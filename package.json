@@ -137,7 +137,12 @@
     "./merch": "./packages/agentsam-merch/src/index.js",
     "./merch/node": "./packages/agentsam-merch/src/node/index.js",
     "./theme/resolve": "./packages/theme-resolve/src/index.js",
-    "./campaign": "./packages/agentsam-campaign/src/index.js"
+    "./campaign": "./packages/agentsam-campaign/src/index.js",
+    "./site-scrape": "./packages/agentsam-site-scrape/runtime/core.mjs",
+    "./site-scrape/worker": "./packages/agentsam-site-scrape/worker/index.mjs",
+    "./site-scrape/index": "./packages/agentsam-site-scrape/runtime/index.mjs",
+    "./site-scrape/storage": "./packages/agentsam-site-scrape/runtime/node-storage.mjs",
+    "./site-scrape/client": "./packages/agentsam-site-scrape/runtime/client.mjs"
   },
   "bin": {
     "agentsam": "bin/agentsam",
@@ -235,7 +240,8 @@
     "packages/agentsam-workbench/src",
     "packages/agentsam-workbench/tsconfig.json",
     "packages/agentsam-merch",
-    "TRADEMARKS.md"
+    "TRADEMARKS.md",
+    "packages/agentsam-site-scrape"
   ],
   "workspaces": [
     "packages/agentsam-analytics",

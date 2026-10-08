@@ -21,10 +21,10 @@ const split = text => text.split(',').map(s => s.trim()).filter(Boolean);
 const flags = (argv, extra = {}) => parseArgs({ args: argv, allowPositionals: true, options: { cwd: { type: 'string' }, json: { type: 'boolean' }, help: { type: 'boolean', short: 'h' }, ...extra } });
 const show = value => console.log(JSON.stringify(value, null, 2));
 const localPath = root => path.join(root, '.agentsam', 'knowledge', 'index.sqlite');
-async function openStore(root, config, readOnly = false) {
+export async function openStore(root, config, readOnly = false) {
   return config.storage.driver === 'sqlite' ? openSqliteStore(localPath(root), { readOnly }) : openPostgresStore(process.env[config.storage.connection_env]);
 }
-function provider(profile) {
+export function provider(profile) {
   if (profile?.provider === 'none') throw new Error('Embedding is disabled for this profile. Configure an explicit provider with `agentsam autorag configure --provider … --semantic`.');
   const adapter = createProviderRegistry().get(profile?.provider);
   return {

@@ -1,10 +1,20 @@
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const directory = path.join(root, 'packages/agentsam-site-scrape');
-const native = spawnSync(process.execPath, ['--test', 'runtime/test/runtime.test.mjs'], {
+const packageJSON = JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+if(!packageJSON.files?.includes('packages/agentsam-site-scrape')){
+  throw new Error('site.scrape is absent from the published SDK package files list');
+}
+for(const publicExport of ['./site-scrape','./site-scrape/worker','./site-scrape/client','./site-scrape/index']){
+  const target = packageJSON.exports?.[publicExport];
+  if(!target || !fs.existsSync(path.join(root,target)))throw new Error(`Missing published site.scrape export: ${publicExport}`);
+}
+
+const native = spawnSync(process.execPath, ['--test', 'runtime/test/runtime.test.mjs', 'runtime/test/knowledge-handoff.test.mjs', 'worker/test/worker.test.mjs'], {
   cwd: directory,
   stdio: 'inherit',
   timeout: 120000,

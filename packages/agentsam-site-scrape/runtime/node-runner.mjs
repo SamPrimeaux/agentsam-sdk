@@ -13,7 +13,12 @@ Usage:
   agentsam site storage --project-root <project-directory>
   agentsam site verify <archive-directory>
   agentsam site index <archive-directory>
+  agentsam site knowledge plan <archive-directory> --project-root <project-directory>
+  agentsam site knowledge index <archive-directory> --project-root <project-directory> [--embed]
+  agentsam site knowledge search <query> --project-root <project-directory> [--semantic]
   agentsam site upload <archive-directory> --project-root <project-directory>
+  agentsam site worker plan --project-root <dir> [--queue-name <queue>] [--authority-service <worker>]
+  agentsam site worker init --project-root <dir> [--queue-name <queue>] [--authority-service <worker>]
 
 Options:
   --project-root <dir>     Project whose configuration/Cloudflare identity owns storage (default cwd)
@@ -26,6 +31,10 @@ Options:
   --upload-archive       Explicit remote R2 upload after staging (never implicit)
   --archive-bucket <name>  Selected project/customer bucket; overrides project configuration
   --verify-only <path>   Verify a staged local archive, no crawling
+  --queue-name <name>    Project-owned Queue physical name
+  --worker-name <name>   Project-owned Worker name
+  --authority-service <name>  IAM/project permission Worker to bind
+  --cms-service <name>  Optional review/attachment Worker to bind
   --help                 Show this guide
 
 Storage authority: CLI choice > project's .agentsam/site-scrape.json >
@@ -36,12 +45,12 @@ function readArgs(args) {
   const options={},positional=[];
   for(let i=0;i<args.length;i++){
     const a=args[i];
-    if(['--help','-h','--capture-assets','--upload-archive'].includes(a)){
+    if(['--help','-h','--capture-assets','--upload-archive','--embed','--semantic'].includes(a)){
       const key=a.slice(2).replaceAll('-','_');options[key]=true;continue;
     }
     if(a.startsWith('--')){
       const [k,inline]=a.slice(2).split('=',2);
-      if(!['project-root','archive-dir','account-id','project-id','max-pages','concurrency','archive-bucket','verify-only'].includes(k)) throw Error('unknown site option: --'+k);
+      if(!['project-root','archive-dir','account-id','project-id','max-pages','concurrency','archive-bucket','verify-only','queue-name','worker-name','authority-service','cms-service'].includes(k)) throw Error('unknown site option: --'+k);
       const value=inline ?? args[++i];
       if(!value || value.startsWith('--'))throw Error('missing value for --'+k);
       options[k.replaceAll('-','_')]=value;
@@ -62,6 +71,51 @@ export async function runNativeSiteScrape(args, {stdout=process.stdout,stderr=pr
     const projectRoot=fs.realpathSync(path.resolve(cwd,opts.project_root||'.'));
     const print=json=>stdout.write(JSON.stringify(json,null,2)+'\n');
     if(action==='storage') {print(resolveProjectStorage(projectRoot,{bucket:opts.archive_bucket}));return 0;}
+    if(action==='knowledge') {
+      const task=positional[0], target=positional.slice(1).join(' ');
+      if(!['plan','index','search'].includes(task)||!target||
+         (task!=='search'&&positional.length!==2)){
+        throw Error('site knowledge plan|index <archive> or search <query> is required');
+      }
+      const {loadVerifiedSiteIndex}=await import('./knowledge.mjs');
+      const {readConfig,planIndex,runIndex,retrieve}=await import('../../../src/knowledge/index.js');
+      const {openStore,provider}=await import('../../../src/commands/knowledge.js');
+      const graph=task==='search'?null:loadVerifiedSiteIndex(path.resolve(cwd,target)).graph;
+      const base=readConfig(projectRoot);
+      // Isolate site evidence from the repository's active source generation.
+      const config={...base,scope:{name:`${base.scope.name}:site-evidence`,include:['sites'],exclude:[]}};
+      let store=null;
+      try{
+        store=await openStore(projectRoot,config,task!=='index').catch(error=>{
+          if(task==='plan')return null;throw error;
+        });
+        if(task==='search') {
+          const topK=opts.top_k?Number(opts.top_k):8;
+          if(!Number.isInteger(topK)||topK<1||topK>100)throw Error('top-k must be 1..100');
+          print(await retrieve({store,config,text:target,semantic:!!opts.semantic,
+            embedder:opts.semantic?provider(config.embedding):undefined,topK}));
+          return 0;
+        }
+        const inputs={root:projectRoot,config,store,siteCrawl:graph,embed:!!opts.embed};
+        const planned=await planIndex(inputs);
+        if(!planned.receipt.files)throw Error('verified archive contains no indexable page content');
+        if(task==='plan')print({...planned.receipt,authority:'site-crawl-evidence'});
+        else print(await runIndex({...inputs,embedder:opts.embed?provider(config.embedding):undefined}));
+        return 0;
+      }finally{await store?.close();}
+    }
+
+    if(action==='worker') {
+      const { projectWorkerPlan, writeProjectWorker }=await import('../worker/project-config.mjs');
+      const config={queueName:opts.queue_name,workerName:opts.worker_name,
+        authorityService:opts.authority_service,cmsService:opts.cms_service,
+        bucket:opts.archive_bucket};
+      if(positional.length!==1 || !['plan','init'].includes(positional[0])){
+        throw Error('site worker requires `plan` or `init`');
+      }
+      const result=positional[0]==='plan'?projectWorkerPlan(projectRoot,config):writeProjectWorker(projectRoot,config);
+      print(result);return 0;
+    }
     if(action==='verify' || action==='index' || opts.verify_only){
       const target=opts.verify_only||positional[0];if(!target)throw Error('site verify requires an archive path');
       const manifest=verifyLocalArchive(path.resolve(cwd,target));

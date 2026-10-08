@@ -105,6 +105,42 @@ def stage_evidence(
             entry["source_url"] = image.url
             entry["section"] = getattr(image, "section", None)
             records.append(entry)
+        # Compatibility adapter emits the SAME site.index graph understood by
+        # Knowledge; it does not create a second indexing engine.
+        compact = lambda value: json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        digest_json = lambda value: hashlib.sha256(compact(value).encode("utf-8")).hexdigest()
+        resources = []
+        for page in sorted(crawl_result.pages, key=lambda p: p.url):
+            payload = json.loads(Path(page.json_path).read_text(encoding="utf-8"))
+            blocks = payload.get("content") or []
+            resources.append({
+                "id": "page:" + hashlib.sha256(page.url.encode("utf-8")).hexdigest()[:24],
+                "url": page.url,
+                "title": getattr(page, "title", None) or payload.get("title") or "",
+                "meta": payload.get("meta") or {},
+                "content_hash": "sha256:" + digest_json(blocks),
+                "blocks": blocks,
+                "image_count": int(getattr(page, "image_count", 0)),
+            })
+        assets = []
+        for image in sorted(crawl_result.images, key=lambda i: i.url):
+            if image.ok and image.optimized_path:
+                assets.append({
+                    "id": "asset:" + hashlib.sha256(image.url.encode("utf-8")).hexdigest()[:24],
+                    "url": image.url,
+                    "alt": "",
+                })
+        edges = []  # No canonical page/link relationships in the Python adapter yet.
+        graph = {
+            "schema": "agentsam.site.index.v1",
+            "resources": resources,
+            "assets": assets,
+            "edges": edges,
+            "counts": {"pages": len(resources), "assets": len(assets), "edges": 0},
+            "content_hash": "sha256:" + digest_json({"resources": resources, "assets": assets, "edges": edges}),
+        }
+        (root / "index.json").write_text(json.dumps(graph, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        records.append(_record(root, "index.json"))
         manifest = {
             "schema_version": 1,
             "kind": "agentsam.crawl-evidence.v1",

@@ -84,7 +84,7 @@ export function robotsAllowed(robotsBody,url,agent='AgentSam') {
 /** Invoke with fetchPage(url,{maxBytes,contentTypes}) that validates every DNS
  * target and manual redirect, and never calls an untrusted host on its own. */
 export async function crawlSite({url,maxPages=20,concurrency=3,maxBytes=1024*1024,maxAssets=1000,captureAssets=false,
-  respectRobots=true,fetchPage,onPage=async()=>{},onAsset=async()=>{},onProgress=()=>{},clock=()=>Date.now()}) {
+  respectRobots=true,runId,runtime='node-local',fetchPage,onPage=async()=>{},onAsset=async()=>{},onProgress=()=>{},clock=()=>Date.now()}) {
   if(typeof fetchPage!=='function') throw TypeError('a secure fetchPage adapter is required');
   if(!Number.isSafeInteger(maxPages)||maxPages<1||maxPages>5000) throw RangeError('maxPages must be 1..5000');
   if(!Number.isSafeInteger(concurrency)||concurrency<1||concurrency>16) throw RangeError('concurrency must be 1..16');
@@ -151,9 +151,10 @@ export async function crawlSite({url,maxPages=20,concurrency=3,maxBytes=1024*102
   const finished=clock(), counts={pages_visited:seen.size,pages_fetched:pages.length,pages_blocked:errors.filter(x=>x.kind==='blocked'&&!x.error.startsWith('asset:')).length,
     pages_skipped:0,pages_failed:errors.filter(x=>x.kind==='failed'&&!x.error.startsWith('asset:')).length,
     ...(captureAssets?{images_fetched:assetFetched,images_failed:errors.filter(x=>x.error.startsWith('asset:')).length}:{})};
-  const run_id='scrp_'+sha(Buffer.from(JSON.stringify([seed,started]))).slice(0,24);
+  if(runId && !/^scrp_[0-9a-f]{24}$/.test(runId)) throw Error('invalid site.scrape runId');
+  const run_id=runId||'scrp_'+sha(Buffer.from(JSON.stringify([seed,started]))).slice(0,24);
   const status=!pages.length?'failed':errors.length?'partial':'completed';
-  return {schema_version:SITE_SCRAPE_SCHEMA,capability:SITE_SCRAPE_CAPABILITY,run_id,status,runtime:'node-local',
+  return {schema_version:SITE_SCRAPE_SCHEMA,capability:SITE_SCRAPE_CAPABILITY,run_id,status,runtime,
     started_at:new Date(started).toISOString(),completed_at:new Date(finished).toISOString(),
     content_hash:'sha256:'+sha(Buffer.from(JSON.stringify(pages.map(p=>[p.url,p.title]).sort((a,b)=>a[0].localeCompare(b[0]))))),
     seed_urls:[seed],counts,applied:{scope:{sameSite:true,maxPages},policy:{respectRobots},

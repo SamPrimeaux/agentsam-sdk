@@ -5,40 +5,85 @@
   "description": "Runtime-neutral crawl request. Hosts supply identity, credentials, storage bindings and rate limits; this contract carries only crawl semantics. Runtimes report any field they did not honor in result.applied.ignored.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["seedUrls"],
+  "required": [
+    "seedUrls"
+  ],
   "properties": {
     "seedUrls": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string", "format": "uri", "pattern": "^https?://" }
+      "items": {
+        "type": "string",
+        "format": "uri",
+        "pattern": "^https?://"
+      }
     },
     "scope": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "allowedOrigins": { "type": "array", "items": { "type": "string" } },
-        "sameSite": { "type": "boolean", "default": true },
-        "maxPages": { "type": "integer", "minimum": 1, "maximum": 5000, "default": 200 },
-        "maxDepth": { "type": "integer", "minimum": 0, "maximum": 50 }
+        "allowedOrigins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sameSite": {
+          "type": "boolean",
+          "default": true
+        },
+        "maxPages": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000,
+          "default": 20
+        },
+        "maxDepth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        }
       }
     },
     "policy": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "respectRobots": { "type": "boolean", "default": true },
-        "hostDelayMs": { "type": "integer", "minimum": 0, "default": 350 },
-        "timeoutMs": { "type": "integer", "minimum": 1 }
+        "respectRobots": {
+          "type": "boolean",
+          "default": true
+        },
+        "hostDelayMs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 350
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
     "capture": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "metadata": { "type": "boolean", "default": true },
-        "text": { "type": "boolean", "default": true },
-        "html": { "type": "boolean", "default": false },
-        "assets": { "type": "boolean", "default": false }
+        "metadata": {
+          "type": "boolean",
+          "default": true
+        },
+        "text": {
+          "type": "boolean",
+          "default": false
+        },
+        "html": {
+          "type": "boolean",
+          "default": false
+        },
+        "assets": {
+          "type": "boolean",
+          "default": false
+        }
       }
     }
   }

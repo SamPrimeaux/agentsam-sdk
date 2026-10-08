@@ -1,0 +1,15 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.inneranimalmedia.com/agentsam/capabilities/site-scrape-project-authority.schema.json",
+  "title":"Project-authority service result for site scrape",
+  "description":"Result produced only by a trusted AUTHORIZER Worker service binding. User-supplied account and project IDs are not permissions.",
+  "type":"object",
+  "additionalProperties":true,
+  "required":["ok","account_id","project_id","allowed_origins"],
+  "properties":{
+    "ok":{"const":true},
+    "account_id":{"type":"string","pattern":"^au_[A-Za-z0-9_-]{4,128}$"},
+    "project_id":{"type":"string","pattern":"^proj_[A-Za-z0-9_-]{3,128}$"},
+    "allowed_origins":{"type":"array","minItems":1,"items":{"type":"string","format":"uri"}}
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.inneranimalmedia.com/agentsam/capabilities/site-scrape-worker-job.schema.json",
+  "title":"Authorized project site scrape Queue envelope",
+  "description":"Queue consumers must verify that this envelope matches the project authorization recorded for the run in the project's R2 bucket.",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema_version","run_id","account_id","project_id","url","max_pages","capture_assets"],
+  "properties":{
+    "schema_version":{"const":1},
+    "run_id":{"type":"string","pattern":"^scrp_[0-9a-f]{24}$"},
+    "account_id":{"type":"string","pattern":"^au_[A-Za-z0-9_-]{4,128}$"},
+    "project_id":{"type":"string","pattern":"^proj_[A-Za-z0-9_-]{3,128}$"},
+    "url":{"type":"string","format":"uri","pattern":"^https?://"},
+    "max_pages":{"type":"integer","minimum":1,"maximum":50},
+    "capture_assets":{"type":"boolean"}
+  }
+}

@@ -66,11 +66,119 @@ agentsam site upload ./my-project/.agentsam/crawls/v1/accounts/au_myaccount123/p
   --project-root ./my-project
 ```
 
-**Runtime limitations:** current Node mode fetches public server HTML (not
-browser-executed JavaScript). Workers HTMLRewriter or other extraction adapters
-can reuse its evidence contracts, but a distributed Queue/Worker execution lane,
-CMS import/publish and real R2 account verification are separate deployment
-gates. This is not an established production-scaled crawling service.
+**Runtime limitations:** Node and Cloudflare fetch public server HTML (not
+browser-executed JavaScript). Cloudflare Queue/Worker code is shipped and has
+isolated adapter tests and a Wrangler dry-run proof, but no customer-owned
+Worker/Queue/R2 or CMS deployment has been verified live. One Queue job handles
+one bounded site run; horizontal concurrency is across run jobs, not an
+unbounded frontier. A real host's IAM and CMS promotion remain mandatory. This
+is not a claim that a production-scaled deployment exists.
+
+## Hosted Cloudflare Queue/Worker lane (project-owned)
+
+This is the **same** `site.scrape` runtime, not a second service. The SDK ships
+`@inneranimalmedia/agentsam-sdk/site-scrape/worker` with these required
+project bindings: `CRAWL_EVIDENCE` (private R2 bucket), `CRAWL_JOBS` (Queue
+producer and consumer), and `AUTHORIZER` (trusted project/identity service
+binding). An optional `CMS_PROMOTER` service binding receives reviewed asset
+handoffs. No publisher account, preset bucket, secret, user ID, or Cloudflare
+account is embedded in this package. Queue message bodies have a published
+schema under `protocol/capabilities/site-scrape-worker-job.schema.json`.
+
+```sh
+# In a project whose own credentials and resource names are known:
+agentsam site worker plan --project-root ./my-project \
+  --queue-name my-project-crawl-jobs \
+  --authority-service my-project-authority \
+  --archive-bucket my-project-evidence
+
+# Writes ONLY this project's .agentsam/site-scrape-worker/{worker.mjs,wrangler.jsonc}
+agentsam site worker init --project-root ./my-project \
+  --queue-name my-project-crawl-jobs \
+  --authority-service my-project-authority \
+  --archive-bucket my-project-evidence
+
+# After the customer's Cloudflare account has created those exact R2/Queue
+# resources and provisioned the named authority Worker, verify the deployment:
+wrangler deploy --dry-run --config ./my-project/.agentsam/site-scrape-worker/wrangler.jsonc
+
+# Deploy ONLY with the customer's explicit project-owned Cloudflare access:
+wrangler deploy --config ./my-project/.agentsam/site-scrape-worker/wrangler.jsonc
+```
+
+`workers_dev` is intentionally false: the project host accesses this Worker
+via a Cloudflare service binding, not an anonymous public Worker URL. Register
+it in the host's Wrangler service bindings as `SITE_SCRAPE`, targeting the
+project's generated Worker name. The host can use
+`createSiteScrapeClient({baseUrl, fetchImpl, authorize})` from the SDK's
+`/site-scrape/client` export with the host's own authorized `fetch` transport.
+
+### Host authorization contract (mandatory)
+
+The trusted `AUTHORIZER` binding receives a POST to
+`/site-scrape/authorize` with the caller's `Authorization` header and a JSON
+body `{action,method,origin}`. Actions are `site.scrape.create`,
+`site.scrape.read`, `site.scrape.read.index`, and `site.scrape.promote`.
+The host must validate the session, account/project membership, origin access,
+and the requested action against its **real** identity authority. On success it
+returns:
+
+```json
+{
+  "ok": true,
+  "account_id": "au_myaccount123",
+  "project_id": "proj_myproject",
+  "allowed_origins": ["https://example.com"]
+}
+```
+
+No trusted AUTHORIZER means no crawl submission. Input account/project IDs
+are never accepted as proof of ownership. Queue consumers additionally match
+every message against the preexisting, authorized R2 run state before fetching.
+Queue delivery may be retried: successful runs are guarded by an R2 commit
+manifest, uploaded **last**. Worker HTTP API:
+
+- `POST /v1/crawls` with `{url,max_pages,capture_assets}` → accepted run ID
+- `GET /v1/crawls/{run_id}` → authorized run status
+- `GET /v1/crawls/{run_id}/index` → committed graph, checksum verified
+- `POST /v1/crawls/{run_id}/promote` with `{asset_keys:[...]}` → CMS review request
+
+The optional `CMS_PROMOTER` binding receives an internal review request with
+account/project/run identifiers, selected verified manifest asset keys and
+`review_required: true`. Its success response must include
+`{ok:true,project_id,receipt_id}`. The consuming CMS still owns rights review,
+asset derivative preparation, attachment, publish authorization and receipt.
+This SDK does not claim that submission equals publication.
+
+### Use the real Knowledge pipeline, including project-selected providers
+
+```sh
+agentsam site knowledge plan <archive-directory> --project-root ./my-project
+agentsam site knowledge index <archive-directory> --project-root ./my-project
+agentsam site knowledge search "greenhouse irrigation" --project-root ./my-project
+
+# Optional: use the provider and backing lane already set in
+# ./my-project/.agentsam/knowledge.json
+agentsam site knowledge plan <archive-directory> --project-root ./my-project --embed
+agentsam site knowledge index <archive-directory> --project-root ./my-project --embed
+agentsam site knowledge search "irrigation" --project-root ./my-project --semantic
+```
+
+These commands require a configured `.agentsam/knowledge.json`; they reuse
+Knowledge's `planIndex`, `runIndex`, configured SQLite/Postgres/Supabase lane
+and chosen live embedding provider. Site evidence has a separate Knowledge
+scope so indexing cannot replace the repository's active generation. Search
+returns original URLs and `source_authority: site-crawl-evidence`. The provider
+is **not** silently changed to a hardcoded model or platform key. Cloudflare
+Vectorize embeddings require the normal configured vector backend adapter.
+
+`@inneranimalmedia/agentsam-sdk/site-scrape/client` also gives a project host
+`submit`, `status`, `index`, and `submitForReview` methods over its injected
+transport—no hardcoded cloud endpoints. For real workers, use the customer's
+Queue/R2 billing, configured retention, and runtime limits; Cloudflare Queues
+currently limit consumer wall time to 15 minutes, so per-run page and asset
+budgets are strictly bounded. Staging and production should be separate per
+customer's chosen isolation policy.
 
 ## Optional Python adapter
 

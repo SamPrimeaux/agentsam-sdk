@@ -47,9 +47,9 @@ class EvidenceTests(unittest.TestCase):
             root = Path(archive['root'])
             manifest = verify_evidence(root)
             self.assertEqual(manifest['visibility'], 'private')
-            self.assertEqual(len(manifest['objects']), 3)
+            self.assertEqual(len(manifest['objects']), 4)
             self.assertEqual(sorted(o['key'].split('/')[0] for o in manifest['objects']),
-                             ['assets', 'pages', 'receipt.json'])
+                             ['assets', 'index.json', 'pages', 'receipt.json'])
             with self.assertRaises(FileExistsError):
                 stage_evidence(result, receipt, account_id=ACCOUNT,
                                project_id=PROJECT, archive_dir=Path(tmp) / 'archives')
@@ -65,8 +65,8 @@ class EvidenceTests(unittest.TestCase):
             with patch('agentsam_site_scrape.evidence.wrangler_put') as put:
                 summary = upload_evidence(archive['root'], bucket='agentsam-crawl-evidence',
                                           repo_root=Path(tmp))
-            self.assertEqual(summary['uploaded'], 4)
-            self.assertEqual(put.call_count, 4)
+            self.assertEqual(summary['uploaded'], 5)
+            self.assertEqual(put.call_count, 5)
             self.assertTrue(put.call_args.args[2].endswith('/manifest.json'))
             self.assertTrue(all(call.args[5] == 'private, no-store' for call in put.call_args_list))
             with self.assertRaises(ValueError):

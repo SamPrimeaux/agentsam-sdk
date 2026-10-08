@@ -58,7 +58,7 @@ class EvidencePipelineTests(unittest.TestCase):
             self.assertTrue(all(not path.exists() for path in paths), 'crawl temporary files should be released')
             run = Path(temp) / 'v1' / 'accounts' / ACCOUNT / 'projects' / PROJECT / 'runs' / receipt['run_id']
             manifest = verify_evidence(run)
-            self.assertEqual(len(manifest['objects']), 3)
+            self.assertEqual(len(manifest['objects']), 4)
             image = next(o for o in manifest['objects'] if o.get('kind') == 'image')
             self.assertEqual(image['source_url'], 'https://example.com/hero.png')
             self.assertEqual(image['section'], 'hero')
