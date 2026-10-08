@@ -3,6 +3,7 @@ import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import {beginPluginOAuth,completePluginOAuth,getRemotePluginToken,runRemotePluginTool,disconnectPublicPlugin} from '../backend/worker/plugin-oauth.js';
+import {mcpRequest} from '../backend/worker/plugin-mcp-client.js';
 import {listCatalogForAccount} from '../backend/worker/plugin-discovery.js';
 import {createLocalStudioPluginRuntime} from '../backend/worker/plugin-registry.js';
 
@@ -137,6 +138,8 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   assert.deepEqual(runtimeResult,{ok:true,tool:'brand.get_context'});
 
   assert.ok(calls.some(c=>c.href===endpoint&&JSON.parse(c.init.body).method==='tools/call'));
+  assert.ok(calls.filter(c=>c.href.includes('/api/oauth/')||c.href===endpoint).every(c=>c.init.redirect==='manual'));
+
   await assert.rejects(completePluginOAuth(env,request,fetcher),/plugin_oauth_state_invalid/);
   await assert.rejects(getRemotePluginToken(env,'au_another',pluginId,fetcher),/plugin_oauth_not_connected/);
   const catalog=await listCatalogForAccount(env,accountId,fetcher);
@@ -156,6 +159,22 @@ test('OAuth client registration carries only validated catalog publisher brandin
   assert.equal(JSON.parse(registration.init.body).logo_uri,origin+'/catalog/icons/agentsam.svg');
   sqlite.close();
 });
+test('OAuth and MCP use Workers-compatible manual redirects and never follow 3xx',async()=>{
+  const {DB,sqlite}=dbFixture();const env=envFor(DB);const {fetcher}=mockFetcher();
+  await assert.rejects(beginPluginOAuth(env,accountId,pluginId,{},async(url,init)=>{
+    if(String(url).endsWith('/api/oauth/register')){
+      assert.equal(init.redirect,'manual');
+      return new Response(null,{status:302,headers:{location:'https://unexpected.example/authorize'}});
+    }
+    return fetcher(url,init);
+  }),/plugin_oauth_redirect_rejected/);
+  await assert.rejects(mcpRequest(endpoint,resource,token,'tools/list',{},async(_url,init)=>{
+    assert.equal(init.redirect,'manual');
+    return new Response(null,{status:307,headers:{location:'https://unexpected.example/mcp'}});
+  }),/plugin_mcp_redirect_rejected/);
+  sqlite.close();
+});
+
 test('OAuth refuses an IAM identity mismatch without enabling the plugin',async()=>{
   const {DB,sqlite}=dbFixture();const env=envFor(DB);
   const started=await beginPluginOAuth(env,accountId,pluginId,{},mockFetcher().fetcher);
