@@ -62,6 +62,9 @@ async function registerIamClient(redirectUri,scope,logoUri,fetcher=fetch){
     headers:{'content-type':'application/json',accept:'application/json'},
     body:JSON.stringify({
       client_name:'AgentSam Local Studio MCP',
+      // The registered OAuth client is Studio, not the requested Brand/Campaign resource.
+      // Catalog-verified publisher icon; never accept a caller-supplied logo URL.
+      ...(logoUri ? {logo_uri:logoUri} : {}),
       redirect_uris:[redirectUri],
       application_type:'web',
       token_endpoint_auth_method:'none',
