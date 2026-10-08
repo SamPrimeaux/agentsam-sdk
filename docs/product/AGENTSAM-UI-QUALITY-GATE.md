@@ -1,64 +1,148 @@
-# AgentSam UI Quality Contract — v1
+# AgentSam UI Quality Gate v1
 
-**Enforced code and browser evidence, not a system-prompt claim.** The contract
-is `protocol/ui/agentsam.ui-quality.v1.schema.json`; the first production
-adapter is the portable `@inneranimalmedia/agentsam-settings` UI used in
-hosted Studio and packaged desktop. Generated CMS blocks/themes, other native
-components, and customer-hosted applications must use the same contract to
-ship a `ready` receipt; a Settings-only passing receipt is **not evidence**
-that those other surfaces have passed.
+Status: source checks and default dark-theme token contrast run in CI.
+The five-viewport browser harness is an additional release test.
+**Static success does not mean UI READY.** Release-ready also needs browser
+a11y, keyboard, visual and functional receipts in hosted and desktop builds.
 
-## Required evidence
+Canonical machine contract: scripts/ui-quality/contract.v1.json.
+Applies to Local Studio, portable Workbench components, FNF/CMS themes,
+generated semantic/static/interactive sections and future plugin UI.
 
-| Check | Minimum release requirement |
+## Mobile-first is not phone UI stretched wider
+
+| Viewport | Expected interaction |
 | --- | --- |
-| Semantic/accessibility | Semantic headings, input labels, dialog roles, accessible names on icon buttons, images with meaningful or explicitly empty alt |
-| Keyboard | Focus entry/return, Tab containment, Escape dismissal, visible keyboard focus |
-| Contrast | WCAG AA 4.5:1 for normal text, 3:1 for large text, 3:1 for applicable UI controls and their focus indicators |
-| Responsive | Render at 320, 390, 640, 820, 1100, 1440, 1920 CSS px, no unintended body horizontal overflow or unreachable controls |
-| Mobile | One primary workspace, minimum 44px tall touch actions, safe-area and dynamic viewport padding, keyboard-safe sheets |
-| Styling | Shared design tokens and portable utility classes, reject **new static inline styles**; runtime-dependent CSS values require an auditable exception |
-| Behavior | No dead controls, mislabeled saved state, fake "connected" status, or unexpected navigation away from draft work |
-| Portability | Browser + desktop use identical package components and account-scoped services; platform-specific host adapters only for auth/OS capabilities |
+| Phone 390x844 | One major surface; editor/settings/AgentSam as full-screen or bottom sheet; safe-area and keyboard-aware. |
+| Tablet 820x1180 | Preview dominant, optional rails overlay or occupy capped width. |
+| Desktop 1440x900 | Optional persistent editor rail and right inspector when room allows. |
+| Large desktop 1728x1117 | Readable content and bounded panels. |
+| Widescreen 2000x1200 | No endlessly growing sidebars; assign additional space to canvas intentionally. |
 
-**Breakpoints** are content-adaptive; viewport widths are test targets, not
-physical-device labels. 320–767px use one main workspace; tablets progressively
-reveal tools and rails; desktop layouts have constrained readable content
-widths and may expose multiple panes. Mobile usability is interaction-based,
-not only responsive CSS.
+These are acceptance checkpoints, not the only widths. Also test landscape,
+intermediate widths, reduced motion, 200% zoom and software keyboard. Use
+container queries for portable embeddable widgets as needed. Start with
+single-primary-surface flex min-h-0 flex-col. Introduce tablet overlays at md,
+optional persistent rails at lg and capped panel widths on 2xl.
+Use 100dvh and env(safe-area-inset-bottom). Aim for 44x44 phone touch targets.
 
-For each changed UI target, emit a machine-readable receipt. Only computed
-results may set `ready: true`; neither a stored status nor a text prompt can.
-Missing, failed or skipped required checks cannot be treated as passing.
-Known unverified legacy surfaces must be reported clearly and remain
-`NOT_READY` for UI-quality purposes until they have their own adapters.
+## Accessibility and helpers
 
-## Commands and current enforcement
+- Use native buttons, links, inputs and semantic landmarks.
+- Every actionable icon has an accessible name through aria-label or
+  aria-labelledby **independently** of its tooltip.
+- Tooltip must work with focus. Crucial help must also be visible in context
+  or accessible by a touch help action; never require hover.
+- Use aria-expanded, aria-controls, aria-selected, aria-live, aria-busy and
+  aria-describedby only when they accurately reflect state.
+- Informative images require useful alt; decorative images use alt="".
+- Logical Tab order, visible focus ring, Enter/Space, Escape and restored focus
+  are required in modals/sheets/editors.
+- WCAG AA contrast: 4.5:1 normal text; 3:1 large text and applicable UI
+  components/focus indicators. Test the rendered background in every theme.
+- Dead buttons, fabricated states, focus traps and hidden primary actions fail.
+
+Local Studio's IconAction component is the initial supported icon-button
+primitive: label, Radix tooltip and >=44px phone touch area.
+
+## Replace inline styles safely
+
+Use Tailwind utility classes for static layout/appearance and @theme tokens
+for brand properties. Package portable layout CSS with the Workbench component
+rather than requiring an unknown consumer to compile Tailwind utilities.
+Do not construct runtime class names that Tailwind scanning cannot discover.
+
+Before:
+
+~~~tsx
+<div style={{ display: "flex", gap: 12, padding: 16 }}>Content</div>
+~~~
+
+After:
+
+~~~tsx
+<div className="flex gap-3 p-4">Content</div>
+~~~
+
+Dynamic geometry is an exception: CSS variable carries *data*, CSS owns
+layout, overflow, max width and responsive behavior.
+
+~~~tsx
+<aside className="editor-rail"
+  style={{ "--editor-rail-width": panelWidth + "px" } as CSSProperties}>
+  ...
+</aside>
+~~~
+
+~~~css
+.editor-rail { width: min(var(--editor-rail-width, 30rem), 42vw, 40rem); }
+@media (max-width: 767px) {
+  .editor-rail { position: fixed; inset: 0; width: 100%; max-width: none; }
+}
+~~~
+
+Custom properties do not permit arbitrary inline visual CSS.
+
+## Check and prove
+
+~~~sh
+node --test scripts/ui-quality/*.test.mjs
+node scripts/ui-quality/check-source.mjs --changed-from origin/main
+node scripts/ui-quality/check-source.mjs --files path/to/component.tsx,path/to/page.html
+node scripts/ui-quality/contrast.mjs
+~~~
+
+Static rules check newly changed JSX/HTML lines, not the entire legacy codebase.
+They catch missing alt, unnamed icon buttons, nonsemantic click targets and
+inline styles; they cannot prove browser appearance and interactions.
+
+Start the actual product first, then check five sizes:
+
+~~~sh
+node scripts/ui-quality/audit-viewports.mjs \
+  --url http://127.0.0.1:8080/work \
+  --expect '[data-agent-conversation-surface]' \
+  --matrix full \
+  --out /tmp/agentsam-ui-quality
+~~~
+
+Five screenshots and receipt.json report route/product presence, overflow,
+basic visible naming, image alt and phone touch targets. A login redirect
+does not count as passing the requested authenticated product surface.
+
+Before declaring READY, run axe-core WCAG 2.2 AA on the rendered pages,
+keyboard traversal, screen-reader checks, reduced-motion and visual reviews,
+plus real create/edit/preview/publish interactions. Record separate hosted
+and packaged desktop runtime evidence. Missing runtime evidence = NOT_READY.
+
+
+## Packaged Settings rendered adapter
+
+The general source/theme contract and boundary matrix above are canonical for
+the SDK; the Settings package adds the independently computed
+`agentsam.ui-quality.v1` **target receipt** at
+`protocol/ui/agentsam.ui-quality.v1.schema.json` (SDK export
+`@inneranimalmedia/agentsam-sdk/ui/quality-schema`). This is an implementation
+adapter, not a competing source of truth for the quality law.
 
 ```sh
 npm run quality:ui:source
-npm run quality:ui:responsive   # after Studio desktop stylesheet build
-npm run quality:ui              # source + desktop build + browser evidence
+npm run quality:ui
 ```
 
-The source gate reads changed TSX/JSX against `origin/main` and checks
-new static inline style objects, alt and accessible controls. The browser
-gate mounts **the actual packaged Settings React components**, not static
-screenshots. It captures all seven widths for Agents, Brand identity, Git &
-PRs, Account and Customize, tests dialog/focus/close, samples rendered text
-and input contrast, verifies minimum touch heights and checks overflow.
-Artifacts live under `UI_QUALITY_OUTPUT` or a temporary evidence folder.
-The existing SDK CI runs these checks before the release checks complete.
+The source adapter scans changed Settings JSX for static inline styles,
+missing alt and inaccessible controls. The real-browser adapter mounts the
+same React Settings package with the desktop CSS and captures seven CSS sizes
+320, 390, 640, 820, 1100, 1440, and 1920px. It checks Agents, Brand
+identity, Git & PRs, Account, and Customize; modal focus/Escape; horizontal
+overflow; phone action height; rendered text (WCAG AA 4.5:1/3:1) and
+form-control borders (3:1). The receipt is computed from all checks and is
+`ready:false` if a check is failed or unverified. CI uploads evidence
+screenshots and receipt.
 
-The source checker can accept other UI source paths. Every CMS generator,
-artifact-backed interactive component, R2 theme materializer, app, and
-desktop/host renderer must call an appropriate adapter and provide its own
-rendered/interaction evidence before declaring *that target* UI-quality
-ready. Do not treat Settings evidence as evidence for arbitrary themes.
-
-**Exceptions:** Only time-limited, owner-attributed exceptions documented
-in a receipt are permitted for legacy surfaces. Static inline styles in
-newly generated components do not receive automatic grandfathering.
-User-controlled Monaco editor font/theme configuration and runtime CSS
-variable/mask values are not static style literals; preserve those
-capabilities, and enforce CSP/provenance restrictions independently.
+A passed **Settings** receipt cannot be reused to mark FNF, CMS theme
+sections, generated HTML/CSS/interactive artifacts, Workbench, or arbitrary
+customer apps ready. Their respective generators/hosts must supply their own
+rendered functional evidence under the broader canonical contract above.
+In particular, the dark-theme token audit is not proof that every published
+client theme has passed rendered AA contrast.

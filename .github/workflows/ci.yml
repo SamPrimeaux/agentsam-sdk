@@ -18,7 +18,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # incremental UI gate must compare to the actual main base
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -38,6 +38,16 @@ jobs:
           set -o pipefail
           npm ci 2>&1 | tee "$RUNNER_TEMP/npm-ci.log"
 
+      - name: UI authoring contract tests
+        run: node --test scripts/ui-quality/*.test.mjs
+
+      - name: UI default theme contrast
+        run: node scripts/ui-quality/contrast.mjs
+
+      - name: UI changed-source gate
+        if: github.event_name == 'pull_request'
+        run: node scripts/ui-quality/check-source.mjs --changed-from "origin/$GITHUB_BASE_REF"
+
       - name: Dependency health
         run: node src/security/cli.mjs check --log "$RUNNER_TEMP/npm-ci.log" --json > "$RUNNER_TEMP/dependency-health.json"
 
@@ -55,15 +65,15 @@ jobs:
       - name: Verify SDK
         run: npm run verify
 
-      # Quality is a release gate, not a system-prompt aspiration. Test the
-      # same Settings components and desktop stylesheet at seven widths.
+      # Settings-specific rendered evidence complements the general UI contract
+      # checks above and blocks shipping when browser interaction/AA checks fail.
       - name: Install Studio browser-test dependencies
         run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
 
       - name: Install Chromium and OS libraries
         run: npm exec --prefix apps/local-studio -- playwright install --with-deps chromium
 
-      - name: Verify UI quality contract
+      - name: Verify packaged Settings UI quality
         run: npm run quality:ui
         env:
           UI_QUALITY_OUTPUT: ${{ runner.temp }}/agentsam-ui-quality
@@ -105,7 +115,7 @@ jobs:
       - name: CLI context smoke
         run: node src/cli.js context --json
 
-      - name: UI quality evidence and viewport screenshots
+      - name: Settings UI quality evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:

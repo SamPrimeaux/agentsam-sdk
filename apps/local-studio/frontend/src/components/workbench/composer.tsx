@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Maximize2, Paperclip, Pause, Play, Square, Target, Trash2 } from "lucide-react";
 import { AgentComposer, GoalStatusStrip } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Button } from "@/components/ui/button";
+import { IconAction } from "@/components/ui/icon-action";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ModelSelect } from "@/components/workbench/model-select";
 import { RunModeSelect } from "@/components/workbench/run-mode-select";
@@ -98,15 +99,15 @@ export function Composer({
           event.target.value = "";
         }}
       />
-      <Button
-        type="button"
+      <IconAction
         size="icon-sm"
         variant="ghost"
-        aria-label="Attach a file"
+        label="Attach a file"
+        hint="Attach images or documents to your message"
         onClick={() => fileRef.current?.click()}
       >
         <Paperclip className="size-4" />
-      </Button>
+      </IconAction>
       <RunModeSelect value={runMode} onChange={(mode) => setRunMode(targetId, mode)} />
       <ModelSelect compact />
     </>

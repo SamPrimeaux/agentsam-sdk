@@ -52,6 +52,16 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background" data-agentsam-resource={`browser:${tab.id}`} aria-label={`Browser preview: ${tab.url || tab.title}. Annotation refers to the preview frame; embedded page contents are not captured.`}>
+      {tab.srcdoc ? (
+        <div className="flex h-10 items-center gap-2 border-b border-border px-3" aria-label="Rendered project preview">
+          <span className="rounded-md bg-muted px-2 py-1 text-[11px] font-medium">Preview</span>
+          <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{tab.title}</span>
+          <Button type="button" size="icon-sm" variant="ghost" aria-label="Refresh preview"
+            onClick={() => setReloadKey((key) => key + 1)}>
+            <RotateCw className="size-3.5" />
+          </Button>
+        </div>
+      ) : (
       <form onSubmit={onSubmit} className="flex items-center gap-1 border-b border-border px-2 py-2">
         <AnnotationToggle />
         <Button
@@ -110,6 +120,7 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
           </Button>
         ) : null}
       </form>
+      )}
 
       {tab.srcdoc ? (
         <iframe

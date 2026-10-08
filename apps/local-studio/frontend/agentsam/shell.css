@@ -113,10 +113,10 @@
 .agentsam-conversation [data-agent-conversation-empty="true"] .agentsam-conversation-dock { padding-top: 0; }
 .agentsam-conversation [data-agent-conversation-composer] > * { margin-inline: auto; width: 100%; max-width: 840px; }
 .agentsam-conversation > [data-agent-thread] { font-size: 16px; line-height: 1.65; }
-.agentsam-side-panel { min-width: 280px; max-width: min(70%, calc(100% - 420px)); border-left: 1px solid var(--nav-border); overflow: auto; }
+.agentsam-side-panel { width: min(var(--agentsam-panel-width, 480px), 42vw, 640px); min-width: 280px; max-width: min(42%, calc(100% - 420px), 640px); border-left: 1px solid var(--nav-border); overflow: auto; }
 .agentsam-workspace > .studio-separator { width: 5px; flex-shrink: 0; background: transparent; cursor: col-resize; }
 .agentsam-workspace > .studio-separator:hover, .agentsam-workspace > .studio-separator:focus-visible { background: var(--nav-accent); }
-@media (max-width: 1000px) { .agentsam-side-panel { width: 46%; min-width: 280px; } }
+@media (max-width: 1000px) { .agentsam-side-panel { width: min(var(--agentsam-panel-width, 480px), 42vw); min-width: min(280px, 42vw); max-width: 42vw; } }
 @media (max-width: 767px) { .agentsam-welcome { padding: 16px 0; } .agentsam-welcome h1 { font-size: 24px; } .agentsam-side-panel { position: absolute; inset: 56px 0 0; z-index: 50; width: 100%; max-width: 100%; min-width: 0; resize: none; background: var(--nav-canvas); } .agentsam-start-context { max-width: 90%; } }
 @media (max-width: 767px) { .agentsam-side-panel { width: 100% !important; } .agentsam-workspace > .studio-separator { display: none; } }
 
