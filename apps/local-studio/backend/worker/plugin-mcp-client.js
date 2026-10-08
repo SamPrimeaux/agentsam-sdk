@@ -11,7 +11,8 @@ export async function mcpRequest(endpoint,resource,accessToken,method,params={},
   const url=boundedUrl(endpoint,resource);
   if(typeof accessToken!=='string'||accessToken.length<12)throw new Error('plugin_mcp_token_missing');
   const response=await fetcher(url,{
-    method:'POST',redirect:'error',
+    // Workers fetch supports manual redirects, not redirect:'error'.
+    method:'POST',redirect:'manual',
     headers:{'content-type':'application/json',accept:'application/json, text/event-stream',authorization:'Bearer '+accessToken},
     body:JSON.stringify({jsonrpc:'2.0',id:crypto.randomUUID(),method,params}),
     signal:AbortSignal.timeout(15000),
