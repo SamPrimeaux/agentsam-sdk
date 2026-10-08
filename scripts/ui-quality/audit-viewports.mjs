@@ -79,6 +79,7 @@ const receipt = {
   contract: 'agentsam.ui-quality.render.v1',
   status: failed ? 'NOT_READY' : 'PASS',
   source: baseUrl,
+  matrix,
   expectedSelector,
   caveat: 'Checks layout, visible basic names, img alt and target dimensions; full WCAG axe, keyboard flows and visual layout review are separate required receipts.',
   results,
