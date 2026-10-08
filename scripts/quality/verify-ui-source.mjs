@@ -11,14 +11,15 @@ import process from 'node:process';
 import ts from 'typescript';
 const root=resolve(import.meta.dirname,'../..');
 const base=process.env.UI_QUALITY_BASE || 'origin/main';
+try {execFileSync('git',['rev-parse','--verify',base],{cwd:root,stdio:'pipe'});}
+catch {throw new Error('UI quality baseline '+base+' missing: fetch the base branch before running; never pass with zero inspected changes.');}
 const argv=process.argv.slice(2);
 const paths=argv.length?argv:['packages/agentsam-settings/src/frontend/index.tsx'];
 const violations=[];
 let scanned=0;
 const findChangedLines=(file)=>{
   let diff='';
-  try {diff=execFileSync('git',['diff','--unified=0',base,'--',file],{cwd:root,encoding:'utf8'});}
-  catch {diff='';}
+  diff=execFileSync('git',['diff','--unified=0',base,'--',file],{cwd:root,encoding:'utf8'});
   const lines=new Set();
   let current=0;
   for(const line of diff.split('\n')){
