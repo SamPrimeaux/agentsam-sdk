@@ -43,7 +43,7 @@ function defaults(discovery, opts, existing, runtime) {
   const declaredVectorize = (runtime?.cloudflare?.vectorize || []).filter(row => row.binding && row.index);
   const adoptVectorize = !opts.backend && !existing?.lane?.backend && declaredVectorize.length === 1;
   const backend = opts.backend || existing?.lane?.backend || (adoptVectorize ? 'cloudflare_vectorize' : 'local_exact');
-  const recommendation = recommendAutoRag({ discovery, purpose, include: opts.scope ? split(opts.scope) : existing?.scope?.include || ['.'], provider: opts.provider || 'none', backend, semantic: Boolean(opts.semantic) });
+  const recommendation = recommendAutoRag({ discovery, purpose, include: opts.scope ? split(opts.scope) : existing?.scope?.include, provider: opts.provider || 'none', backend, semantic: Boolean(opts.semantic) });
   const config = safeAutoRagConfig({ existing: existing || {}, recommendation, repositoryId: existing?.repository_id || discovery.repository.identity, projectKey: existing?.project_key || discovery.repository.identity });
   if (adoptVectorize) {
     const resource = declaredVectorize[0];
