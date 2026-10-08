@@ -856,7 +856,9 @@ function PluginCustomizeView({
                           <span className="flex size-14 items-center justify-center overflow-hidden rounded-[18px] border border-foreground/15 bg-background/75 text-violet-300 shadow-lg">
                             {plugin.iconUrl
                               ? <img src={plugin.iconUrl} alt="" loading="lazy" className="size-full object-contain p-1.5"/>
-                              : iconFor(plugin,"size-7")}
+                              : plugin.publisherIconUrl
+                                ? <PublisherMark url={plugin.publisherIconUrl} className="size-7 text-foreground"/>
+                                : iconFor(plugin,"size-7")}
                           </span>
                           <span className={cx("rounded-full border px-2 py-1 text-[10px] font-medium",stateClasses(state))}>{state}</span>
                         </div>
