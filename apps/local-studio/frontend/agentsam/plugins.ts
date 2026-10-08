@@ -1,4 +1,3 @@
-import { listLocalStudioConnections } from '@/lib/connections/client';
 import { projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/agent';
 import { sideStageComposerWidgets } from './side-stage-actions';
 
@@ -9,6 +8,7 @@ export async function loadComposerCatalog(signal?: AbortSignal): Promise<Compose
   // This client uses the existing authenticated desktop bridge when packaged
   // in Tauri, and /api/connections for hosted Studio.
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  const {listLocalStudioConnections}=await import("../src/lib/connections/client");
   const payload=await listLocalStudioConnections();
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   return projectComposerCatalog({
