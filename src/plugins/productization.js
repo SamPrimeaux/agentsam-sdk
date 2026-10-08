@@ -7,6 +7,34 @@ export const PLUGIN_QUALITY_EVIDENCE_SCHEMA = 'agentsam.plugin-quality-evidence/
 export const PLUGIN_QUALITY_RECEIPT_SCHEMA = 'agentsam.plugin-quality-receipt/v1';
 export const PLUGIN_LIFECYCLE = Object.freeze(['available','installed','needs_connection','connected','ready']);
 
+/**
+ * Protocol gates, not product-specific presets. A new OAuth-backed plugin must
+ * prove issuer acceptance and alignment with the MCP resource/tool definitions.
+ * These are observations supplied by the issuer/host/runtime evidence producers;
+ * plugin inspection does not perform network discovery or authorize clients.
+ */
+export const PLUGIN_OAUTH_RUNTIME_GATES = Object.freeze([
+  'authorization.resource_registered',
+  'authorization.resource_metadata',
+  'authorization.scope_parity',
+  'authorization.client_registration',
+  'authorization.token_audience',
+  'runtime.security_schemes',
+  'release.cross_service_compatibility',
+]);
+const nonWaivableOAuthGates = new Set(PLUGIN_OAUTH_RUNTIME_GATES);
+function isRuntimeOnlyCheck(id) {
+  return id === 'installation.account'
+    || /^(?:authorization|runtime|health|product|persistence|security|portability|release)\./.test(id);
+}
+function requiredCheckIds(product) {
+  const declared = product?.verification?.requiredChecks || [];
+  return [...new Set([
+    ...declared,
+    ...(product?.auth?.type === 'oauth' ? PLUGIN_OAUTH_RUNTIME_GATES : []),
+  ])];
+}
+
 const PLATFORM_AUTHORITIES = Object.freeze([
   'identity.oauth',
   'vault.credentials',
@@ -55,12 +83,16 @@ function evidenceChecks(product,staticEvidence,bundle){
   const checks={};
   const runtime=[...(bundle?.capabilityReceipts||[]),...(bundle?.runtimeReceipts||[])];
   const runtimeById=new Map(runtime.map(row=>[row.check_id||row.checkId||row.tool,row]));
-  for(const id of product?.verification?.requiredChecks||[]){
+  for(const id of requiredCheckIds(product)){
     const dynamic=runtimeById.get(id);
     if(dynamic){
       const status=dynamic.status==='passed'?'pass':dynamic.status==='failed'?'fail':dynamic.status;
+      const validStatus = ['pass','fail','unverified','not_applicable'].includes(status);
+      const nonWaivable = nonWaivableOAuthGates.has(id);
+      const hasReceipt = Boolean(dynamic.receipt_ref || dynamic.receipt);
       checks[id]={
-        status:['pass','fail','unverified','not_applicable'].includes(status)?status:'unverified',
+        status:!validStatus || (nonWaivable && (status === 'not_applicable' || (status === 'pass' && !hasReceipt)))
+          ? 'unverified' : status,
         evidence:dynamic.evidence||dynamic.receipt_ref||dynamic.receipt||'runtime receipt',
         receipt:dynamic.receipt_ref||dynamic.receipt||null,
         source:'runtime_receipt',
@@ -68,7 +100,17 @@ function evidenceChecks(product,staticEvidence,bundle){
       continue;
     }
     const local=staticEvidence?.checks?.[id];
-    checks[id]=local?{...local,source:'package_quality_evidence'}:{status:'unverified',source:'missing_evidence'};
+    // A package author cannot attest their own OAuth/production runtime success.
+    // Keep package claims visible for diagnostics but do not promote them to proof.
+    if (isRuntimeOnlyCheck(id)) {
+      checks[id]={
+        status:'unverified',
+        source:local?'package_evidence_not_runtime_proof':'missing_runtime_evidence',
+        ...(local?.evidence ? {evidence:local.evidence} : {}),
+      };
+    } else {
+      checks[id]=local?{...local,source:'package_quality_evidence'}:{status:'unverified',source:'missing_evidence'};
+    }
   }
   return checks;
 }
@@ -185,6 +227,16 @@ export function inspectPluginProduct(target,{evidenceBundle=null}={}){
       findings.push(finding('error','platform_authority_collision','domain package claims shared platform authority: '+owner,'agentsam.product.json:ownership',expected));
     }
   }
+  if (product.auth?.type === 'oauth') {
+    const declaredChecks = new Set(product.verification?.requiredChecks || []);
+    const missing = PLUGIN_OAUTH_RUNTIME_GATES.filter(id => !declaredChecks.has(id));
+    if (missing.length) findings.push(finding(
+      'warn','oauth_runtime_gates_implicit',
+      'OAuth product omits mandatory runtime checks: '+missing.join(', ')+'. These remain REQUIRED for READY.',
+      'agentsam.product.json:verification','identity.oauth',
+    ));
+  }
+
   const authorities=new Set(product.ownership?.platformAuthorities||[]);
   for(const authority of PLATFORM_AUTHORITIES){
     if(!authorities.has(authority)){
