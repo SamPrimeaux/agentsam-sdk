@@ -42,7 +42,7 @@ import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
-import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin } from "./plugin-oauth.js";
+import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
 import {
@@ -907,6 +907,17 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       try {
         const result=await completePluginOAuth(env,request);
         const desktop=result.source_client==='desktop';
+        // OAuth callback has already verified credentials, registered the tools,
+        // and committed the grant in the existing Studio plugin D1 registry.
+        // Redirect directly to that installed plugin. No timer, scripts or
+        // extra consent page; plugin_key is resolved from the D1 install.
+        if (!desktop) {
+          const destination=pluginOAuthReturnUrl(request.url,result.plugin_key);
+          return new Response(null,{status:303,headers:{
+            location:destination,'cache-control':'no-store',
+            'referrer-policy':'no-referrer','x-content-type-options':'nosniff',
+          }});
+        }
         const notice=desktop
           ? 'Your connection is ready. Return to the AgentSam desktop app to use this plugin.'
           : 'Your permissions are saved. Returning you to the AgentSam Plugins workspace.';

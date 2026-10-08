@@ -256,6 +256,18 @@ async function finishAuthorizedConnection(env,pending,payload,fetcher=fetch){
   await env.DB.batch(statements);
   return {plugin_key:installed.plugin_key,registered_tools:tools.length};
 }
+/** Return to the installed plugin identified by Studio's existing D1 registry. */
+export function pluginOAuthReturnUrl(callbackUrl,pluginKey) {
+  const source=new URL(callbackUrl);
+  if(source.pathname!=='/api/plugins/oauth/callback')fail('plugin_oauth_callback_invalid');
+  if(typeof pluginKey!=='string'||! /^[a-z0-9][a-z0-9_.-]{1,100}$/i.test(pluginKey))
+    fail('plugin_oauth_return_plugin_invalid');
+  const destination=new URL('/settings/customize',source);
+  destination.searchParams.set('view','plugins');
+  destination.searchParams.set('connected',pluginKey);
+  return destination.href;
+}
+
 export async function completePluginOAuth(env,request,fetcher=fetch){
   const url=new URL(request.url);
   const state=url.searchParams.get('state')||'';
