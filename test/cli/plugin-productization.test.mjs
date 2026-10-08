@@ -7,7 +7,7 @@ import {
   buildPluginQualityReceipt,
   inspectPluginProduct,
   verifyPluginProduct,
-} from '../src/plugins/productization.js';
+} from '../../src/plugins/productization.js';
 
 function fixture({collision=false,quality=true}={}){
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'agentsam-plugin-product-'));
