@@ -353,6 +353,10 @@ export default defineConfig(({ command, isPreview }) => ({
         replacement: resolvePath(analyticsPackageRoot, "src/index.ts"),
       },
       {
+        find: /^@inneranimalmedia\/agentsam-workbench\/capabilities$/,
+        replacement: resolvePath(workbenchSource, "agent/capability-catalog.ts"),
+      },
+      {
         find: "@inneranimalmedia/agentsam-workbench",
         replacement: workbenchSource,
       },

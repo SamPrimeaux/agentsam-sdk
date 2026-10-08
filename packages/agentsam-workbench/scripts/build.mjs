@@ -11,6 +11,7 @@ await build({
   entryPoints: {
     index: 'src/index.ts',
     'agent/index': 'src/agent/index.ts',
+    'agent/capability-catalog': 'src/agent/capability-catalog.ts',
     'shell/index': 'src/shell/index.ts',
     'browser/index': 'src/browser/index.ts',
     'terminal/index': 'src/terminal/index.ts',

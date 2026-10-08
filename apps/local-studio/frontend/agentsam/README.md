@@ -23,13 +23,18 @@ Do not delete the work store, composer, SideStage, browser, terminal, CMS packag
 Ember Supply can mount the same package via React or `mountNav` in its plain JavaScript shell. Its routes, identity, account choices, and colorway are supplied by the host. No Ember Supply production files are changed by this integration. The nav package intentionally excludes its composer and plugin connections.
 # Composer plugins and annotation
 
-`PluginPicker` supplies one composer-width menu for `+` and `@`, keyboard selection,
-and compact available-plugin previews. `plugins.ts` projects the authenticated
-`/api/connections` response from `agentsam_plugins`; it does not maintain a second
-hard-coded plugin catalog. Disabled or hidden installations are excluded. OAuth
-requires connected status; configured native/binding plugins may be selected.
-Unhealthy connections lead to settings. A mention is explicit user intent, not
-proof of tool execution or permission to bypass the backend runtime.
+`PluginPicker` supplies one compact grouped capability/context menu for `+` and `@`,
+with keyboard selection and minimal connected-service pills. `plugins.ts` projects
+**the existing authenticated** `/api/connections` and the desktop connection
+bridge through the portable `agentsam-workbench/capabilities` module. The one
+`SIDE_STAGE_ACTIONS` list now powers the SideStage `+` and the composer's widget
+entries, not two independent app lists. Enabled/visible plugin rows accept the
+backend's boolean flags. OAuth requires connected status; native/binding plugins
+require configured status and healthy runtime state. Skills/agents/MCP-only
+records are shown only when a real host supplies discovered entries, never
+from a fixture or Settings' local-only catalog overlays. An `@` mention is
+contextual intent, not a tool invocation or permission grant. Missing provider
+connections are offered through Settings, not silently substituted.
 
 `AnnotationHelper` adapts the portable workbench `MiniAgentSam` to the current
 conversation draft. The shell and browser toolbars start the same selection mode.

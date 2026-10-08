@@ -66,6 +66,7 @@ export type LocalStudioConnectionsResponse = {
   connections?: LocalStudioConnectionRecord[];
   items?: LocalStudioConnectionRecord[];
   plugins?: LocalStudioPluginRecord[];
+  composer_plugins?: LocalStudioPluginRecord[];
   error?: string;
 };
 
