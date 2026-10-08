@@ -16,6 +16,7 @@ export async function mcpRequest(endpoint,resource,accessToken,method,params={},
     body:JSON.stringify({jsonrpc:'2.0',id:crypto.randomUUID(),method,params}),
     signal:AbortSignal.timeout(15000),
   });
+  if((response.status>=300&&response.status<400)||response.type==='opaqueredirect')throw new Error('plugin_mcp_redirect_rejected');
   if(!response.ok)throw new Error(response.status===401?'plugin_mcp_auth_expired':'plugin_mcp_http_'+response.status);
   if(Number(response.headers.get('content-length')||0)>LIMIT)throw new Error('plugin_mcp_response_too_large');
   const body=await response.text();
