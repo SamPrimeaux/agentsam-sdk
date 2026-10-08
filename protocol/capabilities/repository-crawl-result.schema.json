@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "repository-crawl-result",
+  "type": "object",
+  "required": [
+    "schema",
+    "capability",
+    "schema_version",
+    "repository",
+    "machine_run_id",
+    "snapshot_id",
+    "snapshot_hash",
+    "counts",
+    "resources",
+    "edges",
+    "sources",
+    "errors",
+    "provenance"
+  ],
+  "properties": {
+    "schema": {
+      "const": "agentsam.repository.crawl.v1"
+    },
+    "capability": {
+      "const": "repository.crawl"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "repository": {
+      "type": "string"
+    },
+    "machine_run_id": {
+      "type": "string"
+    },
+    "snapshot_id": {
+      "type": "string"
+    },
+    "snapshot_hash": {
+      "type": "string"
+    },
+    "counts": {
+      "type": "object"
+    },
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "provenance"
+        ]
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "from",
+          "to",
+          "type",
+          "evidence"
+        ]
+      }
+    },
+    "sources": {
+      "type": "array"
+    },
+    "errors": {
+      "type": "array"
+    },
+    "provenance": {
+      "type": "object"
+    }
+  }
+}

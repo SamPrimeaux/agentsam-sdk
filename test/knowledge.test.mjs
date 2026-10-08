@@ -204,3 +204,25 @@ test('recovered KnowledgeClient contracts remain usable with injected transports
   await client.index('repository');
   assert.equal(operations[0][1].top_k, 8); assert.equal(operations[0][1].token_budget, 6000); assert.equal(operations[0][1].result_policy.max_items, 8); assert.equal(operations[1][0], 'knowledge.index');
 });
+
+test('Knowledge consumes Machine/Repository inventory with linked snapshot, unchanged cache and stale-file rejection', async t => {
+  const f = await fixture(t);
+  const source = fs.readFileSync(path.join(f.root, 'src/a.ts'));
+  const hash = (await import('node:crypto')).createHash('sha256').update(source).digest('hex');
+  const { createRepositoryCrawl } = await import('../packages/agentsam-repository/src/crawl.js');
+  const machine = { schema:'agentsam.machine.receipt.v1', capability:'machine.inspect', root:f.root, run_id:'knowledge_fixture',
+    facts:[{id:'file:src/a.ts',fs_kind:'file',path:'src/a.ts',size:source.length,sha256:hash,source:{kind:'code',type:'typescript'}}],
+    edges:[],errors:[],summary:{facts_total:1,edges_total:0} };
+  const graph = createRepositoryCrawl(machine,{repository:'knowledge-fixture'});
+  const plan = await planIndex({...f,repositoryCrawl:graph});
+  assert.equal(plan.receipt.repository_crawl_snapshot, graph.snapshot_id);
+  assert.equal(plan.receipt.machine_run_id, machine.run_id);
+  assert.equal(plan.receipt.merkle_root,null);
+  assert.deepEqual(plan.files.map(x=>x.path),['src/a.ts']);
+  const indexed = await runIndex({...f,repositoryCrawl:graph});
+  assert.equal(indexed.published,true);
+  const repeated = await runIndex({...f,repositoryCrawl:graph});
+  assert.equal(repeated.published,false);
+  write(f.root,'src/a.ts','export const changed = 2;\n');
+  await assert.rejects(planIndex({...f,repositoryCrawl:graph}),/snapshot is stale/);
+});
