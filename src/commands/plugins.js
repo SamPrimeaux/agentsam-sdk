@@ -1,6 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { AGENTSAM_MCP_PLUGIN_MANIFEST, normalizePluginKey } from '../plugins/index.js';
+import {
+  AGENTSAM_MCP_PLUGIN_MANIFEST,
+  buildPluginQualityReceipt,
+  inspectPluginProduct,
+  readPluginEvidenceBundle,
+  normalizePluginKey,
+  verifyPluginProduct,
+} from '../plugins/index.js';
 import { authenticateViaBrowser } from '../lib/auth.js';
 import { promptToOpenUrl } from '../lib/open-url.js';
 import { readAccountSession, resolveAccountApiKey, saveAccountSession } from '../lib/account-session.js';
@@ -27,13 +34,14 @@ function installMigration(cwd) {
 function parse(argv) {
   const out = {
     action: argv[0] || 'list', key: '', cwd: process.cwd(), json: false,
-    origin: '',
+    origin: '', evidence: '',
     timeoutMs: 180_000, noOpen: false,
   };
   for (let i = 1; i < argv.length; i += 1) {
     if (argv[i] === '--cwd') out.cwd = argv[++i] || out.cwd;
     else if (argv[i] === '--json') out.json = true;
     else if (argv[i] === '--origin') out.origin = argv[++i] || out.origin;
+    else if (argv[i] === '--evidence') out.evidence = argv[++i] || out.evidence;
     else if (argv[i] === '--timeout') out.timeoutMs = Math.max(1_000, Number(argv[++i]) || out.timeoutMs);
     else if (argv[i] === '--no-open') out.noOpen = true;
     else if (!out.key) out.key = argv[i];
@@ -143,6 +151,30 @@ async function statusPlugin(opts, key) {
 
 export async function runPlugins(argv = []) {
   const opts = parse(argv);
+  if (['inspect','verify','receipt'].includes(opts.action)) {
+    const target = path.resolve(opts.cwd, opts.key || '.');
+    const evidenceBundle = opts.evidence ? readPluginEvidenceBundle(path.resolve(opts.cwd, opts.evidence)) : null;
+    const verification = opts.action === 'inspect' ? null : verifyPluginProduct(target,{evidenceBundle});
+    const result = opts.action === 'inspect'
+      ? inspectPluginProduct(target,{evidenceBundle})
+      : opts.action === 'verify'
+        ? verification
+        : buildPluginQualityReceipt(target,{verification,evidenceBundle});
+    if (opts.json || opts.action === 'receipt') writeJson(result);
+    else {
+      console.log(`\n  Plugin ${result.product?.identity?.id || path.basename(target)}`);
+      console.log(`  status: ${result.status}`);
+      for (const row of result.findings || []) console.log(`  ${row.severity.toUpperCase().padEnd(5)} ${row.code}: ${row.message}`);
+      if (opts.action === 'verify') {
+        for (const [id, check] of Object.entries(result.checks || {})) {
+          console.log(`  ${String(check.status).padEnd(12)} ${id}`);
+        }
+      }
+      console.log('');
+    }
+    if (opts.action !== 'inspect' && result.status !== 'READY') process.exitCode = 1;
+    return result;
+  }
   if (opts.action === 'list') {
     const state = readState(opts.cwd);
     const rows = Object.values(CATALOG).map((manifest) => ({

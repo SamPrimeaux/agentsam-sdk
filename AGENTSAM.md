@@ -123,6 +123,16 @@ Portable product apps follow [`docs/architecture/AGENTSAM_APPLICATION_CONTRACT.m
 - Batch is an asynchronous execution lane, not an interactive service tier. Projected spend and request counts must be known before submitting budgeted background work.
 - Do not impose arbitrary short wall-clock caps on legitimate long work. Use checkpoints, progress events, durable receipts, provider status, and explicit fallback policy so a slow run can continue or fail visibly rather than being silently abandoned.
 
+## Product verification evidence law
+
+Any new product-verification feature must first consume existing Machine, Repository, capability, Settings, Identity, Vault, hooks/MCP, and package evidence. It may add a missing evidence adapter, but it must not rescan or reimplement an authority that already produces the required fact.
+
+Every product finding must identify:
+- the evidence source that supports it, and
+- the expected canonical owner when the finding is about duplicated or misplaced authority.
+
+A warning that only says "duplicate code" is incomplete. Product inspection is perception only; it must not mutate source, connect accounts, grant permissions, execute tools, or manufacture runtime proof. Product readiness is computed from current verification evidence and must never be stored as a casually writable `ready` flag.
+
 ## Verification and completion
 
 - Run proportionate focused tests first, then the repository gates required by the affected public surface.

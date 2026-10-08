@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/plugin-quality-receipt/v1",
+  "title": "AgentSam Plugin Quality Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "plugin",
+    "generatedAt",
+    "findings",
+    "checks",
+    "lifecycle",
+    "status"
+  ],
+  "properties": {
+    "schema": {
+      "const": "agentsam.plugin-quality-receipt/v1"
+    },
+    "plugin": {
+      "type": "object",
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "severity",
+          "code",
+          "message",
+          "evidenceSource",
+          "expectedOwner"
+        ],
+        "properties": {
+          "severity": {
+            "enum": [
+              "info",
+              "warn",
+              "error"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "evidenceSource": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expectedOwner": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "pass",
+              "fail",
+              "unverified",
+              "not_applicable"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "receipt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "status": {
+      "enum": [
+        "READY",
+        "NOT_READY"
+      ]
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "available",
+        "installed",
+        "connectionRequired",
+        "connected",
+        "ready",
+        "blockedBy"
+      ],
+      "properties": {
+        "state": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "available",
+            "installed",
+            "needs_connection",
+            "connected",
+            "ready"
+          ]
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "connectionRequired": {
+          "type": "boolean"
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "blockedBy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

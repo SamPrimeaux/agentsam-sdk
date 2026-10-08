@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/plugin-evidence-bundle/v1",
+  "title": "AgentSam Plugin Evidence Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema"
+  ],
+  "properties": {
+    "schema": {
+      "const": "agentsam.plugin-evidence-bundle/v1"
+    },
+    "machine": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Existing agentsam.machine.receipt.v1 evidence. Plugin inspection never creates it."
+    },
+    "repository": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Existing agentsam.repository.crawl.v1 graph. Plugin inspection never crawls source."
+    },
+    "refinery": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Existing agentsam.refinery.proposal.v1 reuse/authority findings."
+    },
+    "capabilityReceipts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "runtimeReceipts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "sourceRefs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    }
+  }
+}
