@@ -23,6 +23,7 @@ import { useActiveSideTab, useWorkStore } from "@/lib/work/store";
 import { StudioMark } from "@/components/mark";
 import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistantContext";
 import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
+import { SIDE_STAGE_ACTIONS } from "../../../agentsam/side-stage-actions";
 
 function TabIcon({ kind }: { kind: string }) {
   if (kind === "chat") return <Users className="size-3.5" />;
@@ -85,42 +86,23 @@ export function SideStage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              <DropdownMenuItem onSelect={() => openSideTab("goal", { title: "Edit goal", parentTrailId: useWorkStore.getState().activeTrailId, ephemeral: false })}>
-                <Target className="size-3.5" />
-                Edit goal
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openSideTab("chat")}>
-                <Users className="size-3.5" />
-                Co-worker
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openSideTab("browser", { ephemeral: false })}>
-                <Globe className="size-3.5" />
-                Browser
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openSideTab("files", { ephemeral: false })}>
-                <FileCode className="size-3.5" />
-                Files
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openSideTab("artifacts", { ephemeral: false })}>
-                <Box className="size-3.5" />
-                Artifacts
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openSideTab("deploy", { ephemeral: false })}>
-                <Upload className="size-3.5" />
-                Ship
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openSideTab("app", { ephemeral: false })}>
-                <Layers className="size-3.5" />
-                CAD Creator
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openSideTab("database", { ephemeral: false })}>
-                <Database className="size-3.5" />
-                Database
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => openSideTab("terminal", { ephemeral: false })}>
-                <SquareTerminal className="size-3.5" />
-                CLI
-              </DropdownMenuItem>
+              {SIDE_STAGE_ACTIONS.map((item) => {
+                const Icon = {
+                  goal: Target, coworker: Users, browser: Globe, files: FileCode,
+                  artifacts: Box, ship: Upload, cad: Layers, database: Database, cli: SquareTerminal,
+                }[item.id];
+                return (
+                  <DropdownMenuItem key={item.id} onSelect={() => {
+                    const extra = item.tab === "goal"
+                      ? { title: "Edit goal", parentTrailId: useWorkStore.getState().activeTrailId, ephemeral: false }
+                      : item.tab === "chat" ? undefined : { ephemeral: false };
+                    openSideTab(item.tab, extra);
+                  }}>
+                    <Icon className="size-3.5" />
+                    {item.label}
+                  </DropdownMenuItem>
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
