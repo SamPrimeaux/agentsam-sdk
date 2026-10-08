@@ -65,3 +65,21 @@ the widget tokens inherit the host theme.
 Widgets are app-native primitives, not installable prebuilds — the host decides
 where a widget appears and what its data means. Local Studio's `/widgets`
 utilities surface is the proof consumer.
+
+## Capability catalog projection
+
+`@inneranimalmedia/agentsam-workbench/capabilities` is a CSS-free, React-free
+projection contract for `ComposerCatalogEntry[]`. It does **not** register tools
+or create connection state. Hosts supply authenticated plugin, OAuth and MCP
+records plus actual mounted widget/skill/agent/command descriptors.
+
+`projectComposerCatalog({ plugins, connections, widgets, skills, agents, commands })`
+groups existing entries for both `@` mentions and `+` menus. `filterComposerCatalog`
+supports live queries such as `@cl`. `action.type` distinguishes requesting
+context (`mention`), focusing a host-owned stage (`open-side-stage`) and
+launching the host's connection setup (`setup`). A ready mention does **not**
+grant the runtime tool execution permission; the server still authorizes it.
+
+Do not use fixture catalogs, synthetic MCP servers, model/BYOK keys or local
+Settings-only overlays as proof that a runnable tool is installed. Hosts that
+cannot discover a provider must omit it or display a non-ready setup item.
