@@ -902,7 +902,9 @@ function PluginCustomizeView({
               </div>
               <div className="min-w-0 space-y-1">
                 <p className="text-[16px] font-semibold tracking-[-0.025em]">{name}</p>
-                <p className="text-[11px] text-muted-foreground">{selectedCatalog?.publisher || installed?.providerKey || "Plugin provider"}</p>
+                <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <PublisherMark url={selectedCatalog?.publisherIconUrl} className="size-3 text-foreground"/>
+                  {selectedCatalog?.publisher || installed?.providerKey || "Plugin provider"}</p>
                 <span className={cx("inline-block rounded-full border px-2 py-0.5 text-[10px]",stateClasses(
                   selectedCatalog ? stateFor(selectedCatalog) : installed ? installedState(installed) : "Available"))}>
                   {selectedCatalog ? stateFor(selectedCatalog) : installed ? installedState(installed) : "Available"}
