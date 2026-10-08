@@ -44,7 +44,9 @@ import {
 } from "lucide-react";
 import {
   useEffect,
+  useId,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -54,6 +56,10 @@ import type {
   SettingsCatalogKind,
   SettingsCredential,
   SettingsHost,
+  SettingsAgent,
+  SettingsAgentDraft,
+  SettingsAgentPolicy,
+  SettingsGeneralPreferences,
   SettingsManifest,
   SettingsModel,
   SettingsPlugin,
@@ -224,7 +230,7 @@ export function SettingsShell({
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full bg-background text-foreground">
+    <div className="flex h-full min-h-0 w-full bg-background text-foreground max-md:[&_button]:min-h-11">
       <aside
         className={cx(
           "hidden shrink-0 border-r border-border/70 bg-background md:block",
@@ -239,7 +245,7 @@ export function SettingsShell({
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="mr-1 flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+            className="mr-1 flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-violet-400 md:hidden"
             aria-label="Open settings navigation"
           >
             <Menu className="size-3.5" />
@@ -276,7 +282,7 @@ export function SettingsShell({
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="flex size-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-violet-400"
                 aria-label="Close settings navigation"
               >
                 <X className="size-4" />
@@ -303,31 +309,77 @@ export function SettingsSheet({
   children: ReactNode;
   onClose: () => void;
 }) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const panelRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const previousFocus = useRef<HTMLElement|null>(null);
+  useEffect(() => {
+    if (!open) return;
+    previousFocus.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement : null;
+    closeRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const controls = [...panelRef.current.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+      )].filter(element=>element.getClientRects().length>0);
+      if (!controls.length) return;
+      const first = controls[0], last = controls[controls.length-1];
+      if(event.shiftKey && (document.activeElement===first || !panelRef.current.contains(document.activeElement))){
+        event.preventDefault();last.focus();
+      }else if(!event.shiftKey && (document.activeElement===last || !panelRef.current.contains(document.activeElement))){
+        event.preventDefault();first.focus();
+      }
+    };
+    document.addEventListener("keydown",onKeyDown);
+    return () => {
+      document.removeEventListener("keydown",onKeyDown);
+      previousFocus.current?.focus();
+    };
+  },[open]);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[250]">
       <button
         type="button"
         aria-label="Close sheet"
+        tabIndex={-1}
         onClick={onClose}
         className="absolute inset-0 bg-black/65 backdrop-blur-[2px]"
       />
-      <section className="absolute inset-x-0 bottom-0 max-h-[92dvh] overflow-y-auto rounded-t-2xl border border-border bg-background shadow-2xl md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[430px] md:rounded-none md:border-y-0 md:border-r-0">
-        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border/70 bg-background/95 px-5 py-4 backdrop-blur">
-          <div>
-            <h2 className="text-[15px] font-semibold">{title}</h2>
-            {description && <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{description}</p>}
+      <section
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
+        className="absolute inset-x-0 bottom-0 max-h-[92dvh] overscroll-contain overflow-y-auto rounded-t-2xl border border-border bg-background pb-[env(safe-area-inset-bottom)] shadow-2xl md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[430px] md:rounded-none md:border-y-0 md:border-r-0"
+      >
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border/70 bg-background/95 px-4 py-3 backdrop-blur sm:px-5 sm:py-4">
+          <div className="min-w-0">
+            <h2 id={titleId} className="text-[15px] font-semibold">{title}</h2>
+            {description && <p id={descriptionId} className="mt-1 text-[11px] leading-4 text-muted-foreground">{description}</p>}
           </div>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
-            className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Close"
+            className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-400 md:size-9"
+            aria-label="Close dialog"
+            title="Close dialog (Esc)"
           >
             <X className="size-4" />
           </button>
         </header>
-        <div className="p-5">{children}</div>
+        <div className="px-4 py-5 sm:px-5">{children}</div>
       </section>
     </div>
   );
@@ -1658,61 +1710,236 @@ function ThemesView({ themes, host, onChanged }: { themes: SettingsTheme[]; host
   return <><AppearancePreferences /><SettingsThemeGallery themes={themes} host={host} onChanged={onChanged} /></>;
 }
 
-function AgentsView({ snapshot, view }: { snapshot: SettingsSnapshot; view: string }) {
-  if (view === "models") {
-    return (
-      <Section title="Model inventory" description="Only configured and available models should appear in production.">
-        <ModelTable models={snapshot.models} />
-      </Section>
-    );
+const freshAgent=():SettingsAgentDraft=>({
+  name:"",slug:"",description:"",instructions:"",modelId:"",
+  allowedTools:[],runInBackground:false,sandboxMode:"workspace-write",
+  reasoningEffort:"medium",maxConcurrentThreads:3,active:true,
+});
+function agentDraft(row:SettingsAgent):SettingsAgentDraft{
+ return {
+  name:row.name,slug:row.slug||row.role||"",
+  description:row.description||"",instructions:row.instructions||"",
+  modelId:row.modelId||"",allowedTools:row.allowedTools||[],
+  runInBackground:row.runInBackground===true,
+  sandboxMode:row.sandboxMode==="read-only"?"read-only":"workspace-write",
+  reasoningEffort:(["low","medium","high","extra_high"].includes(row.reasoningEffort||"")
+    ? row.reasoningEffort:"medium") as SettingsAgentDraft["reasoningEffort"],
+  maxConcurrentThreads:row.maxConcurrentThreads||3,active:row.active!==false,
+ };
+}
+function AgentsView({snapshot,view,host,onChanged}:{
+  snapshot:SettingsSnapshot;view:string;host:SettingsHost;onChanged:()=>Promise<void>;
+}){
+  const [selected,setSelected]=useState<SettingsAgent|null>(null);
+  const [draft,setDraft]=useState<SettingsAgentDraft>(freshAgent);
+  const [editing,setEditing]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+  const [policy,setPolicy]=useState<SettingsAgentPolicy>(snapshot.agentPolicy||{
+    allowSubagentSpawn:false,allowFanoutExecution:false,maxSpawnDepth:1,requireAllowlistForMcp:true,
+  });
+  useEffect(()=>{
+    if(snapshot.agentPolicy)setPolicy(snapshot.agentPolicy);
+  },[snapshot.agentPolicy]);
+  const availableModels=snapshot.models.filter(model=>model.enabled);
+  const selectedModel=availableModels.some(model=>model.id===draft.modelId);
+  const formClass="w-full rounded-lg border border-foreground/60 bg-muted/10 px-3 py-2 text-[12px] text-foreground outline-none focus:border-violet-400 focus-visible:ring-2 focus-visible:ring-violet-400/60";
+  const field=(label:string,value:string,onChange:(next:string)=>void,placeholder="")=>(
+    <label className="block space-y-1.5">
+      <span className="text-[11px] font-medium">{label}</span>
+      <input className={formClass} value={value} placeholder={placeholder} onChange={event=>onChange(event.target.value)}/>
+    </label>
+  );
+  function startNew(template?:SettingsAgent){
+    setSelected(null);
+    setDraft(template?{...agentDraft(template),modelId:"",active:true}:freshAgent());
+    setError("");setEditing(true);
   }
-  if (view === "cloud") {
-    return (
-      <Section title="Cloud agents" description="Persistent and disposable remote execution lanes.">
-        <Catalog items={snapshot.cloudAgents} />
-      </Section>
-    );
+  function startEdit(agent:SettingsAgent){
+    setSelected(agent);setDraft(agentDraft(agent));setError("");setEditing(true);
   }
-  if (view === "policy") {
-    return (
-      <Section title="Execution policy" description="Deterministic controls stay separate from model selection.">
-        <div className="rounded-lg border border-border/70 px-3">
-          <PreferenceRow label="Provider routing" description="Do not silently fall back to another provider." value="Fail closed" />
-          <PreferenceRow label="Approval boundary" description="Mutating external actions require explicit authorization." value="Required" />
-          <PreferenceRow label="Subagent fanout" description="Parallel lanes use registered role profiles." value="Up to 6" />
-          <PreferenceRow label="Runtime receipts" description="Capture structured evidence for agent execution." trailing={<Toggle enabled />} />
+  async function saveAgent(){
+    if(!host.saveAgent)return;
+    if(!draft.name.trim()||!draft.slug.trim()||draft.instructions.trim().length<8){
+      setError("Name, unique slug and instructions (8+ characters) are required.");return;
+    }
+    setBusy(true);setError("");
+    try{
+      await host.saveAgent(draft,selected?.id);
+      await onChanged();setEditing(false);
+    }catch(e){setError(e instanceof Error?e.message:"Could not save this agent.");}
+    finally{setBusy(false);}
+  }
+  async function archive(agent:SettingsAgent){
+    if(!host.archiveAgent||!window.confirm("Archive "+agent.name+"? It can be restored by editing the saved profile."))return;
+    setBusy(true);setError("");
+    try{await host.archiveAgent(agent.id);await onChanged();}
+    catch(e){setError(e instanceof Error?e.message:"Unable to archive agent.");}
+    finally{setBusy(false);}
+  }
+  async function savePolicy(){
+    if(!host.updateAgentPolicy)return;
+    setBusy(true);setError("");
+    try{await host.updateAgentPolicy(policy);await onChanged();}
+    catch(e){setError(e instanceof Error?e.message:"Could not update execution policy.");}
+    finally{setBusy(false);}
+  }
+  if(view==="models"){
+    return <Section title="Verified model inventory" description="Discovered per credential. Missing credentials and unsupported models are never silently substituted.">
+      <ModelTable models={snapshot.models}/>
+    </Section>;
+  }
+  if(view==="cloud"){
+    return <Section title="Cloud agent execution" description="Connected remote agent runners and supported execution lanes.">
+      {snapshot.cloudAgents.length?<Catalog items={snapshot.cloudAgents}/>:
+      <EmptyState title="No verified cloud agents in the current runtime."/>}
+    </Section>;
+  }
+  if(view==="policy"){
+    return <Section title="Agent execution policy" description="Stored for your account in the existing agentsam_user_policy registry.">
+      {snapshot.agentError?<p role="alert" className="text-[12px] text-amber-300">{snapshot.agentError}</p>:null}
+      <div className="space-y-4 rounded-xl border border-border/70 p-4">
+        {([
+          ["allowSubagentSpawn","Allow subagent spawning","Permit approved agent profiles to delegate work."],
+          ["allowFanoutExecution","Allow parallel agent execution","Enable authorized fanout across eligible agent profiles."],
+          ["requireAllowlistForMcp","Require MCP allowlist","Only permit MCP tool calls through explicit registration/allowlist."],
+        ] as const).map(([key,title,desc])=>(
+          <label key={key} className="flex cursor-pointer items-center justify-between gap-3 border-b border-border/60 py-2">
+            <span><span className="block text-[12px] font-medium">{title}</span>
+            <span className="block text-[10px] text-muted-foreground">{desc}</span></span>
+            <input type="checkbox" checked={policy[key]}
+              onChange={event=>setPolicy(current=>({...current,[key]:event.target.checked}))}
+              className="size-4 accent-violet-500"/>
+          </label>
+        ))}
+        <label className="block space-y-2 text-[12px]">
+          <span className="font-medium">Maximum spawn depth</span>
+          <select className={formClass} value={policy.maxSpawnDepth}
+            onChange={event=>setPolicy(current=>({...current,maxSpawnDepth:Number(event.target.value)}))}>
+            {[1,2,3,4,5].map(value=><option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+        {error?<p role="alert" className="text-[11px] text-red-300">{error}</p>:null}
+        <button type="button" onClick={()=>void savePolicy()} disabled={busy||!host.updateAgentPolicy||!!snapshot.agentError}
+          className="rounded-lg bg-violet-600 px-4 py-2 text-[12px] font-medium text-white disabled:opacity-50">
+          Save execution policy
+        </button>
+      </div>
+    </Section>;
+  }
+  return (
+    <div className="space-y-5">
+      <Section title="My agents" description="Persistent, account-owned agent definitions. Configuration is not proof of runtime execution."
+        action={<button type="button" onClick={()=>startNew()} disabled={!host.saveAgent}
+          className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-medium text-white disabled:opacity-50">
+          <Plus className="size-3.5"/> New agent
+        </button>}>
+        {snapshot.agentError?<p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-amber-300">
+          Failed to load account agent records: {snapshot.agentError}
+        </p>:snapshot.agents.length?(
+          <div className="grid gap-3 md:grid-cols-2">
+            {snapshot.agents.map(agent=>(
+              <article key={agent.id} className="rounded-xl border border-border/70 bg-muted/10 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Bot className="size-5 shrink-0 text-muted-foreground"/>
+                    <div className="min-w-0"><p className="truncate text-[13px] font-semibold">{agent.name}</p>
+                    <p className="text-[10px] text-muted-foreground">/{agent.slug}</p></div>
+                  </div>
+                  <span className={cx("rounded-full px-2 py-1 text-[10px]",agent.active?"bg-emerald-500/10 text-emerald-300":"bg-muted text-muted-foreground")}>
+                    {agent.active?"Enabled":"Archived"}
+                  </span>
+                </div>
+                <p className="mt-3 line-clamp-2 text-[11px] text-muted-foreground">{agent.description||"No description"}</p>
+                <p className="mt-2 truncate text-[10px] text-muted-foreground">Model: {agent.modelId||"Unassigned"}</p>
+                <div className="mt-4 flex gap-2 border-t border-border/70 pt-3">
+                  <button type="button" className="rounded-lg border border-border px-3 py-1.5 text-[11px] hover:bg-muted" onClick={()=>startEdit(agent)}>
+                    {agent.readOnly?"View":"Edit"} profile
+                  </button>
+                  {!agent.readOnly&&agent.active&&host.archiveAgent?
+                    <button type="button" disabled={busy} className="rounded-lg px-3 py-1.5 text-[11px] text-muted-foreground hover:text-red-300" onClick={()=>void archive(agent)}>Archive</button>:null}
+                </div>
+              </article>
+            ))}
+          </div>
+        ):<p className="rounded-xl border border-dashed border-border/70 p-6 text-[12px] text-muted-foreground">
+          No personal agent profiles are enabled in this account. Create one or start from a registered platform template.
+        </p>}
+      </Section>
+      <Section title="Available templates" description="Existing platform agent profiles. Copy a template into your account before making changes.">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {(snapshot.agentTemplates||[]).map(agent=>(
+            <button type="button" key={agent.id} onClick={()=>startNew(agent)} className="rounded-lg border border-border/70 p-3 text-left hover:border-violet-400/50 hover:bg-muted/25">
+              <p className="text-[12px] font-medium">{agent.name}</p>
+              <p className="mt-1 line-clamp-2 text-[10px] text-muted-foreground">{agent.description||"Reusable agent template"}</p>
+              <p className="mt-2 text-[10px] text-violet-300">Create from template →</p>
+            </button>
+          ))}
         </div>
       </Section>
-    );
-  }
-
-  return (
-    <Section title="Agent catalog" description="Configured roles and their current model/runtime relationship.">
-      {!snapshot.agents.length ? (
-        <EmptyState title="No configured agents yet." />
-      ) : (
-      <div className="grid gap-3 md:grid-cols-2">
-        {snapshot.agents.map((agent) => (
-          <article key={agent.id} className="rounded-lg border border-border/70 bg-muted/10 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-8 items-center justify-center rounded-md border border-border bg-muted/20">
-                  <Bot className="size-3.5" />
-                </div>
-                <div>
-                  <div className="text-[12px] font-medium">{agent.name}</div>
-                  <div className="mt-0.5 text-[10px] text-muted-foreground">{agent.role}</div>
-                </div>
-              </div>
-              <StatusPill status={agent.status} />
-            </div>
-            <p className="mt-3 text-[10px] leading-4 text-muted-foreground">{agent.detail}</p>
-            <div className="mt-3 border-t border-border/60 pt-2 text-[10px] text-muted-foreground">{agent.model}</div>
-          </article>
-        ))}
-      </div>
-      )}
-    </Section>
+      <SettingsSheet open={editing} title={selected?"Edit agent":"Create agent"} description="Instructions and model preferences are saved to your account's existing agent registry."
+        onClose={()=>setEditing(false)}>
+        <div className="space-y-4">
+          {field("Agent name",draft.name,value=>setDraft(current=>({...current,name:value})),"Brand researcher")}
+          {field("Slug",draft.slug,value=>setDraft(current=>({...current,slug:value.toLowerCase()})),"brand-researcher")}
+          {field("Description",draft.description,value=>setDraft(current=>({...current,description:value})),"What this agent does")}
+          <label className="block space-y-2">
+            <span className="text-[11px] font-medium">Execution model (verified inventory)</span>
+            <select className={formClass} value={draft.modelId} onChange={event=>setDraft(current=>({...current,modelId:event.target.value}))}>
+              <option value="">No model selected</option>
+              {draft.modelId&&!selectedModel?<option value={draft.modelId}>{draft.modelId} (saved; not verified)</option>:null}
+              {availableModels.map(model=><option key={model.id} value={model.id}>{model.provider}: {model.name}</option>)}
+            </select>
+            {!availableModels.length?<p className="text-[10px] text-amber-300">No verified models discovered. You can save the agent, but cannot claim it is runnable yet.</p>:null}
+          </label>
+          <label className="block space-y-2">
+            <span className="text-[11px] font-medium">Agent instructions</span>
+            <textarea rows={11} value={draft.instructions}
+              onChange={event=>setDraft(current=>({...current,instructions:event.target.value}))}
+              className={cx(formClass,"resize-y font-mono leading-relaxed")} placeholder="Describe the role, task procedure and safeguards."/>
+          </label>
+          <label className="block space-y-2">
+            <span className="text-[11px] font-medium">Allowed tool patterns (one per line)</span>
+            <textarea rows={3} value={draft.allowedTools.join("\n")}
+              onChange={event=>setDraft(current=>({...current,allowedTools:event.target.value.split(/[,\n]/).map(t=>t.trim()).filter(Boolean)}))}
+              className={cx(formClass,"font-mono")}/>
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-2 text-[11px] font-medium">Reasoning effort
+              <select className={formClass} value={draft.reasoningEffort} onChange={event=>setDraft(current=>({...current,reasoningEffort:event.target.value as SettingsAgentDraft["reasoningEffort"]}))}>
+                {["low","medium","high","extra_high"].map(value=><option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+            <label className="space-y-2 text-[11px] font-medium">Sandbox permissions
+              <select className={formClass} value={draft.sandboxMode} onChange={event=>setDraft(current=>({...current,sandboxMode:event.target.value as SettingsAgentDraft["sandboxMode"]}))}>
+                <option value="read-only">Read-only</option>
+                <option value="workspace-write">Workspace write (approval rules apply)</option>
+              </select>
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-[11px]">
+            <input type="checkbox" checked={draft.runInBackground} onChange={event=>setDraft(current=>({...current,runInBackground:event.target.checked}))}/>
+            Allow background execution where supported
+          </label>
+          <label className="flex items-center justify-between gap-3 text-[11px]">
+            <span>Maximum concurrent threads</span>
+            <select value={draft.maxConcurrentThreads} className="min-h-11 rounded-lg border border-foreground/60 bg-muted/20 px-2 py-1 focus-visible:outline-2 focus-visible:outline-violet-400" onChange={event=>setDraft(current=>({...current,maxConcurrentThreads:Number(event.target.value)}))}>
+              {[1,2,3,4,5,6,8,10,12].map(n=><option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-[11px]">
+            <input type="checkbox" checked={draft.active} onChange={event=>setDraft(current=>({...current,active:event.target.checked}))}/>
+            Enabled
+          </label>
+          {error?<p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[11px] text-red-300">{error}</p>:null}
+          <div className="flex justify-end gap-2 border-t border-border/70 pt-4">
+            <button type="button" className="rounded-lg border border-border px-4 py-2 text-[11px]" onClick={()=>setEditing(false)}>Cancel</button>
+            <button type="button" disabled={busy||selected?.readOnly||!host.saveAgent} onClick={()=>void saveAgent()}
+              className="rounded-lg bg-violet-600 px-4 py-2 text-[11px] font-medium text-white disabled:opacity-40">Save agent</button>
+          </div>
+        </div>
+      </SettingsSheet>
+    </div>
   );
 }
 
@@ -1732,6 +1959,24 @@ function CustomizeView({
   }
   if (view === "widgets") {
     return <WidgetCustomizeView widgets={snapshot.widgets} host={host} onChanged={onChanged} />;
+  }
+  if(view === "subagents") {
+    return <Section title="Subagent profiles" description="The same account-owned agent registry as Settings → Agents. No duplicate browser-only definitions.">
+      <div className="space-y-3">
+        {snapshot.agents.length ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {snapshot.agents.map(agent=><div key={agent.id} className="rounded-xl border border-border/70 p-3">
+              <p className="text-[12px] font-medium">{agent.name}</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">{agent.slug} · {agent.active?"Enabled":"Archived"} · {agent.modelId||"No model"}</p>
+              <p className="mt-2 text-[11px] text-muted-foreground">{agent.description}</p>
+            </div>)}
+          </div>
+        ):<p className="text-[12px] text-muted-foreground">No personal agent profiles saved yet.</p>}
+        {snapshot.agentError?<p role="alert" className="text-[11px] text-amber-300">{snapshot.agentError}</p>:null}
+        {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("agents")}
+          className="rounded-lg border border-border px-4 py-2 text-[12px] hover:bg-muted">Create or edit agents →</button>:null}
+      </div>
+    </Section>;
   }
 
   const map: Record<SettingsCatalogKind, SettingsCatalogItem[]> = {
@@ -1753,7 +1998,8 @@ function CustomizeView({
     hooks: "Hooks",
   };
   const kind = (view in map ? view : "plugins") as SettingsCatalogKind;
-  const canWrite = Boolean(host.upsertCatalogItem);
+  // Only Skills currently have verified create/update/delete persistence.
+  const canWrite = kind==="skills" && Boolean(host.upsertCatalogItem);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [draft, setDraft] = useState<{
     id: string;
@@ -1945,27 +2191,61 @@ function CustomizeView({
   );
 }
 
-function GeneralView({ snapshot }: { snapshot: SettingsSnapshot }) {
-  return (
-    <>
-      <Section title="Product context" description="Local Studio owns composition; Settings consumes normalized host context.">
-        <div className="rounded-lg border border-border/70 px-3">
-          <PreferenceRow label="Account" description="Canonical owner for user-created resources." value={snapshot.general.account} />
-          <PreferenceRow label="Organization" description="Organizational context; not a substitute for account authority." value={snapshot.general.organization} />
-          <PreferenceRow label="Project" description="Current repository/project context." value={snapshot.general.project} />
-          <PreferenceRow label="Runtime" description="Current execution host." value={snapshot.general.runtime} />
-        </div>
-      </Section>
-      <AppearancePreferences />
-      <Section title="Application" description="Local preferences stay compact and explicit.">
-        <div className="rounded-lg border border-border/70 px-3">
-          <PreferenceRow label="Update channel" description="Desktop and package update cadence." value={snapshot.general.updateChannel} />
-          <PreferenceRow label="Open last project" description="Restore the most recent project at launch." trailing={<Toggle enabled />} />
-          <PreferenceRow label="Show runtime receipts" description="Surface deterministic evidence beside agent work." trailing={<Toggle enabled />} />
-        </div>
-      </Section>
-    </>
-  );
+function GeneralView({snapshot,host,onChanged}:{
+ snapshot:SettingsSnapshot;host:SettingsHost;onChanged:()=>Promise<void>;
+}){
+ const [preferences,setPreferences]=useState<SettingsGeneralPreferences>(snapshot.general.preferences||{
+  openLastProject:false,showRuntimeReceipts:false,
+ });
+ const [busy,setBusy]=useState(false);
+ const [error,setError]=useState("");
+ useEffect(()=>{
+  if(snapshot.general.preferences)setPreferences(snapshot.general.preferences);
+ },[snapshot.general.preferences]);
+ async function save(){
+  if(!host.updateGeneralPreferences)return;
+  setBusy(true);setError("");
+  try{await host.updateGeneralPreferences(preferences);await onChanged();}
+  catch(e){setError(e instanceof Error?e.message:"Unable to save preferences");}
+  finally{setBusy(false);}
+ }
+ return (
+   <>
+     <Section title="Product context" description="Current authenticated account and runtime, resolved by the host.">
+       <div className="rounded-lg border border-border/70 px-3">
+         <PreferenceRow label="Account" description="Account authority for saved preferences." value={snapshot.general.account}/>
+         <PreferenceRow label="Organization" description="Membership context, when available." value={snapshot.general.organization}/>
+         <PreferenceRow label="Project" description="Current repository/project context." value={snapshot.general.project}/>
+         <PreferenceRow label="Runtime" description="Current execution host." value={snapshot.general.runtime}/>
+       </div>
+     </Section>
+     <AppearancePreferences/>
+     <Section title="Application preferences" description="Saved under your account using the existing user UI preferences registry.">
+       {snapshot.general.preferencesError?<p role="alert" className="rounded-xl border border-amber-500/25 p-3 text-[11px] text-amber-300">
+         {snapshot.general.preferencesError}. Changes cannot be saved until the service is available.
+       </p>:null}
+       <div className="space-y-4 rounded-xl border border-border/70 p-4">
+         {([
+           ["openLastProject","Open last project","Restore the previously selected project on launch."],
+           ["showRuntimeReceipts","Show runtime receipts","Display execution and verification receipts when available."],
+         ] as const).map(([key,label,description])=>(
+           <label key={key} className="flex items-center justify-between gap-3">
+             <span><span className="block text-[12px] font-medium">{label}</span>
+             <span className="text-[10px] text-muted-foreground">{description}</span></span>
+             <input type="checkbox" checked={preferences[key]}
+               onChange={event=>setPreferences(current=>({...current,[key]:event.target.checked}))}
+               className="size-4 accent-violet-500"/>
+           </label>
+         ))}
+         {error?<p role="alert" className="text-[11px] text-red-300">{error}</p>:null}
+         <button type="button" disabled={busy||!!snapshot.general.preferencesError||!host.updateGeneralPreferences}
+           onClick={()=>void save()} className="rounded-lg bg-violet-600 px-4 py-2 text-[11px] font-medium text-white disabled:opacity-50">
+           Save preferences
+         </button>
+       </div>
+     </Section>
+   </>
+ );
 }
 
 const SHELL_APPEARANCE_STORAGE_ID = "agentsam-shell-appearance-v1";
@@ -2075,44 +2355,155 @@ function AppearancePreferences() {
   );
 }
 
-function DesignView() {
+/** Brand identity is not a theme. Themes and editor appearance have separate Settings units. */
+function DesignView({snapshot,host}:{
+  snapshot:SettingsSnapshot;host:SettingsHost;onChanged:()=>Promise<void>;
+}) {
+  const brandPlugin=snapshot.plugins.find(plugin=>plugin.pluginKey==="agentsam-brand");
+  const connected=Boolean(brandPlugin?.setupStatus==="connected" && brandPlugin.enabled);
+  const [context,setContext]=useState<{pluginKey:string;contextTool:string;result:unknown}|null>(null);
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState("");
+  useEffect(()=>{
+    let cancelled=false;
+    setContext(null);
+    setError("");
+    if(!connected || !brandPlugin?.id || !host.readPluginWorkspace)return;
+    setLoading(true);
+    void host.readPluginWorkspace(brandPlugin.id).then(value=>{
+      if(!cancelled)setContext(value);
+    }).catch(reason=>{
+      if(!cancelled)setError(reason instanceof Error?reason.message:"Unable to read brand context.");
+    }).finally(()=>{if(!cancelled)setLoading(false);});
+    return()=>{cancelled=true;};
+  },[connected,brandPlugin?.id,host]);
+  const wrapped=context?.result&&typeof context.result==="object"&&!Array.isArray(context.result)
+    ? context.result as Record<string,unknown>:null;
+  const data=wrapped?.data&&typeof wrapped.data==="object"&&!Array.isArray(wrapped.data)
+    ? wrapped.data as Record<string,unknown>:wrapped;
+  const latest=data?.latestContract&&typeof data.latestContract==="object"
+    ? data.latestContract as Record<string,unknown>:null;
+  const contract=latest?.contract&&typeof latest.contract==="object"&&!Array.isArray(latest.contract)
+    ? latest.contract as Record<string,unknown>:null;
+  const identitySections=[
+    ["Purpose",contract?.purpose],
+    ["Mission",contract?.mission],
+    ["Positioning",contract?.positioning],
+    ["Audience",contract?.audience],
+    ["Voice",contract?.voice],
+    ["Values",contract?.values],
+  ].filter((entry):entry is [string,unknown]=>entry[1]!==null&&entry[1]!==undefined&&entry[1]!=="");
+  const sourceCount=Array.isArray(data?.connections)?data.connections.length:0;
   return (
-    <>
-      <Section title="Brand contract" description="Brand tokens remain semantic; product surfaces consume the contract rather than hard-coded colors.">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <MetricCard label="Token families" value="8" detail="Color, type, radius, spacing, motion…" />
-          <MetricCard label="Themes" value="3" detail="Installed projections" />
-          <MetricCard label="Validation" value="Clean" detail="No unresolved token aliases" />
+    <div className="space-y-5">
+      <Section title="Brand identity" description="Your approved purpose, positioning, voice and identity decisions—not storefront themes or Studio appearance.">
+        {!connected?(
+          <div className="rounded-xl border border-border/70 p-5">
+            <p className="text-[13px] font-medium">Brand identity is not connected</p>
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              Connect AgentSam Brand to inspect the authorized brand workspace and approved identity. A theme cannot substitute for a BrandContract.
+            </p>
+            {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("customize")}
+              className="mt-4 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open plugin connections →</button>:null}
+          </div>
+        ):loading?<p role="status" className="text-[12px] text-muted-foreground">Loading your authorized brand identity…</p>
+        :error?<p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-amber-300">{error}</p>
+        :!latest?<div className="rounded-xl border border-dashed border-border/70 p-5">
+          <p className="text-[13px] font-medium">No approved BrandContract saved</p>
+          <p className="mt-2 text-[12px] text-muted-foreground">
+            Your Brand plugin is connected, but the identity has not been defined and approved. Inspect actual brand evidence, draft the contract, review it, and explicitly save the approved version.
+          </p>
+          <p className="mt-2 text-[11px] text-muted-foreground">Connected evidence sources: {sourceCount}. No identity attributes have been invented.</p>
+          {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("customize")}
+            className="mt-4 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open Brand workspace →</button>:null}
         </div>
+        :<div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 p-4">
+            <div>
+              <p className="text-[13px] font-semibold">Approved BrandContract</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Status: {String(latest.status||"unknown")} · version: {String(latest.schema_version||"unspecified")}
+              </p>
+            </div>
+            <span className="text-[11px] text-muted-foreground">{sourceCount} evidence source{sourceCount===1?"":"s"}</span>
+          </div>
+          {identitySections.length?(
+            <div className="grid gap-3 sm:grid-cols-2">
+              {identitySections.map(([label,value])=>(
+                <article key={label} className="min-w-0 rounded-xl border border-border/70 bg-muted/10 p-4">
+                  <h3 className="text-[11px] font-semibold">{label}</h3>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-[12px] text-muted-foreground">
+                    {typeof value==="string"?value:JSON.stringify(value,null,2)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ):<p className="text-[12px] text-muted-foreground">This approved contract uses custom fields; inspect the complete contract below.</p>}
+          <details className="rounded-xl border border-border/70 p-4">
+            <summary className="cursor-pointer text-[12px] font-medium">Inspect full BrandContract and evidence</summary>
+            <pre className="mt-3 max-h-[460px] overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed">{JSON.stringify(latest,null,2)}</pre>
+          </details>
+          <p className="text-[10px] text-muted-foreground">Source: {context?.contextTool} · approved contract in the authorized Brand workspace.</p>
+        </div>}
       </Section>
-      <Section title="Editor behavior">
-        <div className="rounded-lg border border-border/70 px-3">
-          <PreferenceRow label="Live preview" description="Apply token changes to preview surfaces immediately." trailing={<Toggle enabled />} />
-          <PreferenceRow label="Monaco theme" description="Project brand into code editors where supported." value="AgentSam Graphite" />
-          <PreferenceRow label="Reduced motion" description="Honor the operating system preference." value="System" />
-        </div>
+      <Section title="Brand implementation" description="Logo and media assets, design tokens, application themes and campaign materials express the identity; they do not define it.">
+        <p className="text-[12px] text-muted-foreground">
+          Visual implementation belongs to its associated assets and applications. Theme installation and appearance settings remain under Themes—not Brand &amp; Design.
+        </p>
+        {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("themes")}
+          className="mt-3 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">View themes separately →</button>:null}
       </Section>
-    </>
+    </div>
   );
 }
 
-function GitView({ snapshot }: { snapshot: SettingsSnapshot }) {
+function GitView({snapshot}:{snapshot:SettingsSnapshot}) {
+  const data=snapshot.integrationStatus;
+  const github=data?.providers.find(provider=>provider.provider==="github");
   return (
     <>
-      <Section title="Repository connection" description="Git provider identity and repository state stay visible but compact.">
-        <div className="rounded-lg border border-border/70 px-3">
-          <PreferenceRow label="Provider" description="Repository provider used by this project." value={snapshot.git.provider} />
-          <PreferenceRow label="Repository" description="Current repository." value={snapshot.git.repository} />
-          <PreferenceRow label="Branch" description="Current working branch." value={snapshot.git.branch} />
-          <PreferenceRow label="Pull request" description="Review state for the current branch." value={snapshot.git.pullRequests} />
-        </div>
+      <Section title="GitHub authorization" description="Non-secret evidence from the account's existing OAuth registry. An active grant does not itself prove GitHub API access.">
+        {!data?.available ? (
+          <p role="status" className="rounded-xl border border-amber-500/25 p-4 text-[12px] text-amber-200">
+            OAuth connection status is unavailable. No disconnected state is inferred.
+          </p>
+        ) : (
+          <div className="rounded-xl border border-border/70 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] font-medium">GitHub</span>
+              <StatusPill status={github?.activeCount?"healthy":"unknown"}
+                label={github?.activeCount?"OAuth grant recorded":"No active grant recorded"}/>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+              {github?.activeCount
+                ? "Your account has an active GitHub OAuth token record. Live repository authorization and token refresh are not verified by this panel."
+                : "No active GitHub OAuth grant was found in the current account. Provider setup must use the registered identity/OAuth flow."}
+            </p>
+          </div>
+        )}
       </Section>
-      <Section title="Pull request policy">
-        <div className="rounded-lg border border-border/70 px-3">
-          <PreferenceRow label="Require clean build" description="Block PR creation when the package build fails." trailing={<Toggle enabled />} />
-          <PreferenceRow label="Include runtime receipts" description="Attach verification evidence to generated PR descriptions." trailing={<Toggle enabled />} />
-        </div>
+      <Section title="Registered repositories" description="Account-owned repository references from code_repositories; only verified GitHub operations can mutate remote repositories.">
+        {!data?.repositoriesAvailable ? (
+          <p className="text-[12px] text-muted-foreground">Repository registry unavailable.</p>
+        ) : data.repositories.length ? (
+          <div className="divide-y divide-border/70 rounded-xl border border-border/70">
+            {data.repositories.map(repo=>(
+              <div key={repo.id} className="flex flex-wrap justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="break-words text-[12px] font-medium">{repo.fullName||repo.name}</p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{repo.provider} · branch {repo.defaultBranch||"unspecified"}</p>
+                </div>
+                <span className="text-[10px] text-muted-foreground">Registered</span>
+              </div>
+            ))}
+          </div>
+        ) : <p className="rounded-xl border border-dashed border-border/70 p-5 text-[12px] text-muted-foreground">
+          No repositories are registered to this account.
+        </p>}
       </Section>
+      <p className="text-[11px] text-muted-foreground">
+        PR enforcement, repository connection creation, token refresh, and revocation remain in their existing host-owned workflows; no unconnected policy switches are presented as enabled.
+      </p>
     </>
   );
 }
@@ -2305,13 +2696,13 @@ function renderUnit(
 ) {
   switch (unit) {
     case "general":
-      return <GeneralView snapshot={snapshot} />;
+      return <GeneralView snapshot={snapshot} host={host} onChanged={onChanged}/>;
     case "agents":
-      return <AgentsView snapshot={snapshot} view={view} />;
+      return <AgentsView snapshot={snapshot} view={view} host={host} onChanged={onChanged}/>;
     case "customize":
       return <CustomizeView snapshot={snapshot} view={view} host={host} onChanged={onChanged} />;
     case "design":
-      return <DesignView />;
+      return <DesignView snapshot={snapshot} host={host} onChanged={onChanged}/>;
     case "git-prs":
       return <GitView snapshot={snapshot} />;
     case "codebase":

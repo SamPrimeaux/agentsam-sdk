@@ -379,7 +379,10 @@
     "release:registry:intent": "node scripts/verify-registry-train.mjs --intent-only",
     "release:registry:check": "node scripts/verify-registry-train.mjs",
     "release:publish:preflight": "bash scripts/npm-publish-preflight.sh",
-    "test:site-scrape": "node scripts/verify-site-scrape.mjs"
+    "test:site-scrape": "node scripts/verify-site-scrape.mjs",
+    "quality:ui:source": "node scripts/quality/verify-ui-source.mjs packages/agentsam-settings/src/frontend/index.tsx",
+    "quality:ui:responsive": "node scripts/quality/verify-settings-responsive.mjs",
+    "quality:ui": "npm run quality:ui:source && npm --prefix apps/local-studio run build:desktop && npm run quality:ui:responsive"
   },
   "engines": {
     "node": ">=22 <25",

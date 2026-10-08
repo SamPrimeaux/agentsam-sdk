@@ -67,6 +67,10 @@ export type LocalStudioConnectionsResponse = {
   items?: LocalStudioConnectionRecord[];
   plugins?: LocalStudioPluginRecord[];
   composer_plugins?: LocalStudioPluginRecord[];
+  oauth_status?: {available:boolean;providers:{provider:string;activeCount:number;status:string}[]};
+  repositories?: {available:boolean;items:{
+    id:string;provider:string;owner:string|null;name:string;fullName:string|null;defaultBranch:string|null;
+  }[]};
   error?: string;
 };
 

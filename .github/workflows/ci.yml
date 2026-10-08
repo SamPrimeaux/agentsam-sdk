@@ -13,7 +13,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,6 +53,19 @@ jobs:
       - name: Verify SDK
         run: npm run verify
 
+      # Quality is a release gate, not a system-prompt aspiration. Test the
+      # same Settings components and desktop stylesheet at seven widths.
+      - name: Install Studio browser-test dependencies
+        run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
+
+      - name: Install Chromium and OS libraries
+        run: npm exec --prefix apps/local-studio -- playwright install --with-deps chromium
+
+      - name: Verify UI quality contract
+        run: npm run quality:ui
+        env:
+          UI_QUALITY_OUTPUT: ${{ runner.temp }}/agentsam-ui-quality
+
       - name: Install Go Worker dependencies
         run: npm ci --prefix apps/agentsam-go-worker
 
@@ -89,6 +102,15 @@ jobs:
 
       - name: CLI context smoke
         run: node src/cli.js context --json
+
+      - name: UI quality evidence and viewport screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agentsam-ui-quality
+          path: ${{ runner.temp }}/agentsam-ui-quality
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Dependency health receipt
         if: always()
