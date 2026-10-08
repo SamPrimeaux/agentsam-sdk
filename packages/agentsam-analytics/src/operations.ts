@@ -73,6 +73,7 @@ export type InfrastructureHealthReadModel = {
     operations:Array<{domain:string;operation:string;samples:number;failures:number;duration_ms:number|null}>;
     failures:Array<{domain:string;operation:string;error_code:string|null;status:string;occurred_at:number}>;
     repository:Array<{operation:string;error_code:string|null;status:string;occurred_at:number}>;
+    probes:{samples:number;passed:number;lastSeen:number|null}|null;
   };
   basin:BasinCapability;
   dataAvailability:{cloudflare:boolean;operations:boolean;basin:boolean};
