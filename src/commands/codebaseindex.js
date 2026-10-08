@@ -605,7 +605,7 @@ async function runWizard(root, opts) {
     initialValue: 'local',
     options: [
       { value: 'local', label: 'Local SQLite', hint: 'metadata + optional exact vectors · $0 cloud' },
-      { value: 'supabase', label: 'Supabase + node-api / Hyperdrive', hint: 'pgvector ANN · BYO edge template' },
+      { value: 'supabase', label: 'Postgres / Supabase (direct DB)', hint: 'AGENTSAM_DATABASE_URL; Edge node-api uses autorag remote' },
       { value: 'vectorize', label: 'Cloudflare Vectorize', hint: 'customer CF lane · not IAM host SSOT' },
     ],
   }));
@@ -614,7 +614,7 @@ async function runWizard(root, opts) {
     note('Uses this project’s declared Vectorize binding via Worker runtime or the current user’s authorized Cloudflare API transport.', 'Lane note');
   }
   if (lane === 'supabase') {
-    note('Uses AGENTSAM_DATABASE_URL / Hyperdrive-style postgres. Owner IAM already has node-api.', 'Lane note');
+    note('Direct backend Postgres requires AGENTSAM_DATABASE_URL. For an existing Supabase Edge node-api, use autorag setup --backend supabase_pgvector --resource <EDGE-URL>; the two transports are not interchangeable.', 'Lane note');
   }
 
   // ⑦ Dry-run vs execute

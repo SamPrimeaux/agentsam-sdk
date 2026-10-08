@@ -69,3 +69,5 @@ export async function routeCompanyQuestion({ question, companyAdapter, accountId
   const repositories = (await companyAdapter.candidateRepositories({ question, accountId, repositoryId, intent, route })).slice(0, limits.repositories);
   return { mode: 'company_graph', intent, route, repositories, lane_limit: limits.lanes };
 }
+
+export { createSupabaseNodeApiClient, nodeApiEndpoint } from '../backends/supabase-node-api.js';

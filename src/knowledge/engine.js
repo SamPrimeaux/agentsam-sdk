@@ -120,6 +120,9 @@ export async function retrieve({ store, config: input, text, semantic = false, e
   if (!Number.isInteger(tokenBudget) || tokenBudget < 256 || tokenBudget > maxTokenBudget) throw new Error(`tokenBudget must be 256..${maxTokenBudget} under the active result policy.`);
   const generation = generationId ? await store?.getGeneration(scopeKey(config), generationId) : await store?.active(scopeKey(config));
   if (!generation) throw new Error('No generation found for this repository/scope. Run agentsam index run.');
+  if (!generationId && fingerprint([generation.config?.scope, generation.config?.chunking]) !== fingerprint([config.scope, config.chunking])) {
+    throw new Error('knowledge_generation_config_mismatch: active generation belongs to a different source scope or chunking policy. Run index plan and index run, or request an explicit historical generation.');
+  }
   let queryVector;
   if (semantic) {
     if (generation.profile_id !== embeddingProfileId(config.embedding)) throw new Error('Active generation uses a different embedding profile or AST only. Run index plan --embed and index run --embed.');

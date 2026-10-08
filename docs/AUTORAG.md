@@ -41,6 +41,8 @@ agentsam autorag configure --yes --provider fixture --semantic --dimensions 3
 agentsam autorag probe --semantic
 ```
 
+For projects with an existing Supabase Edge `node-api` semantic service, use `--backend supabase_pgvector --resource <EDGE-URL>`. The SDK discovers the Edge model/dimensions and exposes an explicit `autorag remote` command. Local structural generations and remote semantic projections are different stages; remote publication and query require authorized server-side transport. See [Supabase Edge knowledge lane](knowledge-supabase-node-api.md).
+
 ## Probe and evidence
 
 `agentsam autorag probe` limits itself to 25 files, 100 chunks, and one query. It creates a dedicated probe generation, so a failed probe cannot replace the active non-probe generation. Its receipt records scope, profile, backend, Git evidence, Merkle root, counts, and the bounded query result.
