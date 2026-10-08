@@ -100,6 +100,12 @@ function upstreamFor(provider: string, modelId: string, apiKey: string, body: un
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          systemInstruction: {
+            parts: [{
+              text: (body as { messages: Array<{ role: string; content: string }> }).messages
+                .filter((m) => m.role === "system").map((m) => m.content).join("\n\n"),
+            }],
+          },
           contents: (body as { messages: Array<{ role: string; content: string }> }).messages
             .filter((m) => m.role !== "system")
             .map((m) => ({

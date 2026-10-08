@@ -6,6 +6,7 @@ import { extractArtifacts, mergeArtifacts } from "@/lib/work/files";
 import { DEFAULT_SELECTION, type StudioModelSelection } from "@/lib/work/models";
 import { newProject, newFilesystemProject } from "@/lib/work/seed";
 import { streamChat } from "@/lib/work/stream";
+import { selectStudioWorkspaceForTurn } from "@inneranimalmedia/agentsam-local-shared/studio-chat-policy";
 import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
 import type {
   Artifact,
@@ -984,10 +985,8 @@ export const useWorkStore = create<WorkState>()(
         }
         const draft = (text ?? state.drafts[targetId] ?? "").trim();
         if (!draft && !pendingAttachments.length) return;
-        if (targetKind === "trail" && !state.goals[targetId]) {
-          const project = state.projects.find((item) => item.id === state.activeProjectId);
-          get().setGoal(targetId, draft, project ? "Working in " + project.name : "Working in this workspace");
-        }
+        // A chat turn is not a durable goal. Goals are created explicitly via
+        // the goal editor; quick questions and single replies never self-enroll.
         if (state.streamingIds.includes(targetId)) {
           const queued: FollowupQueuedSend = {
             id: uid(),
@@ -1166,7 +1165,10 @@ export const useWorkStore = create<WorkState>()(
         const taskSummary = draft.replace(/\s+/g, " ").trim().slice(0, 180);
         const isCoworker = targetKind === "side";
         const initialLabel = isCoworker ? "Briefing co-worker" : "Understanding your request";
-        const planningLabel = isCoworker ? "Co-worker planning the task" : "Planning the next step";
+        const turnMode = context?.runMode ?? after.runModes[targetId] ?? defaultRunModeForTarget(targetKind);
+        const planningLabel = turnMode === "plan"
+          ? "Outlining the plan"
+          : isCoworker ? "Preparing co-worker response" : "Preparing response";
         const responseLabel = isCoworker ? "Co-worker drafting response" : "Writing response";
         localStudioRuntimeVisuals.startAgentTurn(
           visualOperationId,
@@ -1184,7 +1186,7 @@ export const useWorkStore = create<WorkState>()(
           "phase-points",
           targetId,
         );
-        const visualWorkspace = workspacePayload(project);
+        const visualWorkspace = selectStudioWorkspaceForTurn(draft, workspacePayload(project));
         localStudioRuntimeVisuals.progressPoints(
           visualOperationId,
           visualWorkspace.length > 0 ? "context_loading" : "thinking",
@@ -1213,7 +1215,7 @@ export const useWorkStore = create<WorkState>()(
           await streamChat({
             messages: payload,
             surface: targetKind,
-            runMode: context?.runMode ?? after.runModes[targetId] ?? defaultRunModeForTarget(targetKind),
+            runMode: turnMode,
             provider: context?.modelSelection?.provider ?? after.modelSelection?.provider,
             model_id: context?.modelSelection?.model_id ?? after.modelSelection?.model_id,
             parentTitle,

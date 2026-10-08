@@ -157,6 +157,24 @@ export function createGeminiGenerateContentAdapter(options = {}) {
 
   async function create(params = {}) {
     const prior = Array.isArray(params.providerState?.contents) ? params.providerState.contents : [];
+    // Canonical AgentSam messages are structured turns, never JSON embedded in a user message.
+    // Gemini separates systemInstruction from the user/model contents array.
+    if (Array.isArray(params.input) && params.input.every((item) =>
+      item && typeof item === 'object' && ['system', 'user', 'assistant', 'model'].includes(item.role)
+    )) {
+      const system = params.input.filter((item) => item.role === 'system')
+        .map((item) => String(item.content ?? '')).filter(Boolean).join('\n\n');
+      const contents = params.input.filter((item) => item.role !== 'system')
+        .map((item) => ({
+          role: item.role === 'assistant' ? 'model' : item.role,
+          parts: [{ text: String(item.content ?? '') }],
+        })).filter((item) => item.parts[0].text.trim());
+      if (!contents.length) throw new Error('gemini_messages_required');
+      return send([...prior, ...contents], {
+        ...params,
+        instructions: [params.instructions, system].filter(Boolean).join('\n\n'),
+      });
+    }
     const input = typeof params.input === 'string' ? params.input : JSON.stringify(params.input ?? '');
     return send([...prior, { role: 'user', parts: [{ text: input }] }], params);
   }

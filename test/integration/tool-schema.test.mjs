@@ -57,3 +57,30 @@ test('Gemini uses JSON Schema declaration field and preserves canonical optional
   assert.deepEqual(declaration.parametersJsonSchema.required, ['text']);
   assert.equal(declaration.parametersJsonSchema.properties.additionalProperties.type, 'string');
 });
+
+test('Gemini preserves canonical conversation roles instead of JSON-stringifying turns', async () => {
+  let body;
+  const adapter = createGeminiGenerateContentAdapter({
+    apiKey: 'test',
+    fetchImpl: async (_, init) => {
+      body = JSON.parse(init.body);
+      return { ok: true, json: async () => ({ candidates: [{ content: { role: 'model', parts: [{ text: 'OK' }] } }] }) };
+    },
+  });
+  await adapter.create({
+    modelRecord: { provider: 'gemini', provider_model_id: 'fixture' },
+    input: [
+      { role: 'system', content: 'Be concise.' },
+      { role: 'user', content: 'What is HTML5?' },
+      { role: 'assistant', content: 'HTML is markup.' },
+      { role: 'user', content: 'Show me a page.' },
+    ],
+  });
+  assert.equal(body.systemInstruction.parts[0].text, 'Be concise.');
+  assert.deepEqual(body.contents, [
+    { role: 'user', parts: [{ text: 'What is HTML5?' }] },
+    { role: 'model', parts: [{ text: 'HTML is markup.' }] },
+    { role: 'user', parts: [{ text: 'Show me a page.' }] },
+  ]);
+  assert.equal(body.contents[0].parts[0].text.includes('"role":"system"'), false);
+});

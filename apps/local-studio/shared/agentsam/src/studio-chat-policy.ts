@@ -31,6 +31,31 @@ export function studioRunModeInstruction(mode: AgentRunMode): string {
   return RUN_MODE_SYSTEM[mode];
 }
 
+/**
+ * Chat context is opt-in by relevance. A general question must not be charged
+ * for (or instructed by) the entire project source tree.
+ *
+ * Named-file edits receive a few bounded file slices. Unnamed project tasks
+ * get a manifest, not the contents of the project.
+ */
+export function selectStudioWorkspaceForTurn(
+  text: string,
+  files: Array<{ path: string; content: string }>,
+): Array<{ path: string; content: string }> {
+  const request = text.toLowerCase();
+  const named = files.filter((file) => {
+    const path = file.path.toLowerCase();
+    const basename = path.split("/").pop() || path;
+    return (basename.includes(".") && request.includes(basename)) || request.includes(path);
+  }).slice(0, 3);
+  if (named.length) return named.map(({ path, content }) => ({ path, content: content.slice(0, 1600) }));
+
+  const mentionsProject = /\b(project|workspace|repository|repo|codebase|existing|current files|these files|my site|our site)\b/i.test(text);
+  const requestsWork = /\b(read|inspect|review|audit|build|create|edit|fix|debug|update|change|implement|refactor|modify|deploy|preview)\b/i.test(text);
+  if (!mentionsProject || !requestsWork) return [];
+  return files.slice(0, 24).map(({ path }) => ({ path, content: "(not loaded; request file contents when needed)" }));
+}
+
 export function buildStudioSystemMessages(input: {
   surface: StudioChatSurface;
   runMode: AgentRunMode;
@@ -58,7 +83,7 @@ export function buildStudioSystemMessages(input: {
     const listing = input.workspace
       .map((file) => "## " + file.path + "\n" + file.content)
       .join("\n\n")
-      .slice(0, 40000);
+      .slice(0, 6500);
     messages.push({
       role: "system",
       content:

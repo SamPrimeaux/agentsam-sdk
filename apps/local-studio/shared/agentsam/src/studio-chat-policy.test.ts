@@ -29,3 +29,21 @@ test("workspace context is additive and bounded by the shared policy builder", (
   assert.match(messages.at(-1)!.content, /src\/example\.ts/);
   assert.match(messages[1]!.content, /Run mode is Debug/i);
 });
+
+test("general questions do not load unrelated project source", async () => {
+  const { selectStudioWorkspaceForTurn } = await import("./studio-chat-policy.ts");
+  const files = [{ path: "README.md", content: "Private project context" }, { path: "index.html", content: "<main />" }];
+  assert.deepEqual(selectStudioWorkspaceForTurn("What is HTML5?", files), []);
+  assert.deepEqual(selectStudioWorkspaceForTurn("Build me a fully styled homepage in HTML5", files), []);
+});
+
+test("named file requests receive bounded code; general project work gets only a manifest", async () => {
+  const { selectStudioWorkspaceForTurn } = await import("./studio-chat-policy.ts");
+  const files = [{ path: "src/app.js", content: "x".repeat(10000) }];
+  const selected = selectStudioWorkspaceForTurn("Fix src/app.js", files);
+  assert.equal(selected.length, 1);
+  assert.equal(selected[0]!.content.length, 1600);
+  const manifest = selectStudioWorkspaceForTurn("Review our project", files);
+  assert.equal(manifest.length, 1);
+  assert.equal(manifest[0]!.content.includes("not loaded"), true);
+});
