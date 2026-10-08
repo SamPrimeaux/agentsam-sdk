@@ -91,6 +91,8 @@ function writeCatalogOverlay(overlay: CatalogOverlay) {
 function applyCatalogOverlay(snapshot: SettingsSnapshot): SettingsSnapshot {
   const overlay = readCatalogOverlay();
   for (const kind of CATALOG_KINDS) {
+    // Skills come from the authenticated D1 registry, never from browser-local overlays.
+    if (kind === "skills") continue;
     const entry = overlay[kind];
     if (!entry) continue;
     const removed = new Set(entry.removedIds || []);
@@ -201,6 +203,24 @@ function settingsWidgets(): SettingsWidget[] {
   }));
 }
 
+async function skillRequest(path="",init?:RequestInit) {
+  const response=await fetch("/api/settings/skills"+path,{
+    credentials:"same-origin",...init,
+  });
+  const body=await response.json().catch(()=>({ok:false,error:"skills_invalid_response"}));
+  if(!response.ok||body.ok!==true) throw new Error(body.error||"skills_unavailable");
+  return body;
+}
+async function loadAccountSkills():Promise<SettingsCatalogItem[]> {
+  const data=await skillRequest();
+  return (data.skills||[]).map((skill:{
+    id:string;name:string;description:string;trigger:string;content:string;
+  })=>({
+    id:skill.id,name:skill.name,subtitle:skill.description,
+    meta:skill.trigger,trigger:skill.trigger,content:skill.content,status:"healthy" as const,
+  }));
+}
+
 async function loadPluginSettings() {
   const response = await listLocalStudioConnections();
   return (response.plugins || []).map(settingsPlugin);
@@ -263,7 +283,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   const desktop = isPackagedDesktop();
   snapshot.themes = await listStudioThemes();
 
-  const [inventoryResult, pluginResult, signedIn, workspace] = await Promise.all([
+  const [inventoryResult, pluginResult, skillsResult, signedIn, workspace] = await Promise.all([
     loadEffectiveModelInventory().then(
       (value) => ({ ok: true as const, value }),
       () => ({ ok: false as const, value: null }),
@@ -271,6 +291,10 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     loadPluginSettings().then(
       (value) => ({ ok: true as const, value }),
       () => ({ ok: false as const, value: [] as SettingsPlugin[] }),
+    ),
+    loadAccountSkills().then(
+      (value) => ({ ok: true as const, value }),
+      () => ({ ok: false as const, value: [] as SettingsCatalogItem[] }),
     ),
     desktop ? identitySessionExists().catch(() => false) : Promise.resolve(false),
     desktop ? getDesktopWorkspaceContext().catch(() => null) : Promise.resolve(null),
@@ -283,6 +307,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   snapshot.general.project = workspace?.default_cwd || (desktop ? "Local workspace" : "Hosted workspace");
   snapshot.widgets = settingsWidgets();
   snapshot.plugins = pluginResult.value;
+  snapshot.skills = skillsResult.value;
   if (!pluginResult.ok) snapshot.health = "attention";
 
   if (!inventoryResult.ok || !inventoryResult.value) {
@@ -314,7 +339,13 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
 
   snapshot.health = snapshot.health === "attention" ? "attention" : health;
   snapshot.models = models;
-  snapshot.repositoryLabel = `${configuredProviders} provider${configuredProviders === 1 ? "" : "s"} · ${runnable} runnable model${runnable === 1 ? "" : "s"}`;
+  snapshot.repositoryLabel = !inventory.providers?.length
+    ? "Provider inventory unavailable"
+    : configuredProviders===0
+      ? "No verified provider connections"
+      : runnable===0
+        ? `${configuredProviders} connected providers · model discovery pending`
+        : `${configuredProviders} provider${configuredProviders === 1 ? "" : "s"} · ${runnable} runnable model${runnable === 1 ? "" : "s"}`;
   snapshot.general.runtime = desktop
     ? `Desktop runtime · ${runnable} runnable models`
     : `Web runtime · ${runnable} runnable models`;
@@ -350,6 +381,15 @@ export const localStudioSettingsHost: SettingsHost = {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
     }
+  },
+  async readPluginWorkspace(pluginId) {
+    if(!/^plg_[a-z0-9]+$/i.test(pluginId))throw new Error("plugin_id_invalid");
+    const response=await fetch("/api/plugins/"+encodeURIComponent(pluginId)+"/workspace",{
+      credentials:"same-origin",
+    });
+    const body=await response.json().catch(()=>({ok:false,error:"plugin_workspace_invalid_response"}));
+    if(!response.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
+    return {pluginKey:body.pluginKey,contextTool:body.contextTool,result:body.result};
   },
   async setPluginEnabled(id, enabled) {
     await updateLocalStudioPlugin(id, { enabled });
@@ -405,6 +445,19 @@ export const localStudioSettingsHost: SettingsHost = {
     );
   },
   async upsertCatalogItem(kind, item) {
+    if(kind==="skills") {
+      const path=item.id.startsWith("skill_")?"/"+encodeURIComponent(item.id):"";
+      const trigger=(item.trigger||item.meta||"").trim();
+      await skillRequest(path,{
+        method:path?"PUT":"POST",
+        headers:{"content-type":"application/json"},
+        body:JSON.stringify({name:item.name,description:item.subtitle,
+          trigger,content:item.content||""}),
+      });
+      if(typeof window!=="undefined")
+        window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+      return;
+    }
     const overlay = readCatalogOverlay();
     const entry = overlay[kind] ?? { items: [], removedIds: [] };
     entry.items = [
@@ -416,6 +469,12 @@ export const localStudioSettingsHost: SettingsHost = {
     writeCatalogOverlay(overlay);
   },
   async removeCatalogItem(kind, id) {
+    if(kind==="skills") {
+      await skillRequest("/"+encodeURIComponent(id),{method:"DELETE"});
+      if(typeof window!=="undefined")
+        window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+      return;
+    }
     const overlay = readCatalogOverlay();
     const entry = overlay[kind] ?? { items: [], removedIds: [] };
     entry.items = entry.items.filter((candidate) => candidate.id !== id);

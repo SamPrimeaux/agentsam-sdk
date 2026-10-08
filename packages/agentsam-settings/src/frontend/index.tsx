@@ -645,6 +645,10 @@ function PluginCustomizeView({
   const [catalog, setCatalog] = useState<SettingsPluginDiscovery | null>(null);
   const [loading, setLoading] = useState(Boolean(host.discoverPlugins));
   const [catalogError, setCatalogError] = useState("");
+  const [focusedPluginId,setFocusedPluginId] = useState<string | null>(null);
+  const [workspace,setWorkspace] = useState<{pluginKey:string;contextTool:string;result:unknown}|null>(null);
+  const [workspaceError,setWorkspaceError] = useState("");
+  const [workspaceBusy,setWorkspaceBusy] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -672,6 +676,22 @@ function PluginCustomizeView({
         .some(value => value.toLowerCase().includes(needle)))
     ));
   }, [discovered, activeCategory, searchTerm]);
+
+  async function openWorkspace(id:string) {
+    setSelectedKey(null);
+    setFocusedPluginId(id);
+    setWorkspace(null);
+    setWorkspaceBusy(true);
+    setWorkspaceError("");
+    try {
+      if(!host.readPluginWorkspace)throw new Error("Plugin workspace is unavailable on this host.");
+      setWorkspace(await host.readPluginWorkspace(id));
+    }catch(error){
+      setWorkspaceError(error instanceof Error?error.message:"Unable to read the connected workspace.");
+    }finally{
+      setWorkspaceBusy(false);
+    }
+  }
 
   async function refresh() {
     if (!host.discoverPlugins) {
@@ -746,32 +766,124 @@ function PluginCustomizeView({
       : "border-amber-400/25 bg-amber-400/10 text-amber-300";
   const anySelected = Boolean(selected);
 
+  const focusedPlugin=plugins.find(item=>item.id===focusedPluginId);
+  if(focusedPlugin) {
+    const result=workspace?.result;
+    const envelope=result && typeof result==="object" && !Array.isArray(result)
+      ? result as Record<string,unknown>:null;
+    const data=envelope?.data && typeof envelope.data==="object"
+      ? envelope.data as Record<string,unknown>:envelope;
+    const brandContract=data?.latestContract && typeof data.latestContract==="object"
+      ? data.latestContract as Record<string,unknown>:null;
+    const briefs=Array.isArray(data?.briefs)?data.briefs:[];
+    const concepts=Array.isArray(data?.concepts)?data.concepts:[];
+    const isBrand=workspace?.pluginKey==="agentsam-brand" || focusedPlugin.pluginKey==="agentsam-brand";
+    return (
+      <section className="space-y-5 pb-8" aria-label={focusedPlugin.name+" workspace"}>
+        <button type="button" onClick={()=>{setFocusedPluginId(null);setWorkspace(null);}}
+          className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] text-muted-foreground hover:bg-muted/25 hover:text-foreground">
+          <ChevronRight className="size-4 rotate-180"/> Back to plugins
+        </button>
+        <header className="flex items-start gap-3 border-b border-border/70 pb-5">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-muted/25">
+            {focusedPlugin.iconUrl ? <img src={focusedPlugin.iconUrl} alt="" className="size-10 object-contain"/> : iconFor(focusedPlugin)}
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold">{isBrand?"Brand workspace":"Campaign workspace"}</h2>
+            <p className="text-[12px] text-muted-foreground">
+              {isBrand?"Approved brand identity, supporting evidence and saved contract.":"Briefs, campaign concepts and plans for this authorized workspace."}
+            </p>
+            <span className="mt-2 inline-block text-[10px] text-emerald-300">Connected · {focusedPlugin.toolCount} registered tools</span>
+          </div>
+          <button type="button" disabled={workspaceBusy} onClick={()=>void openWorkspace(focusedPlugin.id)}
+            className="ml-auto rounded-lg border border-border p-2 text-muted-foreground hover:text-foreground" aria-label="Refresh workspace">
+            <RefreshCw className={cx("size-4",workspaceBusy&&"animate-spin")}/>
+          </button>
+        </header>
+        {workspaceBusy ? <p className="text-[12px] text-muted-foreground">Reading your authorized plugin workspace…</p> : null}
+        {workspaceError ? <p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-amber-200">
+          {workspaceError}. Reconnect the plugin or verify the registered context tool.
+        </p> : null}
+        {workspace && !workspaceError ? (
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
+                <p className="text-[11px] text-muted-foreground">Workspace</p>
+                <p className="mt-1 break-all text-[12px] font-medium">{String(data?.workspaceId||(data?.workspace as Record<string,unknown>|undefined)?.display_name||"Account workspace")}</p>
+              </article>
+              <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
+                <p className="text-[11px] text-muted-foreground">{isBrand?"Saved contract":"Saved briefs"}</p>
+                <p className="mt-1 text-lg font-semibold">{isBrand?(brandContract?"1":"0"):briefs.length}</p>
+              </article>
+              <article className="rounded-xl border border-border/70 bg-muted/15 p-4">
+                <p className="text-[11px] text-muted-foreground">{isBrand?"Connected sources":"Concepts"}</p>
+                <p className="mt-1 text-lg font-semibold">{isBrand?(Array.isArray(data?.connections)?data.connections.length:0):concepts.length}</p>
+              </article>
+            </div>
+            {isBrand ? (
+              <article className="rounded-xl border border-border/70 p-4">
+                <h3 className="text-[14px] font-semibold">Brand identity and contract</h3>
+                {brandContract ? (
+                  <>
+                    <p className="mt-1 text-[11px] text-muted-foreground">Your latest saved BrandContract · status: {String(brandContract.status||"unknown")}</p>
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-lg border border-border/70 bg-muted/15 p-3">
+                        <p className="text-[10px] text-muted-foreground">Contract version</p>
+                        <p className="mt-1 text-[12px] font-medium">{String(brandContract.schema_version||"Unspecified")}</p>
+                      </div>
+                      <div className="rounded-lg border border-border/70 bg-muted/15 p-3">
+                        <p className="text-[10px] text-muted-foreground">Last updated</p>
+                        <p className="mt-1 text-[12px] font-medium">{String(brandContract.updated_at||"Unknown")}</p>
+                      </div>
+                    </div>
+                    <details className="mt-4 rounded-lg border border-border/70 bg-muted/10 p-3">
+                      <summary className="cursor-pointer text-[12px] font-medium">Inspect saved contract and evidence</summary>
+                      <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed">{JSON.stringify(brandContract,null,2)}</pre>
+                    </details>
+                  </>
+                ) : (
+                  <p className="mt-3 rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-foreground">
+                    No BrandContract has been saved in this workspace. Run the Brand inspection and drafting tools with actual brand evidence, review the result, then explicitly approve a saved contract.
+                  </p>
+                )}
+              </article>
+            ) : (
+              <>
+                <section className="space-y-3" aria-label="Campaign briefs">
+                  <h3 className="text-[14px] font-semibold">Campaign briefs</h3>
+                  {briefs.length ? briefs.map((item,index)=>{
+                    const entry=(item && typeof item==="object")?item as Record<string,unknown>:{};
+                    const brief=(entry.brief && typeof entry.brief==="object")?entry.brief as Record<string,unknown>:{};
+                    return <details key={String(entry.id||index)} className="rounded-xl border border-border/70 bg-muted/10 p-4">
+                      <summary className="cursor-pointer text-[12px] font-semibold">{String(brief.title||brief.name||entry.id||"Untitled brief")} <span className="ml-2 text-[10px] text-muted-foreground">{String(entry.status||"draft")}</span></summary>
+                      {brief.objective ? <p className="mt-2 text-[11px] text-muted-foreground">{String(brief.objective)}</p>:null}
+                      <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words text-[11px]">{JSON.stringify(brief,null,2)}</pre>
+                    </details>;
+                  }):<p className="rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-foreground">No approved campaign briefs have been saved in this workspace.</p>}
+                </section>
+                <section className="space-y-3" aria-label="Campaign concepts">
+                  <h3 className="text-[14px] font-semibold">Campaign concepts</h3>
+                  {concepts.length ? concepts.map((item,index)=>{
+                    const entry=(item && typeof item==="object")?item as Record<string,unknown>:{};
+                    const concept=(entry.concept && typeof entry.concept==="object")?entry.concept as Record<string,unknown>:{};
+                    return <details key={String(entry.id||index)} className="rounded-xl border border-border/70 bg-muted/10 p-4">
+                      <summary className="cursor-pointer text-[12px] font-semibold">{String(concept.title||concept.name||entry.id||"Untitled concept")} <span className="ml-2 text-[10px] text-muted-foreground">{String(entry.status||"draft")}</span></summary>
+                      <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-words text-[11px]">{JSON.stringify(concept,null,2)}</pre>
+                    </details>;
+                  }):<p className="rounded-xl border border-dashed border-border p-5 text-[12px] text-muted-foreground">No campaign concepts have been saved yet.</p>}
+                </section>
+              </>
+            )}
+            <p className="text-[10px] text-muted-foreground">Source: {workspace.contextTool} via your authorized MCP connection. Workspace records are separate from chats and projects.</p>
+          </div>
+        ):null}
+      </section>
+    );
+  }
+
   return (
     <>
       <section className="space-y-6 pb-8">
-        <div className="relative overflow-hidden rounded-[22px] border border-border/70 bg-gradient-to-br from-muted/55 via-background to-violet-500/[0.065] p-5 sm:p-7">
-          <div className="pointer-events-none absolute -right-20 -top-20 size-72 rounded-full bg-violet-500/[0.08] blur-3xl" />
-          <div className="relative flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-xl">
-              <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                {discovered.find(plugin=>plugin.publisherIconUrl)?.publisherIconUrl
-                  ? <PublisherMark url={discovered.find(plugin=>plugin.publisherIconUrl)?.publisherIconUrl} className="size-3.5 text-violet-400"/>
-                  : <Plug className="size-3.5 text-violet-400"/>} AgentSam integrations
-              </p>
-              <h2 className="text-[25px] font-semibold tracking-[-0.05em] sm:text-[30px]">Make AgentSam yours.</h2>
-              <p className="mt-2 max-w-lg text-[12px] leading-relaxed text-muted-foreground">
-                Browse real published plugins, inspect their capabilities, and manage the integrations connected to your account.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-2 text-[10px] text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-emerald-400"/>
-              <span><b className="text-foreground">{plugins.length}</b> installed</span>
-              <span className="text-border">/</span>
-              <span><b className="text-foreground">{discovered.length}</b> discoverable</span>
-            </div>
-          </div>
-        </div>
-
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -788,7 +900,9 @@ function PluginCustomizeView({
               {plugins.map(plugin=>{
                 const matched = discovered.find(entry=>entry.pluginKey===plugin.pluginKey);
                 return (
-                  <button type="button" key={plugin.id} onClick={()=>{setSelectedKey(plugin.id);setActionError("");setNotice("");}}
+                  <button type="button" key={plugin.id} onClick={()=>{if(plugin.installationKey==="catalog-v1" && isRunnable(plugin) && host.readPluginWorkspace)
+                      void openWorkspace(plugin.id);
+                    else {setSelectedKey(plugin.id);setActionError("");setNotice("");}}}
                     aria-label={"View installed "+plugin.name}
                     className="group flex w-[100px] shrink-0 flex-col items-center gap-2 rounded-xl p-2 text-center hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400">
                     <span className="relative flex size-[67px] items-center justify-center overflow-hidden rounded-[20px] border border-border/90 bg-muted/35 text-foreground/85 shadow-[0_8px_20px_-14px_rgba(0,0,0,0.5)]">
@@ -847,7 +961,9 @@ function PluginCustomizeView({
                 {filtered.map(plugin=>{
                   const state=stateFor(plugin);
                   return (
-                    <button key={plugin.pluginKey} type="button" onClick={()=>{setSelectedKey(plugin.pluginKey);setActionError("");setNotice("");}}
+                    <button key={plugin.pluginKey} type="button" onClick={()=>{const installed=plugins.find(row=>row.pluginKey===plugin.pluginKey);
+                      if(installed&&isRunnable(installed)&&host.readPluginWorkspace)void openWorkspace(installed.id);
+                      else {setSelectedKey(plugin.pluginKey);setActionError("");setNotice("");}}}
                       aria-label={"Explore "+plugin.name}
                       className="group flex min-w-0 flex-col overflow-hidden rounded-[18px] border border-border/75 bg-background/60 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:bg-muted/20 hover:shadow-[0_14px_35px_-24px_rgba(0,0,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400">
                       <div className="relative flex min-h-[124px] items-end overflow-hidden bg-gradient-to-br from-violet-400/[0.15] via-sky-400/[0.035] to-fuchsia-400/[0.11] p-4">
@@ -914,23 +1030,6 @@ function PluginCustomizeView({
 
             <p className="text-[12px] leading-[1.8] text-muted-foreground">{details}</p>
 
-            {selectedCatalog?.examples.length ? (
-              <div className="space-y-3">
-                <p className="text-[12px] font-semibold">Ideas to try</p>
-                <div className="space-y-2 rounded-[18px] border border-sky-300/25 bg-gradient-to-br from-sky-300/20 via-indigo-400/15 to-violet-400/15 p-3">
-                  {selectedCatalog.examples.slice(0,3).map((prompt,index)=>(
-                    <button key={index} type="button" onClick={()=>void copyText(prompt,"Example prompt")}
-                      aria-label={"Copy example prompt "+(index+1)}
-                      className="group flex w-full items-center gap-3 rounded-[14px] border border-white/10 bg-background/75 px-3.5 py-3.5 text-left transition-colors hover:bg-background/90">
-                      <span className="min-w-0 flex-1 text-[12px] leading-relaxed text-foreground/90">{prompt}</span>
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background"><Copy className="size-3.5"/></span>
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[10px] text-muted-foreground">Copy an example to use in a host where this plugin is authorized.</p>
-              </div>
-            ) : null}
-
             {selectedCatalog?.toolPermissions?.length ? (
               <section className="space-y-2" aria-label="Published tool permissions">
                 <div className="flex items-center justify-between gap-2">
@@ -992,6 +1091,13 @@ function PluginCustomizeView({
             {actionError ? <div role="alert" className="rounded-lg border border-red-400/30 bg-red-400/10 p-3 text-[11px] text-red-300">{actionError}</div> : null}
             {notice ? <div role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 p-3 text-[11px] text-emerald-300">{notice}</div> : null}
 
+            {installed && isRunnable(installed) && host.readPluginWorkspace ? (
+              <button type="button" onClick={()=>void openWorkspace(installed.id)}
+                className="mb-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-violet-600 text-[12px] font-semibold text-white hover:bg-violet-500">
+                Open {installed.pluginKey==="agentsam-brand"?"Brand":installed.pluginKey==="agentsam-campaign"?"Campaign":"Plugin"} workspace
+                <ChevronRight className="size-4"/>
+              </button>
+            ):null}
             <div className="space-y-2 border-t border-border/70 pt-4">
               {selectedCatalog && !plugins.some(plugin=>plugin.pluginKey===selectedCatalog.pluginKey) && host.installPluginFromCatalog ? (
                 <button type="button" disabled={busy} onClick={()=>void run(()=>host.installPluginFromCatalog!(selectedCatalog.pluginKey))}
@@ -1655,10 +1761,13 @@ function CustomizeView({
     subtitle: string;
     meta: string;
     status: HealthState;
-  }>({ id: "", name: "", subtitle: "", meta: "", status: "unknown" });
+    content: string;
+  }>({ id: "", name: "", subtitle: "", meta: "", status: "unknown", content: "" });
+  const [formError,setFormError] = useState("");
 
   function openAdd() {
-    setDraft({ id: "", name: "", subtitle: "", meta: "", status: "unknown" });
+    setFormError("");
+    setDraft({ id: "", name: "", subtitle: "", meta: "", status: "unknown", content: "" });
     setSheetOpen(true);
   }
 
@@ -1669,7 +1778,9 @@ function CustomizeView({
       subtitle: item.subtitle,
       meta: item.meta ?? "",
       status: item.status,
+      content: item.content || "",
     });
+    setFormError("");
     setSheetOpen(true);
   }
 
@@ -1677,23 +1788,36 @@ function CustomizeView({
     if (!host.upsertCatalogItem) return;
     const name = draft.name.trim();
     if (!name) return;
+    const trigger = draft.meta.trim().toLowerCase();
+    if (kind==="skills" && (!/^\/[a-z0-9][a-z0-9-]{0,48}$/.test(trigger) || draft.content.trim().length<8)) {
+      setFormError("Skills need a valid /slash-trigger and instructions of at least eight characters.");
+      return;
+    }
     const id = draft.id || `${kind}-${globalThis.crypto?.randomUUID?.() ?? Date.now().toString(36)}`;
-    await host.upsertCatalogItem(kind, {
-      id,
-      name,
-      subtitle: draft.subtitle.trim() || "Configured in Local Studio",
-      meta: draft.meta.trim() || undefined,
-      status: draft.status,
-    });
-    await onChanged();
-    setSheetOpen(false);
+    try {
+      setFormError("");
+      await host.upsertCatalogItem(kind, {
+        id,name,subtitle:draft.subtitle.trim() || "Personal skill",
+        meta:trigger || undefined,trigger:kind==="skills"?trigger:undefined,
+        content:kind==="skills"?draft.content:undefined,status:draft.status,
+      });
+      await onChanged();
+      setSheetOpen(false);
+    }catch(error) {
+      setFormError(error instanceof Error ? error.message : "Unable to save this skill.");
+    }
   }
 
   async function remove() {
     if (!draft.id || !host.removeCatalogItem) return;
-    await host.removeCatalogItem(kind, draft.id);
-    await onChanged();
-    setSheetOpen(false);
+    try {
+      setFormError("");
+      await host.removeCatalogItem(kind,draft.id);
+      await onChanged();
+      setSheetOpen(false);
+    }catch(error) {
+      setFormError(error instanceof Error ? error.message : "Unable to remove this item.");
+    }
   }
 
   const singular = labels[kind].replace(/s$/, "");
@@ -1702,7 +1826,9 @@ function CustomizeView({
     <>
       <Section
         title={labels[kind]}
-        description="One extension surface with normalized status and configuration behavior."
+        description={kind==="skills"
+          ? "Your account's saved skill instructions and slash commands. Select any skill to inspect or edit it."
+          : "Extensions from the current host and its configured registries."}
         action={
           <button
             type="button"
@@ -1721,7 +1847,7 @@ function CustomizeView({
       <SettingsSheet
         open={sheetOpen}
         title={draft.id ? `Edit ${singular}` : `Add ${singular}`}
-        description="Saved through the Settings host so each product can provide its own persistence adapter."
+        description={kind==="skills" ? "Saved to your account in the existing skills registry." : "Saved through the Settings host."}
         onClose={() => setSheetOpen(false)}
       >
         <div className="space-y-4">
@@ -1745,14 +1871,28 @@ function CustomizeView({
             />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-[11px] font-medium">Metadata</span>
+            <span className="mb-1.5 block text-[11px] font-medium">{kind==="skills"?"Slash trigger":"Metadata"}</span>
             <input
               value={draft.meta}
               onChange={(event) => setDraft((current) => ({ ...current, meta: event.target.value }))}
               className="h-9 w-full rounded-md border border-border bg-muted/20 px-3 text-[12px] outline-none focus:border-foreground/30"
-              placeholder="Package, endpoint, command, or source"
+              placeholder={kind==="skills"?"/my-skill":"Package, endpoint, command, or source"}
             />
           </label>
+          {kind==="skills" ? (
+            <label className="block">
+              <span className="mb-1.5 block text-[11px] font-medium">Skill instructions</span>
+              <textarea
+                value={draft.content}
+                onChange={event=>setDraft(current=>({...current,content:event.target.value}))}
+                rows={14}
+                maxLength={40000}
+                className="w-full resize-y rounded-md border border-border bg-muted/20 px-3 py-2 font-mono text-[11px] leading-relaxed outline-none focus:border-violet-400"
+                placeholder="Describe the skill's purpose, inputs, steps and safeguards."
+              />
+              <span className="text-[10px] text-muted-foreground">Instructions persist under your signed-in account, not browser localStorage.</span>
+            </label>
+          ) : (
           <label className="block">
             <span className="mb-1.5 block text-[11px] font-medium">Status</span>
             <select
@@ -1766,6 +1906,8 @@ function CustomizeView({
               <option value="blocked">Blocked</option>
             </select>
           </label>
+          )}
+          {formError ? <p role="alert" className="rounded-lg border border-red-500/30 p-2 text-[11px] text-red-300">{formError}</p> : null}
 
           <div className="flex items-center justify-between border-t border-border/70 pt-4">
             <div>

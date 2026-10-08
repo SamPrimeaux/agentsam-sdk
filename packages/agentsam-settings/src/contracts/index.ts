@@ -107,6 +107,9 @@ export type SettingsCatalogItem = {
   subtitle: string;
   status: HealthState;
   meta?: string;
+  /** Account-owned instruction body, not a generated template. */
+  content?: string;
+  trigger?: string;
 };
 
 export type SettingsPlugin = SettingsCatalogItem & {
@@ -302,6 +305,7 @@ export interface SettingsHost {
   discoverPlugins?(): Promise<SettingsPluginDiscovery>;
   installPluginFromCatalog?(pluginKey: string): Promise<void>;
   removeCatalogPlugin?(pluginId: string): Promise<void>;
+  readPluginWorkspace?(pluginId: string): Promise<{pluginKey:string;contextTool:string;result:unknown}>;
   setPluginEnabled?(id: string, enabled: boolean): Promise<void>;
   beginPluginSetup?(id: string, options?: {allowWrites?: boolean}): Promise<void>;
   disconnectPlugin?(id: string): Promise<void>;
