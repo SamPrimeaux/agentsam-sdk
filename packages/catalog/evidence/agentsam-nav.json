@@ -8,7 +8,7 @@
       "Plain JavaScript hosts",
       "Boundaries"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-nav/README.md",
+    "path": "packages/agentsam-nav/README.md",
     "summary": "One navigation context, two independently mountable surfaces. The package owns navigation presentation and transient interaction state. The host owns routing, accounts, projects, conversations, persistence, and all network access.",
     "title": "@inneranimalmedia/agentsam-nav"
   },

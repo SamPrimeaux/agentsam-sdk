@@ -12,7 +12,7 @@
       "New packages (this change)",
       "Authority split (from your CF dashboard)"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-vault/README.md",
+    "path": "packages/agentsam-vault/README.md",
     "summary": "Browser /settings/keys \u2502 \u25bc POST /api/vault/secrets  { service_name, value } \u2502 \u25bc AES-256-GCM encrypt with VAULT_MASTER_KEY AAD = userId:service:name \u2502 \u25bc D1 user_secrets (ciphertext + metadata + last4) \u2502 GET list \u2192 metadata only (never plaintext) POST unwrap \u2192 service lane only (bridge / internal)",
     "title": "AgentSam Credential System"
   },

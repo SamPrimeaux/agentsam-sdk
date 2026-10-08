@@ -5,9 +5,10 @@
       "@inneranimalmedia/agentsam-workbench",
       "Floating annotation helper",
       "Conversation and runtime surfaces",
-      "Widgets"
+      "Widgets",
+      "Capability catalog projection"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-workbench/README.md",
+    "path": "packages/agentsam-workbench/README.md",
     "summary": "Reusable React workbench primitives built on `@inneranimalmedia/agentsam-contracts`.",
     "title": "@inneranimalmedia/agentsam-workbench"
   },
@@ -33,6 +34,9 @@
       "./agent/mini-agentsam.css",
       "./agent/tool-permission.css",
       "./browser",
+      "./capabilities",
+      "./dist/agent/capability-catalog.d.ts",
+      "./dist/agent/capability-catalog.js",
       "./dist/agent/contextual-composer.css",
       "./dist/agent/index.d.ts",
       "./dist/agent/index.js",
@@ -42,6 +46,9 @@
       "./dist/browser/index.js",
       "./dist/index.d.ts",
       "./dist/index.js",
+      "./dist/knowledge/autorag-workflow.css",
+      "./dist/knowledge/index.d.ts",
+      "./dist/knowledge/index.js",
       "./dist/manufacturing/index.d.ts",
       "./dist/manufacturing/index.js",
       "./dist/project-control.css",
@@ -56,6 +63,8 @@
       "./dist/widgets/index.d.ts",
       "./dist/widgets/index.js",
       "./dist/widgets/widgets.css",
+      "./knowledge",
+      "./knowledge/autorag-workflow.css",
       "./manufacturing",
       "./project-control.css",
       "./projects",
@@ -81,7 +90,7 @@
   },
   "schema": "agentsam.package-evidence.v1",
   "source_languages": {
-    "javascript": 7,
-    "typescript": 39
+    "javascript": 8,
+    "typescript": 42
   }
 }

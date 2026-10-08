@@ -5,7 +5,7 @@
       "@inneranimalmedia/theme-iasf",
       "Usage"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-iasf/README.md",
+    "path": "packages/theme-iasf/README.md",
     "summary": "Normalized from `studio-cms-editor` harvest lane `theme_layout_donor` into a portable package:",
     "title": "@inneranimalmedia/theme-iasf"
   },

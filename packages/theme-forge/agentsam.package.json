@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/theme-forge",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-forge/README.md"
+    "readme": "packages/theme-forge/README.md"
   },
   "execution_domains": [],
   "id": "theme-forge",

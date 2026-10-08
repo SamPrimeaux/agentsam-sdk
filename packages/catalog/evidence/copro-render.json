@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/copro-render"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-render/README.md",
+    "path": "packages/copro-render/README.md",
     "summary": "The saved project owns creative intent. RenderPlan owns output intent. Runtime adapters decide whether Remotion, WebCodecs, ffmpeg, native, or cloud machinery should execute the plan.",
     "title": "@inneranimalmedia/copro-render"
   },

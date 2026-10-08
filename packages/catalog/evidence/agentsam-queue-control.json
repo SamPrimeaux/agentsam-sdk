@@ -12,7 +12,7 @@
       "Relationship to WorkGraph",
       "Relationship to AgentSam tools and MCP"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-queue-control/README.md",
+    "path": "packages/agentsam-queue-control/README.md",
     "summary": "Portable queue and execution-control primitives for AgentSam.",
     "title": "@inneranimalmedia/agentsam-queue-control"
   },

@@ -5,7 +5,7 @@
       "@inneranimalmedia/agentsam-contracts",
       "Execution-plane ownership"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-contracts/README.md",
+    "path": "packages/agentsam-contracts/README.md",
     "summary": "Framework-neutral AgentSam contracts shared by product surfaces. This package has no React dependency and must not know whether the host is Local Studio, CAD Studio, CMS Studio, Ember Supply, or another product.",
     "title": "@inneranimalmedia/agentsam-contracts"
   },

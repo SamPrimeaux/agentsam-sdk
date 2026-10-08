@@ -6,7 +6,7 @@
       "Frozen v1 contracts",
       "Realtime and durability rule"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-goap/README.md",
+    "path": "packages/agentsam-goap/README.md",
     "summary": "Portable GOAP control-plane contracts for AgentSam.",
     "title": "@inneranimalmedia/agentsam-goap"
   },

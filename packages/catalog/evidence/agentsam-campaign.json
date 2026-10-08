@@ -10,7 +10,7 @@
       "Typical campaign types",
       "Design principle"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-campaign/README.md",
+    "path": "packages/agentsam-campaign/README.md",
     "summary": "Portable, provider-neutral campaign intelligence for AgentSam.",
     "title": "@inneranimalmedia/agentsam-campaign"
   },
@@ -25,7 +25,9 @@
     "exports": [
       ".",
       "./package.json",
-      "./src/index.js"
+      "./project",
+      "./src/index.js",
+      "./src/project.js"
     ],
     "kind": "npm",
     "main": "./src/index.js",
@@ -41,6 +43,6 @@
   },
   "schema": "agentsam.package-evidence.v1",
   "source_languages": {
-    "javascript": 2
+    "javascript": 4
   }
 }

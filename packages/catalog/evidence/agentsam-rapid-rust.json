@@ -9,7 +9,7 @@
     "headings": [
       "@inneranimalmedia/agentsam-rapid-rust"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-rapid-rust/README.md",
+    "path": "packages/agentsam-rapid-rust/README.md",
     "summary": "Native Rust CLI source for `agentsam rust` / `agentsam-rapid-rust`.",
     "title": "@inneranimalmedia/agentsam-rapid-rust"
   },

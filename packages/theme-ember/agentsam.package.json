@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/theme-ember",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-ember/README.md"
+    "readme": "packages/theme-ember/README.md"
   },
   "execution_domains": [],
   "id": "theme-ember",

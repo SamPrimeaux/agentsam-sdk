@@ -1,10 +1,10 @@
-# Runbook for the current 57-package SDK
+# Runbook for the 59-package SDK
 
 Assuming:
 
 ```bash
-REPO=/Users/samprimeaux/agentsam-sdk
-KIT=~/Downloads/agentsam-offline-knowledge-kit-v2/agentsam-offline-knowledge-kit-v2
+REPO="$(pwd)"
+KIT="$REPO"
 ```
 
 ## 1. Learn what your local tooling does

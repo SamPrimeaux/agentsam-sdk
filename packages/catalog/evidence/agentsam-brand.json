@@ -16,7 +16,7 @@
       "Image / media processors (pluggable)",
       "Website composition (sibling package)"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-brand/README.md",
+    "path": "packages/agentsam-brand/README.md",
     "summary": "drop anything \u2192 ingest/classify \u2192 brand.pack.json (source of truth) \u2502 \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510 \u25bc                 \u25bc                 \u25bc localhost studio      ZIP export     production publish",
     "title": "@inneranimalmedia/agentsam-brand"
   },

@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/copro-render",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-render/README.md"
+    "readme": "packages/copro-render/README.md"
   },
   "execution_domains": [],
   "id": "copro-render",

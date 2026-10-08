@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/copro-ui"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-ui/README.md",
+    "path": "packages/copro-ui/README.md",
     "summary": "CoPro creator-facing UI primitives.",
     "title": "@inneranimalmedia/copro-ui"
   },

@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/analytics-ui",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/analytics-ui/README.md"
+    "readme": "packages/analytics-ui/README.md"
   },
   "execution_domains": [],
   "id": "analytics-ui",

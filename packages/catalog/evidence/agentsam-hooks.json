@@ -13,7 +13,7 @@
       "Protocol and bindings",
       "Security defaults"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-hooks/README.md",
+    "path": "packages/agentsam-hooks/README.md",
     "summary": "Portable lifecycle policy and observability for AgentSam runtimes.",
     "title": "`@inneranimalmedia/agentsam-hooks`"
   },

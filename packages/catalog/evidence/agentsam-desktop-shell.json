@@ -8,7 +8,7 @@
       "Auth",
       "Brands"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-desktop-shell/README.md",
+    "path": "packages/agentsam-desktop-shell/README.md",
     "summary": "Tauri multi-brand shell. **Local Studio** is the primary product install.",
     "title": "AgentSam desktop shell"
   },
@@ -42,6 +42,7 @@
       "prepare:sidecars",
       "sync:local-studio",
       "test",
+      "test:icons",
       "typecheck"
     ],
     "types": null,
@@ -50,6 +51,6 @@
   "schema": "agentsam.package-evidence.v1",
   "source_languages": {
     "javascript": 8,
-    "rust": 16
+    "rust": 17
   }
 }

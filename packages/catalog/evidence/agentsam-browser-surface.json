@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/agentsam-browser-surface"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-browser-surface/README.md",
+    "path": "packages/agentsam-browser-surface/README.md",
     "summary": "The browser as a portable capability, not a web-only page.",
     "title": "@inneranimalmedia/agentsam-browser-surface"
   },

@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/theme-grove",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-grove/README.md"
+    "readme": "packages/theme-grove/README.md"
   },
   "execution_domains": [],
   "id": "theme-grove",
@@ -21,7 +21,7 @@
     "javascript"
   ],
   "name": "@inneranimalmedia/theme-grove",
-  "purpose": "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion \u2014 polished enough for a studio, practical enough for a crew.",
+  "purpose": "A visual service-business prebuild centered on project galleries, material detail, process, reviews, and estimate conversion — polished enough for a studio, practical enough for a crew.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/theme-grove",

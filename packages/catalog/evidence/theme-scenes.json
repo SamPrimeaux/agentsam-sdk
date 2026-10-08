@@ -15,7 +15,7 @@
       "Studio (next)",
       "Tests"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/theme-scenes/README.md",
+    "path": "packages/theme-scenes/README.md",
     "summary": "Reusable **scene / shell / block** vocabulary for branded website experiences.",
     "title": "@inneranimalmedia/theme-scenes"
   },

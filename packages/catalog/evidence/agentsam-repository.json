@@ -2,9 +2,10 @@
   "directory": "packages/agentsam-repository",
   "readme": {
     "headings": [
-      "@inneranimalmedia/agentsam-repository"
+      "@inneranimalmedia/agentsam-repository",
+      "Machine-backed repository crawl and refinery"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-repository/README.md",
+    "path": "packages/agentsam-repository/README.md",
     "summary": "Owned repository/runtime package for AgentSam.",
     "title": "@inneranimalmedia/agentsam-repository"
   },
@@ -12,6 +13,7 @@
     "bin": null,
     "dependencies": {
       "dependencies": [
+        "jsonc-parser",
         "typescript"
       ],
       "optionalDependencies": [],
@@ -21,16 +23,20 @@
     "exports": [
       ".",
       "./contracts",
+      "./crawl",
       "./git-context",
       "./merkle",
       "./merkle/cloudflare-persistence",
       "./merkle/persistence",
+      "./refinery",
       "./src/contracts.js",
+      "./src/crawl.js",
       "./src/git-context.js",
       "./src/index.js",
       "./src/merkle/cloudflare-persistence.js",
       "./src/merkle/index.js",
-      "./src/merkle/persistence.js"
+      "./src/merkle/persistence.js",
+      "./src/refinery.js"
     ],
     "kind": "npm",
     "main": "./src/index.js",
@@ -45,6 +51,6 @@
   },
   "schema": "agentsam.package-evidence.v1",
   "source_languages": {
-    "javascript": 24
+    "javascript": 27
   }
 }

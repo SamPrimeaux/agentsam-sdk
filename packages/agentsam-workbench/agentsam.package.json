@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/agentsam-workbench",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-workbench/README.md"
+    "readme": "packages/agentsam-workbench/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-workbench",

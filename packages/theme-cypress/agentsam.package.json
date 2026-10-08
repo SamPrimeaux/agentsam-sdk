@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/theme-cypress",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-cypress/README.md"
+    "readme": "packages/theme-cypress/README.md"
   },
   "execution_domains": [],
   "id": "theme-cypress",

@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/agentsam-contracts",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-contracts/README.md"
+    "readme": "packages/agentsam-contracts/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-contracts",

@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/theme-summit",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-summit/README.md"
+    "readme": "packages/theme-summit/README.md"
   },
   "execution_domains": [],
   "id": "theme-summit",

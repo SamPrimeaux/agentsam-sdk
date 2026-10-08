@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/copro-timeline",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-timeline/README.md"
+    "readme": "packages/copro-timeline/README.md"
   },
   "execution_domains": [],
   "id": "copro-timeline",

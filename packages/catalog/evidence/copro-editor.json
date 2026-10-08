@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/copro-editor"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-editor/README.md",
+    "path": "packages/copro-editor/README.md",
     "summary": "Headless deterministic editing commands for CoPro.",
     "title": "@inneranimalmedia/copro-editor"
   },

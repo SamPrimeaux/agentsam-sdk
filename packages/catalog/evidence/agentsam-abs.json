@@ -11,7 +11,7 @@
       "Development gates",
       "Presentation tokens"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-abs/README.md",
+    "path": "packages/agentsam-abs/README.md",
     "summary": "AgentSam Auto Browser Shell (ABS) is the donor-staged browser system for turning a normal in-app browser into a provider-agnostic rapid development and presentation surface.",
     "title": "@inneranimalmedia/agentsam-abs"
   },

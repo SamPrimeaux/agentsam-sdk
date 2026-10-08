@@ -9,7 +9,7 @@
       "Provider adapters",
       "CLI kernel"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-merch/README.md",
+    "path": "packages/agentsam-merch/README.md",
     "summary": "Portable manufacturing preflight and merch planning for AgentSam applications.",
     "title": "@inneranimalmedia/agentsam-merch"
   },

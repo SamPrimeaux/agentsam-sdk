@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/agentsam-queue-control",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-queue-control/README.md"
+    "readme": "packages/agentsam-queue-control/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-queue-control",

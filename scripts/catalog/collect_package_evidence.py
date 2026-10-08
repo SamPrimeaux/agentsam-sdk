@@ -39,7 +39,7 @@ def first_readme(package: Path):
     return None
 
 
-def readme_summary(path: Path | None):
+def readme_summary(path: Path | None, repo: Path):
     if not path:
         return {"path": None, "title": None, "summary": None, "headings": []}
     text = path.read_text(errors="replace")
@@ -67,7 +67,7 @@ def readme_summary(path: Path | None):
     summary = next((p for p in paragraphs if len(p) >= 30), None)
     if summary and len(summary) > 600:
         summary = summary[:597] + "..."
-    return {"path": str(path), "title": title, "summary": summary, "headings": headings}
+    return {"path": path.relative_to(repo).as_posix(), "title": title, "summary": summary, "headings": headings}
 
 
 def source_languages(package: Path):
@@ -110,7 +110,7 @@ def evidence_for(package: Path, repo: Path):
     ev = {
         "schema": "agentsam.package-evidence.v1",
         "directory": str(package.relative_to(repo)),
-        "readme": readme_summary(readme),
+        "readme": readme_summary(readme, repo),
         "source_languages": source_languages(package),
     }
 

@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/identity",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/identity/README.md"
+    "readme": "packages/identity/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-identity",
@@ -21,7 +21,7 @@
     "javascript"
   ],
   "name": "@inneranimalmedia/agentsam-identity",
-  "purpose": "Identity module for @inneranimalmedia/agentsam-sdk (workspace \u2014 publish via root SDK)",
+  "purpose": "Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK)",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-identity",

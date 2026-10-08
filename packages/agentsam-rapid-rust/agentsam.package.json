@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/agentsam-rapid-rust",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-rapid-rust/README.md"
+    "readme": "packages/agentsam-rapid-rust/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-rapid-rust",

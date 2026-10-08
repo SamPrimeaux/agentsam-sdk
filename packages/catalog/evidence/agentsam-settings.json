@@ -3,9 +3,10 @@
   "readme": {
     "headings": [
       "@inneranimalmedia/agentsam-settings",
+      "Publisher and plugin icons",
       "Exports"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-settings/README.md",
+    "path": "packages/agentsam-settings/README.md",
     "summary": "Portable Settings contracts and React UI for AgentSam applications. Hosts supply runtime/account/provider state through `SettingsHost`; the package does not own a parallel settings database.",
     "title": "@inneranimalmedia/agentsam-settings"
   },
@@ -52,6 +53,6 @@
   "schema": "agentsam.package-evidence.v1",
   "source_languages": {
     "javascript": 3,
-    "typescript": 5
+    "typescript": 6
   }
 }

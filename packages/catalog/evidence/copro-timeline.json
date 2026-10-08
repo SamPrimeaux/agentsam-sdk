@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/copro-timeline"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-timeline/README.md",
+    "path": "packages/copro-timeline/README.md",
     "summary": "Headless timeline projection and geometry for CoPro.",
     "title": "@inneranimalmedia/copro-timeline"
   },
