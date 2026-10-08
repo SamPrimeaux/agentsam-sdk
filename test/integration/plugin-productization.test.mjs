@@ -158,6 +158,12 @@ test('missing issuer proof or non-applicable authorization gates block READY',()
   }});
   assert.equal(impossible.status,'NOT_READY');
   assert.equal(impossible.checks['authorization.resource_registered'].status,'unverified');
+  const noReceipt=verifyPluginProduct(root,{evidenceBundle:{
+    schema:'agentsam.plugin-evidence-bundle/v1',
+    runtimeReceipts:[...receipts,{check_id:'authorization.resource_registered',status:'passed'}],
+  }});
+  assert.equal(noReceipt.status,'NOT_READY');
+  assert.equal(noReceipt.checks['authorization.resource_registered'].status,'unverified');
 });
 
 test('lifecycle distinguishes installed from connected when authorization is missing',()=>{
