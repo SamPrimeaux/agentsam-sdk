@@ -4,6 +4,15 @@ import { spawnSync } from 'node:child_process';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const directory = path.join(root, 'packages/agentsam-site-scrape');
+const native = spawnSync(process.execPath, ['--test', 'runtime/test/runtime.test.mjs'], {
+  cwd: directory,
+  stdio: 'inherit',
+  timeout: 120000,
+});
+if (native.error || native.status !== 0) {
+  throw new Error(`Native site.scrape tests failed: ${native.error?.message || native.status}`);
+}
+
 const candidates = process.env.PYTHON ? [process.env.PYTHON] :
   (process.platform === 'win32' ? ['python'] : ['python3.14', 'python3.13', 'python3.12', 'python3.11', 'python3.10', 'python3']);
 const python = candidates.find(command => {

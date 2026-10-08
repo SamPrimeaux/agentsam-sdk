@@ -164,10 +164,10 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--max-pages must be 1..5000 and --delay must be nonnegative")
     if args.verify_archive and args.resume_archive:
         parser.error("--verify-archive and --resume-archive cannot be combined")
-    if args.resume_archive and not (args.upload_archive and args.archive_bucket and args.repo_root):
-        parser.error("--resume-archive requires --upload-archive, --archive-bucket, and --repo-root")
-    if args.upload_archive and not (args.resume_archive or (args.archive_dir and args.archive_bucket and args.repo_root)):
-        parser.error("--upload-archive requires --archive-dir, --archive-bucket, and --repo-root")
+    if args.resume_archive and not (args.upload_archive and args.repo_root):
+        parser.error("--resume-archive requires --upload-archive and --repo-root")
+    if args.upload_archive and not (args.repo_root and (args.resume_archive or args.archive_dir)):
+        parser.error("--upload-archive requires --repo-root and --archive-dir (or --resume-archive)")
     if args.archive_dir and not (args.account_id and args.project_id):
         parser.error("--archive-dir requires --account-id and --project-id")
     if args.archive_bucket and not (args.archive_dir or args.resume_archive):
@@ -188,7 +188,10 @@ def main(argv: list[str] | None = None) -> int:
             root = Path(args.verify_archive or args.resume_archive)
             manifest = verify_evidence(root)
             if args.resume_archive:
-                uploaded = upload_evidence(root, bucket=args.archive_bucket,
+                from .storage import resolve_evidence_bucket
+                choice = resolve_evidence_bucket(Path(args.repo_root), selected_bucket=args.archive_bucket,
+                                                 wrangler_config=args.wrangler_config)
+                uploaded = upload_evidence(root, bucket=choice["bucket"],
                                            repo_root=Path(args.repo_root),
                                            wrangler_config=args.wrangler_config)
                 print(f"Evidence uploaded: {uploaded['bucket']}/{uploaded['manifest_key']}", file=sys.stderr)
@@ -303,7 +306,10 @@ def main(argv: list[str] | None = None) -> int:
                                    project_id=args.project_id, archive_dir=Path(args.archive_dir))
             print(f"Private evidence staged: {stage['root']}")
             if args.upload_archive:
-                uploaded = upload_evidence(stage['root'], bucket=args.archive_bucket,
+                from .storage import resolve_evidence_bucket
+                choice = resolve_evidence_bucket(repo_root, selected_bucket=args.archive_bucket,
+                                                 wrangler_config=args.wrangler_config)
+                uploaded = upload_evidence(stage['root'], bucket=choice["bucket"],
                                            repo_root=repo_root, wrangler_config=args.wrangler_config)
                 print(f"Private evidence uploaded: {uploaded['bucket']}/{uploaded['manifest_key']}")
         except Exception as exc:

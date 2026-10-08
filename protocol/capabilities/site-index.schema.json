@@ -1,0 +1,15 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://schemas.inneranimalmedia.com/agentsam/capabilities/site-index.schema.json",
+  "title":"Derived site scrape resource graph",
+  "type":"object",
+  "required":["schema","resources","assets","edges","counts","content_hash"],
+  "properties":{
+    "schema":{"const":"agentsam.site.index.v1"},
+    "resources":{"type":"array","items":{"type":"object","required":["id","url","title","content_hash","blocks","image_count"],"properties":{"id":{"type":"string"},"url":{"type":"string"},"title":{"type":"string"},"meta":{"type":"object"},"content_hash":{"type":"string"},"blocks":{"type":"array"},"image_count":{"type":"integer","minimum":0}}}},
+    "assets":{"type":"array","items":{"type":"object","required":["id","url"],"properties":{"id":{"type":"string"},"url":{"type":"string"},"alt":{"type":"string"}}}},
+    "edges":{"type":"array","items":{"type":"object","required":["from","to","kind"],"properties":{"from":{"type":"string"},"to":{"type":"string"},"kind":{"enum":["internal_link","image_reference"]},"text":{"type":"string"}}}},
+    "counts":{"type":"object","required":["pages","assets","edges"]},
+    "content_hash":{"type":"string","pattern":"^sha256:[0-9a-f]{64}$"}
+  }
+}

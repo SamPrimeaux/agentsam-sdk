@@ -383,10 +383,13 @@
     "@inneranimalmedia/agentsam-errors": "2.6.12",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "google-protobuf": "^3.21.4",
+    "jsonc-parser": "^3.3.1",
     "node-pty": "^1.1.0",
+    "parse5": "^8.0.0",
     "pg": "8.16.3",
     "picocolors": "^1.1.1",
     "typescript": "5.9.3",
+    "undici": "^7.30.0",
     "ws": "^8.18.0"
   },
   "publishConfig": {

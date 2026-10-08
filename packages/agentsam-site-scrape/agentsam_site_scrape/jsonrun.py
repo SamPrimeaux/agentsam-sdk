@@ -55,7 +55,10 @@ def run_json(args) -> int:
                 print(f"Failed crawl evidence staged: {staged['root']}", file=sys.stderr)
                 receipt["storage"] = {"status": "staged", "prefix": staged["prefix"]}
                 if getattr(args, "upload_archive", False):
-                    uploaded = upload_evidence(staged["root"], bucket=args.archive_bucket,
+                    from .storage import resolve_evidence_bucket
+                    choice = resolve_evidence_bucket(Path(args.repo_root), selected_bucket=args.archive_bucket,
+                                                     wrangler_config=getattr(args, "wrangler_config", None))
+                    uploaded = upload_evidence(staged["root"], bucket=choice["bucket"],
                                                repo_root=Path(args.repo_root),
                                                wrangler_config=getattr(args, "wrangler_config", None))
                     receipt["storage"] = {"status": "uploaded", "prefix": staged["prefix"],
@@ -107,7 +110,10 @@ def run_json(args) -> int:
                 receipt["storage"] = {"status": "staged", "prefix": staged["prefix"]}
                 print(f"Private evidence staged: {staged['root']}", file=sys.stderr)
                 if getattr(args, "upload_archive", False):
-                    uploaded = upload_evidence(staged["root"], bucket=args.archive_bucket,
+                    from .storage import resolve_evidence_bucket
+                    choice = resolve_evidence_bucket(Path(args.repo_root), selected_bucket=args.archive_bucket,
+                                                     wrangler_config=getattr(args, "wrangler_config", None))
+                    uploaded = upload_evidence(staged["root"], bucket=choice["bucket"],
                                                repo_root=Path(args.repo_root),
                                                wrangler_config=getattr(args, "wrangler_config", None))
                     receipt["storage"] = {"status": "uploaded", "prefix": staged["prefix"],

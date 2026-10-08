@@ -147,6 +147,7 @@ function printLegacyHelp() {
     agentsam cloudflare        Capabilities + CF OAuth packs (agentsam cloudflare login --pack agentsam)
     agentsam go                Go runtime discovery/build/deploy (Cloudflare worker-container)
     agentsam rust              Rust/Wasm scaffold/doctor/check/build/dev/deploy (explicit deploy)
+    agentsam site scrape       Native public-site crawler, project-scoped evidence, explicit R2 upload
     agentsam start-local       Local PTY on ws://127.0.0.1:3099 (no tunnel, no Cloudflare)
     agentsam ollama            Opt-in local Ollama setup/status/model management
     agentsam shell             Interactive Agent Sam slash-command shell
@@ -635,6 +636,9 @@ if (command === '--version' || command === '-v') {
     if (!e?.reported) reportCliError(e);
     process.exitCode = 1;
   }
+} else if (command === 'site') {
+  try { await (await import('./commands/site-scrape.js')).runSiteScrape(rest); }
+  catch (e) { reportCliError(e); process.exitCode = 1; }
 } else if (command === 'rust' || command === 'wasm' || command === 'rapid-rust') {
   try {
     await runRust(rest);
