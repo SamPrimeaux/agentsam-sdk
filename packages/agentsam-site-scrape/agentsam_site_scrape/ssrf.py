@@ -38,7 +38,7 @@ def assert_public_http_url(url: str, *, context: str = "url") -> str:
     host = (p.hostname or "").lower()
     if not host:
         raise ValueError(f"{context}: missing host")
-    if host in SSRF_BLOCKED_HOSTS or host.endswith(".localhost"):
+    if host in SSRF_BLOCKED_HOSTS or host.endswith((".localhost", ".local", ".internal")):
         raise ValueError(f"{context}: blocked host {host}")
     if _is_blocked_ip(host):
         raise ValueError(f"{context}: blocked address {host}")

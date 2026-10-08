@@ -133,7 +133,9 @@
       "deterministic": true,
       "model_required": false,
       "side_effects": "none",
-      "produces": ["brand.evidence"],
+      "produces": [
+        "brand.evidence"
+      ],
       "status": "stable"
     },
     "brand.resolve": {
@@ -149,7 +151,9 @@
       "deterministic": true,
       "model_required": false,
       "side_effects": "none",
-      "produces": ["brand.resolved"],
+      "produces": [
+        "brand.resolved"
+      ],
       "status": "stable"
     },
     "brand.plan": {
@@ -161,7 +165,7 @@
       "package": "@inneranimalmedia/agentsam-sdk/brand",
       "export": "brandPlan",
       "cli": "agentsam plan brand",
-      "description": "Produce a preserve→normalize→migrate brand coherence plan; optional --goap sequencing.",
+      "description": "Produce a preserve\u2192normalize\u2192migrate brand coherence plan; optional --goap sequencing.",
       "deterministic": true,
       "model_required": false,
       "model_assisted_optional": true,
@@ -222,7 +226,9 @@
       "deterministic": true,
       "model_required": false,
       "side_effects": "network+filesystem",
-      "status": "stable"
+      "status": "stable",
+      "input_schema": "protocol/capabilities/site-scrape-input.schema.json",
+      "output_schema": "protocol/capabilities/site-scrape-result.schema.json"
     },
     "blender.status": {
       "id": "blender.status",

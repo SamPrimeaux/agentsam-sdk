@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/agentsam/capabilities/site-scrape-result.schema.json",
+  "title": "site.scrape result",
+  "description": "Receipt produced by every site.scrape runtime (local Python, Worker). Same status vocabulary and counters regardless of runtime.",
+  "type": "object",
+  "required": ["schema_version", "capability", "run_id", "status", "runtime", "started_at", "completed_at", "content_hash", "seed_urls", "counts", "applied", "pages", "errors"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "capability": { "const": "site.scrape" },
+    "run_id": { "type": "string", "pattern": "^scrp_[a-f0-9]{24}$" },
+    "status": { "enum": ["completed", "partial", "failed", "cancelled"] },
+    "runtime": { "type": "string", "minLength": 1 },
+    "started_at": { "type": "string" },
+    "completed_at": { "type": "string" },
+    "content_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "seed_urls": { "type": "array", "items": { "type": "string" } },
+    "counts": {
+      "type": "object",
+      "required": ["pages_visited", "pages_fetched", "pages_blocked", "pages_skipped", "pages_failed"],
+      "properties": {
+        "pages_visited": { "type": "integer", "minimum": 0 },
+        "pages_fetched": { "type": "integer", "minimum": 0 },
+        "pages_blocked": { "type": "integer", "minimum": 0 },
+        "pages_skipped": { "type": "integer", "minimum": 0 },
+        "pages_failed": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "applied": {
+      "type": "object",
+      "required": ["scope", "policy", "capture", "ignored"],
+      "properties": {
+        "scope": { "type": "object" },
+        "policy": { "type": "object" },
+        "capture": { "type": "object" },
+        "ignored": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["url", "title", "image_count"],
+        "properties": {
+          "url": { "type": "string" },
+          "title": { "type": "string" },
+          "image_count": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["url", "kind", "error"],
+        "properties": {
+          "url": { "type": "string" },
+          "kind": { "enum": ["blocked", "skipped", "failed"] },
+          "error": { "type": "string" }
+        }
+      }
+    }
+  }
+}

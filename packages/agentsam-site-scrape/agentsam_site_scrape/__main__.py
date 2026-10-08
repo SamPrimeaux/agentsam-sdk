@@ -144,7 +144,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Also crawl same-site links discovered mid-crawl, beyond the confirmed set",
     )
     parser.add_argument("--yes", "-y", action="store_true", help="Skip prompts; take defaults")
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Non-interactive page crawl; print the canonical site.scrape receipt as JSON on stdout",
+    )
     args = parser.parse_args(argv)
+    if args.json:
+        from .jsonrun import run_json
+
+        return run_json(args)
 
     try:
         seed_url = clean_url(args.url) if args.url else clean_url(_prompt("Seed URL to audit"))
