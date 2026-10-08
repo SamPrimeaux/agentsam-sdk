@@ -90,7 +90,7 @@ async function registerOAuthClient(server,redirectUri,scope,logoUri,fetcher=fetc
     method:'POST',
     headers:{'content-type':'application/json',accept:'application/json'},
     body:JSON.stringify({
-      client_name:'AgentSam Local Studio MCP',
+      client_name:'AgentSam Studio',
       // The registered OAuth client is Studio, not the requested Brand/Campaign resource.
       // Catalog-verified publisher icon; never accept a caller-supplied logo URL.
       ...(logoUri ? {logo_uri:logoUri} : {}),
@@ -128,10 +128,36 @@ export async function beginPluginOAuth(env,accountId,pluginId,options={},fetcher
     hash,accountId,pluginId,clientId,sealed,JSON.stringify(scopes),
     entry.oauthResource,redirectUri,options.desktop===true?'desktop':'web',now()+600
   ).run();
+  // User identity comes from Studio's verified session (not browser form data).
+  // An opaque one-time login_hint conveys the verified Studio account to the
+  // independent plugin issuer. No Studio session cookie or OAuth token leaks.
+  if(!env.STUDIO_HANDOFF_SECRET || env.STUDIO_HANDOFF_SECRET.length<48)
+    fail('plugin_studio_sso_unavailable');
+  const identity=await env.DB.prepare(
+    'SELECT id,email,display_name FROM accounts WHERE id=? LIMIT 1'
+  ).bind(accountId).first();
+  if(!identity||identity.id!==accountId)fail('plugin_studio_identity_missing');
+  const handoff=await httpJson(server.issuer+'/oauth/studio/handoff',{
+    method:'POST',headers:{
+      'content-type':'application/json',
+      'x-agentsam-studio-handoff-secret':env.STUDIO_HANDOFF_SECRET,
+    },
+    body:JSON.stringify({
+      user_id:accountId,
+      display_name:identity.display_name||'AgentSam account',
+      email:identity.email||undefined,
+      client_id:clientId,redirect_uri:redirectUri,
+      resource:entry.oauthResource,scope:scopes.join(' '),
+      code_challenge:challenge,state,
+    }),
+  },pluginFetch);
+  if(typeof handoff.login_hint!=='string'||! /^[A-Za-z0-9_-]{40,80}$/.test(handoff.login_hint))
+    fail('plugin_studio_handoff_invalid');
   const url=new URL(server.authorization);
   for(const [key,value] of Object.entries({
     client_id:clientId,response_type:'code',redirect_uri:redirectUri,scope:scopes.join(' '),
     resource:entry.oauthResource,state,code_challenge:challenge,code_challenge_method:'S256',
+    login_hint:handoff.login_hint,
   }))url.searchParams.set(key,value);
   return {authorize_url:url.toString(),status:'authorization_required',plugin_key:installed.plugin_key};
 }
@@ -150,7 +176,7 @@ async function identityFor(token,pending,fetcher){
   const info=await httpJson(server.userinfo,{
     headers:{authorization:'Bearer '+token,accept:'application/json'},
   },fetcher);
-  if(typeof info.sub!=='string'||!info.sub||info.audience!==pending.resource_url)fail('plugin_oauth_identity_mismatch');
+  if(info.sub!==pending.account_id||info.audience!==pending.resource_url)fail('plugin_oauth_identity_mismatch');
   const granted=Array.isArray(info.scopes)?info.scopes:[];
   const requested=JSON.parse(pending.scopes_json||'[]');
   if(!requested.every(scope=>granted.includes(scope)))fail('plugin_oauth_scope_missing');

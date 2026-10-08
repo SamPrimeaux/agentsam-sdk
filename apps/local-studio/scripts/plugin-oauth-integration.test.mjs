@@ -27,6 +27,10 @@ function dbFixture() {
   const sqlite=new DatabaseSync(':memory:');
   sqlite.exec(readFileSync(new URL('../../../migrations/d1/0001_agentsam_plugin_runtime.sql',import.meta.url),'utf8'));
   sqlite.exec(readFileSync(new URL('../backend/migrations/1348_agentsam_public_plugin_oauth.sql',import.meta.url),'utf8'));
+  sqlite.exec('CREATE TABLE accounts(id TEXT PRIMARY KEY,email TEXT,display_name TEXT)');
+  sqlite.prepare('INSERT INTO accounts(id,email,display_name) VALUES(?,?,?)').run(
+    accountId,'studio-user@example.test','Studio User'
+  );
   sqlite.prepare(`INSERT INTO agentsam_plugins(
     id,account_id,plugin_key,provider_key,installation_key,environment,plugin_kind,display_name,transport,auth_type,
     endpoint_url,category,is_enabled,settings_visible,composer_visible
@@ -78,9 +82,11 @@ function mockFetcher(options={}) {
       code_challenge_methods_supported:['S256'],grant_types_supported:['authorization_code','refresh_token']
     };
     else if(href.endsWith('/oauth/register'))body={client_id:'ags_dcr_fixture1234567890'};
+    else if(href.endsWith('/oauth/studio/handoff'))body={login_hint:'A'.repeat(43),expires_in:300};
     else if(href.endsWith('/oauth/token'))body={access_token:token,refresh_token:'test-refresh-not-real',expires_in:3600};
     else if(href.endsWith('/oauth/userinfo'))body={
-      sub:'au_independent_plugin_account',audience:options.wrongAudience?'https://unknown.example/mcp':resource,scopes:options.scopes||[scope],
+      sub:options.wrongOwner?'au_wrong_account':accountId,
+      audience:options.wrongAudience?'https://unknown.example/mcp':resource,scopes:options.scopes||[scope],
     };
     else if(href===(options.metadata?.endpoint_url||endpoint)){
       const rpc=JSON.parse(init.body);
@@ -95,6 +101,7 @@ function mockFetcher(options={}) {
 const envFor=DB=>({
  DB,VAULT_MASTER_KEY:'v1.'+Buffer.alloc(32,7).toString('base64'),
  AGENTSAM_PLUGIN_CATALOG_URLS:JSON.stringify([origin+'/catalog/plugins']),
+ STUDIO_HANDOFF_SECRET:'fixture-shared-studio-plugin-handoff-secret-long-enough-12345',
 });
 
 test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint checks',async()=>{
@@ -103,12 +110,18 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   assert.equal(started.status,'authorization_required');
   const registration = calls.find(c=>c.href.endsWith('/oauth/register'));
   assert.ok(registration);
-  assert.equal(JSON.parse(registration.init.body).client_name,'AgentSam Local Studio MCP');
+  assert.equal(JSON.parse(registration.init.body).client_name,'AgentSam Studio');
+  const bridge=calls.find(c=>c.href.endsWith('/oauth/studio/handoff'));
+  assert.ok(bridge);
+  assert.equal(JSON.parse(bridge.init.body).user_id,accountId);
+  assert.equal(JSON.parse(bridge.init.body).display_name,'Studio User');
+  assert.equal(bridge.init.headers['x-agentsam-studio-handoff-secret'],env.STUDIO_HANDOFF_SECRET);
   const authUrl=new URL(started.authorize_url);
   assert.equal(authUrl.origin,origin);
   assert.equal(authUrl.searchParams.get('resource'),resource);
   assert.equal(authUrl.searchParams.get('scope'),scope);
   assert.equal(authUrl.searchParams.get('code_challenge_method'),'S256');
+  assert.equal(authUrl.searchParams.get('login_hint'),'A'.repeat(43));
   assert.equal(authUrl.searchParams.get('redirect_uri'),'https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback');
   const state=authUrl.searchParams.get('state');
   assert.ok(state?.length>=40);
@@ -179,6 +192,16 @@ test('OAuth and MCP use Workers-compatible manual redirects and never follow 3xx
     assert.equal(init.redirect,'manual');
     return new Response(null,{status:307,headers:{location:'https://unexpected.example/mcp'}});
   }),/plugin_mcp_redirect_rejected/);
+  sqlite.close();
+});
+
+test('OAuth refuses a different plugin identity for the already authenticated Studio account',async()=>{
+  const {DB,sqlite}=dbFixture();const env=envFor(DB);const {fetcher}=mockFetcher({wrongOwner:true});
+  const started=await beginPluginOAuth(env,accountId,pluginId,{callbackUrl},fetcher);
+  const state=new URL(started.authorize_url).searchParams.get('state');
+  await assert.rejects(completePluginOAuth(env,
+    new Request(callbackUrl+'?code=testcode&state='+state),fetcher),/plugin_oauth_identity_mismatch/);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_plugin_oauth_grants').get().count,0);
   sqlite.close();
 });
 

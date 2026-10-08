@@ -906,11 +906,22 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       const nav='/settings/customize?view=plugins';
       try {
         const result=await completePluginOAuth(env,request);
-        const notice=result.source_client==='desktop'
-          ? 'You can return to the AgentSam desktop app and refresh Plugins.'
-          : 'Return to Local Studio to use your connected plugin.';
-        return new Response('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body style="background:#0d0d14;color:#fafaff;font:16px system-ui;padding:45px"><h1>Plugin connected</h1><p>'+notice+'</p><a style="color:#9e8cff" href="'+nav+'">Open AgentSam Plugins</a></body></html>',{
-          status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'},
+        const desktop=result.source_client==='desktop';
+        const notice=desktop
+          ? 'Your connection is ready. Return to the AgentSam desktop app to use this plugin.'
+          : 'Your permissions are saved. Returning you to the AgentSam Plugins workspace.';
+        const autoReturn=desktop?'':'<meta http-equiv="refresh" content="2;url='+nav+'">';
+        const content='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
+          +autoReturn+'<title>Plugin connected · AgentSam</title><style>'
+          +'body{min-height:100vh;margin:0;background:radial-gradient(ellipse at 50% 20%,#5232aa2a,transparent 65%),#090a10;display:grid;place-items:center;color:#f3f0fc;font:15px/1.6 system-ui;padding:20px}'
+          +'main{width:min(100%,430px);border:1px solid #3c344c;background:#17151f;border-radius:20px;padding:30px;text-align:center;box-shadow:0 20px 80px #0007}'
+          +'.mark{display:grid;place-items:center;margin:0 auto 20px;width:50px;height:50px;border-radius:16px;background:#392657;color:#bca0ff;font-size:28px}'
+          +'h1{font-size:23px;margin:0 0 6px}p{color:#b7b0c4;margin:0 0 20px}'
+          +'a{display:block;background:#8646e9;color:white;padding:11px;border-radius:10px;text-decoration:none;font-weight:650}'
+          +'</style></head><body><main><div class="mark" aria-hidden="true">✓</div><h1>Plugin connected</h1><p>'+notice+'</p>'
+          +'<a href="'+nav+'">Back to AgentSam Plugins →</a></main></body></html>';
+        return new Response(content,{
+          status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"},
         });
       } catch(error) {
         console.warn('plugin_oauth_callback_failed',String(error?.code||error?.message||'error').slice(0,90));
