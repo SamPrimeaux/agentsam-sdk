@@ -102,6 +102,7 @@ export function normalizeDiscoveredPlugin(input, source) {
     description: text(input.description, 1600),
     publisher: text(input.developer_name, 100),
     iconUrl,
+    publisherIconUrl,
     category: text(input.category, 55) || 'Other',
     keywords: strings(input.keywords, 20, 50),
     capabilities: strings(input.capabilities, 25, 150),
