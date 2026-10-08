@@ -9,3 +9,11 @@ test('five named form-factor viewports include an approximately 2000px widescree
   assert.equal(QUALITY_VIEWPORTS.at(-1).width, 2000);
   assert.equal(QUALITY_VIEWPORTS[0].mode, 'single-primary-surface');
 });
+
+test('range contract includes compact phones through ultrawide boundaries', () => {
+  assert.equal(VIEWPORT_RANGES[0].min, 320);
+  assert.equal(VIEWPORT_RANGES.at(-1).max, null);
+  for (const width of [320, 744, 768, 1600, 2560]) {
+    assert.ok(BOUNDARY_VIEWPORTS.some((item) => item.width === width));
+  }
+});
