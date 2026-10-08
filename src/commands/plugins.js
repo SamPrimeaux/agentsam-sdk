@@ -4,6 +4,7 @@ import {
   AGENTSAM_MCP_PLUGIN_MANIFEST,
   buildPluginQualityReceipt,
   inspectPluginProduct,
+  readPluginEvidenceBundle,
   normalizePluginKey,
   verifyPluginProduct,
 } from '../plugins/index.js';
@@ -33,13 +34,14 @@ function installMigration(cwd) {
 function parse(argv) {
   const out = {
     action: argv[0] || 'list', key: '', cwd: process.cwd(), json: false,
-    origin: '',
+    origin: '', evidence: '',
     timeoutMs: 180_000, noOpen: false,
   };
   for (let i = 1; i < argv.length; i += 1) {
     if (argv[i] === '--cwd') out.cwd = argv[++i] || out.cwd;
     else if (argv[i] === '--json') out.json = true;
     else if (argv[i] === '--origin') out.origin = argv[++i] || out.origin;
+    else if (argv[i] === '--evidence') out.evidence = argv[++i] || out.evidence;
     else if (argv[i] === '--timeout') out.timeoutMs = Math.max(1_000, Number(argv[++i]) || out.timeoutMs);
     else if (argv[i] === '--no-open') out.noOpen = true;
     else if (!out.key) out.key = argv[i];
@@ -151,11 +153,13 @@ export async function runPlugins(argv = []) {
   const opts = parse(argv);
   if (['inspect','verify','receipt'].includes(opts.action)) {
     const target = path.resolve(opts.cwd, opts.key || '.');
+    const evidenceBundle = opts.evidence ? readPluginEvidenceBundle(path.resolve(opts.cwd, opts.evidence)) : null;
+    const verification = opts.action === 'inspect' ? null : verifyPluginProduct(target,{evidenceBundle});
     const result = opts.action === 'inspect'
-      ? inspectPluginProduct(target)
+      ? inspectPluginProduct(target,{evidenceBundle})
       : opts.action === 'verify'
-        ? verifyPluginProduct(target)
-        : buildPluginQualityReceipt(target);
+        ? verification
+        : buildPluginQualityReceipt(target,{verification,evidenceBundle});
     if (opts.json || opts.action === 'receipt') writeJson(result);
     else {
       console.log(`\n  Plugin ${result.product?.identity?.id || path.basename(target)}`);
