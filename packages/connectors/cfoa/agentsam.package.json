@@ -1,0 +1,46 @@
+{
+  "schema": "agentsam.package.v1",
+  "id": "agentsam-connector-cloudflare",
+  "name": "@inneranimalmedia/agentsam-connector-cloudflare",
+  "version": "2.6.12",
+  "catalog_status": "needs-review",
+  "class": "package",
+  "status": "unknown",
+  "languages": [
+    "javascript"
+  ],
+  "execution_domains": [
+    "cloudflare"
+  ],
+  "purpose": "Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not affiliated with Cloudflare, Inc..",
+  "install": [
+    {
+      "command": "npm install @inneranimalmedia/agentsam-connector-cloudflare",
+      "package": "@inneranimalmedia/agentsam-connector-cloudflare",
+      "type": "npm"
+    }
+  ],
+  "use_when": [
+    "Connect AgentSam to supported Cloudflare services through the capability connector."
+  ],
+  "avoid_when": [],
+  "commands": [],
+  "topics": [
+    "cloudflare",
+    "connectors"
+  ],
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-connector-cloudflare",
+    "public_claim": true
+  },
+  "evidence": {
+    "directory": "packages/connectors/cfoa",
+    "purpose_source": "package.json",
+    "readme": null
+  },
+  "review_required": [
+    "avoid_when",
+    "runtime-readiness"
+  ]
+}

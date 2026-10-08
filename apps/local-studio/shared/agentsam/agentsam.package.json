@@ -1,0 +1,42 @@
+{
+  "schema": "agentsam.package.v1",
+  "id": "agentsam-local-shared",
+  "name": "@inneranimalmedia/agentsam-local-shared",
+  "version": "2.6.12",
+  "catalog_status": "needs-review",
+  "class": "package",
+  "status": "unknown",
+  "languages": [
+    "typescript"
+  ],
+  "execution_domains": [
+    "desktop",
+    "hosted"
+  ],
+  "purpose": "Private shared Local Studio chat, vault, inventory and workspace contracts.",
+  "install": [],
+  "use_when": [
+    "Implement shared Local Studio contracts for chat, workspace, and vault UI."
+  ],
+  "avoid_when": [
+    "Building a standalone public runtime package; this module is private to Local Studio."
+  ],
+  "commands": [],
+  "topics": [
+    "desktop",
+    "contracts"
+  ],
+  "registry": {
+    "kind": "private-workspace",
+    "name": "@inneranimalmedia/agentsam-local-shared",
+    "public_claim": false
+  },
+  "evidence": {
+    "directory": "apps/local-studio/shared/agentsam",
+    "purpose_source": "package.json",
+    "readme": null
+  },
+  "review_required": [
+    "runtime-readiness"
+  ]
+}
