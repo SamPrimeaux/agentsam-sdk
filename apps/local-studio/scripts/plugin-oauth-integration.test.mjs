@@ -148,6 +148,14 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   assert.equal(sqlite.prepare('SELECT setup_status FROM agentsam_plugins').get().setup_status,'unconfigured');
   sqlite.close();
 });
+test('OAuth client registration carries only validated catalog publisher branding',async()=>{
+  const {DB,sqlite}=dbFixture();const catalog=mockFetcher({metadata:{...metadata,
+    publisher_icon_url:origin+'/catalog/icons/agentsam.svg'}});
+  await beginPluginOAuth(envFor(DB),accountId,pluginId,{},catalog.fetcher);
+  const registration=catalog.calls.find(c=>c.href.endsWith('/api/oauth/register'));
+  assert.equal(JSON.parse(registration.init.body).logo_uri,origin+'/catalog/icons/agentsam.svg');
+  sqlite.close();
+});
 test('OAuth refuses an IAM identity mismatch without enabling the plugin',async()=>{
   const {DB,sqlite}=dbFixture();const env=envFor(DB);
   const started=await beginPluginOAuth(env,accountId,pluginId,{},mockFetcher().fetcher);
