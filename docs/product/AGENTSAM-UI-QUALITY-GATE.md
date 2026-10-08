@@ -102,6 +102,7 @@ Start the actual product first, then check five sizes:
 node scripts/ui-quality/audit-viewports.mjs \
   --url http://127.0.0.1:8080/work \
   --expect '[data-agent-conversation-surface]' \
+  --matrix full \
   --out /tmp/agentsam-ui-quality
 ~~~
 
