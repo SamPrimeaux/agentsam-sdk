@@ -962,7 +962,7 @@ function PluginCustomizeView({
                 <PreferenceRow label="Version" description="Published plugin manifest version." value={selectedCatalog.version}/>
                 <PreferenceRow label="Transport" description="Declared MCP transport protocol." value={selectedCatalog.transport}/>
                 <PreferenceRow label="Permissions" description="Connection and authorization requirements." value="OAuth authorization required"/>
-                <PreferenceRow label="Tools / skills" description="Capabilities declared by the published manifest." value={selectedCatalog.toolCount+" tools · "+selectedCatalog.skillCount+" skills"}/>
+                <PreferenceRow label="Tools / skills" description="Tool declarations from the verified catalog; execution requires a valid grant and registered runtime tools." value={selectedCatalog.toolPermissions.length+" declared tools · "+selectedCatalog.skillCount+" packaged skills"}/>
               </> : null}
               {installed ? <>
                 <PreferenceRow label="Connection status" description="Recorded connection state for this account." value={installed.setupStatus}/>
