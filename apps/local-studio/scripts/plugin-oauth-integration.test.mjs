@@ -12,7 +12,8 @@ const resource=origin+'/mcp';
 const endpoint=origin+'/mcp/brand';
 const accountId='au_test';
 const pluginId='plg_authdemo';
-const token='iam_test_access_token_long_enough_123456789';
+const token='ags_test_access_token_long_enough_123456789';
+const callbackUrl='https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback';
 const scope='brand:read';
 const metadata={
   plugin_key:'agentsam-brand',version:'1.0.0',display_name:'AgentSam Brand',
@@ -70,10 +71,16 @@ function mockFetcher(options={}) {
     const href=String(url);calls.push({href,init});
     let body,status=200;
     if(href===origin+'/catalog/plugins')body={schema:'agentsam.plugin-catalog/v1',plugins:[options.metadata||metadata]};
-    else if(href.endsWith('/api/oauth/register'))body={client_id:'iam_dcr_fixture1234567890'};
-    else if(href.endsWith('/api/oauth/token'))body={access_token:token,refresh_token:'test-refresh-not-real',expires_in:3600};
-    else if(href.endsWith('/api/oauth/userinfo'))body={
-      sub:options.wrongOwner?'au_someone_else':accountId,audience:resource,scopes:options.scopes||[scope],
+    else if(href===origin+'/.well-known/oauth-protected-resource')body={resource,authorization_servers:[origin],scopes_supported:[scope]};
+    else if(href===origin+'/.well-known/oauth-authorization-server')body={
+      issuer:origin,authorization_endpoint:origin+'/oauth/authorize',token_endpoint:origin+'/oauth/token',
+      registration_endpoint:origin+'/oauth/register',userinfo_endpoint:origin+'/oauth/userinfo',
+      code_challenge_methods_supported:['S256'],grant_types_supported:['authorization_code','refresh_token']
+    };
+    else if(href.endsWith('/oauth/register'))body={client_id:'ags_dcr_fixture1234567890'};
+    else if(href.endsWith('/oauth/token'))body={access_token:token,refresh_token:'test-refresh-not-real',expires_in:3600};
+    else if(href.endsWith('/oauth/userinfo'))body={
+      sub:'au_independent_plugin_account',audience:options.wrongAudience?'https://unknown.example/mcp':resource,scopes:options.scopes||[scope],
     };
     else if(href===(options.metadata?.endpoint_url||endpoint)){
       const rpc=JSON.parse(init.body);
@@ -92,13 +99,13 @@ const envFor=DB=>({
 
 test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint checks',async()=>{
   const {DB,sqlite}=dbFixture();const env=envFor(DB);const {fetcher,calls}=mockFetcher();
-  const started=await beginPluginOAuth(env,accountId,pluginId,{},fetcher);
+  const started=await beginPluginOAuth(env,accountId,pluginId,{callbackUrl},fetcher);
   assert.equal(started.status,'authorization_required');
-  const registration = calls.find(c=>c.href.endsWith('/api/oauth/register'));
+  const registration = calls.find(c=>c.href.endsWith('/oauth/register'));
   assert.ok(registration);
   assert.equal(JSON.parse(registration.init.body).client_name,'AgentSam Local Studio MCP');
   const authUrl=new URL(started.authorize_url);
-  assert.equal(authUrl.origin,'https://inneranimalmedia.com');
+  assert.equal(authUrl.origin,origin);
   assert.equal(authUrl.searchParams.get('resource'),resource);
   assert.equal(authUrl.searchParams.get('scope'),scope);
   assert.equal(authUrl.searchParams.get('code_challenge_method'),'S256');
@@ -138,7 +145,7 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   assert.deepEqual(runtimeResult,{ok:true,tool:'brand.get_context'});
 
   assert.ok(calls.some(c=>c.href===endpoint&&JSON.parse(c.init.body).method==='tools/call'));
-  assert.ok(calls.filter(c=>c.href.includes('/api/oauth/')||c.href===endpoint).every(c=>c.init.redirect==='manual'));
+  assert.ok(calls.filter(c=>c.href.includes('/oauth/')||c.href===endpoint).every(c=>c.init.redirect==='manual'));
 
   await assert.rejects(completePluginOAuth(env,request,fetcher),/plugin_oauth_state_invalid/);
   await assert.rejects(getRemotePluginToken(env,'au_another',pluginId,fetcher),/plugin_oauth_not_connected/);
@@ -154,15 +161,15 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
 test('OAuth client registration carries only validated catalog publisher branding',async()=>{
   const {DB,sqlite}=dbFixture();const catalog=mockFetcher({metadata:{...metadata,
     publisher_icon_url:origin+'/catalog/icons/agentsam.svg'}});
-  await beginPluginOAuth(envFor(DB),accountId,pluginId,{},catalog.fetcher);
-  const registration=catalog.calls.find(c=>c.href.endsWith('/api/oauth/register'));
+  await beginPluginOAuth(envFor(DB),accountId,pluginId,{callbackUrl},catalog.fetcher);
+  const registration=catalog.calls.find(c=>c.href.endsWith('/oauth/register'));
   assert.equal(JSON.parse(registration.init.body).logo_uri,origin+'/catalog/icons/agentsam.svg');
   sqlite.close();
 });
 test('OAuth and MCP use Workers-compatible manual redirects and never follow 3xx',async()=>{
   const {DB,sqlite}=dbFixture();const env=envFor(DB);const {fetcher}=mockFetcher();
-  await assert.rejects(beginPluginOAuth(env,accountId,pluginId,{},async(url,init)=>{
-    if(String(url).endsWith('/api/oauth/register')){
+  await assert.rejects(beginPluginOAuth(env,accountId,pluginId,{callbackUrl},async(url,init)=>{
+    if(String(url).endsWith('/oauth/register')){
       assert.equal(init.redirect,'manual');
       return new Response(null,{status:302,headers:{location:'https://unexpected.example/authorize'}});
     }
@@ -175,12 +182,12 @@ test('OAuth and MCP use Workers-compatible manual redirects and never follow 3xx
   sqlite.close();
 });
 
-test('OAuth refuses an IAM identity mismatch without enabling the plugin',async()=>{
+test('OAuth refuses a mismatched resource audience without enabling the plugin',async()=>{
   const {DB,sqlite}=dbFixture();const env=envFor(DB);
-  const started=await beginPluginOAuth(env,accountId,pluginId,{},mockFetcher().fetcher);
+  const started=await beginPluginOAuth(env,accountId,pluginId,{callbackUrl},mockFetcher().fetcher);
   const state=new URL(started.authorize_url).searchParams.get('state');
   const request=new Request('https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback?code=samplecode&state='+state);
-  await assert.rejects(completePluginOAuth(env,request,mockFetcher({wrongOwner:true}).fetcher),/plugin_oauth_identity_mismatch/);
+  await assert.rejects(completePluginOAuth(env,request,mockFetcher({wrongAudience:true}).fetcher),/plugin_oauth_identity_mismatch/);
   assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_tools WHERE plugin_id=?').get(pluginId).count,0);
   assert.equal(sqlite.prepare('SELECT setup_status FROM agentsam_plugins').get().setup_status,'unconfigured');
   sqlite.close();
@@ -206,12 +213,12 @@ test('Campaign keeps writes unavailable without scopes and requires approval aft
     _meta:{securitySchemes:[{type:'oauth2',scopes:permission.scopes}]},
   }));
   const readOnly=mockFetcher({metadata:campaign,tools:availableTools,scopes:['campaign:read']});
-  const started=await beginPluginOAuth(env,accountId,pluginId,{},readOnly.fetcher);
+  const started=await beginPluginOAuth(env,accountId,pluginId,{callbackUrl},readOnly.fetcher);
   assert.equal(new URL(started.authorize_url).searchParams.get('scope'),'campaign:read');
   await completePluginOAuth(env,new Request('https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback?code=one&state='+new URL(started.authorize_url).searchParams.get('state')),readOnly.fetcher);
   assert.deepEqual(sqlite.prepare('SELECT tool_key FROM agentsam_tools WHERE plugin_id=?').all(pluginId).map(r=>r.tool_key),['campaign.get_context']);
   const elevated=mockFetcher({metadata:campaign,tools:availableTools,scopes:['campaign:read','campaign:brief:write']});
-  const elevatedStart=await beginPluginOAuth(env,accountId,pluginId,{allowWrites:true},elevated.fetcher);
+  const elevatedStart=await beginPluginOAuth(env,accountId,pluginId,{allowWrites:true,callbackUrl},elevated.fetcher);
   assert.equal(new URL(elevatedStart.authorize_url).searchParams.get('scope'),'campaign:brief:write campaign:read');
   await completePluginOAuth(env,new Request('https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback?code=two&state='+new URL(elevatedStart.authorize_url).searchParams.get('state')),elevated.fetcher);
   const write=sqlite.prepare("SELECT * FROM agentsam_tools WHERE tool_key='campaign.brief.save' AND plugin_id=?").get(pluginId);

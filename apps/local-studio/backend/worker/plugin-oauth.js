@@ -3,7 +3,6 @@ import { importVaultMasterKey, encryptVaultSecret, decryptVaultSecret } from '..
 import { discoverPublicPlugins, fetchPluginResource } from './plugin-discovery.js';
 import { listRemoteMcpTools, callRemoteMcpTool } from './plugin-mcp-client.js';
 
-const ISSUER='https://inneranimalmedia.com';
 const MAX_JSON=48_000;
 const now=()=>Math.floor(Date.now()/1000);
 const bytes=()=>crypto.getRandomValues(new Uint8Array(32));
@@ -14,6 +13,7 @@ async function digest(value){
 function fail(code){const error=new Error(code);error.code=code;throw error}
 const aadState=(owner,hash)=>owner+':agentsam-mcp-oauth:'+hash;
 const aadGrant=(owner,id)=>owner+':agentsam-mcp-oauth:'+id;
+const boundFetch=(env,fetcher)=>(url,options={})=>fetchPluginResource(env,url,options,fetcher);
 async function seal(env,value,aad) {
   return encryptVaultSecret(await importVaultMasterKey(env.VAULT_MASTER_KEY),JSON.stringify(value),aad);
 }
@@ -30,6 +30,33 @@ async function httpJson(url,options={},fetcher=fetch){
   let parsed;try{parsed=JSON.parse(body)}catch{fail('plugin_oauth_invalid_json')}
   if(!response.ok)fail('plugin_oauth_upstream_'+response.status);
   return parsed;
+}
+/** Trust the first-party plugin resource's own advertised OAuth issuer. */
+async function oauthServer(resource,fetcher=fetch){
+  let origin;
+  try{
+    const parsed=new URL(resource);
+    if(parsed.protocol!=='https:'||parsed.username||parsed.password||parsed.hash||parsed.search)fail('plugin_oauth_resource_invalid');
+    origin=parsed.origin;
+  }catch{fail('plugin_oauth_resource_invalid')}
+  const resourceMeta=await httpJson(origin+'/.well-known/oauth-protected-resource',{
+    headers:{accept:'application/json'},
+  },fetcher);
+  if(resourceMeta.resource!==resource||!Array.isArray(resourceMeta.authorization_servers)
+    ||resourceMeta.authorization_servers.length!==1
+    ||resourceMeta.authorization_servers[0]!==origin)fail('plugin_oauth_issuer_untrusted');
+  const metadata=await httpJson(origin+'/.well-known/oauth-authorization-server',{
+    headers:{accept:'application/json'},
+  },fetcher);
+  if(metadata.issuer!==origin||!metadata.code_challenge_methods_supported?.includes('S256')
+    ||!metadata.grant_types_supported?.includes('authorization_code'))fail('plugin_oauth_metadata_invalid');
+  for(const key of ['authorization_endpoint','token_endpoint','registration_endpoint','userinfo_endpoint']){
+    const endpoint=metadata[key];
+    try{if(new URL(endpoint).origin!==origin||new URL(endpoint).protocol!=='https:')fail('plugin_oauth_metadata_invalid')}
+    catch{fail('plugin_oauth_metadata_invalid')}
+  }
+  return {issuer:origin,authorization:metadata.authorization_endpoint,
+    token:metadata.token_endpoint,registration:metadata.registration_endpoint,userinfo:metadata.userinfo_endpoint};
 }
 async function catalogEntry(env,pluginKey,fetcher){
   const catalog=await discoverPublicPlugins(env,fetcher);
@@ -58,8 +85,8 @@ function scopesFor(entry,allowWrites){
   return allowWrites ? entry.oauthScopes : entry.readOnlyScopes;
 }
 function codeVerifier(){return base64url(bytes())}
-async function registerIamClient(redirectUri,scope,logoUri,fetcher=fetch){
-  const response=await httpJson(ISSUER+'/api/oauth/register',{
+async function registerOAuthClient(server,redirectUri,scope,logoUri,fetcher=fetch){
+  const response=await httpJson(server.registration,{
     method:'POST',
     headers:{'content-type':'application/json',accept:'application/json'},
     body:JSON.stringify({
@@ -75,7 +102,7 @@ async function registerIamClient(redirectUri,scope,logoUri,fetcher=fetch){
       scope:scope.join(' '),
     }),
   },fetcher);
-  if(typeof response.client_id!=='string'||!/^iam_dcr_[a-z0-9]+$/.test(response.client_id))fail('plugin_oauth_registration_invalid');
+  if(typeof response.client_id!=='string'||!/^[-A-Za-z0-9._:]{6,250}$/.test(response.client_id))fail('plugin_oauth_registration_invalid');
   return response.client_id;
 }
 export async function beginPluginOAuth(env,accountId,pluginId,options={},fetcher=fetch){
@@ -83,8 +110,12 @@ export async function beginPluginOAuth(env,accountId,pluginId,options={},fetcher
   const entry=await catalogEntry(env,installed.plugin_key,fetcher);
   if(installed.endpoint_url!==entry.endpointUrl)fail('plugin_endpoint_changed_requires_reconnect');
   const scopes=scopesFor(entry,options.allowWrites===true);
-  const redirectUri='https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback';
-  const clientId=await registerIamClient(redirectUri,scopes,entry.publisherIconUrl,fetcher);
+  const pluginFetch=boundFetch(env,fetcher);
+  const server=await oauthServer(entry.oauthResource,pluginFetch);
+  const redirectUri=options.callbackUrl;
+  if(typeof redirectUri!=='string'||!redirectUri.startsWith('https://')
+    ||new URL(redirectUri).pathname!=='/api/plugins/oauth/callback')fail('plugin_oauth_callback_untrusted');
+  const clientId=await registerOAuthClient(server,redirectUri,scopes,entry.publisherIconUrl,pluginFetch);
   const state=codeVerifier();
   const hash=await digest(state);
   const verifier=codeVerifier();
@@ -97,7 +128,7 @@ export async function beginPluginOAuth(env,accountId,pluginId,options={},fetcher
     hash,accountId,pluginId,clientId,sealed,JSON.stringify(scopes),
     entry.oauthResource,redirectUri,options.desktop===true?'desktop':'web',now()+600
   ).run();
-  const url=new URL(ISSUER+'/api/oauth/authorize');
+  const url=new URL(server.authorization);
   for(const [key,value] of Object.entries({
     client_id:clientId,response_type:'code',redirect_uri:redirectUri,scope:scopes.join(' '),
     resource:entry.oauthResource,state,code_challenge:challenge,code_challenge_method:'S256',
@@ -105,7 +136,8 @@ export async function beginPluginOAuth(env,accountId,pluginId,options={},fetcher
   return {authorize_url:url.toString(),status:'authorization_required',plugin_key:installed.plugin_key};
 }
 async function exchangeCode(pending,verifier,code,fetcher){
-  return httpJson(ISSUER+'/api/oauth/token',{
+  const server=await oauthServer(pending.resource_url,fetcher);
+  return httpJson(server.token,{
     method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},
     body:new URLSearchParams({
       grant_type:'authorization_code',client_id:pending.client_id,code,
@@ -114,10 +146,11 @@ async function exchangeCode(pending,verifier,code,fetcher){
   },fetcher);
 }
 async function identityFor(token,pending,fetcher){
-  const info=await httpJson(ISSUER+'/api/oauth/userinfo',{
+  const server=await oauthServer(pending.resource_url,fetcher);
+  const info=await httpJson(server.userinfo,{
     headers:{authorization:'Bearer '+token,accept:'application/json'},
   },fetcher);
-  if(info.sub!==pending.account_id||info.audience!==pending.resource_url)fail('plugin_oauth_identity_mismatch');
+  if(typeof info.sub!=='string'||!info.sub||info.audience!==pending.resource_url)fail('plugin_oauth_identity_mismatch');
   const granted=Array.isArray(info.scopes)?info.scopes:[];
   const requested=JSON.parse(pending.scopes_json||'[]');
   if(!requested.every(scope=>granted.includes(scope)))fail('plugin_oauth_scope_missing');
@@ -165,7 +198,7 @@ function toolStatements(db,entry,installed,accountId,tools){
 }
 async function finishAuthorizedConnection(env,pending,payload,fetcher=fetch){
   if(typeof payload.access_token!=='string'||payload.access_token.length<20)fail('plugin_oauth_access_missing');
-  const scopes=await identityFor(payload.access_token,pending,fetcher);
+  const scopes=await identityFor(payload.access_token,pending,boundFetch(env,fetcher));
   const installed=await getOwnedCatalogPlugin(env.DB,pending.account_id,pending.plugin_id);
   const entry=await catalogEntry(env,installed.plugin_key,fetcher);
   if(entry.oauthResource!==pending.resource_url||entry.endpointUrl!==installed.endpoint_url)fail('plugin_oauth_resource_changed');
@@ -186,7 +219,7 @@ async function finishAuthorizedConnection(env,pending,payload,fetcher=fetch){
       client_id=excluded.client_id,resource_url=excluded.resource_url,issuer_url=excluded.issuer_url,
       credentials_ciphertext=excluded.credentials_ciphertext,scopes_json=excluded.scopes_json,
       expires_at=excluded.expires_at,updated_at=unixepoch()`).bind(
-      pending.account_id,pending.plugin_id,pending.client_id,pending.resource_url,ISSUER,
+      pending.account_id,pending.plugin_id,pending.client_id,pending.resource_url,(await oauthServer(pending.resource_url,boundFetch(env,fetcher))).issuer,
       ciphertext,JSON.stringify(scopes),until
     ),
     env.DB.prepare(`UPDATE agentsam_plugins SET setup_status='connected',
@@ -209,7 +242,7 @@ export async function completePluginOAuth(env,request,fetcher=fetch){
     WHERE state_hash=? AND consumed_at IS NULL AND expires_at>unixepoch()`).bind(hash).run();
   if(Number(consumed?.meta?.changes||0)!==1)fail('plugin_oauth_state_consumed');
   const {verifier}=await unseal(env,pending.verifier_ciphertext,aadState(pending.account_id,hash));
-  const token=await exchangeCode(pending,verifier,code,fetcher);
+  const token=await exchangeCode(pending,verifier,code,boundFetch(env,fetcher));
   const connected=await finishAuthorizedConnection(env,pending,token,fetcher);
   return {...connected,source_client:pending.source_client};
 }
@@ -218,22 +251,24 @@ export async function getRemotePluginToken(env,accountId,pluginId,fetcher=fetch)
     'SELECT * FROM agentsam_plugin_oauth_grants WHERE account_id=? AND plugin_id=? LIMIT 1'
   ).bind(accountId,pluginId).first();
   if(!grant)fail('plugin_oauth_not_connected');
-  if(grant.issuer_url!==ISSUER)fail('plugin_oauth_issuer_mismatch');
+  const pluginFetch=boundFetch(env,fetcher);
+  const server=await oauthServer(grant.resource_url,pluginFetch);
+  if(grant.issuer_url!==server.issuer)fail('plugin_oauth_issuer_mismatch');
   const tokens=await unseal(env,grant.credentials_ciphertext,aadGrant(accountId,pluginId));
   if(grant.expires_at>now()+90 && tokens.access_token)return {
     token:tokens.access_token,resource:grant.resource_url,scopes:JSON.parse(grant.scopes_json||'[]'),
   };
   if(!tokens.refresh_token)fail('plugin_oauth_refresh_required');
-  const refreshed=await httpJson(ISSUER+'/api/oauth/token',{
+  const refreshed=await httpJson(server.token,{
     method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},
     body:new URLSearchParams({
       grant_type:'refresh_token',client_id:grant.client_id,
       refresh_token:tokens.refresh_token,resource:grant.resource_url,
     }).toString(),
-  },fetcher);
+  },pluginFetch);
   if(typeof refreshed.access_token!=='string')fail('plugin_oauth_refresh_invalid');
   const owner={account_id:accountId,resource_url:grant.resource_url,scopes_json:grant.scopes_json};
-  const scopes=await identityFor(refreshed.access_token,owner,fetcher);
+  const scopes=await identityFor(refreshed.access_token,owner,pluginFetch);
   const sealed=await seal(env,{
     access_token:refreshed.access_token,
     refresh_token:refreshed.refresh_token||tokens.refresh_token,
