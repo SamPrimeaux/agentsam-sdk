@@ -135,6 +135,8 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   assert.deepEqual(runtimeResult,{ok:true,tool:'brand.get_context'});
 
   assert.ok(calls.some(c=>c.href===endpoint&&JSON.parse(c.init.body).method==='tools/call'));
+  assert.ok(calls.filter(c=>c.href.includes('/api/oauth/')||c.href===endpoint).every(c=>c.init.redirect==='manual'),
+    'OAuth and MCP must use Workers-compatible manual redirects');
   await assert.rejects(completePluginOAuth(env,request,fetcher),/plugin_oauth_state_invalid/);
   await assert.rejects(getRemotePluginToken(env,'au_another',pluginId,fetcher),/plugin_oauth_not_connected/);
   const catalog=await listCatalogForAccount(env,accountId,fetcher);
