@@ -176,7 +176,7 @@ async function identityFor(token,pending,fetcher){
   const info=await httpJson(server.userinfo,{
     headers:{authorization:'Bearer '+token,accept:'application/json'},
   },fetcher);
-  if(typeof info.sub!=='string'||!info.sub||info.audience!==pending.resource_url)fail('plugin_oauth_identity_mismatch');
+  if(info.sub!==pending.account_id||info.audience!==pending.resource_url)fail('plugin_oauth_identity_mismatch');
   const granted=Array.isArray(info.scopes)?info.scopes:[];
   const requested=JSON.parse(pending.scopes_json||'[]');
   if(!requested.every(scope=>granted.includes(scope)))fail('plugin_oauth_scope_missing');

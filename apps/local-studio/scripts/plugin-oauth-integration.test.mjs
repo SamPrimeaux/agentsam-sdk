@@ -85,7 +85,8 @@ function mockFetcher(options={}) {
     else if(href.endsWith('/oauth/studio/handoff'))body={login_hint:'A'.repeat(43),expires_in:300};
     else if(href.endsWith('/oauth/token'))body={access_token:token,refresh_token:'test-refresh-not-real',expires_in:3600};
     else if(href.endsWith('/oauth/userinfo'))body={
-      sub:'au_independent_plugin_account',audience:options.wrongAudience?'https://unknown.example/mcp':resource,scopes:options.scopes||[scope],
+      sub:options.wrongOwner?'au_wrong_account':accountId,
+      audience:options.wrongAudience?'https://unknown.example/mcp':resource,scopes:options.scopes||[scope],
     };
     else if(href===(options.metadata?.endpoint_url||endpoint)){
       const rpc=JSON.parse(init.body);
@@ -191,6 +192,16 @@ test('OAuth and MCP use Workers-compatible manual redirects and never follow 3xx
     assert.equal(init.redirect,'manual');
     return new Response(null,{status:307,headers:{location:'https://unexpected.example/mcp'}});
   }),/plugin_mcp_redirect_rejected/);
+  sqlite.close();
+});
+
+test('OAuth refuses a different plugin identity for the already authenticated Studio account',async()=>{
+  const {DB,sqlite}=dbFixture();const env=envFor(DB);const {fetcher}=mockFetcher({wrongOwner:true});
+  const started=await beginPluginOAuth(env,accountId,pluginId,{callbackUrl},fetcher);
+  const state=new URL(started.authorize_url).searchParams.get('state');
+  await assert.rejects(completePluginOAuth(env,
+    new Request(callbackUrl+'?code=testcode&state='+state),fetcher),/plugin_oauth_identity_mismatch/);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_plugin_oauth_grants').get().count,0);
   sqlite.close();
 });
 
