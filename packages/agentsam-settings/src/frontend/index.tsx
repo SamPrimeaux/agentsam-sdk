@@ -1006,7 +1006,7 @@ function PluginCustomizeView({
               ) : null}
               {(installed?.setupUrl || installed?.installationKey === "catalog-v1") && host.beginPluginSetup ? (
                 <button type="button" disabled={busy} onClick={()=>void run(()=>host.beginPluginSetup!(installed.id))}
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-foreground text-[11px] font-semibold text-background disabled:opacity-40">
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-violet-600 text-[11px] font-semibold text-white hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 disabled:opacity-40">
                   {installed.installationKey==="catalog-v1" ? "Connect read-only" :
                     installed.setupStatus==="connected"?"Reconnect":"Connect plugin"} <ArrowUpRight className="size-3.5"/>
                 </button>

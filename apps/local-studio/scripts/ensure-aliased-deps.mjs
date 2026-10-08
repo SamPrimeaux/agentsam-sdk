@@ -93,6 +93,14 @@ function linkFromStudio(pkgDir, name) {
   return linkPackageDir(pkgDir, name, studioDepTarget(name));
 }
 
+// Monorepo installs commonly hoist shared runtime deps to the repository root.
+// Reuse those before attempting a nested network install; Vite's aliased /src
+// modules still need each dependency resolvable at the package's own path.
+function linkFromRepoRoot(pkgDir, name) {
+  const parts = name.startsWith('@') ? name.split('/') : [name];
+  return linkPackageDir(pkgDir, name, path.join(root, 'node_modules', ...parts));
+}
+
 function linkFromWorkspace(pkgDir, name) {
   const source = workspacePackages.get(name);
   if (!source) return false;
@@ -173,6 +181,7 @@ for (const name of ALIASED) {
     const linkedFromWorkspace = [];
     for (const dep of missing) {
       if (linkFromStudio(pkgDir, dep)) linkedFromStudio.push(dep);
+      else if (linkFromRepoRoot(pkgDir, dep)) linkedFromStudio.push(dep);
       else if (linkFromWorkspace(pkgDir, dep)) linkedFromWorkspace.push(dep);
     }
     if (linkedFromStudio.length) {
