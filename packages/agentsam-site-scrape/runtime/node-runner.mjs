@@ -13,6 +13,7 @@ Usage:
   agentsam site storage --project-root <project-directory>
   agentsam site verify <archive-directory>
   agentsam site index <archive-directory>
+  agentsam site upload <archive-directory> --project-root <project-directory>
 
 Options:
   --project-root <dir>     Project whose configuration/Cloudflare identity owns storage (default cwd)
@@ -67,6 +68,20 @@ export async function runNativeSiteScrape(args, {stdout=process.stdout,stderr=pr
       if(action==='index') {
         print(JSON.parse(fs.readFileSync(path.join(path.resolve(cwd,target),'index.json'),'utf8')));
       } else print({ok:true,run_id:manifest.run_id,objects:manifest.objects.length,prefix:manifest.prefix});
+      return 0;
+    }
+    if(action==='upload') {
+      const target=positional[0];
+      if(!target || positional.length!==1)throw Error('site upload requires one existing archive directory');
+      const archiveRoot=path.resolve(cwd,target);
+      const manifest=verifyLocalArchive(archiveRoot);
+      const identity=projectIdentities(projectRoot,opts);
+      if(identity.accountId&&identity.accountId!==manifest.account_id ||
+         identity.projectId&&identity.projectId!==manifest.project_id) {
+        throw Error('archive identity does not match the selected project configuration');
+      }
+      const remote=await uploadProjectArchive({archiveRoot,projectRoot,bucket:opts.archive_bucket});
+      print({ok:true,run_id:manifest.run_id,storage:{status:'uploaded',...remote}});
       return 0;
     }
     if(action!=='scrape')throw Error('expected: agentsam site scrape <URL>');

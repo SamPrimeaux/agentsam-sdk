@@ -129,3 +129,17 @@ test('native project R2 uploader requires per-project selection and uploads comp
   assert.ok(!errorWrites.some(x=>x.key.endsWith('/manifest.json')));
  }finally{fs.rmSync(root,{recursive:true,force:true});}
 });
+
+test('native upload command refuses a resumed archive without user-selected project bucket',async()=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'agentsam-project-resume-'));
+ try{
+  const archive=createLocalArchive({projectRoot:root,accountId:'au_testaccount123',projectId:'proj_test123'});
+  const receipt=await crawlSite({url:site,maxPages:1,fetchPage:stub,onPage:archive.onPage});
+  const staged=archive.finalize(receipt);
+  let error='';
+  const code=await runNativeSiteScrape(['upload',staged.root,'--project-root',root],
+    {cwd:root,stdout:{write(){}},stderr:{write:s=>error+=s}});
+  assert.equal(code,2);assert.match(error,/no project R2 crawl bucket selected/);
+  assert.equal(verifyLocalArchive(staged.root).run_id,receipt.run_id);
+ }finally{fs.rmSync(root,{recursive:true,force:true});}
+});

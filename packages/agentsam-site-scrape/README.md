@@ -60,6 +60,10 @@ authorization are needed. CLI-provided IDs are not proof of IAM membership.
 agentsam site scrape https://example.com --project-root ./my-project \
   --account-id au_myaccount123 --project-id proj_myproject \
   --upload-archive
+
+# Recover an interrupted remote upload from the original verified archive:
+agentsam site upload ./my-project/.agentsam/crawls/v1/accounts/au_myaccount123/projects/proj_myproject/runs/<run-id> \
+  --project-root ./my-project
 ```
 
 **Runtime limitations:** current Node mode fetches public server HTML (not
