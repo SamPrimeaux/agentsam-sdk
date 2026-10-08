@@ -16,6 +16,7 @@ import { WebSocketServer } from 'ws';
 import { createLocalFilesystem } from '../local-fs/index.js';
 import { resolveContainedPath } from '../local-fs/paths.js';
 import { getRepositoryFreshness } from '../local-fs/freshness.js';
+import { LspHost } from '../local-lsp/host.js';
 import {
   mintWorkspaceCapability,
   writeLocalRuntimeRecord,
@@ -214,6 +215,7 @@ export async function startLocalPtyServer(opts = {}) {
   }
   const shell = opts.shell || shellForPlatform();
   const filesystem = createLocalFilesystem(cwd);
+  const lspHost = new LspHost({ root: cwd });
   // Capability minted after bind so port is known; provisional id first.
   /** @type {ReturnType<typeof mintWorkspaceCapability>|null} */
   let capability = null;
@@ -299,6 +301,24 @@ export async function startLocalPtyServer(opts = {}) {
         ...capability,
         freshness: getRepositoryFreshness(cwd),
       });
+    }
+
+    // Workspace-scoped LSP process host. No command/path strings are accepted
+    // from the browser; installed server binaries are selected by language.
+    if (pathname.startsWith('/v1/lsp/')) {
+      if (!requireCapability(req, res, capability)) return;
+      if (origin && !isAllowedStudioOrigin(origin)) return sendJson(req,res,403,{ok:false,error:'origin_not_allowed'});
+      try {
+        const action=pathname.slice('/v1/lsp/'.length);
+        if(req.method==='GET' && action==='capabilities') return sendJson(req,res,200,{ok:true,adapter:'node-stdio',languages:lspHost.capabilities()});
+        if(req.method==='GET' && action==='poll') return sendJson(req,res,200,lspHost.poll(url.searchParams.get('session_id'),Number(url.searchParams.get('after')||0)));
+        if(req.method!=='POST') return sendJson(req,res,405,{ok:false,error:'method_not_allowed'});
+        const body=await readJsonBody(req);
+        if(action==='start') return sendJson(req,res,200,lspHost.start(body.language));
+        if(action==='send') return sendJson(req,res,200,lspHost.send(body.session_id,body.message));
+        if(action==='stop') return sendJson(req,res,200,lspHost.stop(body.session_id));
+        return sendJson(req,res,404,{ok:false,error:'unknown_lsp_action'});
+      } catch(error) {return sendJson(req,res,500,{ok:false,error:error.message});}
     }
 
     if (pathname === '/v1/freshness' && req.method === 'GET') {
@@ -466,6 +486,7 @@ export async function startLocalPtyServer(opts = {}) {
     bootstrapUrl: `http://${host}:${boundPort}/v1/workspace/bootstrap`,
     close: () =>
       new Promise((resolve, reject) => {
+        lspHost.close();
         wss.close(() => {
           httpServer.close((err) => (err ? reject(err) : resolve()));
         });

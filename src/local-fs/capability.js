@@ -104,6 +104,11 @@ export function isAllowedStudioOrigin(origin, extra = []) {
     'http://localhost:5173',
     'http://127.0.0.1:3000',
     'http://localhost:3000',
+    'https://agentsam.inneranimalmedia.com',
+    'tauri://localhost',
+    'http://tauri.localhost',
+    'https://tauri.localhost',
+    ...(process.env.AGENTSAM_LOCAL_STUDIO_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean),
     ...extra,
   ];
   return allow.includes(origin);

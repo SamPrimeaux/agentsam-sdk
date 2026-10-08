@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Editor, { type BeforeMount, type OnMount, type Monaco, type EditorProps } from '@monaco-editor/react';
 import { languageIdFromPath } from './model.js';
 import { workspaceDocumentUri } from './workspace.js';
+import { LspClient, type LspTransport } from '../lsp/client.js';
+import { attachLspToMonaco } from '../lsp/monaco.js';
 import type { Uri, editor as MonacoEditorNamespace } from 'monaco-editor';
 
 export type AgentSamEditorDocument = {
@@ -51,9 +53,16 @@ export type AgentSamMonacoEditorProps = {
   /** Controlled text changes; the host owns persistence, not the editor. */
   onChange(text: string, document: AgentSamEditorDocument): void;
   onSave?(text: string, document: AgentSamEditorDocument): void | Promise<void>;
+  /** Verified persisted version supplied by the host; triggers LSP didSave, not merely a keypress. */
+  savedVersion?: string;
   onSelectionChange?(selection: AgentSamEditorSelection, document: AgentSamEditorDocument): void;
   onDiagnostics?(diagnostics: AgentSamEditorDiagnostic[], document: AgentSamEditorDocument): void;
+  /** Open a language-server target using the host's authorized workspace UI. */
+  onNavigate?: (uri:string,range:{start:{line:number;character:number};end:{line:number;character:number}})=>Promise<void>|void;
+  onApplyWorkspaceEdit?: (edit:unknown)=>Promise<void>;
   onEditorReady?: OnMount;
+  /** Optional real external LSP; the authorized workspace host provides the transport. */
+  lsp?: {transport:LspTransport;workspaceRootUri:string;onStatus?:(status:'starting'|'ready'|'error'|'missing',detail?:string)=>void};
   palette?: AgentSamEditorPalette;
   themeId?: string;
   readOnly?: boolean;
@@ -112,13 +121,17 @@ export function defineAgentSamEditorTheme(monaco: Monaco, name: string, p: Agent
 
 /** Portable Monaco UI. All filesystem, auth, LSP and sidecar behavior is host-owned. */
 export function AgentSamMonacoEditor({
-  document, onChange, onSave, onSelectionChange, onDiagnostics, onEditorReady,
-  palette, themeId = 'agentsam-ide', readOnly = false, options, className,
+  document, onChange, onSave, savedVersion, onSelectionChange, onDiagnostics, onEditorReady, onNavigate, onApplyWorkspaceEdit,
+  palette, themeId = 'agentsam-ide', readOnly = false, options, className, lsp,
   height = '100%', loading = 'Loading editor…',
 }: AgentSamMonacoEditorProps) {
   const monacoRef = useRef<Monaco | null>(null);
-  const callbacks = useRef({ document, onSave, onSelectionChange, onDiagnostics, onEditorReady });
-  callbacks.current = { document, onSave, onSelectionChange, onDiagnostics, onEditorReady };
+  const lastSavedVersion=useRef<string|undefined>(undefined);
+  const editorRef = useRef<Parameters<OnMount>[0]|null>(null);
+  const [mountedEditor,setMountedEditor] = useState(false);
+  const activeLsp = useRef<{client:LspClient;fileUri:string}|null>(null);
+  const callbacks = useRef({ document, onSave, onSelectionChange, onDiagnostics, onEditorReady, onNavigate, onApplyWorkspaceEdit });
+  callbacks.current = { document, onSave, onSelectionChange, onDiagnostics, onEditorReady, onNavigate, onApplyWorkspaceEdit };
 
   const uri = useMemo(() => workspaceDocumentUri(document), [document.workspaceId, document.path]);
   const language = document.languageId || languageIdFromPath(document.path);
@@ -129,6 +142,8 @@ export function AgentSamMonacoEditor({
 
   const mount: OnMount = (editor, monaco) => {
     monacoRef.current = monaco;
+    editorRef.current = editor;
+    setMountedEditor(true);
     if (palette) defineAgentSamEditorTheme(monaco, themeId, palette);
     editor.addAction({
       id: 'agentsam.ide.format',
@@ -140,7 +155,12 @@ export function AgentSamMonacoEditor({
       id: 'agentsam.ide.save',
       label: 'Save document',
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-      run: async (ed) => { await callbacks.current.onSave?.(ed.getValue(), callbacks.current.document); },
+      run: async (ed) => {
+        if (!callbacks.current.onSave) return;
+        await callbacks.current.onSave(ed.getValue(), callbacks.current.document);
+        const current=activeLsp.current;
+        if(current?.client.initialized)await current.client.saved(current.fileUri);
+      },
     });
     const selectionSubscription = editor.onDidChangeCursorSelection(({ selection }) => {
       const current = callbacks.current;
@@ -186,6 +206,52 @@ export function AgentSamMonacoEditor({
   };
 
   useEffect(() => {
+    if (!mountedEditor || !lsp || !monacoRef.current || !editorRef.current) return;
+    const {transport,workspaceRootUri,onStatus}=lsp;
+    if (!['rust','go','python','typescript','javascript'].includes(language))return;
+    const model=monacoRef.current.editor.getModel(monacoRef.current.Uri.parse(uri));
+    if (!model)return;
+    let canceled=false;
+    let attached:ReturnType<typeof attachLspToMonaco>|undefined;
+    const root=workspaceRootUri.endsWith('/')?workspaceRootUri:workspaceRootUri+'/';
+    const fileUri=new URL(document.path.split('/').map(encodeURIComponent).join('/'),root).toString();
+    const client=new LspClient(transport,language,workspaceRootUri);
+    const unsubscribeStatus=client.onStatus((status,detail)=>{if(!canceled)onStatus?.(status,detail);});
+    activeLsp.current={client,fileUri};
+    onStatus?.('starting');
+    void (async()=>{
+      try {
+        await client.connect();
+        if(canceled)return;
+        await client.open(fileUri,language,editorRef.current?.getValue() ?? callbacks.current.document.text);
+        if(canceled)return;
+        attached=attachLspToMonaco(monacoRef.current!,editorRef.current!,client,{
+          modelUri:uri,fileUri,languageId:language,
+          applyWorkspaceEdit:async edit=>{
+            if(!callbacks.current.onApplyWorkspaceEdit)throw new Error('lsp_workspace_rename_host_required');
+            await callbacks.current.onApplyWorkspaceEdit(edit);
+            return {edits:[]};
+          },
+          resolveLocation:async location=>{
+            if(location.uri===fileUri)return null;
+            await callbacks.current.onNavigate?.(location.uri,location.range);
+            return null; // The host opens the authoritative file; never fabricate a Monaco model.
+          },
+        });
+        // Actual READY comes from a diagnostic/feature response, not initialize alone.
+      }catch(error){if(!canceled)onStatus?.('error',error instanceof Error?error.message:String(error));}
+    })();
+    return ()=>{canceled=true;unsubscribeStatus();attached?.dispose();activeLsp.current=null;void client.close();onStatus?.('missing');};
+  }, [mountedEditor, uri, language, lsp?.transport, lsp?.workspaceRootUri]);
+
+  useEffect(()=>{
+    if(!savedVersion || savedVersion===lastSavedVersion.current)return;
+    lastSavedVersion.current=savedVersion;
+    const current=activeLsp.current;
+    if(current?.client.initialized)void current.client.saved(current.fileUri).catch(()=>{});
+  },[savedVersion]);
+
+  useEffect(() => {
     if (!palette || !monacoRef.current) return;
     defineAgentSamEditorTheme(monacoRef.current, themeId, palette);
     monacoRef.current.editor.setTheme(themeId);
@@ -202,7 +268,13 @@ export function AgentSamMonacoEditor({
       loading={loading}
       beforeMount={beforeMount}
       onMount={mount}
-      onChange={value => onChange(value ?? '', callbacks.current.document)}
+      key={uri}
+      onChange={value => {
+        const next=value??'';
+        onChange(next, callbacks.current.document);
+        const current=activeLsp.current;
+        if(current?.client.initialized)void current.client.change(current.fileUri,next).catch(()=>{});
+      }}
       saveViewState
       keepCurrentModel
       options={{ ...DEFAULT_OPTIONS, ...options, ...(readOnly !== undefined ? { readOnly } : {}) }}

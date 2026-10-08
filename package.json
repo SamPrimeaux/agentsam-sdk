@@ -331,6 +331,7 @@
     "verify:boundaries": "node scripts/verify-source-boundaries.mjs",
     "verify:bootstrap": "node scripts/verify-bootstrap.mjs",
     "verify:ide-package": "node scripts/verify-ide-package.mjs",
+    "verify:ide-browser-lsp": "node scripts/verify-ide-browser-lsp.mjs",
     "verify:knowledge-package": "node scripts/verify-knowledge-package.mjs && npm run test:autorag",
     "test:python": "node scripts/verify-python.mjs",
     "verify:release": "npm run verify && npm run verify:packages:public && npm run verify:knowledge-package && npm run test:python && npm run security:release",
@@ -386,7 +387,9 @@
     "test:site-scrape": "node scripts/verify-site-scrape.mjs",
     "quality:ui:source": "node scripts/quality/verify-ui-source.mjs packages/agentsam-settings/src/frontend/index.tsx",
     "quality:ui:responsive": "node scripts/quality/verify-settings-responsive.mjs",
-    "quality:ui": "npm run quality:ui:source && npm --prefix apps/local-studio run build:desktop && npm run quality:ui:responsive"
+    "quality:ui": "npm run quality:ui:source && npm --prefix apps/local-studio run build:desktop && npm run quality:ui:responsive",
+    "catalog:inventory": "node scripts/generate-capability-inventory.mjs",
+    "catalog:inventory:check": "node scripts/generate-capability-inventory.mjs --check"
   },
   "engines": {
     "node": ">=22 <25",

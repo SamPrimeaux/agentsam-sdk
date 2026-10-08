@@ -651,7 +651,11 @@ if (command === '--version' || command === '-v') {
   try {
     await runRust(rest);
   } catch (e) {
-    if (!e?.reported) reportCliError(e);
+    // This command is a native CLI passthrough, not an HTTP request.
+    // Preserve the real exit code and never classify a clap usage error as HTTP 500.
+    if (Number.isInteger(e?.exitCode)) {
+      console.error(`  rust command exited ${e.exitCode}; see native output above`);
+    } else if (!e?.reported) reportCliError(e);
     process.exitCode = Number(e?.exitCode || 1);
   }
 } else if (command === 'login') {
