@@ -56,12 +56,15 @@ function scopesFor(entry,allowWrites){
   return allowWrites ? entry.oauthScopes : entry.readOnlyScopes;
 }
 function codeVerifier(){return base64url(bytes())}
-async function registerIamClient(redirectUri,scope,fetcher=fetch){
+async function registerIamClient(redirectUri,scope,logoUri,fetcher=fetch){
   const response=await httpJson(ISSUER+'/api/oauth/register',{
     method:'POST',
     headers:{'content-type':'application/json',accept:'application/json'},
     body:JSON.stringify({
       client_name:'AgentSam Local Studio MCP',
+      // The registered OAuth client is Studio, not the requested Brand/Campaign resource.
+      // Catalog-verified publisher icon; never accept a caller-supplied logo URL.
+      ...(logoUri ? {logo_uri:logoUri} : {}),
       redirect_uris:[redirectUri],
       application_type:'web',
       token_endpoint_auth_method:'none',
@@ -79,7 +82,7 @@ export async function beginPluginOAuth(env,accountId,pluginId,options={},fetcher
   if(installed.endpoint_url!==entry.endpointUrl)fail('plugin_endpoint_changed_requires_reconnect');
   const scopes=scopesFor(entry,options.allowWrites===true);
   const redirectUri='https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback';
-  const clientId=await registerIamClient(redirectUri,scopes,fetcher);
+  const clientId=await registerIamClient(redirectUri,scopes,entry.publisherIconUrl,fetcher);
   const state=codeVerifier();
   const hash=await digest(state);
   const verifier=codeVerifier();

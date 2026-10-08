@@ -88,6 +88,12 @@ export function normalizeDiscoveredPlugin(input, source) {
   const iconUrl = icon && icon.origin === sourceUrl.origin
     && /^\/catalog\/icons\/[a-z0-9-]+\.png$/.test(icon.pathname)
     ? icon.toString() : null;
+  // Catalog-owned publisher SVG is distinct from the product's PNG icon.
+  // Do not admit arbitrary external SVG sources into privileged Settings UI.
+  const publisherIcon = httpUrl(input.publisher_icon_url);
+  const publisherIconUrl = publisherIcon && publisherIcon.origin === sourceUrl.origin
+    && /^\/catalog\/icons\/[a-z0-9-]+\.svg$/.test(publisherIcon.pathname)
+    && !publisherIcon.search ? publisherIcon.toString() : null;
   return {
     pluginKey: key,
     version: text(input.version, 40),
@@ -96,6 +102,7 @@ export function normalizeDiscoveredPlugin(input, source) {
     description: text(input.description, 1600),
     publisher: text(input.developer_name, 100),
     iconUrl,
+    publisherIconUrl,
     category: text(input.category, 55) || 'Other',
     keywords: strings(input.keywords, 20, 50),
     capabilities: strings(input.capabilities, 25, 150),

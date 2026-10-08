@@ -87,6 +87,15 @@ function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
 }
 
+/** Verified, same-origin catalog SVG, tinted by CSS currentColor for every host theme. */
+function PublisherMark({url,className = "size-4"}: {url?: string | null; className?: string}) {
+  if (!url) return null;
+  const mask = `url("${url}")`;
+  return <span role="img" aria-label="Plugin publisher mark" className={cx("inline-block shrink-0 bg-current",className)}
+    style={{WebkitMaskImage:mask,maskImage:mask,WebkitMaskRepeat:"no-repeat",maskRepeat:"no-repeat",
+      WebkitMaskPosition:"center",maskPosition:"center",WebkitMaskSize:"contain",maskSize:"contain"}}/>;
+}
+
 function statusTone(status: HealthState | SettingsCredential["status"]) {
   if (status === "healthy" || status === "active") {
     return "border-emerald-500/20 bg-emerald-500/8 text-emerald-300";
@@ -745,7 +754,9 @@ function PluginCustomizeView({
           <div className="relative flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-xl">
               <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                <Plug className="size-3.5 text-violet-400" /> AgentSam integrations
+                {discovered.find(plugin=>plugin.publisherIconUrl)?.publisherIconUrl
+                  ? <PublisherMark url={discovered.find(plugin=>plugin.publisherIconUrl)?.publisherIconUrl} className="size-3.5 text-violet-400"/>
+                  : <Plug className="size-3.5 text-violet-400"/>} AgentSam integrations
               </p>
               <h2 className="text-[25px] font-semibold tracking-[-0.05em] sm:text-[30px]">Make AgentSam yours.</h2>
               <p className="mt-2 max-w-lg text-[12px] leading-relaxed text-muted-foreground">
@@ -845,13 +856,16 @@ function PluginCustomizeView({
                           <span className="flex size-14 items-center justify-center overflow-hidden rounded-[18px] border border-foreground/15 bg-background/75 text-violet-300 shadow-lg">
                             {plugin.iconUrl
                               ? <img src={plugin.iconUrl} alt="" loading="lazy" className="size-full object-contain p-1.5"/>
-                              : iconFor(plugin,"size-7")}
+                              : plugin.publisherIconUrl
+                                ? <PublisherMark url={plugin.publisherIconUrl} className="size-7 text-foreground"/>
+                                : iconFor(plugin,"size-7")}
                           </span>
                           <span className={cx("rounded-full border px-2 py-1 text-[10px] font-medium",stateClasses(state))}>{state}</span>
                         </div>
                       </div>
                       <div className="flex flex-1 flex-col gap-2 p-4">
-                        <p className="text-[13px] font-semibold tracking-[-0.02em] text-foreground">{plugin.name}</p>
+                        <p className="flex items-center gap-1.5 text-[13px] font-semibold tracking-[-0.02em] text-foreground">
+                          <PublisherMark url={plugin.publisherIconUrl} className="size-3 text-muted-foreground"/>{plugin.name}</p>
                         <p className="line-clamp-2 min-h-[34px] text-[11px] leading-[1.6] text-muted-foreground">{plugin.subtitle || plugin.description}</p>
                         <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/65 pt-3">
                           <span className="text-[10px] text-muted-foreground">{plugin.toolCount} tools · {plugin.skillCount} skills</span>
@@ -888,7 +902,9 @@ function PluginCustomizeView({
               </div>
               <div className="min-w-0 space-y-1">
                 <p className="text-[16px] font-semibold tracking-[-0.025em]">{name}</p>
-                <p className="text-[11px] text-muted-foreground">{selectedCatalog?.publisher || installed?.providerKey || "Plugin provider"}</p>
+                <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <PublisherMark url={selectedCatalog?.publisherIconUrl} className="size-3 text-foreground"/>
+                  {selectedCatalog?.publisher || installed?.providerKey || "Plugin provider"}</p>
                 <span className={cx("inline-block rounded-full border px-2 py-0.5 text-[10px]",stateClasses(
                   selectedCatalog ? stateFor(selectedCatalog) : installed ? installedState(installed) : "Available"))}>
                   {selectedCatalog ? stateFor(selectedCatalog) : installed ? installedState(installed) : "Available"}
