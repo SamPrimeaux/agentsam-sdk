@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/cms-runtime",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/cms-runtime/README.md"
+    "readme": "packages/cms-runtime/README.md"
   },
   "execution_domains": [],
   "id": "cms-runtime",

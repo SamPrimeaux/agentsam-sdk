@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/agentsam-shell-kit"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-shell-kit/README.md",
+    "path": "packages/agentsam-shell-kit/README.md",
     "summary": "Compatibility facade only. New product code must import `@inneranimalmedia/agentsam-workbench` (or its `/shell` subpath).",
     "title": "@inneranimalmedia/agentsam-shell-kit"
   },

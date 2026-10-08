@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/heuristic-theme",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/heuristic-theme/README.md"
+    "readme": "packages/heuristic-theme/README.md"
   },
   "execution_domains": [],
   "id": "theme-heuristic",

@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/agentsam-database-editor",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-database-editor/README.md"
+    "readme": "packages/agentsam-database-editor/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-database-editor",
@@ -22,7 +22,7 @@
     "typescript"
   ],
   "name": "@inneranimalmedia/agentsam-database-editor",
-  "purpose": "Portable AgentSam Database Editor \u2014 adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database. Independent project; not affiliated with Supabase.",
+  "purpose": "Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database. Independent project; not affiliated with Supabase.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-database-editor",

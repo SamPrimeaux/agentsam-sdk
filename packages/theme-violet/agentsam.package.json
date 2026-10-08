@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/theme-violet",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-violet/README.md"
+    "readme": "packages/theme-violet/README.md"
   },
   "execution_domains": [],
   "id": "theme-violet",

@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/copro-storage"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-storage/README.md",
+    "path": "packages/copro-storage/README.md",
     "summary": "Local-first project persistence for CoPro.",
     "title": "@inneranimalmedia/copro-storage"
   },

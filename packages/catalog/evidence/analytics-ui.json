@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/analytics-ui"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/analytics-ui/README.md",
+    "path": "packages/analytics-ui/README.md",
     "summary": "Neutral analytics presentation primitives harvested from the proven Ember Supply analytics UI.",
     "title": "@inneranimalmedia/analytics-ui"
   },

@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/agentsam-ide"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-ide/README.md",
+    "path": "packages/agentsam-ide/README.md",
     "summary": "Publishable IDE building blocks for AgentSam Local Studio / desktop.",
     "title": "@inneranimalmedia/agentsam-ide"
   },

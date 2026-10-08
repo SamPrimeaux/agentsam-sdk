@@ -1,8 +1,8 @@
-import { doctorReport } from '../src/commands/catalog-doctor.js';
+import { doctorReport } from '../../src/commands/catalog-doctor.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
-import { recommendCatalog } from '../src/commands/catalog.js';
+import { recommendCatalog } from '../../src/commands/catalog.js';
 
 test('reusable native logic picks a portable Rust core', () => {
   const r = recommendCatalog({ goal:'native-core', reusable_core:'yes', execution:'multiple' });
@@ -25,7 +25,7 @@ test('reject unknown user answers instead of silently choosing', () => {
 });
 
 test('catalog is generated and unreviewed packages remain explicitly drafts', () => {
-  const f = new URL('../packages/catalog/generated/packages.json', import.meta.url);
+  const f = new URL('../../packages/catalog/generated/packages.json', import.meta.url);
   assert.ok(existsSync(f));
   const data = JSON.parse(readFileSync(f, 'utf8'));
   assert.ok(data.count > 0);
@@ -46,7 +46,7 @@ test('native filesystem constraint beats a Worker rule', () => {
 });
 
 test('interactive questionnaire includes all 10 required decision dimensions', () => {
-  const q = JSON.parse(readFileSync(new URL('../packages/catalog/assist/questions.json', import.meta.url),'utf8'));
+  const q = JSON.parse(readFileSync(new URL('../../packages/catalog/assist/questions.json', import.meta.url),'utf8'));
   assert.equal(q.questions.length, 10);
 });
 

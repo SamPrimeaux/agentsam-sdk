@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/theme-resolve",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-resolve/README.md"
+    "readme": "packages/theme-resolve/README.md"
   },
   "execution_domains": [],
   "id": "theme-resolve",

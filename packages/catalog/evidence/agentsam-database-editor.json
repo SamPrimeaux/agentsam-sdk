@@ -8,7 +8,7 @@
       "Resource rules",
       "CLI/install"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-database-editor/README.md",
+    "path": "packages/agentsam-database-editor/README.md",
     "summary": "Portable AgentSam Database Editor harvested from the production InnerAnimalMedia database studio.",
     "title": "@inneranimalmedia/agentsam-database-editor"
   },

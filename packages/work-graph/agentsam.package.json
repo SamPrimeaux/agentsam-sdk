@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/work-graph",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/work-graph/README.md"
+    "readme": "packages/work-graph/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-work-graph",

@@ -3,9 +3,10 @@
   "readme": {
     "headings": [
       "@inneranimalmedia/agentsam-work",
-      "Exports"
+      "Exports",
+      "Host shell integration"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-work/README.md",
+    "path": "packages/agentsam-work/README.md",
     "summary": "Portable AgentSam Work contracts and React product surfaces for projects, tickets, mail, calendars, artifacts, and related host-driven work data. The package does not own a second persistence layer; host applications supply `WorkHost`.",
     "title": "@inneranimalmedia/agentsam-work"
   },

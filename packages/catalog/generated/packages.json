@@ -9,7 +9,7 @@
       "evidence": {
         "directory": "packages/agentsam-abs",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-abs/README.md"
+        "readme": "packages/agentsam-abs/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-abs",
@@ -52,7 +52,7 @@
       "evidence": {
         "directory": "packages/agentsam-analytics",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-analytics/README.md"
+        "readme": "packages/agentsam-analytics/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-analytics",
@@ -136,7 +136,7 @@
       "evidence": {
         "directory": "packages/agentsam-brand",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-brand/README.md"
+        "readme": "packages/agentsam-brand/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-brand",
@@ -178,7 +178,7 @@
       "evidence": {
         "directory": "packages/agentsam-browser-surface",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-browser-surface/README.md"
+        "readme": "packages/agentsam-browser-surface/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-browser-surface",
@@ -220,7 +220,7 @@
       "evidence": {
         "directory": "packages/agentsam-campaign",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-campaign/README.md"
+        "readme": "packages/agentsam-campaign/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-campaign",
@@ -389,7 +389,7 @@
       "evidence": {
         "directory": "packages/agentsam-contracts",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-contracts/README.md"
+        "readme": "packages/agentsam-contracts/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-contracts",
@@ -432,7 +432,7 @@
       "evidence": {
         "directory": "packages/agentsam-database-editor",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-database-editor/README.md"
+        "readme": "packages/agentsam-database-editor/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-database-editor",
@@ -475,7 +475,7 @@
       "evidence": {
         "directory": "packages/agentsam-desktop-shell",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-desktop-shell/README.md"
+        "readme": "packages/agentsam-desktop-shell/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-desktop-shell",
@@ -518,7 +518,7 @@
       "evidence": {
         "directory": "packages/agentsam-docs-theme",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-docs-theme/README.md"
+        "readme": "packages/agentsam-docs-theme/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-docs-theme",
@@ -601,7 +601,7 @@
       "evidence": {
         "directory": "packages/agentsam-goap",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-goap/README.md"
+        "readme": "packages/agentsam-goap/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-goap",
@@ -643,7 +643,7 @@
       "evidence": {
         "directory": "packages/agentsam-hooks",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-hooks/README.md"
+        "readme": "packages/agentsam-hooks/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-hooks",
@@ -688,7 +688,7 @@
       "evidence": {
         "directory": "packages/agentsam-ide",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-ide/README.md"
+        "readme": "packages/agentsam-ide/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-ide",
@@ -730,7 +730,7 @@
       "evidence": {
         "directory": "packages/identity",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/identity/README.md"
+        "readme": "packages/identity/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-identity",
@@ -857,7 +857,7 @@
       "evidence": {
         "directory": "packages/agentsam-loading-scene",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-loading-scene/README.md"
+        "readme": "packages/agentsam-loading-scene/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-loading-scene",
@@ -899,7 +899,7 @@
       "evidence": {
         "directory": "packages/agentsam-merch",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-merch/README.md"
+        "readme": "packages/agentsam-merch/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-merch",
@@ -942,7 +942,7 @@
       "evidence": {
         "directory": "packages/agentsam-nav",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-nav/README.md"
+        "readme": "packages/agentsam-nav/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-nav",
@@ -985,7 +985,7 @@
       "evidence": {
         "directory": "packages/agentsam-queue-control",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-queue-control/README.md"
+        "readme": "packages/agentsam-queue-control/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-queue-control",
@@ -1027,7 +1027,7 @@
       "evidence": {
         "directory": "packages/agentsam-rapid-rust",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-rapid-rust/README.md"
+        "readme": "packages/agentsam-rapid-rust/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-rapid-rust",
@@ -1069,7 +1069,7 @@
       "evidence": {
         "directory": "packages/agentsam-repository",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-repository/README.md"
+        "readme": "packages/agentsam-repository/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-repository",
@@ -1153,7 +1153,7 @@
       "evidence": {
         "directory": "packages/agentsam-sections",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-sections/README.md"
+        "readme": "packages/agentsam-sections/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-sections",
@@ -1195,7 +1195,7 @@
       "evidence": {
         "directory": "packages/agentsam-settings",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-settings/README.md"
+        "readme": "packages/agentsam-settings/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-settings",
@@ -1238,7 +1238,7 @@
       "evidence": {
         "directory": "packages/agentsam-shell-kit",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-shell-kit/README.md"
+        "readme": "packages/agentsam-shell-kit/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-shell-kit",
@@ -1281,7 +1281,7 @@
       "evidence": {
         "directory": "packages/agentsam-vault",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-vault/README.md"
+        "readme": "packages/agentsam-vault/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-vault",
@@ -1324,7 +1324,7 @@
       "evidence": {
         "directory": "packages/agentsam-work",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-work/README.md"
+        "readme": "packages/agentsam-work/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-work",
@@ -1367,7 +1367,7 @@
       "evidence": {
         "directory": "packages/work-graph",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/work-graph/README.md"
+        "readme": "packages/work-graph/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-work-graph",
@@ -1409,7 +1409,7 @@
       "evidence": {
         "directory": "packages/agentsam-workbench",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-workbench/README.md"
+        "readme": "packages/agentsam-workbench/README.md"
       },
       "execution_domains": [],
       "id": "agentsam-workbench",
@@ -1452,7 +1452,7 @@
       "evidence": {
         "directory": "packages/analytics-ui",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/analytics-ui/README.md"
+        "readme": "packages/analytics-ui/README.md"
       },
       "execution_domains": [],
       "id": "analytics-ui",
@@ -1494,7 +1494,7 @@
       "evidence": {
         "directory": "packages/cms-runtime",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/cms-runtime/README.md"
+        "readme": "packages/cms-runtime/README.md"
       },
       "execution_domains": [],
       "id": "cms-runtime",
@@ -1536,7 +1536,7 @@
       "evidence": {
         "directory": "packages/copro-editor",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-editor/README.md"
+        "readme": "packages/copro-editor/README.md"
       },
       "execution_domains": [],
       "id": "copro-editor",
@@ -1579,7 +1579,7 @@
       "evidence": {
         "directory": "packages/copro-media",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-media/README.md"
+        "readme": "packages/copro-media/README.md"
       },
       "execution_domains": [],
       "id": "copro-media",
@@ -1622,7 +1622,7 @@
       "evidence": {
         "directory": "packages/copro-project",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-project/README.md"
+        "readme": "packages/copro-project/README.md"
       },
       "execution_domains": [],
       "id": "copro-project",
@@ -1665,7 +1665,7 @@
       "evidence": {
         "directory": "packages/copro-proof",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-proof/README.md"
+        "readme": "packages/copro-proof/README.md"
       },
       "execution_domains": [],
       "id": "copro-proof",
@@ -1707,7 +1707,7 @@
       "evidence": {
         "directory": "packages/copro-provider-contracts",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-provider-contracts/README.md"
+        "readme": "packages/copro-provider-contracts/README.md"
       },
       "execution_domains": [],
       "id": "copro-provider-contracts",
@@ -1749,7 +1749,7 @@
       "evidence": {
         "directory": "packages/copro-render",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-render/README.md"
+        "readme": "packages/copro-render/README.md"
       },
       "execution_domains": [],
       "id": "copro-render",
@@ -1791,7 +1791,7 @@
       "evidence": {
         "directory": "packages/copro-storage",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-storage/README.md"
+        "readme": "packages/copro-storage/README.md"
       },
       "execution_domains": [],
       "id": "copro-storage",
@@ -1834,7 +1834,7 @@
       "evidence": {
         "directory": "packages/copro-templates",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-templates/README.md"
+        "readme": "packages/copro-templates/README.md"
       },
       "execution_domains": [],
       "id": "copro-templates",
@@ -1876,7 +1876,7 @@
       "evidence": {
         "directory": "packages/copro-timeline",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-timeline/README.md"
+        "readme": "packages/copro-timeline/README.md"
       },
       "execution_domains": [],
       "id": "copro-timeline",
@@ -1919,7 +1919,7 @@
       "evidence": {
         "directory": "packages/copro-ui",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-ui/README.md"
+        "readme": "packages/copro-ui/README.md"
       },
       "execution_domains": [],
       "id": "copro-ui",
@@ -2033,7 +2033,7 @@
       "evidence": {
         "directory": "packages/theme-cypress",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-cypress/README.md"
+        "readme": "packages/theme-cypress/README.md"
       },
       "execution_domains": [],
       "id": "theme-cypress",
@@ -2075,7 +2075,7 @@
       "evidence": {
         "directory": "packages/theme-ember",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-ember/README.md"
+        "readme": "packages/theme-ember/README.md"
       },
       "execution_domains": [],
       "id": "theme-ember",
@@ -2117,7 +2117,7 @@
       "evidence": {
         "directory": "packages/theme-forge",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-forge/README.md"
+        "readme": "packages/theme-forge/README.md"
       },
       "execution_domains": [],
       "id": "theme-forge",
@@ -2159,7 +2159,7 @@
       "evidence": {
         "directory": "packages/theme-grove",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-grove/README.md"
+        "readme": "packages/theme-grove/README.md"
       },
       "execution_domains": [],
       "id": "theme-grove",
@@ -2201,7 +2201,7 @@
       "evidence": {
         "directory": "packages/theme-harbor",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-harbor/README.md"
+        "readme": "packages/theme-harbor/README.md"
       },
       "execution_domains": [],
       "id": "theme-harbor",
@@ -2243,7 +2243,7 @@
       "evidence": {
         "directory": "packages/heuristic-theme",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/heuristic-theme/README.md"
+        "readme": "packages/heuristic-theme/README.md"
       },
       "execution_domains": [],
       "id": "theme-heuristic",
@@ -2285,7 +2285,7 @@
       "evidence": {
         "directory": "packages/theme-iasf",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-iasf/README.md"
+        "readme": "packages/theme-iasf/README.md"
       },
       "execution_domains": [],
       "id": "theme-iasf",
@@ -2327,7 +2327,7 @@
       "evidence": {
         "directory": "packages/theme-resolve",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-resolve/README.md"
+        "readme": "packages/theme-resolve/README.md"
       },
       "execution_domains": [],
       "id": "theme-resolve",
@@ -2369,7 +2369,7 @@
       "evidence": {
         "directory": "packages/theme-scenes",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-scenes/README.md"
+        "readme": "packages/theme-scenes/README.md"
       },
       "execution_domains": [],
       "id": "theme-scenes",
@@ -2411,7 +2411,7 @@
       "evidence": {
         "directory": "packages/theme-summit",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-summit/README.md"
+        "readme": "packages/theme-summit/README.md"
       },
       "execution_domains": [],
       "id": "theme-summit",
@@ -2453,7 +2453,7 @@
       "evidence": {
         "directory": "packages/theme-violet",
         "purpose_source": "package-manifest-description",
-        "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-violet/README.md"
+        "readme": "packages/theme-violet/README.md"
       },
       "execution_domains": [],
       "id": "theme-violet",

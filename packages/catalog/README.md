@@ -41,7 +41,7 @@ python3 scripts/catalog/build_catalog.py --repo . --check
 ```
 
 The CLI consumer is implemented in `src/commands/catalog.js` and `src/commands/catalog-doctor.js`.
-Run `npm run catalog:check` and `node --test test/offline-catalog.test.mjs` to verify deterministic output.
+Run `npm run catalog:check` and `node --test test/cli/offline-catalog.test.mjs` to verify deterministic output.
 For evidence gathering, Python 3.11+ is required (on the operator Mac, use `python3.14`).
 For customers, Python is not a runtime dependency.
 

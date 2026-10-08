@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/agentsam-ide",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-ide/README.md"
+    "readme": "packages/agentsam-ide/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-ide",
@@ -21,7 +21,7 @@
     "typescript"
   ],
   "name": "@inneranimalmedia/agentsam-ide",
-  "purpose": "AgentSam IDE packages \u2014 Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
+  "purpose": "AgentSam IDE packages — Monaco, file tree, xterm, LSP client, first-login onboarding. Rapidly deployable into Local Studio / desktop.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-ide",

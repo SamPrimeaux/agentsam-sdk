@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/copro-media"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-media/README.md",
+    "path": "packages/copro-media/README.md",
     "summary": "Provider-neutral media identity and provenance for CoPro.",
     "title": "@inneranimalmedia/copro-media"
   },

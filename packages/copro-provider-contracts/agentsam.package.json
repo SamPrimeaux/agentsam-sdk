@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/copro-provider-contracts",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-provider-contracts/README.md"
+    "readme": "packages/copro-provider-contracts/README.md"
   },
   "execution_domains": [],
   "id": "copro-provider-contracts",

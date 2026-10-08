@@ -9,7 +9,7 @@
       "Design invariant: inverse glass chrome",
       "Product previews"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-sections/README.md",
+    "path": "packages/agentsam-sections/README.md",
     "summary": "Reusable page kit under the standardized `mxs-*` theme: global header / footer, scroll-driven split sections, and one media slot for image, gif, video, glb and sandboxed interactive app previews.",
     "title": "@inneranimalmedia/agentsam-sections"
   },

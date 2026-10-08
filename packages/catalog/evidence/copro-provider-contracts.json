@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/copro-provider-contracts"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-provider-contracts/README.md",
+    "path": "packages/copro-provider-contracts/README.md",
     "summary": "Provider-neutral capability contracts for CoPro.",
     "title": "@inneranimalmedia/copro-provider-contracts"
   },

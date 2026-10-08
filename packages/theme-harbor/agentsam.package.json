@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/theme-harbor",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-harbor/README.md"
+    "readme": "packages/theme-harbor/README.md"
   },
   "execution_domains": [],
   "id": "theme-harbor",

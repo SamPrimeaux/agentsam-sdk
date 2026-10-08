@@ -10,7 +10,7 @@
       "or pin: @inneranimalmedia/agentsam-sdk@2.0.0-alpha.identity.1",
       "IAM design lab"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/identity/README.md",
+    "path": "packages/identity/README.md",
     "summary": "inneranimalmedia (reference) \u2192 agentsam-sdk (product) \u2192 Legendary-OS (first external proof)",
     "title": "Identity (`packages/identity`)"
   },
@@ -86,6 +86,6 @@
   },
   "schema": "agentsam.package-evidence.v1",
   "source_languages": {
-    "javascript": 95
+    "javascript": 96
   }
 }

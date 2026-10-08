@@ -2,9 +2,10 @@
   "directory": "packages/agentsam-analytics",
   "readme": {
     "headings": [
-      "@inneranimalmedia/agentsam-analytics"
+      "@inneranimalmedia/agentsam-analytics",
+      "Source-backed infrastructure and repository-quality telemetry (October 2026)"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-analytics/README.md",
+    "path": "packages/agentsam-analytics/README.md",
     "summary": "Portable AgentSam runtime analytics product.",
     "title": "@inneranimalmedia/agentsam-analytics"
   },
@@ -44,6 +45,7 @@
     "scripts": [
       "build",
       "prepack",
+      "test",
       "typecheck"
     ],
     "types": "./dist/index.d.ts",
@@ -51,6 +53,7 @@
   },
   "schema": "agentsam.package-evidence.v1",
   "source_languages": {
-    "typescript": 4
+    "javascript": 1,
+    "typescript": 5
   }
 }

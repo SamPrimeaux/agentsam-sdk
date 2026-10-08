@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/theme-iasf",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-iasf/README.md"
+    "readme": "packages/theme-iasf/README.md"
   },
   "execution_domains": [],
   "id": "theme-iasf",
@@ -21,7 +21,7 @@
     "javascript"
   ],
   "name": "@inneranimalmedia/theme-iasf",
-  "purpose": "IASF \u2014 stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest).",
+  "purpose": "IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest).",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/theme-iasf",

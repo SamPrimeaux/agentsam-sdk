@@ -7,7 +7,7 @@
       "Business adapter",
       "Origin"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/work-graph/README.md",
+    "path": "packages/work-graph/README.md",
     "summary": "Core primitive for AgentSam workflows. Import it through the published SDK, for example `@inneranimalmedia/agentsam-sdk/work-graph` or the matching `/work-graph/renderers/timeline` subpath. The sibling workspace package stays private until it has its own release process.",
     "title": "Work Graph"
   },

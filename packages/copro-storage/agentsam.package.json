@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/copro-storage",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/copro-storage/README.md"
+    "readme": "packages/copro-storage/README.md"
   },
   "execution_domains": [],
   "id": "copro-storage",

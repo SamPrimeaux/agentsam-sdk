@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/copro-templates"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-templates/README.md",
+    "path": "packages/copro-templates/README.md",
     "summary": "Structured creative templates for CoPro.",
     "title": "@inneranimalmedia/copro-templates"
   },

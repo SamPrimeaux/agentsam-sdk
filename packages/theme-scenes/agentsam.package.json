@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/theme-scenes",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/theme-scenes/README.md"
+    "readme": "packages/theme-scenes/README.md"
   },
   "execution_domains": [],
   "id": "theme-scenes",

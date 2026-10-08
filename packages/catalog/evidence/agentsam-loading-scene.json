@@ -11,7 +11,7 @@
       "Preview",
       "Gates"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-loading-scene/README.md",
+    "path": "packages/agentsam-loading-scene/README.md",
     "summary": "Provider-agnostic runtime visualization for AgentSam.",
     "title": "@inneranimalmedia/agentsam-loading-scene"
   },

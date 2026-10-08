@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/agentsam-shell-kit",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-shell-kit/README.md"
+    "readme": "packages/agentsam-shell-kit/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-shell-kit",

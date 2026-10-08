@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/agentsam-goap",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-goap/README.md"
+    "readme": "packages/agentsam-goap/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-goap",

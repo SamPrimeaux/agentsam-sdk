@@ -4,7 +4,7 @@
     "headings": [
       "AgentSam Docs Theme"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-docs-theme/README.md",
+    "path": "packages/agentsam-docs-theme/README.md",
     "summary": "Violet skin for public AgentSam documentation (`data-asbd-skin=\"violet\"`).",
     "title": "AgentSam Docs Theme"
   },

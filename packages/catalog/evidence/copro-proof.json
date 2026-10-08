@@ -4,7 +4,7 @@
     "headings": [
       "@inneranimalmedia/copro-proof"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/copro-proof/README.md",
+    "path": "packages/copro-proof/README.md",
     "summary": "Mechanical vertical acceptance proof for the clean-room CoPro architecture.",
     "title": "@inneranimalmedia/copro-proof"
   },

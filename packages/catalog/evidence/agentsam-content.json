@@ -65,6 +65,6 @@
   "schema": "agentsam.package-evidence.v1",
   "source_languages": {
     "javascript": 2,
-    "typescript": 70
+    "typescript": 71
   }
 }

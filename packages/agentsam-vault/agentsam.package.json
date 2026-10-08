@@ -6,7 +6,7 @@
   "evidence": {
     "directory": "packages/agentsam-vault",
     "purpose_source": "package-manifest-description",
-    "readme": "/Users/samprimeaux/agentsam-sdk/packages/agentsam-vault/README.md"
+    "readme": "packages/agentsam-vault/README.md"
   },
   "execution_domains": [],
   "id": "agentsam-vault",
@@ -22,7 +22,7 @@
     "typescript"
   ],
   "name": "@inneranimalmedia/agentsam-vault",
-  "purpose": "AgentSam credential vault core \u2014 contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
+  "purpose": "AgentSam credential vault core — contracts, AES-GCM crypto, provider registry, resolver. UI lives in agentsam-key-manager.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-vault",

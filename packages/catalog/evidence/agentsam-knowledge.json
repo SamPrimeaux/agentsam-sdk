@@ -37,6 +37,6 @@
   },
   "schema": "agentsam.package-evidence.v1",
   "source_languages": {
-    "javascript": 6
+    "javascript": 8
   }
 }

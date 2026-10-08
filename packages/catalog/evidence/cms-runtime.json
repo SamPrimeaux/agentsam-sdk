@@ -5,7 +5,7 @@
       "@inneranimalmedia/cms-runtime",
       "Install"
     ],
-    "path": "/Users/samprimeaux/agentsam-sdk/packages/cms-runtime/README.md",
+    "path": "packages/cms-runtime/README.md",
     "summary": "Portable CMS runtime distributed from the AgentSam SDK monorepo.",
     "title": "@inneranimalmedia/cms-runtime"
   },
