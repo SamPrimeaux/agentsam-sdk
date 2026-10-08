@@ -12,27 +12,7 @@ const GITHUB_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="curren
 
 const CHEVRON_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-const FALLBACK_MCP_SERVERS = [
-  {
-    slug: "agentsam-mcp",
-    display_name: "AgentSam MCP",
-    status: "needs_oauth",
-    connected: false,
-    oauth_start: "/api/connections/cloudflare/start",
-  },
-  {
-    slug: "inneranimalmedia-mcp-server",
-    display_name: "Inner Animal MCP",
-    status: "needs_bridge",
-    connected: false,
-  },
-  {
-    slug: "github",
-    display_name: "GitHub",
-    status: "needs_oauth",
-    connected: false,
-  },
-];
+
 
 /** @type {string|null} */
 let conversationId = null;
@@ -202,7 +182,7 @@ function disconnectConnection(slug, e) {
 function toggleConnection(slug) {
   if (activeConnections.has(slug)) {
     activeConnections.delete(slug);
-  } else {
+  } else if (getServerBySlug(slug)?.connected === true) {
     activeConnections.add(slug);
   }
   renderConnectionPills();
@@ -210,7 +190,8 @@ function toggleConnection(slug) {
 }
 
 function initActiveConnections(servers) {
-  activeConnections = new Set((servers || []).map((s) => s.slug).filter(Boolean));
+  activeConnections = new Set((servers || []).filter((server) => server.connected === true)
+    .map((server) => server.slug).filter(Boolean));
 }
 
 function renderConnectionPills() {
@@ -218,7 +199,7 @@ function renderConnectionPills() {
   if (!box) return;
   box.innerHTML = "";
   const plus = $("agentsam-plus");
-  const active = mcpServers.filter((s) => activeConnections.has(s.slug));
+  const active = mcpServers.filter((s) => s.connected === true && activeConnections.has(s.slug));
 
   if (!active.length) {
     box.hidden = true;
@@ -775,14 +756,12 @@ function applyPlatformData(data) {
   iamLogoUrl = data.iam_logo_url || IAM_LOGO_DEFAULT;
   connectUrls = data.connect_urls || connectUrls || {};
 
-  const incoming = data.mcp_servers && data.mcp_servers.length ? data.mcp_servers : FALLBACK_MCP_SERVERS;
-  const bySlug = new Map(incoming.map((s) => [s.slug, s]));
-  mcpServers = ["agentsam-mcp", "inneranimalmedia-mcp-server", "github"]
-    .map((slug) => bySlug.get(slug) || FALLBACK_MCP_SERVERS.find((row) => row.slug === slug))
-    .filter(Boolean);
-
-  if (!mcpServers.length) mcpServers = [...FALLBACK_MCP_SERVERS];
-
+  const incoming = Array.isArray(data.mcp_servers) ? data.mcp_servers : [];
+  // Server-confirmed capabilities only. Never synthesize MCP servers when
+  // discovery fails; disconnected services stay visible as setup options.
+  mcpServers = incoming.filter((server) => server && typeof server.slug === "string");
+  activeConnections = new Set([...activeConnections].filter((slug) =>
+    mcpServers.some((server) => server.slug === slug && server.connected === true)));
   if (!activeConnections.size) initActiveConnections(mcpServers);
   renderMcpList(mcpServers);
   renderConnectionPills();
@@ -1027,10 +1006,10 @@ async function boot() {
     if (toolsRes.ok && data.ok) {
       applyPlatformData(data);
     } else {
-      applyPlatformData({ mcp_servers: FALLBACK_MCP_SERVERS, quick_actions: [] });
+      applyPlatformData({ mcp_servers: [], quick_actions: [] });
     }
   } catch {
-    applyPlatformData({ mcp_servers: FALLBACK_MCP_SERVERS, quick_actions: [] });
+    applyPlatformData({ mcp_servers: [], quick_actions: [] });
     renderChips([{ label: "Write or edit", prompt: "Draft shop hero copy.", enabled: true }]);
   }
   hydrateRecentActivity();
