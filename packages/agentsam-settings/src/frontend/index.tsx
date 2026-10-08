@@ -754,7 +754,9 @@ function PluginCustomizeView({
           <div className="relative flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-xl">
               <p className="mb-2 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                <Plug className="size-3.5 text-violet-400" /> AgentSam integrations
+                {discovered.find(plugin=>plugin.publisherIconUrl)?.publisherIconUrl
+                  ? <PublisherMark url={discovered.find(plugin=>plugin.publisherIconUrl)?.publisherIconUrl} className="size-3.5 text-violet-400"/>
+                  : <Plug className="size-3.5 text-violet-400"/>} AgentSam integrations
               </p>
               <h2 className="text-[25px] font-semibold tracking-[-0.05em] sm:text-[30px]">Make AgentSam yours.</h2>
               <p className="mt-2 max-w-lg text-[12px] leading-relaxed text-muted-foreground">
