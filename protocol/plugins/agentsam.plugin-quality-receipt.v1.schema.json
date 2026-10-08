@@ -10,6 +10,7 @@
     "generatedAt",
     "findings",
     "checks",
+    "lifecycle",
     "status"
   ],
   "properties": {
@@ -103,6 +104,57 @@
         "READY",
         "NOT_READY"
       ]
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "available",
+        "installed",
+        "connectionRequired",
+        "connected",
+        "ready",
+        "blockedBy"
+      ],
+      "properties": {
+        "state": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "available",
+            "installed",
+            "needs_connection",
+            "connected",
+            "ready"
+          ]
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "connectionRequired": {
+          "type": "boolean"
+        },
+        "connected": {
+          "type": "boolean"
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "blockedBy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
     }
   }
 }
