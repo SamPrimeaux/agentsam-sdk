@@ -12,7 +12,7 @@ export async function loadComposerCatalog(signal?: AbortSignal): Promise<Compose
   const payload=await listLocalStudioConnections();
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   return projectComposerCatalog({
-    plugins:payload.plugins || [],
+    plugins:payload.composer_plugins || payload.plugins || [],
     connections:payload.connections || [],
     widgets:sideStageComposerWidgets(),
   });
