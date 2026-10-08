@@ -27,15 +27,18 @@ function fixture({collision=false,quality=true}={}){
     auth:{type:'oauth',connectionRequired:true,resource:'https://plugins.example.com/mcp'},
     health:{required:true,strategy:'mcp.tools_list'},
     lifecycle:{states:['available','installed','needs_connection','connected','ready']},
-    verification:{requiredChecks:['manifest','tool_call','fresh_account']},
+    verification:{requiredChecks:['definition.manifest','installation.account','authorization.valid','authorization.permissions','runtime.tools_executable','portability.fresh_account']},
     release:{receiptRequired:true},
   }));
   if(quality) fs.writeFileSync(path.join(root,'agentsam.quality.json'),JSON.stringify({
     schema:'agentsam.plugin-quality-evidence/v1',pluginId:'agentsam-test',
     checks:{
-      manifest:{status:'pass',evidence:'fixture manifest',receipt:'receipt:manifest'},
-      tool_call:{status:'pass',evidence:'fixture tool call',receipt:'receipt:tool_call'},
-      fresh_account:{status:'pass',evidence:'fixture fresh account',receipt:'receipt:fresh_account'},
+      'definition.manifest':{status:'pass',evidence:'fixture manifest',receipt:'receipt:manifest'},
+      'installation.account':{status:'pass',evidence:'fixture install',receipt:'receipt:install'},
+      'authorization.valid':{status:'pass',evidence:'fixture auth',receipt:'receipt:auth'},
+      'authorization.permissions':{status:'pass',evidence:'fixture scopes',receipt:'receipt:scopes'},
+      'runtime.tools_executable':{status:'pass',evidence:'fixture tool call',receipt:'receipt:tool_call'},
+      'portability.fresh_account':{status:'pass',evidence:'fixture fresh account',receipt:'receipt:fresh_account'},
     },
   }));
   return root;
@@ -81,7 +84,7 @@ test('verify computes READY only from required evidence',()=>{
   const missing=verifyPluginProduct(fixture({quality:false}));
   assert.equal(missing.status,'NOT_READY');
   assert.equal(missing.lifecycle.state,null);
-  assert.equal(missing.checks.fresh_account.status,'unverified');
+  assert.equal(missing.checks['portability.fresh_account'].status,'unverified');
 });
 
 test('runtime receipts override static placeholders without persisting ready state',()=>{
@@ -90,16 +93,19 @@ test('runtime receipts override static placeholders without persisting ready sta
     schema:'agentsam.plugin-evidence-bundle/v1',
     capabilityReceipts:[],
     runtimeReceipts:[
-      {check_id:'manifest',status:'passed',receipt_ref:'receipt:manifest'},
-      {check_id:'tool_call',status:'passed',receipt_ref:'receipt:tool-call'},
-      {check_id:'fresh_account',status:'passed',receipt_ref:'receipt:fresh-account'},
+      {check_id:'definition.manifest',status:'passed',receipt_ref:'receipt:manifest'},
+      {check_id:'installation.account',status:'passed',receipt_ref:'receipt:install'},
+      {check_id:'authorization.valid',status:'passed',receipt_ref:'receipt:auth'},
+      {check_id:'authorization.permissions',status:'passed',receipt_ref:'receipt:scopes'},
+      {check_id:'runtime.tools_executable',status:'passed',receipt_ref:'receipt:tool-call'},
+      {check_id:'portability.fresh_account',status:'passed',receipt_ref:'receipt:fresh-account'},
     ],
   };
   const verified=verifyPluginProduct(root,{evidenceBundle});
   assert.equal(verified.status,'READY');
   assert.equal(verified.lifecycle.state,'ready');
   assert.equal(verified.lifecycle.ready,true);
-  assert.equal(verified.checks.tool_call.receipt,'receipt:tool-call');
+  assert.equal(verified.checks['runtime.tools_executable'].receipt,'receipt:tool-call');
   assert.equal(Object.hasOwn(verified.product,'ready'),false);
 });
 
