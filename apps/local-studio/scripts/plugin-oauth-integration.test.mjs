@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
-import {beginPluginOAuth,completePluginOAuth,getRemotePluginToken,runRemotePluginTool,disconnectPublicPlugin} from '../backend/worker/plugin-oauth.js';
+import {beginPluginOAuth,completePluginOAuth,getRemotePluginToken,runRemotePluginTool,disconnectPublicPlugin,pluginOAuthReturnUrl} from '../backend/worker/plugin-oauth.js';
 import {mcpRequest} from '../backend/worker/plugin-mcp-client.js';
 import {listCatalogForAccount} from '../backend/worker/plugin-discovery.js';
 import {createLocalStudioPluginRuntime} from '../backend/worker/plugin-registry.js';
@@ -14,6 +14,17 @@ const accountId='au_test';
 const pluginId='plg_authdemo';
 const token='ags_test_access_token_long_enough_123456789';
 const callbackUrl='https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback';
+test('OAuth success returns directly to the D1-selected plugin in Studio, not a timer page',()=>{
+  const destination=new URL(pluginOAuthReturnUrl(callbackUrl+'?code=secret&state=opaque','agentsam-brand'));
+  assert.equal(destination.origin,'https://agentsam.inneranimalmedia.com');
+  assert.equal(destination.pathname,'/settings/customize');
+  assert.equal(destination.searchParams.get('view'),'plugins');
+  assert.equal(destination.searchParams.get('connected'),'agentsam-brand');
+  assert.equal(destination.searchParams.has('code'),false);
+  assert.equal(destination.searchParams.has('state'),false);
+  assert.throws(()=>pluginOAuthReturnUrl(callbackUrl,'https://evil.example/'),/plugin_oauth_return_plugin_invalid/);
+  assert.throws(()=>pluginOAuthReturnUrl('https://evil.example/wrong', 'agentsam-brand'),/plugin_oauth_callback_invalid/);
+});
 const scope='brand:read';
 const metadata={
   plugin_key:'agentsam-brand',version:'1.0.0',display_name:'AgentSam Brand',
