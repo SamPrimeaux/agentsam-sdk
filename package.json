@@ -18,6 +18,8 @@
     "./knowledge-service-client": "./src/knowledge/service/client.js",
     "./knowledge-service-grpc-client": "./src/knowledge/service/grpc-client.js",
     "./capabilities": "./src/capabilities/index.js",
+    "./registry": "./src/registry/index.js",
+    "./registry/inventory": "./src/registry/generated/inventory.json",
     "./capability-manifest": "./protocol/capabilities/manifest.json",
     "./sam": "./src/sam/index.js",
     "./sam/operation-schema": "./protocol/sam/operation.schema.json",
@@ -309,6 +311,7 @@
   "scripts": {
     "verify:ui-quality": "node --test scripts/ui-quality/*.test.mjs && node scripts/ui-quality/contrast.mjs",
     "verify:ui-quality:source": "node scripts/ui-quality/check-source.mjs --changed-from origin/main",
+    "verify:registry": "node scripts/registry/generate.mjs --check && node scripts/registry/generate-error-docs.mjs --check && python3 scripts/catalog/build_catalog.py --repo . --check && node scripts/registry/check-plain-command-errors.mjs && node --test test/registry/*.test.mjs",
     "catalog:check": "python3 scripts/catalog/build_catalog.py --repo . --check",
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
     "test:brand": "npm --prefix packages/agentsam-brand test",

@@ -1,3 +1,4 @@
+import { createRegistry } from '../registry/index.js';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -44,17 +45,18 @@ function compactJson(value, asJson) {
 export function explainCatalog(argv = []) {
   const { values, positional } = flags(argv);
   if (values.help || !positional.length) {
-    console.log('Usage: agentsam explain <rust|workers|wasm|rapid-rust|package NAME> [--json]');
+    console.log('Usage: agentsam explain <rust|workers|wasm|rapid-rust|package NAME|command NAME|capability ID> [--json]');
     return 0;
   }
-  const isPackage = positional[0] === 'package';
-  const term = (isPackage ? positional.slice(1) : positional).join(' ').toLowerCase();
+  const category = ['package','command','capability'].includes(positional[0]) ? positional[0] : null;
+  const term = (category ? positional.slice(1) : positional).join(' ').toLowerCase();
   let result;
-  if (isPackage) {
-    const candidates = index().packages;
-    result = candidates.find(p => [p.id, p.name, p.registry?.name].filter(Boolean)
-      .some(name => name.toLowerCase() === term || name.toLowerCase() === '@inneranimalmedia/' + term));
-    if (result) result = { ...result, title: result.name, summary: result.purpose };
+  if (category) {
+    const row = createRegistry().describe(term,{type:category});
+    result = row && {
+      ...row, title:row.name||row.id,
+      summary:row.summary||row.description||row.purpose,
+    };
   } else result = topics()[term] || null;
   if (!result) {
     console.error('Unknown catalog topic or package: ' + term);

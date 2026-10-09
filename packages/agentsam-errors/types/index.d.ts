@@ -155,3 +155,7 @@ export function classifyBlenderFailure(evidence?: Record<string, unknown>, conte
 export function classifyMeshyFailure(evidence?: Record<string, unknown>, context?: Record<string, unknown>): Readonly<AgentSamErrorEnvelope>;
 export function classifyOAuthFailure(error: unknown, context?: Record<string, unknown>): Readonly<AgentSamErrorEnvelope>;
 export function classifyCadFailure(tool: string, evidence?: Record<string, unknown>, context?: Record<string, unknown>): Readonly<AgentSamErrorEnvelope>;
+
+export function usageError(message: string, options?: Record<string, unknown>): AgentSamError & { exitCode: number; cliHints: Record<string, string> };
+export function processError(message: string, options?: Record<string, unknown>): AgentSamError & { exitCode: number; cliHints: Record<string, string> };
+export function renderCliError(error: unknown, options?: {json?: boolean}): string;

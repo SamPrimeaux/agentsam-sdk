@@ -31,6 +31,9 @@ apps/cad-creator/backend/runtime/
 !packages/**/.agentsam/
 !packages/**/.agentsam/**
 generated/
+# Canonical checked-in registry inventory; unlike build output it is CI evidence.
+!src/registry/generated/
+!src/registry/generated/inventory.json
 work/
 
 # Generated theme gallery mounts (scripts/stage-themes-to-site.mjs via site:sync)

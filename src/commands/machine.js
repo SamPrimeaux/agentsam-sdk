@@ -5,6 +5,8 @@
 import os from 'node:os';
 import path from 'node:path';
 import pc from 'picocolors';
+import fs from 'node:fs';
+import { usageError, processError } from '../../packages/agentsam-errors/src/cli.js';
 import { resolveMachineBinary, spawnMachine } from './machine-binary.js';
 import {
   installManagedMachine,
@@ -72,22 +74,22 @@ function parseArgs(argv = []) {
     else if (arg === '--include-generated') out.includeGenerated = true;
     else if (arg === '--against') {
       const value = argv[++i];
-      if (!value || value.startsWith('--')) throw new Error('--against requires a path');
+      if (!value || value.startsWith('--')) throw usageError('--against requires a path',{command:'agentsam machine',hints:{example:'agentsam machine mine . --against ../other-repo'}});
       out.against.push(value);
     } else if (arg === '--limit') {
       const value = Number(argv[++i]);
-      if (!Number.isInteger(value) || value < 1 || value > 500) throw new Error('--limit must be 1..500');
+      if (!Number.isInteger(value) || value < 1 || value > 500) throw usageError('--limit must be 1..500',{command:'agentsam machine'});
       out.limit = value;
     } else if (arg === '--run-id') {
       const value = argv[++i];
-      if (value == null || value.startsWith('--')) throw new Error('--run-id requires a value');
+      if (value == null || value.startsWith('--')) throw usageError('--run-id requires a value',{command:'agentsam machine'});
       out.runId = value;
     } else if (arg === '--version') {
       const value = argv[++i];
-      if (value == null || value.startsWith('--')) throw new Error('--version requires a value');
+      if (value == null || value.startsWith('--')) throw usageError('--version requires a value',{command:'agentsam machine'});
       out.version = value;
     } else if (arg.startsWith('-')) {
-      throw new Error('unknown machine option: ' + arg);
+      throw usageError('unknown machine option: ' + arg,{command:'agentsam machine'});
     } else {
       out.positionals.push(arg);
     }
@@ -174,6 +176,7 @@ function printInstallResult(action, result) {
 }
 
 export async function runMachine(argv = []) {
+  if (argv.includes('--help') || argv.includes('-h')) { console.log(usage()); return 0; }
   const args = parseArgs(argv);
   if (args.help || !args.subcommand) {
     console.log(usage());
@@ -219,15 +222,23 @@ export async function runMachine(argv = []) {
     const { createRepositoryCrawl, findRefineryCandidates } = await import('../../packages/agentsam-repository/src/index.js');
     const resolution = resolveMachineBinary();
     const targets = [args.target || process.cwd(), ...(args.subcommand === 'mine' ? args.against : [])];
-    if (args.subcommand === 'mine' && targets.length < 2) throw new Error('machine mine requires --against <second-repository>');
+    if (args.subcommand === 'mine' && targets.length < 2) throw usageError('machine mine finds cross-repository code reuse; supply --against <second-repository>',{command:'agentsam machine',hints:{example:'agentsam machine mine . --against ../other-repo'}});
     const graphs = targets.map(target => {
       const abs = path.resolve(target);
+      if (!fs.existsSync(abs)) throw usageError('Machine target not found: '+abs,{command:'agentsam machine',reason:'target_not_found'});
       const result = spawnMachine(resolution, ['inspect', abs, '--json'], {
         stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 128 * 1024 * 1024,
       });
-      if (result.error) throw result.error;
-      if (result.status !== 0) throw new Error(String(result.stderr || `Machine inspection failed: ${abs}`).trim());
-      return createRepositoryCrawl(JSON.parse(String(result.stdout)), { root: abs });
+      if (result.error) throw processError(result.error.message || 'Machine process spawn failed',{
+      command:'agentsam machine',
+      reason:['ENOBUFS','ERR_CHILD_PROCESS_STDIO_MAXBUFFER'].includes(result.error.code) ? 'process_output_limit' : 'process_spawn_failed',
+      cause:result.error,hints:{example:'agentsam machine install'},
+    });
+      if (result.status !== 0) throw processError(String(result.stderr || `Machine inspection failed: ${abs}`).trim());
+      let inspection;
+      try { inspection = JSON.parse(String(result.stdout)); }
+      catch (cause) { throw processError('Machine inspection output is not JSON',{command:'agentsam machine',reason:'upstream_invalid_response',cause}); }
+      return createRepositoryCrawl(inspection, { root: abs });
     });
     const output = args.subcommand === 'mine' ? findRefineryCandidates(graphs, { limit: args.limit }) : graphs[0];
     if (args.json) console.log(JSON.stringify(output));
@@ -243,6 +254,7 @@ export async function runMachine(argv = []) {
     const resolution = resolveMachineBinary();
     const target = args.target || process.cwd();
     const abs = path.resolve(target);
+    if (!fs.existsSync(abs)) throw usageError('Machine target not found: '+abs,{command:'agentsam machine',reason:'target_not_found'});
     const machineArgv = ['inspect', abs];
     if (args.runId) machineArgv.push('--run-id', args.runId);
     if (args.includeGenerated) machineArgv.push('--include-generated');
@@ -253,27 +265,28 @@ export async function runMachine(argv = []) {
       maxBuffer: 32 * 1024 * 1024,
     });
 
-    if (result.error) throw result.error;
+    if (result.error) throw processError(result.error.message || 'Machine process spawn failed',{
+      command:'agentsam machine',
+      reason:['ENOBUFS','ERR_CHILD_PROCESS_STDIO_MAXBUFFER'].includes(result.error.code) ? 'process_output_limit' : 'process_spawn_failed',
+      cause:result.error,hints:{example:'agentsam machine install'},
+    });
     if (args.json) {
       const stdout = String(result.stdout || '');
       const stderr = String(result.stderr || '');
       if (result.status && result.status !== 0) {
-        const err = new Error(stderr.trim() || 'agentsam-machine exited with code ' + result.status);
-        err.exitCode = result.status;
+        const err = processError(stderr.trim() || 'agentsam-machine exited with code ' + result.status,{command:'agentsam machine',reason:'execution_failed',nativeExitCode:result.status,stderr_tail:stderr.slice(-500)});
+        err.exitCode = 1;
         throw err;
       }
-      try {
-        console.log(JSON.stringify(JSON.parse(stdout)));
-      } catch {
-        process.stdout.write(stdout);
-      }
+      try { console.log(JSON.stringify(JSON.parse(stdout))); }
+      catch (cause) { throw processError('Machine inspection output is not JSON',{command:'agentsam machine',reason:'upstream_invalid_response',cause}); }
       if (stderr.trim()) process.stderr.write(stderr);
     }
-    return result.status ?? 0;
+    return result.status ? 1 : 0;
   }
 
   console.log(usage());
-  const err = new Error('Unknown machine subcommand: ' + args.subcommand);
-  err.exitCode = 1;
+  const err = usageError('Unknown machine subcommand: ' + args.subcommand,{command:'agentsam machine'});
+  err.exitCode = 2;
   throw err;
 }

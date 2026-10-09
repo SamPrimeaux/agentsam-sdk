@@ -16,6 +16,12 @@ export async function streamChat(opts: {
   operationId?: string;
   onActivity?: (event: RawRuntimeEvent) => void;
   onDelta: (chunk: string) => void;
+  /** Opt-in turn-one audit hook, not a default log. Contains full model context. */
+  onPreparedTurn?: (payload: {
+    source: string; stage: string; provider: string; model: string;
+    instructions: null; messages: Array<{role:string;content:string}>;
+    tools: unknown[]; workspace?: Array<{path:string;content:string}>;
+  }) => void;
 }): Promise<string> {
   if (!opts.provider || !opts.model_id) {
     throw new Error("Select a provider and model before chatting.");
@@ -65,6 +71,11 @@ export async function streamChat(opts: {
         }),
         ...requestBody.messages.filter((message) => message.role !== "system"),
       ];
+      if (!opts.messages.some((m) => m.role === 'assistant')) opts.onPreparedTurn?.({
+        source: 'local-studio', stage: 'desktop-provider-bridge', provider: opts.provider,
+        model: opts.model_id, instructions: null,
+        messages: localMessages, tools: [], workspace: opts.workspace,
+      });
       const local = await invokeLocalProvider<{ ok?: boolean; error?: string; text?: string }>({
         operation: "chat",
         provider: opts.provider,
@@ -124,6 +135,11 @@ export async function streamChat(opts: {
     opts.surface === "side" ? "Co-worker calling model service" : "Calling model service",
     opts.model_id,
   );
+  if (!opts.messages.some((m) => m.role === 'assistant')) opts.onPreparedTurn?.({
+    source: 'local-studio', stage: 'hosted-chat-api',
+    provider: opts.provider, model: opts.model_id,
+    instructions: null, messages: requestBody.messages, tools: [], workspace: opts.workspace,
+  });
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
