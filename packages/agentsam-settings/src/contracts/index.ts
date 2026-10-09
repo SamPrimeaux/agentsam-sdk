@@ -86,6 +86,36 @@ export type SettingsAgent = {
   model: string;
   status: HealthState;
   detail: string;
+  slug?: string;
+  description?: string;
+  instructions?: string;
+  modelId?: string;
+  allowedTools?: string[];
+  workspaceId?: string;
+  active?: boolean;
+  readOnly?: boolean;
+  template?: boolean;
+  runInBackground?: boolean;
+  sandboxMode?: "read-only" | "workspace-write";
+  reasoningEffort?: string;
+  maxConcurrentThreads?: number;
+  updatedAt?: string;
+};
+export type SettingsAgentDraft = {
+  name: string;slug: string;description: string;instructions: string;
+  modelId: string;allowedTools: string[];runInBackground: boolean;
+  sandboxMode: "read-only" | "workspace-write";
+  reasoningEffort: "low" | "medium" | "high" | "extra_high";
+  maxConcurrentThreads: number;active: boolean;
+};
+export type SettingsGeneralPreferences = {
+  openLastProject:boolean;
+  showRuntimeReceipts:boolean;
+};
+
+export type SettingsAgentPolicy = {
+  allowSubagentSpawn: boolean;allowFanoutExecution: boolean;
+  maxSpawnDepth: number;requireAllowlistForMcp: boolean;
 };
 
 export type SettingsModel = {
@@ -254,6 +284,14 @@ export type SettingsSnapshot = {
   health: HealthState;
   credentials: SettingsCredential[];
   agents: SettingsAgent[];
+  integrationStatus?: {
+    available: boolean;providers: {provider:string;activeCount:number;status:string}[];
+    repositoriesAvailable: boolean;
+    repositories: {id:string;provider:string;owner:string|null;name:string;fullName:string|null;defaultBranch:string|null}[];
+  };
+  agentTemplates?: SettingsAgent[];
+  agentPolicy?: SettingsAgentPolicy | null;
+  agentError?: string | null;
   models: SettingsModel[];
   plugins: SettingsPlugin[];
   widgets: SettingsWidget[];
@@ -294,12 +332,19 @@ export type SettingsSnapshot = {
     project: string;
     runtime: string;
     updateChannel: string;
+    preferences?:SettingsGeneralPreferences | null;
+    preferencesError?:string | null;
   };
 };
 
 export interface SettingsHost {
   capabilities(): Promise<SettingsCapabilities>;
   snapshot(): Promise<SettingsSnapshot>;
+  saveAgent?(draft: SettingsAgentDraft, id?: string): Promise<void>;
+  archiveAgent?(id: string): Promise<void>;
+  updateAgentPolicy?(policy: SettingsAgentPolicy): Promise<void>;
+  updateGeneralPreferences?(preferences: SettingsGeneralPreferences): Promise<void>;
+  openSettingsUnit?(unit: SettingsUnitId): void;
   upsertCatalogItem?(kind: SettingsCatalogKind, item: SettingsCatalogItem): Promise<void>;
   removeCatalogItem?(kind: SettingsCatalogKind, id: string): Promise<void>;
   discoverPlugins?(): Promise<SettingsPluginDiscovery>;

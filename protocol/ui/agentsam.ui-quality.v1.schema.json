@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/contracts/agentsam.ui-quality.v1.schema.json",
+  "title": "AgentSam UI Quality Receipt",
+  "description": "Evidence-backed release gate for native and generated UI, CMS themes, hosted apps and desktop. Not a manually writable readiness status.",
+  "type": "object",
+  "required": ["schema_version","target","source_revision","checks","viewport_evidence","ready"],
+  "properties": {
+    "schema_version": {"const": "agentsam.ui-quality.v1"},
+    "target": {"type":"string","minLength":1},
+    "source_revision": {"type":"string","minLength":1},
+    "checks": {
+      "type":"array",
+      "items":{"type":"object","required":["id","status","evidence"],
+        "properties":{"id":{"enum":["semantics","accessibility_names","keyboard","contrast_text","contrast_ui","responsive_overflow","mobile_touch","safe_areas","image_alternatives","style_authority","behavior","build_parity"]},
+          "status":{"enum":["pass","fail","unverified","not_applicable"]},
+          "evidence":{"type":"string","minLength":1}}}
+    },
+    "viewport_evidence": {
+      "type":"array",
+      "items":{"type":"object","required":["width","height","horizontal_overflow","controls_accessible"],
+        "properties":{"width":{"type":"integer","minimum":320},"height":{"type":"integer","minimum":400},
+          "horizontal_overflow":{"type":"boolean"},"controls_accessible":{"type":"boolean"},
+          "screenshot":{"type":"string"},"issues":{"type":"array","items":{"type":"string"}}}}
+    },
+    "ready":{"type":"boolean"},
+    "exemptions":{"type":"array","items":{"type":"object","required":["rule","reason","owner","expires_at"],
+      "properties":{"rule":{"type":"string"},"reason":{"type":"string"},"owner":{"type":"string"},"expires_at":{"type":"string","format":"date"}}}}
+  },
+  "additionalProperties":false
+}

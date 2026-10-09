@@ -83,7 +83,7 @@ export function safePluginSettingsRecord(plugin, tools = []) {
 }
 
 export async function loadConnectionsRegistry(env, userId) {
-  const [cloudflareRow, secretsResult] = await Promise.all([
+  const [cloudflareRow, secretsResult, oauthRecords, repositories] = await Promise.all([
     loadCloudflareConnectionRecord(env, userId),
     env.DB.prepare(
       `SELECT id, secret_name, service_name, description, metadata_json,
@@ -95,6 +95,15 @@ export async function loadConnectionsRegistry(env, userId) {
     )
       .bind(userId)
       .all(),
+    env.DB.prepare(`SELECT LOWER(provider) AS provider,COUNT(*) AS active_count
+      FROM user_oauth_tokens
+      WHERE user_id=? AND is_active=1 AND LOWER(provider) IN ('github','google_drive','google_gmail')
+      GROUP BY provider`).bind(userId).all().then(value=>({available:true,rows:value.results||[]}),
+      ()=>({available:false,rows:[]})),
+    env.DB.prepare(`SELECT id,provider,owner,name,repo_full_name,default_branch,is_active
+      FROM code_repositories WHERE account_id=? AND is_active=1
+      ORDER BY updated_at DESC LIMIT 75`).bind(userId).all().then(value=>({available:true,rows:value.results||[]}),
+      ()=>({available:false,rows:[]})),
   ]);
 
   const cloudflare = cloudflareConnectionSafeStatus(
@@ -139,6 +148,21 @@ export async function loadConnectionsRegistry(env, userId) {
     plugins: settingsPlugins,
     // Independent views of the SAME registry, never a second authority.
     composer_plugins: composerPlugins,
+    // Non-secret OAuth evidence and registered repositories from the existing account SSOT.
+    oauth_status: {
+      available: oauthRecords.available,
+      providers: oauthRecords.rows.map(row=>({
+        provider:String(row.provider),activeCount:Number(row.active_count||0),
+        status:"recorded", // token row is not proof of a successful provider API request
+      })),
+    },
+    repositories: {
+      available: repositories.available,
+      items: repositories.rows.map(row=>({
+        id:row.id,provider:row.provider,owner:row.owner,
+        name:row.name,fullName:row.repo_full_name,defaultBranch:row.default_branch,
+      })),
+    },
     connections: [
       {
         provider: "cloudflare",

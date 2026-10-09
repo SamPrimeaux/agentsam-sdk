@@ -92,6 +92,45 @@ struct StudioServiceBridgeResponse {
 
 fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method, String), String> {
     match request.operation.trim() {
+        // Same authenticated account Settings API as the web host.
+        // Constrained to existing Skills and Agents resources; never arbitrary URLs.
+        "settings" => {
+            let path = request.path.as_deref().unwrap_or("").trim();
+            let root = path == "/api/settings/skills"
+                || path == "/api/settings/preferences"
+                || path == "/api/settings/agents"
+                || path == "/api/settings/agents/policy";
+            let skill = path.strip_prefix("/api/settings/skills/").is_some_and(|id| {
+                id.starts_with("skill_") && id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+            });
+            let agent = path.strip_prefix("/api/settings/agents/").is_some_and(|id| {
+                id.starts_with("asp_") && id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+            });
+            if !(root || skill || agent)
+                || path.contains("://")
+                || path.contains('\\')
+                || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
+            {
+                return Err("studio_service_settings_path_invalid".into());
+            }
+            let method = match request.method.as_deref().unwrap_or("GET").to_ascii_uppercase().as_str() {
+                "GET" => Method::GET,
+                "POST" => Method::POST,
+                "PUT" => Method::PUT,
+                "DELETE" => Method::DELETE,
+                _ => return Err("studio_service_settings_method_invalid".into()),
+            };
+            let valid = match method {
+                Method::GET => root,
+                Method::POST => path == "/api/settings/skills" || path == "/api/settings/agents",
+                Method::PUT => skill || agent || path == "/api/settings/agents/policy"
+                    || path == "/api/settings/preferences",
+                Method::DELETE => skill || agent,
+                _ => false,
+            };
+            if !valid {return Err("studio_service_settings_operation_invalid".into());}
+            Ok((method,path.to_string()))
+        }
         "inventory" => Ok((Method::GET, "/api/llm/inventory".to_string())),
         "chat" => Ok((Method::POST, "/api/chat".to_string())),
         "vault" => {
@@ -163,6 +202,16 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                     return Err("studio_service_plugins_method_invalid".into());
                 }
                 return Ok((Method::POST, path.to_string()));
+            }
+
+            // Dedicated plugin workspace context GET, via the same account grant.
+            if let Some(plugin_id) = path.strip_prefix("/api/plugins/").and_then(|tail| tail.strip_suffix("/workspace")) {
+                if plugin_id.starts_with("plg_")
+                    && plugin_id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch=='_')
+                    && request.method.as_deref().unwrap_or("GET").eq_ignore_ascii_case("GET") {
+                    return Ok((Method::GET,path.to_string()));
+                }
+                return Err("studio_service_plugins_workspace_invalid".into());
             }
 
             if let Some(remainder) = path.strip_prefix("/api/plugins/") {
@@ -849,6 +898,56 @@ mod tests {
             studio_service_route(&bad).unwrap_err(),
             "studio_service_plugins_path_invalid"
         );
+    }
+
+    #[test]
+    fn settings_bridge_allows_same_agent_skill_policy_crud_on_desktop() {
+        for (path, method) in [
+            ("/api/settings/agents", "GET"),
+            ("/api/settings/agents", "POST"),
+            ("/api/settings/agents/asp_1234", "PUT"),
+            ("/api/settings/agents/asp_1234", "DELETE"),
+            ("/api/settings/agents/policy", "GET"),
+            ("/api/settings/agents/policy", "PUT"),
+            ("/api/settings/preferences", "GET"),
+            ("/api/settings/preferences", "PUT"),
+            ("/api/settings/skills", "GET"),
+            ("/api/settings/skills", "POST"),
+            ("/api/settings/skills/skill_1234", "PUT"),
+            ("/api/settings/skills/skill_1234", "DELETE"),
+        ] {
+            let request = StudioServiceBridgeRequest {
+                operation: "settings".into(),account_id:None,body:None,
+                path:Some(path.into()),method:Some(method.into()),
+            };
+            let (actual, target) = studio_service_route(&request).expect("settings route");
+            assert_eq!(actual.as_str(), method);
+            assert_eq!(target, path);
+        }
+        for (path, method) in [
+            ("/api/settings/agents/../vault/secrets", "GET"),
+            ("/api/settings/agents/asp_1234", "POST"),
+            ("/api/settings/skills/skill_1234", "GET"),
+            ("/api/settings/agents/policy", "DELETE"),
+            ("https://evil.invalid/api/settings/agents", "GET"),
+        ] {
+            let request = StudioServiceBridgeRequest {
+                operation:"settings".into(),account_id:None,body:None,
+                path:Some(path.into()),method:Some(method.into()),
+            };
+            assert!(studio_service_route(&request).is_err(), "should deny {path} {method}");
+        }
+    }
+
+    #[test]
+    fn plugin_workspace_bridge_is_read_only_and_exact() {
+        let request=StudioServiceBridgeRequest {
+            operation:"plugins".into(),account_id:None,body:None,
+            path:Some("/api/plugins/plg_1234/workspace".into()),method:Some("GET".into()),
+        };
+        assert_eq!(studio_service_route(&request).unwrap().0,Method::GET);
+        let bad=StudioServiceBridgeRequest{method:Some("POST".into()),..request};
+        assert!(studio_service_route(&bad).is_err());
     }
 
     #[test]

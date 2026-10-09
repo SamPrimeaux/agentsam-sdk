@@ -30,6 +30,7 @@
     "./sam/answer-schema": "./protocol/sam/answer.v1.schema.json",
     "./sam/evaluation-schema": "./protocol/sam/evaluation.v1.schema.json",
     "./sam/decision-receipt-schema": "./protocol/sam/decision-receipt.v1.schema.json",
+    "./ui/quality-schema": "./protocol/ui/agentsam.ui-quality.v1.schema.json",
     "./sam/outcome-schema": "./protocol/sam/outcome.v1.schema.json",
     "./sam/calibration-schema": "./protocol/sam/calibration.v1.schema.json",
     "./sam/activity-schema": "./protocol/sam/activity.v1.schema.json",
@@ -387,6 +388,9 @@
     "release:registry:check": "node scripts/verify-registry-train.mjs",
     "release:publish:preflight": "bash scripts/npm-publish-preflight.sh",
     "test:site-scrape": "node scripts/verify-site-scrape.mjs",
+    "quality:ui:source": "node scripts/quality/verify-ui-source.mjs packages/agentsam-settings/src/frontend/index.tsx",
+    "quality:ui:responsive": "node scripts/quality/verify-settings-responsive.mjs",
+    "quality:ui": "npm run quality:ui:source && npm --prefix apps/local-studio run build:desktop && npm run quality:ui:responsive",
     "catalog:inventory": "node scripts/generate-capability-inventory.mjs",
     "catalog:inventory:check": "node scripts/generate-capability-inventory.mjs --check"
   },

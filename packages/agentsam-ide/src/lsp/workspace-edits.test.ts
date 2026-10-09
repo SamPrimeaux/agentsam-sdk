@@ -37,6 +37,6 @@ test('multi-file rename reads and validates all files, then uses actual versions
 });
 
 test('root URI is portable and URI-encodes paths',()=>{
-  assert.equal(workspaceRootFileUri('/Users/Person/My Apps'),'file:///Users/Person/My%20Apps');
-  assert.equal(workspaceRootFileUri('C:\\Users\\Person\\Projects'),'file:///C:/Users/Person/Projects');
+  assert.equal(workspaceRootFileUri('/workspace/demo/My Apps'),'file:///workspace/demo/My%20Apps');
+  assert.equal(workspaceRootFileUri('D:\\Projects\\Demo'),'file:///D:/Projects/Demo');
 });

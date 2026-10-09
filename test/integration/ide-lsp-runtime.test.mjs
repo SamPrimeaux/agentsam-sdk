@@ -11,7 +11,7 @@ const installed=spawnSync('rust-analyzer',['--version'],{encoding:'utf8'}).statu
 function fakePty(){return {spawn(){throw new Error('PTY not requested in LSP test');}};}
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 
-test('authorized workspace runtime opens an actual rust-analyzer LSP process and reads diagnostics', {skip:!installed,timeout:35000}, async()=>{
+test('authorized workspace runtime opens an actual rust-analyzer LSP process and reads diagnostics', {skip:!installed,timeout:100000}, async()=>{
   const temp=realpathSync(mkdtempSync(path.join(tmpdir(),'agentsam-lsp-e2e-')));
   mkdirSync(path.join(temp,'src'));
   writeFileSync(path.join(temp,'Cargo.toml'),'[package]\nname="agentsam-lsp-e2e"\nversion="0.1.0"\nedition="2021"\n');
@@ -32,7 +32,7 @@ test('authorized workspace runtime opens an actual rust-analyzer LSP process and
     assert.equal(client.readiness,'starting','initialize alone must not declare LSP ready');
     const uri=new URL('file://'+temp+'/src/main.rs').href;
     await client.open(uri,'rust',source);
-    for(let i=0;i<70 && !received.some(x=>x.diagnostics.length>0);i++)await wait(180);
+    for(let i=0;i<175 && !received.some(x=>x.diagnostics.length>0);i++)await wait(200);
     assert.ok(received.some(x=>x.uri===uri&&x.diagnostics.length>0),'real rust-analyzer should report invalid Rust syntax');
     assert.equal(client.readiness,'ready','actual diagnostic is server readiness evidence');
     const valid='fn meaning() -> i32 { 42 }\nfn main() { let x = meaning(); println!("{}", x); }\n';

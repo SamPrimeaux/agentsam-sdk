@@ -122,7 +122,7 @@ export async function invokeIdentity(payload: Record<string, unknown>): Promise<
 }
 
 
-export type StudioServiceOperation = "inventory" | "chat" | "vault" | "cms" | "database" | "connections" | "plugins" | "work";
+export type StudioServiceOperation = "inventory" | "chat" | "vault" | "cms" | "database" | "connections" | "plugins" | "work" | "settings";
 
 export async function invokeLocalProvider<T = Record<string, unknown>>(payload: {
   operation: "inventory" | "chat" | "select_model";

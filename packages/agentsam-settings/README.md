@@ -19,3 +19,14 @@ are separate. Never treat untrusted catalog artwork as authorization evidence.
 - `@inneranimalmedia/agentsam-settings/contracts` — host/snapshot contracts
 - `@inneranimalmedia/agentsam-settings/frontend` — React settings product UI
 - `@inneranimalmedia/agentsam-settings/fixtures` — deterministic fixture hosts for tests/previews
+
+
+## UI quality release gate
+
+The host and desktop share the same component implementation. Run
+`npm run quality:ui` from the SDK root before releasing Settings changes.
+This runs changed-source accessibility/style checks, the desktop stylesheet
+build and seven-width real-browser checks. The machine-readable v1 quality
+receipt contract is in `protocol/ui/agentsam.ui-quality.v1.schema.json` and
+its acceptance/limitations are in `docs/product/AGENTSAM-UI-QUALITY-GATE.md`.
+A passing Settings receipt does not certify unrelated CMS themes.

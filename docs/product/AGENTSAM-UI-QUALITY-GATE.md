@@ -114,3 +114,35 @@ Before declaring READY, run axe-core WCAG 2.2 AA on the rendered pages,
 keyboard traversal, screen-reader checks, reduced-motion and visual reviews,
 plus real create/edit/preview/publish interactions. Record separate hosted
 and packaged desktop runtime evidence. Missing runtime evidence = NOT_READY.
+
+
+## Packaged Settings rendered adapter
+
+The general source/theme contract and boundary matrix above are canonical for
+the SDK; the Settings package adds the independently computed
+`agentsam.ui-quality.v1` **target receipt** at
+`protocol/ui/agentsam.ui-quality.v1.schema.json` (SDK export
+`@inneranimalmedia/agentsam-sdk/ui/quality-schema`). This is an implementation
+adapter, not a competing source of truth for the quality law.
+
+```sh
+npm run quality:ui:source
+npm run quality:ui
+```
+
+The source adapter scans changed Settings JSX for static inline styles,
+missing alt and inaccessible controls. The real-browser adapter mounts the
+same React Settings package with the desktop CSS and captures seven CSS sizes
+320, 390, 640, 820, 1100, 1440, and 1920px. It checks Agents, Brand
+identity, Git & PRs, Account, and Customize; modal focus/Escape; horizontal
+overflow; phone action height; rendered text (WCAG AA 4.5:1/3:1) and
+form-control borders (3:1). The receipt is computed from all checks and is
+`ready:false` if a check is failed or unverified. CI uploads evidence
+screenshots and receipt.
+
+A passed **Settings** receipt cannot be reused to mark FNF, CMS theme
+sections, generated HTML/CSS/interactive artifacts, Workbench, or arbitrary
+customer apps ready. Their respective generators/hosts must supply their own
+rendered functional evidence under the broader canonical contract above.
+In particular, the dark-theme token audit is not proof that every published
+client theme has passed rendered AA contrast.

@@ -44,6 +44,8 @@ import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPl
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
 import { handleStudioSkills } from "./studio-skills.js";
+import { handleStudioAgentSettings } from "./studio-agents-settings.js";
+import { handleStudioUserPreferences } from "./studio-user-preferences.js";
 import { readPluginWorkspace } from "./plugin-workspace.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
@@ -659,6 +661,9 @@ export default {
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
+    const isStudioPreferences=url.pathname==="/api/settings/preferences";
+    const isStudioAgentSettings=url.pathname==="/api/settings/agents"
+      || url.pathname.startsWith("/api/settings/agents/");
     const isStudioSkills = url.pathname === "/api/settings/skills"
       || url.pathname.startsWith("/api/settings/skills/");
     const workspaceMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/workspace$/i.exec(url.pathname);
@@ -785,6 +790,18 @@ export default {
         const code=String(error?.message||"plugin_workspace_unavailable");
         return json({ok:false,error:code.slice(0,120)},code.includes("not_connected")?409:400);
       }
+    }
+    if(isStudioPreferences) {
+      try{return await handleStudioUserPreferences(request,env,await sessionUser());}
+      catch(error){
+        console.warn("studio_user_preferences_error",String(error?.message||error).slice(0,120));
+        return json({ok:false,error:"preferences_unavailable"},503);
+      }
+    }
+    if (isStudioAgentSettings) {
+      try {return await handleStudioAgentSettings(request,env,await sessionUser());}
+      catch(error){console.warn("studio_agent_settings_error",String(error?.message||error).slice(0,140));
+        return json({ok:false,error:"agent_settings_unavailable"},503);}
     }
     if (isStudioSkills) {
       try {

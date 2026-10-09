@@ -4,6 +4,10 @@ import type {
   HealthState,
   SettingsCapabilities,
   SettingsCatalogItem,
+  SettingsAgent,
+  SettingsAgentDraft,
+  SettingsAgentPolicy,
+  SettingsGeneralPreferences,
   SettingsCatalogKind,
   SettingsHost,
   SettingsModel,
@@ -15,6 +19,8 @@ import {
   getDesktopWorkspaceContext,
   identitySessionExists,
   isPackagedDesktop,
+  invokeStudioService,
+  resolveDesktopStudioAccountId,
   openExternalUrl,
 } from "@/lib/desktop/tauri";
 import {
@@ -45,6 +51,9 @@ const capabilities: SettingsCapabilities = {
   capabilities: [
     { id: "settings.read", available: true },
     { id: "settings.write", available: true },
+    { id: "agents.read", available: true },
+    { id: "agents.write", available: true },
+    { id: "agents.policy", available: true },
     { id: "models.inventory", available: true },
     { id: "plugins.read", available: true },
     { id: "plugins.write", available: true },
@@ -53,59 +62,11 @@ const capabilities: SettingsCapabilities = {
   ],
 };
 
-const SETTINGS_CATALOG_KEY = "agentsam-settings-catalog-v1";
 const SETTINGS_CATALOG_CHANGED_EVENT = "agentsam:settings-catalog-changed";
-const CATALOG_KINDS: Exclude<SettingsCatalogKind, "plugins">[] = [
-  "mcps",
-  "skills",
-  "subagents",
-  "rules",
-  "commands",
-  "hooks",
-];
-
-type CatalogOverlayEntry = {
-  items: SettingsCatalogItem[];
-  removedIds: string[];
-};
-
-type CatalogOverlay = Partial<Record<SettingsCatalogKind, CatalogOverlayEntry>>;
-
-function readCatalogOverlay(): CatalogOverlay {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(SETTINGS_CATALOG_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as CatalogOverlay;
-  } catch {
-    return {};
-  }
-}
-
-function writeCatalogOverlay(overlay: CatalogOverlay) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(SETTINGS_CATALOG_KEY, JSON.stringify(overlay));
-  window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
-}
 
 function applyCatalogOverlay(snapshot: SettingsSnapshot): SettingsSnapshot {
-  const overlay = readCatalogOverlay();
-  for (const kind of CATALOG_KINDS) {
-    // Skills come from the authenticated D1 registry, never from browser-local overlays.
-    if (kind === "skills") continue;
-    const entry = overlay[kind];
-    if (!entry) continue;
-    const removed = new Set(entry.removedIds || []);
-    const overrides = new Map((entry.items || []).map((item) => [item.id, item]));
-    const base = snapshot[kind]
-      .filter((item) => !removed.has(item.id))
-      .map((item) => overrides.get(item.id) ?? item);
-    const baseIds = new Set(base.map((item) => item.id));
-    snapshot[kind] = [
-      ...base,
-      ...(entry.items || []).filter((item) => !baseIds.has(item.id)),
-    ];
-  }
+  // The old catalog overlay is no longer treated as runtime authority.
+  // Only verified host registries can populate Settings inventory.
   return snapshot;
 }
 
@@ -203,27 +164,80 @@ function settingsWidgets(): SettingsWidget[] {
   }));
 }
 
-async function skillRequest(path="",init?:RequestInit) {
-  const response=await fetch("/api/settings/skills"+path,{
-    credentials:"same-origin",...init,
-  });
-  const body=await response.json().catch(()=>({ok:false,error:"skills_invalid_response"}));
-  if(!response.ok||body.ok!==true) throw new Error(body.error||"skills_unavailable");
-  return body;
+/**
+ * Shared host IO: web session cookie OR desktop Keychain-backed native session.
+ * Both hit the same Worker service, authenticated as the current account.
+ */
+async function settingsRequest<T extends {ok?:boolean;error?:string}>(
+  path:string,method:"GET"|"POST"|"PUT"|"DELETE"="GET",body?:unknown,
+):Promise<T> {
+  let payload:T;
+  let status:number;
+  if(isPackagedDesktop()){
+    const bridged=await invokeStudioService({
+      operation:"settings",account_id:await resolveDesktopStudioAccountId(),
+      path,method,...(body===undefined?{}:{body}),
+    });
+    status=bridged.status;
+    try{payload=JSON.parse(bridged.body) as T;}catch{throw new Error("settings_invalid_response");}
+  }else{
+    const response=await fetch(path,{method,credentials:"same-origin",
+      headers:{accept:"application/json",...(body===undefined?{}:{"content-type":"application/json"})},
+      body:body===undefined?undefined:JSON.stringify(body),
+    });
+    status=response.status;
+    payload=await response.json().catch(()=>({ok:false,error:"settings_invalid_response"} as T));
+  }
+  if(status>=400||payload.ok!==true)throw new Error(payload.error||"settings_request_failed_"+status);
+  return payload;
 }
+type StudioSkillApiRecord = {
+  id:string;name:string;description:string;trigger:string;content:string;
+};
+function isStudioSkillRecord(value:unknown):value is StudioSkillApiRecord {
+  if(!value||typeof value!=="object")return false;
+  const record=value as Record<string,unknown>;
+  return ["id","name","description","trigger","content"].every(key=>typeof record[key]==="string");
+}
+async function skillRequest(path="",init?:RequestInit) {
+  const body=init?.body?JSON.parse(String(init.body)):undefined;
+  return settingsRequest<{ok:boolean;skills?:unknown[];error?:string}>(
+    "/api/settings/skills"+path,(init?.method||"GET") as "GET"|"POST"|"PUT"|"DELETE",body);
+}
+type AgentApiRecord = SettingsAgent & {modelId:string;active:boolean};
+async function loadGeneralSettings():Promise<SettingsGeneralPreferences>{
+  const data=await settingsRequest<{ok:boolean;preferences:SettingsGeneralPreferences}>(
+    "/api/settings/preferences");
+  return data.preferences;
+}
+
+async function loadAgentSettings():Promise<{
+  agents:SettingsAgent[];templates:SettingsAgent[];policy:SettingsAgentPolicy;
+}> {
+  const [agents,policy]=await Promise.all([
+    settingsRequest<{ok:boolean;agents:AgentApiRecord[];templates:AgentApiRecord[]}>("/api/settings/agents"),
+    settingsRequest<{ok:boolean;policy:SettingsAgentPolicy}>("/api/settings/agents/policy"),
+  ]);
+  const normalize=(item:AgentApiRecord):SettingsAgent=>({
+    ...item,role:item.slug||"Agent",
+    model:item.modelId||"No model assigned",
+    detail:item.description||"Saved agent definition",
+    status:"unknown",
+  });
+  return {agents:(agents.agents||[]).map(normalize),
+    templates:(agents.templates||[]).map(normalize),policy:policy.policy};
+}
+
 async function loadAccountSkills():Promise<SettingsCatalogItem[]> {
   const data=await skillRequest();
-  return (data.skills||[]).map((skill:{
-    id:string;name:string;description:string;trigger:string;content:string;
-  })=>({
+  return (data.skills||[]).filter(isStudioSkillRecord).map(skill=>({
     id:skill.id,name:skill.name,subtitle:skill.description,
     meta:skill.trigger,trigger:skill.trigger,content:skill.content,status:"healthy" as const,
   }));
 }
 
 async function loadPluginSettings() {
-  const response = await listLocalStudioConnections();
-  return (response.plugins || []).map(settingsPlugin);
+  return listLocalStudioConnections();
 }
 
 function emptySnapshot(): SettingsSnapshot {
@@ -234,8 +248,12 @@ function emptySnapshot(): SettingsSnapshot {
     health: "unknown",
     credentials: [],
     agents: [],
+    agentTemplates: [],
+    agentPolicy: null,
+    agentError: null,
     models: [],
     plugins: [],
+    integrationStatus:undefined,
     widgets: [],
     mcps: [],
     skills: [],
@@ -274,6 +292,8 @@ function emptySnapshot(): SettingsSnapshot {
       project: "Local workspace",
       runtime: "Checking…",
       updateChannel: "Not checked",
+      preferences:null,
+      preferencesError:null,
     },
   };
 }
@@ -283,18 +303,26 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   const desktop = isPackagedDesktop();
   snapshot.themes = await listStudioThemes();
 
-  const [inventoryResult, pluginResult, skillsResult, signedIn, workspace] = await Promise.all([
+  const [inventoryResult, pluginResult, skillsResult, agentsResult, prefsResult, signedIn, workspace] = await Promise.all([
     loadEffectiveModelInventory().then(
       (value) => ({ ok: true as const, value }),
       () => ({ ok: false as const, value: null }),
     ),
     loadPluginSettings().then(
       (value) => ({ ok: true as const, value }),
-      () => ({ ok: false as const, value: [] as SettingsPlugin[] }),
+      () => ({ ok: false as const, value: null }),
     ),
     loadAccountSkills().then(
       (value) => ({ ok: true as const, value }),
       () => ({ ok: false as const, value: [] as SettingsCatalogItem[] }),
+    ),
+    loadAgentSettings().then(
+      (value)=>({ok:true as const,value}),
+      (error)=>({ok:false as const,error:String(error?.message||"Agent settings unavailable"),value:null}),
+    ),
+    loadGeneralSettings().then(
+      (value)=>({ok:true as const,value}),
+      (error)=>({ok:false as const,error:String(error?.message||"Preferences unavailable"),value:null}),
     ),
     desktop ? identitySessionExists().catch(() => false) : Promise.resolve(false),
     desktop ? getDesktopWorkspaceContext().catch(() => null) : Promise.resolve(null),
@@ -306,8 +334,35 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     : "Web session";
   snapshot.general.project = workspace?.default_cwd || (desktop ? "Local workspace" : "Hosted workspace");
   snapshot.widgets = settingsWidgets();
-  snapshot.plugins = pluginResult.value;
+  snapshot.plugins = (pluginResult.value?.plugins||[]).map(settingsPlugin);
+  const oauth=pluginResult.value?.oauth_status;
+  const repositories=pluginResult.value?.repositories;
+  if(oauth||repositories){
+    snapshot.integrationStatus={
+      available:oauth?.available===true,
+      providers:oauth?.providers||[],repositoriesAvailable:repositories?.available===true,
+      repositories:repositories?.items||[],
+    };
+    const github=oauth?.providers.find(provider=>provider.provider==="github");
+    const linkedRepo=repositories?.items[0];
+    snapshot.git.provider=github?.activeCount?"GitHub OAuth grant recorded":"Not verified";
+    snapshot.git.repository=linkedRepo?.fullName||"No registered repository";
+    snapshot.git.branch=linkedRepo?.defaultBranch||"—";
+    snapshot.git.pullRequests="Not checked";
+    snapshot.network.oauth=(pluginResult.value?.connections||[]).some(
+      conn=>conn.provider==="cloudflare"&&conn.status==="connected"
+    )?"Connected":"Not connected";
+  }
   snapshot.skills = skillsResult.value;
+  if(prefsResult.ok)snapshot.general.preferences=prefsResult.value;
+  else snapshot.general.preferencesError=prefsResult.error;
+  if(agentsResult.ok&&agentsResult.value) {
+    snapshot.agents=agentsResult.value.agents;
+    snapshot.agentTemplates=agentsResult.value.templates;
+    snapshot.agentPolicy=agentsResult.value.policy;
+  }else{
+    snapshot.agentError=agentsResult.error;
+  }
   if (!pluginResult.ok) snapshot.health = "attention";
 
   if (!inventoryResult.ok || !inventoryResult.value) {
@@ -362,6 +417,27 @@ export const localStudioSettingsHost: SettingsHost = {
   async snapshot() {
     return liveSnapshot();
   },
+  openSettingsUnit(unit) {
+    if(typeof window!=="undefined")
+      window.dispatchEvent(new CustomEvent("agentsam:navigate",{detail:{to:"/settings/"+unit}}));
+  },
+  async updateGeneralPreferences(preferences:SettingsGeneralPreferences){
+    await settingsRequest("/api/settings/preferences","PUT",preferences);
+    if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+  },
+  async saveAgent(draft:SettingsAgentDraft,id?:string) {
+    const key=id?"/"+encodeURIComponent(id):"";
+    await settingsRequest("/api/settings/agents"+key,id?"PUT":"POST",draft);
+    if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+  },
+  async archiveAgent(id:string){
+    await settingsRequest("/api/settings/agents/"+encodeURIComponent(id),"DELETE");
+    if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+  },
+  async updateAgentPolicy(policy:SettingsAgentPolicy){
+    await settingsRequest("/api/settings/agents/policy","PUT",policy);
+    if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+  },
   async discoverPlugins() {
     const result = await discoverLocalStudioPlugins();
     return {
@@ -384,12 +460,20 @@ export const localStudioSettingsHost: SettingsHost = {
   },
   async readPluginWorkspace(pluginId) {
     if(!/^plg_[a-z0-9]+$/i.test(pluginId))throw new Error("plugin_id_invalid");
-    const response=await fetch("/api/plugins/"+encodeURIComponent(pluginId)+"/workspace",{
-      credentials:"same-origin",
-    });
-    const body=await response.json().catch(()=>({ok:false,error:"plugin_workspace_invalid_response"}));
-    if(!response.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
-    return {pluginKey:body.pluginKey,contextTool:body.contextTool,result:body.result};
+    const path="/api/plugins/"+encodeURIComponent(pluginId)+"/workspace";
+    let body:{ok?:boolean;error?:string;pluginKey?:string;contextTool?:string;result?:unknown};
+    if(isPackagedDesktop()){
+      const native=await invokeStudioService({
+        operation:"plugins",account_id:await resolveDesktopStudioAccountId(),method:"GET",path,
+      });
+      body=JSON.parse(native.body||"{}");
+      if(!native.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
+    }else{
+      const response=await fetch(path,{credentials:"same-origin"});
+      body=await response.json().catch(()=>({ok:false,error:"plugin_workspace_invalid_response"}));
+      if(!response.ok||body.ok!==true)throw new Error(body.error||"plugin_workspace_unavailable");
+    }
+    return {pluginKey:body.pluginKey||"",contextTool:body.contextTool||"",result:body.result};
   },
   async setPluginEnabled(id, enabled) {
     await updateLocalStudioPlugin(id, { enabled });
@@ -398,7 +482,8 @@ export const localStudioSettingsHost: SettingsHost = {
     }
   },
   async beginPluginSetup(id, options = {}) {
-    const plugins = await loadPluginSettings();
+    const registry = await loadPluginSettings();
+    const plugins = (registry.plugins||[]).map(settingsPlugin);
     const plugin = plugins.find((candidate) => candidate.id === id);
     if (!plugin) throw new Error("plugin_not_found");
     if (plugin.installationKey === "catalog-v1") {
@@ -421,7 +506,8 @@ export const localStudioSettingsHost: SettingsHost = {
     throw new Error("plugin_setup_url_unsupported");
   },
   async disconnectPlugin(id) {
-    const plugins = await loadPluginSettings();
+    const registry = await loadPluginSettings();
+    const plugins = (registry.plugins||[]).map(settingsPlugin);
     const plugin = plugins.find((candidate) => candidate.id === id);
     if (!plugin) throw new Error("plugin_not_found");
     if (plugin.installationKey === "catalog-v1") {
@@ -458,15 +544,7 @@ export const localStudioSettingsHost: SettingsHost = {
         window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
       return;
     }
-    const overlay = readCatalogOverlay();
-    const entry = overlay[kind] ?? { items: [], removedIds: [] };
-    entry.items = [
-      ...entry.items.filter((candidate) => candidate.id !== item.id),
-      item,
-    ];
-    entry.removedIds = entry.removedIds.filter((id) => id !== item.id);
-    overlay[kind] = entry;
-    writeCatalogOverlay(overlay);
+    throw new Error("settings_catalog_kind_requires_verified_adapter:"+kind);
   },
   async removeCatalogItem(kind, id) {
     if(kind==="skills") {
@@ -475,12 +553,7 @@ export const localStudioSettingsHost: SettingsHost = {
         window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
       return;
     }
-    const overlay = readCatalogOverlay();
-    const entry = overlay[kind] ?? { items: [], removedIds: [] };
-    entry.items = entry.items.filter((candidate) => candidate.id !== id);
-    if (!entry.removedIds.includes(id)) entry.removedIds.push(id);
-    overlay[kind] = entry;
-    writeCatalogOverlay(overlay);
+    throw new Error("settings_catalog_kind_requires_verified_adapter:"+kind);
   },
   subscribe(_unitId, callback) {
     if (typeof window === "undefined") return () => {};
