@@ -189,6 +189,12 @@ export async function runHelp(argv = [], options = {}) {
 
   const topicArg = args.find((arg) => !arg.startsWith('-'));
   if (topicArg) {
+    // A named help topic wins over an identically named CLI command (runtime).
+    const requestedTopic = CLI_HELP_TOPICS.find((item) => item.id === clean(topicArg));
+    if (requestedTopic) {
+      write(renderHelpTopic(resolveHelpTopic(topicArg), version));
+      return;
+    }
     const command = getCliCommand(topicArg);
     if (command) {
       write(renderCommandHelp(command, version));

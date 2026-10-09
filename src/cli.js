@@ -322,7 +322,11 @@ if (catalogEntry && command !== 'help' && !rest.includes('--help') &&
 }
 
 try {
-if (command && !command.startsWith('-') && (rest.includes('--help') || rest.includes('-h'))) {
+if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
+  // Keep the existing inspect path/world-state help authoritative instead of a
+  // generic registry stub that hides its positional argument and safety boundary.
+  await runInspect(rest);
+} else if (command && !command.startsWith('-') && (rest.includes('--help') || rest.includes('-h'))) {
   const entry = getCliCommand(command);
   if (!entry) { console.error('Unknown command: ' + command); process.exitCode = 2; }
   else { console.log('agentsam '+entry.id+' — '+entry.summary); for (const u of entry.usage?.length ? entry.usage : ['agentsam '+entry.id+' [--help]']) console.log('  '+u); }
