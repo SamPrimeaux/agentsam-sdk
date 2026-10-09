@@ -29,6 +29,7 @@ test('rapid rust native help keeps the public agentsam rust command name', () =>
 test('bare rust help is successful and never invents HTTP 500',()=>{
   const result=spawnSync(process.execPath,['src/cli.js','rust'],{cwd:root,encoding:'utf8',timeout:25000});
   assert.equal(result.status,0,`stderr: ${result.stderr}`);
-  assert.match(result.stdout,/Usage: agentsam rust/);
+  assert.match(result.stdout,/agentsam rust/);
+  assert.match(result.stdout,/--help/);
   assert.doesNotMatch(result.stderr,/HTTP 500|internal · inspect_error/);
 });
