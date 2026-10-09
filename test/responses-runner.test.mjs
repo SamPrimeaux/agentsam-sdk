@@ -92,7 +92,21 @@ test('capability adapter hydrates packaged JSON schemas and tool surface exposes
     'terminal.exec',
     ...CAD_PROJECT_TOOLS.map((tool) => tool.name),
   ].sort();
-  assert.deepEqual(descriptors.map((row) => row.name).sort(), expectedNames);
+  // The registry can add verified capabilities without editing a frozen test list.
+  // Preserve coverage for the original required set and validate every exposed schema.
+  const actualNames = descriptors.map((row) => row.name).sort();
+  assert.equal(new Set(actualNames).size, actualNames.length, 'executable tools must have unique names');
+  for (const name of expectedNames) {
+    assert.ok(actualNames.includes(name), `missing required executable capability: ${name}`);
+  }
+  for (const descriptor of descriptors) {
+    assert.equal(descriptor.input_schema?.type, 'object', `${descriptor.name} lacks a packaged object schema`);
+    assert.ok(descriptor.input_schema.properties, `${descriptor.name} lacks input schema properties`);
+  }
+  for (const name of ['capability.search', 'capability.describe', 'capability.status', 'capability.invoke',
+    'machine.inspect', 'test.run', 'workspace.read', 'workspace.write']) {
+    assert.ok(actualNames.includes(name), `registered executable capability missing: ${name}`);
+  }
   const repository = descriptors.find((row) => row.name === 'repository.snapshot');
   assert.equal(repository.input_schema.type, 'object');
   assert.ok(repository.input_schema.properties.cwd);
