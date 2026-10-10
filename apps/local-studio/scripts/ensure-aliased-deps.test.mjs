@@ -87,6 +87,8 @@ test('Cloudflare app-only install builds sibling SDK packages with linked build 
       if (withEntry) writeFileSync(path.join(dir, 'index.js'), 'export {};\n');
     }
     installed('esbuild');
+    installed('@monaco-editor/react');
+    installed('monaco-editor');
     installed('react');
     installed('react-dom');
     installed('@types/react', false);
@@ -119,6 +121,10 @@ test('Cloudflare app-only install builds sibling SDK packages with linked build 
       return dir;
     }
 
+    const ide = sibling('agentsam-ide', {
+      peerDependencies: { '@monaco-editor/react': '^4.7.0', monaco-editor: '^0.50.0' },
+      devDependencies: { react: '^19', '@types/react': '^19', monaco-editor: '^0.50.0' },
+    });
     const nav = sibling('agentsam-nav', { devDependencies: { esbuild: '^0.28.1' } });
     const contracts = sibling('agentsam-contracts', { devDependencies: { esbuild: '^0.28.1' } });
     const workbench = sibling('agentsam-workbench', {
@@ -137,9 +143,10 @@ test('Cloudflare app-only install builds sibling SDK packages with linked build 
       cwd: studio, encoding: 'utf8', timeout: 20000,
     });
     assert.equal(run.status, 0, run.stdout + '\n' + run.stderr);
-    for (const dir of [nav, contracts, workbench, settings, analyticsUi, analytics]) {
+    for (const dir of [ide, nav, contracts, workbench, settings, analyticsUi, analytics]) {
       assert.equal(existsSync(path.join(dir, 'dist', 'index.js')), true, dir);
     }
+    assert.equal(existsSync(path.join(ide, 'node_modules', '@monaco-editor', 'react', 'package.json')), true);
     assert.equal(existsSync(path.join(contracts, 'node_modules', 'esbuild', 'package.json')), true);
     assert.equal(existsSync(path.join(analyticsUi, 'node_modules', '@types', 'react', 'package.json')), true);
   } finally {
