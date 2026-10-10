@@ -351,6 +351,10 @@ if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
 } else if (command === 'explain' || command === 'assist' || (command === 'choose' && rest[0] === 'runtime')) {
   const code = await runCatalog(command === 'choose' ? 'choose' : command, command === 'choose' ? rest.slice(1) : rest);
   if (code) process.exitCode = code;
+} else if (command === 'sam' || command === 'os') {
+  const { runSam } = await import('./commands/sam.js');
+  const result = await runSam(rest);
+  if (result?.ok === false) process.exitCode = 2;
 } else if (command === 'doctor') {
   const code = runCatalogDoctor(rest);
   if (code) process.exitCode = code;
@@ -563,7 +567,8 @@ if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
     if (!rest.length) {
       console.log('agentsam rust — native Rust build and tooling commands');
       console.log('  agentsam rust --help');
-      console.log('  agentsam rust status');
+      console.log('  agentsam rust doctor');
+      console.log('  agentsam rust status  (alias of doctor)');
     } else await runRust(rest);
   } catch (e) {
     // This command is a native CLI passthrough, not an HTTP request.

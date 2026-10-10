@@ -80,6 +80,75 @@
       "entry": "agentsam-codebaseindex/SKILL.md",
       "references": [],
       "user_invocable": true
+    },
+    {
+      "id": "agentsam-plan-and-goap",
+      "aliases": [
+        "plan",
+        "plans",
+        "goap",
+        "blackboard",
+        "resume-work"
+      ],
+      "title": "AgentSam Plan and GOAP",
+      "description": "Read plan state first; check, create, advance, and prove durable project-local plans and the GOAP blackboard.",
+      "entry": "agentsam-plan-and-goap/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-sam-operations",
+      "aliases": [
+        "sam",
+        "sam-operations",
+        "invoke",
+        "operations"
+      ],
+      "title": "AgentSam SAM Operations",
+      "description": "Exact inputs for each SAM operation and how to tell a real result from an empty one.",
+      "entry": "agentsam-sam-operations/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-repo-recon",
+      "aliases": [
+        "recon",
+        "repo-recon",
+        "inspect-first",
+        "map-repo"
+      ],
+      "title": "AgentSam Repo Recon",
+      "description": "Map a repository with deterministic read-only commands before reading files or spending model tokens.",
+      "entry": "agentsam-repo-recon/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-cad",
+      "aliases": [
+        "cad",
+        "blender"
+      ],
+      "title": "AgentSam CAD",
+      "description": "Typed-recipe Blender build, inspect, preview, and export with sha256 proof between steps.",
+      "entry": "agentsam-cad/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-sdk-orientation",
+      "aliases": [
+        "orientation",
+        "sdk-map",
+        "where-is-it",
+        "catalog"
+      ],
+      "title": "AgentSam SDK Orientation",
+      "description": "Authoritative source for each kind of thing in the SDK, and the habit of checking before building.",
+      "entry": "agentsam-sdk-orientation/SKILL.md",
+      "references": [],
+      "user_invocable": true
     }
   ]
 }

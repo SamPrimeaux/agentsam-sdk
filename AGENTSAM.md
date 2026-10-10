@@ -60,6 +60,18 @@ Product graduation and resale enforcement are defined in
 - Prefer deterministic code, Git, Merkle, AST, indexes, and other non-LLM mechanisms when they can answer the question reliably.
 - Keep security- or correctness-critical checks in trusted runtime code, not prompt prose.
 
+## Skills
+
+Portable skills live in `skills/` (index: `skills/catalog.json`; list with `agentsam skills`, open with
+`agentsam skills <id>`). Before planning, resuming work, or building a new capability, load the matching
+skill instead of rediscovering it:
+
+- plan or blackboard state: `agentsam-plan-and-goap`
+- calling or judging operations: `agentsam-sam-operations`
+- understanding a repository: `agentsam-repo-recon`
+- Blender and CAD artifacts: `agentsam-cad`
+- where something lives, or what is authoritative: `agentsam-sdk-orientation`
+
 ## Repository behavior
 
 - Inspect relevant current code before changing it.

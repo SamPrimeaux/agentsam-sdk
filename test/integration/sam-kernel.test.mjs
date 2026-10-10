@@ -75,9 +75,13 @@ describe('SAM kernel seed', () => {
   it('domain projection matches invoke', async () => {
     const sam = new AgentSamClient();
     const viaModule = await sam.security.scan({ root: process.cwd(), offline: true });
-    assert.equal(viaModule.ok, true);
+    // Offline skips external dependency-advisory lookups: the scanner reports
+    // incomplete work, not a successful complete security attestation.
+    assert.equal(viaModule.ok, false);
     assert.equal(viaModule.operation, 'security.scan');
     assert.equal(viaModule.data?.scanner, 'agentsam-sca');
+    assert.equal(viaModule.data?.complete, false);
+    assert.equal(viaModule.receipt.status, 'failed');
   });
 
   it('invoke package.audit returns deterministic offline package authority', async () => {

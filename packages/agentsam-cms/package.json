@@ -1,0 +1,14 @@
+{
+  "name": "@inneranimalmedia/agentsam-cms",
+  "version": "0.1.0",
+  "description": "Portable versioned CMS operation engine and transaction-backed Node adapter for SAM installations.",
+  "type": "module",
+  "files": ["src", "test", "README.md"],
+  "exports": {
+    ".": { "types": "./src/index.d.ts", "import": "./src/index.js" },
+    "./node": { "types": "./src/node.d.ts", "import": "./src/node.js" }
+  },
+  "engines": { "node": ">=22" },
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "license": "MIT"
+}

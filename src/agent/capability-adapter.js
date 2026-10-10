@@ -25,7 +25,7 @@ function loadSchema(value) {
   catch (error) { throw new Error(`capability_schema_unreadable:${value}:${error?.message || error}`); }
 }
 
-export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot = process.cwd(), authorizeCapability = null } = {}) {
+export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot = process.cwd(), authorizeCapability = null, samAdapter = null } = {}) {
   const cad = localProjectRuntime(projectRoot);
   const cadDescriptors = CAD_PROJECT_TOOLS.map(t=>({...t,id:t.name,version:'1.0.0',domain:'design',kind:'tool',status:'active',side_effects:['design_project_get','design_project_validate','design_model_inspect'].includes(t.name)?'none':'filesystem-write',deterministic:true,model_required:false}));
   const executable = new Map([
@@ -82,10 +82,10 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
   }
 
   return Object.freeze({
-    list(options = {}) { return [...listCapabilities(options),...cadDescriptors.filter(t=>(!options.domain||options.domain==='design')&&(!options.kind||options.kind==='tool')&&(!options.status||options.status==='active'))]; },
-    describe,
+    list(options = {}) { return [...listCapabilities(options),...cadDescriptors.filter(t=>(!options.domain||options.domain==='design')&&(!options.kind||options.kind==='tool')&&(!options.status||options.status==='active')),...(samAdapter?.toolDescriptors?.({domain:options.domain,kind:options.kind})||[]).map(t=>({...t,id:t.name,domain:t.category,handler_bound:true,agent_callable:true,readiness:'available'}))]; },
+    describe(id) { if (samAdapter?.canInvoke?.(id)) return samAdapter.toolDescriptors().find(t=>t.name===id); return describe(id); },
     toolDescriptors({ domain, kind, includeUnavailable = false } = {}) {
-      return [...listCapabilities({ domain, kind, status: null }), ...cadDescriptors.filter(t=>(!domain||domain==='design')&&(!kind||kind==='tool'))].filter((row) => includeUnavailable || (executable.has(row.id) && (row.id !== 'machine.inspect' || machineAvailable()))).map((row) => ({
+      const native = [...listCapabilities({ domain, kind, status: null }), ...cadDescriptors.filter(t=>(!domain||domain==='design')&&(!kind||kind==='tool'))].filter((row) => includeUnavailable || (executable.has(row.id) && (row.id !== 'machine.inspect' || machineAvailable()))).map((row) => ({
         name: row.id,
         description: row.description,
         category: row.domain,
@@ -96,9 +96,13 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
         deterministic: row.deterministic,
         model_required: row.model_required,
       }));
+      const sam = (samAdapter?.toolDescriptors?.({domain,kind,includeUnavailable})||[])
+        .filter(t=>(!domain||domain===t.category)&&(!kind||kind==='tool'));
+      return [...native.filter(row=>!sam.some(tool=>tool.name===row.name)),...sam];
     },
-    canInvoke(id) { const name=String(id || '').trim(); return executable.has(name) && (name !== 'machine.inspect' || machineAvailable()); },
+    canInvoke(id) { const name=String(id || '').trim(); return samAdapter?.canInvoke?.(name) === true || (executable.has(name) && (name !== 'machine.inspect' || machineAvailable())); },
     async invoke(id, input = {}) {
+      if (samAdapter?.canInvoke?.(id)) return samAdapter.invoke(id,input);
       const capability = describe(id);
       const handler = executable.get(capability.id);
       if (!handler) throw new Error(`capability_handler_unavailable:${capability.id}`);

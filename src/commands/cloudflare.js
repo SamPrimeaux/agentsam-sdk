@@ -61,6 +61,7 @@ function parse(argv = []) {
     status: '',
     help: false,
     pack: '',
+    probe: true,
   };
 
   // Legacy: cloudflare run <id> / cloudflare cpu analyze
@@ -91,6 +92,7 @@ function parse(argv = []) {
   for (let i = 1; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--json') out.json = true;
+    else if (arg === '--no-probe') out.probe = false;
     else if (arg === '--cwd') out.cwd = argv[++i] || out.cwd;
     else if (arg === '--account') out.account = argv[++i] || '';
     else if (arg === '--zone') out.zone = argv[++i] || '';
@@ -170,8 +172,57 @@ function clientFromArgs(args, options = {}) {
   });
 }
 
+/**
+ * Narrow, read-only Cloudflare API-token probes. Scope lists are not available
+ * for raw API tokens, so use real endpoint evidence for the three core services.
+ * Probe success authorizes the tested GET only; it never grants write privileges.
+ */
+export async function probeCloudflareCore(client) {
+  if (!client?.apiToken || !client?.accountId) return {};
+  const targets = [
+    ['cloudflare.d1', 'd1/database'],
+    ['cloudflare.r2', 'r2/buckets'],
+    ['cloudflare.vectorize', 'vectorize/v2/indexes'],
+  ];
+  const results = await Promise.all(targets.map(async ([id, path]) => {
+    try {
+      const result = await client.request('GET', client.accountPath(path), {
+        capabilityId: id, operation: 'cloudflare.status.read_probe',
+        query: { per_page: 1 },
+      });
+      return [id, {
+        status: 'authorized', operation: 'read', verified: true,
+        http_status: result.http_status, source: 'live_cloudflare_api',
+      }];
+    } catch (error) {
+      const httpStatus = error?.httpStatus ?? error?.status ?? null;
+      const denied = httpStatus === 401 || httpStatus === 403;
+      return [id, {
+        status: denied ? 'needs_authorization' : 'unknown',
+        operation: 'read', verified: false, http_status: httpStatus,
+        source: 'live_cloudflare_api',
+        error_code: denied ? 'cloudflare_permission_denied' : (error?.code || 'cloudflare_probe_unavailable'),
+      }];
+    }
+  }));
+  return Object.fromEntries(results);
+}
+
 function formatHuman(result) {
   if (result == null) return '';
+  if (result.schema === 'agentsam.cloudflare.status.v1' && result.auth?.mode === 'api_token') {
+    const lines = [
+      'Agent Sam · Cloudflare status',
+      `Account: ${result.auth.account_id || 'not configured'} · API token: ${result.auth.token_configured ? 'configured' : 'missing'}`,
+    ];
+    for (const [id, label] of [['cloudflare.d1','D1'],['cloudflare.r2','R2'],['cloudflare.vectorize','Vectorize']]) {
+      const probe = result.probes?.[id];
+      lines.push(`${(label + ' (read)').padEnd(18)} ${probe ? probe.status : 'not probed'}${probe?.http_status ? ' (HTTP ' + probe.http_status + ')' : ''}`);
+    }
+    lines.push('Only listed read operations are probed; API-token scope lists and write permissions remain unverified.');
+    lines.push('Use --json for the full catalog and detailed results.');
+    return lines.join('\n') + '\n';
+  }
   if (typeof result === 'string') return result;
   const lines = [];
   if (result.capability_label || result.capability_id) {
@@ -416,7 +467,17 @@ export async function runCloudflare(argv = [], options = {}) {
       // Prefer API token probe when present; else Wrangler whoami
       if (process.env.CLOUDFLARE_API_TOKEN || options.apiToken) {
         const client = clientFromArgs(args, options);
+        // API-token grants are not enumerable OAuth scopes. Start as unknown,
+        // then upgrade only the exact read operations confirmed by live probes.
         const matrix = capabilityAuthorizationMatrix([]);
+        const core = args.probe ? await probeCloudflareCore(client) : {};
+        for (const row of matrix) {
+          const verified = core[row.capability_id];
+          if (!verified) continue;
+          // An authorized GET must never authorize the family's write scope.
+          // Keep the API-token scope status 'unknown'; attach read proof only.
+          row.probe = verified;
+        }
         result = {
           schema: 'agentsam.cloudflare.status.v1',
           provider: 'cloudflare',
@@ -426,6 +487,7 @@ export async function runCloudflare(argv = [], options = {}) {
             account_id: client.accountId || null,
           },
           capabilities: matrix,
+          probes: core,
           feature_packs: listCloudflareFeaturePacks().map((p) => ({
             id: p.id,
             label: p.label,
@@ -434,8 +496,8 @@ export async function runCloudflare(argv = [], options = {}) {
           note: 'OAuth scope matrix unknown for raw API tokens — use family status probes for live authorization. Prefer agentsam_cf_browser_oauth packs for scoped consent.',
         };
         // Live probes for key families when account present
-        if (client.accountId) {
-          result.probes = {};
+        if (client.accountId && args.probe) {
+          result.probes = { ...result.probes };
           for (const [key, fn] of [
             ['workflows', () => workflows.workflowsStatus(client)],
             ['scanner', () => scanner.scannerStatus(client)],

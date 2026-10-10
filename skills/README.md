@@ -13,6 +13,11 @@ current task calls for them.
 | `agentsam-progression-guard` | **current** | Local → CI → deploy → postdeploy gates; no silent regress |
 | `agentsam-cloudflare-workers` | **current** | Wrangler-native ops, observability, CPU profiling |
 | `agentsam-codebaseindex` | **current** | Guided ingest / `codebaseindex.ingest` / Vectorize+pgvector+local lanes |
+| `agentsam-plan-and-goap` | **current** | Read plan state first; advance plans with evidence, only when asked |
+| `agentsam-sam-operations` | **current** | Exact SAM operation inputs; judge results, not envelopes |
+| `agentsam-repo-recon` | **current** | Map a repo with deterministic read-only tools first |
+| `agentsam-cad` | **current** | Typed-recipe Blender build/inspect/export with hash proof |
+| `agentsam-sdk-orientation` | **current** | Where things live, which source is authoritative |
 
 List or open them with `agentsam skills`; aliases such as `quick-bytes`, `no-regress`,
 `ingest` are intentionally short enough for terminal use.

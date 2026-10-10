@@ -9,3 +9,9 @@ These instructions are committed with agentsam-sdk and apply when Agent Sam work
 - Keep runtime/account state out of `.agentsam/config.json`.
 - Preserve real local process/filesystem behavior for CLI workflows.
 - Run focused tests first, then release verification for contract changes.
+- Patch existing code; do not rewrite a file or module to change a small behavior.
+- Do not create backup copies (`.bak`, backup folders). Git is the backup.
+- Inspect the existing code and schema first and reuse what exists; do not add tables, lookup tables, or parallel registries.
+- Finish unfinished work on its existing branch, and prune branches and worktrees once merged.
+- Do not start plan steps or other agentic actions unless the user asked for them in the current turn.
+- An `ok: true` result or a receipt is not proof. Check the result is complete and cite the output.

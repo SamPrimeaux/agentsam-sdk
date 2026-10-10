@@ -1,6 +1,6 @@
 import { getSamOperation, listSamOperations, toSamOperationCard } from './registry.js';
 import { buildSamResult } from './result.js';
-import { ensureSeedOperations } from './seed.js';
+import { ensureOS } from './os.js';
 
 /**
  * Resolve root/cwd from common input shapes.
@@ -39,10 +39,11 @@ export class AgentSamClient {
    */
   constructor(options = {}) {
     this.apiKey = options.apiKey ?? options.env?.AGENTSAM_API_KEY ?? process.env.AGENTSAM_API_KEY ?? null;
+    this.os = options.os || null;
     this.cwd = options.cwd ?? process.cwd();
     this.env = options.env ?? process.env;
-    if (options.autoSeed !== false) {
-      ensureSeedOperations();
+    if (!this.os && options.autoSeed !== false) {
+      ensureOS();
     }
 
     /** Domain projections → sam.invoke(canonicalId, …) */
@@ -85,8 +86,8 @@ export class AgentSamClient {
    * @returns {Promise<import('./types.js').SamResult>}
    */
   async invoke(operationId, input = {}, options = {}) {
-    ensureSeedOperations();
-    const def = getSamOperation(operationId);
+    if (!this.os) ensureOS();
+    const def = this.os ? this.os.get(operationId) : getSamOperation(operationId);
     if (!def) {
       return buildSamResult({
         operation: operationId,
@@ -114,10 +115,21 @@ export class AgentSamClient {
       const warnings = Array.isArray(/** @type {any} */ (data)?.warnings)
         ? /** @type {any} */ (data).warnings
         : undefined;
+      // A domain handler can report a structured failure without throwing.
+      // Never promote { ok: false } into an apparently successful SAM receipt.
+      const failed = data && typeof data === 'object' && data.ok === false;
+      const domainError = failed ? data.error : null;
+      const failureCode = typeof domainError === 'object' && domainError?.code
+        ? domainError.code : (typeof domainError === 'string' ? domainError : 'sam_operation_failed');
       return buildSamResult({
         operation: def.id,
         module: def.module,
-        ok: true,
+        ok: !failed,
+        ...(failed ? { error: {
+          code: failureCode,
+          message: typeof domainError === 'object' && domainError?.message
+            ? domainError.message : String(domainError || 'Operation reported failure'),
+        }, status: 'failed' } : {}),
         data,
         startedAt,
         lane: 'local',
@@ -154,8 +166,8 @@ export class AgentSamClient {
    * @param {{ schema?: boolean }} [options]
    */
   async describe(operationId, options = {}) {
-    ensureSeedOperations();
-    const def = getSamOperation(operationId);
+    if (!this.os) ensureOS();
+    const def = this.os ? this.os.get(operationId) : getSamOperation(operationId);
     if (!def) {
       return {
         ok: false,
@@ -199,11 +211,11 @@ export class AgentSamClient {
    * @param {{ query?: string, module?: string, model?: string, limit?: number }} [query]
    */
   async discover(query = {}) {
-    ensureSeedOperations();
+    if (!this.os) ensureOS();
     const q = String(query.query || '').trim().toLowerCase();
     const tokens = q ? q.split(/\s+/).filter(Boolean) : [];
     const limit = Number.isInteger(query.limit) ? query.limit : 20;
-    let cards = listSamOperations().map(toSamOperationCard);
+    let cards = (this.os ? this.os.list() : listSamOperations()).map(toSamOperationCard);
 
     if (query.module) {
       cards = cards.filter((c) => c.module === query.module);

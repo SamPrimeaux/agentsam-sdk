@@ -1,0 +1,46 @@
+{
+  "schema": "agentsam.package.v1",
+  "id": "agentsam-cms",
+  "name": "@inneranimalmedia/agentsam-cms",
+  "version": "0.1.0",
+  "catalog_status": "classified",
+  "class": "package",
+  "status": "local-verified-host-integration-required",
+  "languages": ["javascript", "typescript"],
+  "execution_domains": ["cms", "local", "worker-adapter"],
+  "purpose": "Portable executable SAM CMS machine with typed page/component tools, revision recovery, explicit publication, and the canonical cms-runtime SQLite storage schema.",
+  "install": [
+    {
+      "type": "npm",
+      "package": "@inneranimalmedia/agentsam-cms",
+      "command": "npm install ./packages/agentsam-cms-0.1.0.tgz"
+    }
+  ],
+  "use_when": [
+    "Authoring or changing CMS drafts using validated, revision-safe operations",
+    "Installing CMS capabilities inside a standalone Ecommerce or desktop application",
+    "Resolving CMS definitions, preview, revision history and explicit publication"
+  ],
+  "avoid_when": [
+    "The consuming CMS repository or IAM permissions are not installed",
+    "Claiming Ecommerce deployment readiness from the SDK's local tests",
+    "Trying to use CMS mutation tools as an unrestricted Bash or D1 executor"
+  ],
+  "commands": [],
+  "topics": ["cms", "sections", "blocks", "drafts", "revisions", "publication", "sam-os"],
+  "registry": {
+    "kind": "npm",
+    "name": "@inneranimalmedia/agentsam-cms",
+    "public_claim": false
+  },
+  "evidence": {
+    "directory": "packages/agentsam-cms",
+    "readme": "packages/agentsam-cms/README.md",
+    "tests": [
+      "packages/agentsam-cms/test/standalone.test.mjs",
+      "test/integration/sam-cms-machine.integration.test.mjs"
+    ],
+    "runtime_proof": "local-sqlite-and-cleanroom",
+    "host_integration": "not-verified"
+  }
+}

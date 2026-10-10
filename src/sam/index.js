@@ -20,6 +20,7 @@ export {
 export { buildSamResult, hashJson } from './result.js';
 export { AgentSamClient, createAgentSamClient } from './client.js';
 export { ensureSeedOperations, SEED_OPERATIONS, resetSeedFlagForTests } from './seed.js';
+export { ensureOS, getOSStatus, registerOSPack, createSamOS } from './os.js';
 export {
   planAStar,
   planGoap,
@@ -63,3 +64,10 @@ export {
   ACTIVITY_EVENTS,
   DECISION_ACTIVITY_LABELS,
 } from './activity/index.js';
+
+export { createSamCapabilityAdapter } from './model-adapter.js';
+export { createLocalMediaStore } from './adapters/local-media-store.js';
+
+export { createCmsOperations, validateCmsSchema } from './packs/cms/machine.js';
+export { CMS_OPERATION_CONTRACTS, CMS_CONTRACTS_BY_NAME } from './packs/cms/contracts.js';
+export { CMS_COMPATIBILITY_ALIASES } from './packs/cms/aliases.js';
