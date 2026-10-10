@@ -20,7 +20,7 @@ const packagesRoot = path.join(root, 'packages');
 const studioNodeModules = path.join(studioRoot, 'node_modules');
 
 /** Packages whose /src is aliased from apps/local-studio/vite.config.ts */
-const ALIASED = ['agentsam-nav', 'agentsam-workbench', 'agentsam-settings', 'agentsam-analytics'];
+const ALIASED = ['agentsam-ide', 'agentsam-nav', 'agentsam-workbench', 'agentsam-settings', 'agentsam-analytics'];
 
 const workspacePackages = new Map();
 for (const entry of readdirSync(packagesRoot, { withFileTypes: true })) {
