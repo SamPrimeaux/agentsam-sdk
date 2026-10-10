@@ -26,6 +26,7 @@ import { detectCliProject, findCliProjectRoot, readCliPreferences, updateCliPref
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
 import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
+import { createShellSamAdapter, resolveShellSamIdentity } from '../sam/shell-host.js';
 import { preparedTurnOne, saveTurnOneLocally } from '../registry/turn-one.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
 import { createLocalSession, saveLocalSession, localSessionElapsedMs, loadSessionContinuation } from '../lib/local-sessions.js';
@@ -673,8 +674,14 @@ async function runInteractiveModelTurn(prompt, state) {
     endpoint: model.provider === 'ollama' ? (process.env.AGENTSAM_OLLAMA_ENDPOINT || process.env.OLLAMA_BASE_URL || process.env.OLLAMA_HOST) : undefined,
     fetchImpl: state.providerFetchImpl,
   });
+  const trustedSamIdentity = await resolveShellSamIdentity({state});
+  const samAdapter = createShellSamAdapter({
+    state, trustedIdentity: trustedSamIdentity,
+    authorize: request => approveToolExecution(request, state),
+  });
   const capabilityAdapter = createCapabilityAdapter({
     projectRoot: state.cwd,
+    samAdapter,
     authorizeCapability: ({ capability, input }) => approveToolExecution({
       capability_id: capability.id,
       input,

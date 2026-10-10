@@ -15,6 +15,12 @@ export {
   AgentSamClient,
   createAgentSamClient,
   ensureSeedOperations,
+  ensureOS,
+  createSamOS,
+  createSamCapabilityAdapter,
+  createLocalMediaStore,
+  getOSStatus,
+  registerOSPack,
   SEED_OPERATIONS,
 } from './sam/index.js';
 export {
