@@ -123,8 +123,8 @@ test('Cloudflare app-only install builds sibling SDK packages with linked build 
     }
 
     const ide = sibling('agentsam-ide', {
-      peerDependencies: { '@monaco-editor/react': '^4.7.0', monaco-editor: '^0.50.0' },
-      devDependencies: { react: '^19', '@types/react': '^19', monaco-editor: '^0.50.0' },
+      peerDependencies: { '@monaco-editor/react': '^4.7.0', 'monaco-editor': '^0.50.0' },
+      devDependencies: { react: '^19', '@types/react': '^19', 'monaco-editor': '^0.50.0' },
     });
     const nav = sibling('agentsam-nav', { devDependencies: { esbuild: '^0.28.1' } });
     const contracts = sibling('agentsam-contracts', { devDependencies: { esbuild: '^0.28.1' } });
