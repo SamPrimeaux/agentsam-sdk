@@ -186,8 +186,7 @@ for (const name of ALIASED) {
   const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
   const deps = { ...(pkg.dependencies || {}), ...(pkg.peerDependencies || {}) };
   if (!Object.keys(deps).length) {
-    console.log(`[ensure-aliased-deps] ${name}: no runtime or peer deps`);
-    continue;
+    console.log(`[ensure-aliased-deps] ${name}: no runtime or peer deps; will still build missing exports`);
   }
 
   let missing = missingDeps(pkgDir, deps);
