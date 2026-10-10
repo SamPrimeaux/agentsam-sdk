@@ -575,7 +575,9 @@
       "version": "2.6.12"
     },
     {
-      "avoid_when": [],
+      "avoid_when": [
+        "Treating desktop-shell as a branding-only CLI or a replacement for the native Tauri application."
+      ],
       "catalog_status": "needs-review",
       "class": "package",
       "commands": [],
@@ -584,7 +586,9 @@
         "purpose_source": "package-manifest-description",
         "readme": "packages/agentsam-desktop-shell/README.md"
       },
-      "execution_domains": [],
+      "execution_domains": [
+        "desktop"
+      ],
       "id": "agentsam-desktop-shell",
       "install": [
         {
@@ -598,23 +602,27 @@
         "rust"
       ],
       "name": "@inneranimalmedia/agentsam-desktop-shell",
-      "purpose": "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs. Independent project; not affiliated with Tauri.",
+      "purpose": "Tauri desktop application and downloadable AgentSam Local Studio .app/.dmg packaging, including native bridges, bundled frontend and agentsamd sidecar.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/agentsam-desktop-shell",
         "public_claim": true
       },
       "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics",
-        "use_when"
+        "status"
       ],
       "schema": "agentsam.package.v1",
       "status": "unknown",
-      "topics": [],
-      "use_when": [],
+      "topics": [
+        "desktop",
+        "tauri",
+        "local-studio",
+        "bundling"
+      ],
+      "use_when": [
+        "Building and packaging AgentSam Local Studio for desktop installation.",
+        "Preparing native desktop bridges, frontend assets and the bundled agentsamd sidecar."
+      ],
       "version": "2.6.12"
     },
     {
