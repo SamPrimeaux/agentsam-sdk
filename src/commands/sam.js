@@ -3,6 +3,7 @@
  * Builtins work offline; remote and v2 host operation packs are opt-in.
  */
 import { AgentSamClient } from '../sam/client.js';
+import { AgentSamDiagnosticError } from '../errors/diagnostic.js';
 import { ensureOS, getOSStatus } from '../sam/os.js';
 import { listSamOperations, toSamOperationCard } from '../sam/registry.js';
 import { OPERATION_CATALOG } from '../sam/operation-packs/generated-v2/catalog.js';
@@ -61,7 +62,7 @@ export async function runSam(argv = [], options = {}) {
     };
   } else if (sub === 'describe') {
     const id = args[1];
-    if (!id) throw new Error('usage: agentsam sam describe <operation-id>');
+    if (!id) throw new AgentSamDiagnosticError({ source: 'agentsam-sdk', kind: 'usage_error', code: 'sam_operation_id_required', message: 'usage: agentsam sam describe <operation-id>' });
     result = await sam.describe(id);
     if (!result.ok) {
       const candidate = OPERATION_CATALOG.find(item => item.name === id);
@@ -78,7 +79,7 @@ export async function runSam(argv = [], options = {}) {
   } else if (sub === 'help' || sub === '--help' || sub === '-h') {
     result = { ok: true, help: 'agentsam sam [status|doctor|list|describe <id>|discover <query>] [--json]' };
   } else {
-    throw new Error('unknown SAM OS subcommand: ' + sub);
+    throw new AgentSamDiagnosticError({ source: 'agentsam-sdk', kind: 'unknown_command', code: 'sam_unknown_subcommand', message: 'unknown SAM OS subcommand: ' + sub });
   }
   if (json) write(JSON.stringify(result, null, 2) + '\n');
   else if (result.help) write(result.help + '\n');
