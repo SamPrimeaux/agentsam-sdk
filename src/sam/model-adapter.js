@@ -16,7 +16,7 @@ export function createSamCapabilityAdapter({ os, expose = [], authorize, client 
     toolDescriptors({ includeUnavailable = false } = {}) {
       // Only genuinely installed operations with a JSON Schema are model-visible.
       // No guessing schemas or exposing terminal privileges by default.
-      return os.list().filter(op => allow.has(op.id)).filter(op =>
+      return os.list().filter(op => allow.has(op.id) && op.model_visible !== false).filter(op =>
         op.input_schema && typeof op.input_schema === 'object' && op.input_schema.type === 'object'
       ).map(op => ({
         name: op.id, description: op.description || op.summary,
@@ -30,7 +30,7 @@ export function createSamCapabilityAdapter({ os, expose = [], authorize, client 
     },
     canInvoke(id) {
       const op = os.get(id);
-      return !!op && allow.has(id) && !!op.input_schema && typeof op.input_schema === 'object';
+      return !!op && allow.has(id) && op.model_visible !== false && !!op.input_schema && typeof op.input_schema === 'object';
     },
     async invoke(id, input = {}) {
       if (!this.canInvoke(id)) return { ok:false, error:'sam_tool_unavailable', operation:id };

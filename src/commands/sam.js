@@ -43,7 +43,22 @@ export async function runSam(argv = [], options = {}) {
     };
     if (sub === 'doctor') result.generated_unbound_names = unbound.map(item => item.name);
   } else if (sub === 'list') {
-    result = { ok: true, operations: listSamOperations().map(toSamOperationCard) };
+    const coreCards = listSamOperations().map(toSamOperationCard);
+    const hostCards = hostDescriptors
+      .filter(item => !coreCards.some(card => card.id === item.name))
+      .map(item => ({
+        id: item.name,
+        module: item.category,
+        summary: item.description,
+        risk: item.risk,
+        handler_bound: true,
+        authorization: 'required_at_invocation',
+      }));
+    result = {
+      ok: true,
+      count: coreCards.length + hostCards.length,
+      operations: [...coreCards, ...hostCards].sort((a,b)=>a.id.localeCompare(b.id)),
+    };
   } else if (sub === 'describe') {
     const id = args[1];
     if (!id) throw new Error('usage: agentsam sam describe <operation-id>');

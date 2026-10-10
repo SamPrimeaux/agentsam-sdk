@@ -43,3 +43,18 @@ test('independent installed operation packs can extend SAM without editing the s
   assert.equal(installs,1);
   assert.equal(getOSStatus().pack_status.find(x=>x.id==='fixture-runtime').installed,true);
 });
+
+
+test('SAM OS list includes authenticated host tools and matches status count', async () => {
+  const trusted = {accountId:'account_a',actorId:'au_a',installationId:'install_a'};
+  const state = {cwd:process.cwd(),projectRoot:process.cwd(),home:'/tmp/fixture-nonexistent-sam-home'};
+  const run = (args) => runSam(args, {state,identityLoader:async()=>trusted,write:()=>{}});
+  const status = await run(['status']);
+  const listed = await run(['list']);
+  assert.equal(listed.count,status.bound_count);
+  assert.equal(new Set(listed.operations.map(item=>item.id)).size,listed.operations.length);
+  assert.ok(listed.operations.some(item=>item.id==='media.image.background.remove' && item.handler_bound===true));
+  assert.ok(listed.operations.some(item=>item.id==='repository.inspect'));
+  const described = await run(['describe','media.image.background.remove']);
+  assert.equal(described.handler_bound,true);
+});

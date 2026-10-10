@@ -17,6 +17,8 @@ export {
   ensureSeedOperations,
   ensureOS,
   createSamOS,
+  createCmsOperations,
+  CMS_OPERATION_CONTRACTS,
   createSamCapabilityAdapter,
   createLocalMediaStore,
   getOSStatus,

@@ -5,8 +5,8 @@
 
 - CLI commands: **74** (aliases not counted)
 - In-shell slash commands: **38**
-- Package catalog registrations: **61**
-- Physical packages with manifests: **58**
+- Package catalog registrations: **62**
+- Physical packages with manifests: **59**
 - Apps with manifests: **8**
 
 ## CLI commands
@@ -232,6 +232,7 @@ Authority: `packages/catalog/generated/packages.json`. `catalog_status` and `sta
 | `@inneranimalmedia/agentsam-browser-surface` | AgentSamBrowserSurface: a portable Browse/Build browser capability with a provider registry so the lightweight Local Studio browser and the AgentSam Browser Shell can be swapped behind one stable host composition. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-campaign` | Portable AgentSam campaign intelligence for promotional planning, product launches, SEO/content strategy, merchandising, audience targeting, conversion, brand consistency, and evidence-backed campaign evaluation. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-cloudflare-images` | Shared Cloudflare Images transport: credentials, delivery URLs, and HTTP client. Content and Brand consume this — duplicate clients are not allowed. Independent project; not affiliated with Cloudflare, Inc.. | needs-review | unknown |
+| `@inneranimalmedia/agentsam-cms` | Portable executable SAM CMS machine with typed page/component tools, revision recovery, explicit publication, and the canonical cms-runtime SQLite storage schema. | classified | local-verified-host-integration-required |
 | `@inneranimalmedia/agentsam-connector-cloudflare` | Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not affiliated with Cloudflare, Inc.. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-content` | Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContentRuntime(). BrandPack remains peer brand authority. | needs-review | unknown |
 | `@inneranimalmedia/agentsam-content-studio` | Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRuntime; the UI never knows their names. | needs-review | unknown |

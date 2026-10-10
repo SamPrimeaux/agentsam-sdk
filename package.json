@@ -257,6 +257,7 @@
     "packages/analytics-ui",
     "packages/agentsam-assets-core",
     "packages/agentsam-brand",
+    "packages/agentsam-cms",
     "packages/agentsam-campaign",
     "packages/agentsam-cloudflare-images",
     "packages/agentsam-content",
