@@ -1,0 +1,31 @@
+{
+  "package": "agentsam-gorilla-character-kit",
+  "version": "1.0.0",
+  "character": "Gorilla AgentSam",
+  "style": "friendly hooded cyber-gorilla, lavender shell, dark mask, violet eyes, light muzzle",
+  "masterVector": "vector/gorilla-head-master.svg",
+  "favicons": "favicon/",
+  "appIcons": "app-icons/",
+  "miniComposer": "ui/mini-composer-idle.svg",
+  "pet": "pet/",
+  "referenceRaster": "reference/chosen-gorilla-3d-concept-crop.png",
+  "sourceNote": "2D assets are original editable SVG interpretations of the approved direction. 3D preview is cropped from an image concept and does NOT imply a native 3D master.",
+  "palette": {
+    "night": "#0B0A18",
+    "purple": "#753CF8",
+    "lilac": "#AE72FF",
+    "lightFur": "#EAE6FF",
+    "mask": "#151426"
+  },
+  "states": [
+    "idle",
+    "blink",
+    "thinking",
+    "working",
+    "happy",
+    "sleep",
+    "listen"
+  ],
+  "fileCount": 111,
+  "pixelPet": "pet/pixel/"
+}

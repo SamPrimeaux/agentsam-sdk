@@ -74,6 +74,8 @@ skill instead of rediscovering it:
 
 ## Repository behavior
 
+- For **AgentSam-owned visual identity** work (mascot, icons, favicons, miniAgentSam and pet), consult `assets/brand/agentsam-gorilla/README.md` and `asset-roles.json` before re-creating artwork or distributing assets. This is a character asset source, not a customer/merchant branding default.
+
 - Inspect relevant current code before changing it.
 - Extend working primitives instead of creating parallel legacy implementations.
 - Git owns source-control history. Merkle owns filesystem evidence and snapshot lineage. Runtime/hosted stores own run and execution history.

@@ -2,6 +2,10 @@
 
 Family system for product marks and UI glyphs. Static identity stays quiet and architectural; runtime motion (Computational Hyperspace) is spectral and dimensional — not the icon itself.
 
+## Selected character system (Gorilla AgentSam)
+
+The founder-selected Gorilla AgentSam character kit (2026-10-10) lives at [`assets/brand/agentsam-gorilla/`](../../assets/brand/agentsam-gorilla/). Its [`README.md`](../../assets/brand/agentsam-gorilla/README.md) and [`asset-roles.json`](../../assets/brand/agentsam-gorilla/asset-roles.json) are the installation/selection guide for 2D gorilla vectors, tiny favicon outlines, composer states and the optional pet. The gorilla **adds a recognizable character identity**; it does not authorize automatic replacement of existing product logos, native icons, or merchant brands. Preserve the original character sources and use simplified outlines at very small sizes.
+
 ## Brand hierarchy
 
 ```text

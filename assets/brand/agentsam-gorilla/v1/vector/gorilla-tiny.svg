@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><defs>
+ <linearGradient id="fur" x1="0" y1="0" x2="0.9" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".43" stop-color="#EAE6FF"/><stop offset="1" stop-color="#9D94CE"/></linearGradient>
+ <linearGradient id="muzzle" x1="0" x2=".9" y2="1"><stop stop-color="#F4F1FF"/><stop offset=".67" stop-color="#BAB2E0"/><stop offset="1" stop-color="#857BAD"/></linearGradient>
+ <linearGradient id="shadow" x1="0" x2=".7" y2="1"><stop stop-color="#35304E"/><stop offset="1" stop-color="#080814"/></linearGradient>
+ <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#B681FF"/><stop offset=".55" stop-color="#753CF8"/><stop offset="1" stop-color="#34139B"/></linearGradient>
+ <radialGradient id="background" cx=".2" cy="0"><stop stop-color="#7233F2"/><stop offset=".56" stop-color="#381294"/><stop offset="1" stop-color="#08081A"/></radialGradient>
+ <radialGradient id="glow"><stop stop-color="#AE7EFF" stop-opacity=".6"/><stop offset="1" stop-color="#7A3AFF" stop-opacity="0"/></radialGradient>
+ </defs>
+ <path d="M64 10Q75 8 79 24Q108 31 107 57Q121 72 108 91Q93 117 64 117Q32 116 21 91Q9 73 21 56Q22 32 51 23Q56 11 64 10Z" fill="url(#fur)" stroke="#41305C" stroke-width="3"/>
+ <path d="M30 59Q31 38 55 43Q63 49 71 43Q98 36 99 62Q102 93 76 98Q63 102 51 99Q26 92 30 59Z" fill="#11101F"/>
+ <ellipse cx="51" cy="72" rx="10" ry="11" fill="#A46BFF"/><ellipse cx="79" cy="72" rx="10" ry="11" fill="#A46BFF"/>
+ <ellipse cx="51" cy="70" rx="5" ry="5" fill="#F4E9FF"/><ellipse cx="79" cy="70" rx="5" ry="5" fill="#F4E9FF"/>
+ <ellipse cx="65" cy="94" rx="18" ry="13" fill="#D0C7EF"/><circle cx="60" cy="90" r="2.5" fill="#282338"/><circle cx="70" cy="90" r="2.5" fill="#282338"/>
+ </svg>
