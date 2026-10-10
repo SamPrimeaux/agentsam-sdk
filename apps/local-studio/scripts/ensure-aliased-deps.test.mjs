@@ -79,15 +79,16 @@ test('Cloudflare app-only install builds sibling SDK packages with linked build 
     // Run the production helper inside an isolated, app-scoped npm fixture.
     writeFileSync(path.join(scripts, 'ensure-aliased-deps.mjs'), readFileSync(script, 'utf8'));
 
-    function installed(name, withEntry = true) {
+    function installed(name, withEntry = true, dependencies = {}) {
       const dir = path.join(studio, 'node_modules', ...name.split('/'));
       mkdirSync(dir, { recursive: true });
       writeFileSync(path.join(dir, 'package.json'),
-        JSON.stringify({ name, type: 'module', ...(withEntry ? { main: './index.js' } : {}) }));
+        JSON.stringify({ name, type: 'module', dependencies, ...(withEntry ? { main: './index.js' } : {}) }));
       if (withEntry) writeFileSync(path.join(dir, 'index.js'), 'export {};\n');
     }
     installed('esbuild');
-    installed('@monaco-editor/react');
+    installed('@monaco-editor/react', true, { '@monaco-editor/loader': '^1.7.0' });
+    installed('@monaco-editor/loader');
     installed('monaco-editor');
     installed('react');
     installed('react-dom');
@@ -147,6 +148,7 @@ test('Cloudflare app-only install builds sibling SDK packages with linked build 
       assert.equal(existsSync(path.join(dir, 'dist', 'index.js')), true, dir);
     }
     assert.equal(existsSync(path.join(ide, 'node_modules', '@monaco-editor', 'react', 'package.json')), true);
+    assert.equal(existsSync(path.join(ide, 'node_modules', '@monaco-editor', 'loader', 'package.json')), true);
     assert.equal(existsSync(path.join(contracts, 'node_modules', 'esbuild', 'package.json')), true);
     assert.equal(existsSync(path.join(analyticsUi, 'node_modules', '@types', 'react', 'package.json')), true);
   } finally {
