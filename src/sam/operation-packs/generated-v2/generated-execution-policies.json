@@ -1,0 +1,401 @@
+{
+  "schema": "sam.generated.policies.v2",
+  "policies": [
+    {
+      "name": "sam.superbash",
+      "pack": "sam",
+      "effect": "shell_execution",
+      "target_scope": "authorized_execution_lane",
+      "authorization": "execution_grant",
+      "recovery_requirement": "process_receipt",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "sam.script.save",
+      "pack": "sam",
+      "effect": "script_artifact_write",
+      "target_scope": "owned_script_library",
+      "authorization": "script_write_permission",
+      "recovery_requirement": "versioned_artifact",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "sam.script.get",
+      "pack": "sam",
+      "effect": "read",
+      "target_scope": "owned_script_library",
+      "authorization": "script_read_permission",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.definition.list",
+      "pack": "cms",
+      "effect": "read",
+      "target_scope": "merchant_catalog",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.page.inspect",
+      "pack": "cms",
+      "effect": "read",
+      "target_scope": "merchant_page",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.page.createDraft",
+      "pack": "cms",
+      "effect": "draft_create",
+      "target_scope": "merchant_page",
+      "authorization": "draft_write_permission",
+      "recovery_requirement": "revision",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.section.inspect",
+      "pack": "cms",
+      "effect": "read",
+      "target_scope": "merchant_section",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.section.create",
+      "pack": "cms",
+      "effect": "draft_create",
+      "target_scope": "merchant_section",
+      "authorization": "draft_write_permission",
+      "recovery_requirement": "revision",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.section.updateDraft",
+      "pack": "cms",
+      "effect": "draft_update",
+      "target_scope": "merchant_section",
+      "authorization": "draft_write_permission",
+      "recovery_requirement": "revision",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.section.duplicate",
+      "pack": "cms",
+      "effect": "draft_create",
+      "target_scope": "merchant_section",
+      "authorization": "draft_write_permission",
+      "recovery_requirement": "revision",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.section.move",
+      "pack": "cms",
+      "effect": "draft_reorder",
+      "target_scope": "merchant_section",
+      "authorization": "draft_write_permission",
+      "recovery_requirement": "revision",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.section.visibility",
+      "pack": "cms",
+      "effect": "draft_visibility",
+      "target_scope": "merchant_section",
+      "authorization": "draft_write_permission",
+      "recovery_requirement": "revision",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.section.remove",
+      "pack": "cms",
+      "effect": "draft_soft_remove",
+      "target_scope": "merchant_section",
+      "authorization": "draft_write_permission",
+      "recovery_requirement": "recovery_required",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.block.add",
+      "pack": "cms",
+      "effect": "draft_create",
+      "target_scope": "merchant_block",
+      "authorization": "draft_write_permission",
+      "recovery_requirement": "revision",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.block.update",
+      "pack": "cms",
+      "effect": "draft_update",
+      "target_scope": "merchant_block",
+      "authorization": "draft_write_permission",
+      "recovery_requirement": "revision",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.block.move",
+      "pack": "cms",
+      "effect": "draft_reorder",
+      "target_scope": "merchant_block",
+      "authorization": "draft_write_permission",
+      "recovery_requirement": "revision",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.block.remove",
+      "pack": "cms",
+      "effect": "draft_destructive_remove",
+      "target_scope": "merchant_block",
+      "authorization": "draft_remove_permission_and_recovery_check",
+      "recovery_requirement": "revision_restore_must_be_proven",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cms.page.publish",
+      "pack": "cms",
+      "effect": "live_publish",
+      "target_scope": "merchant_page",
+      "authorization": "publish_permission_and_explicit_intent",
+      "recovery_requirement": "published_revision",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.asset.inspect",
+      "pack": "media",
+      "effect": "read",
+      "target_scope": "merchant_media",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.asset.upload",
+      "pack": "media",
+      "effect": "media_asset_create",
+      "target_scope": "merchant_media",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_asset_retained",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.asset.prepare",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_media",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_asset_retained",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.asset.job.status",
+      "pack": "media",
+      "effect": "read",
+      "target_scope": "merchant_media_job",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.asset.background.remove",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_media",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_asset_retained",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.asset.versions.list",
+      "pack": "media",
+      "effect": "read",
+      "target_scope": "merchant_media",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.model.inspect",
+      "pack": "media",
+      "effect": "read",
+      "target_scope": "merchant_model",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.model.validate",
+      "pack": "media",
+      "effect": "read",
+      "target_scope": "merchant_model",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.model.optimize",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_model",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_asset_retained",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "product.artwork.preflight",
+      "pack": "product",
+      "effect": "read",
+      "target_scope": "merchant_product_artwork",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cloudflare.r2.buckets.list",
+      "pack": "cloudflare",
+      "effect": "platform_read",
+      "target_scope": "authorized_cloudflare_connection",
+      "authorization": "operator_platform_read",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "cloudflare.r2.objects.inventory",
+      "pack": "cloudflare",
+      "effect": "platform_read",
+      "target_scope": "authorized_r2_bucket",
+      "authorization": "operator_or_delegated_bucket_read",
+      "recovery_requirement": "none",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.image.background.remove",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_media",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_and_derivative",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.image.generate",
+      "pack": "media",
+      "effect": "media_draft_create",
+      "target_scope": "merchant_media",
+      "authorization": "image_generation_permission",
+      "recovery_requirement": "receipt",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.image.edit",
+      "pack": "media",
+      "effect": "media_draft_create",
+      "target_scope": "merchant_media",
+      "authorization": "image_generation_permission",
+      "recovery_requirement": "receipt",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.image.inspect",
+      "pack": "media",
+      "effect": "read",
+      "target_scope": "merchant_media",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "receipt",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.image.optimize",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_media",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_and_derivative",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.image.resize",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_media",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_and_derivative",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.image.crop",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_media",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_and_derivative",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.image.convert",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_media",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_and_derivative",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.image.trim_alpha",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_media",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_and_derivative",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.image.normalize_color",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_media",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_and_derivative",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.model.validateStructural",
+      "pack": "media",
+      "effect": "read",
+      "target_scope": "merchant_model",
+      "authorization": "resource_read_permission",
+      "recovery_requirement": "receipt",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.artwork.normalize",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_artwork",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_and_derivative",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.artwork.vector.trace",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_artwork",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_and_derivative",
+      "actor_identity": "host_authenticated_context_only"
+    },
+    {
+      "name": "media.artwork.svg.normalize",
+      "pack": "media",
+      "effect": "media_derivative_create",
+      "target_scope": "merchant_artwork",
+      "authorization": "media_write_permission",
+      "recovery_requirement": "original_and_derivative",
+      "actor_identity": "host_authenticated_context_only"
+    }
+  ]
+}
