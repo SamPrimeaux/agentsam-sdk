@@ -71,3 +71,5 @@ export { createLocalMediaStore } from './adapters/local-media-store.js';
 export { createCmsOperations, validateCmsSchema } from './packs/cms/machine.js';
 export { CMS_OPERATION_CONTRACTS, CMS_CONTRACTS_BY_NAME } from './packs/cms/contracts.js';
 export { CMS_COMPATIBILITY_ALIASES } from './packs/cms/aliases.js';
+
+export { createAuthoringOperations } from './packs/authoring/index.js';
