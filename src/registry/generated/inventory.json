@@ -6,9 +6,9 @@
     "packages/catalog/generated/packages.json"
   ],
   "counts": {
-    "commands": 73,
+    "commands": 74,
     "capabilities": 43,
-    "packages": 61
+    "packages": 62
   },
   "commands": [
     {
@@ -173,6 +173,22 @@
         "agentsam inspect"
       ],
       "operation": "repository.inspect"
+    },
+    {
+      "id": "sam",
+      "aliases": [
+        "os"
+      ],
+      "summary": "Inspect the SAM operations runtime, installed handlers and availability",
+      "topic": "runtime",
+      "usage": [
+        "agentsam sam status",
+        "agentsam sam doctor",
+        "agentsam sam list",
+        "agentsam sam describe repository.inspect",
+        "agentsam sam discover background --json"
+      ],
+      "operation": null
     },
     {
       "id": "machine",
@@ -1458,6 +1474,69 @@
       "readiness": "unverified"
     },
     {
+      "avoid_when": [
+        "The consuming CMS repository or IAM permissions are not installed",
+        "Claiming Ecommerce deployment readiness from the SDK's local tests",
+        "Trying to use CMS mutation tools as an unrestricted Bash or D1 executor"
+      ],
+      "catalog_status": "classified",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/agentsam-cms",
+        "host_integration": "not-verified",
+        "readme": "packages/agentsam-cms/README.md",
+        "runtime_proof": "local-sqlite-and-cleanroom",
+        "tests": [
+          "packages/agentsam-cms/test/standalone.test.mjs",
+          "test/integration/sam-cms-machine.integration.test.mjs"
+        ]
+      },
+      "execution_domains": [
+        "cms",
+        "local",
+        "worker-adapter"
+      ],
+      "id": "agentsam-cms",
+      "install": [
+        {
+          "command": "npm install ./packages/agentsam-cms-0.1.0.tgz",
+          "package": "@inneranimalmedia/agentsam-cms",
+          "type": "npm"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-cms",
+      "purpose": "Portable executable SAM CMS machine with typed page/component tools, revision recovery, explicit publication, and the canonical cms-runtime SQLite storage schema.",
+      "registry": {
+        "kind": "npm",
+        "name": "@inneranimalmedia/agentsam-cms",
+        "public_claim": false
+      },
+      "schema": "agentsam.package.v1",
+      "status": "local-verified-host-integration-required",
+      "topics": [
+        "cms",
+        "sections",
+        "blocks",
+        "drafts",
+        "revisions",
+        "publication",
+        "sam-os"
+      ],
+      "use_when": [
+        "Authoring or changing CMS drafts using validated, revision-safe operations",
+        "Installing CMS capabilities inside a standalone Ecommerce or desktop application",
+        "Resolving CMS definitions, preview, revision history and explicit publication"
+      ],
+      "version": "0.1.0",
+      "review_required": [],
+      "readiness": "unverified"
+    },
+    {
       "avoid_when": [],
       "catalog_status": "needs-review",
       "class": "package",
@@ -1684,7 +1763,9 @@
       "readiness": "unverified"
     },
     {
-      "avoid_when": [],
+      "avoid_when": [
+        "Treating desktop-shell as a branding-only CLI or a replacement for the native Tauri application."
+      ],
       "catalog_status": "needs-review",
       "class": "package",
       "commands": [],
@@ -1693,7 +1774,9 @@
         "purpose_source": "package-manifest-description",
         "readme": "packages/agentsam-desktop-shell/README.md"
       },
-      "execution_domains": [],
+      "execution_domains": [
+        "desktop"
+      ],
       "id": "agentsam-desktop-shell",
       "install": [
         {
@@ -1707,23 +1790,26 @@
         "rust"
       ],
       "name": "@inneranimalmedia/agentsam-desktop-shell",
-      "purpose": "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs. Independent project; not affiliated with Tauri.",
+      "purpose": "Tauri desktop application and downloadable AgentSam Local Studio .app/.dmg packaging, including native bridges, bundled frontend and agentsamd sidecar.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/agentsam-desktop-shell",
         "public_claim": true
       },
       "review_required": [
-        "avoid_when",
-        "execution_domains",
-        "status",
-        "topics"
+        "status"
       ],
       "schema": "agentsam.package.v1",
       "status": "unknown",
-      "topics": [],
+      "topics": [
+        "desktop",
+        "tauri",
+        "local-studio",
+        "bundling"
+      ],
       "use_when": [
-        "Tauri desktop shell for AgentSam-powered brand dashboards — manifest-driven, multi-brand installs. Independent project; not affiliated with Tauri."
+        "Building and packaging AgentSam Local Studio for desktop installation.",
+        "Preparing native desktop bridges, frontend assets and the bundled agentsamd sidecar."
       ],
       "version": "2.6.12",
       "readiness": "unverified"
