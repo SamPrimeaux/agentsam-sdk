@@ -1,0 +1,56 @@
+name: Local Studio Cloudflare Build
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/cloudflare-local-studio-build.yml'
+      - 'apps/local-studio/**'
+      - 'packages/agentsam-nav/**'
+      - 'packages/agentsam-workbench/**'
+      - 'packages/agentsam-contracts/**'
+      - 'packages/agentsam-loading-scene/**'
+      - 'packages/agentsam-settings/**'
+      - 'packages/agentsam-analytics/**'
+      - 'packages/analytics-ui/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cloudflare-local-studio-build.yml'
+      - 'apps/local-studio/**'
+      - 'packages/agentsam-nav/**'
+      - 'packages/agentsam-workbench/**'
+      - 'packages/agentsam-contracts/**'
+      - 'packages/agentsam-loading-scene/**'
+      - 'packages/agentsam-settings/**'
+      - 'packages/agentsam-analytics/**'
+      - 'packages/analytics-ui/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cloudflare-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/local-studio
+    steps:
+      - name: Checkout SDK monorepo
+        uses: actions/checkout@v4
+
+      - name: Use Cloudflare Node/npm versions
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.3'
+          cache: npm
+          cache-dependency-path: apps/local-studio/package-lock.json
+
+      # Deliberately DO NOT install the SDK monorepo root dependencies.
+      # The production Cloudflare Builds service runs npm ci from this app only.
+      - name: Install app-only dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Compile Local Studio and verify Worker assets
+        run: npm run build && npm run cf:verify-output
