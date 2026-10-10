@@ -101,6 +101,28 @@ function linkFromRepoRoot(pkgDir, name) {
   return linkPackageDir(pkgDir, name, path.join(root, 'node_modules', ...parts));
 }
 
+// Linking a package from Studio alone is insufficient for Rolldown: imports
+// inside that linked package resolve from its SDK sibling directory. Restore
+// the already-locked, transitive runtime dependency closure beside the link.
+// No install, registry access, manifest edit or alternate version is involved.
+function linkInstalledClosure(pkgDir, name, seen = new Set()) {
+  if (seen.has(name) || workspacePackages.has(name)) return;
+  seen.add(name);
+  const parts = name.startsWith('@') ? name.split('/') : [name];
+  const source = [studioDepTarget(name), path.join(root, 'node_modules', ...parts)]
+    .find((dir) => packageReady(dir));
+  if (!source) return;
+  if (!packageReady(depTarget(pkgDir, name))) linkPackageDir(pkgDir, name, source);
+  try {
+    const manifest = JSON.parse(readFileSync(path.join(source, 'package.json'), 'utf8'));
+    for (const dependency of Object.keys(manifest.dependencies || {})) {
+      linkInstalledClosure(pkgDir, dependency, seen);
+    }
+  } catch {
+    // Invalid manifests and unavailable packages are diagnosed by Vite/npm.
+  }
+}
+
 // Sibling SDK packages are source links, not installed development workspaces.
 // Cloudflare's app-scoped npm ci has the toolchain in Local Studio/node_modules,
 // but Node and tsc resolving from packages/* cannot see it. Link available build
@@ -112,6 +134,7 @@ function linkBuildTooling(pkgDir, pkg) {
     if (linkFromStudio(pkgDir, name) || linkFromRepoRoot(pkgDir, name)) {
       linked.push(name);
     }
+    linkInstalledClosure(pkgDir, name);
   }
   if (linked.length) {
     console.log('[ensure-aliased-deps] ' + pkg.name + ': linked build tooling · ' + linked.join(', '));
@@ -229,6 +252,10 @@ for (const name of ALIASED) {
       continue;
     }
   }
+
+  // The app lock already contains transitive package dependencies. Vite's
+  // source aliases need their resolution paths available in each sibling.
+  for (const dep of Object.keys(deps)) linkInstalledClosure(pkgDir, dep);
 
   if (!packageReady(pkgDir) && pkg?.scripts?.build) {
     linkBuildTooling(pkgDir, pkg);
