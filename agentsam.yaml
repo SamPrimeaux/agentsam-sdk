@@ -74,6 +74,10 @@ packages:
       name: "@inneranimalmedia/agentsam-cloudflare-images"
       path: "packages/agentsam-cloudflare-images"
       readiness: unverified
+    - id: "agentsam-cms"
+      name: "@inneranimalmedia/agentsam-cms"
+      path: "packages/agentsam-cms"
+      readiness: unverified
     - id: "agentsam-connector-cloudflare"
       name: "@inneranimalmedia/agentsam-connector-cloudflare"
       path: "packages/connectors/cfoa"
@@ -422,6 +426,7 @@ cli:
     - terminal
     - dev
     - inspect
+    - sam
     - machine
     - engine
     - package
