@@ -101,6 +101,23 @@ function linkFromRepoRoot(pkgDir, name) {
   return linkPackageDir(pkgDir, name, path.join(root, 'node_modules', ...parts));
 }
 
+// Sibling SDK packages are source links, not installed development workspaces.
+// Cloudflare's app-scoped npm ci has the toolchain in Local Studio/node_modules,
+// but Node and tsc resolving from packages/* cannot see it. Link available build
+// tooling before compiling each workspace; never install it into the git tree.
+function linkBuildTooling(pkgDir, pkg) {
+  const linked = [];
+  for (const name of Object.keys(pkg?.devDependencies || {})) {
+    if (packageReady(depTarget(pkgDir, name))) continue;
+    if (linkFromStudio(pkgDir, name) || linkFromRepoRoot(pkgDir, name)) {
+      linked.push(name);
+    }
+  }
+  if (linked.length) {
+    console.log('[ensure-aliased-deps] ' + pkg.name + ': linked build tooling · ' + linked.join(', '));
+  }
+}
+
 function linkFromWorkspace(pkgDir, name) {
   const source = workspacePackages.get(name);
   if (!source) return false;
@@ -110,6 +127,7 @@ function linkFromWorkspace(pkgDir, name) {
     try {
       const pkg = JSON.parse(readFileSync(manifest, 'utf8'));
       if (pkg?.scripts?.build) {
+        linkBuildTooling(source, pkg);
         console.log('[ensure-aliased-deps] ' + name + ': building workspace dependency');
         execFileSync(
           'npm',
@@ -195,6 +213,14 @@ for (const name of ALIASED) {
     if (missing.length) {
       console.log('[ensure-aliased-deps] ' + name + ': npm install nested for ' + missing.join(', '));
       installNested(pkgDir);
+      // A nested npm install can replace/remove prior source and peer links.
+      // Restore canonical workspace sources and the app-installed runtime deps.
+      for (const dep of Object.keys(deps)) {
+        if (workspacePackages.has(dep)) linkFromWorkspace(pkgDir, dep);
+        else if (!packageReady(depTarget(pkgDir, dep))) {
+          linkFromStudio(pkgDir, dep) || linkFromRepoRoot(pkgDir, dep);
+        }
+      }
     }
 
     missing = missingDeps(pkgDir, deps);
@@ -206,6 +232,7 @@ for (const name of ALIASED) {
   }
 
   if (!packageReady(pkgDir) && pkg?.scripts?.build) {
+    linkBuildTooling(pkgDir, pkg);
     console.log('[ensure-aliased-deps] ' + name + ': building aliased package exports');
     try {
       execFileSync(
