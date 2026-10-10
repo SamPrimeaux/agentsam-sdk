@@ -38,6 +38,9 @@ jobs:
           set -o pipefail
           npm ci 2>&1 | tee "$RUNNER_TEMP/npm-ci.log"
 
+      - name: Verify app-scoped Cloudflare SDK dependency links
+        run: node --test apps/local-studio/scripts/ensure-aliased-deps.test.mjs
+
       - name: UI authoring contract tests
         run: node --test scripts/ui-quality/*.test.mjs
 

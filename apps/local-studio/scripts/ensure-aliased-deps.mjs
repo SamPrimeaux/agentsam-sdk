@@ -20,7 +20,7 @@ const packagesRoot = path.join(root, 'packages');
 const studioNodeModules = path.join(studioRoot, 'node_modules');
 
 /** Packages whose /src is aliased from apps/local-studio/vite.config.ts */
-const ALIASED = ['agentsam-nav', 'agentsam-workbench', 'agentsam-settings', 'agentsam-analytics'];
+const ALIASED = ['agentsam-ide', 'agentsam-nav', 'agentsam-workbench', 'agentsam-settings', 'agentsam-analytics'];
 
 const workspacePackages = new Map();
 for (const entry of readdirSync(packagesRoot, { withFileTypes: true })) {
@@ -101,6 +101,46 @@ function linkFromRepoRoot(pkgDir, name) {
   return linkPackageDir(pkgDir, name, path.join(root, 'node_modules', ...parts));
 }
 
+// Linking a package from Studio alone is insufficient for Rolldown: imports
+// inside that linked package resolve from its SDK sibling directory. Restore
+// the already-locked, transitive runtime dependency closure beside the link.
+// No install, registry access, manifest edit or alternate version is involved.
+function linkInstalledClosure(pkgDir, name, seen = new Set()) {
+  if (seen.has(name) || workspacePackages.has(name)) return;
+  seen.add(name);
+  const parts = name.startsWith('@') ? name.split('/') : [name];
+  const source = [studioDepTarget(name), path.join(root, 'node_modules', ...parts)]
+    .find((dir) => packageReady(dir));
+  if (!source) return;
+  if (!packageReady(depTarget(pkgDir, name))) linkPackageDir(pkgDir, name, source);
+  try {
+    const manifest = JSON.parse(readFileSync(path.join(source, 'package.json'), 'utf8'));
+    for (const dependency of Object.keys(manifest.dependencies || {})) {
+      linkInstalledClosure(pkgDir, dependency, seen);
+    }
+  } catch {
+    // Invalid manifests and unavailable packages are diagnosed by Vite/npm.
+  }
+}
+
+// Sibling SDK packages are source links, not installed development workspaces.
+// Cloudflare's app-scoped npm ci has the toolchain in Local Studio/node_modules,
+// but Node and tsc resolving from packages/* cannot see it. Link available build
+// tooling before compiling each workspace; never install it into the git tree.
+function linkBuildTooling(pkgDir, pkg) {
+  const linked = [];
+  for (const name of Object.keys(pkg?.devDependencies || {})) {
+    if (packageReady(depTarget(pkgDir, name))) continue;
+    if (linkFromStudio(pkgDir, name) || linkFromRepoRoot(pkgDir, name)) {
+      linked.push(name);
+    }
+    linkInstalledClosure(pkgDir, name);
+  }
+  if (linked.length) {
+    console.log('[ensure-aliased-deps] ' + pkg.name + ': linked build tooling · ' + linked.join(', '));
+  }
+}
+
 function linkFromWorkspace(pkgDir, name) {
   const source = workspacePackages.get(name);
   if (!source) return false;
@@ -110,6 +150,7 @@ function linkFromWorkspace(pkgDir, name) {
     try {
       const pkg = JSON.parse(readFileSync(manifest, 'utf8'));
       if (pkg?.scripts?.build) {
+        linkBuildTooling(source, pkg);
         console.log('[ensure-aliased-deps] ' + name + ': building workspace dependency');
         execFileSync(
           'npm',
@@ -168,8 +209,7 @@ for (const name of ALIASED) {
   const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
   const deps = { ...(pkg.dependencies || {}), ...(pkg.peerDependencies || {}) };
   if (!Object.keys(deps).length) {
-    console.log(`[ensure-aliased-deps] ${name}: no runtime or peer deps`);
-    continue;
+    console.log(`[ensure-aliased-deps] ${name}: no runtime or peer deps; will still build missing exports`);
   }
 
   let missing = missingDeps(pkgDir, deps);
@@ -195,6 +235,14 @@ for (const name of ALIASED) {
     if (missing.length) {
       console.log('[ensure-aliased-deps] ' + name + ': npm install nested for ' + missing.join(', '));
       installNested(pkgDir);
+      // A nested npm install can replace/remove prior source and peer links.
+      // Restore canonical workspace sources and the app-installed runtime deps.
+      for (const dep of Object.keys(deps)) {
+        if (workspacePackages.has(dep)) linkFromWorkspace(pkgDir, dep);
+        else if (!packageReady(depTarget(pkgDir, dep))) {
+          linkFromStudio(pkgDir, dep) || linkFromRepoRoot(pkgDir, dep);
+        }
+      }
     }
 
     missing = missingDeps(pkgDir, deps);
@@ -205,7 +253,12 @@ for (const name of ALIASED) {
     }
   }
 
+  // The app lock already contains transitive package dependencies. Vite's
+  // source aliases need their resolution paths available in each sibling.
+  for (const dep of Object.keys(deps)) linkInstalledClosure(pkgDir, dep);
+
   if (!packageReady(pkgDir) && pkg?.scripts?.build) {
+    linkBuildTooling(pkgDir, pkg);
     console.log('[ensure-aliased-deps] ' + name + ': building aliased package exports');
     try {
       execFileSync(
