@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "character": "Gorilla AgentSam",
+  "source": "source/AgentSam_Gorilla_Character_Kit_v1.zip",
+  "assetRoot": "v1",
+  "palette": {
+    "night": "#0B0A18",
+    "purple": "#753CF8",
+    "lilac": "#AE72FF",
+    "lightFur": "#EAE6FF",
+    "mask": "#151426"
+  },
+  "roles": {
+    "character.vector": "vector/gorilla-head-master.svg",
+    "character.flat": "vector/gorilla-mark-flat.svg",
+    "character.outlineLight": "vector/gorilla-outline-light.svg",
+    "character.outlineDark": "vector/gorilla-outline-dark.svg",
+    "character.tiny": "vector/gorilla-tiny.svg",
+    "favicon.svg": "favicon/favicon.svg",
+    "favicon.ico": "favicon/favicon.ico",
+    "favicon.16": "favicon/favicon-16.png",
+    "app.svg": "app-icons/agentsam-gorilla-app.svg",
+    "app.png1024": "app-icons/agentsam-gorilla-app-1024.png",
+    "app.macos": "app-icons/agentsam-gorilla.icns",
+    "app.windows": "app-icons/agentsam-gorilla-windows.ico",
+    "composer.idle": "ui/mini-composer-idle.svg",
+    "composer.thinking": "ui/mini-composer-thinking.svg",
+    "composer.working": "ui/mini-composer-working.svg",
+    "composer.listen": "ui/mini-composer-listen.svg",
+    "composer.happy": "ui/mini-composer-happy.svg",
+    "pet.headIdle": "pet/heads/head-idle.svg",
+    "pet.ledgeIdle": "pet/ledge/ledge-idle.svg",
+    "pet.ledgeSpritesheet": "pet/ledge/spritesheet-256.png",
+    "pet.ledgeFrames": "pet/ledge/spritesheet.json",
+    "pet.pixelFrames": "pet/pixel/spritesheet-pixel.json",
+    "preview": "preview/index.html"
+  },
+  "referenceOnly": [
+    "reference/chosen-gorilla-3d-concept-crop.png",
+    "reference/original-side-by-side-concept.png"
+  ]
+}
