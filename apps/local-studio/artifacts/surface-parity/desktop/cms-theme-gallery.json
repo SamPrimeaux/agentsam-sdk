@@ -1,0 +1,34 @@
+{
+  "route": "#/themes",
+  "viewport": [
+    1440,
+    1000
+  ],
+  "tokens": {
+    "--nav-canvas": "",
+    "--nav-surface": "",
+    "--nav-text": "",
+    "--nav-accent": "",
+    "--background": "",
+    "--card": ""
+  },
+  "htmlClass": "dark antialiased",
+  "bodyClass": "bg-background font-sans text-foreground",
+  "stylesheets": [
+    "http://127.0.0.1:51243/assets/index-BpHH45aM.css",
+    null
+  ],
+  "themes": [
+    "cypress",
+    "ember",
+    "forge",
+    "grove",
+    "harbor",
+    "heuristic",
+    "iasf",
+    "resolve",
+    "scenes",
+    "summit",
+    "violet"
+  ]
+}
