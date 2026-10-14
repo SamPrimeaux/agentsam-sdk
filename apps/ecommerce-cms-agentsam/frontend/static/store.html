@@ -113,10 +113,17 @@ function fmtStoreDate(iso) {
   }).replace(",", " at");
 }
 
-function formatMs(ms) {
-  if (ms == null) return "—";
-  if (ms >= 1000) return `${(ms / 1000).toFixed(1)} s`;
-  return `${ms} ms`;
+function metricValue(metric) {
+  if (metric && typeof metric === "object") return metric.value ?? null;
+  return metric ?? null;
+}
+
+function formatMs(metric) {
+  const ms = metricValue(metric);
+  if (ms == null || !Number.isFinite(Number(ms))) return "—";
+  const value = Number(ms);
+  if (value >= 1000) return `${(value / 1000).toFixed(1)} s`;
+  return `${value} ms`;
 }
 
 function renderDraftRow(theme) {
@@ -125,12 +132,12 @@ function renderDraftRow(theme) {
       <div class="online-store-draft-thumb" aria-hidden="true"><span>F&amp;FT</span></div>
       <div class="online-store-draft-copy">
         <div class="online-store-draft-name">${theme.name}</div>
-        <div class="online-store-draft-meta">${theme.meta}</div>
-        <div class="online-store-version"><span class="online-store-version-dot" aria-hidden="true"></span>Version ${theme.version} available</div>
+        <div class="online-store-draft-meta">${theme.meta || "Saved draft theme"}</div>
+        <div class="online-store-version"><span class="online-store-version-dot" aria-hidden="true"></span>${theme.version ? `Version ${theme.version}` : "Draft study"}</div>
       </div>
       <div class="online-store-draft-actions">
         <button type="button" class="online-store-icon-btn" aria-label="Theme options"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg></button>
-        <button type="button" class="btn ghost small draft-publish" data-theme-id="${theme.id}">Publish</button>
+        ${theme.source === "builtin-theme-project" ? `<a href="${theme.preview_href || theme.edit_href}" class="btn ghost small">Explore</a>` : `<button type="button" class="btn ghost small draft-publish" data-theme-id="${theme.id}">Publish</button>`}
         <a href="${theme.edit_href}" class="btn ghost small">Edit theme</a>
       </div>
     </div>`;
@@ -153,11 +160,12 @@ function setPreviewFrames(url) {
     const perf = d.performance;
     document.getElementById("perf-lcp").textContent = formatMs(perf.lcp_ms);
     document.getElementById("perf-inp").textContent = formatMs(perf.inp_ms);
+    const cls = metricValue(perf.cls);
     document.getElementById("perf-cls").textContent =
-      perf.cls != null ? String(perf.cls) : "—";
+      cls != null ? String(cls) : "—";
 
-    const desktop = perf.sessions_desktop;
-    const mobile = perf.sessions_mobile;
+    const desktop = metricValue(perf.sessions_desktop);
+    const mobile = metricValue(perf.sessions_mobile);
     document.getElementById("perf-sessions").innerHTML = `
       <span class="device desktop">${desktop != null ? desktop : "—"} Desktop</span>
       <span class="device mobile">${mobile != null ? mobile : "—"} Mobile</span>`;

@@ -79,6 +79,19 @@ await cp(
   { recursive: true }
 );
 
+await cp(
+  path.join(
+    frontend,
+    "theme-editor"
+  ),
+  path.join(
+    output,
+    "admin",
+    "theme-editor-lib"
+  ),
+  { recursive: true }
+);
+
 console.log(
   "Assembled ecommerce admin assets into dist/assets"
 );

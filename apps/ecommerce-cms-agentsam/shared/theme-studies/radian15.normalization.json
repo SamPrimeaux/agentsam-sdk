@@ -1,0 +1,60 @@
+{
+  "schema": "agentsam.theme-study.normalization.v1",
+  "id": "radian15-aw26",
+  "source": {
+    "repository": "SamPrimeaux/RADIAN15",
+    "branch": "arena/8d51254b-radian15",
+    "commit": "9b75ec5b607dbfe763ac9654d264c157e701e931",
+    "kind": "react-vite-design-donor"
+  },
+  "target": {
+    "theme": "@inneranimalmedia/revise-theme",
+    "section_library": "@inneranimalmedia/section-library",
+    "consumer": "@inneranimalmedia/ecommerce-cms-agentsam"
+  },
+  "rules": [
+    "Do not copy RADIAN customer identity into reusable section contracts.",
+    "Reuse an existing Revise preset when geometry and behavior already match.",
+    "Promote unique page-level behavior as layouts/templates, not giant sections.",
+    "BrandStream is a Brand Studio/workbench surface, not a storefront theme section.",
+    "A normalized candidate is not portable until it works with unrelated content and media."
+  ],
+  "mappings": [
+    { "source": "HeroCurtain", "status": "covered", "target": "revise/sticky-curtain", "kind": "section" },
+    { "source": "WardrobeGallery", "status": "covered", "target": "revise/wardrobe-rail", "kind": "section" },
+    { "source": "PromoGrid", "status": "covered", "target": "revise/dark-promo-grid", "kind": "section" },
+    { "source": "StoriesRings", "status": "covered", "target": "revise/story-rings", "kind": "section" },
+    { "source": "CollectionCarousel", "status": "covered", "target": "revise/tabbed-products", "kind": "section" },
+    { "source": "FullscreenEditorial", "status": "covered", "target": "revise/scroll-text-reveal", "kind": "section" },
+    { "source": "SplitMediaDiptych", "status": "covered", "target": "revise/parallax-diptych", "kind": "section" },
+    { "source": "DressBlurb", "status": "covered-by-composition", "target": "revise/editorial-statement", "kind": "section" },
+    { "source": "ShopTheLookbook", "status": "covered", "target": "revise/hotspot-lookbook", "kind": "section" },
+    { "source": "BundleBuilder", "status": "covered", "target": "revise/sticky-summary", "kind": "section" },
+    { "source": "FeaturedPDP", "status": "covered", "target": "revise/pinned-pdp", "kind": "section" },
+    { "source": "TickerMarquee", "status": "covered", "target": "revise/commerce-marquee", "kind": "section" },
+    { "source": "RefinedBasicsSplit", "status": "covered", "target": "revise/pinned-media-grid", "kind": "section" },
+    { "source": "BrandFilm", "status": "covered", "target": "revise/brand-film", "kind": "section" },
+    { "source": "BeforeAfterSlider", "status": "covered", "target": "revise/before-after", "kind": "section" },
+    { "source": "BlogPostsStack", "status": "covered", "target": "revise/sticky-card-deck", "kind": "section" },
+    { "source": "NewsletterBand", "status": "covered", "target": "revise/newsletter", "kind": "section" },
+    { "source": "SocialGrid", "status": "covered", "target": "revise/full-bleed-grid", "kind": "section" },
+    { "source": "FAQAndTrust", "status": "covered", "target": ["revise/faq", "revise/trust-row"], "kind": "section-composition" },
+    { "source": "TestimonialsSection", "status": "covered", "target": "revise/testimonials", "kind": "section" },
+    { "source": "LogoMarquee", "status": "covered", "target": "revise/logo-track", "kind": "section" },
+    { "source": "CollectionsPage", "status": "candidate", "target": "template.commerce-catalog.faceted", "kind": "template", "notes": "Normalize search, faceting, 2/3/4-column density, sorting, quick view and cart feedback." },
+    { "source": "LookbookPage", "status": "compose", "target": "template.editorial-lookbook", "kind": "template", "notes": "Compose hotspot-lookbook, split media, product references and chapters rather than copying one page blob." },
+    { "source": "MaisonPage", "status": "compose", "target": "template.brand-provenance", "kind": "template", "notes": "Compose statement, before-after, editorial media, locations and appointment CTA." },
+    { "source": "ReserveVaultPage", "status": "candidate", "target": "template.drop-vault", "kind": "template", "notes": "Normalize numbered releases, countdown, gated access and allocation receipt without RADIAN passcodes/content." },
+    { "source": "ProductDetailPage", "status": "candidate", "target": "template.product-detail.editorial", "kind": "template", "notes": "Keep product data/provider neutral; reuse PDP section primitives." },
+    { "source": "Header/MenuDrawer/SearchPanel/BagDrawer/DiscoverDrawer", "status": "candidate", "target": "layout.storefront-shell.editorial", "kind": "layout", "notes": "Shell behavior belongs above page sections and must remain themeable." },
+    { "source": "FlyToCartGhost", "status": "candidate", "target": "behavior.commerce.fly-to-cart", "kind": "behavior" },
+    { "source": "StoriesViewerModal", "status": "candidate", "target": "behavior.stories.viewer", "kind": "behavior" },
+    { "source": "BrandStreamPage", "status": "separate-surface", "target": "agentsam.brand-studio.stream", "kind": "workbench", "notes": "Harvest Stream/Board/Grid/Compare, epistemic states and provenance inspector into Brand Studio; do not ship as storefront theme chrome." }
+  ],
+  "next_candidates": [
+    "template.commerce-catalog.faceted",
+    "layout.storefront-shell.editorial",
+    "template.drop-vault",
+    "agentsam.brand-studio.stream"
+  ]
+}

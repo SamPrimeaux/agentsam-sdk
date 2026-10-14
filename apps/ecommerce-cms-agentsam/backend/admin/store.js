@@ -206,8 +206,23 @@ export async function verifyStorefrontPassword(env, password) {
   return verifyPassword(password, storePasswordHash, storePasswordSalt);
 }
 
+const BUILTIN_DRAFT_THEMES = Object.freeze([
+  Object.freeze({
+    id: "fnf-earned-hours-revise",
+    name: "F&FT — Earned Hours / Revise",
+    status: "draft",
+    version: "study-1",
+    last_saved: null,
+    meta: "24 editable sections · Revise 0.2.0 · draft only",
+    edit_href: "/admin/theme-project.html?id=fnf-earned-hours-revise",
+    preview_href: "/admin/theme-project.html?id=fnf-earned-hours-revise",
+    source: "builtin-theme-project",
+  }),
+]);
+
 async function resolveThemes(env) {
-  // No fabricated themes. Prefer agentsam_products theme rows if present; else empty.
+  // Product registry remains active-theme authority. Built-in studies are draft-only
+  // theme projects and cannot silently replace the live storefront.
   try {
     const { results } = await env.DB.prepare(
       `SELECT slug AS id, name, version, status, updated_at
@@ -226,10 +241,12 @@ async function resolveThemes(env) {
       preview_href: "/",
     }));
     const active = themes.find((t) => t.status === "active" || t.status === "wired") || null;
-    const drafts = themes.filter((t) => t !== active);
+    const productDrafts = themes.filter((t) => t !== active);
+    const known = new Set(productDrafts.map((theme) => theme.id));
+    const drafts = [...productDrafts, ...BUILTIN_DRAFT_THEMES.filter((theme) => !known.has(theme.id))];
     return { active_theme: active, draft_themes: drafts };
   } catch {
-    return { active_theme: null, draft_themes: [] };
+    return { active_theme: null, draft_themes: [...BUILTIN_DRAFT_THEMES] };
   }
 }
 

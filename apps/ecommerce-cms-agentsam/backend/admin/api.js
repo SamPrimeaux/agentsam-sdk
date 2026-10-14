@@ -91,6 +91,7 @@ import { handleDiscountsApi } from "./discounts.js";
 import { handleCompletefulAdminApi } from "./completeful.js";
 import { handleProductStudioAdminApi } from "./product-studio.js";
 import { getBrandWorkspace, patchBrandWorkspace } from "./brand.js";
+import { getThemeProject, putThemeProject } from "./theme-projects.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -537,6 +538,14 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/store/preferences" && method === "POST") {
     return postStorePreferences(request, env);
+  }
+
+  let themeProjectMatch = path.match(/^\/api\/admin\/theme-projects\/([a-z0-9_-]+)$/);
+  if (themeProjectMatch && method === "GET") {
+    return getThemeProject(env, themeProjectMatch[1]);
+  }
+  if (themeProjectMatch && method === "PUT") {
+    return putThemeProject(request, env, themeProjectMatch[1]);
   }
 
   if (path === "/api/admin/agentsam/maintenance/compact" && method === "POST") {
