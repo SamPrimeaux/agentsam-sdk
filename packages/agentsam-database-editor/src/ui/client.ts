@@ -18,6 +18,8 @@ export type DatabaseSource = {
   label: string;
   database_name?: string;
   database_id?: string;
+  /** Local runtime absolute file path; never present for remote sources. */
+  path_hint?: string;
   account_id?: string;
   file_size?: number;
   num_tables?: number;

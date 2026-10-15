@@ -425,6 +425,11 @@ const config = {
                   '../../identity/src': 'runtime/identity/src',
                   '../../identity/migrations/sqlite': 'runtime/identity/migrations/sqlite',
                   'generated/local-provider-bridge.mjs': 'runtime/provider/local-provider-bridge.mjs',
+                  // Native LSP requires BOTH the IPC entrypoint and portable
+                  // agentsam-ide host. Keep these in generated config so every
+                  // white-label/release build contains them.
+                  '../scripts/native-lsp-bridge.mjs': 'runtime/lsp/native-lsp-bridge.mjs',
+                  '../../agentsam-ide/src/lsp/host.mjs': 'runtime/lsp/host.mjs',
                 }
               : {}),
           },

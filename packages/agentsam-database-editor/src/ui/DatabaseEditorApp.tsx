@@ -4,6 +4,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Cloud,
+  Code2,
+  Play,
   Database,
   Loader2,
   Plus,
@@ -236,20 +238,24 @@ function EditorModal({
         </header>
         <div className="db-modal-fields">
           {columns
-            .filter((column) => mode === "edit" || !column.primaryKey || initial[column.name] != null)
             .map((column) => (
               <label key={column.name} className="db-field">
                 <span>
                   {column.name}
                   <small>{column.type || "value"}{column.primaryKey ? " · PK" : ""}</small>
                 </span>
-                <input
+                {(/text|json|blob/i.test(column.type) && (draft[column.name] || "").length > 120) ? <textarea
+                  rows={4}
+                  spellCheck={false}
+                  value={draft[column.name] ?? ""}
+                  onChange={(event) => setDraft((current) => ({ ...current, [column.name]: event.target.value }))}
+                /> : <input
                   value={draft[column.name] ?? ""}
                   onChange={(event) =>
                     setDraft((current) => ({ ...current, [column.name]: event.target.value }))
                   }
                   placeholder={column.defaultValue ? `default: ${column.defaultValue}` : column.nullable ? "NULL / value" : "value"}
-                />
+                />}
               </label>
             ))}
         </div>
@@ -434,6 +440,7 @@ export function DatabaseEditorApp({
     setSchema(null);
     setRows(null);
     setSelectedRow(null);
+    setQueryResult(null);
     if (!sourceId) return;
     void Promise.all([loadMetrics(), loadTables()]);
   }, [sourceId, loadMetrics, loadTables]);
@@ -550,7 +557,8 @@ export function DatabaseEditorApp({
     [metrics],
   );
 
-  const pk = schema?.columns.find((column) => column.primaryKey) || null;
+  const pkColumns = schema?.columns.filter((column) => column.primaryKey) || [];
+  const hasRowIdentity = Boolean(selectedRow && pkColumns.length && pkColumns.every((column) => selectedRow[column.name] !== undefined));
 
   const refreshActive = useCallback(async () => {
     if (!sourceId) return;
@@ -619,19 +627,18 @@ export function DatabaseEditorApp({
           const payload = Object.fromEntries(
             Object.entries(values).filter(([key, value]) => {
               const column = schema.columns.find((item) => item.name === key);
-              return value !== "" || !column?.defaultValue;
+              return value !== "" || !(column?.defaultValue || (column?.primaryKey && /int/i.test(column.type)));
             }),
           );
           await client.insert(sourceId, selectedTable, payload);
         } else {
-          if (!pk || !selectedRow) throw new Error("A primary key is required to edit rows safely.");
+          if (!hasRowIdentity || !selectedRow) throw new Error("Every primary key field is required to edit rows safely.");
           const changed = Object.fromEntries(
             Object.entries(values).filter(([key, value]) => value !== selectedRow[key]),
           );
           if (Object.keys(changed).length) {
-            await client.update(sourceId, selectedTable, changed, {
-              [pk.name]: selectedRow[pk.name],
-            });
+            await client.update(sourceId, selectedTable, changed,
+              Object.fromEntries(pkColumns.map((column) => [column.name, selectedRow[column.name]])));
           }
         }
         setEditMode(null);
@@ -642,23 +649,24 @@ export function DatabaseEditorApp({
         setBusyMutation(false);
       }
     },
-    [client, editMode, loadMetrics, loadTable, page, pk, schema, selectedRow, selectedTable, sourceId],
+    [client, editMode, hasRowIdentity, loadMetrics, loadTable, page, pkColumns, schema, selectedRow, selectedTable, sourceId],
   );
 
   const deleteRow = useCallback(async () => {
-    if (!sourceId || !selectedTable || !pk || !selectedRow) return;
+    if (!sourceId || !selectedTable || !hasRowIdentity || !selectedRow) return;
     if (!window.confirm(`Delete this row from ${tableKey(selectedTable)}? This cannot be undone.`)) return;
     setBusyMutation(true);
     setError(null);
     try {
-      await client.delete(sourceId, selectedTable, { [pk.name]: selectedRow[pk.name] });
+      await client.delete(sourceId, selectedTable,
+        Object.fromEntries(pkColumns.map((column) => [column.name, selectedRow[column.name]])));
       await Promise.all([loadTable(selectedTable, page), loadMetrics()]);
     } catch (caught) {
       setError(errorText(caught));
     } finally {
       setBusyMutation(false);
     }
-  }, [client, loadMetrics, loadTable, page, pk, selectedRow, selectedTable, sourceId]);
+  }, [client, hasRowIdentity, loadMetrics, loadTable, page, pkColumns, selectedRow, selectedTable, sourceId]);
 
   if (loading) {
     return (
@@ -827,6 +835,13 @@ export function DatabaseEditorApp({
           ))}
         </select>
 
+        <button type="button" className="db-button db-sql-launch"
+          data-active={view === "sql" || undefined}
+          onClick={() => setView("sql")}
+          aria-label="Open SQL editor"
+          aria-pressed={view === "sql"}
+          title="Write and run SQL against the selected database"
+        ><Code2 size={15} /> SQL Editor</button>
         <button className="db-icon-button" type="button" onClick={() => void refreshActive()} title="Refresh">
           <RefreshCw className={loadingMain ? "spin" : ""} size={15} />
         </button>
@@ -870,6 +885,7 @@ export function DatabaseEditorApp({
       {source ? (
         <div className="db-source-meta">
           <span>{source.label}</span>
+          {source.path_hint ? <code className="db-source-path" title={source.path_hint}>{source.path_hint}</code> : null}
           <span className="db-chip">{source.database_id ? `${source.database_id.slice(0, 8)}…` : source.engine}</span>
           <span>· {providerLabel(source)}</span>
           {metrics?.health?.latencyMs != null ? <span>· {metrics.health.latencyMs}ms</span> : null}
@@ -1006,7 +1022,7 @@ export function DatabaseEditorApp({
                   disabled={item !== "sql" && !selectedTable}
                   onClick={() => setView(item)}
                 >
-                  {item}
+                  {item === "sql" ? "SQL Editor" : item === "data" ? "Table Data" : "Schema"}
                 </button>
               ))}
               <span className="db-tab-spacer" />
@@ -1018,7 +1034,7 @@ export function DatabaseEditorApp({
                   <button
                     type="button"
                     onClick={() => setEditMode("edit")}
-                    disabled={!source?.writable || !selectedRow || !pk}
+                    disabled={!source?.writable || !hasRowIdentity}
                   >
                     Edit row
                   </button>
@@ -1026,7 +1042,7 @@ export function DatabaseEditorApp({
                     type="button"
                     className="danger"
                     onClick={() => void deleteRow()}
-                    disabled={!source?.writable || !selectedRow || !pk || busyMutation}
+                    disabled={!source?.writable || !hasRowIdentity || busyMutation}
                   >
                     <Trash2 size={13} /> Delete
                   </button>
@@ -1035,15 +1051,33 @@ export function DatabaseEditorApp({
             </nav>
 
             {view === "sql" ? (
-              <div className="db-sql-view">
+              <div className="db-sql-view" data-sql-workspace="true">
+                <div className="db-sql-header">
+                  <div><strong>SQL Workspace</strong><span>Source: {source?.label || "Choose database"}</span></div>
+                  <button type="button" className="db-button secondary"
+                    disabled={!selectedTable}
+                    onClick={() => {
+                      if (!selectedTable) return;
+                      setSql("SELECT * FROM " + (selectedTable.schema ? '"' + selectedTable.schema.replace(/"/g, '""') + '".' : "") + '"' + selectedTable.name.replace(/"/g, '""') + '" LIMIT 100;');
+                      setQueryResult(null);
+                    }}>Query selected table</button>
+                </div>
                 <textarea
                   value={sql}
                   onChange={(event) => setSql(event.target.value)}
                   spellCheck={false}
                   aria-label="SQL query"
+                  aria-describedby="db-sql-help"
+                  placeholder="SELECT * FROM your_table LIMIT 100;"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                      event.preventDefault();
+                      if (sql.trim() && !loadingMain) void runSql();
+                    }
+                  }}
                 />
                 <div className="db-sql-actions">
-                  <span>
+                  <span id="db-sql-help">
                     {source?.writable
                       ? "Writes require confirmation. Destructive schema changes require a second confirmation."
                       : "Read-only source."}
@@ -1054,8 +1088,8 @@ export function DatabaseEditorApp({
                     disabled={!sql.trim() || loadingMain}
                     onClick={() => void runSql()}
                   >
-                    {loadingMain ? <Loader2 className="spin" size={14} /> : null}
-                    Run
+                    {loadingMain ? <Loader2 className="spin" size={14} /> : <Play size={13} />}
+                    Run SQL · ⌘ Enter
                   </button>
                 </div>
                 {queryResult ? (
@@ -1134,7 +1168,7 @@ export function DatabaseEditorApp({
                     <div className="db-result-meta">
                       <span>{tableKey(selectedTable)}</span>
                       <span>{rows.total.toLocaleString()} rows</span>
-                      {pk ? <span>PK: {pk.name}</span> : <span className="warn">No PK · edits disabled</span>}
+                      {pkColumns.length ? <span>PK: {pkColumns.map((column) => column.name).join(", ")}</span> : <span className="warn">No PK · edits disabled</span>}
                     </div>
                     <div className="db-grid-scroll">
                       <table className="db-data-grid">

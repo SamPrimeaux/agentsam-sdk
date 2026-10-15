@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AgentSamMonacoEditor, type AgentSamEditorPalette } from '@inneranimalmedia/agentsam-ide/monaco';
 import type { Artifact } from '@inneranimalmedia/agentsam-local-shared';
 import { HttpLspTransport, workspaceRootFileUri } from '@inneranimalmedia/agentsam-ide/lsp';
+import { isPackagedDesktop } from '@/lib/desktop/tauri';
+import { NativeLspTransport } from '@/lib/desktop/native-lsp';
 import { readTheme, type StoredTheme } from '@/lib/work/theme';
 
 function fromLocalStudioTheme(theme: StoredTheme): AgentSamEditorPalette {
@@ -65,10 +67,14 @@ export function MonacoPane({ file, workspaceId, onChange, onSave, runtimeBaseUrl
   const palette = useMemo(() => fromLocalStudioTheme(theme), [theme]);
   // Optional real LSP: the editor never owns credentials, processes, or filesystem access.
   const lsp = useMemo(() => {
-    if (!runtimeBaseUrl || !runtimeCapability || !workspaceRoot) return undefined;
+    if (!workspaceRoot) return undefined;
     const rootUri = workspaceRootFileUri(workspaceRoot);
-    return { transport:new HttpLspTransport(runtimeBaseUrl,runtimeCapability), workspaceRootUri:rootUri, onStatus:onLspStatus };
-  }, [runtimeBaseUrl,runtimeCapability,workspaceRoot,lspRetry]);
+    if (isPackagedDesktop()) {
+      return { transport: new NativeLspTransport(workspaceRoot), workspaceRootUri: rootUri, onStatus: onLspStatus };
+    }
+    if (!runtimeBaseUrl || !runtimeCapability) return undefined;
+    return { transport: new HttpLspTransport(runtimeBaseUrl, runtimeCapability), workspaceRootUri: rootUri, onStatus: onLspStatus };
+  }, [runtimeBaseUrl, runtimeCapability, workspaceRoot, lspRetry]);
   if (runtimeError) return <div role="alert" className="p-3 text-sm text-destructive">Monaco failed to start: {runtimeError}</div>;
   if (!runtimeReady) return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading local Monaco runtime…</div>;
   return (

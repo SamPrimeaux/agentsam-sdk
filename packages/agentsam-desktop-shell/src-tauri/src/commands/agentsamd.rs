@@ -231,3 +231,39 @@ pub async fn agentsamd_health(listen: Option<String>) -> Result<DaemonHandshake,
     message: "unreachable".into(),
   })
 }
+
+/// Read available/missing language server packs from the existing daemon.
+#[tauri::command]
+pub async fn agentsamd_language_packs() -> Result<serde_json::Value, String> {
+  let response = reqwest::Client::new()
+    .get("http://127.0.0.1:18765/v1/language/packs")
+    .timeout(Duration::from_secs(4))
+    .send()
+    .await.map_err(|e| format!("agentsamd_language_packs_unavailable:{e}"))?;
+  if !response.status().is_success() {
+    return Err(format!("agentsamd_language_packs_http_{}", response.status()));
+  }
+  response.json().await.map_err(|e| format!("agentsamd_language_packs_invalid:{e}"))
+}
+
+/// Explicit user-approved install. The daemon checks the pairing token again.
+#[tauri::command]
+pub async fn agentsamd_install_language_pack(id: String) -> Result<serde_json::Value, String> {
+  if !["language.typescript-lsp", "language.rust", "language.go", "language.python"].contains(&id.as_str()) {
+    return Err("language_pack_not_approved".into());
+  }
+  let token = agentsamd_pairing_token()?;
+  let response = reqwest::Client::new()
+    .post("http://127.0.0.1:18765/v1/language/packs/install")
+    .header("X-Agentsamd-Token", token)
+    .json(&serde_json::json!({ "id": id }))
+    .timeout(Duration::from_secs(180))
+    .send().await.map_err(|e| format!("language_pack_install_failed:{e}"))?;
+  let status = response.status();
+  let payload: serde_json::Value = response.json().await
+    .map_err(|e| format!("language_pack_install_invalid_response:{e}"))?;
+  if !status.is_success() || payload.get("ok") == Some(&serde_json::Value::Bool(false)) {
+    return Err(format!("language_pack_install_denied:{payload}"));
+  }
+  Ok(payload)
+}

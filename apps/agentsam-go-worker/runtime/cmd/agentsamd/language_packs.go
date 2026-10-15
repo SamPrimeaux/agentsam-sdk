@@ -29,6 +29,13 @@ var (
 		"language.json":       {ID: "language.json", Status: "ready"},
 		"language.html":       {ID: "language.html", Status: "ready"},
 		"language.css":        {ID: "language.css", Status: "ready"},
+		// Monaco's built-in TS language service is ready without an external
+		// binary. Full LSP diagnostics/navigation require this optional pack.
+		"language.typescript-lsp": {
+			ID: "language.typescript-lsp", Status: "missing", ServerBinary: "typescript-language-server",
+			InstallHint: "npm install -g typescript typescript-language-server",
+			Commands:    []string{"npm", "install", "-g", "typescript", "typescript-language-server"},
+		},
 		"language.go": {
 			ID: "language.go", Status: "missing", ServerBinary: "gopls",
 			InstallHint: "go install golang.org/x/tools/gopls@latest",
@@ -80,6 +87,17 @@ func handleLanguagePacks(w http.ResponseWriter, r *http.Request) {
 		"platform":     runtime.GOOS,
 		"architecture": runtime.GOARCH,
 	})
+}
+
+// Installation may download executables: it MUST require daemon pairing.
+func authorizedLanguagePackInstall(verify func(*http.Request) bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !verify(r) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "agentsamd_pairing_token_required"})
+			return
+		}
+		handleLanguagePackInstall(w, r)
+	}
 }
 
 func handleLanguagePackInstall(w http.ResponseWriter, r *http.Request) {

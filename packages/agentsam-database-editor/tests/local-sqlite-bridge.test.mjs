@@ -115,3 +115,66 @@ test("registered local SQLite sources resolve by source_id instead of being forc
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+function rawInvoke(request) {
+  const child = spawnSync(process.execPath, [BRIDGE], { input: JSON.stringify(request), encoding: "utf8" });
+  return { status: child.status, result: JSON.parse(child.stdout) };
+}
+
+test("finds repository SQLite from a nested folder, not an unrelated cwd", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentsam-db-nested-"));
+  try {
+    const project = path.join(root, "project");
+    const nested = path.join(project, "src", "deep", "code");
+    fs.mkdirSync(path.join(project, ".agentsam", "data"), { recursive: true });
+    fs.mkdirSync(nested, { recursive: true });
+    const filename = path.join(project, ".agentsam", "data", "agentsam.sqlite");
+    const db = new DatabaseSync(filename);
+    db.exec("CREATE TABLE nested_marker (id INTEGER PRIMARY KEY);");
+    db.close();
+    const status = invoke({ op: "status", cwd: nested });
+    assert.equal(status.root, project);
+    assert.equal(status.default_path, filename);
+    const described = invoke({ op: "open_agentsam", cwd: nested });
+    assert.equal(described.source.path_hint, filename);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("SQL editor bridge returns real rows and guards local writes with approvals", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "agentsam-db-sql-"));
+  try {
+    const file = path.join(root, ".agentsam", "data", "agentsam.sqlite");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const db = new DatabaseSync(file);
+    db.exec("CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT NOT NULL);");
+    db.close();
+    const base = { cwd: root, source_id: "local-sqlite:agentsam" };
+    const read = invoke({ ...base, op: "query", sql: "SELECT id, body FROM notes" });
+    assert.deepEqual(read.columns, ["id", "body"]);
+    assert.deepEqual(read.objects, []);
+    const blocked = rawInvoke({ ...base, op: "query", sql: "INSERT INTO notes (body) VALUES ('hello')" });
+    assert.notEqual(blocked.status, 0);
+    assert.equal(blocked.result.requires_approval, true);
+    assert.equal(invoke({ ...base, op: "query", sql: "INSERT INTO notes (body) VALUES (?)", params: ["hello"], studio_approved: true }).ok, true);
+    const queried = invoke({ ...base, op: "query", sql: "SELECT id, body FROM notes" });
+    assert.equal(queried.objects[0].body, "hello");
+    const added = invoke({ ...base, op: "insert", table: "notes", values: { body: "second" } });
+    assert.equal(added.result.changes, 1);
+    const updated = invoke({ ...base, op: "update", table: "notes", values: { body: "revised" }, where: { id: 1 } });
+    assert.equal(updated.result.changes, 1);
+    const deleted = invoke({ ...base, op: "delete", table: "notes", where: { id: 2 } });
+    assert.equal(deleted.result.changes, 1);
+    const final = invoke({ ...base, op: "query", sql: "SELECT body FROM notes" });
+    assert.deepEqual(final.objects.map((x) => x.body), ["revised"]);
+    const writePragma = rawInvoke({ ...base, op: "query", sql: "PRAGMA user_version=5" });
+    assert.equal(writePragma.result.requires_approval, true);
+    const destructive = rawInvoke({ ...base, op: "query", sql: "DROP TABLE notes", studio_approved: true });
+    assert.equal(destructive.result.requires_destructive_confirmation, true);
+    const pragma = invoke({ ...base, op: "query", sql: "PRAGMA journal_mode" });
+    assert.equal(String(pragma.rows[0][0]).toLowerCase(), "wal");
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
