@@ -7,7 +7,7 @@
   ],
   "counts": {
     "commands": 74,
-    "capabilities": 44,
+    "capabilities": 45,
     "packages": 62
   },
   "commands": [
@@ -306,10 +306,13 @@
     {
       "id": "db",
       "aliases": [],
-      "summary": "Project-local SQLite status/init",
+      "summary": "Discover local and remote stores, inspect explicit remote D1 schemas, or manage local AgentSam SQLite",
       "topic": "runtime",
       "usage": [
-        "agentsam db"
+        "agentsam db sources",
+        "agentsam db schema --remote --binding DB --config wrangler.toml --limit 100 --offset 0 --json",
+        "agentsam db status",
+        "agentsam db init"
       ],
       "operation": null
     },
@@ -820,6 +823,14 @@
     }
   ],
   "capabilities": [
+    {
+      "id": "cloudflare.d1.schema",
+      "description": "Explicit, host-authorized remote Cloudflare D1 read-only schema discovery from the selected project Wrangler binding; bounded and paginated; no arbitrary SQL.",
+      "package": "@inneranimalmedia/agentsam-sdk/knowledge",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
     {
       "id": "project.discover",
       "description": "Read-only detection of existing project tooling, Cloudflare bindings, Vectorize, npm scripts and knowledge configuration; propose adoption without changing resources.",
