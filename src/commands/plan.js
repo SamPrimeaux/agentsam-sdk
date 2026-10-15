@@ -63,8 +63,8 @@ function help() {
     '',
     'agentsam plan - durable project-local work plans',
     '',
-    '  agentsam plan new "<title>" [--goal "..."] [--type feature|sprint|refactor|incident|daily|run]',
-    '  agentsam plan list [--all] [--json]',
+    '  agentsam plan new "<title>" [--goal "..."] [--type feature|sprint|refactor|incident|daily|run] [--cwd PATH]',
+    '  agentsam plan list [--all] [--json] [--cwd PATH]',
     '  agentsam plan show [current|PLAN_ID] [--json]',
     '  agentsam plan next [--plan PLAN_ID] [--start] [--json]',
     '  agentsam plan add "<step>" [--plan PLAN_ID] [--kind inspect|implement|verify|deploy|decision] [--acceptance "..."]',
@@ -92,7 +92,7 @@ export async function runPlan(argv = []) {
     return runBrand(['plan', ...rest, ...(opts.json ? ['--json'] : []), ...(opts.goap ? ['--goap'] : []), ...(opts.write ? ['--write'] : [])]);
   }
 
-  const ctx = openPlanLedger(process.cwd());
+  const ctx = openPlanLedger(opts.cwd || process.cwd(), { readOnly: ['list','show','next'].includes(sub) && !opts.start });
   try {
     let result;
     if (sub === 'new') {
