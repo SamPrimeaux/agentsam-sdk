@@ -283,7 +283,10 @@ export function mapProject(row, tickets = [], index = 0) {
     starred: Boolean(meta.starred),
     openTasks: open.length,
     totalTasks: live.length,
-    trackedMinutes: live.reduce((sum, t) => sum + (t.estimatedMinutes || 0), 0),
+    // No time ledger is joined here. Keep estimated effort distinct from
+    // tracked time so the UI cannot present guesses as billed/worked hours.
+    estimatedMinutes: live.reduce((sum, t) => sum + (t.estimatedMinutes || 0), 0),
+    trackedMinutes: 0,
     updatedAt: row.updated_at ? new Date(`${String(row.updated_at).replace(' ', 'T')}Z`).toISOString() : null,
   };
 }

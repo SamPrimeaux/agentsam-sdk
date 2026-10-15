@@ -1,6 +1,6 @@
-import { MoreHorizontal, Star } from "lucide-react";
+import { MoreHorizontal, Star, Image as ImageIcon, Clock3 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { WorkCapabilities, WorkNavigate, WorkProject, WorkProjectInput, WorkTicket } from "../../contracts/index";
+import type { WorkCapabilities, WorkNavigate, WorkProject, WorkProjectInput, WorkTicket, WorkArtifact } from "../../contracts/index";
 import { ProjectPortfolio } from "../ProjectPortfolio";
 import type { WorkActions } from "../actions";
 import { ProjectDeleteDialog, ProjectEditor, projectStatusLabel } from "../ProjectEditor";
@@ -16,6 +16,7 @@ export const statusTone = (status: string): "neutral" | "accent" | "success" | "
 export function ProjectsSurface({
   projects,
   tickets = [],
+  artifacts = [],
   onOpenTicket,
   capabilities,
   actions = {},
@@ -24,6 +25,7 @@ export function ProjectsSurface({
 }: {
   projects: WorkProject[];
   tickets?: WorkTicket[];
+  artifacts?: WorkArtifact[];
   onOpenTicket?: (ticket: WorkTicket) => void;
   capabilities?: WorkCapabilities["projects"];
   actions?: WorkActions;
@@ -32,12 +34,12 @@ export function ProjectsSurface({
   headerActions?: ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("all");
-  const [view, setView] = useState<"portfolio" | "cards">(() =>
-    typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches ? "portfolio" : "cards"
-  );
+  // A project catalog is the entry point on every device. Timeline is an
+  // intentional planning mode, never an unexpected desktop default.
+  const [view, setView] = useState<"portfolio" | "cards">("cards");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"attention" | "updated" | "name" | "progress">("attention");
-  const [focusFilter, setFocusFilter] = useState<"focus" | "blocked" | "review" | "all">("focus");
+  const [focusFilter, setFocusFilter] = useState<"focus" | "blocked" | "review" | "all">("all");
   const [editing, setEditing] = useState<WorkProject | "new" | null>(null);
   const [removing, setRemoving] = useState<WorkProject | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
@@ -111,8 +113,8 @@ export function ProjectsSurface({
 
       <ErrorLine message={error} />
       <div className="aw-portfolio-views" role="group" aria-label="Project view">
+        <button type="button" data-active={view === "cards"} aria-pressed={view === "cards"} onClick={() => setView("cards")}>Project grid</button>
         <button type="button" data-active={view === "portfolio"} aria-pressed={view === "portfolio"} onClick={() => setView("portfolio")}>Portfolio timeline</button>
-        <button type="button" data-active={view === "cards"} aria-pressed={view === "cards"} onClick={() => setView("cards")}>Project cards</button>
       </div>
 
       <div className="aw-tabs" role="tablist">
@@ -167,6 +169,13 @@ export function ProjectsSurface({
                 style={{ ["--aw-accent" as string]: p.accent }}
                 onClick={() => onNavigate("/projects/" + encodeURIComponent(p.id))}
               >
+                <div className="aw-project-v3__cover" data-has-cover={Boolean(p.coverImageUrl)} aria-label={"Cover for " + p.name}>
+                  {p.coverImageUrl
+                    ? <img src={p.coverImageUrl} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = "none"; }} />
+                    : <div className="aw-project-v3__cover-empty"><ImageIcon size={24} aria-hidden/><span>{p.name}</span></div>}
+                  <span className="aw-project-v3__cover-status">{projectStatusLabel(p.status)}</span>
+                </div>
+                <div className="aw-project-v3__content">
                 <div className="aw-project-v3__head">
                   <span className="aw-project-v3__icon" aria-hidden>{p.initials}</span>
                   <div className="aw-project-v3__identity"><h3>{p.name}</h3><p>{p.description || p.projectType || "Project workspace"}</p>
@@ -182,9 +191,11 @@ export function ProjectsSurface({
                   {next ? <button type="button" title={next.title} onClick={(event) => { event.stopPropagation(); onOpenTicket?.(next); }}>{next.title}</button> : <strong>{p.objective || "Set the next action"}</strong>}
                 </div>
                 <div className="aw-project-v3__foot">
-                  <span>{p.openTasks} open · {p.totalTasks ?? linked.length} total</span>
+                  <span>{p.openTasks} open · {p.totalTasks ?? linked.length} tickets</span>
+                  {(p.estimatedMinutes || 0) > 0 ? <span className="aw-project-v3__effort" title="Estimated ticket effort, not recorded time"><Clock3 size={12}/>{Math.round((p.estimatedMinutes || 0) / 60 * 10) / 10}h estimated</span> : null}
                   {blockerCount ? <strong className="aw-project-v3__blockers">{blockerCount} blocker{blockerCount !== 1 ? "s" : ""}</strong> : p.status === "qa" || p.status === "staging" ? <strong className="aw-project-v3__review">Needs review</strong> : <span>{p.updatedAt ? "Updated " + timeAgo(p.updatedAt) : projectStatusLabel(p.status)}</span>}
                   <span className="aw-project-v3__arrow">→</span>
+                </div>
                 </div>
                 {caps.update || caps.delete ? <div className="aw-menu aw-project-v3__menu" onClick={(event) => event.stopPropagation()}>
                   <button type="button" className="aw-icon-btn" aria-label={"More actions for " + p.name} aria-expanded={menu === p.id} onClick={() => setMenu(menu === p.id ? null : p.id)}><MoreHorizontal size={18}/></button>
@@ -205,6 +216,7 @@ export function ProjectsSurface({
       {editing ? (
         <ProjectEditor
           project={editing === "new" ? null : editing}
+          coverImages={artifacts}
           onClose={() => setEditing(null)}
           onSave={async (input) => {
             if (editing === "new") await actions.createProject?.(input);

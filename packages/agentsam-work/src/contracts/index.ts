@@ -164,7 +164,10 @@ export type WorkProject = {
   starred?: boolean;
   openTasks: number;
   totalTasks?: number;
+  /** Actual logged minutes. Never populated from ticket effort estimates. */
   trackedMinutes: number;
+  /** Estimated effort from linked ticket estimates (not a time entry). */
+  estimatedMinutes?: number;
   updatedAt?: string | null;
 };
 
@@ -310,8 +313,17 @@ export type WorkProjectChat = {
   starred: boolean;
 };
 
+export type WorkProjectInsights = {
+  projectId: string;
+  costs: { currency: string; recordedTotal: number; lineItems: number } | null;
+  rules: { id: string; title: string; version: number; updatedAt: string } | null;
+  costsConnected: boolean;
+  rulesConnected: boolean;
+};
 export interface WorkHost {
   snapshot(request?: WorkSnapshotRequest): Promise<WorkSnapshot>;
+  /** Optional verified D1 insights, account-scoped by the server. */
+  projectInsights?(projectId: string): Promise<WorkProjectInsights>;
   listProjectChats?(projectId: string): Promise<WorkProjectChat[]>;
   listAssignableChats?(): Promise<(WorkProjectChat & { workProjectId?: string })[]>;
   assignProjectChat?(chatId: string, projectId: string | null): Promise<void>;

@@ -363,6 +363,7 @@ export function WorkProduct({
         <ProjectsSurface
           projects={snapshot.projects}
           tickets={snapshot.tickets}
+          artifacts={snapshot.artifacts}
           onOpenTicket={setOpenTicket}
           capabilities={snapshot.capabilities?.projects}
           actions={actions}
@@ -376,6 +377,7 @@ export function WorkProduct({
           projects={snapshot.projects}
           tickets={snapshot.tickets}
           events={snapshot.calendar}
+          artifacts={snapshot.artifacts}
           capabilities={snapshot.capabilities}
           actions={actions}
           onNavigate={onNavigate}
