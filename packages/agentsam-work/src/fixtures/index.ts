@@ -42,6 +42,8 @@ export const populatedWorkFixture: WorkSnapshot = {
     },
     {
       id: "tkt_telemetry_002",
+      startAt: fixtureSlot(-1, 9, 180).start,
+      dueAt: fixtureSlot(2, 12, 60).end,
       title: "Image intent in-review set",
       description: "Likely code already landed — need pass/fail proof.",
       status: "in_review",
@@ -152,6 +154,21 @@ export const populatedWorkFixture: WorkSnapshot = {
     }
   ],
   projects: [
+    {
+      id: "agentsam-sdk",
+      name: "AgentSam SDK",
+      description: "Portable agent tooling and Work platform",
+      projectType: "internal-tool",
+      status: "development",
+      progress: 75,
+      initials: "AS",
+      accent: "#7561ed",
+      githubRepo: "SamPrimeaux/agentsam-sdk",
+      objective: "Verify shared execution and the project workspace",
+      openTasks: 5,
+      totalTasks: 5,
+      trackedMinutes: 240
+    },
     {
       id: "proj_companions_cpas_web",
       name: "Companions of CPAS",

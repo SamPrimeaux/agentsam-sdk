@@ -52,5 +52,15 @@ export function buildWorkspacePreview(
     return "<script data-agentsam-source=" + JSON.stringify(source.path) + ">" +
       source.content.replace(/<\/script/gi, "<\\/script") + "</script>";
   });
+  // Unnamed code fences are fragments, not authored documents. This wrapper
+  // applies to the ephemeral preview only and never changes saved source files.
+  if (/^(?:.*\/)?snippet-\d+\.html$/i.test(file.path) && !/<html\b/i.test(html)) {
+    const needsStyles = !/<style\b|rel\s*=\s*["']stylesheet|style\s*=/i.test(html);
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+      (needsStyles ? '<meta name="agentsam-preview-fragment" content="unstyled">' : '') +
+      '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+      '<style>html,body{min-height:100%;margin:0;font-family:system-ui,sans-serif}' +
+      'img,svg{max-width:100%}</style></head><body>' + html + '</body></html>';
+  }
   return html;
 }

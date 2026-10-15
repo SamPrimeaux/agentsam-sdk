@@ -93,3 +93,28 @@ test('desktop WorkHost uses identical CRUD routes as browser and Rust permits ev
   }
   for (const method of ['GET', 'POST', 'PATCH', 'DELETE']) assert.match(bridge, new RegExp('"'+ method + '" => Method::' + method));
 });
+
+test('project portfolio maps real ticket records into a selectable timeline, never fake milestones', () => {
+  const read = (name) => readFileSync(new URL('../src/frontend/' + name, import.meta.url), 'utf8');
+  const portfolio = read('ProjectPortfolio.tsx');
+  const plan = read('ticket-plan.ts');
+  const timeline = read('TimelineView.tsx');
+  const detail = read('surfaces/ProjectDetailSurface.tsx');
+  assert.match(portfolio, /sameProject/);
+  assert.match(portfolio, /onOpenTicket/);
+  assert.match(portfolio, /timelineItems/);
+  assert.match(plan, /provenance: "scheduled"/);
+  assert.match(plan, /provenance: "activity"/);
+  assert.match(timeline, /Observed changes, not planned dates/);
+  assert.match(timeline, /Only user-scheduled dates/);
+  assert.match(detail, /hideModeTabs/);
+  assert.match(detail, /not verification evidence/);
+});
+
+test('ticket queue uses compact actionable recommendations and supports collapsing filters', () => {
+  const file = readFileSync(new URL('../src/frontend/surfaces/TicketsSurface.tsx', import.meta.url), 'utf8');
+  assert.match(file, /aw-focus-item/);
+  assert.match(file, /aw-ticket-search/);
+  assert.match(file, /aria-expanded=\{showFilters\}/);
+  assert.doesNotMatch(file, /plan\.batch\.slice\(0, 4\)\.map/);
+});

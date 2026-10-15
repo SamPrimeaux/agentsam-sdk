@@ -105,7 +105,7 @@ export function TicketEditor({
       <ErrorLine message={error} />
       {ticket ? <code className="aw-mono" style={{ fontSize: 11, color: "var(--agentsam-work-muted)" }}>{ticket.id}</code> : null}
       <Field label="Title" full>
-        <input className="aw-input" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus placeholder="What needs to happen?" />
+        <textarea rows={2} className="aw-textarea aw-ticket-title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus placeholder="What needs to happen?" />
       </Field>
       <Field label="Documentation" full>
         <textarea className="aw-textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Acceptance criteria, links, notes, implementation steps…" />

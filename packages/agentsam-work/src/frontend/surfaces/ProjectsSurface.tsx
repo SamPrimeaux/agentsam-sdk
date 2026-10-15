@@ -1,6 +1,7 @@
 import { MoreHorizontal, Star } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { WorkCapabilities, WorkNavigate, WorkProject, WorkProjectInput } from "../../contracts/index";
+import type { WorkCapabilities, WorkNavigate, WorkProject, WorkProjectInput, WorkTicket } from "../../contracts/index";
+import { ProjectPortfolio } from "../ProjectPortfolio";
 import type { WorkActions } from "../actions";
 import { ProjectDeleteDialog, ProjectEditor, projectStatusLabel } from "../ProjectEditor";
 import { Empty, ErrorLine, Pill, timeAgo, useAction } from "../shared";
@@ -13,12 +14,16 @@ export const statusTone = (status: string): "neutral" | "accent" | "success" | "
 
 export function ProjectsSurface({
   projects,
+  tickets = [],
+  onOpenTicket,
   capabilities,
   actions = {},
   onNavigate,
   headerActions,
 }: {
   projects: WorkProject[];
+  tickets?: WorkTicket[];
+  onOpenTicket?: (ticket: WorkTicket) => void;
   capabilities?: WorkCapabilities["projects"];
   actions?: WorkActions;
   onNavigate: WorkNavigate;
@@ -26,6 +31,9 @@ export function ProjectsSurface({
   headerActions?: ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("all");
+  const [view, setView] = useState<"portfolio" | "cards">(() =>
+    typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches ? "portfolio" : "cards"
+  );
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"attention" | "updated" | "name" | "progress">("attention");
   const [editing, setEditing] = useState<WorkProject | "new" | null>(null);
@@ -89,6 +97,10 @@ export function ProjectsSurface({
       </div>
 
       <ErrorLine message={error} />
+      <div className="aw-portfolio-views" role="group" aria-label="Project view">
+        <button type="button" data-active={view === "portfolio"} aria-pressed={view === "portfolio"} onClick={() => setView("portfolio")}>Portfolio timeline</button>
+        <button type="button" data-active={view === "cards"} aria-pressed={view === "cards"} onClick={() => setView("cards")}>Project cards</button>
+      </div>
 
       <div className="aw-tabs" role="tablist">
         {([["all", "All"], ["active", "Active"], ["production", "Production"], ["starred", "Starred"], ["archived", "Archived"]] as Array<[Tab, string]>).map(([id, label]) => (
@@ -107,7 +119,9 @@ export function ProjectsSurface({
         </select>
       </div>
 
-      {visible.length === 0 ? (
+      {view === "portfolio" && visible.length > 0 ? (
+        <ProjectPortfolio projects={visible} tickets={tickets} onNavigate={onNavigate} onOpenTicket={onOpenTicket}/>
+      ) : visible.length === 0 ? (
         <Empty
           title={projects.length ? "No projects here" : "No projects yet"}
           hint={projects.length ? "Try another tab or clear the search." : "Create a project to organize tickets, events and releases."}
