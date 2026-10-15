@@ -7,15 +7,12 @@ modify, or migrate production resources.
 
 ## Bootstrap
 
-- The core SAM OS no longer eagerly resolves `@inneranimalmedia/agentsam-cms`.
-  A missing CMS package does not break `agentsam models`, core SAM or other
-  unrelated CLI commands. CMS operations still use the actual portable CMS
-  engine and fail with setup guidance if it is not installed.
-- The CMS package publishes explicit Node 22 ESM `import` and `require`
-  conditions for the synchronous CMS installation boundary.
-- For local monorepo development, install dependencies from the SDK root.
-  Missing workspace links are installation-state problems, not evidence that
-  the CMS machine module needs to be duplicated elsewhere.
+- PR #227 established SDK-owned relative CMS module resolution. We retain
+  that upstream fix; SDK core and CMS operations no longer depend on a separate
+  npm workspace link just to boot. No competing loader is introduced here.
+- For existing developer worktrees, broken node_modules links can still be
+  repaired by installing dependencies from the SDK root; the new branch does
+  not alter the user's dependency installation automatically.
 - `auto` model preference cannot select the first model in a global catalog.
   A verified cached preference can be restored; otherwise AgentSam instructs
   the user to choose a model with `/model`. It does not substitute an embedding

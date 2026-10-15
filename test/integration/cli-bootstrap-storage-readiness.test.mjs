@@ -24,13 +24,13 @@ test('core SAM import is safe when CMS module cannot be required',()=>{
     (async()=>{
       const {createSamOS}=await import('./src/sam/os.js');
       if(createSamOS({core:true}).status().core_count!==10)throw Error('core SAM not ready');
-      try{createSamOS({core:false,cms:{}});throw Error('expected explicit CMS setup error');}
-      catch(e){if(!String(e.message).includes('cms_dependency_unavailable'))throw e;}
-      process.stdout.write('core_ready_and_optional_cms_explained');
+      // PR #227 now imports the bundled CMS implementation from SDK source,
+      // so core startup must be independent of external workspace links.
+      process.stdout.write('core_ready_without_external_cms_link');
     })().catch(e=>{console.error(e);process.exitCode=1;});
   `;
   const output=execFileSync(process.execPath,['-e',code],{cwd:root,encoding:'utf8'});
-  assert.match(output,/core_ready_and_optional_cms_explained/);
+  assert.match(output,/core_ready_without_external_cms_link/);
 });
 
 test('TOML binding inventory discovers D1/R2/Vectorize/Hyperdrive without leaking vars or touching repo',async(t)=>{
