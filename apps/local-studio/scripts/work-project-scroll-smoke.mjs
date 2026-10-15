@@ -4,6 +4,7 @@
  *
  * Both the progress ring's inner disc and the Work / Project breadcrumb
  * must move with their owning content when the project body scrolls.
+ * The mini-nav and breadcrumb divider must align on the same horizontal pixel.
  */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -19,12 +20,24 @@ const css = readFileSync(resolve(repo, "packages/agentsam-work/src/frontend/them
 assert.match(shell, /<div className="agentsam-work-stage__body">\s*<header className="agentsam-work-stage__topbar">/);
 const browser = await chromium.launch({ headless: true, channel: "chrome" });
 try {
-  for (const width of [390, 1440]) {
+  for (const { width, collapsed } of [
+    { width: 390, collapsed: false },
+    { width: 1080, collapsed: false },
+    { width: 1080, collapsed: true },
+    { width: 1440, collapsed: false },
+  ]) {
     const page = await browser.newPage({ viewport: { width, height: 760 } });
     await page.setContent(`<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
       <body style="margin:0">
-        <div class="agentsam-work agentsam-work-shell" data-presentation="standalone" data-right-rail="false" style="height:760px">
-          <aside class="agentsam-work-mini-nav"></aside>
+        <div class="agentsam-work agentsam-work-shell" data-presentation="standalone" data-nav-collapsed="${collapsed}" data-right-rail="false" style="height:760px">
+          <aside class="agentsam-work-mini-nav">
+            <header class="agentsam-work-mini-nav__header">
+              <div class="agentsam-work-mini-nav__brand">
+                <div class="agentsam-work-mini-nav__eyebrow">AgentSam</div>
+                <div class="agentsam-work-mini-nav__title">Work</div>
+              </div>
+            </header>
+          </aside>
           <section class="agentsam-work-stage">
             <div class="agentsam-work-stage__body">
               <header class="agentsam-work-stage__topbar"><span>Work</span><span>/</span><span>Project</span></header>
@@ -48,6 +61,9 @@ try {
     const geometry = await page.evaluate(() => {
       const scroller = document.querySelector(".agentsam-work-stage__body");
       const breadcrumb = scroller.querySelector(".agentsam-work-stage__topbar");
+      const navHeader = document.querySelector(".agentsam-work-mini-nav__header");
+      const navVisible = getComputedStyle(navHeader.parentElement).display !== "none";
+      const dividerDelta = Math.abs(navHeader.getBoundingClientRect().bottom - breadcrumb.getBoundingClientRect().bottom);
       const rings = [...scroller.querySelectorAll(".aw-project-inspector__ring")];
       const before = breadcrumb.getBoundingClientRect().top;
       const beforeRing = rings[0].getBoundingClientRect().top;
@@ -56,6 +72,10 @@ try {
       const afterRing = rings[0].getBoundingClientRect().top;
       return {
         scrollTop: scroller.scrollTop,
+        navVisible,
+        dividerDelta,
+        navHeaderHeight: navHeader.getBoundingClientRect().height,
+        stageHeaderHeight: breadcrumb.getBoundingClientRect().height,
         breadcrumbTravel: before - after,
         ringTravel: beforeRing - afterRing,
         ringPositions: rings.map(el => getComputedStyle(el).position),
@@ -64,13 +84,16 @@ try {
         viewportWidth: document.documentElement.clientWidth,
       };
     });
+    if (geometry.navVisible) {
+      assert.ok(geometry.dividerDelta <= 0.5, `${width}px: mini-nav and Work breadcrumb divider must meet perfectly ${JSON.stringify(geometry)}`);
+    }
     assert.ok(geometry.scrollTop >= 210, `${width}px: expected scrollable project content ${JSON.stringify(geometry)}`);
     assert.ok(geometry.breadcrumbTravel >= 210, `${width}px: breadcrumb must scroll away ${JSON.stringify(geometry)}`);
     assert.ok(geometry.ringTravel >= 210, `${width}px: ring must travel with project card ${JSON.stringify(geometry)}`);
     assert.deepEqual(geometry.ringPositions, ["relative", "relative"], `${width}px: rings must anchor their inner discs`);
     assert.deepEqual(geometry.innerDiscPositions, ["absolute", "absolute"], `${width}px: inner discs must stay inside rings`);
     assert.ok(geometry.scrollWidth <= geometry.viewportWidth + 1, `${width}px: no page overflow`);
-    console.log(`PROJECT_SCROLL_PASS ${width}px ${JSON.stringify(geometry)}`);
+    console.log(`PROJECT_SCROLL_PASS ${width}px collapsed=${collapsed} ${JSON.stringify(geometry)}`);
     await page.close();
   }
 } finally {
