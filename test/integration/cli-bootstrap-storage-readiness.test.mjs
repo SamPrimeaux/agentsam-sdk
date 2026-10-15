@@ -30,7 +30,7 @@ test('core SAM import is safe when CMS module cannot be required',()=>{
     })().catch(e=>{console.error(e);process.exitCode=1;});
   `;
   const output=execFileSync(process.execPath,['-e',code],{cwd:root,encoding:'utf8'});
-  assert.match(output,/core_ready_and_optional_cms_explained/);
+  assert.match(output,/core_ready_without_external_cms_link/);
 });
 
 test('TOML binding inventory discovers D1/R2/Vectorize/Hyperdrive without leaking vars or touching repo',async(t)=>{
