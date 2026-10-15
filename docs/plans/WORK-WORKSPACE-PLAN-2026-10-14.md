@@ -1,6 +1,6 @@
 # AgentSam Work — one workspace (Tickets · Projects · Calendar · Timeline)
 
-Branch: `feat/work-workspace-crud-20261014` · Status: PLAN (nothing below is built yet except the `project-control/build.mjs` single-React fix)
+Branch: `feat/work-workspace-crud-20261014` (merged as PR #215) · Status: shipped Work CRUD/web+desktop baseline; remaining phases explicitly tracked in section 15.
 
 ## 0. Goal and rules
 
@@ -190,3 +190,23 @@ TODO, in order
 5. Google Calendar provider (capability googleCalendar): port google status/sync from inneranimalmedia src/api/calendar.js using the existing Google OAuth client; synced events are already read-only.
 6. Delete apps/project-control once nothing imports it. Resolve work-graph private/public and add a tickets adapter.
 7. Deploy worker, then desktop: cd packages/agentsam-desktop-shell && npm run bundle:app, install and click through tickets, projects and calendar on web and desktop.
+
+## 15. Release receipt — 2026-10-15
+
+- GitHub PR #215 merged to main at `5509b5eb`; work feature commit `7183f468`, mobile/desktop parity commit `1091ae39`.
+- Cloudflare Worker `agentsam-sdk` deployed on `agentsam.inneranimalmedia.com` with version ID `4ffd9c5c-0ee3-4056-bf35-7ce744c78320`.
+- Live unauthenticated smoke: `/projects` HTTP 200, `/tickets` HTTP 200; `/api/work/snapshot` HTTP 401 without a session (expected).
+- Owner/backfill verified on production D1 after deployment: 666 tickets, 39 projects, 61 calendar events, zero NULL-owner rows in each (61 calendar total includes one separate user's event).
+- Work UI: real project/ticket/calendar CRUD, ticket views, responsive Gantt, mobile Quick Create for task/project/event, project search and sorting, adjustable perceived completion and project color. The existing five-item mobile dock is preserved.
+- Shared desktop transport uses `createWorkCrud(request)`; Rust Work route allowlist includes project/calendar CRUD and DELETE. The same Work UI package is used for web and desktop.
+- Quality gates: Work package 8/8 tests; work-data 7/7 tests; frontend TS check passed; targeted Rust work bridge test passed; desktop asset build and headless desktop shell smoke passed; Cloudflare dry-run passed.
+- iOS viewport check: explicit 390x844 device metrics, 390px document/shell/dock widths, five dock buttons, six fixture project cards. The fixture does not expose CRUD capability, so it cannot prove the blue Quick Create button interaction; authenticated iOS click-through remains an acceptance action.
+- Tauri `.app` built for Apple Silicon, ad-hoc locally signed and zipped in `~/Downloads/AgentSam-Local-Studio-WorkV1-5509b5eb-macOS-arm64.zip`. Bundle verifies locally but is not Apple Developer-signed/notarized, and is NOT published to the updater. Treat as a local test installer, not a public release.
+
+### Outstanding work (do not report as shipped)
+1. Authenticated iPhone click-through of Tickets, Projects, + Quick Create and modal persistence; optimize any remaining rough interactions.
+2. Installed desktop app sign-in and live account data acceptance: project/ticket create/edit/archive across desktop and web, same owner-scoped rows; confirm all new Rust paths through the installed service bridge.
+3. Desktop offline/signed-out SQLite store and read-only signed-in cache. Do not create diverging signed-in datasets.
+4. Google Calendar OAuth scope and event sync (Gmail connection already exists). Keep optional provider capabilities honest.
+5. Milestones, reusable/versioned Templates, richer saved filters, verified progress and cross-project dependency presentation.
+6. Real Apple signing/notarization and updater publication once credentials and release versioning exist. Do not promise automatic desktop updates before this.
