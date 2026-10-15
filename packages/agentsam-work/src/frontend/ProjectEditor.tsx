@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { WORK_PROJECT_STATUSES, WORK_PROJECT_TYPES, type WorkProject, type WorkProjectInput, type WorkProjectStatus } from "../contracts/index";
+import { WORK_PROJECT_STATUSES, WORK_PROJECT_TYPES, type WorkProject, type WorkProjectInput, type WorkProjectStatus, type WorkArtifact } from "../contracts/index";
 import { Drawer, ErrorLine, Field, useAction } from "./shared";
 
 const LABEL: Record<string, string> = {
@@ -18,8 +18,10 @@ export function ProjectEditor({
   project,
   onSave,
   onClose,
+  coverImages = [],
 }: {
   project: WorkProject | null;
+  coverImages?: WorkArtifact[];
   onSave: (input: WorkProjectInput & { name: string }) => Promise<void>;
   onClose: () => void;
 }) {
@@ -27,6 +29,7 @@ export function ProjectEditor({
   const [description, setDescription] = useState(project?.description ?? "");
   const [progress, setProgress] = useState(project?.progress ?? 0);
   const [accent, setAccent] = useState(project?.accent ?? "");
+  const [coverImageUrl, setCoverImageUrl] = useState(project?.coverImageUrl ?? "");
   const [type, setType] = useState(project?.projectType && project.projectType !== "project" ? project.projectType : "");
   const [status, setStatus] = useState<WorkProjectStatus>(project?.status ?? "discovery");
   const [clientName, setClientName] = useState(project?.clientName ?? "");
@@ -54,6 +57,7 @@ export function ProjectEditor({
                 description: description.trim(),
                 projectType: type || undefined,
                 status,
+                coverImageUrl: coverImageUrl.trim() || null,
                 ...(project ? { progress, ...(accent ? { accent } : {}) } : {}),
                 clientName: clientName.trim(),
                 domain: domain.trim(),
@@ -87,6 +91,24 @@ export function ProjectEditor({
       <details className="aw-project-more" open={Boolean(project)}>
         <summary>More project details</summary>
         <div className="aw-project-more__fields">
+          <Field label="Cover image" full>
+            <div className="aw-project-cover-field">
+              <input className="aw-input" type="url" placeholder="Existing Media Library or hosted image URL"
+                aria-label="Project cover image URL" value={coverImageUrl}
+                onChange={(event) => setCoverImageUrl(event.target.value)}/>
+              {coverImageUrl ? <img src={coverImageUrl} alt="Project cover preview" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
+              {coverImages.length ? <div className="aw-project-cover-options" role="group" aria-label="Choose a cover from Media Library">
+                {coverImages.filter((item) => item.kind === "image" && item.preview).slice(0, 12).map((item) => (
+                  <button key={item.id} type="button" data-active={coverImageUrl === item.preview}
+                    aria-label={"Use " + item.name + " as project cover"} aria-pressed={coverImageUrl === item.preview}
+                    onClick={() => setCoverImageUrl(item.preview || "")}>
+                    <img src={item.preview || ""} alt=""/><span>{item.name}</span>
+                  </button>
+                ))}
+              </div> : null}
+              <small>Choose an existing Media Library asset or use an existing hosted image URL. Nothing is duplicated in storage.</small>
+            </div>
+          </Field>
           <Field label="Description" full>
             <textarea className="aw-textarea" style={{ minHeight: 80 }} value={description} onChange={(e) => setDescription(e.target.value)} />
           </Field>

@@ -246,6 +246,10 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             let path = request.path.as_deref().unwrap_or("").trim();
             let valid_path = path == "/api/work/snapshot"
                 || path.starts_with("/api/work/snapshot?")
+                || (path.starts_with("/api/work/projects/")
+                    && path.ends_with("/insights")
+                    && path.trim_start_matches("/api/work/projects/").trim_end_matches("/insights").trim_matches('/').chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+                    && !path.trim_start_matches("/api/work/projects/").trim_end_matches("/insights").trim_matches('/').is_empty())
                 || path == "/api/projects"
                 || path.starts_with("/api/projects/")
                 || path == "/api/calendar/events"
@@ -814,6 +818,7 @@ mod tests {
             ("/api/tickets/tkt_123", "PATCH"),
             ("/api/tickets/tkt_123", "DELETE"),
             ("/api/projects", "POST"),
+            ("/api/work/projects/proj_agentsam_sdk/insights", "GET"),
             ("/api/projects/prj_123", "PATCH"),
             ("/api/projects/prj_123", "DELETE"),
             ("/api/projects/prj_123?hard=1", "DELETE"),
@@ -838,6 +843,7 @@ mod tests {
         for invalid_path in [
             "https://evil.invalid/api/work/snapshot",
             "/api/work/../../vault",
+            "/api/work/projects/a/../../vault/insights",
             r"/api/mail/send\oops",
         ] {
             let request = StudioServiceBridgeRequest {

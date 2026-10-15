@@ -1,6 +1,6 @@
-import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, ExternalLink, Flag, GitBranch, MoreHorizontal } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
-import type { WorkCalendarEvent, WorkCapabilities, WorkNavigate, WorkProject, WorkTicket, WorkHost } from "../../contracts/index";
+import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, Flag, GitBranch, MessageSquarePlus, Link2, MoreHorizontal, ListTodo } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { WorkCalendarEvent, WorkCapabilities, WorkNavigate, WorkProject, WorkTicket, WorkHost, WorkProjectInsights, WorkArtifact } from "../../contracts/index";
 import type { WorkActions } from "../actions";
 import { ProjectDeleteDialog, ProjectEditor, projectStatusLabel } from "../ProjectEditor";
 import { Pill, formatDate, timeAgo } from "../shared";
@@ -19,6 +19,7 @@ export function ProjectDetailSurface({
   projects = [],
   tickets = [],
   events = [],
+  artifacts = [],
   capabilities,
   actions = {},
   onNavigate,
@@ -31,18 +32,54 @@ export function ProjectDetailSurface({
   projects?: WorkProject[];
   tickets?: WorkTicket[];
   events?: WorkCalendarEvent[];
+  artifacts?: WorkArtifact[];
   capabilities?: WorkCapabilities;
   actions?: WorkActions;
   onNavigate: WorkNavigate;
   onOpenTicket?: (ticket: WorkTicket) => void;
   onCreateTicket?: () => void;
-  chatHost?: Pick<WorkHost, "listProjectChats" | "listAssignableChats" | "assignProjectChat" | "createProjectChat">;
+  chatHost?: Pick<WorkHost, "listProjectChats" | "listAssignableChats" | "assignProjectChat" | "createProjectChat" | "projectInsights">;
   /** Host-supplied control for codebase / knowledge indexing. */
   knowledgeAction?: ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("overview");
   const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [creatingChat, setCreatingChat] = useState(false);
+  const [chatError, setChatError] = useState("");
+  const [showAllFocus, setShowAllFocus] = useState(false);
+  const [insights, setInsights] = useState<WorkProjectInsights | null>(null);
+  const [insightsError, setInsightsError] = useState("");
+  useEffect(() => {
+    if (!chatHost?.projectInsights) return;
+    let cancelled = false;
+    async function refresh() {
+      try {
+        const next = await chatHost!.projectInsights!(project.id);
+        if (!cancelled) { setInsights(next); setInsightsError(""); }
+      } catch (cause) {
+        if (!cancelled) setInsightsError(cause instanceof Error ? cause.message : "Insights unavailable");
+      }
+    }
+    void refresh();
+    const interval = window.setInterval(() => { if (document.visibilityState === "visible") void refresh(); }, 30_000);
+    window.addEventListener("focus", refresh);
+    return () => { cancelled = true; window.clearInterval(interval); window.removeEventListener("focus", refresh); };
+  }, [chatHost?.projectInsights, project.id]);
+
+  async function newProjectChat() {
+    if (!chatHost?.createProjectChat || creatingChat) return;
+    setCreatingChat(true);
+    setChatError("");
+    try {
+      const chatId = await chatHost.createProjectChat(project.id);
+      onNavigate("/chats/" + encodeURIComponent(chatId));
+    } catch (cause) {
+      setChatError(cause instanceof Error ? cause.message : "Could not create project chat");
+    } finally {
+      setCreatingChat(false);
+    }
+  }
   const mine = useMemo(() => tickets.filter((t) => sameProject(t, project)), [tickets, project]);
   const open = mine.filter(isOpen);
   const shipped = mine.filter((ticket) => ticket.status === "shipped");
@@ -63,7 +100,9 @@ export function ProjectDetailSurface({
       </button>
       <div className="aw-head">
         <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-          <div className="aw-badge" style={{ width: 52, height: 52, fontSize: 18 }} aria-hidden>{project.initials}</div>
+          {project.coverImageUrl
+            ? <img className="aw-project-detail__avatar" src={project.coverImageUrl} alt="" />
+            : <div className="aw-badge" style={{ width: 52, height: 52, fontSize: 18 }} aria-hidden>{project.initials}</div>}
           <div>
             <p className="aw-kicker">Project</p>
             <h1 style={{ fontSize: "clamp(22px, 3vw, 30px)" }}>{project.name}</h1>
@@ -74,6 +113,8 @@ export function ProjectDetailSurface({
           </div>
         </div>
         <div className="aw-actions aw-project-detail__actions">
+          {chatHost?.createProjectChat ? <button type="button" className="aw-btn aw-btn--primary" onClick={() => void newProjectChat()} disabled={creatingChat}><MessageSquarePlus size={15}/> {creatingChat ? "Creating…" : "New chat"}</button> : null}
+          {chatHost?.listAssignableChats && chatHost?.assignProjectChat ? <button type="button" className="aw-btn" onClick={() => setTab("chats")}><Link2 size={15}/> Attach chat</button> : null}
           <div className="aw-project-detail__desktop-actions">
             {knowledgeAction}
             {canEdit && actions.updateProject ? <button type="button" className="aw-btn" onClick={() => setEditing(true)}>Edit</button> : null}
@@ -90,6 +131,13 @@ export function ProjectDetailSurface({
         </div>
       </div>
 
+      <section className="aw-project-mobile-summary" aria-label="Project quick summary">
+        <div><span>Estimated</span><strong>{project.progress}%</strong></div>
+        <div><span>Shipped</span><strong>{ticketCompletion == null ? "—" : ticketCompletion + "%"}</strong></div>
+        <div><span>Open</span><strong>{open.length}</strong></div>
+        <div><span>Blocked</span><strong>{focus.blockedCount}</strong></div>
+      </section>
+
       <div className="aw-tabs" role="tablist">
         {([["overview", "Overview"], ["tickets", `Tickets ${mine.length || ""}`], ["timeline", "Timeline"], ["chats", "Chats"], ["calendar", "Calendar"]] as Array<[Tab, string]>).map(([id, label]) => (
           <button key={id} type="button" role="tab" className="aw-tab" data-active={tab === id} aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>
@@ -99,46 +147,53 @@ export function ProjectDetailSurface({
       <div className="aw-project-detail__layout">
         <main className="aw-project-detail__main" aria-label="Project work">
       {tab === "overview" ? (
-        <>
-          <div className="aw-project-overview-heading">
-            <div><span className="aw-project-eyebrow">YOUR PROJECT</span><h2>Overview</h2><p>{project.objective || project.description || "Add a next objective so this project has a clear destination."}</p></div>
-            {canEdit && actions.updateProject ? <button type="button" className="aw-btn" onClick={() => setEditing(true)}>Edit project</button> : null}
-          </div>
-          {focus.batch.length ? <section className="aw-project-plan" aria-label="Recommended execution order">
-            <header className="aw-project-plan__header">
-              <div><span className="aw-project-eyebrow">RECOMMENDED EXECUTION ORDER</span><h3>What to work on next</h3><p>Derived from ticket priority, blockers, and review state — not a generated schedule.</p></div>
-              <button type="button" className="aw-btn" onClick={() => setTab("tickets")}>All tickets <ArrowUpRight size={13}/></button>
-            </header>
-            <div className="aw-project-plan__steps">
-              {focus.batch.slice(0, 4).map((entry, index) => <button key={entry.ticket.id} type="button" className="aw-project-plan__step" onClick={() => onOpenTicket?.(entry.ticket)}>
-                <span className="aw-project-plan__number">{index + 1}</span>
-                <strong title={entry.ticket.title}>{entry.ticket.title}</strong>
-                <small>{entry.reason}</small>
-              </button>)}
-            </div>
-          </section> : null}
-          <section className="aw-project-work-list">
-            <header><div><h3>Suggested next batch</h3><p>Direct access to the work ready for attention.</p></div><span>{focus.batch.length} tickets</span></header>
-            <TicketTable tickets={focus.batch.map((entry) => entry.ticket)} compact onOpenTicket={(ticket) => onOpenTicket?.(ticket)}/>
+        <div className="aw-project-home" aria-label="Project overview">
+          {chatError ? <p role="alert" className="aw-error">{chatError}</p> : null}
+          <section className="aw-project-home__objective">
+            <span className="aw-project-eyebrow">CURRENT OBJECTIVE</span>
+            <h2>{project.objective || "Define your next objective"}</h2>
+            <p>{project.description || "Keep tasks, conversations and project context together."}</p>
+            {canEdit && actions.updateProject ? <button type="button" className="aw-btn" onClick={() => setEditing(true)}>Edit objective</button> : null}
           </section>
-          <div className="aw-project-bottom-grid">
-            <section className="aw-project-preview">
-              <header><h3>Timeline preview</h3><button type="button" onClick={() => setTab("timeline")}>View full <ArrowUpRight size={13}/></button></header>
-              <TimelineView items={timeline.items} activityItems={timeline.activities} undatedCount={timeline.undated} onSelect={(id) => {
-                const found = mine.find((item) => item.id === id);
-                if (found) onOpenTicket?.(found);
-              }}/>
-            </section>
-            <section className="aw-project-blockers">
-              <header><h3>Dependencies</h3><span>{focus.dependencies.length} links</span></header>
-              {focus.dependencies.length ? focus.dependencies.slice(0, 5).map((edge) => <p key={edge} title={edge}>{edge}</p>) : <p>No blocking relationships found in the current tickets.</p>}
-              <div className="aw-project-links">
-                {project.githubRepo ? <span>Repository: {project.githubRepo}</span> : null}
-                {project.domain ? <span>Site: {project.domain}</span> : null}
+          <section className="aw-project-home__focus">
+            <header>
+              <div><span className="aw-project-eyebrow">FOCUS</span><h3>Up next</h3>
+                <p>{focus.blockedCount} blocked · {open.length} open tickets</p></div>
+              <button type="button" className="aw-btn" onClick={() => setTab("tickets")}><ListTodo size={15}/> All tickets</button>
+            </header>
+            {focus.batch.length ? <ol className="aw-project-home__tasks">
+              {focus.batch.slice(0, showAllFocus ? 12 : 5).map((entry) => <li key={entry.ticket.id}>
+                <button type="button" onClick={() => onOpenTicket?.(entry.ticket)}
+                  title={entry.ticket.title}>
+                  <span className="aw-project-home__task-dot" data-status={entry.ticket.status} aria-hidden/>
+                  <span className="aw-project-home__task-body"><strong>{entry.ticket.title}</strong><small>{entry.reason}</small></span>
+                  <ArrowUpRight size={15}/>
+                </button>
+              </li>)}
+            </ol> : <p className="aw-project-home__empty">No outstanding tickets in the current project.</p>}
+            {focus.batch.length > 5 ? <button type="button" className="aw-project-home__show" onClick={() => setShowAllFocus((v) => !v)}>
+              {showAllFocus ? "Show fewer" : "Expand focus list"}
+            </button> : null}
+            {onCreateTicket ? <button type="button" className="aw-project-home__show" onClick={onCreateTicket}>+ Create project ticket</button> : null}
+          </section>
+          <section className="aw-project-home__tools">
+            <header><span className="aw-project-eyebrow">WORKSPACE</span><h3>Work with AgentSam</h3></header>
+            <div className="aw-project-home__tool-grid">
+              <button type="button" className="aw-project-home__tool" onClick={() => setTab("chats")} disabled={!chatHost?.listProjectChats}>
+                <MessageSquarePlus size={20}/><strong>Conversations</strong>
+                <small>Open, create and assign chats to this project</small>
+              </button>
+              <div className="aw-project-home__tool">
+                <GitBranch size={20}/><strong>Codebase knowledge</strong>
+                <small>{project.githubRepo ? project.githubRepo : "No repository assigned"}</small>
+                {knowledgeAction || <span className="aw-project-home__tool-note">Index capability not available from this host</span>}
               </div>
-            </section>
-          </div>
-        </>
+              <button type="button" className="aw-project-home__tool" onClick={() => setTab("timeline")}>
+                <CalendarDays size={20}/><strong>Timeline</strong><small>{timeline.undated} tickets without planned dates</small>
+              </button>
+            </div>
+          </section>
+        </div>
       ) : null}
 
       {tab === "tickets" ? (
@@ -184,7 +239,7 @@ export function ProjectDetailSurface({
       {tab === "chats" ? <ProjectChatsPanel projectId={project.id} host={chatHost || {}} onNavigate={onNavigate} /> : null}
         </main>
         <aside className="aw-project-detail__inspector" aria-label="Project details">
-          <header className="aw-project-inspector__head"><strong>Project details</strong><span>{project.status === "archived" ? "Archived" : "Live workspace"}</span></header>
+          <header className="aw-project-inspector__head"><strong>Quick stats</strong><span>{project.status === "archived" ? "Archived" : "Live workspace"}</span></header>
           <div className="aw-project-inspector__progress">
             <div className="aw-project-inspector__ring" style={{ ["--value" as string]: project.progress + "%", ["--ring" as string]: project.accent }}><strong>{project.progress}%</strong></div>
             <div><strong>Perceived progress</strong><small>Your estimate, editable from project settings</small></div>
@@ -200,12 +255,21 @@ export function ProjectDetailSurface({
             <div><span>Status</span><strong>{projectStatusLabel(project.status)}</strong></div>
             <div><span>Open tickets</span><strong>{open.length}</strong></div>
             <div><span>Blocked tickets</span><strong>{focus.blockedCount}</strong></div>
-            <div><span>Tracked time</span><strong>{Math.round((project.trackedMinutes || 0) / 60)}h</strong></div>
+            <div><span>Estimated effort</span><strong>{project.estimatedMinutes ? (Math.round(project.estimatedMinutes / 60 * 10) / 10) + "h" : "—"}</strong></div>
+            <div><span>Tracked time</span><strong>{project.trackedMinutes ? (Math.round(project.trackedMinutes / 60 * 10) / 10) + "h" : "Not connected"}</strong></div>
+            <div><span>Recorded cost</span><strong>{insights?.costs ? new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(insights.costs.recordedTotal) : "No measured entries"}</strong></div>
             {project.launchDate ? <div><span>Target launch</span><strong>{formatDate(project.launchDate)}</strong></div> : null}
           </div>
+          {insightsError ? <p role="status" className="aw-project-inspector__notice">Stats currently unavailable: {insightsError}</p> : null}
+          {insights?.costs ? <p className="aw-project-inspector__notice">{insights.costs.lineItems} recorded cost entries · excludes unallocated provider costs</p> : null}
           <section className="aw-project-inspector__group">
             <h3><Flag size={15}/> Milestones</h3>
-            <p>Milestone tracking requires the persisted milestone contract. No dates or completion evidence are fabricated.</p>
+            <p>No milestone provider connected. Use the Timeline tab for existing ticket dates.</p>
+          </section>
+          <section className="aw-project-inspector__group">
+            <h3><GitBranch size={15}/> Project knowledge</h3>
+            <p>{insights?.rules ? "Active rules: " + insights.rules.title + " · version " + insights.rules.version : "No account-owned active rules found for this project."} Automatic injection into Local Studio chat is not connected yet.</p>
+            {knowledgeAction}
           </section>
           <section className="aw-project-inspector__group">
             <h3><GitBranch size={15}/> Project links</h3>
@@ -221,7 +285,7 @@ export function ProjectDetailSurface({
       </div>
 
       {editing ? (
-        <ProjectEditor project={project} onClose={() => setEditing(false)} onSave={async (input) => { await actions.updateProject?.(project.id, input); }} />
+        <ProjectEditor project={project} coverImages={artifacts} onClose={() => setEditing(false)} onSave={async (input) => { await actions.updateProject?.(project.id, input); }} />
       ) : null}
       {removing ? (
         <ProjectDeleteDialog

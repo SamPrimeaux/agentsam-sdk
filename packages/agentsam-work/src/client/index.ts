@@ -4,6 +4,7 @@ import type {
   WorkHost,
   WorkProject,
   WorkProjectInput,
+  WorkProjectInsights,
   WorkSnapshot,
   WorkTicket,
   WorkTicketInput,
@@ -31,6 +32,7 @@ export function createWorkCrud(request: WorkRequest): Pick<
   | "createProject"
   | "updateProject"
   | "deleteProject"
+  | "projectInsights"
   | "createEvent"
   | "updateEvent"
   | "deleteEvent"
@@ -54,6 +56,9 @@ export function createWorkCrud(request: WorkRequest): Pick<
     },
     async deleteProject(projectId: string, options?: { hard?: boolean }) {
       await json(await request(`/api/projects/${id(projectId)}${options?.hard ? "?hard=1" : ""}`, "DELETE"));
+    },
+    async projectInsights(projectId: string) {
+      return (await json<{ insights: WorkProjectInsights }>(await request("/api/work/projects/" + id(projectId) + "/insights"))).insights;
     },
     async createEvent(input: WorkEventInput & { title: string; start: string }) {
       return (await json<{ event: WorkCalendarEvent }>(await request("/api/calendar/events", "POST", input))).event;

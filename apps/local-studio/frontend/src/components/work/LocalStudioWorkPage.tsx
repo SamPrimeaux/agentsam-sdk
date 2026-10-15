@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { createHttpWorkHost, createWorkCrud } from "@inneranimalmedia/agentsam-work/client";
-import { localStudioProjectChats } from "@/lib/work/project-chat-links";
+import { localStudioProjectChats } from "@/lib/project-chat-links";
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, openExternalUrl } from "@/lib/desktop/tauri";
 import { WorkProduct } from "@inneranimalmedia/agentsam-work/frontend";
 import { AutoRagWorkflowDialog } from "@inneranimalmedia/agentsam-workbench/knowledge";

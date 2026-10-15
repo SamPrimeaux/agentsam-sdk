@@ -4,6 +4,7 @@
  */
 
 import { resolveWebsiteAssets } from './bindings.js';
+import { readProjectInsights } from './work-project-insights.js';
 import { handleWorkData, isWorkDataRequest, listEvents, listProjects, listTickets, ticketAnalytics } from './work-data.js';
 import { beginGmailOAuth, disconnectGmail, listGmailConnections, loadGmailMessages, mutateGmailMessage, sendGmailMessage } from './gmail-service.js';
 
@@ -219,6 +220,7 @@ async function loadArtifacts(env, origin) {
 export function isWorkRequest(pathname) {
   return (
     pathname === '/api/work/snapshot' ||
+    /^\/api\/work\/projects\/[^/]+\/insights$/.test(pathname) ||
     pathname === '/api/work/gmail/oauth/start' ||
     pathname === '/api/work/gmail/status' ||
     pathname === '/api/work/gmail/disconnect' ||
@@ -236,11 +238,17 @@ export async function handleWorkRequest(request, env, accountId) {
   try {
     const dataResponse = await handleWorkData(request, env.DB, accountId, url);
     if (dataResponse) return dataResponse;
+    const insightsRoute = /^\/api\/work\/projects\/([^/]+)\/insights$/.exec(url.pathname);
+    if (insightsRoute && method === 'GET') {
+      const id = decodeURIComponent(insightsRoute[1]);
+      const insights = await readProjectInsights(env.DB, accountId, id);
+      return insights ? json({ ok: true, insights }) : json({ ok: false, error: 'project_not_found' }, 404);
+    }
 
     if (url.pathname === '/api/work/snapshot' && method === 'GET') {
       const surface = clean(url.searchParams.get('surface'));
       const needsTickets = !surface || ['tickets', 'projects', 'project-detail', 'artifact-tickets', 'calendar'].includes(surface);
-      const needsArtifacts = !surface || ['artifacts', 'artifact-tickets'].includes(surface);
+      const needsArtifacts = !surface || ['artifacts', 'artifact-tickets', 'projects', 'project-detail'].includes(surface);
       const needsProjects = !surface || ['projects', 'project-detail', 'tickets', 'calendar', 'artifact-tickets'].includes(surface);
       const needsCalendar = !surface || ['calendar', 'project-detail'].includes(surface);
       const needsMail = surface === 'mail';
