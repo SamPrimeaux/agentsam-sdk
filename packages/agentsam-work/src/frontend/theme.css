@@ -1464,3 +1464,5 @@ button.aw-project-home__tool:hover { border-color: var(--agentsam-work-accent); 
 }
 
 .aw-project-detail__initials { width:52px; height:52px; flex:none; font-size:18px; }
+
+.aw-project-home__sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }

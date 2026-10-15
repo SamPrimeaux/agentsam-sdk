@@ -165,6 +165,7 @@ export function ProjectDetailSurface({
               {focus.batch.slice(0, showAllFocus ? 12 : 5).map((entry) => <li key={entry.ticket.id}>
                 <button type="button" onClick={() => onOpenTicket?.(entry.ticket)}
                   title={entry.ticket.title} aria-label={"Open ticket: " + entry.ticket.title}>
+                  <span className="aw-project-home__sr-only">Open ticket</span>
                   <span className="aw-project-home__task-dot" data-status={entry.ticket.status} aria-hidden/>
                   <span className="aw-project-home__task-body"><strong>{entry.ticket.title}</strong><small>{entry.reason}</small></span>
                   <ArrowUpRight size={15}/>
