@@ -15,8 +15,13 @@ export function machineInspect(input={},projectRoot){
  const resolved=resolveMachineBinary();
  if(resolved.kind==='missing')return {ok:false,error:'machine_binary_missing',next:'agentsam machine install'};
  const argv=['inspect',real,'--json'];
- const result=spawnMachine(resolved,argv,{stdio:['ignore','pipe','pipe'],maxBuffer:16*1024*1024});
- if(result.error)return {ok:false,error:'process_spawn_failed',message:result.error.message};
+ if(input.run_id){
+  if(typeof input.run_id!=='string'||!/^[A-Za-z0-9_-]{1,90}$/.test(input.run_id))
+   throw new Error('machine_run_id_invalid');
+  argv.push('--run-id',input.run_id);
+ }
+ const result=spawnMachine(resolved,argv,{stdio:['ignore','pipe','pipe'],maxBuffer:16*1024*1024,timeoutMs:90000});
+ if(result.error)return {ok:false,error:result.error.code==='ETIMEDOUT'?'process_timeout':'process_spawn_failed',message:result.error.message};
  if(result.status!==0)return {ok:false,error:'execution_failed',exit_code:result.status,stderr:String(result.stderr||'').slice(-1200)};
  try {return {ok:true,result:JSON.parse(String(result.stdout||'')),source:'agentsam-machine'};}
  catch{return {ok:false,error:'upstream_invalid_response',stderr:String(result.stderr||'').slice(-500)};}

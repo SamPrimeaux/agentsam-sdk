@@ -27,13 +27,15 @@ export function createRegistry({
   })));
   const capabilityRows = ordered(Object.values(manifest.capabilities || {}).map((row) => {
     const bound = capabilityAdapter?.canInvoke?.(row.id) === true;
+    const reported = capabilityAdapter?.availability?.(row.id) || null;
     const callable = !!capabilityAdapter && bound;
     return {
       ...row, type: 'capability',
       handler_bound: callable,
       agent_callable: callable,
-      readiness: capabilityAdapter ? (bound ? 'available' : 'unavailable') : 'unverified',
-      unavailable_reason: capabilityAdapter && !bound ? 'capability_handler_unavailable' : null,
+      readiness: capabilityAdapter ? (reported?.readiness || (bound ? 'available' : 'unavailable')) : 'unverified',
+      unavailable_reason: reported?.reason || (capabilityAdapter && !bound ? 'capability_handler_unavailable' : null),
+      next: reported?.next || null,
     };
   }));
 
@@ -60,7 +62,7 @@ export function createRegistry({
     if (!row) return { id, declared: false, agent_callable: false, readiness: 'missing', reason: 'not_declared' };
     return {
       id: row.id, declared: true, agent_callable: row.agent_callable,
-      readiness: row.readiness, reason: row.unavailable_reason,
+      readiness: row.readiness, reason: row.unavailable_reason, next: row.next,
       risk: ['none','network-read'].includes(row.side_effects) ? 'read' : 'write',
     };
   }
@@ -78,7 +80,8 @@ export function createRegistry({
       return { ok: false, error: 'capability_not_authorized', capability_id: row.id };
     }
     const execution = await capabilityAdapter.invoke(row.id, input);
-    return { ok: true, ...execution, verified: false };
+    const failed = execution?.ok === false || execution?.result?.ok === false;
+    return {ok:!failed,...execution,...(failed ? {error:execution?.result?.error||execution?.error||'capability_execution_failed'} : {}),verified:false};
   }
 
   return Object.freeze({

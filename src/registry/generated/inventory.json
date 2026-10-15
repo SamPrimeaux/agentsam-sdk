@@ -7,7 +7,7 @@
   ],
   "counts": {
     "commands": 74,
-    "capabilities": 43,
+    "capabilities": 44,
     "packages": 62
   },
   "commands": [
@@ -818,6 +818,14 @@
     }
   ],
   "capabilities": [
+    {
+      "id": "project.discover",
+      "description": "Read-only detection of existing project tooling, Cloudflare bindings, Vectorize, npm scripts and knowledge configuration; propose adoption without changing resources.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
     {
       "id": "machine.inspect",
       "description": "Read-only native deterministic repository inspection in the authorized workspace; only advertised when a Machine runtime is resolved.",

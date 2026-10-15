@@ -134,9 +134,17 @@ function resolveUnknownWindowContext(cwd, card, contextItems = []) {
 export function buildAgentToolSurface(capabilityAdapter, objective, options = {}) {
   if (!capabilityAdapter?.toolDescriptors) throw new TypeError('capabilityAdapter.toolDescriptors is required');
   const catalog = capabilityAdapter.toolDescriptors({ includeUnavailable: false });
-  const searched = searchToolCards(catalog, objective, { maxItems: options.maxTools ?? 8, maxChars: options.maxCardChars ?? 24_000 });
-  const selected = searched.cards.map((card) => card.tool);
-  const hydrated = hydrateToolSchemas(catalog, selected, { maxTools: options.maxTools ?? 8, maxChars: options.maxSchemaChars ?? 40_000 });
+  const maxTools = options.maxTools ?? 8;
+  // These are the four bootstrap calls required for progressive, typed
+  // discovery. Keyword ranking may otherwise hide describe/status/invoke.
+  const bootstrapIds = ['capability.search','capability.describe','capability.status','capability.invoke'];
+  const bootstrap = bootstrapIds.map(id=>catalog.find(row=>row.name===id)).filter(Boolean).slice(0,maxTools);
+  const remaining = catalog.filter(row=>!bootstrapIds.includes(row.name));
+  const searched = searchToolCards(remaining, objective, {
+    maxItems: Math.max(0,maxTools-bootstrap.length), maxChars: options.maxCardChars ?? 24_000,
+  });
+  const selected = [...bootstrap.map(row=>row.name),...searched.cards.map(card=>card.tool)];
+  const hydrated = hydrateToolSchemas(catalog, selected, { maxTools, maxChars: options.maxSchemaChars ?? 40_000 });
   const aliases = new Map();
   const tools = hydrated.tools.map((descriptor) => {
     const alias = capabilityFunctionName(descriptor.name);
@@ -157,7 +165,7 @@ export function buildAgentToolSurface(capabilityAdapter, objective, options = {}
     descriptors: Object.freeze(hydrated.tools),
     receipt: Object.freeze({
       catalog_tools: catalog.length,
-      cards_returned: searched.receipt.returned_items,
+      cards_returned: searched.receipt.returned_items + bootstrap.length,
       card_chars: searched.receipt.chars,
       hydrated_tools: hydrated.receipt.hydrated_tools,
       hydrated_schema_chars: tools.reduce((sum, tool) => sum + JSON.stringify(tool.parameters).length, 0),
@@ -421,11 +429,6 @@ async function runAgentSamTurnCore(options = {}) {
       context_receipt: resolvedContext?.receipt || null,
     });
   }
-  if (typeof options.onPreparedTurn === 'function') await options.onPreparedTurn({
-    source: 'cli-agent', provider: record.provider, model: record.provider_model_id,
-    instructions, messages: input, tools: toolSurface.tools,
-    context_receipt: resolvedContext?.receipt || null,
-  });
   let response = await modelTurn({
     provider,
     model: record.provider_model_id,

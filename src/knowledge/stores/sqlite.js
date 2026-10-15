@@ -25,6 +25,13 @@ export async function openSqliteStore(filename, { readOnly = false } = {}) {
   const active = scope => decode(db.prepare('SELECT g.payload FROM knowledge_active a JOIN knowledge_generations g ON a.id=g.id WHERE a.scope=?').get(scope));
   return {
     async active(scope) { return active(scope); },
+    async scopeStatus(scope) {
+      // Cheap status probe: never deserialize all generation payloads just to
+      // determine whether the configured repository scope is usable.
+      const row=db.prepare('SELECT id FROM knowledge_active WHERE scope=?').get(scope);
+      const total=db.prepare('SELECT COUNT(*) AS n FROM knowledge_generations').get();
+      return {active_id:row?.id||null,existing_generations:Number(total?.n||0)};
+    },
     async getGeneration(scope, id) { return decode(db.prepare('SELECT payload FROM knowledge_generations WHERE scope=? AND id=?').get(scope, id)); },
     async cacheGet(key) { const row = db.prepare('SELECT value FROM knowledge_cache WHERE key=?').get(key); return row ? JSON.parse(row.value) : null; },
     async cachePut(key, value) { db.prepare('INSERT OR IGNORE INTO knowledge_cache VALUES (?,?)').run(key, JSON.stringify(value)); },
