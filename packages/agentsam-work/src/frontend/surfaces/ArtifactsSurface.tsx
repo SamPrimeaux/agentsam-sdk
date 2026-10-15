@@ -42,7 +42,7 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
           <button type="button" className="agentsam-work-toolbar-button">Type: All</button>
         </div>
 
-        <section className="agentsam-work-card" style={{ marginTop: 16, padding: 14, borderLeft: "3px solid #c83cff" }}>
+        <section className="agentsam-work-card" style={{ marginTop: 16, padding: 14, borderLeft: "3px solid var(--agentsam-work-accent)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div>
               <h2 style={{ margin: 0, fontSize: 14 }}>My artifacts</h2>
@@ -101,7 +101,7 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
                           borderRadius: 8,
                           background:
                             artifact.kind === "image"
-                              ? "linear-gradient(135deg, #172033, #315b7f 45%, #80d8ff)"
+                              ? "linear-gradient(135deg, var(--agentsam-work-panel-subtle), color-mix(in srgb, var(--agentsam-work-accent) 45%, var(--agentsam-work-panel)) 55%, var(--agentsam-work-accent-soft))"
                               : "var(--agentsam-work-panel)",
                           border: "1px solid color-mix(in srgb, var(--agentsam-work-border) 70%, transparent)",
                         }}
@@ -118,14 +118,14 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
                                   borderRadius: 99,
                                   background:
                                     index === 0
-                                      ? "#ee817b"
+                                      ? "var(--agentsam-work-danger)"
                                       : index === 1
-                                        ? "#7fc89c"
+                                        ? "var(--agentsam-work-success)"
                                         : index === 2
-                                          ? "#9bbcf2"
+                                          ? "var(--agentsam-work-accent)"
                                           : index === 3
-                                            ? "#f5d167"
-                                            : "#dce3ed",
+                                            ? "var(--agentsam-work-warning)"
+                                            : "var(--agentsam-work-muted)",
                                 }}
                               />
                             ))}

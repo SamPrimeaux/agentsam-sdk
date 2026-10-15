@@ -1,5 +1,14 @@
 import type { WorkHost, WorkSnapshot } from "../contracts/index";
 
+/** Demo-only: a calendar slot `dayOffset` days from today at `hour` (fractional) for `minutes`. */
+function fixtureSlot(dayOffset: number, hour: number, minutes: number) {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() + dayOffset);
+  start.setMinutes(Math.round(hour * 60));
+  return { start: start.toISOString(), end: new Date(start.getTime() + minutes * 60_000).toISOString() };
+}
+
 export const populatedWorkFixture: WorkSnapshot = {
   fixtureName: "populated",
   nav: [
@@ -148,7 +157,7 @@ export const populatedWorkFixture: WorkSnapshot = {
       name: "Companions of CPAS",
       description: "Community website and content platform",
       projectType: "dashboard",
-      status: "active",
+      status: "development",
       progress: 42,
       coverImageUrl: "fixture:companions",
       initials: "CO",
@@ -162,7 +171,7 @@ export const populatedWorkFixture: WorkSnapshot = {
       name: "Swamp Blood Gator Guides — CF-Native",
       description: "Guide commerce and booking platform",
       projectType: "e-commerce",
-      status: "active",
+      status: "development",
       progress: 18,
       coverImageUrl: null,
       initials: "SC",
@@ -176,7 +185,7 @@ export const populatedWorkFixture: WorkSnapshot = {
       name: "AgentSamRemix",
       description: "Agent product experimentation",
       projectType: "dashboard",
-      status: "active",
+      status: "development",
       progress: 64,
       coverImageUrl: null,
       initials: "IN",
@@ -218,7 +227,7 @@ export const populatedWorkFixture: WorkSnapshot = {
       name: "Gerald Bathroom project",
       description: "Residential remodel",
       projectType: "dashboard",
-      status: "active",
+      status: "development",
       progress: 26,
       coverImageUrl: null,
       initials: "IN",
@@ -264,9 +273,9 @@ export const populatedWorkFixture: WorkSnapshot = {
     }
   ],
   calendar: [
-    { id: "cal-1", title: "Local Studio review", dayOffset: 1, startMinutes: 10 * 60 + 30, durationMinutes: 60, kind: "meeting" },
-    { id: "cal-2", title: "Settings v2 polish", dayOffset: 3, startMinutes: 13 * 60, durationMinutes: 90, kind: "focus" },
-    { id: "cal-3", title: "Ticket proof pass", dayOffset: 5, startMinutes: 15 * 60, durationMinutes: 45, kind: "task" }
+    { id: "cal-1", title: "Local Studio review", type: "meeting", ...fixtureSlot(1, 10.5, 60) },
+    { id: "cal-2", title: "Settings v2 polish", type: "task", ...fixtureSlot(3, 13, 90) },
+    { id: "cal-3", title: "Ticket proof pass", type: "task", ...fixtureSlot(5, 15, 45) }
   ],
   currentProjectId: "proj_companions_cpas_web",
   ticketAnalytics: {

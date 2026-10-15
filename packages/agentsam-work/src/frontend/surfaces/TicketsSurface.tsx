@@ -1,173 +1,385 @@
+import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { WorkTicket } from "../../contracts/index";
+import type { WorkCapabilities, WorkProject, WorkTicket, WorkTicketInput, WorkTicketStatus } from "../../contracts/index";
+import { Empty, ErrorLine, formatDate, Pill, useAction } from "../shared";
+import { TicketEditor } from "../TicketEditor";
+import { TimelineView } from "../TimelineView";
+import {
+  BOARD_STATUSES,
+  isOpen,
+  priorityRank,
+  recommendOrder,
+  sameProject,
+  STATUS_LABEL,
+  STATUS_ORDER,
+  STATUS_TONE,
+  timelineItems,
+} from "../ticket-plan";
 
-function statusLabel(status: WorkTicket["status"]) {
-  return status.replace("_", " ").toUpperCase();
-}
+type Mode = "queue" | "board" | "timeline";
+type Sort = "priority" | "updated" | "due";
+const PAGE = 40;
 
 export function TicketsSurface({
   tickets,
   analytics,
-  scope = "all",
+  projects = [],
+  capabilities,
+  projectId,
+  embedded = false,
+  initialMode = "queue",
+  onCreate,
+  onUpdate,
+  onDelete,
+  onSchedule,
+  onRefresh,
   onOpenTicket,
 }: {
   tickets: WorkTicket[];
-  analytics: { completionRate: number; avgCycleDays: number; oldestActiveDays: number };
-  scope?: "all" | "platform" | "collaborate";
+  analytics?: { completionRate: number; avgCycleDays: number; oldestActiveDays: number };
+  projects?: WorkProject[];
+  capabilities?: WorkCapabilities["tickets"];
+  /** When set, tickets are scoped to this project and new tickets default to it. */
+  projectId?: string;
+  embedded?: boolean;
+  initialMode?: "queue" | "board" | "timeline";
+  onCreate?: (input: WorkTicketInput & { title: string }) => Promise<unknown>;
+  onUpdate?: (id: string, patch: WorkTicketInput) => Promise<unknown>;
+  onDelete?: (id: string) => Promise<unknown>;
+  onSchedule?: (ticket: WorkTicket) => Promise<unknown>;
+  onRefresh?: () => Promise<unknown> | void;
   onOpenTicket?: (ticket: WorkTicket) => void;
 }) {
-  const [mode, setMode] = useState<"queue" | "board">("queue");
-  const visible = useMemo(
-    () => (scope === "all" ? tickets : tickets.filter((ticket) => ticket.surface === scope)),
-    [scope, tickets],
+  const [mode, setMode] = useState<Mode>(initialMode);
+  const [query, setQuery] = useState("");
+  const [lane, setLane] = useState("all");
+  const [project, setProject] = useState("all");
+  const [sort, setSort] = useState<Sort>("priority");
+  const [editing, setEditing] = useState<WorkTicket | "new" | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [limits, setLimits] = useState<Record<string, number>>({});
+  const [dragOver, setDragOver] = useState<string | null>(null);
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const { busy, error, run } = useAction();
+
+  const caps = capabilities ?? { create: Boolean(onCreate), update: Boolean(onUpdate), delete: Boolean(onDelete) };
+  const scopeProject = projectId ? projects.find((p) => p.id === projectId) : undefined;
+
+  const lanes = useMemo(() => [...new Set(tickets.map((t) => t.surface).filter(Boolean))].sort(), [tickets]);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const picked = project !== "all" && project !== "none" ? projects.find((p) => p.id === project) : undefined;
+    const list = tickets.filter((t) => {
+      if (scopeProject && !sameProject(t, scopeProject)) return false;
+      if (lane !== "all" && t.surface !== lane) return false;
+      if (project === "none" && t.project) return false;
+      if (picked && !sameProject(t, picked)) return false;
+      if (q && !`${t.title} ${t.id} ${t.description ?? ""} ${t.tags.join(" ")}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const rank = (t: WorkTicket) => priorityRank(t.priority);
+    return list.sort((a, b) => {
+      if (sort === "updated") return b.updatedAt - a.updatedAt;
+      if (sort === "due") return (a.dueAt ? Date.parse(a.dueAt) : Infinity) - (b.dueAt ? Date.parse(b.dueAt) : Infinity);
+      return rank(a) - rank(b) || b.updatedAt - a.updatedAt;
+    });
+  }, [tickets, query, lane, project, sort, projects, scopeProject]);
+
+  const plan = useMemo(() => recommendOrder(visible), [visible]);
+  const timeline = useMemo(() => timelineItems(visible), [visible]);
+  const byStatus = useMemo(() => {
+    const map = new Map<WorkTicketStatus, WorkTicket[]>();
+    for (const status of STATUS_ORDER) map.set(status, []);
+    for (const t of visible) map.get(t.status)?.push(t);
+    return map;
+  }, [visible]);
+
+  const openEditor = (ticket: WorkTicket) => (onOpenTicket && !onUpdate ? onOpenTicket(ticket) : setEditing(ticket));
+  const patch = (id: string, input: WorkTicketInput) => run(async () => { await onUpdate?.(id, input); });
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const bulkStatus = (status: WorkTicketStatus) =>
+    run(async () => {
+      for (const id of selected) await onUpdate?.(id, { status });
+      setSelected(new Set());
+    });
+  const bulkDelete = () =>
+    run(async () => {
+      for (const id of selected) await onDelete?.(id);
+      setSelected(new Set());
+      setConfirmBulk(false);
+    });
+
+  const row = (t: WorkTicket) => (
+    <div className="aw-row" key={t.id} onClick={() => openEditor(t)}>
+      {caps.update || caps.delete ? (
+        <input type="checkbox" aria-label={`Select ${t.title}`} checked={selected.has(t.id)} onClick={(e) => e.stopPropagation()} onChange={() => toggle(t.id)} />
+      ) : <span />}
+      <code>{t.id.replace(/^tkt_/, "").slice(0, 8)}</code>
+      <span className="aw-row__title" title={t.title}>{t.title}</span>
+      <span className="aw-row__meta">
+        {t.priority ? <Pill tone={priorityRank(t.priority) === 0 ? "danger" : "neutral"}>{t.priority}</Pill> : null}
+        {t.project ? <Pill>{projects.find((p) => p.id === t.project)?.name ?? t.project}</Pill> : null}
+        {t.dueAt ? <Pill tone={Date.parse(t.dueAt) < Date.now() && isOpen(t) ? "warning" : "neutral"}>due {formatDate(t.dueAt)}</Pill> : null}
+        {caps.update ? (
+          <select
+            className="aw-select"
+            style={{ width: "auto", minHeight: 28 }}
+            aria-label="Status"
+            value={t.status}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => void patch(t.id, { status: e.target.value as WorkTicketStatus })}
+          >
+            {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+          </select>
+        ) : (
+          <Pill tone={STATUS_TONE[t.status]}>{STATUS_LABEL[t.status]}</Pill>
+        )}
+      </span>
+    </div>
   );
 
-  const next = visible.slice(0, 4);
+  const section = (status: WorkTicketStatus) => {
+    const items = byStatus.get(status) ?? [];
+    if (!items.length) return null;
+    const limit = limits[status] ?? PAGE;
+    const body = (
+      <div className="aw-rows">
+        {items.slice(0, limit).map(row)}
+        {items.length > limit ? (
+          <button type="button" className="aw-btn" onClick={() => setLimits((l) => ({ ...l, [status]: limit + PAGE * 2 }))}>
+            Show {Math.min(PAGE * 2, items.length - limit)} more ({items.length - limit} hidden)
+          </button>
+        ) : null}
+      </div>
+    );
+    const collapsed = status === "shipped" || status === "abandoned";
+    return collapsed ? (
+      <details key={status} style={{ marginTop: 18 }}>
+        <summary className="aw-section-title" style={{ cursor: "pointer" }}>{STATUS_LABEL[status]} <span>{items.length}</span></summary>
+        {body}
+      </details>
+    ) : (
+      <div key={status}>
+        <div className="aw-section-title">{status === "in_review" ? "In review — close with proof" : STATUS_LABEL[status]} <span>{items.length}</span></div>
+        {body}
+      </div>
+    );
+  };
+
+  const stats = analytics ?? { completionRate: 0, avgCycleDays: 0, oldestActiveDays: 0 };
+  const total = visible.length;
 
   return (
-    <div style={{ maxWidth: 1120, margin: "0 auto", padding: "18px 18px 64px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <button
-          type="button"
-          className="agentsam-work-toolbar-button"
-          data-primary={mode === "queue"}
-          onClick={() => setMode("queue")}
-        >
-          Queue
-        </button>
-        <button
-          type="button"
-          className="agentsam-work-toolbar-button"
-          data-primary={mode === "board"}
-          onClick={() => setMode("board")}
-        >
-          Board
-        </button>
-        <span style={{ marginLeft: 8, fontSize: 12, color: "var(--agentsam-work-muted)" }}>
-          {analytics.completionRate}% complete · {analytics.avgCycleDays}d avg · oldest {analytics.oldestActiveDays}d
-        </span>
-        <div style={{ flex: 1 }} />
-        <select className="agentsam-work-toolbar-button" defaultValue="priority">
+    <div className={embedded ? undefined : "aw-page"}>
+      {!embedded ? (
+        <div className="aw-head">
+          <div>
+            <p className="aw-kicker">Work</p>
+            <h1>Tickets</h1>
+            <p className="aw-sub">
+              {total} ticket{total === 1 ? "" : "s"} · {stats.completionRate}% shipped · oldest active {stats.oldestActiveDays}d
+            </p>
+          </div>
+          <div className="aw-actions">
+            {onRefresh ? (
+              <button type="button" className="aw-btn" onClick={() => void run(async () => { await onRefresh(); })} disabled={busy}>
+                <RefreshCw size={14} /> Refresh
+              </button>
+            ) : null}
+            {caps.create && onCreate ? (
+              <button type="button" className="aw-btn aw-btn--primary" onClick={() => setEditing("new")}>+ New ticket</button>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <div className="aw-actions" style={{ marginBottom: 12 }}>
+          {caps.create && onCreate ? <button type="button" className="aw-btn aw-btn--primary" onClick={() => setEditing("new")}>+ New ticket</button> : null}
+        </div>
+      )}
+
+      <ErrorLine message={error} />
+
+      <div className="aw-tabs" role="tablist">
+        {(["queue", "board", "timeline"] as Mode[]).map((m) => (
+          <button key={m} type="button" role="tab" className="aw-tab" data-active={mode === m} aria-selected={mode === m} onClick={() => setMode(m)}>
+            {m === "queue" ? "Queue" : m === "board" ? "Board" : "Timeline"}
+          </button>
+        ))}
+      </div>
+
+      <div className="aw-toolbar">
+        <input className="aw-input grow" placeholder="Search tickets…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search tickets" />
+        {lanes.length > 1 ? (
+          <select className="aw-select" value={lane} onChange={(e) => setLane(e.target.value)} aria-label="Lane">
+            <option value="all">All lanes</option>
+            {lanes.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+        ) : null}
+        {!scopeProject && projects.length ? (
+          <select className="aw-select" value={project} onChange={(e) => setProject(e.target.value)} aria-label="Project">
+            <option value="all">All projects</option>
+            <option value="none">No project</option>
+            {projects.filter((p) => p.status !== "archived").map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        ) : null}
+        <select className="aw-select" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">
           <option value="priority">Sort: priority</option>
           <option value="updated">Sort: updated</option>
+          <option value="due">Sort: due date</option>
         </select>
-        <button type="button" className="agentsam-work-toolbar-button">Refresh</button>
-        <button type="button" className="agentsam-work-toolbar-button">New ticket</button>
       </div>
 
-      <div
-        style={{
-          marginTop: 14,
-          padding: 14,
-          borderRadius: 12,
-          border: "1px solid color-mix(in srgb, var(--agentsam-work-accent) 35%, var(--agentsam-work-border))",
-          background: "var(--agentsam-work-accent-soft)",
-        }}
-      >
-        <div style={{ color: "var(--agentsam-work-accent)", fontSize: 12, fontWeight: 700 }}>
-          Recommended execution order
-        </div>
-        <div style={{ marginTop: 6, color: "var(--agentsam-work-text)", fontSize: 11, lineHeight: 1.55 }}>
-          Close in review with proof first → Finding #3 unlocks ledger Phase B → reward single-writer unlocks cost_mean loop → child routing P0s.
-        </div>
-      </div>
-
-      <section className="agentsam-work-card" style={{ marginTop: 14, padding: 14 }}>
-        <h3 style={{ margin: 0, fontSize: 13 }}>Suggested next batch</h3>
-        <div style={{ overflowX: "auto", marginTop: 10 }}>
-          <table style={{ width: "100%", minWidth: 700, borderCollapse: "collapse", fontSize: 11 }}>
-            <thead>
-              <tr style={{ color: "var(--agentsam-work-muted)", textAlign: "left" }}>
-                <th style={{ padding: "8px 6px" }}>Ticket</th>
-                <th style={{ padding: "8px 6px" }}>Why now</th>
-                <th style={{ padding: "8px 6px" }}>Validation shortcut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {next.map((ticket) => (
-                <tr key={ticket.id} style={{ borderTop: "1px solid var(--agentsam-work-border)" }}>
-                  <td style={{ padding: "10px 6px", fontFamily: "ui-monospace, SFMono-Regular, monospace" }}>{ticket.id}</td>
-                  <td style={{ padding: "10px 6px" }}>{ticket.description || ticket.title}</td>
-                  <td style={{ padding: "10px 6px" }}>
-                    {ticket.status === "in_review" ? "Proof + expected receipt" : "Run target check then update status"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="agentsam-work-card" style={{ marginTop: 14, padding: 14 }}>
-        <h3 style={{ margin: 0, fontSize: 13 }}>Dependency sketch</h3>
-        <pre
-          style={{
-            margin: "10px 0 0",
-            overflowX: "auto",
-            color: "var(--agentsam-work-muted)",
-            fontSize: 10,
-            lineHeight: 1.65,
-            whiteSpace: "pre-wrap",
-            fontFamily: "inherit",
-          }}
-        >
-          {"hardcoded_routing_audit → inferIntent → code hub + image guards\nfinding_3_pending_status → ledger_ownership_b\nreward_events_tenant → arm_cost_mean_loop → consolidate_arm_writers"}
-        </pre>
-      </section>
-
-      <div style={{ marginTop: 18 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-          <strong>In review — close with proof</strong>
-          <span style={{ color: "var(--agentsam-work-muted)" }}>{visible.filter((ticket) => ticket.status === "in_review").length}</span>
-        </div>
-        <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
-          {visible.map((ticket) => (
-            <article key={ticket.id} className="agentsam-work-card" style={{ padding: 14 }}>
-              <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <input type="checkbox" aria-label={"Select " + ticket.title} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-                    <code style={{ color: "var(--agentsam-work-muted)", fontSize: 9 }}>{ticket.id}</code>
-                    {ticket.priority ? (
-                      <span style={{ color: ticket.priority === "P0" ? "var(--agentsam-work-danger)" : "var(--agentsam-work-muted)", fontSize: 10, fontWeight: 700 }}>
-                        {ticket.priority}
+      {mode === "queue" ? (
+        <>
+          {plan.batch.length ? (
+            <>
+              <div className="aw-callout">
+                <h3>Recommended execution order</h3>
+                <p>{plan.batch.slice(0, 4).map((r) => r.ticket.title).join(" → ")}</p>
+              </div>
+              <section className="agentsam-work-card" style={{ padding: 14, marginBottom: 14 }}>
+                <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>Suggested next batch</h3>
+                <div className="aw-rows">
+                  {plan.batch.map((r) => (
+                    <div key={r.ticket.id} className="aw-row" onClick={() => openEditor(r.ticket)}>
+                      <span />
+                      <code>{r.ticket.id.replace(/^tkt_/, "").slice(0, 8)}</code>
+                      <span className="aw-row__title">{r.ticket.title}</span>
+                      <span className="aw-row__meta">
+                        <Pill tone={r.ticket.status === "in_review" ? "warning" : "accent"}>{r.reason}</Pill>
+                        {caps.update && r.action !== "Open" ? (
+                          <button
+                            type="button"
+                            className="aw-btn"
+                            disabled={busy}
+                            onClick={(e) => { e.stopPropagation(); void patch(r.ticket.id, { status: r.action === "Ship" ? "shipped" : "active" }); }}
+                          >
+                            {r.action}
+                          </button>
+                        ) : null}
                       </span>
-                    ) : null}
-                    <span
-                      style={{
-                        borderRadius: 99,
-                        padding: "3px 8px",
-                        background: "var(--agentsam-work-accent-soft)",
-                        color: "var(--agentsam-work-accent)",
-                        fontSize: 9,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {statusLabel(ticket.status)}
-                    </span>
-                    <span style={{ color: "var(--agentsam-work-muted)", fontSize: 9 }}>{ticket.surface}</span>
-                  </div>
-                  <h4 style={{ margin: "7px 0 0", fontSize: 13 }}>{ticket.title}</h4>
-                  {ticket.description ? (
-                    <p style={{ margin: "7px 0 0", color: "var(--agentsam-work-muted)", fontSize: 10, lineHeight: 1.5 }}>
-                      {ticket.description}
-                    </p>
-                  ) : null}
+                    </div>
+                  ))}
                 </div>
-                {onOpenTicket ? (
-                  <button
-                    type="button"
-                    className="agentsam-work-toolbar-button"
-                    onClick={() => onOpenTicket(ticket)}
-                  >
-                    Open
+              </section>
+              {plan.dependencies.length ? (
+                <section className="agentsam-work-card" style={{ padding: 14, marginBottom: 14 }}>
+                  <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>Dependencies</h3>
+                  <div style={{ display: "grid", gap: 4, fontSize: 12, color: "var(--agentsam-work-muted)" }}>
+                    {plan.dependencies.map((d) => <span key={d}>{d}</span>)}
+                  </div>
+                </section>
+              ) : null}
+            </>
+          ) : null}
+          {total === 0 ? (
+            <Empty
+              title={tickets.length ? "No tickets match these filters" : "No tickets yet"}
+              hint={tickets.length ? "Clear a filter to see more." : "Create your first ticket to start tracking work."}
+              action={caps.create && onCreate && !tickets.length ? <button type="button" className="aw-btn aw-btn--primary" onClick={() => setEditing("new")}>+ New ticket</button> : undefined}
+            />
+          ) : (
+            STATUS_ORDER.map(section)
+          )}
+        </>
+      ) : null}
+
+      {mode === "board" ? (
+        <div className="aw-board">
+          {BOARD_STATUSES.map((status) => {
+            const items = byStatus.get(status) ?? [];
+            return (
+              <div
+                key={status}
+                className="aw-col"
+                data-over={dragOver === status}
+                onDragOver={(e) => { if (caps.update) { e.preventDefault(); setDragOver(status); } }}
+                onDragLeave={() => setDragOver((v) => (v === status ? null : v))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(null);
+                  const id = e.dataTransfer.getData("text/plain");
+                  const moved = tickets.find((t) => t.id === id);
+                  if (moved && moved.status !== status) void patch(id, { status });
+                }}
+              >
+                <h4><span>{STATUS_LABEL[status]}</span><span>{items.length}</span></h4>
+                {items.slice(0, limits[`b-${status}`] ?? PAGE).map((t) => (
+                  <div key={t.id} className="aw-card" draggable={caps.update} onDragStart={(e) => e.dataTransfer.setData("text/plain", t.id)} onClick={() => openEditor(t)}>
+                    <strong style={{ fontSize: 13, fontWeight: 600 }}>{t.title}</strong>
+                    <span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {t.priority ? <Pill tone={priorityRank(t.priority) === 0 ? "danger" : "neutral"}>{t.priority}</Pill> : null}
+                      {t.dueAt ? <Pill>due {formatDate(t.dueAt)}</Pill> : null}
+                    </span>
+                  </div>
+                ))}
+                {items.length > (limits[`b-${status}`] ?? PAGE) ? (
+                  <button type="button" className="aw-btn" onClick={() => setLimits((l) => ({ ...l, [`b-${status}`]: (l[`b-${status}`] ?? PAGE) + PAGE * 2 }))}>
+                    Show more ({items.length - (limits[`b-${status}`] ?? PAGE)})
                   </button>
                 ) : null}
               </div>
-            </article>
-          ))}
+            );
+          })}
         </div>
-      </div>
+      ) : null}
+
+      {mode === "timeline" ? (
+        <TimelineView
+          items={timeline.items}
+          undatedCount={timeline.undated}
+          onSelect={(id) => {
+            const t = tickets.find((x) => x.id === id);
+            if (t) openEditor(t);
+          }}
+        />
+      ) : null}
+
+      {selected.size ? (
+        <div className="aw-bulk">
+          <strong style={{ fontSize: 13 }}>{selected.size} selected</strong>
+          {caps.update ? (
+            <select className="aw-select" style={{ width: "auto" }} value="" onChange={(e) => e.target.value && void bulkStatus(e.target.value as WorkTicketStatus)} aria-label="Set status">
+              <option value="">Set status…</option>
+              {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+            </select>
+          ) : null}
+          {caps.delete ? (
+            confirmBulk ? (
+              <button type="button" className="aw-btn aw-btn--danger" disabled={busy} onClick={() => void bulkDelete()}>Confirm delete {selected.size}</button>
+            ) : (
+              <button type="button" className="aw-btn aw-btn--danger" onClick={() => setConfirmBulk(true)}>Delete</button>
+            )
+          ) : null}
+          <button type="button" className="aw-btn" onClick={() => { setSelected(new Set()); setConfirmBulk(false); }}>Clear</button>
+        </div>
+      ) : null}
+
+      {editing ? (
+        <TicketEditor
+          ticket={editing === "new" ? null : editing}
+          defaults={editing === "new" && scopeProject ? { project: scopeProject.id } : undefined}
+          projects={projects}
+          lanes={lanes}
+          canSave={editing === "new" ? caps.create : caps.update}
+          canDelete={caps.delete}
+          onClose={() => setEditing(null)}
+          onSave={async (input) => {
+            if (editing === "new") await onCreate?.(input);
+            else await onUpdate?.(editing.id, input);
+          }}
+          onDelete={editing !== "new" && onDelete ? async () => { await onDelete(editing.id); } : undefined}
+          onSchedule={editing !== "new" && onSchedule ? async () => { await onSchedule(editing); } : undefined}
+        />
+      ) : null}
     </div>
   );
 }
