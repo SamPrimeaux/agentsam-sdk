@@ -74,10 +74,6 @@
       "service": "execos"
     },
     {
-      "binding": "CMS_FNF",
-      "service": "fuelnfreetime"
-    },
-    {
       "binding": "PLUGIN_CATALOG",
       "service": "agentsam-plugin-mcp"
     }
