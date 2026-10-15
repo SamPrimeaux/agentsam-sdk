@@ -33,6 +33,7 @@ export function openPlanLedger(cwd = process.cwd(), { readOnly = false } = {}) {
   let db = null;
   if (readOnly) {
     if (fs.existsSync(dbPath)) {
+      const { DatabaseSync } = requireSqlite('node:sqlite');
       db = new DatabaseSync(dbPath, { readOnly: true });
       const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('agentsam_plans','agentsam_todo')").all();
       if (tables.length !== 2) { db.close(); db = null; }
