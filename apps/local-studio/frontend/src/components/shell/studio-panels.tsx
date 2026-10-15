@@ -63,7 +63,7 @@ function TrailRow({
         type="button"
         onClick={() => {
           setActiveTrail(trail.id);
-          void navigate({ to: "/trails/$trailId", params: { trailId: trail.id } });
+          void navigate({ to: "/chats/$chatId", params: { chatId: trail.id } });
         }}
         className="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left md:min-h-0"
       >
@@ -93,7 +93,7 @@ function TrailRow({
             className="text-destructive"
             onSelect={() => {
               deleteTrail(trail.id);
-              if (active) void navigate({ to: "/trails" });
+              if (active) void navigate({ to: "/chats" });
             }}
           >
             <Trash2 className="size-3.5" />
@@ -169,7 +169,7 @@ export function TrailsPanel({
           aria-label="New chat"
           onClick={() => {
             const id = startTrail();
-            void navigate({ to: "/trails/$trailId", params: { trailId: id } });
+            void navigate({ to: "/chats/$chatId", params: { chatId: id } });
           }}
         >
           <Plus className="size-4" />
@@ -283,7 +283,7 @@ export function ProjectsPanel() {
               className="flex min-h-11 min-w-0 flex-1 flex-col px-2.5 py-2 text-left md:min-h-0"
               onClick={() => {
                 setActiveProject(item.id);
-                void navigate({ to: "/trails" });
+                void navigate({ to: "/chats" });
               }}
             >
               <span className="truncate text-sm">{item.name}</span>
@@ -338,7 +338,7 @@ export function ProjectsPanel() {
               e.preventDefault();
               const id = createProject(name || "Untitled");
               setNewOpen(false);
-              void navigate({ to: "/trails" });
+              void navigate({ to: "/chats" });
               void id;
             }}
           >

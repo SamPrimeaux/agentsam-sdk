@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { ArrowLeft, CalendarDays, Check, Clock3, Link2, Save, Trash2 } from "lucide-react";
 import type { WorkProject, WorkTicket, WorkTicketInput, WorkTicketStatus } from "../contracts/index";
-import { Drawer, ErrorLine, Field, fromInputValue, toInputValue, useAction } from "./shared";
+import { ErrorLine, Field, fromInputValue, toInputValue, useAction } from "./shared";
 import { STATUS_LABEL, STATUS_ORDER } from "./ticket-plan";
 
 const PRIORITIES = ["", "P0", "P1", "P2", "P3"];
@@ -69,97 +70,72 @@ export function TicketEditor({
     });
 
   return (
-    <Drawer
-      title={ticket ? "Edit ticket" : "New ticket"}
-      onClose={onClose}
-      footer={
-        <>
-          <button type="button" className="aw-btn aw-btn--primary" disabled={busy || !canSave} onClick={() => void save()}>
-            {ticket ? "Save" : "Create ticket"}
-          </button>
-          {ticket && ticket.status !== "shipped" && canSave ? (
-            <button type="button" className="aw-btn" disabled={busy} onClick={() => void save({ status: "shipped", percentComplete: 100 })}>
-              Mark complete
-            </button>
-          ) : null}
-          {ticket && onSchedule ? (
-            <button type="button" className="aw-btn" disabled={busy} onClick={() => void run(async () => { await onSchedule(); })}>
-              Schedule on calendar
-            </button>
-          ) : null}
-          <span className="spacer" />
-          {ticket && canDelete && onDelete ? (
-            confirmDelete ? (
-              <button type="button" className="aw-btn aw-btn--danger" disabled={busy} onClick={() => void run(async () => { await onDelete(); onClose(); })}>
-                Confirm delete
-              </button>
-            ) : (
-              <button type="button" className="aw-btn aw-btn--danger" onClick={() => setConfirmDelete(true)}>
-                Delete
-              </button>
-            )
-          ) : null}
-        </>
-      }
-    >
-      <ErrorLine message={error} />
-      {ticket ? <code className="aw-mono" style={{ fontSize: 11, color: "var(--agentsam-work-muted)" }}>{ticket.id}</code> : null}
-      <Field label="Title" full>
-        <textarea rows={2} className="aw-textarea aw-ticket-title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus placeholder="What needs to happen?" />
-      </Field>
-      <Field label="Documentation" full>
-        <textarea className="aw-textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Acceptance criteria, links, notes, implementation steps…" />
-      </Field>
-      <div className="aw-grid2">
-        <Field label="Status">
-          <select className="aw-select" value={status} onChange={(e) => setStatus(e.target.value as WorkTicketStatus)}>
-            {STATUS_ORDER.map((s) => (
-              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-            ))}
-          </select>
+    <section className="aw-ticket-context" aria-label={ticket ? "Edit ticket" : "Create ticket"}>
+      <header className="aw-ticket-context__header">
+        <button type="button" className="aw-ticket-context__back" onClick={onClose}><ArrowLeft size={16}/> <span>Back to work</span></button>
+        <span className="aw-ticket-context__eyebrow">{ticket ? "TICKET DETAILS" : "NEW WORK ITEM"}</span>
+        <div className="aw-ticket-context__heading">
+          <h2>{ticket ? "Ticket details" : "Create a ticket"}</h2>
+          <span className="aw-ticket-context__id">{ticket?.id || "Draft"}</span>
+        </div>
+        {ticket ? <div className="aw-ticket-context__statusline"><span data-status={status}>{STATUS_LABEL[status]}</span><span>{priority || "No priority"}</span></div> : null}
+      </header>
+      <div className="aw-ticket-context__content">
+        <ErrorLine message={error} />
+        <Field label="Title" full>
+          <textarea rows={3} className="aw-textarea aw-ticket-title" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus placeholder="What needs to happen?" />
         </Field>
-        <Field label="Priority">
-          <select className="aw-select" value={priority} onChange={(e) => setPriority(e.target.value)}>
-            {PRIORITIES.map((p) => (
-              <option key={p} value={p}>{p || "None"}</option>
-            ))}
-            {priority && !PRIORITIES.includes(priority) ? <option value={priority}>{priority}</option> : null}
-          </select>
+        <Field label="Documentation & acceptance criteria" full>
+          <textarea className="aw-textarea aw-ticket-context__documentation" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What done looks like, context, implementation notes, links…" />
         </Field>
-        <Field label="Project">
+        <div className="aw-ticket-context__group-title"><span>WORKFLOW</span></div>
+        <div className="aw-grid2">
+          <Field label="Status">
+            <select className="aw-select" value={status} onChange={(e) => setStatus(e.target.value as WorkTicketStatus)}>
+              {STATUS_ORDER.map((item) => <option key={item} value={item}>{STATUS_LABEL[item]}</option>)}
+            </select>
+          </Field>
+          <Field label="Priority">
+            <select className="aw-select" value={priority} onChange={(e) => setPriority(e.target.value)}>
+              {PRIORITIES.map((item) => <option key={item} value={item}>{item || "None"}</option>)}
+              {priority && !PRIORITIES.includes(priority) ? <option value={priority}>{priority}</option> : null}
+            </select>
+          </Field>
+        </div>
+        <Field label="Project" full>
           <select className="aw-select" value={project} onChange={(e) => setProject(e.target.value)}>
             <option value="">No project</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-            {project && !projects.some((p) => p.id === project) ? <option value={project}>{project}</option> : null}
+            {projects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            {project && !projects.some((item) => item.id === project) ? <option value={project}>{project}</option> : null}
           </select>
         </Field>
-        <Field label="Lane">
-          <input className="aw-input" list="aw-lanes" value={surface} onChange={(e) => setSurface(e.target.value)} />
-          <datalist id="aw-lanes">
-            {lanes.map((lane) => <option key={lane} value={lane} />)}
-          </datalist>
-        </Field>
-        <Field label="Start">
-          <input className="aw-input" type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
-        </Field>
-        <Field label="Due">
-          <input className="aw-input" type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
-        </Field>
-        <Field label="Estimate (minutes)">
-          <input className="aw-input" type="number" min={0} value={estimate} onChange={(e) => setEstimate(e.target.value)} />
-        </Field>
-        <Field label="% complete">
-          <input className="aw-input" type="number" min={0} max={100} value={percent} onChange={(e) => setPercent(e.target.value)} />
-        </Field>
+        <details className="aw-ticket-context__more">
+          <summary>Schedule, estimates & dependencies <Clock3 size={15} /></summary>
+          <div className="aw-ticket-context__more-body">
+            <div className="aw-grid2">
+              <Field label="Start date"><input className="aw-input" type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} /></Field>
+              <Field label="Due date"><input className="aw-input" type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></Field>
+              <Field label="Estimate (minutes)"><input className="aw-input" type="number" min={0} value={estimate} onChange={(e) => setEstimate(e.target.value)} /></Field>
+              <Field label="Completion estimate"><input className="aw-input" type="number" min={0} max={100} value={percent} onChange={(e) => setPercent(e.target.value)} /></Field>
+            </div>
+            <Field label="Work lane" full>
+              <input className="aw-input" list="aw-ticket-lanes" value={surface} onChange={(e) => setSurface(e.target.value)} />
+              <datalist id="aw-ticket-lanes">{lanes.map((item) => <option key={item} value={item}/>)}</datalist>
+            </Field>
+            <Field label="Blocked by (ticket IDs)" full><input className="aw-input" value={blockedBy} onChange={(e) => setBlockedBy(e.target.value)} /></Field>
+            <Field label="Tags" full><input className="aw-input" value={tags} onChange={(e) => setTags(e.target.value)} /></Field>
+          </div>
+        </details>
+        {ticket && ticket.blockedBy?.length ? <div className="aw-ticket-context__relations">
+          <Link2 size={15}/><span>Blocked by {ticket.blockedBy.length} ticket{ticket.blockedBy.length === 1 ? "" : "s"}</span>
+        </div> : null}
       </div>
-      <Field label="Blocked by (ticket ids, comma separated)" full>
-        <input className="aw-input aw-mono" value={blockedBy} onChange={(e) => setBlockedBy(e.target.value)} />
-      </Field>
-      <Field label="Tags (comma separated)" full>
-        <input className="aw-input" value={tags} onChange={(e) => setTags(e.target.value)} />
-      </Field>
-    </Drawer>
+      <footer className="aw-ticket-context__footer">
+        <button type="button" className="aw-btn aw-btn--primary" disabled={busy || !canSave} onClick={() => void save()}><Save size={15}/>{ticket ? "Save changes" : "Create ticket"}</button>
+        {ticket && ticket.status !== "shipped" && canSave ? <button type="button" className="aw-btn" disabled={busy} onClick={() => void save({ status: "shipped", percentComplete: 100 })}><Check size={14}/> Mark shipped</button> : null}
+        {ticket && onSchedule ? <button type="button" className="aw-btn" disabled={busy} onClick={() => void run(async () => { await onSchedule(); })}><CalendarDays size={14}/> Schedule</button> : null}
+        {ticket && canDelete && onDelete ? <button type="button" className="aw-btn aw-ticket-context__delete" disabled={busy} onClick={() => confirmDelete ? void run(async () => { await onDelete(); onClose(); }) : setConfirmDelete(true)}><Trash2 size={14}/>{confirmDelete ? "Confirm delete" : "Delete"}</button> : null}
+      </footer>
+    </section>
   );
 }

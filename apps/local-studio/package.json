@@ -49,7 +49,8 @@
     "prepack": "npm run build:desktop",
     "verify:cms-architecture": "node scripts/verify-cms-architecture.mjs",
     "verify:brand-assets": "node scripts/verify-brand-assets.mjs",
-    "smoke:work-visual": "node scripts/work-visual-qa.mjs"
+    "smoke:work-visual": "node scripts/work-visual-qa.mjs",
+    "smoke:work-chats": "node --test scripts/work-chats-contract.test.mjs"
   },
   "dependencies": {
     "@cloudflare/codemode": "^0.5.2",

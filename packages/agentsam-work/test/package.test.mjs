@@ -118,3 +118,20 @@ test('ticket queue uses compact actionable recommendations and supports collapsi
   assert.match(file, /aria-expanded=\{showFilters\}/);
   assert.doesNotMatch(file, /plan\.batch\.slice\(0, 4\)\.map/);
 });
+
+
+test('Work project conversations are assigned Local Studio chats, not IAM records', () => {
+  const read = (name) => readFileSync(new URL('../src/' + name, import.meta.url), 'utf8');
+  const detail = read('frontend/surfaces/ProjectDetailSurface.tsx');
+  const panel = read('frontend/ProjectChatsPanel.tsx');
+  const contracts = read('contracts/index.ts');
+  assert.match(detail, /ProjectChatsPanel/);
+  assert.match(detail, /chatHost=|host=\{chatHost/);
+  assert.match(panel, /Assign an existing conversation/);
+  assert.match(panel, /New chat/);
+  assert.match(panel, /\/chats\//);
+  assert.doesNotMatch(panel, /\/trails|IAM session|\/api\/agent\/sessions/);
+  assert.match(contracts, /listProjectChats/);
+  assert.match(contracts, /assignProjectChat/);
+  assert.match(contracts, /createProjectChat/);
+});

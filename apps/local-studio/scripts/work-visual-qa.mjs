@@ -83,6 +83,16 @@ try {
     {name:'desktop-project-detail',route:'/projects/agentsam-sdk',width:1440,height:900},
     {name:'iphone-project-timeline',route:'/projects/agentsam-sdk',width:390,height:844,clickTimeline:true},
     {name:'desktop-project-timeline',route:'/projects/agentsam-sdk',width:1440,height:900,clickTimeline:true},
+    {name:'iphone-ticket-selected',route:'/projects/agentsam-sdk',width:390,height:844,clickTicket:true},
+    {name:'desktop-ticket-selected',route:'/projects/agentsam-sdk',width:1440,height:900,clickTicket:true},
+    {name:'iphone-project-chats',route:'/projects/agentsam-sdk',width:390,height:844,clickChat:true},
+    {name:'desktop-project-chats',route:'/projects/agentsam-sdk',width:1440,height:900,clickChat:true},
+    {name:'iphone-project-chat-assignment',route:'/projects/agentsam-sdk',width:390,height:844,clickChat:true,assignChat:true},
+    {name:'desktop-project-chat-assignment',route:'/projects/agentsam-sdk',width:1440,height:900,clickChat:true,assignChat:true},
+    {name:'iphone-chats-index',route:'/chats',width:390,height:844},
+    {name:'desktop-chats-index',route:'/chats',width:1440,height:900},
+    {name:'iphone-chats-conversation',route:'/chats/trail-studio',width:390,height:844},
+    {name:'desktop-chats-conversation',route:'/chats/trail-studio',width:1440,height:900},
   ]) {
     await call('Emulation.setDeviceMetricsOverride',{width:screen.width,height:screen.height,deviceScaleFactor:1,mobile:screen.width<600,screenWidth:screen.width,screenHeight:screen.height});
     await call('Page.navigate',{url:'http://127.0.0.1:'+port+'/?fixture=populated#'+screen.route});
@@ -91,7 +101,29 @@ try {
       await call('Runtime.evaluate', { expression: "Array.from(document.querySelectorAll('.aw-tabs button')).find(button=>button.textContent?.includes('Timeline'))?.click()" });
       await delay(250);
     }
-    const expression="JSON.stringify({href:location.href,width:innerWidth,bodyWidth:document.documentElement.scrollWidth,shellWidth:document.querySelector('.agentsam-work-shell')?.getBoundingClientRect().width,ticketRows:document.querySelectorAll('.aw-row').length,detailSummary:!!document.querySelector('.aw-project-summary'),nestedTabs:document.querySelectorAll('.aw-tabs').length,focusRows:document.querySelectorAll('.aw-focus-item').length,projectCards:document.querySelectorAll('.aw-project').length,timeline:!!document.querySelector('.aw-tl'),dock:document.querySelectorAll('.agentsam-work-bottom-nav button').length})";
+    if (screen.clickTicket) {
+      // React keeps the previously selected tab when navigating between fixture
+      // screens. Return to Overview before selecting the actual first ticket.
+      await call('Runtime.evaluate', { expression: "Array.from(document.querySelectorAll('.aw-tabs button')).find(button=>button.textContent?.includes('Overview'))?.click()" });
+      await delay(100);
+      await call('Runtime.evaluate', { expression: "document.querySelector('.aw-project-plan__step')?.click()" });
+      await delay(350);
+    }
+    if (screen.clickChat) {
+      // The fixture SPA retains an in-page ticket selection between captures.
+      // Test the independent chat surface after exiting ticket inspection.
+      await call('Runtime.evaluate', { expression: "document.querySelector('.aw-ticket-context__back')?.click()" });
+      await delay(100);
+      await call('Runtime.evaluate', { expression: "Array.from(document.querySelectorAll('.aw-tabs button')).find(button=>button.textContent?.includes('Chats'))?.click()" });
+      await delay(200);
+    }
+    if (screen.assignChat) {
+      await call('Runtime.evaluate', { expression: "(()=>{let el=document.querySelector('#aw-assign-project-chat'); if(el&&el.options.length>1){el.value=el.options[1].value;el.dispatchEvent(new Event('change',{bubbles:true}));return el.value}return ''})()" });
+      await delay(150);
+      await call('Runtime.evaluate', { expression: "Array.from(document.querySelectorAll('.aw-project-chats__assign button')).find(b=>b.textContent?.includes('Assign')||b.textContent?.includes('Move here'))?.click()" });
+      await delay(350);
+    }
+    const expression="JSON.stringify({href:location.href,width:innerWidth,bodyWidth:document.documentElement.scrollWidth,shellWidth:document.querySelector('.agentsam-work-shell')?.getBoundingClientRect().width,ticketRows:document.querySelectorAll('.aw-row').length,detailSummary:!!document.querySelector('.aw-project-detail__inspector'),chatsTab:!!document.querySelector('.aw-project-chats'),chatsIndex:!!document.querySelector('[data-studio-chats]'),chatConversation:!!document.querySelector('.agentsam-page-layout'),linkedChatsInIndex:document.querySelectorAll('[data-linked-to-work=yes]').length,assignedChats:document.querySelectorAll('.aw-project-chats__item').length,chatAssignControl:!!document.querySelector('#aw-assign-project-chat'),ticketContext:!!document.querySelector('.aw-ticket-context'),ticketOverlayCount:document.querySelectorAll('.aw-drawer-overlay').length,nestedTabs:document.querySelectorAll('.aw-tabs').length,focusRows:document.querySelectorAll('.aw-focus-item').length,projectCards:document.querySelectorAll('.aw-project-v3, .aw-project-cards-v3 .aw-project').length,portfolio:!!document.querySelector('.aw-portfolio-v3'),timeline:!!document.querySelector('.aw-tl'),dock:document.querySelectorAll('.agentsam-work-bottom-nav button').length})";
     const r=await call('Runtime.evaluate',{expression,returnByValue:true});
     const data=JSON.parse(r.result.value);
     const screenshot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
@@ -100,7 +132,7 @@ try {
   }
   writeFileSync(join(output,'results.json'),JSON.stringify(results,null,2));
   console.log(JSON.stringify(results,null,2));
-  const failures = results.filter(r => r.overflow || (r.name.endsWith('projects') && !(r.projectCards || r.timeline)) || (r.name.includes('project-timeline') && (!r.timeline || r.nestedTabs !== 1)) || (r.name.includes('project-detail') && !r.detailSummary) || (r.name.includes('tickets') && r.focusRows === 0));
+  const failures = results.filter(r => r.overflow || (r.name.endsWith('projects') && !(r.projectCards || r.portfolio || r.timeline)) || (r.name.includes('project-timeline') && (!r.timeline || r.nestedTabs !== 1)) || (r.name.includes('project-detail') && !r.detailSummary) || (r.name.includes('ticket-selected') && (!r.ticketContext || r.ticketOverlayCount > 0)) || (r.name.includes('project-chats') && !r.chatsTab) || (r.name.includes('chat-assignment') && (!r.chatAssignControl || r.assignedChats < 1)) || (r.name.includes('chats-index') && (!r.chatsIndex || r.linkedChatsInIndex < 1)) || (r.name.includes('chats-conversation') && !r.chatConversation) || (r.name.includes('tickets') && r.focusRows === 0));
   if (failures.length) {
     process.exitCode=1;
     console.error('Work visual QA failed:', failures.map(r=>r.name).join(', '));

@@ -37,6 +37,8 @@ import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifacts/index'
 import { Route as appsArtifactsTicketsRouteImport } from './routes/(apps)/artifacts/tickets'
+import { Route as appsChatsIndexRouteImport } from './routes/(apps)/chats/index'
+import { Route as appsChatsChatIdRouteImport } from './routes/(apps)/chats/$chatId'
 import { Route as appsProjectsIndexRouteImport } from './routes/(apps)/projects/index'
 import { Route as appsProjectsProjectIdRouteImport } from './routes/(apps)/projects/$projectId'
 import { Route as appsSettingsIndexRouteImport } from './routes/(apps)/settings/index'
@@ -45,8 +47,6 @@ import { Route as appsSettingsIntegrationsRouteImport } from './routes/(apps)/se
 import { Route as appsSettingsKeysRouteImport } from './routes/(apps)/settings/keys'
 import { Route as appsSettingsRuntimeRouteImport } from './routes/(apps)/settings/runtime'
 import { Route as appsSettingsThemesRouteImport } from './routes/(apps)/settings/themes'
-import { Route as appsTrailsIndexRouteImport } from './routes/(apps)/trails/index'
-import { Route as appsTrailsTrailIdRouteImport } from './routes/(apps)/trails/$trailId'
 import { Route as ApiContentOptimizeRouteImport } from './routes/api/content.optimize'
 import { Route as ApiLlmInventoryRouteImport } from './routes/api/llm.inventory'
 import { Route as appsAgentsamAppsCadRouteImport } from './routes/(apps)/agentsam.apps.cad'
@@ -195,6 +195,16 @@ const appsArtifactsTicketsRoute = appsArtifactsTicketsRouteImport.update({
   path: '/tickets',
   getParentRoute: () => appsArtifactsRoute,
 } as any)
+const appsChatsIndexRoute = appsChatsIndexRouteImport.update({
+  id: '/(apps)/chats/',
+  path: '/chats/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsChatsChatIdRoute = appsChatsChatIdRouteImport.update({
+  id: '/(apps)/chats/$chatId',
+  path: '/chats/$chatId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsProjectsIndexRoute = appsProjectsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -235,16 +245,6 @@ const appsSettingsThemesRoute = appsSettingsThemesRouteImport.update({
   id: '/themes',
   path: '/themes',
   getParentRoute: () => appsSettingsRoute,
-} as any)
-const appsTrailsIndexRoute = appsTrailsIndexRouteImport.update({
-  id: '/(apps)/trails/',
-  path: '/trails/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const appsTrailsTrailIdRoute = appsTrailsTrailIdRouteImport.update({
-  id: '/(apps)/trails/$trailId',
-  path: '/trails/$trailId',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiContentOptimizeRoute = ApiContentOptimizeRouteImport.update({
   id: '/api/content/optimize',
@@ -312,19 +312,19 @@ export interface FileRoutesByFullPath {
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
+  '/chats/$chatId': typeof appsChatsChatIdRoute
   '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
   '/settings/runtime': typeof appsSettingsRuntimeRoute
   '/settings/themes': typeof appsSettingsThemesRoute
-  '/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/artifacts/': typeof appsArtifactsIndexRoute
+  '/chats/': typeof appsChatsIndexRoute
   '/projects/': typeof appsProjectsIndexRoute
   '/settings/': typeof appsSettingsIndexRoute
-  '/trails/': typeof appsTrailsIndexRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
@@ -355,19 +355,19 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/chats/$chatId': typeof appsChatsChatIdRoute
   '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/settings/keys': typeof appsSettingsKeysRoute
   '/settings/runtime': typeof appsSettingsRuntimeRoute
   '/settings/themes': typeof appsSettingsThemesRoute
-  '/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/artifacts': typeof appsArtifactsIndexRoute
+  '/chats': typeof appsChatsIndexRoute
   '/projects': typeof appsProjectsIndexRoute
   '/settings': typeof appsSettingsIndexRoute
-  '/trails': typeof appsTrailsIndexRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
@@ -403,19 +403,19 @@ export interface FileRoutesById {
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
   '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
+  '/(apps)/chats/$chatId': typeof appsChatsChatIdRoute
   '/(apps)/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
   '/(apps)/settings/integrations': typeof appsSettingsIntegrationsRoute
   '/(apps)/settings/keys': typeof appsSettingsKeysRoute
   '/(apps)/settings/runtime': typeof appsSettingsRuntimeRoute
   '/(apps)/settings/themes': typeof appsSettingsThemesRoute
-  '/(apps)/trails/$trailId': typeof appsTrailsTrailIdRoute
   '/api/content/optimize': typeof ApiContentOptimizeRoute
   '/api/llm/inventory': typeof ApiLlmInventoryRoute
   '/(apps)/artifacts/': typeof appsArtifactsIndexRoute
+  '/(apps)/chats/': typeof appsChatsIndexRoute
   '/(apps)/projects/': typeof appsProjectsIndexRoute
   '/(apps)/settings/': typeof appsSettingsIndexRoute
-  '/(apps)/trails/': typeof appsTrailsIndexRoute
   '/(apps)/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/(apps)/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
@@ -452,19 +452,19 @@ export interface FileRouteTypes {
     | '/api/cloudflare'
     | '/api/github'
     | '/artifacts/tickets'
+    | '/chats/$chatId'
     | '/projects/$projectId'
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
     | '/settings/runtime'
     | '/settings/themes'
-    | '/trails/$trailId'
     | '/api/content/optimize'
     | '/api/llm/inventory'
     | '/artifacts/'
+    | '/chats/'
     | '/projects/'
     | '/settings/'
-    | '/trails/'
     | '/agentsam/apps/cad'
     | '/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
@@ -495,19 +495,19 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/chats/$chatId'
     | '/projects/$projectId'
     | '/settings/$unit'
     | '/settings/integrations'
     | '/settings/keys'
     | '/settings/runtime'
     | '/settings/themes'
-    | '/trails/$trailId'
     | '/api/content/optimize'
     | '/api/llm/inventory'
     | '/artifacts'
+    | '/chats'
     | '/projects'
     | '/settings'
-    | '/trails'
     | '/agentsam/apps/cad'
     | '/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
@@ -542,19 +542,19 @@ export interface FileRouteTypes {
     | '/api/cloudflare'
     | '/api/github'
     | '/(apps)/artifacts/tickets'
+    | '/(apps)/chats/$chatId'
     | '/(apps)/projects/$projectId'
     | '/(apps)/settings/$unit'
     | '/(apps)/settings/integrations'
     | '/(apps)/settings/keys'
     | '/(apps)/settings/runtime'
     | '/(apps)/settings/themes'
-    | '/(apps)/trails/$trailId'
     | '/api/content/optimize'
     | '/api/llm/inventory'
     | '/(apps)/artifacts/'
+    | '/(apps)/chats/'
     | '/(apps)/projects/'
     | '/(apps)/settings/'
-    | '/(apps)/trails/'
     | '/(apps)/agentsam/apps/cad'
     | '/(apps)/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
@@ -589,10 +589,10 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
-  appsTrailsTrailIdRoute: typeof appsTrailsTrailIdRoute
+  appsChatsChatIdRoute: typeof appsChatsChatIdRoute
   ApiContentOptimizeRoute: typeof ApiContentOptimizeRoute
   ApiLlmInventoryRoute: typeof ApiLlmInventoryRoute
-  appsTrailsIndexRoute: typeof appsTrailsIndexRoute
+  appsChatsIndexRoute: typeof appsChatsIndexRoute
   ApiContentLocalBridgeRoute: typeof ApiContentLocalBridgeRoute
   ApiDatabaseLocalBridgeRoute: typeof ApiDatabaseLocalBridgeRoute
 }
@@ -795,6 +795,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsArtifactsTicketsRouteImport
       parentRoute: typeof appsArtifactsRoute
     }
+    '/(apps)/chats/': {
+      id: '/(apps)/chats/'
+      path: '/chats'
+      fullPath: '/chats/'
+      preLoaderRoute: typeof appsChatsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/chats/$chatId': {
+      id: '/(apps)/chats/$chatId'
+      path: '/chats/$chatId'
+      fullPath: '/chats/$chatId'
+      preLoaderRoute: typeof appsChatsChatIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/projects/': {
       id: '/(apps)/projects/'
       path: '/'
@@ -850,20 +864,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/themes'
       preLoaderRoute: typeof appsSettingsThemesRouteImport
       parentRoute: typeof appsSettingsRoute
-    }
-    '/(apps)/trails/': {
-      id: '/(apps)/trails/'
-      path: '/trails'
-      fullPath: '/trails/'
-      preLoaderRoute: typeof appsTrailsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/(apps)/trails/$trailId': {
-      id: '/(apps)/trails/$trailId'
-      path: '/trails/$trailId'
-      fullPath: '/trails/$trailId'
-      preLoaderRoute: typeof appsTrailsTrailIdRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/api/content/optimize': {
       id: '/api/content/optimize'
@@ -1019,10 +1019,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
-  appsTrailsTrailIdRoute: appsTrailsTrailIdRoute,
+  appsChatsChatIdRoute: appsChatsChatIdRoute,
   ApiContentOptimizeRoute: ApiContentOptimizeRoute,
   ApiLlmInventoryRoute: ApiLlmInventoryRoute,
-  appsTrailsIndexRoute: appsTrailsIndexRoute,
+  appsChatsIndexRoute: appsChatsIndexRoute,
   ApiContentLocalBridgeRoute: ApiContentLocalBridgeRoute,
   ApiDatabaseLocalBridgeRoute: ApiDatabaseLocalBridgeRoute,
 }

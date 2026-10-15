@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import type { WorkCapabilities, WorkProject, WorkTicket, WorkTicketInput, WorkTicketStatus } from "../../contracts/index";
 import { Empty, ErrorLine, formatDate, Pill, useAction } from "../shared";
 import { TicketEditor } from "../TicketEditor";
+import { TicketTable } from "../TicketTable";
 import { TimelineView } from "../TimelineView";
 import {
   BOARD_STATUSES,
@@ -35,6 +36,7 @@ export function TicketsSurface({
   onSchedule,
   onRefresh,
   onOpenTicket,
+  onCreateTicket,
 }: {
   tickets: WorkTicket[];
   analytics?: { completionRate: number; avgCycleDays: number; oldestActiveDays: number };
@@ -52,6 +54,7 @@ export function TicketsSurface({
   onSchedule?: (ticket: WorkTicket) => Promise<unknown>;
   onRefresh?: () => Promise<unknown> | void;
   onOpenTicket?: (ticket: WorkTicket) => void;
+  onCreateTicket?: () => void;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [query, setQuery] = useState("");
@@ -101,7 +104,8 @@ export function TicketsSurface({
     return map;
   }, [visible]);
 
-  const openEditor = (ticket: WorkTicket) => (onOpenTicket && !onUpdate ? onOpenTicket(ticket) : setEditing(ticket));
+  const openEditor = (ticket: WorkTicket) => onOpenTicket ? onOpenTicket(ticket) : setEditing(ticket);
+  const createEditor = () => onCreateTicket ? onCreateTicket() : setEditing("new");
   const patch = (id: string, input: WorkTicketInput) => run(async () => { await onUpdate?.(id, input); });
   const toggle = (id: string) =>
     setSelected((prev) => {
@@ -201,13 +205,13 @@ export function TicketsSurface({
               </button>
             ) : null}
             {caps.create && onCreate ? (
-              <button type="button" className="aw-btn aw-btn--primary" onClick={() => setEditing("new")}>+ New ticket</button>
+              <button type="button" className="aw-btn aw-btn--primary" onClick={createEditor}>+ New ticket</button>
             ) : null}
           </div>
         </div>
       ) : (
         <div className="aw-actions" style={{ marginBottom: 12 }}>
-          {caps.create && onCreate ? <button type="button" className="aw-btn aw-btn--primary" onClick={() => setEditing("new")}>+ New ticket</button> : null}
+          {caps.create && onCreate ? <button type="button" className="aw-btn aw-btn--primary" onClick={createEditor}>+ New ticket</button> : null}
         </div>
       )}
 
@@ -281,10 +285,10 @@ export function TicketsSurface({
             <Empty
               title={tickets.length ? "No tickets match these filters" : "No tickets yet"}
               hint={tickets.length ? "Clear a filter to see more." : "Create your first ticket to start tracking work."}
-              action={caps.create && onCreate && !tickets.length ? <button type="button" className="aw-btn aw-btn--primary" onClick={() => setEditing("new")}>+ New ticket</button> : undefined}
+              action={caps.create && onCreate && !tickets.length ? <button type="button" className="aw-btn aw-btn--primary" onClick={createEditor}>+ New ticket</button> : undefined}
             />
           ) : (
-            STATUS_ORDER.map(section)
+            <TicketTable tickets={visible} onOpenTicket={openEditor}/>
           )}
         </>
       ) : null}

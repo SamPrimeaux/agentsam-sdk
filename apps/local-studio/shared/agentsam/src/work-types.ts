@@ -95,6 +95,8 @@ export type Trail = {
   messages: ChatMessage[];
   files: Artifact[];
   projectId: string;
+  /** Optional association to a Work project; does NOT change the Studio workspace. */
+  workProjectId?: string;
 };
 
 export type SideKind = "chat" | "browser" | "files" | "terminal" | "artifacts" | "deploy" | "app" | "goal" | "database";

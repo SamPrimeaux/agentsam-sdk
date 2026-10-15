@@ -15,7 +15,7 @@ function CliPage() {
     <div className="flex h-full min-h-0 flex-col bg-background">
       <header className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border px-2">
         <Button asChild size="icon" variant="ghost" className="size-11 md:hidden">
-          <Link to="/trails" aria-label="Back">
+          <Link to="/chats" aria-label="Back">
             <ArrowLeft className="size-4" />
           </Link>
         </Button>

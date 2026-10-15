@@ -196,6 +196,8 @@ type WorkState = {
   deleteTrail: (id: string) => void;
   setActiveProject: (id: string) => void;
   moveTrailToProject: (trailId: string, projectId: string) => void;
+  /** Assign a Local Studio conversation to Work without moving its filesystem workspace. */
+  assignChatToWorkProject: (chatId: string, workProjectId: string | null) => void;
   createProject: (name?: string) => string;
   createFilesystemProject: (opts: { root: string; name?: string; runtimeBaseUrl?: string }) => Promise<string>;
   createProjectForTrail: (trailId: string, name?: string) => string;
@@ -656,6 +658,15 @@ export const useWorkStore = create<WorkState>()(
           trails: s.trails.map((trail) =>
             trail.id === trailId ? { ...trail, projectId, updatedAt: Date.now() } : trail,
           ),
+        }));
+      },
+      assignChatToWorkProject: (chatId, workProjectId) => {
+        const id = workProjectId?.trim() || undefined;
+        if (!get().trails.some((chat) => chat.id === chatId)) return;
+        set((s) => ({
+          trails: s.trails.map((chat) => chat.id === chatId
+            ? { ...chat, workProjectId: id, updatedAt: Date.now() }
+            : chat),
         }));
       },
       createProject: (name) => {

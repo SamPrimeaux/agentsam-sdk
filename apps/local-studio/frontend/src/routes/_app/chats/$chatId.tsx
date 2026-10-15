@@ -1,27 +1,22 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { TrailWorkspace } from "@/components/shell/trail-workspace";
 import { Button } from "@/components/ui/button";
 import { useWorkStore } from "@/lib/work/store";
 
-export const Route = createFileRoute("/_app/trails/$trailId")({
-  beforeLoad: ({ params }) => {
-    if (params.trailId === "trail-studio") {
-      throw redirect({ to: "/agentsam" });
-    }
-  },
-  component: TrailPage,
+export const Route = createFileRoute("/_app/chats/$chatId")({
+  component: ChatPage,
 });
 
-function TrailPage() {
-  const { trailId } = Route.useParams();
-  const trail = useWorkStore((s) => s.trails.find((t) => t.id === trailId));
+function ChatPage() {
+  const { chatId } = Route.useParams();
+  const trail = useWorkStore((s) => s.trails.find((t) => t.id === chatId));
 
   if (!trail) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="text-sm text-muted-foreground">That chat is not on this device.</p>
         <Button asChild variant="secondary">
-          <Link to="/trails">Back to chats</Link>
+          <Link to="/chats">Back to chats</Link>
         </Button>
       </div>
     );

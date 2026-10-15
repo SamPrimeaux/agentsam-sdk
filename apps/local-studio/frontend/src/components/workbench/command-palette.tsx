@@ -41,7 +41,7 @@ export function CommandPalette() {
           <Command.Item
             onSelect={() => {
               const id = startTrail();
-              void navigate({ to: "/trails/$trailId", params: { trailId: id } });
+              void navigate({ to: "/chats/$chatId", params: { chatId: id } });
               setOpen(false);
             }}
           >
@@ -114,7 +114,7 @@ export function CommandPalette() {
           </Command.Item>
           <Command.Item
             onSelect={() => {
-              void navigate({ to: "/trails" });
+              void navigate({ to: "/chats" });
               setOpen(false);
             }}
           >
@@ -129,7 +129,7 @@ export function CommandPalette() {
               value={`project ${project.name}`}
               onSelect={() => {
                 setActiveProject(project.id);
-                void navigate({ to: "/trails" });
+                void navigate({ to: "/chats" });
                 setOpen(false);
               }}
             >
@@ -144,7 +144,7 @@ export function CommandPalette() {
               value={trail.title}
               onSelect={() => {
                 setActiveTrail(trail.id);
-                void navigate({ to: "/trails/$trailId", params: { trailId: trail.id } });
+                void navigate({ to: "/chats/$chatId", params: { chatId: trail.id } });
                 setOpen(false);
               }}
             >
