@@ -57,7 +57,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
       { flag: '-i, --interactive', description: 'Open the interactive next-action menu.' },
     ],
   },
-  { id: 'db', summary: 'Project-local SQLite status/init', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
+  { id: 'db', summary: 'Discover local and remote stores, inspect explicit remote D1 schemas, or manage local AgentSam SQLite', topic: 'runtime', skill: 'agentsam-app-fundamentals', usage: ['agentsam db sources', 'agentsam db schema --remote --binding DB --config wrangler.toml --limit 100 --offset 0 --json', 'agentsam db status', 'agentsam db init'] },
   { id: 'models', summary: 'Probe hosted/local model availability', topic: 'start', skill: 'agentsam-app-fundamentals', common: true },
   { id: 'hooks', aliases: ['hook'], summary: 'Inspect lifecycle hooks, sources, and execution receipts', topic: 'runtime', skill: 'agentsam-app-fundamentals', common: true, usage: ['agentsam hooks status', 'agentsam hooks list', 'agentsam hooks executions [--limit N]', 'agentsam hooks init'] },
   { id: 'providers', summary: 'Configure machine provider credentials', topic: 'start', skill: 'agentsam-app-fundamentals' },
