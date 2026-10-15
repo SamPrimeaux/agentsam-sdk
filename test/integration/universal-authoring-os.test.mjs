@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createSamOS} from '../src/sam/os.js';
-import {AgentSamClient} from '../src/sam/client.js';
+import {createSamOS} from '../../src/sam/os.js';
+import {AgentSamClient} from '../../src/sam/client.js';
 
 function fixture() {
   const calls=[];
