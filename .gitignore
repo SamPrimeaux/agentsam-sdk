@@ -68,3 +68,6 @@ apps/agentsam-go-worker/runtime/.agentsam-build-source
 
 # Generated native Machine receipts from nested workspaces
 **/.agentsam/machine/
+
+# Per-repository media choice and local asset objects
+.agentsam/media/

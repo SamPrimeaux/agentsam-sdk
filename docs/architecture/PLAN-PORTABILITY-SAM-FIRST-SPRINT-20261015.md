@@ -26,7 +26,7 @@ Model results are bounded: plan.list reports count and the first 30 plans, plan.
 ## Earlier SAM work and remaining acceptance
 SAM v2 registered planning.goap and planning.astar. Raw A* expects JavaScript callback functions and is unsuitable for a plain JSON model tool. The GOAP wrapper accepts declarative states/actions and is exposed through the SDK.
 Generated v2 Superbash and media operations are intentionally host-bound to explicit runtime/identity/authorization; unavailable handlers are not assumed installed or removed.
-Earlier discovery/repository-knowledge PR #225 is still a separate draft; reconcile adapter/manifest conflicts if merging both.
+Discovery/repository-knowledge PR #225 is merged in main; this integration preserves its registry, bounded knowledge handlers and discovery authority.
 
 Acceptance:
   npm run verify:registry

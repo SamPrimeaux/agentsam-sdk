@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { CONFIG_PATH, readConfig, validateConfig, defaultConfig } from './config.js';
+import { parseWranglerTomlBindings } from './wrangler-binding-discovery.js';
 import { findCliProjectRoot } from '../lib/cli-preferences.js';
 import { runtimeDatabasePath } from '../local/runtime-store.js';
 import { getRepositoryId, portableRepositoryIdFromGit, tryReadProjectConfig } from '../lib/project-config.js';
@@ -30,7 +31,7 @@ export async function discoverProjectStores(cwd, env = process.env) {
       const file = path.join(dir, entry.name);
       if (entry.isDirectory()) scan(file, depth + 1);
       else if (['wrangler.json', 'wrangler.jsonc'].includes(entry.name)) configs.push(file);
-      else if (entry.name === 'wrangler.toml') warnings.push(`${path.relative(root, file)}: TOML discovery is not implemented; inspect this configuration explicitly.`);
+      else if (entry.name === 'wrangler.toml') configs.push(file);
     }
   }
   scan(root, 0);
@@ -40,10 +41,15 @@ export async function discoverProjectStores(cwd, env = process.env) {
     for (const file of configs) {
       const source = path.relative(root, file);
       if (fs.statSync(file).size > 1024 * 1024) { warnings.push(`${source}: configuration too large`); continue; }
-      const parsed = parseConfigFileTextToJson(file, fs.readFileSync(file, 'utf8'));
+      const contents=fs.readFileSync(file, 'utf8');
+      if (file.endsWith('.toml')) {
+        candidates.push(...parseWranglerTomlBindings(contents, source));
+        continue;
+      }
+      const parsed = parseConfigFileTextToJson(file, contents);
       if (parsed.error) { warnings.push(`${source}: invalid JSONC`); continue; }
       const add = (cfg, environment = null) => {
-        for (const [key, driver, label] of [['d1_databases', 'd1', 'database_name'], ['hyperdrive', 'postgres-hyperdrive', 'id'], ['r2_buckets', 'r2', 'bucket_name']]) {
+        for (const [key, driver, label] of [['d1_databases', 'd1', 'database_name'], ['hyperdrive', 'postgres-hyperdrive', 'id'], ['r2_buckets', 'r2', 'bucket_name'], ['vectorize','vectorize','index_name'], ['kv_namespaces','kv','id']]) {
           for (const binding of Array.isArray(cfg?.[key]) ? cfg[key] : []) {
             candidates.push({ id: `${source}:${environment || 'default'}:${binding.binding}`, driver, role: 'application', binding: binding.binding, name: binding[label], source, environment, selectable: false, status: 'declared; connectivity not verified' });
           }

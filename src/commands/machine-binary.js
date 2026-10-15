@@ -82,16 +82,17 @@ export function spawnMachine(resolution, machineArgv, options = {}) {
   const env = options.env || process.env;
   const stdio = options.stdio || 'inherit';
   const maxBuffer = options.maxBuffer || 32 * 1024 * 1024;
+  const timeout = options.timeoutMs || undefined;
 
   if (resolution.kind === 'binary') {
-    return spawnSync(resolution.path, machineArgv, { stdio, env, encoding: 'utf8', maxBuffer });
+    return spawnSync(resolution.path, machineArgv, { stdio, env, encoding: 'utf8', maxBuffer, timeout });
   }
 
   if (resolution.kind === 'cargo') {
     return spawnSync(
       'cargo',
       ['run', '--quiet', '--manifest-path', resolution.manifest, '--bin', 'agentsam-machine', '--', ...machineArgv],
-      { stdio, env, encoding: 'utf8', maxBuffer },
+      { stdio, env, encoding: 'utf8', maxBuffer, timeout },
     );
   }
 

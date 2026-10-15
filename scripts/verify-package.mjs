@@ -57,6 +57,12 @@ assert.ok(!pkg.files?.includes('packages/agentsam-brand'), 'root package must no
 assert.ok(!pkg.files?.includes('packages/agentsam-workbench'), 'root package must not publish the entire workbench workspace');
 assert.ok(!pkg.files?.includes('apps/client-cms-editor'), 'root package must not publish the entire CMS editor workspace');
 assert.ok(pkg.files?.includes('packages/agentsam-contracts'), 'published files must include framework-neutral contracts');
+assert.ok(pkg.files?.includes('packages/agentsam-cms'), 'root SDK package must ship the portable CMS runtime it imports');
+assert.ok(existsSync(join(root, 'packages/agentsam-cms/src/index.js')), 'portable CMS runtime entry missing');
+assert.ok(pkg.files?.includes('packages/agentsam-ide/src/lsp/host.mjs'),
+  'root SDK must pack its CLI-imported LSP host adapter');
+assert.equal(pkg.dependencies?.['@inneranimalmedia/agentsam-cms'], undefined,
+  'root SDK must not depend on an independently published CMS package to start its CLI');
 assert.ok(pkg.files?.includes('packages/agentsam-errors'), 'published files must include canonical errors runtime');
 assert.notEqual(errors.private, true, 'errors runtime is a publishable workspace package and is also distributed through the root SDK');
 assert.equal(errors.publishConfig?.access, 'public', 'errors workspace must remain publicly publishable');

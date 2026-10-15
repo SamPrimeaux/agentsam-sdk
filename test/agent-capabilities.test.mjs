@@ -60,7 +60,7 @@ test('agent capability adapter exposes only executable tools by default', async 
   assert.ok(names.includes('repository.snapshot'));
   assert.ok(names.includes('repository.audit'));
   assert.ok(names.includes('knowledge.search'));
-  assert.equal(names.includes('knowledge.index'), false);
+  assert.equal(names.includes('knowledge.index'), true, 'local knowledge indexing is now a real bounded handler');
   const result = await adapter.invoke('knowledge.search', { text: 'hello' });
   assert.equal(result.capability_id, 'knowledge.search');
   assert.deepEqual(result.result.hits, []);
