@@ -28,6 +28,7 @@ export function TicketsSurface({
   projectId,
   embedded = false,
   initialMode = "queue",
+  hideModeTabs = false,
   onCreate,
   onUpdate,
   onDelete,
@@ -43,6 +44,8 @@ export function TicketsSurface({
   projectId?: string;
   embedded?: boolean;
   initialMode?: "queue" | "board" | "timeline";
+  /** Project detail already owns the top-level view switch. */
+  hideModeTabs?: boolean;
   onCreate?: (input: WorkTicketInput & { title: string }) => Promise<unknown>;
   onUpdate?: (id: string, patch: WorkTicketInput) => Promise<unknown>;
   onDelete?: (id: string) => Promise<unknown>;
@@ -52,6 +55,9 @@ export function TicketsSurface({
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [query, setQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(min-width: 800px)").matches
+  );
   const [lane, setLane] = useState("all");
   const [project, setProject] = useState("all");
   const [sort, setSort] = useState<Sort>("priority");
@@ -207,78 +213,69 @@ export function TicketsSurface({
 
       <ErrorLine message={error} />
 
-      <div className="aw-tabs" role="tablist">
-        {(["queue", "board", "timeline"] as Mode[]).map((m) => (
-          <button key={m} type="button" role="tab" className="aw-tab" data-active={mode === m} aria-selected={mode === m} onClick={() => setMode(m)}>
-            {m === "queue" ? "Queue" : m === "board" ? "Board" : "Timeline"}
-          </button>
-        ))}
-      </div>
+      {!hideModeTabs ? (
+        <div className="aw-tabs" role="tablist">
+          {(["queue", "board", "timeline"] as Mode[]).map((m) => (
+            <button key={m} type="button" role="tab" className="aw-tab" data-active={mode === m} aria-selected={mode === m} onClick={() => setMode(m)}>
+              {m === "queue" ? "Queue" : m === "board" ? "Board" : "Timeline"}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
-      <div className="aw-toolbar">
-        <input className="aw-input grow" placeholder="Search tickets…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search tickets" />
-        {lanes.length > 1 ? (
-          <select className="aw-select" value={lane} onChange={(e) => setLane(e.target.value)} aria-label="Lane">
-            <option value="all">All lanes</option>
-            {lanes.map((l) => <option key={l} value={l}>{l}</option>)}
+      <div className="aw-ticket-filters">
+        <div className="aw-ticket-search">
+          <input className="aw-input" placeholder="Search tickets…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search tickets" />
+          <button type="button" className="aw-btn" aria-expanded={showFilters} aria-controls="aw-ticket-filter-content" onClick={() => setShowFilters((shown) => !shown)}>
+            Filters{lane !== "all" || project !== "all" ? " · active" : ""}
+          </button>
+        </div>
+        {showFilters ? <div className="aw-ticket-filter-content" id="aw-ticket-filter-content">
+          {lanes.length > 1 ? (
+            <select className="aw-select" value={lane} onChange={(e) => setLane(e.target.value)} aria-label="Lane">
+              <option value="all">All lanes</option>
+              {lanes.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          ) : null}
+          {!scopeProject && projects.length ? (
+            <select className="aw-select" value={project} onChange={(e) => setProject(e.target.value)} aria-label="Project">
+              <option value="all">All projects</option>
+              <option value="none">No project</option>
+              {projects.filter((p) => p.status !== "archived").map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          ) : null}
+          <select className="aw-select" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">
+            <option value="priority">Priority</option>
+            <option value="updated">Recently updated</option>
+            <option value="due">Due date</option>
           </select>
-        ) : null}
-        {!scopeProject && projects.length ? (
-          <select className="aw-select" value={project} onChange={(e) => setProject(e.target.value)} aria-label="Project">
-            <option value="all">All projects</option>
-            <option value="none">No project</option>
-            {projects.filter((p) => p.status !== "archived").map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        ) : null}
-        <select className="aw-select" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort">
-          <option value="priority">Sort: priority</option>
-          <option value="updated">Sort: updated</option>
-          <option value="due">Sort: due date</option>
-        </select>
+        </div> : null}
       </div>
 
       {mode === "queue" ? (
         <>
           {plan.batch.length ? (
-            <>
-              <div className="aw-callout">
-                <h3>Recommended execution order</h3>
-                <p>{plan.batch.slice(0, 4).map((r) => r.ticket.title).join(" → ")}</p>
+            <section className="aw-focus-panel" aria-label="Recommended next actions">
+              <div className="aw-focus-panel__head">
+                <div><span className="aw-kicker">Focus</span><h3>Next actions</h3></div>
+                <span className="aw-focus-panel__count">{plan.openCount} open · {plan.blockedCount} blocked</span>
               </div>
-              <section className="agentsam-work-card" style={{ padding: 14, marginBottom: 14 }}>
-                <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>Suggested next batch</h3>
-                <div className="aw-rows">
-                  {plan.batch.map((r) => (
-                    <div key={r.ticket.id} className="aw-row" onClick={() => openEditor(r.ticket)}>
-                      <span />
-                      <code>{r.ticket.id.replace(/^tkt_/, "").slice(0, 8)}</code>
-                      <span className="aw-row__title">{r.ticket.title}</span>
-                      <span className="aw-row__meta">
-                        <Pill tone={r.ticket.status === "in_review" ? "warning" : "accent"}>{r.reason}</Pill>
-                        {caps.update && r.action !== "Open" ? (
-                          <button
-                            type="button"
-                            className="aw-btn"
-                            disabled={busy}
-                            onClick={(e) => { e.stopPropagation(); void patch(r.ticket.id, { status: r.action === "Ship" ? "shipped" : "active" }); }}
-                          >
-                            {r.action}
-                          </button>
-                        ) : null}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              <div className="aw-focus-list">
+                {plan.batch.slice(0, 3).map((recommendation, index) => (
+                  <button className="aw-focus-item" type="button" key={recommendation.ticket.id} onClick={() => openEditor(recommendation.ticket)}>
+                    <span className="aw-focus-item__num">{index + 1}</span>
+                    <span className="aw-focus-item__body"><strong>{recommendation.ticket.title}</strong><small>{recommendation.reason}</small></span>
+                    <span className="aw-focus-item__go">Open</span>
+                  </button>
+                ))}
+              </div>
               {plan.dependencies.length ? (
-                <section className="agentsam-work-card" style={{ padding: 14, marginBottom: 14 }}>
-                  <h3 style={{ margin: "0 0 8px", fontSize: 13 }}>Dependencies</h3>
-                  <div style={{ display: "grid", gap: 4, fontSize: 12, color: "var(--agentsam-work-muted)" }}>
-                    {plan.dependencies.map((d) => <span key={d}>{d}</span>)}
-                  </div>
-                </section>
+                <details className="aw-focus-dependencies">
+                  <summary>Dependency links <span>{plan.dependencies.length}</span></summary>
+                  {plan.dependencies.map(d => <p key={d} title={d}>{d}</p>)}
+                </details>
               ) : null}
-            </>
+            </section>
           ) : null}
           {total === 0 ? (
             <Empty
@@ -335,6 +332,7 @@ export function TicketsSurface({
       {mode === "timeline" ? (
         <TimelineView
           items={timeline.items}
+          activityItems={timeline.activities}
           undatedCount={timeline.undated}
           onSelect={(id) => {
             const t = tickets.find((x) => x.id === id);

@@ -3,6 +3,7 @@ import { mergeArtifacts, printTree, renderAsciiTree } from "@/lib/work/files";
 import { commitStaged, dirtyPaths, emptyGit, headSnapshot, parseGithubRemote, statusLines, workingTree } from "@/lib/work/git";
 import { baseName, joinPath, parentDir, toStoragePath } from "@/lib/work/paths";
 import { slugify } from "@/lib/work/seed";
+import { buildWorkspacePreview } from "@/lib/work/workspace-preview";
 import type { Artifact, Project, ShellEffect } from "@inneranimalmedia/agentsam-local-shared";
 
 export type ShellResult = {
@@ -354,7 +355,7 @@ export function runCommand(project: Project, raw: string): ShellResult {
       if (file.path.endsWith(".html")) {
         return ok(project, `preview ${file.path}`, {
           type: "open-browser",
-          srcdoc: file.content,
+          srcdoc: buildWorkspacePreview(file, project.files),
           title: file.path,
         });
       }

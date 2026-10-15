@@ -204,12 +204,9 @@ export function WorkProduct({
     return snapshot.projects.find((candidate) => candidate.id === id) || snapshot.projects[0] || null;
   }, [projectId, snapshot]);
 
-  const rightRail =
-    surface === "calendar" ||
-    surface === "tickets" ||
-    surface === "mail" ||
-    surface === "artifacts" ||
-    surface === "artifact-tickets";
+  // Hide duplicate Work rails: several legacy buttons had no handlers.
+  // The functional navigation stays in MiniNav and the existing mobile dock.
+  const rightRail = false;
 
   const authHint =
     loadError === "unauthorized"
@@ -355,6 +352,8 @@ export function WorkProduct({
       {surface === "projects" ? (
         <ProjectsSurface
           projects={snapshot.projects}
+          tickets={snapshot.tickets}
+          onOpenTicket={setOpenTicket}
           capabilities={snapshot.capabilities?.projects}
           actions={actions}
           onNavigate={onNavigate}
@@ -370,6 +369,7 @@ export function WorkProduct({
           capabilities={snapshot.capabilities}
           actions={actions}
           onNavigate={onNavigate}
+          onOpenTicket={setOpenTicket}
           knowledgeAction={knowledgeAction}
         />
       ) : null}

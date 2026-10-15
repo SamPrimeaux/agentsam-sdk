@@ -103,29 +103,53 @@ const COLOR: Partial<Record<WorkTicketStatus, string>> = {
   in_review: "var(--agentsam-work-warning)",
 };
 
-export function timelineItems(tickets: WorkTicket[]): { items: TimelineItem[]; undated: number } {
+export function priorityLabel(priority?: string | null): string {
+  const rank = priorityRank(priority);
+  return rank < 4 ? "P" + rank : priority?.trim() || "Unprioritized";
+}
+
+const unixMillis = (value?: number) => {
+  if (!Number.isFinite(value)) return NaN;
+  const n = Number(value);
+  return n < 10_000_000_000 ? n * 1000 : n;
+};
+
+/** Activity is observed history, never a fabricated planned start/due date. */
+export function timelineItems(tickets: WorkTicket[]): {
+  items: TimelineItem[];
+  activities: TimelineItem[];
+  undated: number;
+} {
   const items: TimelineItem[] = [];
-  let undated = 0;
+  const activities: TimelineItem[] = [];
   for (const t of tickets) {
     const due = t.dueAt ? Date.parse(t.dueAt) : NaN;
     const startRaw = t.startAt ? Date.parse(t.startAt) : NaN;
-    if (!Number.isFinite(due) && !Number.isFinite(startRaw)) {
-      undated += 1;
-      continue;
-    }
     const day = 86_400_000;
     const estimate = (t.estimatedMinutes || 0) * 60_000;
-    const end = Number.isFinite(due) ? due : startRaw + Math.max(day, estimate);
-    const start = Number.isFinite(startRaw) ? startRaw : Math.min(end - Math.max(day, estimate), end - day);
-    items.push({
+    const base = {
       id: t.id,
       title: t.title,
-      start: new Date(start).toISOString(),
-      end: new Date(Math.max(end, start + day / 2)).toISOString(),
       progress: t.status === "shipped" ? 100 : t.percentComplete ?? 0,
       color: COLOR[t.status],
-      meta: t.priority || undefined,
-    });
+      meta: priorityLabel(t.priority),
+      status: t.status,
+    };
+    if (Number.isFinite(due) || Number.isFinite(startRaw)) {
+      const end = Number.isFinite(due) ? due : startRaw + Math.max(day, estimate);
+      const start = Number.isFinite(startRaw) ? startRaw : end - Math.max(day, estimate);
+      items.push({ ...base, start: new Date(start).toISOString(), end: new Date(Math.max(end, start + day / 2)).toISOString(), provenance: "scheduled" });
+      continue;
+    }
+    const updated = unixMillis(t.updatedAt);
+    const created = unixMillis(t.createdAt);
+    const closed = t.closedAt ? Date.parse(t.closedAt) : NaN;
+    const begin = Number.isFinite(created) ? created : updated;
+    const finish = Number.isFinite(closed) && closed >= begin ? closed : updated;
+    if (Number.isFinite(begin) && Number.isFinite(finish)) {
+      activities.push({ ...base, start: new Date(begin).toISOString(), end: new Date(Math.max(finish, begin + day)).toISOString(), provenance: "activity" });
+    }
   }
-  return { items, undated };
+  activities.sort((a, b) => Date.parse(b.end) - Date.parse(a.end));
+  return { items, activities, undated: activities.length };
 }

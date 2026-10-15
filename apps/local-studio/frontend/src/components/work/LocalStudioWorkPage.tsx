@@ -46,7 +46,8 @@ function writeStoredMailConnectionId(value: string): void {
 function readStoredNavCollapsed(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return window.localStorage.getItem(WORK_NAV_COLLAPSED_KEY) === "1";
+    const stored = window.localStorage.getItem(WORK_NAV_COLLAPSED_KEY);
+    return stored === null ? window.innerWidth >= 1024 : stored === "1";
   } catch {
     return false;
   }
@@ -386,8 +387,8 @@ export function LocalStudioWorkPage({
         surface={surface}
         projectId={projectId}
         ticketId={ticketId}
-        headerActions={showAutoRag && isPackagedDesktop() ? <button type="button" className="aw-btn" onClick={openAutoRag}>Knowledge / AutoRAG</button> : undefined}
-        knowledgeAction={showAutoRag && isPackagedDesktop() ? <button type="button" className="aw-btn" onClick={openAutoRag}>Knowledge / AutoRAG</button> : undefined}
+        headerActions={showAutoRag && isPackagedDesktop() ? <button type="button" className="aw-btn aw-knowledge-action" onClick={openAutoRag}>Knowledge</button> : undefined}
+        knowledgeAction={showAutoRag && isPackagedDesktop() ? <button type="button" className="aw-btn aw-knowledge-action" onClick={openAutoRag}>Knowledge</button> : undefined}
         navCollapsed={navCollapsed}
         onNavCollapsedChange={(next) => {
           setNavCollapsed(next);

@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { shortTime } from "@/lib/utils";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
+import { buildWorkspacePreview } from "@/lib/work/workspace-preview";
 import type { Artifact } from "@inneranimalmedia/agentsam-local-shared";
 import { cn } from "@/lib/utils";
 
@@ -54,7 +55,7 @@ export function ArtifactsStage() {
                       if (kind === "preview") {
                         openSideTab("browser", {
                           title: file.path,
-                          srcdoc: file.content,
+                          srcdoc: buildWorkspacePreview(file, project.files),
                           ephemeral: false,
                         });
                         void navigate({ to: "/browse" });

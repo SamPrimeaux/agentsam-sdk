@@ -22,3 +22,13 @@ test("HTML preview leaves unrelated external styles unchanged", () => {
   const file = { path: "index.html", content: '<link rel="stylesheet" href="https://example.com/a.css">' };
   assert.equal(buildWorkspacePreview(file, [file]), file.content);
 });
+
+
+test("an unnamed HTML code-fence preview is wrapped without modifying the source file", () => {
+  const file = { path: "snippet-1.html", content: '<main><svg viewBox="0 0 20 20"></svg>Hello</main>' };
+  const html = buildWorkspacePreview(file, [file]);
+  assert.match(html, /^<!doctype html>/);
+  assert.match(html, /<meta name="viewport"/);
+  assert.match(html, /<main><svg/);
+  assert.equal(file.content, '<main><svg viewBox="0 0 20 20"></svg>Hello</main>');
+});

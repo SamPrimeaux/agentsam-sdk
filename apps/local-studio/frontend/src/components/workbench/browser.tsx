@@ -123,13 +123,20 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
       )}
 
       {tab.srcdoc ? (
-        <iframe
+        <>
+          {tab.srcdoc.includes('name="agentsam-preview-fragment"') ? (
+            <p className="border-b border-border bg-muted/60 px-3 py-2 text-xs text-muted-foreground" role="status">
+              HTML fragment preview · no stylesheet was included. This is not a finished page.
+            </p>
+          ) : null}
+          <iframe
           key={`doc-${reloadKey}`}
           title={tab.title}
           srcDoc={tab.srcdoc}
           sandbox="allow-scripts allow-forms"
-          className="h-full w-full bg-paper"
+          className="min-h-0 flex-1 w-full bg-paper"
         />
+        </>
       ) : src ? (
         <iframe
           key={`${src}-${reloadKey}`}
