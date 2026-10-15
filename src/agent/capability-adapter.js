@@ -73,6 +73,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
   // invoke is not a shell escape hatch: it requires the host to authorize the
   // underlying operation with its actual side-effect profile.
   const allowAgentInvoke = new Set([
+    ...MCP_D1_TOOLS,
     ...PLAN_READ_OPERATIONS, ...PLAN_WRITE_OPERATIONS,
     'project.discover',
     'repository.snapshot','repository.intelligence','repository.crawl','repository.mine',
