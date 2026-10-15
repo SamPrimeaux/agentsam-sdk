@@ -26,6 +26,7 @@ import { detectCliProject, findCliProjectRoot, readCliPreferences, updateCliPref
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
 import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
+import { createMcpD1Bridge } from '../capabilities/mcp-d1-bridge.js';
 import { createShellSamAdapter, resolveShellSamIdentity } from '../sam/shell-host.js';
 import { preparedTurnOne, saveTurnOneLocally } from '../registry/turn-one.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
@@ -685,6 +686,7 @@ async function runInteractiveModelTurn(prompt, state) {
   const capabilityAdapter = createCapabilityAdapter({
     projectRoot: state.cwd,
     samAdapter,
+    mcpD1Bridge: createMcpD1Bridge({home:state.home}),
     authorizeCapability: ({ capability, input }) => approveToolExecution({
       capability_id: capability.id,
       input,

@@ -16,6 +16,7 @@ import { PLAN_READ_OPERATIONS, PLAN_WRITE_OPERATIONS } from '../capabilities/pla
 import { inspectRemoteD1Schema } from '../knowledge/d1-schema.js';
 import { repositoryIntelligence, repositoryCrawl, repositoryMine } from '../capabilities/repository-awareness.js';
 import { discoverProjectCapabilities } from './project-discovery.js';
+import { createMcpD1Bridge, MCP_D1_TOOLS } from '../capabilities/mcp-d1-bridge.js';
 import { knowledgeIndex, knowledgeSearch, contextResolve, knowledgeStatus, knowledgeGenerationStatus } from '../capabilities/knowledge-operations.js';
 
 const PACKAGE_ROOT = path.resolve(fileURLToPath(new URL('../../', import.meta.url)));
@@ -29,10 +30,12 @@ function loadSchema(value) {
   catch (error) { throw new Error(`capability_schema_unreadable:${value}:${error?.message || error}`); }
 }
 
-export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot = process.cwd(), authorizeCapability = null, samAdapter = null, allowedRepositories = [projectRoot] } = {}) {
+export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot = process.cwd(), authorizeCapability = null, samAdapter = null, mcpD1Bridge = null, allowedRepositories = [projectRoot] } = {}) {
+  const d1Bridge = mcpD1Bridge || createMcpD1Bridge();
   const cad = localProjectRuntime(projectRoot);
   const cadDescriptors = CAD_PROJECT_TOOLS.map(t=>({...t,id:t.name,version:'1.0.0',domain:'design',kind:'tool',status:'active',side_effects:['design_project_get','design_project_validate','design_model_inspect'].includes(t.name)?'none':'filesystem-write',deterministic:true,model_required:false}));
   const executable = new Map([
+    ...(d1Bridge.available ? MCP_D1_TOOLS.map(id=>[id,(input={})=>d1Bridge.invoke(id,input)]) : []),
     ...[...PLAN_READ_OPERATIONS, ...PLAN_WRITE_OPERATIONS].map(id =>
       [id, async (input = {}) => (await import('../capabilities/plan-operations.js')).invokePlanOperation(id, input, projectRoot)]),
     ['project.discover', () => discoverProjectCapabilities(projectRoot)],
@@ -70,6 +73,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
   // invoke is not a shell escape hatch: it requires the host to authorize the
   // underlying operation with its actual side-effect profile.
   const allowAgentInvoke = new Set([
+    ...MCP_D1_TOOLS,
     ...PLAN_READ_OPERATIONS, ...PLAN_WRITE_OPERATIONS,
     'project.discover',
     'repository.snapshot','repository.intelligence','repository.crawl','repository.mine',
@@ -80,6 +84,8 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
   const registry = createRegistry({ capabilityAdapter: {
     canInvoke: (id) => executable.has(id) && (!['machine.inspect','repository.crawl','repository.mine'].includes(id) || machineAvailable()),
     availability: (id) => {
+      if(MCP_D1_TOOLS.includes(id) && !d1Bridge.available)
+        return {readiness:'unavailable',reason:d1Bridge.reason||'mcp_d1_connection_not_configured',next:d1Bridge.next||null};
       if(id==='cloudflare.d1.schema')return {readiness:'unverified',reason:'remote_credentials_not_probed',next:'agentsam db sources'};
       if (['machine.inspect','repository.crawl','repository.mine'].includes(id) && !machineAvailable())
         return {readiness:'unavailable',reason:'machine_runtime_not_installed',next:'agentsam machine install'};

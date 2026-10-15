@@ -7,7 +7,7 @@
   ],
   "counts": {
     "commands": 74,
-    "capabilities": 56,
+    "capabilities": 60,
     "packages": 62
   },
   "commands": [
@@ -823,6 +823,38 @@
     }
   ],
   "capabilities": [
+    {
+      "id": "agentsam_cf_d1_list",
+      "description": "List real Cloudflare D1 databases through the existing authorized InnerAnimalMedia MCP connection; never use local SQLite as a substitute.",
+      "package": "@inneranimalmedia/agentsam-sdk/mcp",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_d1_query",
+      "description": "Execute a bounded read-only D1 query through the existing IAM MCP SQL policy, using a selected Cloudflare database UUID.",
+      "package": "@inneranimalmedia/agentsam-sdk/mcp",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_d1_write",
+      "description": "Execute an explicitly approved D1 mutation through the existing IAM MCP write tool; never run without host write authorization.",
+      "package": "@inneranimalmedia/agentsam-sdk/mcp",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_d1_delete",
+      "description": "Execute an explicitly approved D1 DELETE through the existing IAM MCP delete tool; never run without host write authorization.",
+      "package": "@inneranimalmedia/agentsam-sdk/mcp",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
     {
       "id": "plan.list",
       "description": "List durable plans from this repository. Returns uninitialized without creating a database.",
