@@ -16,6 +16,7 @@ import { PLAN_READ_OPERATIONS, PLAN_WRITE_OPERATIONS } from '../capabilities/pla
 import { inspectRemoteD1Schema } from '../knowledge/d1-schema.js';
 import { repositoryIntelligence, repositoryCrawl, repositoryMine } from '../capabilities/repository-awareness.js';
 import { discoverProjectCapabilities } from './project-discovery.js';
+import { createMcpD1Bridge, MCP_D1_TOOLS } from '../capabilities/mcp-d1-bridge.js';
 import { knowledgeIndex, knowledgeSearch, contextResolve, knowledgeStatus, knowledgeGenerationStatus } from '../capabilities/knowledge-operations.js';
 
 const PACKAGE_ROOT = path.resolve(fileURLToPath(new URL('../../', import.meta.url)));
