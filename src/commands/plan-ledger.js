@@ -1,8 +1,10 @@
 import path from 'node:path';
+import fs from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { randomBytes } from 'node:crypto';
 import { createLocalSqliteDatabaseSync } from '../local/sqlite.js';
 import { applyRuntimeMigrationsSync } from '../local/migrations.js';
-import { getLocalDatabasePath, readProjectConfig } from '../lib/project-config.js';
+import { getLocalDatabasePath, tryReadProjectConfig } from '../lib/project-config.js';
 import { tryResolveGitContext } from '../../packages/agentsam-repository/src/git-context.js';
 
 function id(prefix) {
@@ -20,18 +22,29 @@ function repositoryIdFor(root, git, config) {
     || 'local:' + root;
 }
 
-export function openPlanLedger(cwd = process.cwd()) {
+export function openPlanLedger(cwd = process.cwd(), { readOnly = false } = {}) {
   const git = tryResolveGitContext({ cwd });
   const root = git?.root || path.resolve(cwd);
-  const config = readProjectConfig(root);
+  // A repository is not required to adopt AgentSam configuration to use plans.
+  const config = tryReadProjectConfig(root);
   const dbPath = path.resolve(root, getLocalDatabasePath(config));
-  const db = createLocalSqliteDatabaseSync(dbPath);
-  applyRuntimeMigrationsSync(db);
-  db.exec('PRAGMA foreign_keys = ON;');
+  // Reads must not create a database or apply migrations as a side effect.
+  let db = null;
+  if (readOnly) {
+    if (fs.existsSync(dbPath)) {
+      db = new DatabaseSync(dbPath, { readOnly: true });
+      const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('agentsam_plans','agentsam_todo')").all();
+      if (tables.length !== 2) { db.close(); db = null; }
+    }
+  } else {
+    db = createLocalSqliteDatabaseSync(dbPath);
+    applyRuntimeMigrationsSync(db);
+    db.exec('PRAGMA foreign_keys = ON;');
+  }
   return {
-    db, dbPath, root, git,
+    db, dbPath, root, git, readOnly,
     repositoryId: repositoryIdFor(root, git, config),
-    close() { db.close(); },
+    close() { db?.close(); },
   };
 }
 
@@ -108,6 +121,7 @@ export function createPlan(ctx, input) {
 }
 
 export function listPlans(ctx, { all = false } = {}) {
+  if (!ctx.db) return [];
   const sql =
     "SELECT * FROM agentsam_plans " +
     "WHERE json_extract(metadata_json, '$.repository_id') = ? " +
@@ -117,6 +131,7 @@ export function listPlans(ctx, { all = false } = {}) {
 }
 
 export function getCurrentPlan(ctx) {
+  if (!ctx.db) return null;
   const row = ctx.db.prepare(
     "SELECT p.* FROM agentsam_plans p " +
     "WHERE json_extract(p.metadata_json, '$.repository_id') = ? " +
@@ -129,10 +144,11 @@ export function getCurrentPlan(ctx) {
 }
 
 export function getPlan(ctx, planId = 'current') {
+  if (!ctx.db) return null;
   const plan = planId === 'current'
     ? getCurrentPlan(ctx)
     : hydratePlan(ctx.db.prepare('SELECT * FROM agentsam_plans WHERE id = ? LIMIT 1').get(planId));
-  if (!plan) return null;
+  if (!plan || plan.metadata?.repository_id !== ctx.repositoryId) return null;
   const tasks = ctx.db.prepare(
     'SELECT * FROM agentsam_todo WHERE plan_id = ? ORDER BY sort_order ASC, created_at_unix ASC'
   ).all(plan.id).map(hydrateTask);
@@ -172,7 +188,11 @@ export function addPlanStep(ctx, input) {
 const PRIORITY_ORDER = Object.freeze({ critical: 0, high: 1, medium: 2, low: 3 });
 
 function getTask(ctx, taskId) {
-  return hydrateTask(ctx.db.prepare('SELECT * FROM agentsam_todo WHERE id = ? LIMIT 1').get(taskId));
+  if (!ctx.db) return null;
+  const task = hydrateTask(ctx.db.prepare('SELECT * FROM agentsam_todo WHERE id = ? LIMIT 1').get(taskId));
+  if (!task) return null;
+  // IDs alone do not grant access when a custom shared SQLite store is used.
+  return getPlan(ctx, task.plan_id) ? task : null;
 }
 
 function dependencyBlockers(ctx, task) {
@@ -203,7 +223,8 @@ function pendingAcceptance(task) {
 
 export function getNextPlanStep(ctx, { planId = 'current', start = false } = {}) {
   const plan = getPlan(ctx, planId);
-  if (!plan) throw new Error('plan_not_found');
+  if (!plan && !ctx.db) return {plan:null,step:null,selection:'uninitialized',blocked:[],evidence:[],acceptance:[],depends_on:[],recommended_action:null};
+  if (!plan) return {plan:null,step:null,selection:'no_active_plan',blocked:[],evidence:[],acceptance:[],depends_on:[],recommended_action:null};
   const rank = (a, b) => {
     const priority = (PRIORITY_ORDER[a.priority] ?? 99) - (PRIORITY_ORDER[b.priority] ?? 99);
     if (priority !== 0) return priority;
@@ -249,7 +270,9 @@ export function getNextPlanStep(ctx, { planId = 'current', start = false } = {})
     evidence: selected?.metadata?.evidence || [],
     acceptance: selected?.metadata?.acceptance || [],
     depends_on: selected?.metadata?.depends_on || [],
-    recommended_action: selected ? ('agentsam plan ' + (start ? 'show ' : 'start ') + selected.id) : null,
+    recommended_action: selected
+      ? (start ? 'agentsam plan show ' + plan.id : 'agentsam plan start ' + selected.id)
+      : null,
   };
 }
 
@@ -284,6 +307,11 @@ export function acceptPlanStep(ctx, taskId, criterion, { evidenceRef = null } = 
   if (!text) throw new Error('acceptance_criterion_required');
   const metadata = { ...task.metadata };
   const entries = Array.isArray(metadata.acceptance) ? [...metadata.acceptance] : [];
+  if (!entries.some(entry => (typeof entry === 'string' ? entry : entry?.criterion) === text))
+    throw new RangeError('acceptance_criterion_not_declared');
+  const evidence = Array.isArray(metadata.evidence) ? metadata.evidence : [];
+  if (!evidenceRef || !evidence.some(entry => entry?.ref === evidenceRef))
+    throw new RangeError('acceptance_evidence_not_recorded');
   const now = Math.floor(Date.now() / 1000);
   let matched = false;
   metadata.acceptance = entries.map((entry) => {
@@ -298,15 +326,6 @@ export function acceptPlanStep(ctx, taskId, criterion, { evidenceRef = null } = 
       evidence_ref: evidenceRef || (typeof entry === 'object' ? entry.evidence_ref || null : null),
     };
   });
-  if (!matched) {
-    metadata.acceptance.push({
-      criterion: text,
-      required: true,
-      status: 'accepted',
-      accepted_at_unix: now,
-      evidence_ref: evidenceRef || null,
-    });
-  }
   ctx.db.prepare('UPDATE agentsam_todo SET metadata_json = ?, updated_at_unix = unixepoch() WHERE id = ?')
     .run(JSON.stringify(metadata), taskId);
   return getTask(ctx, taskId);
@@ -319,6 +338,17 @@ export function addPlanDependency(ctx, taskId, dependencyId) {
   if (!dependency) throw new Error('dependency_not_found:' + dependencyId);
   if (task.plan_id !== dependency.plan_id) throw new Error('dependency_cross_plan_not_allowed');
   if (task.id === dependency.id) throw new Error('dependency_self_reference');
+  // An A -> B -> A cycle would leave no executable next step.
+  const stack = [dependency.id];
+  const seen = new Set();
+  while (stack.length) {
+    const current = stack.pop();
+    if (current === task.id) throw new RangeError('dependency_cycle_not_allowed');
+    if (seen.has(current)) continue;
+    seen.add(current);
+    const node = getTask(ctx, current);
+    for (const ref of node?.metadata?.depends_on || []) stack.push(ref);
+  }
   const metadata = { ...task.metadata };
   const dependsOn = new Set(Array.isArray(metadata.depends_on) ? metadata.depends_on : []);
   dependsOn.add(dependency.id);
@@ -333,9 +363,11 @@ export function setPlanStepStatus(ctx, taskId, status, { reason = null } = {}) {
   if (!allowed.has(status)) throw new Error('invalid_step_status:' + status);
   const task = getTask(ctx, taskId);
   if (!task) throw new Error('step_not_found:' + taskId);
-  if (status === 'complete') {
+  if (status === 'running' || status === 'complete') {
     const blockers = dependencyBlockers(ctx, task);
     if (blockers.length) throw new Error('step_dependencies_incomplete:' + blockers.map((row) => row.id).join(','));
+  }
+  if (status === 'complete') {
     const acceptance = pendingAcceptance(task);
     if (acceptance.length) {
       const labels = acceptance.map((entry) => typeof entry === 'string' ? entry : entry.criterion).filter(Boolean);
@@ -365,6 +397,10 @@ export function setPlanStatus(ctx, planId, status) {
   if (!allowed.has(status)) throw new Error('invalid_plan_status:' + status);
   const plan = getPlan(ctx, planId || 'current');
   if (!plan) throw new Error('plan_not_found');
+  if (status === 'complete') {
+    const incomplete = plan.tasks.filter(task => task.status !== 'complete');
+    if (incomplete.length) throw new RangeError('plan_steps_incomplete:' + incomplete.map(task => task.id).join(','));
+  }
   ctx.db.prepare('UPDATE agentsam_plans SET status = ?, updated_at_unix = unixepoch() WHERE id = ?').run(status, plan.id);
   return getPlan(ctx, plan.id);
 }
