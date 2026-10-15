@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { inspectMediaEnvironment, readMediaStorageSelection } from '../src/sam/media/environment.js';
-import { createObjectMediaStore } from '../src/sam/adapters/object-media-store.js';
-import { createLocalMediaStore } from '../src/sam/adapters/local-media-store.js';
-import { runSamMedia } from '../src/commands/sam-media.js';
-import { createMediaHandlers } from '../src/sam/operation-packs/generated-v2/raster.js';
-import { createShellSamAdapter } from '../src/sam/shell-host.js';
+import { inspectMediaEnvironment, readMediaStorageSelection } from '../../src/sam/media/environment.js';
+import { createObjectMediaStore } from '../../src/sam/adapters/object-media-store.js';
+import { createLocalMediaStore } from '../../src/sam/adapters/local-media-store.js';
+import { runSamMedia } from '../../src/commands/sam-media.js';
+import { createMediaHandlers } from '../../src/sam/operation-packs/generated-v2/raster.js';
+import { createShellSamAdapter } from '../../src/sam/shell-host.js';
 
 function bucket() {
   const map=new Map();

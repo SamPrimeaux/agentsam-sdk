@@ -1,1 +1,1 @@
-export { CMS_COMPATIBILITY_ALIASES } from '@inneranimalmedia/agentsam-cms';
+export { CMS_COMPATIBILITY_ALIASES } from '../../../../packages/agentsam-cms/src/index.js';
