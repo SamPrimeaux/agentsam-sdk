@@ -82,8 +82,4 @@ export function invokePlanOperation(id, input = {}, root) {
   } finally { ctx.close(); }
 }
 
-export const PLAN_READ_OPERATIONS = Object.freeze(['plan.list', 'plan.show', 'plan.next', 'planning.goap']);
-export const PLAN_WRITE_OPERATIONS = Object.freeze([
-  'plan.create', 'plan.step.add', 'plan.step.status', 'plan.step.evidence',
-  'plan.step.accept', 'plan.step.depends', 'plan.status',
-]);
+export { PLAN_READ_OPERATIONS, PLAN_WRITE_OPERATIONS } from './plan-operation-ids.js';
