@@ -23,7 +23,7 @@ test("only Chats routes are registered, without trails fallbacks or redirects", 
 test("Work project chat association reuses persisted Studio chats, not IAM", () => {
   const shared = read("shared/agentsam/src/work-types.ts");
   const store = read("frontend/src/lib/work/store.ts");
-  const links = read("frontend/src/lib/work/project-chat-links.ts");
+  const links = read("frontend/src/lib/project-chat-links.ts");
   const panel = read("frontend/src/components/work/LocalStudioWorkPage.tsx");
   assert.match(shared, /workProjectId\?: string/);
   assert.match(store, /assignChatToWorkProject/);
