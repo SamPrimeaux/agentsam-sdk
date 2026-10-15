@@ -12,7 +12,7 @@ import { createRegistry } from '../registry/index.js';
 import { workspaceRead, workspaceWrite } from '../capabilities/workspace-files.js';
 import { machineInspect, machineAvailable } from '../capabilities/machine-inspect.js';
 import { testRun } from '../capabilities/test-run.js';
-import { invokePlanOperation, PLAN_READ_OPERATIONS, PLAN_WRITE_OPERATIONS } from '../capabilities/plan-operations.js';
+import { PLAN_READ_OPERATIONS, PLAN_WRITE_OPERATIONS } from '../capabilities/plan-operation-ids.js';
 import { inspectRemoteD1Schema } from '../knowledge/d1-schema.js';
 import { repositoryIntelligence, repositoryCrawl, repositoryMine } from '../capabilities/repository-awareness.js';
 import { discoverProjectCapabilities } from './project-discovery.js';
