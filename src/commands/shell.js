@@ -686,6 +686,7 @@ async function runInteractiveModelTurn(prompt, state) {
   const capabilityAdapter = createCapabilityAdapter({
     projectRoot: state.cwd,
     samAdapter,
+    mcpD1Bridge: createMcpD1Bridge({home:state.home}),
     authorizeCapability: ({ capability, input }) => approveToolExecution({
       capability_id: capability.id,
       input,
