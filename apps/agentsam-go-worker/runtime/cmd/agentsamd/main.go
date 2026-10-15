@@ -84,22 +84,22 @@ func main() {
 				"cpus": runtime.NumCPU(),
 			},
 			"capabilities": map[string]any{
-				"exec":                 true,
-				"pty":                  runtime.GOOS != "windows",
-				"filesystem":           true,
-				"process":              true,
-				"git":                  true,
-				"ports":                true,
-				"hash":                 true,
-				"inspect":              true,
-				"language.typescript":  "ready",
-				"language.javascript":  "ready",
-				"language.json":        "ready",
-				"language.html":        "ready",
-				"language.css":         "ready",
-				"language.go":          "missing",
-				"language.rust":        "missing",
-				"language.python":      "missing",
+				"exec":                true,
+				"pty":                 runtime.GOOS != "windows",
+				"filesystem":          true,
+				"process":             true,
+				"git":                 true,
+				"ports":               true,
+				"hash":                true,
+				"inspect":             true,
+				"language.typescript": "ready",
+				"language.javascript": "ready",
+				"language.json":       "ready",
+				"language.html":       "ready",
+				"language.css":        "ready",
+				"language.go":         "missing",
+				"language.rust":       "missing",
+				"language.python":     "missing",
 			},
 			"status": "online",
 		})
@@ -129,7 +129,7 @@ func main() {
 		})
 	})
 	mux.HandleFunc("/v1/language/packs", handleLanguagePacks)
-	mux.HandleFunc("/v1/language/packs/install", handleLanguagePackInstall)
+	mux.HandleFunc("/v1/language/packs/install", authorizedLanguagePackInstall(checkHeaderAuth))
 
 	// Real exec/pty surfaces. Both require the local pairing token.
 	mux.HandleFunc("/v1/exec", execapi.ExecHandler(checkHeaderAuth))

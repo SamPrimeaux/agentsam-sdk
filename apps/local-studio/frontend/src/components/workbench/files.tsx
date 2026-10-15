@@ -11,6 +11,7 @@ import type { Artifact, SideTab } from "@inneranimalmedia/agentsam-local-shared"
 import { WorkspaceSaveQueue, type SaveStatus } from "@inneranimalmedia/agentsam-ide/workspace";
 import { applyLspWorkspaceEdit, workspaceRootFileUri, type LspWorkspaceEdit } from "@inneranimalmedia/agentsam-ide/lsp";
 import { cn } from "@/lib/utils";
+import { LspLanguageSetup } from "@/components/workbench/LspLanguageSetup";
 
 const MonacoPane = lazy(() =>
   import("@/components/workbench/monaco-pane").then((m) => ({ default: m.MonacoPane })),
@@ -414,6 +415,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
                 {isFilesystem ? ` · ${saveState}` : ""}
               </span>
               {isFilesystem ? <span aria-label="Language server status" title={lspDetail} className="px-2 text-[11px] text-muted-foreground">LSP: {lspStatus}{lspDetail&&lspStatus==='ready' ? ` (${lspDetail})` : ''}</span> : null}
+              {isFilesystem ? <LspLanguageSetup onInstalled={() => setLspRetry((x) => x + 1)}/> : null}
               {isFilesystem&&lspStatus==='error'?<Button type="button" size="sm" variant="outline" title={lspDetail} onClick={()=>setLspRetry(x=>x+1)}>Retry LSP</Button>:null}
               {conflict ? (
                 <>

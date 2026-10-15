@@ -75,7 +75,22 @@ export function createLocalStudioDatabaseClient(
     localHost,
 
     async listSources() {
-      const remoteCatalog = await remote.listSources();
+      // Local discovery must work independently of Cloudflare auth or network.
+      let remoteCatalog: Awaited<ReturnType<typeof remote.listSources>>;
+      try {
+        remoteCatalog = await remote.listSources();
+      } catch (error) {
+        remoteCatalog = {
+          ok: true,
+          sources: [],
+          connections: {
+            cloudflare: {
+              status: "disconnected",
+              message: error instanceof Error ? error.message : "Remote database catalog unavailable",
+            },
+          },
+        };
+      }
       let localSources: DatabaseSource[] = [];
       let localStatus = "requires_local_runtime";
       let localMessage =
@@ -196,7 +211,7 @@ export function createLocalStudioDatabaseClient(
           id: sourceId,
           provider: "local-sqlite",
           engine: "sqlite",
-          label: "AgentSam local database",
+          label: sourceId,
           writable: true,
           metrics: false,
           capabilities: LOCAL_DATABASE_CAPABILITIES,
@@ -220,7 +235,7 @@ export function createLocalStudioDatabaseClient(
           id: sourceId,
           provider: "local-sqlite",
           engine: "sqlite",
-          label: "AgentSam local database",
+          label: sourceId,
           writable: true,
           metrics: false,
           capabilities: LOCAL_DATABASE_CAPABILITIES,
@@ -241,6 +256,8 @@ export function createLocalStudioDatabaseClient(
         source_id: sourceId,
         sql: input.sql,
         params: input.params || [],
+        studio_approved: input.studio_approved === true,
+        destructive_confirmed: input.destructive_confirmed === true,
       }, localOptions);
       return { ok: true, ...body };
     },

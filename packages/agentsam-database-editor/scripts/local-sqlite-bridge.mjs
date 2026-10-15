@@ -146,6 +146,7 @@ async function describeDatabase(filePath, values = {}) {
         writable: true,
         metrics: false,
         connection: "local_runtime",
+        path_hint: filePath,
       },
     };
   } finally {
@@ -176,9 +177,9 @@ function initializePreset(filePath, preset) {
 
 function findProjectRoot(startDir) {
   let dir = path.resolve(startDir);
-  for (let i = 0; i < 16; i += 1) {
-    if (fs.existsSync(path.join(dir, ".agentsam", "config.json"))) return dir;
-    if (fs.existsSync(path.join(dir, ".agentsam", "data", "agentsam.sqlite"))) return dir;
+  for (let i = 0; i < 32; i += 1) {
+    if (fs.existsSync(path.join(dir, ".agentsam", "config.json")) ||
+        fs.existsSync(path.join(dir, ".agentsam", "data", "agentsam.sqlite"))) return dir;
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
@@ -246,6 +247,8 @@ function fail(error, status = 400) {
       ok: false,
       error: error instanceof Error ? error.message : String(error),
       status,
+      requires_approval: error?.requires_approval === true,
+      requires_destructive_confirmation: error?.requires_destructive_confirmation === true,
     }) + "\n",
   );
   process.exitCode = 1;
@@ -253,7 +256,28 @@ function fail(error, status = 400) {
 
 function openAdapter(filePath, { readOnly = false, id } = {}) {
   if (!fs.existsSync(filePath)) throw new Error("local_sqlite_not_found");
-  return createSqliteAdapter({ path: filePath, readOnly, id: id || `local-sqlite:${filePath}` });
+  const agentManaged = filePath.split(path.sep).includes(".agentsam");
+  return createSqliteAdapter({ path: filePath, readOnly, managedWal: agentManaged, id: id || `local-sqlite:${filePath}` });
+}
+
+/** The local bridge is an authority boundary, not merely UI transport. */
+function assertSqlApproved(sql, req) {
+  const text = String(sql || "").replace(/^\s*(?:--[^\n]*\n|\/\*[\s\S]*?\*\/\s*)*/g, "").trim();
+  if (!text) throw new Error("sql_required");
+  const mutating = /\b(insert|update|delete|replace|merge|upsert|create|alter|drop|truncate|vacuum|reindex|attach|detach|grant|revoke)\b/i.test(text) ||
+    !/^(select|pragma|with|explain)\b/i.test(text);
+  const destructive = /\b(drop|truncate|alter|vacuum|reindex|attach|detach|grant|revoke)\b/i.test(text);
+  const pragmaWrite = /^pragma\s+[\w.]+\s*=/i.test(text);
+  if ((mutating || pragmaWrite) && req.studio_approved !== true) {
+    const error = new Error("database_write_requires_approval");
+    error.requires_approval = true;
+    throw error;
+  }
+  if ((destructive || pragmaWrite) && req.destructive_confirmed !== true) {
+    const error = new Error("destructive_sql_requires_confirmation");
+    error.requires_destructive_confirmation = true;
+    throw error;
+  }
 }
 
 async function main() {
@@ -407,6 +431,7 @@ async function main() {
     }
 
     if (op === "query") {
+      assertSqlApproved(req.sql, req);
       const result = await adapter.query({
         sql: String(req.sql || ""),
         params: Array.isArray(req.params) ? req.params : [],

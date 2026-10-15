@@ -55,7 +55,17 @@ async function invokeBridge(payload: BridgeRequest): Promise<Record<string, unkn
     const result = (await window.__TAURI__.core.invoke("local_sqlite_bridge", {
       requestJson: JSON.stringify(payload),
     })) as string;
-    return JSON.parse(result) as Record<string, unknown>;
+    const body = JSON.parse(result) as Record<string, unknown>;
+    if (body.ok === false) {
+      const error = new Error(String(body.error || "local_sqlite_bridge_failed")) as Error & {
+        requires_approval?: boolean;
+        requires_destructive_confirmation?: boolean;
+      };
+      error.requires_approval = body.requires_approval === true;
+      error.requires_destructive_confirmation = body.requires_destructive_confirmation === true;
+      throw error;
+    }
+    return body;
   }
 
   // Dev / local Node companion (optional). Hosted CF Worker never serves this.
@@ -67,7 +77,13 @@ async function invokeBridge(payload: BridgeRequest): Promise<Record<string, unkn
   });
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   if (!response.ok || body.ok === false) {
-    throw new Error(String(body.error || `local_bridge_failed_${response.status}`));
+    const error = new Error(String(body.error || "local_bridge_failed_" + response.status)) as Error & {
+      requires_approval?: boolean;
+      requires_destructive_confirmation?: boolean;
+    };
+    error.requires_approval = body.requires_approval === true;
+    error.requires_destructive_confirmation = body.requires_destructive_confirmation === true;
+    throw error;
   }
   return body;
 }

@@ -4,13 +4,14 @@
 mod commands;
 mod tray;
 
-use commands::{agentsamd, deep_link, google_desktop_identity, keychain, local_content, local_identity, local_node, local_provider, local_sqlite, native_capabilities, system, updater};
+use commands::{agentsamd, deep_link, google_desktop_identity, keychain, local_content, local_identity, local_node, local_provider, local_sqlite, local_lsp, native_capabilities, system, updater};
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(agentsamd::AgentsamdState::default())
+        .manage(local_lsp::LocalLspState::default())
         .manage(local_content::LocalContentState::default())
         .manage(deep_link::DeepLinkState::default())
         .manage(keychain::IdentityPendingState::default())
@@ -37,8 +38,11 @@ fn main() {
             local_node::enroll_as_local_node,
             agentsamd::ensure_agentsamd,
             agentsamd::agentsamd_health,
+            agentsamd::agentsamd_language_packs,
+            agentsamd::agentsamd_install_language_pack,
             agentsamd::agentsamd_pairing_token,
             local_sqlite::local_sqlite_bridge,
+            local_lsp::local_lsp_bridge,
             local_provider::local_provider_bridge,
             local_identity::local_identity_bridge,
             local_identity::identity_runtime_config,

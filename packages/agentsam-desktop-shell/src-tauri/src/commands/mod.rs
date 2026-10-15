@@ -6,6 +6,7 @@ pub mod local_content;
 pub mod local_node;
 pub mod local_provider;
 pub mod local_sqlite;
+pub mod local_lsp;
 pub mod updater;
 pub mod native_capabilities;
 pub mod system;

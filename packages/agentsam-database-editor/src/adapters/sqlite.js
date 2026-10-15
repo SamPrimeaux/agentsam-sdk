@@ -20,6 +20,10 @@ export function createSqliteAdapter(opts) {
   const db = new DatabaseSync(filePath, {
     readOnly: Boolean(opts.readOnly),
   });
+  db.exec('PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;');
+  // Only managed AgentSam files opt into WAL automatically. A database merely
+  // opened for inspection must not have its on-disk journal format changed.
+  if (!opts.readOnly && opts.managedWal) db.exec('PRAGMA journal_mode=WAL;');
 
   /** @type {import('../contracts/adapter.js').DatabaseCapabilities} */
   const caps = {
@@ -89,11 +93,12 @@ export function createSqliteAdapter(opts) {
       const isSelect = /^\s*(select|pragma|with|explain)\b/i.test(sql);
       if (isSelect) {
         const rowsObj = stmt.all(...params);
-        const columns = rowsObj[0] ? Object.keys(rowsObj[0]) : [];
+        const columns = stmt.columns().map((column) => column.name);
         const rows = rowsObj.map((row) => columns.map((c) => row[c]));
         return {
           columns,
           rows,
+          objects: rowsObj.map((row) => Object.fromEntries(columns.map((column) => [column, row[column]]))),
           rowCount: rows.length,
           durationMs: Date.now() - started,
           truncated: false,
@@ -103,6 +108,7 @@ export function createSqliteAdapter(opts) {
       return {
         columns: ['changes', 'lastInsertRowid'],
         rows: [[info.changes, info.lastInsertRowid]],
+        objects: [{ changes: info.changes, lastInsertRowid: info.lastInsertRowid }],
         rowCount: 1,
         durationMs: Date.now() - started,
       };

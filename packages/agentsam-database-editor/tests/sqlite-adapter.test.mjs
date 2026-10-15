@@ -36,6 +36,7 @@ describe('createSqliteAdapter', () => {
     const result = await adapter.query({ sql: 'SELECT id, body FROM notes ORDER BY id' });
     assert.deepEqual(result.columns, ['id', 'body']);
     assert.deepEqual(result.rows, [[1, 'hello']]);
+    assert.deepEqual(result.objects, [{ id: 1, body: 'hello' }]);
 
     await adapter.update({ table: 'notes', values: { body: 'world' }, where: { id: 1 } });
     const again = await adapter.query({ sql: 'SELECT body FROM notes WHERE id = ?', params: [1] });

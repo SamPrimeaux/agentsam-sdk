@@ -43,7 +43,9 @@
       "../../identity/scripts/local-identity-bridge.mjs": "runtime/identity/scripts/local-identity-bridge.mjs",
       "../../identity/src": "runtime/identity/src",
       "../../identity/migrations/sqlite": "runtime/identity/migrations/sqlite",
-      "generated/local-provider-bridge.mjs": "runtime/provider/local-provider-bridge.mjs"
+      "generated/local-provider-bridge.mjs": "runtime/provider/local-provider-bridge.mjs",
+      "../scripts/native-lsp-bridge.mjs": "runtime/lsp/native-lsp-bridge.mjs",
+      "../../agentsam-ide/src/lsp/host.mjs": "runtime/lsp/host.mjs"
     }
   },
   "plugins": {
