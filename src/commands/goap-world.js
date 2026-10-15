@@ -52,6 +52,10 @@ export async function buildLocalGoapState({ cwd = process.cwd(), snapshot = null
     const projectedWorld = projectGoapWorld({
       repository: {
         ...world.repository,
+        // Standalone/uninitialized Git repos may have no remote identifier.
+        // Plan has already established the canonical local repository scope;
+        // GOAP must preserve that identity instead of rejecting the world.
+        repository_id: world.repository?.repository_id || ctx.repositoryId,
         merkle_root: world.tree?.merkle_root || null,
       },
       plan,
