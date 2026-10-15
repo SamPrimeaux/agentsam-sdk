@@ -97,3 +97,38 @@ Keep a running `docs/product/CLI_FRICTION_LOG.md` (observed, fix, verified) so p
 - The capability contract suite passes on all four target repos and all three hosts.
 - A released SDK, with IAM, MCP and Local Studio recorded at that version.
 - Sam can open any of his repos, run `agentsam`, and see within seconds which tools are ready and why any are not.
+
+## ADDENDUM 2 (2026-10-15): live transcript evidence and the "team" gap
+
+Source: Sam's screenshots of a real interactive run (session `asess_71438eeb-4c95-4ab7-a1a7-c8c96ac4906a`, model `gpt-6-luna`, Model/Reasoning set to Automatic). The CLI boots fine (directory trust, runtime, model policy all green, session summary with tokens, cost and a resume command). The product shell works. The agent behavior does not yet.
+
+### I1. What happened (observed)
+Sam typed `agentsam doctor` into the agent prompt. After "Thinking" the run ended "Done · 3 tool calls · 11s" with: "I couldn't run `agentsam doctor`: the registered command isn't allowlisted for invocation in this environment. Run it in your project terminal." Run directly in zsh, the same command works and prints a toolchain report (Node 22.23.3, npm, rustc, cargo, rustup, worker-build, Wrangler, wasm target, "AgentSam CLI: ready").
+So the agent could not run the product's own read-only diagnostic, burned three tool calls, then handed the job back to the human. That is the exact opposite of the intended product. Make this transcript the first regression case in the eval suite: "run agentsam doctor and summarize" must succeed end to end with no handoff to the user.
+
+### I2. Likely causes (verify each; these come from reading the code, not from a debugger)
+1. `src/agent/capability-adapter.js` defines the meta-tools `capability.search`, `capability.describe`, `capability.status`, `capability.invoke`. `capability.invoke` returns `{ ok:false, error:'capability_not_allowlisted' }` unless the id is in `allowAgentInvoke`. The message Sam saw matches this. The error carries no remedy and no alternative.
+2. CORRECTION to the first handoff: it said no model-callable discovery tool exists. `capability.search/describe/status/invoke` do exist in the capability adapter. What still needs checking is whether they are reliably in the offered tool surface (the runner's `buildAgentToolSurface` keeps only 8 keyword-scored tools) and whether the model is told to use them.
+3. Probable build mismatch: the screenshot shows the global `agentsam` binary (`~/.nvm/versions/node/v22.23.3/bin/agentsam`) running inside the Superbash worktree. Sam's notes say the global binary is `npm link`ed to `~/agentsam-sdk`, which is on a different branch. If so, this run did NOT contain the Superbash code and `sam.superbash` could not have been available. Verify with `readlink -f $(which agentsam)` and by running `node <worktree>/bin/agentsam` from the worktree.
+4. `doctor` today is `runCatalogDoctor` (toolchain and catalog), not a capability readiness check. The readiness doctor described in the first addendum should include this toolchain report as one section.
+
+### I3. Required fixes
+1. Self-service diagnostics. Classify capabilities by side effect (read-only, local write, network, destructive). Read-only product diagnostics (`doctor`, `status`, `whoami`, `runtime-status`, `sam status`, repository snapshot) must be agent-invocable by default with no approval, and exposed as first-class capabilities returning structured JSON (not by shelling out). Writes follow the approval rules.
+2. Denials must be useful. `capability_not_allowlisted` and every permission error returns: code, plain-language reason, the exact remedy ("approve in /permissions", "log in", "run X"), and a list of allowed alternatives. The model prompt rule: after one denial, try the sanctioned alternative (for a local command: `sam.superbash` with the user's approval prompt) before ever telling the user to run something themselves. Never end a run with "run it in your terminal" unless the user declined approval or no sanctioned path exists.
+3. Build provenance. `agentsam --version --verbose` and the boot banner show the executable's real path, SDK version, git branch/commit of the linked checkout if any, and the list of bound capabilities. `doctor` warns when the running build differs from the checkout in the current directory.
+4. Warning leak. The prompt is polluted by `ExperimentalWarning: SQLite is an experimental feature`. `bin/agentsam` registers `process.on('warning')`, but that does not stop Node's own default warning printer, which is also a `warning` listener. Remove or replace the default listener (`process.removeAllListeners('warning')` before adding the filtered one) or launch with `--disable-warning=ExperimentalWarning`; keep other warnings visible. Add a test that starting the CLI on Node 22 prints no SQLite warning.
+5. Status line honesty. The footer shows `ctx unknown` and `auto auto` with no explanation. Show the actual model chosen by Automatic routing and why (short reason), and the real context usage or a clear "unknown for this model". Make "Done · 3 tool calls · 11s" expandable (`/trace`, or `--verbose`) so every tool call, argument summary and outcome is visible. Failures must name the failing call.
+
+### I4. Make it behave like a tailored team (design, then build on what exists)
+Sam's experience: models respond, but they do not act like a coordinated team with the right specialist on each part. Build team behavior from existing primitives, not a new orchestration engine. Inspect first: `src/acp/agent-executor.js`, `src/acp/client.js`, `src/commands/run.js`, `src/skills/runtime.js`, `src/telemetry/contracts.js` (multitask mode), `packages/agentsam-goap`.
+1. Define a small fixed set of roles as versioned playbooks (system prompt, allowed tools, output contract): Scout (read, map the repo, answer questions), Planner (turn the request into a short verified plan and acceptance checks), Builder (edit and run), Verifier (run tests, type checks, diff review, no edits), Reviewer (risk and regression read of the diff). Each hands the next a compact, typed handoff artifact (goal, files touched, evidence, open questions) instead of a transcript dump.
+2. Routing. A request is classified (question, small fix, multi-file change, investigation, release task) and the right roles are engaged automatically; trivial asks stay single-agent and fast. Show the plan and active role in the status line.
+3. Model policy per role. "Automatic" must pick a stronger model/reasoning level for Planner/Builder on hard work and a cheap fast one for Scout and trivial asks, escalate on repeated failure, and always explain the choice. Record model, tokens and cost per role in the run record.
+4. Verification is mandatory for Builder output: the Verifier runs the project's real checks before the run reports success. A run that did not verify says so.
+5. All of it is invoked only when the user asks in that turn (no unprovoked autonomy), shares one context budget, and reuses the tool surface and approval rules above.
+
+### I5. Acceptance (add to the eval suite)
+- "run agentsam doctor and summarize": passes in the CLI on the SDK build under test, in under about 15 seconds, no user handoff, no allowlist error, no SQLite warning.
+- "run this script and tell me what it printed" (needs `sam.superbash`): offered in the surface, approval prompt shows exact script and cwd, receipt id printed.
+- A multi-file change task completes with Planner, Builder and Verifier roles visible in the trace, with real test results in the final summary.
+- `agentsam --version --verbose` proves which build is running.
