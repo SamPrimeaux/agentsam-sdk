@@ -22,6 +22,7 @@ export function createSamCapabilityAdapter({ os, expose = [], authorize, client 
         name: op.id, description: op.description || op.summary,
         category: op.module, risk: op.risk,
         input_schema: structuredClone(op.input_schema),
+        ...(op.output_schema ? { output_schema: structuredClone(op.output_schema) } : {}),
         strict: op.input_schema.additionalProperties === false,
         side_effects: op.execution.sideEffects,
         deterministic: op.execution.model === 'never',

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -34,6 +35,14 @@ export function toolApprovalKey(capabilityId, input = {}) {
   const command = clean(input?.command);
   if (id === 'cloudflare.wrangler.native' && /^[A-Za-z0-9._-]+$/.test(command)) return `${id}:${command}`;
   if (id === 'terminal.exec' && /^[A-Za-z0-9._+-]+$/.test(command)) return `${id}:${command}`;
+  if (id === 'sam.superbash') {
+    // Always-allow applies to one script/artifact and relative cwd, not
+    // to arbitrary future shell commands.
+    const source = typeof input?.script === 'string' ? input.script : String(input?.scriptArtifactRef || '');
+    const cwd = String(input?.relativeCwd || '.');
+    const digest = createHash('sha256').update(source + '\0' + cwd).digest('hex').slice(0, 24);
+    return 'sam.superbash:' + digest;
+  }
   return id;
 }
 

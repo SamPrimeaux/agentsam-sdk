@@ -22,6 +22,7 @@
     "./registry/inventory": "./src/registry/generated/inventory.json",
     "./capability-manifest": "./protocol/capabilities/manifest.json",
     "./sam": "./src/sam/index.js",
+    "./sam/local-execution": "./src/sam/local-execution.js",
     "./sam/operation-schema": "./protocol/sam/operation.schema.json",
     "./sam/result-schema": "./protocol/sam/result.schema.json",
     "./sam/registry-seed": "./protocol/sam/registry.seed.json",
