@@ -102,7 +102,7 @@ export function ProjectDetailSurface({
         <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
           {project.coverImageUrl
             ? <img className="aw-project-detail__avatar" src={project.coverImageUrl} alt="" />
-            : <div className="aw-badge" style={{ width: 52, height: 52, fontSize: 18 }} aria-hidden>{project.initials}</div>}
+            : <div className="aw-badge aw-project-detail__initials" aria-hidden>{project.initials}</div>}
           <div>
             <p className="aw-kicker">Project</p>
             <h1 style={{ fontSize: "clamp(22px, 3vw, 30px)" }}>{project.name}</h1>
@@ -164,7 +164,7 @@ export function ProjectDetailSurface({
             {focus.batch.length ? <ol className="aw-project-home__tasks">
               {focus.batch.slice(0, showAllFocus ? 12 : 5).map((entry) => <li key={entry.ticket.id}>
                 <button type="button" onClick={() => onOpenTicket?.(entry.ticket)}
-                  title={entry.ticket.title}>
+                  title={entry.ticket.title} aria-label={"Open ticket: " + entry.ticket.title}>
                   <span className="aw-project-home__task-dot" data-status={entry.ticket.status} aria-hidden/>
                   <span className="aw-project-home__task-body"><strong>{entry.ticket.title}</strong><small>{entry.reason}</small></span>
                   <ArrowUpRight size={15}/>
