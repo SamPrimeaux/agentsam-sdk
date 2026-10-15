@@ -34,7 +34,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
   const cadDescriptors = CAD_PROJECT_TOOLS.map(t=>({...t,id:t.name,version:'1.0.0',domain:'design',kind:'tool',status:'active',side_effects:['design_project_get','design_project_validate','design_model_inspect'].includes(t.name)?'none':'filesystem-write',deterministic:true,model_required:false}));
   const executable = new Map([
     ...[...PLAN_READ_OPERATIONS, ...PLAN_WRITE_OPERATIONS].map(id =>
-      [id, (input = {}) => invokePlanOperation(id, input, projectRoot)]),
+      [id, async (input = {}) => (await import('../capabilities/plan-operations.js')).invokePlanOperation(id, input, projectRoot)]),
     ['project.discover', () => discoverProjectCapabilities(projectRoot)],
     ['repository.snapshot', (input = {}) => {
       const days=Number(input.churnDays??input.churn_days??30);
