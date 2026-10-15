@@ -31,7 +31,14 @@ test('catalog is generated and unreviewed packages remain explicitly drafts', ()
   assert.ok(data.count > 0);
   assert.equal(data.packages.length, data.count);
   assert.ok(data.packages.some(p => p.catalog_status === 'needs-review'));
-  assert.ok(data.packages.every(p => p.catalog_status !== 'classified'));
+  // Classified packages must have positive, inspectable evidence. Do not
+  // downgrade verified local packages merely to satisfy a draft-only assertion.
+  for (const item of data.packages.filter(p => p.catalog_status === 'classified')) {
+    assert.ok(item.evidence?.runtime_proof, item.name + ': missing runtime proof');
+    assert.ok(item.evidence?.tests?.length, item.name + ': missing tests');
+    assert.equal(item.evidence.host_integration, 'not-verified');
+    assert.equal(item.registry?.public_claim, false);
+  }
 });
 
 test('Python preference does not silently become Rust', () => {
