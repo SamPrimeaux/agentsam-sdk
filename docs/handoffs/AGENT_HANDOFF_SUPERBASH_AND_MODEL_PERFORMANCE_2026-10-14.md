@@ -68,3 +68,32 @@ C3. Observability and learning loop:
 
 ## Context to read first
 `docs/engineering/SUPERBASH_LOCAL_RUNTIME.md`, `src/agent/responses-runner.js`, `src/agent/capability-adapter.js`, `src/tools/search.js`, `src/lib/agent-instructions.js`, `src/providers/anthropic-messages.js`, `src/sam/shell-host.js`, `src/telemetry/`, `src/receipts/`, `src/eval/`.
+
+## ADDENDUM (2026-10-15): make the tools reliably ready and pleasant to use
+
+Sam's report: when the tools work they are excellent, but the CLI feels clunky and he cannot count on the tools being available in whatever repo he opens. Finishing the capability work is not enough. The product must (1) be installed and current, (2) tell him exactly what is ready the moment it boots, and (3) fail loudly and helpfully instead of silently degrading. Build on what already exists: `src/cli.js` already has `doctor`, `status`, `setup`, `update`, `whoami`, plus `agentsam sam status --json`, `runtime-status`, `mini`, and `interactive`. Extend these; do not add a parallel command family.
+
+### D. Readiness: one truth about "can I use it here, now?"
+1. `agentsam doctor` is the single readiness check. It must report, for the current directory: git repo root found (also from a nested folder); `.agentsam/config.json` and `.agentsamrules` found or sensibly defaulted; identity/session valid and expiry; selected model and provider reachable; the full list of SAM capabilities with state `ready`, `unavailable (reason)` or `needs approval`, including `sam.superbash` and the script tools (Bash on PATH, trusted identity); local runtime health (agentsamd, SQLite, terminal); installed SDK version versus latest published; and any host skew (CLI, Local Studio, MCP, IAM on different SDK versions). Exit nonzero with a clear fix command for each failure. Support `--json` for CI and for the app.
+2. On every interactive boot print a compact readiness banner (3 to 6 lines): repo, model, tools ready N of M, anything unavailable with the one-line reason, version skew warning. No scrolling walls of text. A degraded state must never be silent: if a tool the user expects is unbound, say so at boot and when the model tries to use it.
+3. Every unavailable capability returns a structured error with a code, the reason, and the exact remedy (log in, install Bash, start agentsamd, update package). The model sees the same error text, so it can explain it instead of guessing.
+
+### E. Fresh-install and any-repo certification (the "regardless of repo" guarantee)
+1. Add a fresh-install smoke test that runs in CI and locally via `npm run smoke:fresh`: pack the SDK tarball, install it into a brand new temp directory with a clean HOME, `git init` a throwaway repo (plus a nested subfolder), run `agentsam setup`, `agentsam doctor --json`, `repository.snapshot`, `sam.script.save` + `sam.superbash` (with an approved test identity), and confirm receipts are produced. It must pass with no env vars, no Cloudflare, no IAM, no network beyond the model call (stub the model).
+2. Run the same capability contract suite against four targets: `agentsam-sdk`, `inneranimalmedia`, `inneranimalmedia-cms`, and the fresh repo, through CLI, MCP and Local Studio. Same capability ids, schemas, failure codes, receipts. A new capability is not "done" until it is in this suite.
+3. Version alignment gate: `doctor` and CI fail when consumers pin different SDK versions. The previous agent reported IAM locked at 2.4.1 while the SDK manifest is 2.6.12 and `docs/RELEASES.md` last records 2.6.0. Verify these facts against npm (`npm view @inneranimalmedia/agentsam-sdk dist-tags`) and the lockfiles before acting; do not trust this note.
+
+### F. Release path (do not publish from a dirty tree)
+Work lands in this order, each through its own PR into `main`: Superbash branch (this one), then the Work workspace branch (`feat/work-workspace-crud-20261014`), then Repo Intelligence consolidation into `packages/agentsam-repository` and the root `/repository` exports (no new "v2" package). Only then cut a release from a clean `main`: `npm run release:train:check`, `npm run verify:release`, `npm run release:publish:preflight`, publish, tag. Afterwards upgrade IAM's SDK dependency and lockfile, remove its duplicated algorithms, deploy IAM and the MCP Worker if they changed, and rebuild Local Studio desktop only if bundled frontend, SDK code or the native bridge changed. Record the exact versions shipped per host in `docs/RELEASES.md`.
+Rules: IAM owns Cloudflare bindings, account authorization, persisted records. MCP is a thin transport. Portable behavior lives in the SDK. Preserve the already-working Repo Intelligence behavior and move it, do not rewrite it.
+
+### G. CLI experience polish (product level)
+The CLI is clunky. Do not guess: run these scripted first-run scenarios in a clean HOME and record every point of friction (extra keystrokes, unclear prompts, unexplained waits, walls of text, confusing errors, missing next-step hints): install, `setup`, first `agentsam` in a repo, choose model, ask a code question, run a task that needs a script, approve and deny an action, resume a previous session, update. Fix the top friction items first. Targets: first useful answer without reading docs; approval prompts that show exactly what will run and where; progress shown for any step over 2 seconds; consistent concise output (human by default, `--json` for machines); `Ctrl-C` always cancels cleanly and says what stopped; a visible "what just happened" summary with the receipt id after tool use; one consistent way to see model, cost and tools in play (`status`).
+Keep a running `docs/product/CLI_FRICTION_LOG.md` (observed, fix, verified) so polish is cumulative and not rediscovered.
+
+### H. Definition of done for this addendum
+- `agentsam doctor` and the boot banner exist, are accurate, and are covered by tests.
+- `npm run smoke:fresh` passes in CI from a clean HOME with no env vars.
+- The capability contract suite passes on all four target repos and all three hosts.
+- A released SDK, with IAM, MCP and Local Studio recorded at that version.
+- Sam can open any of his repos, run `agentsam`, and see within seconds which tools are ready and why any are not.
