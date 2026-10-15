@@ -10,6 +10,8 @@ import { getJson } from '../lib/core-client.js';
 import { createSamOS } from './os.js';
 import { createSamCapabilityAdapter } from './model-adapter.js';
 import { createLocalMediaStore } from './adapters/local-media-store.js';
+import { createObjectMediaStore } from './adapters/object-media-store.js';
+import { readMediaStorageSelection } from './media/environment.js';
 import { createLocalScriptStore } from './adapters/local-script-store.js';
 import { createLocalScriptRuntime, isLocalBashAvailable } from './adapters/local-script-runtime.js';
 import { createWorkspaceMediaImportOperation, projectInstallationId } from './adapters/workspace-media.js';
@@ -52,7 +54,7 @@ export async function resolveShellSamIdentity({ state, authorityLoader = resolve
   } catch { return null; }
 }
 
-export function createShellSamAdapter({ state, authorize, trustedIdentity = null } = {}) {
+export function createShellSamAdapter({ state, authorize, trustedIdentity = null, mediaBindings = null } = {}) {
   if (!state?.cwd || typeof authorize !== 'function') return null;
   const readTrustedIdentity = () => {
     const session = readAccountSession({home:state.home});
@@ -68,7 +70,18 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
   // An API key without a verified actor identity is not a substitute for one.
   if (!readTrustedIdentity()) return null;
   const root = path.resolve(state.projectRoot || state.cwd);
-  const assetStore = createLocalMediaStore({root:path.join(root,'.agentsam','media')});
+  const selection = readMediaStorageSelection(root);
+  if (selection?.error) throw new Error(selection.error);
+  // An explicit remote selection must never silently redirect writes to disk.
+  const kind = selection?.kind || 'local';
+  const objectBound = mediaBindings?.bucket?.get && mediaBindings?.bucket?.put &&
+    mediaBindings?.bucket?.delete;
+  const assetStore = kind === 'local'
+    ? createLocalMediaStore({root:path.join(root,'.agentsam','media')})
+    : objectBound && (kind === 'r2' || (kind === 'r2_d1' && mediaBindings?.index?.register))
+      ? createObjectMediaStore({bucket:mediaBindings.bucket,
+        index:kind === 'r2_d1' ? mediaBindings.index : null})
+      : null;
   const scriptStore = createLocalScriptStore({home: state.home});
   const processRuntime = isLocalBashAvailable() ? createLocalScriptRuntime({root}) : null;
   const permit = async ({operation,policy,input,identity}) => {
@@ -86,7 +99,7 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
     },
     authorize: permit,
   }});
-  samOS.install([createWorkspaceMediaImportOperation({
+  if (assetStore) samOS.install([createWorkspaceMediaImportOperation({
     root,assetStore,
     resolveTrustedContext: async () => {
       const principal = readTrustedIdentity();
