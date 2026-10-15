@@ -20,7 +20,7 @@ import { createInlineActivity } from '../ui/cli/activity.js';
 import { createCliRuntimePresenter } from '../ui/cli/runtime-events.js';
 import { renderCliFooter, renderDiffPreview, renderUsagePanel } from '../ui/cli/footer.js';
 import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
-import { getModelRecord, mergeModelReference, listModelCatalog } from '../models/index.js';
+import { getModelRecord, mergeModelReference } from '../models/index.js';
 import { discoverProviderModels } from '../models/discovery.js';
 import { detectCliProject, findCliProjectRoot, readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
 import { buildContextEconomicsReport, renderContextEconomics } from './context-economics.js';
@@ -265,7 +265,7 @@ function spawnGit(cwd, args) {
   if (result.status !== 0) throw new Error(`git exited ${result.status}`);
 }
 
-function selectedModel(cwd, state = null) {
+export function selectedModel(cwd, state = null) {
   const saved = readCliPreferences(cwd) || {};
   const sessionConfig = state?.hookEffectiveConfig || {};
   const preferences = {
@@ -299,9 +299,12 @@ function selectedModel(cwd, state = null) {
     }
   }
   if (!model && (preferences.modelPreference === 'auto' || !preferences.modelPreference)) {
-    model = mergeModelReference(saved.modelSnapshot) || listModelCatalog()[0];
+    // Never silently choose the first catalog entry (which may be an embedding
+    // model or an unconfigured provider). Auto may restore only a verified choice.
+    const last = mergeModelReference(saved.modelSnapshot);
+    model = last?.availability === 'available' ? last : null;
   }
-  if (!model) throw new Error('Select an exact provider-verified model with /model first so Agent Sam can verify supported runtime controls.');
+  if (!model) throw new Error('No verified chat model selected. Use /model to choose from your connected providers; local embeddings are not a chat-model fallback.');
   return { preferences, model };
 }
 

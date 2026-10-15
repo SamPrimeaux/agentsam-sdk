@@ -1,4 +1,6 @@
 import { discoverProjectStores, selectKnowledgeStore } from '../knowledge/store-discovery.js';
+import { inspectRemoteD1Schema } from '../knowledge/d1-schema.js';
+import { usageError } from '../../packages/agentsam-errors/src/cli.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createLocalSqliteDatabase, initializeLocalSqlite, inspectLocalSqlite } from '../local/sqlite.js';
@@ -29,6 +31,21 @@ export async function runDb(argv = [], opts = {}) {
     if (sub === 'select' && (argv[1] !== 'knowledge' || !argv[2] || argv.length > 4)) throw new Error('Usage: /db select knowledge sqlite|postgres [CONNECTION_ENV]');
     const result = sub === 'sources' ? await discoverProjectStores(opts.cwd || process.cwd()) : selectKnowledgeStore(opts.cwd || process.cwd(), argv[2], argv[3]);
     (opts.write || console.log)(JSON.stringify(result, null, 2) + '\n');
+    return result;
+  }
+  if (sub === 'schema') {
+    const options={remote:false,binding:'DB',config:'wrangler.toml'};
+    for(let i=1;i<argv.length;i++){
+      const flag=argv[i];
+      if(flag==='--remote')options.remote=true;
+      else if(['--binding','--config','--env','--limit','--offset'].includes(flag)){
+        const value=argv[++i];
+        if(!value||value.startsWith('--'))throw usageError('db_schema_option_value_required:'+flag,{command:'agentsam db',hints:{example:'agentsam db schema --remote --binding DB --config wrangler.toml'}});
+        options[{'--binding':'binding','--config':'config','--env':'environment','--limit':'limit','--offset':'offset'}[flag]]=value;
+      }else if(flag!=='--json')throw usageError('db_schema_option_unknown:'+flag,{command:'agentsam db',hints:{example:'agentsam db sources'}});
+    }
+    const result=await inspectRemoteD1Schema(opts.cwd||process.cwd(),options,opts.dbSchemaDeps);
+    (opts.write||console.log)(JSON.stringify(result,null,2)+'\n');
     return result;
   }
   if (!['init', 'migrate', 'status'].includes(sub)) {

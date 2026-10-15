@@ -12,6 +12,7 @@ import { createRegistry } from '../registry/index.js';
 import { workspaceRead, workspaceWrite } from '../capabilities/workspace-files.js';
 import { machineInspect, machineAvailable } from '../capabilities/machine-inspect.js';
 import { testRun } from '../capabilities/test-run.js';
+import { inspectRemoteD1Schema } from '../knowledge/d1-schema.js';
 import { repositoryIntelligence, repositoryCrawl, repositoryMine } from '../capabilities/repository-awareness.js';
 import { discoverProjectCapabilities } from './project-discovery.js';
 import { knowledgeIndex, knowledgeSearch, contextResolve, knowledgeStatus, knowledgeGenerationStatus } from '../capabilities/knowledge-operations.js';
@@ -52,6 +53,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     ['workspace.write', (input = {}) => workspaceWrite(input,projectRoot)],
     ['machine.inspect', (input = {}) => machineInspect(input,projectRoot)],
     ['test.run', (input = {}) => testRun(input,projectRoot)],
+    ['cloudflare.d1.schema', (input = {}) => inspectRemoteD1Schema(projectRoot,{...input,remote:true})],
     ['terminal.exec', (input = {}) => terminalExec({ ...input, cwd: projectRoot }, { cwd: projectRoot })],
     ['cloudflare.wrangler.native', (input = {}) => runWranglerNative(input.command, input)],
     ['cloudflare.cpu.profile', (input = {}) => summarizeCloudflareCpuProfileFile(input)],
@@ -69,10 +71,12 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     'repository.snapshot','repository.intelligence','repository.crawl','repository.mine',
     'knowledge.index','knowledge.search','context.resolve',
     'workspace.read','workspace.write','machine.inspect','terminal.exec','test.run',
+    'cloudflare.d1.schema',
   ]);
   const registry = createRegistry({ capabilityAdapter: {
     canInvoke: (id) => executable.has(id) && (!['machine.inspect','repository.crawl','repository.mine'].includes(id) || machineAvailable()),
     availability: (id) => {
+      if(id==='cloudflare.d1.schema')return {readiness:'unverified',reason:'remote_credentials_not_probed',next:'agentsam db sources'};
       if (['machine.inspect','repository.crawl','repository.mine'].includes(id) && !machineAvailable())
         return {readiness:'unavailable',reason:'machine_runtime_not_installed',next:'agentsam machine install'};
       if(id==='knowledge.index'){
