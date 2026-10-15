@@ -166,7 +166,7 @@
 
 .agentsam-work-stage__body {
   min-height: 0;
-  height: calc(100% - 58px);
+  height: 100%;
   overflow: auto;
   background: var(--agentsam-work-panel);
 }
@@ -296,7 +296,7 @@
   }
 
   .agentsam-work-stage__body {
-    height: calc(100% - 58px - 58px);
+    height: calc(100% - 58px);
   }
 
   .agentsam-work-bottom-nav {
@@ -610,7 +610,7 @@
 @media (max-width: 900px) {
   .aw-mobile-create { position: absolute; display: grid; place-items: center; right: 18px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 35; width: 56px; height: 56px; border: 0; border-radius: 50%; background: var(--agentsam-work-accent); color: var(--agentsam-work-panel); box-shadow: 0 6px 22px color-mix(in srgb, var(--agentsam-work-accent) 35%, transparent); cursor: pointer; }
   .agentsam-work-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
-  .agentsam-work-stage__body { height: calc(100% - 58px - 58px - env(safe-area-inset-bottom, 0px)); }
+  .agentsam-work-stage__body { height: calc(100% - 58px - env(safe-area-inset-bottom, 0px)); }
   .aw-btn, .aw-icon-btn, .aw-tab { min-height: 44px; }
   .aw-icon-btn { min-width: 44px; }
   .aw-input, .aw-select, .aw-textarea { min-height: 44px; font-size: 16px; }
@@ -964,7 +964,7 @@
 .aw-project-inspector__progress > div:last-child { display: grid; gap: 5px; flex: 1; min-width: 0; }
 .aw-project-inspector__progress strong { font-size: 12px; font-weight: 750; }
 .aw-project-inspector__progress small { font-size: 11px; color: var(--agentsam-work-muted); line-height: 1.45; }
-.aw-project-inspector__ring { --value: 0%; --ring: var(--agentsam-work-muted); flex: none; display: grid; place-items: center; width: 68px; height: 68px; background: conic-gradient(var(--ring) var(--value), var(--agentsam-work-panel-subtle) 0); border-radius: 50%; }
+.aw-project-inspector__ring { --value: 0%; --ring: var(--agentsam-work-muted); position: relative; isolation: isolate; flex: none; display: grid; place-items: center; width: 68px; height: 68px; background: conic-gradient(var(--ring) var(--value), var(--agentsam-work-panel-subtle) 0); border-radius: 50%; }
 .aw-project-inspector__ring::before { content: ""; position: absolute; width: 56px; height: 56px; border-radius: 50%; background: var(--agentsam-work-panel-subtle); }
 .aw-project-inspector__ring strong { position: relative; z-index: 1; font-size: 15px; font-weight: 800; }
 .aw-project-inspector__next { display: flex; align-items: flex-start; gap: 11px; border: 1px solid var(--agentsam-work-muted); background: var(--agentsam-work-panel-subtle); color: var(--agentsam-work-success); border-radius: 12px; padding: 14px 12px; text-align: left; cursor: pointer; }
