@@ -134,9 +134,17 @@ function resolveUnknownWindowContext(cwd, card, contextItems = []) {
 export function buildAgentToolSurface(capabilityAdapter, objective, options = {}) {
   if (!capabilityAdapter?.toolDescriptors) throw new TypeError('capabilityAdapter.toolDescriptors is required');
   const catalog = capabilityAdapter.toolDescriptors({ includeUnavailable: false });
-  const searched = searchToolCards(catalog, objective, { maxItems: options.maxTools ?? 8, maxChars: options.maxCardChars ?? 24_000 });
-  const selected = searched.cards.map((card) => card.tool);
-  const hydrated = hydrateToolSchemas(catalog, selected, { maxTools: options.maxTools ?? 8, maxChars: options.maxSchemaChars ?? 40_000 });
+  const maxTools = options.maxTools ?? 8;
+  // These are the four bootstrap calls required for progressive, typed
+  // discovery. Keyword ranking may otherwise hide describe/status/invoke.
+  const bootstrapIds = ['capability.search','capability.describe','capability.status','capability.invoke'];
+  const bootstrap = bootstrapIds.map(id=>catalog.find(row=>row.name===id)).filter(Boolean).slice(0,maxTools);
+  const remaining = catalog.filter(row=>!bootstrapIds.includes(row.name));
+  const searched = searchToolCards(remaining, objective, {
+    maxItems: Math.max(0,maxTools-bootstrap.length), maxChars: options.maxCardChars ?? 24_000,
+  });
+  const selected = [...bootstrap.map(row=>row.name),...searched.cards.map(card=>card.tool)];
+  const hydrated = hydrateToolSchemas(catalog, selected, { maxTools, maxChars: options.maxSchemaChars ?? 40_000 });
   const aliases = new Map();
   const tools = hydrated.tools.map((descriptor) => {
     const alias = capabilityFunctionName(descriptor.name);
@@ -157,7 +165,7 @@ export function buildAgentToolSurface(capabilityAdapter, objective, options = {}
     descriptors: Object.freeze(hydrated.tools),
     receipt: Object.freeze({
       catalog_tools: catalog.length,
-      cards_returned: searched.receipt.returned_items,
+      cards_returned: searched.receipt.returned_items + bootstrap.length,
       card_chars: searched.receipt.chars,
       hydrated_tools: hydrated.receipt.hydrated_tools,
       hydrated_schema_chars: tools.reduce((sum, tool) => sum + JSON.stringify(tool.parameters).length, 0),
@@ -421,11 +429,6 @@ async function runAgentSamTurnCore(options = {}) {
       context_receipt: resolvedContext?.receipt || null,
     });
   }
-  if (typeof options.onPreparedTurn === 'function') await options.onPreparedTurn({
-    source: 'cli-agent', provider: record.provider, model: record.provider_model_id,
-    instructions, messages: input, tools: toolSurface.tools,
-    context_receipt: resolvedContext?.receipt || null,
-  });
   let response = await modelTurn({
     provider,
     model: record.provider_model_id,
@@ -665,122 +668,4 @@ function hookInvocation(options = {}) {
  * usage instead of constructing a hidden second session.
  */
 export async function runAgentSamTurn(options = {}) {
-  const hookSource = options.hookRuntime || options.hooks;
-  if (!hookSource) return runAgentSamTurnCore(options);
-
-  const hooks = ensureHookRuntime(hookSource);
-  const cwd = path.resolve(options.cwd || process.cwd());
-  const invocation = hookInvocation(options);
-  const submitted = await hooks.dispatch('user_prompt_submitted', {
-    prompt: clean(options.prompt),
-    cwd,
-  }, invocation, { cwd });
-  const submittedPrompt = clean(submitted.input.prompt);
-  if (!submittedPrompt) throw new TypeError('prompt is required');
-  const transformed = await hooks.dispatch('user_prompt_transformed', {
-    original_prompt: clean(options.prompt),
-    transformed_prompt: submittedPrompt,
-    cwd,
-  }, invocation, { cwd });
-  const prompt = clean(transformed.input.transformed_prompt);
-  if (!prompt) throw new TypeError('transformed prompt is required');
-  const additionalContext = [submitted.output.additional_context, transformed.output.additional_context]
-    .filter(Boolean).join('\n\n');
-  const instrumented = {
-    ...options,
-    prompt,
-    provider: createHookedProviderAdapter(options.provider, {
-      hookRuntime: hooks,
-      invocation,
-      cwd,
-      requestPermission: options.requestPermission,
-      maxRetries: options.maxHookRetries,
-    }),
-    capabilityAdapter: createHookedCapabilityAdapter(options.capabilityAdapter, {
-      hookRuntime: hooks,
-      invocation,
-      cwd,
-      requestPermission: options.requestPermission,
-      maxRetries: options.maxHookRetries,
-    }),
-    ...(additionalContext && options.instructions != null
-      ? { instructions: [String(options.instructions), additionalContext].filter(Boolean).join('\n\n') }
-      : {}),
-    ...(additionalContext && options.instructions == null
-      ? {
-          contextItems: [
-            ...(options.contextItems || []),
-            { kind: 'hook', ref: 'hook://user-prompt/context', priority: 95, content: additionalContext },
-          ],
-        }
-      : {}),
-  };
-
-  const maxContinuations = Number.isInteger(options.maxHookContinuations)
-    ? Math.max(0, Math.min(options.maxHookContinuations, 8))
-    : 4;
-  const continuationReceipts = [];
-  let current = instrumented;
-  let result;
-  let totalCost = 0;
-  let totalRounds = 0;
-  let totalCalls = 0;
-  let totalElapsedMs = 0;
-  let hookContinuations = 0;
-  const costBreakdown = { input: 0, cached_input: 0, cache_write: 0, output: 0 };
-  const allToolReceipts = [];
-  const allContinuationCompactions = [];
-
-  for (let continuationIndex = 0; ; continuationIndex += 1) {
-    result = await runAgentSamTurnCore(current);
-    totalCost += Number(result.total_cost_usd || 0);
-    totalRounds += Number(result.run_budget?.tool_rounds || 0);
-    totalCalls += Number(result.run_budget?.tool_calls || 0);
-    totalElapsedMs += Number(result.run_budget?.elapsed_ms || 0);
-    for (const key of Object.keys(costBreakdown)) costBreakdown[key] += Number(result.cost_breakdown_usd?.[key] || 0);
-    allToolReceipts.push(...(result.tool_receipts || []));
-    allContinuationCompactions.push(...(result.continuation_compactions || []));
-    const stopped = await hooks.dispatch('agent_stop', {
-      stop_reason: result.output_text ? 'completed' : 'no_output',
-      stop_hook_active: continuationIndex > 0,
-      output_text: result.output_text,
-      continuation_index: continuationIndex,
-      run_budget: result.run_budget,
-    }, invocation, { cwd });
-    continuationReceipts.push(...stopped.receipts);
-    if (stopped.output.decision !== 'block') break;
-    if (continuationIndex >= maxContinuations) throw new Error(`hook_continuation_limit_exceeded:${maxContinuations}`);
-    const reason = clean(stopped.output.reason);
-    if (!reason) throw new Error('hook_continuation_reason_required');
-    hookContinuations += 1;
-    current = {
-      ...instrumented,
-      prompt: reason,
-      previousProviderState: result.provider_state,
-      previousUsageSnapshot: result.usage_snapshot,
-      cumulativeUsage: result.cumulative_usage,
-    };
-  }
-
-  return Object.freeze({
-    ...result,
-    ...(submitted.output.suppress_output === true || transformed.output.suppress_output === true
-      ? { output_text: '', suppressed_by_hook: true } : {}),
-    total_cost_usd: totalCost,
-    cost_breakdown_usd: Object.freeze(costBreakdown),
-    tool_receipts: Object.freeze(allToolReceipts),
-    continuation_compactions: Object.freeze(allContinuationCompactions),
-    run_budget: Object.freeze({
-      ...result.run_budget,
-      tool_rounds: totalRounds,
-      tool_calls: totalCalls,
-      elapsed_ms: totalElapsedMs,
-      hook_continuations: hookContinuations,
-      max_hook_continuations: maxContinuations,
-    }),
-    hook_receipts: Object.freeze([...submitted.receipts, ...transformed.receipts, ...continuationReceipts]),
-  });
-}
-
-/** @deprecated Use runAgentSamTurn(). */
-export const runResponsesAgent = runAgentSamTurn;
+  const hookSource = op

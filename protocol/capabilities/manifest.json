@@ -2,14 +2,15 @@
   "schema_version": 1,
   "package": "@inneranimalmedia/agentsam-sdk",
   "capabilities": {
-    "machine.inspect": {"id": "machine.inspect", "kind": "capability", "version": 1, "domain": "repository", "runtime": "node", "package": "@inneranimalmedia/agentsam-sdk/capabilities", "description": "Read-only native deterministic repository inspection in the authorized workspace; only advertised when a Machine runtime is resolved.", "deterministic": true, "model_required": false, "side_effects": "none", "status": "stable", "input_schema": {"type": "object", "properties": {"path": {"type": "string"}}, "additionalProperties": false}},
+    "project.discover": {"id":"project.discover","kind":"capability","version":1,"domain":"repository","runtime":"node","package":"@inneranimalmedia/agentsam-sdk/agent","description":"Read-only detection of existing project tooling, Cloudflare bindings, Vectorize, npm scripts and knowledge configuration; propose adoption without changing resources.","deterministic":true,"model_required":false,"side_effects":"none","input_schema":{"type":"object","properties":{},"required":[],"additionalProperties":false},"status":"stable"},
+    "machine.inspect": {"id": "machine.inspect", "kind": "capability", "version": 1, "domain": "repository", "runtime": "node", "package": "@inneranimalmedia/agentsam-sdk/capabilities", "description": "Read-only native deterministic repository inspection in the authorized workspace; only advertised when a Machine runtime is resolved.", "deterministic": true, "model_required": false, "side_effects": "local-state", "status": "stable", "input_schema": {"type": "object", "properties": {"path": {"type": "string"}}, "additionalProperties": false}},
     "test.run": {"id": "test.run", "kind": "capability", "version": 1, "domain": "tool", "runtime": "node", "package": "@inneranimalmedia/agentsam-sdk/capabilities", "description": "Run a named npm test script in the authorized workspace after execution approval.", "deterministic": false, "model_required": false, "side_effects": "filesystem-write", "status": "stable", "input_schema": {"type": "object", "properties": {"script": {"type": "string"}, "relative_cwd": {"type": "string"}, "args": {"type": "array", "items": {"type": "string"}}, "timeout_ms": {"type": "integer"}}, "additionalProperties": false}},
     "workspace.read": {"id": "workspace.read", "description": "Read a bounded UTF-8 file from the selected project workspace without escaping its root.", "side_effects": "none", "kind": "capability", "version": 1, "domain": "repository", "runtime": "node", "package": "@inneranimalmedia/agentsam-sdk/capabilities", "deterministic": true, "model_required": false, "status": "stable", "input_schema": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": false}},
     "workspace.write": {"id": "workspace.write", "description": "Write a bounded UTF-8 file in the selected workspace; updating existing files requires expected_sha256 and host approval.", "side_effects": "filesystem-write", "kind": "capability", "version": 1, "domain": "repository", "runtime": "node", "package": "@inneranimalmedia/agentsam-sdk/capabilities", "deterministic": true, "model_required": false, "status": "stable", "input_schema": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}, "expected_sha256": {"type": "string"}}, "required": ["path", "content"], "additionalProperties": false}},
     "capability.search": {"id": "capability.search", "kind": "capability", "version": 1, "domain": "tool", "runtime": "node", "package": "@inneranimalmedia/agentsam-sdk/registry", "description": "Search AgentSam registered commands, packages, and executable capability declarations.", "deterministic": true, "model_required": false, "side_effects": "none", "status": "stable", "strict": true, "input_schema": {"type": "object", "properties": {"query": {"type": "string"}, "type": {"type": "string", "enum": ["command", "capability", "package"]}, "limit": {"type": "integer"}}, "required": ["query"], "additionalProperties": false}},
     "capability.describe": {"id": "capability.describe", "kind": "capability", "version": 1, "domain": "tool", "runtime": "node", "package": "@inneranimalmedia/agentsam-sdk/registry", "description": "Describe a named AgentSam capability, CLI command or package without implying it is runnable.", "deterministic": true, "model_required": false, "side_effects": "none", "status": "stable", "strict": true, "input_schema": {"type": "object", "properties": {"id": {"type": "string"}, "type": {"type": "string", "enum": ["command", "capability", "package"]}}, "required": ["id"], "additionalProperties": false}},
     "capability.status": {"id": "capability.status", "kind": "capability", "version": 1, "domain": "tool", "runtime": "node", "package": "@inneranimalmedia/agentsam-sdk/registry", "description": "Report capability handler binding and availability; never infer a working runtime from a declaration.", "deterministic": true, "model_required": false, "side_effects": "none", "status": "stable", "strict": true, "input_schema": {"type": "object", "properties": {"id": {"type": "string"}}, "required": ["id"], "additionalProperties": false}},
-    "capability.invoke": {"id": "capability.invoke", "kind": "capability", "version": 1, "domain": "tool", "runtime": "node", "package": "@inneranimalmedia/agentsam-sdk/registry", "description": "Invoke one of the allowlisted AgentSam operations through the host-authorized registry, with a structured result.", "deterministic": true, "model_required": false, "side_effects": "none", "status": "stable", "strict": false, "input_schema": {"type": "object", "properties": {"capability_id": {"type": "string"}, "input": {"type": "object"}}, "required": ["capability_id"], "additionalProperties": false}},
+    "capability.invoke": {"id": "capability.invoke", "kind": "capability", "version": 1, "domain": "tool", "runtime": "node", "package": "@inneranimalmedia/agentsam-sdk/registry", "description": "Invoke one of the allowlisted AgentSam operations through the host-authorized registry, with a structured result.", "deterministic": true, "model_required": false, "side_effects": "delegated-execution", "status": "stable", "strict": false, "input_schema": {"type": "object", "properties": {"capability_id": {"type": "string"}, "input": {"type": "object"}}, "required": ["capability_id"], "additionalProperties": false}},
     "repository.snapshot": {
       "id": "repository.snapshot",
       "kind": "capability",
@@ -55,6 +56,7 @@
       "deterministic": true,
       "model_required": false,
       "side_effects": "none",
+      "input_schema": {"type":"object","properties":{"churn_days":{"type":"integer","minimum":1,"maximum":3650}},"required":[],"additionalProperties":false},
       "status": "stable"
     },
     "knowledge.index": {
@@ -69,6 +71,7 @@
       "deterministic": true,
       "model_required": false,
       "side_effects": "local-state",
+      "input_schema": {"type":"object","properties":{"mode":{"type":"string","enum":["plan","run","status"]},"max_inputs":{"type":"integer"},"max_characters":{"type":"integer"},"embed":{"type":"boolean"}},"required":[],"additionalProperties":false},
       "status": "stable"
     },
     "knowledge.search": {
@@ -83,6 +86,7 @@
       "deterministic": true,
       "model_required": false,
       "side_effects": "none",
+      "input_schema": {"type":"object","properties":{"query":{"type":"string"},"top_k":{"type":"integer"},"token_budget":{"type":"integer"},"generation_id":{"type":"string"}},"required":["query"],"additionalProperties":false},
       "status": "stable",
       "input_schema": "protocol/capabilities/knowledge-search-input.schema.json"
     },
@@ -326,6 +330,7 @@
       "deterministic": true,
       "model_required": false,
       "side_effects": "none",
+      "input_schema": {"type":"object","properties":{"query":{"type":"string"},"type":{"type":"string","enum":["capability","command","package"]},"limit":{"type":"integer"}},"required":["query"],"additionalProperties":false},
       "status": "experimental"
     },
     "context.resolve": {
@@ -341,6 +346,7 @@
       "model_required": false,
       "side_effects": "none",
       "output_schema": "protocol/context/resolved-context-pack.schema.json",
+      "input_schema": {"type":"object","properties":{"objective":{"type":"string"},"window_tokens":{"type":"integer"},"items":{"type":"array","items":{"type":"object"}},"refs":{"type":"array","items":{"type":"string"}}},"required":["objective"],"additionalProperties":false},
       "status": "experimental"
     },
     "terminal.exec": {
@@ -516,8 +522,8 @@
       "deterministic": true,
       "model_required": false,
       "side_effects": "local-state",
-      "input_schema": "protocol/capabilities/repository-crawl-input.schema.json",
       "output_schema": "protocol/capabilities/repository-crawl-result.schema.json",
+      "input_schema": {"type":"object","properties":{},"required":[],"additionalProperties":false},
       "status": "stable"
     },
     "repository.mine": {
@@ -533,8 +539,8 @@
       "deterministic": true,
       "model_required": false,
       "side_effects": "local-state",
-      "input_schema": "protocol/capabilities/repository-mine-input.schema.json",
       "output_schema": "protocol/capabilities/repository-mine-result.schema.json",
+      "input_schema": {"type":"object","properties":{"against":{"type":"string"},"limit":{"type":"integer","minimum":1,"maximum":100}},"required":["against"],"additionalProperties":false},
       "status": "stable"
     }
   }
