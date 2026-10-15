@@ -42,6 +42,17 @@ describe('Lane 1 packed identity consumer proof', () => {
     const errorsTarballDest = path.join(artifacts, errorsTarballName);
     assert.ok(fs.existsSync(errorsTarballDest), errorsTarballDest);
 
+    // The root SDK now declares the independently packaged CMS engine.
+    // Install its local tarball in this offline packed-consumer fixture,
+    // matching the published-dependency release order.
+    const cmsPackOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts],
+      path.join(REPO, 'packages', 'agentsam-cms'));
+    const cmsPacked = JSON.parse(cmsPackOut);
+    const cmsTarballName = cmsPacked[0]?.filename || cmsPacked.filename;
+    assert.ok(cmsTarballName, 'portable CMS npm pack must emit a tarball name');
+    const cmsTarballDest = path.join(artifacts, cmsTarballName);
+    assert.ok(fs.existsSync(cmsTarballDest), cmsTarballDest);
+
     const packOut = run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', artifacts], REPO);
     const packed = JSON.parse(packOut);
     const tarballName = packed[0]?.filename || packed.filename;
@@ -62,7 +73,7 @@ describe('Lane 1 packed identity consumer proof', () => {
     );
     run(
       'npm',
-      ['install', errorsTarballDest, tarballDest, '--ignore-scripts', '--no-audit', '--no-fund'],
+      ['install', errorsTarballDest, cmsTarballDest, tarballDest, '--ignore-scripts', '--no-audit', '--no-fund'],
       consumer,
     );
 

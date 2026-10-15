@@ -1,1 +1,1 @@
-export { createNodeSqliteCmsRepository } from '../../../../packages/agentsam-cms/src/node.js';
+export { createNodeSqliteCmsRepository } from '@inneranimalmedia/agentsam-cms/node';
