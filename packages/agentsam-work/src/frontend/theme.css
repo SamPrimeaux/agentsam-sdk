@@ -39,6 +39,7 @@
 }
 
 .agentsam-work-shell {
+  --agentsam-work-header-height: 58px;
   position: relative;
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr);
@@ -62,9 +63,11 @@
 
 .agentsam-work-mini-nav__header {
   display: flex;
+  flex: 0 0 var(--agentsam-work-header-height);
   align-items: center;
   gap: 12px;
-  min-height: 64px;
+  height: var(--agentsam-work-header-height);
+  min-height: var(--agentsam-work-header-height);
   padding: 0 16px;
   border-bottom: 1px solid var(--agentsam-work-border);
 }
@@ -147,7 +150,8 @@
 
 .agentsam-work-stage__topbar {
   display: flex;
-  min-height: 58px;
+  height: var(--agentsam-work-header-height);
+  min-height: var(--agentsam-work-header-height);
   align-items: center;
   gap: 10px;
   padding: 0 18px;
