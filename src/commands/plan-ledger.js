@@ -1,6 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
+import { createRequire } from 'node:module';
+const requireSqlite = createRequire(import.meta.url);
 import { randomBytes } from 'node:crypto';
 import { createLocalSqliteDatabaseSync } from '../local/sqlite.js';
 import { applyRuntimeMigrationsSync } from '../local/migrations.js';
