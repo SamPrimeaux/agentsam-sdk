@@ -30,7 +30,7 @@ function loadSchema(value) {
   catch (error) { throw new Error(`capability_schema_unreadable:${value}:${error?.message || error}`); }
 }
 
-export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot = process.cwd(), authorizeCapability = null, samAdapter = null, allowedRepositories = [projectRoot] } = {}) {
+export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot = process.cwd(), authorizeCapability = null, samAdapter = null, mcpD1Bridge = null, allowedRepositories = [projectRoot] } = {}) {
   const cad = localProjectRuntime(projectRoot);
   const cadDescriptors = CAD_PROJECT_TOOLS.map(t=>({...t,id:t.name,version:'1.0.0',domain:'design',kind:'tool',status:'active',side_effects:['design_project_get','design_project_validate','design_model_inspect'].includes(t.name)?'none':'filesystem-write',deterministic:true,model_required:false}));
   const executable = new Map([
