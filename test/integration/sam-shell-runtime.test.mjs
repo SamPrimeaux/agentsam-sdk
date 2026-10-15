@@ -33,7 +33,9 @@ test('CLI model catalog uses authenticated local SAM handlers, imports source, c
     });
     assert.ok(samAdapter);
     assert.equal(samAdapter.canInvoke('media.local.import'),true);
-    assert.equal(samAdapter.canInvoke('sam.superbash'),false);
+    assert.equal(samAdapter.canInvoke('sam.superbash'),true);
+    assert.equal(samAdapter.canInvoke('sam.script.save'),true);
+    assert.equal(samAdapter.canInvoke('sam.script.get'),true);
     const agentAdapter=createCapabilityAdapter({
       projectRoot:project,samAdapter,authorizeCapability:async()=>true,
     });

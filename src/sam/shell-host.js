@@ -10,7 +10,11 @@ import { getJson } from '../lib/core-client.js';
 import { createSamOS } from './os.js';
 import { createSamCapabilityAdapter } from './model-adapter.js';
 import { createLocalMediaStore } from './adapters/local-media-store.js';
+import { createLocalScriptStore } from './adapters/local-script-store.js';
+import { createLocalScriptRuntime, isLocalBashAvailable } from './adapters/local-script-runtime.js';
 import { createWorkspaceMediaImportOperation, projectInstallationId } from './adapters/workspace-media.js';
+
+const LOCAL_SCRIPT_OPERATIONS = Object.freeze(['sam.script.save', 'sam.script.get', 'sam.superbash']);
 
 const LOCAL_MEDIA_OPERATIONS = Object.freeze([
   'media.local.import',
@@ -65,14 +69,16 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
   if (!readTrustedIdentity()) return null;
   const root = path.resolve(state.projectRoot || state.cwd);
   const assetStore = createLocalMediaStore({root:path.join(root,'.agentsam','media')});
+  const scriptStore = createLocalScriptStore({home: state.home});
+  const processRuntime = isLocalBashAvailable() ? createLocalScriptRuntime({root}) : null;
   const permit = async ({operation,policy,input,identity}) => {
     if (!readTrustedIdentity()) return false;
     return (await authorize({capability_id:operation,input,descriptor:{
-      side_effects: policy?.effect || 'local_write',
+      side_effects: policy?.effect === 'script_artifact_read' ? 'none' : policy?.effect || 'local_write',
     }})) === true;
   };
   const samOS = createSamOS({core:true,generated:{
-    assetStore,
+    assetStore, scriptStore, processRuntime, scriptExecutionLanes: ['local'],
     resolveTrustedContext: async () => {
       const principal = readTrustedIdentity();
       if (!principal) throw new Error('sam_authenticated_session_required');
@@ -91,7 +97,7 @@ export function createShellSamAdapter({ state, authorize, trustedIdentity = null
   })]);
   return createSamCapabilityAdapter({
     os:samOS,
-    expose:LOCAL_MEDIA_OPERATIONS,
+    expose:[...LOCAL_MEDIA_OPERATIONS, ...LOCAL_SCRIPT_OPERATIONS].filter(id => samOS.get(id)),
     // Provider dispatch performs a separate allowlist check. The bound
     // SAM handlers make the actual privileged auth decision above.
     authorize: async () => !!readTrustedIdentity(),

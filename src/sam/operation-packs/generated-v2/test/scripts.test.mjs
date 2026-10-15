@@ -16,6 +16,17 @@ test('superbash calls authorized injected ExecOS process runtime, model cannot p
 });
 test('nonzero exit is not success and missing identity cannot execute',async()=>{
   const h=createScriptHandlers({processRuntime:{executeScript:async()=>({executionId:'ex2',status:'failed',exitCode:3})}});
-  await assert.rejects(h['sam.superbash']({script:'exit 3'},ctx),/script_execution_failed/);
+  const failed = await h['sam.superbash']({script:'exit 3'},ctx);
+  assert.equal(failed.ok,false);
+  assert.equal(failed.exitCode,3);
+  assert.equal(failed.error.code,'script_execution_failed');
+  for (const result of [
+    {executionId:'queued',status:'queued',exitCode:0},
+    {executionId:'timeout',status:'timed_out',exitCode:-1},
+    {executionId:'unknown',status:'completed'},
+  ]) {
+    const check=createScriptHandlers({processRuntime:{executeScript:async()=>result}});
+    assert.equal((await check['sam.superbash']({script:'pwd'},ctx)).ok,false);
+  }
   await assert.rejects(h['sam.superbash']({script:'pwd'},{}),/trusted_identity_required/);
 });

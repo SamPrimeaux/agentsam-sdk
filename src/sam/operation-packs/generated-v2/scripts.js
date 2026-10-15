@@ -45,10 +45,18 @@ export function createScriptHandlers({ scriptStore, processRuntime } = {}) {
         onEvent:ctx.onEvent,
       });
       if (!result?.executionId || !result?.status) deny('invalid_process_runtime_result');
-      if (result.status==='failed' || result.status==='cancelled' || Number(result.exitCode)>0) {
-        const e=new Error('script_execution_'+result.status);e.code='script_execution_failed';e.result=result;throw e;
-      }
-      return {ok:true,...result};
+      const completed = result.status === 'completed' && result.exitCode === 0;
+      // Script failures are structured tool results, never false success.
+      return {
+        ...result,
+        ok: completed,
+        ...(completed ? {} : {
+          error: result.error || {
+            code: 'script_execution_failed',
+            message: 'Script did not complete successfully (' + result.status + ')',
+          },
+        }),
+      };
     };
   }
   return handlers;

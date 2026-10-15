@@ -84,7 +84,7 @@ export async function runSam(argv = [], options = {}) {
   if (json) write(JSON.stringify(result, null, 2) + '\n');
   else if (result.help) write(result.help + '\n');
   else if (sub === 'status' || sub === 'doctor') {
-    write(`SAM OS · ${result.bound_count} installed · ${result.core_count} packaged core · ${result.host_model_operations.length} authorized-host media handlers · ${result.generated_unbound} other proposals unbound\n`);
+    write(`SAM OS · ${result.bound_count} installed · ${result.core_count} packaged core · ${result.host_model_operations.length} authorized-host operations · ${result.generated_unbound} other proposals unbound\n`);
     write('Executable tools require a bound handler; hosted D1/third-party installations are not implied by CLI login.\n');
     if (result.pack_status.length) write('Installed packs: ' + result.pack_status.map(p => p.id).join(', ') + '\n');
     if (sub === 'doctor' && unbound.length) write('Awaiting host integration: ' + unbound.map(x => x.name).join(', ') + '\n');
