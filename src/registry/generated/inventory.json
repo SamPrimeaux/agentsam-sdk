@@ -186,7 +186,9 @@
         "agentsam sam doctor",
         "agentsam sam list",
         "agentsam sam describe repository.inspect",
-        "agentsam sam discover background --json"
+        "agentsam sam discover background --json",
+        "agentsam sam media doctor --json",
+        "agentsam sam media setup"
       ],
       "operation": null
     },
