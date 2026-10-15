@@ -63,3 +63,33 @@ test('theme: no literal colors in Work UI source; hex only in the standalone def
   const afterDefaults = css.slice(css.indexOf('.agentsam-work {'));
   assert.doesNotMatch(afterDefaults, COLOR, 'theme.css has literal colors outside the :root defaults block');
 });
+
+
+test('mobile work flow exposes real Quick Create actions while preserving five-item navigation', () => {
+  const read = (name) => readFileSync(new URL('../src/frontend/' + name, import.meta.url), 'utf8');
+  const shell = read('WorkShell.tsx');
+  const product = read('WorkProduct.tsx');
+  const theme = read('theme.css');
+  assert.match(shell, /onQuickCreate/);
+  assert.match(shell, /aw-mobile-create/);
+  for (const action of ['createTicket', 'createProject', 'createEvent']) assert.match(product, new RegExp(action));
+  for (const editor of ['ProjectEditor', 'TicketEditor', 'EventEditor']) assert.match(product, new RegExp(editor));
+  assert.match(theme, /safe-area-inset-bottom/);
+  assert.match(theme, /min-height: 44px/);
+  assert.match(theme, /aw-quick-create-sheet/);
+  for (const nav of ['calendar', 'tickets', 'mail', 'projects', 'artifacts']) assert.match(shell, new RegExp('id: "' + nav + '" as const'));
+});
+
+test('desktop WorkHost uses identical CRUD routes as browser and Rust permits every write', () => {
+  const localStudio = readFileSync(new URL('../../../apps/local-studio/frontend/src/components/work/LocalStudioWorkPage.tsx', import.meta.url), 'utf8');
+  const bridge = readFileSync(new URL('../../agentsam-desktop-shell/src-tauri/src/commands/local_identity.rs', import.meta.url), 'utf8');
+  const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8');
+  assert.match(localStudio, /createWorkCrud\(request\)/);
+  assert.match(localStudio, /snapshotRequest.from/);
+  assert.match(localStudio, /snapshotRequest.to/);
+  for (const prefix of ['/api/projects', '/api/calendar/events', '/api/tickets']) {
+    assert.ok(client.includes(prefix), 'browser missing route ' + prefix);
+    assert.ok(bridge.includes(prefix), 'desktop missing route ' + prefix);
+  }
+  for (const method of ['GET', 'POST', 'PATCH', 'DELETE']) assert.match(bridge, new RegExp('"'+ method + '" => Method::' + method));
+});

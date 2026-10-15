@@ -1,4 +1,4 @@
-import { Settings } from "lucide-react";
+import { CalendarPlus, FolderPlus, ListTodo, Settings, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type {
   WorkHost,
@@ -16,6 +16,8 @@ import { ProjectDetailSurface } from "./surfaces/ProjectDetailSurface";
 import { TicketDetailSurface } from "./surfaces/TicketDetailSurface";
 import type { WorkActions } from "./actions";
 import { TicketEditor } from "./TicketEditor";
+import { ProjectEditor } from "./ProjectEditor";
+import { EventEditor } from "./EventEditor";
 import type { WorkTicket } from "../contracts/index";
 
 const SNAPSHOT_CACHE = new WeakMap<WorkHost, Map<string, WorkSnapshot>>();
@@ -89,6 +91,13 @@ export function WorkProduct({
   const calendarRange = surface === "calendar" && range.from ? range : {};
   const cacheKey = surface === "calendar" && range.from ? `calendar:${range.from}:${range.to}` : surface;
   const [openTicket, setOpenTicket] = useState<WorkTicket | null>(null);
+  const [quickCreate, setQuickCreate] = useState<null | "menu" | "project" | "ticket" | "event">(null);
+  useEffect(() => {
+    if (quickCreate !== "menu") return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setQuickCreate(null); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [quickCreate]);
   const [snapshot, setSnapshot] = useState<WorkSnapshot>(() =>
     snapshotBucket(SNAPSHOT_CACHE, host).get(cacheKey) || { ...EMPTY_LIVE_SNAPSHOT },
   );
@@ -218,6 +227,9 @@ export function WorkProduct({
       presentation={presentation}
       navCollapsed={navCollapsed}
       onNavCollapsedChange={onNavCollapsedChange}
+      onQuickCreate={surface === "projects" || surface === "project-detail" || surface === "tickets" || surface === "calendar"
+        ? (actions.createTicket || actions.createProject || actions.createEvent ? () => setQuickCreate("menu") : undefined)
+        : undefined}
       trailing={
         host.openMailConnections ? (
           <button
@@ -359,6 +371,56 @@ export function WorkProduct({
           actions={actions}
           onNavigate={onNavigate}
           knowledgeAction={knowledgeAction}
+        />
+      ) : null}
+      {quickCreate === "menu" ? (
+        <div className="aw-quick-create-overlay" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setQuickCreate(null);
+        }}>
+          <section className="aw-quick-create-sheet" role="dialog" aria-modal="true" aria-label="Create new work">
+            <div className="aw-quick-create-head">
+              <strong>Create new</strong>
+              <button type="button" className="aw-quick-close" aria-label="Close" onClick={() => setQuickCreate(null)}><X size={20}/></button>
+            </div>
+            {actions.createTicket ? <button type="button" className="aw-quick-option" onClick={() => setQuickCreate("ticket")}>
+              <ListTodo size={21}/><span><strong>New task</strong><small>Capture work, priority and due date</small></span>
+            </button> : null}
+            {actions.createProject ? <button type="button" className="aw-quick-option" onClick={() => setQuickCreate("project")}>
+              <FolderPlus size={21}/><span><strong>New project</strong><small>Organize a new development outcome</small></span>
+            </button> : null}
+            {actions.createEvent ? <button type="button" className="aw-quick-option" onClick={() => setQuickCreate("event")}>
+              <CalendarPlus size={21}/><span><strong>New calendar event</strong><small>Schedule a dedicated work session</small></span>
+            </button> : null}
+          </section>
+        </div>
+      ) : null}
+      {quickCreate === "project" && actions.createProject ? (
+        <ProjectEditor
+          project={null}
+          onClose={() => setQuickCreate(null)}
+          onSave={async (input) => { await actions.createProject?.(input); }}
+        />
+      ) : null}
+      {quickCreate === "ticket" && actions.createTicket ? (
+        <TicketEditor
+          ticket={null}
+          defaults={project && surface === "project-detail" ? { project: project.name } : undefined}
+          projects={snapshot.projects}
+          lanes={lanes}
+          canSave={true}
+          canDelete={false}
+          onClose={() => setQuickCreate(null)}
+          onSave={async (input) => { await actions.createTicket?.(input); }}
+        />
+      ) : null}
+      {quickCreate === "event" && actions.createEvent ? (
+        <EventEditor
+          event={null}
+          projects={snapshot.projects}
+          canSave={true}
+          canDelete={false}
+          onClose={() => setQuickCreate(null)}
+          onSave={async (input) => { await actions.createEvent?.(input); }}
         />
       ) : null}
       {openTicket ? (

@@ -25,6 +25,8 @@ export function ProjectEditor({
 }) {
   const [name, setName] = useState(project?.name ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
+  const [progress, setProgress] = useState(project?.progress ?? 0);
+  const [accent, setAccent] = useState(project?.accent ?? "");
   const [type, setType] = useState(project?.projectType && project.projectType !== "project" ? project.projectType : "");
   const [status, setStatus] = useState<WorkProjectStatus>(project?.status ?? "discovery");
   const [clientName, setClientName] = useState(project?.clientName ?? "");
@@ -52,6 +54,7 @@ export function ProjectEditor({
                 description: description.trim(),
                 projectType: type || undefined,
                 status,
+                ...(project ? { progress, ...(accent ? { accent } : {}) } : {}),
                 clientName: clientName.trim(),
                 domain: domain.trim(),
                 githubRepo: repo.trim(),
@@ -71,10 +74,28 @@ export function ProjectEditor({
       <Field label="Name" full>
         <input className="aw-input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
       </Field>
-      <Field label="Description" full>
-        <textarea className="aw-textarea" style={{ minHeight: 80 }} value={description} onChange={(e) => setDescription(e.target.value)} />
+      <Field label="Current objective" full>
+        <input className="aw-input" value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="What should happen next?" />
       </Field>
-      <div className="aw-grid2">
+      {project ? (
+        <div className="aw-progress-control">
+          <label htmlFor="aw-project-progress">Perceived completion <strong>{progress}%</strong></label>
+          <input id="aw-project-progress" type="range" min={0} max={100} step={5} value={progress} onChange={(e) => setProgress(Number(e.target.value))} />
+          <small>Your estimate, independent of completed tickets.</small>
+        </div>
+      ) : null}
+      <details className="aw-project-more" open={Boolean(project)}>
+        <summary>More project details</summary>
+        <div className="aw-project-more__fields">
+          <Field label="Description" full>
+            <textarea className="aw-textarea" style={{ minHeight: 80 }} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </Field>
+          {project && /^#[0-9a-f]{6}$/i.test(accent) ? (
+            <Field label="Project color">
+              <input className="aw-color-input" type="color" value={accent} onChange={(e) => setAccent(e.target.value)} aria-label="Project accent color" />
+            </Field>
+          ) : null}
+          <div className="aw-grid2">
         <Field label="Type">
           <select className="aw-select" value={type} onChange={(e) => setType(e.target.value)}>
             <option value="">Not set</option>
@@ -91,10 +112,9 @@ export function ProjectEditor({
         <Field label="Repository"><input className="aw-input" value={repo} onChange={(e) => setRepo(e.target.value)} placeholder="owner/repo" /></Field>
         <Field label="Branch"><input className="aw-input" value={branch} onChange={(e) => setBranch(e.target.value)} /></Field>
         <Field label="Launch date"><input className="aw-input" type="date" value={launch} onChange={(e) => setLaunch(e.target.value)} /></Field>
-      </div>
-      <Field label="Current objective" full>
-        <input className="aw-input" value={objective} onChange={(e) => setObjective(e.target.value)} placeholder="What is this project driving toward right now?" />
-      </Field>
+          </div>
+        </div>
+      </details>
     </Drawer>
   );
 }

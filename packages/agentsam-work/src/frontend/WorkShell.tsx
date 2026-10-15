@@ -221,6 +221,7 @@ export function WorkShell({
   onNavigate,
   children,
   trailing,
+  onQuickCreate,
   rightRail = false,
   presentation = "standalone",
   navCollapsed = false,
@@ -231,6 +232,7 @@ export function WorkShell({
   onNavigate: WorkNavigate;
   children: ReactNode;
   trailing?: ReactNode;
+  onQuickCreate?: () => void;
   rightRail?: boolean;
   presentation?: WorkShellPresentation;
   navCollapsed?: boolean;
@@ -279,6 +281,11 @@ export function WorkShell({
         <div className="agentsam-work-stage__body">{children}</div>
       </section>
       {rightRail ? <RightRail surface={surface} onNavigate={onNavigate} /> : null}
+      {onQuickCreate ? (
+        <button type="button" className="aw-mobile-create" aria-label="Create task, project or event" onClick={onQuickCreate}>
+          <Plus size={25} strokeWidth={2} />
+        </button>
+      ) : null}
       <nav className="agentsam-work-bottom-nav" aria-label="Work surfaces">
         {[
           { id: "calendar" as const, label: "Calendar", href: "/collaborate", icon: CalendarDays },

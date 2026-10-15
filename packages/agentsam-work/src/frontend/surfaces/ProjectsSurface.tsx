@@ -27,6 +27,7 @@ export function ProjectsSurface({
 }) {
   const [tab, setTab] = useState<Tab>("all");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<"attention" | "updated" | "name" | "progress">("attention");
   const [editing, setEditing] = useState<WorkProject | "new" | null>(null);
   const [removing, setRemoving] = useState<WorkProject | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
@@ -60,8 +61,14 @@ export function ProjectsSurface({
       if (tab === "starred" && !p.starred) return false;
       if (tab === "archived" && p.status !== "archived") return false;
       return !q || `${p.name} ${p.description ?? ""} ${p.clientName ?? ""} ${p.domain ?? ""}`.toLowerCase().includes(q);
+    }).sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "progress") return b.progress - a.progress;
+      if (sort === "updated") return (b.updatedAt || "").localeCompare(a.updatedAt || "");
+      const score = (p: WorkProject) => p.status === "qa" || p.status === "staging" ? 0 : p.openTasks > 0 ? 1 : p.status === "production" ? 3 : 2;
+      return score(a) - score(b) || (b.updatedAt || "").localeCompare(a.updatedAt || "");
     });
-  }, [projects, tab, query]);
+  }, [projects, tab, query, sort]);
 
   const update = (id: string, patch: WorkProjectInput) => run(async () => { await actions.updateProject?.(id, patch); });
 
@@ -92,6 +99,12 @@ export function ProjectsSurface({
       </div>
       <div className="aw-toolbar">
         <input className="aw-input grow" placeholder="Search projects…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search projects" />
+        <select className="aw-select aw-project-sort" value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort projects">
+          <option value="attention">Needs attention</option>
+          <option value="updated">Recently updated</option>
+          <option value="progress">Most progressed</option>
+          <option value="name">Name A–Z</option>
+        </select>
       </div>
 
       {visible.length === 0 ? (
@@ -106,6 +119,9 @@ export function ProjectsSurface({
             <article
               key={p.id}
               className="aw-project"
+              role="link"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onNavigate("/projects/" + encodeURIComponent(p.id)); } }}
               style={{ ["--aw-accent" as string]: p.accent }}
               onClick={() => onNavigate("/projects/" + encodeURIComponent(p.id))}
             >
@@ -125,8 +141,8 @@ export function ProjectsSurface({
                 {p.projectType && p.projectType !== "project" ? <span>{p.projectType}</span> : null}
               </div>
               <div className="aw-project__obj">
-                <small>Current objective</small>
-                <strong>{p.objective || "Not set"}</strong>
+                <div className="aw-project-progress-title"><small>Current objective</small><b>{p.progress}% estimated</b></div>
+                <strong>{p.objective || "Add your next objective"}</strong>
                 <div className="aw-progress" role="progressbar" aria-valuenow={p.progress} aria-valuemin={0} aria-valuemax={100}>
                   <span style={{ width: `${p.progress}%`, background: "var(--aw-accent)" }} />
                 </div>

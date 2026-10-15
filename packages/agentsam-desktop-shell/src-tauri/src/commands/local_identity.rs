@@ -245,7 +245,12 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
         "work" => {
             let path = request.path.as_deref().unwrap_or("").trim();
             let valid_path = path == "/api/work/snapshot"
-                || path.starts_with("/api/work/snapshot?surface=")
+                || path.starts_with("/api/work/snapshot?")
+                || path == "/api/projects"
+                || path.starts_with("/api/projects/")
+                || path == "/api/calendar/events"
+                || path.starts_with("/api/calendar/events?")
+                || path.starts_with("/api/calendar/events/")
                 || path == "/api/work/gmail/oauth/start"
                 || path == "/api/work/gmail/status"
                 || path == "/api/work/gmail/disconnect"
@@ -254,6 +259,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 || path == "/api/mail/send"
                 || path.starts_with("/api/mail/email/");
             if !valid_path
+                || path.contains("..")
                 || path.contains("://")
                 || path.contains('\\')
                 || path.as_bytes().iter().any(|byte| *byte == 13 || *byte == 10)
@@ -264,6 +270,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 "GET" => Method::GET,
                 "POST" => Method::POST,
                 "PATCH" => Method::PATCH,
+                "DELETE" => Method::DELETE,
                 _ => return Err("studio_service_work_method_invalid".into()),
             };
             Ok((method, path.to_string()))
@@ -805,6 +812,16 @@ mod tests {
             ("/api/work/gmail/disconnect", "POST"),
             ("/api/tickets", "POST"),
             ("/api/tickets/tkt_123", "PATCH"),
+            ("/api/tickets/tkt_123", "DELETE"),
+            ("/api/projects", "POST"),
+            ("/api/projects/prj_123", "PATCH"),
+            ("/api/projects/prj_123", "DELETE"),
+            ("/api/projects/prj_123?hard=1", "DELETE"),
+            ("/api/calendar/events?from=2026-10-01&to=2026-10-31", "GET"),
+            ("/api/calendar/events", "POST"),
+            ("/api/calendar/events/evt_123", "PATCH"),
+            ("/api/calendar/events/evt_123", "DELETE"),
+            ("/api/work/snapshot?from=2026-10-01&to=2026-10-31", "GET"),
             ("/api/mail/send", "POST"),
             ("/api/mail/email/msg_123", "PATCH"),
         ] {

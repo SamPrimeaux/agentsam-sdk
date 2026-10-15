@@ -591,3 +591,70 @@
 .aw-tl__bar-item > i { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--aw-color, var(--agentsam-work-accent)) 45%, transparent); }
 .aw-tl__bar-item > span { position: relative; display: block; padding: 0 6px; font-size: 10px; font-weight: 650; line-height: 22px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .aw-tl__today { position: absolute; top: 0; bottom: 0; z-index: 2; width: 1px; background: var(--agentsam-work-accent); pointer-events: none; }
+
+
+/* One mobile creation affordance, shared by Projects / Tickets / Calendar.
+   The existing five-slot Work dock is deliberately preserved. */
+.aw-mobile-create { display: none; }
+.aw-quick-create-overlay { position: fixed; inset: 0; z-index: 110; display: flex; align-items: flex-end; justify-content: center; padding: 16px; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--agentsam-work-text) 45%, transparent); }
+.aw-quick-create-sheet { width: min(100%, 480px); display: grid; gap: 8px; padding: 18px; border: 1px solid var(--agentsam-work-border); border-radius: 22px; background: var(--agentsam-work-panel); box-shadow: 0 24px 80px color-mix(in srgb, var(--agentsam-work-text) 23%, transparent); }
+.aw-quick-create-head { display: flex; justify-content: space-between; align-items: center; padding: 0 2px 6px; font-size: 18px; }
+.aw-quick-close { display: grid; place-items: center; min-width: 44px; min-height: 44px; border: 0; border-radius: 12px; color: var(--agentsam-work-muted); background: var(--agentsam-work-panel-subtle); cursor: pointer; }
+.aw-quick-option { display: flex; align-items: center; gap: 15px; padding: 14px; min-height: 68px; border: 1px solid var(--agentsam-work-border); border-radius: 14px; background: var(--agentsam-work-panel-subtle); color: var(--agentsam-work-text); text-align: left; cursor: pointer; }
+.aw-quick-option > svg { flex: 0 0 auto; color: var(--agentsam-work-accent); }
+.aw-quick-option span { display: grid; gap: 3px; }
+.aw-quick-option small { color: var(--agentsam-work-muted); font-size: 12px; }
+.aw-quick-option:focus-visible, .aw-mobile-create:focus-visible { outline: 3px solid var(--agentsam-work-accent); outline-offset: 3px; }
+
+@media (max-width: 900px) {
+  .aw-mobile-create { position: absolute; display: grid; place-items: center; right: 18px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 35; width: 56px; height: 56px; border: 0; border-radius: 50%; background: var(--agentsam-work-accent); color: var(--agentsam-work-panel); box-shadow: 0 6px 22px color-mix(in srgb, var(--agentsam-work-accent) 35%, transparent); cursor: pointer; }
+  .agentsam-work-bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .agentsam-work-stage__body { height: calc(100% - 58px - 58px - env(safe-area-inset-bottom, 0px)); }
+  .aw-btn, .aw-icon-btn, .aw-tab { min-height: 44px; }
+  .aw-icon-btn { min-width: 44px; }
+  .aw-input, .aw-select, .aw-textarea { min-height: 44px; font-size: 16px; }
+  .aw-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .aw-tab { white-space: nowrap; flex: 0 0 auto; }
+  .aw-page { padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)); }
+  .aw-drawer { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .aw-drawer__foot { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+}
+
+.aw-progress-control { display: grid; gap: 10px; border: 1px solid var(--agentsam-work-border); padding: 14px; border-radius: 14px; }
+.aw-progress-control label { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--agentsam-work-text); }
+.aw-progress-control input[type="range"] { width: 100%; min-height: 32px; accent-color: var(--agentsam-work-accent); }
+.aw-progress-control small { font-size: 12px; color: var(--agentsam-work-muted); }
+.aw-project-more { border: 1px solid var(--agentsam-work-border); border-radius: 14px; padding: 12px 14px; }
+.aw-project-more summary { cursor: pointer; font-weight: 600; font-size: 13px; min-height: 32px; }
+.aw-project-more__fields { display: grid; gap: 12px; padding-top: 14px; }
+.aw-color-input { width: 100%; height: 44px; border: 1px solid var(--agentsam-work-border); border-radius: 10px; cursor: pointer; background: var(--agentsam-work-panel); }
+.aw-project-progress-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.aw-project-progress-title b { color: var(--aw-accent, var(--agentsam-work-accent)); font-size: 12px; }
+.aw-project-sort { max-width: 170px; }
+.aw-project:focus-visible { outline: 3px solid var(--agentsam-work-accent); outline-offset: 2px; }
+@media (max-width: 520px) {
+  .aw-project-sort { max-width: 100%; width: 100%; }
+  .aw-project { padding: 14px; gap: 10px; border-left: 4px solid var(--aw-accent, var(--agentsam-work-accent)); }
+  .aw-project__meta { font-size: 11px; }
+}
+
+/* iPhone viewport containment: never allow a desktop minimum-width to move the dock or creation control offscreen. */
+@media (max-width: 900px) {
+  .agentsam-work-shell { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: clip; }
+  .agentsam-work-stage { min-width: 0; max-width: 100%; }
+  .agentsam-work-stage__body { min-width: 0; max-width: 100%; overflow-x: clip; }
+  .aw-page { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; }
+  .agentsam-work-bottom-nav { width: 100%; box-sizing: border-box; }
+  .agentsam-work-bottom-nav button { min-width: 0; }
+  .aw-mobile-create { position: fixed; right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 95; }
+  .aw-head { gap: 10px; }
+  .aw-kicker, .aw-sub { display: none; }
+  .aw-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; }
+  .aw-toolbar .aw-input, .aw-toolbar .aw-select { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; }
+  .aw-projects { width: 100%; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+  .aw-project { box-sizing: border-box; min-width: 0; }
+  .aw-project__top { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: start; }
+  .aw-project__top > :last-child { grid-column: 2; justify-self: start; }
+  .aw-project__meta { min-width: 0; overflow-wrap: anywhere; }
+  .aw-project__foot { overflow-wrap: anywhere; }
+}
