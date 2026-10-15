@@ -29,6 +29,7 @@ test('packed root GOAP resolves the single published AgentSam errors runtime', a
   fs.mkdirSync(consumer);
 
   const errorsTar = run('npm', ['pack', '--silent', '--pack-destination', packDir], path.join(root, 'packages/agentsam-errors'));
+  const cmsTar = run('npm', ['pack', '--silent', '--pack-destination', packDir], path.join(root, 'packages/agentsam-cms'));
   const rootTar = run('npm', ['pack', '--silent', '--pack-destination', packDir], root);
 
   fs.writeFileSync(path.join(consumer, 'package.json'), JSON.stringify({
@@ -42,6 +43,7 @@ test('packed root GOAP resolves the single published AgentSam errors runtime', a
     'install',
     '--ignore-scripts',
     path.join(packDir, errorsTar),
+    path.join(packDir, cmsTar),
     path.join(packDir, rootTar),
   ], consumer);
 
@@ -50,6 +52,8 @@ test('packed root GOAP resolves the single published AgentSam errors runtime', a
     const sdkErrors = await import('@inneranimalmedia/agentsam-sdk/errors');
     const errors = await import('@inneranimalmedia/agentsam-errors');
     const goap = await import('@inneranimalmedia/agentsam-sdk/goap');
+    const cms = await import('@inneranimalmedia/agentsam-cms');
+    if (!cms.createCmsOperations) throw new Error('portable CMS dependency missing');
     if (sdkErrors.AgentSamError !== errors.AgentSamError) {
       throw new Error('root errors export does not share canonical AgentSamError identity');
     }
