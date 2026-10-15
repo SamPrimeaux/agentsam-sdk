@@ -1,5 +1,5 @@
-import { Settings } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { CalendarPlus, FolderPlus, ListTodo, Settings, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type {
   WorkHost,
   WorkNavigate,
@@ -14,6 +14,11 @@ import { ArtifactsSurface } from "./surfaces/ArtifactsSurface";
 import { ProjectsSurface } from "./surfaces/ProjectsSurface";
 import { ProjectDetailSurface } from "./surfaces/ProjectDetailSurface";
 import { TicketDetailSurface } from "./surfaces/TicketDetailSurface";
+import type { WorkActions } from "./actions";
+import { TicketEditor } from "./TicketEditor";
+import { ProjectEditor } from "./ProjectEditor";
+import { EventEditor } from "./EventEditor";
+import type { WorkTicket } from "../contracts/index";
 
 const SNAPSHOT_CACHE = new WeakMap<WorkHost, Map<string, WorkSnapshot>>();
 const SNAPSHOT_REQUESTS = new WeakMap<WorkHost, Map<string, Promise<WorkSnapshot>>>();
@@ -66,6 +71,8 @@ export function WorkProduct({
   presentation = "standalone",
   navCollapsed = false,
   onNavCollapsedChange,
+  headerActions,
+  knowledgeAction,
 }: {
   host: WorkHost;
   surface: WorkSurfaceId;
@@ -75,8 +82,22 @@ export function WorkProduct({
   presentation?: WorkShellPresentation;
   navCollapsed?: boolean;
   onNavCollapsedChange?: (collapsed: boolean) => void;
+  /** Host extras shown beside the Projects header actions. */
+  headerActions?: ReactNode;
+  /** Host control for knowledge / codebase indexing on the project page. */
+  knowledgeAction?: ReactNode;
 }) {
-  const cacheKey = surface;
+  const [range, setRange] = useState<{ from?: string; to?: string }>({});
+  const calendarRange = surface === "calendar" && range.from ? range : {};
+  const cacheKey = surface === "calendar" && range.from ? `calendar:${range.from}:${range.to}` : surface;
+  const [openTicket, setOpenTicket] = useState<WorkTicket | null>(null);
+  const [quickCreate, setQuickCreate] = useState<null | "menu" | "project" | "ticket" | "event">(null);
+  useEffect(() => {
+    if (quickCreate !== "menu") return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setQuickCreate(null); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [quickCreate]);
   const [snapshot, setSnapshot] = useState<WorkSnapshot>(() =>
     snapshotBucket(SNAPSHOT_CACHE, host).get(cacheKey) || { ...EMPTY_LIVE_SNAPSHOT },
   );
@@ -92,7 +113,7 @@ export function WorkProduct({
 
     let request = requests.get(cacheKey);
     if (!request) {
-      request = host.snapshot({ surface });
+      request = host.snapshot({ surface, ...calendarRange });
       requests.set(cacheKey, request);
     }
 
@@ -113,15 +134,15 @@ export function WorkProduct({
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, host, surface]);
+  }, [cacheKey, host, surface]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refreshSnapshot = useCallback(async () => {
-    const next = await host.snapshot({ surface });
+    const next = await host.snapshot({ surface, ...calendarRange });
     snapshotBucket(SNAPSHOT_CACHE, host).set(cacheKey, next);
     setSnapshot(next);
     setLoadError(null);
     return next;
-  }, [cacheKey, host, surface]);
+  }, [cacheKey, host, surface]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -135,6 +156,47 @@ export function WorkProduct({
       window.removeEventListener("agentsam:work-refresh", onFocus);
     };
   }, [refreshSnapshot]);
+
+  const actions: WorkActions = useMemo(() => {
+    const after = async <T,>(work: Promise<T>): Promise<T> => {
+      const result = await work;
+      await refreshSnapshot().catch(() => undefined);
+      return result;
+    };
+    return {
+      createTicket: host.createTicket ? (input) => after(host.createTicket!(input)) : undefined,
+      updateTicket: host.updateTicket ? (id, patch) => after(host.updateTicket!(id, patch)) : undefined,
+      deleteTicket: host.deleteTicket ? (id) => after(host.deleteTicket!(id)) : undefined,
+      createProject: host.createProject ? (input) => after(host.createProject!(input)) : undefined,
+      updateProject: host.updateProject ? (id, patch) => after(host.updateProject!(id, patch)) : undefined,
+      deleteProject: host.deleteProject ? (id, options) => after(host.deleteProject!(id, options)) : undefined,
+      createEvent: host.createEvent ? (input) => after(host.createEvent!(input)) : undefined,
+      updateEvent: host.updateEvent ? (id, patch) => after(host.updateEvent!(id, patch)) : undefined,
+      deleteEvent: host.deleteEvent ? (id) => after(host.deleteEvent!(id)) : undefined,
+      scheduleTicket: host.createEvent
+        ? (ticket) => {
+            const hasDue = Boolean(ticket.dueAt);
+            const start = hasDue
+              ? new Date(Date.parse(ticket.dueAt as string) - 30 * 60_000)
+              : new Date(Math.ceil((Date.now() + 3_600_000) / 3_600_000) * 3_600_000);
+            const minutes = hasDue ? 30 : ticket.estimatedMinutes || 60;
+            return after(
+              host.createEvent!({
+                title: ticket.title,
+                type: "task",
+                start: start.toISOString(),
+                end: new Date(start.getTime() + minutes * 60_000).toISOString(),
+              }),
+            );
+          }
+        : undefined,
+      refresh: async () => {
+        await refreshSnapshot();
+      },
+    };
+  }, [host, refreshSnapshot]);
+
+  const lanes = useMemo(() => [...new Set(snapshot.tickets.map((t) => t.surface).filter(Boolean))].sort(), [snapshot.tickets]);
 
   const project = useMemo(() => {
     if (!snapshot) return null;
@@ -165,6 +227,9 @@ export function WorkProduct({
       presentation={presentation}
       navCollapsed={navCollapsed}
       onNavCollapsedChange={onNavCollapsedChange}
+      onQuickCreate={surface === "projects" || surface === "project-detail" || surface === "tickets" || surface === "calendar"
+        ? (actions.createTicket || actions.createProject || actions.createEvent ? () => setQuickCreate("menu") : undefined)
+        : undefined}
       trailing={
         host.openMailConnections ? (
           <button
@@ -188,12 +253,32 @@ export function WorkProduct({
           <strong style={{ display: "block", fontSize: 13 }}>{authHint}</strong>
         </div>
       ) : null}
-      {surface === "calendar" ? <CalendarSurface events={snapshot.calendar} /> : null}
+      {snapshot.source === "local" ? (
+        <div className="aw-pill" style={{ margin: "10px 16px 0" }} data-tone="accent">Local workspace on this device</div>
+      ) : null}
+      {surface === "calendar" ? (
+        <CalendarSurface
+          events={snapshot.calendar}
+          tickets={snapshot.tickets}
+          projects={snapshot.projects}
+          capabilities={snapshot.capabilities?.calendar}
+          actions={actions}
+          onRangeChange={(from, to) => setRange((prev) => (prev.from === from && prev.to === to ? prev : { from, to }))}
+          onOpenTicket={setOpenTicket}
+          onNavigate={onNavigate}
+        />
+      ) : null}
       {surface === "tickets" ? (
         <TicketsSurface
           tickets={snapshot.tickets}
           analytics={snapshot.ticketAnalytics}
-          scope="collaborate"
+          projects={snapshot.projects}
+          capabilities={snapshot.capabilities?.tickets}
+          onCreate={actions.createTicket}
+          onUpdate={actions.updateTicket}
+          onDelete={actions.deleteTicket}
+          onSchedule={actions.scheduleTicket}
+          onRefresh={actions.refresh}
         />
       ) : null}
       {surface === "artifact-tickets" ? (
@@ -210,7 +295,7 @@ export function WorkProduct({
           <TicketsSurface
             tickets={snapshot.tickets}
             analytics={snapshot.ticketAnalytics}
-            scope="platform"
+            projects={snapshot.projects}
             onOpenTicket={(ticket) =>
               onNavigate("/artifacts/tickets/" + encodeURIComponent(ticket.id))
             }
@@ -268,10 +353,89 @@ export function WorkProduct({
       ) : null}
       {surface === "artifacts" ? <ArtifactsSurface artifacts={snapshot.artifacts} /> : null}
       {surface === "projects" ? (
-        <ProjectsSurface projects={snapshot.projects} onNavigate={onNavigate} />
+        <ProjectsSurface
+          projects={snapshot.projects}
+          capabilities={snapshot.capabilities?.projects}
+          actions={actions}
+          onNavigate={onNavigate}
+          headerActions={headerActions}
+        />
       ) : null}
       {surface === "project-detail" && project ? (
-        <ProjectDetailSurface project={project} onNavigate={onNavigate} />
+        <ProjectDetailSurface
+          project={project}
+          projects={snapshot.projects}
+          tickets={snapshot.tickets}
+          events={snapshot.calendar}
+          capabilities={snapshot.capabilities}
+          actions={actions}
+          onNavigate={onNavigate}
+          knowledgeAction={knowledgeAction}
+        />
+      ) : null}
+      {quickCreate === "menu" ? (
+        <div className="aw-quick-create-overlay" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setQuickCreate(null);
+        }}>
+          <section className="aw-quick-create-sheet" role="dialog" aria-modal="true" aria-label="Create new work">
+            <div className="aw-quick-create-head">
+              <strong>Create new</strong>
+              <button type="button" className="aw-quick-close" aria-label="Close" onClick={() => setQuickCreate(null)}><X size={20}/></button>
+            </div>
+            {actions.createTicket ? <button type="button" className="aw-quick-option" onClick={() => setQuickCreate("ticket")}>
+              <ListTodo size={21}/><span><strong>New task</strong><small>Capture work, priority and due date</small></span>
+            </button> : null}
+            {actions.createProject ? <button type="button" className="aw-quick-option" onClick={() => setQuickCreate("project")}>
+              <FolderPlus size={21}/><span><strong>New project</strong><small>Organize a new development outcome</small></span>
+            </button> : null}
+            {actions.createEvent ? <button type="button" className="aw-quick-option" onClick={() => setQuickCreate("event")}>
+              <CalendarPlus size={21}/><span><strong>New calendar event</strong><small>Schedule a dedicated work session</small></span>
+            </button> : null}
+          </section>
+        </div>
+      ) : null}
+      {quickCreate === "project" && actions.createProject ? (
+        <ProjectEditor
+          project={null}
+          onClose={() => setQuickCreate(null)}
+          onSave={async (input) => { await actions.createProject?.(input); }}
+        />
+      ) : null}
+      {quickCreate === "ticket" && actions.createTicket ? (
+        <TicketEditor
+          ticket={null}
+          defaults={project && surface === "project-detail" ? { project: project.name } : undefined}
+          projects={snapshot.projects}
+          lanes={lanes}
+          canSave={true}
+          canDelete={false}
+          onClose={() => setQuickCreate(null)}
+          onSave={async (input) => { await actions.createTicket?.(input); }}
+        />
+      ) : null}
+      {quickCreate === "event" && actions.createEvent ? (
+        <EventEditor
+          event={null}
+          projects={snapshot.projects}
+          canSave={true}
+          canDelete={false}
+          onClose={() => setQuickCreate(null)}
+          onSave={async (input) => { await actions.createEvent?.(input); }}
+        />
+      ) : null}
+      {openTicket ? (
+        <TicketEditor
+          ticket={openTicket}
+          projects={snapshot.projects}
+          lanes={lanes}
+          canSave={snapshot.capabilities?.tickets.update ?? Boolean(actions.updateTicket)}
+          canDelete={snapshot.capabilities?.tickets.delete ?? Boolean(actions.deleteTicket)}
+          onClose={() => setOpenTicket(null)}
+          onSave={async (input) => {
+            await actions.updateTicket?.(openTicket.id, input);
+          }}
+          onDelete={actions.deleteTicket ? async () => { await actions.deleteTicket?.(openTicket.id); } : undefined}
+        />
       ) : null}
     </WorkShell>
   );

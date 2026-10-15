@@ -511,9 +511,9 @@ export function FilesStage({ tab }: { tab: SideTab }) {
                   }
                 >
                   <MonacoPane file={selected} workspaceId={project.id} onChange={onEditorChange}
-                    runtimeBaseUrl={isFilesystem ? project.runtimeBaseUrl : undefined}
-                    runtimeCapability={isFilesystem ? project.runtimeCapability : undefined}
-                    workspaceRoot={isFilesystem ? project.workspaceRoot : undefined}
+                    runtimeBaseUrl={isFilesystem ? project.runtimeBaseUrl ?? undefined : undefined}
+                    runtimeCapability={isFilesystem ? project.runtimeCapability ?? undefined : undefined}
+                    workspaceRoot={isFilesystem ? project.workspaceRoot ?? undefined : undefined}
                     savedVersion={isFilesystem ? versions[selected.path] : undefined}
                     lspRetry={lspRetry}
                     onLspStatus={(status, detail) => {setLspStatus(status);setLspDetail(detail);}}

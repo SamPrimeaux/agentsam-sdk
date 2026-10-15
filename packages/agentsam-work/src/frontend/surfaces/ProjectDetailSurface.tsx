@@ -1,157 +1,159 @@
-import { CalendarDays, ChevronDown, ExternalLink, Folder, GitBranch, MoreHorizontal, RefreshCw, Send, Star, Timer, Users } from "lucide-react";
-import { useState } from "react";
-import type { WorkNavigate, WorkProject } from "../../contracts/index";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import type { WorkCalendarEvent, WorkCapabilities, WorkNavigate, WorkProject, WorkTicket } from "../../contracts/index";
+import type { WorkActions } from "../actions";
+import { ProjectDeleteDialog, ProjectEditor, projectStatusLabel } from "../ProjectEditor";
+import { Pill, formatDate, timeAgo } from "../shared";
+import { isOpen, sameProject } from "../ticket-plan";
+import { statusTone } from "./ProjectsSurface";
+import { TicketsSurface } from "./TicketsSurface";
+
+type Tab = "overview" | "tickets" | "timeline" | "calendar";
 
 export function ProjectDetailSurface({
   project,
+  projects = [],
+  tickets = [],
+  events = [],
+  capabilities,
+  actions = {},
   onNavigate,
+  knowledgeAction,
 }: {
   project: WorkProject;
+  projects?: WorkProject[];
+  tickets?: WorkTicket[];
+  events?: WorkCalendarEvent[];
+  capabilities?: WorkCapabilities;
+  actions?: WorkActions;
   onNavigate: WorkNavigate;
+  /** Host-supplied control for codebase / knowledge indexing. */
+  knowledgeAction?: ReactNode;
 }) {
-  const [prompt, setPrompt] = useState("");
+  const [tab, setTab] = useState<Tab>("overview");
+  const [editing, setEditing] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const mine = useMemo(() => tickets.filter((t) => sameProject(t, project)), [tickets, project]);
+  const open = mine.filter(isOpen);
+  const upcoming = useMemo(
+    () => events.filter((e) => e.projectId === project.id && Date.parse(e.end) >= Date.now()).sort((a, b) => Date.parse(a.start) - Date.parse(b.start)).slice(0, 8),
+    [events, project.id],
+  );
+  const canEdit = capabilities?.projects.update ?? Boolean(actions.updateProject);
+  const canDelete = capabilities?.projects.delete ?? Boolean(actions.deleteProject);
 
   return (
-    <div style={{ height: "100%", display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", minWidth: 820 }}>
-      <main style={{ minWidth: 0, overflowY: "auto", padding: "28px 34px 72px" }}>
-        <button
-          type="button"
-          onClick={() => onNavigate("/projects")}
-          style={{ border: 0, background: "transparent", color: "var(--agentsam-work-muted)", fontSize: 10, cursor: "pointer" }}
-        >
-          ← All projects
-        </button>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 18 }}>
-          <h1 style={{ margin: 0, minWidth: 0, flex: 1, fontSize: 28, letterSpacing: "-.03em" }}>{project.name}</h1>
-          <RefreshCw size={15} color="var(--agentsam-work-muted)" />
-          <MoreHorizontal size={17} color="var(--agentsam-work-muted)" />
-          <Star size={16} color="var(--agentsam-work-muted)" />
-        </div>
-
-        <div
-          className="agentsam-work-card"
-          style={{
-            marginTop: 20,
-            padding: 14,
-            background: "var(--agentsam-work-panel-subtle)",
-          }}
-        >
-          <div style={{ fontSize: 12 }}>How can I help you today?</div>
-          <textarea
-            value={prompt}
-            onChange={(event) => setPrompt(event.target.value)}
-            rows={3}
-            placeholder="Ask AgentSam about this project…"
-            style={{
-              width: "100%",
-              resize: "vertical",
-              marginTop: 8,
-              border: 0,
-              outline: 0,
-              background: "transparent",
-              color: "var(--agentsam-work-text)",
-            }}
-          />
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <button type="button" className="agentsam-work-toolbar-button" data-primary="true" aria-label="Send">
-              <Send size={14} />
-            </button>
+    <div className="aw-page" style={{ ["--aw-accent" as string]: project.accent }}>
+      <button type="button" className="aw-btn" style={{ marginBottom: 14 }} onClick={() => onNavigate("/projects")}>
+        <ArrowLeft size={14} /> All projects
+      </button>
+      <div className="aw-head">
+        <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+          <div className="aw-badge" style={{ width: 52, height: 52, fontSize: 18 }} aria-hidden>{project.initials}</div>
+          <div>
+            <p className="aw-kicker">Project</p>
+            <h1 style={{ fontSize: "clamp(22px, 3vw, 30px)" }}>{project.name}</h1>
+            <p className="aw-sub" style={{ marginTop: 6 }}>
+              <Pill tone={statusTone(project.status)}>{projectStatusLabel(project.status)}</Pill>{" "}
+              {project.clientName ? `${project.clientName} · ` : ""}{project.updatedAt ? `Updated ${timeAgo(project.updatedAt)}` : ""}
+            </p>
           </div>
         </div>
-
-        <div style={{ marginTop: 34, color: "var(--agentsam-work-muted)", fontSize: 11 }}>
-          No chats in this project yet. Start one above — AgentSam opens full-screen with this project linked.
+        <div className="aw-actions">
+          {knowledgeAction}
+          {canEdit && actions.updateProject ? <button type="button" className="aw-btn" onClick={() => setEditing(true)}>Edit</button> : null}
+          {canDelete && actions.deleteProject ? <button type="button" className="aw-btn aw-btn--danger" onClick={() => setRemoving(true)}>{project.status === "archived" ? "Delete…" : "Archive…"}</button> : null}
         </div>
-      </main>
+      </div>
 
-      <aside style={{ minHeight: 0, overflowY: "auto", borderLeft: "1px solid var(--agentsam-work-border)", background: "var(--agentsam-work-panel-subtle)" }}>
-        <section style={{ padding: 18, borderBottom: "1px solid var(--agentsam-work-border)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <strong style={{ fontSize: 12 }}>Quick stats</strong>
-            <ChevronDown size={13} />
-            <div style={{ flex: 1 }} />
-            <RefreshCw size={13} />
-            <ExternalLink size={13} />
-          </div>
-          <div style={{ marginTop: 14, color: "var(--agentsam-work-muted)", fontSize: 9, textTransform: "uppercase" }}>This week</div>
-          <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600 }}>Project insights</div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 14 }}>
-            <button className="agentsam-work-toolbar-button" data-primary="true" type="button">Week</button>
-            <button className="agentsam-work-toolbar-button" type="button">Month</button>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginTop: 10 }}>
-            <button className="agentsam-work-toolbar-button" data-primary="true" type="button">Time</button>
-            <button className="agentsam-work-toolbar-button" type="button">Cost</button>
-            <button className="agentsam-work-toolbar-button" type="button">Progress</button>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
-            <button className="agentsam-work-toolbar-button" type="button"><Timer size={14} /> Start</button>
-            <div style={{ flex: 1 }} />
-            <span style={{ color: "var(--agentsam-work-muted)", fontSize: 10 }}>Today</span>
-            <strong style={{ fontSize: 11 }}>{project.trackedMinutes}m</strong>
-          </div>
-
-          <div
-            style={{
-              width: 86,
-              height: 86,
-              margin: "12px auto 0",
-              borderRadius: "50%",
-              background: "conic-gradient(var(--agentsam-work-success) 0 78%, var(--agentsam-work-border) 78% 100%)",
-              display: "grid",
-              placeItems: "center",
-            }}
-          >
-            <span style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--agentsam-work-panel-subtle)" }} />
-          </div>
-
-          <div style={{ display: "grid", gap: 8, marginTop: 12, fontSize: 10 }}>
-            <div style={{ display: "flex" }}><span>Tracked today</span><span style={{ marginLeft: "auto" }}>{project.trackedMinutes}m</span></div>
-            <div style={{ display: "flex" }}><span>Open tasks</span><span style={{ marginLeft: "auto" }}>{project.openTasks}</span></div>
-            <div style={{ display: "flex" }}><span>Progress</span><span style={{ marginLeft: "auto" }}>{project.progress}%</span></div>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <button className="agentsam-work-toolbar-button" type="button"><Users size={13} /> Tasks</button>
-            <button className="agentsam-work-toolbar-button" type="button"><CalendarDays size={13} /> Calendar</button>
-            <button className="agentsam-work-toolbar-button" type="button"><ExternalLink size={13} /> Collaborate</button>
-          </div>
-        </section>
-
-        <section style={{ padding: 18, borderBottom: "1px solid var(--agentsam-work-border)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <strong style={{ fontSize: 12 }}>Codebase index</strong>
-            <ChevronDown size={13} />
-            <div style={{ flex: 1 }} />
-            <GitBranch size={14} />
-            <RefreshCw size={13} />
-          </div>
-          <p style={{ color: "var(--agentsam-work-muted)", fontSize: 10, lineHeight: 1.5 }}>
-            {project.githubRepo ? "Repository linked and ready for indexing." : "Connect a GitHub repository to index and search this project's code."}
-          </p>
-          <button className="agentsam-work-toolbar-button" type="button">
-            <GitBranch size={13} /> {project.githubRepo ? project.githubRepo : "Connect GitHub repo"}
-          </button>
-        </section>
-
-        {([
-          ["Brand assets", Folder],
-          ["Cover", Folder],
-          ["Memory", Folder],
-        ] as const).map(([label, Icon]) => (
-          <section key={String(label)} style={{ padding: 18, borderBottom: "1px solid var(--agentsam-work-border)", display: "flex", alignItems: "center", gap: 8 }}>
-            <strong style={{ fontSize: 12 }}>{label}</strong>
-            <ChevronDown size={13} />
-            <div style={{ flex: 1 }} />
-            <Icon size={14} />
-            <ExternalLink size={13} />
-          </section>
+      <div className="aw-tabs" role="tablist">
+        {([["overview", "Overview"], ["tickets", `Tickets ${mine.length || ""}`], ["timeline", "Timeline"], ["calendar", `Calendar ${upcoming.length || ""}`]] as Array<[Tab, string]>).map(([id, label]) => (
+          <button key={id} type="button" role="tab" className="aw-tab" data-active={tab === id} aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>
         ))}
-      </aside>
+      </div>
+
+      {tab === "overview" ? (
+        <>
+          <div className="aw-stats">
+            <div className="aw-stat"><small>Progress</small><strong>{project.progress}%</strong><div className="aw-progress" style={{ marginTop: 8 }}><span style={{ width: `${project.progress}%`, background: "var(--aw-accent)" }} /></div></div>
+            <div className="aw-stat"><small>Open tickets</small><strong>{open.length}</strong></div>
+            <div className="aw-stat"><small>Total tickets</small><strong>{mine.length}</strong></div>
+            <div className="aw-stat"><small>Estimated time</small><strong>{Math.round((project.trackedMinutes || 0) / 60)}h</strong></div>
+          </div>
+          <div className="aw-panels">
+            <section className="aw-panel">
+              <h3>Current objective</h3>
+              <p>{project.objective || "No objective set yet."}</p>
+              {project.description ? <p>{project.description}</p> : null}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {project.projectType && project.projectType !== "project" ? <Pill>{project.projectType}</Pill> : null}
+                {project.launchDate ? <Pill>launch {formatDate(project.launchDate)}</Pill> : null}
+                {(project.tags ?? []).map((tag) => <Pill key={tag}>{tag}</Pill>)}
+              </div>
+            </section>
+            <section className="aw-panel">
+              <h3>Links</h3>
+              {project.domain ? <p><ExternalLink size={12} /> {project.domain}</p> : null}
+              {project.githubRepo ? <p>{project.githubRepo}{project.branch ? ` · ${project.branch}` : ""}</p> : null}
+              {!project.domain && !project.githubRepo ? <p>Add a domain or repository from Edit.</p> : null}
+            </section>
+            <section className="aw-panel">
+              <h3>Up next</h3>
+              {upcoming.length ? upcoming.slice(0, 4).map((e) => <p key={e.id} style={{ margin: "0 0 6px" }}><strong>{e.title}</strong> · {formatDate(e.start, true)}</p>) : <p>No upcoming events for this project.</p>}
+              <button type="button" className="aw-btn" onClick={() => onNavigate("/collaborate")}>Open calendar</button>
+            </section>
+          </div>
+        </>
+      ) : null}
+
+      {tab === "tickets" ? (
+        <TicketsSurface
+          embedded
+          tickets={tickets}
+          projects={projects}
+          projectId={project.id}
+          capabilities={capabilities?.tickets}
+          onCreate={actions.createTicket}
+          onUpdate={actions.updateTicket}
+          onDelete={actions.deleteTicket}
+          onSchedule={actions.scheduleTicket}
+        />
+      ) : null}
+
+      {tab === "timeline" ? (
+        <TicketsSurface
+          embedded
+          tickets={tickets}
+          projects={projects}
+          projectId={project.id}
+          capabilities={capabilities?.tickets}
+          onCreate={actions.createTicket}
+          onUpdate={actions.updateTicket}
+          onDelete={actions.deleteTicket}
+          onSchedule={actions.scheduleTicket}
+          initialMode="timeline"
+        />
+      ) : null}
+
+      {tab === "calendar" ? (
+        <section className="aw-panel">
+          <h3>Upcoming for this project</h3>
+          {upcoming.length ? upcoming.map((e) => <p key={e.id} style={{ margin: "0 0 8px" }}><strong>{e.title}</strong> · {formatDate(e.start, true)}</p>) : <p>Nothing scheduled. Create events from the calendar and link them to this project.</p>}
+          <button type="button" className="aw-btn aw-btn--primary" onClick={() => onNavigate("/collaborate")}>Open calendar</button>
+        </section>
+      ) : null}
+
+      {editing ? (
+        <ProjectEditor project={project} onClose={() => setEditing(false)} onSave={async (input) => { await actions.updateProject?.(project.id, input); }} />
+      ) : null}
+      {removing ? (
+        <ProjectDeleteDialog
+          project={project}
+          onClose={() => setRemoving(false)}
+          onArchive={actions.deleteProject ? async () => { await actions.deleteProject?.(project.id); } : undefined}
+          onDelete={actions.deleteProject ? async () => { await actions.deleteProject?.(project.id, { hard: true }); onNavigate("/projects"); } : undefined}
+        />
+      ) : null}
     </div>
   );
 }

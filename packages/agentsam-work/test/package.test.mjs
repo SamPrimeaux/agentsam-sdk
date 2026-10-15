@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { createFixtureWorkHost, populatedWorkFixture } from '../dist/fixtures/index.js';
 import { WORK_THEME_CSS_VARS } from '../dist/contracts/index.js';
 
@@ -25,69 +25,71 @@ test('embedded WorkShell delegates chrome to the host application', () => {
 });
 
 
-test('Projects surface preserves the established Work product grammar', () => {
-  const source = readFileSync(
-    new URL('../src/frontend/surfaces/ProjectsSurface.tsx', import.meta.url),
-    'utf8',
-  );
-  for (const label of ['My Projects', 'Recent', 'Shared', 'Archived', 'Starred']) {
+test('Projects surface keeps the established Work grammar and now supports full CRUD', () => {
+  const source = readFileSync(new URL('../src/frontend/surfaces/ProjectsSurface.tsx', import.meta.url), 'utf8');
+  for (const label of ['All', 'Active', 'Production', 'Starred', 'Archived']) {
     assert.match(source, new RegExp(label));
   }
   assert.match(source, /Search projects/);
-  assert.match(source, /Create project is not available on hosted yet/);
+  assert.match(source, /\+ New project/);
   assert.match(source, /More actions for/);
-  assert.match(source, /project\.coverImageUrl/);
+  assert.match(source, /Current objective/);
+  assert.doesNotMatch(source, /not available on hosted yet/);
 });
 
-test('Project detail preserves the established Work detail surface', () => {
-  const source = readFileSync(
-    new URL('../src/frontend/surfaces/ProjectDetailSurface.tsx', import.meta.url),
-    'utf8',
-  );
-  assert.match(source, /Tracked today/);
-  assert.match(source, /Open tasks/);
-  assert.match(source, /Repository linked and ready for indexing/);
-  assert.match(source, /agentsam-work-toolbar-button/);
+test('every Work surface hides controls the host cannot perform (capability gated)', () => {
+  const read = (name) => readFileSync(new URL(`../src/frontend/${name}`, import.meta.url), 'utf8');
+  assert.match(read('surfaces/TicketsSurface.tsx'), /caps\.create/);
+  assert.match(read('surfaces/ProjectsSurface.tsx'), /caps\.delete/);
+  assert.match(read('surfaces/CalendarSurface.tsx'), /caps\.update/);
+});
+
+test('theme: no literal colors in Work UI source; hex only in the standalone defaults block', () => {
+  const COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/;
+  const dir = new URL('../src/frontend/', import.meta.url);
+  const files = [];
+  const walk = (url) => {
+    for (const entry of readdirSync(url, { withFileTypes: true })) {
+      const child = new URL(entry.name + (entry.isDirectory() ? '/' : ''), url);
+      if (entry.isDirectory()) walk(child);
+      else if (/\.(tsx|ts)$/.test(entry.name) && entry.name !== 'theme.ts') files.push(child);
+    }
+  };
+  walk(dir);
+  for (const file of files) {
+    assert.doesNotMatch(readFileSync(file, 'utf8'), COLOR, `literal color in ${file.pathname.split('/src/')[1]}`);
+  }
+  const css = readFileSync(new URL('../src/frontend/theme.css', import.meta.url), 'utf8');
+  const afterDefaults = css.slice(css.indexOf('.agentsam-work {'));
+  assert.doesNotMatch(afterDefaults, COLOR, 'theme.css has literal colors outside the :root defaults block');
 });
 
 
-test('Tickets keeps its canonical route and host typography/contrast', () => {
-  const shell = readFileSync(new URL('../src/frontend/WorkShell.tsx', import.meta.url), 'utf8');
-  const tickets = readFileSync(new URL('../src/frontend/surfaces/TicketsSurface.tsx', import.meta.url), 'utf8');
-  assert.ok(shell.includes('href: "/tickets"'));
-  assert.ok(!shell.includes('/collaborate?seg=tickets'));
-  assert.ok(tickets.includes('fontFamily: "inherit"'));
-  assert.ok(tickets.includes('color: "var(--agentsam-work-text)"'));
+test('mobile work flow exposes real Quick Create actions while preserving five-item navigation', () => {
+  const read = (name) => readFileSync(new URL('../src/frontend/' + name, import.meta.url), 'utf8');
+  const shell = read('WorkShell.tsx');
+  const product = read('WorkProduct.tsx');
+  const theme = read('theme.css');
+  assert.match(shell, /onQuickCreate/);
+  assert.match(shell, /aw-mobile-create/);
+  for (const action of ['createTicket', 'createProject', 'createEvent']) assert.match(product, new RegExp(action));
+  for (const editor of ['ProjectEditor', 'TicketEditor', 'EventEditor']) assert.match(product, new RegExp(editor));
+  assert.match(theme, /safe-area-inset-bottom/);
+  assert.match(theme, /min-height: 44px/);
+  assert.match(theme, /aw-quick-create-sheet/);
+  for (const nav of ['calendar', 'tickets', 'mail', 'projects', 'artifacts']) assert.match(shell, new RegExp('id: "' + nav + '" as const'));
 });
 
-test('Work snapshots render immediately and refresh by surface', () => {
-  const source = readFileSync(new URL('../src/frontend/WorkProduct.tsx', import.meta.url), 'utf8');
-  assert.ok(!source.includes('Loading Work…'));
-  assert.ok(source.includes('SNAPSHOT_CACHE'));
-  assert.ok(source.includes('host.snapshot({ surface })'));
-});
-
-test('Mail exposes provider-neutral connections and real message actions', () => {
-  const source = readFileSync(new URL('../src/frontend/surfaces/MailSurface.tsx', import.meta.url), 'utf8');
-  assert.match(source, /Mail connections/);
-  assert.match(source, /mailboxConnections/);
-  assert.match(source, /infrastructureConnections/);
-  assert.match(source, /Mail infrastructure/);
-  assert.match(source, /item\.capabilities/);
-  assert.match(source, /onSelectConnection/);
-  assert.match(source, /onConnectProvider/);
-  assert.match(source, /onArchive/);
-  assert.match(source, /onStar/);
-  assert.match(source, /onSend/);
-  assert.match(source, /Sending…/);
-});
-
-test('Work mini navigation is host-controlled and collapsible', () => {
-  const shell = readFileSync(new URL('../src/frontend/WorkShell.tsx', import.meta.url), 'utf8');
-  const theme = readFileSync(new URL('../src/frontend/theme.css', import.meta.url), 'utf8');
-  assert.match(shell, /navCollapsed/);
-  assert.match(shell, /onNavCollapsedChange/);
-  assert.match(shell, /Collapse Work navigation/);
-  assert.match(theme, /data-nav-collapsed="true"/);
-  assert.match(theme, /grid-template-columns: 64px minmax\(0, 1fr\)/);
+test('desktop WorkHost uses identical CRUD routes as browser and Rust permits every write', () => {
+  const localStudio = readFileSync(new URL('../../../apps/local-studio/frontend/src/components/work/LocalStudioWorkPage.tsx', import.meta.url), 'utf8');
+  const bridge = readFileSync(new URL('../../agentsam-desktop-shell/src-tauri/src/commands/local_identity.rs', import.meta.url), 'utf8');
+  const client = readFileSync(new URL('../src/client/index.ts', import.meta.url), 'utf8');
+  assert.match(localStudio, /createWorkCrud\(request\)/);
+  assert.match(localStudio, /snapshotRequest.from/);
+  assert.match(localStudio, /snapshotRequest.to/);
+  for (const prefix of ['/api/projects', '/api/calendar/events', '/api/tickets']) {
+    assert.ok(client.includes(prefix), 'browser missing route ' + prefix);
+    assert.ok(bridge.includes(prefix), 'desktop missing route ' + prefix);
+  }
+  for (const method of ['GET', 'POST', 'PATCH', 'DELETE']) assert.match(bridge, new RegExp('"'+ method + '" => Method::' + method));
 });

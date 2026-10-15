@@ -277,7 +277,7 @@ export function MailSurface({
             border: "1px solid var(--agentsam-work-border)",
             borderRadius: 12,
             background: "var(--agentsam-work-panel)",
-            boxShadow: "0 16px 44px rgb(0 0 0 / 24%)",
+            boxShadow: "0 16px 44px color-mix(in srgb, var(--agentsam-work-text) 24%, transparent)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", borderBottom: "1px solid var(--agentsam-work-border)" }}>
@@ -387,7 +387,7 @@ export function MailSurface({
             border: "1px solid var(--agentsam-work-border)",
             borderRadius: 14,
             background: "var(--agentsam-work-panel)",
-            boxShadow: "0 16px 50px rgb(0 0 0 / 20%)",
+            boxShadow: "0 16px 50px color-mix(in srgb, var(--agentsam-work-text) 20%, transparent)",
             overflow: "hidden",
           }}
         >

@@ -69,7 +69,8 @@ export type WorkTicketStatus =
   | "shipped"
   | "abandoned";
 
-export type WorkTicketSurface = "platform" | "collaborate";
+/** Free-form ticket lane (platform, collaborate, dashboard, worker, ...). */
+export type WorkTicketSurface = string;
 
 export type WorkTicket = {
   id: string;
@@ -83,8 +84,22 @@ export type WorkTicket = {
   blockedBy: string[];
   blocks: string[];
   surface: WorkTicketSurface;
+  statusReason?: string | null;
+  parentId?: string | null;
+  /** ISO-8601 timestamps. */
+  startAt?: string | null;
+  dueAt?: string | null;
+  closedAt?: string | null;
+  estimatedMinutes?: number | null;
+  percentComplete?: number;
+  ownerKind?: string;
+  ownerRef?: string | null;
+  createdAt?: number;
+  /** Epoch seconds. */
   updatedAt: number;
 };
+
+export type WorkTicketInput = Partial<Omit<WorkTicket, "id" | "updatedAt" | "createdAt" | "closedAt">>;
 
 export type WorkArtifact = {
   id: string;
@@ -97,20 +112,84 @@ export type WorkArtifact = {
   updatedLabel?: string | null;
 };
 
+export type WorkProjectStatus =
+  | "discovery"
+  | "design"
+  | "development"
+  | "qa"
+  | "staging"
+  | "production"
+  | "maintenance"
+  | "archived";
+
+export const WORK_PROJECT_STATUSES: WorkProjectStatus[] = [
+  "discovery",
+  "design",
+  "development",
+  "qa",
+  "staging",
+  "production",
+  "maintenance",
+  "archived",
+];
+
+export const WORK_PROJECT_TYPES = [
+  "dashboard",
+  "landing-page",
+  "saas-product",
+  "e-commerce",
+  "internal-tool",
+  "template",
+] as const;
+
 export type WorkProject = {
   id: string;
   name: string;
   description?: string;
   projectType?: string;
-  status: "planning" | "active" | "review" | "blocked" | "complete" | "production";
+  status: WorkProjectStatus;
   progress: number;
   coverImageUrl?: string | null;
   initials: string;
   accent: string;
   githubRepo?: string | null;
+  branch?: string | null;
+  objective?: string | null;
+  clientName?: string | null;
+  clientId?: string | null;
+  domain?: string | null;
+  launchDate?: string | null;
+  priority?: number;
+  tags?: string[];
+  starred?: boolean;
   openTasks: number;
+  totalTasks?: number;
   trackedMinutes: number;
+  updatedAt?: string | null;
 };
+
+export type WorkProjectInput = Partial<
+  Pick<
+    WorkProject,
+    | "name"
+    | "description"
+    | "projectType"
+    | "status"
+    | "progress"
+    | "coverImageUrl"
+    | "accent"
+    | "githubRepo"
+    | "branch"
+    | "objective"
+    | "clientName"
+    | "clientId"
+    | "domain"
+    | "launchDate"
+    | "priority"
+    | "tags"
+    | "starred"
+  >
+>;
 
 export type WorkMailMessage = {
   id: string;
@@ -135,13 +214,62 @@ export type WorkMailConnection = {
   description?: string | null;
 };
 
+export type WorkEventType =
+  | "meeting"
+  | "deadline"
+  | "reminder"
+  | "task"
+  | "client_call"
+  | "personal"
+  | "travel"
+  | "other";
+
+export const WORK_EVENT_TYPES: WorkEventType[] = [
+  "meeting",
+  "deadline",
+  "reminder",
+  "task",
+  "client_call",
+  "personal",
+  "travel",
+  "other",
+];
+
 export type WorkCalendarEvent = {
   id: string;
   title: string;
-  dayOffset: number;
-  startMinutes: number;
-  durationMinutes: number;
-  kind: "meeting" | "task" | "focus" | "event";
+  description?: string | null;
+  location?: string | null;
+  type: WorkEventType;
+  /** ISO-8601 (UTC). */
+  start: string;
+  end: string;
+  allDay?: boolean;
+  status?: "scheduled" | "completed" | "cancelled" | "rescheduled";
+  color?: string | null;
+  priority?: "low" | "normal" | "high" | "urgent";
+  projectId?: string | null;
+  clientId?: string | null;
+  /** "primary" = created here and editable; anything else is synced from a provider. */
+  source?: string;
+  readOnly?: boolean;
+};
+
+export type WorkEventInput = Partial<
+  Pick<
+    WorkCalendarEvent,
+    "title" | "description" | "location" | "type" | "start" | "end" | "allDay" | "status" | "color" | "priority" | "projectId" | "clientId"
+  >
+>;
+
+export type WorkEntityCapabilities = { create: boolean; update: boolean; delete: boolean };
+
+/** Hosts advertise what they can do; surfaces hide controls instead of rendering dead buttons. */
+export type WorkCapabilities = {
+  tickets: WorkEntityCapabilities;
+  projects: WorkEntityCapabilities;
+  calendar: WorkEntityCapabilities;
+  googleCalendar?: boolean;
 };
 
 export type WorkSnapshot = {
@@ -154,6 +282,9 @@ export type WorkSnapshot = {
   mailConnections?: WorkMailConnection[];
   activeMailConnectionId?: string | null;
   calendar: WorkCalendarEvent[];
+  /** Where this data lives: the hosted account, or the local on-device store. */
+  source?: "hosted" | "local";
+  capabilities?: WorkCapabilities;
   currentProjectId: string;
   ticketAnalytics: {
     completionRate: number;
@@ -165,13 +296,24 @@ export type WorkSnapshot = {
 export type WorkSnapshotRequest = {
   surface?: WorkSurfaceId;
   mailConnectionId?: string;
+  /** Calendar window (ISO-8601). */
+  from?: string;
+  to?: string;
 };
 
 export interface WorkHost {
   snapshot(request?: WorkSnapshotRequest): Promise<WorkSnapshot>;
   refresh?(): Promise<void>;
-  createTicket?(input: Pick<WorkTicket, "title" | "surface"> & Partial<WorkTicket>): Promise<WorkTicket>;
-  updateTicket?(id: string, patch: Partial<WorkTicket>): Promise<WorkTicket>;
+  createTicket?(input: WorkTicketInput & { title: string }): Promise<WorkTicket>;
+  updateTicket?(id: string, patch: WorkTicketInput): Promise<WorkTicket>;
+  deleteTicket?(id: string): Promise<void>;
+  createProject?(input: WorkProjectInput & { name: string }): Promise<WorkProject>;
+  updateProject?(id: string, patch: WorkProjectInput): Promise<WorkProject>;
+  /** Default archives; `hard` removes the project permanently. */
+  deleteProject?(id: string, options?: { hard?: boolean }): Promise<void>;
+  createEvent?(input: WorkEventInput & { title: string; start: string }): Promise<WorkCalendarEvent>;
+  updateEvent?(id: string, patch: WorkEventInput): Promise<WorkCalendarEvent>;
+  deleteEvent?(id: string): Promise<void>;
   archiveMail?(id: string, connectionId?: string): Promise<void>;
   starMail?(id: string, starred: boolean, connectionId?: string): Promise<void>;
   connectMail?(provider?: string): Promise<void>;

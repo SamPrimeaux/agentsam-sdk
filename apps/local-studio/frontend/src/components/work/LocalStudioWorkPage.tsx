@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { createHttpWorkHost } from "@inneranimalmedia/agentsam-work/client";
+import { createHttpWorkHost, createWorkCrud } from "@inneranimalmedia/agentsam-work/client";
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, openExternalUrl } from "@/lib/desktop/tauri";
 import { WorkProduct } from "@inneranimalmedia/agentsam-work/frontend";
 import { AutoRagWorkflowDialog } from "@inneranimalmedia/agentsam-workbench/knowledge";
@@ -95,7 +95,7 @@ function createDesktopWorkHost(): WorkHost {
       await invokeStudioService({
         operation: "work",
         path,
-        method: method as "GET" | "POST" | "PATCH",
+        method: method as "GET" | "POST" | "PATCH" | "DELETE",
         ...(body !== undefined ? { body } : {}),
       }),
     );
@@ -121,6 +121,8 @@ function createDesktopWorkHost(): WorkHost {
     async snapshot(snapshotRequest = {}) {
       const params = new URLSearchParams();
       if (snapshotRequest.surface) params.set("surface", snapshotRequest.surface);
+      if (snapshotRequest.from) params.set("from", snapshotRequest.from);
+      if (snapshotRequest.to) params.set("to", snapshotRequest.to);
       const selected = snapshotRequest.mailConnectionId || readStoredMailConnectionId();
       if (selected) params.set("mail_connection", selected);
       const query = params.size ? "?" + params.toString() : "";
@@ -132,18 +134,7 @@ function createDesktopWorkHost(): WorkHost {
       }
       return payload.snapshot;
     },
-    async createTicket(input) {
-      const payload = await json<{ ticket: Awaited<ReturnType<NonNullable<WorkHost["createTicket"]>>> }>(
-        await request("/api/tickets", "POST", input),
-      );
-      return payload.ticket;
-    },
-    async updateTicket(id, patch) {
-      const payload = await json<{ ticket: Awaited<ReturnType<NonNullable<WorkHost["updateTicket"]>>> }>(
-        await request("/api/tickets/" + encodeURIComponent(id), "PATCH", patch),
-      );
-      return payload.ticket;
-    },
+    ...createWorkCrud(request),
     async sendMail(input, connectionId) {
       await json(await request("/api/mail/send", "POST", {
         ...input,
@@ -388,15 +379,15 @@ export function LocalStudioWorkPage({
 
   return (
     <div className="local-studio-work-surface relative h-full min-h-0" data-work-host={mode}>
-      {showAutoRag && (
-        <button type="button" onClick={openAutoRag} aria-label="Open AutoRAG setup" className="absolute right-5 top-4 z-20 rounded-full border border-white/15 bg-neutral-900 px-4 py-2 text-sm font-medium text-white shadow-xl hover:bg-neutral-800">Knowledge / AutoRAG</button>
-      )}
+
       <AutoRagWorkflowDialog open={ragOpen} root={ragRoot} host={localStudioAutoRagHost} onClose={() => setRagOpen(false)} />
       <WorkProduct
         host={host}
         surface={surface}
         projectId={projectId}
         ticketId={ticketId}
+        headerActions={showAutoRag && isPackagedDesktop() ? <button type="button" className="aw-btn" onClick={openAutoRag}>Knowledge / AutoRAG</button> : undefined}
+        knowledgeAction={showAutoRag && isPackagedDesktop() ? <button type="button" className="aw-btn" onClick={openAutoRag}>Knowledge / AutoRAG</button> : undefined}
         navCollapsed={navCollapsed}
         onNavCollapsedChange={(next) => {
           setNavCollapsed(next);
