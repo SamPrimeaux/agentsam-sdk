@@ -37,3 +37,12 @@ Scope: hosted Projects/Tickets, the shared packages/agentsam-work UI, and apps/l
 ## Evidence
 
 Use apps/local-studio npm run build:desktop and npm run smoke:work-visual, plus packages/agentsam-work tests and worker data tests. The local QA screenshots are in Downloads/agentsam-work-visual-review (fixtures, not customer data). A clean build is not an authenticated production acceptance test.
+
+## Release receipt — 2026-10-15
+
+- PR #216 merged to main as 16d3f4a0, from UX remaster commit 6bc0a81a.
+- Production Cloudflare Worker agentsam-sdk deployment succeeded with version c1fbcfe5-d895-4546-841c-bd48aebf187b.
+- Live unauthenticated checks: /projects HTTP 200, /tickets HTTP 200, /api/work/snapshot HTTP 401 as expected without identity.
+- Tauri desktop app bundled on Apple Silicon from the merged source, ad-hoc signed with successful local code-signing verification. ZIP: ~/Downloads/AgentSam-Local-Studio-UX-Remaster-16d3f4a0-macOS-arm64.zip (29 MB). Archive integrity passed; SHA-256 800a84a5652a18e6ccaa4647a5fd4f6164a65e8a98ca1029082f1a0f7c1ae4a8.
+- NOT notarized or published via auto-updater. Authenticated iPhone Safari and installed-desktop cross-host CRUD acceptance not yet completed. Keychain multi-prompt issue remains unchanged.
+- Independent Superbash branch/worktree was inspected but not edited, merged, published or reset by this release.
