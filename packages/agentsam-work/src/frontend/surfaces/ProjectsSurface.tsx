@@ -5,6 +5,7 @@ import { ProjectPortfolio } from "../ProjectPortfolio";
 import type { WorkActions } from "../actions";
 import { ProjectDeleteDialog, ProjectEditor, projectStatusLabel } from "../ProjectEditor";
 import { Empty, ErrorLine, Pill, timeAgo, useAction } from "../shared";
+import { isOpen, recommendOrder, sameProject } from "../ticket-plan";
 
 type Tab = "all" | "active" | "production" | "starred" | "archived";
 const ACTIVE = new Set(["discovery", "design", "development", "qa", "staging"]);
@@ -36,6 +37,7 @@ export function ProjectsSurface({
   );
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"attention" | "updated" | "name" | "progress">("attention");
+  const [focusFilter, setFocusFilter] = useState<"focus" | "blocked" | "review" | "all">("focus");
   const [editing, setEditing] = useState<WorkProject | "new" | null>(null);
   const [removing, setRemoving] = useState<WorkProject | null>(null);
   const [menu, setMenu] = useState<string | null>(null);
@@ -78,6 +80,17 @@ export function ProjectsSurface({
     });
   }, [projects, tab, query, sort]);
 
+  const projectWork = useMemo(() => new Map(projects.map((p) => {
+    const linked = tickets.filter((ticket) => sameProject(ticket, p));
+    return [p.id, { linked, plan: recommendOrder(linked), shipped: linked.filter((ticket) => ticket.status === "shipped").length }] as const;
+  })), [projects, tickets]);
+  const visibleCards = useMemo(() => focusFilter === "all" ? visible : visible.filter((p) => {
+    const summary = projectWork.get(p.id);
+    if (!summary) return false;
+    if (focusFilter === "blocked") return summary.plan.blockedCount > 0;
+    if (focusFilter === "review") return summary.linked.some((ticket) => ticket.status === "in_review");
+    return p.openTasks > 0 || p.starred;
+  }), [visible, focusFilter, projectWork]);
   const update = (id: string, patch: WorkProjectInput) => run(async () => { await actions.updateProject?.(id, patch); });
 
   return (
@@ -128,62 +141,65 @@ export function ProjectsSurface({
           action={!projects.length && caps.create && actions.createProject ? <button type="button" className="aw-btn aw-btn--primary" onClick={() => setEditing("new")}>+ New project</button> : undefined}
         />
       ) : (
-        <div className="aw-projects">
-          {visible.map((p) => (
-            <article
-              key={p.id}
-              className="aw-project"
-              role="link"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onNavigate("/projects/" + encodeURIComponent(p.id)); } }}
-              style={{ ["--aw-accent" as string]: p.accent }}
-              onClick={() => onNavigate("/projects/" + encodeURIComponent(p.id))}
-            >
-              <div className="aw-project__top">
-                <div className="aw-badge" aria-hidden>{p.initials}</div>
-                <div style={{ minWidth: 0, flex: 1, paddingRight: 36 }}>
-                  <h3>{p.name}</h3>
-                  {p.description ? <p>{p.description}</p> : null}
+        <>
+          <div className="aw-project-focus" role="group" aria-label="Project focus">
+            {([
+              ["focus", "My focus"],
+              ["blocked", "Blocked"],
+              ["review", "Needs review"],
+              ["all", "All projects"],
+            ] as const).map(([key, label]) => <button key={key} type="button" data-active={focusFilter === key} onClick={() => setFocusFilter(key)}>{label}</button>)}
+          </div>
+          {visibleCards.length === 0 ? <Empty title="Nothing needs attention in this filter" hint="Switch to All projects to view everything."/> : (
+          <div className="aw-projects aw-project-cards-v3">
+            {visibleCards.map((p) => {
+              const summary = projectWork.get(p.id);
+              const linked = summary?.linked || [];
+              const next = summary?.plan.batch[0]?.ticket;
+              const blockerCount = summary?.plan.blockedCount || 0;
+              const shippedPct = linked.length ? Math.round((summary?.shipped || 0) / linked.length * 100) : null;
+              return <article
+                key={p.id}
+                className="aw-project-v3"
+                role="link"
+                tabIndex={0}
+                onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onNavigate("/projects/" + encodeURIComponent(p.id)); } }}
+                style={{ ["--aw-accent" as string]: p.accent }}
+                onClick={() => onNavigate("/projects/" + encodeURIComponent(p.id))}
+              >
+                <div className="aw-project-v3__head">
+                  <span className="aw-project-v3__icon" aria-hidden>{p.initials}</span>
+                  <div className="aw-project-v3__identity"><h3>{p.name}</h3><p>{p.description || p.projectType || "Project workspace"}</p>
+                    <span className="aw-project-v3__tags">{(p.tags?.length ? p.tags : [p.projectType || "project", p.status]).slice(0, 3).map((tag) => <i key={tag}>{tag}</i>)}</span>
+                  </div>
+                  <div className="aw-project-v3__rings">
+                    <span className="aw-project-v3__ring" style={{ ["--value" as string]: p.progress + "%", ["--ring" as string]: p.accent }}><b>{p.progress}%</b><small>Estimated</small></span>
+                    <span className="aw-project-v3__ring" style={{ ["--value" as string]: (shippedPct ?? 0) + "%", ["--ring" as string]: "var(--agentsam-work-success)" }}><b>{shippedPct == null ? "—" : shippedPct + "%"}</b><small>Shipped</small></span>
+                  </div>
                 </div>
-                <Pill tone={statusTone(p.status)}>{projectStatusLabel(p.status)}</Pill>
-              </div>
-              <div className="aw-project__meta">
-                {p.clientName ? <span>{p.clientName}</span> : null}
-                {p.domain ? <span>{p.domain}</span> : null}
-                {p.githubRepo ? <span>{p.githubRepo}</span> : null}
-                {p.branch ? <span>{p.branch}</span> : null}
-                {p.projectType && p.projectType !== "project" ? <span>{p.projectType}</span> : null}
-              </div>
-              <div className="aw-project__obj">
-                <div className="aw-project-progress-title"><small>Current objective</small><b>{p.progress}% estimated</b></div>
-                <strong>{p.objective || "Add your next objective"}</strong>
-                <div className="aw-progress" role="progressbar" aria-valuenow={p.progress} aria-valuemin={0} aria-valuemax={100}>
-                  <span style={{ width: `${p.progress}%`, background: "var(--aw-accent)" }} />
+                <div className="aw-project-v3__next" aria-label={"Current objective: " + (p.objective || "not set")}>
+                  <span>Next action</span>
+                  {next ? <button type="button" title={next.title} onClick={(event) => { event.stopPropagation(); onOpenTicket?.(next); }}>{next.title}</button> : <strong>{p.objective || "Set the next action"}</strong>}
                 </div>
-              </div>
-              <div className="aw-project__foot">
-                <span><strong>{p.openTasks}</strong> open · {p.totalTasks ?? 0} tickets{p.starred ? " · starred" : ""}</span>
-                <span>{p.updatedAt ? `Updated ${timeAgo(p.updatedAt)}` : ""} →</span>
-              </div>
-              {caps.update || caps.delete ? (
-                <div className="aw-menu" onClick={(e) => e.stopPropagation()}>
-                  <button type="button" className="aw-icon-btn" aria-label={`More actions for ${p.name}`} aria-expanded={menu === p.id} onClick={() => setMenu(menu === p.id ? null : p.id)}>
-                    {p.starred ? <Star size={14} fill="currentColor" /> : <MoreHorizontal size={16} />}
-                  </button>
-                  {menu === p.id ? (
-                    <div className="aw-menu__list" role="menu">
-                      <button type="button" onClick={() => onNavigate("/projects/" + encodeURIComponent(p.id))}>Open</button>
-                      {caps.update ? <button type="button" onClick={() => { setMenu(null); setEditing(p); }}>Edit</button> : null}
-                      {caps.update ? <button type="button" onClick={() => { setMenu(null); void update(p.id, { starred: !p.starred }); }}>{p.starred ? "Unstar" : "Star"}</button> : null}
-                      {caps.update && p.status === "archived" ? <button type="button" onClick={() => { setMenu(null); void update(p.id, { status: "development" }); }}>Restore</button> : null}
-                      {caps.delete ? <button type="button" data-danger onClick={() => { setMenu(null); setRemoving(p); }}>{p.status === "archived" ? "Delete…" : "Archive or delete…"}</button> : null}
-                    </div>
-                  ) : null}
+                <div className="aw-project-v3__foot">
+                  <span>{p.openTasks} open · {p.totalTasks ?? linked.length} total</span>
+                  {blockerCount ? <strong className="aw-project-v3__blockers">{blockerCount} blocker{blockerCount !== 1 ? "s" : ""}</strong> : p.status === "qa" || p.status === "staging" ? <strong className="aw-project-v3__review">Needs review</strong> : <span>{p.updatedAt ? "Updated " + timeAgo(p.updatedAt) : projectStatusLabel(p.status)}</span>}
+                  <span className="aw-project-v3__arrow">→</span>
                 </div>
-              ) : null}
-            </article>
-          ))}
-        </div>
+                {caps.update || caps.delete ? <div className="aw-menu aw-project-v3__menu" onClick={(event) => event.stopPropagation()}>
+                  <button type="button" className="aw-icon-btn" aria-label={"More actions for " + p.name} aria-expanded={menu === p.id} onClick={() => setMenu(menu === p.id ? null : p.id)}><MoreHorizontal size={18}/></button>
+                  {menu === p.id ? <div className="aw-menu__list" role="menu">
+                    <button type="button" onClick={() => onNavigate("/projects/" + encodeURIComponent(p.id))}>Open</button>
+                    {caps.update ? <button type="button" onClick={() => { setMenu(null); setEditing(p); }}>Edit</button> : null}
+                    {caps.update ? <button type="button" onClick={() => { setMenu(null); void update(p.id, { starred: !p.starred }); }}>{p.starred ? "Unstar" : "Star"}</button> : null}
+                    {caps.update && p.status === "archived" ? <button type="button" onClick={() => { setMenu(null); void update(p.id, { status: "development" }); }}>Restore</button> : null}
+                    {caps.delete ? <button type="button" data-danger onClick={() => { setMenu(null); setRemoving(p); }}>{p.status === "archived" ? "Delete…" : "Archive or delete…"}</button> : null}
+                  </div> : null}
+                </div> : null}
+              </article>;
+            })}
+          </div>)}
+        </>
       )}
 
       {editing ? (

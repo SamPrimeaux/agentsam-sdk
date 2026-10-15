@@ -24,12 +24,12 @@ export function SettingsLayout() {
       onExit={() => {
         if (activeTrailId) {
           void navigate({
-            to: "/trails/$trailId",
-            params: { trailId: activeTrailId },
+            to: "/chats/$chatId",
+            params: { chatId: activeTrailId },
           } as never);
           return;
         }
-        void navigate({ to: "/trails" as never });
+        void navigate({ to: "/chats" as never });
       }}
     >
       <Outlet />

@@ -301,8 +301,21 @@ export type WorkSnapshotRequest = {
   to?: string;
 };
 
+/** Local Studio conversation metadata, derived from its existing persisted chat store. */
+export type WorkProjectChat = {
+  id: string;
+  title: string;
+  updatedAt: number;
+  messageCount: number;
+  starred: boolean;
+};
+
 export interface WorkHost {
   snapshot(request?: WorkSnapshotRequest): Promise<WorkSnapshot>;
+  listProjectChats?(projectId: string): Promise<WorkProjectChat[]>;
+  listAssignableChats?(): Promise<(WorkProjectChat & { workProjectId?: string })[]>;
+  assignProjectChat?(chatId: string, projectId: string | null): Promise<void>;
+  createProjectChat?(projectId: string): Promise<string>;
   refresh?(): Promise<void>;
   createTicket?(input: WorkTicketInput & { title: string }): Promise<WorkTicket>;
   updateTicket?(id: string, patch: WorkTicketInput): Promise<WorkTicket>;

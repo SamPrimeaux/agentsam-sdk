@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { createHttpWorkHost, createWorkCrud } from "@inneranimalmedia/agentsam-work/client";
+import { localStudioProjectChats } from "@/lib/work/project-chat-links";
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, openExternalUrl } from "@/lib/desktop/tauri";
 import { WorkProduct } from "@inneranimalmedia/agentsam-work/frontend";
 import { AutoRagWorkflowDialog } from "@inneranimalmedia/agentsam-workbench/knowledge";
@@ -136,6 +137,7 @@ function createDesktopWorkHost(): WorkHost {
       return payload.snapshot;
     },
     ...createWorkCrud(request),
+    ...localStudioProjectChats,
     async sendMail(input, connectionId) {
       await json(await request("/api/mail/send", "POST", {
         ...input,
@@ -197,6 +199,7 @@ function sharedLiveWorkHost(): WorkHost {
     const base = createHttpWorkHost("");
     const host: WorkHost = {
       ...base,
+      ...localStudioProjectChats,
       async snapshot(request = {}) {
         const selected = request.mailConnectionId || readStoredMailConnectionId();
         const snapshot = await base.snapshot({
@@ -307,7 +310,7 @@ function useLocalStudioWorkHost(): WorkHost | null {
       mod.createFixtureWorkHost(mod.populatedWorkFixture),
     );
     void sharedFixtureHostPromise.then((fixtureHost) => {
-      if (!cancelled) setHost(fixtureHost);
+      if (!cancelled) setHost({ ...fixtureHost, ...localStudioProjectChats });
     });
     return () => {
       cancelled = true;

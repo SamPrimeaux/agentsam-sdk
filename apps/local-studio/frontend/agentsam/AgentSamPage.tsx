@@ -1,4 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
+import { Link } from '@tanstack/react-router';
+import { ArrowLeft } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
 import { useWorkStore } from '@/lib/work/store';
 import { MessageList } from '@/components/workbench/thread';
@@ -21,7 +23,10 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const empty = trail.messages.length === 0 || (trail.messages.length === 1 && trail.messages[0].id === 'welcome-msg');
   const streaming = state.streamingIds.includes(trail.id);
   return <div className="agentsam-page-layout">
-    <Nav.Topbar startup={empty} rightSlot={<><AnnotationToggle /><SidePanelToggle /></>} />
+    <Nav.Topbar startup={empty} rightSlot={<>
+      {conversationId ? <Link to="/chats" aria-label="Back to Chats" title="Back to Chats" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="size-4"/></Link> : null}
+      <AnnotationToggle /><SidePanelToggle />
+    </>} />
     <div className="agentsam-workspace">
       <section className="agentsam-conversation" aria-label="Conversation" inert={isMobile && state.sideOpen}>
         <AgentConversationSurface

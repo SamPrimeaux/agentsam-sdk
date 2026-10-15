@@ -90,8 +90,14 @@ export function WorkProduct({
   const [range, setRange] = useState<{ from?: string; to?: string }>({});
   const calendarRange = surface === "calendar" && range.from ? range : {};
   const cacheKey = surface === "calendar" && range.from ? `calendar:${range.from}:${range.to}` : surface;
-  const [openTicket, setOpenTicket] = useState<WorkTicket | null>(null);
+  const [openTicket, setOpenTicket] = useState<WorkTicket | "new" | null>(null);
   const [quickCreate, setQuickCreate] = useState<null | "menu" | "project" | "ticket" | "event">(null);
+  useEffect(() => {
+    if (!openTicket) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setOpenTicket(null); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [openTicket]);
   useEffect(() => {
     if (quickCreate !== "menu") return;
     const close = (event: KeyboardEvent) => { if (event.key === "Escape") setQuickCreate(null); };
@@ -224,9 +230,9 @@ export function WorkProduct({
       presentation={presentation}
       navCollapsed={navCollapsed}
       onNavCollapsedChange={onNavCollapsedChange}
-      onQuickCreate={surface === "projects" || surface === "project-detail" || surface === "tickets" || surface === "calendar"
+      onQuickCreate={openTicket ? undefined : (surface === "projects" || surface === "project-detail" || surface === "tickets" || surface === "calendar"
         ? (actions.createTicket || actions.createProject || actions.createEvent ? () => setQuickCreate("menu") : undefined)
-        : undefined}
+        : undefined)}
       trailing={
         host.openMailConnections ? (
           <button
@@ -253,6 +259,8 @@ export function WorkProduct({
       {snapshot.source === "local" ? (
         <div className="aw-pill" style={{ margin: "10px 16px 0" }} data-tone="accent">Local workspace on this device</div>
       ) : null}
+      <div className="aw-work-content-layout" data-ticket-open={openTicket ? "true" : "false"}>
+        <div className="aw-work-content-primary">
       {surface === "calendar" ? (
         <CalendarSurface
           events={snapshot.calendar}
@@ -276,6 +284,8 @@ export function WorkProduct({
           onDelete={actions.deleteTicket}
           onSchedule={actions.scheduleTicket}
           onRefresh={actions.refresh}
+          onOpenTicket={setOpenTicket}
+          onCreateTicket={() => setOpenTicket("new")}
         />
       ) : null}
       {surface === "artifact-tickets" ? (
@@ -370,9 +380,31 @@ export function WorkProduct({
           actions={actions}
           onNavigate={onNavigate}
           onOpenTicket={setOpenTicket}
+          onCreateTicket={() => setOpenTicket("new")}
+          chatHost={host}
           knowledgeAction={knowledgeAction}
         />
       ) : null}
+        </div>
+      {openTicket ? (
+        <TicketEditor
+          key={openTicket === "new" ? "create-ticket" : openTicket.id}
+          ticket={openTicket === "new" ? null : snapshot.tickets.find((t) => t.id === openTicket.id) || openTicket}
+          defaults={openTicket === "new" && project && surface === "project-detail" ? { project: project.id } : undefined}
+          projects={snapshot.projects}
+          lanes={lanes}
+          canSave={openTicket === "new" ? Boolean(actions.createTicket) : (snapshot.capabilities?.tickets.update ?? Boolean(actions.updateTicket))}
+          canDelete={openTicket !== "new" && (snapshot.capabilities?.tickets.delete ?? Boolean(actions.deleteTicket))}
+          onClose={() => setOpenTicket(null)}
+          onSave={async (input) => {
+            if (openTicket === "new") await actions.createTicket?.(input);
+            else await actions.updateTicket?.(openTicket.id, input);
+          }}
+          onDelete={openTicket !== "new" && actions.deleteTicket ? async () => { await actions.deleteTicket?.(openTicket.id); } : undefined}
+          onSchedule={openTicket !== "new" && actions.scheduleTicket ? async () => { await actions.scheduleTicket?.(openTicket); } : undefined}
+        />
+      ) : null}
+      </div>
       {quickCreate === "menu" ? (
         <div className="aw-quick-create-overlay" onMouseDown={(event) => {
           if (event.target === event.currentTarget) setQuickCreate(null);
@@ -382,7 +414,7 @@ export function WorkProduct({
               <strong>Create new</strong>
               <button type="button" className="aw-quick-close" aria-label="Close" onClick={() => setQuickCreate(null)}><X size={20}/></button>
             </div>
-            {actions.createTicket ? <button type="button" className="aw-quick-option" onClick={() => setQuickCreate("ticket")}>
+            {actions.createTicket ? <button type="button" className="aw-quick-option" onClick={() => { setQuickCreate(null); setOpenTicket("new"); }}>
               <ListTodo size={21}/><span><strong>New task</strong><small>Capture work, priority and due date</small></span>
             </button> : null}
             {actions.createProject ? <button type="button" className="aw-quick-option" onClick={() => setQuickCreate("project")}>
@@ -401,18 +433,6 @@ export function WorkProduct({
           onSave={async (input) => { await actions.createProject?.(input); }}
         />
       ) : null}
-      {quickCreate === "ticket" && actions.createTicket ? (
-        <TicketEditor
-          ticket={null}
-          defaults={project && surface === "project-detail" ? { project: project.name } : undefined}
-          projects={snapshot.projects}
-          lanes={lanes}
-          canSave={true}
-          canDelete={false}
-          onClose={() => setQuickCreate(null)}
-          onSave={async (input) => { await actions.createTicket?.(input); }}
-        />
-      ) : null}
       {quickCreate === "event" && actions.createEvent ? (
         <EventEditor
           event={null}
@@ -421,20 +441,6 @@ export function WorkProduct({
           canDelete={false}
           onClose={() => setQuickCreate(null)}
           onSave={async (input) => { await actions.createEvent?.(input); }}
-        />
-      ) : null}
-      {openTicket ? (
-        <TicketEditor
-          ticket={openTicket}
-          projects={snapshot.projects}
-          lanes={lanes}
-          canSave={snapshot.capabilities?.tickets.update ?? Boolean(actions.updateTicket)}
-          canDelete={snapshot.capabilities?.tickets.delete ?? Boolean(actions.deleteTicket)}
-          onClose={() => setOpenTicket(null)}
-          onSave={async (input) => {
-            await actions.updateTicket?.(openTicket.id, input);
-          }}
-          onDelete={actions.deleteTicket ? async () => { await actions.deleteTicket?.(openTicket.id); } : undefined}
         />
       ) : null}
     </WorkShell>

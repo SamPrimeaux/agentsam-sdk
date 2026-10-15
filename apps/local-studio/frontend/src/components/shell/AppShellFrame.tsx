@@ -104,7 +104,7 @@ export function AppShellFrame() {
       if (meta && event.key.toLowerCase() === "n" && !event.shiftKey) {
         event.preventDefault();
         const id = useWorkStore.getState().startTrail();
-        void navigate({ to: "/trails/$trailId", params: { trailId: id } });
+        void navigate({ to: "/chats/$chatId", params: { chatId: id } });
       }
       if (meta && event.key === "`") {
         event.preventDefault();
@@ -112,7 +112,7 @@ export function AppShellFrame() {
       }
       if (meta && event.key.toLowerCase() === "b") {
         event.preventDefault();
-        void navigate({ to: "/trails" });
+        void navigate({ to: "/chats" });
       }
     }
     window.addEventListener("keydown", onKey);

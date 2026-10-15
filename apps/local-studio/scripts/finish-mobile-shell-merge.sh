@@ -23,7 +23,7 @@ if ! git merge origin/main --no-edit; then
     src/routes/_app/browse.tsx \
     src/routes/_app/cli.tsx \
     src/routes/_app/files.tsx \
-    'src/routes/_app/trails/$trailId.tsx' || true
+    'src/routes/_app/chats/$chatId.tsx' || true
   git add -A
   git commit -m "Merge origin/main into mobile-shell; keep Cursor Studio UI and workhorse CLI"
 fi

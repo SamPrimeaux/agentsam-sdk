@@ -22,7 +22,7 @@ import { StudioMark } from "@/components/mark";
 import { useWorkStore } from "@/lib/work/store";
 
 const ITEMS = [
-  { to: "/agentsam", label: "Studio", icon: MessageSquare, match: (p: string) => p === "/agentsam" || p.startsWith("/trails") },
+  { to: "/chats", label: "Chats", icon: MessageSquare, match: (p: string) => p === "/agentsam" || p.startsWith("/chats") },
   { to: "/cms", label: "CMS", icon: LayoutTemplate, match: (p: string) => p.startsWith("/cms") },
   { to: "/sites", label: "Sites", icon: Globe, match: (p: string) => p.startsWith("/sites") },
   { to: "/media", label: "Media", icon: Images, match: (p: string) => p.startsWith("/media") || p.startsWith("/content") },

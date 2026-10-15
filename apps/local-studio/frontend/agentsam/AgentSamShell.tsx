@@ -37,7 +37,7 @@ export function AgentSamShell() {
   const [identityOpen, setIdentityOpen] = useState(false);
   const trail = state.trails.find((item) => item.id === state.activeTrailId);
   const project = state.projects.find((item) => item.id === trail?.projectId);
-  const isConversation = pathname === '/agentsam' || pathname.startsWith('/trails');
+  const isConversation = pathname === '/agentsam' || pathname.startsWith('/chats');
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
   const go = (to: string) => {
     if (isPackagedDesktop()) {

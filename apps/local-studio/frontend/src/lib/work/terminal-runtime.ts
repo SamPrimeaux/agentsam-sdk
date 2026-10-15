@@ -234,7 +234,7 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
         return proj;
       case "vibe":
         void store.send(store.activeTrailId, "trail", effect.prompt);
-        navigateApp({ to: "/trails/$trailId", params: { trailId: store.activeTrailId } });
+        navigateApp({ to: "/chats/$chatId", params: { chatId: store.activeTrailId } });
         return proj;
       case "download-zip": {
         const bytes = zipProject(proj.files, proj.name);
