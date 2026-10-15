@@ -272,11 +272,12 @@ export function WorkShell({
           <header className="agentsam-work-stage__topbar">
             <button type="button" className="agentsam-work-stage__mobile-menu" onClick={() => setDrawerOpen(true)} aria-label="Open Work navigation">
               <Menu size={18} />
+              <span className="agentsam-work-stage__menu-tooltip" role="tooltip">Open Work navigation</span>
             </button>
             <span className="agentsam-work-stage__muted">Work</span>
             <span className="agentsam-work-stage__muted">/</span>
             <span className="agentsam-work-stage__crumb">{shellTitle(surface)}</span>
-            <div style={{ minWidth: 0, flex: 1 }} />
+            <div className="agentsam-work-stage__spacer" />
             {trailing}
           </header>
           {children}

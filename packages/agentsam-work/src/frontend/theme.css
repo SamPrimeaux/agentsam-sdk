@@ -159,6 +159,30 @@
   font-size: 14px;
   font-weight: 500;
 }
+.agentsam-work-stage__spacer { min-width: 0; flex: 1; }
+.agentsam-work-stage__mobile-menu { position: relative; }
+.agentsam-work-stage__menu-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  width: max-content;
+  max-width: min(240px, 80vw);
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--agentsam-work-border);
+  background: var(--agentsam-work-panel);
+  color: var(--agentsam-work-text);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--agentsam-work-text) 12%, transparent);
+  font-size: 12px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.agentsam-work-stage__mobile-menu:is(:hover, :focus-visible) .agentsam-work-stage__menu-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
 
 .agentsam-work-stage__muted {
   color: var(--agentsam-work-muted);
