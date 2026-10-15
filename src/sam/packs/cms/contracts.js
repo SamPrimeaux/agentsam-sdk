@@ -1,1 +1,1 @@
-export { CMS_OPERATION_CONTRACTS, CMS_CONTRACTS_BY_NAME } from '@inneranimalmedia/agentsam-cms';
+export { CMS_OPERATION_CONTRACTS, CMS_CONTRACTS_BY_NAME } from '../../../../packages/agentsam-cms/src/index.js';

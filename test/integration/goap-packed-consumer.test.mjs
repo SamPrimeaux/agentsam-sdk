@@ -17,52 +17,53 @@ function run(command, args, cwd) {
     cwd,
     encoding: 'utf8',
     env,
+    maxBuffer: 8 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
   }).trim();
 }
 
-test('packed root GOAP resolves the single published AgentSam errors runtime', async () => {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-goap-packed-'));
-  const packDir = path.join(tmp, 'packs');
-  const consumer = path.join(tmp, 'consumer');
-  fs.mkdirSync(packDir);
-  fs.mkdirSync(consumer);
+test('standalone SDK tarball installs and launches without a local CMS workspace or companion tarballs', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-sdk-packed-'));
+  try {
+    const packDir = path.join(tmp, 'packs');
+    const consumer = path.join(tmp, 'consumer');
+    fs.mkdirSync(packDir);
+    fs.mkdirSync(consumer);
+    const rootTar = run('npm', ['pack', '--silent', '--pack-destination', packDir], root);
+    fs.writeFileSync(path.join(consumer, 'package.json'), JSON.stringify({
+      name: 'agentsam-sdk-packed-consumer',
+      version: '1.0.0',
+      private: true,
+      type: 'module',
+    }, null, 2) + '\n');
 
-  const errorsTar = run('npm', ['pack', '--silent', '--pack-destination', packDir], path.join(root, 'packages/agentsam-errors'));
-  const cmsTar = run('npm', ['pack', '--silent', '--pack-destination', packDir], path.join(root, 'packages/agentsam-cms'));
-  const rootTar = run('npm', ['pack', '--silent', '--pack-destination', packDir], root);
+    // Install ONLY the SDK tarball. npm must resolve its public dependencies.
+    // No sibling workspaces, second checkout, CMS tarball, or NODE_PATH.
+    run('npm', [
+      'install', '--ignore-scripts', '--no-audit', '--no-fund',
+      path.join(packDir, rootTar),
+    ], consumer);
 
-  fs.writeFileSync(path.join(consumer, 'package.json'), JSON.stringify({
-    name: 'agentsam-goap-packed-consumer',
-    version: '1.0.0',
-    private: true,
-    type: 'module',
-  }, null, 2) + '\n');
-
-  run('npm', [
-    'install',
-    '--ignore-scripts',
-    path.join(packDir, errorsTar),
-    path.join(packDir, cmsTar),
-    path.join(packDir, rootTar),
-  ], consumer);
-
-  const script = `
-    const sdk = await import('@inneranimalmedia/agentsam-sdk');
-    const sdkErrors = await import('@inneranimalmedia/agentsam-sdk/errors');
-    const errors = await import('@inneranimalmedia/agentsam-errors');
-    const goap = await import('@inneranimalmedia/agentsam-sdk/goap');
-    const cms = await import('@inneranimalmedia/agentsam-cms');
-    if (!cms.createCmsOperations) throw new Error('portable CMS dependency missing');
-    if (sdkErrors.AgentSamError !== errors.AgentSamError) {
-      throw new Error('root errors export does not share canonical AgentSamError identity');
+    const installed = JSON.parse(fs.readFileSync(
+      path.join(consumer, 'node_modules/@inneranimalmedia/agentsam-sdk/package.json'), 'utf8'));
+    assert.equal(installed.dependencies?.['@inneranimalmedia/agentsam-cms'], undefined);
+    const script = [
+      "const sdk = await import('@inneranimalmedia/agentsam-sdk');",
+      "const sdkErrors = await import('@inneranimalmedia/agentsam-sdk/errors');",
+      "const errors = await import('@inneranimalmedia/agentsam-errors');",
+      "const goap = await import('@inneranimalmedia/agentsam-sdk/goap');",
+      "const sam = await import('@inneranimalmedia/agentsam-sdk/sam');",
+      "if (!sam.createCmsOperations || !sam.CMS_OPERATION_CONTRACTS) throw new Error('bundled CMS runtime unavailable');",
+      "if (sdkErrors.AgentSamError !== errors.AgentSamError) throw new Error('canonical errors identity mismatch');",
+      "if (!goap || Object.keys(goap).length === 0 || !sdk) throw new Error('SDK / GOAP exports missing');",
+    ].join('\n');
+    run(process.execPath, ['--input-type=module', '-e', script], consumer);
+    const cli = path.join(consumer, 'node_modules/.bin/agentsam');
+    for (const argv of [['--version'], ['--help'], ['models', '--help'], ['rust', '--help']]) {
+      const output = run(cli, argv, consumer);
+      assert.ok(output.length > 0, 'packaged agentsam ' + argv.join(' ') + ' returned no output');
     }
-    if (!goap || Object.keys(goap).length === 0) {
-      throw new Error('root GOAP export did not hydrate');
-    }
-    if (!sdk) throw new Error('root SDK did not hydrate');
-  `;
-  run(process.execPath, ['--input-type=module', '-e', script], consumer);
-
-  assert.equal(true, true);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 });
