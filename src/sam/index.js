@@ -67,6 +67,8 @@ export {
 
 export { createSamCapabilityAdapter } from './model-adapter.js';
 export { createLocalMediaStore } from './adapters/local-media-store.js';
+export { createObjectMediaStore } from './adapters/object-media-store.js';
+export { inspectMediaEnvironment, readMediaStorageSelection, MEDIA_SELECTION_PATH } from './media/environment.js';
 
 export { createCmsOperations, validateCmsSchema } from './packs/cms/machine.js';
 export { CMS_OPERATION_CONTRACTS, CMS_CONTRACTS_BY_NAME } from './packs/cms/contracts.js';
