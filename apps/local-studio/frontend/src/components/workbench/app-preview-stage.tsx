@@ -16,7 +16,9 @@ import {
   AGENTSAM_PREVIEW_BRIDGE_VERSION
 } from "@/lib/preview-host-bridge";
 import { installCadHostBridge } from "@/lib/cad-host-bridge";
-import { publishCadAssistantContext } from "@/lib/cad/assistantContext";
+import { runCadAssistantTurn } from "@/lib/cad/assistantTurn";
+import { approveCadProposal, isLocalCadExecutionHost } from "@/lib/cad/approval";
+import type { CadHostHandlers, CadSelectionContext } from "@/lib/cad-host-bridge";
 
 interface AppPreviewStageProps {
   tab?: SideTab;
@@ -74,23 +76,43 @@ export function AppPreviewStage({
     });
   };
 
-  const [cadSelection, setCadSelection] = useState<unknown>(null);
-  const [pendingProposal, setPendingProposal] = useState<{ summary: string } | null>(null);
+  const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
+  const [pendingProposal, setPendingProposal] = useState<Parameters<NonNullable<CadHostHandlers["onProposal"]>>[0] | null>(null);
+  const [approvalBusy, setApprovalBusy] = useState(false);
+  const [approvalStatus, setApprovalStatus] = useState("");
   // Validated host bridge: origin/source checked; proposals surface for approval, never auto-apply.
   useEffect(() => {
     const dispose = installCadHostBridge(() => iframeRef.current, {
       onReady: () => setIsReady(true),
       onSelection: (sel) => setCadSelection(sel),
       onAssistantRequest: ({ request_id, prompt, selection }) => {
-        // Real transport: publish into the host-owned conversation context (buffered + event,
-        // same pattern as Database assistant). Reply is a transport receipt, not a model answer.
-        publishCadAssistantContext({ request_id, prompt, selection });
-        postToGuest({ type: "assistant.response", request_id, text: "Received by the Local Studio AgentSam conversation with your CAD selection context. Continue there for the full response and tool approvals." });
+        void runCadAssistantTurn({ request_id, prompt, selection }, (text) => {
+          postToGuest({ type: "assistant.response", request_id, text });
+        }).catch((error: unknown) => {
+          const reason = error instanceof Error ? error.message : "cad_assistant_unavailable";
+          postToGuest({ type: "assistant.response", request_id, text: `AgentSam request failed: ${reason}` });
+        });
       },
       onProposal: (proposal) => setPendingProposal(proposal),
     });
     return dispose;
   }, []);
+
+  const canApprove = typeof window !== "undefined" && isLocalCadExecutionHost(window.location.hostname);
+  const handleApprove = async () => {
+    if (!pendingProposal || approvalBusy) return;
+    setApprovalBusy(true);
+    setApprovalStatus("");
+    try {
+      await approveCadProposal(pendingProposal, cadSelection, window.location.hostname);
+      setPendingProposal(null);
+      setApprovalStatus("Approved CAD revision applied.");
+    } catch (error) {
+      setApprovalStatus(error instanceof Error ? error.message : "cad_revision_write_failed");
+    } finally {
+      setApprovalBusy(false);
+    }
+  };
 
   const handleReload = () => {
     setIsReady(false);
@@ -168,6 +190,15 @@ export function AppPreviewStage({
         </div>
       </div>
 
+      {(pendingProposal || approvalStatus) && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2 text-xs">
+          {pendingProposal && <span>CAD proposal: {pendingProposal.summary}</span>}
+          {pendingProposal && <button type="button" onClick={() => void handleApprove()}
+            disabled={!canApprove || approvalBusy} className="rounded border px-2 py-1 disabled:opacity-40">Approve & apply</button>}
+          {pendingProposal && !canApprove && <span>Local CAD host required</span>}
+          {approvalStatus && <span role="status">{approvalStatus}</span>}
+        </div>
+      )}
       {/* Embedded Iframe Stage */}
       <div className="relative min-h-0 flex-1 bg-black">
         <iframe

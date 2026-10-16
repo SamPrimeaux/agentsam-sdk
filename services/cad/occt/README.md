@@ -23,6 +23,8 @@ Output receipts begin with `AGENTSAM_RESULT=` and report the engine version, ver
 
 Target provider interface: `discover(ctx)`, `doctor(ctx)`, `execute(operation, input, ctx)`, `inspect(artifact, ctx)`. Existing normalized `design_model_build`/`design_model_inspect` tools remain the canonical AgentSam surface; do not register a duplicate `occt_create_box` agent tool.
 
+Relocated offline OCCT builds may reference FreeType outside the packaged OCCT prefix. For that environment, supply `-DAGENTSAM_OCCT_FREETYPE_PREFIX=/opt/homebrew/opt/freetype` together with the explicit OCCT/TBB prefixes. The resulting executable carries the dependency search path; do not copy dylibs into the source tree. Native receipts use `max_digits10` precision so STEP re-import volume comparisons are based on complete values.
+
 ## SDK-owned provider (not yet registered in hosted execution)
 
 `src/lib/cad/occt-native-provider.mjs` exports `createOcctNativeProvider`. Set `AGENTSAM_OCCT_BIN` to an absolute path to a verified local `agentsam-occt` executable. Its `doctor()` performs a real subprocess probe; unsupported operations and unavailable engines fail closed. The initial `execute()` contract supports `design_model_build` with `{ kind: "box", width, depth, height, units: "mm" | "in" }` and `design_model_inspect`. It requires an existing **absolute, authorized artifactRoot**, generates its own STEP filename, re-imports the file, and hashes the resulting bytes. The caller still owns project revision checks, authorization, and artifact persistence.
