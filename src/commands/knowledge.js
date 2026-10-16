@@ -151,6 +151,7 @@ export async function runKnowledgeSearch({
     return await retrieve({
       store,
       config,
+      root,
       text: q,
       semantic: Boolean(semantic),
       embedder: semantic ? provider(config.embedding) : null,

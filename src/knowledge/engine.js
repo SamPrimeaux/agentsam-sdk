@@ -117,7 +117,7 @@ export async function runIndex({ root, config, store, embedder, embed = false, v
   return { ...receipt, generation_id: generation.id, published: true, vector_upsert: vectorUpsert };
 }
 
-export async function retrieve({ store, config: input, text, semantic = false, embedder, topK = 8, tokenBudget = 6000, generationId, resultPolicy: requestedResultPolicy }) {
+export async function retrieve({ store, config: input, root = null, text, semantic = false, embedder, topK = 8, tokenBudget = 6000, generationId, resultPolicy: requestedResultPolicy }) {
   const config = validateConfig(input);
   if (typeof text !== 'string' || !text.trim()) throw new Error('A nonempty query is required.');
   const resultPolicy = normalizeResultPolicy(requestedResultPolicy || {});
@@ -155,17 +155,42 @@ export async function retrieve({ store, config: input, text, semantic = false, e
   ranked.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path) || a.ordinal - b.ordinal);
   let estimatedTokens = 0;
   const hits = [];
+  // A generation is evidence from indexing time, not proof of the present
+  // working tree. Verify returned local source files only, without rescanning
+  // the entire repository or paying for embeddings.
+  const indexedFiles = new Map((generation.files || []).map(file => [file.path, file.hash]));
+  const checked = new Map();
+  const sourceFreshness = (file) => {
+    if (!root || generation.receipt?.site_crawl_snapshot || !indexedFiles.has(file)) return 'not_checked';
+    if (checked.has(file)) return checked.get(file);
+    let state = 'unverifiable';
+    try {
+      const current = readSource(root, file);
+      state = !current ? 'missing_or_unreadable'
+        : current.hash === indexedFiles.get(file) ? 'verified' : 'changed';
+    } catch {
+      state = 'unverifiable';
+    }
+    checked.set(file, state);
+    return state;
+  };
   for (const hit of ranked) {
     const tokens = Math.ceil(hit.content.length / 4);
     if (estimatedTokens + tokens > tokenBudget) continue;
+    const freshness = sourceFreshness(hit.path);
     hits.push({ chunk_id: hit.id, content: hit.content, score: hit.score, lane: /\.[cm]?[jt]sx?$/i.test(hit.path) ? 'code' : 'docs',
       path: hit.path, line_start: hit.start_line, line_end: hit.end_line, commit_sha: generation.git.commit, ref: generation.git.branch,
-      stale: Boolean(generationId), reasons: [semantic ? 'cosine' : 'lexical'], source_authority: generation.receipt?.site_crawl_snapshot?'site-crawl-evidence':'repository-snapshot',
+      stale: Boolean(generationId) || freshness === 'changed' || freshness === 'missing_or_unreadable',
+      reasons: [semantic ? 'cosine' : 'lexical', ...(freshness === 'changed' ? ['indexed_source_changed'] : freshness === 'missing_or_unreadable' ? ['indexed_source_unavailable'] : [])],
+      source_authority: generation.receipt?.site_crawl_snapshot?'site-crawl-evidence':'repository-snapshot',
       metadata: { generation_id: generation.id, symbol: hit.symbol, content_hash: hit.content_hash,
         ...(generation.receipt?.site_source_urls?{url:generation.receipt.site_source_urls[hit.path]}:{}),
-        freshness: generation.receipt?.site_crawl_snapshot?'verified crawl evidence snapshot':'working tree not checked' } }); estimatedTokens += tokens;
+        freshness: freshness === 'verified' ? 'returned file hash verified; full repository not checked' : freshness === 'changed' ? 'returned file changed after indexing' : freshness === 'missing_or_unreadable' ? 'returned file missing or unreadable' : 'working tree not checked' } }); estimatedTokens += tokens;
     if (hits.length === topK) break;
   }
   return createContextPack({ queryId: randomUUID(), query: { text, top_k: topK, token_budget: tokenBudget, result_policy: resultPolicy }, hits,
-    diagnostics: { generation_id: generation.id, source_hash: generation.source_hash, scope: generation.config.scope, mode: semantic ? 'semantic-exact' : 'lexical', freshness: 'snapshot; working tree not checked' } });
+    diagnostics: { generation_id: generation.id, source_hash: generation.source_hash, scope: generation.config.scope, mode: semantic ? 'semantic-exact' : 'lexical',
+      freshness: hits.some(h => h.stale) ? 'at least one returned hit is stale' :
+        hits.length && hits.every(h => h.metadata.freshness.startsWith('returned file hash verified')) ? 'returned file hashes verified; full repository not checked' :
+        'snapshot; working tree not checked' } });
 }
