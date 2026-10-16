@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { authenticateViaBrowser } from '../src/lib/auth.js';
+import { authenticateViaBrowser } from '../../src/lib/auth.js';
 
 const RESOURCE = 'https://mcp.inneranimalmedia.com/mcp';
 
