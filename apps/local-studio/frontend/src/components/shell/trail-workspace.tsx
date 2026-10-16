@@ -1,4 +1,4 @@
-import { useEffect, useState, type PointerEvent } from "react";
+import { useEffect, useState, type PointerEvent, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Columns2, Maximize2, Settings, Share, SquareTerminal, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -13,6 +13,14 @@ import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
 import type { Trail } from "@inneranimalmedia/agentsam-local-shared";
 
+function restorePaneWidth(key: string, fallback: number, min: number, max: number) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const saved = Number(window.localStorage.getItem(key));
+    return Number.isFinite(saved) && saved >= min && saved <= max ? saved : fallback;
+  } catch { return fallback; }
+}
+
 export function TrailWorkspace({ trail }: { trail: Trail }) {
   const sideOpen = useWorkStore((s) => s.sideOpen);
   const sideTabs = useWorkStore((s) => s.sideTabs);
@@ -23,13 +31,19 @@ export function TrailWorkspace({ trail }: { trail: Trail }) {
   const setActiveTrail = useWorkStore((s) => s.setActiveTrail);
   const toggleTerminal = useWorkStore((s) => s.toggleTerminal);
   const setSettingsOpen = useWorkStore((s) => s.setSettingsOpen);
-  const [railW, setRailW] = useState(288);
-  const [sideW, setSideW] = useState(420);
+  const [railW, setRailW] = useState(() => restorePaneWidth("agentsam.studio.railWidth", 288, 200, 420));
+  const [sideW, setSideW] = useState(() => restorePaneWidth("agentsam.studio.sideWidth", 420, 280, 1100));
   const [stageFull, setStageFull] = useState(false);
 
   useEffect(() => {
     setActiveTrail(trail.id);
   }, [trail.id, setActiveTrail]);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("agentsam.studio.railWidth", String(railW));
+      window.localStorage.setItem("agentsam.studio.sideWidth", String(sideW));
+    } catch { /* Preference persistence is optional; resizing must still work. */ }
+  }, [railW, sideW]);
 
   function lightPane(event: PointerEvent<HTMLElement>, on: boolean) {
     event.currentTarget.setAttribute("data-pane", on ? "hover" : "idle");
@@ -202,16 +216,16 @@ export function TrailWorkspace({ trail }: { trail: Trail }) {
                 axis="x"
                 label="Resize side stage"
                 className="hidden md:flex"
-                onDrag={(d) => setSideW((w) => Math.min(720, Math.max(280, w - d)))}
+                onDrag={(d) => setSideW((w) => Math.max(280, Math.min(1100, w - d, window.innerWidth - railW - 360)))}
                 onDoubleClick={() => setSideW(420)}
               />
               <aside
                 className={cn(
                   "studio-pane min-h-0 min-w-0 bg-background",
                   "max-md:fixed max-md:inset-0 max-md:z-50",
-                  "md:relative md:shrink-0",
+                  "md:relative md:shrink-0 md:max-w-[calc(100%-360px)] md:w-[var(--agentsam-side-stage-width)] md:basis-[var(--agentsam-side-stage-width)]",
                 )}
-                style={{ width: sideW, flexBasis: sideW }}
+                style={{ "--agentsam-side-stage-width": sideW + "px" } as CSSProperties}
                 onPointerEnter={(e) => lightPane(e, true)}
                 onPointerLeave={(e) => lightPane(e, false)}
               >

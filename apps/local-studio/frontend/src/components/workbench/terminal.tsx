@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import { Copy, Plus, RotateCw, X } from "lucide-react";
+import { Columns2, Copy, Plus, RotateCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconAction } from "@/components/ui/icon-action";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
 import { attachSharedTerminal, detachSharedTerminal, getSharedTerminalRun } from "@/lib/work/terminal-runtime";
 import { useTerminalSessionStore } from "@/lib/work/terminal-sessions";
@@ -14,31 +15,20 @@ export function TerminalPane({
 }) {
   const activeSessionId = useTerminalSessionStore((s) => s.activeSessionId);
   const sessions = useTerminalSessionStore((s) => s.sessions);
+  const splitView = useTerminalSessionStore((s) => s.splitView);
+  const secondarySessionId = useTerminalSessionStore((s) => s.secondarySessionId);
+  const setSplitView = useTerminalSessionStore((s) => s.setSplitView);
+  const setSecondarySession = useTerminalSessionStore((s) => s.setSecondarySession);
   const createSession = useTerminalSessionStore((s) => s.createSession);
   const closeSession = useTerminalSessionStore((s) => s.closeSession);
   const duplicateSession = useTerminalSessionStore((s) => s.duplicateSession);
   const setActiveSession = useTerminalSessionStore((s) => s.setActiveSession);
   const resolvedSessionId = sessionId || activeSessionId;
-  const hostRef = useRef<HTMLDivElement>(null);
   const project = useActiveProject();
-  const projectRef = useRef(project);
-  projectRef.current = project;
   const pending = useWorkStore((s) => s.pendingCommands);
-
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    let cancelled = false;
-
-    void attachSharedTerminal(host, () => projectRef.current, resolvedSessionId).then(() => {
-      if (cancelled) detachSharedTerminal(host, resolvedSessionId);
-    });
-
-    return () => {
-      cancelled = true;
-      detachSharedTerminal(host, resolvedSessionId);
-    };
-  }, [resolvedSessionId]);
+  const secondarySession = splitView
+    ? sessions.find((session) => session.id === secondarySessionId && session.id !== resolvedSessionId)
+    : undefined;
 
   useEffect(() => {
     if (!pending.length) return;
@@ -84,6 +74,30 @@ export function TerminalPane({
         <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Duplicate terminal cwd" onClick={() => duplicateSession(resolvedSessionId)}>
           <Copy className="size-3.5" />
         </Button>
+        <IconAction
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          className="shrink-0"
+          label={splitView ? "Close split terminal" : "Split terminal into two interactive panes"}
+          aria-pressed={splitView}
+          hint={splitView ? "Return to one terminal" : "Monitor two independent PTY sessions"}
+          onClick={() => {
+            if (splitView) { setSplitView(false); return; }
+            const other = sessions.find((session) => session.id !== resolvedSessionId);
+            if (other) {
+              setSecondarySession(other.id);
+            } else {
+              // A new PTY session is distinct, never another mount of the same xterm.
+              const previous = resolvedSessionId;
+              createSession({ cwd: project.workspaceRoot || undefined });
+              setSecondarySession(previous);
+            }
+            setSplitView(true);
+          }}
+        >
+          <Columns2 className="size-3.5" />
+        </IconAction>
         <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Reconnect terminal" onClick={() => window.location.reload()}>
           <RotateCw className="size-3.5" />
         </Button>
@@ -104,7 +118,50 @@ export function TerminalPane({
           </Button>
         </div>
       ) : null}
-      <div ref={hostRef} className="terminal-host min-h-0 flex-1 px-1 pb-[env(safe-area-inset-bottom)]" />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
+        <TerminalViewport sessionId={resolvedSessionId} />
+        {secondarySession ? (
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col border-border/60 max-md:border-t md:border-l" aria-label="Adjacent terminal">
+            <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/60 px-2">
+              <span className="font-mono text-[11px] text-muted-foreground">Adjacent PTY</span>
+              <select
+                aria-label="Choose adjacent terminal session"
+                className="ml-auto min-w-0 max-w-[60%] rounded bg-transparent px-1 text-xs text-foreground outline-offset-2"
+                value={secondarySession.id}
+                onChange={(event) => setSecondarySession(event.target.value)}
+              >
+                {sessions.filter((session) => session.id !== resolvedSessionId).map((session) => (
+                  <option key={session.id} value={session.id}>{session.title} · {session.state}</option>
+                ))}
+              </select>
+            </div>
+            <TerminalViewport sessionId={secondarySession.id} />
+          </section>
+        ) : null}
+      </div>
     </div>
   );
+}
+
+/** Mount each PTY into exactly one host; splitting never duplicates a terminal element. */
+function TerminalViewport({ sessionId }: { sessionId: string }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const project = useActiveProject();
+  const projectRef = useRef(project);
+  projectRef.current = project;
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    let cancelled = false;
+    void attachSharedTerminal(host, () => projectRef.current, sessionId).then(() => {
+      if (cancelled) detachSharedTerminal(host, sessionId);
+    });
+    return () => {
+      cancelled = true;
+      detachSharedTerminal(host, sessionId);
+    };
+  }, [sessionId]);
+
+  return <div ref={hostRef} data-terminal-viewport={sessionId} className="terminal-host min-h-0 min-w-0 flex-1 px-1 pb-[env(safe-area-inset-bottom)]" />;
 }

@@ -18,6 +18,10 @@ export type StudioTerminalSession = {
 type TerminalSessionState = {
   sessions: StudioTerminalSession[];
   activeSessionId: string;
+  splitView: boolean;
+  secondarySessionId: string | null;
+  setSplitView(enabled: boolean): void;
+  setSecondarySession(id: string | null): void;
   createSession(input?: Partial<Pick<StudioTerminalSession, "title" | "cwd" | "connectionId" | "instanceId" | "lane" | "runtimeLabel">>): string;
   closeSession(id: string): void;
   renameSession(id: string, title: string): void;
@@ -46,6 +50,19 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
     (set, get) => ({
       sessions: [initialSession],
       activeSessionId: INITIAL_SESSION_ID,
+      splitView: false,
+      secondarySessionId: null,
+      setSplitView(enabled) {
+        set((state) => ({
+          splitView: enabled && state.sessions.some((session) => session.id !== state.activeSessionId),
+        }));
+      },
+      setSecondarySession(id) {
+        set((state) => ({
+          secondarySessionId: id && id !== state.activeSessionId && state.sessions.some((session) => session.id === id)
+            ? id : null,
+        }));
+      },
       createSession(input = {}) {
         const connectionId = input.connectionId || "runtime-auto";
         const localSessions = get().sessions.filter((item) => item.connectionId === connectionId);
@@ -69,9 +86,14 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
         set((state) => {
           const index = state.sessions.findIndex((item) => item.id === id);
           const remaining = state.sessions.filter((item) => item.id !== id);
-          if (!remaining.length) return { sessions: [initialSession], activeSessionId: INITIAL_SESSION_ID };
+          if (!remaining.length) return { sessions: [initialSession], activeSessionId: INITIAL_SESSION_ID, splitView: false, secondarySessionId: null };
           const next = remaining[Math.min(Math.max(index, 0), remaining.length - 1)]!;
-          return { sessions: remaining, activeSessionId: state.activeSessionId === id ? next.id : state.activeSessionId };
+          const activeSessionId = state.activeSessionId === id ? next.id : state.activeSessionId;
+          const secondarySessionId = state.secondarySessionId === id
+            ? remaining.find((session) => session.id !== activeSessionId)?.id ?? null
+            : state.secondarySessionId;
+          return { sessions: remaining, activeSessionId, secondarySessionId,
+            splitView: state.splitView && secondarySessionId !== null && secondarySessionId !== activeSessionId };
         });
       },
       renameSession(id, title) {
@@ -90,7 +112,13 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
         });
       },
       setActiveSession(id) {
-        if (get().sessions.some((item) => item.id === id)) set({ activeSessionId: id });
+        set((state) => {
+          if (!state.sessions.some((item) => item.id === id)) return state;
+          // Selecting the adjacent terminal swaps the panes; never mount a PTY twice.
+          const secondarySessionId = state.splitView && state.secondarySessionId === id
+            ? state.activeSessionId : state.secondarySessionId;
+          return { activeSessionId: id, secondarySessionId };
+        });
       },
       patchSession(id, patch) {
         set((state) => ({ sessions: state.sessions.map((item) => (item.id === id ? { ...item, ...patch } : item)) }));
@@ -102,6 +130,8 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
       partialize: (state) => ({
         sessions: state.sessions.map((item) => ({ ...item, state: "disconnected" as const, error: undefined })),
         activeSessionId: state.activeSessionId,
+        splitView: state.splitView,
+        secondarySessionId: state.secondarySessionId,
       }),
     },
   ),

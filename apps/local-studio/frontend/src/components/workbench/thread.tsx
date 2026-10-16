@@ -74,7 +74,7 @@ export function MessageList({
       messages={messages}
       streaming={streaming}
       scrollerClassName="scrollbar-thin flex-1 overflow-y-auto px-4 py-6"
-      listClassName="mx-auto flex w-full max-w-3xl flex-col gap-6"
+      listClassName="mx-auto flex w-full max-w-6xl flex-col gap-6"
       renderMessage={(message, index) => (
         <MessageBubble
           key={message.id}
@@ -96,7 +96,7 @@ export function TrailThread() {
 
   const starterStatus =
     trail.id === "trail-studio" && trail.messages.length === 1 ? (
-      <div className="mx-auto mb-2 flex w-full max-w-3xl flex-wrap gap-2 px-4">
+      <div className="mx-auto mb-2 flex w-full max-w-6xl flex-wrap gap-2 px-4">
         {STARTERS.map((prompt) => (
           <Button
             key={prompt}
