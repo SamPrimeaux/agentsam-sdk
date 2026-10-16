@@ -32,3 +32,9 @@ copro-provider-contracts owns provider-neutral capabilities.
 copro-ui owns direct visual editing surfaces.
 copro-proof owns cross-package acceptance proof.
 agentsam-copro-studio composes the product.
+
+## Media Production product-family classification (2026-10-16)
+
+The IAM product registry groups CoPro and MovieMode into the **Media Production** family. This is a *portfolio, discovery and cross-product workflow relationship*, not a revision to the accepted dependency law. CoPro remains the independent provider-neutral creative contract and editor product. MovieMode remains an independently hosted product and a donor of proven production operations, never an upstream CoPro import or required runtime.
+
+The hosted MovieMode D1/R2/Stream/Remotion authority is unchanged. Translating existing MovieMode timeline documents into CoPro project/asset commands requires a versioned, lossless, bidirectional compatibility adapter, authorization tests and save/reload/export evidence before changing any canonical writer. See [Media Production Family](../product/MEDIA-PRODUCTION-FAMILY.md).
