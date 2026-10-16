@@ -539,3 +539,96 @@ body[data-split-hover] .studio-pane::after {
 @media (prefers-reduced-motion: reduce) {
   .hero-grid { animation: none !important; }
 }
+
+/* Multi-PTY layout: measured against the terminal region, never window.innerWidth. */
+.terminal-tiles-region {
+  display: flex;
+  flex-direction: column;
+  container-name: terminal-stage;
+  container-type: inline-size;
+  overflow: hidden;
+}
+.terminal-two-pane,
+.terminal-tile-grid {
+  display: grid;
+  flex: 1 1 0%;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.terminal-two-pane {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+.terminal-two-pane[data-split="true"] {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+.terminal-adjacent,
+.terminal-tile {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+}
+.terminal-adjacent {
+  border-top: 1px solid var(--color-border);
+}
+.terminal-tile-grid {
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: minmax(250px, 1fr);
+  overflow-x: hidden;
+  overflow-y: auto;
+  gap: 1px;
+  background: var(--color-border);
+}
+.terminal-tile,
+.terminal-tile-empty {
+  background: var(--color-background);
+}
+.terminal-tile[data-selected="true"] .terminal-tile-toolbar {
+  color: var(--color-foreground);
+  background: color-mix(in srgb, var(--color-muted) 35%, transparent);
+}
+.terminal-tile-toolbar {
+  height: 30px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--color-border);
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.terminal-tile-toolbar button:focus-visible,
+.terminal-tile-toolbar select:focus-visible {
+  outline: 1px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.terminal-tile-empty {
+  display: flex;
+  min-height: 190px;
+  align-items: center;
+  justify-content: center;
+}
+@container terminal-stage (min-width: 760px) {
+  .terminal-two-pane[data-split="true"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .terminal-adjacent {
+    border-top: 0;
+    border-left: 1px solid var(--color-border);
+  }
+  .terminal-tile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    overflow: hidden;
+  }
+  .terminal-tile[data-last="true"] {
+    grid-column: 1 / -1;
+  }
+}

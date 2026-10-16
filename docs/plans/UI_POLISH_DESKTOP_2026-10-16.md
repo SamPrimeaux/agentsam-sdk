@@ -65,3 +65,20 @@ This is a desktop polish branch, **not** an authorization for unbounded CAD feat
 Before modifying overlapping source files, fetch and compare currently active WIP branches/PRs, especially earlier terminal, shell, conversation and image-attachment repairs. Reuse completed work. Commit/push completed batches and merge only when actual tests, branch protections and desktop acceptance pass; clean up proven merged worktrees without discarding unique user assets.
 
 **Success:** open Local Studio, attach a screenshot and get an image-grounded response; open terminal/browser/CAD side by side without layout jitter; inspect an actual CAD/robotic artifact or live run; switch context and restart without losing progress.
+## Multi-PTY UI implementation — 2026-10-16
+
+The existing PR #235 had already shipped a native paste fix, terminal FitAddon/ResizeObserver stability, and an independently connected TWO-PTY split view. It did NOT yet provide the multi-PTY tiled workspace of the visual reference.
+
+In this branch, `TerminalPane` now presents single, two-pane, or five-slot tiled layouts from the EXISTING per-session xterm/PTY authority. Tiled mode displays independent live terminals, has per-tile session selectors, and creates additional terminals on demand. Layout and slot preferences are persisted through the existing Zustand terminal store. Styling responds to the available terminal container width, with a two-column arrangement on sufficiently wide panes and a single column on narrow panes. In-page expansion is available from dock/side panes. No new backend or per-tile PTY transport was created.
+
+Acceptance evidence:
+- TypeScript frontend: PASS (`tsc --noEmit -p apps/local-studio/frontend/tsconfig.json`).
+- New session-state tests: 4 PASS (unique PTY IDs, tile replacement, session close, transition back to split/single).
+- Desktop-target Vite build: PASS.
+- Existing desktop SPA smoke: PASS.
+- Playwright Chromium, desktop preview hash-route `#/cli`: 1440x900 and 610x900, no errors, no horizontal page overflow, tiles responsively arranged. Five live tile hosts survived page reload at 1440x950 without duplicate IDs; two-column by three-row layout with full-width last row. Preview-only server used port 4337 and did not replace installed `.app`.
+
+Out of scope / NOT finished by this slice:
+- Screenshot and image-to-terminal input needs its own secure attachment pipeline and model-request integration. Current Chat composer keeps a pending File map and sends attachment metadata; `streamChat` currently sends text-only messages to the provider. Merely adding a drag target would be misleading and is NOT evidence of image understanding.
+- Per-tile drag-and-resize ratios, background PTY lifecycle after closing a tab, and final installed Tauri `.app` acceptance remain separate verification tasks.
+- This desktop visual slice does not change CAD/OCCT code or interrupt ongoing local PTY sessions.
