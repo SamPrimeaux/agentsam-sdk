@@ -15,7 +15,17 @@ import { localStudioRuntimeVisuals } from '@/lib/runtime-visuals/local-studio-ru
 export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const { data, isMobile } = useNav();
   const state = useWorkStore();
-  const [panelWidth, setPanelWidth] = useState(480);
+  const [panelWidth, setPanelWidth] = useState(() => {
+    if (typeof window === 'undefined') return 480;
+    try {
+      const saved = Number(window.localStorage.getItem('agentsam.studio.agentPanelWidth'));
+      return Number.isFinite(saved) && saved >= 280 && saved <= 1120 ? saved : 480;
+    } catch { return 480; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem('agentsam.studio.agentPanelWidth', String(panelWidth)); }
+    catch { /* Resizing remains available without localStorage. */ }
+  }, [panelWidth]);
   const trail = state.trails.find((item) => item.id === (conversationId ?? state.activeTrailId));
   useEffect(() => { if (conversationId && state.trails.some((item) => item.id === conversationId)) state.setActiveTrail(conversationId); }, [conversationId, state.setActiveTrail, state.trails]);
   if (!trail) return <div className="agentsam-welcome"><h1>Conversation unavailable</h1><button type="button" className="as-nav-button" onClick={data.onCreateConversation}>New chat</button></div>;
@@ -46,7 +56,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           composerClassName="agentsam-conversation-dock"
         />
       </section>
-      {state.sideOpen ? <><SplitHandle label="Resize Side Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(280, Math.min(900, width - delta)))} onDoubleClick={() => setPanelWidth(480)} /><aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Side Panel"><SideStage /></aside></> : null}
+      {state.sideOpen ? <><SplitHandle label="Resize Side Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(280, Math.min(1120, width - delta, window.innerWidth - 360)))} onDoubleClick={() => setPanelWidth(480)} /><aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Side Panel"><SideStage /></aside></> : null}
     </div>
   </div>;
 }
