@@ -122,9 +122,9 @@ test('user-global rules follow AgentSam into any repository without changing its
   const repo = path.join(root, 'randomrepo123');
   fs.mkdirSync(path.dirname(globalPath), { recursive: true });
   fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
-  fs.writeFileSync(globalPath, '# Owner law\\nCraft over spectacle. Substance over promises.\\n');
-  fs.writeFileSync(path.join(repo, 'AGENTSAM.md'), '# Repo runtime\\nkeep contracts real\\n');
-  fs.writeFileSync(path.join(repo, '.agentsamrules'), '# Repo settings\\nno hardcoded tenant values\\n');
+  fs.writeFileSync(globalPath, '# Owner law\nCraft over spectacle. Substance over promises.\n');
+  fs.writeFileSync(path.join(repo, 'AGENTSAM.md'), '# Repo runtime\nkeep contracts real\n');
+  fs.writeFileSync(path.join(repo, '.agentsamrules'), '# Repo settings\nno hardcoded tenant values\n');
 
   const compiled = compileAgentInstructions(repo, { globalFilename: globalPath });
   assert.deepEqual(compiled.sources.map(source => source.id), ['global', 'runtime', 'project']);
@@ -148,7 +148,7 @@ test('user-global instructions work without an AGENTSAM.md in the target reposit
   const globalPath = path.join(root, 'AGENTSAM.md');
   const repo = path.join(root, 'empty-repository');
   fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
-  fs.writeFileSync(globalPath, 'Owner-wide release gate\\n');
+  fs.writeFileSync(globalPath, 'Owner-wide release gate\n');
   const compiled = compileAgentInstructions(repo, { globalFilename: globalPath });
   assert.equal(compiled.found, true);
   assert.equal(compiled.path, globalPath);
