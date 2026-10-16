@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   getCadRecovery,
   probeDockerDaemon,
-} from '../apps/cad-creator/bin/cad-discovery.mjs';
+} from '../../apps/cad-creator/bin/cad-discovery.mjs';
 
 test('OpenSCAD recovery offers native rescan and explicit-approval Docker lane', () => {
   const recovery = getCadRecovery('openscad', 'darwin');
@@ -22,7 +22,7 @@ test('Docker daemon discovery is read-only and handles an absent CLI', async () 
 
 test('host-install declares Docker opt-in and does not duplicate product fields', async () => {
   const { readFileSync } = await import('node:fs');
-  const host = JSON.parse(readFileSync(new URL('../apps/cad-creator/.agentsam/app.json', import.meta.url)));
+  const host = JSON.parse(readFileSync(new URL('../../apps/cad-creator/.agentsam/app.json', import.meta.url)));
   assert.equal(host.schema, 'agentsam.host-install.v1');
   assert.equal(host.config.runtime.docker_cad, 'explicit_approval');
   assert.equal('routes' in host, false);

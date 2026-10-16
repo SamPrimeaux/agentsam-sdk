@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict'; import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
-import { createOcctNativeProvider } from '../src/lib/cad/occt-native-provider.mjs';
+import { createOcctNativeProvider } from '../../src/lib/cad/occt-native-provider.mjs';
 const bin = process.env.AGENTSAM_OCCT_BIN;
 test('real OCCT: create 10in box -> inspect STEP reopen (exact volume)', { skip: !bin && 'Set AGENTSAM_OCCT_BIN to a built agentsam-occt' }, async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'occt-real-'));
