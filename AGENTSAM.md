@@ -21,6 +21,10 @@ AgentSam is deliberately **not** “an LLM with tools.” It is a layered system
 
 This division is a product requirement: **LLMs supercharge AgentSam; they do not become the source of truth that holds AgentSam together.**
 
+## Authored experiences and multi-agent delivery
+
+For brand/experience work, use the portable workflow skill `agentsam-experience-delivery` and the proposed, status-labeled program at `docs/plans/SAM_MACHINERY_TO_EXPERIENCE_2026-10-15.md`. These are procedural references, **not** new runtime capabilities or authority to edit a consuming brand. Brand identity decisions belong to that project’s approved guide and owner. Machine/kernel correctness and source preservation precede creative-source mining and presentation work. Never transplant the InnerAnimalMedia reference fixture into a generic SDK default.
+
 ## Portability, resale, and repurposability law
 
 AgentSam machinery is only reusable when an unrelated user can install or instantiate it without inheriting the operator's machine, identity, credentials, infrastructure, or monorepo.

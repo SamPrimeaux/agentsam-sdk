@@ -23,6 +23,13 @@ test('AgentSam Jr Dev loads compact instructions and references on demand', () =
   assert.match(full.references[1].content, /# Real Application Logic/);
 });
 
+test('experience workflow is discoverable without assigning brand authority', () => {
+  assert.equal(getSkill('experience-atlas')?.id, 'agentsam-experience-delivery');
+  const skill = loadSkill('agentsam-experience-delivery');
+  assert.match(skill.instructions, /Machinery-first preflight/);
+  assert.match(skill.instructions, /preserve|Preserve/);
+});
+
 test('every catalog skill resolves to real files and a matching frontmatter name', () => {
   const root = fileURLToPath(new URL('../skills/', import.meta.url));
   for (const skill of listSkills()) {
