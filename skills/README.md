@@ -17,6 +17,7 @@ current task calls for them.
 | `agentsam-sam-operations` | **current** | Exact SAM operation inputs; judge results, not envelopes |
 | `agentsam-repo-recon` | **current** | Map a repo with deterministic read-only tools first |
 | `agentsam-cad` | **current** | Typed-recipe Blender build/inspect/export with hash proof |
+| `agentsam-experience-delivery` | **proposed workflow** | Machine-first, source-faithful brand/UX/scene handoffs with real functional gates |
 | `agentsam-sdk-orientation` | **current** | Where things live, which source is authoritative |
 
 List or open them with `agentsam skills`; aliases such as `quick-bytes`, `no-regress`,

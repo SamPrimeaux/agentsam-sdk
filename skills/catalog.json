@@ -137,6 +137,22 @@
       "user_invocable": true
     },
     {
+      "id": "agentsam-experience-delivery",
+      "aliases": [
+        "experience-delivery",
+        "experience-atlas",
+        "brand-experience",
+        "scene-handoff"
+      ],
+      "title": "AgentSam Experience Delivery",
+      "description": "Machinery-first, source-faithful creative experience workflow with real interactive and CMS acceptance gates; preserve originals and founder authority.",
+      "entry": "agentsam-experience-delivery/SKILL.md",
+      "references": [
+        "agentsam-experience-delivery/references/visual-design-fidelity.md"
+      ],
+      "user_invocable": true
+    },
+    {
       "id": "agentsam-sdk-orientation",
       "aliases": [
         "orientation",
