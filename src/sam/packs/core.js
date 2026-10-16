@@ -8,6 +8,7 @@ import { planningAstarOp } from '../operations/planning-astar.js';
 import { planningGoapOp } from '../operations/planning-goap.js';
 import { decisionEvaluateOp } from '../operations/decision-evaluate.js';
 import { packageAuditOp } from '../operations/package-audit.js';
+import { roboticsOps } from '../operations/robotics.js';
 
 export const CORE_OPERATIONS = [
   repositoryInspect,
@@ -20,4 +21,5 @@ export const CORE_OPERATIONS = [
   planningGoapOp,
   decisionEvaluateOp,
   packageAuditOp,
+  ...roboticsOps,
 ];
