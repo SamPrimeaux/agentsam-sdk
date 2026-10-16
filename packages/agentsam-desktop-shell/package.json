@@ -13,7 +13,7 @@
     "test": "node --test scripts/icon-idempotence.test.mjs worker/src/index.test.mjs",
     "test:icons": "node --test scripts/icon-idempotence.test.mjs",
     "prepare:sidecars": "node scripts/prepare-sidecars.mjs",
-    "build:desktop-assets": "npm --prefix ../../apps/local-studio run build:desktop && node scripts/sync-local-studio-dist.mjs",
+    "build:desktop-assets": "npm --prefix ../../apps/local-studio run build:desktop && node scripts/sync-local-studio-dist.mjs && npm --prefix ../../apps/local-studio run smoke:desktop-cad",
     "bundle": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && tauri build --bundles app,dmg --ci",
     "bundle:app": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && tauri build --bundles app --ci",
     "bundle:shell-only": "node scripts/build-brand.mjs local-studio && tauri build --bundles app,dmg --ci"
