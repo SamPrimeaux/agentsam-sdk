@@ -563,7 +563,7 @@ function App() {
   }
 
   if (!restored) {
-    return <div className="copro-boot"><span>CoPro</span><small>Restoring project…</small></div>;
+    return <div className="copro-boot"><span>MovieMode</span><small>Restoring your projects…</small></div>;
   }
 
   if (screen === "projects") {
