@@ -6,8 +6,8 @@ import { ensureOS } from './os.js';
  * Resolve root/cwd from common input shapes.
  * @param {unknown} input
  */
-function resolveRoot(input) {
-  if (input == null) return process.cwd();
+function resolveRoot(input, fallbackRoot = process.cwd()) {
+  if (input == null) return fallbackRoot;
   if (typeof input === 'string') return input;
   if (typeof input === 'object') {
     const o = /** @type {Record<string, unknown>} */ (input);
@@ -15,7 +15,7 @@ function resolveRoot(input) {
     if (typeof o.cwd === 'string') return o.cwd;
     if (typeof o.projectRoot === 'string') return o.projectRoot;
   }
-  return process.cwd();
+  return fallbackRoot;
 }
 
 /**
@@ -48,13 +48,13 @@ export class AgentSamClient {
 
     /** Domain projections → sam.invoke(canonicalId, …) */
     this.repository = {
-      inspect: (input = {}, opts) => this.invoke('repository.inspect', normalizeRootInput(input), opts),
+      inspect: (input = {}, opts) => this.invoke('repository.inspect', normalizeRootInput(input, this.cwd), opts),
     };
     this.brand = {
-      scan: (input = {}, opts) => this.invoke('brand.scan', normalizeRootInput(input), opts),
+      scan: (input = {}, opts) => this.invoke('brand.scan', normalizeRootInput(input, this.cwd), opts),
     };
     this.security = {
-      scan: (input = {}, opts) => this.invoke('security.scan', normalizeRootInput(input), opts),
+      scan: (input = {}, opts) => this.invoke('security.scan', normalizeRootInput(input, this.cwd), opts),
     };
     this.terminal = {
       exec: (input = {}, opts) => this.invoke('terminal.exec', input, opts),
@@ -65,7 +65,7 @@ export class AgentSamClient {
       },
     };
     this.codebaseindex = {
-      ingest: (input = {}, opts) => this.invoke('codebaseindex.ingest', normalizeRootInput(input), opts),
+      ingest: (input = {}, opts) => this.invoke('codebaseindex.ingest', normalizeRootInput(input, this.cwd), opts),
     };
     this.decision = {
       evaluate: (input = {}, opts) => this.invoke('decision.evaluate', input, opts),
@@ -246,16 +246,16 @@ export class AgentSamClient {
 /**
  * @param {unknown} input
  */
-function normalizeRootInput(input) {
+function normalizeRootInput(input, fallbackRoot = process.cwd()) {
   if (typeof input === 'string') {
     return { root: input };
   }
   if (input && typeof input === 'object') {
     const o = /** @type {Record<string, unknown>} */ (input);
-    const root = resolveRoot(input);
+    const root = resolveRoot(input, fallbackRoot);
     return { ...o, root, cwd: o.cwd ?? root };
   }
-  return { root: process.cwd(), cwd: process.cwd() };
+  return { root: fallbackRoot, cwd: fallbackRoot };
 }
 
 /** Convenience factory matching docs examples. */

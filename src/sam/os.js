@@ -85,7 +85,15 @@ export function createSamOS({ core = true, generated = null, cms = null, authori
     }),
     // Explicitly installed adapters may register additional real SAM operations.
     install: (defs) => {
-      for (const def of defs) register(defineSamOperation(def));
+      // Validate the entire pack before modifying this instance. A duplicate ID
+      // inside the batch must not leave a partially installed capability set.
+      const pending = [...defs].map(def => defineSamOperation(def));
+      const seen = new Set(registry.keys());
+      for (const def of pending) {
+        if (seen.has(def.id)) throw new Error('sam_os_duplicate_operation:' + def.id);
+        seen.add(def.id);
+      }
+      for (const def of pending) registry.set(def.id, def);
       return os.status();
     },
   };
