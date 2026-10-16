@@ -211,7 +211,7 @@ test('old section/block operation names execute canonical SDK machinery without 
     const unknown=await call('cms.section.updateDraft',{
       pageId:'case',sectionId,expectedVersion:4,settings:{heading:'bad'},accountId:'injected'});
     assert.equal(unknown.ok,false);
-    assert.match(unknown.error.message,/cms_alias_unknown_field/);
+    assert.equal(unknown.error.message,'input.accountId:unknown_field');
     const permitted=osRuntime.list().map(x=>x.id);
     const adapter=createSamCapabilityAdapter({os:osRuntime,expose:permitted,authorize:async()=>true});
     const names=adapter.toolDescriptors().map(x=>x.name);
