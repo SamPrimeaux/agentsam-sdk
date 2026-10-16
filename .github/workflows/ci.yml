@@ -51,6 +51,12 @@ jobs:
         if: github.event_name == 'pull_request'
         run: node scripts/ui-quality/check-source.mjs --changed-from "origin/$GITHUB_BASE_REF"
 
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: CAD Python quality (pinned ty + Ruff)
+        run: npm run verify:cad-python
+
       - name: Verify AgentSam registry and CLI contract
         run: npm run verify:registry
 

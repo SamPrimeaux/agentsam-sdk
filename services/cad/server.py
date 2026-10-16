@@ -40,12 +40,12 @@ OPENSCAD_FORMATS = {"stl", "3mf", "dxf", "svg", "csg", "off", "amf"}
 FREECAD_FORMATS = {"step", "stp", "iges", "brep", "stl"}
 BLENDER_FORMATS = {"glb", "stl", "obj", "png"}
 FORBIDDEN_OPENSCAD = [
-    (re.compile(r"\binclude\s*<", re.I), "include directives are disabled"),
-    (re.compile(r"\buse\s*<", re.I), "use directives are disabled"),
-    (re.compile(r"\bimport\s*\(", re.I), "import() is disabled"),
-    (re.compile(r"\bsurface\s*\(", re.I), "surface() file loading is disabled"),
+    (re.compile(r"\binclude\s*<", re.IGNORECASE), "include directives are disabled"),
+    (re.compile(r"\buse\s*<", re.IGNORECASE), "use directives are disabled"),
+    (re.compile(r"\bimport\s*\(", re.IGNORECASE), "import() is disabled"),
+    (re.compile(r"\bsurface\s*\(", re.IGNORECASE), "surface() file loading is disabled"),
     (re.compile(r"\.\.[/\\]"), "path traversal is disabled"),
-    (re.compile(r"(?:^|[\s\"'])/(?:etc|proc|sys|dev|var|home|root|run|mnt)/", re.I), "absolute host-style paths are disabled"),
+    (re.compile(r"(?:^|[\s\"'])/(?:etc|proc|sys|dev|var|home|root|run|mnt)/", re.IGNORECASE), "absolute host-style paths are disabled"),
 ]
 
 
@@ -446,8 +446,8 @@ def _execute_blender(payload: dict[str, Any]) -> dict[str, Any]:
 class Handler(BaseHTTPRequestHandler):
     server_version = "AgentSamCAD/1"
 
-    def log_message(self, fmt: str, *args: Any) -> None:
-        print(f"[cad] {self.address_string()} {fmt % args}", flush=True)
+    def log_message(self, format: str, *args: Any) -> None:
+        print(f"[cad] {self.address_string()} {format % args}", flush=True)
 
     def _json(self, status: int, body: Any) -> None:
         payload = json.dumps(body, separators=(",", ":")).encode("utf-8")
@@ -483,7 +483,7 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("JSON request must be an object")
         return value
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         if self.path == "/healthz":
             caps = _capabilities()
             self._json(HTTPStatus.OK, {"ok": True, **caps})
@@ -495,7 +495,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         if not self._require_auth():
             return
         try:
