@@ -25,7 +25,10 @@ export function createRegistry({
     ...row, type: 'package',
     readiness: 'unverified',
   })));
-  const capabilityRows = ordered(Object.values(manifest.capabilities || {}).map((row) => {
+  // Resolve handlers at query time: host adapters and MCP connections may become
+  // available after registry construction. Static snapshots falsely mark meta-tools
+  // such as capability.invoke unavailable even after their handlers are installed.
+  const capabilityRows = () => ordered(Object.values(manifest.capabilities || {}).map((row) => {
     const bound = capabilityAdapter?.canInvoke?.(row.id) === true;
     const reported = capabilityAdapter?.availability?.(row.id) || null;
     const callable = !!capabilityAdapter && bound;
@@ -40,7 +43,7 @@ export function createRegistry({
   }));
 
   function search(query = '', { type = null, limit = 30 } = {}) {
-    const all = [...commandRows, ...capabilityRows, ...packageRows];
+    const all = [...commandRows, ...capabilityRows(), ...packageRows];
     const words = stable(query).split(/\s+/).filter(Boolean);
     return all.filter((row) => (!type || row.type === type) &&
       words.every((word) => [row.id,row.name,row.summary,row.description,row.purpose,
@@ -52,7 +55,7 @@ export function createRegistry({
 
   function describe(id, { type = null } = {}) {
     const key = stable(id).replace(/^@inneranimalmedia\//, '');
-    return [...commandRows, ...capabilityRows, ...packageRows]
+    return [...commandRows, ...capabilityRows(), ...packageRows]
       .find((row) => (!type || row.type === type) && (stable(row.id) === key ||
         stable(row.name) === stable(id) || (row.aliases || []).some((v) => stable(v) === key))) || null;
   }
@@ -86,7 +89,7 @@ export function createRegistry({
 
   return Object.freeze({
     commands: () => structuredClone(commandRows),
-    capabilities: () => structuredClone(capabilityRows),
+    capabilities: () => structuredClone(capabilityRows()),
     packages: () => structuredClone(packageRows),
     search, describe, status, invoke,
   });

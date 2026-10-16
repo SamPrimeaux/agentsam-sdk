@@ -83,6 +83,11 @@ export function buildNativeAuthorizationUrl(options = {}) {
   url.searchParams.set('code_challenge_method', 'S256');
   url.searchParams.set('state', state);
   if (scope) url.searchParams.set('scope', scope);
+  if (options.resource) {
+    const resource = new URL(options.resource);
+    if (resource.protocol !== 'https:') throw new Error('oauth_resource_must_be_https');
+    url.searchParams.set('resource', resource.toString());
+  }
   return url.toString();
 }
 
@@ -132,7 +137,28 @@ export async function exchangeAuthorizationCode(options = {}) {
     redirect_uri: redirectUri,
     code,
     code_verifier: codeVerifier,
+    ...(options.resource ? { resource: options.resource } : {}),
   }, options);
+}
+
+/** Refresh an explicitly resource-scoped IAM OAuth token without overwriting
+ * the independent CLI account session. Callers own persistence and approval. */
+export async function refreshNativeOAuthToken(options = {}) {
+  const session = options.session;
+  if (!session?.refresh_token) throw new Error('mcp_oauth_refresh_unavailable');
+  const resolved = resolveIamClientId({ ...options, clientId: session.client_id || options.clientId });
+  if (resolved.error) throw new Error(resolved.error);
+  const refreshed = await oauthTokenRequest({
+    grant_type: 'refresh_token',
+    client_id: resolved.clientId,
+    refresh_token: session.refresh_token,
+    ...(options.resource ? { resource: options.resource } : {}),
+  }, options);
+  return {
+    ...refreshed,
+    refresh_token: clean(refreshed.refresh_token) || session.refresh_token,
+    client_id: resolved.clientId,
+  };
 }
 
 export async function refreshAccountSession(options = {}) {
@@ -366,6 +392,7 @@ export async function authenticateViaBrowser(options = {}) {
       state,
       codeChallenge: pkce.challenge,
       scope: options.scope,
+      resource: options.resource,
     });
 
     // Gate through IAM /auth/login; authorize URL preserved in `next`.
@@ -392,10 +419,14 @@ export async function authenticateViaBrowser(options = {}) {
       redirectUri: listener.redirectUri,
       code: callback.code,
       codeVerifier: pkce.verifier,
+      resource: options.resource,
       fetchImpl: options.fetchImpl,
       signal: options.signal,
     });
 
+    // MCP resource login is a separate OAuth grant, never replace the CLI's
+    // own account token with an MCP audience token.
+    if (options.saveSession === false) return { ...tokenSet, client_id: clientId };
     return saveAccountSession({
       ...tokenSet,
       client_id: clientId,
