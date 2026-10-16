@@ -44,6 +44,7 @@ export function Toolbar({
         onClick={togglePause}
         className={`w-10 h-10 rounded-xl glass-panel flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl ${panelStyle}`}
         title={isPaused ? "Resume" : "Pause"}
+        aria-label={isPaused ? "Resume simulation" : "Pause simulation"}
       >
         {isPaused ? <Play className={`w-4 h-4 ${iconFill}`} /> : <Pause className={`w-4 h-4 ${iconFill}`} />}
       </button>
@@ -53,6 +54,7 @@ export function Toolbar({
         onClick={onReset}
         className={`w-10 h-10 rounded-xl glass-panel flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl ${panelStyle}`}
         title="Reset Simulation"
+        aria-label="Reset simulation"
       >
         <RotateCcw className="w-4 h-4" />
       </button>
@@ -69,6 +71,7 @@ export function Toolbar({
         onClick={toggleDarkMode}
         className={`w-10 h-10 rounded-xl glass-panel flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl ${panelStyle}`}
         title={isDarkMode ? "Light Mode" : "Dark Mode"}
+        aria-label={isDarkMode ? "Use light mode" : "Use dark mode"}
       >
         {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
       </button>
@@ -78,6 +81,7 @@ export function Toolbar({
         onClick={toggleSidebar}
         className={`w-10 h-10 rounded-xl glass-panel flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl ${showSidebar ? (isDarkMode ? 'text-indigo-400 bg-slate-800' : 'text-indigo-600 bg-white') : panelStyle}`}
         title="Toggle Analysis Panel"
+        aria-label={showSidebar ? "Close simulation inspector" : "Open simulation inspector"}
       >
         <PanelRight className="w-4 h-4" />
       </button>
