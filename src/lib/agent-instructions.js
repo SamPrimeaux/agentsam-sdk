@@ -1,10 +1,13 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { findProjectRules } from './project-rules.js';
 
 export const AGENT_RUNTIME_FILENAME = 'AGENTSAM.md';
-export const AGENT_INSTRUCTION_PRECEDENCE = Object.freeze(['AGENTSAM.md', '.agentsamrules']);
+// Optional, user-owned policy. Never scaffold or bundle an operator's rules for customers.
+export const AGENT_USER_GLOBAL_RULES_PATH = '.agentsam/AGENTSAM.md';
+export const AGENT_INSTRUCTION_PRECEDENCE = Object.freeze(['~/.agentsam/AGENTSAM.md', 'AGENTSAM.md', '.agentsamrules']);
 
 /** Provider/editor adapters that must redirect to AGENTSAM.md — never compiled as policy. */
 export const AGENT_INSTRUCTION_COMPAT_SHIMS = Object.freeze(['AGENTS.md', 'CLAUDE.md']);
@@ -35,9 +38,15 @@ export function compileAgentInstructions(startDir = process.cwd(), options = {})
   const maxChars = Number(options.maxChars ?? 24_000);
   if (!Number.isInteger(maxChars) || maxChars < 1) throw new RangeError('agent instructions maxChars must be a positive integer');
 
+  // The caller can explicitly disable user-global policy for isolated/hosted contexts
+  // or point it at the authenticated user's chosen policy file.
+  const globalPath = options.globalFilename === null
+    ? null
+    : path.resolve(options.globalFilename || path.join(os.homedir(), AGENT_USER_GLOBAL_RULES_PATH));
   const runtimePath = options.runtimeFilename ? path.resolve(options.runtimeFilename) : findAgentRuntimeContract(startDir);
   const projectPath = options.projectFilename ? path.resolve(options.projectFilename) : findProjectRules(startDir);
   const descriptors = [
+    { id: 'global', filename: '~/.agentsam/AGENTSAM.md', path: globalPath },
     { id: 'runtime', filename: AGENT_RUNTIME_FILENAME, path: runtimePath },
     { id: 'project', filename: '.agentsamrules', path: projectPath },
   ];
@@ -64,7 +73,7 @@ export function compileAgentInstructions(startDir = process.cwd(), options = {})
   const content = truncated ? `${combined.slice(0, Math.max(0, maxChars - 1))}…` : combined;
   return Object.freeze({
     found: sources.length > 0,
-    path: projectPath || runtimePath || null,
+    path: projectPath || runtimePath || (sources.length ? globalPath : null),
     content,
     chars: content.length,
     source_chars: sourceChars,
