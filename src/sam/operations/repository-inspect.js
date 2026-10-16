@@ -40,8 +40,18 @@ export const repositoryInspect = defineSamOperation({
   artifacts: ['repository.snapshot', 'evidence.refs'],
   cli: { command: [['inspect']] },
   docs: { section: 'Repository', examples: ['repository-inspect-basic'] },
-  input_schema: 'protocol/capabilities/repository-snapshot-input.schema.json',
-  output_schema: 'protocol/capabilities/repository-snapshot.schema.json',
+  // This operation accepts root/cwd; the repository.snapshot capability
+  // schema requires cwd + churnDays and is not a valid model-facing contract
+  // for repository.inspect. Keep a truthful, directly consumable input schema.
+  input_schema: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      root: { type: 'string', minLength: 1 },
+      cwd: { type: 'string', minLength: 1 },
+      churnDays: { type: 'integer', minimum: 1, maximum: 3650 },
+    },
+  },
   status: 'stable',
   async handler(input = {}, ctx = {}) {
     const root = typeof input === 'string'
