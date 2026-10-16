@@ -126,6 +126,25 @@ export function applyCoProCommand(inputProject, command) {
       break;
     }
 
+    case "clip.set_transform": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      const previous = found.clip.metadata?.transform ?? {};
+      const next = { ...previous };
+      for (const key of ["scale", "x", "y", "rotation", "opacity"]) {
+        if (payload[key] === undefined) continue;
+        const value = Number(payload[key]);
+        if (!Number.isFinite(value)) throw new Error("copro_clip_transform_invalid");
+        if (key === "scale" && (value < 0.05 || value > 8)) throw new Error("copro_clip_scale_invalid");
+        if (key === "opacity" && (value < 0 || value > 1)) throw new Error("copro_clip_opacity_invalid");
+        if ((key === "x" || key === "y") && Math.abs(value) > 1000) throw new Error("copro_clip_position_invalid");
+        if (key === "rotation" && Math.abs(value) > 3600) throw new Error("copro_clip_rotation_invalid");
+        next[key] = value;
+      }
+      found.clip.metadata = { ...(found.clip.metadata ?? {}), transform: next };
+      break;
+    }
+
     case "clip.set_text": {
       const found = locateClip(project, payload.clipId);
       if (!found) throw new Error("copro_clip_not_found");

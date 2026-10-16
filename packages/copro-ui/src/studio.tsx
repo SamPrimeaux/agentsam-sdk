@@ -3,6 +3,7 @@ import {
   ArrowLeft, AudioLines, Captions, Copy, Film,
   Layers, Play, Pause, Redo2, Scissors, SlidersHorizontal, Sparkles,
   Trash2, Type, Undo2, X, Gauge, Volume2, Replace, Clapperboard, PanelLeftClose, PanelRightClose, PanelsTopLeft, RotateCcw,
+  Sticker, Palette, SlidersVertical, Folder, Download, Film as FilmIcon,
 } from "lucide-react";
 import { CoProTimeline, type CoProProjectView } from "./timeline.js";
 import { CoProToolPanel, type CoProMediaShelfItem } from "./tool-sheet.js";
@@ -12,6 +13,7 @@ import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspac
 export type CoProStudioAction =
   | { type: "back" }
   | { type: "export-project" }
+  | { type: "browse-templates" }
   | { type: "undo" }
   | { type: "redo" }
   | { type: "split"; clipId: string; atUs: number }
@@ -21,6 +23,7 @@ export type CoProStudioAction =
   | { type: "trim"; clipId: string; patch: { startUs?: number; inUs?: number; durationUs?: number } }
   | { type: "speed"; clipId: string; playbackRate: number }
   | { type: "volume"; clipId: string; volume: number }
+  | { type: "transform"; clipId: string; patch: { scale?: number; x?: number; y?: number; rotation?: number; opacity?: number } }
   | { type: "text"; clipId: string; text: string }
   | { type: "effect"; clipId: string; effect: string }
   | { type: "transition"; clipId: string; transition: string; durationUs?: number }
@@ -52,7 +55,10 @@ const PRIMARY_TOOLS = [
   ["audio", "Audio", "♫"],
   ["text", "Text", "T"],
   ["captions", "Captions", "CC"],
+  ["stickers", "Stickers", "☆"],
   ["effects", "Effects", "✦"],
+  ["filters", "Filters", "◐"],
+  ["adjustments", "Adjustment", "☷"],
   ["transitions", "Transitions", "◇"],
   ["templates", "Templates", "▦"],
 ] as const;
@@ -75,6 +81,9 @@ function renderToolIcon(id: string) {
     case "audio": return <AudioLines size={size}/>;
     case "text": return <Type size={size}/>;
     case "captions": return <Captions size={size}/>;
+    case "stickers": return <Sticker size={size}/>;
+    case "filters": return <Palette size={size}/>;
+    case "adjustments": return <SlidersVertical size={size}/>;
     case "effects": return <Sparkles size={size}/>;
     case "transitions": return <Layers size={size}/>;
     case "templates": return <Clapperboard size={size}/>;
@@ -107,6 +116,7 @@ export function CoProStudio({
   const [playing, setPlaying] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(initialTool);
   const [categoryTool, setCategoryTool] = useState<string>(initialTool ?? "media");
+  const [browserSection, setBrowserSection] = useState<"import" | "media" | "subprojects" | "yours" | "generate" | "spaces" | "library">("import");
   const [panePreference, setPanePreference] = useState<"browser" | "inspector">("browser");
   const { layout, setLayout, resetLayout } = useWorkspaceLayout();
   const workspaceRef = useRef<HTMLElement>(null);
@@ -127,6 +137,7 @@ export function CoProStudio({
   useEffect(() => { if (selectedClipId) setPanePreference("inspector"); }, [selectedClipId]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const dragStartRef = useRef<{startX:number;startY:number;x:number;y:number;clipId:string;nextX:number;nextY:number}|null>(null);
 
   const selectedEntry = useMemo(() => {
     for (const track of project.tracks) {
@@ -140,9 +151,10 @@ export function CoProStudio({
   const selectedTrack = selectedEntry?.track ?? null;
   const isNarrow = workspaceWidth < 1180;
   const isCompact = workspaceWidth < 760;
-  const clipSpecificTools = ["trim", "speed", "volume", "effects", "transitions", "text", "captions"];
+  const clipSpecificTools = ["trim", "speed", "volume", "effects", "transitions", "text", "captions", "transform", "filters", "adjustments"];
+  const canonicalTool = (tool: string | null) => tool === "filters" ? "effects" : tool === "adjustments" ? "transform" : tool;
   const inspectorTool = activeTool === "export" ? "export" : selectedClip
-    ? (activeTool && clipSpecificTools.includes(activeTool) ? activeTool : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" ? "text" : "trim")
+    ? (activeTool && clipSpecificTools.includes(activeTool) ? canonicalTool(activeTool) : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" ? "text" : "transform")
     : null;
   const inspectorAvailable = Boolean(inspectorTool);
   const showInspector = inspectorAvailable && layout.inspectorOpen && (!isNarrow || panePreference === "inspector" || !layout.browserOpen);
@@ -175,6 +187,38 @@ export function CoProStudio({
   const activeMedia = activeVisualClip
     ? mediaItems.find((item) => item.id === activeVisualClip.assetId) ?? null
     : null;
+  const activeTransform = (activeVisualClip?.metadata?.transform ?? {}) as { scale?:number; x?:number; y?:number; rotation?:number; opacity?:number };
+  const mediaTransformStyle: React.CSSProperties = {
+    transform: `translate(${activeTransform.x ?? 0}%, ${activeTransform.y ?? 0}%) scale(${activeTransform.scale ?? 1}) rotate(${activeTransform.rotation ?? 0}deg)`,
+    opacity: activeTransform.opacity ?? 1,
+    cursor: activeVisualClip ? "grab" : undefined,
+    touchAction: "none",
+  };
+  function startVisualDrag(event: React.PointerEvent<HTMLVideoElement | HTMLImageElement>) {
+    if (!activeVisualClip || event.button !== 0) return;
+    onSelectClip?.(activeVisualClip.id);
+    dragStartRef.current = {startX:event.clientX,startY:event.clientY,x:activeTransform.x ?? 0,y:activeTransform.y ?? 0,clipId:activeVisualClip.id,nextX:activeTransform.x ?? 0,nextY:activeTransform.y ?? 0};
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+  function moveVisualDrag(event: React.PointerEvent<HTMLVideoElement | HTMLImageElement>) {
+    const drag = dragStartRef.current;
+    if (!drag) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const dx = 100*(event.clientX-drag.startX)/rect.width;
+    const dy = 100*(event.clientY-drag.startY)/rect.height;
+    drag.nextX = Math.max(-1000,Math.min(1000,Math.round((drag.x+dx)*10)/10));
+    drag.nextY = Math.max(-1000,Math.min(1000,Math.round((drag.y+dy)*10)/10));
+    event.currentTarget.style.transform = `translate(${drag.nextX}%, ${drag.nextY}%) scale(${activeTransform.scale ?? 1}) rotate(${activeTransform.rotation ?? 0}deg)`;
+  }
+  function endVisualDrag(event: React.PointerEvent<HTMLVideoElement | HTMLImageElement>) {
+    const drag = dragStartRef.current;
+    dragStartRef.current = null;
+    if (!drag) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (drag.nextX !== drag.x || drag.nextY !== drag.y) onAction?.({type:"transform",clipId:drag.clipId,patch:{x:drag.nextX,y:drag.nextY}});
+  }
   const effectivePreviewSrc = activeMedia ? activeMedia.url : (mediaItems.length ? null : previewSrc);
   const effectivePreviewKind = activeMedia?.kind === "image" ? "image"
     : activeMedia?.kind === "video" ? "video"
@@ -262,6 +306,7 @@ export function CoProStudio({
   }
 
   function runTool(id: string) {
+    if (id === "templates") { onAction?.({type:"browse-templates"}); return; }
     if (!selectedClip) {
       setActiveTool(id);
       return;
@@ -284,6 +329,14 @@ export function CoProStudio({
     setLayout(current => ({ ...current, inspectorOpen: true }));
   }
 
+  function selectCategory(id: string) {
+    if (id === "templates") { onAction?.({type:"browse-templates"}); return; }
+    setCategoryTool(id);
+    setLayout(value => ({...value,browserOpen:true}));
+    setPanePreference("browser");
+    if (selectedClip && ["effects","transitions","filters","adjustments"].includes(id)) setActiveTool(id);
+  }
+
   return (
     <section className="copro-studio" data-inspector-open={Boolean(activeTool)}>
       <header className="copro-topbar">
@@ -303,13 +356,13 @@ export function CoProStudio({
         </div>
       </header>
 
+      <nav className="mm-editor-categories" aria-label="MovieMode editing categories">
+        {PRIMARY_TOOLS.map(([id,label]) => <button key={id} type="button" className={categoryTool===id?"is-active":""} aria-pressed={categoryTool===id} title={id==="templates"?"Browse editable composition templates":`${label}: open the creation browser`} onClick={()=>selectCategory(id)}>
+          {renderToolIcon(id)}<span>{label}</span>
+        </button>)}
+      </nav>
       <main className="copro-workspace" ref={workspaceRef}>
-        <aside className="copro-desktop-rail">
-          {PRIMARY_TOOLS.map(([id, label]) => (
-            <button key={id} type="button" aria-pressed={categoryTool === id} aria-expanded={showBrowser && categoryTool === id} aria-controls="copro-tool-browser" className={categoryTool === id ? "is-active" : ""} disabled={id === "templates"} title={id === "templates" ? "Template catalog not connected" : label} onClick={() => { setCategoryTool(id); setActiveTool(selectedClip ? id : null); setLayout(value => ({ ...value, browserOpen: true })); setPanePreference("browser"); }}>
-              <i>{renderToolIcon(id)}</i><span>{label}</span>
-            </button>
-          ))}
+        <aside className="copro-desktop-rail" aria-label="Selected clip actions">
           {selectedClip ? (
             <div className="copro-rail-clip-tools" aria-label="Selected clip tools">
               <span className="copro-rail-section-label">CLIP</span>
@@ -323,13 +376,23 @@ export function CoProStudio({
         </aside>
 
         <div className={["copro-editing-grid", showBrowser ? "has-browser" : "", showInspector ? "has-inspector" : "", isNarrow ? "is-narrow" : "", isCompact ? "is-compact" : "", layout.reversed ? "is-reversed" : ""].filter(Boolean).join(" ")} style={gridStyle} data-layout-mode={isCompact ? "mobile" : isNarrow ? "single-pane" : "wide"}>
-          {showBrowser && <aside id="copro-tool-browser" className="copro-browser-slot" aria-label={`${categoryTool} browser`}>
-            <CoProToolPanel tool={categoryTool} onClose={() => setLayout(value => ({ ...value, browserOpen: false }))}
+          {showBrowser && <aside id="copro-tool-browser" className="copro-browser-slot mm-browser" aria-label={`${categoryTool} browser`}>
+            <div className="mm-browser-top"><strong>{categoryTool.charAt(0).toUpperCase()+categoryTool.slice(1)}</strong><button type="button" aria-label="Collapse media browser" title="Collapse panel" onClick={()=>setLayout(value=>({...value,browserOpen:false}))}>×</button></div>
+            {categoryTool === "media" && <nav className="mm-media-subnav" aria-label="Media collections">
+              {([ ["import","Import"], ["media","Media"], ["subprojects","Subprojects"], ["yours","Yours"], ["generate","Generate"], ["spaces","Spaces"], ["library","Library"] ] as const).map(([id,label]) => <button type="button" key={id} className={browserSection===id?"is-active":""} aria-pressed={browserSection===id} onClick={()=>setBrowserSection(id)}>{label}</button>)}
+            </nav>}
+            {categoryTool === "media" && ["subprojects","generate","spaces"].includes(browserSection) ? <div className="mm-browser-unavailable"><strong>{browserSection==="subprojects"?"Compound clips":browserSection==="generate"?"Media generation":"Connected spaces"}</strong><p>{browserSection==="generate"?"Generation requires an authorized provider. Open miniAgentSam to explore connected capabilities; no fake generations here.":browserSection==="spaces"?"Connect a permitted workspace to browse remote files; imported local files remain in Media and Yours.":"Build compositions by adding clips to tracks. Compound-clip browsing requires the linked subproject engine."}</p><button onClick={()=>setBrowserSection("media")}>Browse imported media</button></div> : <CoProToolPanel tool={categoryTool==="filters"?"effects":categoryTool==="adjustments"?"transform":categoryTool==="stickers"?"stickers":categoryTool} onClose={() => setLayout(value => ({ ...value, browserOpen: false }))}
               mediaItems={mediaItems} onMediaAdd={(id) => onMediaAdd?.(id,playheadUs)}
               onMediaPicked={(file) => onAction?.({type:"import-media",file,atUs:playheadUs})}
               onTextCommit={(text,kind) => onAction?.({type:"create-text",kind,text,atUs:playheadUs})}
+              onEffectChange={(effect) => selectedClip && onAction?.({type:"effect",clipId:selectedClip.id,effect})}
+              onTransitionChange={(transition) => selectedClip && onAction?.({type:"transition",clipId:selectedClip.id,transition,durationUs:300_000})}
+              onTransformChange={(patch) => selectedClip && onAction?.({type:"transform",clipId:selectedClip.id,patch})}
+              transform={selectedClip?.metadata?.transform as {scale?:number;x?:number;y?:number;rotation?:number;opacity?:number}|undefined}
+              hasSelectedClip={Boolean(selectedClip && ["effects","transitions","filters","adjustments"].includes(categoryTool))}
+              selectedClipId={selectedClipId}
               onProjectExport={() => onAction?.({type:"export-project"})}
-            />
+            />}
           </aside>}
           {showBrowser && !isNarrow && <ResizeHandle axis="x" className="copro-browser-divider" label="Resize tool browser" value={browserWidth} min={240} max={Math.max(260,workspaceWidth - (showInspector ? inspectorWidth : 0) - 410)} direction={layout.reversed ? -1 : 1} onChange={width => setLayout(value => ({ ...value, browserWidth: width }))}/>}
 
@@ -341,6 +404,8 @@ export function CoProStudio({
                   className={"copro-preview-media copro-preview-effect-" + String(selectedClip?.metadata?.effect ?? "none")}
                   src={effectivePreviewSrc}
                   playsInline
+                  style={mediaTransformStyle}
+                  onPointerDown={startVisualDrag} onPointerMove={moveVisualDrag} onPointerUp={endVisualDrag} onPointerCancel={endVisualDrag}
                   onPlay={() => setPlaying(true)}
                   onPause={() => setPlaying(false)}
                   onTimeUpdate={(event) => {
@@ -353,6 +418,8 @@ export function CoProStudio({
                   className={"copro-preview-media copro-preview-effect-" + String(selectedClip?.metadata?.effect ?? "none")}
                   src={effectivePreviewSrc}
                   alt="Project footage"
+                  style={mediaTransformStyle}
+                  onPointerDown={startVisualDrag} onPointerMove={moveVisualDrag} onPointerUp={endVisualDrag} onPointerCancel={endVisualDrag}
                 />
               ) : (
                 <div className="copro-preview-placeholder">
@@ -396,6 +463,8 @@ export function CoProStudio({
                 selectedClipDurationUs={selectedClip?.durationUs ?? 0}
                 initialSpeed={selectedClip?.playbackRate ?? 1}
                 initialVolume={selectedClip?.volume ?? 1}
+                transform={selectedClip?.metadata?.transform as {scale?:number;x?:number;y?:number;rotation?:number;opacity?:number}|undefined}
+                onTransformChange={(patch) => selectedClip && onAction?.({type:"transform",clipId:selectedClip.id,patch})}
                 initialText={typeof selectedClip?.metadata?.text === "string" ? selectedClip.metadata.text : ""}
                 hasSelection={Boolean(selectedClip &&
                   ((activeTool === "text" && selectedTrack?.kind === "overlay") ||
@@ -443,7 +512,7 @@ export function CoProStudio({
             <button type="button" disabled={!canRedo} aria-label="Redo last edit" title="Redo (⇧⌘Z)" onClick={() => onAction?.({ type: "redo" })}><i><Redo2 size={19}/></i><span>Redo</span></button>
             {selectedClip ? <button className="copro-deselect-button" onClick={() => onSelectClip?.(null)}><X size={20}/><span>Done</span></button> : null}
             {(selectedClip ? CLIP_TOOLS : PRIMARY_TOOLS).map(([id, label]) => (
-              <button key={id} disabled={id === "templates"} aria-pressed={activeTool === id} className={[id === "delete" ? "is-danger" : "", activeTool === id ? "is-active" : ""].join(" ")} onClick={() => runTool(id)}>
+              <button key={id} aria-pressed={activeTool === id} className={[id === "delete" ? "is-danger" : "", activeTool === id ? "is-active" : ""].join(" ")} onClick={() => runTool(id)}>
                 <i>{renderToolIcon(id)}</i><span>{label}</span>
               </button>
             ))}

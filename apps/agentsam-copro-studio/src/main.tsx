@@ -7,7 +7,6 @@ import { BrowserLocalStorageProjectStore } from "@inneranimalmedia/copro-storage
 import { extractBrowserAudioWaveform } from "@inneranimalmedia/copro-media";
 import {
   CoProProjectsScreen,
-  CoProSheet,
   CoProStudio,
   type CoProProjectSummary,
   type CoProStudioAction,
@@ -144,7 +143,11 @@ function makeImportedProject(file: File) {
 
 function App() {
   const [screen, setScreen] = useState<Screen>("projects");
-  const [createOpen, setCreateOpen] = useState(false);
+  const homeFileRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const captureStreamRef = useRef<MediaStream | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
   const [projectSeed, setProjectSeed] = useState(0);
   const sessionRef = useRef(new CoProEditorSession(makeDemoProject()));
   const [project, setProject] = useState(sessionRef.current.project);
@@ -156,6 +159,7 @@ function App() {
   const [mediaItems, setMediaItems] = useState<SessionMediaItem[]>([]);
 
   const [savedProjects, setSavedProjects] = useState<CoProProjectSummary[]>([]);
+  const [homeSection, setHomeSection] = useState<"home" | "templates">("home");
   const [initialTool, setInitialTool] = useState<"text" | "captions" | null>(null);
 
   async function refreshSavedProjects() {
@@ -240,7 +244,6 @@ function App() {
     installProject(next, null);
     setPreviewSrc(null);
     setPreviewKind(null);
-    setCreateOpen(false);
     setInitialTool(tool);
     setScreen("editor");
   }
@@ -254,11 +257,73 @@ function App() {
     void registerSessionMedia(file);
     setPreviewSrc(url);
     setPreviewKind(file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : null);
-    setCreateOpen(false);
     setInitialTool(null);
     setScreen("editor");
   }
 
+
+  function stopScreenRecording() {
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+    captureStreamRef.current?.getTracks().forEach(track => track.stop());
+    captureStreamRef.current = null;
+    setRecording(false);
+  }
+
+  async function startScreenRecording() {
+    if (recording) { stopScreenRecording(); return; }
+    try {
+      if (!navigator.mediaDevices?.getDisplayMedia || typeof MediaRecorder === "undefined") {
+        setCaptureError("Screen recording is not supported in this browser. Import a recording made on your device instead.");
+        return;
+      }
+      // Permission prompt must run as a direct user action, never on page load.
+      const stream = await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+      captureStreamRef.current = stream;
+      const preferredTypes = ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+      const mimeType = preferredTypes.find(type => MediaRecorder.isTypeSupported(type));
+      const recorder = mimeType ? new MediaRecorder(stream,{mimeType}) : new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      recorderRef.current = recorder;
+      recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+      recorder.onerror = () => setCaptureError("Screen capture failed. Try again or import an existing recording.");
+      recorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop());
+        captureStreamRef.current = null;
+        recorderRef.current = null;
+        setRecording(false);
+        if (!chunks.length) { setCaptureError("Recording ended without a file. Capture at least one second before stopping."); return; }
+        const type = recorder.mimeType || "video/webm";
+        const ext = type.includes("mp4") ? "mp4" : "webm";
+        const file = new File(chunks,`moviemode-screen-${new Date().toISOString().replace(/[:.]/g,"-")}.${ext}`,{type,lastModified:Date.now()});
+        importFile(file);
+      };
+      stream.getVideoTracks().forEach(track => track.addEventListener("ended",() => {
+        if (recorder.state !== "inactive") recorder.stop();
+      },{once:true}));
+      recorder.start(500);
+      setRecording(true);
+      setCaptureError(null);
+    } catch (error) {
+      const reason = error instanceof Error ? error.name : "capture_failed";
+      setCaptureError(reason === "NotAllowedError" ? "Screen sharing was cancelled or denied. Allow capture to record or import an existing file." : "Could not start screen capture. Verify the screen sharing permission and try again.");
+      setRecording(false);
+      captureStreamRef.current?.getTracks().forEach(track => track.stop());
+      captureStreamRef.current = null;
+    }
+  }
+
+  async function deleteSavedProject(id: string) {
+    await store.remove(id);
+    await refreshSavedProjects();
+  }
+
+  async function duplicateSavedProject(id: string) {
+    const original = await store.load(id);
+    if (!original) return;
+    await store.save({ ...original, id:`project:copy:${Date.now()}:${Math.random().toString(36).slice(2,6)}`, title:`${original.title} (copy)`, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() });
+    await refreshSavedProjects();
+  }
 
   async function registerSessionMedia(file: File): Promise<SessionMediaItem> {
     const kind: SessionMediaItem["kind"] =
@@ -345,7 +410,8 @@ function App() {
   async function commit(action: CoProStudioAction) {
     const session = sessionRef.current;
 
-    if (action.type === "back") { setScreen("projects"); return; }
+    if (action.type === "back") { setHomeSection("home"); setScreen("projects"); return; }
+    if (action.type === "browse-templates") { setHomeSection("templates"); setScreen("projects"); return; }
     if (action.type === "export-project") {
       const json = serializeCoProProject(session.project);
       const blob = new Blob([json], { type:"application/json" });
@@ -365,6 +431,7 @@ function App() {
     if (action.type === "trim") { setProject(session.execute({ type:"clip.trim", payload:{ clipId:action.clipId, ...action.patch } })); return; }
     if (action.type === "speed") { setProject(session.execute({ type:"clip.set_speed", payload:{ clipId:action.clipId, playbackRate:action.playbackRate } })); return; }
     if (action.type === "volume") { setProject(session.execute({ type:"clip.set_volume", payload:{ clipId:action.clipId, volume:action.volume } })); return; }
+    if (action.type === "transform") { setProject(session.execute({ type:"clip.set_transform", payload:{ clipId:action.clipId, ...action.patch } })); return; }
     if (action.type === "text") { setProject(session.execute({ type:"clip.set_text", payload:{ clipId:action.clipId, text:action.text } })); return; }
     if (action.type === "effect") { setProject(session.execute({ type:"clip.set_effect", payload:{ clipId:action.clipId, effect:action.effect } })); return; }
     if (action.type === "transition") { setProject(session.execute({ type:"clip.set_transition", payload:{ clipId:action.clipId, transition:action.transition, durationUs:action.durationUs } })); return; }
@@ -449,31 +516,25 @@ function App() {
     return <>
       <CoProProjectsScreen
         projects={projects}
+        initialSection={homeSection}
         onOpenProject={openProject}
-        onCreate={() => setCreateOpen(true)}
-        onImport={() => setCreateOpen(true)}
+        onCreate={() => createBlank()}
+        onImport={() => homeFileRef.current?.click()}
+        recording={recording}
+        onRecord={() => void startScreenRecording()}
+        onStopRecording={stopScreenRecording}
         onOpenTool={(tool) => createBlank(tool)}
         onRenameProject={(id,title) => void renameProject(id,title)}
+        onDeleteProject={(id) => void deleteSavedProject(id)}
+        onDuplicateProject={(id) => void duplicateSavedProject(id)}
         appIconUrl={coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
       />
-      <CoProSheet open={createOpen} title="Create" detent="half" onClose={() => setCreateOpen(false)}>
-        <div className="copro-create-options">
-          <button onClick={() => createBlank()}><i>＋</i><span><strong>New video</strong><small>Blank timeline</small></span></button>
-          <label className="copro-create-option-file">
-            <input
-              type="file"
-              accept="video/*,image/*,audio/*"
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                if (file) importFile(file);
-              }}
-            />
-            <i>⇧</i><span><strong>Import media</strong><small>From this device</small></span>
-          </label>
-          <button disabled title="Template library lands in the next UI slice"><i>▦</i><span><strong>From template</strong><small>Requires template browser</small></span></button>
-          <button disabled title="Recording requires camera capability"><i>●</i><span><strong>Record</strong><small>Requires camera capability</small></span></button>
-        </div>
-      </CoProSheet>
+      <input ref={homeFileRef} type="file" accept="video/*,image/*,audio/*" style={{display:"none"}} aria-label="Select a video, image or audio file" onChange={(event) => {
+        const file = event.currentTarget.files?.[0];
+        if (file) importFile(file);
+        event.currentTarget.value = "";
+      }}/>
+      {captureError && <div role="alert" className="mm-capture-error">{captureError}<button onClick={() => setCaptureError(null)} aria-label="Dismiss error">×</button></div>}
     </>;
   }
 

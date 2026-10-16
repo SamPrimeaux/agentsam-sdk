@@ -22,6 +22,8 @@ export type CoProToolPanelProps = {
   selectedClipId?: string | null;
   selectedClipStartUs?: number;
   selectedClipDurationUs?: number;
+  transform?: { scale?: number; x?: number; y?: number; rotation?: number; opacity?: number };
+  onTransformChange?: (patch: { scale?: number; x?: number; y?: number; rotation?: number; opacity?: number }) => void;
   onSpeedChange?: (rate: number) => void;
   onVolumeChange?: (volume: number) => void;
   onTrimChange?: (patch: { startUs?: number; durationUs?: number }) => void;
@@ -42,10 +44,12 @@ const DESCRIPTION: Record<string, string> = {
   text: "Add a title or edit the selected text directly on the timeline.",
   captions: "Write captions that remain editable as timeline clips.",
   trim: "Precisely adjust the selected clip's time and duration.",
+  transform: "Position, scale and rotate the selected visual layer using exact values.",
   speed: "Change the selected clip's playback rate.",
   volume: "Adjust the selected clip's audio level.",
   effects: "Choose a visual treatment for the selected clip.",
   transitions: "Choose how the selected clip moves into the next.",
+  stickers: "Add editable annotations, arrows and graphic marks to the timeline.",
   templates: "Reusable composition templates are not connected yet.",
   export: "Save an editable project file. Video rendering requires a connected runtime.",
 };
@@ -65,6 +69,8 @@ export function CoProToolPanel({
   onSpeedChange,
   onVolumeChange,
   onTrimChange,
+  transform,
+  onTransformChange,
   onProjectExport,
   onTextCommit,
   onMediaPicked,
@@ -92,7 +98,7 @@ export function CoProToolPanel({
   if (!tool) return null;
   const title = tool.charAt(0).toUpperCase() + tool.slice(1);
   const isText = tool === "text" || tool === "captions";
-  const needSelection = ["trim", "speed", "volume", "effects", "transitions"].includes(tool);
+  const needSelection = ["trim", "speed", "volume", "effects", "transitions", "transform"].includes(tool);
   const isAudio = tool === "audio" || tool === "volume";
   const showMedia = tool === "media" || tool === "audio";
 
@@ -114,6 +120,35 @@ export function CoProToolPanel({
             <Film size={23}/>
             <strong>Select a clip</strong>
             <p>Tap a clip in the timeline to edit its {tool === "volume" ? "volume" : tool}. The canvas and timeline stay visible.</p>
+          </div>
+        ) : tool === "transform" ? (
+          <div className="mm-transform-controls">
+            <div className="mm-inspector-tabs"><span className="is-active">Video</span><span>Transform</span><span>Basic</span></div>
+            <h3>Transform <small>Real-time preview</small></h3>
+            {([
+              ["scale", "Scale", 5, 600, 1, "%", 100],
+              ["x", "Position X", -100, 100, 1, "%", 0],
+              ["y", "Position Y", -100, 100, 1, "%", 0],
+              ["rotation", "Rotate", -180, 180, 1, "°", 0],
+              ["opacity", "Opacity", 0, 100, 1, "%", 100],
+            ] as const).map(([key,label,min,max,step,unit,fallback]) => {
+              const raw = transform?.[key] ?? (key === "scale" || key === "opacity" ? 1 : 0);
+              const value = key === "scale" || key === "opacity" ? Number((raw * 100).toFixed(2)) : raw;
+              const change = (next: number) => {
+                if (!Number.isFinite(next)) return;
+                onTransformChange?.({[key] : key === "scale" || key === "opacity" ? next/100 : next});
+              };
+              return <label key={key} className="mm-transform-row">
+                <span>{label}</span>
+                <div className="mm-transform-inputs">
+                  <input aria-label={`${label} slider`} type="range" min={min} max={max} step={step} value={Math.max(min,Math.min(max,value))} onChange={event => change(Number(event.currentTarget.value))}/>
+                  <input aria-label={label} type="number" min={min} max={max} step={step} value={value} onChange={event => change(Math.min(max,Math.max(min,Number(event.currentTarget.value))))}/>
+                  <b>{unit}</b>
+                  <button type="button" title={`Reset ${label}`} aria-label={`Reset ${label}`} onClick={()=>change(fallback)}>↺</button>
+                </div>
+              </label>;
+            })}
+            <p className="copro-panel-note">Changes update the selected clip, preview and editable project history. Drag the image to reposition it.</p>
           </div>
         ) : tool === "trim" ? (
           <div className="copro-tool-control">
@@ -148,6 +183,13 @@ export function CoProToolPanel({
             }}/>
             <div className="copro-preset-row">
               {[0,50,100,150].map((value)=><button key={value} className={volume===value?"is-active":""} aria-pressed={volume===value} onClick={()=>{setVolume(value);onVolumeChange?.(value/100);}}>{value}%</button>)}
+            </div>
+          </div>
+        ) : tool === "stickers" ? (
+          <div className="copro-tool-control">
+            <p className="copro-panel-note">Select a mark to create an editable, timed overlay on the timeline.</p>
+            <div className="mm-sticker-grid">
+              {([ ["→","Arrow right"], ["←","Arrow left"], ["↑","Arrow up"], ["↓","Arrow down"], ["★","Star"], ["●","Point"], ["✓","Check"], ["!","Callout"], ["▶","Play marker"], ["✦","Spark"], ["+","Plus"], ["□","Square"] ] as const).map(([mark,label]) => <button type="button" key={mark} title={`Add ${label}`} aria-label={`Add ${label} to timeline`} onClick={() => onTextCommit?.(mark,"overlay")}><span>{mark}</span><small>{label}</small></button>)}
             </div>
           </div>
         ) : isText ? (

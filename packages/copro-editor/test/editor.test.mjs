@@ -102,3 +102,20 @@ test("effects and transitions are canonical clip commands", () => {
     durationUs: 420_000,
   });
 });
+
+test('GUI transform is a canonical undoable command with exact numeric state', () => {
+  const session = new CoProEditorSession(fixture());
+  const original = session.project.tracks[0].clips[0];
+  session.execute({type:'clip.set_transform', payload:{clipId:'clip:1',scale:1.25,x:12,y:-8,rotation:90,opacity:.7}});
+  const transformed = session.project.tracks[0].clips[0];
+  assert.deepEqual(transformed.metadata.transform, {scale:1.25,x:12,y:-8,rotation:90,opacity:.7});
+  assert.equal(original.metadata.transform,undefined);
+  session.execute({type:'clip.set_transform',payload:{clipId:'clip:1',x:20}});
+  assert.equal(session.project.tracks[0].clips[0].metadata.transform.x,20);
+  assert.equal(session.project.tracks[0].clips[0].metadata.transform.scale,1.25);
+  session.undo();
+  assert.equal(session.project.tracks[0].clips[0].metadata.transform.x,12);
+  session.redo();
+  assert.equal(session.project.tracks[0].clips[0].metadata.transform.x,20);
+  assert.throws(()=>applyCoProCommand(session.project,{type:'clip.set_transform',payload:{clipId:'clip:1',opacity:1.7}}),/copro_clip_opacity_invalid/);
+});
