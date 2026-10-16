@@ -75,3 +75,8 @@ export { CMS_OPERATION_CONTRACTS, CMS_CONTRACTS_BY_NAME } from './packs/cms/cont
 export { CMS_COMPATIBILITY_ALIASES } from './packs/cms/aliases.js';
 
 export { createAuthoringOperations } from './packs/authoring/index.js';
+
+export { createCadOperations, CAD_DONOR_OPERATOR_MAPPINGS } from './packs/cad/index.js';
+
+export { createCadHttpPorts } from "./packs/cad/http-ports.js";
+export { createCadModelTools } from "./packs/cad/model-tools.js";

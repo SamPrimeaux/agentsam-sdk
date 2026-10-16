@@ -15,6 +15,7 @@
   "files": [
     ".env.example",
     "README.md",
+    "BIM_STARTERS.md",
     "agentsam.app.json",
     "bin/",
     "frontend/dist/",
@@ -44,9 +45,10 @@
     "test": "npm run test --workspaces --if-present",
     "clean": "rm -rf frontend/dist backend/dist coverage",
     "cf:dry-run": "npm run build && wrangler deploy -c backend/wrangler.jsonc --dry-run",
-    "package:verify": "npm run build && npm run typecheck && npm test && node scripts/verify-publish-package.mjs",
+    "package:verify": "npm run build && npm run typecheck && npm test && npm run test:bim && node scripts/verify-publish-package.mjs",
     "prepack": "npm run package:verify",
-    "prepare:runtime": "node scripts/prepare-cad-runtime.mjs"
+    "prepare:runtime": "node scripts/prepare-cad-runtime.mjs",
+    "test:bim": "node --test bin/bim-starters.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

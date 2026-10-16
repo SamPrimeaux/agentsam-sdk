@@ -14,3 +14,9 @@ export function proposeWallHeight(sel: CadSelectionContext, currentIn: number, n
     args: { project_id: sel.project_id, expected_revision: sel.revision, operation: { type: 'update_wall', wallId: sel.object.id, updates: { height3D: nextIn } } },
   };
 }
+
+/** UI project versions are not database revisions. Unverified selections never grant edit authority. */
+export function verifiedSelectionRevision(projectId: string, verified: { projectId: string; revision: number } | null): number | null {
+  if (!verified || verified.projectId !== projectId || !Number.isSafeInteger(verified.revision) || verified.revision < 1) return null;
+  return verified.revision;
+}

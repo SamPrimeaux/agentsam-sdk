@@ -12,6 +12,8 @@ for (const relative of [
   'frontend/dist/index.html',
   'backend/dist/server.mjs',
   'bin/agentsam-cad-creator.mjs',
+  'bin/freecad-bim-preview.py',
+  'BIM_STARTERS.md',
   'agentsam.app.json',
   'backend/worker/index.js',
   'backend/wrangler.jsonc'

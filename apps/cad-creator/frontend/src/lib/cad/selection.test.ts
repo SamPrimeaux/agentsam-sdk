@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSelectionContext, proposeWallHeight } from './selection';
+import { buildSelectionContext, proposeWallHeight, verifiedSelectionRevision } from './selection';
 import { CAD_WORKSPACES } from '../agentsam-preview-bridge';
 describe('cad selection + proposal', () => {
   it('builds real selection context in inches', () => {
@@ -12,6 +12,15 @@ describe('cad selection + proposal', () => {
     expect(pr.tool).toBe('design_apply_operation');
     expect(pr.args).toMatchObject({ expected_revision:4, operation:{type:'update_wall',wallId:'wall-04',updates:{height3D:120}} });
     expect(pr.summary).toContain('96 in → 120 in');
+  });
+  it('refuses unsaved, wrong-project, or invalid CAD revisions', () => {
+    expect(verifiedSelectionRevision('p1', null)).toBeNull();
+    expect(verifiedSelectionRevision('p1', {projectId: 'p2', revision: 3})).toBeNull();
+    expect(verifiedSelectionRevision('p1', {projectId: 'p1', revision: 0})).toBeNull();
+    expect(verifiedSelectionRevision('p1', {projectId: 'p1', revision: 7})).toBe(7);
+  });
+  it('legacy workspace IDs remain compatible with the 3 primary modes', () => {
+    expect(['plan', 'model', 'robotics'].every(id => CAD_WORKSPACES.includes(id as any))).toBe(true);
   });
   it('workspaces stay the canonical five', () => { expect([...CAD_WORKSPACES]).toEqual(['plan','model','parametric','robotics','render']); });
 });

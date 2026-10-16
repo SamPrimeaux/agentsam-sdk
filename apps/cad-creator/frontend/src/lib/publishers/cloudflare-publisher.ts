@@ -26,32 +26,11 @@ export class CloudflarePublisher implements DesignPublisher {
   }
 
   async publishProject(
-    project: DesignProject,
-    artifacts: DesignArtifact[],
-    options: PublishOptions
+    _project: DesignProject,
+    _artifacts: DesignArtifact[],
+    _options: PublishOptions,
   ): Promise<PublishResult> {
-    const creds = options.credentials || {};
-    const validation = await this.validateCredentials(creds);
-    if (!validation.valid) {
-      throw new Error(validation.error || 'Invalid credentials');
-    }
-
-    const endpoint = creds.endpointUrl?.replace(/\/$/, '') || 'https://r2.cloudflare.com/agentsam';
-    const targetUrl = `${endpoint}/projects/${project.id}/v${project.version || 1}`;
-
-    return {
-      success: true,
-      destination: 'cloudflare',
-      receiptId: `cfr2_${Date.now()}`,
-      targetUrl,
-      publishedAt: Date.now(),
-      filesCount: artifacts.length,
-      message: `Uploaded ${artifacts.length} artifacts to Cloudflare R2 edge storage.`,
-      metadata: {
-        bucket: 'agentsam-cad-artifacts',
-        edgeUrl: targetUrl,
-      },
-    };
+    throw new Error('Cloudflare publishing requires an authorized host R2 upload with verified object receipts. No upload was performed.');
   }
 }
 
@@ -79,19 +58,10 @@ export class DockerPublisher implements DesignPublisher {
   }
 
   async publishProject(
-    project: DesignProject,
-    artifacts: DesignArtifact[],
-    options: PublishOptions
+    _project: DesignProject,
+    _artifacts: DesignArtifact[],
+    _options: PublishOptions,
   ): Promise<PublishResult> {
-    const endpoint = options.credentials?.endpointUrl || 'http://localhost:8080';
-    return {
-      success: true,
-      destination: 'docker',
-      receiptId: `dock_rcpt_${Date.now()}`,
-      targetUrl: endpoint,
-      publishedAt: Date.now(),
-      filesCount: artifacts.length,
-      message: `Published ${artifacts.length} CAD artifacts to self-hosted Docker endpoint.`,
-    };
+    throw new Error('A trusted host-managed publishing endpoint is required. No Docker upload was performed.');
   }
 }
