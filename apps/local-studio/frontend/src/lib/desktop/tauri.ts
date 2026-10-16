@@ -128,7 +128,7 @@ export async function invokeLocalProvider<T = Record<string, unknown>>(payload: 
   operation: "inventory" | "chat" | "select_model";
   provider?: string;
   model_id?: string;
-  messages?: Array<{ role: string; content: string }>;
+  messages?: Array<{ role: string; content: string; images?: Array<{ mimeType: string; dataUrl: string }> }>;
   cwd?: string;
 }): Promise<T> {
   const invoke = getTauriInvoke();

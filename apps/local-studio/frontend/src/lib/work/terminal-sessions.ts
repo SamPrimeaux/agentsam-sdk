@@ -23,6 +23,10 @@ type TerminalSessionState = {
   /** A persisted, ordered set of independent PTY sessions visible in tile mode. */
   gridView: boolean;
   gridSessionIds: string[];
+  gridColumnFraction: number;
+  gridFirstRowFraction: number;
+  setGridColumnFraction(value: number): void;
+  setGridFirstRowFraction(value: number): void;
   setGridView(enabled: boolean): void;
   setGridSession(slot: number, id: string): void;
   setSplitView(enabled: boolean): void;
@@ -59,6 +63,16 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
       secondarySessionId: null,
       gridView: false,
       gridSessionIds: [],
+      gridColumnFraction: 0.5,
+      gridFirstRowFraction: 1 / 3,
+      setGridColumnFraction(value) {
+        if (!Number.isFinite(value)) return;
+        set({ gridColumnFraction: Math.min(0.78, Math.max(0.22, value)) });
+      },
+      setGridFirstRowFraction(value) {
+        if (!Number.isFinite(value)) return;
+        set({ gridFirstRowFraction: Math.min(0.55, Math.max(0.2, value)) });
+      },
       setGridView(enabled) {
         set((state) => {
           if (!enabled) return { gridView: false };
@@ -177,6 +191,8 @@ export const useTerminalSessionStore = create<TerminalSessionState>()(
         secondarySessionId: state.secondarySessionId,
         gridView: state.gridView,
         gridSessionIds: state.gridSessionIds,
+        gridColumnFraction: state.gridColumnFraction,
+        gridFirstRowFraction: state.gridFirstRowFraction,
       }),
     },
   ),

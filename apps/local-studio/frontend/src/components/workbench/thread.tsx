@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { createIndexedDbContentStorage } from "@inneranimalmedia/agentsam-content";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import type { ChatImageReference } from "@/lib/content/chat-images";
 import { AgentConversationSurface, AgentRuntimeField, AgentThread } from "@inneranimalmedia/agentsam-workbench/agent";
 import { MessageMarkdown } from "@/components/workbench/markdown";
 import { Composer } from "@/components/workbench/composer";
@@ -14,6 +17,32 @@ const STARTERS = [
   "Add a landing hero to index.html and preview it",
   "Prepare this workspace for Cloudflare Pages and GitHub Actions",
 ];
+
+function ConversationImage({ refInfo }: { refInfo: ChatImageReference }) {
+  const { user } = useCurrentUserState();
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.id || refInfo.source?.type !== "blob") return;
+    let mounted = true;
+    let temporaryUrl: string | null = null;
+    const { provider } = createIndexedDbContentStorage(user.id);
+    void provider.head(refInfo.source.blobId).then((head) => {
+      if (!head || !mounted) return;
+      const preview = provider.deliveryUrl(refInfo.source.blobId);
+      if (preview) {
+        temporaryUrl = preview;
+        setUrl(preview);
+      }
+    }).catch(() => undefined);
+    return () => {
+      mounted = false;
+      if (temporaryUrl?.startsWith("blob:")) URL.revokeObjectURL(temporaryUrl);
+    };
+  }, [user?.id, refInfo.source]);
+  return url ? (
+    <img src={url} alt={refInfo.name} title={refInfo.name} className="max-h-52 max-w-64 rounded-lg object-contain" />
+  ) : <span className="text-xs opacity-70">{refInfo.name} · image stored locally</span>;
+}
 
 function MessageBubble({
   message,
@@ -37,7 +66,14 @@ function MessageBubble({
     return (
       <div className="flex justify-end">
         <div className="max-w-[min(100%,40rem)] rounded-2xl bg-accent px-4 py-3 text-sm leading-relaxed text-accent-foreground">
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {(message.metadata.attachments as ChatImageReference[]).filter((image) => image.kind === "image").map((image) => (
+                <ConversationImage key={image.id} refInfo={image} />
+              ))}
+            </div>
+          ) : null}
+          {message.content ? <p className="whitespace-pre-wrap">{message.content}</p> : null}
         </div>
       </div>
     );

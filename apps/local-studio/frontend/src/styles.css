@@ -623,8 +623,8 @@ body[data-split-hover] .studio-pane::after {
     border-left: 1px solid var(--color-border);
   }
   .terminal-tile-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, var(--terminal-grid-column, 50%)) minmax(0, 1fr);
+    grid-template-rows: minmax(0, var(--terminal-grid-first-row, 33.333%)) repeat(2, minmax(0, 1fr));
     grid-auto-rows: minmax(0, 1fr);
     overflow: hidden;
   }
@@ -632,3 +632,17 @@ body[data-split-hover] .studio-pane::after {
     grid-column: 1 / -1;
   }
 }
+
+/* Draggable, keyboard-adjustable, quiet tile seams; container width is the authority. */
+.terminal-tile-grid { position: relative; }
+.terminal-grid-resize { display: none; z-index: 2; position: absolute; border: 0; background: transparent; touch-action: none; }
+.terminal-grid-resize:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.terminal-grid-resize::after { content: ""; position: absolute; background: color-mix(in srgb, var(--color-foreground) 30%, transparent); opacity: 0; transition: opacity 150ms; }
+.terminal-grid-resize:hover::after, .terminal-grid-resize:focus-visible::after { opacity: 1; }
+@container terminal-stage (min-width: 760px) {
+  .terminal-grid-resize { display: block; }
+  .terminal-grid-resize-column { left: var(--terminal-grid-column, 50%); top: 0; bottom: 0; width: 12px; transform: translateX(-50%); cursor: col-resize; }
+  .terminal-grid-resize-column::after { top: 0; bottom: 0; width: 1px; left: 50%; }
+  .terminal-grid-resize-row { top: var(--terminal-grid-first-row, 33.333%); left: 0; right: 0; height: 12px; transform: translateY(-50%); cursor: row-resize; }
+  .terminal-grid-resize-row::after { left: 0; right: 0; height: 1px; top: 50%; }
+}\n

@@ -1,9 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type PointerEvent, type KeyboardEvent, type CSSProperties } from "react";
 import { Columns2, Copy, Grid2X2, Maximize2, PanelTop, Plus, RotateCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
 import { navigateApp } from "@/lib/work/navigate";
+import { queueChatImages } from "@/lib/content/chat-drop-queue";
+import { toast } from "sonner";
 import { attachSharedTerminal, detachSharedTerminal, getSharedTerminalRun } from "@/lib/work/terminal-runtime";
 import { useTerminalSessionStore } from "@/lib/work/terminal-sessions";
 
@@ -19,6 +21,11 @@ export function TerminalPane({
   const splitView = useTerminalSessionStore((s) => s.splitView);
   const gridView = useTerminalSessionStore((s) => s.gridView);
   const gridSessionIds = useTerminalSessionStore((s) => s.gridSessionIds ?? []);
+  const gridColumnFraction = useTerminalSessionStore((s) => s.gridColumnFraction ?? 0.5);
+  const gridFirstRowFraction = useTerminalSessionStore((s) => s.gridFirstRowFraction ?? 1 / 3);
+  const setGridColumnFraction = useTerminalSessionStore((s) => s.setGridColumnFraction);
+  const setGridFirstRowFraction = useTerminalSessionStore((s) => s.setGridFirstRowFraction);
+  const gridRef = useRef<HTMLDivElement>(null);
   const secondarySessionId = useTerminalSessionStore((s) => s.secondarySessionId);
   const setSplitView = useTerminalSessionStore((s) => s.setSplitView);
   const setGridView = useTerminalSessionStore((s) => s.setGridView);
@@ -36,6 +43,22 @@ export function TerminalPane({
     : undefined;
   // A PTY may be mounted only once: ordered, unique IDs render into independent tile hosts.
   const visibleIds = [...new Set(gridSessionIds)].filter((id) => sessions.some((s) => s.id === id)).slice(0, 5);
+
+  function moveGridHandle(event: PointerEvent<HTMLElement>, kind: "column" | "row") {
+    const region = gridRef.current?.getBoundingClientRect();
+    if (!region || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    if (kind === "column" && region.width > 0) setGridColumnFraction((event.clientX - region.left) / region.width);
+    if (kind === "row" && region.height > 0) setGridFirstRowFraction((event.clientY - region.top) / region.height);
+  }
+
+  function keyGridHandle(event: KeyboardEvent<HTMLElement>, kind: "column" | "row") {
+    const delta = (event.key === "ArrowRight" || event.key === "ArrowDown") ? 0.03 :
+      (event.key === "ArrowLeft" || event.key === "ArrowUp") ? -0.03 : 0;
+    if (!delta) return;
+    event.preventDefault();
+    if (kind === "column") setGridColumnFraction(gridColumnFraction + delta);
+    else setGridFirstRowFraction(gridFirstRowFraction + delta);
+  }
 
   useEffect(() => {
     if (!pending.length) return;
@@ -119,7 +142,15 @@ export function TerminalPane({
       ) : null}
       <div className="terminal-tiles-region min-h-0 min-w-0 flex-1">
         {gridView ? (
-          <div className="terminal-tile-grid" data-testid="terminal-tile-grid">
+          <div
+            ref={gridRef}
+            className="terminal-tile-grid"
+            data-testid="terminal-tile-grid"
+            style={{
+              "--terminal-grid-column": (gridColumnFraction * 100) + "%",
+              "--terminal-grid-first-row": (gridFirstRowFraction * 100) + "%",
+            } as CSSProperties}
+          >
             {visibleIds.map((id, index) => {
               const session = sessions.find((s) => s.id === id)!;
               return (
@@ -144,6 +175,26 @@ export function TerminalPane({
                   <Plus className="size-4" /> New terminal tile
                 </Button>
               </div>
+            )}
+            {visibleIds.length > 1 && (
+              <>
+                <div role="separator" tabIndex={0} aria-label="Resize terminal columns" aria-orientation="vertical"
+                  aria-valuenow={Math.round(gridColumnFraction * 100)} aria-valuemin={22} aria-valuemax={78}
+                  className="terminal-grid-resize terminal-grid-resize-column"
+                  onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault(); }}
+                  onPointerMove={(event) => moveGridHandle(event, "column")}
+                  onKeyDown={(event) => keyGridHandle(event, "column")}
+                  onDoubleClick={() => setGridColumnFraction(0.5)}
+                />
+                <div role="separator" tabIndex={0} aria-label="Resize terminal rows" aria-orientation="horizontal"
+                  aria-valuenow={Math.round(gridFirstRowFraction * 100)} aria-valuemin={20} aria-valuemax={55}
+                  className="terminal-grid-resize terminal-grid-resize-row"
+                  onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault(); }}
+                  onPointerMove={(event) => moveGridHandle(event, "row")}
+                  onKeyDown={(event) => keyGridHandle(event, "row")}
+                  onDoubleClick={() => setGridFirstRowFraction(1 / 3)}
+                />
+              </>
             )}
           </div>
         ) : (
@@ -187,5 +238,19 @@ function TerminalViewport({ sessionId }: { sessionId: string }) {
     };
   }, [sessionId]);
 
-  return <div ref={hostRef} data-terminal-viewport={sessionId} className="terminal-host min-h-0 min-w-0 flex-1 px-1 pb-[env(safe-area-inset-bottom)]" />;
+  return <div
+    ref={hostRef}
+    data-terminal-viewport={sessionId}
+    className="terminal-host min-h-0 min-w-0 flex-1 px-1 pb-[env(safe-area-inset-bottom)]"
+    onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }}
+    onDrop={(event) => {
+      if (!event.dataTransfer.files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const trailId = useWorkStore.getState().activeTrailId;
+      queueChatImages(trailId, Array.from(event.dataTransfer.files));
+      navigateApp("/agentsam");
+      toast("Opening Chat to attach screenshot — no terminal input sent.");
+    }}
+  />;
 }

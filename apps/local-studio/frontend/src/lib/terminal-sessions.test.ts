@@ -23,6 +23,8 @@ beforeEach(() => {
     secondarySessionId: null,
     gridView: false,
     gridSessionIds: [],
+    gridColumnFraction: 0.5,
+    gridFirstRowFraction: 1 / 3,
   });
 });
 
@@ -68,4 +70,16 @@ test("returning to split or single layout preserves terminal sessions", () => {
   assert.equal(store.getState().splitView, false);
   assert.equal(store.getState().sessions.length, 2);
   assert.equal(store.getState().activeSessionId, second);
+});
+
+
+test("tile size preferences are bounded and independent of window dimensions", () => {
+  store.getState().setGridColumnFraction(0.71);
+  store.getState().setGridFirstRowFraction(0.4);
+  assert.equal(store.getState().gridColumnFraction, 0.71);
+  assert.equal(store.getState().gridFirstRowFraction, 0.4);
+  store.getState().setGridColumnFraction(5);
+  store.getState().setGridFirstRowFraction(-3);
+  assert.equal(store.getState().gridColumnFraction, 0.78);
+  assert.equal(store.getState().gridFirstRowFraction, 0.2);
 });

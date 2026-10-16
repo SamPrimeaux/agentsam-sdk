@@ -10,6 +10,10 @@ import { cn, formatElapsed } from "@/lib/utils";
 import { defaultRunModeForTarget, useWorkStore } from "@/lib/work/store";
 import { PluginPicker } from '../../../agentsam/PluginPicker';
 import { Nav } from '@inneranimalmedia/agentsam-nav';
+import { toast } from "sonner";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
+import { stageChatImage, type ChatImageReference } from "@/lib/content/chat-images";
+import { CHAT_IMAGE_DROP_EVENT, takeChatImages } from "@/lib/content/chat-drop-queue";
 
 const RUN_MODE_PLACEHOLDERS = {
   agent: "Work on anything…",
@@ -29,6 +33,8 @@ export function Composer({
   placeholder?: string;
 }) {
   const value = useWorkStore((s) => s.drafts[targetId] ?? "");
+  const { user } = useCurrentUserState();
+  const [staging, setStaging] = useState(false);
   const setDraft = useWorkStore((s) => s.setDraft);
   const send = useWorkStore((s) => s.send);
   const stop = useWorkStore((s) => s.stop);
@@ -43,7 +49,7 @@ export function Composer({
   const [now, setNow] = useState(Date.now());
 
   const [pendingAttachments, setPendingAttachments] = useState<
-    Array<{ id: string; name: string; mimeType: string; size: number; previewUrl?: string; kind: string }>
+    Array<ChatImageReference & { previewUrl?: string }>
   >([]);
 
   useEffect(() => {
@@ -52,38 +58,58 @@ export function Composer({
     return () => window.clearInterval(timer);
   }, [goal?.id, goal?.status]);
 
-  async function onFiles(files: FileList | null) {
-    if (!files?.length) return;
+  async function onFiles(files: FileList | File[] | null) {
+    if (!files?.length || staging) return;
+    setStaging(true);
     const next: typeof pendingAttachments = [];
-    for (const file of Array.from(files).slice(0, 10)) {
-      if (file.size > 20 * 1024 * 1024) continue;
-      const id = `att_${crypto.randomUUID().slice(0, 12)}`;
-      const kind = file.type.startsWith("image/") ? "image" : file.type.startsWith("text/") ? "text" : "binary";
-      const previewUrl = kind === "image" ? URL.createObjectURL(file) : undefined;
-      next.push({
-        id,
-        name: file.name,
-        mimeType: file.type || "application/octet-stream",
-        size: file.size,
-        previewUrl,
-        kind,
-      });
-      // Stash File on window map for send path (no base64 in draft)
-      const bag = ((window as unknown as { __agentsamPendingFiles?: Map<string, File> }).__agentsamPendingFiles ||= new Map());
-      bag.set(id, file);
+    try {
+      for (const file of Array.from(files).slice(0, 4)) {
+        const image = await stageChatImage(file, user?.id || "");
+        next.push({ ...image, previewUrl: URL.createObjectURL(file) });
+      }
+      setPendingAttachments((previous) => [...previous, ...next].slice(0, 4));
+    } catch (error) {
+      for (const image of next) if (image.previewUrl) URL.revokeObjectURL(image.previewUrl);
+      toast.error(error instanceof Error ? error.message : "Could not attach this image.");
+    } finally {
+      setStaging(false);
     }
-    if (!next.length) return;
-    setPendingAttachments((prev) => [...prev, ...next].slice(0, 10));
   }
 
+  useEffect(() => {
+    const takePending = (event?: Event) => {
+      // Wait until desktop identity has resolved before consuming queued Files.
+      if (!user?.id) return;
+      const intended = (event as CustomEvent<{ targetId: string }> | undefined)?.detail?.targetId;
+      if (intended && intended !== targetId) return;
+      const files = takeChatImages(targetId);
+      if (files.length) void onFiles(files);
+    };
+    window.addEventListener(CHAT_IMAGE_DROP_EVENT, takePending);
+    takePending();
+    return () => window.removeEventListener(CHAT_IMAGE_DROP_EVENT, takePending);
+    // Staging function is local by design: files are transferred once to this composer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetId, user?.id]);
+
   function removeAttachment(id: string) {
-    setPendingAttachments((prev) => {
-      const hit = prev.find((a) => a.id === id);
+    setPendingAttachments((previous) => {
+      const hit = previous.find((a) => a.id === id);
       if (hit?.previewUrl) URL.revokeObjectURL(hit.previewUrl);
-      return prev.filter((a) => a.id !== id);
+      return previous.filter((a) => a.id !== id);
     });
-    const bag = (window as unknown as { __agentsamPendingFiles?: Map<string, File> }).__agentsamPendingFiles;
-    bag?.delete(id);
+  }
+
+  function submitWithAttachments() {
+    if (staging) return;
+    const bag = (window as unknown as { __agentsamComposerAttachments?: unknown });
+    bag.__agentsamComposerAttachments = {
+      targetId, accountId: user?.id || "",
+      attachments: pendingAttachments.map(({ previewUrl: _previewUrl, ...ref }) => ref),
+    };
+    void send(targetId, targetKind);
+    for (const a of pendingAttachments) if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
+    setPendingAttachments([]);
   }
 
   const attachControl = (
@@ -103,7 +129,7 @@ export function Composer({
         size="icon-sm"
         variant="ghost"
         label="Attach a file"
-        hint="Attach images or documents to your message"
+        hint="Attach an image (PNG, JPEG, WebP, 5 MB max)"
         onClick={() => fileRef.current?.click()}
       >
         <Paperclip className="size-4" />
@@ -120,28 +146,8 @@ export function Composer({
       aria-label="Send"
       data-composer-send=""
       className="rounded-full border-0 shadow-none hover:bg-[var(--composer-control-hover)] disabled:opacity-100"
-      disabled={!value.trim() && pendingAttachments.length === 0}
-      onClick={() => {
-        // Attachment refs travel with the turn — never paste base64 into the draft.
-        const bag = (window as unknown as { __agentsamComposerAttachments?: Record<string, unknown> });
-        bag.__agentsamComposerAttachments = {
-          targetId,
-          attachments: pendingAttachments.map(({ id, name, mimeType, size, kind }) => ({
-            id,
-            name,
-            mimeType,
-            size,
-            kind,
-            lifetime: "ephemeral",
-            source: { type: "blob", blobId: id },
-          })),
-        };
-        void send(targetId, targetKind);
-        for (const a of pendingAttachments) {
-          if (a.previewUrl) URL.revokeObjectURL(a.previewUrl);
-        }
-        setPendingAttachments([]);
-      }}
+      disabled={staging || (!value.trim() && pendingAttachments.length === 0)}
+      onClick={submitWithAttachments}
     >
       <ArrowUp className="size-4" />
     </Button>
@@ -162,7 +168,9 @@ export function Composer({
   );
 
   return (
-    <div className="px-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-4 md:pb-4">
+    <div className="px-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-4 md:pb-4"
+      onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }}
+      onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void onFiles(event.dataTransfer.files); } }}>
       {pendingAttachments.length ? (
         <div className="mx-auto mb-2 flex w-full max-w-6xl flex-wrap gap-2">
           {pendingAttachments.map((a) => (
@@ -232,7 +240,7 @@ export function Composer({
         value={value}
         runMode={runMode}
         onChange={(next) => setDraft(targetId, next)}
-        onSend={() => send(targetId, targetKind)}
+        onSend={submitWithAttachments}
         onCancel={() => stop(targetId)}
         streaming={streaming}
         placeholder={targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}

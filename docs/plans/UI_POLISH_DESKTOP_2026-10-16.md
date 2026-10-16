@@ -82,3 +82,21 @@ Out of scope / NOT finished by this slice:
 - Screenshot and image-to-terminal input needs its own secure attachment pipeline and model-request integration. Current Chat composer keeps a pending File map and sends attachment metadata; `streamChat` currently sends text-only messages to the provider. Merely adding a drag target would be misleading and is NOT evidence of image understanding.
 - Per-tile drag-and-resize ratios, background PTY lifecycle after closing a tab, and final installed Tauri `.app` acceptance remain separate verification tasks.
 - This desktop visual slice does not change CAD/OCCT code or interrupt ongoing local PTY sessions.
+
+## Desktop execution continuation — candidate verification
+
+Ownership check: Muse currently has dirty changes on `feat/cad-creator-remaster-20261016` in `apps/cad-creator/`, `apps/local-studio/frontend/src/routes/(apps)/cad.tsx`, `app-preview-stage.tsx`, `side-stage.tsx`, and untracked `cad-host-bridge.ts` / CAD context sources. The desktop branch intentionally did NOT edit these active CAD integration files. The host's CAD assistant request/response approval cycle cannot be declared complete before Muse's bridge contract is handed off and integrated.
+
+Terminal work: persistent per-layout column and top-row fractions; drag/keyboard adjustment, focus, double-click reset and bounded ratios; verified 1440px Chrome resize from 692/691px to 832/551px and exact proportion restored after full reload without page overflow.
+
+Images: composer paste/select/drop stages actual PNG/JPEG/WebP bytes (<=5 MiB) in the pre-existing account-scoped IndexedDB Content provider; messages persist provider references, not image data URLs. Reopen can rehydrate image bytes and show thumbnails. Each request rehydrates transient inline image content at the provider boundary; OpenAI hosted Chat Completions uses image_url parts, and desktop local OpenAI Responses uses input_image parts through Rust/Tauri/Node. Other providers reject unsupported image requests rather than silently dropping them. Input has a four-image cap. Terminal file drops route into AgentSam Chat's image queue, never shell stdin; browser test confirmed the queued image appeared in the composer after route navigation and local staging. Existing full chat composer still requires packaged app acceptance.
+
+Validation:
+- Frontend TypeScript: PASS; frontend suite: 70/70 PASS.
+- Local provider input tests: 4/4 PASS.
+- Desktop SPA build + asset staging + `cargo check --offline`: PASS (generated sidecars/build-brand required).
+- Browser IndexedDB staging: 12 original bytes read back identically, including after reopening; browser title and IDs retained across terminal grid reload.
+- Real provider run: built a synthetic valid red 96x96 PNG and sent it via `packages/agentsam-desktop-shell/scripts/local-provider-bridge.mjs` to the discovered, configured OpenAI `gpt-6-luna` endpoint. Returned `ok:true`, model `gpt-6-luna`, text `Red.` (real image consumption, no personal image sent).
+- Chrome terminal screenshot-drop test: navigated from `#/cli` to `#/agentsam` and displayed the staged image name in Chat; no JS page errors. Vite development mode produced an unrelated local-health CORS diagnostic.
+
+Remaining release gates: actual installed Tauri app sign-in/conversation/attachment/UI acceptance; provider/model capability enumeration beyond OpenAI and image types; per-conversation deletion/garbage collection of staged Content blobs; five independent real PTY streams measured in native Tauri; real CAD selection -> host response -> approved project revision with Muse; CAD state restore; production deployment is separate and has NOT occurred.
