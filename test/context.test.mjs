@@ -109,10 +109,51 @@ test('AgentSam instructions compile in stable then repository-specific precedenc
   fs.mkdirSync(path.join(root, '.git'));
   fs.writeFileSync(path.join(root, 'AGENTSAM.md'), '# Stable\nbase law\n');
   fs.writeFileSync(path.join(root, '.agentsamrules'), '# Repo\nlocal law\n');
-  const compiled = compileAgentInstructions(root);
-  assert.deepEqual(compiled.precedence, ['AGENTSAM.md', '.agentsamrules']);
+  const compiled = compileAgentInstructions(root, { globalFilename: null });
+  assert.deepEqual(compiled.precedence, ['~/.agentsam/AGENTSAM.md', 'AGENTSAM.md', '.agentsamrules']);
   assert.equal(compiled.sources.length, 2);
   assert.ok(compiled.content.indexOf('base law') < compiled.content.indexOf('local law'));
+});
+
+test('user-global rules follow AgentSam into any repository without changing its local rules', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-global-rules-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const globalPath = path.join(root, 'home', '.agentsam', 'AGENTSAM.md');
+  const repo = path.join(root, 'randomrepo123');
+  fs.mkdirSync(path.dirname(globalPath), { recursive: true });
+  fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
+  fs.writeFileSync(globalPath, '# Owner law\\nCraft over spectacle. Substance over promises.\\n');
+  fs.writeFileSync(path.join(repo, 'AGENTSAM.md'), '# Repo runtime\\nkeep contracts real\\n');
+  fs.writeFileSync(path.join(repo, '.agentsamrules'), '# Repo settings\\nno hardcoded tenant values\\n');
+
+  const compiled = compileAgentInstructions(repo, { globalFilename: globalPath });
+  assert.deepEqual(compiled.sources.map(source => source.id), ['global', 'runtime', 'project']);
+  assert.ok(compiled.content.indexOf('Craft over spectacle') < compiled.content.indexOf('keep contracts real'));
+  assert.ok(compiled.content.indexOf('keep contracts real') < compiled.content.indexOf('no hardcoded tenant values'));
+  assert.equal(compiled.sources[0].path, globalPath);
+  assert.match(compiled.sources[0].hash, /^sha256:/);
+
+  const context = resolveProjectContext({ cwd: repo, objective: 'review the experience', globalFilename: globalPath, items: [] });
+  assert.match(context.rules.content, /Craft over spectacle/);
+  assert.equal(context.rules.sources.length, 3);
+
+  const disabled = compileAgentInstructions(repo, { globalFilename: null });
+  assert.deepEqual(disabled.sources.map(source => source.id), ['runtime', 'project']);
+  assert.doesNotMatch(disabled.content, /Craft over spectacle/);
+});
+
+test('user-global instructions work without an AGENTSAM.md in the target repository', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-global-only-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const globalPath = path.join(root, 'AGENTSAM.md');
+  const repo = path.join(root, 'empty-repository');
+  fs.mkdirSync(path.join(repo, '.git'), { recursive: true });
+  fs.writeFileSync(globalPath, 'Owner-wide release gate\\n');
+  const compiled = compileAgentInstructions(repo, { globalFilename: globalPath });
+  assert.equal(compiled.found, true);
+  assert.equal(compiled.path, globalPath);
+  assert.deepEqual(compiled.sources.map(source => source.id), ['global']);
+  assert.match(compiled.content, /Owner-wide release gate/);
 });
 
 test('compatibility shims are not compiled into AgentSam instruction authority', t => {
@@ -122,7 +163,7 @@ test('compatibility shims are not compiled into AgentSam instruction authority',
   fs.writeFileSync(path.join(root, 'AGENTSAM.md'), '# Stable\ncanonical only\n');
   fs.writeFileSync(path.join(root, 'AGENTS.md'), 'shim should not become policy\n');
   fs.writeFileSync(path.join(root, 'CLAUDE.md'), 'claude shim should not become policy\n');
-  const compiled = compileAgentInstructions(root);
+  const compiled = compileAgentInstructions(root, { globalFilename: null });
   assert.equal(compiled.sources.length, 1);
   assert.equal(compiled.sources[0].filename, 'AGENTSAM.md');
   assert.match(compiled.content, /canonical only/);
