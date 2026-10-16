@@ -1,0 +1,102 @@
+# Local Studio desktop polish — focused branch handoff
+
+**Branch:** `ui-polish-desktop` (cut from the latest `agentsam-sdk/main` on 2026-10-16)  
+**Status:** Work intake and acceptance notes only. No runtime or CAD UI changes have been implemented on this branch yet.
+
+## Product intent
+
+InnerAnimalMedia Experience Standard: **Craft over spectacle. Substance over promises.**  
+Companion principle: **Complex underneath. Effortless above.**
+
+Local Studio should be a calm, coherent, highly capable workspace, inspired by the interaction *discipline* of modern desktop/Work applications rather than imitating their branding. Improve and reconnect existing UI/runtime capabilities; avoid adding a second shell, state authority, or design system.
+
+## Desktop polish workstreams
+
+### A. One composable layout contract
+- Trace `apps/local-studio/frontend/agentsam/AgentSamPage.tsx`, `shell.css`, `src/components/shell/trail-workspace.tsx`, and shared `packages/agentsam-workbench` resize/layout components.
+- Replace overlapping hard-coded split maxima with a container-aware policy. Persist preferred pane proportions separately from the effective size allowed by the currently available container.
+- Preserve a readable conversation measure, while allowing browser/CAD/editor/terminal canvases to use all available space.
+- When the primary pane and contextual pane cannot both be usable, use a focused/overlay presentation; never squeeze the composer offscreen.
+- Restore sidebar, tabs, split ratios, project and active conversation after restart. Keep hover/focus, panel swap, drag, reset and keyboard resize functional.
+
+### B. Native-feeling PTY, clipboard, and multimodal input
+- Fix the xterm paste path so Command-V uses a standard paste event rather than triggering an unnecessary clipboard API permission prompt.
+- Correct nested terminal scrolling, flex constraints, fit-addon/ResizeObserver churn, and the fresh-terminal horizontal-scrollbar jitter. Preserve real scrollback.
+- Distinguish ordinary text/path paste from images. Drop or paste a screenshot into an AgentSam terminal workflow via a secure staged-asset/context reference; NEVER inject image binary into PTY stdin.
+- An image staged in Chat must be attached to the *submitted* message, persist through conversation reopen, and reach a provider/model with verified image capability. Do not silently omit the image and then reply that AgentSam cannot analyze it.
+- Maintain platform permissions, audit evidence, attachment lifecycle, and failure/retry states.
+
+### C. Contextual Work and live executions
+- Keep the composer visually quiet, with predictable hover, focus, keyboard and reduced-motion behavior.
+- Surface actual GOAP/Plan/SAM stages, authorized tool commands, verified receipts, pending approval and resume state from existing runtime authority. No invented stages/progress.
+- Make voice input optional, user-authorized, editable before submission, and independent of the terminal's shell stream.
+- Reuse the existing conversation/session contracts. Do not confuse localStorage cache with cloud-authoritative persistence.
+
+### D. Release verification
+- Test compact, standard, and wide installed macOS windows, with navigation expanded and collapsed, one/two panes, multiple terminal tabs, and varied content sizes.
+- Verify with the **bundled desktop SPA in Tauri**, not only the hosted site. Respect `docs/product/LOCAL_STUDIO_DESKTOP_EXPERIENCE.md`; the real Local Studio UI must be packaged in the app.
+- Keep CI focused during implementation; do one consolidated integration and packaged desktop acceptance pass before merge. Preserve unrelated active branches/worktrees.
+
+## CAD integration notes — guardrails for this desktop branch
+
+CAD Creator remains its own experimental npm workspace at `apps/cad-creator`, not part of the SDK root workspace graph. It already has 2D/3D, robotics, tool adapters and its own frontend. Local Studio should host CAD as a cohesive **workspace surface**, not duplicate or silently fork its project model or CAD runtime.
+
+Key source contracts to inspect:
+- `apps/cad-creator/README.md`: active CAD Creator app, shared CAD types and server.
+- `docs/cad-project-tools.md`: authoritative editable `DesignProject`, inches as canonical document units, revision-aware saves, immutable artifacts, renderer interchange.
+- `src/lib/cad/{discovery,freecad,blender}.js`, `services/cad/freecad/adapter.py`, `services/cad/blender/adapter.py`: local native/CAD adapters.
+- `src/lib/cad-docker.js`: existing OpenSCAD/FreeCAD/Blender Docker lanes.
+- `apps/cad-creator/frontend/src/workspaces/robotics/DiagnosticOverlay.tsx`: tool/telemetry visualization to audit for genuine runtime status.
+
+Important distinctions:
+1. **FreeCAD / OpenCASCADE**: precision/parametric solids and STEP/IGES; inspect actual compatible Python bindings/runtime rather than assuming any bundled application library is a complete developer SDK.
+2. **OpenSCAD**: deterministic constructive solids. **Blender**: scenes, lighting, animation, mesh assets and GLB exports. These complement, rather than replace, the canonical editable design document.
+3. GLB is a rendering/preview interchange; do **not** treat it as lossless editable CAD/BIM data or claim IFC roundtrip where unsupported.
+4. The robotics diagnostic overlay currently has default tool integration statuses, including FreeCAD shown as `connected`; ensure the rendered status is based on a real capability/discovery probe, or explicitly label it a design/demo fallback. Likewise, don't present illustrative telemetry as observed data.
+5. The robot arm can become a genuinely useful demo **only** when transform gizmos, joint limits, kinematics, collision/telemetry and save/export are backed by real scene/runtime behavior. Do not let a beautiful control panel imply operations that aren't connected.
+6. CAD needs the same global shell affordances as other surfaces: drag/paste images, fit-to-view, selection-specific inspector, responsive split layouts, autosave/revision visibility, undo/redo and contextual AgentSam help.
+7. Avoid recreating CAD Creator inside `apps/local-studio`: share cross-product workbench primitives and inject domain adapters. Leave CAD-specific geometry, kernels and source formats in the CAD domain.
+8. The specific real-machine Blender crash/Metal/sandbox behavior should be discovered and reported by the adapter rather than hidden behind a fictitious `ready` badge.
+
+## Scope / branch discipline
+
+This is a desktop polish branch, **not** an authorization for unbounded CAD feature redevelopment. CAD-specific changes should remain on their existing owner branch unless they are small, proven shared UI primitives or necessary integration fixes.
+
+Before modifying overlapping source files, fetch and compare currently active WIP branches/PRs, especially earlier terminal, shell, conversation and image-attachment repairs. Reuse completed work. Commit/push completed batches and merge only when actual tests, branch protections and desktop acceptance pass; clean up proven merged worktrees without discarding unique user assets.
+
+**Success:** open Local Studio, attach a screenshot and get an image-grounded response; open terminal/browser/CAD side by side without layout jitter; inspect an actual CAD/robotic artifact or live run; switch context and restart without losing progress.
+## Multi-PTY UI implementation — 2026-10-16
+
+The existing PR #235 had already shipped a native paste fix, terminal FitAddon/ResizeObserver stability, and an independently connected TWO-PTY split view. It did NOT yet provide the multi-PTY tiled workspace of the visual reference.
+
+In this branch, `TerminalPane` now presents single, two-pane, or five-slot tiled layouts from the EXISTING per-session xterm/PTY authority. Tiled mode displays independent live terminals, has per-tile session selectors, and creates additional terminals on demand. Layout and slot preferences are persisted through the existing Zustand terminal store. Styling responds to the available terminal container width, with a two-column arrangement on sufficiently wide panes and a single column on narrow panes. In-page expansion is available from dock/side panes. No new backend or per-tile PTY transport was created.
+
+Acceptance evidence:
+- TypeScript frontend: PASS (`tsc --noEmit -p apps/local-studio/frontend/tsconfig.json`).
+- New session-state tests: 4 PASS (unique PTY IDs, tile replacement, session close, transition back to split/single).
+- Desktop-target Vite build: PASS.
+- Existing desktop SPA smoke: PASS.
+- Playwright Chromium, desktop preview hash-route `#/cli`: 1440x900 and 610x900, no errors, no horizontal page overflow, tiles responsively arranged. Five live tile hosts survived page reload at 1440x950 without duplicate IDs; two-column by three-row layout with full-width last row. Preview-only server used port 4337 and did not replace installed `.app`.
+
+Out of scope / NOT finished by this slice:
+- Screenshot and image-to-terminal input needs its own secure attachment pipeline and model-request integration. Current Chat composer keeps a pending File map and sends attachment metadata; `streamChat` currently sends text-only messages to the provider. Merely adding a drag target would be misleading and is NOT evidence of image understanding.
+- Per-tile drag-and-resize ratios, background PTY lifecycle after closing a tab, and final installed Tauri `.app` acceptance remain separate verification tasks.
+- This desktop visual slice does not change CAD/OCCT code or interrupt ongoing local PTY sessions.
+
+## Desktop execution continuation — candidate verification
+
+Ownership check: Muse currently has dirty changes on `feat/cad-creator-remaster-20261016` in `apps/cad-creator/`, `apps/local-studio/frontend/src/routes/(apps)/cad.tsx`, `app-preview-stage.tsx`, `side-stage.tsx`, and untracked `cad-host-bridge.ts` / CAD context sources. The desktop branch intentionally did NOT edit these active CAD integration files. The host's CAD assistant request/response approval cycle cannot be declared complete before Muse's bridge contract is handed off and integrated.
+
+Terminal work: persistent per-layout column and top-row fractions; drag/keyboard adjustment, focus, double-click reset and bounded ratios; verified 1440px Chrome resize from 692/691px to 832/551px and exact proportion restored after full reload without page overflow.
+
+Images: composer paste/select/drop stages actual PNG/JPEG/WebP bytes (<=5 MiB) in the pre-existing account-scoped IndexedDB Content provider; messages persist provider references, not image data URLs. Reopen can rehydrate image bytes and show thumbnails. Each request rehydrates transient inline image content at the provider boundary; OpenAI hosted Chat Completions uses image_url parts, and desktop local OpenAI Responses uses input_image parts through Rust/Tauri/Node. Other providers reject unsupported image requests rather than silently dropping them. Input has a four-image cap. Terminal file drops route into AgentSam Chat's image queue, never shell stdin; browser test confirmed the queued image appeared in the composer after route navigation and local staging. Existing full chat composer still requires packaged app acceptance.
+
+Validation:
+- Frontend TypeScript: PASS; frontend suite: 70/70 PASS.
+- Local provider input tests: 4/4 PASS.
+- Desktop SPA build + asset staging + `cargo check --offline`: PASS (generated sidecars/build-brand required).
+- Browser IndexedDB staging: 12 original bytes read back identically, including after reopening; browser title and IDs retained across terminal grid reload.
+- Real provider run: built a synthetic valid red 96x96 PNG and sent it via `packages/agentsam-desktop-shell/scripts/local-provider-bridge.mjs` to the discovered, configured OpenAI `gpt-6-luna` endpoint. Returned `ok:true`, model `gpt-6-luna`, text `Red.` (real image consumption, no personal image sent).
+- Chrome terminal screenshot-drop test: navigated from `#/cli` to `#/agentsam` and displayed the staged image name in Chat; no JS page errors. Vite development mode produced an unrelated local-health CORS diagnostic.
+
+Remaining release gates: actual installed Tauri app sign-in/conversation/attachment/UI acceptance; provider/model capability enumeration beyond OpenAI and image types; per-conversation deletion/garbage collection of staged Content blobs; five independent real PTY streams measured in native Tauri; real CAD selection -> host response -> approved project revision with Muse; CAD state restore; production deployment is separate and has NOT occurred.

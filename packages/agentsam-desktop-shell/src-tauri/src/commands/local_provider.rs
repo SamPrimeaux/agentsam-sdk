@@ -32,6 +32,17 @@ pub struct LocalProviderBridgeRequest {
 pub struct LocalProviderMessage {
     role: String,
     content: String,
+    #[serde(default)]
+    images: Vec<LocalProviderImage>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LocalProviderImage {
+    #[serde(rename = "mimeType")]
+    mime_type: String,
+    #[serde(rename = "dataUrl")]
+    data_url: String,
 }
 
 fn canonical_provider(value: &str) -> Result<&str, String> {
@@ -110,8 +121,23 @@ fn child_payload(request: LocalProviderBridgeRequest) -> Result<Value, String> {
         .messages
         .unwrap_or_default()
         .into_iter()
-        .map(|row| json!({ "role": row.role, "content": row.content }))
-        .collect::<Vec<_>>();
+        .map(|row| {
+            if row.images.len() > 4 || (!row.images.is_empty() && (row.role != "user" || provider != Some("openai"))) {
+                return Err("local_provider_image_input_not_supported".to_string());
+            }
+            let images = row.images.into_iter().map(|image| {
+                let prefix = format!("data:{};base64,", image.mime_type);
+                if !matches!(image.mime_type.as_str(), "image/png" | "image/jpeg" | "image/webp")
+                    || !image.data_url.starts_with(&prefix)
+                    || image.data_url.len() > 7_100_000
+                {
+                    return Err("local_provider_image_data_invalid".to_string());
+                }
+                Ok(json!({ "mimeType": image.mime_type, "dataUrl": image.data_url }))
+            }).collect::<Result<Vec<_>, String>>()?;
+            Ok(json!({ "role": row.role, "content": row.content, "images": images }))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
 
     Ok(json!({
         "operation": operation,

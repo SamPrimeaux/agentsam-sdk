@@ -24,6 +24,10 @@ const Body = z.object({
       z.object({
         role: z.enum(["user", "assistant", "system"]),
         content: z.string().max(12000),
+        images: z.array(z.object({
+          mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
+          dataUrl: z.string().max(7_100_000),
+        })).max(4).optional(),
       }),
     )
     .min(1)
@@ -189,6 +193,23 @@ export const Route = createFileRoute("/api/chat")({
 
         const providerId = parsed.provider.trim().toLowerCase();
         const modelId = parsed.model_id.trim();
+        const imageMessages = parsed.messages.filter((m) => m.images?.length);
+        const images = imageMessages.flatMap((m) => m.images || []);
+        if (images.length > 4) return Response.json({ error: "too_many_images" }, { status: 400 });
+        if (images.length && providerId !== "openai") {
+          return Response.json({ error: "image_input_not_supported_for_selected_provider" }, { status: 422 });
+        }
+        for (const image of images) {
+          const prefix = "data:" + image.mimeType + ";base64,";
+          const encoded = image.dataUrl.startsWith(prefix) ? image.dataUrl.slice(prefix.length) : "";
+          if (!encoded || encoded.length > 7_000_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) {
+            return Response.json({ error: "image_data_invalid" }, { status: 400 });
+          }
+          const estimatedBytes = Math.floor(encoded.length * 3 / 4) - (encoded.endsWith("==") ? 2 : encoded.endsWith("=") ? 1 : 0);
+          if (estimatedBytes < 1 || estimatedBytes > 5 * 1024 * 1024) {
+            return Response.json({ error: "image_size_invalid" }, { status: 400 });
+          }
+        }
 
         // Session → accounts.id (au_*) → user_secrets.account_id → unwrap.
         const bindings = studioServerBindings(ctx);
@@ -243,7 +264,19 @@ export const Route = createFileRoute("/api/chat")({
 
         for (const message of parsed.messages) {
           if (message.role === "system") continue;
-          messages.push({ role: message.role, content: message.content });
+          // The source images stay in the account-scoped local Content provider;
+          // only transient provider-format parts enter an authorized model request.
+          if (providerId === "openai" && message.role === "user" && message.images?.length) {
+            (messages as Array<{ role: string; content: unknown }>).push({
+              role: "user",
+              content: [
+                { type: "text", text: message.content || "Describe the attached image." },
+                ...message.images.map((image) => ({ type: "image_url", image_url: { url: image.dataUrl } })),
+              ],
+            });
+          } else {
+            messages.push({ role: message.role, content: message.content });
+          }
         }
 
         const maxTokens = surface === "side" ? 2200 : 4200;

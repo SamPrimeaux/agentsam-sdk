@@ -1,8 +1,11 @@
-import { useEffect, useRef } from "react";
-import { Columns2, Copy, Plus, RotateCw, X } from "lucide-react";
+import { useEffect, useRef, type PointerEvent, type KeyboardEvent, type CSSProperties } from "react";
+import { Columns2, Copy, Grid2X2, Maximize2, PanelTop, Plus, RotateCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
+import { navigateApp } from "@/lib/work/navigate";
+import { queueChatImages } from "@/lib/content/chat-drop-queue";
+import { toast } from "sonner";
 import { attachSharedTerminal, detachSharedTerminal, getSharedTerminalRun } from "@/lib/work/terminal-runtime";
 import { useTerminalSessionStore } from "@/lib/work/terminal-sessions";
 
@@ -16,8 +19,17 @@ export function TerminalPane({
   const activeSessionId = useTerminalSessionStore((s) => s.activeSessionId);
   const sessions = useTerminalSessionStore((s) => s.sessions);
   const splitView = useTerminalSessionStore((s) => s.splitView);
+  const gridView = useTerminalSessionStore((s) => s.gridView);
+  const gridSessionIds = useTerminalSessionStore((s) => s.gridSessionIds ?? []);
+  const gridColumnFraction = useTerminalSessionStore((s) => s.gridColumnFraction ?? 0.5);
+  const gridFirstRowFraction = useTerminalSessionStore((s) => s.gridFirstRowFraction ?? 1 / 3);
+  const setGridColumnFraction = useTerminalSessionStore((s) => s.setGridColumnFraction);
+  const setGridFirstRowFraction = useTerminalSessionStore((s) => s.setGridFirstRowFraction);
+  const gridRef = useRef<HTMLDivElement>(null);
   const secondarySessionId = useTerminalSessionStore((s) => s.secondarySessionId);
   const setSplitView = useTerminalSessionStore((s) => s.setSplitView);
+  const setGridView = useTerminalSessionStore((s) => s.setGridView);
+  const setGridSession = useTerminalSessionStore((s) => s.setGridSession);
   const setSecondarySession = useTerminalSessionStore((s) => s.setSecondarySession);
   const createSession = useTerminalSessionStore((s) => s.createSession);
   const closeSession = useTerminalSessionStore((s) => s.closeSession);
@@ -26,9 +38,27 @@ export function TerminalPane({
   const resolvedSessionId = sessionId || activeSessionId;
   const project = useActiveProject();
   const pending = useWorkStore((s) => s.pendingCommands);
-  const secondarySession = splitView
+  const secondarySession = splitView && !gridView
     ? sessions.find((session) => session.id === secondarySessionId && session.id !== resolvedSessionId)
     : undefined;
+  // A PTY may be mounted only once: ordered, unique IDs render into independent tile hosts.
+  const visibleIds = [...new Set(gridSessionIds)].filter((id) => sessions.some((s) => s.id === id)).slice(0, 5);
+
+  function moveGridHandle(event: PointerEvent<HTMLElement>, kind: "column" | "row") {
+    const region = gridRef.current?.getBoundingClientRect();
+    if (!region || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    if (kind === "column" && region.width > 0) setGridColumnFraction((event.clientX - region.left) / region.width);
+    if (kind === "row" && region.height > 0) setGridFirstRowFraction((event.clientY - region.top) / region.height);
+  }
+
+  function keyGridHandle(event: KeyboardEvent<HTMLElement>, kind: "column" | "row") {
+    const delta = (event.key === "ArrowRight" || event.key === "ArrowDown") ? 0.03 :
+      (event.key === "ArrowLeft" || event.key === "ArrowUp") ? -0.03 : 0;
+    if (!delta) return;
+    event.preventDefault();
+    if (kind === "column") setGridColumnFraction(gridColumnFraction + delta);
+    else setGridFirstRowFraction(gridFirstRowFraction + delta);
+  }
 
   useEffect(() => {
     if (!pending.length) return;
@@ -36,37 +66,28 @@ export function TerminalPane({
     const run = getSharedTerminalRun(resolvedSessionId);
     if (!run) return;
     void (async () => {
-      for (const cmd of cmds) {
-        await run(cmd);
-      }
+      for (const cmd of cmds) await run(cmd);
     })();
   }, [pending, resolvedSessionId]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background" data-terminal-session={resolvedSessionId}>
+    <div className="flex h-full min-h-0 min-w-0 flex-col bg-background" data-terminal-session={resolvedSessionId}>
       <div className="flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-1">
         {sessions.map((session) => (
-          <button
-            type="button"
-            key={session.id}
-            className="group flex h-7 shrink-0 items-center gap-2 rounded-md px-2 font-mono text-xs text-muted-foreground data-[active=true]:bg-muted data-[active=true]:text-foreground"
-            data-active={session.id === resolvedSessionId}
-            onClick={() => setActiveSession(session.id)}
-            title={`${session.runtimeLabel || session.lane}${session.cwd ? ` · ${session.cwd}` : ""}`}
-          >
-            <span className="size-1.5 rounded-full bg-muted-foreground data-[state=connected]:bg-primary" data-state={session.state} />
-            <span>{session.title}</span>
-            <span
-              role="button"
-              tabIndex={0}
-              className="opacity-0 transition-opacity group-hover:opacity-100"
-              aria-label={`Close ${session.title}`}
-              onClick={(event) => { event.stopPropagation(); closeSession(session.id); }}
-              onKeyDown={(event) => { if (event.key === "Enter") closeSession(session.id); }}
+          <div key={session.id} className="group flex h-7 shrink-0 items-center rounded-md pr-1 font-mono text-xs text-muted-foreground data-[active=true]:bg-muted data-[active=true]:text-foreground" data-active={session.id === resolvedSessionId}>
+            <button
+              type="button"
+              className="flex min-w-0 items-center gap-2 px-2"
+              onClick={() => setActiveSession(session.id)}
+              title={'' + (session.runtimeLabel || session.lane) + (session.cwd ? ' · ' + session.cwd : '')}
             >
+              <span className="size-1.5 rounded-full bg-muted-foreground data-[state=connected]:bg-primary" data-state={session.state} />
+              <span>{session.title}</span>
+            </button>
+            <button type="button" className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" aria-label={'Close ' + session.title} onClick={() => closeSession(session.id)}>
               <X className="size-3" />
-            </span>
-          </button>
+            </button>
+          </div>
         ))}
         <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="New terminal" onClick={() => createSession({ cwd: project.workspaceRoot || undefined })}>
           <Plus className="size-3.5" />
@@ -74,70 +95,124 @@ export function TerminalPane({
         <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Duplicate terminal cwd" onClick={() => duplicateSession(resolvedSessionId)}>
           <Copy className="size-3.5" />
         </Button>
-        <IconAction
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          className="shrink-0"
-          label={splitView ? "Close split terminal" : "Split terminal into two interactive panes"}
-          aria-pressed={splitView}
-          hint={splitView ? "Return to one terminal" : "Monitor two independent PTY sessions"}
-          onClick={() => {
-            if (splitView) { setSplitView(false); return; }
-            const other = sessions.find((session) => session.id !== resolvedSessionId);
-            if (other) {
-              setSecondarySession(other.id);
-            } else {
-              // A new PTY session is distinct, never another mount of the same xterm.
-              const previous = resolvedSessionId;
-              createSession({ cwd: project.workspaceRoot || undefined });
-              setSecondarySession(previous);
-            }
-            setSplitView(true);
-          }}
-        >
-          <Columns2 className="size-3.5" />
-        </IconAction>
-        <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Reconnect terminal" onClick={() => window.location.reload()}>
-          <RotateCw className="size-3.5" />
-        </Button>
+        <div className="ml-auto flex shrink-0 items-center gap-0.5">
+          <IconAction size="icon-sm" variant="ghost" label="Single terminal" hint="Focus on the selected terminal" aria-pressed={!splitView && !gridView} onClick={() => { setGridView(false); setSplitView(false); }}>
+            <PanelTop className="size-3.5" />
+          </IconAction>
+          <IconAction
+            size="icon-sm" variant="ghost"
+            label="Split two terminals"
+            aria-pressed={splitView && !gridView}
+            hint="Run two independent PTY sessions in adjacent panes"
+            onClick={() => {
+              if (splitView && !gridView) { setSplitView(false); return; }
+              const other = sessions.find((session) => session.id !== resolvedSessionId);
+              if (other) setSecondarySession(other.id);
+              else {
+                const previous = resolvedSessionId;
+                createSession({ cwd: project.workspaceRoot || undefined });
+                setSecondarySession(previous);
+              }
+              setSplitView(true);
+            }}
+          ><Columns2 className="size-3.5" /></IconAction>
+          <IconAction
+            size="icon-sm" variant="ghost"
+            label={gridView ? "Close tiled terminals" : "Tile terminal sessions"}
+            aria-pressed={gridView}
+            hint="Monitor up to five independent agents, shells, and servers"
+            onClick={() => setGridView(!gridView)}
+          ><Grid2X2 className="size-3.5" /></IconAction>
+          {variant !== "page" && <IconAction size="icon-sm" variant="ghost" label="Open full terminal workspace" hint="Expand tiled terminals to their own workspace" onClick={() => navigateApp("/cli")}>
+            <Maximize2 className="size-3.5" />
+          </IconAction>}
+          <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Reconnect terminal" onClick={() => window.location.reload()}>
+            <RotateCw className="size-3.5" />
+          </Button>
+        </div>
       </div>
       {variant === "dock" ? (
         <div className="flex h-8 shrink-0 items-center gap-2 border-t border-border px-2">
           <span className="px-1 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">CLI</span>
           <span className="truncate font-mono text-[11px] text-clay">{project.name}</span>
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="ghost"
-            className="ml-auto size-7"
-            aria-label="Close terminal"
-            onClick={() => useWorkStore.getState().setTerminalOpen(false)}
-          >
+          <Button type="button" size="icon-sm" variant="ghost" className="ml-auto size-7" aria-label="Close terminal" onClick={() => useWorkStore.getState().setTerminalOpen(false)}>
             <X className="size-3.5" />
           </Button>
         </div>
       ) : null}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
-        <TerminalViewport sessionId={resolvedSessionId} />
-        {secondarySession ? (
-          <section className="flex min-h-0 min-w-0 flex-1 flex-col border-border/60 max-md:border-t md:border-l" aria-label="Adjacent terminal">
-            <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/60 px-2">
-              <span className="font-mono text-[11px] text-muted-foreground">Adjacent PTY</span>
-              <select
-                aria-label="Choose adjacent terminal session"
-                className="ml-auto min-w-0 max-w-[60%] rounded bg-transparent px-1 text-xs text-foreground outline-offset-2"
-                value={secondarySession.id}
-                onChange={(event) => setSecondarySession(event.target.value)}
-              >
-                {sessions.filter((session) => session.id !== resolvedSessionId).map((session) => (
-                  <option key={session.id} value={session.id}>{session.title} · {session.state}</option>
-                ))}
-              </select>
-            </div>
-            <TerminalViewport sessionId={secondarySession.id} />
-          </section>
-        ) : null}
+      <div className="terminal-tiles-region min-h-0 min-w-0 flex-1">
+        {gridView ? (
+          <div
+            ref={gridRef}
+            className="terminal-tile-grid"
+            data-testid="terminal-tile-grid"
+            style={{
+              "--terminal-grid-column": (gridColumnFraction * 100) + "%",
+              "--terminal-grid-first-row": (gridFirstRowFraction * 100) + "%",
+            } as CSSProperties}
+          >
+            {visibleIds.map((id, index) => {
+              const session = sessions.find((s) => s.id === id)!;
+              return (
+                <section key={id} className="terminal-tile" data-selected={id === resolvedSessionId} data-last={visibleIds.length === 5 && index === 4} aria-label={'Terminal tile ' + (index + 1)}>
+                  <div className="terminal-tile-toolbar">
+                    <button type="button" onClick={() => setActiveSession(id)} aria-label={'Focus ' + session.title} className="flex min-w-0 items-center gap-2 text-xs text-foreground">
+                      <span className="text-muted-foreground">{index + 1}</span>
+                      <span className="size-1.5 rounded-full bg-muted-foreground data-[state=connected]:bg-primary" data-state={session.state} />
+                      <span className="truncate">{session.title}</span>
+                    </button>
+                    <select aria-label={'Terminal ' + (index + 1) + ' session'} className="ml-auto max-w-[44%] truncate rounded bg-transparent text-[11px] text-muted-foreground" value={id} onChange={(event) => setGridSession(index, event.target.value)}>
+                      {sessions.filter((s) => s.id === id || !visibleIds.includes(s.id)).map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
+                    </select>
+                  </div>
+                  <TerminalViewport sessionId={id} />
+                </section>
+              );
+            })}
+            {visibleIds.length < 5 && (
+              <div className="terminal-tile-empty">
+                <Button type="button" variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => createSession({ cwd: project.workspaceRoot || undefined })}>
+                  <Plus className="size-4" /> New terminal tile
+                </Button>
+              </div>
+            )}
+            {visibleIds.length > 1 && (
+              <>
+                <div role="separator" tabIndex={0} aria-label="Resize terminal columns" aria-orientation="vertical"
+                  aria-valuenow={Math.round(gridColumnFraction * 100)} aria-valuemin={22} aria-valuemax={78}
+                  className="terminal-grid-resize terminal-grid-resize-column"
+                  onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault(); }}
+                  onPointerMove={(event) => moveGridHandle(event, "column")}
+                  onKeyDown={(event) => keyGridHandle(event, "column")}
+                  onDoubleClick={() => setGridColumnFraction(0.5)}
+                />
+                <div role="separator" tabIndex={0} aria-label="Resize terminal rows" aria-orientation="horizontal"
+                  aria-valuenow={Math.round(gridFirstRowFraction * 100)} aria-valuemin={20} aria-valuemax={55}
+                  className="terminal-grid-resize terminal-grid-resize-row"
+                  onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault(); }}
+                  onPointerMove={(event) => moveGridHandle(event, "row")}
+                  onKeyDown={(event) => keyGridHandle(event, "row")}
+                  onDoubleClick={() => setGridFirstRowFraction(1 / 3)}
+                />
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="terminal-two-pane" data-split={Boolean(secondarySession)}>
+            <TerminalViewport sessionId={resolvedSessionId} />
+            {secondarySession && (
+              <section className="terminal-adjacent min-h-0 min-w-0" aria-label="Adjacent terminal">
+                <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/60 px-2">
+                  <span className="font-mono text-[11px] text-muted-foreground">Adjacent PTY</span>
+                  <select aria-label="Choose adjacent terminal session" className="ml-auto min-w-0 max-w-[60%] rounded bg-transparent px-1 text-xs text-foreground outline-offset-2" value={secondarySession.id} onChange={(event) => setSecondarySession(event.target.value)}>
+                    {sessions.filter((s) => s.id !== resolvedSessionId).map((s) => <option key={s.id} value={s.id}>{s.title} · {s.state}</option>)}
+                  </select>
+                </div>
+                <TerminalViewport sessionId={secondarySession.id} />
+              </section>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -163,5 +238,19 @@ function TerminalViewport({ sessionId }: { sessionId: string }) {
     };
   }, [sessionId]);
 
-  return <div ref={hostRef} data-terminal-viewport={sessionId} className="terminal-host min-h-0 min-w-0 flex-1 px-1 pb-[env(safe-area-inset-bottom)]" />;
+  return <div
+    ref={hostRef}
+    data-terminal-viewport={sessionId}
+    className="terminal-host min-h-0 min-w-0 flex-1 px-1 pb-[env(safe-area-inset-bottom)]"
+    onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }}
+    onDrop={(event) => {
+      if (!event.dataTransfer.files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const trailId = useWorkStore.getState().activeTrailId;
+      queueChatImages(trailId, Array.from(event.dataTransfer.files));
+      navigateApp("/agentsam");
+      toast("Opening Chat to attach screenshot — no terminal input sent.");
+    }}
+  />;
 }

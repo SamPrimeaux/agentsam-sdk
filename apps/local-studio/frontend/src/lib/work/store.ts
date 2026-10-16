@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { AgentRunMode } from "@inneranimalmedia/agentsam-contracts";
+import type { ChatImageReference } from "@/lib/content/chat-images";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { titleFromText, uid } from "@/lib/utils";
 import { extractArtifacts, mergeArtifacts } from "@/lib/work/files";
@@ -466,9 +467,15 @@ export const useWorkStore = create<WorkState>()(
           }
 
           const payload = history
-            .filter((m) => m.id !== assistantId && m.content.trim())
+            .filter((m) => m.id !== assistantId && (
+            m.content.trim() || (Array.isArray(m.metadata?.attachments) && m.metadata.attachments.length > 0)
+          ))
             .slice(-16)
-            .map((m) => ({ role: m.role, content: m.content }));
+            .map((m) => ({
+            role: m.role, content: m.content,
+            attachments: Array.isArray(m.metadata?.attachments)
+              ? m.metadata.attachments as ChatImageReference[] : [],
+          }));
 
           const project = after.projects.find((p) => p.id === after.activeProjectId) ?? after.projects[0]!;
 
@@ -984,7 +991,7 @@ export const useWorkStore = create<WorkState>()(
         const state = get();
         const pendingBag =
           typeof window !== "undefined"
-            ? (window as unknown as { __agentsamComposerAttachments?: { targetId?: string; attachments?: unknown[] } })
+            ? (window as unknown as { __agentsamComposerAttachments?: { targetId?: string; accountId?: string; attachments?: ChatImageReference[] } })
                 .__agentsamComposerAttachments
             : undefined;
         const pendingAttachments =
@@ -1073,6 +1080,7 @@ export const useWorkStore = create<WorkState>()(
           role: "user",
           content: draft.slice(0, 12000),
           createdAt: Date.now(),
+          ...(pendingAttachments.length ? { metadata: { attachments: pendingAttachments } } : {}),
         };
         const assistantId = uid();
         const assistantMsg: ChatMessage = {
@@ -1125,9 +1133,15 @@ export const useWorkStore = create<WorkState>()(
         }
 
         const payload = history
-          .filter((m) => m.id !== assistantId && m.content.trim())
+          .filter((m) => m.id !== assistantId && (
+            m.content.trim() || (Array.isArray(m.metadata?.attachments) && m.metadata.attachments.length > 0)
+          ))
           .slice(-16)
-          .map((m) => ({ role: m.role, content: m.content }));
+          .map((m) => ({
+            role: m.role, content: m.content,
+            attachments: Array.isArray(m.metadata?.attachments)
+              ? m.metadata.attachments as ChatImageReference[] : [],
+          }));
 
         const projectId = context?.projectId ?? after.activeProjectId;
         const project = after.projects.find((p) => p.id === projectId) ?? after.projects[0]!;
@@ -1225,6 +1239,7 @@ export const useWorkStore = create<WorkState>()(
           let sawDelta = false;
           await streamChat({
             messages: payload,
+            accountId: pendingBag?.accountId || "",
             surface: targetKind,
             runMode: turnMode,
             provider: context?.modelSelection?.provider ?? after.modelSelection?.provider,

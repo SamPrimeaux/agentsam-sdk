@@ -74,10 +74,36 @@ function safeFailure(error, provider = null) {
   if (code === 'selected_model_not_available_for_credential' || message.startsWith('selected_model_not_available_for_credential:')) {
     return { ok: false, error: 'selected_model_not_available', provider };
   }
+  if (message.startsWith('provider_image_')) {
+    return { ok: false, error: message, provider };
+  }
   if (message.startsWith('interactive_provider_adapter_unavailable:')) {
     return { ok: false, error: 'provider_adapter_unavailable', provider };
   }
   return { ok: false, error: 'local_provider_request_failed', provider };
+}
+
+export function prepareLocalChatMessages(rows, provider) {
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .filter((row) => row && ['system', 'user', 'assistant'].includes(String(row.role)) && typeof row.content === 'string')
+    .map((row) => {
+      const images = Array.isArray(row.images) ? row.images : [];
+      if (!images.length) return { role: String(row.role), content: row.content };
+      if (provider !== 'openai' || row.role !== 'user' || images.length > 4) {
+        throw new Error('provider_image_input_not_supported');
+      }
+      const content = [{ type: 'input_text', text: row.content || 'Describe the attached image.' }];
+      for (const image of images) {
+        const mime = String(image.mimeType || '');
+        const data = String(image.dataUrl || '');
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(mime)
+            || !data.startsWith('data:' + mime + ';base64,')
+            || data.length > 7_100_000) throw new Error('provider_image_data_invalid');
+        content.push({ type: 'input_image', image_url: data });
+      }
+      return { role: 'user', content };
+    });
 }
 
 export async function executeLocalProviderBridge(input = {}, options = {}) {
@@ -126,11 +152,7 @@ export async function executeLocalProviderBridge(input = {}, options = {}) {
       }
 
       const adapter = createProviderAdapter({ modelRecord, credential, fetchImpl });
-      const messages = Array.isArray(input.messages)
-        ? input.messages
-            .filter((row) => row && ['system', 'user', 'assistant'].includes(String(row.role)) && typeof row.content === 'string')
-            .map((row) => ({ role: String(row.role), content: row.content }))
-        : [];
+      const messages = prepareLocalChatMessages(input.messages, provider);
       if (!messages.length) return { ok: false, error: 'messages_required', provider };
 
       const result = await adapter.create({

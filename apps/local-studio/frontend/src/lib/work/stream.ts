@@ -1,10 +1,12 @@
 import type { AgentMessage as ChatMessage, AgentRunMode } from "@inneranimalmedia/agentsam-contracts";
+import { resolveChatImages, type ChatImageReference } from "@/lib/content/chat-images";
 import type { RawRuntimeEvent } from "@inneranimalmedia/agentsam-loading-scene";
 import { buildStudioSystemMessages, type StudioChatSurface } from "@inneranimalmedia/agentsam-local-shared/studio-chat-policy";
 import { identitySessionExists, invokeLocalProvider, invokeStudioService, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 export async function streamChat(opts: {
-  messages: Pick<ChatMessage, "role" | "content">[];
+  messages: Array<Pick<ChatMessage, "role" | "content"> & { attachments?: ChatImageReference[] }>;
+  accountId?: string;
   surface: StudioChatSurface;
   runMode: AgentRunMode;
   provider?: string;
@@ -37,8 +39,20 @@ export async function streamChat(opts: {
     });
   };
 
+  // Rehydrate account-scoped original bytes only at the trusted request boundary.
+  // Content-local references, not data URLs, remain in persisted chat history.
+  const imageCount = opts.messages.reduce((n, m) => n + (m.attachments?.length || 0), 0);
+  if (imageCount > 4) throw new Error("This conversation contains more than four image inputs. Start a fresh image turn.");
+  const modelMessages = await Promise.all(opts.messages.map(async (m) => ({
+    role: m.role,
+    content: m.content,
+    ...(m.attachments?.length
+      ? { images: await resolveChatImages(m.attachments, opts.accountId || "") }
+      : {}),
+  })));
+
   const requestBody = {
-    messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
+    messages: modelMessages,
     surface: opts.surface,
     run_mode: opts.runMode,
     provider: opts.provider,
@@ -74,7 +88,7 @@ export async function streamChat(opts: {
       if (!opts.messages.some((m) => m.role === 'assistant')) opts.onPreparedTurn?.({
         source: 'local-studio', stage: 'desktop-provider-bridge', provider: opts.provider,
         model: opts.model_id, instructions: null,
-        messages: localMessages, tools: [], workspace: opts.workspace,
+        messages: localMessages.map(({role,content}) => ({role,content})), tools: [], workspace: opts.workspace,
       });
       const local = await invokeLocalProvider<{ ok?: boolean; error?: string; text?: string }>({
         operation: "chat",
@@ -138,7 +152,7 @@ export async function streamChat(opts: {
   if (!opts.messages.some((m) => m.role === 'assistant')) opts.onPreparedTurn?.({
     source: 'local-studio', stage: 'hosted-chat-api',
     provider: opts.provider, model: opts.model_id,
-    instructions: null, messages: requestBody.messages, tools: [], workspace: opts.workspace,
+    instructions: null, messages: modelMessages.map(({role,content}) => ({role,content})), tools: [], workspace: opts.workspace,
   });
   const res = await fetch("/api/chat", {
     method: "POST",
