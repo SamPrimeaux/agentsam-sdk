@@ -81,6 +81,64 @@ test('runner accepts provider-verified models whose context window is unknown', 
   assert.equal(localSnapshot.payload.resolver_receipt?.fallback_policy, 'bounded_unknown_model_window');
 });
 
+test('actual model request receives owner-global and repository rules with inspectable source receipts', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-portable-model-rules-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, '.git'));
+  fs.writeFileSync(path.join(root, 'package.json'), '{"name":"randomrepo123"}');
+  const global = path.join(root, 'global-policy.md');
+  fs.writeFileSync(global, 'Owner cross-project policy: complex underneath, effortless above.');
+  fs.writeFileSync(path.join(root, 'AGENTSAM.md'), 'Repository runtime: preserve architecture contracts.');
+  fs.writeFileSync(path.join(root, '.agentsamrules'), 'Repository rules: no tenant hardcoding.');
+  const modelRecord = {
+    model_key: 'openai:stub-portable-rules',
+    provider: 'openai',
+    provider_model_id: 'stub-portable-rules',
+    availability: 'available',
+    availability_source: 'provider_api',
+    context_window: null,
+    context_window_source: 'unknown',
+    reasoning_efforts: ['auto'],
+    service_tiers: ['default'],
+    capabilities: { responses: true },
+  };
+  const calls = [];
+  const receipts = [];
+  const provider = {
+    async create(params) {
+      calls.push(params);
+      return {
+        response_id: 'resp_rules_' + calls.length,
+        output_text: 'verified model payload',
+        actual_service_tier: 'default',
+        tool_calls: [],
+        usage_snapshot: usage(),
+        cost: null,
+      };
+    },
+    async continueWithToolOutputs() { throw new Error('unexpected continuation'); },
+  };
+  const run = async globalFilename => runResponsesAgent({
+    provider, capabilityAdapter: createCapabilityAdapter(), cwd: root,
+    model: modelRecord.model_key, modelRecord,
+    prompt: 'inspect this repository and its policies',
+    globalFilename,
+    onPreparedTurn: payload => receipts.push(payload),
+  });
+  assert.equal((await run(global)).output_text, 'verified model payload');
+  assert.match(calls[0].instructions, /Owner cross-project policy/);
+  assert.match(calls[0].instructions, /Repository runtime/);
+  assert.match(calls[0].instructions, /Repository rules/);
+  assert.deepEqual(receipts[0].instruction_receipt.sources.map(s => s.id), ['global', 'runtime', 'project']);
+  assert.ok(receipts[0].instruction_receipt.sources.every(s => s.hash.startsWith('sha256:')));
+  assert.equal(receipts[0].instructions, calls[0].instructions);
+
+  assert.equal((await run(null)).output_text, 'verified model payload');
+  assert.doesNotMatch(calls[1].instructions, /Owner cross-project policy/);
+  assert.match(calls[1].instructions, /Repository rules/);
+  assert.deepEqual(receipts[1].instruction_receipt.sources.map(s => s.id), ['runtime', 'project']);
+});
+
 test('capability adapter hydrates packaged JSON schemas and tool surface exposes only selected executable schemas', () => {
   const adapter = createCapabilityAdapter();
   const descriptors = adapter.toolDescriptors();

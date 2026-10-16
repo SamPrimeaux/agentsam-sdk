@@ -77,8 +77,8 @@ const UNKNOWN_WINDOW_CONTEXT_LIMITS = Object.freeze({
   maxItemChars: 16_000,
 });
 
-function resolveUnknownWindowContext(cwd, card, contextItems = []) {
-  const rules = compileAgentInstructions(cwd, { maxChars: UNKNOWN_WINDOW_CONTEXT_LIMITS.maxSystemChars });
+function resolveUnknownWindowContext(cwd, card, contextItems = [], ruleOptions = {}) {
+  const rules = compileAgentInstructions(cwd, { ...ruleOptions, maxChars: UNKNOWN_WINDOW_CONTEXT_LIMITS.maxSystemChars });
   let remainingEvidenceChars = UNKNOWN_WINDOW_CONTEXT_LIMITS.maxEvidenceChars;
   const included = [{
     kind: 'repo',
@@ -270,6 +270,8 @@ async function runAgentSamTurnCore(options = {}) {
     : baseRecord;
   const budget = modelBudget(record, dynamicPolicy);
   const generalQuestion = options.instructions == null && isStandaloneKnowledgeQuestion(objective);
+  // Hosts may supply null for strict tenant isolation, or a vetted per-user file.
+  const ruleOptions = Object.hasOwn(options, 'globalFilename') ? { globalFilename: options.globalFilename } : {};
   let instructions;
   let resolvedContext = null;
   if (generalQuestion) {
@@ -286,6 +288,7 @@ async function runAgentSamTurnCore(options = {}) {
           cwd,
           objective,
           budget,
+          ...ruleOptions,
           items: [
             {
               kind: 'repo',
@@ -296,7 +299,7 @@ async function runAgentSamTurnCore(options = {}) {
             ...(options.contextItems || []),
           ],
         })
-      : resolveUnknownWindowContext(cwd, card, options.contextItems || []);
+      : resolveUnknownWindowContext(cwd, card, options.contextItems || [], ruleOptions);
     const cardContent = resolvedContext.items.find((i) => i.ref === 'project://card')?.content || card.content;
     const extraContent = resolvedContext.items
       .filter((i) => i.ref !== 'project://card')
@@ -427,6 +430,12 @@ async function runAgentSamTurnCore(options = {}) {
       source: 'cli-agent', provider: record.provider, model: record.provider_model_id,
       instructions, messages: input, tools: toolSurface.tools,
       context_receipt: resolvedContext?.receipt || null,
+      instruction_receipt: resolvedContext?.rules ? {
+        hash: resolvedContext.rules.hash,
+        chars: resolvedContext.rules.chars,
+        budget_chars: resolvedContext.rules.budget_chars,
+        sources: resolvedContext.rules.sources,
+      } : null,
     });
   }
   let response = await modelTurn({

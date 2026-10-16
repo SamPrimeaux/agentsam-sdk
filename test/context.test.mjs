@@ -171,22 +171,43 @@ test('compatibility shims are not compiled into AgentSam instruction authority',
   assert.doesNotMatch(compiled.content, /claude shim should not become policy/);
 });
 
-test('project context loads bounded compiled AgentSam instructions', t => {
+test('over-budget AgentSam instructions stop before silently losing repository authority', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-context-rules-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(path.join(root, '.git'));
-  fs.writeFileSync(path.join(root, 'AGENTSAM.md'), '# stable\n' + 'a'.repeat(300));
-  fs.writeFileSync(path.join(root, '.agentsamrules'), '# rules\n' + 'x'.repeat(5000) + '\n');
-  const pack = resolveProjectContext({
-    cwd: root,
-    objective: 'inspect repository',
-    budget: createContextBudget({ windowTokens: 8_000, maxSystemChars: 1_000, maxEvidenceChars: 1_000 }),
-    items: [],
-  });
-  assert.equal(pack.rules.found, true);
-  assert.equal(pack.rules.chars, 1_000);
-  assert.equal(pack.rules.truncated, true);
-  assert.equal(pack.receipt.system_chars, 1_000);
+  const global = path.join(root, 'owner-global.md');
+  fs.writeFileSync(global, '# Owner policy\n' + 'g'.repeat(900));
+  fs.writeFileSync(path.join(root, 'AGENTSAM.md'), '# runtime\n' + 'a'.repeat(300));
+  fs.writeFileSync(path.join(root, '.agentsamrules'), '# repository\n' + 'x'.repeat(5000) + '\n');
+
+  let receipt;
+  assert.throws(
+    () => resolveProjectContext({
+      cwd: root,
+      globalFilename: global,
+      objective: 'inspect repository',
+      budget: createContextBudget({ windowTokens: 8_000, maxSystemChars: 1_000, maxEvidenceChars: 1_000 }),
+      items: [],
+    }),
+    error => {
+      assert.equal(error.code, 'AGENTSAM_INSTRUCTION_BUDGET_EXCEEDED');
+      assert.match(error.message, /agent_instructions_budget_exceeded/);
+      receipt = error.receipt;
+      return true;
+    },
+  );
+  assert.equal(receipt.safe_to_execute, false);
+  assert.equal(receipt.omitted, false);
+  assert.equal(receipt.budget_chars, 1_000);
+  assert.ok(receipt.required_chars > receipt.budget_chars);
+  assert.deepEqual(receipt.sources.map(source => source.id), ['global', 'runtime', 'project']);
+  assert.ok(receipt.sources.every(source => /^sha256:/.test(source.hash)));
+
+  const full = compileAgentInstructions(root, { globalFilename: global, maxChars: receipt.required_chars });
+  assert.equal(full.truncated, false);
+  assert.ok(full.content.includes('g'.repeat(900)));
+  assert.ok(full.content.includes('x'.repeat(5000)));
+  assert.equal(full.budget_chars, receipt.required_chars);
 });
 
 test('consumed tool results compact to 4k while preserving rehydration identity', async () => {

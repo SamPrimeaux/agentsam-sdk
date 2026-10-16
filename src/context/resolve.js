@@ -111,7 +111,9 @@ export function resolveContext(options = {}) {
 
 export function resolveProjectContext(options = {}) {
   const budget = options.budget?.windowTokens ? options.budget : createContextBudget(options.budget || {});
-  const ruleOptions = { maxChars: Math.min(24_000, budget.maxSystemChars) };
+  // Use the model's declared system budget; don't impose an unrelated 24k ceiling.
+  // If full instructions do not fit, the compiler fails with an inspectable receipt.
+  const ruleOptions = { maxChars: budget.maxSystemChars };
   if (Object.hasOwn(options, 'globalFilename')) ruleOptions.globalFilename = options.globalFilename;
   const rules = compileAgentInstructions(options.cwd || process.cwd(), ruleOptions);
   return resolveContext({ ...options, budget, rules });
