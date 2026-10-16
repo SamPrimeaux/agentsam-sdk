@@ -1,13 +1,28 @@
 :root {
   --copro-bg: #08090d;
   --copro-surface: #111319;
-  --copro-surface-2: #171a22;
   --copro-line: rgba(255,255,255,.11);
   --copro-text: #f6f7fb;
   --copro-muted: #9297a7;
   --copro-accent: #22d3c5;
   --copro-accent-ink: #0b0d08;
   --copro-danger: #ff6d76;
+  --copro-accent-deep: #006c6e;
+  --copro-home-canvas: #eeeff6;
+  --copro-home-paper: #fff;
+  --copro-home-text: #132330;
+  --copro-home-muted: #536574;
+  --copro-home-border: rgba(14,39,50,.12);
+  --copro-surface-0: #080d12;
+  --copro-surface-1: #101821;
+  --copro-surface-2: #172630;
+  --copro-text-1: #f2f7f7;
+  --copro-text-2: #b5c4ca;
+  --copro-text-3: #8599a2;
+  --copro-radius-sm: 12px;
+  --copro-radius-md: 16px;
+  --copro-radius-lg: 24px;
+  --copro-font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 * { box-sizing: border-box; }
 .copro-studio { min-height:100dvh; background:var(--copro-bg); color:var(--copro-text); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; display:flex; flex-direction:column; overflow:hidden; }
@@ -81,59 +96,97 @@
 
 
 /* Donor-derived project/library language, rebuilt for CoPro */
-.copro-projects { min-height:100dvh; background:var(--copro-bg); color:var(--copro-text); padding-bottom:calc(78px + env(safe-area-inset-bottom)); }
-.copro-projects-hero { padding:max(18px,env(safe-area-inset-top)) 18px 24px; background:linear-gradient(145deg,#071216 0,#0a1118 55%,#0a0e13 100%); border-bottom:1px solid var(--copro-line); }
-.copro-projects-brand { display:flex; align-items:center; gap:10px; }
-.copro-projects-brand > div { display:flex; gap:6px; align-items:baseline; }
-.copro-projects-brand strong { font-size:14px; letter-spacing:.02em; }
-.copro-projects-brand span { color:var(--copro-muted); font-size:11px; }
-.copro-brand-mark { width:34px; height:34px; display:grid; place-items:center; border-radius:11px; background:var(--copro-accent); color:#041014!important; font-size:11px!important; font-weight:900; }
-.copro-projects-copy { margin-top:34px; max-width:560px; }
-.copro-eyebrow { margin:0; color:var(--copro-accent); font-weight:800; font-size:10px; letter-spacing:.16em; }
-.copro-projects-copy h1 { margin:8px 0; font-size:clamp(30px,8vw,52px); line-height:.98; letter-spacing:-.045em; }
-.copro-projects-copy > p:last-child { max-width:430px; margin:0; color:#a8b0bc; line-height:1.45; font-size:13px; }
-.copro-hero-actions { display:grid; grid-template-columns:1fr; gap:10px; margin-top:26px; }
-.copro-hero-action { min-height:74px; border:1px solid rgba(255,255,255,.09); border-radius:18px; background:#101820; color:#fff; display:flex; align-items:center; gap:13px; padding:13px; text-align:left; }
-.copro-hero-action:hover { background:#142029; }
-.copro-hero-action b { width:42px; height:42px; display:grid; place-items:center; border-radius:13px; background:var(--copro-accent); color:#061014; font-size:24px; font-weight:500; }
-.copro-hero-action:not(.copro-hero-action-primary) b { background:#1d2d34; color:var(--copro-accent); }
-.copro-hero-action span { display:grid; gap:3px; }
-.copro-hero-action strong { font-size:13px; }
-.copro-hero-action small { color:#89929f; font-size:10px; }
-.copro-projects-content { padding:22px 16px 28px; max-width:1100px; margin:0 auto; }
-.copro-projects-titlebar { display:flex; align-items:end; justify-content:space-between; gap:12px; }
-.copro-projects-titlebar h2 { margin:4px 0 0; font-size:24px; letter-spacing:-.03em; }
-.copro-project-search { min-width:0; width:42px; height:42px; border:1px solid var(--copro-line); border-radius:14px; background:var(--copro-surface); display:flex; align-items:center; padding:0 12px; overflow:hidden; transition:width .2s ease; }
-.copro-project-search:focus-within { width:min(52vw,300px); }
-.copro-project-search span { color:var(--copro-muted); font-size:18px; }
-.copro-project-search input { min-width:0; flex:1; border:0; outline:0; background:transparent; color:#fff; padding-left:8px; font:inherit; font-size:12px; }
-.copro-filter-row { display:flex; gap:7px; overflow-x:auto; padding:18px 0 14px; scrollbar-width:none; }
-.copro-filter-row::-webkit-scrollbar { display:none; }
-.copro-filter-row button { height:34px; flex:0 0 auto; border:1px solid var(--copro-line); border-radius:12px; background:transparent; color:#9299a6; padding:0 15px; font:inherit; font-size:11px; }
-.copro-filter-row button.is-active { color:#061014; background:var(--copro-accent); border-color:var(--copro-accent); font-weight:800; }
-.copro-project-list { display:grid; gap:8px; }
-.copro-project-card { width:100%; border:0; border-radius:15px; background:#11151b; color:inherit; padding:10px; display:grid; grid-template-columns:74px minmax(0,1fr) 30px; gap:12px; align-items:center; text-align:left; }
-.copro-project-card:hover { background:#151b22; }
-.copro-project-thumb { width:74px; aspect-ratio:1; border-radius:12px; display:grid; place-items:center; overflow:hidden; color:white; position:relative; }
-.copro-project-thumb:after { content:""; position:absolute; inset:0; background:linear-gradient(145deg,rgba(255,255,255,.24),transparent 45%); }
-.copro-project-thumb span { z-index:1; font-size:18px; }
-.copro-thumb-cyan { background:linear-gradient(145deg,#12434b,#0c242d); }
-.copro-thumb-violet { background:linear-gradient(145deg,#49366f,#211c33); }
-.copro-thumb-amber { background:linear-gradient(145deg,#704824,#2d2117); }
-.copro-thumb-slate { background:linear-gradient(145deg,#38404c,#171b21); }
-.copro-project-card-copy { min-width:0; display:grid; gap:4px; }
-.copro-project-card-copy strong { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px; }
-.copro-project-card-copy span { color:#9299a6; font-size:10px; }
-.copro-project-card-copy small { color:#68717e; font-size:9px; }
-.copro-project-card-tail { display:grid; justify-items:end; gap:8px; color:#6f7783; }
-.copro-real-progress { width:28px; height:3px; background:#27303a; border-radius:999px; overflow:hidden; }
-.copro-real-progress i { display:block; height:100%; background:var(--copro-accent); }
-.copro-mobile-nav { position:fixed; z-index:20; left:0; right:0; bottom:0; min-height:64px; padding:7px 8px max(7px,env(safe-area-inset-bottom)); display:grid; grid-template-columns:repeat(5,1fr); gap:2px; background:rgba(8,9,13,.96); border-top:1px solid var(--copro-line); backdrop-filter:blur(18px); }
-.copro-mobile-nav button { border:0; background:transparent; color:#6f7783; display:grid; place-items:center; gap:3px; font:inherit; font-size:9px; }
-.copro-mobile-nav button i { font-style:normal; font-size:19px; }
-.copro-mobile-nav button.is-active { color:#fff; }
-.copro-mobile-nav .copro-create-dock i { width:38px; height:38px; margin-top:-17px; border-radius:50%; background:var(--copro-accent); color:#061014; display:grid; place-items:center; font-size:22px; box-shadow:0 8px 26px rgba(0,214,211,.22); }
-
+/* CoPro / Media Production home — light workspace beneath one dark editorial hero. */
+.copro-projects{min-height:100dvh;background:var(--copro-home-canvas);color:var(--copro-home-text);font-family:var(--copro-font-ui);font-size:15px;line-height:1.45;display:flex;align-items:stretch}
+.copro-home-flow{width:100%;min-width:0}
+.copro-family-rail{display:none}
+.copro-projects-hero{position:relative;overflow:hidden;padding:22px 20px 25px;background:radial-gradient(ellipse at 95% -20%,rgba(34,211,197,.15),transparent 45%),linear-gradient(145deg,#00212b,#082c35 75%,#0a242d);color:#f7ffff}
+.copro-projects-hero:after{content:"";position:absolute;width:270px;height:270px;border:1px solid rgba(255,255,255,.055);border-radius:50%;top:-140px;right:-120px;pointer-events:none}
+.copro-projects-brand{display:flex;align-items:center;gap:11px;min-height:42px}
+.copro-brand-mark{display:grid;place-items:center;flex:none;width:40px;height:40px;background:var(--copro-accent);color:#052b32;border-radius:12px;overflow:hidden}
+.copro-brand-mark img{display:block;width:40px;height:40px;object-fit:cover}
+.copro-projects-brand>div{display:grid;gap:0}
+.copro-projects-brand strong{font-size:16px;line-height:1.1;font-weight:800;letter-spacing:-.03em}
+.copro-projects-brand>div span{font-size:12px;color:#a4c5ca}
+.copro-brand-edition{margin-left:auto;color:#91bec3;font-size:11px;font-weight:700;letter-spacing:.18em}
+.copro-projects-copy{margin-top:29px;max-width:660px}
+.copro-eyebrow{margin:0;color:var(--copro-accent-deep);font-size:12px;letter-spacing:.16em;font-weight:800;text-transform:uppercase}
+.copro-projects-hero .copro-eyebrow{color:#86d6d2}
+.copro-projects-copy h1{margin:9px 0 11px;font-size:clamp(35px,7vw,58px);font-style:normal;font-weight:850;line-height:1.04;letter-spacing:-.055em}
+.copro-projects-copy h1 em{font-style:normal;color:#34dec9}
+.copro-projects-copy>p:last-child{max-width:460px;color:#c3d7dc;margin:0;font-size:14px;line-height:1.55}
+.copro-hero-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;max-width:790px;margin-top:22px}
+.copro-hero-action{display:flex;align-items:center;gap:11px;min-width:0;min-height:82px;padding:12px 14px;border:1px solid rgba(201,251,245,.22);background:rgba(255,255,255,.055);color:#fff;text-align:left;border-radius:16px;font:inherit;cursor:pointer}
+.copro-hero-action-primary{background:#24cbbb;color:#05282c;border-color:#24cbbb}
+.copro-hero-action:hover{transform:translateY(-1px);border-color:#5aded1}
+.copro-action-icon{display:grid;place-items:center;width:46px;height:46px;flex:none;background:#0b3b43;border-radius:12px;color:#78e9e2}
+.copro-hero-action-primary .copro-action-icon{background:#073a3c;color:#b6fbf3}
+.copro-hero-action .copro-action-copy{min-width:0;display:grid;gap:2px;flex:1}
+.copro-hero-action strong{display:block;font-size:14px;font-weight:800}
+.copro-hero-action small{font-size:12px;color:#b6ced3;line-height:1.35}
+.copro-hero-action-primary small{color:#10474b}
+.copro-hero-action>svg:last-child{flex:none;opacity:.75}
+.copro-projects-content{padding:25px 17px calc(93px + env(safe-area-inset-bottom));max-width:1250px;margin:0 auto}
+.copro-projects-titlebar{display:flex;align-items:center;justify-content:space-between;gap:14px;scroll-margin-top:18px}
+.copro-projects-titlebar h2,.copro-section-heading h2{margin:4px 0 0;color:var(--copro-home-text);font-size:clamp(21px,2.1vw,25px);line-height:1.2;font-weight:800;letter-spacing:-.04em}
+.copro-project-search{flex:0 1 250px;display:flex;align-items:center;gap:9px;height:44px;min-width:44px;padding:0 13px;border:1px solid var(--copro-home-border);background:#fff;border-radius:12px;color:#6b7c86}
+.copro-project-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#162b35;font:inherit;font-size:13px}
+.copro-filter-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:17px 0 15px}
+.copro-filter-row button{min-height:44px;padding:0 17px;border:1px solid #d6dbe1;border-radius:12px;background:#fff;color:#48606c;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer}
+.copro-filter-row button.is-active{background:#103039;border-color:#103039;color:#e9fffa}
+.copro-project-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:12px}
+.copro-project-card{position:relative;min-width:0;display:flex;align-items:stretch;background:#fff;border:1px solid var(--copro-home-border);border-radius:16px;box-shadow:0 4px 18px rgba(21,42,58,.035)}
+.copro-project-card:hover{border-color:rgba(0,108,110,.30);box-shadow:0 7px 24px rgba(21,42,58,.08)}
+.copro-card-main{flex:1;min-width:0;display:flex;align-items:center;gap:13px;padding:11px;text-align:left;background:transparent;border:0;color:inherit;font:inherit;cursor:pointer}
+.copro-project-thumb{position:relative;flex:none;display:grid;place-items:center;width:72px;height:72px;border-radius:12px;color:#eafaf7;overflow:hidden}
+.copro-thumb-cyan{background:linear-gradient(135deg,#1a7284,#062c3e)}
+.copro-thumb-violet{background:linear-gradient(135deg,#7c659f,#353153)}
+.copro-thumb-amber{background:linear-gradient(135deg,#a2784c,#403129)}
+.copro-thumb-slate{background:linear-gradient(135deg,#405867,#1c2b39)}
+.copro-project-thumb:after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 0 0,rgba(255,255,255,.22),transparent 65%)}
+.copro-project-thumb svg{position:relative;z-index:1}
+.copro-project-card-copy{min-width:0;display:grid;gap:4px;flex:1}
+.copro-project-card-copy strong{font-size:15px;font-weight:800;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copro-project-card-copy span{color:var(--copro-home-muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copro-project-card-copy small{color:#637986;font-size:12px;display:flex;align-items:center;gap:6px}
+.copro-card-chevron{color:#70838e;flex:none}
+.copro-project-card-tail{position:relative;display:flex;align-items:flex-start;padding:8px 9px 8px 0}
+.copro-project-card-tail>button{width:36px;height:36px;display:grid;place-items:center;background:transparent;border:0;color:#4b6471;border-radius:10px;cursor:pointer}
+.copro-project-card-tail>button:hover{background:#e8edf2}
+.copro-card-menu{position:absolute;top:41px;right:7px;z-index:8;width:160px;background:#fff;padding:6px;border:1px solid #d3dbe1;border-radius:12px;box-shadow:0 10px 34px rgba(0,0,0,.16)}
+.copro-card-menu button{width:100%;min-height:40px;text-align:left;background:transparent;border:0;border-radius:8px;color:#1d3441;font:inherit;font-size:13px;padding:0 9px;cursor:pointer}
+.copro-card-menu button:hover{background:#eef3f4}
+.copro-project-empty{padding:32px 20px;text-align:center;border:1px dashed #c9d3d9;background:rgba(255,255,255,.6);border-radius:16px;display:grid;place-items:center;gap:9px}
+.copro-empty-art{position:relative;display:grid;place-items:center;width:76px;height:72px;margin:0 0 6px;border:1px solid #cadee0;border-radius:16px;background:#d7eaeb;color:#00787c}
+.copro-project-empty strong{font-size:16px}
+.copro-project-empty p{max-width:330px;margin:0;color:#546d79;font-size:13px;line-height:1.55}
+.copro-project-empty button{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-top:7px;padding:0 16px;border:0;border-radius:12px;background:var(--copro-accent-deep);color:#fff;font-weight:700;cursor:pointer}
+.copro-section-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:16px}
+.copro-section-heading>span{color:#657985;font-size:12px;text-align:right}
+.copro-creative-tools,.copro-examples{margin-top:36px}
+.copro-tool-catalog{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.copro-tool-catalog button{min-width:0;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:149px;padding:17px 8px 13px;border:1px solid var(--copro-home-border);border-radius:16px;background:#fff;color:#172c36;box-shadow:0 3px 18px rgba(23,47,63,.035);font:inherit;cursor:pointer}
+.copro-tool-catalog button:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(23,47,63,.09)}
+.copro-tool-catalog button:disabled{opacity:.4;cursor:default;transform:none}
+.copro-tool-tile-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:13px;background:#f0f3f6;color:#17313d;border:1px solid #e1e7e9}
+.copro-tool-tile-icon.is-primary{background:#26cabb;border-color:#26cabb;color:#062c32}
+.copro-tool-catalog strong{font-size:13px;font-weight:800}
+.copro-tool-catalog small{color:#586e78;font-size:12px;text-align:center;line-height:1.25}
+.copro-tools-guidance,.copro-sample-note{display:flex;align-items:center;gap:8px;margin:14px 0 0;color:#607481;font-size:12px;line-height:1.5}
+.copro-tools-guidance svg{flex:none;color:#087d78}
+.copro-example-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:10px}
+.copro-example-card{display:flex;align-items:center;gap:11px;padding:10px;background:rgba(255,255,255,.66);border:1px solid #d2dbe0;border-radius:16px;text-align:left;color:#152d37;cursor:pointer}
+.copro-example-card .copro-project-thumb{width:54px;height:54px}
+.copro-example-card>span:nth-child(2){flex:1;min-width:0;display:grid;gap:3px}
+.copro-example-card strong{font-size:13px}
+.copro-example-card small{font-size:12px;color:#607783}
+.copro-mobile-nav{position:fixed;z-index:15;inset:auto 0 0;display:grid;grid-template-columns:repeat(4,1fr);min-height:70px;padding:7px 8px max(7px,env(safe-area-inset-bottom));border-top:1px solid #1e4047;background:#09262f;backdrop-filter:blur(14px)}
+.copro-mobile-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;border-radius:12px;background:transparent;color:#a6c3c8;font:inherit;font-size:12px;cursor:pointer}
+.copro-mobile-nav button.is-active{color:#6ce0d5}
+.copro-mobile-nav .copro-create-dock{color:#0a3134}
+.copro-mobile-nav .copro-create-dock svg{width:39px;height:39px;margin-top:-13px;padding:8px;border-radius:12px;background:#26cbbb}
+.copro-mobile-nav .copro-create-dock span{color:#b4dce0}
+.copro-projects button:focus-visible,.copro-studio button:focus-visible,.copro-projects input:focus-visible{outline:2px solid var(--copro-accent-deep);outline-offset:3px}
 .copro-sheet-backdrop { position:fixed; z-index:100; inset:0; display:flex; align-items:flex-end; justify-content:center; background:rgba(0,0,0,.44); backdrop-filter:blur(2px); }
 .copro-sheet { width:100%; max-width:720px; border:1px solid rgba(255,255,255,.12); border-bottom:0; border-radius:24px 24px 0 0; background:#14171d; box-shadow:0 -20px 80px rgba(0,0,0,.5); display:flex; flex-direction:column; max-height:calc(100dvh - env(safe-area-inset-top) - 12px); }
 .copro-sheet-peek { height:22dvh; } .copro-sheet-compact { height:34dvh; } .copro-sheet-half { height:52dvh; } .copro-sheet-expanded { height:78dvh; } .copro-sheet-fullscreen { height:100dvh; border-radius:0; }
@@ -284,3 +337,185 @@
 .copro-preview-effect-warm { filter:sepia(.28) saturate(1.2) brightness(1.04); }
 
 .copro-transition-marker { position:absolute; z-index:6; right:-9px; top:50%; transform:translateY(-50%); width:18px; height:18px; border-radius:5px; display:grid; place-items:center; background:#f4f7f8; color:#11151a; box-shadow:0 2px 8px rgba(0,0,0,.36); font-size:10px; }
+
+/* Consistent home-responsive layout; editor remains dark and does not inherit the light canvas. */
+@media (min-width:760px){
+ .copro-family-rail{position:sticky;top:0;height:100dvh;flex:0 0 68px;display:flex;flex-direction:column;align-items:center;gap:11px;background:#07242e;border-right:1px solid rgba(255,255,255,.12);padding:22px 8px}
+ .copro-family-rail button{position:relative;width:48px;height:48px;display:grid;place-items:center;background:transparent;color:#91bbc0;border:0;border-radius:12px;cursor:pointer}
+ .copro-family-rail button.is-active,.copro-family-rail button:hover{background:#113d44;color:#7eefe1}
+ .copro-family-rail button.is-active:before{content:"";position:absolute;left:-8px;top:9px;bottom:9px;width:3px;border-radius:4px;background:#2bd6c7}
+ .copro-projects-hero{padding:28px clamp(30px,4vw,66px) 36px}
+ .copro-projects-copy{margin-top:43px}
+ .copro-projects-content{padding:32px clamp(28px,3vw,55px) 58px}
+ .copro-hero-actions{margin-top:30px}
+ .copro-mobile-nav{display:none}
+}
+@media (max-width:560px){
+ .copro-hero-actions{gap:8px}
+ .copro-hero-action{min-height:86px;padding:10px 9px;gap:8px;align-items:flex-start;flex-direction:column}
+ .copro-hero-action .copro-action-icon{width:39px;height:39px}
+ .copro-hero-action>svg:last-child{display:none}
+ .copro-hero-action strong{font-size:13px}
+ .copro-hero-action small{font-size:12px}
+ .copro-projects-content{padding-left:14px;padding-right:14px}
+ .copro-project-search{flex:0 0 44px;padding:0 10px;transition:flex-basis .2s ease}
+ .copro-project-search:focus-within{flex-basis:min(55vw,230px)}
+ .copro-project-search input{width:0}
+ .copro-project-search:focus-within input{width:100%}
+ .copro-project-card-copy span{white-space:normal}
+ .copro-tool-catalog{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .copro-tool-catalog button{min-height:129px}
+ .copro-creative-tools,.copro-examples{margin-top:27px}
+ .copro-section-heading>span{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+ .copro-hero-action,.copro-tool-catalog button{transform:none!important;transition:none!important}
+}
+
+/* ==========================================================================
+   CoPro continuous editing workspace v1 — no modal tool sheets.
+   A single tool inspector occupies real layout space next to the editor on
+   wide screens and inside it on compact screens. The preview remains visible.
+   ========================================================================== */
+body:has(.copro-studio) { margin:0; }
+.copro-studio {
+  height:100dvh;
+  min-height:0;
+  font-family:var(--copro-font-ui);
+  background:var(--copro-surface-0);
+}
+.copro-workspace { min-width:0; overflow:hidden; }
+.copro-editing-grid {
+  min-width:0;
+  min-height:0;
+  flex:1;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(145px,1fr) 42px minmax(120px,220px) 68px;
+  overflow:hidden;
+  background:var(--copro-surface-0);
+}
+.copro-editing-grid>.copro-preview-stage { grid-column:1; grid-row:1; min-width:0; min-height:0; overflow:hidden; }
+.copro-editing-grid>.copro-transport { grid-column:1;grid-row:2; height:100%;min-width:0; }
+.copro-editing-grid>.copro-timeline-shell { grid-column:1;grid-row:3;min-width:0;min-height:0;height:100%;overflow:hidden; }
+.copro-editing-grid>.copro-context-tools { grid-column:1;grid-row:4;min-width:0;min-height:0;overflow-x:auto;overflow-y:hidden; }
+.copro-inspector-slot { min-width:0;min-height:0;overflow:hidden;background:var(--copro-surface-1); }
+.copro-tool-panel { display:flex; flex-direction:column;height:100%;min-height:0;min-width:0;color:var(--copro-text-1);font-size:14px;line-height:1.45; }
+.copro-tool-panel-header { flex:none;min-height:79px;padding:15px 17px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--copro-line);background:var(--copro-surface-1); }
+.copro-panel-eyebrow { color:var(--copro-accent);font-size:12px;font-weight:750;letter-spacing:.12em; }
+.copro-tool-panel-header h2 { margin:2px 0 0;color:var(--copro-text-1);font-size:19px;line-height:1.25;font-weight:760;letter-spacing:-.025em; }
+.copro-panel-close { width:44px;height:44px;flex:none;border:1px solid var(--copro-line);border-radius:12px;display:grid;place-items:center;background:transparent;color:var(--copro-text-2);cursor:pointer; }
+.copro-panel-close:hover { background:var(--copro-surface-2);color:var(--copro-text-1); }
+.copro-tool-panel-body { padding:17px;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-color:#42535c transparent; }
+.copro-tool-intro { margin:0 0 19px;color:var(--copro-text-2);font-size:13px;line-height:1.55; }
+.copro-inspector-guidance { min-height:115px;padding:18px 15px;background:var(--copro-surface-2);border:1px dashed rgba(255,255,255,.15);border-radius:16px;display:grid;gap:7px;justify-items:start;align-content:center;color:var(--copro-text-2); }
+.copro-inspector-guidance strong { font-size:14px;color:var(--copro-text-1); }
+.copro-inspector-guidance p { margin:0;font-size:13px;line-height:1.5; }
+.copro-inspector-guidance svg { color:var(--copro-accent); }
+.copro-panel-note { color:var(--copro-text-3);font-size:12px;line-height:1.5;margin:11px 0 0; }
+.copro-tool-panel .copro-tool-control { gap:16px; }
+.copro-tool-panel .copro-text-field { color:var(--copro-text-2);font-size:13px;gap:9px; }
+.copro-tool-panel .copro-text-field textarea { font-size:14px;min-height:104px;padding:14px;resize:vertical;background:var(--copro-surface-0);line-height:1.5;border-radius:12px; }
+.copro-tool-panel input[type=range] { min-height:44px;cursor:pointer; }
+.copro-tool-panel .copro-preset-row button, .copro-tool-panel .copro-toggle-list button { min-height:44px;font-size:13px;padding:10px 12px;cursor:pointer; }
+.copro-tool-panel .copro-value-row { align-items:center;font-size:14px; }
+.copro-tool-panel .copro-value-row strong { color:var(--copro-accent);font-size:17px; }
+.copro-tool-panel .copro-inline-primary { display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:12px;font-size:14px;cursor:pointer; }
+.copro-tool-panel .copro-tool-grid { grid-template-columns:repeat(2,minmax(0,1fr));gap:10px; }
+.copro-tool-panel .copro-tool-grid button { min-height:100px;align-content:center;font-size:13px;cursor:pointer; }
+.copro-tool-panel .copro-tool-grid button span { font-size:13px; }
+.copro-number-control { display:grid;gap:8px;font-size:13px;color:var(--copro-text-2); }
+.copro-number-control input { width:100%;min-height:45px;border:1px solid var(--copro-line);border-radius:12px;padding:10px 13px;background:var(--copro-surface-0);color:var(--copro-text-1);font:inherit; }
+.copro-tool-panel .copro-media-shelf-item { grid-template-columns:46px minmax(0,1fr) auto;gap:8px; }
+.copro-tool-panel .copro-media-shelf-item>button { min-height:44px;min-width:48px;font-size:12px;cursor:pointer; }
+.copro-tool-panel .copro-file-picker { cursor:pointer;min-height:90px; }
+.copro-tool-panel .copro-file-picker strong { font-size:13px; }
+.copro-tool-panel .copro-file-picker span { font-size:12px; }
+.copro-tool-panel .copro-media-shelf-copy strong { font-size:12px; }
+.copro-tool-panel .copro-media-shelf-copy small { font-size:12px; }
+.copro-tool-panel .copro-media-empty { font-size:13px;line-height:1.5; }
+.copro-desktop-rail button.is-active { background:var(--copro-surface-2);color:var(--copro-accent);box-shadow:inset 3px 0 0 var(--copro-accent); }
+.copro-context-tools button.is-active { background:var(--copro-surface-2);color:var(--copro-accent); }
+.copro-context-tools button:disabled { opacity:.3;cursor:not-allowed; }
+.copro-deselect-button { color:var(--copro-accent)!important; }
+.copro-export-button { min-height:44px;border-radius:12px; }
+.copro-icon-button { min-width:44px;min-height:44px; }
+.copro-tool-panel :focus-visible, .copro-desktop-rail button:focus-visible, .copro-context-tools button:focus-visible {
+ outline:2px solid var(--copro-accent);outline-offset:2px;
+}
+
+@media (min-width:760px) {
+  .copro-editing-grid {
+    grid-template-rows:minmax(160px,1fr) 42px minmax(180px,33dvh) 66px;
+  }
+  .copro-editing-grid.has-inspector {
+    grid-template-columns:minmax(0,1fr) clamp(290px,27vw,370px);
+  }
+  .copro-editing-grid>.copro-inspector-slot {
+    grid-column:2;
+    grid-row:1/5;
+    border-left:1px solid var(--copro-line);
+  }
+  .copro-desktop-rail { flex:0 0 80px;min-width:80px;background:var(--copro-surface-1); }
+  .copro-desktop-rail button { min-height:65px;cursor:pointer; }
+  .copro-desktop-rail span { font-size:12px; }
+  .copro-editing-grid>.copro-preview-stage .copro-preview-device { max-width:100%;max-height:100%;width:min(100%,880px); }
+  .copro-tool-panel-header { min-height:85px; }
+  .copro-tool-panel-body { padding:18px; }
+}
+@media (max-width:759px) {
+  .copro-editing-grid.has-inspector {
+    grid-template-rows:minmax(128px,1fr) 40px minmax(190px,34dvh) minmax(114px,19dvh) 67px;
+  }
+  .copro-editing-grid>.copro-inspector-slot {
+    grid-column:1;grid-row:3;border-top:1px solid var(--copro-line);border-bottom:1px solid var(--copro-line);
+  }
+  .copro-editing-grid.has-inspector>.copro-timeline-shell { grid-row:4; }
+  .copro-editing-grid.has-inspector>.copro-context-tools { grid-row:5; }
+  .copro-preview-stage { padding:6px 10px; }
+  .copro-preview-device { height:100%;width:auto;max-width:100%;max-height:100%; }
+  .copro-tool-panel-header { min-height:54px;padding:8px 13px; }
+  .copro-tool-panel-header h2 { font-size:16px; }
+  .copro-tool-panel-body { padding:12px 14px; }
+  .copro-tool-intro { margin-bottom:11px;font-size:12px; }
+  .copro-tool-panel .copro-text-field textarea { min-height:70px; }
+  .copro-tool-panel .copro-tool-control { gap:9px; }
+  .copro-context-tools button { min-width:67px;flex-basis:67px; }
+  .copro-context-tools span { font-size:12px; }
+  .copro-preview-mark { font-size:clamp(17px,5vw,38px); }
+  .copro-transport { font-size:12px; }
+  .copro-context-tools .copro-deselect-button { min-width:60px;flex-basis:60px; }
+}
+@media (max-height:660px) and (max-width:759px) {
+  .copro-editing-grid.has-inspector {
+    grid-template-rows:minmax(80px,1fr) 36px minmax(155px,31dvh) minmax(105px,18dvh) 64px;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .copro-tool-panel *, .copro-desktop-rail *, .copro-context-tools * { scroll-behavior:auto;transition-duration:0.01ms!important; }
+}
+/* A single editing tool navigation on wide screens; compact mode retains the dock. */
+@media (min-width:760px) {
+  .copro-editing-grid {
+    grid-template-rows:minmax(160px,1fr) 42px minmax(180px,38dvh);
+  }
+  .copro-editing-grid>.copro-context-tools { display:none; }
+  .copro-editing-grid>.copro-inspector-slot { grid-row:1/4; }
+}
+@media (max-width:759px) {
+  .copro-tool-panel .copro-text-field textarea {
+    height:72px;
+    min-height:72px;
+    max-height:72px;
+    resize:none;
+  }
+  .copro-tool-panel .copro-panel-note { margin-top:7px; }
+  .copro-tool-panel-body { padding:9px 13px; }
+}
+@media (min-width:760px) {
+  .copro-desktop-rail { overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#3a545e transparent; }
+  .copro-rail-clip-tools { display:flex;flex-direction:column;gap:2px;margin-top:12px;padding-top:8px;border-top:1px solid var(--copro-line); }
+  .copro-rail-section-label { padding:7px 0;color:var(--copro-text-3);font-size:12px;font-weight:800;letter-spacing:.14em;text-align:center; }
+  .copro-rail-clip-tools button { min-height:54px;color:var(--copro-text-2); }
+  .copro-rail-clip-tools button.is-danger { color:var(--copro-danger); }
+}

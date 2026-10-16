@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { coproAppManifest } from "./app-manifest";
 import { createRoot } from "react-dom/client";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
-import { createCoProProject, createTrack, createClip } from "@inneranimalmedia/copro-project";
+import { createCoProProject, createTrack, createClip, serializeCoProProject } from "@inneranimalmedia/copro-project";
 import { BrowserLocalStorageProjectStore } from "@inneranimalmedia/copro-storage";
 import { extractBrowserAudioWaveform } from "@inneranimalmedia/copro-media";
 import {
@@ -22,13 +23,22 @@ type SessionMediaItem = CoProMediaShelfItem & {
 };
 
 const FIXTURE_PROJECTS: CoProProjectSummary[] = [
-  { id:"demo:weekend", title:"Weekend cut", subtitle:"Short-form video", kind:"video", status:"draft", durationMs:11_900, aspectRatio:"9:16", updatedAt:"2026-10-04T17:10:00Z", thumbnailTone:"cyan" },
-  { id:"demo:launch", title:"Launch teaser", subtitle:"Ready to export", kind:"video", status:"ready", durationMs:18_400, aspectRatio:"16:9", updatedAt:"2026-10-04T16:24:00Z", thumbnailTone:"violet" },
-  { id:"demo:caption", title:"Talking-head captions", subtitle:"Caption pass", kind:"video", status:"active", durationMs:64_000, aspectRatio:"9:16", updatedAt:"2026-10-03T22:20:00Z", thumbnailTone:"slate" },
-  { id:"demo:render", title:"Fall campaign cut", subtitle:"Rendering 68%", kind:"video", status:"rendering", progress:68, durationMs:31_000, aspectRatio:"4:5", updatedAt:"2026-10-03T19:15:00Z", thumbnailTone:"amber" },
-  { id:"demo:template", title:"Fast hook template", subtitle:"Reusable structure", kind:"template", status:"ready", aspectRatio:"9:16", updatedAt:"2026-10-02T14:00:00Z", thumbnailTone:"violet" },
-  { id:"demo:archive", title:"Product reel v1", subtitle:"Archived", kind:"video", status:"archived", durationMs:22_000, aspectRatio:"1:1", updatedAt:"2026-09-28T14:00:00Z", thumbnailTone:"slate" },
+  { id:"demo:weekend", title:"Weekend cut", subtitle:"Sample timeline · no video supplied", kind:"video", status:"draft", durationMs:11_900, aspectRatio:"9:16", updatedAt:"2026-10-04T17:10:00Z", thumbnailTone:"cyan", example:true },
+  { id:"demo:caption", title:"Caption layout", subtitle:"Sample tracks & captions", kind:"video", status:"draft", durationMs:11_900, aspectRatio:"9:16", updatedAt:"2026-10-04T17:10:00Z", thumbnailTone:"violet", example:true },
 ];
+
+function installCoProBrandIcons() {
+  if (typeof document === "undefined") return;
+  const base = coproAppManifest.iconBaseUrl;
+  if (!base) return;
+  const setLink = (rel: string, size: string) => {
+    let node = document.querySelector<HTMLLinkElement>('link[rel="' + rel + '"]');
+    if (!node) { node = document.createElement("link"); node.rel = rel; document.head.appendChild(node); }
+    node.href = base + "/" + size;
+  };
+  setLink("icon", "thumbnail");
+  setLink("apple-touch-icon", "medium");
+}
 
 const store = new BrowserLocalStorageProjectStore({ prefix:"agentsam.copro.project:" });
 
@@ -37,15 +47,15 @@ function makeDemoProject(id = "project:demo", title = "Weekend cut") {
 
   const video = createTrack({ id:"track:video", kind:"video", name:"Video" });
   video.clips.push(
-    createClip({ id:"clip:1", assetId:"asset:mountain", startUs:0, durationUs:4_500_000 }),
-    createClip({ id:"clip:2", assetId:"asset:street", startUs:4_500_000, durationUs:3_200_000 }),
-    createClip({ id:"clip:3", assetId:"asset:portrait", startUs:7_700_000, durationUs:4_200_000 })
+    createClip({ id:"clip:1", assetId:"sample:unavailable:mountain", startUs:0, durationUs:4_500_000 }),
+    createClip({ id:"clip:2", assetId:"sample:unavailable:street", startUs:4_500_000, durationUs:3_200_000 }),
+    createClip({ id:"clip:3", assetId:"sample:unavailable:portrait", startUs:7_700_000, durationUs:4_200_000 })
   );
 
   const audio = createTrack({ id:"track:audio", kind:"audio", name:"Audio" });
   audio.clips.push(createClip({
     id:"audio:music",
-    assetId:"asset:music-bed",
+    assetId:"sample:unavailable:music-bed",
     startUs:0,
     durationUs:11_900_000,
     volume:.72,
@@ -109,6 +119,10 @@ async function probeMediaDurationUs(file: File): Promise<number> {
   }
 }
 
+function mediaIdForFile(file: File) {
+  return "asset:" + file.name + ":" + file.lastModified + ":" + file.size;
+}
+
 function makeImportedProject(file: File) {
   const project = createCoProProject({
     id:"project:import:" + file.name + ":" + Date.now(),
@@ -120,7 +134,7 @@ function makeImportedProject(file: File) {
   const track = createTrack({ id:"track:" + kind, kind, name:kind === "audio" ? "Audio" : "Video" });
   track.clips.push(createClip({
     id:"clip:imported",
-    assetId:"asset:" + file.name,
+    assetId:mediaIdForFile(file),
     startUs:0,
     durationUs:8_000_000,
   }));
@@ -141,9 +155,29 @@ function App() {
   const [restored, setRestored] = useState(false);
   const [mediaItems, setMediaItems] = useState<SessionMediaItem[]>([]);
 
-  const projects = useMemo(() => FIXTURE_PROJECTS, []);
+  const [savedProjects, setSavedProjects] = useState<CoProProjectSummary[]>([]);
+  const [initialTool, setInitialTool] = useState<"text" | "captions" | null>(null);
+
+  async function refreshSavedProjects() {
+    const saved = await store.list();
+    const summaries: CoProProjectSummary[] = saved.map((entry:any) => {
+      const durationUs = Math.max(0, ...entry.tracks.flatMap((track:any) =>
+        track.clips.map((clip:any) => clip.startUs + clip.durationUs)));
+      return {
+        id:entry.id, title:entry.title, kind:"video" as const, status:"draft" as const,
+        subtitle:"Saved in this browser", durationMs:Math.round(durationUs/1000),
+        aspectRatio:"9:16", updatedAt:String(entry.updatedAt || entry.createdAt || new Date().toISOString()),
+        thumbnailTone:"cyan" as const,
+      };
+    });
+    setSavedProjects(summaries.sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)));
+  }
+
+  const projects = useMemo(() => [...savedProjects, ...FIXTURE_PROJECTS], [savedProjects]);
 
   useEffect(() => {
+    installCoProBrandIcons();
+    void refreshSavedProjects();
     let cancelled = false;
     void store.loadRecent().then((recent) => {
       if (cancelled || !recent) {
@@ -161,8 +195,10 @@ function App() {
   useEffect(() => {
     if (!restored) return;
     const timer = window.setTimeout(() => {
-      void store.save(project);
-    }, 140);
+      void store.save(project).then(() => refreshSavedProjects()).catch((error) => {
+        console.error("CoPro local save failed", error);
+      });
+    }, 180);
     return () => window.clearTimeout(timer);
   }, [project, restored]);
 
@@ -172,24 +208,40 @@ function App() {
     setSelectedClipId(selectedId ?? next.tracks.flatMap((track:any) => track.clips)[0]?.id ?? null);
     setPlayheadUs(0);
     setProjectSeed((value) => value + 1);
-    void store.save(next);
+    void store.save(next).then(() => refreshSavedProjects());
   }
 
-  function openProject(id: string) {
+  async function openProject(id: string) {
     const summary = projects.find((item) => item.id === id);
-    installProject(makeDemoProject("project:" + id, summary?.title ?? "CoPro project"));
+    const saved = summary?.example ? null : await store.load(id);
+    if (!summary?.example && !saved) return;
+    const next = saved ?? makeDemoProject("project:example-copy:" + Date.now(), (summary?.title ?? "CoPro") + " (example)");
+    installProject(next);
+    setInitialTool(null);
     setPreviewSrc(null);
     setPreviewKind(null);
     setScreen("editor");
   }
 
-  function createBlank() {
+  async function renameProject(id: string, title: string) {
+    const saved = await store.load(id);
+    if (!saved) return;
+    await store.save({ ...saved, title });
+    if (project.id === id) {
+      sessionRef.current = new CoProEditorSession({ ...saved, title });
+      setProject(sessionRef.current.project);
+    }
+    await refreshSavedProjects();
+  }
+
+  function createBlank(tool: "text" | "captions" | null = null) {
     const next = createCoProProject({ id:"project:new:" + Date.now(), title:"Untitled project" });
     next.tracks.push(createTrack({ id:"track:video", kind:"video", name:"Video" }));
     installProject(next, null);
     setPreviewSrc(null);
     setPreviewKind(null);
     setCreateOpen(false);
+    setInitialTool(tool);
     setScreen("editor");
   }
 
@@ -203,6 +255,7 @@ function App() {
     setPreviewSrc(url);
     setPreviewKind(file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : null);
     setCreateOpen(false);
+    setInitialTool(null);
     setScreen("editor");
   }
 
@@ -213,7 +266,7 @@ function App() {
       file.type.startsWith("image/") ? "image" :
       "video";
 
-    const id = "asset:" + file.name + ":" + file.lastModified + ":" + file.size;
+    const id = mediaIdForFile(file);
     const existing = mediaItems.find((item) => item.id === id);
     if (existing) return existing;
 
@@ -293,6 +346,19 @@ function App() {
     const session = sessionRef.current;
 
     if (action.type === "back") { setScreen("projects"); return; }
+    if (action.type === "export-project") {
+      const json = serializeCoProProject(session.project);
+      const blob = new Blob([json], { type:"application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = (session.project.title || "copro-project").replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-|-$/g,"").slice(0,80) + ".copro.json";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return;
+    }
     if (action.type === "undo") { setProject(session.undo()); return; }
     if (action.type === "redo") { setProject(session.redo()); return; }
     if (action.type === "move") { setProject(session.execute({ type:"clip.move", payload:{ clipId:action.clipId, startUs:action.startUs } })); return; }
@@ -386,10 +452,13 @@ function App() {
         onOpenProject={openProject}
         onCreate={() => setCreateOpen(true)}
         onImport={() => setCreateOpen(true)}
+        onOpenTool={(tool) => createBlank(tool)}
+        onRenameProject={(id,title) => void renameProject(id,title)}
+        appIconUrl={coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
       />
       <CoProSheet open={createOpen} title="Create" detent="half" onClose={() => setCreateOpen(false)}>
         <div className="copro-create-options">
-          <button onClick={createBlank}><i>＋</i><span><strong>New video</strong><small>Blank timeline</small></span></button>
+          <button onClick={() => createBlank()}><i>＋</i><span><strong>New video</strong><small>Blank timeline</small></span></button>
           <label className="copro-create-option-file">
             <input
               type="file"
@@ -410,6 +479,7 @@ function App() {
 
   return <CoProStudio
     key={projectSeed}
+    initialTool={initialTool}
     project={project as any}
     projectTitle={project.title}
     playheadUs={playheadUs}
