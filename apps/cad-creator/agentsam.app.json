@@ -4,7 +4,7 @@
   "name": "AgentSam CAD Creator",
   "kind": "app",
   "package": "@inneranimalmedia/agentsam-cad-creator",
-  "version": "0.1.0",
+  "version": "2.6.12",
   "entrypoints": {
     "frontend": "./frontend",
     "backend": "./backend",
@@ -42,12 +42,26 @@
     }
   },
   "routes": {
-    "app.authenticated": { "path": "/cad", "auth": "required", "spa": true },
-    "app.home": { "path": "/cad" },
-    "identity.login": { "path": "/auth/login" },
-    "identity.recovery": { "path": "/auth/login" },
-    "identity.oauth.start": { "path": "/api/oauth/:provider/start" },
-    "identity.oauth.callback": { "path": "/api/oauth/:provider/callback" },
+    "app.authenticated": {
+      "path": "/cad",
+      "auth": "required",
+      "spa": true
+    },
+    "app.home": {
+      "path": "/cad"
+    },
+    "identity.login": {
+      "path": "/auth/login"
+    },
+    "identity.recovery": {
+      "path": "/auth/login"
+    },
+    "identity.oauth.start": {
+      "path": "/api/oauth/:provider/start"
+    },
+    "identity.oauth.callback": {
+      "path": "/api/oauth/:provider/callback"
+    },
     "entry": "/cad",
     "mounts": [
       {
@@ -68,23 +82,32 @@
     "local_preview": "ready",
     "source_scaffold": "ready",
     "cloudflare": "scaffold",
-    "github": "source-ready"
+    "github": "source-ready",
+    "native_cad": "discover_on_host",
+    "docker_cad": "opt_in_service",
+    "hosted_worker_native": "unsupported"
   },
   "commands": {
     "preview": "agentsam-cad-creator",
-    "doctor": "agentsam-cad-creator doctor",
+    "doctor": "agentsam-cad-creator doctor [--json]",
     "scaffold": "agentsam-cad-creator scaffold <directory>",
-    "info": "agentsam-cad-creator info"
+    "info": "agentsam-cad-creator info",
+    "setup": "agentsam-cad-creator setup [--docker]"
   },
   "secrets": {
     "server_only": [
-      "GEMINI_API_KEY"
-    ]
+      "GEMINI_API_KEY",
+      "MESHY_API_KEY"
+    ],
+    "note": "Optional provider credentials; native CAD and deterministic robotics do not require an LLM key."
   },
   "bin": "bin/agentsam-cad-creator.mjs",
   "install": {
     "command": "npm install @inneranimalmedia/agentsam-cad-creator",
     "selector": "cad-creator",
-    "paths": ["/install/cad", "/install/cad-creator"]
+    "paths": [
+      "/install/cad",
+      "/install/cad-creator"
+    ]
   }
 }

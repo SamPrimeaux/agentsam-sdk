@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 
 const execFileAsync = promisify(execFile);
 
@@ -463,7 +464,24 @@ export function probeMujoco() {
 export async function probeDockerServiceHealth(options = {}) {
   const env = options.env || process.env;
   const url = (options.serviceUrl || env.AGENTSAM_CAD_SERVICE_URL || 'http://127.0.0.1:8793').replace(/\/+$/, '');
-  const token = options.token || env.AGENTSAM_CAD_TOKEN || null;
+  let token = options.token || env.AGENTSAM_CAD_TOKEN || null;
+  if (!token) {
+    const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const candidates = [
+      path.join(process.cwd(), '.agentsam/docker/cad/agentsam-cad/service.token'),
+      path.join(packageRoot, '.agentsam/docker/cad/agentsam-cad/service.token'),
+      path.join(os.homedir(), '.agentsam/docker/cad/agentsam-cad/service.token'),
+    ];
+    for (const candidate of candidates) {
+      if (!isFile(candidate)) continue;
+      try {
+        token = fs.readFileSync(candidate, 'utf8').trim() || null;
+        if (token) break;
+      } catch {
+        // Missing token is a nonfatal, honest service probe failure.
+      }
+    }
+  }
   const timeoutMs = options.timeoutMs ?? 2000;
 
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -492,6 +510,46 @@ export async function probeDockerServiceHealth(options = {}) {
     if (timer) clearTimeout(timer);
     return { available: false, url, error: err.message };
   }
+}
+
+/**
+ * Discovery is read-only: suggesting a Docker lane never starts containers.
+ * Only setup may launch a service, after explicit user confirmation.
+ */
+export async function probeDockerDaemon({ env = process.env, timeoutMs = 3500 } = {}) {
+  const configured = String(env.AGENTSAM_DOCKER_BIN || '').trim();
+  const docker = configured || pathCandidates(['docker'], env.PATH, process.platform)
+    .find(candidate => isFile(candidate)) || null;
+  if (!docker) return { available: false, reason: 'docker_cli_not_found' };
+  try {
+    const { stdout } = await execFileAsync(docker, ['info', '--format', '{{.ServerVersion}}'], {
+      timeout: timeoutMs,
+      maxBuffer: 128 * 1024,
+    });
+    return { available: true, version: String(stdout).trim() || null };
+  } catch {
+    return { available: false, reason: 'docker_daemon_unavailable' };
+  }
+}
+
+export function getCadRecovery(tool, platform = process.platform) {
+  return {
+    status: 'action_required',
+    requires_approval: true,
+    attempted_lanes: ['native', 'docker_service'],
+    tool,
+    options: [
+      { id: 'rescan_native', label: 'Recheck local CAD installation', command: 'agentsam-cad-creator setup' },
+      {
+        id: 'start_docker',
+        label: 'Use isolated Docker CAD service (requires approval)',
+        command: 'agentsam-cad-creator setup --docker',
+      },
+      ...(getInstallGuidance(tool, platform)
+        ? [{ id: 'install_native', label: 'Install a native CAD engine', ...getInstallGuidance(tool, platform) }]
+        : []),
+    ],
+  };
 }
 
 export async function probeAllCadTools(env = process.env, platform = process.platform, cache = true) {
@@ -537,6 +595,10 @@ export async function probeAllCadTools(env = process.env, platform = process.pla
     } catch {
       // Docker service check is best-effort
     }
+  }
+
+  for (const tool of [openscad, freecad, blender]) {
+    if (!tool.available) tool.recovery = getCadRecovery(tool.tool, platform);
   }
 
   const meshy = probeMeshy(env);

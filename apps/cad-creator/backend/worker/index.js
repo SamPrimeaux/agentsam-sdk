@@ -25,6 +25,29 @@ export default {
     if (request.method === "GET" && (url.pathname === "/health" || url.pathname === "/api/health")) {
       return json({ ok: true, app: APP.id, runtime: "cloudflare-worker-scaffold" });
     }
+    if (request.method === "GET" && url.pathname === "/api/cad/health") {
+      return json({
+        ok: true,
+        app: APP.id,
+        runtime: "cloudflare_worker",
+        cad_execution: "requires_local_or_remote_host",
+        native_processes: false,
+        docker_service: "not_probed_by_worker",
+        recovery: {
+          status: "host_required",
+          action: "Connect an authorized local CAD host or use agentsam-cad-creator setup --docker on that host",
+          requires_approval: true,
+        },
+      });
+    }
+    if (request.method === "POST" && url.pathname === "/api/cad/execute") {
+      return json({
+        ok: false,
+        error: "cad_host_required",
+        message: "Cloudflare Worker cannot launch OpenSCAD on a user's Mac. Use an authorized CAD runtime host.",
+        recovery: { status: "host_required", requires_approval: true },
+      }, 501);
+    }
     if (request.method === "GET" && url.pathname === "/api/robotics/capabilities") {
       return json(getRoboticsPerceptionCapabilities(env));
     }

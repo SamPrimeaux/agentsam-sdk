@@ -43,6 +43,15 @@ export interface OpenScadExecuteOptions {
 
 export interface OpenScadExecuteResult {
   success: boolean;
+  verified?: boolean;
+  previewOnly?: boolean;
+  error?: string;
+  recovery?: {
+    status: 'action_required';
+    requires_approval: boolean;
+    attempted_lanes: string[];
+    options: Array<{ id: string; command: string }>;
+  };
   engine: 'openscad-native' | 'openscad-docker' | 'procedural-fallback';
   artifactContent: string;
   mimeType: string;
@@ -177,6 +186,15 @@ export async function executeOpenScadCompiler({
     verified: false,
     previewOnly: true,
     error: 'openscad_native_unavailable: no native OpenSCAD binary or Docker route; preview mesh is NOT a verified OpenSCAD compilation',
+    recovery: {
+      status: 'action_required',
+      requires_approval: true,
+      attempted_lanes: ['native', 'docker_service'],
+      options: [
+        { id: 'rescan_native', command: 'agentsam-cad-creator setup' },
+        { id: 'start_docker', command: 'agentsam-cad-creator setup --docker' },
+      ],
+    },
     engine: 'procedural-fallback',
     artifactContent,
     mimeType: format === 'stl' ? 'model/stl' : format === 'dxf' ? 'image/vnd.dxf' : 'text/plain',

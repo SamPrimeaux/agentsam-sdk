@@ -182,6 +182,15 @@ export async function openScadCompile({
     verified: false,
     previewOnly: true,
     error: 'openscad_native_unavailable: no native OpenSCAD binary or Docker route; preview mesh is NOT a verified OpenSCAD compilation',
+    recovery: {
+      status: 'action_required',
+      requires_approval: true,
+      attempted_lanes: ['native', 'docker_service'],
+      options: [
+        { id: 'rescan_native', command: 'agentsam-cad-creator setup' },
+        { id: 'start_docker', command: 'agentsam-cad-creator setup --docker' },
+      ],
+    },
     engine: 'procedural-fallback',
     binary: null,
     outputFormat: format,
