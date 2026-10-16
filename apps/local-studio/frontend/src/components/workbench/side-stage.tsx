@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AgentConversationSurface, AgentRuntimeField } from "@inneranimalmedia/agentsam-workbench/agent";
+import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
 import { Box, Database, FileCode, Globe, Layers, Plus, SquareTerminal, Target, Upload, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,6 @@ import { cn } from "@/lib/utils";
 import { useActiveSideTab, useWorkStore } from "@/lib/work/store";
 import { StudioMark } from "@/components/mark";
 import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistantContext";
-import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
 import { SIDE_STAGE_ACTIONS } from "../../../agentsam/side-stage-actions";
 
 function TabIcon({ kind }: { kind: string }) {
@@ -272,15 +271,6 @@ function CoworkerChat({ tabId }: { tabId: string }) {
       ) : null}
       <AgentConversationSurface
         empty={empty}
-        runtime={
-          <AgentRuntimeField
-            controller={localStudioRuntimeVisuals.controllerFor(tab.id)}
-            blocking={false}
-            passiveOpacity={0.56}
-            style={{ zIndex: 1 }}
-            narrationStyle={{ bottom: 92, left: 16 }}
-          />
-        }
         thread={<MessageList messages={tab.messages} trailId={parent?.id} streaming={streaming} />}
         emptyState={
           <div className="flex flex-col items-center justify-center px-6 text-center">
