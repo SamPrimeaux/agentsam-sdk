@@ -1,17 +1,17 @@
+#include <BRepAlgoAPI_Cut.hxx>
 #include <BRepCheck_Analyzer.hxx>
 #include <BRepGProp.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <GProp_GProps.hxx>
 #include <IFSelect_ReturnStatus.hxx>
 #include <STEPControl_Reader.hxx>
-#include <BRepAlgoAPI_Cut.hxx>
 #include <STEPControl_Writer.hxx>
 #include <Standard_Version.hxx>
 #include <TopoDS_Shape.hxx>
 #include <cmath>
 #include <cstdlib>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 
