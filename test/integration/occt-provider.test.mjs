@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict';
-import { createOcctNativeProvider } from '../src/lib/cad/occt-native-provider.mjs';
+import { createOcctNativeProvider } from '../../src/lib/cad/occt-native-provider.mjs';
 test('OCCT unavailable on this machine fails closed, never fake-ready', async () => {
   const p = createOcctNativeProvider({ binary: '/nonexistent/agentsam-occt' });
   const d = await p.doctor();

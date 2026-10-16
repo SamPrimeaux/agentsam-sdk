@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mergeBoundWorkersAIInventory } from "../backend/worker/bound-workers-inventory.js";
-import { WORKERS_AI_CURATED_MODEL_IDS } from "../../../src/models/inventory-core.js";
+import { WORKERS_AI_CURATED_MODEL_IDS } from "../../../protocol/models/workers-ai-curated.mjs";
 
 const binding = { async run() { return { response: "ok" }; } };
 

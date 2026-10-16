@@ -1,4 +1,4 @@
-import { WORKERS_AI_CURATED_MODEL_IDS } from "../../../../src/models/inventory-core.js";
+import { WORKERS_AI_CURATED_MODEL_IDS } from "../../../../protocol/models/workers-ai-curated.mjs";
 
 /**
  * Advertise the host's Workers AI binding independently of account BYOK.

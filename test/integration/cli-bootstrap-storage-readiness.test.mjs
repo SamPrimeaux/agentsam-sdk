@@ -23,7 +23,11 @@ test('core SAM import is safe when CMS module cannot be required',()=>{
     };
     (async()=>{
       const {createSamOS}=await import('./src/sam/os.js');
-      if(createSamOS({core:true}).status().core_count!==10)throw Error('core SAM not ready');
+      const core=createSamOS({core:true});
+      const ids=core.list().map(x=>x.id);
+      if(core.status().core_count!==ids.length ||
+        !['terminal.exec','security.scan','repository.inspect'].every(id=>ids.includes(id)))
+        throw Error('core SAM not ready');
       // PR #227 now imports the bundled CMS implementation from SDK source,
       // so core startup must be independent of external workspace links.
       process.stdout.write('core_ready_without_external_cms_link');

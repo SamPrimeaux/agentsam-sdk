@@ -12,16 +12,8 @@ export const INVENTORY_API_PROVIDERS = Object.freeze([
   { id: 'cloudflare', label: 'Cloudflare', service: 'cloudflare', env: 'CLOUDFLARE_API_TOKEN' },
 ]);
 
-export const WORKERS_AI_CURATED_MODEL_IDS = Object.freeze([
-  '@cf/qwen/qwen2.5-coder-32b-instruct',
-  '@cf/moonshotai/kimi-k2.7-code',
-  '@cf/zai-org/glm-5.3',
-  '@cf/deepseek-ai/deepseek-v4-pro-0813',
-  '@cf/deepseek-ai/deepseek-v4-flash-0731',
-  '@cf/qwen/qwen3.8-27b',
-  '@cf/openai/gpt-oss-120b',
-  '@cf/meta/llama-4-scout-17b-16e-instruct',
-]);
+import { WORKERS_AI_CURATED_MODEL_IDS } from '../../protocol/models/workers-ai-curated.mjs';
+export { WORKERS_AI_CURATED_MODEL_IDS } from '../../protocol/models/workers-ai-curated.mjs';
 
 const CURATED = new Set(WORKERS_AI_CURATED_MODEL_IDS);
 export const PROVIDER_MODEL_SNAPSHOT_SCHEMA = 'agentsam.provider-model-snapshot.v1';
