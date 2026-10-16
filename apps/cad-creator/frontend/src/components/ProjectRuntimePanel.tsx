@@ -1,18 +1,18 @@
 import React, {useState,useEffect,useRef} from 'react';
 import type {DesignProject} from '@inneranimalmedia/agentsam-cad-shared';
-export function ProjectRuntimePanel({project,onLoad,readOnly=false}:{project:DesignProject;onLoad:(p:DesignProject)=>void;readOnly?:boolean}){
+export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRevision}:{project:DesignProject;onLoad:(p:DesignProject)=>void;readOnly?:boolean;onVerifiedRevision?:(revision:number|null,projectId:string)=>void}){
  const [revision,setRevision]=useState(0),[status,setStatus]=useState('Unsaved'),[busy,setBusy]=useState(false),[loadId,setLoadId]=useState(project.id),[restoreRevision,setRestoreRevision]=useState('1');
  const [artifact,setArtifact]=useState('');
  const current=useRef(project),synced=useRef(''),adoptedId=useRef('');
  current.current=project;
  async function call(name:string,args:any){const res=await fetch('/api/cad/project/tools/'+name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(args)});const body=await res.json();if(!res.ok||!body.ok)throw new Error(body.error||'Project operation failed');return body.result;}
- function adopt(row:any){synced.current=JSON.stringify(row.project);adoptedId.current=row.project.id;setRevision(row.revision);onLoad(row.project);}
+ function adopt(row:any){synced.current=JSON.stringify(row.project);adoptedId.current=row.project.id;setRevision(row.revision);onVerifiedRevision?.(row.revision,row.project.id);onLoad(row.project);}
  useEffect(()=>{let cancelled=false;setLoadId(project.id);setArtifact('');
   if(adoptedId.current===project.id)return;
-  setRevision(0);synced.current='';
+  setRevision(0);onVerifiedRevision?.(null,project.id);synced.current='';
   call('design_project_get',{project_id:project.id}).then(row=>{
    if(cancelled)return;
-   if(JSON.stringify(current.current)===JSON.stringify(row.project)){synced.current=JSON.stringify(row.project);setRevision(row.revision);setStatus('Revision '+row.revision);}
+   if(JSON.stringify(current.current)===JSON.stringify(row.project)){synced.current=JSON.stringify(row.project);setRevision(row.revision);onVerifiedRevision?.(row.revision,row.project.id);setStatus('Revision '+row.revision);}
    else setStatus('A saved project exists. Open saved before overwriting it.');
   }).catch(()=>{if(!cancelled)setStatus('Unsaved');});return()=>{cancelled=true;};
  },[project.id]);
@@ -20,7 +20,7 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false}:{project:Des
   const row=JSON.parse(e.data);if(row.project.id!==current.current.id)return;
   const next=JSON.stringify(row.project),local=JSON.stringify(current.current);
   if(local!==next&&local!==synced.current){setStatus('External revision '+row.revision+' available. Local edits retained; reopen to reconcile.');return;}
-  synced.current=next;adoptedId.current=row.project.id;setRevision(row.revision);onLoad(row.project);setStatus('Revision '+row.revision);
+  synced.current=next;adoptedId.current=row.project.id;setRevision(row.revision);onVerifiedRevision?.(row.revision,row.project.id);onLoad(row.project);setStatus('Revision '+row.revision);
  };return()=>events.close();},[onLoad]);
  async function run(action:string){if(readOnly&&action!=='load')return;setBusy(true);setArtifact('');try{
   if(action==='load'){const r=await call('design_project_get',{project_id:loadId});adopt(r);setStatus('Loaded revision '+r.revision);}

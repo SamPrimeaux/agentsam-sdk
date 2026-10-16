@@ -32,7 +32,7 @@ import { CadCreatorShell } from './CadCreatorShell';
 import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
 import { installCadPreviewGuestBridge } from '../lib/agentsam-preview-bridge';
-import { buildSelectionContext, type CadSelectionContext } from '../lib/cad/selection';
+import { buildSelectionContext, verifiedSelectionRevision, type CadSelectionContext } from '../lib/cad/selection';
 import { useCadTools } from '../lib/execution/useCadTools';
 import {
   WORKSPACE_REGISTRY,
@@ -82,12 +82,17 @@ export function CadCreatorApp({
   const [redoStack, setRedoStack] = useState<ProjectState[]>([]);
 
   // 2. Workspace & Layout State
-  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(initialWorkspace);
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(initialWorkspace === 'parametric' || initialWorkspace === 'render' ? 'model' : initialWorkspace);
   const [planLayout, setPlanLayout] = useState<'2d' | 'split' | 'sketch'>('split');
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [selectedFurnitureType, setSelectedFurnitureType] = useState<string | null>(null);
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
   const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
+  const [verifiedProjectRevision, setVerifiedProjectRevision] = useState<{projectId:string;revision:number}|null>(null);
+  const [modelModule, setModelModule] = useState<'parametric'|null>(initialWorkspace === 'parametric' ? 'parametric' : null);
+  const onVerifiedRevision = useCallback((revision:number|null, projectId:string) => {
+    setVerifiedProjectRevision(revision === null ? null : {projectId,revision});
+  }, []);
   const bridgeRef = React.useRef<{ post: (m: never) => void; dispose: () => void } | null>(null);
   const [chromeFolded, setChromeFolded] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -164,7 +169,16 @@ export function CadCreatorApp({
     if (wsId === 'robotics') {
       preloadRoboticsWorkspace();
     }
-    setActiveWorkspace(wsId);
+    if (wsId === 'parametric') {
+      setModelModule('parametric');
+      setActiveWorkspace('model');
+    } else if (wsId === 'render') {
+      setActiveWorkspace('model');
+      setIsImageGenModalOpen(true);
+    } else {
+      setModelModule(null);
+      setActiveWorkspace(wsId);
+    }
   };
 
   // Initialize WebSocket Collaboration
@@ -229,6 +243,7 @@ export function CadCreatorApp({
       return;
     }
 
+    setVerifiedProjectRevision(null);
     setProject((prev) => {
       const next = updater(prev);
       setHistory((h) => [...h.slice(-20), prev]);
@@ -269,7 +284,7 @@ export function CadCreatorApp({
           <button type="button" onClick={() => setChromeFolded(false)} aria-label="Show workspace controls" className="rounded bg-slate-800 px-2 py-0.5 hover:bg-slate-700">Show controls</button>
         </div>
       ) : (<>
-      <ProjectRuntimePanel project={project} onLoad={setProject} readOnly={isViewer} />
+      <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer} />
       <CadCreatorShell
         activeWorkspace={activeWorkspace}
         onSelectWorkspace={handleSelectWorkspace}
@@ -374,6 +389,14 @@ export function CadCreatorApp({
                 onClick={() => setShowBimStarters((previous) => !previous)}
                 className="rounded bg-amber-500/15 px-2 py-1 text-[11px] text-amber-300 hover:bg-amber-500/25"
               >BIM Starters</button>
+              <button
+                type="button"
+                onClick={() => setModelModule((m) => m === 'parametric' ? null : 'parametric')}
+                aria-expanded={modelModule === 'parametric'}
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px]"
+              >Parametric tools</button>
+              <button type="button" onClick={() => setIsImageGenModalOpen(true)}
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px]">Render</button>
               <button
                 type="button"
                 onClick={() => setIsTemplateLibraryOpen(true)}
@@ -484,7 +507,12 @@ export function CadCreatorApp({
                     userRole={currentUser.role}
                     onSelectElement={(type, id) => {
                       try {
-                        const sel = buildSelectionContext({ workspace: activeWorkspace, projectId: (project as any).id || 'tpl_modern_villa', revision: 1, objectId: id, objectType: type, label: `${type} ${id}` });
+                        const revision = verifiedSelectionRevision(project.id, verifiedProjectRevision);
+                        if (revision === null) {
+                          setCadSelection(null);
+                          return; // Unsaved drafts never impersonate revision 1.
+                        }
+                        const sel = buildSelectionContext({ workspace: activeWorkspace, projectId: project.id, revision, objectId: id, objectType: type, label: `${type} ${id}` });
                         setCadSelection(sel);
                         bridgeRef.current?.post({ type: 'cad.selection', selection: sel } as never);
                       } catch { /* selection without real id supplies no context */ }
@@ -527,9 +555,21 @@ export function CadCreatorApp({
                   setIsImageGenModalOpen(true);
                 }}
               />}
+              {modelModule === 'parametric' && (
+                <aside className="absolute right-0 top-0 bottom-0 z-20 w-full max-w-[440px] border-l border-white/10 bg-slate-950/95 shadow-2xl" aria-label="Parametric tools">
+                  <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs">
+                    <span className="font-semibold">Parametric tools · current model</span>
+                    <button type="button" className="rounded px-2 py-1 hover:bg-white/10" onClick={() => setModelModule(null)} aria-label="Close parametric tools">Close</button>
+                  </div>
+                  <div className="h-[calc(100%-38px)] overflow-auto">
+                    <ParametricEditor project={project} onUpdateProject={(next) => updateProject(() => next)} canEdit={!isViewer} />
+                  </div>
+                </aside>
+              )}
             </div>
           )}
 
+          {/* Legacy panel routes remain registered for existing links; primary navigation has three destinations. */}
           {/* WORKSPACE 3: PARAMETRIC */}
           {activeWorkspace === 'parametric' && (
             <div className="w-full h-full relative">
@@ -564,9 +604,9 @@ export function CadCreatorApp({
                       showDiagnostics={showRoboticsDiagnostics}
                       setShowDiagnostics={setShowRoboticsDiagnostics}
                       onOpenToolIntegration={(toolId) => {
-                        if (toolId === 'openscad') setActiveWorkspace('parametric');
-                        else if (toolId === 'blender' || toolId === 'meshy') setActiveWorkspace('render');
-                        else setActiveWorkspace('model');
+                        if (toolId === 'openscad') handleSelectWorkspace('parametric');
+                        else if (toolId === 'blender' || toolId === 'meshy') handleSelectWorkspace('render');
+                        else handleSelectWorkspace('model');
                       }}
                       toolCapabilities={liveCapabilities.map((c) => ({
                         id: c.id,

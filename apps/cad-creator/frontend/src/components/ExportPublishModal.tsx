@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   X,
   Download,
@@ -15,9 +15,9 @@ import {
   ExternalLink,
   ShieldCheck,
 } from 'lucide-react';
-import { DesignProject, ExportFormat, PublisherDestinationId, DesignArtifact, PublishResult } from '@inneranimalmedia/agentsam-cad-shared';
+import { DesignProject, ExportFormat, PublisherDestinationId, PublishResult } from '@inneranimalmedia/agentsam-cad-shared';
 import { exportProjectToArtifact, downloadFile } from '../lib/exporters';
-import { listPublishers, getPublisher } from '../lib/publishers';
+import { listPublishers } from '../lib/publishers';
 
 interface ExportPublishModalProps {
   project: DesignProject;
@@ -35,25 +35,48 @@ export const ExportPublishModal: React.FC<ExportPublishModalProps> = ({
   const [selectedTab, setSelectedTab] = useState<'export' | 'publish'>('export');
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('dxf');
   const [selectedDestination, setSelectedDestination] = useState<PublisherDestinationId>('github');
-  const [commitMessage, setCommitMessage] = useState<string>(
-    `Release spatial design v${project.version || 1}: ${project.name}`
-  );
-  const [credentials, setCredentials] = useState<Record<string, string>>({
-    repoOwner: '',
-    repoName: 'agentsam-cad-project',
-    branch: 'main',
-    token: '',
-    endpointUrl: '',
-    apiKey: '',
-  });
+  const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
+  const [connectionStatus, setConnectionStatus] = useState<'loading'|'available'|'unavailable'>('loading');
   const [isProcessing, setIsProcessing] = useState(false);
   const [publishResult, setPublishResult] = useState<PublishResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Connection discovery reads the authenticated host session, never editable API keys.
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    setConnectionStatus('loading');
+    fetch('/api/connections', { credentials: 'same-origin', signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error('connection_registry_unavailable');
+        return response.json();
+      })
+      .then(data => {
+        const active = new Set<string>();
+        for (const entry of data.connections || data.items || []) {
+          const provider = String(entry.provider || entry.slug || '').toLowerCase();
+          if (!provider) continue;
+          if (entry.connected === true || ['connected', 'active', 'ready'].includes(String(entry.status || '').toLowerCase())) active.add(provider);
+        }
+        for (const entry of data.oauth_status?.providers || []) {
+          if (Number(entry.activeCount) > 0) active.add(String(entry.provider).toLowerCase());
+        }
+        setConnectedProviders(active);
+        setConnectionStatus('available');
+      })
+      .catch(error => {
+        if (error?.name !== 'AbortError') {
+          setConnectedProviders(new Set());
+          setConnectionStatus('unavailable');
+        }
+      });
+    return () => controller.abort();
+  }, [isOpen]);
+
+  const publishers = listPublishers().filter(pub => pub.id === 'github' || pub.id === 'cloudflare');
+
   if (!isOpen) return null;
 
-  const publishers = listPublishers();
-  const currentPublisher = getPublisher(selectedDestination);
 
   const FORMAT_DESCRIPTIONS: Record<ExportFormat, { label: string; desc: string; ext: string; icon: string }> = {
     dxf: { label: 'AutoCAD DXF (R12)', desc: 'Industry-standard 2D CAD with WALLS, DOORS, and ROOM_LABELS layers.', ext: '.dxf', icon: '📐' },
@@ -80,36 +103,8 @@ export const ExportPublishModal: React.FC<ExportPublishModalProps> = ({
     }
   };
 
-  const handlePublish = async () => {
-    setIsProcessing(true);
-    setErrorMessage(null);
-    setPublishResult(null);
-
-    try {
-      // 1. Generate core bundle artifacts
-      const formats: ExportFormat[] = ['json', 'svg', 'dxf', 'scad', 'obj'];
-      const artifacts: DesignArtifact[] = [];
-
-      for (const fmt of formats) {
-        const art = await exportProjectToArtifact(project, fmt);
-        artifacts.push(art);
-      }
-
-      // 2. Publish through selected provider
-      const result = await currentPublisher.publishProject(project, artifacts, {
-        destination: selectedDestination,
-        commitMessage,
-        credentials,
-      });
-
-      setPublishResult(result);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Publishing failed');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
+  // Connected OAuth identities do not establish publishing rights by themselves.
+  // Remote publish is intentionally not offered until a host-owned, receipted API exists.
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
@@ -269,35 +264,28 @@ export const ExportPublishModal: React.FC<ExportPublishModalProps> = ({
                 </div>
               </div>
 
-              {/* Dynamic Credentials & options form */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                <div className="flex items-center space-x-2 text-xs text-slate-300 font-semibold">
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs text-slate-200 font-semibold">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Adapter Configuration & Security Manifest</span>
+                  Connected account authority
                 </div>
-
-                {currentPublisher.capabilities.authFields?.map((field) => (
-                  <div key={field.key} className="space-y-1">
-                    <label className="text-[11px] text-slate-400 block">{field.label}</label>
-                    <input
-                      type={field.type}
-                      placeholder={field.placeholder}
-                      value={credentials[field.key] || ''}
-                      onChange={(e) => setCredentials({ ...credentials, [field.key]: e.target.value })}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                ))}
-
-                <div className="space-y-1">
-                  <label className="text-[11px] text-slate-400 block">Commit / Release Note</label>
-                  <input
-                    type="text"
-                    value={commitMessage}
-                    onChange={(e) => setCommitMessage(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
-                  />
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  GitHub App and Cloudflare OAuth are managed by AgentSam. No API keys, personal access tokens, or arbitrary endpoints belong in this editor.
+                </p>
+                <div className="text-xs text-slate-300" role="status">
+                  {connectionStatus === 'loading' ? 'Checking the current host connections…' :
+                    connectionStatus === 'unavailable' ? 'Connection registry unavailable in this CAD host.' :
+                    connectedProviders.has(selectedDestination) ? 'OAuth connection detected. Publishing still requires the host-owned artifact writer.' :
+                    'No active OAuth connection detected for this provider.'}
                 </div>
+                <a href="https://agentsam.inneranimalmedia.com/settings/integrations"
+                   target="_blank" rel="noopener noreferrer"
+                   className="inline-flex items-center gap-1 text-xs text-blue-300 hover:underline">
+                  Manage provider connections in AgentSam <ExternalLink className="size-3" />
+                </a>
+                <p className="text-xs text-amber-300">
+                  Remote publish is not enabled in this host yet. Export a verified CAD artifact locally; remote publishing will become available after real storage and GitHub receipts are wired.
+                </p>
               </div>
             </div>
           )}
@@ -327,14 +315,7 @@ export const ExportPublishModal: React.FC<ExportPublishModalProps> = ({
                 <span>{isProcessing ? 'Generating...' : `Export ${selectedFormat.toUpperCase()}`}</span>
               </button>
             ) : (
-              <button
-                onClick={handlePublish}
-                disabled={!canExport || isProcessing}
-                className="flex items-center space-x-1.5 px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-xs font-semibold shadow transition disabled:opacity-50"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{isProcessing ? 'Publishing Package...' : 'Publish to Target'}</span>
-              </button>
+              <span role="status" className="text-[11px] text-amber-300">Remote publishing requires connected host execution</span>
             )}
           </div>
         </div>

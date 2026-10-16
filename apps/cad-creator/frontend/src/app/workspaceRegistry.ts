@@ -43,7 +43,8 @@ export const WORKSPACE_REGISTRY: WorkspaceDescriptor[] = [
     icon: Box,
     description: '3D architectural viewer, component assemblies, spatial object placement, and materials.',
     engine: 'Three.js / WebGL',
-    badge: '3D BIM'
+    badge: '3D BIM',
+    isPrimary: true
   },
   {
     id: 'parametric',
@@ -61,7 +62,8 @@ export const WORKSPACE_REGISTRY: WorkspaceDescriptor[] = [
     icon: Cpu,
     description: 'MuJoCo 500Hz physics simulation, Franka Panda 7-DOF kinematics, and embodied perception reasoning.',
     engine: 'MuJoCo WASM',
-    badge: 'Physics 500Hz'
+    badge: 'Physics 500Hz',
+    isPrimary: true
   },
   {
     id: 'render',
