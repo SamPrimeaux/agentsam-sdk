@@ -32,6 +32,7 @@ import { CadCreatorShell } from './CadCreatorShell';
 import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
 import { installCadPreviewGuestBridge } from '../lib/agentsam-preview-bridge';
+import { buildSelectionContext, type CadSelectionContext } from '../lib/cad/selection';
 import { useCadTools } from '../lib/execution/useCadTools';
 import {
   WORKSPACE_REGISTRY,
@@ -85,6 +86,8 @@ export function CadCreatorApp({
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [selectedFurnitureType, setSelectedFurnitureType] = useState<string | null>(null);
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
+  const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
+  const bridgeRef = React.useRef<{ post: (m: never) => void; dispose: () => void } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
@@ -145,12 +148,14 @@ export function CadCreatorApp({
   // Connect to AgentSam Preview Bridge when embedded in host
   useEffect(() => {
     if (presentation !== 'embedded') return;
-    const cleanup = installCadPreviewGuestBridge({
+    const bridge = installCadPreviewGuestBridge({
       activeWorkspace,
-      onSelectWorkspace: (wsId) => handleSelectWorkspace(wsId),
-      onSetTheme: (dark) => setIsDarkMode(dark)
+      onSelectWorkspace: (wsId) => handleSelectWorkspace(wsId as WorkspaceId),
+      onSetTheme: (dark) => setIsDarkMode(dark),
+      onAssistantResponse: (_rid, text) => window.dispatchEvent(new CustomEvent('agentsam:cad-assistant-response', { detail: text }))
     });
-    return cleanup;
+    bridgeRef.current = bridge;
+    return () => { bridge.dispose(); bridgeRef.current = null; };
   }, [presentation, activeWorkspace]);
 
   // Preload robotics when user hovers or selects robotics
@@ -448,6 +453,15 @@ export function CadCreatorApp({
         {/* AgentSam Sidebar (Toggleable) */}
         {isSidebarOpen && activeWorkspace !== 'robotics' && (
           <AgentSidebar
+            embedded={presentation === 'embedded'}
+            selection={cadSelection}
+            onApproveProposal={(proposal) => {
+              if (isViewer) return;
+              const wallId = (proposal.args.operation as any).wallId; const h = (proposal.args.operation as any).updates.height3D;
+              updateProject((prev) => ({ ...prev, walls: prev.walls.map((w: any) => w.id === wallId ? { ...w, height3D: h } : w), updatedAt: Date.now() }));
+              showToast(`Approved: ${proposal.summary} Use Save revision to persist with expected_revision.`);
+            }}
+            postToHost={(m) => bridgeRef.current?.post(m as never)}
             project={project}
             onApplyPlan={(plan) => {
               if (isViewer) return;
@@ -484,6 +498,13 @@ export function CadCreatorApp({
                     remoteUsers={remoteUsers}
                     unit={unit}
                     userRole={currentUser.role}
+                    onSelectElement={(type, id) => {
+                      try {
+                        const sel = buildSelectionContext({ workspace: activeWorkspace, projectId: (project as any).id || 'tpl_modern_villa', revision: 1, objectId: id, objectType: type, label: `${type} ${id}` });
+                        setCadSelection(sel);
+                        bridgeRef.current?.post({ type: 'cad.selection', selection: sel } as never);
+                      } catch { /* selection without real id supplies no context */ }
+                    }}
                   />
                 </div>
               )}

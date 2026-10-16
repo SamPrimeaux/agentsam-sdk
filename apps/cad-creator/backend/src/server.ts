@@ -25,14 +25,14 @@ installProjectRoutes(app);
 
 // Lazy Gemini API initialization helper
 let aiClient: GoogleGenAI | null = null;
+class ProviderNotConfigured extends Error {}
+const providerGate = (_req: unknown, res: any, next: any) => { if (!process.env.GEMINI_API_KEY) return res.status(501).json({ error: 'generative_provider_not_configured', recovery: 'Connect a provider via AgentSam provider discovery or use deterministic design_* tools.' }); return next(); };
 function getAI(): GoogleGenAI {
-  if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.warn('GEMINI_API_KEY is not set in environment.');
-    }
-    aiClient = new GoogleGenAI({ apiKey: apiKey || '' });
-  }
+  // Optional provider-backed creative/perception routes only. Never construct
+  // a client with an empty key or present this provider as universally available.
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new ProviderNotConfigured('generative_provider_not_configured: set GEMINI_API_KEY or use deterministic CAD tools');
+  if (!aiClient) aiClient = new GoogleGenAI({ apiKey });
   return aiClient;
 }
 
@@ -40,6 +40,7 @@ function getAI(): GoogleGenAI {
 // 1. ARCHITECTURAL BIM PLANNING API
 // ----------------------------------------------------
 app.post('/api/plan/generate', async (req, res) => {
+    if (!process.env.GEMINI_API_KEY) return res.status(501).json({ error: 'generative_provider_not_configured', recovery: 'Connect a provider through AgentSam provider discovery, or use deterministic design_* CAD tools. No plan was generated or applied.' });
   try {
     const { prompt, currentProject } = req.body;
     if (!prompt) {
@@ -121,7 +122,7 @@ Return ONLY a valid JSON object with the following schema:
     })}\n\nUser Request: ${prompt}`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: userContent,
       config: {
         systemInstruction,
@@ -166,7 +167,7 @@ Return ONLY valid JSON matching the architectural schema:
 }`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [
         {
           role: 'user',

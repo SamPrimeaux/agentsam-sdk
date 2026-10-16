@@ -9,7 +9,6 @@ import * as THREE from 'three';
 import { DetectionLogOverlay as LogOverlay } from './DetectionLogOverlay';
 import { RobotSelector } from './components/RobotSelector';
 import { Toolbar } from './components/Toolbar';
-import { EmbodiedReasoningPanel } from './EmbodiedReasoningPanel';
 import { HttpRoboticsPerceptionProvider } from '../../lib/robotics/perception/http-provider';
 import { MujocoSimulationProvider } from '../../lib/robotics/simulation/mujoco-provider';
 import { SimulationProvider } from '../../lib/robotics/simulation/provider';
@@ -162,7 +161,7 @@ export function RoboticsWorkspace({
     type: DetectType,
     temperature = 0.1,
     enableThinking = true,
-    modelId = 'gemini-robotics-er-2-preview'
+    modelId?: string
   ) => {
     const sim = activeSimProvider.current;
     if (!sim) return;
@@ -319,21 +318,17 @@ export function RoboticsWorkspace({
         />
       )}
 
-      {/* Right Side Embodied Reasoning Panel */}
-      {!isLoading && !loadError && (
-        <EmbodiedReasoningPanel
-          isOpen={showSidebar}
-          onClose={() => setShowSidebar(false)}
-          onSend={handleErSend}
-          onPickup={handlePickup}
-          isLoading={erLoading}
-          hasDetectedItems={detectedCount > 0}
-          logs={logs}
-          onOpenLog={log => setExpandedLogId(log.id)}
-          isDarkMode={isDarkMode}
-          isPickingUp={isPickingUp}
-          playbackSpeed={playbackSpeed}
-        />
+      {/* Compact contextual inspector (canvas-first). No permanent AI panel:
+          conversation lives in AgentSam Side Assistant; known objects resolve
+          from structured MuJoCo/world state, never by default LLM vision. */}
+      {!isLoading && !loadError && showSidebar && (
+        <aside className="absolute right-3 top-16 z-20 w-60 rounded-xl border border-white/10 bg-slate-900/90 p-3 text-[11px] text-slate-200" aria-label="Simulation inspector">
+          <div className="mb-1 flex items-center justify-between"><span className="font-semibold">Inspector</span><button onClick={() => setShowSidebar(false)} aria-label="Close inspector">×</button></div>
+          <div>Frame rate: {simulationStats?.fps ?? '—'} FPS</div>
+          <div>Collisions: {(simulationStats as any)?.collisions ?? '—'}</div>
+          <div>Physics: MuJoCo WASM (structured state)</div>
+          <div className="mt-1 text-slate-400">Object locations come from simulation state. Optional AI perception requires explicit authorization in the Side Assistant.</div>
+        </aside>
       )}
 
       {/* Real-Time Diagnostic HUD Overlay */}
