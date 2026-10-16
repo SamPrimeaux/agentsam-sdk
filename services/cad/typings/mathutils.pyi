@@ -8,5 +8,6 @@ class Vector:
     y: float
     z: float
     def __iter__(self) -> Any: ...
+
 class Matrix:
     def __init__(self, values: Any = ...) -> None: ...
