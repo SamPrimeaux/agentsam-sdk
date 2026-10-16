@@ -79,10 +79,49 @@ export function RoboticsWorkspace({
 
   const [isPickingUp, setIsPickingUp] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  // Simulation-only IK controls. No physical robot actuator or host bridge.
-  const [motionNotice, setMotionNotice] = useState('Ready to preview a robot movement');
-  const motionAnchor = useRef<THREE.Vector3 | null>(null);
+  const [reachRunning, setReachRunning] = useState(false);
+  const [reachReceipt, setReachReceipt] = useState('Ready for a simulated reach test.');
+  const reachTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => () => {
+    if (reachTimer.current) clearTimeout(reachTimer.current);
+  }, []);
+
+  const handleReachTest = () => {
+    const provider = activeSimProvider.current;
+    const state = provider?.getTelemetry();
+    const pose = state?.endEffectorPos;
+    if (!provider?.isReady || !pose || reachRunning) {
+      setReachReceipt('Simulation is not ready for a verified reach test.');
+      return;
+    }
+    const baseline = { x: pose.x, y: pose.y, z: pose.z };
+    if (![baseline.x, baseline.y, baseline.z].every(Number.isFinite)) {
+      setReachReceipt('End-effector telemetry is unavailable. No motion command sent.');
+      return;
+    }
+    provider.play();
+    setIsPaused(false);
+    setReachRunning(true);
+    setReachReceipt('Sending a bounded +8 cm X-axis reach target to MuJoCo IK…');
+    // A simulation-only motion test, never a command to a real robot.
+    provider.moveIkTargetTo(new THREE.Vector3(baseline.x + 0.08, baseline.y, baseline.z), 900);
+    reachTimer.current = setTimeout(() => {
+      const measured = provider.getTelemetry()?.endEffectorPos;
+      const displacement = measured
+        ? Math.hypot(measured.x - baseline.x, measured.y - baseline.y, measured.z - baseline.z)
+        : NaN;
+      if (!Number.isFinite(displacement)) {
+        setReachReceipt('No telemetry receipt returned. Simulation motion is unverified.');
+      } else if (displacement >= 0.005) {
+        setReachReceipt('Simulated end effector moved ' + (displacement * 100).toFixed(1) + ' cm (measured). Grasp not verified.');
+      } else {
+        setReachReceipt('No measurable robot movement (' + (displacement * 100).toFixed(2) + ' cm). Check IK and physics state.');
+      }
+      setReachRunning(false);
+      reachTimer.current = null;
+    }, 2000);
+  };
 
   const activeLog = expandedLogId ? logs.find(l => l.id === expandedLogId) : null;
 
@@ -157,26 +196,7 @@ export function RoboticsWorkspace({
       setIsPaused(false);
       setIsPickingUp(false);
       setPlaybackSpeed(1);
-      motionAnchor.current = null;
-      setMotionNotice('Simulation reset');
     }
-  };
-
-  const handleSimMotion = (side: -1 | 1) => {
-    const sim = activeSimProvider.current;
-    const present = sim?.getGizmoStats()?.pos;
-    if (!sim?.isReady || !present) {
-      setMotionNotice('Simulation target unavailable');
-      return;
-    }
-    const anchor = motionAnchor.current ?? present.clone();
-    motionAnchor.current = anchor;
-    // A bounded visual motion target based on the real simulated end-effector.
-    // It never invokes a hardware or network executor.
-    const target = anchor.clone();
-    target.x += side * 0.08;
-    sim.moveIkTargetTo(target, 900);
-    setMotionNotice(side < 0 ? 'Previewing left reach' : 'Previewing right reach');
   };
 
   const handleErSend = async (
@@ -325,20 +345,6 @@ export function RoboticsWorkspace({
         />
       )}
 
-      {!isLoading && !loadError && (
-        <div className="absolute bottom-3 left-1/2 z-20 flex w-[min(390px,calc(100%-16px))] -translate-x-1/2 flex-col gap-2 rounded-xl border border-white/15 bg-slate-950/90 p-3 text-slate-100 shadow-xl backdrop-blur-md sm:bottom-4" aria-label="Robot simulation actions">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold">Try the robot</span>
-            <span className="text-[10px] text-slate-400">Simulation only</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => handleSimMotion(-1)} disabled={isPaused || isPickingUp} className="min-h-10 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/20 disabled:opacity-40">Reach left</button>
-            <button type="button" onClick={() => handleSimMotion(1)} disabled={isPaused || isPickingUp} className="min-h-10 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/20 disabled:opacity-40">Reach right</button>
-          </div>
-          <p className="text-[10px] text-slate-400" role="status">{motionNotice}</p>
-        </div>
-      )}
-
       {/* Floating Bottom Toolbar */}
       {!isLoading && !loadError && (
         <Toolbar
@@ -348,11 +354,19 @@ export function RoboticsWorkspace({
             setIsPaused(nextPaused);
           }}
           onReset={handleReset}
+          onReachTest={handleReachTest}
+          isReachRunning={reachRunning}
           showSidebar={showSidebar}
           toggleSidebar={() => setShowSidebar(!showSidebar)}
           isDarkMode={isDarkMode}
           toggleDarkMode={toggleDarkMode}
         />
+      )}
+
+      {!isLoading && !loadError && (
+        <div role="status" aria-live="polite" className="absolute bottom-[98px] left-3 z-20 max-w-[min(420px,calc(100%-24px))] rounded-lg border border-white/10 bg-slate-950/90 px-3 py-2 text-[11px] text-slate-200 shadow-lg">
+          <span className="mr-2 font-semibold text-emerald-300">Reach test</span>{reachReceipt}
+        </div>
       )}
 
       {/* Compact contextual inspector (canvas-first). No permanent AI panel:

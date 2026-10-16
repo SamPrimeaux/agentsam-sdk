@@ -62,7 +62,7 @@ export const WORKSPACE_REGISTRY: WorkspaceDescriptor[] = [
     icon: Cpu,
     description: 'MuJoCo 500Hz physics simulation, Franka Panda 7-DOF kinematics, and embodied perception reasoning.',
     engine: 'MuJoCo WASM',
-    badge: 'Simulated',
+    badge: 'Physics 500Hz',
     isPrimary: true
   },
   {
@@ -76,10 +76,7 @@ export const WORKSPACE_REGISTRY: WorkspaceDescriptor[] = [
   }
 ];
 
-/**
- * Top-level experiences only. Modeling compilers and rendering remain contextual
- * modules; keep their legacy WorkspaceId values for stored links/host bridges.
- */
+/** Model and render tools are contextual, not separate primary destinations. */
 export const PRIMARY_WORKSPACES = WORKSPACE_REGISTRY.filter((ws) => ws.isPrimary);
 export function primaryWorkspaceFor(id: WorkspaceId): 'plan' | 'model' | 'robotics' {
   return id === 'plan' || id === 'robotics' ? id : 'model';

@@ -17,7 +17,6 @@ import {
 import { preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import {
   PRIMARY_WORKSPACES,
-  primaryWorkspaceFor,
   WorkspaceDescriptor,
   WorkspaceId
 } from './workspaceRegistry';
@@ -73,7 +72,7 @@ export function CadCreatorShell({
         {presentation === 'standalone' && (
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-400 p-0.5 shadow-md flex items-center justify-center overflow-hidden">
-              <span className="text-white font-bold text-xs tracking-tighter">AS</span>
+              <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d1864d11-4485-4a38-1849-168f567aa200/avatar" alt="AgentSam CAD Creator" className="h-full w-full rounded-lg object-cover" />
             </div>
             <div className="hidden sm:block">
               <div className="flex items-center gap-1.5">
@@ -99,11 +98,11 @@ export function CadCreatorShell({
         </div>
       </div>
 
-      {/* 2. Center: Three Primary Experiences */}
+      {/* Primary destinations only: CSG and rendering are tools within Model. */}
       <nav className="flex items-center gap-1 overflow-x-auto custom-scrollbar px-2">
         {PRIMARY_WORKSPACES.map((ws) => {
           const Icon = ws.icon;
-          const isActive = primaryWorkspaceFor(activeWorkspace) === ws.id;
+          const isActive = activeWorkspace === ws.id;
 
           return (
             <button
@@ -128,7 +127,6 @@ export function CadCreatorShell({
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               }`}
               title={ws.description}
-              aria-current={isActive ? 'page' : undefined}
             >
               <Icon className="size-3.5" />
               <span>{ws.shortName}</span>
@@ -186,7 +184,7 @@ export function CadCreatorShell({
           </button>
         )}
 
-        {/* AgentSam Co-pilot Toggle */}
+        {/* The host owns conversation. This controls workspace chrome, not an independent assistant. */}
         <button
           type="button"
           onClick={onToggleSidebar}

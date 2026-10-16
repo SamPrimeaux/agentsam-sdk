@@ -16,6 +16,7 @@ export class GitHubPublisher implements DesignPublisher {
       { key: 'repoOwner', label: 'Repository Owner / Org', type: 'text' as const, placeholder: 'e.g. your-username', required: true },
       { key: 'repoName', label: 'Repository Name', type: 'text' as const, placeholder: 'e.g. agentsam-cad-project', required: true },
       { key: 'branch', label: 'Branch', type: 'text' as const, placeholder: 'main' },
+      { key: 'token', label: 'Personal Access Token', type: 'password' as const, placeholder: 'ghp_...', required: true },
     ],
   };
 
@@ -23,16 +24,19 @@ export class GitHubPublisher implements DesignPublisher {
     if (!credentials?.repoOwner || !credentials?.repoName) {
       return { valid: false, error: 'Repository owner and name are required.' };
     }
-    return { valid: false, error: 'GitHub publishing requires a verified host connection.' };
+    if (!credentials?.token) {
+      return { valid: false, error: 'GitHub Personal Access Token is required.' };
+    }
+    return { valid: true };
   }
 
   async publishProject(
-    project: DesignProject,
-    artifacts: DesignArtifact[],
-    options: PublishOptions
+    _project: DesignProject,
+    _artifacts: DesignArtifact[],
+    _options: PublishOptions,
   ): Promise<PublishResult> {
-    // Remote publishing is executed by an authenticated host using its GitHub
-    // App installation, never by a browser-entered personal access token.
-    throw new Error('cad_publish_requires_authorized_github_host');
+    // Publishing must use the existing host's authenticated GitHub App session.
+    // Browser PAT fields are not an acceptable substitute; never fabricate a receipt.
+    throw new Error('GitHub publishing requires the authenticated AgentSam host adapter. Export locally until that connected publishing route is available.');
   }
 }

@@ -32,14 +32,13 @@ import { CadCreatorShell } from './CadCreatorShell';
 import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
 import { installCadPreviewGuestBridge } from '../lib/agentsam-preview-bridge';
-import { buildSelectionContext, type CadSelectionContext } from '../lib/cad/selection';
+import { buildSelectionContext, verifiedSelectionRevision, type CadSelectionContext } from '../lib/cad/selection';
 import { useCadTools } from '../lib/execution/useCadTools';
 import {
   WORKSPACE_REGISTRY,
   WorkspaceDescriptor,
   WorkspaceId,
-  DEFAULT_RUNTIME_CAPABILITIES,
-  primaryWorkspaceFor
+  DEFAULT_RUNTIME_CAPABILITIES
 } from './workspaceRegistry';
 import {
   Box,
@@ -83,13 +82,17 @@ export function CadCreatorApp({
   const [redoStack, setRedoStack] = useState<ProjectState[]>([]);
 
   // 2. Workspace & Layout State
-  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(primaryWorkspaceFor(initialWorkspace));
-  const [explorePanel, setExplorePanel] = useState<'parameters' | 'render' | null>(null);
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(initialWorkspace === 'parametric' || initialWorkspace === 'render' ? 'model' : initialWorkspace);
   const [planLayout, setPlanLayout] = useState<'2d' | 'split' | 'sketch'>('split');
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [selectedFurnitureType, setSelectedFurnitureType] = useState<string | null>(null);
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
   const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
+  const [verifiedProjectRevision, setVerifiedProjectRevision] = useState<{projectId:string;revision:number}|null>(null);
+  const [modelModule, setModelModule] = useState<'parametric'|null>(initialWorkspace === 'parametric' ? 'parametric' : null);
+  const onVerifiedRevision = useCallback((revision:number|null, projectId:string) => {
+    setVerifiedProjectRevision(revision === null ? null : {projectId,revision});
+  }, []);
   const bridgeRef = React.useRef<{ post: (m: never) => void; dispose: () => void } | null>(null);
   const [chromeFolded, setChromeFolded] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -166,8 +169,16 @@ export function CadCreatorApp({
     if (wsId === 'robotics') {
       preloadRoboticsWorkspace();
     }
-    setActiveWorkspace(primaryWorkspaceFor(wsId));
-    setExplorePanel(null);
+    if (wsId === 'parametric') {
+      setModelModule('parametric');
+      setActiveWorkspace('model');
+    } else if (wsId === 'render') {
+      setActiveWorkspace('model');
+      setIsImageGenModalOpen(true);
+    } else {
+      setModelModule(null);
+      setActiveWorkspace(wsId);
+    }
   };
 
   // Initialize WebSocket Collaboration
@@ -232,6 +243,7 @@ export function CadCreatorApp({
       return;
     }
 
+    setVerifiedProjectRevision(null);
     setProject((prev) => {
       const next = updater(prev);
       setHistory((h) => [...h.slice(-20), prev]);
@@ -265,14 +277,14 @@ export function CadCreatorApp({
 
   return (
     <div className={`flex flex-col h-screen w-screen font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-      {/* Three primary experiences; CAD engines appear as contextual tools. */}
+      {/* 1. Global Shell Header (5 Workspaces, Project, Sync, Undo/Redo, AgentSam, Export) */}
       {chromeFolded ? (
         <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/10 bg-slate-900 px-3 text-[11px]">
           <span className="font-medium">{project.name || 'Untitled Project'} · {activeWorkspace}</span>
           <button type="button" onClick={() => setChromeFolded(false)} aria-label="Show workspace controls" className="rounded bg-slate-800 px-2 py-0.5 hover:bg-slate-700">Show controls</button>
         </div>
       ) : (<>
-      <ProjectRuntimePanel project={project} onLoad={setProject} readOnly={isViewer} />
+      <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer} />
       <CadCreatorShell
         activeWorkspace={activeWorkspace}
         onSelectWorkspace={handleSelectWorkspace}
@@ -361,7 +373,7 @@ export function CadCreatorApp({
           <div className="flex items-center gap-3">
             <span className="font-semibold text-xs text-indigo-400 flex items-center gap-1.5">
               <Box className="size-3.5" />
-              <span>Explore · Live 3D model</span>
+              <span>3D Spatial Scene Assembly</span>
             </span>
             <div className="flex items-center gap-1 border-l border-inherit/40 pl-3">
               <button
@@ -379,16 +391,12 @@ export function CadCreatorApp({
               >BIM Starters</button>
               <button
                 type="button"
-                onClick={() => setExplorePanel((p) => p === 'parameters' ? null : 'parameters')}
-                aria-expanded={explorePanel === 'parameters'}
-                className={`rounded px-2 py-1 text-[11px] ${explorePanel === 'parameters' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}
-              >Parameters</button>
-              <button
-                type="button"
-                onClick={() => setExplorePanel((p) => p === 'render' ? null : 'render')}
-                aria-expanded={explorePanel === 'render'}
-                className={`rounded px-2 py-1 text-[11px] ${explorePanel === 'render' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}
-              >Render</button>
+                onClick={() => setModelModule((m) => m === 'parametric' ? null : 'parametric')}
+                aria-expanded={modelModule === 'parametric'}
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px]"
+              >Parametric tools</button>
+              <button type="button" onClick={() => setIsImageGenModalOpen(true)}
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px]">Render</button>
               <button
                 type="button"
                 onClick={() => setIsTemplateLibraryOpen(true)}
@@ -499,7 +507,12 @@ export function CadCreatorApp({
                     userRole={currentUser.role}
                     onSelectElement={(type, id) => {
                       try {
-                        const sel = buildSelectionContext({ workspace: activeWorkspace, projectId: (project as any).id || 'tpl_modern_villa', revision: 1, objectId: id, objectType: type, label: `${type} ${id}` });
+                        const revision = verifiedSelectionRevision(project.id, verifiedProjectRevision);
+                        if (revision === null) {
+                          setCadSelection(null);
+                          return; // Unsaved drafts never impersonate revision 1.
+                        }
+                        const sel = buildSelectionContext({ workspace: activeWorkspace, projectId: project.id, revision, objectId: id, objectType: type, label: `${type} ${id}` });
                         setCadSelection(sel);
                         bridgeRef.current?.post({ type: 'cad.selection', selection: sel } as never);
                       } catch { /* selection without real id supplies no context */ }
@@ -542,32 +555,21 @@ export function CadCreatorApp({
                   setIsImageGenModalOpen(true);
                 }}
               />}
-              {explorePanel && !showBimStarters && (
-                <aside
-                  aria-label={explorePanel === 'parameters' ? 'Parametric tools' : 'Render tools'}
-                  className="absolute right-2 bottom-2 top-2 z-20 flex w-[min(410px,calc(100%-16px))] flex-col overflow-hidden rounded-xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-md sm:right-4 sm:top-4 sm:bottom-4"
-                >
-                  <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
-                    <span className="text-sm font-semibold">{explorePanel === 'parameters' ? 'Parametric tools' : 'Render & presentation'}</span>
-                    <button type="button" onClick={() => setExplorePanel(null)} aria-label="Close tools" className="rounded-md px-2 py-1 text-xs text-slate-300 hover:bg-white/10">Close</button>
-                  </header>
-                  {explorePanel === 'parameters' ? (
-                    <div className="min-h-0 flex-1 overflow-y-auto">
-                      <ParametricEditor project={project} onUpdateProject={(newProj) => updateProject(() => newProj)} canEdit={!isViewer} />
-                    </div>
-                  ) : (
-                    <div className="space-y-3 p-4 text-sm">
-                      <p className="text-slate-400">Create a render from your current design. Rendering uses its configured provider, not a separate workspace.</p>
-                      <button type="button" onClick={() => setIsImageGenModalOpen(true)} className="block w-full rounded-lg bg-indigo-600 p-3 text-left text-white hover:bg-indigo-500">Architectural image render</button>
-                      <button type="button" onClick={() => setIsVeoModalOpen(true)} className="block w-full rounded-lg border border-white/15 p-3 text-left text-slate-100 hover:bg-white/10">Video walkthrough</button>
-                    </div>
-                  )}
+              {modelModule === 'parametric' && (
+                <aside className="absolute right-0 top-0 bottom-0 z-20 w-full max-w-[440px] border-l border-white/10 bg-slate-950/95 shadow-2xl" aria-label="Parametric tools">
+                  <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs">
+                    <span className="font-semibold">Parametric tools · current model</span>
+                    <button type="button" className="rounded px-2 py-1 hover:bg-white/10" onClick={() => setModelModule(null)} aria-label="Close parametric tools">Close</button>
+                  </div>
+                  <div className="h-[calc(100%-38px)] overflow-auto">
+                    <ParametricEditor project={project} onUpdateProject={(next) => updateProject(() => next)} canEdit={!isViewer} />
+                  </div>
                 </aside>
               )}
             </div>
           )}
 
-          {/* Legacy direct links remain readable; the main navigation uses Explore. */}
+          {/* Legacy panel routes remain registered for existing links; primary navigation has three destinations. */}
           {/* WORKSPACE 3: PARAMETRIC */}
           {activeWorkspace === 'parametric' && (
             <div className="w-full h-full relative">
@@ -602,9 +604,9 @@ export function CadCreatorApp({
                       showDiagnostics={showRoboticsDiagnostics}
                       setShowDiagnostics={setShowRoboticsDiagnostics}
                       onOpenToolIntegration={(toolId) => {
-                        if (toolId === 'openscad') setActiveWorkspace('parametric');
-                        else if (toolId === 'blender' || toolId === 'meshy') setActiveWorkspace('render');
-                        else setActiveWorkspace('model');
+                        if (toolId === 'openscad') handleSelectWorkspace('parametric');
+                        else if (toolId === 'blender' || toolId === 'meshy') handleSelectWorkspace('render');
+                        else handleSelectWorkspace('model');
                       }}
                       toolCapabilities={liveCapabilities.map((c) => ({
                         id: c.id,

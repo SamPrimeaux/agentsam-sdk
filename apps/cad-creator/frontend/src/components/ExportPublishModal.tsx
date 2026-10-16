@@ -1,103 +1,325 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, Cloud, Download, GitBranch, X } from 'lucide-react';
-import type { DesignProject, ExportFormat } from '@inneranimalmedia/agentsam-cad-shared';
+import {
+  X,
+  Download,
+  Share2,
+  HardDrive,
+  GitBranch,
+  Cloud,
+  Server,
+  CheckCircle2,
+  AlertCircle,
+  FileCode,
+  Layers,
+  Sparkles,
+  ExternalLink,
+  ShieldCheck,
+} from 'lucide-react';
+import { DesignProject, ExportFormat, PublisherDestinationId, PublishResult } from '@inneranimalmedia/agentsam-cad-shared';
 import { exportProjectToArtifact, downloadFile } from '../lib/exporters';
-import { getCadPublishConnections, publishCadProject, type CadPublishConnection, type CadPublishProvider } from '../lib/publishers/authorized-publish';
+import { listPublishers } from '../lib/publishers';
 
-interface Props { project: DesignProject; isOpen: boolean; onClose: () => void; canExport: boolean; }
-const FORMATS: Array<{ id: ExportFormat; title: string; detail: string }> = [
-  { id: 'dxf', title: 'DXF plan', detail: 'Architectural lines and layers' },
-  { id: 'svg', title: 'SVG plan', detail: 'Scalable vector drawing' },
-  { id: 'obj', title: 'OBJ model', detail: '3D mesh interchange' },
-  { id: 'scad', title: 'OpenSCAD', detail: 'Parametric source' },
-  { id: 'stl', title: 'STL mesh', detail: 'Manufacturing mesh' },
-  { id: 'json', title: 'Project JSON', detail: 'Editable source document' },
-];
-export function ExportPublishModal({ project, isOpen, onClose, canExport }: Props) {
-  const [tab, setTab] = useState<'export' | 'publish'>('export');
-  const [format, setFormat] = useState<ExportFormat>('dxf');
-  const [provider, setProvider] = useState<CadPublishProvider>('github');
-  const [connections, setConnections] = useState<CadPublishConnection[]>([]);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [receipt, setReceipt] = useState<{id: string; files_written: number; target_url?: string} | null>(null);
-  useEffect(() => {
-    if (!isOpen || tab !== 'publish') return;
-    let cancelled = false;
-    setConnections([]);
-    setConnectionError(null);
-    void getCadPublishConnections().then(result => {
-      if (!cancelled) setConnections(result);
-    }).catch(cause => {
-      if (!cancelled) setConnectionError(cause instanceof Error ? cause.message : 'CAD publishing unavailable');
-    });
-    return () => { cancelled = true; };
-  }, [isOpen, tab]);
-  if (!isOpen) return null;
-  const connection = connections.find(item => item.provider === provider);
-  const publishReady = canExport && !busy && connection?.status === 'connected';
-  const run = async () => {
-    setBusy(true); setError(null); setReceipt(null);
-    try {
-      if (tab === 'export') {
-        const artifact = await exportProjectToArtifact(project, format);
-        const content = typeof artifact.content === 'string' ? artifact.content : new TextDecoder().decode(artifact.content);
-        downloadFile(content, artifact.filename, artifact.mimeType);
-      } else {
-        if (!publishReady) throw new Error('cad_publish_connection_required');
-        const types: ExportFormat[] = ['json', 'svg', 'dxf', 'scad', 'obj'];
-        const artifacts = await Promise.all(types.map(fmt => exportProjectToArtifact(project, fmt)));
-        const out = await publishCadProject({provider, project, artifacts, note: `CAD ${project.name} revision ${project.version || 1}`});
-        setReceipt(out);
-      }
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Operation failed'); }
-    finally { setBusy(false); }
-  };
-  return <div role="dialog" aria-modal="true" aria-label="Export and publish project" className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm">
-    <div className="flex w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#10131d] text-slate-100 shadow-2xl">
-      <header className="flex items-center justify-between border-b border-white/10 p-4">
-        <div><h2 className="text-sm font-semibold">Project files</h2><p className="mt-1 text-xs text-slate-400">{project.name} · Revision {project.version || 1}</p></div>
-        <button type="button" aria-label="Close export dialog" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-white/10"><X className="size-4" /></button>
-      </header>
-      <nav className="flex border-b border-white/10 px-2" aria-label="Export options">
-        {(['export', 'publish'] as const).map(item => <button type="button" key={item} onClick={() => {setTab(item); setError(null);}}
-          className={`border-b-2 px-4 py-3 text-xs font-medium ${tab === item ? 'border-indigo-400 text-white' : 'border-transparent text-slate-400'}`}>
-          {item === 'export' ? 'Download files' : 'Publish via connected account'}
-        </button>)}
-      </nav>
-      <main className="max-h-[64vh] min-h-[245px] overflow-y-auto p-4">
-        {error && <p role="alert" className="mb-3 flex gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200"><AlertCircle className="size-4 shrink-0" />{error}</p>}
-        {tab === 'export' ? <>
-          <p className="mb-3 text-xs text-slate-400">Choose a format. The project document remains distinct from presentation or fabrication exports.</p>
-          <div className="grid grid-cols-2 gap-2">{FORMATS.map(item => <button type="button" key={item.id} onClick={() => setFormat(item.id)} aria-pressed={format === item.id}
-            className={`rounded-xl border p-3 text-left ${format === item.id ? 'border-indigo-400 bg-indigo-500/10' : 'border-white/10 hover:bg-white/5'}`}>
-            <span className="block text-xs font-semibold">{item.title}</span><span className="mt-1 block text-[11px] text-slate-400">{item.detail}</span>
-          </button>)}</div>
-        </> : <>
-          <p className="mb-3 text-xs text-slate-400">Uses GitHub App or Cloudflare OAuth via the authorized host. No pasted credentials and no simulated publication receipts.</p>
-          <div className="grid gap-2 sm:grid-cols-2">{(['github','cloudflare'] as CadPublishProvider[]).map(item => {
-            const state = connections.find(x => x.provider === item);
-            return <button type="button" key={item} onClick={() => setProvider(item)} aria-pressed={provider === item}
-              className={`flex items-center gap-3 rounded-xl border p-3 text-left ${provider === item ? 'border-indigo-400 bg-indigo-500/10' : 'border-white/10 hover:bg-white/5'}`}>
-              {item === 'github' ? <GitBranch className="size-5 shrink-0" /> : <Cloud className="size-5 shrink-0" />}
-              <span><span className="block text-xs font-semibold">{item === 'github' ? 'GitHub App' : 'Cloudflare OAuth'}</span>
-              <span className="mt-1 block text-[11px] text-slate-400">{state?.status === 'connected' ? state.label : state?.status === 'not_connected' ? 'Connection required' : 'Publishing not verified'}</span></span>
-            </button>;
-          })}</div>
-          {connectionError && <p role="status" className="mt-3 rounded-lg border border-amber-500/20 p-3 text-xs text-amber-200">{connectionError}</p>}
-          {connection?.status === 'not_connected' && <p className="mt-3 text-xs text-slate-400">Connect the provider in AgentSam account settings to authorize CAD publishing.</p>}
-          {receipt && <p role="status" className="mt-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200"><CheckCircle2 className="mr-2 inline size-4" />Verified {receipt.files_written} files · {receipt.id}{receipt.target_url && <a href={receipt.target_url} target="_blank" rel="noopener noreferrer" className="mt-2 block break-all underline">Open published project</a>}</p>}
-        </>}
-      </main>
-      <footer className="flex items-center justify-end gap-2 border-t border-white/10 p-4">
-        <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-xs text-slate-400 hover:bg-white/10">Close</button>
-        <button type="button" disabled={!canExport || busy || (tab === 'publish' && !publishReady)} onClick={() => void run()}
-          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40">
-          {tab === 'export' ? <Download className="size-4" /> : <Cloud className="size-4" />}
-          {busy ? 'Working…' : tab === 'export' ? `Export ${format.toUpperCase()}` : 'Publish project'}
-        </button>
-      </footer>
-    </div>
-  </div>;
+interface ExportPublishModalProps {
+  project: DesignProject;
+  isOpen: boolean;
+  onClose: () => void;
+  canExport: boolean;
 }
+
+export const ExportPublishModal: React.FC<ExportPublishModalProps> = ({
+  project,
+  isOpen,
+  onClose,
+  canExport,
+}) => {
+  const [selectedTab, setSelectedTab] = useState<'export' | 'publish'>('export');
+  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('dxf');
+  const [selectedDestination, setSelectedDestination] = useState<PublisherDestinationId>('github');
+  const [connectedProviders, setConnectedProviders] = useState<Set<string>>(new Set());
+  const [connectionStatus, setConnectionStatus] = useState<'loading'|'available'|'unavailable'>('loading');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [publishResult, setPublishResult] = useState<PublishResult | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Connection discovery reads the authenticated host session, never editable API keys.
+  useEffect(() => {
+    if (!isOpen) return;
+    const controller = new AbortController();
+    setConnectionStatus('loading');
+    fetch('/api/connections', { credentials: 'same-origin', signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error('connection_registry_unavailable');
+        return response.json();
+      })
+      .then(data => {
+        const active = new Set<string>();
+        for (const entry of data.connections || data.items || []) {
+          const provider = String(entry.provider || entry.slug || '').toLowerCase();
+          if (!provider) continue;
+          if (entry.connected === true || ['connected', 'active', 'ready'].includes(String(entry.status || '').toLowerCase())) active.add(provider);
+        }
+        for (const entry of data.oauth_status?.providers || []) {
+          if (Number(entry.activeCount) > 0) active.add(String(entry.provider).toLowerCase());
+        }
+        setConnectedProviders(active);
+        setConnectionStatus('available');
+      })
+      .catch(error => {
+        if (error?.name !== 'AbortError') {
+          setConnectedProviders(new Set());
+          setConnectionStatus('unavailable');
+        }
+      });
+    return () => controller.abort();
+  }, [isOpen]);
+
+  const publishers = listPublishers().filter(pub => pub.id === 'github' || pub.id === 'cloudflare');
+
+  if (!isOpen) return null;
+
+
+  const FORMAT_DESCRIPTIONS: Record<ExportFormat, { label: string; desc: string; ext: string; icon: string }> = {
+    dxf: { label: 'AutoCAD DXF (R12)', desc: 'Industry-standard 2D CAD with WALLS, DOORS, and ROOM_LABELS layers.', ext: '.dxf', icon: '📐' },
+    svg: { label: 'Vector Plan (SVG)', desc: 'Crisp architectural plan with title block, grid, and dimension callouts.', ext: '.svg', icon: '🎨' },
+    obj: { label: 'Wavefront 3D (OBJ)', desc: '3D polygonal mesh of walls, floors, and spatial volumes in real-world meters.', ext: '.obj', icon: '🧊' },
+    scad: { label: 'OpenSCAD Script (SCAD)', desc: 'Pure code parametric script with CSG boolean subtractions for doors/windows.', ext: '.scad', icon: '💻' },
+    stl: { label: 'Fabrication Mesh (STL)', desc: 'Watertight triangulated mesh ready for 3D printing and CNC slicers.', ext: '.stl', icon: '🖨️' },
+    json: { label: 'Canonical Project (JSON)', desc: 'Complete AgentSam Design Studio project schema with layers, metadata & history.', ext: '.json', icon: '📄' },
+    gltf: { label: 'GLTF 2.0 (JSON)', desc: 'Web3D and metaverse ready spatial transmission schema.', ext: '.gltf', icon: '🌐' },
+    '3mf': { label: '3D Manufacturing Format', desc: 'Compact manufacturing container with material and unit metadata.', ext: '.3mf', icon: '📦' },
+  };
+
+  const handleDownloadSingle = async (format: ExportFormat) => {
+    setIsProcessing(true);
+    setErrorMessage(null);
+    try {
+      const artifact = await exportProjectToArtifact(project, format);
+      const str = typeof artifact.content === 'string' ? artifact.content : new TextDecoder().decode(artifact.content);
+      downloadFile(str, artifact.filename, artifact.mimeType);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Export failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Connected OAuth identities do not establish publishing rights by themselves.
+  // Remote publish is intentionally not offered until a host-owned, receipted API exists.
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg">
+              <Share2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">Export & Publish CAD Artifacts</h2>
+              <p className="text-xs text-slate-400">
+                {project.name} (v{project.version || 1})
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Tab navigation */}
+        <div className="flex border-b border-slate-800 bg-slate-950/60 px-6">
+          <button
+            onClick={() => setSelectedTab('export')}
+            className={`py-3 px-4 text-xs font-semibold border-b-2 flex items-center space-x-2 transition ${
+              selectedTab === 'export'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Download className="w-4 h-4" />
+            <span>Direct File Export</span>
+          </button>
+          <button
+            onClick={() => setSelectedTab('publish')}
+            className={`py-3 px-4 text-xs font-semibold border-b-2 flex items-center space-x-2 transition ${
+              selectedTab === 'publish'
+                ? 'border-blue-500 text-blue-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Cloud className="w-4 h-4" />
+            <span>Publish & Cloud Adapters</span>
+          </button>
+        </div>
+
+        {/* Modal Body */}
+        <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+          {errorMessage && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-300 text-xs flex items-center space-x-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
+          {publishResult && (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-2">
+              <div className="flex items-center space-x-2 text-emerald-400 text-xs font-semibold">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{publishResult.message}</span>
+              </div>
+              {publishResult.targetUrl && (
+                <div className="flex items-center space-x-2 text-xs">
+                  <span className="text-slate-400">Target URL:</span>
+                  <a
+                    href={publishResult.targetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:underline flex items-center space-x-1"
+                  >
+                    <span>{publishResult.targetUrl}</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
+          {selectedTab === 'export' ? (
+            <div className="space-y-3">
+              <span className="text-xs font-semibold text-slate-300 block">
+                Select Format for Single-Click Download:
+              </span>
+              <div className="grid grid-cols-2 gap-2.5">
+                {(['dxf', 'svg', 'obj', 'scad', 'stl', 'json'] as ExportFormat[]).map((fmt) => {
+                  const meta = FORMAT_DESCRIPTIONS[fmt];
+                  return (
+                    <div
+                      key={fmt}
+                      onClick={() => setSelectedFormat(fmt)}
+                      className={`p-3 rounded-xl border cursor-pointer transition flex flex-col justify-between ${
+                        selectedFormat === fmt
+                          ? 'bg-blue-950/40 border-blue-500/50'
+                          : 'bg-slate-950/60 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-base">{meta.icon}</span>
+                          <div>
+                            <span className="text-xs font-bold text-white block">{meta.label}</span>
+                            <span className="text-[10px] text-slate-500 font-mono">{meta.ext}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadSingle(fmt);
+                          }}
+                          disabled={!canExport || isProcessing}
+                          className="p-1.5 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg transition"
+                          title={`Download ${meta.label}`}
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-2 line-clamp-2">{meta.desc}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Destination selector */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-2">
+                  Select Publishing Adapter:
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {publishers.map((pub) => {
+                    const isSelected = selectedDestination === pub.id;
+                    return (
+                      <div
+                        key={pub.id}
+                        onClick={() => setSelectedDestination(pub.id)}
+                        className={`p-3 rounded-xl border cursor-pointer transition text-center space-y-1 ${
+                          isSelected
+                            ? 'bg-blue-950/40 border-blue-500/50 text-white'
+                            : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="flex justify-center">
+                          {pub.id === 'github' && <GitBranch className="w-5 h-5 text-indigo-400" />}
+                          {pub.id === 'cloudflare' && <Cloud className="w-5 h-5 text-amber-400" />}
+                          {pub.id === 'local' && <HardDrive className="w-5 h-5 text-blue-400" />}
+                          {pub.id === 'docker' && <Server className="w-5 h-5 text-emerald-400" />}
+                        </div>
+                        <span className="text-xs font-bold block">{pub.displayName}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs text-slate-200 font-semibold">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  Connected account authority
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  GitHub App and Cloudflare OAuth are managed by AgentSam. No API keys, personal access tokens, or arbitrary endpoints belong in this editor.
+                </p>
+                <div className="text-xs text-slate-300" role="status">
+                  {connectionStatus === 'loading' ? 'Checking the current host connections…' :
+                    connectionStatus === 'unavailable' ? 'Connection registry unavailable in this CAD host.' :
+                    connectedProviders.has(selectedDestination) ? 'OAuth connection detected. Publishing still requires the host-owned artifact writer.' :
+                    'No active OAuth connection detected for this provider.'}
+                </div>
+                <a href="https://agentsam.inneranimalmedia.com/settings/integrations"
+                   target="_blank" rel="noopener noreferrer"
+                   className="inline-flex items-center gap-1 text-xs text-blue-300 hover:underline">
+                  Manage provider connections in AgentSam <ExternalLink className="size-3" />
+                </a>
+                <p className="text-xs text-amber-300">
+                  Remote publish is not enabled in this host yet. Export a verified CAD artifact locally; remote publishing will become available after real storage and GitHub receipts are wired.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
+          <span className="text-[11px] text-slate-500">
+            {project.walls.length} walls • {project.rooms.length} rooms • {(project.parametricObjects || []).length} parametric assemblies
+          </span>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 text-xs text-slate-400 hover:text-white transition"
+            >
+              Close
+            </button>
+
+            {selectedTab === 'export' ? (
+              <button
+                onClick={() => handleDownloadSingle(selectedFormat)}
+                disabled={!canExport || isProcessing}
+                className="flex items-center space-x-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow transition disabled:opacity-50"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{isProcessing ? 'Generating...' : `Export ${selectedFormat.toUpperCase()}`}</span>
+              </button>
+            ) : (
+              <span role="status" className="text-[11px] text-amber-300">Remote publishing requires connected host execution</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
