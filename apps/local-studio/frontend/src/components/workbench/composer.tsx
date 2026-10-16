@@ -164,7 +164,7 @@ export function Composer({
   return (
     <div className="px-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:px-4 md:pb-4">
       {pendingAttachments.length ? (
-        <div className="mx-auto mb-2 flex w-full max-w-3xl flex-wrap gap-2">
+        <div className="mx-auto mb-2 flex w-full max-w-6xl flex-wrap gap-2">
           {pendingAttachments.map((a) => (
             <div
               key={a.id}
@@ -192,7 +192,7 @@ export function Composer({
       ) : null}
       {goal ? (
         <GoalStatusStrip
-          className="mx-auto mb-2 w-full max-w-3xl rounded-xl bg-card/70 px-3 py-2 text-foreground shadow-hairline backdrop-blur"
+          className="mx-auto mb-2 w-full max-w-6xl rounded-xl bg-card/70 px-3 py-2 text-foreground shadow-hairline backdrop-blur"
           icon={<Target className="size-3.5 text-accent" />}
           label={goal.status === "paused" ? "Goal paused" : "Pursuing goal"}
           title={goal.title}
@@ -239,7 +239,7 @@ export function Composer({
         toolbarStart={<>{trigger}{attachControl}</>}
         sendControl={sendControl}
         cancelControl={cancelControl}
-        containerClassName="mx-auto flex w-full max-w-3xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline"
+        containerClassName="mx-auto flex w-full max-w-6xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline"
         inputClassName={cn(
           "flex min-h-[44px] max-h-52 w-full resize-none rounded-lg bg-transparent px-1 py-2.5 text-sm text-foreground placeholder:text-muted-foreground",
           "focus:outline-none focus-visible:outline-none focus-visible:shadow-none disabled:cursor-not-allowed disabled:opacity-40",
