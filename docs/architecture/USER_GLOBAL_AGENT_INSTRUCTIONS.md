@@ -35,6 +35,12 @@ The symlink keeps one editable source of truth; use a regular file when no relia
 - **Multi-tenant hosts must not implicitly treat the server process's home directory as a customer's policy authority.** Pass a tenant-authorized file or `null` at the call site. Do not allow one user's instructions to bleed into another user's run.
 - Rules loading never authenticates providers, changes permissions, performs actions, or changes the authoritative repository data. It only composes instruction text.
 
+## No silent rule truncation
+
+The compiled instruction set must fit the selected model's system-instruction budget. If owner, runtime, and repository rules exceed that budget, AgentSam rejects the turn with `AGENTSAM_INSTRUCTION_BUDGET_EXCEEDED` and an inspectable receipt containing source paths/hashes, requested bytes, and available character budget. No earlier global rule may quietly consume the budget and hide the repository's own requirements. Adjust the model budget or explicitly review and shorten rules, then retry. This is a safe rejection, not an authorization downgrade.
+
+For an actual CLI model request, `runResponsesAgent(..., { onPreparedTurn })` records the exact effective `instructions` and an `instruction_receipt` with the source hashes used for that turn. These data can contain sensitive repository policy; log only into an authorized diagnostic context, never default provider logs or public telemetry. Hosted/multi-tenant use must pass `globalFilename: null` unless the user has specifically authorized a tenant-owned rules path.
+
 ## Verify the effective rules
 
 The compiler is exported from the SDK:
