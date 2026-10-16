@@ -8,6 +8,8 @@ conventional client variable for that machinery, never a human identity. Prefer 
 “AgentSam executes through SAM…” over anthropomorphic phrasing. Architecture SSOT:
 `docs/architecture/SAM_KERNEL.md`.
 
+**Owner development-quality gate:** InnerAnimalMedia-owned work follows the [Experience Standard](https://github.com/SamPrimeaux/inneranimalmedia/blob/main/docs/standards/INNERANIMALMEDIA_EXPERIENCE_STANDARD.md): *Craft over spectacle. Substance over promises.* Visual distinction, functional depth, effortless usability, technical reliability, and narrative coherence determine actual experience quality. Never claim a feature is finished solely because it compiles, passes isolated tests, or looks good in a screenshot. This is an owner-scoped development standard, **not** a default policy for unrelated customers installing the portable SDK. See [user-global rule loading](docs/architecture/USER_GLOBAL_AGENT_INSTRUCTIONS.md).
+
 ## AgentSam system model: deterministic machinery + LLM augmentation
 
 AgentSam is deliberately **not** “an LLM with tools.” It is a layered system:
