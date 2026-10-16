@@ -133,7 +133,7 @@ test('user-global rules follow AgentSam into any repository without changing its
   assert.equal(compiled.sources[0].path, globalPath);
   assert.match(compiled.sources[0].hash, /^sha256:/);
 
-  const context = resolveProjectContext({ cwd: repo, objective: 'review the experience', globalFilename: globalPath, items: [] });
+  const context = resolveProjectContext({ cwd: repo, objective: 'review the experience', globalFilename: globalPath, budget: createContextBudget({ windowTokens: 8_000 }), items: [] });
   assert.match(context.rules.content, /Craft over spectacle/);
   assert.equal(context.rules.sources.length, 3);
 
