@@ -14,7 +14,7 @@ import {
   persistEffectiveModelSelection,
   type StudioInventoryPayload,
 } from "@/lib/work/model-inventory";
-import { shortLabel, type StudioInventoryModel, type StudioModelSelection } from "@/lib/work/models";
+import { DEFAULT_SELECTION, shortLabel, type StudioInventoryModel, type StudioModelSelection } from "@/lib/work/models";
 import { useWorkStore } from "@/lib/work/store";
 import { cn } from "@/lib/utils";
 
