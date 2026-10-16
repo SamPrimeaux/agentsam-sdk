@@ -28,6 +28,10 @@ test('experience workflow is discoverable without assigning brand authority', ()
   const skill = loadSkill('agentsam-experience-delivery');
   assert.match(skill.instructions, /Machinery-first preflight/);
   assert.match(skill.instructions, /preserve|Preserve/);
+  const withRefs = loadSkill('agentsam-experience-delivery', { references: true });
+  assert.equal(withRefs.references.length, 1);
+  assert.match(withRefs.references[0].content, /Mandatory interpretation mode/);
+  assert.match(withRefs.references[0].content, /One source, many projections/);
 });
 
 test('every catalog skill resolves to real files and a matching frontmatter name', () => {

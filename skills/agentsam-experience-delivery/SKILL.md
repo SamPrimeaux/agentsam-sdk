@@ -55,7 +55,7 @@ Do not begin generating themes, mockups or new renderer code before proving the 
 
 **6. High-fidelity authored experience.** Work from approved materials and actual editable source assets. Coordinate typography, material, composition, motion, navigation, scrollytelling, accessibility and a reduced-motion alternative. Make each visual transition change user understanding.
 
-**7. Technical handoff and verification.** Retain stable design IDs (direction/scene/screen), map them to component IDs, asset versions, data contracts, CMS settings, run events and tests. The source-to-preview link must be inspectable and survive an agent restart.
+**7. Technical handoff and verification.** Retain stable design IDs (direction/scene/screen), map them to component IDs, asset versions, data contracts, CMS settings, run events and tests. The source-to-preview link must be inspectable and survive an agent restart. Apply the on-demand `references/visual-design-fidelity.md` standard: record recreation vs interpretation vs variation, one canonical editable design, and must-match / behaviorally-equivalent / open-to-interpretation requirements. Do not confuse a device presentation with a reproducible flat design or production capture.
 
 **8. Ownership.** Demonstrate actual edit -> save draft -> preview -> publish -> reload/reopen or clearly mark the missing integration. No fake control affordances or claims that a visual-only demo changed persisted data.
 
