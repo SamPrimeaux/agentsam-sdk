@@ -8,6 +8,8 @@ import {
   loadCadConfig,
   saveCadConfig,
   getInstallGuidance,
+  probeDockerDaemon,
+  probeDockerServiceHealth,
 } from './cad-discovery.mjs';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -19,7 +21,7 @@ AgentSam CAD Creator
   agentsam-cad-creator [preview] [--port 3000]
   agentsam-cad-creator scaffold <directory>
   agentsam-cad-creator doctor [--json]
-  agentsam-cad-creator setup [--install] [--json]
+  agentsam-cad-creator setup [--install] [--docker] [--no-prompt] [--json]
   agentsam-cad-creator info
 
 preview
@@ -33,7 +35,7 @@ doctor
 setup
   Run local-machine discovery, probe PATH & OS standard install paths,
   and cache executable binary paths in ~/.agentsam/cad.json.
-  Optionally pass --install on macOS to invoke brew for missing tools.
+  Optionally pass --install for native tools or --docker for the isolated\n  CAD service (explicit approval required).
 
 scaffold
   Materialize the editable frontend/backend/shared source into a normal project.
@@ -80,7 +82,7 @@ function scaffoldRootPackage(targetRoot) {
       'cf:dry-run': 'npm run build && wrangler deploy -c backend/wrangler.jsonc --dry-run'
     },
     devDependencies: {
-      wrangler: '4.130.0'
+      wrangler: '4.147.0'
     }
   };
   fs.writeFileSync(path.join(targetRoot, 'package.json'), JSON.stringify(pkg, null, 2) + '\n');
@@ -98,6 +100,7 @@ function scaffold(targetArg) {
     '.env.example',
     'README.md',
     'agentsam.app.json',
+    '.agentsam/app.json',
     'frontend/index.html',
     'frontend/package.json',
     'frontend/tsconfig.json',
@@ -199,7 +202,12 @@ async function runDoctor(args = []) {
     }
     console.log('');
     console.log('  Run "agentsam-cad-creator setup" to probe and cache paths, or set AGENTSAM_<TOOL>_BIN.');
-    console.log('  Container alternative: run "agentsam dockerize cad" to launch the isolated Docker CAD service.');
+    const daemon = await probeDockerDaemon();
+    const service = await probeDockerServiceHealth();
+    console.log('  Docker daemon: ' + (daemon.available ? 'ready' : daemon.reason || 'unavailable'));
+    console.log('  CAD Docker service: ' + (service.available ? 'online' : 'not running'));
+    console.log('  To choose a container route, run "agentsam-cad-creator setup --docker".');
+    console.log('  Doctor never starts containers automatically.');
   } else {
     console.log('');
     console.log('All local CAD engines are operational.');
@@ -209,9 +217,11 @@ async function runDoctor(args = []) {
 async function runSetup(args = []) {
   const isJson = args.includes('--json');
   const doInstall = args.includes('--install');
+  const requestDocker = args.includes('--docker');
+  const noPrompt = args.includes('--no-prompt');
   const configPath = getCadConfigPath();
 
-  console.log('Probing machine for CAD engines across PATH and standard OS locations...');
+  if (!isJson) console.log('Probing machine for CAD engines across PATH and standard OS locations...');
   const cadReport = await probeAllCadTools(process.env, process.platform, true);
 
   if (isJson) {
@@ -235,6 +245,60 @@ async function runSetup(args = []) {
         console.log(`      Install command: ${tool.install_guidance.command}`);
       }
     }
+  }
+
+  const openscad = cadReport.tools.find(t => t.tool === 'openscad');
+  const dockerService = await probeDockerServiceHealth();
+  const dockerDaemon = await probeDockerDaemon();
+  if (!isJson && openscad && !openscad.available && !dockerService.available) {
+    console.log('Docker daemon: ' + (dockerDaemon.available ? 'ready' : dockerDaemon.reason || 'unavailable'));
+    console.log('Docker recovery is opt-in: "agentsam-cad-creator setup --docker".');
+  }
+
+  let approvedDocker = requestDocker;
+  if (!approvedDocker && !noPrompt && process.stdin.isTTY && process.stdout.isTTY &&
+      openscad && !openscad.available && dockerDaemon.available && !dockerService.available) {
+    const { createInterface } = await import('node:readline/promises');
+    const prompt = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      const answer = await prompt.question('OpenSCAD missing. Start a localhost-only Docker CAD service? [y/N] ');
+      approvedDocker = /^y(es)?$/i.test(answer.trim());
+    } finally {
+      prompt.close();
+    }
+  }
+
+  if (approvedDocker && !dockerService.available) {
+    if (!dockerDaemon.available) {
+      console.error('Docker is not available: start Docker Desktop/daemon first, then retry --docker.');
+      process.exitCode = 1;
+      return;
+    }
+    const sdkCli = path.resolve(packageRoot, '../../src/cli.js');
+    if (!fs.existsSync(sdkCli)) {
+      console.error('Standalone CAD package cannot launch SDK dockerize automatically. Run "agentsam dockerize cad --tools openscad" in the installed AgentSam SDK.');
+      process.exitCode = 1;
+      return;
+    }
+    // Docker creation only occurs after explicit --docker or affirmative TTY reply.
+    const { spawnSync } = await import('node:child_process');
+    const result = spawnSync(process.execPath, [sdkCli, 'dockerize', 'cad', '--tools', 'openscad'], {
+      cwd: packageRoot,
+      stdio: 'inherit',
+      env: process.env,
+    });
+    if (result.error || result.status !== 0) {
+      console.error('Docker CAD service could not be started; local CAD engines remain unchanged.');
+      process.exitCode = 1;
+      return;
+    }
+    const confirmed = await probeDockerServiceHealth();
+    if (!confirmed.available || !confirmed.tools?.openscad?.installed) {
+      console.error('Docker started but OpenSCAD execution health could not be verified.');
+      process.exitCode = 1;
+      return;
+    }
+    console.log('Docker OpenSCAD service verified. Retry the CAD operation.');
   }
 
   if (doInstall) {

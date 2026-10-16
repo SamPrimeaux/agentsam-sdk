@@ -6,7 +6,7 @@
     "packages/catalog/generated/packages.json"
   ],
   "counts": {
-    "commands": 74,
+    "commands": 75,
     "capabilities": 60,
     "packages": 62
   },
@@ -720,12 +720,22 @@
     {
       "id": "cad",
       "aliases": [],
-      "summary": "Blender/OpenSCAD/FreeCAD CAD tools",
+      "summary": "CAD: cad.project.v1 tools (design_project_*/design_model_*), Blender/OpenSCAD/FreeCAD, OCCT native via design_model_build",
       "topic": "work",
       "usage": [
         "agentsam cad"
       ],
       "operation": "cad.blender.inspect"
+    },
+    {
+      "id": "robotics",
+      "aliases": [],
+      "summary": "SAM Robotics: robotics.scene.inspect/object.locate/grasp.plan/motion.plan/validate/simulate/execute/verify, robot.home, execution.cancel (model: never)",
+      "topic": "work",
+      "usage": [
+        "agentsam robotics"
+      ],
+      "operation": "robotics.scene.inspect"
     },
     {
       "id": "dockerize",

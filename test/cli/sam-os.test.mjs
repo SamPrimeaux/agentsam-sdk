@@ -7,8 +7,9 @@ import { registerSamOperation, getSamOperation } from '../../src/sam/registry.js
 
 test('SAM OS bootstraps its offline packaged core without D1', () => {
   const status = ensureOS();
-  assert.equal(status.core_count, 10);
+  assert.equal(status.core_count, 20); // 10 original core + 10 deterministic robotics operations
   assert.ok(status.available.includes('repository.inspect'));
+  assert.ok(status.available.includes('robotics.scene.inspect'));
   assert.ok(!status.available.includes('media.image.background.remove'));
 });
 
