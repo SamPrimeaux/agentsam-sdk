@@ -3,7 +3,7 @@ import { coproAppManifest } from "./app-manifest";
 import { createRoot } from "react-dom/client";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
 import { createCoProProject, createTrack, createClip, serializeCoProProject } from "@inneranimalmedia/copro-project";
-import { BrowserLocalStorageProjectStore } from "@inneranimalmedia/copro-storage";
+import { BrowserLocalStorageProjectStore, BrowserIndexedDbMediaStore } from "@inneranimalmedia/copro-storage";
 import { extractBrowserAudioWaveform } from "@inneranimalmedia/copro-media";
 import {
   CoProProjectsScreen,
@@ -40,6 +40,9 @@ function installCoProBrandIcons() {
 }
 
 const store = new BrowserLocalStorageProjectStore({ prefix:"agentsam.copro.project:" });
+// Browser-level source authority: project JSON stores IDs, original File bytes live in IndexedDB.
+const sourceStore = typeof globalThis.indexedDB === "undefined" ? null :
+  new BrowserIndexedDbMediaStore({ name:"agentsam.copro.media.v1" });
 
 function makeDemoProject(id = "project:demo", title = "Weekend cut") {
   const project = createCoProProject({ id, title, now:"2026-10-04T00:00:00.000Z" });
@@ -157,6 +160,8 @@ function App() {
   const [previewKind, setPreviewKind] = useState<"video" | "image" | null>(null);
   const [restored, setRestored] = useState(false);
   const [mediaItems, setMediaItems] = useState<SessionMediaItem[]>([]);
+  const mediaUrlsRef = useRef(new Map<string,string>());
+  const [mediaPersistenceError, setMediaPersistenceError] = useState<string | null>(null);
 
   const [savedProjects, setSavedProjects] = useState<CoProProjectSummary[]>([]);
   const [homeSection, setHomeSection] = useState<"home" | "templates">("home");
@@ -178,6 +183,38 @@ function App() {
   }
 
   const projects = useMemo(() => [...savedProjects, ...FIXTURE_PROJECTS], [savedProjects]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!sourceStore) {
+      setMediaPersistenceError("Durable media storage isn't available in this browser. Imported files may need to be relinked after reopening.");
+      return;
+    }
+    // Hydrate original File bytes before media references are needed by the player.
+    void sourceStore.list().then((records) => {
+      if (cancelled) return;
+      const recovered: SessionMediaItem[] = records.map((record) => {
+        const existingUrl = mediaUrlsRef.current.get(record.id);
+        const url = existingUrl ?? URL.createObjectURL(record.file);
+        if (!existingUrl) mediaUrlsRef.current.set(record.id, url);
+        return {
+          id:record.id, name:record.name, kind:record.kind, url,
+          durationUs:record.durationUs, file:record.file, waveform:record.waveform,
+        };
+      });
+      setMediaItems((current) => {
+        const known = new Set(current.map((item) => item.id));
+        return [...current, ...recovered.filter((item) => !known.has(item.id))];
+      });
+      setMediaPersistenceError(null);
+    }).catch((error) => {
+      if (!cancelled) {
+        console.error("CoPro source recovery failed", error);
+        setMediaPersistenceError("Saved source media could not be loaded. Check browser storage permissions and relink unavailable files.");
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     installCoProBrandIcons();
@@ -333,7 +370,13 @@ function App() {
 
     const id = mediaIdForFile(file);
     const existing = mediaItems.find((item) => item.id === id);
-    if (existing) return existing;
+    if (existing) {
+      if (sourceStore) void sourceStore.put({
+        id:existing.id, name:existing.name, kind:existing.kind, file:existing.file,
+        durationUs:existing.durationUs, waveform:existing.waveform,
+      }).then(() => setMediaPersistenceError(null)).catch(() => setMediaPersistenceError("Source media could not be saved. Check available device storage."));
+      return existing;
+    }
 
     let durationUs = await probeMediaDurationUs(file);
     let waveform: number[] | undefined;
@@ -350,13 +393,24 @@ function App() {
       id,
       name:file.name,
       kind,
-      url:URL.createObjectURL(file),
+      url:mediaUrlsRef.current.get(id) ?? URL.createObjectURL(file),
       durationUs,
       file,
       waveform,
     };
-
-    setMediaItems((current) => [...current, item]);
+    mediaUrlsRef.current.set(id,item.url);
+    setMediaItems((current) => current.some((candidate) => candidate.id === id) ? current : [...current, item]);
+    if (sourceStore) {
+      try {
+        await sourceStore.put({ id, name:item.name, kind, file, durationUs, waveform });
+        setMediaPersistenceError(null);
+      } catch (error) {
+        console.error("CoPro media source save failed", error);
+        setMediaPersistenceError("Imported media is available for this session, but its original bytes were not saved. Free device storage or reimport before closing.");
+      }
+    } else {
+      setMediaPersistenceError("Original media bytes could not be persisted. This browser has no IndexedDB storage.");
+    }
     return item;
   }
 
@@ -538,7 +592,12 @@ function App() {
     </>;
   }
 
-  return <CoProStudio
+  return <>
+    {mediaPersistenceError && <div role="alert" className="copro-source-storage-warning" style={{position:"fixed",zIndex:30,bottom:78,left:12,right:12,maxWidth:720,margin:"0 auto",padding:"13px 16px",background:"#442a24",color:"#fff5e9",border:"1px solid #bd816d",borderRadius:12,boxShadow:"0 12px 36px #0006",fontSize:13}}>
+      <strong>Source storage needs attention. </strong>{mediaPersistenceError}
+      <button type="button" onClick={() => setMediaPersistenceError(null)} aria-label="Dismiss storage warning" style={{marginLeft:12,color:"inherit",background:"transparent",border:"1px solid #cba08c",padding:"4px 8px",borderRadius:7,cursor:"pointer"}}>Dismiss</button>
+    </div>}
+    <CoProStudio
     key={projectSeed}
     initialTool={initialTool}
     project={project as any}
@@ -557,7 +616,8 @@ function App() {
     onSeek={setPlayheadUs}
     onSelectClip={setSelectedClipId}
     onAction={commit}
-  />;
+  />
+  </>;
 }
 
 createRoot(document.getElementById("root")!).render(<React.StrictMode><App /></React.StrictMode>);

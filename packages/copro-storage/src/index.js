@@ -70,3 +70,71 @@ export class BrowserLocalStorageProjectStore {
     this.storage.removeItem(this.key(id));
   }
 }
+
+/**
+ * Browser-owned original media bytes. Project JSON stores stable IDs, never object URLs.
+ * No network, tenant IDs, or duplicate project writer. IndexedDB's structured clone
+ * preserves File/Blob bytes, which can be reopened after a page or desktop relaunch.
+ */
+export class BrowserIndexedDbMediaStore {
+  #dbPromise = null;
+
+  constructor({ indexedDB = globalThis.indexedDB, name = 'copro.media.v1', storeName = 'sources' } = {}) {
+    if (!indexedDB || typeof indexedDB.open !== 'function') throw new Error('copro_media_indexeddb_unavailable');
+    this.factory = indexedDB;
+    this.name = name;
+    this.storeName = storeName;
+  }
+
+  open() {
+    if (!this.#dbPromise) {
+      this.#dbPromise = new Promise((resolve, reject) => {
+        const request = this.factory.open(this.name, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(this.storeName)) db.createObjectStore(this.storeName, { keyPath: 'id' });
+        };
+        request.onsuccess = () => {
+          const db = request.result;
+          db.onversionchange = () => { db.close(); this.#dbPromise = null; };
+          resolve(db);
+        };
+        request.onerror = () => reject(request.error ?? new Error('copro_media_open_failed'));
+        request.onblocked = () => reject(new Error('copro_media_upgrade_blocked'));
+      }).catch((error) => { this.#dbPromise = null; throw error; });
+    }
+    return this.#dbPromise;
+  }
+
+  async #transaction(mode, operation) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      let result;
+      const transaction = db.transaction(this.storeName, mode);
+      const request = operation(transaction.objectStore(this.storeName));
+      request.onsuccess = () => { result = request.result; };
+      transaction.oncomplete = () => resolve(result);
+      transaction.onabort = () => reject(transaction.error ?? request.error ?? new Error('copro_media_transaction_aborted'));
+      transaction.onerror = () => reject(transaction.error ?? request.error ?? new Error('copro_media_transaction_failed'));
+    });
+  }
+
+  async put(item) {
+    if (!item?.id || !item?.file || typeof item.name !== 'string') throw new Error('copro_media_invalid_source');
+    const stored = {
+      id: item.id,
+      name: item.name,
+      kind: item.kind,
+      durationUs: item.durationUs,
+      waveform: item.waveform,
+      file: item.file,
+      savedAt: new Date().toISOString(),
+    };
+    await this.#transaction('readwrite', (store) => store.put(stored));
+    return stored;
+  }
+
+  async get(id) { return (await this.#transaction('readonly', (store) => store.get(id))) ?? null; }
+  async list() { return (await this.#transaction('readonly', (store) => store.getAll())) ?? []; }
+  async remove(id) { await this.#transaction('readwrite', (store) => store.delete(id)); }
+}
