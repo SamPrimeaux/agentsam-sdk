@@ -21,7 +21,6 @@ import { SketchCanvasTLDraw } from '../components/SketchCanvasTLDraw';
 import { ParametricEditor } from '../components/ParametricEditor';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import { ExportPublishModal } from '../components/ExportPublishModal';
-import { AgentSidebar } from '../components/AgentSidebar';
 import { FurniturePicker } from '../components/FurniturePicker';
 import { VeoStudioModal } from '../components/VeoStudioModal';
 import { ImageGenModal } from '../components/ImageGenModal';
@@ -88,7 +87,7 @@ export function CadCreatorApp({
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
   const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
   const bridgeRef = React.useRef<{ post: (m: never) => void; dispose: () => void } | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [chromeFolded, setChromeFolded] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   // Robotics is an optional heavy workspace.
@@ -262,6 +261,12 @@ export function CadCreatorApp({
   return (
     <div className={`flex flex-col h-screen w-screen font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {/* 1. Global Shell Header (5 Workspaces, Project, Sync, Undo/Redo, AgentSam, Export) */}
+      {chromeFolded ? (
+        <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/10 bg-slate-900 px-3 text-[11px]">
+          <span className="font-medium">{project.name || 'Untitled Project'} · {activeWorkspace}</span>
+          <button type="button" onClick={() => setChromeFolded(false)} aria-label="Show workspace controls" className="rounded bg-slate-800 px-2 py-0.5 hover:bg-slate-700">Show controls</button>
+        </div>
+      ) : (<>
       <ProjectRuntimePanel project={project} onLoad={setProject} readOnly={isViewer} />
       <CadCreatorShell
         activeWorkspace={activeWorkspace}
@@ -274,8 +279,8 @@ export function CadCreatorApp({
         onRedo={handleRedo}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        isSidebarOpen={!chromeFolded}
+        onToggleSidebar={() => setChromeFolded((v) => !v)}
         onExport={() => setIsExportPublishOpen(true)}
         presentation={presentation}
         showDiagnostics={showRoboticsDiagnostics}
@@ -284,6 +289,7 @@ export function CadCreatorApp({
 
       {/* 2. Contextual Secondary Toolbar (Changes per workspace) */}
       <div className={`h-10 px-3.5 border-b flex items-center justify-between text-xs z-20 shrink-0 backdrop-blur-md ${isDarkMode ? 'bg-slate-900/80 border-white/10 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'}`}>
+        <button type="button" onClick={() => setChromeFolded(true)} aria-label="Fold workspace controls" title="Fold controls for more canvas" className="mr-2 rounded bg-slate-800 px-2 py-0.5 text-[11px] hover:bg-slate-700">Fold ×</button>
         {/* Workspace Context Controls */}
         {activeWorkspace === 'plan' && (
           <div className="flex items-center gap-3">
@@ -448,39 +454,10 @@ export function CadCreatorApp({
         </div>
       </div>
 
-      {/* 3. Main Stage + Persistent Agent Sidebar */}
+      </>)}
+      {/* 3. Main Stage (canvas-first, no assistant sidebar) */}
       <main className="flex-1 flex overflow-hidden relative">
         {/* AgentSam Sidebar (Toggleable) */}
-        {isSidebarOpen && activeWorkspace !== 'robotics' && (
-          <AgentSidebar
-            embedded={presentation === 'embedded'}
-            selection={cadSelection}
-            onApproveProposal={(proposal) => {
-              if (isViewer) return;
-              const wallId = (proposal.args.operation as any).wallId; const h = (proposal.args.operation as any).updates.height3D;
-              updateProject((prev) => ({ ...prev, walls: prev.walls.map((w: any) => w.id === wallId ? { ...w, height3D: h } : w), updatedAt: Date.now() }));
-              showToast(`Approved: ${proposal.summary} Use Save revision to persist with expected_revision.`);
-            }}
-            postToHost={(m) => bridgeRef.current?.post(m as never)}
-            project={project}
-            onApplyPlan={(plan) => {
-              if (isViewer) return;
-              updateProject((prev) => ({
-                ...prev,
-                walls: plan.walls && plan.walls.length > 0 ? plan.walls : prev.walls,
-                doors: plan.doors ? plan.doors : prev.doors,
-                windows: plan.windows ? plan.windows : prev.windows,
-                furniture: plan.furniture && plan.furniture.length > 0 ? plan.furniture : prev.furniture,
-                rooms: plan.rooms && plan.rooms.length > 0 ? plan.rooms : prev.rooms,
-                updatedAt: Date.now()
-              }));
-            }}
-            onOpenVeoModal={() => setIsVeoModalOpen(true)}
-            onOpenImageGenModal={() => setIsImageGenModalOpen(true)}
-            onOpenSketchModal={() => setIsSketchModalOpen(true)}
-            userRole={currentUser.role}
-          />
-        )}
 
         {/* PRIMARY VIEWPORT STAGE */}
         <section className="flex-1 flex overflow-hidden relative bg-[#121212]">
