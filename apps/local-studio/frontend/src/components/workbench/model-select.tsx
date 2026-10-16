@@ -14,7 +14,7 @@ import {
   persistEffectiveModelSelection,
   type StudioInventoryPayload,
 } from "@/lib/work/model-inventory";
-import { DEFAULT_SELECTION, shortLabel, type StudioInventoryModel, type StudioModelSelection } from "@/lib/work/models";
+import { shortLabel, type StudioInventoryModel, type StudioModelSelection } from "@/lib/work/models";
 import { useWorkStore } from "@/lib/work/store";
 import { cn } from "@/lib/utils";
 
@@ -35,11 +35,6 @@ function eligibilityLabel(reason?: string | null) {
   if (reason === "specialized_output_model") return "Specialized output model";
   if (reason === "capability_excludes_chat") return "Not a chat model";
   return "Chat capability not reported";
-}
-
-function navigateToKeys() {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/settings/keys" } }));
 }
 
 export function ModelSelect({ compact = false }: { compact?: boolean }) {
@@ -65,16 +60,25 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
       const activeIsEligible = chatModels.some(
         (model) => model.provider === active?.provider && model.model_id === active?.model_id,
       );
-      if (state.modelSelectionMode === "auto") {
-        const next = chatModels[0];
-        setModelSelection(next ? { provider: next.provider, model_id: next.model_id } : DEFAULT_SELECTION);
-      } else if (!activeIsEligible) {
-        const next = chatModels[0];
-        setModelSelectionMode("auto");
-        setModelSelection(next ? { provider: next.provider, model_id: next.model_id } : DEFAULT_SELECTION);
+      // A transiently empty discovery result must not erase a previously
+      // selected, credential-scoped model. The server still authorizes sends.
+      if (chatModels.length) {
+        if (state.modelSelectionMode === "auto") {
+          const next = chatModels.find((model) => model.availability === "available") || chatModels[0];
+          setModelSelection({ provider: next.provider, model_id: next.model_id });
+        } else if (!activeIsEligible) {
+          const next = chatModels.find((model) => model.availability === "available") || chatModels[0];
+          setModelSelectionMode("auto");
+          setModelSelection({ provider: next.provider, model_id: next.model_id });
+        }
       }
-    } catch {
-      setError("Models are unavailable right now. Check provider settings and try again.");
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "";
+      setError(
+        message.includes("401") || message.includes("unauthorized") || message.includes("studio_session_required")
+          ? "The Studio session is not authorized to read model inventory. Refresh your sign-in; saved credentials have not been changed."
+          : "Model discovery failed. Retry inventory or inspect the account/runtime connection; saved credentials have not been changed.",
+      );
     } finally {
       setLoading(false);
     }
@@ -165,19 +169,26 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
         ) : null}
         {!loading && !error && !eligibleModels.length ? (
           <div className="px-2 py-3">
-            <div className="text-xs font-medium text-foreground">No runnable models yet</div>
+            <div className="text-xs font-medium text-foreground">Model inventory returned no chat options</div>
             <div className="mt-1 text-[11px] leading-4 text-muted-foreground">
-              Add a provider credential or configure a local model, then refresh.
+              {(inventory?.providers || []).some((provider) => provider.configured)
+                ? "Your session has configured providers, but discovery returned no chat-capable models. This is an inventory/runtime problem, not a request to add credentials."
+                : "No model source was reported for this session. Check your Studio sign-in and the host's Workers AI binding."}
+            </div>
+            <div className="mt-2 text-[10px] text-muted-foreground">
+              {(inventory?.providers || []).filter((provider) => provider.configured).length} configured providers
+              {" · "}{(inventory?.availableModels || []).length} discovered models
             </div>
             <button
               type="button"
               className="mt-2 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted"
               onClick={(event) => {
                 event.preventDefault();
-                navigateToKeys();
+                event.stopPropagation();
+                void refresh();
               }}
             >
-              Connect provider
+              Retry inventory
             </button>
           </div>
         ) : null}
