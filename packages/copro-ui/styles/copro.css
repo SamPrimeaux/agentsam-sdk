@@ -519,3 +519,78 @@ body:has(.copro-studio) { margin:0; }
   .copro-rail-clip-tools button { min-height:54px;color:var(--copro-text-2); }
   .copro-rail-clip-tools button.is-danger { color:var(--copro-danger); }
 }
+
+/* MovieMode dockable workspace v2 — tool browser and selection inspector are separate surfaces.
+   Every desktop region is directly resizable; compact host panes preserve preview+timeline. */
+.copro-studio .copro-editing-grid {
+  grid-template-columns:var(--copro-browser-width) var(--copro-browser-handle) minmax(0,1fr) var(--copro-inspector-handle) var(--copro-inspector-width);
+  grid-template-rows:minmax(145px,1fr) 42px 10px minmax(135px,var(--copro-timeline-height));
+  grid-template-areas:
+    "browser browser-divider stage inspector-divider inspector"
+    "browser browser-divider transport inspector-divider inspector"
+    "timeline-divider timeline-divider timeline-divider timeline-divider timeline-divider"
+    "timeline timeline timeline timeline timeline";
+  gap:0;
+}
+.copro-studio .copro-editing-grid.is-reversed {
+  grid-template-columns:var(--copro-inspector-width) var(--copro-inspector-handle) minmax(0,1fr) var(--copro-browser-handle) var(--copro-browser-width);
+  grid-template-areas:
+    "inspector inspector-divider stage browser-divider browser"
+    "inspector inspector-divider transport browser-divider browser"
+    "timeline-divider timeline-divider timeline-divider timeline-divider timeline-divider"
+    "timeline timeline timeline timeline timeline";
+}
+.copro-studio .copro-editing-grid>.copro-browser-slot { grid-area:browser;min-width:0;min-height:0;overflow:hidden;background:var(--copro-surface-1);border-right:1px solid var(--copro-line); }
+.copro-studio .copro-editing-grid>.copro-preview-stage { grid-area:stage;min-width:0;min-height:0; }
+.copro-studio .copro-editing-grid>.copro-transport { grid-area:transport;min-width:0; }
+.copro-studio .copro-editing-grid>.copro-inspector-slot { grid-area:inspector;min-width:0;min-height:0;border-left:1px solid var(--copro-line); }
+.copro-studio .copro-editing-grid>.copro-timeline-shell { grid-area:timeline;min-width:0;min-height:0;height:100%; }
+.copro-studio .copro-editing-grid>.copro-context-tools { display:none; }
+.copro-studio .copro-resize-handle { position:relative;display:flex;align-items:center;justify-content:center;background:var(--copro-surface-0);border:0;touch-action:none;user-select:none;z-index:2; }
+.copro-studio .copro-resize-handle:focus-visible { outline:2px solid var(--copro-accent);outline-offset:-2px;background:#143139; }
+.copro-studio .copro-resize-handle span { background:#627780;border-radius:999px;transition:background .1s; }
+.copro-studio .copro-resize-handle:hover span { background:var(--copro-accent); }
+.copro-studio .copro-resize-x { width:8px;cursor:col-resize; }
+.copro-studio .copro-resize-x span { width:3px;height:34px; }
+.copro-studio .copro-resize-y { height:10px;cursor:row-resize; }
+.copro-studio .copro-resize-y span { width:42px;height:3px; }
+.copro-studio .copro-browser-divider { grid-area:browser-divider; }
+.copro-studio .copro-inspector-divider { grid-area:inspector-divider; }
+.copro-studio .copro-timeline-divider { grid-area:timeline-divider; }
+.copro-studio .copro-browser-slot .copro-tool-panel-header { min-height:60px; }
+.copro-studio .copro-browser-slot .copro-tool-panel-body { padding:14px; }
+.copro-studio .copro-topbar-actions .copro-icon-button { min-width:32px; }
+.copro-studio .copro-editing-grid.is-reversed>.copro-browser-slot { border-left:1px solid var(--copro-line);border-right:0; }
+.copro-studio .copro-editing-grid.is-reversed>.copro-inspector-slot { border-right:1px solid var(--copro-line);border-left:0; }
+
+/* App-container-based breakpoint, not a monitor-width assumption: Work/desktop embeds are often narrow. */
+.copro-studio .copro-editing-grid.is-narrow {
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(140px,1fr) 42px minmax(115px,26dvh) 10px minmax(115px,var(--copro-timeline-height)) 68px;
+  grid-template-areas:"stage" "transport" "pane" "timeline-divider" "timeline" "dock";
+}
+.copro-studio .copro-editing-grid.is-narrow:not(.has-browser):not(.has-inspector) {
+  grid-template-rows:minmax(140px,1fr) 42px 0 10px minmax(115px,var(--copro-timeline-height)) 68px;
+}
+.copro-studio .copro-editing-grid.is-narrow>.copro-browser-slot,
+.copro-studio .copro-editing-grid.is-narrow>.copro-inspector-slot {
+  grid-area:pane;border-top:1px solid var(--copro-line);border-bottom:1px solid var(--copro-line);
+  border-left:0;border-right:0;min-height:0;height:100%;
+}
+.copro-studio .copro-editing-grid.is-narrow>.copro-context-tools { grid-area:dock;display:flex;min-height:0; }
+.copro-studio .copro-editing-grid.is-narrow>.copro-resize-x { display:none; }
+.copro-studio .copro-editing-grid.is-narrow>.copro-timeline-shell { grid-area:timeline; }
+.copro-workspace:has(.is-compact)>.copro-desktop-rail { display:none; }
+.copro-studio .copro-editing-grid.is-compact { grid-template-rows:minmax(115px,1fr) 38px minmax(110px,22dvh) 10px minmax(115px,var(--copro-timeline-height)) 68px; }
+.copro-studio .copro-editing-grid.is-compact:not(.has-browser):not(.has-inspector) { grid-template-rows:minmax(115px,1fr) 38px 0 10px minmax(115px,var(--copro-timeline-height)) 68px; }
+@media(max-width:599px) { .copro-studio .copro-wide-layout-control { display:none; } }
+/* Keep editing transport usable on an actual 320–430px phone without hiding undo. */
+@media (max-width:450px) {
+  .copro-studio .copro-topbar { padding-left:5px;padding-right:5px;gap:4px; }
+  .copro-studio .copro-title-block { gap:0; }
+  .copro-studio .copro-title-block span { display:none; }
+  .copro-studio .copro-topbar-actions { gap:2px; }
+  .copro-studio .copro-topbar-actions .copro-history-button { display:none; }
+  .copro-studio .copro-topbar-actions>.copro-icon-button { width:32px;min-width:32px;min-height:36px;height:36px; }
+  .copro-studio .copro-export-button { min-height:36px;padding:0 10px; }
+}

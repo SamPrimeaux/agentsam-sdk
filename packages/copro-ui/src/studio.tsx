@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, AudioLines, Captions, Copy, Film,
   Layers, Play, Pause, Redo2, Scissors, SlidersHorizontal, Sparkles,
-  Trash2, Type, Undo2, X, Gauge, Volume2, Replace, Clapperboard,
+  Trash2, Type, Undo2, X, Gauge, Volume2, Replace, Clapperboard, PanelLeftClose, PanelRightClose, PanelsTopLeft, RotateCcw,
 } from "lucide-react";
-import { CoProTimeline, type CoProProjectView } from "./timeline";
-import { CoProToolPanel, type CoProMediaShelfItem } from "./tool-sheet";
+import { CoProTimeline, type CoProProjectView } from "./timeline.js";
+import { CoProToolPanel, type CoProMediaShelfItem } from "./tool-sheet.js";
+import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout.js";
 
 
 export type CoProStudioAction =
@@ -105,6 +106,25 @@ export function CoProStudio({
 }: CoProStudioProps) {
   const [playing, setPlaying] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(initialTool);
+  const [categoryTool, setCategoryTool] = useState<string>(initialTool ?? "media");
+  const [panePreference, setPanePreference] = useState<"browser" | "inspector">("browser");
+  const { layout, setLayout, resetLayout } = useWorkspaceLayout();
+  const workspaceRef = useRef<HTMLElement>(null);
+  const [workspaceWidth, setWorkspaceWidth] = useState(1440);
+  const [workspaceHeight, setWorkspaceHeight] = useState(800);
+
+  useEffect(() => {
+    if (!workspaceRef.current || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      setWorkspaceWidth(entry.contentRect.width);
+      setWorkspaceHeight(entry.contentRect.height);
+    });
+    observer.observe(workspaceRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => { if (selectedClipId) setPanePreference("inspector"); }, [selectedClipId]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -118,6 +138,25 @@ export function CoProStudio({
 
   const selectedClip = selectedEntry?.clip ?? null;
   const selectedTrack = selectedEntry?.track ?? null;
+  const isNarrow = workspaceWidth < 1180;
+  const isCompact = workspaceWidth < 760;
+  const clipSpecificTools = ["trim", "speed", "volume", "effects", "transitions", "text", "captions"];
+  const inspectorTool = activeTool === "export" ? "export" : selectedClip
+    ? (activeTool && clipSpecificTools.includes(activeTool) ? activeTool : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" ? "text" : "trim")
+    : null;
+  const inspectorAvailable = Boolean(inspectorTool);
+  const showInspector = inspectorAvailable && layout.inspectorOpen && (!isNarrow || panePreference === "inspector" || !layout.browserOpen);
+  const showBrowser = layout.browserOpen && (!isNarrow || !showInspector);
+  const browserWidth = clampWorkspaceSize(layout.browserWidth, 240, Math.max(240, workspaceWidth - 420));
+  const inspectorWidth = clampWorkspaceSize(layout.inspectorWidth, 250, Math.max(250, workspaceWidth - (showBrowser ? browserWidth : 0) - 390));
+  const timelineHeight = clampWorkspaceSize(layout.timelineHeight, isCompact ? 115 : 150, Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 320 : 230)));
+  const gridStyle = {
+    "--copro-browser-width": showBrowser ? `${browserWidth}px` : "0px",
+    "--copro-browser-handle": showBrowser ? "8px" : "0px",
+    "--copro-inspector-width": showInspector ? `${inspectorWidth}px` : "0px",
+    "--copro-inspector-handle": showInspector ? "8px" : "0px",
+    "--copro-timeline-height": `${timelineHeight}px`,
+  } as React.CSSProperties;
 
   const activeVisualClip = useMemo(() => {
     for (const track of project.tracks) {
@@ -240,7 +279,9 @@ export function CoProStudio({
       setActiveTool(null);
       return;
     }
-    setActiveTool((current) => current === id ? null : id);
+    setActiveTool(id);
+    setPanePreference("inspector");
+    setLayout(current => ({ ...current, inspectorOpen: true }));
   }
 
   return (
@@ -252,16 +293,20 @@ export function CoProStudio({
           <span>CoPro</span>
         </div>
         <div className="copro-topbar-actions">
-          <button className="copro-icon-button" aria-label="Undo" disabled={!canUndo} onClick={() => onAction?.({ type: "undo" })}><Undo2 size={20}/></button>
-          <button className="copro-icon-button" aria-label="Redo" disabled={!canRedo} onClick={() => onAction?.({ type: "redo" })}><Redo2 size={20}/></button>
-          <button className="copro-export-button" aria-expanded={activeTool === "export"} aria-controls="copro-tool-inspector" onClick={() => setActiveTool(activeTool === "export" ? null : "export")}>Export</button>
+          <button className="copro-icon-button copro-history-button" aria-label="Undo" disabled={!canUndo} onClick={() => onAction?.({ type: "undo" })}><Undo2 size={20}/></button>
+          <button className="copro-icon-button copro-history-button" aria-label="Redo" disabled={!canRedo} onClick={() => onAction?.({ type: "redo" })}><Redo2 size={20}/></button>
+          <button className="copro-icon-button" type="button" title={layout.browserOpen ? "Collapse media browser" : "Show media browser"} aria-label={layout.browserOpen ? "Collapse media browser" : "Show media browser"} aria-pressed={layout.browserOpen} onClick={() => { setLayout(value => ({ ...value, browserOpen: !value.browserOpen })); setPanePreference("browser"); }}><PanelLeftClose size={18}/></button>
+          <button className="copro-icon-button" type="button" title={layout.inspectorOpen ? "Collapse inspector" : "Show inspector"} aria-label={layout.inspectorOpen ? "Collapse inspector" : "Show inspector"} aria-pressed={layout.inspectorOpen} onClick={() => { setLayout(value => ({ ...value, inspectorOpen: !value.inspectorOpen })); setPanePreference("inspector"); }}><PanelRightClose size={18}/></button>
+          <button className="copro-icon-button copro-wide-layout-control" type="button" title="Swap dock positions of browser and inspector" aria-label="Swap browser and inspector" onClick={() => setLayout(value => ({ ...value, reversed: !value.reversed }))}><PanelsTopLeft size={18}/></button>
+          <button className="copro-icon-button copro-wide-layout-control" type="button" title="Restore default panel widths, docking and timeline height" aria-label="Reset workspace layout" onClick={() => { resetLayout(); setPanePreference("browser"); }}><RotateCcw size={18}/></button>
+          <button className="copro-export-button" aria-expanded={activeTool === "export"} aria-controls="copro-tool-inspector" onClick={() => { setActiveTool("export"); setLayout(value => ({ ...value, inspectorOpen: true })); setPanePreference("inspector"); }}>Export</button>
         </div>
       </header>
 
-      <main className="copro-workspace">
+      <main className="copro-workspace" ref={workspaceRef}>
         <aside className="copro-desktop-rail">
           {PRIMARY_TOOLS.map(([id, label]) => (
-            <button key={id} type="button" aria-pressed={activeTool === id} aria-expanded={activeTool === id} aria-controls="copro-tool-inspector" className={activeTool === id ? "is-active" : ""} disabled={id === "templates"} title={id === "templates" ? "Template catalog not connected" : label} onClick={() => setActiveTool(activeTool === id ? null : id)}>
+            <button key={id} type="button" aria-pressed={categoryTool === id} aria-expanded={showBrowser && categoryTool === id} aria-controls="copro-tool-browser" className={categoryTool === id ? "is-active" : ""} disabled={id === "templates"} title={id === "templates" ? "Template catalog not connected" : label} onClick={() => { setCategoryTool(id); setActiveTool(selectedClip ? id : null); setLayout(value => ({ ...value, browserOpen: true })); setPanePreference("browser"); }}>
               <i>{renderToolIcon(id)}</i><span>{label}</span>
             </button>
           ))}
@@ -277,7 +322,17 @@ export function CoProStudio({
           ) : null}
         </aside>
 
-        <div className={"copro-editing-grid" + (activeTool ? " has-inspector" : "")}>
+        <div className={["copro-editing-grid", showBrowser ? "has-browser" : "", showInspector ? "has-inspector" : "", isNarrow ? "is-narrow" : "", isCompact ? "is-compact" : "", layout.reversed ? "is-reversed" : ""].filter(Boolean).join(" ")} style={gridStyle} data-layout-mode={isCompact ? "mobile" : isNarrow ? "single-pane" : "wide"}>
+          {showBrowser && <aside id="copro-tool-browser" className="copro-browser-slot" aria-label={`${categoryTool} browser`}>
+            <CoProToolPanel tool={categoryTool} onClose={() => setLayout(value => ({ ...value, browserOpen: false }))}
+              mediaItems={mediaItems} onMediaAdd={(id) => onMediaAdd?.(id,playheadUs)}
+              onMediaPicked={(file) => onAction?.({type:"import-media",file,atUs:playheadUs})}
+              onTextCommit={(text,kind) => onAction?.({type:"create-text",kind,text,atUs:playheadUs})}
+              onProjectExport={() => onAction?.({type:"export-project"})}
+            />
+          </aside>}
+          {showBrowser && !isNarrow && <ResizeHandle axis="x" className="copro-browser-divider" label="Resize tool browser" value={browserWidth} min={240} max={Math.max(260,workspaceWidth - (showInspector ? inspectorWidth : 0) - 410)} direction={layout.reversed ? -1 : 1} onChange={width => setLayout(value => ({ ...value, browserWidth: width }))}/>}
+
           <section className="copro-preview-stage">
             <div className="copro-preview-device">
               {effectivePreviewSrc && effectivePreviewKind === "video" ? (
@@ -329,11 +384,11 @@ export function CoProStudio({
             <button className="copro-icon-button" aria-label="Timeline controls" onClick={() => onSelectClip?.(null)}><SlidersHorizontal size={18}/></button>
           </section>
 
-          {activeTool && (
+          {showInspector && inspectorTool && (
             <aside id="copro-tool-inspector" className="copro-inspector-slot" aria-label={activeTool + " settings"}>
               <CoProToolPanel
-                tool={activeTool}
-                onClose={() => setActiveTool(null)}
+                tool={inspectorTool}
+                onClose={() => setLayout(value => ({ ...value, inspectorOpen: false }))}
                 selectedClipId={selectedClipId}
                 hasSelectedClip={Boolean(selectedClip)}
                 selectedClipKind={selectedTrack?.kind}
@@ -368,6 +423,8 @@ export function CoProStudio({
             </aside>
           )}
 
+          {showInspector && !isNarrow && <ResizeHandle axis="x" className="copro-inspector-divider" label="Resize clip inspector" value={inspectorWidth} min={250} max={Math.max(270, workspaceWidth - (showBrowser ? browserWidth : 0) - 410)} direction={layout.reversed ? 1 : -1} onChange={width => setLayout(value => ({ ...value, inspectorWidth: width }))}/>}
+          <ResizeHandle axis="y" className="copro-timeline-divider" label="Resize timeline" value={timelineHeight} min={isCompact ? 115 : 150} max={Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 320 : 230))} direction={-1} onChange={height => setLayout(value => ({ ...value, timelineHeight: height }))}/>
           <CoProTimeline
             project={project}
             selectedClipId={selectedClipId}
@@ -382,6 +439,8 @@ export function CoProStudio({
           />
 
           <section className="copro-context-tools" aria-label="Editing tools">
+            <button type="button" disabled={!canUndo} aria-label="Undo last edit" title="Undo (⌘Z)" onClick={() => onAction?.({ type: "undo" })}><i><Undo2 size={19}/></i><span>Undo</span></button>
+            <button type="button" disabled={!canRedo} aria-label="Redo last edit" title="Redo (⇧⌘Z)" onClick={() => onAction?.({ type: "redo" })}><i><Redo2 size={19}/></i><span>Redo</span></button>
             {selectedClip ? <button className="copro-deselect-button" onClick={() => onSelectClip?.(null)}><X size={20}/><span>Done</span></button> : null}
             {(selectedClip ? CLIP_TOOLS : PRIMARY_TOOLS).map(([id, label]) => (
               <button key={id} disabled={id === "templates"} aria-pressed={activeTool === id} className={[id === "delete" ? "is-danger" : "", activeTool === id ? "is-active" : ""].join(" ")} onClick={() => runTool(id)}>
