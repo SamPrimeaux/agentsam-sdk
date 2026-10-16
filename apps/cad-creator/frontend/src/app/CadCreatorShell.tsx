@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import {
-  WORKSPACE_REGISTRY,
+  PRIMARY_WORKSPACES,
   WorkspaceDescriptor,
   WorkspaceId
 } from './workspaceRegistry';
@@ -100,7 +100,7 @@ export function CadCreatorShell({
 
       {/* Primary destinations only: CSG and rendering are tools within Model. */}
       <nav className="flex items-center gap-1 overflow-x-auto custom-scrollbar px-2">
-        {WORKSPACE_REGISTRY.filter((ws) => ws.isPrimary).map((ws) => {
+        {PRIMARY_WORKSPACES.map((ws) => {
           const Icon = ws.icon;
           const isActive = activeWorkspace === ws.id;
 
