@@ -38,7 +38,8 @@ import {
   WORKSPACE_REGISTRY,
   WorkspaceDescriptor,
   WorkspaceId,
-  DEFAULT_RUNTIME_CAPABILITIES
+  DEFAULT_RUNTIME_CAPABILITIES,
+  primaryWorkspaceFor
 } from './workspaceRegistry';
 import {
   Box,
@@ -82,7 +83,8 @@ export function CadCreatorApp({
   const [redoStack, setRedoStack] = useState<ProjectState[]>([]);
 
   // 2. Workspace & Layout State
-  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(initialWorkspace);
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(primaryWorkspaceFor(initialWorkspace));
+  const [explorePanel, setExplorePanel] = useState<'parameters' | 'render' | null>(null);
   const [planLayout, setPlanLayout] = useState<'2d' | 'split' | 'sketch'>('split');
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [selectedFurnitureType, setSelectedFurnitureType] = useState<string | null>(null);
@@ -164,7 +166,8 @@ export function CadCreatorApp({
     if (wsId === 'robotics') {
       preloadRoboticsWorkspace();
     }
-    setActiveWorkspace(wsId);
+    setActiveWorkspace(primaryWorkspaceFor(wsId));
+    setExplorePanel(null);
   };
 
   // Initialize WebSocket Collaboration
@@ -262,7 +265,7 @@ export function CadCreatorApp({
 
   return (
     <div className={`flex flex-col h-screen w-screen font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-      {/* 1. Global Shell Header (5 Workspaces, Project, Sync, Undo/Redo, AgentSam, Export) */}
+      {/* Three primary experiences; CAD engines appear as contextual tools. */}
       {chromeFolded ? (
         <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/10 bg-slate-900 px-3 text-[11px]">
           <span className="font-medium">{project.name || 'Untitled Project'} · {activeWorkspace}</span>
@@ -358,7 +361,7 @@ export function CadCreatorApp({
           <div className="flex items-center gap-3">
             <span className="font-semibold text-xs text-indigo-400 flex items-center gap-1.5">
               <Box className="size-3.5" />
-              <span>3D Spatial Scene Assembly</span>
+              <span>Explore · Live 3D model</span>
             </span>
             <div className="flex items-center gap-1 border-l border-inherit/40 pl-3">
               <button
@@ -374,6 +377,18 @@ export function CadCreatorApp({
                 onClick={() => setShowBimStarters((previous) => !previous)}
                 className="rounded bg-amber-500/15 px-2 py-1 text-[11px] text-amber-300 hover:bg-amber-500/25"
               >BIM Starters</button>
+              <button
+                type="button"
+                onClick={() => setExplorePanel((p) => p === 'parameters' ? null : 'parameters')}
+                aria-expanded={explorePanel === 'parameters'}
+                className={`rounded px-2 py-1 text-[11px] ${explorePanel === 'parameters' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}
+              >Parameters</button>
+              <button
+                type="button"
+                onClick={() => setExplorePanel((p) => p === 'render' ? null : 'render')}
+                aria-expanded={explorePanel === 'render'}
+                className={`rounded px-2 py-1 text-[11px] ${explorePanel === 'render' ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-300 hover:bg-white/10'}`}
+              >Render</button>
               <button
                 type="button"
                 onClick={() => setIsTemplateLibraryOpen(true)}
@@ -527,9 +542,32 @@ export function CadCreatorApp({
                   setIsImageGenModalOpen(true);
                 }}
               />}
+              {explorePanel && !showBimStarters && (
+                <aside
+                  aria-label={explorePanel === 'parameters' ? 'Parametric tools' : 'Render tools'}
+                  className="absolute right-2 bottom-2 top-2 z-20 flex w-[min(410px,calc(100%-16px))] flex-col overflow-hidden rounded-xl border border-white/15 bg-slate-950/95 shadow-2xl backdrop-blur-md sm:right-4 sm:top-4 sm:bottom-4"
+                >
+                  <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
+                    <span className="text-sm font-semibold">{explorePanel === 'parameters' ? 'Parametric tools' : 'Render & presentation'}</span>
+                    <button type="button" onClick={() => setExplorePanel(null)} aria-label="Close tools" className="rounded-md px-2 py-1 text-xs text-slate-300 hover:bg-white/10">Close</button>
+                  </header>
+                  {explorePanel === 'parameters' ? (
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                      <ParametricEditor project={project} onUpdateProject={(newProj) => updateProject(() => newProj)} canEdit={!isViewer} />
+                    </div>
+                  ) : (
+                    <div className="space-y-3 p-4 text-sm">
+                      <p className="text-slate-400">Create a render from your current design. Rendering uses its configured provider, not a separate workspace.</p>
+                      <button type="button" onClick={() => setIsImageGenModalOpen(true)} className="block w-full rounded-lg bg-indigo-600 p-3 text-left text-white hover:bg-indigo-500">Architectural image render</button>
+                      <button type="button" onClick={() => setIsVeoModalOpen(true)} className="block w-full rounded-lg border border-white/15 p-3 text-left text-slate-100 hover:bg-white/10">Video walkthrough</button>
+                    </div>
+                  )}
+                </aside>
+              )}
             </div>
           )}
 
+          {/* Legacy direct links remain readable; the main navigation uses Explore. */}
           {/* WORKSPACE 3: PARAMETRIC */}
           {activeWorkspace === 'parametric' && (
             <div className="w-full h-full relative">

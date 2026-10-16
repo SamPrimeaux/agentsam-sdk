@@ -79,6 +79,10 @@ export function RoboticsWorkspace({
 
   const [isPickingUp, setIsPickingUp] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  // Simulation-only IK controls. No physical robot actuator or host bridge.
+  const [motionNotice, setMotionNotice] = useState('Ready to preview a robot movement');
+  const motionAnchor = useRef<THREE.Vector3 | null>(null);
+
 
   const activeLog = expandedLogId ? logs.find(l => l.id === expandedLogId) : null;
 
@@ -153,7 +157,26 @@ export function RoboticsWorkspace({
       setIsPaused(false);
       setIsPickingUp(false);
       setPlaybackSpeed(1);
+      motionAnchor.current = null;
+      setMotionNotice('Simulation reset');
     }
+  };
+
+  const handleSimMotion = (side: -1 | 1) => {
+    const sim = activeSimProvider.current;
+    const present = sim?.getGizmoStats()?.pos;
+    if (!sim?.isReady || !present) {
+      setMotionNotice('Simulation target unavailable');
+      return;
+    }
+    const anchor = motionAnchor.current ?? present.clone();
+    motionAnchor.current = anchor;
+    // A bounded visual motion target based on the real simulated end-effector.
+    // It never invokes a hardware or network executor.
+    const target = anchor.clone();
+    target.x += side * 0.08;
+    sim.moveIkTargetTo(target, 900);
+    setMotionNotice(side < 0 ? 'Previewing left reach' : 'Previewing right reach');
   };
 
   const handleErSend = async (
@@ -300,6 +323,20 @@ export function RoboticsWorkspace({
           gizmoStats={simulationStats.gizmoStats}
           isDarkMode={isDarkMode}
         />
+      )}
+
+      {!isLoading && !loadError && (
+        <div className="absolute bottom-3 left-1/2 z-20 flex w-[min(390px,calc(100%-16px))] -translate-x-1/2 flex-col gap-2 rounded-xl border border-white/15 bg-slate-950/90 p-3 text-slate-100 shadow-xl backdrop-blur-md sm:bottom-4" aria-label="Robot simulation actions">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold">Try the robot</span>
+            <span className="text-[10px] text-slate-400">Simulation only</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => handleSimMotion(-1)} disabled={isPaused || isPickingUp} className="min-h-10 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/20 disabled:opacity-40">Reach left</button>
+            <button type="button" onClick={() => handleSimMotion(1)} disabled={isPaused || isPickingUp} className="min-h-10 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium hover:bg-white/20 disabled:opacity-40">Reach right</button>
+          </div>
+          <p className="text-[10px] text-slate-400" role="status">{motionNotice}</p>
+        </div>
       )}
 
       {/* Floating Bottom Toolbar */}

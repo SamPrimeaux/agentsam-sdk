@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import {
-  WORKSPACE_REGISTRY,
+  PRIMARY_WORKSPACES,
+  primaryWorkspaceFor,
   WorkspaceDescriptor,
   WorkspaceId
 } from './workspaceRegistry';
@@ -98,11 +99,11 @@ export function CadCreatorShell({
         </div>
       </div>
 
-      {/* 2. Center: Five Canonical Workspaces */}
+      {/* 2. Center: Three Primary Experiences */}
       <nav className="flex items-center gap-1 overflow-x-auto custom-scrollbar px-2">
-        {WORKSPACE_REGISTRY.map((ws) => {
+        {PRIMARY_WORKSPACES.map((ws) => {
           const Icon = ws.icon;
-          const isActive = activeWorkspace === ws.id;
+          const isActive = primaryWorkspaceFor(activeWorkspace) === ws.id;
 
           return (
             <button
@@ -127,6 +128,7 @@ export function CadCreatorShell({
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               }`}
               title={ws.description}
+              aria-current={isActive ? 'page' : undefined}
             >
               <Icon className="size-3.5" />
               <span>{ws.shortName}</span>
