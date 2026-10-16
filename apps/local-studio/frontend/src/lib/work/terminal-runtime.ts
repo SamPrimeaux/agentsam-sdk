@@ -136,6 +136,7 @@ type TerminalRuntime = {
   host: HTMLElement | null;
   park: DocumentFragment;
   observer: ResizeObserver | null;
+  resizeFrame?: number;
   refCount: number;
   getProject: ProjectGetter;
   resize?: () => void;
@@ -187,10 +188,9 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
       void navigator.clipboard.writeText(term.getSelection());
       return false;
     }
-    if (event.key.toLowerCase() === "v") {
-      void navigator.clipboard.readText().then((text) => term.paste(text));
-      return false;
-    }
+    // Native paste is delivered to xterm's focused textarea via the paste event.
+    // Async clipboard.readText() requests extra browser permission and can duplicate paste.
+    if (event.key.toLowerCase() === "v") return true;
     return true;
   });
 
@@ -836,17 +836,27 @@ export async function attachSharedTerminal(
 
   if (runtime.host !== host) {
     runtime.observer?.disconnect();
+    if (runtime.resizeFrame !== undefined) cancelAnimationFrame(runtime.resizeFrame);
+    runtime.resizeFrame = undefined;
     runtime.observer = null;
     const root = runtime.term.element;
     if (root) host.appendChild(root);
     runtime.host = host;
     runtime.observer = new ResizeObserver(() => {
-      try {
-        runtime.fit.fit();
-        runtime.resize?.();
-      } catch {
-        /* ignore */
-      }
+      // Coalesce measurement events; report PTY dimensions only when rows/cols change.
+      if (runtime.resizeFrame !== undefined) return;
+      runtime.resizeFrame = requestAnimationFrame(() => {
+        runtime.resizeFrame = undefined;
+        if (runtime.host !== host || !host.isConnected || !host.clientWidth || !host.clientHeight) return;
+        try {
+          const previousCols = runtime.term.cols;
+          const previousRows = runtime.term.rows;
+          runtime.fit.fit();
+          if (runtime.term.cols !== previousCols || runtime.term.rows !== previousRows) runtime.resize?.();
+        } catch {
+          /* Detached or not yet measurable; the next observation will retry. */
+        }
+      });
     });
     runtime.observer.observe(host);
   }
@@ -867,6 +877,8 @@ export function detachSharedTerminal(host: HTMLElement, sessionId = activeTermin
   runtime.refCount = Math.max(0, runtime.refCount - 1);
   if (runtime.host !== host) return;
   runtime.observer?.disconnect();
+  if (runtime.resizeFrame !== undefined) cancelAnimationFrame(runtime.resizeFrame);
+  runtime.resizeFrame = undefined;
   runtime.observer = null;
   const root = runtime.term.element;
   if (root) runtime.park.appendChild(root);
