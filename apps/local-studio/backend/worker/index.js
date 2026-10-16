@@ -25,6 +25,7 @@ import {
   collectCredentialScopedInventory,
   sanitizeInventoryForClient,
 } from "@inneranimalmedia/agentsam-sdk/models/inventory";
+import { mergeBoundWorkersAIInventory } from "./bound-workers-inventory.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
 import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
@@ -643,7 +644,10 @@ async function handleLlmInventory(env, userId, request) {
       };
     },
   });
-  const inventory = sanitizeInventoryForClient(discovered);
+  const inventory = mergeBoundWorkersAIInventory(
+    sanitizeInventoryForClient(discovered),
+    env.AGENTSAM_WAI,
+  );
 
   return json({
     ok: true,
@@ -1130,22 +1134,12 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         }
       }
 
-      if (isLlmInventory) {
-        // Pass through to Nitro/TanStack /api/llm/inventory route for live model discovery.
-        // Fall back to worker-level credential provenance if Nitro is not mounted or returns 404.
-        if (typeof nitroWorker?.fetch === "function") {
-          try {
-            const nitroRes = await nitroWorker.fetch(request, env, context);
-            if (nitroRes && nitroRes.status !== 404) {
-              return nitroRes;
-            }
-          } catch (err) {
-            console.error("nitro_llm_inventory_passthrough_error", String(err));
-          }
-        }
-      } else {
+      if (!isLlmInventory) {
         return nitroWorker.fetch(request, env, context);
       }
+      // Inventory is served by the authenticated Worker owner below. Delegating
+      // first to Nitro loses the host binding and can report zero models even
+      // when AGENTSAM_WAI and the user's saved vault credentials are present.
     }
 
     const headers = isVault || isLlmInventory ? vaultCors(request) : {};
