@@ -7,6 +7,8 @@
 
 > **Complex underneath. Effortless above.**
 
+This AgentSam-specific product law implements the broader [InnerAnimalMedia Experience Standard](https://github.com/SamPrimeaux/inneranimalmedia/blob/main/docs/standards/INNERANIMALMEDIA_EXPERIENCE_STANDARD.md): **Craft over spectacle. Substance over promises.** The broader owner development standard applies to AgentSam releases, and this document supplies AgentSam-specific expression of it. A polished demo or passing build is not a release-ready product without proven real workflows, usability, reliability, and recovery.
+
 ## Product posture
 
 AgentSam is a professional software platform, not a prototype dashboard, chatbot wrapper, or collection of demos. The UI communicates maturity through **clarity, speed, consistency, depth, and restraint**.
