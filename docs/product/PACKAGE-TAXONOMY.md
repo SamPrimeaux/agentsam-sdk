@@ -38,6 +38,16 @@ This is the exhaustive current package/app placement map for `agentsam-sdk`. It 
 | `@inneranimalmedia/agentsam-work` | Product engine | AgentSam Work | Portable AgentSam Work product surface: shared work contracts, fixture and HTTP hosts, project/ticket/mail/calendar/artifact views, and host-neutral React UI. |
 | `@inneranimalmedia/agentsam-workbench` | Shared product UI primitive | Local Studio and AgentSam apps | Reusable AgentSam workbench primitives for agent threads, composer, browser, terminal and resizable work surfaces. |
 | `@inneranimalmedia/analytics-ui` | Product UI | AgentSam Analytics, Commerce Studio | Domain-neutral analytics presentation primitives for Inner Animal Media products. |
+| `@inneranimalmedia/copro-project` | Product engine | CoPro / Media Production | Provider-neutral project schema, serialization, validation, and durable creative intent. |
+| `@inneranimalmedia/copro-editor` | Product engine | CoPro / Media Production | Canonical deterministic clip editing commands, undo/redo, and history. |
+| `@inneranimalmedia/copro-timeline` | Domain primitive | CoPro / Media Production | Timeline math, ordering, duration, playhead, and viewport projection. |
+| `@inneranimalmedia/copro-media` | Domain primitive | CoPro / Media Production | Provider-neutral media identities, sources and provenance. |
+| `@inneranimalmedia/copro-render` | Domain primitive | CoPro / Media Production | Backend-neutral RenderPlan and runtime-capability-driven renderer selection. |
+| `@inneranimalmedia/copro-storage` | Persistence adapter | CoPro / Media Production | Portable memory and browser storage; additional durable adapters remain acceptance work. |
+| `@inneranimalmedia/copro-templates` | Product engine | CoPro / Media Production | Canvas, tracks, slots, captions, transitions, audio cues and generation-slot template contracts. |
+| `@inneranimalmedia/copro-provider-contracts` | Provider contract | CoPro / Media Production | Abstract storage, streaming, transcription, generation, conversion and rendering capabilities. |
+| `@inneranimalmedia/copro-proof` | Acceptance primitive | CoPro / Media Production | Cross-package mechanical composition tests and architecture proof. |
+| `@inneranimalmedia/copro-ui` | Product UI | CoPro / Media Production | Mobile-first preview, timeline, gesture editing and composition screens. |
 | `@inneranimalmedia/cms-runtime` | Product engine | Site Studio, Commerce Studio | Portable self-describing local CMS runtime with SQLite schema, tool/skill catalogs, and provider-neutral package contracts. |
 | `@inneranimalmedia/theme-heuristic` | Theme/prebuild | Site Studio | Stock AgentSam CMS storefront shell theme contract (heuristic-theme). |
 | `@inneranimalmedia/agentsam-identity` | Platform capability | Public/local identity implementations | Identity module for @inneranimalmedia/agentsam-sdk (workspace — publish via root SDK) |
@@ -61,6 +71,7 @@ This is the exhaustive current package/app placement map for `agentsam-sdk`. It 
 | --- | --- | --- | --- |
 | `@inneranimalmedia/agentsam-browser-site` | Product/public surface | AgentSam Browser | Public site for AgentSam Browser. Consumes the real ABS and sections packages. |
 | `@inneranimalmedia/agentsam-go-worker` | Deployable runtime | AgentSam Hosted Runtime | Deployable AgentSam Go runtime service artifact for Cloudflare Worker + Container self-hosting and official InnerAnimalMedia releases. Independent project; not affiliated with Cloudflare, Inc.. |
+| `@inneranimalmedia/agentsam-copro-studio` | Packaged product app | CoPro / Media Production | Existing CoPro visual editor assembled from portable CoPro packages; not the hosted MovieMode dashboard. |
 | `@inneranimalmedia/agentsam-cad-creator` | Packaged app | AgentSam CAD Studio | Prepackaged AgentSam CAD, spatial design, and robotics application kit. |
 | `@inneranimalmedia/client-cms-editor` | Donor/reference app | AgentSam Site Studio | Reusable full-stack website + CMS kit with multi-page public sites, a protected authoring dashboard, local SQLite, starter/theme import, and pluggable auth, storage, and deployment adapters. |
 | `@inneranimalmedia/ecommerce-cms-agentsam` | Packaged app/runtime | AgentSam Commerce Studio | Portable AgentSam ecommerce CMS runtime, scaffolding, media, analytics, and admin application package. |
@@ -76,3 +87,9 @@ This is the exhaustive current package/app placement map for `agentsam-sdk`. It 
 - **Donor/reference app** is implementation evidence, not necessarily the long-term product identity.
 
 Any new package should be added here when introduced.
+
+## Media Production family boundary
+
+The **Media Production** family contains two independent product members: **CoPro**, the portable creative engine/UI represented by the packages above, and **MovieMode**, the existing hosted media-operations/product surface in `SamPrimeaux/inneranimalmedia`. Family classification is governed by `inneranimalmedia/product-manifests/media-production.json` and member manifests; this table identifies SDK package roles, not a runtime dependency. Do not import MovieMode's Worker, D1/R2 identity, terminal lanes or credentials into CoPro's canonical project or editing packages.
+
+See [MEDIA-PRODUCTION-FAMILY.md](./MEDIA-PRODUCTION-FAMILY.md) for cross-repo authority and integration gates.

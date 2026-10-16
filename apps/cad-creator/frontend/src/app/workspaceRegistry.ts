@@ -38,12 +38,12 @@ export const WORKSPACE_REGISTRY: WorkspaceDescriptor[] = [
   },
   {
     id: 'model',
-    name: '3D BIM & Assemblies',
-    shortName: 'Model',
+    name: 'Explore in 3D',
+    shortName: 'Explore',
     icon: Box,
     description: '3D architectural viewer, component assemblies, spatial object placement, and materials.',
     engine: 'Three.js / WebGL',
-    badge: '3D BIM',
+    badge: '3D',
     isPrimary: true
   },
   {
@@ -75,6 +75,12 @@ export const WORKSPACE_REGISTRY: WorkspaceDescriptor[] = [
     badge: 'Raytracing / GenAI'
   }
 ];
+
+/** Model and render tools are contextual, not separate primary destinations. */
+export const PRIMARY_WORKSPACES = WORKSPACE_REGISTRY.filter((ws) => ws.isPrimary);
+export function primaryWorkspaceFor(id: WorkspaceId): 'plan' | 'model' | 'robotics' {
+  return id === 'plan' || id === 'robotics' ? id : 'model';
+}
 
 export interface RuntimeCapabilityStatus {
   id: string;

@@ -21,11 +21,24 @@ A package is not automatically a product. Products are defined by end-to-end use
 | AgentSam Analytics | Experimental | `agentsam-analytics`, `analytics-ui` | Commerce + AgentSam operational decision support |
 | AgentSam Knowledge | Experimental | `agentsam-knowledge`, `agentsam-repository` | Provenance-aware reusable project/organization knowledge |
 | AgentSam Merch | Experimental | `agentsam-merch` | Manufacturing-ready artwork/product preparation |
+| CoPro — Creative Production | Experimental | `packages/copro-*` + `apps/agentsam-copro-studio` | Portable mobile-first media editing, composition, preview and render planning, with optional provider adapters |
 | AgentSam CAD Studio | Experimental | `apps/agentsam-cad-creator` | Agent-assisted structured spatial/CAD design |
 | AgentSam Commerce Studio | Experimental | `apps/ecommerce-cms-agentsam` | Provider-neutral commerce operations with AgentSam assistance |
 | AgentSam Site Studio | Experimental | CMS runtime + sections + themes | Brand-aware website creation/refinement |
 | AgentSam Developer Studio | Experimental | `agentsam-ide` + workbench | Reusable AgentSam-native developer workspace |
 | AgentSam Hosted Runtime | Experimental | `apps/agentsam-go-worker` | Durable hosted orchestration without idle model polling |
+
+## Media Production family — CoPro and MovieMode
+
+- **CoPro** is an independent SDK-distributed visual-creation product built from provider-neutral project, editor, timeline, media, template, storage, render, proof, and UI packages.
+- **MovieMode** is its *peer* product in `SamPrimeaux/inneranimalmedia`: existing authenticated production UI, D1 media/project authority, Remotion/PTY execution, conversions, Stream, R2, and exports. MovieMode is not silently recast as an SDK package or renamed to CoPro.
+- **Media Production** (`media-production`) is a registry/family concept, not a third hosted product, editor, database, or deployable Worker. It should unify discoverability and user journeys while preserving independent distribution and runtime ownership.
+- **Asset Core / Images DAM / Content Studio** remain peer/shared capabilities; websites, CAD, chess and CMS consume media-production output but do not inherit the family classification.
+- **CoPro to MovieMode adapter** is a future verified boundary. Existing MovieMode frame-based projects are not silently rewritten as CoPro microsecond projects.
+
+Family implementation and acceptance: [MEDIA-PRODUCTION-FAMILY.md](./MEDIA-PRODUCTION-FAMILY.md).
+
+---
 
 ## Shared primitives - not standalone offers by default
 
@@ -74,6 +87,7 @@ These may be sold or bundled as templates/prebuilds, but their durable product v
 
 ## Existing apps and placement
 
+- `agentsam-copro-studio` -> CoPro — Creative Production product editor; MovieMode stays in the InnerAnimalMedia host.
 - `agentsam-local-studio` -> AgentSam Local Studio.
 - `agentsam-work-app` -> AgentSam Work reference/packaged app.
 - `agentsam-browser-site` -> AgentSam Browser public product/promo surface.
