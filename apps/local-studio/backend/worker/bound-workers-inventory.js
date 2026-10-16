@@ -1,4 +1,4 @@
-import { WORKERS_AI_CURATED_MODEL_IDS } from "@inneranimalmedia/agentsam-sdk/models/inventory";
+import { WORKERS_AI_CURATED_MODEL_IDS } from "../../../../src/models/inventory-core.js";
 
 /**
  * Advertise the host's Workers AI binding independently of account BYOK.
