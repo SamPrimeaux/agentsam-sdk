@@ -1,4 +1,4 @@
-import { useEffect, useState, type PointerEvent } from "react";
+import { useEffect, useState, type PointerEvent, type CSSProperties } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Columns2, Maximize2, Settings, Share, SquareTerminal, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -223,9 +223,9 @@ export function TrailWorkspace({ trail }: { trail: Trail }) {
                 className={cn(
                   "studio-pane min-h-0 min-w-0 bg-background",
                   "max-md:fixed max-md:inset-0 max-md:z-50",
-                  "md:relative md:shrink-0 md:max-w-[calc(100%-360px)]",
+                  "md:relative md:shrink-0 md:max-w-[calc(100%-360px)] md:w-[var(--agentsam-side-stage-width)] md:basis-[var(--agentsam-side-stage-width)]",
                 )}
-                style={{ width: sideW, flexBasis: sideW }}
+                style={{ "--agentsam-side-stage-width": sideW + "px" } as CSSProperties}
                 onPointerEnter={(e) => lightPane(e, true)}
                 onPointerLeave={(e) => lightPane(e, false)}
               >
