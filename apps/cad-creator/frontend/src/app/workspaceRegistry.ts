@@ -131,14 +131,14 @@ export const DEFAULT_RUNTIME_CAPABILITIES: RuntimeCapabilityStatus[] = [
     description: '500Hz physics simulation engine running in WebAssembly.'
   },
   {
-    id: 'gemini',
-    name: 'Gemini',
-    available: true,
-    version: '3.8 Flash',
+    id: 'generative-provider',
+    name: 'Generative provider (optional)',
+    available: false,
+    version: undefined,
     lane: 'cloud_byok',
-    source: 'env.d',
-    status: 'connected',
-    description: 'Embodied perception, spatial bounding box detection, and architectural copilot.'
+    source: 'unprobed',
+    status: 'not_connected',
+    description: 'Optional provider-backed image/video/perception. Availability is probed via AgentSam provider discovery; no provider is hardcoded or assumed connected.'
   },
   {
     id: 'meshy',

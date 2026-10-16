@@ -173,7 +173,10 @@ export async function executeOpenScadCompiler({
   }
 
   return {
-    success: true,
+    success: false,
+    verified: false,
+    previewOnly: true,
+    error: 'openscad_native_unavailable: no native OpenSCAD binary or Docker route; preview mesh is NOT a verified OpenSCAD compilation',
     engine: 'procedural-fallback',
     artifactContent,
     mimeType: format === 'stl' ? 'model/stl' : format === 'dxf' ? 'image/vnd.dxf' : 'text/plain',
