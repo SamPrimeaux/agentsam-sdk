@@ -127,7 +127,8 @@ export async function pingMcpServer(serverConfig = {}, options = {}) {
       signal: AbortSignal.timeout(options.timeoutMs || 5000),
     });
     return {
-      ok: res.status < 500,
+      // A 401/403 only proves HTTP reachability, never an authorized MCP session.
+      ok: res.ok,
       status: res.status,
       statusText: res.statusText,
       latencyMs: Date.now() - startMs,

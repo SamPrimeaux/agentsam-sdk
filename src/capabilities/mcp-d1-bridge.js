@@ -5,7 +5,8 @@
  * server's existing OAuth, workspace scope, D1 SQL policies and receipts.
  * No Cloudflare token lookup, local database, or replacement SQL engine.
  */
-import { listMcpServers } from '../mcp/authority.js';
+import { readMcpServer } from '../mcp/authority.js';
+import { mcpConnectionStatus, resolveMcpResourceServer, IAM_MCP_SERVER } from '../mcp/oauth-connection.js';
 import { callMcpTool } from '../mcp/client.js';
 
 export const MCP_D1_READ_TOOLS = Object.freeze(['agentsam_cf_d1_list', 'agentsam_d1_query']);
@@ -57,20 +58,38 @@ export function normalizeD1McpResult(raw) {
  * existing ~/.agentsam/mcp server store, without copying OAuth tokens across
  * applications or inventing an alternate credential precedence.
  */
-export function createMcpD1Bridge({ invokeTool = null, serverName = 'inneranimalmedia', home, callTool = callMcpTool } = {}) {
+export function createMcpD1Bridge({
+  invokeTool = null, serverName = IAM_MCP_SERVER, home,
+  callTool = callMcpTool, resolveServer = resolveMcpResourceServer,
+} = {}) {
   if (typeof invokeTool === 'function') {
-    return Object.freeze({available:true,source:'host',invoke:async(name,input={})=>
-      normalizeD1McpResult(await invokeTool(name,validateInput(name,input)))});
+    return Object.freeze({
+      available: true, source: 'host', readiness: 'available',
+      invoke: async (name, input = {}) =>
+        normalizeD1McpResult(await invokeTool(name, validateInput(name, input))),
+    });
   }
-  const connections = listMcpServers(home ? {home} : {});
-  const server = connections.find(row=>row.name===serverName && row.url &&
-    /^https:\/\//i.test(row.url) && typeof row.auth?.token==='string' && row.auth.token.trim());
-  if (!server) {
-    return Object.freeze({available:false,source:'mcp',reason:'mcp_d1_connection_not_configured',
-      next:'agentsam mcp list --json (inspect configured MCP connections)'});
+  // Explicit resource authority: do not fall back to a CLI account token,
+  // Wrangler credential, service key or another configured MCP server.
+  const configured = serverName === IAM_MCP_SERVER
+    ? readMcpServer(IAM_MCP_SERVER, home ? { home } : {})
+    : null;
+  const status = mcpConnectionStatus(configured);
+  if (!status.available) {
+    return Object.freeze({
+      available: false, source: 'mcp', readiness: 'unavailable',
+      reason: status.reason, next: status.next,
+    });
   }
   return Object.freeze({
-    available:true,source:'mcp',
-    invoke:async(name,input={})=>normalizeD1McpResult(await callTool(server,name,validateInput(name,input),{timeoutMs:30000})),
+    available: true, source: 'mcp', readiness: status.readiness,
+    reason: status.reason, next: status.next,
+    invoke: async (name, input = {}) => {
+      const args = validateInput(name, input);
+      // Resolve/refresh on each call. A copied startup bearer can expire while
+      // an interactive agent session is still active.
+      const server = await resolveServer({ home });
+      return normalizeD1McpResult(await callTool(server, name, args, { timeoutMs: 30000 }));
+    },
   });
 }

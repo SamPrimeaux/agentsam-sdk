@@ -86,6 +86,8 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     availability: (id) => {
       if(MCP_D1_TOOLS.includes(id) && !d1Bridge.available)
         return {readiness:'unavailable',reason:d1Bridge.reason||'mcp_d1_connection_not_configured',next:d1Bridge.next||null};
+      if(MCP_D1_TOOLS.includes(id))
+        return {readiness:d1Bridge.readiness||'unverified',reason:d1Bridge.reason||'remote_mcp_connection_not_probed',next:d1Bridge.next||null};
       if(id==='cloudflare.d1.schema')return {readiness:'unverified',reason:'remote_credentials_not_probed',next:'agentsam db sources'};
       if (['machine.inspect','repository.crawl','repository.mine'].includes(id) && !machineAvailable())
         return {readiness:'unavailable',reason:'machine_runtime_not_installed',next:'agentsam machine install'};

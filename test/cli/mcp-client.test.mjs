@@ -218,7 +218,9 @@ test('agentsam mcp CLI handles add, list, status, doctor, and remove end-to-end'
   );
   assert.equal(addRes.ok, true);
   assert.equal(addRes.server.name, 'inneranimalmedia');
-  assert.equal(addRes.server.auth.token, 'test_tok_777');
+  assert.equal(addRes.server.auth.configured, true);
+  assert.equal(readMcpServer('inneranimalmedia', { home }).auth.token, 'test_tok_777');
+  assert.doesNotMatch(logs.join(''), /test_tok_777/, 'CLI JSON must never print a bearer token');
   assert.equal(addRes.syncedAdapters[0].client, 'chatgpt');
 
   // List
