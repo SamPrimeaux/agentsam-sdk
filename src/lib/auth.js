@@ -395,15 +395,23 @@ export async function authenticateViaBrowser(options = {}) {
       resource: options.resource,
     });
 
-    // Gate through IAM /auth/login; authorize URL preserved in `next`.
-    const authorizePath = authorizationUrl.startsWith(issuer)
-      ? authorizationUrl.slice(issuer.length)
-      : authorizationUrl.replace(/^https?:\/\/[^/]+/, '');
-    const loginGateUrl = new URL('/auth/login', `${issuer}/`);
-    loginGateUrl.searchParams.set('next', authorizePath.startsWith('/') ? authorizePath : `/${authorizePath}`);
+    // Resource-scoped MCP OAuth must enter IAM's authorize endpoint directly.
+    // IAM stores a short-lived login challenge and redirects to a compact
+    // /auth/login?flow=oauth&challenge=... URL. Do not put full PKCE data in
+    // /auth/login?next=... (WAF false positives and unnecessary URL exposure).
+    // Preserve the legacy entry URL for ordinary CLI account login.
+    let browserUrl = authorizationUrl;
+    if (!options.resource) {
+      const authorizePath = authorizationUrl.startsWith(issuer)
+        ? authorizationUrl.slice(issuer.length)
+        : authorizationUrl.replace(/^https?:\/\/[^/]+/, '');
+      const loginGateUrl = new URL('/auth/login', `${issuer}/`);
+      loginGateUrl.searchParams.set('next', authorizePath.startsWith('/') ? authorizePath : `/${authorizePath}`);
+      browserUrl = loginGateUrl.toString();
+    }
 
     const promptImpl = options.promptToOpenUrlImpl || promptToOpenUrl;
-    await promptImpl(loginGateUrl.toString(), {
+    await promptImpl(browserUrl, {
       heading: 'Authenticate your Inner Animal Media account at:',
       prompt: 'Press ENTER to open Inner Animal Media sign-in in your browser.',
       input: options.input,
