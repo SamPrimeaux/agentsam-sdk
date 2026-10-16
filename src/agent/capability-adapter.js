@@ -35,7 +35,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
   const cad = localProjectRuntime(projectRoot);
   const cadDescriptors = CAD_PROJECT_TOOLS.map(t=>({...t,id:t.name,version:'1.0.0',domain:'design',kind:'tool',status:'active',side_effects:['design_project_get','design_project_validate','design_model_inspect'].includes(t.name)?'none':'filesystem-write',deterministic:true,model_required:false}));
   const executable = new Map([
-    ...(d1Bridge.available ? MCP_D1_TOOLS.map(id=>[id,(input={})=>d1Bridge.invoke(id,input)]) : []),
+    ...(d1Bridge.available ? (d1Bridge.allowedTools || MCP_D1_TOOLS).map(id=>[id,(input={})=>d1Bridge.invoke(id,input)]) : []),
     ...[...PLAN_READ_OPERATIONS, ...PLAN_WRITE_OPERATIONS].map(id =>
       [id, async (input = {}) => (await import('../capabilities/plan-operations.js')).invokePlanOperation(id, input, projectRoot)]),
     ['project.discover', () => discoverProjectCapabilities(projectRoot)],
@@ -86,6 +86,8 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     availability: (id) => {
       if(MCP_D1_TOOLS.includes(id) && !d1Bridge.available)
         return {readiness:'unavailable',reason:d1Bridge.reason||'mcp_d1_connection_not_configured',next:d1Bridge.next||null};
+      if(MCP_D1_TOOLS.includes(id) && !executable.has(id))
+        return {readiness:'unavailable',reason:'mcp_d1_write_scope_missing',next:'agentsam mcp connect inneranimalmedia --write'};
       if(MCP_D1_TOOLS.includes(id))
         return {readiness:d1Bridge.readiness||'unverified',reason:d1Bridge.reason||'remote_mcp_connection_not_probed',next:d1Bridge.next||null};
       if(id==='cloudflare.d1.schema')return {readiness:'unverified',reason:'remote_credentials_not_probed',next:'agentsam db sources'};

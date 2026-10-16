@@ -19,7 +19,7 @@ import {
 } from '../mcp/index.js';
 import { authenticateViaBrowser } from '../lib/auth.js';
 import {
-  IAM_MCP_RESOURCE, IAM_MCP_SCOPE, IAM_MCP_SERVER, describeMcpServer, resolveMcpResourceServer, McpResourceError,
+  IAM_MCP_RESOURCE, IAM_MCP_SCOPE, IAM_MCP_WRITE_SCOPE, IAM_MCP_SERVER, describeMcpServer, resolveMcpResourceServer, McpResourceError,
 } from '../mcp/oauth-connection.js';
 import { createMcpServerProject } from '../lib/scaffold/mcp-server.js';
 import { listMcpServerPresets } from '../lib/scaffold/templates/mcp-server/presets.js';
@@ -72,6 +72,7 @@ export function parseMcpArgs(argv = []) {
   let audience = '';
   let displayName = '';
   let authMode = '';
+  let writeAccess = false;
   let force = false;
 
   for (let i = 1; i < argv.length; i += 1) {
@@ -87,6 +88,7 @@ export function parseMcpArgs(argv = []) {
     else if (arg === '--display-name') displayName = argv[++i] || '';
     else if (arg === '--public') authMode = 'public';
     else if (arg === '--oauth') authMode = 'oauth';
+    else if (arg === '--write') writeAccess = true;
     else if (arg === '--force') force = true;
     else if (arg === '--json') json = true;
     else if (arg === '--catalog' || arg === '--all') catalog = true;
@@ -107,6 +109,7 @@ export function parseMcpArgs(argv = []) {
     audience,
     displayName,
     authMode,
+    writeAccess,
     force,
     json,
     catalog,
@@ -145,7 +148,7 @@ function renderHelp(options = {}) {
   Usage:
     agentsam mcp create <name> [--preset <preset>] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
     agentsam mcp add <name> [--client <client>|all] [--url <url>] [--token <token>]
-    agentsam mcp connect inneranimalmedia     Authorize resource-scoped MCP via existing IAM PKCE
+    agentsam mcp connect inneranimalmedia [--write]     Authorize resource-scoped MCP via existing IAM PKCE
     agentsam mcp list [--catalog|--bundles] [--json]
     agentsam mcp status [<name>] [--json]
     agentsam mcp doctor [<name>] [--json]
@@ -221,13 +224,16 @@ export async function runMcp(argv = [], options = {}) {
     const grant = await login({
       home: options.home, env: options.env || process.env,
       input: options.input, output: options.output,
-      scope: IAM_MCP_SCOPE,
+      scope: args.writeAccess ? IAM_MCP_WRITE_SCOPE : IAM_MCP_SCOPE,
       resource: IAM_MCP_RESOURCE,
       saveSession: false,
     });
     const grantedScopes = clean(grant?.scope).split(/\s+/);
     if (!clean(grant?.access_token) || !grantedScopes.includes('mcp:tools')) {
       throw new McpResourceError('mcp_oauth_scope_not_granted');
+    }
+    if (args.writeAccess && !grantedScopes.includes('iam:agent')) {
+      throw new McpResourceError('mcp_oauth_agent_scope_not_granted');
     }
     if (grant.audience && grant.audience !== IAM_MCP_RESOURCE) {
       throw new McpResourceError('mcp_oauth_wrong_audience');

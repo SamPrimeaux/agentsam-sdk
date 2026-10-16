@@ -119,11 +119,30 @@ test('valid MCP grant binds D1; live discovery and connection status remain trut
   const dbStatus = (await adapter.invoke('capability.status', { id: 'agentsam_cf_d1_list' })).result;
   assert.equal(dbStatus.agent_callable, true);
   assert.equal(dbStatus.readiness, 'unverified', 'connection is not live-probed yet');
+  const writeStatus = (await adapter.invoke('capability.status', { id:'agentsam_d1_write' })).result;
+  assert.equal(writeStatus.agent_callable, false);
+  assert.equal(writeStatus.reason, 'mcp_d1_write_scope_missing');
   const invoked = await adapter.invoke('agentsam_cf_d1_list', {});
   assert.equal(invoked.result.result[0].name, 'fuelnfreetime');
   const status = (await adapter.invoke('capability.status', { id: 'capability.invoke' })).result;
   assert.equal(status.agent_callable, true, 'registration after registry creation must be visible');
   assert.equal(status.readiness, 'available');
+});
+
+test('explicit --write consent requests the agent scope without changing read-only defaults', async t => {
+  const home = makeHome(t), calls = [];
+  await runMcp(['connect', 'inneranimalmedia', '--write', '--json'], {
+    home, write: () => {},
+    authenticateImpl: async input => {
+      calls.push(input);
+      return { access_token:'consented', scope:input.scope, client_id:'iam_cli_agentsam', audience:IAM_MCP_RESOURCE, expires_in:3600 };
+    },
+  });
+  assert.match(calls[0].scope, /iam:agent/);
+  const bridge=createMcpD1Bridge({home});
+  assert.ok(bridge.allowedTools.includes('agentsam_d1_write'));
+  const adapter=createCapabilityAdapter({projectRoot:process.cwd(),mcpD1Bridge:bridge});
+  assert.equal(adapter.canInvoke('agentsam_d1_write'),true);
 });
 
 test('unconnected and invalid MCP OAuth grants are not advertised as callable', async t => {

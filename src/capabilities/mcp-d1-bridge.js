@@ -6,7 +6,7 @@
  * No Cloudflare token lookup, local database, or replacement SQL engine.
  */
 import { readMcpServer } from '../mcp/authority.js';
-import { mcpConnectionStatus, resolveMcpResourceServer, IAM_MCP_SERVER } from '../mcp/oauth-connection.js';
+import { mcpConnectionStatus, resolveMcpResourceServer, mcpOAuthHasWriteScope, IAM_MCP_SERVER } from '../mcp/oauth-connection.js';
 import { callMcpTool } from '../mcp/client.js';
 
 export const MCP_D1_READ_TOOLS = Object.freeze(['agentsam_cf_d1_list', 'agentsam_d1_query']);
@@ -65,6 +65,7 @@ export function createMcpD1Bridge({
   if (typeof invokeTool === 'function') {
     return Object.freeze({
       available: true, source: 'host', readiness: 'available',
+      allowedTools: [...MCP_D1_TOOLS],
       invoke: async (name, input = {}) =>
         normalizeD1McpResult(await invokeTool(name, validateInput(name, input))),
     });
@@ -78,11 +79,13 @@ export function createMcpD1Bridge({
   if (!status.available) {
     return Object.freeze({
       available: false, source: 'mcp', readiness: 'unavailable',
+      allowedTools: [],
       reason: status.reason, next: status.next,
     });
   }
   return Object.freeze({
     available: true, source: 'mcp', readiness: status.readiness,
+    allowedTools: mcpOAuthHasWriteScope(configured) ? [...MCP_D1_TOOLS] : [...MCP_D1_READ_TOOLS],
     reason: status.reason, next: status.next,
     invoke: async (name, input = {}) => {
       const args = validateInput(name, input);

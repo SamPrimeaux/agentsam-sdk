@@ -8,6 +8,7 @@ import { refreshNativeOAuthToken } from '../lib/auth.js';
 
 export const IAM_MCP_RESOURCE = 'https://mcp.inneranimalmedia.com/mcp';
 export const IAM_MCP_SCOPE = 'openid profile email offline_access iam:profile iam:workspaces mcp:tools mcp:userinfo';
+export const IAM_MCP_WRITE_SCOPE = IAM_MCP_SCOPE + ' iam:agent';
 export const IAM_MCP_SERVER = 'inneranimalmedia';
 
 export class McpResourceError extends Error {
@@ -20,6 +21,8 @@ export class McpResourceError extends Error {
 }
 
 const clean = value => String(value || '').trim();
+export const mcpOAuthHasWriteScope = server => server?.auth?.type !== 'oauth' ||
+  clean(server?.auth?.scope).split(/\s+/).includes('iam:agent');
 
 export function mcpConnectionStatus(server, { nowMs = Date.now() } = {}) {
   const next = 'agentsam mcp connect inneranimalmedia';
@@ -52,6 +55,7 @@ export function describeMcpServer(server, options = {}) {
     configured: Boolean(server),
     authenticated: Boolean(server?.auth?.token),
     refreshable: Boolean(server?.auth?.refresh_token),
+    write_scope_granted: Boolean(server?.auth?.token) && mcpOAuthHasWriteScope(server),
     expires_at: server?.auth?.expires_at || null,
     ...state,
   };
