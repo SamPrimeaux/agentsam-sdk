@@ -243,8 +243,9 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
     </div>
     {error && <div role="alert" className="p-4 text-sm text-amber-300">{error}</div>}
     {!active ? <div className="grid flex-1 content-start gap-4 overflow-y-auto p-5 sm:grid-cols-2">
-      {starters.map((starter) => <button key={starter.id} onClick={() => void open(starter.id)}
+      {starters.map((starter) => <button key={starter.id} aria-label={`Open ${starter.title} FreeCAD project`} onClick={() => void open(starter.id)}
         className="overflow-hidden rounded-lg border border-white/15 bg-slate-900 text-left hover:border-amber-400/60">
+        <span className="sr-only">{`Open ${starter.title} FreeCAD project`}</span>
         <img alt={starter.title + ' FreeCAD thumbnail'} src={asset(starter.id, 'thumbnail')} className="h-40 w-full object-contain bg-[#25262a]" />
         <div className="p-3"><div className="font-semibold">{starter.title}</div>
           <div className="mt-1 text-xs text-slate-400">{starter.objectCount} native FreeCAD objects · {starter.meshCount} selectable 3D parts</div>
