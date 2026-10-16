@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { useActiveSideTab, useWorkStore } from "@/lib/work/store";
 import { StudioMark } from "@/components/mark";
 import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistantContext";
+import { consumePendingCadAssistantContext } from "@/lib/cad/assistantContext";
 import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
 import { SIDE_STAGE_ACTIONS } from "../../../agentsam/side-stage-actions";
 
@@ -219,7 +220,18 @@ function CoworkerChat({ tabId }: { tabId: string }) {
       apply(detail);
     };
     window.addEventListener("agentsam:database-assistant-context", onContext);
-    return () => window.removeEventListener("agentsam:database-assistant-context", onContext);
+    // CAD Creator guest: prompt + structured selection arrive as conversation context/draft.
+    const applyCad = (detail: any) => {
+      if (!detail?.prompt) return;
+      const sel = detail.selection?.object ? ` [CAD selection: ${detail.selection.object.label} ${detail.selection.object.id}, project ${detail.selection.project_id} rev ${detail.selection.revision}, units in]` : "";
+      const existing = useWorkStore.getState().drafts[tabId] || "";
+      if (!existing.trim()) setDraft(tabId, `${detail.prompt}${sel}`);
+    };
+    const pendingCad = consumePendingCadAssistantContext();
+    if (pendingCad) applyCad(pendingCad);
+    const onCad = (e: Event) => applyCad((e as CustomEvent).detail);
+    window.addEventListener("agentsam:cad-assistant-context", onCad);
+    return () => { window.removeEventListener("agentsam:database-assistant-context", onContext); window.removeEventListener("agentsam:cad-assistant-context", onCad); };
   }, [setDraft, tabId]);
 
   if (!tab) return null;

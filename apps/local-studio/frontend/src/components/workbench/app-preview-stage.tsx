@@ -15,6 +15,8 @@ import {
   AGENTSAM_PREVIEW_BRIDGE_CHANNEL,
   AGENTSAM_PREVIEW_BRIDGE_VERSION
 } from "@/lib/preview-host-bridge";
+import { installCadHostBridge } from "@/lib/cad-host-bridge";
+import { publishCadAssistantContext } from "@/lib/cad/assistantContext";
 
 interface AppPreviewStageProps {
   tab?: SideTab;
@@ -56,7 +58,7 @@ export function AppPreviewStage({
           channel: AGENTSAM_PREVIEW_BRIDGE_CHANNEL,
           version: AGENTSAM_PREVIEW_BRIDGE_VERSION,
         },
-        "*"
+        window.location.origin
       );
     } catch {
       // ignore cross-origin postMessage errors
@@ -72,25 +74,22 @@ export function AppPreviewStage({
     });
   };
 
-  // Listen for guest announcements
+  const [cadSelection, setCadSelection] = useState<unknown>(null);
+  const [pendingProposal, setPendingProposal] = useState<{ summary: string } | null>(null);
+  // Validated host bridge: origin/source checked; proposals surface for approval, never auto-apply.
   useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      const data = event.data;
-      if (!data || typeof data !== "object") return;
-      if (data.channel !== AGENTSAM_PREVIEW_BRIDGE_CHANNEL) return;
-
-      if (data.type === "ready") {
-        setIsReady(true);
-        if (data.activeWorkspace) {
-          setActiveWorkspace(data.activeWorkspace);
-        }
-      } else if (data.type === "workspace-changed" && data.workspace) {
-        setActiveWorkspace(data.workspace);
-      }
-    };
-
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
+    const dispose = installCadHostBridge(() => iframeRef.current, {
+      onReady: () => setIsReady(true),
+      onSelection: (sel) => setCadSelection(sel),
+      onAssistantRequest: ({ request_id, prompt, selection }) => {
+        // Real transport: publish into the host-owned conversation context (buffered + event,
+        // same pattern as Database assistant). Reply is a transport receipt, not a model answer.
+        publishCadAssistantContext({ request_id, prompt, selection });
+        postToGuest({ type: "assistant.response", request_id, text: "Received by the Local Studio AgentSam conversation with your CAD selection context. Continue there for the full response and tool approvals." });
+      },
+      onProposal: (proposal) => setPendingProposal(proposal),
+    });
+    return dispose;
   }, []);
 
   const handleReload = () => {
