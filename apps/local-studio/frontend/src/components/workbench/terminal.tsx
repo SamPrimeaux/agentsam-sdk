@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Columns2, Copy, Plus, RotateCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconAction } from "@/components/ui/icon-action";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
 import { attachSharedTerminal, detachSharedTerminal, getSharedTerminalRun } from "@/lib/work/terminal-runtime";
 import { useTerminalSessionStore } from "@/lib/work/terminal-sessions";
@@ -73,14 +74,14 @@ export function TerminalPane({
         <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Duplicate terminal cwd" onClick={() => duplicateSession(resolvedSessionId)}>
           <Copy className="size-3.5" />
         </Button>
-        <Button
+        <IconAction
           type="button"
           size="icon-sm"
           variant="ghost"
-          className="size-7 shrink-0"
-          aria-label={splitView ? "Close split terminal" : "Split terminal into two interactive panes"}
+          className="shrink-0"
+          label={splitView ? "Close split terminal" : "Split terminal into two interactive panes"}
           aria-pressed={splitView}
-          title={splitView ? "Single terminal" : "Monitor two terminals side by side"}
+          hint={splitView ? "Return to one terminal" : "Monitor two independent PTY sessions"}
           onClick={() => {
             if (splitView) { setSplitView(false); return; }
             const other = sessions.find((session) => session.id !== resolvedSessionId);
@@ -96,7 +97,7 @@ export function TerminalPane({
           }}
         >
           <Columns2 className="size-3.5" />
-        </Button>
+        </IconAction>
         <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Reconnect terminal" onClick={() => window.location.reload()}>
           <RotateCw className="size-3.5" />
         </Button>
