@@ -45,3 +45,16 @@ test('desktop editor separates creation browser and selected clip inspector', ()
   assert.match(html, /sample\.webm/);
   assert.doesNotMatch(html, /aria-modal="true"/);
 });
+
+
+test('empty editor retains project details and full tool navigation without a creation sheet', () => {
+  const html = renderToStaticMarkup(React.createElement(CoProStudio, {
+    project:{id:'project:blank',tracks:[{id:'v1',kind:'video',clips:[]}]},
+    selectedClipId:null,playheadUs:0,projectTitle:'Launch walkthrough',
+  }));
+  for (const label of ['MovieMode editing categories','Media collections','Import','Subprojects','Generate','Library','Project information','Launch walkthrough','Project details']) {
+    const match = label==='Project details'? /aria-label="project settings"|>Project</i : label;
+    assert.ok(typeof match==='string' ? html.includes(match) : match.test(html), label);
+  }
+  assert.doesNotMatch(html,/aria-modal="true"/);
+});

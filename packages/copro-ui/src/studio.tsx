@@ -155,7 +155,7 @@ export function CoProStudio({
   const canonicalTool = (tool: string | null) => tool === "filters" ? "effects" : tool === "adjustments" ? "transform" : tool;
   const inspectorTool = activeTool === "export" ? "export" : selectedClip
     ? (activeTool && clipSpecificTools.includes(activeTool) ? canonicalTool(activeTool) : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" ? "text" : "transform")
-    : null;
+    : "project";
   const inspectorAvailable = Boolean(inspectorTool);
   const showInspector = inspectorAvailable && layout.inspectorOpen && (!isNarrow || panePreference === "inspector" || !layout.browserOpen);
   const showBrowser = layout.browserOpen && (!isNarrow || !showInspector);
@@ -343,7 +343,7 @@ export function CoProStudio({
         <button className="copro-icon-button" aria-label="Back to projects" onClick={() => onAction?.({ type: "back" })}><ArrowLeft size={22}/></button>
         <div className="copro-title-block">
           <strong>{projectTitle}</strong>
-          <span>CoPro</span>
+          <span>MovieMode</span>
         </div>
         <div className="copro-topbar-actions">
           <button className="copro-icon-button copro-history-button" aria-label="Undo" disabled={!canUndo} onClick={() => onAction?.({ type: "undo" })}><Undo2 size={20}/></button>
@@ -457,6 +457,10 @@ export function CoProStudio({
                 tool={inspectorTool}
                 onClose={() => setLayout(value => ({ ...value, inspectorOpen: false }))}
                 selectedClipId={selectedClipId}
+                projectTitle={projectTitle}
+                projectTrackCount={project.tracks.length}
+                projectClipCount={project.tracks.reduce((total,track) => total + track.clips.length,0)}
+                projectDurationUs={Math.max(0,...project.tracks.flatMap(track=>track.clips.map(clip=>clip.startUs+clip.durationUs)))}
                 hasSelectedClip={Boolean(selectedClip)}
                 selectedClipKind={selectedTrack?.kind}
                 selectedClipStartUs={selectedClip?.startUs ?? 0}

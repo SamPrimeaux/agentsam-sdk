@@ -22,6 +22,10 @@ export type CoProToolPanelProps = {
   selectedClipId?: string | null;
   selectedClipStartUs?: number;
   selectedClipDurationUs?: number;
+  projectTitle?: string;
+  projectTrackCount?: number;
+  projectClipCount?: number;
+  projectDurationUs?: number;
   transform?: { scale?: number; x?: number; y?: number; rotation?: number; opacity?: number };
   onTransformChange?: (patch: { scale?: number; x?: number; y?: number; rotation?: number; opacity?: number }) => void;
   onSpeedChange?: (rate: number) => void;
@@ -39,6 +43,7 @@ export type CoProToolPanelProps = {
 };
 
 const DESCRIPTION: Record<string, string> = {
+  project: "Project information and timeline configuration.",
   media: "Bring in video, photographs, or audio and add them to the timeline.",
   audio: "Add audio, select a clip, and adjust its level.",
   text: "Add a title or edit the selected text directly on the timeline.",
@@ -66,6 +71,10 @@ export function CoProToolPanel({
   selectedClipId,
   selectedClipStartUs = 0,
   selectedClipDurationUs = 0,
+  projectTitle = "Untitled project",
+  projectTrackCount = 0,
+  projectClipCount = 0,
+  projectDurationUs = 0,
   onSpeedChange,
   onVolumeChange,
   onTrimChange,
@@ -121,6 +130,16 @@ export function CoProToolPanel({
             <strong>Select a clip</strong>
             <p>Tap a clip in the timeline to edit its {tool === "volume" ? "volume" : tool}. The canvas and timeline stay visible.</p>
           </div>
+        ) : tool === "project" ? (
+          <dl className="mm-project-inspector-details">
+            <div><dt>Name</dt><dd>{projectTitle}</dd></div>
+            <div><dt>Tracks</dt><dd>{projectTrackCount}</dd></div>
+            <div><dt>Timeline clips</dt><dd>{projectClipCount}</dd></div>
+            <div><dt>Sequence duration</dt><dd>{(projectDurationUs/1_000_000).toFixed(2)} seconds</dd></div>
+            <div><dt>Resolution</dt><dd>Source adaptive</dd></div>
+            <div><dt>Frame rate</dt><dd>From imported footage</dd></div>
+            <div><dt>Asset storage</dt><dd>Browser local</dd></div>
+          </dl>
         ) : tool === "transform" ? (
           <div className="mm-transform-controls">
             <div className="mm-inspector-tabs"><span className="is-active">Video</span><span>Transform</span><span>Basic</span></div>
@@ -251,7 +270,7 @@ export function CoProToolPanel({
                 ))}
               </div>
             ) : <p className="copro-media-empty">No imported {isAudio?"audio":"media"} in this session. Choose a file above.</p>}
-            <p className="copro-panel-note">Local media previews are session-only; keep your original files for reopening the project.</p>
+            <p className="copro-panel-note">Original imported files are retained in this browser when device storage permits. Watch for storage warnings and retain backups of irreplaceable footage.</p>
           </div>
         ) : <div className="copro-inspector-guidance">
           <strong>{tool === "templates" ? "Template catalog not connected" : "Not yet available"}</strong>
