@@ -5,4 +5,6 @@ These documents define product-facing laws above implementation-specific archite
 - [AgentSam Product Experience Standard](./AGENTSAM_PRODUCT_EXPERIENCE_STANDARD.md) — brand posture, visual/interaction language, progressive discovery, Local Studio quality bar, runtime UX, donor extraction, and authority discipline.
 - [Local Studio Desktop Experience Contract](./LOCAL_STUDIO_DESKTOP_EXPERIENCE.md) — launch behavior, bundled UI, desktop OAuth/Keychain behavior, handoff security, and release acceptance.
 
+Owner-wide release quality and definition of finished: [InnerAnimalMedia Experience Standard](https://github.com/SamPrimeaux/inneranimalmedia/blob/main/docs/standards/INNERANIMALMEDIA_EXPERIENCE_STANDARD.md). User-global instruction loading (separate from customer product defaults): [User-global AgentSam instructions](../architecture/USER_GLOBAL_AGENT_INSTRUCTIONS.md).
+
 Architecture contracts remain authoritative for their own namespaces, including `docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md` and `docs/architecture/SAM_KERNEL.md`.

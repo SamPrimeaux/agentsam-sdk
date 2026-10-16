@@ -15,3 +15,4 @@ These instructions are committed with agentsam-sdk and apply when Agent Sam work
 - Finish unfinished work on its existing branch, and prune branches and worktrees once merged.
 - Do not start plan steps or other agentic actions unless the user asked for them in the current turn.
 - An `ok: true` result or a receipt is not proof. Check the result is complete and cite the output.
+- For InnerAnimalMedia-owned development, enforce the [Experience Standard](https://github.com/SamPrimeaux/inneranimalmedia/blob/main/docs/standards/INNERANIMALMEDIA_EXPERIENCE_STANDARD.md): craft over spectacle, substance over promises. Do not call work finished based on a compile, screenshot, or a few passing tests; prove the real journey and recovery paths appropriate to scope.

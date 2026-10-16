@@ -111,6 +111,8 @@ export function resolveContext(options = {}) {
 
 export function resolveProjectContext(options = {}) {
   const budget = options.budget?.windowTokens ? options.budget : createContextBudget(options.budget || {});
-  const rules = compileAgentInstructions(options.cwd || process.cwd(), { maxChars: Math.min(24_000, budget.maxSystemChars) });
+  const ruleOptions = { maxChars: Math.min(24_000, budget.maxSystemChars) };
+  if (Object.hasOwn(options, 'globalFilename')) ruleOptions.globalFilename = options.globalFilename;
+  const rules = compileAgentInstructions(options.cwd || process.cwd(), ruleOptions);
   return resolveContext({ ...options, budget, rules });
 }
