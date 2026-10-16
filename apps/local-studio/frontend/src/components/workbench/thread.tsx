@@ -2,12 +2,11 @@ import { useEffect, useState } from "react";
 import { createIndexedDbContentStorage } from "@inneranimalmedia/agentsam-content";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import type { ChatImageReference } from "@/lib/content/chat-images";
-import { AgentConversationSurface, AgentRuntimeField, AgentThread } from "@inneranimalmedia/agentsam-workbench/agent";
+import { AgentConversationSurface, AgentThread } from "@inneranimalmedia/agentsam-workbench/agent";
 import { MessageMarkdown } from "@/components/workbench/markdown";
 import { Composer } from "@/components/workbench/composer";
 import { StudioMark } from "@/components/mark";
 import { formatElapsed } from "@/lib/utils";
-import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
 import { useWorkStore, useActiveTrail } from "@/lib/work/store";
 import type { ChatMessage } from "@inneranimalmedia/agentsam-local-shared";
 import { Button } from "@/components/ui/button";
@@ -151,14 +150,6 @@ export function TrailThread() {
   return (
     <AgentConversationSurface
       empty={empty}
-      runtime={
-        <AgentRuntimeField
-          controller={localStudioRuntimeVisuals.controllerFor(trail.id)}
-          blocking={false}
-          passiveOpacity={0.48}
-          narrationStyle={{ bottom: 92, left: 16 }}
-        />
-      }
       thread={<MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} />}
       emptyState={<EmptyTrail onPrompt={(text) => void send(trail.id, "trail", text)} />}
       status={starterStatus}
