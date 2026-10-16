@@ -29,8 +29,9 @@ export class RobotLoader {
 
         const isDouble = false;
         const isStacking = robotId === 'franka_panda_stack';
+        const isChess = robotId === 'franka_panda_chess';
         // Base URL for standard models from DeepMind's repository
-        const currentRobotId = isStacking ? 'franka_emika_panda' : robotId;
+        const currentRobotId = (isStacking || isChess) ? 'franka_emika_panda' : robotId;
         const baseUrl = `https://raw.githubusercontent.com/google-deepmind/mujoco_menagerie/main/${currentRobotId}/`;
 
         const downloaded = new Set<string>(); // Keep track to avoid re-downloading same file twice
@@ -68,7 +69,7 @@ export class RobotLoader {
             // If it's an XML, we might need to patch it and scan it for more dependencies
             if (fname.endsWith('.xml')) {
                 let text = await res.text();
-                text = this.patchSingleRobot(fname, sceneFile, isStacking, text);
+                text = this.patchSingleRobot(fname, sceneFile, isStacking, isChess, text);
 
                 // Write text file to virtual FS
                 this.mujoco.FS.writeFile(`/working/${fname}`, text);
@@ -84,7 +85,7 @@ export class RobotLoader {
     }
 
     // Modifies the standard XMLs to add our specific demo objects (cubes, trays)
-    private patchSingleRobot(fname: string, sceneFile: string, isStacking: boolean, text: string): string {
+    private patchSingleRobot(fname: string, sceneFile: string, isStacking: boolean, isChess: boolean, text: string): string {
         if (fname === sceneFile) {
             let injection = '';
             if (isStacking) {
@@ -141,7 +142,7 @@ export class RobotLoader {
                 }
                 // Increased stack_base size from 0.05 to 0.1 (2x width/length) - now 20cm x 20cm tray
                 injection += `<body name="stack_base" pos="0.6 0 0.0"><geom type="box" size="0.1 0.1 0.005" rgba="0.3 0.3 0.3 1"/></body>`;
-            } else {
+            } else if (!isChess) {
                  // Inject single cube and tray
                  // Tray size doubled from 0.08 to 0.16. Walls adjusted accordingly.
                 injection = `<body name="cube" pos="0.4 -0.1 0.04"><freejoint/><geom type="box" size="0.02 0.02 0.02" rgba="1 0 0 1" mass="0.05" friction="2 0.3 0.1" solref="0.01 1" solimp="0.95 0.99 0.001 0.5 2" condim="4"/></body><body name="tray" pos="0.4 0.2 0.0"><geom type="box" size="0.16 0.16 0.005" pos="0 0 0.005" rgba="0.8 0.8 0.8 1"/><geom type="box" size="0.16 0.005 0.02" pos="0 0.16 0.02" rgba="0.8 0.8 0.8 1"/><geom type="box" size="0.005 0.16 0.02" pos="-0.16 0 0.02" rgba="0.8 0.8 0.8 1"/></body>`;

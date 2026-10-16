@@ -20,6 +20,7 @@ import {
 } from '../../lib/robotics/runtime/types';
 import { DiagnosticOverlay } from './DiagnosticOverlay';
 import { useSimulationStats } from './useSimulationStats';
+import { RobotChessMatch } from './RobotChessMatch';
 
 interface RoboticsWorkspaceProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -68,6 +69,8 @@ export function RoboticsWorkspace({
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [isPaused, setIsPaused] = useState(false);
+  const [experience, setExperience] = useState<'chess' | 'sandbox'>('chess');
+  const [simRevision, setSimRevision] = useState(0);
   const [showSidebar, setShowSidebar] = useState(() => window.innerWidth >= 660);
 
   const [erLoading, setErLoading] = useState(false);
@@ -82,54 +85,64 @@ export function RoboticsWorkspace({
 
   const activeLog = expandedLogId ? logs.find(l => l.id === expandedLogId) : null;
 
-  // Initialize simulation via SimulationProvider
+  // Switches between the preserved cube sandbox and the chess scene without
+  // stacking MuJoCo RAF loops, renderers, or stale runtime instances.
   useEffect(() => {
+    let cancelled = false;
     isMounted.current = true;
+    setIsLoading(true);
+    setLoadError(null);
+    setIsPaused(false);
+    const previous = activeSimProvider.current;
+    if (previous) previous.dispose();
+    activeSimProvider.current = null;
+    if (simRef) simRef.current = null;
 
-    if (!containerRef.current) return;
-
-    if (activeSimProvider.current && activeSimProvider.current.isReady) {
-      setIsLoading(false);
-      return;
-    }
-
-    const initSim = async () => {
-      try {
-        setLoadingStatus("Connecting MuJoCo Physics WASM...");
-
-        if (!activeSimProvider.current) {
-          activeSimProvider.current = new MujocoSimulationProvider(mujocoModuleRef?.current || undefined);
-        }
-
-        await activeSimProvider.current.initialize(
-          containerRef.current!,
-          'franka_panda_stack',
-          'scene.xml',
-          (msg: string) => {
-            if (isMounted.current) setLoadingStatus(msg);
-          }
-        );
-
-        // Synchronize legacy simRef if provided
-        if (simRef) {
-          simRef.current = activeSimProvider.current.getRawSim();
-        }
-
-        if (isMounted.current) {
+    const initialize = async () => {
+      const container = containerRef.current;
+      if (!container) {
+        if (!cancelled) {
+          setLoadError('Robotics viewport is unavailable');
           setIsLoading(false);
-          activeSimProvider.current.setDarkMode(isDarkMode);
         }
-      } catch (err: unknown) {
-        console.error("Simulation initialization failed:", err);
-        if (isMounted.current) {
-          setLoadError((err as Error).message || "Failed to initialize 3D scene.");
+        return;
+      }
+      const provider = new MujocoSimulationProvider(mujocoModuleRef?.current || undefined);
+      activeSimProvider.current = provider;
+      try {
+        setLoadingStatus('Starting MuJoCo robotics environment...');
+        await provider.initialize(
+          container,
+          experience === 'chess' ? 'franka_panda_chess' : 'franka_panda_stack',
+          'scene.xml',
+          (message) => { if (!cancelled) setLoadingStatus(message); },
+        );
+        if (cancelled) {
+          provider.dispose();
+          return;
+        }
+        if (simRef) simRef.current = provider.getRawSim();
+        provider.setDarkMode(isDarkMode);
+        setSimRevision((v) => v + 1);
+        setIsLoading(false);
+      } catch (error) {
+        provider.dispose();
+        if (!cancelled) {
+          setLoadError(error instanceof Error ? error.message : String(error));
           setIsLoading(false);
         }
       }
     };
+    void initialize();
 
-    initSim();
-  }, []);
+    return () => {
+      cancelled = true;
+      isMounted.current = false;
+      activeSimProvider.current?.dispose();
+      activeSimProvider.current = null;
+      if (simRef) simRef.current = null;
+    };
+  }, [experience]);
 
   // Keyboard shortcut: 'D' for diagnostics
   useEffect(() => {
@@ -258,7 +271,7 @@ export function RoboticsWorkspace({
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden select-none">
+    <div className="relative w-full h-full overflow-hidden select-none pointer-events-none">
       {/* Visual Flash Effect on Perception snapshot */}
       <div className={`absolute inset-0 bg-white pointer-events-none transition-opacity duration-300 z-50 ${flash ? 'opacity-30' : 'opacity-0'}`} />
 
@@ -294,8 +307,22 @@ export function RoboticsWorkspace({
         </div>
       )}
 
+      {!isLoading && !loadError && experience === 'chess' && activeSimProvider.current?.isReady && (
+        <RobotChessMatch
+          key={simRevision}
+          provider={activeSimProvider.current}
+          onLeave={() => setExperience('sandbox')}
+        />
+      )}
+      {!isLoading && !loadError && experience === 'sandbox' && (
+        <button type="button" onClick={() => setExperience('chess')}
+          className="pointer-events-auto absolute right-3 top-3 z-30 rounded-xl border border-amber-300/30 bg-slate-950/90 px-3 py-2 text-xs font-semibold text-amber-200 shadow-lg hover:bg-slate-800 focus-visible:outline focus-visible:outline-2">
+          Play chess vs Franka
+        </button>
+      )}
+
       {/* Top Left Robot Info Card */}
-      {!isLoading && !loadError && (
+      {!isLoading && !loadError && experience === 'sandbox' && (
         <RobotSelector
           gizmoStats={simulationStats.gizmoStats}
           isDarkMode={isDarkMode}
@@ -303,7 +330,7 @@ export function RoboticsWorkspace({
       )}
 
       {/* Floating Bottom Toolbar */}
-      {!isLoading && !loadError && (
+      {!isLoading && !loadError && experience === 'sandbox' && (
         <Toolbar
           isPaused={isPaused}
           togglePause={() => {
@@ -321,7 +348,7 @@ export function RoboticsWorkspace({
       {/* Compact contextual inspector (canvas-first). No permanent AI panel:
           conversation lives in AgentSam Side Assistant; known objects resolve
           from structured MuJoCo/world state, never by default LLM vision. */}
-      {!isLoading && !loadError && showSidebar && (
+      {!isLoading && !loadError && showSidebar && experience === 'sandbox' && (
         <aside className="absolute right-3 top-16 z-20 w-60 rounded-xl border border-white/10 bg-slate-900/90 p-3 text-[11px] text-slate-200" aria-label="Simulation inspector">
           <div className="mb-1 flex items-center justify-between"><span className="font-semibold">Inspector</span><button onClick={() => setShowSidebar(false)} aria-label="Close inspector">×</button></div>
           <div>Frame rate: {simulationStats?.fps ?? '—'} FPS</div>

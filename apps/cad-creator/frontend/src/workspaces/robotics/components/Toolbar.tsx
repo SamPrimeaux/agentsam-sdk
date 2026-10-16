@@ -33,7 +33,7 @@ export function Toolbar({
   const iconFill = isDarkMode ? "fill-slate-100" : "fill-slate-800";
 
   return (
-    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 min-[660px]:left-10 min-[660px]:translate-x-0 flex items-center gap-4 z-30">
+    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 min-[660px]:left-10 min-[660px]:translate-x-0 flex items-center gap-4 z-30 pointer-events-auto">
 
       {/* Play/Pause Button */}
       <button

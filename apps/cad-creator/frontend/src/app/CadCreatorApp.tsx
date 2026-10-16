@@ -539,7 +539,7 @@ export function CadCreatorApp({
             <div className="w-full h-full relative">
               <div ref={roboticsContainerRef} className="absolute inset-0" />
               <div className="absolute inset-0 z-10 pointer-events-none">
-                <div className="w-full h-full pointer-events-auto">
+                <div className="w-full h-full pointer-events-none">
                   <React.Suspense
                     fallback={(
                       <div className="absolute inset-0 flex items-center justify-center bg-slate-950 text-slate-300">
