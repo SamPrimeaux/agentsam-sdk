@@ -9,6 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const input = process.argv[2] || 'http://127.0.0.1:5199/?presentation=embedded';
 const target = new URL(input);
@@ -19,10 +20,14 @@ const shotId = 'CAD-ROBOTICS-CHESS-01';
 const MAX_CLIP_SECONDS = 25; // strictly below 30 s, including encoder rounding
 const MEDIA_VERSION = 'agentsam.capture.v2';
 const safeSlug = text => String(text).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-const out = process.env.AGENTSAM_CAPTURE_DIR || path.join(homedir(), 'Downloads', 'AgentSamEvidence', 'robot-chess');
-await mkdir(out, { recursive: true });
-await mkdir(path.join(out,'raw'), { recursive: true });
 const startedAt = new Date().toISOString();
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+let revision = 'unknown';
+try { revision = execFileSync('git',['rev-parse','HEAD'],{cwd:repoRoot,encoding:'utf8'}).trim(); } catch {}
+const captureRoot = process.env.AGENTSAM_CAPTURE_DIR || path.join(homedir(), 'Downloads', 'AgentSamEvidence', 'robot-chess');
+// Each source-identified take has its own directory; never overwrite another recording.
+const out = path.join(captureRoot, startedAt.replace(/[:.]/g,'-') + '--' + revision.slice(0,12));
+await mkdir(path.join(out,'raw'), { recursive: true });
 const errors = [];
 const browser = await chromium.launch({
   channel: 'chrome', headless: true,
@@ -43,7 +48,8 @@ page.on('response', response => {
   }
 });
 let hudVisible = false, originalsLoaded = false, loadingState = '';
-let loadedAtSeconds = null, playedAtSeconds = null, chessMoveVerified = false;
+let loadedAtSeconds = null, playedAtSeconds = null, repliedAtSeconds = null, chessMoveVerified = false;
+const fallbackScreenshots = [];
 let initialScreenshotCreated = false, replyScreenshotCreated = false;
 const monotonicStart = Date.now();
 try {
@@ -97,6 +103,7 @@ try {
     const b = squarePixel('e4');
     await page.mouse.click(b.x, b.y);
     await page.getByTestId('robot-chess-hud').getByText(/2 half-moves/).waitFor({ timeout: 12000 });
+    repliedAtSeconds = (Date.now()-monotonicStart)/1000;
     await page.waitForTimeout(2500);
     chessMoveVerified = true;
     try {
@@ -134,8 +141,8 @@ try {
     const step = playedAtSeconds !== null && start >= playedAtSeconds ? 'chess-play'
       : loadedAtSeconds!==null && start >= loadedAtSeconds ? 'board-ready'
       : start < 15 ? 'sim-initializing' : 'asset-loading';
-    const name = shotId + '--' + String(index).padStart(2,'0') + '--' + step +
-      '--' + clipDate + '--1440x900.webm';
+    const name = 'CAD--ROBOT-CHESS--' + String(index).padStart(2,'0') + '--' + step +
+      '--' + clipDate + '--' + revision.slice(0,12) + '--desktop-1440x900.webm';
     const args=['-hide_banner','-loglevel','error','-y','-ss',String(start),'-t',String(length),
       '-i',rawVideo,'-an','-c:v','libvpx','-deadline','realtime','-cpu-used','6',
       '-b:v','1350k','-f','webm',path.join(out,name)];
@@ -147,9 +154,32 @@ try {
       duration_seconds:length,step,source_id:shotId,source_file:'raw/'+shotId+'--full-unedited-qa.webm',
       kind:'unedited_qa_segment',size_bytes:bytes });
   }
+  // A WebGL-heavy Chromium page can time out on page.screenshot even while
+  // video recording succeeds. Extract actual video frames (never fabricated
+  // stills) and label their recorded source/time in the evidence receipt.
+  const extractFrame = async (second, filename, kind) => {
+    const time = Math.max(0.1, Math.min(duration - 0.1, second));
+    execFileSync(ffmpeg, ['-hide_banner','-loglevel','error','-y',
+      '-i',rawVideo,'-ss',String(time),'-frames:v','1',path.join(out,filename)],
+    {encoding:'utf8',timeout:30000});
+    if ((await stat(path.join(out,filename))).size===0) throw new Error('empty_recorded_frame');
+    fallbackScreenshots.push({filename,second:time,kind,source_file:'raw/'+shotId+'--full-unedited-qa.webm'});
+  };
+  if (!initialScreenshotCreated && originalsLoaded && loadedAtSeconds!==null) {
+    try {
+      await extractFrame(loadedAtSeconds + 1,
+        shotId + '--desktop-1440x900--original-glbs.png', 'recorded_board_frame');
+      initialScreenshotCreated = true;
+    } catch(error) {errors.push('frame_extract: initial: '+String(error));}
+  }
+  if (!replyScreenshotCreated && chessMoveVerified && repliedAtSeconds!==null) {
+    try {
+      await extractFrame(repliedAtSeconds + 0.5,
+        shotId + '--desktop-1440x900--e2-e4-franka-reply.png', 'recorded_chess_reply_frame');
+      replyScreenshotCreated = true;
+    } catch(error) {errors.push('frame_extract: reply: '+String(error));}
+  }
 } catch(error) {clipFailure=String(error);}
-let revision = 'unknown';
-try { revision = execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(); } catch {}
 const evidence = {
   schema: MEDIA_VERSION, shot_id: shotId, started_at: startedAt,
   source_route: target.pathname, source_commit: revision,
@@ -157,6 +187,7 @@ const evidence = {
   checks: { chess_hud_visible: hudVisible, original_baroque_glbs_loaded: originalsLoaded, e2_e4_franka_response: chessMoveVerified },
   status: originalsLoaded && chessMoveVerified && !errors.some(e => e.startsWith('page:')) ? 'visual_chess_journey_verified' : 'blocked',
   loading_state: loadingState, errors, clip_error: clipFailure, max_clip_seconds: MAX_CLIP_SECONDS,
+  screenshot_fallbacks: fallbackScreenshots,
   artifacts: clips.map(clip=>clip.filename).concat([
     ...(initialScreenshotCreated ? [shotId + '--desktop-1440x900--' + (originalsLoaded ? 'original-glbs' : 'blocked') + '.png'] : []),
     ...(replyScreenshotCreated ? [shotId+'--desktop-1440x900--e2-e4-franka-reply.png'] : []),

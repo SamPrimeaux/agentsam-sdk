@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowLeft, AudioLines, Captions, Copy, Film,
+  Layers, Play, Pause, Redo2, Scissors, SlidersHorizontal, Sparkles,
+  Trash2, Type, Undo2, X, Gauge, Volume2, Replace, Clapperboard,
+} from "lucide-react";
 import { CoProTimeline, type CoProProjectView } from "./timeline";
-import { CoProToolSheet, type CoProMediaShelfItem } from "./tool-sheet";
-import { CoProExportSheet } from "./export-sheet";
+import { CoProToolPanel, type CoProMediaShelfItem } from "./tool-sheet";
+
 
 export type CoProStudioAction =
   | { type: "back" }
+  | { type: "export-project" }
   | { type: "undo" }
   | { type: "redo" }
   | { type: "split"; clipId: string; atUs: number }
@@ -25,6 +31,7 @@ export type CoProStudioAction =
 
 export type CoProStudioProps = {
   project: CoProProjectView;
+  initialTool?: "text" | "captions" | null;
   playheadUs: number;
   selectedClipId?: string | null;
   canUndo?: boolean;
@@ -34,7 +41,7 @@ export type CoProStudioProps = {
   previewKind?: "video" | "image" | null;
   mediaItems?: CoProMediaShelfItem[];
   onSeek?: (timeUs: number) => void;
-  onSelectClip?: (clipId: string) => void;
+  onSelectClip?: (clipId: string | null) => void;
   onMediaAdd?: (id: string, atUs: number) => void;
   onAction?: (action: CoProStudioAction) => void;
 };
@@ -60,8 +67,29 @@ const CLIP_TOOLS = [
   ["delete", "Delete", "⌫"],
 ] as const;
 
+function renderToolIcon(id: string) {
+  const size = 21;
+  switch (id) {
+    case "media": return <Film size={size}/>;
+    case "audio": return <AudioLines size={size}/>;
+    case "text": return <Type size={size}/>;
+    case "captions": return <Captions size={size}/>;
+    case "effects": return <Sparkles size={size}/>;
+    case "transitions": return <Layers size={size}/>;
+    case "templates": return <Clapperboard size={size}/>;
+    case "split": return <Scissors size={size}/>;
+    case "trim": return <Replace size={size}/>;
+    case "speed": return <Gauge size={size}/>;
+    case "volume": return <Volume2 size={size}/>;
+    case "duplicate": return <Copy size={size}/>;
+    case "delete": return <Trash2 size={size}/>;
+    default: return <SlidersHorizontal size={size}/>;
+  }
+}
+
 export function CoProStudio({
   project,
+  initialTool = null,
   playheadUs,
   selectedClipId,
   canUndo = false,
@@ -76,8 +104,8 @@ export function CoProStudio({
   onAction,
 }: CoProStudioProps) {
   const [playing, setPlaying] = useState(false);
-  const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [exportOpen, setExportOpen] = useState(false);
+  const [activeTool, setActiveTool] = useState<string | null>(initialTool);
+
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const selectedEntry = useMemo(() => {
@@ -90,6 +118,33 @@ export function CoProStudio({
 
   const selectedClip = selectedEntry?.clip ?? null;
   const selectedTrack = selectedEntry?.track ?? null;
+
+  const activeVisualClip = useMemo(() => {
+    for (const track of project.tracks) {
+      if (track.visible === false || (track.kind !== "video" && track.kind !== "overlay")) continue;
+      for (const clip of track.clips) {
+        if (playheadUs >= clip.startUs && playheadUs < clip.startUs + clip.durationUs) {
+          if (track.kind === "video" || mediaItems.some((media) => media.id === clip.assetId && media.kind === "image")) {
+            return clip;
+          }
+        }
+      }
+    }
+    return null;
+  }, [project, playheadUs, mediaItems]);
+
+  const activeMedia = activeVisualClip
+    ? mediaItems.find((item) => item.id === activeVisualClip.assetId) ?? null
+    : null;
+  const effectivePreviewSrc = activeMedia ? activeMedia.url : (mediaItems.length ? null : previewSrc);
+  const effectivePreviewKind = activeMedia?.kind === "image" ? "image"
+    : activeMedia?.kind === "video" ? "video"
+    : mediaItems.length ? null : previewKind;
+  const hasUnavailableFootage = project.tracks.some((track) =>
+    (track.kind === "video" || track.kind === "audio") && track.clips.some((clip) =>
+      !mediaItems.some((item) => item.id === clip.assetId)
+    )
+  );
 
   const activeCanvasText = useMemo(() => {
     const overlays: Array<{ id: string; kind: string; text: string }> = [];
@@ -108,13 +163,15 @@ export function CoProStudio({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    const seekSeconds = playheadUs / 1_000_000;
+    const seekSeconds = activeVisualClip
+      ? (playheadUs - activeVisualClip.startUs + (activeVisualClip.inUs ?? 0)) / 1_000_000
+      : 0;
     if (Math.abs(video.currentTime - seekSeconds) > .25 && Number.isFinite(video.duration)) {
       video.currentTime = Math.min(seekSeconds, video.duration || seekSeconds);
     }
     video.playbackRate = Math.max(.25, Math.min(4, selectedClip?.playbackRate ?? 1));
     video.volume = Math.max(0, Math.min(1, selectedClip?.volume ?? 1));
-  }, [playheadUs, selectedClip?.playbackRate, selectedClip?.volume]);
+  }, [playheadUs, activeVisualClip?.startUs, activeVisualClip?.inUs, selectedClip?.playbackRate, selectedClip?.volume]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -180,58 +237,72 @@ export function CoProStudio({
     }
     if (id === "delete") {
       onAction?.({ type: "delete", clipId: selectedClip.id });
+      setActiveTool(null);
       return;
     }
-    setActiveTool(id);
+    setActiveTool((current) => current === id ? null : id);
   }
 
   return (
-    <section className="copro-studio">
+    <section className="copro-studio" data-inspector-open={Boolean(activeTool)}>
       <header className="copro-topbar">
-        <button className="copro-icon-button" aria-label="Back to projects" onClick={() => onAction?.({ type: "back" })}>‹</button>
+        <button className="copro-icon-button" aria-label="Back to projects" onClick={() => onAction?.({ type: "back" })}><ArrowLeft size={22}/></button>
         <div className="copro-title-block">
           <strong>{projectTitle}</strong>
           <span>CoPro</span>
         </div>
         <div className="copro-topbar-actions">
-          <button className="copro-icon-button" aria-label="Undo" disabled={!canUndo} onClick={() => onAction?.({ type: "undo" })}>↶</button>
-          <button className="copro-icon-button" aria-label="Redo" disabled={!canRedo} onClick={() => onAction?.({ type: "redo" })}>↷</button>
-          <button className="copro-export-button" onClick={() => setExportOpen(true)}>Export</button>
+          <button className="copro-icon-button" aria-label="Undo" disabled={!canUndo} onClick={() => onAction?.({ type: "undo" })}><Undo2 size={20}/></button>
+          <button className="copro-icon-button" aria-label="Redo" disabled={!canRedo} onClick={() => onAction?.({ type: "redo" })}><Redo2 size={20}/></button>
+          <button className="copro-export-button" aria-expanded={activeTool === "export"} aria-controls="copro-tool-inspector" onClick={() => setActiveTool(activeTool === "export" ? null : "export")}>Export</button>
         </div>
       </header>
 
       <main className="copro-workspace">
         <aside className="copro-desktop-rail">
-          {PRIMARY_TOOLS.map(([id, label, icon]) => (
-            <button key={id} onClick={() => setActiveTool(id)}>
-              <i>{icon}</i><span>{label}</span>
+          {PRIMARY_TOOLS.map(([id, label]) => (
+            <button key={id} type="button" aria-pressed={activeTool === id} aria-expanded={activeTool === id} aria-controls="copro-tool-inspector" className={activeTool === id ? "is-active" : ""} disabled={id === "templates"} title={id === "templates" ? "Template catalog not connected" : label} onClick={() => setActiveTool(activeTool === id ? null : id)}>
+              <i>{renderToolIcon(id)}</i><span>{label}</span>
             </button>
           ))}
+          {selectedClip ? (
+            <div className="copro-rail-clip-tools" aria-label="Selected clip tools">
+              <span className="copro-rail-section-label">CLIP</span>
+              {CLIP_TOOLS.filter(([id]) => !["effects","transitions"].includes(id)).map(([id,label]) => (
+                <button key={id} type="button" aria-pressed={activeTool === id} aria-controls="copro-tool-inspector" className={[activeTool === id ? "is-active" : "",id === "delete" ? "is-danger" : ""].join(" ")} onClick={() => runTool(id)}>
+                  <i>{renderToolIcon(id)}</i><span>{label}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
         </aside>
 
-        <div className="copro-editor-column">
+        <div className={"copro-editing-grid" + (activeTool ? " has-inspector" : "")}>
           <section className="copro-preview-stage">
             <div className="copro-preview-device">
-              {previewSrc && previewKind === "video" ? (
+              {effectivePreviewSrc && effectivePreviewKind === "video" ? (
                 <video
                   ref={videoRef}
                   className={"copro-preview-media copro-preview-effect-" + String(selectedClip?.metadata?.effect ?? "none")}
-                  src={previewSrc}
+                  src={effectivePreviewSrc}
                   playsInline
                   onPlay={() => setPlaying(true)}
                   onPause={() => setPlaying(false)}
-                  onTimeUpdate={(event) => onSeek?.(Math.round(event.currentTarget.currentTime * 1_000_000))}
+                  onTimeUpdate={(event) => {
+                    const base = activeVisualClip?.startUs ?? 0;
+                    onSeek?.(base + Math.round(event.currentTarget.currentTime * 1_000_000));
+                  }}
                 />
-              ) : previewSrc && previewKind === "image" ? (
+              ) : effectivePreviewSrc && effectivePreviewKind === "image" ? (
                 <img
                   className={"copro-preview-media copro-preview-effect-" + String(selectedClip?.metadata?.effect ?? "none")}
-                  src={previewSrc}
-                  alt=""
+                  src={effectivePreviewSrc}
+                  alt="Project footage"
                 />
               ) : (
                 <div className="copro-preview-placeholder">
-                  <div className="copro-preview-mark">CoPro</div>
-                  <p>Drop media or tap Media</p>
+                  <div className="copro-preview-mark">{hasUnavailableFootage ? "Media unavailable" : "Your story starts here"}</div>
+                  <p>{hasUnavailableFootage ? "This timeline needs its original files reattached." : "Import video or images to start editing."}</p>
                 </div>
               )}
 
@@ -251,12 +322,51 @@ export function CoProStudio({
 
           <section className="copro-transport">
             <button className="copro-play-button" aria-label={playing ? "Pause" : "Play"} onClick={() => void togglePlayback()}>
-              {playing ? "Ⅱ" : "▶"}
+              {playing ? <Pause size={16} fill="currentColor"/> : <Play size={16} fill="currentColor"/>}
             </button>
             <span>{formatTime(playheadUs)}</span>
             <div className="copro-transport-line" />
-            <button className="copro-icon-button" aria-label="Fit timeline">↔</button>
+            <button className="copro-icon-button" aria-label="Timeline controls" onClick={() => onSelectClip?.(null)}><SlidersHorizontal size={18}/></button>
           </section>
+
+          {activeTool && (
+            <aside id="copro-tool-inspector" className="copro-inspector-slot" aria-label={activeTool + " settings"}>
+              <CoProToolPanel
+                tool={activeTool}
+                onClose={() => setActiveTool(null)}
+                selectedClipId={selectedClipId}
+                hasSelectedClip={Boolean(selectedClip)}
+                selectedClipKind={selectedTrack?.kind}
+                selectedClipStartUs={selectedClip?.startUs ?? 0}
+                selectedClipDurationUs={selectedClip?.durationUs ?? 0}
+                initialSpeed={selectedClip?.playbackRate ?? 1}
+                initialVolume={selectedClip?.volume ?? 1}
+                initialText={typeof selectedClip?.metadata?.text === "string" ? selectedClip.metadata.text : ""}
+                hasSelection={Boolean(selectedClip &&
+                  ((activeTool === "text" && selectedTrack?.kind === "overlay") ||
+                   (activeTool === "captions" && selectedTrack?.kind === "captions")))}
+                onTrimChange={(patch) => selectedClip && onAction?.({type:"trim",clipId:selectedClip.id,patch})}
+                onSpeedChange={(playbackRate) => selectedClip && onAction?.({type:"speed",clipId:selectedClip.id,playbackRate})}
+                onVolumeChange={(volume) => selectedClip && onAction?.({type:"volume",clipId:selectedClip.id,volume})}
+                onTextCommit={(text, kind) => {
+                  if (selectedClip && ((kind === "overlay" && selectedTrack?.kind === "overlay") ||
+                       (kind === "captions" && selectedTrack?.kind === "captions"))) {
+                    onAction?.({type:"text",clipId:selectedClip.id,text});
+                  } else {
+                    onAction?.({type:"create-text",kind,text,atUs:playheadUs});
+                  }
+                }}
+                onMediaPicked={(file) => onAction?.({type:"import-media",file,atUs:playheadUs})}
+                mediaItems={mediaItems}
+                onMediaAdd={(id) => onMediaAdd?.(id,playheadUs)}
+                currentEffect={String(selectedClip?.metadata?.effect ?? "none")}
+                currentTransition={String((selectedClip?.metadata?.transitionOut as any)?.type ?? "none")}
+                onEffectChange={(effect) => selectedClip && onAction?.({type:"effect",clipId:selectedClip.id,effect})}
+                onTransitionChange={(transition) => selectedClip && onAction?.({type:"transition",clipId:selectedClip.id,transition,durationUs:300_000})}
+                onProjectExport={() => onAction?.({type:"export-project"})}
+              />
+            </aside>
+          )}
 
           <CoProTimeline
             project={project}
@@ -272,49 +382,16 @@ export function CoProStudio({
           />
 
           <section className="copro-context-tools" aria-label="Editing tools">
-            {(selectedClip ? CLIP_TOOLS : PRIMARY_TOOLS).map(([id, label, icon]) => (
-              <button key={id} className={id === "delete" ? "is-danger" : ""} onClick={() => runTool(id)}>
-                <i>{icon}</i><span>{label}</span>
+            {selectedClip ? <button className="copro-deselect-button" onClick={() => onSelectClip?.(null)}><X size={20}/><span>Done</span></button> : null}
+            {(selectedClip ? CLIP_TOOLS : PRIMARY_TOOLS).map(([id, label]) => (
+              <button key={id} disabled={id === "templates"} aria-pressed={activeTool === id} className={[id === "delete" ? "is-danger" : "", activeTool === id ? "is-active" : ""].join(" ")} onClick={() => runTool(id)}>
+                <i>{renderToolIcon(id)}</i><span>{label}</span>
               </button>
             ))}
           </section>
         </div>
       </main>
 
-      <CoProToolSheet
-        tool={activeTool}
-        open={Boolean(activeTool)}
-        onClose={() => setActiveTool(null)}
-        initialSpeed={selectedClip?.playbackRate ?? 1}
-        initialVolume={selectedClip?.volume ?? 1}
-        initialText={typeof selectedClip?.metadata?.text === "string" ? selectedClip.metadata.text : ""}
-        hasSelection={Boolean(
-          selectedClip &&
-          ((activeTool === "text" && selectedTrack?.kind === "overlay") ||
-            (activeTool === "captions" && selectedTrack?.kind === "captions"))
-        )}
-        onSpeedChange={(playbackRate) => selectedClip && onAction?.({ type: "speed", clipId: selectedClip.id, playbackRate })}
-        onVolumeChange={(volume) => selectedClip && onAction?.({ type: "volume", clipId: selectedClip.id, volume })}
-        onTextCommit={(text, kind) => {
-          const selectedMatchesKind =
-            selectedClip &&
-            ((kind === "overlay" && selectedTrack?.kind === "overlay") ||
-              (kind === "captions" && selectedTrack?.kind === "captions"));
-          if (selectedMatchesKind) {
-            onAction?.({ type: "text", clipId: selectedClip.id, text });
-          } else {
-            onAction?.({ type: "create-text", kind, text, atUs: playheadUs });
-          }
-        }}
-        onMediaPicked={(file) => onAction?.({ type: "import-media", file, atUs: playheadUs })}
-        mediaItems={mediaItems}
-        onMediaAdd={(id) => onMediaAdd?.(id, playheadUs)}
-        currentEffect={String(selectedClip?.metadata?.effect ?? "none")}
-        currentTransition={String((selectedClip?.metadata?.transitionOut as any)?.type ?? "none")}
-        onEffectChange={(effect) => selectedClip && onAction?.({ type: "effect", clipId: selectedClip.id, effect })}
-        onTransitionChange={(transition) => selectedClip && onAction?.({ type: "transition", clipId: selectedClip.id, transition, durationUs: 300_000 })}
-      />
-      <CoProExportSheet open={exportOpen} onClose={() => setExportOpen(false)} />
     </section>
   );
 }

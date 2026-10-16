@@ -60,8 +60,7 @@ export class MujocoSim {
 
         this.ikSys = new IkSystem(this.mujoco, this.renderSys.camera, this.renderSys.renderer.domElement, this.renderSys.controls);
         this.renderSys.simGroup.add(this.ikSys.target);
-        // Three.js r185 exposes a TransformControls root via getHelper();
-        // adding the control itself is invalid and leaves its gizmo unmounted.
+        // TransformControls is not an Object3D; its renderable helper belongs in the scene.
         this.renderSys.scene.add(this.ikSys.control.getHelper());
         this.ikSys.control.getHelper().visible = false;
 
