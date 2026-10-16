@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import struct
 import sys
 from pathlib import Path
@@ -22,6 +23,8 @@ import MeshPart  # type: ignore
 
 def _appearance(source: Path):
     with ZipFile(source) as archive:
+        if "GuiDocument.xml" not in archive.namelist():
+            return {}
         root = ElementTree.fromstring(archive.read("GuiDocument.xml"))
         result = {}
         for view in root.findall(".//ViewProvider"):
@@ -48,7 +51,6 @@ def _pad(data: bytearray, align: int = 4):
 
 
 def build(source: Path, output: Path, *, deflection: float = 32.0, working: bool = False):
-    appearance = _appearance(source)
     output.mkdir(parents=True, exist_ok=True)
     original = output / "source.FCStd"
     if working:
@@ -61,6 +63,12 @@ def build(source: Path, output: Path, *, deflection: float = 32.0, working: bool
             raise ValueError("Existing BIM library source differs; refusing overwrite")
         if not original.exists():
             original.write_bytes(source.read_bytes())
+    appearance = _appearance(source)
+    fallback_appearance = working and not appearance
+    if fallback_appearance:
+        # A headless FreeCAD save may omit GuiDocument.xml. Preserve the
+        # original GUI visibility/colors without modifying the working file.
+        appearance = _appearance(original)
     doc = FreeCAD.openDocument(str(source if working else original))
     try:
         objects = []
@@ -79,13 +87,13 @@ def build(source: Path, output: Path, *, deflection: float = 32.0, working: bool
                 "name": item.Name,
                 "label": item.Label,
                 "type": item.TypeId,
-                "visible": appearance.get(item.Name, {}).get("visible", False),
+                "visible": appearance.get(item.Name, {}).get("visible", bool(fallback_appearance)),
                 "inPreview": False,
                 "color": appearance.get(item.Name, {}).get("rgb"),
                 "parents": [o.Name for o in item.InList],
                 "children": [o.Name for o in item.OutList],
             })
-            if not appearance.get(item.Name, {}).get("visible", False) or not hasattr(item, "Shape") or item.Shape.isNull():
+            if not appearance.get(item.Name, {}).get("visible", bool(fallback_appearance)) or not hasattr(item, "Shape") or item.Shape.isNull():
                 continue
             if not item.Shape.Solids:
                 continue
@@ -133,9 +141,13 @@ def build(source: Path, output: Path, *, deflection: float = 32.0, working: bool
         text += b" " * (-len(text) % 4)
         total = 12 + 8 + len(text) + 8 + len(buffers)
         header = struct.pack("<4sII", b"glTF", 2, total)
-        (output / "preview.glb").write_bytes(header + struct.pack("<I4s", len(text), b"JSON") + text + struct.pack("<I4s", len(buffers), b"BIN\0") + buffers)
-        with ZipFile(original) as archive:
-            (output / "thumbnail.png").write_bytes(archive.read("thumbnails/Thumbnail.png"))
+        preview_bytes = header + struct.pack("<I4s", len(text), b"JSON") + text + struct.pack("<I4s", len(buffers), b"BIN\0") + buffers
+        with ZipFile(source if working else original) as archive:
+            if "thumbnails/Thumbnail.png" in archive.namelist():
+                thumbnail_bytes = archive.read("thumbnails/Thumbnail.png")
+            else:
+                with ZipFile(original) as preserved:
+                    thumbnail_bytes = preserved.read("thumbnails/Thumbnail.png")
         pinned_title = source.stem
         if working:
             prior_manifest = output / "manifest.json"
@@ -151,10 +163,26 @@ def build(source: Path, output: Path, *, deflection: float = 32.0, working: bool
             "sourceFile": "source.FCStd", "previewFile": "preview.glb",
             "thumbnailFile": "thumbnail.png",
             "objectCount": len(objects), "meshCount": len(nodes), "materialCount": len(materials),
+            "previewSha256": hashlib.sha256(preview_bytes).hexdigest(),
             "objects": objects, "previewIsDerived": True,
             "editingAuthority": "Native FreeCAD .FCStd",
+            "appearanceFallback": bool(fallback_appearance),
         }
-        (output / "manifest.json").write_text(json.dumps(meta, indent=2) + "\n")
+        # Stage all derivatives and publish manifest last; source.FCStd is never
+        # overwritten, and a failed conversion cannot truncate a valid GLB.
+        glb_temp = output / "preview.glb.tmp"
+        thumb_temp = output / "thumbnail.png.tmp"
+        manifest_temp = output / "manifest.json.tmp"
+        try:
+            glb_temp.write_bytes(preview_bytes)
+            thumb_temp.write_bytes(thumbnail_bytes)
+            manifest_temp.write_text(json.dumps(meta, indent=2) + "\n")
+            os.replace(glb_temp, output / "preview.glb")
+            os.replace(thumb_temp, output / "thumbnail.png")
+            os.replace(manifest_temp, output / "manifest.json")
+        finally:
+            for temporary in (glb_temp, thumb_temp, manifest_temp):
+                temporary.unlink(missing_ok=True)
         print(json.dumps({"id": meta["id"], "objectCount": len(objects), "meshCount": len(nodes), "previewBytes": total, "sourceHash": meta["sourceSha256"]}))
     finally:
         FreeCAD.closeDocument(doc.Name)

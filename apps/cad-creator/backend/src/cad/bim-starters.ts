@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -15,7 +16,7 @@ const local = (req: Request) => {
 
 type Starter = {
   schema: string; id: string; title: string; sourceSha256: string;
-  objectCount: number; meshCount: number; previewSourceSha256?: string;
+  objectCount: number; meshCount: number; previewSourceSha256?: string; previewSha256?: string;
   objects: Array<{ name: string; label: string; type: string; visible: boolean; parents: string[]; children: string[] }>;
 };
 function readStarter(id: string): { starter: Starter; directory: string } | null {
@@ -42,7 +43,12 @@ export function installBimStarterRoutes(app: Express): void {
     if (!local(req)) return res.sendStatus(403);
     const result = readStarter(req.params.id);
     if (!result) return res.sendStatus(404);
-    return res.json({ ok: true, starter: result.starter });
+    return res.json({
+      ok: true, starter: {
+        ...result.starter,
+        workingExists: fs.existsSync(path.join(result.directory, 'working.FCStd')),
+      },
+    });
   });
   app.get('/api/cad/bim-starters/:id/file/:asset', (req, res) => {
     if (!local(req)) return res.sendStatus(403);
@@ -52,6 +58,11 @@ export function installBimStarterRoutes(app: Express): void {
     if (!entry || !filename) return res.sendStatus(404);
     const filepath = path.join(entry.directory, filename);
     if (!fs.existsSync(filepath)) return res.sendStatus(404);
+    // Never claim a partially regenerated or tampered GLB is a valid preview.
+    if (req.params.asset === 'preview' && entry.starter.previewSha256) {
+      const actual = createHash('sha256').update(fs.readFileSync(filepath)).digest('hex');
+      if (actual !== entry.starter.previewSha256) return res.status(409).json({ error: 'bim_preview_integrity_mismatch' });
+    }
     if (req.params.asset === 'source' || req.params.asset === 'working')
       res.setHeader('Content-Disposition', 'attachment; filename="' + req.params.id + (req.params.asset === 'working' ? '-working' : '-original') + '.FCStd"');
     if (req.params.asset === 'preview') res.type('model/gltf-binary');

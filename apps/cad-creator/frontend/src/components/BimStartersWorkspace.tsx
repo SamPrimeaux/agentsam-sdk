@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 type SourceObject = { name: string; label: string; type: string; visible: boolean; inPreview: boolean; parents: string[]; children: string[] };
 type Starter = {
   id: string; title: string; objectCount: number; meshCount: number;
-  sourceSha256: string; objects?: SourceObject[];
+  sourceSha256: string; workingExists?: boolean; objects?: SourceObject[];
 };
 const asset = (id: string, kind: 'preview' | 'thumbnail' | 'source' | 'working') =>
   `/api/cad/bim-starters/${encodeURIComponent(id)}/file/${kind}`;
@@ -175,8 +175,13 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
   useEffect(() => {
     const controller = new AbortController();
     fetch('/api/cad/bim-starters', { signal: controller.signal })
-      .then(async (r) => { if (!r.ok) throw new Error('Connect the local CAD runtime to browse native BIM projects.'); return r.json(); })
-      .then((data) => setStarters(data.starters ?? []))
+      .then(async (r) => {
+        if (!r.ok || !r.headers.get('content-type')?.includes('application/json')) {
+          throw new Error('Native BIM library requires the local CAD runtime. Open standalone CAD Creator on this machine.');
+        }
+        return r.json();
+      })
+      .then((data) => { if (!Array.isArray(data.starters)) throw new Error('Native BIM library response is invalid.'); setStarters(data.starters); })
       .catch((e) => { if (!controller.signal.aborted) setError(e.message); });
     return () => controller.abort();
   }, []);
@@ -186,7 +191,10 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
     setHidden([]);
     setIsolated(null);
     const response = await fetch('/api/cad/bim-starters/' + encodeURIComponent(id));
-    if (!response.ok) { setError('Cannot read this BIM starter from the local CAD runtime.'); return; }
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+      setError('Cannot read this BIM starter from the local CAD runtime.');
+      return;
+    }
     const body = await response.json();
     setActive(body.starter);
   };
@@ -202,6 +210,7 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
       const r = await fetch('/api/cad/bim-starters/' + encodeURIComponent(active.id) + '/open-native', { method: 'POST' });
       const body = await r.json();
       if (!r.ok || body.ok !== true) throw new Error(body.error ?? 'FreeCAD launch failed');
+      setActive((current) => current ? { ...current, workingExists: true } : current);
       setNativeStatus('Opened native working copy in FreeCAD.');
     } catch (e) {
       setNativeStatus(e instanceof Error ? e.message : 'FreeCAD launch unavailable');
@@ -255,7 +264,7 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
           <button onClick={() => void openNative()} className="w-full rounded bg-amber-500 px-2 py-2 font-semibold text-slate-950">Edit working copy in FreeCAD</button>
           <button disabled={refreshing} onClick={() => void refreshPreview()} className="w-full rounded border border-amber-500/40 px-2 py-2 text-amber-200 disabled:opacity-40">{refreshing ? 'Converting model…' : 'Sync 3D after FreeCAD save'}</button>
           <a className="block rounded border border-white/20 px-2 py-2 text-center hover:bg-white/10" href={asset(active.id, 'source')}>Download preserved original .FCStd</a>
-          <a className="block rounded border border-white/20 px-2 py-2 text-center hover:bg-white/10" href={asset(active.id, 'working')}>Download working copy (after opening)</a>
+          {active.workingExists && <a className="block rounded border border-white/20 px-2 py-2 text-center hover:bg-white/10" href={asset(active.id, 'working')}>Download working copy</a>}
           {nativeStatus && <div role="status" className="text-amber-200">{nativeStatus}</div>}
         </div>
         <div className="border-b border-white/10 p-3">

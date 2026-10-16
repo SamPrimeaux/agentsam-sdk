@@ -362,6 +362,8 @@ function runBim(args) {
       if (data.toString('ascii', 16, 20) !== 'JSON' || jsonSize < 16)
         throw new Error('Invalid GLB JSON chunk: ' + entry.name);
       const gltf = JSON.parse(data.toString('utf8', 20, 20 + jsonSize));
+      if (manifest.previewSha256 && createHash('sha256').update(data).digest('hex') !== manifest.previewSha256)
+        throw new Error('Preview digest mismatch: ' + entry.name);
       if (gltf.meshes.length !== manifest.meshCount || gltf.scenes[0].nodes.length !== manifest.meshCount)
         throw new Error('GLB mesh count mismatch: ' + entry.name);
       if (gltf.materials.length !== manifest.materialCount)
