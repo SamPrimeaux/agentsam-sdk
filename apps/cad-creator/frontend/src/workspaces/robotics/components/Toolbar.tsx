@@ -37,26 +37,28 @@ export function Toolbar({
   const iconFill = isDarkMode ? "fill-slate-100" : "fill-slate-800";
 
   return (
-    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 min-[660px]:left-10 min-[660px]:translate-x-0 flex items-center gap-2 z-30">
+    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 min-[660px]:left-10 min-[660px]:translate-x-0 flex items-center gap-2 z-30 max-w-[calc(100vw-16px)] overflow-x-auto">
 
       {/* Play/Pause Button */}
       <button
         onClick={togglePause}
-        className={`w-10 h-10 rounded-xl glass-panel flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl ${panelStyle}`}
+        className={`h-10 shrink-0 rounded-xl px-2 glass-panel flex items-center justify-center gap-1 transition-all hover:scale-105 active:scale-95 shadow-xl ${panelStyle}`}
         title={isPaused ? "Resume" : "Pause"}
         aria-label={isPaused ? "Resume simulation" : "Pause simulation"}
       >
         {isPaused ? <Play className={`w-4 h-4 ${iconFill}`} /> : <Pause className={`w-4 h-4 ${iconFill}`} />}
+        <span className="text-[10px]">{isPaused ? "Resume" : "Pause"}</span>
       </button>
 
       {/* Reset Button */}
       <button
         onClick={onReset}
-        className={`w-10 h-10 rounded-xl glass-panel flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl ${panelStyle}`}
+        className={`h-10 shrink-0 rounded-xl px-2 glass-panel flex items-center justify-center gap-1 transition-all hover:scale-105 active:scale-95 shadow-xl ${panelStyle}`}
         title="Reset Simulation"
         aria-label="Reset simulation"
       >
         <RotateCcw className="w-4 h-4" />
+        <span className="text-[10px]">Reset</span>
       </button>
 
       <button type="button" onClick={onReachTest} disabled={isReachRunning}
@@ -69,21 +71,23 @@ export function Toolbar({
       {/* Dark Mode Toggle */}
       <button
         onClick={toggleDarkMode}
-        className={`w-10 h-10 rounded-xl glass-panel flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl ${panelStyle}`}
+        className={`h-10 shrink-0 rounded-xl px-2 glass-panel flex items-center justify-center gap-1 transition-all hover:scale-105 active:scale-95 shadow-xl ${panelStyle}`}
         title={isDarkMode ? "Light Mode" : "Dark Mode"}
         aria-label={isDarkMode ? "Use light mode" : "Use dark mode"}
       >
         {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        <span className="text-[10px]">{isDarkMode ? "Light" : "Dark"}</span>
       </button>
 
       {/* Sidebar Toggle */}
       <button
         onClick={toggleSidebar}
-        className={`w-10 h-10 rounded-xl glass-panel flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-xl ${showSidebar ? (isDarkMode ? 'text-indigo-400 bg-slate-800' : 'text-indigo-600 bg-white') : panelStyle}`}
+        className={`h-10 shrink-0 rounded-xl px-2 glass-panel flex items-center justify-center gap-1 transition-all hover:scale-105 active:scale-95 shadow-xl ${showSidebar ? (isDarkMode ? 'text-indigo-400 bg-slate-800' : 'text-indigo-600 bg-white') : panelStyle}`}
         title="Toggle Analysis Panel"
         aria-label={showSidebar ? "Close simulation inspector" : "Open simulation inspector"}
       >
         <PanelRight className="w-4 h-4" />
+        <span className="text-[10px]">Inspector</span>
       </button>
     </div>
   );
