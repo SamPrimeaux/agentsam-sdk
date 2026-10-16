@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -41,7 +42,7 @@ double volume(const TopoDS_Shape& shape) {
 void receipt(double volumeMm3, const char* operation) {
   std::cout << "AGENTSAM_RESULT={\"ok\":true,\"engine\":\"occt\",\"version\":\""
             << OCC_VERSION_COMPLETE << "\",\"operation\":\"" << operation
-            << "\",\"volume_mm3\":" << std::setprecision(15) << volumeMm3 << "}" << std::endl;
+            << "\",\"volume_mm3\":" << std::setprecision(std::numeric_limits<double>::max_digits10) << volumeMm3 << "}" << std::endl;
 }
 }
 
