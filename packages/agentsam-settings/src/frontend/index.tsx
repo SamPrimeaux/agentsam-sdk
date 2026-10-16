@@ -1433,7 +1433,7 @@ function EmptyState({ title }: { title: string }) {
 }
 
 function ModelTable({ models }: { models: SettingsModel[] }) {
-  if (!models.length) return <EmptyState title="No runnable models yet." />;
+  if (!models.length) return <EmptyState title="This model inventory returned no entries. Refresh discovery or verify the connected runtime." />;
 
   const columns = {
     display: "grid",
