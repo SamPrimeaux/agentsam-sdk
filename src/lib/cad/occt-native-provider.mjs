@@ -1,0 +1,137 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const defaultRun = promisify(execFile);
+const RECEIPT_PREFIX = 'AGENTSAM_RESULT=';
+export const OCCT_NATIVE_OPERATIONS = Object.freeze(['design_model_build', 'design_model_inspect']);
+
+function readReceipt(stdout, expectedOperation) {
+  const line = String(stdout).split(/\r?\n/).filter(v => v.startsWith(RECEIPT_PREFIX)).at(-1);
+  if (!line) throw new Error('occt_receipt_missing');
+  let value;
+  try { value = JSON.parse(line.slice(RECEIPT_PREFIX.length)); }
+  catch { throw new Error('occt_receipt_invalid'); }
+  if (value?.ok !== true || value?.engine !== 'occt' ||
+      (expectedOperation && value.operation !== expectedOperation)) {
+    throw new Error('occt_receipt_unverified');
+  }
+  return value;
+}
+
+function existingExecutable(binary) {
+  if (typeof binary !== 'string' || !path.isAbsolute(binary)) return false;
+  try {
+    return fs.statSync(binary).isFile() && (fs.accessSync(binary, fs.constants.X_OK), true);
+  } catch { return false; }
+}
+
+function artifactRoot(ctx) {
+  if (typeof ctx?.artifactRoot !== 'string' || !path.isAbsolute(ctx.artifactRoot)) {
+    throw new Error('occt_artifact_root_required');
+  }
+  const root = fs.realpathSync(ctx.artifactRoot);
+  if (!fs.statSync(root).isDirectory()) throw new Error('occt_artifact_root_invalid');
+  return root;
+}
+
+function scopedFile(file, root) {
+  if (typeof file !== 'string' || !path.isAbsolute(file)) throw new Error('occt_artifact_path_invalid');
+  const real = fs.realpathSync(file);
+  const relative = path.relative(root, real);
+  if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error('occt_artifact_outside_scope');
+  }
+  if (!fs.statSync(real).isFile()) throw new Error('occt_artifact_not_file');
+  return real;
+}
+
+function millimeters(value, units) {
+  if (units !== 'mm' && units !== 'in') throw new Error('occt_explicit_units_required');
+  if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error('occt_invalid_dimension');
+  const size = units === 'in' ? value * 25.4 : value;
+  if (size <= 0 || size > 1000000) throw new Error('occt_invalid_dimension');
+  return size;
+}
+
+/** Native-only, fail-closed implementation of a small subset of cad.project.v1 operations.
+ * Engine availability is established from a real process receipt, never a UI claim.
+ */
+export function createOcctNativeProvider({
+  binary = process.env.AGENTSAM_OCCT_BIN,
+  runProcess = defaultRun,
+  timeoutMs = 20000,
+} = {}) {
+  async function call(args, expectedOperation) {
+    const { stdout } = await runProcess(binary, args, {
+      timeout: timeoutMs,
+      maxBuffer: 1024 * 1024,
+      windowsHide: true,
+    });
+    return readReceipt(stdout, expectedOperation);
+  }
+
+  async function doctor() {
+    if (!existingExecutable(binary)) {
+      return { engine: 'occt', available: false, ready: false, reason: 'occt_binary_not_configured', execution_lane: 'local' };
+    }
+    try {
+      const receipt = await call(['--doctor']);
+      if (!receipt.version || !Array.isArray(receipt.capabilities) ||
+          !receipt.capabilities.includes('solid.box.create') ||
+          !receipt.capabilities.includes('solid.inspect.step')) {
+        throw new Error('occt_capability_receipt_invalid');
+      }
+      return { engine: 'occt', available: true, ready: true, version: receipt.version,
+        capabilities: receipt.capabilities, operations: [...OCCT_NATIVE_OPERATIONS],
+        execution_lane: 'local', binary };
+    } catch (error) {
+      return { engine: 'occt', available: true, ready: false,
+        reason: error?.message || 'occt_probe_failed', execution_lane: 'local' };
+    }
+  }
+
+  async function inspect(artifact, ctx) {
+    const root = artifactRoot(ctx);
+    const file = scopedFile(artifact?.path, root);
+    const receipt = await call(['--inspect', file], 'solid.inspect.step');
+    if (!Number.isFinite(receipt.volume_mm3) || receipt.volume_mm3 <= 0) {
+      throw new Error('occt_inspection_unverified');
+    }
+    return { verified: true, engine: 'occt', operation: 'design_model_inspect',
+      volume_mm3: receipt.volume_mm3, units: 'mm', artifact_path: file };
+  }
+
+  async function execute(operation, input = {}, ctx = {}) {
+    if (!OCCT_NATIVE_OPERATIONS.includes(operation)) throw new Error('occt_operation_unsupported');
+    const health = await doctor();
+    if (!health.ready) throw new Error(health.reason || 'occt_engine_not_ready');
+    if (operation === 'design_model_inspect') return inspect(input.artifact, ctx);
+    if (input.kind !== 'box') throw new Error('occt_shape_unsupported');
+    const { width, depth, height, units } = input;
+    const dimensions = [width, depth, height].map(v => millimeters(v, units));
+    const root = artifactRoot(ctx);
+    const target = path.join(root, `${crypto.randomUUID()}.step`);
+    const receipt = await call(['--box', ...dimensions.map(String), target], 'solid.box.create');
+    const inspected = await inspect({ path: target }, ctx);
+    const expected = dimensions.reduce((a, b) => a * b, 1);
+    if (Math.abs(inspected.volume_mm3 - expected) > Math.max(1e-5, expected * 1e-6) ||
+        !Number.isFinite(receipt.volume_mm3) ||
+        Math.abs(receipt.volume_mm3 - inspected.volume_mm3) > Math.max(1e-5, expected * 1e-6)) {
+      throw new Error('occt_roundtrip_mismatch');
+    }
+    const artifact = fs.readFileSync(target);
+    if (artifact.length === 0) throw new Error('occt_artifact_empty');
+    return { engine: 'occt', operation, verified: true,
+      native_version: health.version, shape: 'box', dimensions_mm: dimensions,
+      volume_mm3: inspected.volume_mm3,
+      artifact: { path: target, format: 'step', size_bytes: artifact.length,
+        sha256: crypto.createHash('sha256').update(artifact).digest('hex') } };
+  }
+
+  return { id: 'occt-native', executionLanes: ['local'],
+    capabilities: ['design.solid.create', 'design.solid.inspect', 'design.solid.export.step'],
+    discover: doctor, doctor, execute, inspect };
+}
