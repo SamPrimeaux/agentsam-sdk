@@ -476,6 +476,7 @@ cli:
     - security
     - merkle
     - cad
+    - robotics
     - dockerize
     - mini
     - recon
