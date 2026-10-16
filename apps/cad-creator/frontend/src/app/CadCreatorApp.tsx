@@ -17,6 +17,7 @@ import { getPermissions } from '../lib/permissions';
 import { collaborationClient } from '../lib/socket';
 import { Canvas2D } from '../components/Canvas2D';
 import { Viewport3D } from '../components/Viewport3D';
+import { BimStartersWorkspace } from '../components/BimStartersWorkspace';
 import { SketchCanvasTLDraw } from '../components/SketchCanvasTLDraw';
 import { ParametricEditor } from '../components/ParametricEditor';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
@@ -71,6 +72,7 @@ export function CadCreatorApp({
   onNavigateHost
 }: CadCreatorAppProps) {
   // 1. Core Project State
+  const [showBimStarters, setShowBimStarters] = useState(false);
   const [project, setProject] = useState<ProjectState>(() => {
     return TEMPLATES.modern_villa;
   });
@@ -369,6 +371,11 @@ export function CadCreatorApp({
               </button>
               <button
                 type="button"
+                onClick={() => setShowBimStarters((previous) => !previous)}
+                className="rounded bg-amber-500/15 px-2 py-1 text-[11px] text-amber-300 hover:bg-amber-500/25"
+              >BIM Starters</button>
+              <button
+                type="button"
                 onClick={() => setIsTemplateLibraryOpen(true)}
                 className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] flex items-center gap-1"
               >
@@ -513,13 +520,13 @@ export function CadCreatorApp({
           {/* WORKSPACE 2: MODEL */}
           {activeWorkspace === 'model' && (
             <div className="w-full h-full relative">
-              <Viewport3D
+              {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} /> : <Viewport3D
                 project={project}
                 onTakeSnapshot={(dataUrl) => {
                   setActiveSnapshotUrl(dataUrl);
                   setIsImageGenModalOpen(true);
                 }}
-              />
+              />}
             </div>
           )}
 
