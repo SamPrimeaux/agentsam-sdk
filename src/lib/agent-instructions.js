@@ -69,15 +69,30 @@ export function compileAgentInstructions(startDir = process.cwd(), options = {})
   }
 
   const combined = sections.join('\n');
-  const truncated = combined.length > maxChars;
-  const content = truncated ? `${combined.slice(0, Math.max(0, maxChars - 1))}…` : combined;
+  // Fail closed instead of trimming a global-first concatenation: truncation used
+  // to silently remove the *repository's* rules from real model requests.
+  if (combined.length > maxChars) {
+    const error = new RangeError(`agent_instructions_budget_exceeded:${combined.length}>${maxChars}; increase the instruction budget or shorten the source files before running a model turn`);
+    error.code = 'AGENTSAM_INSTRUCTION_BUDGET_EXCEEDED';
+    error.receipt = Object.freeze({
+      required_chars: combined.length,
+      budget_chars: maxChars,
+      source_hash: sha256(combined),
+      sources: Object.freeze([...sources]),
+      omitted: false,
+      safe_to_execute: false,
+    });
+    throw error;
+  }
+  const content = combined;
   return Object.freeze({
     found: sources.length > 0,
     path: projectPath || runtimePath || (sources.length ? globalPath : null),
     content,
     chars: content.length,
+    budget_chars: maxChars,
     source_chars: sourceChars,
-    truncated,
+    truncated: false,
     hash: combined ? sha256(combined) : null,
     precedence: AGENT_INSTRUCTION_PRECEDENCE,
     sources: Object.freeze(sources),
