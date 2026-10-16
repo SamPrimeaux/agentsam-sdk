@@ -1,6 +1,7 @@
 import { getSamOperation, listSamOperations, toSamOperationCard } from './registry.js';
 import { buildSamResult } from './result.js';
 import { ensureOS } from './os.js';
+import { validateSamInput } from './validation.js';
 
 /**
  * Resolve root/cwd from common input shapes.
@@ -111,6 +112,9 @@ export class AgentSamClient {
     };
 
     try {
+      if (def.input_schema && typeof def.input_schema === 'object') {
+        validateSamInput(input, def.input_schema);
+      }
       const data = await def.handler(input, ctx);
       const warnings = Array.isArray(/** @type {any} */ (data)?.warnings)
         ? /** @type {any} */ (data).warnings
