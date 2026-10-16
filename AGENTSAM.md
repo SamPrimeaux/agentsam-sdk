@@ -10,6 +10,8 @@ conventional client variable for that machinery, never a human identity. Prefer 
 
 **Owner development-quality gate:** InnerAnimalMedia-owned work follows the [Experience Standard](https://github.com/SamPrimeaux/inneranimalmedia/blob/main/docs/standards/INNERANIMALMEDIA_EXPERIENCE_STANDARD.md): *Craft over spectacle. Substance over promises.* Visual distinction, functional depth, effortless usability, technical reliability, and narrative coherence determine actual experience quality. Never claim a feature is finished solely because it compiles, passes isolated tests, or looks good in a screenshot. This is an owner-scoped development standard, **not** a default policy for unrelated customers installing the portable SDK. See [user-global rule loading](docs/architecture/USER_GLOBAL_AGENT_INSTRUCTIONS.md).
 
+**Delivery closure law:** Follow [docs/standards/DELIVERY_CLOSURE.md](docs/standards/DELIVERY_CLOSURE.md) for every owner-led branch. Feature branch ≠ shipped. Check existing branches first, complete real runtime validation, merge, prove the deployed revision and route, then safely prune merged worktrees. A PR, standalone Vite screenshot, or doc-only handoff never completes a functional user request.
+
 ## AgentSam system model: deterministic machinery + LLM augmentation
 
 AgentSam is deliberately **not** “an LLM with tools.” It is a layered system:
