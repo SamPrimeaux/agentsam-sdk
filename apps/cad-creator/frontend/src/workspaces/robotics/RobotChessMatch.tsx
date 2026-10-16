@@ -17,6 +17,9 @@ export function RobotChessMatch({ provider, onLeave }: Props) {
   const [phase, setPhase] = useState('Your move · Select a white piece');
   const [lastRobot, setLastRobot] = useState<Move | null>(null);
   const [sceneError, setSceneError] = useState<string | null>(null);
+  const [assetProgress, setAssetProgress] = useState('Loading original chess models · 0/12');
+  const [assetError, setAssetError] = useState<string | null>(null);
+  const [assetRetry, setAssetRetry] = useState(0);
   const history = game.current.history({ verbose: true }) as Move[];
   const points = capturePoints(history);
   const legal = selected ? game.current.moves({ square: selected, verbose: true }).map(m => m.to) : [];
@@ -27,6 +30,19 @@ export function RobotChessMatch({ provider, onLeave }: Props) {
       const overlay = new RobotChessScene(provider, (square) => callbackRef.current(square));
       scene.current = overlay;
       overlay.draw(game.current, null, []);
+      setAssetError(null);
+      setAssetProgress('Loading original chess models · 0/12');
+      void overlay.loadBaroquePieces((done,total) => {
+        if (alive.current) setAssetProgress('Loading original chess models · ' + done + '/' + total);
+      }).then(() => {
+        if (!alive.current) return;
+        setAssetProgress('Original Baroque models loaded');
+        overlay.draw(game.current, null, []);
+      }).catch(error => {
+        if (!alive.current) return;
+        setAssetError(error instanceof Error ? error.message : String(error));
+        setAssetProgress('Original models unavailable · procedural fallback');
+      });
     } catch (error) {
       setSceneError(error instanceof Error ? error.message : String(error));
     }
@@ -35,7 +51,7 @@ export function RobotChessMatch({ provider, onLeave }: Props) {
       scene.current?.dispose();
       scene.current = null;
     };
-  }, [provider]);
+  }, [provider, assetRetry]);
 
   useEffect(() => { scene.current?.draw(game.current, selected, legal); }, [fen, selected]);
 
@@ -54,11 +70,17 @@ export function RobotChessMatch({ provider, onLeave }: Props) {
     if (busy || game.current.isGameOver() || game.current.turn() !== 'w') return;
     const piece = game.current.get(square);
     if (!selected) {
-      if (piece?.color === 'w') setSelected(square);
+      if (piece?.color === 'w') {
+        setSelected(square);
+        if (!game.current.moves({square,verbose:true}).length)
+          setPhase('No legal moves from ' + square + ' · select another white piece');
+        else setPhase('Selected ' + square + ' · choose an illuminated destination');
+      }
       return;
     }
     if (piece?.color === 'w') {
       setSelected(square);
+      setPhase(game.current.moves({square,verbose:true}).length ? 'Selected ' + square + ' · choose an illuminated destination' : 'No legal moves from ' + square);
       return;
     }
     let move: Move;
@@ -85,19 +107,21 @@ export function RobotChessMatch({ provider, onLeave }: Props) {
         return;
       }
       setPhase('Franka moving ' + robot.from + ' → ' + robot.to + ' · Visual simulation');
+      // The validated chess turn commits independently of a visual gesture.
+      // A renderer or IK failure must never undo the authoritative game state.
+      game.current.move({ from: robot.from, to: robot.to, promotion: robot.promotion });
+      setLastRobot(robot);
+      refresh();
       try {
         await scene.current?.showRobotMove(robot);
         if (!alive.current) return;
-        game.current.move({ from: robot.from, to: robot.to, promotion: robot.promotion });
-        setLastRobot(robot);
-        refresh();
         if (game.current.isCheckmate()) setPhase('Checkmate! Franka wins.');
         else if (game.current.isDraw()) setPhase('Game drawn');
         else if (game.current.isCheck()) setPhase('Check · Your move');
         else setPhase('Your move · Select a white piece');
       } catch (error) {
         if (alive.current) {
-          setPhase('Robot simulation interrupted. Board unchanged; retry by starting a new match.');
+          setPhase('Chess move recorded; simulated robot gesture interrupted.');
           console.error('Franka chess simulation:', error);
         }
       } finally {
@@ -122,6 +146,13 @@ export function RobotChessMatch({ provider, onLeave }: Props) {
           <div className="min-w-0 text-right"><p className="text-[10px] text-slate-400">Franka · Black</p><p className="text-xl font-semibold tabular-nums">{points.robot} <span className="text-[9px] text-slate-400">pts</span></p></div>
         </div>
         <p aria-live="polite" className="mt-2 text-[11px] text-slate-200">{sceneError ? 'Chess viewport unavailable: ' + sceneError : phase}</p>
+        <p data-testid="baroque-load-status" role="status" className={`mt-1 text-[10px] ${assetError ? 'text-amber-300' : 'text-slate-400'}`}>
+          {assetProgress}
+        </p>
+        {assetError && <button type="button" onClick={() => setAssetRetry(value => value+1)}
+          className="mt-1 rounded-md border border-amber-500/30 px-2 py-1 text-[10px] text-amber-200 focus-visible:outline focus-visible:outline-2">
+          Retry original GLBs
+        </button>}
         {lastRobot && <p className="mt-1 text-[10px] text-amber-300">Last: Franka {lastRobot.san}</p>}
         <div className="mt-3 flex items-center gap-2">
           <button type="button" onClick={reset} disabled={busy} className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-medium hover:bg-white/20 disabled:opacity-40">New game</button>

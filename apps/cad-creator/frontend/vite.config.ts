@@ -17,6 +17,18 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      // Local preview uses the same path as the production Worker. Vite proxies
+      // the public R2 model bytes server-side, so browser CORS is not required.
+      proxy: {
+        '/cad-creator/assets/chess/baroque/': {
+          target: 'https://assets.inneranimalmedia.com',
+          changeOrigin: true,
+          secure: true,
+          rewrite: (url: string) => url.replace(
+            '/cad-creator/assets/chess/baroque/', '/glb/chess/baroque/'
+          ),
+        },
+      },
     },
   };
 });

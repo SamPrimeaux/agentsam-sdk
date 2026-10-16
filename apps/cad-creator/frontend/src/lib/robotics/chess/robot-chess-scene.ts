@@ -2,13 +2,17 @@
  * Chess pieces are a visual layer, not MuJoCo collision bodies. Grasp isn't verified.
  */
 import { Chess, type Square, type Move } from 'chess.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as THREE from 'three';
-import { SQUARE_M } from './frankaChessScene';
+import { SQUARE_M, ornatePieceUrl } from './frankaChessScene';
 import type { SimulationProvider } from '../simulation/provider';
 
 const BLACK_EDGE_Y = 0.18;
 const BOARD_CENTER_Y = BLACK_EDGE_Y + 3.5 * SQUARE_M;
-const PIECE_BASE_Z = 0.047;
+const PIECE_BASE_Z = 0.0375;
+const BAROQUE_KINDS: Record<string,string> = {p:'pawn',n:'knight',b:'bishop',r:'rook',q:'queen',k:'king'};
+const BAROQUE_TYPES = ['p','n','b','r','q','k'] as const;
 type SquareClick = (square: Square) => void;
 
 export function chessSquarePosition(square: string, z = 0) {
@@ -21,6 +25,8 @@ export class RobotChessScene {
   private readonly group = new THREE.Group();
   private readonly tiles = new Map<string, THREE.Mesh>();
   private readonly pieceLayer = new THREE.Group();
+  private readonly baroqueTemplates = new Map<string, THREE.Group>();
+  private baroqueReady = false;
   private readonly cameraPosition: THREE.Vector3;
   private readonly cameraTarget: THREE.Vector3;
   private readonly renderer: THREE.WebGLRenderer;
@@ -88,7 +94,10 @@ export class RobotChessScene {
     if (!bounds.width || !bounds.height) return;
     this.pointer.set(((event.clientX - bounds.left) / bounds.width)*2-1, -((event.clientY - bounds.top) / bounds.height)*2+1);
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    const hits = this.raycaster.intersectObjects([...this.tiles.values(), this.pieceLayer], true);
+    // Chess input must resolve the BOARD square, not whichever tall GLB crown
+    // is first along the ray. Model geometry overlaps neighboring screen pixels
+    // in perspective; selecting its nearest triangle can choose a wrong square.
+    const hits = this.raycaster.intersectObjects([...this.tiles.values()], false);
     for (const hit of hits) {
       let object: THREE.Object3D | null = hit.object;
       while (object && !object.userData.square) object = object.parent;
@@ -99,6 +108,74 @@ export class RobotChessScene {
     }
   };
 
+  /** Reuses the canonical public MeauxChess GLBs. Source meshes are cached once,
+   * scaled to the metric MuJoCo board and rotated from GLTF Y-up to physics Z-up.
+   * A failed download stays explicit in the caller's retry UI.
+   */
+  async loadBaroquePieces(onProgress?: (done: number, total: number) => void): Promise<void> {
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    const variants = BAROQUE_TYPES.flatMap(type =>
+      (['w','b'] as const).map(color => ({ type, color, key: type + color }))
+    );
+    let completed = 0;
+    for (const variant of variants) {
+      if (this.disposed) return;
+      if (this.baroqueTemplates.has(variant.key)) {
+        onProgress?.(++completed, variants.length);
+        continue;
+      }
+      const model = await loader.loadAsync(ornatePieceUrl(BAROQUE_KINDS[variant.type], variant.color === 'w' ? 'white' : 'black'));
+      if (this.disposed) {
+        model.scene.traverse(object => {
+          if (object instanceof THREE.Mesh) {
+            object.geometry.dispose();
+            const materials = Array.isArray(object.material) ? object.material : [object.material];
+            materials.forEach(material => material.dispose());
+          }
+        });
+        return;
+      }
+      const bounds = new THREE.Box3().setFromObject(model.scene);
+      const size = bounds.getSize(new THREE.Vector3());
+      if (bounds.isEmpty() || !(size.y > 0) || !(Math.max(size.x,size.z) > 0)) {
+        throw new Error('baroque_invalid_model_bounds:' + variant.key);
+      }
+      const scale = Math.min(SQUARE_M * 0.8 / Math.max(size.x, size.z), SQUARE_M * 2.0 / size.y);
+      const center = bounds.getCenter(new THREE.Vector3());
+      model.scene.position.set(-center.x, -bounds.min.y, -center.z);
+      const oriented = new THREE.Group();
+      oriented.rotation.x = Math.PI / 2;
+      oriented.scale.setScalar(scale);
+      oriented.add(model.scene);
+      oriented.traverse(object => {
+        if (object instanceof THREE.Mesh) {
+          object.castShadow = true;
+          object.receiveShadow = true;
+        }
+      });
+      this.baroqueTemplates.set(variant.key, oriented);
+      onProgress?.(++completed, variants.length);
+    }
+    if (this.disposed) return;
+    this.baroqueReady = true;
+  }
+
+  private clearPieceLayer() {
+    while (this.pieceLayer.children.length) {
+      const child = this.pieceLayer.children[0];
+      this.pieceLayer.remove(child);
+      if (child.userData.baroque) continue; // cached GLB geometries/materials belong to templates
+      child.traverse(object => {
+        if (object instanceof THREE.Mesh) {
+          object.geometry.dispose();
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          materials.forEach(material => material.dispose());
+        }
+      });
+    }
+  }
+
   /** Display authoritative chess.js state, never a second mutable chess board. */
   draw(game: Chess, selected: Square | null, targets: readonly Square[]) {
     if (this.disposed) return;
@@ -108,20 +185,12 @@ export class RobotChessScene {
       const rank = Number(square[1]);
       material.color.setHex(square === selected ? 0x8070b3 : targets.includes(square as Square) ? 0x627c75 : ((rank + file)%2 === 0 ? 0xbac1bc : 0x303a4a));
     }
-    while (this.pieceLayer.children.length) {
-      const child = this.pieceLayer.children[0];
-      this.pieceLayer.remove(child);
-      child.traverse((obj) => {
-        const mesh = obj as THREE.Mesh;
-        if (mesh.geometry) mesh.geometry.dispose();
-        if (mesh.material) {
-          for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) material.dispose();
-        }
-      });
-    }
+    this.clearPieceLayer();
     for (const row of game.board()) for (const piece of row) {
       if (!piece) continue;
-      const shape = this.buildPiece(piece.type, piece.color);
+      const template = this.baroqueReady ? this.baroqueTemplates.get(piece.type + piece.color) : undefined;
+      const shape = template ? template.clone(true) : this.buildPiece(piece.type, piece.color);
+      shape.userData.baroque = Boolean(template);
       shape.position.copy(chessSquarePosition(piece.square, PIECE_BASE_Z));
       shape.userData.square = piece.square;
       this.pieceLayer.add(shape);
@@ -186,11 +255,22 @@ export class RobotChessScene {
     this.camera.position.copy(this.cameraPosition);
     this.controls.target.copy(this.cameraTarget);
     this.controls.update();
+    this.clearPieceLayer();
     this.group.removeFromParent();
     this.group.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
       mesh.geometry?.dispose();
       if (mesh.material) for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) m.dispose();
     });
+    for (const template of this.baroqueTemplates.values()) {
+      template.traverse(object => {
+        if (object instanceof THREE.Mesh) {
+          object.geometry.dispose();
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          materials.forEach(material => material.dispose());
+        }
+      });
+    }
+    this.baroqueTemplates.clear();
   }
 }

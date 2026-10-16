@@ -80,3 +80,4 @@ export { createCadOperations, CAD_DONOR_OPERATOR_MAPPINGS } from './packs/cad/in
 
 export { createCadHttpPorts } from "./packs/cad/http-ports.js";
 export { createCadModelTools } from "./packs/cad/model-tools.js";
+export { CAD_RUN_MODES, executeCadRunMode } from "./packs/cad/modes.js";

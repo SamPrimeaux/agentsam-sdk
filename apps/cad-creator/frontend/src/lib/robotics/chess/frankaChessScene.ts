@@ -7,7 +7,10 @@
 import * as THREE from 'three';
 export const ORNATE_BASE = 'https://assets.inneranimalmedia.com/glb/chess/baroque';
 export const squareVector = (square: string) => { const p = squarePose(square); return new THREE.Vector3(p.x, p.y, p.z); };
-export const ornatePieceUrl = (kind: string, color: string) => `${ORNATE_BASE}/baroque_${kind}_${color}_opt.glb`;
+// Original source remains R2. The serving host streams the same bytes through
+// a narrow same-origin route because the public R2 domain has no CORS policy.
+export const CAD_CHESS_ASSET_BASE = '/cad-creator/assets/chess/baroque';
+export const ornatePieceUrl = (kind: string, color: string) => `${CAD_CHESS_ASSET_BASE}/baroque_${kind}_${color}_opt.glb`;
 export const BOARD_URL = `${ORNATE_BASE}/baroque_board_opt.glb`;
 export const SQUARE_M = 0.05715;
 export function squarePose(square: string) {
