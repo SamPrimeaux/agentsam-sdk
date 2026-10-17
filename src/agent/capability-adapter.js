@@ -9,7 +9,7 @@ import { runWranglerNative, summarizeCloudflareCpuProfileFile, runCloudflareCpuA
 import { runRepositoryAudit } from './repository-audit.js';
 import { terminalExec } from '../capabilities/terminal-exec.js';
 import { createRegistry } from '../registry/index.js';
-import { workspaceRead, workspaceWrite } from '../capabilities/workspace-files.js';
+import { workspaceRead, workspaceWrite, workspaceList, workspaceSearch } from '../capabilities/workspace-files.js';
 import { machineInspect, machineAvailable } from '../capabilities/machine-inspect.js';
 import { testRun } from '../capabilities/test-run.js';
 import { PLAN_READ_OPERATIONS, PLAN_WRITE_OPERATIONS } from '../capabilities/plan-operation-ids.js';
@@ -113,6 +113,8 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     }],
     ['repository.mine', (input = {}) => repositoryMine(input,projectRoot,{allowedRoots:allowedRepositories})],
     ['workspace.read', (input = {}) => workspaceRead(input,projectRoot)],
+    ['workspace.list', (input = {}) => workspaceList(input,projectRoot)],
+    ['workspace.search', (input = {}) => workspaceSearch(input,projectRoot)],
     ['workspace.write', (input = {}) => workspaceWrite(input,projectRoot)],
     ['machine.inspect', (input = {}) => machineInspect(input,projectRoot)],
     ['test.run', (input = {}) => testRun(input,projectRoot)],
@@ -149,7 +151,7 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
       ? ['agentsam_d1_create'] : []),
     'repository.snapshot','repository.intelligence','repository.crawl','repository.mine',
     'knowledge.index','knowledge.search','context.resolve',
-    'workspace.read','workspace.write','machine.inspect','terminal.exec','test.run',
+    'workspace.read','workspace.list','workspace.search','workspace.write','machine.inspect','terminal.exec','test.run',
     'cloudflare.d1.schema',
   ]);
   const registry = createRegistry({ capabilityAdapter: {

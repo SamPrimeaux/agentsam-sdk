@@ -519,3 +519,137 @@ body:has(.copro-studio) { margin:0; }
   .copro-rail-clip-tools button { min-height:54px;color:var(--copro-text-2); }
   .copro-rail-clip-tools button.is-danger { color:var(--copro-danger); }
 }
+
+/* Product editor layout v2. Container measurements, not browser viewport,
+   are the source of truth for all grid breakpoints. */
+.copro-dockable-grid{
+  position:relative;
+  height:100%;
+  min-height:0;
+  display:grid;
+  grid-template-columns:var(--copro-left-col) 8px minmax(0,1fr) 8px var(--copro-right-col);
+  grid-template-rows:minmax(160px,1fr) 42px 8px minmax(150px,var(--copro-timeline-size));
+  background:var(--copro-surface-0);
+  overflow:hidden;
+}
+.copro-dockable-grid>.copro-preview-stage{grid-column:3;grid-row:1;min-width:0;min-height:0}
+.copro-dockable-grid>.copro-transport{grid-column:3;grid-row:2;min-width:0;min-height:0}
+.copro-dockable-grid>.copro-timeline-divider{grid-column:1/-1;grid-row:3}
+.copro-dockable-grid>.copro-timeline-shell{grid-column:1/-1;grid-row:4;min-height:0;height:100%;overflow:hidden}
+.copro-dockable-grid>.copro-context-tools{display:none}
+.copro-dockable-grid>.copro-pane-slot{
+  display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;
+  background:var(--copro-surface-1);border-color:var(--copro-line);
+}
+.copro-dockable-grid[data-swapped=false]>.copro-source-slot,
+.copro-dockable-grid[data-swapped=true]>.copro-inspector-slot{grid-column:1;grid-row:1/3}
+.copro-dockable-grid[data-swapped=false]>.copro-inspector-slot,
+.copro-dockable-grid[data-swapped=true]>.copro-source-slot{grid-column:5;grid-row:1/3}
+.copro-dockable-grid[data-swapped=false]>.copro-source-divider,
+.copro-dockable-grid[data-swapped=true]>.copro-inspector-divider{grid-column:2;grid-row:1/3}
+.copro-dockable-grid[data-swapped=false]>.copro-inspector-divider,
+.copro-dockable-grid[data-swapped=true]>.copro-source-divider{grid-column:4;grid-row:1/3}
+.copro-pane-controls{
+  display:flex;align-items:center;gap:2px;flex:none;min-height:42px;
+  padding:0 7px 0 12px;border-bottom:1px solid var(--copro-line);
+  color:#b6cbd0;background:#111e28;
+}
+.copro-pane-controls>span{flex:1;font-size:12px;letter-spacing:.04em;font-weight:650;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.copro-pane-controls button{
+  flex:none;display:grid;place-items:center;width:32px;height:34px;border:0;border-radius:9px;
+  background:transparent;color:#a1bac4;cursor:pointer;
+}
+.copro-pane-controls button:hover{background:#29404b;color:#e5fffa}
+.copro-pane-controls button:disabled{opacity:.25;cursor:default}
+.copro-pane-controls button:focus-visible{outline:2px solid #2dd4bf;outline-offset:1px}
+.copro-dockable-grid .copro-pane-slot .copro-tool-panel{min-height:0;flex:1}
+.copro-resize-handle{position:relative;display:grid;place-items:center;background:#0b1119;color:#7396a1;z-index:3;touch-action:none;user-select:none;cursor:col-resize}
+.copro-resize-handle.copro-resize-horizontal{cursor:row-resize}
+.copro-resize-handle>span{display:block;width:3px;height:39px;border-radius:10px;background:#37525d}
+.copro-resize-handle.copro-resize-horizontal>span{width:50px;height:3px}
+.copro-resize-handle[data-dragging=true],.copro-resize-handle:hover{background:#174147}
+.copro-resize-handle[data-dragging=true]>span,.copro-resize-handle:focus-visible>span{background:#2dd4bf}
+.copro-resize-handle:focus-visible{outline:2px solid #2dd4bf;outline-offset:-2px}
+.copro-dockable-grid>.copro-pane-slot.is-floating{
+  position:absolute;grid-column:auto;grid-row:auto;z-index:9;
+  height:min(74%,610px);max-width:calc(100% - 24px);min-width:min(260px,90%);
+  border:1px solid #35616e;box-shadow:0 16px 44px rgba(0,0,0,.5);border-radius:12px;
+}
+.copro-dockable-grid>.copro-pane-slot.is-floating .copro-pane-grip{cursor:grab;opacity:1;touch-action:none}
+.copro-dockable-grid>.copro-pane-slot.is-floating .copro-pane-grip:active{cursor:grabbing}
+.copro-dockable-grid>.copro-pane-slot.is-floating .copro-tool-panel{min-height:0}
+.copro-dockable-grid .copro-tool-panel-header{min-height:65px}
+.copro-dockable-grid .copro-tool-panel-header h2{font-size:17px}
+.copro-dockable-grid .copro-tool-panel-body{overflow-y:auto}
+.copro-dockable-grid[data-layout-mode=compact]{
+  grid-template-columns:var(--copro-compact-col) 8px minmax(0,1fr);
+  grid-template-rows:minmax(160px,1fr) 42px 8px minmax(150px,var(--copro-timeline-size));
+}
+.copro-dockable-grid[data-layout-mode=compact]>.copro-preview-stage{grid-column:3;grid-row:1}
+.copro-dockable-grid[data-layout-mode=compact]>.copro-transport{grid-column:3;grid-row:2}
+.copro-dockable-grid[data-layout-mode=compact]>.copro-pane-slot:not(.is-floating){grid-column:1;grid-row:1/3}
+.copro-dockable-grid[data-layout-mode=compact]>.copro-resize-vertical{grid-column:2;grid-row:1/3}
+.copro-dockable-grid[data-layout-mode=compact][data-active-pane=source]>.copro-inspector-slot:not(.is-floating),
+.copro-dockable-grid[data-layout-mode=compact][data-active-pane=source]>.copro-inspector-divider,
+.copro-dockable-grid[data-layout-mode=compact][data-active-pane=inspector]>.copro-source-slot:not(.is-floating),
+.copro-dockable-grid[data-layout-mode=compact][data-active-pane=inspector]>.copro-source-divider{display:none}
+.copro-dockable-grid[data-layout-mode=compact]>.copro-timeline-divider{grid-column:1/-1;grid-row:3}
+.copro-dockable-grid[data-layout-mode=compact]>.copro-timeline-shell{grid-column:1/-1;grid-row:4}
+
+.copro-dockable-grid[data-layout-mode=mobile]{
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(100px,1fr) 40px 8px minmax(135px,31%) 8px minmax(105px,var(--copro-timeline-size)) 66px;
+}
+.copro-dockable-grid[data-layout-mode=mobile]>.copro-preview-stage{grid-column:1;grid-row:1}
+.copro-dockable-grid[data-layout-mode=mobile]>.copro-transport{grid-column:1;grid-row:2}
+.copro-dockable-grid[data-layout-mode=mobile]>.copro-pane-slot:not(.is-floating){grid-column:1;grid-row:4;border-top:1px solid var(--copro-line)}
+.copro-dockable-grid[data-layout-mode=mobile]>.copro-source-divider,
+.copro-dockable-grid[data-layout-mode=mobile]>.copro-inspector-divider{display:none}
+.copro-dockable-grid[data-layout-mode=mobile][data-active-pane=source]>.copro-inspector-slot:not(.is-floating),
+.copro-dockable-grid[data-layout-mode=mobile][data-active-pane=inspector]>.copro-source-slot:not(.is-floating){display:none}
+.copro-dockable-grid[data-layout-mode=mobile]>.copro-timeline-divider{grid-column:1;grid-row:5}
+.copro-dockable-grid[data-layout-mode=mobile]>.copro-timeline-shell{grid-column:1;grid-row:6}
+.copro-dockable-grid[data-layout-mode=mobile]>.copro-context-tools{display:flex;grid-column:1;grid-row:7;min-height:0}
+.copro-dockable-grid[data-layout-mode=mobile]>.copro-resize-horizontal:first-of-type{display:none}
+.copro-dockable-grid[data-layout-mode=mobile] .copro-pane-controls{min-height:36px}
+.copro-dockable-grid[data-layout-mode=mobile] .copro-tool-panel-header{min-height:48px}
+.copro-dockable-grid[data-layout-mode=mobile] .copro-tool-panel-body{padding:9px 12px}
+@media(prefers-reduced-motion:reduce){
+  .copro-dockable-grid *{scroll-behavior:auto;transition-duration:.01ms!important}
+}
+/* Embedded Work and mobile: topbar follows measured studio container size. */
+.copro-layout-menu{display:none}
+.copro-studio[data-workspace-mode=mobile] .copro-topbar{padding:0 8px;gap:4px;overflow:visible}
+.copro-studio[data-workspace-mode=mobile] .copro-title-block{flex:1 1 auto;min-width:0;max-width:none;margin-right:2px}
+.copro-studio[data-workspace-mode=mobile] .copro-title-block strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.copro-studio[data-workspace-mode=mobile] .copro-title-block span{display:none}
+.copro-studio[data-workspace-mode=mobile] .copro-topbar-actions{gap:2px;flex:0 0 auto}
+.copro-studio[data-workspace-mode=mobile] .copro-topbar-actions>.copro-layout-wide-only{display:none}
+.copro-studio[data-workspace-mode=mobile] .copro-topbar-actions>.copro-icon-button{width:36px;min-width:36px;padding:0}
+.copro-studio[data-workspace-mode=mobile] .copro-layout-menu{display:block;position:relative;z-index:30}
+.copro-layout-menu>summary{list-style:none;display:grid;place-items:center;width:38px;height:44px;cursor:pointer;color:var(--copro-text-2);border-radius:10px}
+.copro-layout-menu>summary::-webkit-details-marker{display:none}
+.copro-layout-menu>summary:focus-visible{outline:2px solid #2dd4bf;outline-offset:2px}
+.copro-layout-menu[open]>summary{background:#1a343c;color:#2dd4bf}
+.copro-layout-menu-content{position:absolute;z-index:40;right:0;top:44px;display:grid;width:220px;padding:7px;gap:3px;background:#10222b;border:1px solid #33525e;border-radius:12px;box-shadow:0 18px 32px #0008}
+.copro-layout-menu-content button{width:100%;min-height:42px;padding:8px 12px;text-align:left;border:0;border-radius:9px;background:transparent;color:#dcecef;font:inherit;font-size:13px;cursor:pointer}
+.copro-layout-menu-content button:hover,.copro-layout-menu-content button:focus-visible{background:#254652}
+.copro-studio[data-workspace-mode=mobile] .copro-export-button{padding:0 11px;min-width:65px;font-size:13px}
+.copro-preview-device:has(.copro-preview-placeholder){aspect-ratio:auto;width:min(100%,640px)!important;height:100%;max-width:100%}
+.copro-preview-placeholder{padding:16px;min-width:0;text-align:center}
+.copro-studio[data-workspace-mode=mobile] .copro-preview-mark{max-width:100%;font-size:clamp(18px,5vw,28px);overflow-wrap:break-word}
+.copro-studio[data-workspace-mode=mobile] .copro-preview-placeholder p{max-width:260px;margin:9px auto 0;font-size:12px;line-height:1.4}
+.copro-media-error{flex:none;padding:8px 16px;background:#462421;color:#ffdfd7;border-bottom:1px solid #a45c54;font-size:13px;line-height:1.5}
+.copro-track-label{position:relative;min-height:48px}
+.copro-track-height-grip{
+  position:absolute;bottom:-7px;left:4px;right:4px;z-index:8;
+  width:calc(100% - 8px);height:17px;border:0;background:transparent;
+  cursor:row-resize;touch-action:none;display:grid;place-items:center;
+}
+.copro-track-height-grip>span{width:30px;height:3px;border-radius:4px;background:#335360}
+.copro-track-height-grip:hover>span,.copro-track-height-grip:focus-visible>span{background:#2dd4bf}
+.copro-track-height-grip:focus-visible{outline:2px solid #2dd4bf;outline-offset:-1px}
+.copro-track-labels{overflow-y:auto;scrollbar-width:none}
+.copro-track-labels::-webkit-scrollbar{display:none}
+.copro-timeline-scroll{overflow-x:auto;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#39505b transparent;touch-action:pan-x pan-y}
+.copro-timeline-stage{height:auto}

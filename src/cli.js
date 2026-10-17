@@ -627,7 +627,7 @@ if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
     const result = await runShell(['--exec', ...rest], { interactive: false });
     if (result?.ok === false) process.exitCode = 1;
   } catch (e) {
-    if (rest.includes('--json')) console.log(JSON.stringify({ schema:'agentsam.exec.v1', ok:false, error: { code: e?.code || 'exec_failed', message: e?.message || String(e) } }));
+    if (rest.includes('--json')) console.log(JSON.stringify({ schema:'agentsam.exec.v1', ok:false, status:e?.approval?.status || 'failed', error: e?.envelope || { code: e?.code || 'exec_failed', message: e?.message || String(e) }, ...(e?.approval ? { approval:e.approval } : {}) }));
     else reportCliError(e);
     process.exitCode = 1;
   }

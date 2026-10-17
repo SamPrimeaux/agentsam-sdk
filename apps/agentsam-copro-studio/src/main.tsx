@@ -3,7 +3,7 @@ import { coproAppManifest } from "./app-manifest";
 import { createRoot } from "react-dom/client";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
 import { createCoProProject, createTrack, createClip, serializeCoProProject } from "@inneranimalmedia/copro-project";
-import { BrowserLocalStorageProjectStore } from "@inneranimalmedia/copro-storage";
+import { BrowserLocalStorageProjectStore, BrowserIndexedDbMediaStore } from "@inneranimalmedia/copro-storage";
 import { extractBrowserAudioWaveform } from "@inneranimalmedia/copro-media";
 import {
   CoProProjectsScreen,
@@ -41,6 +41,7 @@ function installCoProBrandIcons() {
 }
 
 const store = new BrowserLocalStorageProjectStore({ prefix:"agentsam.copro.project:" });
+const mediaStore = new BrowserIndexedDbMediaStore({ databaseName:"agentsam.copro.media.v1" });
 
 function makeDemoProject(id = "project:demo", title = "Weekend cut") {
   const project = createCoProProject({ id, title, now:"2026-10-04T00:00:00.000Z" });
@@ -103,17 +104,32 @@ async function probeMediaDurationUs(file: File): Promise<number> {
     media.preload = "metadata";
     media.src = url;
 
-    const duration = await new Promise<number>((resolve) => {
-      const done = () => {
-        const seconds = Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 8;
-        resolve(seconds);
-      };
-      media.addEventListener("loadedmetadata", done, { once:true });
-      media.addEventListener("error", () => resolve(8), { once:true });
-      window.setTimeout(() => resolve(8), 2500);
+    await new Promise<void>((resolve,reject)=>{
+      const timeout=window.setTimeout(()=>reject(new Error("copro_media_metadata_timeout")),4000);
+      const complete=()=>{window.clearTimeout(timeout);resolve();};
+      media.addEventListener("loadedmetadata",complete,{once:true});
+      media.addEventListener("error",()=>{
+        window.clearTimeout(timeout);
+        reject(new Error("copro_media_unsupported_or_corrupt"));
+      },{once:true});
     });
 
-    return Math.max(100_000, Math.round(duration * 1_000_000));
+    // Browser-produced WebM often has Infinity/NaN in its container metadata.
+    // Seek to its actual end rather than inventing an 8-second duration.
+    let seconds=media.duration;
+    if (!Number.isFinite(seconds) || seconds<=0) {
+      const reachedEnd=new Promise<number>((resolve,reject)=>{
+        const timeout=window.setTimeout(()=>reject(new Error("copro_media_duration_unavailable")),4000);
+        media.addEventListener("seeked",()=>{
+          window.clearTimeout(timeout);
+          resolve(media.currentTime);
+        },{once:true});
+      });
+      media.currentTime=10_000_000;
+      seconds=await reachedEnd;
+    }
+    if(!Number.isFinite(seconds)||seconds<=0)throw new Error("copro_media_duration_unavailable");
+    return Math.max(100_000, Math.round(seconds * 1_000_000));
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -123,20 +139,21 @@ function mediaIdForFile(file: File) {
   return "asset:" + file.name + ":" + file.lastModified + ":" + file.size;
 }
 
-function makeImportedProject(file: File) {
+function makeImportedProject(file: File, durationUs: number) {
   const project = createCoProProject({
     id:"project:import:" + file.name + ":" + Date.now(),
     title:file.name.replace(/\.[^.]+$/, ""),
     now:new Date(),
   });
 
-  const kind = file.type.startsWith("audio/") ? "audio" : "video";
+  const kind = file.type.startsWith("audio/") ? "audio" : file.type.startsWith("image/") ? "overlay" : "video";
   const track = createTrack({ id:"track:" + kind, kind, name:kind === "audio" ? "Audio" : "Video" });
   track.clips.push(createClip({
     id:"clip:imported",
     assetId:mediaIdForFile(file),
     startUs:0,
-    durationUs:8_000_000,
+    durationUs,
+    metadata:{fileName:file.name,mimeType:file.type,persistedAsset:true},
   }));
   project.tracks.push(track);
   return project;
@@ -154,6 +171,7 @@ function App() {
   const [previewKind, setPreviewKind] = useState<"video" | "image" | null>(null);
   const [restored, setRestored] = useState(false);
   const [mediaItems, setMediaItems] = useState<SessionMediaItem[]>([]);
+  const [mediaError,setMediaError] = useState<string|null>(null);
 
   const [savedProjects, setSavedProjects] = useState<CoProProjectSummary[]>([]);
   const [initialTool, setInitialTool] = useState<"text" | "captions" | null>(null);
@@ -202,6 +220,35 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [project, restored]);
 
+  async function restoreProjectMedia(next: any) {
+    const ids:string[] = [...new Set<string>(next.tracks.flatMap((track:any) =>
+      track.clips.map((clip:any) => String(clip.assetId)).filter((id:string)=>id.startsWith("asset:"))))];
+    if(!ids.length) {
+      setMediaItems([]);setPreviewSrc(null);setPreviewKind(null);setMediaError(null);
+      return;
+    }
+    try {
+      const records=await mediaStore.loadMany(ids);
+      const items:SessionMediaItem[]=await Promise.all(records.map(async (record)=>{
+        const file=record.file instanceof File ? record.file
+          : new File([record.file],record.name,{type:record.type,lastModified:record.lastModified});
+        const kind:SessionMediaItem["kind"]=file.type.startsWith("audio/")?"audio":
+          file.type.startsWith("image/")?"image":"video";
+        return {id:record.id,name:record.name,file,kind,
+          url:URL.createObjectURL(file),durationUs:await probeMediaDurationUs(file)};
+      }));
+      setMediaItems(items);
+      const firstVisual=items.find(item=>item.kind==="video"||item.kind==="image");
+      setPreviewSrc(firstVisual?.url??null);
+      setPreviewKind(firstVisual?.kind==="image"?"image":firstVisual?.kind==="video"?"video":null);
+      const missing=ids.filter(id=>!records.some(record=>record.id===id));
+      setMediaError(missing.length ? missing.length+" original media file(s) missing from this browser. Reimport or relink them." : null);
+    }catch(error){
+      setMediaError("Could not restore source media: "+String(error));
+      setMediaItems([]);setPreviewSrc(null);setPreviewKind(null);
+    }
+  }
+
   function installProject(next: any, selectedId: string | null = null) {
     sessionRef.current = new CoProEditorSession(next);
     setProject(sessionRef.current.project);
@@ -218,9 +265,8 @@ function App() {
     const next = saved ?? makeDemoProject("project:example-copy:" + Date.now(), (summary?.title ?? "CoPro") + " (example)");
     installProject(next);
     setInitialTool(null);
-    setPreviewSrc(null);
-    setPreviewKind(null);
     setScreen("editor");
+    await restoreProjectMedia(next);
   }
 
   async function renameProject(id: string, title: string) {
@@ -238,6 +284,8 @@ function App() {
     const next = createCoProProject({ id:"project:new:" + Date.now(), title:"Untitled project" });
     next.tracks.push(createTrack({ id:"track:video", kind:"video", name:"Video" }));
     installProject(next, null);
+    setMediaItems([]);
+    setMediaError(null);
     setPreviewSrc(null);
     setPreviewKind(null);
     setCreateOpen(false);
@@ -245,20 +293,20 @@ function App() {
     setScreen("editor");
   }
 
-  function importFile(file: File) {
-    const old = previewSrc;
-    if (old) URL.revokeObjectURL(old);
-    const url = URL.createObjectURL(file);
-    const next = makeImportedProject(file);
-    installProject(next, "clip:imported");
-    void registerSessionMedia(file);
-    setPreviewSrc(url);
-    setPreviewKind(file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : null);
-    setCreateOpen(false);
-    setInitialTool(null);
-    setScreen("editor");
+  async function importFile(file: File) {
+    try {
+      const item=await registerSessionMedia(file);
+      const next=makeImportedProject(file,item.durationUs??3_000_000);
+      installProject(next,"clip:imported");
+      setMediaItems([item]);
+      setPreviewSrc(item.kind==="video"||item.kind==="image"?item.url:null);
+      setPreviewKind(item.kind==="image"?"image":item.kind==="video"?"video":null);
+      setMediaError(null);
+      setCreateOpen(false);
+      setInitialTool(null);
+      setScreen("editor");
+    }catch(error){setMediaError("Media import failed: "+String(error));}
   }
-
 
   async function registerSessionMedia(file: File): Promise<SessionMediaItem> {
     const kind: SessionMediaItem["kind"] =
@@ -291,7 +339,15 @@ function App() {
       waveform,
     };
 
-    setMediaItems((current) => [...current, item]);
+    try {
+      await mediaStore.save(id,file);
+    }catch(error){
+      URL.revokeObjectURL(item.url);
+      setMediaError("Source file could not be saved in browser storage. Import not completed: "+String(error));
+      throw error;
+    }
+    setMediaItems((current) => current.some((entry)=>entry.id===item.id)?current:[...current,item]);
+    setMediaError(null);
     return item;
   }
 
@@ -324,7 +380,7 @@ function App() {
       metadata:{
         fileName:item.name,
         mimeType:item.file.type,
-        localSessionOnly:true,
+        persistedAsset:true,
         ...(item.waveform ? { waveform:item.waveform } : {}),
       },
     });
@@ -372,8 +428,12 @@ function App() {
     if (action.type === "track-reorder") { setProject(session.execute({ type:"track.reorder", payload:{ trackId:action.trackId, index:action.index } })); return; }
 
     if (action.type === "import-media") {
-      const item = await registerSessionMedia(action.file);
-      addSessionMediaToTimeline(item, action.atUs);
+      try {
+        const item=await registerSessionMedia(action.file);
+        addSessionMediaToTimeline(item,action.atUs);
+      }catch(error){
+        setMediaError("Source media import failed: "+String(error));
+      }
       return;
     }
 
@@ -447,6 +507,7 @@ function App() {
 
   if (screen === "projects") {
     return <>
+      {mediaError && <div role="alert" className="copro-media-error">{mediaError}</div>}
       <CoProProjectsScreen
         projects={projects}
         onOpenProject={openProject}
@@ -465,7 +526,7 @@ function App() {
               accept="video/*,image/*,audio/*"
               onChange={(event) => {
                 const file = event.currentTarget.files?.[0];
-                if (file) importFile(file);
+                if (file) void importFile(file);
               }}
             />
             <i>⇧</i><span><strong>Import media</strong><small>From this device</small></span>
@@ -480,6 +541,7 @@ function App() {
   return <CoProStudio
     key={projectSeed}
     initialTool={initialTool}
+    mediaError={mediaError}
     project={project as any}
     projectTitle={project.title}
     playheadUs={playheadUs}

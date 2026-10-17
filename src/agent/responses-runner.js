@@ -7,6 +7,7 @@ import { getModelRecord, calculateModelCost, loadModelPolicy } from '../models/i
 import { searchToolCards, hydrateToolSchemas } from '../tools/index.js';
 import { createAgentEvent } from '../telemetry/index.js';
 import { diagnosticFromError } from '../errors/index.js';
+import { createToolError } from '@inneranimalmedia/agentsam-errors';
 import { runAgentSamModelTurn } from './model-turn.js';
 import {
   createHookedCapabilityAdapter,
@@ -134,15 +135,20 @@ function resolveUnknownWindowContext(cwd, card, contextItems = [], ruleOptions =
 export function buildAgentToolSurface(capabilityAdapter, objective, options = {}) {
   if (!capabilityAdapter?.toolDescriptors) throw new TypeError('capabilityAdapter.toolDescriptors is required');
   const catalog = capabilityAdapter.toolDescriptors({ includeUnavailable: false });
-  const maxTools = options.maxTools ?? 8;
+  const maxTools = options.maxTools ?? (options.headlessCoding ? 10 : 8);
   // These are the four bootstrap calls required for progressive, typed
   // discovery. Keyword ranking may otherwise hide describe/status/invoke.
-  const bootstrapIds = ['capability.search','capability.describe','capability.status','capability.invoke'];
+  // Headless coding cannot discover source boundaries without its bounded
+  // workspace file reader. Reserve one of the advertised slots rather than
+  // letting keyword matching replace reading with a write tool.
+  const bootstrapIds = ['capability.search','capability.describe','capability.status','capability.invoke',
+    ...(options.headlessCoding ? ['workspace.list','workspace.search','workspace.read','workspace.write','test.run'] : [])];
   const bootstrap = bootstrapIds.map(id=>catalog.find(row=>row.name===id)).filter(Boolean).slice(0,maxTools);
   const remaining = catalog.filter(row=>!bootstrapIds.includes(row.name));
-  const searched = searchToolCards(remaining, objective, {
-    maxItems: Math.max(0,maxTools-bootstrap.length), maxChars: options.maxCardChars ?? 24_000,
-  });
+  const remainingSlots = Math.max(0,maxTools-bootstrap.length);
+  const searched = remainingSlots ? searchToolCards(remaining, objective, {
+    maxItems: remainingSlots, maxChars: options.maxCardChars ?? 24_000,
+  }) : {cards:[],receipt:{returned_items:0,chars:0}};
   const selected = [...bootstrap.map(row=>row.name),...searched.cards.map(card=>card.tool)];
   const hydrated = hydrateToolSchemas(catalog, selected, { maxTools, maxChars: options.maxSchemaChars ?? 40_000 });
   const aliases = new Map();
@@ -500,8 +506,13 @@ async function runAgentSamTurnCore(options = {}) {
           cwd,
         });
         if (approved === false) {
-          const denied = new Error(`tool_execution_not_approved:${capabilityId}`);
-          denied.code = 'AGENTSAM_TOOL_NOT_APPROVED';
+          const denied = createToolError({
+            tool: capabilityId,
+            reason: 'tool_permission_denied',
+            stage: 'authorize',
+            message: `tool_execution_not_approved:${capabilityId}`,
+          });
+          denied.legacy_code = 'AGENTSAM_TOOL_NOT_APPROVED';
           const diagnostic = diagnosticFromError(denied, { source: 'tool', kind: 'tool_execution_denied' });
           event(emit, 'tool.failed', { call_id: call.call_id, capability_id: capabilityId, error: diagnostic }, runId);
           event(emit, 'error.observed', { ...diagnostic, call_id: call.call_id, capability_id: capabilityId }, runId);

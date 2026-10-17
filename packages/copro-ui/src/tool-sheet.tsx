@@ -209,7 +209,7 @@ export function CoProToolPanel({
                 ))}
               </div>
             ) : <p className="copro-media-empty">No imported {isAudio?"audio":"media"} in this session. Choose a file above.</p>}
-            <p className="copro-panel-note">Local media previews are session-only; keep your original files for reopening the project.</p>
+            <p className="copro-panel-note">Original files stay in this browser for project reopening. Exported project JSON does not bundle the source media; retain a backup.</p>
           </div>
         ) : <div className="copro-inspector-guidance">
           <strong>{tool === "templates" ? "Template catalog not connected" : "Not yet available"}</strong>
