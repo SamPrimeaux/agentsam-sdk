@@ -20,6 +20,7 @@ import { createInlineActivity } from '../ui/cli/activity.js';
 import { createCliRuntimePresenter } from '../ui/cli/runtime-events.js';
 import { renderCliFooter, renderDiffPreview, renderUsagePanel } from '../ui/cli/footer.js';
 import { diagnosticFromError, renderDiagnosticError } from '../errors/index.js';
+import { createToolError } from '@inneranimalmedia/agentsam-errors';
 import { getModelRecord, mergeModelReference } from '../models/index.js';
 import { discoverProviderModels } from '../models/discovery.js';
 import { detectCliProject, findCliProjectRoot, readCliPreferences, updateCliPreferences } from '../lib/cli-preferences.js';
@@ -554,8 +555,18 @@ async function approveToolExecution(request, state) {
   if (sideEffects === 'none') return true;
   const key = toolApprovalKey(request.capability_id, request.input);
   if (isExecutionApproved({ cwd: state.cwd, key }, { home: state.home })) return true;
-  if (!state.interactive) return false;
-
+  if (!state.interactive && state.execApprovalMode !== 'prompt') {
+    const pending = createToolError({
+      tool: request.capability_id,
+      reason: 'tool_approval_required',
+      stage: 'authorize',
+      message: `Approval required before executing ${request.capability_id}`,
+    });
+    pending.approval = { status: 'pending', capability_id: request.capability_id,
+      target: compactCwd(state.cwd), side_effects: sideEffects,
+      input: safeToolInput(request.input || {}), approval_key: key };
+    throw pending;
+  }
   const summary = JSON.stringify(safeToolInput(request.input || {}));
   state.activity?.clear?.();
   writeLine(state.write, '');
@@ -1244,6 +1255,9 @@ export async function runShell(argv = [], options = {}) {
     if (Boolean(promptFile) === Boolean(directPrompt)) throw new TypeError('exec requires exactly one of --prompt-file or --prompt');
     const requestedCwd = value('--cwd');
     const modelKey = value('--model');
+    const approvalMode = value('--approval-mode') || 'pending';
+    if (!['prompt', 'pending'].includes(approvalMode)) throw new TypeError('approval-mode must be prompt or pending');
+    if (approvalMode === 'prompt' && !process.stdin.isTTY) throw new TypeError('approval-mode prompt requires a terminal');
     if (requestedCwd) {
       if (!fs.existsSync(requestedCwd) || !fs.statSync(requestedCwd).isDirectory()) throw new TypeError('exec workspace directory not found');
       state.cwd = fs.realpathSync(requestedCwd);
@@ -1252,7 +1266,7 @@ export async function runShell(argv = [], options = {}) {
     const prompt = promptFile ? fs.readFileSync(path.resolve(state.cwd, promptFile), 'utf8') : directPrompt;
     if (!prompt.trim()) throw new TypeError('exec prompt is empty');
     if (prompt.length > 200000) throw new TypeError('exec prompt exceeds 200000 characters');
-    const allowedFlags = new Set(['--exec', '--prompt-file', '--prompt', '--cwd', '--model', '--json']);
+    const allowedFlags = new Set(['--exec', '--prompt-file', '--prompt', '--cwd', '--model', '--approval-mode', '--json']);
     for (let i = 1; i < argv.length; i++) {
       if (argv[i] === '--json') continue;
       if (!allowedFlags.has(argv[i]) || argv[i] === '--exec') throw new TypeError(`unknown exec argument: ${argv[i]}`);
@@ -1262,6 +1276,7 @@ export async function runShell(argv = [], options = {}) {
     state.interactive = false;
     state.persistFooter = false;
     if (modelKey) state.execModelKey = modelKey;
+    state.execApprovalMode = approvalMode;
     const json = argv.includes('--json');
     // A headless call cannot click an approval dialog. Existing project grants
     // and host authorization still apply; unapproved side effects fail closed.

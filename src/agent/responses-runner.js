@@ -7,6 +7,7 @@ import { getModelRecord, calculateModelCost, loadModelPolicy } from '../models/i
 import { searchToolCards, hydrateToolSchemas } from '../tools/index.js';
 import { createAgentEvent } from '../telemetry/index.js';
 import { diagnosticFromError } from '../errors/index.js';
+import { createToolError } from '@inneranimalmedia/agentsam-errors';
 import { runAgentSamModelTurn } from './model-turn.js';
 import {
   createHookedCapabilityAdapter,
@@ -500,8 +501,13 @@ async function runAgentSamTurnCore(options = {}) {
           cwd,
         });
         if (approved === false) {
-          const denied = new Error(`tool_execution_not_approved:${capabilityId}`);
-          denied.code = 'AGENTSAM_TOOL_NOT_APPROVED';
+          const denied = createToolError({
+            tool: capabilityId,
+            reason: 'tool_permission_denied',
+            stage: 'authorize',
+            message: `Tool execution was not approved: ${capabilityId}`,
+          });
+          denied.legacy_code = 'AGENTSAM_TOOL_NOT_APPROVED';
           const diagnostic = diagnosticFromError(denied, { source: 'tool', kind: 'tool_execution_denied' });
           event(emit, 'tool.failed', { call_id: call.call_id, capability_id: capabilityId, error: diagnostic }, runId);
           event(emit, 'error.observed', { ...diagnostic, call_id: call.call_id, capability_id: capabilityId }, runId);
