@@ -205,10 +205,12 @@
 (async function initHomeCreateHero(){
  const scene=document.getElementById('home-create-hero-scene');if(!scene)return;
  try{
-  const response=await adminFetch('/api/admin/completeful/catalog?limit=3&offset=0');
+  const http=await fetch('/api/admin/completeful/catalog?limit=3&offset=0',{credentials:'same-origin'});
+  if(!http.ok)return;
+  const response=await http.json();
   const items=Array.isArray(response?.items)?response.items:[];
   for(const [index,item] of items.slice(0,3).entries()){
-   const src=[item.realistic_image_url,item.cover_image_url,item.main_icon_url,item.image_url].find(v=>typeof v==='string'&&/^https?:\/\//.test(v));
+   const src=[item.realistic_image_url,item.cover_image_url,item.main_icon_url,item.image_url].find(v=>typeof v==='string'&&(v.startsWith('https://')||v.startsWith('http://')||v.startsWith('/')));
    if(!src)continue;
    const tile=document.createElement('div');tile.className='fnf-home-create-hero__tile';
    const image=document.createElement('img');image.src=src;image.alt='';image.loading='lazy';

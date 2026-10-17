@@ -31,6 +31,18 @@ const find=(p)=>{
 const server=http.createServer(async(req,res)=>{
  try{
   const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+  if(pathname==='/api/admin/completeful/catalog'){
+   // Isolated SDK UI review ONLY: real read-only FNF supplier sample records.
+   // The packaged application reads the real authenticated catalog backend.
+   const items=[
+    {name:'11x17 Bamboo Cutting Board',product_type:'ENGRAVING',realistic_image_url:'https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-555100fd-13cf-46a0-b6ec-1a73fa625a2f/covers/6fa805ee-f13c-489e-81dd-47d5665844b9-_-2400-x-2400-px-2026-08-12T105504.484.png'},
+    {name:'12oz Kids Tumbler',product_type:'ETCHING',realistic_image_url:'https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/c21d336d-cae7-408e-a212-98438cf04c7e/10417e91-c692-44db-a5f1-e88849dc6cad/background.png'},
+    {name:'12oz Skinny Mini Tumbler',product_type:'ETCHING',realistic_image_url:'https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/mockups/88a4fd95-d42c-4f48-910a-dc5b606662e0/bccebc69-c3cb-4c3f-8f6a-bb0e355c11cc/background.png'}
+   ];
+   res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
+   res.end(JSON.stringify({items,pagination:{total:3,has_more:false},sample_source:'read-only supplier catalog records; preview only'}));
+   return;
+  }
   const match=pathname.match(/^\/api\/admin\/products\/(prod_[a-z0-9]+)(\/images)?$/);
   if(match){
    const snapshot=JSON.parse(await readFile(path.join(staticRoot,'registry/products-snapshot.json'),'utf8'));
