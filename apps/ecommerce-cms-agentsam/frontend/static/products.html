@@ -57,7 +57,7 @@ function drawRegistry() {
   document.getElementById('registry-count').textContent=items.length+' / '+registryRecords.length+' catalog entries';
   document.getElementById('registry-rows').innerHTML=items.map(p=>{
     const initials=(p.kind||'item').slice(0,3).toUpperCase();
-    const url='/admin/registry-build-edit?id='+encodeURIComponent(p.id);
+    const url='/admin/product-edit?id='+encodeURIComponent(p.id);
     const preview=registryPreview(p);
     return '<tr><td><div style="display:flex;gap:12px;align-items:center"><span style="width:48px;height:48px;display:grid;place-items:center;background:#eeeaf6;border-radius:6px;color:#665587;font-size:11px;font-weight:700;overflow:hidden">'+preview+'</span><a href="'+url+'">'+registryEsc(p.name)+'</a></div></td><td>'+registryEsc(p.kind)+'</td><td><code>'+registryEsc(registrySku(p))+'</code></td><td>'+registryEsc(p.version||'—')+'</td><td>'+registryEsc(p.canonical_path||'—')+'</td><td><a class="btn ghost small" href="'+url+'">Edit</a></td></tr>';
   }).join('') || '<tr><td colspan="6">No matching builds.</td></tr>';
@@ -114,7 +114,7 @@ function badgeFor(status) {
       const records=(snapshot.items||[]).filter(p=>p.repository_id?.toLowerCase()==='github:samprimeaux/agentsam-sdk' || (p.repository_id==null && p.package_name?.includes('agentsam')));
       document.getElementById('registry-notice').textContent='AgentSam SDK products · read-only inventory snapshot';
       document.getElementById('products-body').innerHTML=records.map(p=>{
-        const url='/admin/registry-build-edit?id='+encodeURIComponent(p.id);
+        const url='/admin/product-edit?id='+encodeURIComponent(p.id);
         const img=registryPreview(p);
         return '<tr><td><div style="display:flex;gap:12px;align-items:center"><span style="width:45px;height:45px;background:#f1eff7;color:#665587;display:grid;place-items:center;border-radius:6px;overflow:hidden;font-size:11px;font-weight:700">'+img+'</span><a href="'+url+'">'+registryEsc(p.name)+'</a></div></td><td>'+registryEsc(p.kind)+'</td><td>—</td><td><span class="badge">'+registryEsc(p.status)+'</span></td><td>'+registryEsc(p.version||'—')+'</td><td>Digital / package</td><td><a href="'+url+'" class="btn ghost small">Edit</a></td></tr>';
       }).join('')||'<tr><td colspan="7" class="admin-empty">No catalog entries found.</td></tr>';

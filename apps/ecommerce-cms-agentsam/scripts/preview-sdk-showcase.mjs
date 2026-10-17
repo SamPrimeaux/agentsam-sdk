@@ -13,6 +13,8 @@ const spa=new Set(['analytics','account','products/create','products/help/artwor
 const find=(p)=>{
  if(p==='/')return path.join(staticRoot,'home.html');
  if(p==='/admin/registry-build-edit')return path.join(staticRoot,'registry-build-edit.html');
+ if(p==='/admin/products/create')return path.join(staticRoot,'product-create-universal.html');
+ if(p==='/admin/product-edit')return path.join(staticRoot,'registry-build-edit.html');
  if(p==='/admin/_spa/'||p==='/admin/_spa')return path.join(distRoot,'index.html');
  if(p.startsWith('/admin/_spa/assets/'))return path.join(distRoot,p.slice('/admin/_spa/'.length));
  if(p==='/admin/js/shell.js')return path.join(root,'frontend/shell.js');
@@ -30,7 +32,7 @@ const server=http.createServer(async(req,res)=>{
   const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
   if(pathname.startsWith('/api/')){res.writeHead(503,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'preview_only',message:'This is an isolated UI preview. Backend APIs and tenant data are not connected.'}));return}
   if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405);res.end();return}
-  let target=find(pathname);
+  let target=(pathname==='/admin/product-edit' && /^\d+$/.test(new URL(req.url,'http://localhost').searchParams.get('id')||''))?path.join(staticRoot,'product-edit.html'):find(pathname);
   if(!target){res.writeHead(302,{Location:'/admin/home'});res.end();return}
   target=path.resolve(target);
   if(![staticRoot,distRoot,path.join(root,'frontend')].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
