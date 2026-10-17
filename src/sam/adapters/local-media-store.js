@@ -6,7 +6,7 @@
  */
 import path from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const ident = value => {
