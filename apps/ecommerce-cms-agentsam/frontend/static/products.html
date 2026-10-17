@@ -17,18 +17,69 @@ renderShell('/admin/products', `
   <div class="admin-toolbar">
     <div>
       <h1 class="admin-page-title">Products</h1>
-      <p class="admin-page-sub">Manage catalog items, pricing, and status.</p>
+      <p class="admin-page-sub">Manage products, builds, collections, and status.</p>
     </div>
     <a href="/admin/products/create" class="btn primary">+ New Product</a>
   </div>
 
-  <div class="admin-card">
+  <div style="display:flex;gap:8px;margin:0 0 15px;align-items:center">
+    <button class="btn primary" id="view-commerce" type="button">Commerce products</button>
+    <button class="btn ghost" id="view-builds" type="button">Build registry</button>
+    <span id="registry-notice" style="font-size:12px;color:#777;margin-left:8px">Local preview · no database writes</span>
+  </div>
+  <div class="admin-card" id="commerce-panel">
     <table class="admin-table">
       <thead><tr><th>Title</th><th>Collection</th><th>Price</th><th>Status</th><th>Variants</th><th>Inventory</th><th></th></tr></thead>
       <tbody id="products-body"><tr><td colspan="7" class="admin-empty">Loading…</td></tr></tbody>
     </table>
   </div>
+  <div class="admin-card" id="builds-panel" style="display:none">
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+      <input id="registry-search" type="search" placeholder="Search products, packages, SKUs" aria-label="Search builds" style="flex:1;min-width:180px;padding:9px;border:1px solid #ddd;border-radius:6px">
+      <select id="registry-kind" aria-label="Build type" style="padding:9px;border:1px solid #ddd;border-radius:6px"><option value="">All types</option></select>
+      <span id="registry-count" style="font-size:12px;color:#777">Loading…</span>
+    </div>
+    <table class="admin-table">
+      <thead><tr><th>Preview / Name</th><th>Kind</th><th>SKU candidate</th><th>Version</th><th>Source</th><th></th></tr></thead>
+      <tbody id="registry-rows"><tr><td colspan="6" class="admin-empty">Loading registry…</td></tr></tbody>
+    </table>
+  </div>
 `);
+
+let registryRecords=[];
+const registrySku = p => 'IAM-'+({'app':'APP','ui-component':'CMP','sdk-package':'SDK','theme':'THM','section':'SEC','block':'BLK','integration':'INT','service':'SVC','script':'TOOL'}[p.kind]||'ITEM')+'-'+p.slug.toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'');
+const registryEsc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+function drawRegistry() {
+  const term=document.getElementById('registry-search').value.toLowerCase();
+  const kind=document.getElementById('registry-kind').value;
+  const items=registryRecords.filter(p=>(!kind||p.kind===kind)&&(!term||[p.name,p.slug,p.package_name,registrySku(p)].some(v=>String(v||'').toLowerCase().includes(term))));
+  document.getElementById('registry-count').textContent=items.length+' / '+registryRecords.length+' builds';
+  document.getElementById('registry-rows').innerHTML=items.map(p=>{
+    const initials=(p.kind||'item').slice(0,3).toUpperCase();
+    const url='/admin/registry-build-edit?id='+encodeURIComponent(p.id);
+    return '<tr><td><div style="display:flex;gap:12px;align-items:center"><span style="width:48px;height:48px;display:grid;place-items:center;background:#eeeaf6;border-radius:6px;color:#665587;font-size:11px;font-weight:700">'+registryEsc(initials)+'</span><a href="'+url+'">'+registryEsc(p.name)+'</a></div></td><td>'+registryEsc(p.kind)+'</td><td><code>'+registryEsc(registrySku(p))+'</code></td><td>'+registryEsc(p.version||'—')+'</td><td>'+registryEsc(p.canonical_path||'—')+'</td><td><a class="btn ghost small" href="'+url+'">Edit</a></td></tr>';
+  }).join('') || '<tr><td colspan="6">No matching builds.</td></tr>';
+}
+document.getElementById('view-commerce').onclick=()=>{
+ document.getElementById('commerce-panel').style.display='';
+ document.getElementById('builds-panel').style.display='none';
+ document.getElementById('view-commerce').className='btn primary';
+ document.getElementById('view-builds').className='btn ghost';
+};
+document.getElementById('view-builds').onclick=()=>{
+ document.getElementById('commerce-panel').style.display='none';
+ document.getElementById('builds-panel').style.display='';
+ document.getElementById('view-commerce').className='btn ghost';
+ document.getElementById('view-builds').className='btn primary';
+};
+document.getElementById('registry-search').addEventListener('input',drawRegistry);
+document.getElementById('registry-kind').addEventListener('change',drawRegistry);
+fetch('/admin/registry/products-snapshot.json').then(r=>r.json()).then(d=>{
+  registryRecords=d.items||[];
+  const select=document.getElementById('registry-kind');
+  [...new Set(registryRecords.map(p=>p.kind))].sort().forEach(k=>select.add(new Option(k,k)));
+  drawRegistry();
+}).catch(e=>document.getElementById('registry-count').textContent='Registry preview unavailable');
 
 function badgeFor(status) {
   return `<span class="badge ${status}">${status}</span>`;

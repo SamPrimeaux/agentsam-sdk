@@ -12,9 +12,7 @@ const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=u
 const spa=new Set(['analytics','account','products/create','products/help/artwork']);
 const find=(p)=>{
  if(p==='/')return path.join(staticRoot,'home.html');
- if(p==='/admin/products')return path.join(staticRoot,'products-registry.html');
- if(p==='/admin/product-edit')return path.join(staticRoot,'product-edit-registry.html');
- if(p==='/admin/commerce-products')return path.join(staticRoot,'products.html');
+ if(p==='/admin/registry-build-edit')return path.join(staticRoot,'registry-build-edit.html');
  if(p==='/admin/_spa/'||p==='/admin/_spa')return path.join(distRoot,'index.html');
  if(p.startsWith('/admin/_spa/assets/'))return path.join(distRoot,p.slice('/admin/_spa/'.length));
  if(p==='/admin/js/shell.js')return path.join(root,'frontend/shell.js');
