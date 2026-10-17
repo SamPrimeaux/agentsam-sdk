@@ -46,6 +46,9 @@ test('CLI model catalog uses authenticated local SAM handlers, imports source, c
     assert.ok(selected.descriptors.some(x=>x.name==='media.image.background.remove'));
     const imported=await agentAdapter.invoke('media.local.import',{relativePath:'source.png'});
     assert.equal(imported.ok,true,JSON.stringify(imported.error));
+    const inspected=await agentAdapter.invoke('media.asset.inspect',{assetId:imported.data.assetId});
+    assert.equal(inspected.ok,true,JSON.stringify(inspected.error));
+    assert.equal(inspected.data.contentType,'image/png');
     const removed=await agentAdapter.invoke('media.image.background.remove',{assetId:imported.data.assetId});
     assert.equal(removed.ok,true,JSON.stringify(removed.error));
     assert.ok(removed.data.derivativeAssetId);
