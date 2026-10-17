@@ -4,3 +4,4 @@ export * from "./sheet";
 export * from "./projects";
 export * from "./tool-sheet";
 export * from "./export-sheet";
+export * from "./capabilities";

@@ -7,17 +7,43 @@ export type WorkspaceLayout = {
   browserOpen: boolean;
   inspectorOpen: boolean;
   reversed: boolean;
+  browserFloating: boolean;
+  inspectorFloating: boolean;
+  playerFloating: boolean;
+  browserX: number;
+  browserY: number;
+  inspectorX: number;
+  inspectorY: number;
+  playerX: number;
+  playerY: number;
+  playerFloatWidth: number;
+  playerFloatHeight: number;
+  browserFloatHeight: number;
+  inspectorFloatHeight: number;
 };
 
 export const DEFAULT_WORKSPACE_LAYOUT: WorkspaceLayout = {
-  browserWidth: 328,
-  inspectorWidth: 310,
-  timelineHeight: 290,
+  browserWidth: 490,
+  inspectorWidth: 350,
+  timelineHeight: 0,
   browserOpen: true,
   inspectorOpen: true,
   reversed: false,
+  browserFloating: false,
+  inspectorFloating: false,
+  playerFloating: false,
+  browserX: 70,
+  browserY: 110,
+  inspectorX: 760,
+  inspectorY: 110,
+  playerX: 410,
+  playerY: 120,
+  playerFloatWidth: 640,
+  playerFloatHeight: 440,
+  browserFloatHeight: 520,
+  inspectorFloatHeight: 520,
 };
-const STORAGE_KEY = "copro.workspace.layout.v2";
+const STORAGE_KEY = "moviemode.workspace.layout.v3";
 export const clampWorkspaceSize = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
 export function loadWorkspaceLayout(): WorkspaceLayout {
@@ -27,12 +53,25 @@ export function loadWorkspaceLayout(): WorkspaceLayout {
     if (!raw) return { ...DEFAULT_WORKSPACE_LAYOUT };
     const data = JSON.parse(raw) as Partial<WorkspaceLayout>;
     return {
-      browserWidth: Number.isFinite(data.browserWidth) ? clampWorkspaceSize(data.browserWidth!, 240, 540) : DEFAULT_WORKSPACE_LAYOUT.browserWidth,
-      inspectorWidth: Number.isFinite(data.inspectorWidth) ? clampWorkspaceSize(data.inspectorWidth!, 250, 500) : DEFAULT_WORKSPACE_LAYOUT.inspectorWidth,
-      timelineHeight: Number.isFinite(data.timelineHeight) ? clampWorkspaceSize(data.timelineHeight!, 135, 600) : DEFAULT_WORKSPACE_LAYOUT.timelineHeight,
+      browserWidth: Number.isFinite(data.browserWidth) ? clampWorkspaceSize(data.browserWidth!, 260, 800) : DEFAULT_WORKSPACE_LAYOUT.browserWidth,
+      inspectorWidth: Number.isFinite(data.inspectorWidth) ? clampWorkspaceSize(data.inspectorWidth!, 260, 700) : DEFAULT_WORKSPACE_LAYOUT.inspectorWidth,
+      timelineHeight: Number.isFinite(data.timelineHeight) && data.timelineHeight! > 0 ? clampWorkspaceSize(data.timelineHeight!, 140, 1200) : DEFAULT_WORKSPACE_LAYOUT.timelineHeight,
       browserOpen: typeof data.browserOpen === "boolean" ? data.browserOpen : true,
       inspectorOpen: typeof data.inspectorOpen === "boolean" ? data.inspectorOpen : true,
       reversed: typeof data.reversed === "boolean" ? data.reversed : false,
+      browserFloating: data.browserFloating === true,
+      inspectorFloating: data.inspectorFloating === true,
+      playerFloating: data.playerFloating === true,
+      browserX: Number.isFinite(data.browserX) ? clampWorkspaceSize(data.browserX!, 0, 4000) : 70,
+      browserY: Number.isFinite(data.browserY) ? clampWorkspaceSize(data.browserY!, 0, 4000) : 110,
+      inspectorX: Number.isFinite(data.inspectorX) ? clampWorkspaceSize(data.inspectorX!, 0, 4000) : 760,
+      inspectorY: Number.isFinite(data.inspectorY) ? clampWorkspaceSize(data.inspectorY!, 0, 4000) : 110,
+      playerX: Number.isFinite(data.playerX) ? clampWorkspaceSize(data.playerX!, 0, 4000) : 410,
+      playerY: Number.isFinite(data.playerY) ? clampWorkspaceSize(data.playerY!, 0, 4000) : 120,
+      playerFloatWidth: Number.isFinite(data.playerFloatWidth) ? clampWorkspaceSize(data.playerFloatWidth!, 360, 2000) : 640,
+      playerFloatHeight: Number.isFinite(data.playerFloatHeight) ? clampWorkspaceSize(data.playerFloatHeight!, 260, 1500) : 440,
+      browserFloatHeight: Number.isFinite(data.browserFloatHeight) ? clampWorkspaceSize(data.browserFloatHeight!, 250, 1500) : 520,
+      inspectorFloatHeight: Number.isFinite(data.inspectorFloatHeight) ? clampWorkspaceSize(data.inspectorFloatHeight!, 250, 1500) : 520,
     };
   } catch { return { ...DEFAULT_WORKSPACE_LAYOUT }; }
 }

@@ -66,6 +66,14 @@ export function CoProTimeline({
   const pinchStart = useRef<{ distance: number; pixelsPerSecond: number } | null>(null);
   const [pixelsPerSecond, setPixelsPerSecond] = useState(76);
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [trackHeight, setTrackHeight] = useState(() => {
+    if(typeof window === "undefined") return 70;
+    try {const saved=Number(window.localStorage.getItem("moviemode.timeline.trackHeight.v1"));return [48,70,96,128].includes(saved)?saved:70;} catch {return 70;}
+  });
+  function changeTrackHeight(height:number){
+    setTrackHeight(height);
+    try{window.localStorage.setItem("moviemode.timeline.trackHeight.v1",String(height));}catch{/* preserve editing without storage */}
+  }
 
   const durationUs = Math.max(projectDurationUs(project as any), 15_000_000);
   const timelineWidth = Math.max(720, timeUsToPixels(durationUs + 2_000_000, { pixelsPerSecond }));
@@ -107,11 +115,18 @@ export function CoProTimeline({
   return (
     <section className="copro-timeline-shell">
       <header className="copro-timeline-toolbar">
+        <span className="mm-timeline-heading">Timeline</span>
         <div className="copro-timeline-tool-group">
           <button aria-label="Zoom out" onClick={() => zoomBy(.8)}>−</button>
           <span>{Math.round(pixelsPerSecond)} px/s</span>
           <button aria-label="Zoom in" onClick={() => zoomBy(1.25)}>＋</button>
         </div>
+        <label className="mm-track-size-control" title="Resize all track lanes; each media track remains editable">
+          <span>Track height</span>
+          <select aria-label="Timeline track height" value={trackHeight} onChange={event=>changeTrackHeight(Number(event.currentTarget.value))}>
+            <option value={48}>Compact</option><option value={70}>Standard</option><option value={96}>Large</option><option value={128}>Extra large</option>
+          </select>
+        </label>
         <button
           className={snapEnabled ? "is-active" : ""}
           aria-pressed={snapEnabled}
@@ -121,7 +136,7 @@ export function CoProTimeline({
         </button>
       </header>
 
-      <div className="copro-timeline-layout">
+      <div className="copro-timeline-layout" style={{"--copro-track-height":`${trackHeight}px`,"--copro-clip-height":`${trackHeight-6}px`} as React.CSSProperties}>
         <div className="copro-track-labels">
           <div className="copro-track-label-spacer" />
           {project.tracks.map((track, trackIndex) => (

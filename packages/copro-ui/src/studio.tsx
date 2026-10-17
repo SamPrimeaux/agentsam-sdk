@@ -3,7 +3,7 @@ import {
   ArrowLeft, AudioLines, Captions, Copy, Film,
   Layers, Play, Pause, Redo2, Scissors, SlidersHorizontal, Sparkles,
   Trash2, Type, Undo2, X, Gauge, Volume2, Replace, Clapperboard, PanelLeftClose, PanelRightClose, PanelsTopLeft, RotateCcw,
-  Sticker, Palette, SlidersVertical, Folder, Download, Film as FilmIcon,
+  Sticker, Palette, SlidersVertical, Folder, Download, Film as FilmIcon, GripVertical, PanelsTopLeft as DockIcon, ExternalLink,
 } from "lucide-react";
 import { CoProTimeline, type CoProProjectView } from "./timeline.js";
 import { CoProToolPanel, type CoProMediaShelfItem } from "./tool-sheet.js";
@@ -159,14 +159,18 @@ export function CoProStudio({
   const inspectorAvailable = Boolean(inspectorTool);
   const showInspector = inspectorAvailable && layout.inspectorOpen && (!isNarrow || panePreference === "inspector" || !layout.browserOpen);
   const showBrowser = layout.browserOpen && (!isNarrow || !showInspector);
-  const browserWidth = clampWorkspaceSize(layout.browserWidth, 240, Math.max(240, workspaceWidth - 420));
-  const inspectorWidth = clampWorkspaceSize(layout.inspectorWidth, 250, Math.max(250, workspaceWidth - (showBrowser ? browserWidth : 0) - 390));
-  const timelineHeight = clampWorkspaceSize(layout.timelineHeight, isCompact ? 115 : 150, Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 320 : 230)));
+  const browserFloating = !isNarrow && showBrowser && layout.browserFloating;
+  const inspectorFloating = !isNarrow && showInspector && layout.inspectorFloating;
+  const dockBrowser = showBrowser && !browserFloating;
+  const dockInspector = showInspector && !inspectorFloating;
+  const browserWidth = clampWorkspaceSize(layout.browserWidth, 260, Math.max(260, workspaceWidth - (dockInspector ? layout.inspectorWidth : 0) - 330));
+  const inspectorWidth = clampWorkspaceSize(layout.inspectorWidth, 260, Math.max(260, workspaceWidth - (dockBrowser ? browserWidth : 0) - 330));
+  const timelineHeight = clampWorkspaceSize(layout.timelineHeight || Math.round(workspaceHeight * .45), isCompact ? 115 : 150, Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 300 : 225)));
   const gridStyle = {
-    "--copro-browser-width": showBrowser ? `${browserWidth}px` : "0px",
-    "--copro-browser-handle": showBrowser ? "8px" : "0px",
-    "--copro-inspector-width": showInspector ? `${inspectorWidth}px` : "0px",
-    "--copro-inspector-handle": showInspector ? "8px" : "0px",
+    "--copro-browser-width": dockBrowser ? `${browserWidth}px` : "0px",
+    "--copro-browser-handle": dockBrowser ? "8px" : "0px",
+    "--copro-inspector-width": dockInspector ? `${inspectorWidth}px` : "0px",
+    "--copro-inspector-handle": dockInspector ? "8px" : "0px",
     "--copro-timeline-height": `${timelineHeight}px`,
   } as React.CSSProperties;
 
@@ -329,6 +333,29 @@ export function CoProStudio({
     setLayout(current => ({ ...current, inspectorOpen: true }));
   }
 
+  function moveFloating(event: React.PointerEvent<HTMLElement>, panel: "browser" | "inspector" | "player") {
+    if (event.button !== 0 || (event.target as HTMLElement).closest("button")) return;
+    const xKey = panel === "browser" ? "browserX" : panel === "inspector" ? "inspectorX" : "playerX";
+    const yKey = panel === "browser" ? "browserY" : panel === "inspector" ? "inspectorY" : "playerY";
+    const startX = event.clientX, startY = event.clientY;
+    const originalX = layout[xKey], originalY = layout[yKey];
+    const previous = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+    function drag(e: PointerEvent) {
+      setLayout(old => ({...old,[xKey]:Math.max(0,Math.min(window.innerWidth-150,originalX+e.clientX-startX)),[yKey]:Math.max(0,Math.min(window.innerHeight-90,originalY+e.clientY-startY))}));
+    }
+    function end() {window.removeEventListener("pointermove",drag);window.removeEventListener("pointerup",end);window.removeEventListener("pointercancel",end);document.body.style.userSelect=previous;}
+    window.addEventListener("pointermove",drag);window.addEventListener("pointerup",end);window.addEventListener("pointercancel",end);
+  }
+  function saveFloatingSize(event: React.PointerEvent<HTMLElement>, panel: "browser" | "inspector" | "player") {
+    if (event.target !== event.currentTarget) return;
+    const element = event.currentTarget;
+    const widthKey = panel === "browser" ? "browserWidth" : panel === "inspector" ? "inspectorWidth" : "playerFloatWidth";
+    const heightKey = panel === "browser" ? "browserFloatHeight" : panel === "inspector" ? "inspectorFloatHeight" : "playerFloatHeight";
+    const size = element.getBoundingClientRect();
+    setLayout(old=>({...old,[widthKey]:clampWorkspaceSize(size.width,panel === "player" ? 360 : 260,panel === "player" ? 2000 : 800),[heightKey]:clampWorkspaceSize(size.height,250,1500)}));
+  }
+
   function selectCategory(id: string) {
     if (id === "templates") { onAction?.({type:"browse-templates"}); return; }
     setCategoryTool(id);
@@ -351,33 +378,28 @@ export function CoProStudio({
           <button className="copro-icon-button" type="button" title={layout.browserOpen ? "Collapse media browser" : "Show media browser"} aria-label={layout.browserOpen ? "Collapse media browser" : "Show media browser"} aria-pressed={layout.browserOpen} onClick={() => { setLayout(value => ({ ...value, browserOpen: !value.browserOpen })); setPanePreference("browser"); }}><PanelLeftClose size={18}/></button>
           <button className="copro-icon-button" type="button" title={layout.inspectorOpen ? "Collapse inspector" : "Show inspector"} aria-label={layout.inspectorOpen ? "Collapse inspector" : "Show inspector"} aria-pressed={layout.inspectorOpen} onClick={() => { setLayout(value => ({ ...value, inspectorOpen: !value.inspectorOpen })); setPanePreference("inspector"); }}><PanelRightClose size={18}/></button>
           <button className="copro-icon-button copro-wide-layout-control" type="button" title="Swap dock positions of browser and inspector" aria-label="Swap browser and inspector" onClick={() => setLayout(value => ({ ...value, reversed: !value.reversed }))}><PanelsTopLeft size={18}/></button>
+          <label className="mm-workspace-preset" title="Choose a saved-panel layout preset"><span>Layout</span><select aria-label="Workspace layout preset" defaultValue="custom" onChange={event=>{
+            const choice=event.currentTarget.value;
+            if (choice === "balanced") resetLayout();
+            if (choice === "media") setLayout(old=>({...old,browserWidth:590,inspectorWidth:300,timelineHeight:Math.round(workspaceHeight*.36),browserOpen:true,inspectorOpen:true,browserFloating:false,inspectorFloating:false}));
+            if (choice === "timeline") setLayout(old=>({...old,browserWidth:390,inspectorWidth:300,timelineHeight:Math.round(workspaceHeight*.55),browserOpen:true,inspectorOpen:true,browserFloating:false,inspectorFloating:false}));
+          }}><option value="custom">Custom</option><option value="balanced">Balanced</option><option value="media">Media focus</option><option value="timeline">Timeline focus</option></select></label>
           <button className="copro-icon-button copro-wide-layout-control" type="button" title="Restore default panel widths, docking and timeline height" aria-label="Reset workspace layout" onClick={() => { resetLayout(); setPanePreference("browser"); }}><RotateCcw size={18}/></button>
           <button className="copro-export-button" aria-expanded={activeTool === "export"} aria-controls="copro-tool-inspector" onClick={() => { setActiveTool("export"); setLayout(value => ({ ...value, inspectorOpen: true })); setPanePreference("inspector"); }}>Export</button>
         </div>
       </header>
 
+      <main className="copro-workspace" ref={workspaceRef}>
+        <div className={["copro-editing-grid", showBrowser ? "has-browser" : "", showInspector ? "has-inspector" : "", isNarrow ? "is-narrow" : "", isCompact ? "is-compact" : "", layout.reversed ? "is-reversed" : ""].filter(Boolean).join(" ")} style={gridStyle} data-layout-mode={isCompact ? "mobile" : isNarrow ? "single-pane" : "wide"}>
+          {showBrowser && <aside id="copro-tool-browser" className={`copro-browser-slot mm-browser${browserFloating ? " is-floating" : ""}`} aria-label={`${categoryTool} browser`}
+            style={browserFloating ? { position:"fixed",left:layout.browserX,top:layout.browserY,width:browserWidth,height:layout.browserFloatHeight,zIndex:40 } : undefined}
+            onPointerUp={browserFloating ? (event) => saveFloatingSize(event,"browser") : undefined}>
       <nav className="mm-editor-categories" aria-label="MovieMode editing categories">
         {PRIMARY_TOOLS.map(([id,label]) => <button key={id} type="button" className={categoryTool===id?"is-active":""} aria-pressed={categoryTool===id} title={id==="templates"?"Browse editable composition templates":`${label}: open the creation browser`} onClick={()=>selectCategory(id)}>
           {renderToolIcon(id)}<span>{label}</span>
         </button>)}
       </nav>
-      <main className="copro-workspace" ref={workspaceRef}>
-        <aside className="copro-desktop-rail" aria-label="Selected clip actions">
-          {selectedClip ? (
-            <div className="copro-rail-clip-tools" aria-label="Selected clip tools">
-              <span className="copro-rail-section-label">CLIP</span>
-              {CLIP_TOOLS.filter(([id]) => !["effects","transitions"].includes(id)).map(([id,label]) => (
-                <button key={id} type="button" aria-pressed={activeTool === id} aria-controls="copro-tool-inspector" className={[activeTool === id ? "is-active" : "",id === "delete" ? "is-danger" : ""].join(" ")} onClick={() => runTool(id)}>
-                  <i>{renderToolIcon(id)}</i><span>{label}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </aside>
-
-        <div className={["copro-editing-grid", showBrowser ? "has-browser" : "", showInspector ? "has-inspector" : "", isNarrow ? "is-narrow" : "", isCompact ? "is-compact" : "", layout.reversed ? "is-reversed" : ""].filter(Boolean).join(" ")} style={gridStyle} data-layout-mode={isCompact ? "mobile" : isNarrow ? "single-pane" : "wide"}>
-          {showBrowser && <aside id="copro-tool-browser" className="copro-browser-slot mm-browser" aria-label={`${categoryTool} browser`}>
-            <div className="mm-browser-top"><strong>{categoryTool.charAt(0).toUpperCase()+categoryTool.slice(1)}</strong><button type="button" aria-label="Collapse media browser" title="Collapse panel" onClick={()=>setLayout(value=>({...value,browserOpen:false}))}>×</button></div>
+            <div className="mm-browser-top" onPointerDown={browserFloating ? event => moveFloating(event,"browser") : undefined}><span>{browserFloating && <GripVertical size={14} aria-hidden="true"/>}<strong>{categoryTool.charAt(0).toUpperCase()+categoryTool.slice(1)}</strong></span><div className="mm-panel-window-buttons"><button type="button" aria-label={browserFloating ? "Dock Media browser" : "Undock Media browser"} title={browserFloating ? "Dock Media browser back into workspace" : "Float and drag Media browser"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(value=>({...value,browserFloating:!value.browserFloating}))}>{browserFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button><strong>{categoryTool.charAt(0).toUpperCase()+categoryTool.slice(1)}</strong><button type="button" aria-label="Collapse media browser" title="Collapse panel" onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(value=>({...value,browserOpen:false}))}>×</button></div></div>
             {categoryTool === "media" && <nav className="mm-media-subnav" aria-label="Media collections">
               {([ ["import","Import"], ["media","Media"], ["subprojects","Subprojects"], ["yours","Yours"], ["generate","Generate"], ["spaces","Spaces"], ["library","Library"] ] as const).map(([id,label]) => <button type="button" key={id} className={browserSection===id?"is-active":""} aria-pressed={browserSection===id} onClick={()=>setBrowserSection(id)}>{label}</button>)}
             </nav>}
@@ -394,9 +416,16 @@ export function CoProStudio({
               onProjectExport={() => onAction?.({type:"export-project"})}
             />}
           </aside>}
-          {showBrowser && !isNarrow && <ResizeHandle axis="x" className="copro-browser-divider" label="Resize tool browser" value={browserWidth} min={240} max={Math.max(260,workspaceWidth - (showInspector ? inspectorWidth : 0) - 410)} direction={layout.reversed ? -1 : 1} onChange={width => setLayout(value => ({ ...value, browserWidth: width }))}/>}
+          {dockBrowser && !isNarrow && <ResizeHandle axis="x" className="copro-browser-divider" label="Resize tool browser" value={browserWidth} min={240} max={Math.max(260,workspaceWidth - (showInspector ? inspectorWidth : 0) - 410)} direction={layout.reversed ? -1 : 1} onChange={width => setLayout(value => ({ ...value, browserWidth: width }))}/>}
 
-          <section className="copro-preview-stage">
+          <section className={`mm-player-pane${layout.playerFloating && !isNarrow?" is-floating":""}`} aria-label="MovieMode player"
+            style={layout.playerFloating && !isNarrow ? {position:"fixed",left:layout.playerX,top:layout.playerY,width:layout.playerFloatWidth,height:layout.playerFloatHeight,zIndex:42} : undefined}
+            onPointerUp={layout.playerFloating && !isNarrow?event=>saveFloatingSize(event,"player"):undefined}>
+            <div className="mm-player-pane-header" onPointerDown={layout.playerFloating && !isNarrow?event=>moveFloating(event,"player"):undefined}>
+              <span>{layout.playerFloating && !isNarrow && <GripVertical size={14}/>}Player · Timeline 01</span>
+              <button type="button" aria-label={layout.playerFloating ? "Dock player" : "Undock player"} title={layout.playerFloating ? "Dock player" : "Float and drag player"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(old=>({...old,playerFloating:!old.playerFloating}))}>{layout.playerFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button>
+            </div>
+            <section className="copro-preview-stage">
             <div className="copro-preview-device">
               {effectivePreviewSrc && effectivePreviewKind === "video" ? (
                 <video
@@ -451,8 +480,16 @@ export function CoProStudio({
             <button className="copro-icon-button" aria-label="Timeline controls" onClick={() => onSelectClip?.(null)}><SlidersHorizontal size={18}/></button>
           </section>
 
+          </section>{/* Player and transport remain one resizable, movable unit. */}
+
           {showInspector && inspectorTool && (
-            <aside id="copro-tool-inspector" className="copro-inspector-slot" aria-label={activeTool + " settings"}>
+            <aside id="copro-tool-inspector" className={`copro-inspector-slot${inspectorFloating?" is-floating":""}`} aria-label={`${inspectorTool} inspector`}
+              style={inspectorFloating ? {position:"fixed",left:layout.inspectorX,top:layout.inspectorY,width:inspectorWidth,height:layout.inspectorFloatHeight,zIndex:41} : undefined}
+              onPointerUp={inspectorFloating ? event => saveFloatingSize(event,"inspector") : undefined}>
+              <div className="mm-inspector-dock-header" onPointerDown={inspectorFloating ? event=>moveFloating(event,"inspector") : undefined}>
+                <span>{inspectorFloating && <GripVertical size={14}/>}<strong>{selectedTrack?.kind === "audio"?"Audio":selectedClip?"Clip properties":"Project Details"}</strong></span>
+                <button type="button" aria-label={inspectorFloating?"Dock inspector":"Undock inspector"} title={inspectorFloating?"Dock inspector":"Float and drag inspector"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(value=>({...value,inspectorFloating:!value.inspectorFloating}))}>{inspectorFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button>
+              </div>
               <CoProToolPanel
                 tool={inspectorTool}
                 onClose={() => setLayout(value => ({ ...value, inspectorOpen: false }))}
@@ -496,7 +533,7 @@ export function CoProStudio({
             </aside>
           )}
 
-          {showInspector && !isNarrow && <ResizeHandle axis="x" className="copro-inspector-divider" label="Resize clip inspector" value={inspectorWidth} min={250} max={Math.max(270, workspaceWidth - (showBrowser ? browserWidth : 0) - 410)} direction={layout.reversed ? 1 : -1} onChange={width => setLayout(value => ({ ...value, inspectorWidth: width }))}/>}
+          {dockInspector && !isNarrow && <ResizeHandle axis="x" className="copro-inspector-divider" label="Resize clip inspector" value={inspectorWidth} min={250} max={Math.max(270, workspaceWidth - (showBrowser ? browserWidth : 0) - 410)} direction={layout.reversed ? 1 : -1} onChange={width => setLayout(value => ({ ...value, inspectorWidth: width }))}/>}
           <ResizeHandle axis="y" className="copro-timeline-divider" label="Resize timeline" value={timelineHeight} min={isCompact ? 115 : 150} max={Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 320 : 230))} direction={-1} onChange={height => setLayout(value => ({ ...value, timelineHeight: height }))}/>
           <CoProTimeline
             project={project}

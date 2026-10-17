@@ -58,3 +58,20 @@ test('empty editor retains project details and full tool navigation without a cr
   }
   assert.doesNotMatch(html,/aria-modal="true"/);
 });
+
+test('reference-first desktop default is dense but fully user-adjustable',()=>{
+  assert.equal(DEFAULT_WORKSPACE_LAYOUT.browserWidth,490);
+  assert.equal(DEFAULT_WORKSPACE_LAYOUT.inspectorWidth,350);
+  assert.equal(DEFAULT_WORKSPACE_LAYOUT.timelineHeight,0); // automatic 45% on initial layout
+  assert.equal(DEFAULT_WORKSPACE_LAYOUT.browserFloating,false);
+  assert.equal(DEFAULT_WORKSPACE_LAYOUT.inspectorFloating,false);
+  const html=renderToStaticMarkup(React.createElement(CoProStudio,{project,selectedClipId:'clip-1',playheadUs:0,projectTitle:'Layout proof'}));
+  const browserStart=html.indexOf('id="copro-tool-browser"');
+  const categories=html.indexOf('class="mm-editor-categories"');
+  const inspector=html.indexOf('id="copro-tool-inspector"');
+  assert.ok(browserStart!==-1 && categories>browserStart && inspector>categories);
+  assert.match(html,/aria-label="Undock Media browser"/);
+  assert.match(html,/aria-label="Undock inspector"/);
+  assert.match(html,/aria-label="Workspace layout preset"/);
+  assert.doesNotMatch(html,/class="copro-desktop-rail"/);
+});

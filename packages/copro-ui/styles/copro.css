@@ -662,3 +662,96 @@ body:has(.copro-studio) { margin:0; }
 @media(min-width:760px){.copro-workspace>.copro-desktop-rail{min-width:56px;flex:0 0 56px}.copro-studio .copro-rail-clip-tools button{min-height:55px}.copro-workspace>.copro-desktop-rail span{font-size:10px}}
 @media(max-width:759px){.mm-editor-categories{display:none}}
 .mm-project-inspector-details{display:grid;margin:0;color:#b4bbbd;font-size:11px}.mm-project-inspector-details div{display:grid;grid-template-columns:44% 56%;gap:8px;border-bottom:1px solid #35393d;min-height:45px;align-items:center;padding:8px 4px}.mm-project-inspector-details dt{color:#899da2}.mm-project-inspector-details dd{margin:0;color:#e2e9ec;overflow-wrap:anywhere;font-weight:500}
+
+/* MovieMode v3: independent dockable desktop surfaces. This overrides the obsolete
+   full-width category ribbon/vertical rail without changing the player/timeline engine. */
+.copro-studio { --copro-surface-0:#17181a;--copro-surface-1:#252628;--copro-surface-2:#303234;--copro-line:#393b3d; }
+.copro-studio .copro-workspace>.copro-desktop-rail { display:none!important; }
+.copro-studio .copro-editing-grid { width:100%; height:100%; }
+.copro-studio .copro-editing-grid>.copro-browser-slot { display:grid; grid-template-rows:55px 35px minmax(0,1fr);grid-template-columns:1fr; }
+.copro-studio .mm-browser:has(.mm-media-subnav) { grid-template-columns:99px minmax(0,1fr); }
+.copro-studio .mm-browser>.mm-editor-categories { grid-area:1/1/2/-1;min-width:0;height:55px;padding:2px 6px 0;gap:0;background:#262729; }
+.copro-studio .mm-browser>.mm-editor-categories button { flex:1 0 auto;min-width:50px;max-width:105px;padding:3px 5px;font-size:10px; }
+.copro-studio .mm-browser>.mm-editor-categories svg { width:19px;height:19px; }
+.copro-studio .mm-browser>.mm-browser-top { grid-area:2/1/3/-1;min-width:0;padding:0 10px;background:#292b2d; }
+.copro-studio .mm-browser>.mm-browser-top>span,
+.copro-studio .mm-inspector-dock-header>span { display:flex;align-items:center;gap:7px; }
+.copro-studio .mm-browser>.mm-media-subnav { grid-row:3;grid-column:1; }
+.copro-studio .mm-browser>.copro-tool-panel,
+.copro-studio .mm-browser>.mm-browser-unavailable { grid-row:3;grid-column:1; }
+.copro-studio .mm-browser:has(.mm-media-subnav)>.copro-tool-panel,
+.copro-studio .mm-browser:has(.mm-media-subnav)>.mm-browser-unavailable { grid-row:3;grid-column:2; }
+.copro-studio .mm-browser>.copro-tool-panel { overflow:hidden;min-width:0; }
+.copro-studio .copro-editing-grid>.copro-inspector-slot { display:flex;flex-direction:column;background:#252628; }
+.copro-studio .copro-editing-grid>.copro-inspector-slot>.copro-tool-panel { flex:1;min-height:0; }
+.copro-studio .mm-inspector-dock-header { flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:35px;padding:0 10px;background:#292b2d;border-bottom:1px solid #3b3e40;color:#dce2e3;font-size:11px; }
+.copro-studio .mm-panel-window-buttons { display:flex;align-items:center;gap:1px; }
+.copro-studio .mm-panel-window-buttons button,
+.copro-studio .mm-inspector-dock-header button { width:28px;height:26px;display:grid;place-items:center;border:0;background:transparent;color:#b8c3c5;border-radius:4px;cursor:pointer; }
+.copro-studio .mm-panel-window-buttons button:hover,
+.copro-studio .mm-inspector-dock-header button:hover { background:#444a4b;color:#fff; }
+.copro-studio .copro-inspector-slot .copro-tool-panel-header { min-height:53px;padding:7px 12px; }
+.copro-studio .copro-inspector-slot .copro-panel-eyebrow { font-size:10px; }
+.copro-studio .copro-inspector-slot .copro-tool-panel-header h2 { font-size:15px; }
+.copro-studio .copro-inspector-slot .copro-panel-close { width:28px;height:28px;border-radius:5px; }
+.copro-studio .copro-inspector-slot .copro-tool-panel-body { padding:10px 12px; }
+.copro-studio .copro-inspector-slot .copro-tool-panel input[type=range] { min-height:24px; }
+.copro-studio .copro-inspector-slot .copro-tool-control { gap:9px; }
+.copro-studio .copro-editing-grid>.is-floating { position:fixed!important;grid-area:auto!important;min-width:260px;min-height:250px;max-width:95vw;max-height:90dvh;resize:both;overflow:hidden;box-shadow:0 12px 55px #000b;border:1px solid #708588;border-radius:7px; }
+.copro-studio .is-floating>.mm-browser-top,
+.copro-studio .is-floating>.mm-inspector-dock-header { cursor:grab;user-select:none;touch-action:none; }
+.copro-studio .is-floating>.mm-browser-top:active,
+.copro-studio .is-floating>.mm-inspector-dock-header:active { cursor:grabbing; }
+.copro-studio .mm-workspace-preset { display:flex;align-items:center;gap:5px;color:#9aa9aa;font-size:11px; }
+.copro-studio .mm-workspace-preset select { width:115px;max-width:115px;padding:5px 3px;background:#2c3031;border:1px solid #42494b;color:#e1e9eb;border-radius:4px;font:inherit;cursor:pointer; }
+.copro-studio .copro-resize-handle:hover { background:#30494b; }
+.copro-studio .copro-resize-handle:focus-visible { outline-offset:-2px; }
+.copro-studio .copro-timeline-toolbar { background:#2b2d2f;border-bottom:1px solid #404447; }
+.copro-studio .copro-timeline-shell { background:#222426; }
+@media(max-width:1179px) {
+  .copro-studio .mm-browser>.mm-editor-categories { overflow-x:auto; }
+  .copro-studio .mm-workspace-preset { display:none; }
+  .copro-studio .copro-editing-grid.is-narrow>.copro-browser-slot { display:grid; }
+}
+@media(max-width:759px) {
+  .copro-studio .mm-browser>.mm-editor-categories { display:none; }
+  .copro-studio .copro-editing-grid>.copro-browser-slot { grid-template-rows:35px minmax(0,1fr); }
+  .copro-studio .mm-browser>.mm-browser-top { grid-row:1; }
+  .copro-studio .mm-browser>.mm-media-subnav,
+  .copro-studio .mm-browser>.copro-tool-panel { grid-row:2; }
+  .copro-studio .mm-browser:has(.mm-media-subnav)>.copro-tool-panel { grid-row:2; }
+  .copro-studio .mm-inspector-dock-header button,
+  .copro-studio .mm-browser .mm-panel-window-buttons button:first-child { display:none; }
+}
+/* Timeline track density can be changed independently of the timeline dock height. */
+.copro-studio .copro-timeline-layout .copro-track-row,
+.copro-studio .copro-timeline-layout .copro-track-label { height:var(--copro-track-height,70px); }
+.copro-studio .copro-timeline-layout .copro-clip {height:var(--copro-clip-height,64px);}
+.copro-studio .mm-track-size-control {display:flex;align-items:center;gap:7px;color:#a9b5b8;font-size:10px;margin-left:auto;}
+.copro-studio .mm-track-size-control select {background:#343739;color:#e6ecee;border:1px solid #535759;border-radius:4px;padding:3px 5px;font-size:11px;}
+.copro-studio .mm-timeline-heading {font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:#a3b4b9;font-weight:700;}
+@media(max-width:599px){.copro-studio .mm-track-size-control>span{display:none}.copro-studio .mm-timeline-heading{display:none}}
+/* Player is a single dockable unit with its own header, canvas and transport. */
+.copro-studio .copro-editing-grid {grid-template-areas:
+  "browser browser-divider player inspector-divider inspector"
+  "browser browser-divider player inspector-divider inspector"
+  "timeline-divider timeline-divider timeline-divider timeline-divider timeline-divider"
+  "timeline timeline timeline timeline timeline";}
+.copro-studio .copro-editing-grid.is-reversed {grid-template-areas:
+  "inspector inspector-divider player browser-divider browser"
+  "inspector inspector-divider player browser-divider browser"
+  "timeline-divider timeline-divider timeline-divider timeline-divider timeline-divider"
+  "timeline timeline timeline timeline timeline";}
+.copro-studio .copro-editing-grid>.mm-player-pane {grid-area:player;min-width:0;min-height:0;display:grid;grid-template-rows:30px minmax(0,1fr) 42px;overflow:hidden;background:#1f2022;}
+.copro-studio .mm-player-pane-header {display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:#292b2d;border-bottom:1px solid #414548;color:#dce4e6;font-size:11px;}
+.copro-studio .mm-player-pane-header>span {display:flex;align-items:center;gap:7px;}
+.copro-studio .mm-player-pane-header button {width:28px;height:26px;border:0;display:grid;place-items:center;background:transparent;color:#c3cecf;border-radius:4px;cursor:pointer;}
+.copro-studio .mm-player-pane-header button:hover {background:#414a4c;color:white;}
+.copro-studio .mm-player-pane>.copro-preview-stage {min-width:0;min-height:0;overflow:hidden;display:grid;place-items:center;padding:8px 12px;background:#1b1c1e;}
+.copro-studio .mm-player-pane>.copro-transport {min-width:0;height:42px;background:#242628;}
+.copro-studio .copro-editing-grid>.mm-player-pane.is-floating {min-width:360px;min-height:260px;max-width:96vw;max-height:90dvh;resize:both;overflow:hidden;box-shadow:0 15px 65px #000c;border:1px solid #748889;border-radius:7px;}
+.copro-studio .mm-player-pane.is-floating>.mm-player-pane-header {cursor:grab;user-select:none;touch-action:none;}
+.copro-studio .mm-player-pane.is-floating>.mm-player-pane-header:active {cursor:grabbing;}
+.copro-studio .copro-editing-grid.is-narrow {grid-template-areas:"player" "player" "pane" "timeline-divider" "timeline" "dock";}
+.copro-studio .copro-editing-grid.is-narrow>.mm-player-pane {grid-area:player;}
+.copro-studio .copro-editing-grid.is-narrow .mm-player-pane-header button {display:none;}
