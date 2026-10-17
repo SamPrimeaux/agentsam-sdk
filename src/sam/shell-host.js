@@ -30,6 +30,7 @@ const LOCAL_MEDIA_OPERATIONS = Object.freeze([
   'media.image.trim_alpha',
   'media.image.normalize_color',
   'media.model.inspect',
+  'media.model.validate',
 ]);
 
 /**
