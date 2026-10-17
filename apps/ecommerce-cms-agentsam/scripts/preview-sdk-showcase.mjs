@@ -45,6 +45,18 @@ const server=http.createServer(async(req,res)=>{
    const out=match[2]?{images:demoImages}:{product,variants:[],collection_ids:[],design_draft:null,fulfillment:null,source:null,selling_selection:null};
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(out));return;
   }
+  if(pathname==='/api/admin/store/online'){
+   if(req.method!=='GET'){res.writeHead(405,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'read_only'}));return}
+   // An SDK-scoped, read-only store overview. Absence of a verified installed
+   // theme must not be misrepresented as an active theme or a published draft.
+   const payload={
+     store:{name:'AgentSam SDK',site_url:'https://agentsam.inneranimalmedia.com/',visibility:'public'},
+     active_theme:null,draft_themes:[],
+     performance:{period_days:30,lcp_ms:null,inp_ms:null,cls:null,sessions_desktop:null,sessions_mobile:null},
+     installation:{status:'not_connected',required:['tenant_session','cms_themes','cms_pages','cms_page_sections','cms_assets']}
+   };
+   res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(payload));return;
+  }
   if(pathname==='/api/admin/collections'){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({collections:[]}));return}
   if(pathname.startsWith('/api/')){res.writeHead(503,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'preview_only',message:'This is an isolated UI preview. Backend APIs and tenant data are not connected.'}));return}
   if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405);res.end();return}
