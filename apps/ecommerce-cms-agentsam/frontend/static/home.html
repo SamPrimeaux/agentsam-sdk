@@ -46,6 +46,11 @@ renderShell("/admin/home", `
       </div>
     </section>
 
+    <section class="fnf-home-templates" aria-labelledby="home-templates-title">
+      <div class="fnf-home-templates__heading"><div><h2 id="home-templates-title">Templates</h2><p>Choose a starting point for your next build.</p></div><div class="fnf-home-templates__nav"><button id="home-templates-back" type="button" aria-label="Previous templates">←</button><button id="home-templates-forward" type="button" aria-label="Next templates">→</button></div></div>
+      <div class="fnf-home-templates__frame"><div class="fnf-home-templates__edge" data-template-scroll="-1" aria-hidden="true"></div><div class="fnf-home-templates__rail" id="home-templates-rail" role="group" aria-label="Creative templates"></div><div class="fnf-home-templates__edge fnf-home-templates__edge--right" data-template-scroll="1" aria-hidden="true"></div></div>
+      <p id="home-templates-feedback" class="fnf-home-templates__feedback" role="status" aria-live="polite"></p>
+    </section>
     <section class="fnf-home-operations" aria-labelledby="fnf-home-operations-heading">
       <div class="fnf-home-operations__heading"><div><h2 id="fnf-home-operations-heading">Store activity</h2><p>Your live operations at a glance</p></div><a href="/admin/products">Manage products <span aria-hidden="true">↗</span></a></div>
       <div class="console-stat-grid" id="home-stats">
