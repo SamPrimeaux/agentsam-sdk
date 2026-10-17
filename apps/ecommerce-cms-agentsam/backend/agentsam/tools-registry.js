@@ -1,12 +1,9 @@
 /**
- * AgentSam tools registry — D1-backed catalog (IAM parity, Commerce scoped).
+ * AgentSam tools registry — D1-backed catalog (IAM parity, FNF scoped).
  */
 
-import {
-  COMMERCE_PLATFORM_SCOPE,
-  COMMERCE_ACCOUNT_ID,
-  COMMERCE_TOOL_SCOPE_NOTE,
-} from "./constants.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
+import { resolveGithubRepo } from "../lib/integration-config.js";
 import { isToolKeyAllowed } from "./feature-gates.js";
 import { sanitizeAnalyticsText } from "./analytics.js";
 
@@ -28,15 +25,23 @@ function mapToolRow(row) {
     display_name: row.display_name,
     tool_category: row.tool_category,
     handler_type: row.handler_type,
+    handler_key: row.handler_key || null,
     description: row.description,
     input_schema: parseJson(row.input_schema, {}),
     handler_config: parseJson(row.handler_config, {}),
+    resource_scope: parseJson(row.resource_scope_json, {}),
+    operations: parseJson(row.operations_json, []),
     intent_tags: parseJson(row.intent_tags, []),
+    app_id: row.app_id || null,
+    plugin_key: row.plugin_key || null,
+    plugin_id: row.plugin_id || null,
     mcp_server_key: row.mcp_server_key,
     mcp_service_url: row.mcp_service_url,
     dispatch_target: row.dispatch_target,
     risk_level: row.risk_level,
     requires_approval: !!row.requires_approval,
+    requires_confirmation: !!row.requires_confirmation,
+    connector_access_class: row.connector_access_class || "read",
     route_key: row.route_key,
     workflow_key: row.workflow_key,
     task_type: row.task_type,
@@ -44,6 +49,7 @@ function mapToolRow(row) {
     capability_key: row.capability_key,
     sort_priority: row.sort_priority,
     is_active: !!row.is_active,
+    is_degraded: !!row.is_degraded,
   };
 }
 
@@ -67,56 +73,109 @@ function mapServerRow(row) {
 }
 
 
-function matchesFnfPlatformScope(tool) {
+/**
+ * Validate a registered operation against this installation's actual bindings and
+ * authenticated account. Resource names and repository authority come from the
+ * installed runtime/D1 plugins, never merchant-specific constants in application JS.
+ *
+ * A scope error denies only the offending operation; it must not erase the catalog.
+ */
+async function matchesInstalledToolScope(env, tool, accountId) {
   const cfg = tool.handler_config || {};
-  const scope = cfg.commerce_scope || {};
+  const scope = tool.resource_scope || {};
+  if (scope.account_id && scope.account_id !== accountId) return false;
 
-  if (cfg.database && cfg.database !== COMMERCE_PLATFORM_SCOPE.d1_database) return false;
-  if (cfg.d1_database && cfg.d1_database !== COMMERCE_PLATFORM_SCOPE.d1_database) return false;
-  if (cfg.binding && cfg.binding !== COMMERCE_PLATFORM_SCOPE.d1_binding && cfg.binding !== COMMERCE_PLATFORM_SCOPE.r2_binding) {
-    return false;
+  if (cfg.binding) {
+    const bindingName = String(cfg.binding);
+    const binding = env?.[bindingName];
+    if (!binding || (typeof binding !== "object" && typeof binding !== "function")) return false;
+    if (tool.handler_type === "d1" && typeof binding.prepare !== "function") return false;
+    if (tool.handler_type === "vectorize" && typeof binding.query !== "function") return false;
+    if (tool.handler_type === "ai" && typeof binding.run !== "function") return false;
+    if (tool.handler_type === "cf" && !(
+      typeof binding.list === "function" ||
+      typeof binding.get === "function" ||
+      typeof binding.run === "function"
+    )) return false;
   }
-  if (cfg.r2_bucket && cfg.r2_bucket !== COMMERCE_PLATFORM_SCOPE.r2_bucket) return false;
-  if (cfg.worker && cfg.worker !== COMMERCE_PLATFORM_SCOPE.worker) return false;
 
   const repos = cfg.repo_allowlist || scope.github_repos || [];
-  if (Array.isArray(repos) && repos.length) {
-    const ok = repos.every((r) => String(r).toLowerCase() === COMMERCE_PLATFORM_SCOPE.github_repo.toLowerCase());
-    if (!ok) return false;
+  if (repos && (!Array.isArray(repos) || repos.some(r => typeof r !== "string" || !r.trim()))) return false;
+  if (repos.length) {
+    const installed = await resolveGithubRepo(env, { accountId });
+    if (!installed.ok || !installed.repo) return false;
+    const authorizedRepo = installed.repo.toLowerCase();
+    if (!repos.every(repo => repo.toLowerCase() === authorizedRepo)) return false;
   }
-
-  if (scope.account_id && scope.account_id !== COMMERCE_ACCOUNT_ID) return false;
-
   return true;
 }
 
-export function formatScopeForPrompt() {
-  return `TOOL PLATFORM SCOPE (hard limit):
-- Worker: ${COMMERCE_PLATFORM_SCOPE.worker}
-- D1: ${COMMERCE_PLATFORM_SCOPE.d1_database} via ${COMMERCE_PLATFORM_SCOPE.d1_binding}
-- R2: ${COMMERCE_PLATFORM_SCOPE.r2_bucket} via ${COMMERCE_PLATFORM_SCOPE.r2_binding}
-- GitHub: ${COMMERCE_PLATFORM_SCOPE.github_repo}
-- Domain: ${COMMERCE_PLATFORM_SCOPE.domain}
-${COMMERCE_TOOL_SCOPE_NOTE}`;
+/**
+ * Convert D1 tool rows into Workers AI traditional function definitions.
+ * Tool keys stay stable/provider-specific; capability keys remain domain-level policy.
+ */
+export function toolsForWorkersAi(tools = []) {
+  return (tools || [])
+    .filter((tool) => tool?.tool_key && tool?.is_active !== false)
+    .map((tool) => ({
+      name: tool.tool_key,
+      description: tool.description || tool.display_name || tool.tool_key,
+      parameters:
+        tool.input_schema && typeof tool.input_schema === "object"
+          ? tool.input_schema
+          : { type: "object", properties: {} },
+    }));
 }
 
-export { COMMERCE_PLATFORM_SCOPE, COMMERCE_TOOL_SCOPE_NOTE };
+/** Prompt guidance; never insert hardcoded resource identities or trust this as ACL. */
+export function formatScopeForPrompt() {
+  return "TOOL ACCESS: Tools execute only against the authenticated installation's " +
+    "authorized account, enabled provider integrations and runtime resource bindings. " +
+    "Unregistered resources, unapproved writes and cross-account access must be denied. " +
+    "Tool metadata does not grant permissions; the executor enforces them.";
+}
 
-function scoreTool(tool, { intent, message, workflowKey, taskType, domain }) {
+export function scoreTool(
+  tool,
+  { intent, message, workflowKey, taskType, domain, appId, routeContext },
+) {
   let score = 0;
-  const hay = `${intent || ""} ${message || ""} ${workflowKey || ""} ${taskType || ""}`.toLowerCase();
+  let matched = false;
+  const hay =
+    `${intent || ""} ${message || ""} ${workflowKey || ""} ${taskType || ""} ${routeContext || ""}`
+      .toLowerCase();
   const tags = tool.intent_tags || [];
 
   for (const tag of tags) {
     const t = String(tag).toLowerCase();
-    if (t && hay.includes(t)) score += 3;
+    if (t && hay.includes(t)) {
+      score += 3;
+      matched = true;
+    }
   }
 
-  if (tool.route_key && intent && tool.route_key === intent) score += 4;
-  if (tool.workflow_key && workflowKey && tool.workflow_key === workflowKey) score += 6;
-  if (tool.task_type && taskType && tool.task_type === taskType) score += 4;
-  if (tool.domain && domain && tool.domain === domain) score += 2;
+  if (tool.app_id && appId && tool.app_id === appId) {
+    score += 10;
+    matched = true;
+  }
+  if (tool.route_key && intent && tool.route_key === intent) {
+    score += 4;
+    matched = true;
+  }
+  if (tool.workflow_key && workflowKey && tool.workflow_key === workflowKey) {
+    score += 6;
+    matched = true;
+  }
+  if (tool.task_type && taskType && tool.task_type === taskType) {
+    score += 4;
+    matched = true;
+  }
+  if (tool.domain && domain && tool.domain === domain) {
+    score += 2;
+    matched = true;
+  }
 
+  if (!matched) return 0;
   score += Math.max(0, 50 - (tool.sort_priority || 50)) / 10;
   return score;
 }
@@ -126,9 +185,10 @@ export async function listAgentSamTools(env, options = {}) {
 
   const includeInactive = options.includeInactive === true;
   const clauses = ["account_id = ?", "(account_id IS NULL OR account_id = ?)"];
-  const binds = [options.account_id || COMMERCE_ACCOUNT_ID, options.account_id || COMMERCE_ACCOUNT_ID];
+  const binds = [options.account_id || requireApplicationAccountId(), options.account_id || requireApplicationAccountId()];
 
   if (!includeInactive) clauses.push("is_active = 1");
+  if (options.includeDegraded !== true) clauses.push("is_degraded = 0");
   if (options.handler_type) {
     clauses.push("handler_type = ?");
     binds.push(options.handler_type);
@@ -152,10 +212,19 @@ export async function listAgentSamTools(env, options = {}) {
       .bind(...binds)
       .all();
 
-    return (results || [])
-      .map(mapToolRow)
-      .filter((t) => matchesFnfPlatformScope(t))
-      .filter((t) => isToolKeyAllowed(t.tool_key, t.display_name));
+    const accepted = [];
+    const accountId = options.account_id || requireApplicationAccountId();
+    for (const row of results || []) {
+      try {
+        const tool = mapToolRow(row);
+        if (!tool || !isToolKeyAllowed(tool.tool_key, tool.display_name)) continue;
+        if (await matchesInstalledToolScope(env, tool, accountId)) accepted.push(tool);
+      } catch (error) {
+        // Broken configuration never takes down discovery for otherwise valid tools.
+        console.warn("agentsam tool scope denied", row?.tool_key, String(error?.message || error));
+      }
+    }
+    return accepted;
   } catch (err) {
     console.error("agentsam tools list failed", err?.message || err);
     return [];
@@ -167,12 +236,14 @@ export async function getAgentSamTool(env, toolKey) {
   try {
     const row = await env.DB.prepare(
       `SELECT * FROM agentsam_tools
-       WHERE account_id = ? AND tool_key = ? AND is_active = 1
+       WHERE account_id = ? AND tool_key = ? AND is_active = 1 AND is_degraded = 0
        LIMIT 1`
     )
-      .bind(COMMERCE_ACCOUNT_ID, toolKey)
+      .bind(requireApplicationAccountId(), toolKey)
       .first();
-    return mapToolRow(row);
+    const tool = mapToolRow(row);
+    if (!tool || tool.is_degraded || !tool.is_active || !isToolKeyAllowed(tool.tool_key, tool.display_name)) return null;
+    return await matchesInstalledToolScope(env, tool, requireApplicationAccountId()) ? tool : null;
   } catch {
     return null;
   }
@@ -193,7 +264,7 @@ export async function listAgentSamMcpServers(env) {
          AND (plugin_kind = 'mcp' OR plugin_key LIKE '%mcp%')
        ORDER BY display_name ASC`,
     )
-      .bind(COMMERCE_ACCOUNT_ID)
+      .bind(requireApplicationAccountId())
       .all();
 
     if (plugins?.length) {
@@ -222,7 +293,7 @@ export async function listAgentSamMcpServers(env) {
        WHERE account_id = ? AND is_active = 1
        ORDER BY display_name ASC`,
     )
-      .bind(COMMERCE_ACCOUNT_ID)
+      .bind(requireApplicationAccountId())
       .all();
     return (results || []).map((row) => mapServerRow({ ...row, source: "agentsam_mcp_servers" }));
   } catch (err) {
@@ -240,7 +311,7 @@ export async function listToolPolicyKeys(env, policyKind) {
        WHERE account_id = ? AND policy_kind = ? AND is_active = 1
        ORDER BY sort_order ASC`
     )
-      .bind(COMMERCE_ACCOUNT_ID, policyKind)
+      .bind(requireApplicationAccountId(), policyKind)
       .all();
     return results || [];
   } catch {
@@ -262,11 +333,12 @@ export async function selectToolsForChat(env, routing = {}) {
     }))
     .filter((entry) => entry.score > 0 || entry.essential)
     .sort((a, b) => {
+      if (a.score !== b.score) return b.score - a.score;
       if (a.essential !== b.essential) return a.essential ? -1 : 1;
-      return b.score - a.score;
+      return (a.tool.sort_priority || 50) - (b.tool.sort_priority || 50);
     });
 
-  return scored.slice(0, routing.limit || 6).map((e) => e.tool);
+  return scored.slice(0, routing.limit || 8).map((e) => e.tool);
 }
 
 export async function getToolsRegistryStatus(env) {
@@ -279,21 +351,21 @@ export async function getToolsRegistryStatus(env) {
       const t = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_tools WHERE account_id = ? AND is_active = 1`
       )
-        .bind(COMMERCE_ACCOUNT_ID)
+        .bind(requireApplicationAccountId())
         .first();
       toolsCount = t?.n ?? 0;
 
       const s = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_mcp_servers WHERE account_id = ? AND is_active = 1`
       )
-        .bind(COMMERCE_ACCOUNT_ID)
+        .bind(requireApplicationAccountId())
         .first();
       mcpServersCount = s?.n ?? 0;
 
       const p = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_tool_policy_keys WHERE account_id = ? AND is_active = 1`
       )
-        .bind(COMMERCE_ACCOUNT_ID)
+        .bind(requireApplicationAccountId())
         .first();
       policyKeysCount = p?.n ?? 0;
     }
@@ -339,7 +411,7 @@ export async function logToolCall(env, event, options = {}) {
     )
       .bind(
         id,
-        COMMERCE_ACCOUNT_ID,
+        requireApplicationAccountId(),
         options.session_id ?? null,
         options.conversation_id ?? null,
         options.message_id ?? null,

@@ -3,6 +3,7 @@
  */
 
 import { trackAgentSamEvent, estimateCostUsd, estimateTokens } from "./analytics.js";
+import { generateRegisteredImage } from "./media-image-runtime.js";
 import {
   getFallbackChain,
   normalizeChatRouting,
@@ -44,35 +45,43 @@ function extractReply(result) {
   return "";
 }
 
+function parseToolArguments(raw) {
+  if (raw == null || raw === "") return {};
+  if (typeof raw === "object") return raw;
+  try {
+    const parsed = JSON.parse(String(raw));
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function extractToolCalls(result) {
+  if (!result) return [];
+  const direct =
+    (Array.isArray(result.tool_calls) && result.tool_calls) ||
+    (Array.isArray(result.result?.tool_calls) && result.result.tool_calls) ||
+    (Array.isArray(result.choices?.[0]?.message?.tool_calls) && result.choices[0].message.tool_calls) ||
+    [];
+
+  return direct
+    .map((call, index) => {
+      const fn = call?.function || call || {};
+      const name = String(fn.name || call?.name || "").trim();
+      if (!name) return null;
+      return {
+        id: call?.id || `toolcall_${index + 1}`,
+        name,
+        arguments: parseToolArguments(fn.arguments ?? call?.arguments),
+      };
+    })
+    .filter(Boolean);
+}
+
 function trimSystem(text) {
   const s = String(text || "");
   if (s.length <= MAX_SYSTEM_CHARS) return s;
   return `${s.slice(0, MAX_SYSTEM_CHARS)}\n\n[context truncated]`;
-}
-
-function bytesToBase64(bytes) {
-  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-  if (!u8.length) return "";
-  let binary = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < u8.length; i += chunk) {
-    binary += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
-  }
-  return btoa(binary);
-}
-
-function normalizeImageBytes(result) {
-  if (!result) return null;
-  if (result instanceof ArrayBuffer) return new Uint8Array(result);
-  if (result instanceof Uint8Array) return result;
-  if (result instanceof ReadableStream) return null;
-  if (result?.image instanceof Uint8Array) return result.image;
-  if (result?.image instanceof ArrayBuffer) return new Uint8Array(result.image);
-  if (Array.isArray(result) && result[0]?.image) {
-    const img = result[0].image;
-    return img instanceof Uint8Array ? img : new Uint8Array(img);
-  }
-  return null;
 }
 
 function resolveImageDataUrl(routing) {
@@ -89,8 +98,19 @@ function resolveImageDataUrl(routing) {
   return null;
 }
 
+function resolveVisionImages(routing) {
+  const list = Array.isArray(routing.image_attachments) ? routing.image_attachments : [];
+  const urls = list.slice(0, 6).map(item => resolveImageDataUrl({
+    image_base64: item?.image_base64,
+    image_url: item?.url || item?.image_url,
+    image_mime_type: item?.mime_type || item?.image_mime_type,
+  })).filter(Boolean);
+  const single = resolveImageDataUrl(routing);
+  return urls.length ? urls : (single ? [single] : []);
+}
+
 function hasVisionInput(routing) {
-  return Boolean(resolveImageDataUrl(routing));
+  return resolveVisionImages(routing).length > 0;
 }
 
 function isModelCompatible(model, taskType, routing) {
@@ -98,8 +118,8 @@ function isModelCompatible(model, taskType, routing) {
   if (taskType === "image_generation") return modelTask === "image_generation";
   if (taskType === "image_to_text") {
     if (modelTask !== "image_to_text") return false;
-    if (!hasVisionInput(routing) && !model.supports_vision) return false;
-    return true;
+    // Never send an image through a text-only adapter and claim it was inspected.
+    return model.supports_vision !== false && hasVisionInput(routing);
   }
   if (modelTask === "image_generation" || modelTask === "image_to_text") return false;
   if (modelTask === "embedding" || modelTask === "rerank" || modelTask === "safety") return false;
@@ -108,36 +128,47 @@ function isModelCompatible(model, taskType, routing) {
 
 function buildVisionPayload(model, systemPrompt, userMessage, routing, defaults) {
   const user = String(userMessage || "").slice(0, 4000);
-  const imageUrl = resolveImageDataUrl(routing);
-  if (!imageUrl) throw new Error("vision_requires_image");
-
-  const useMessagesFormat = model.supports_vision !== false;
-  if (useMessagesFormat) {
-    return {
-      messages: [
-        { role: "system", content: trimSystem(systemPrompt) },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: user },
-            { type: "image_url", image_url: { url: imageUrl } },
-          ],
-        },
-      ],
-      max_tokens: defaults.max_tokens || 1200,
-      ...defaults,
-    };
-  }
-
+  const images = resolveVisionImages(routing);
+  if (!images.length) throw new Error("vision_requires_image");
+  if (model.supports_vision === false) throw new Error("model_does_not_support_vision");
+  const content = [];
+  if (user) content.push({ type: "text", text: user });
+  for (const url of images) content.push({ type: "image_url", image_url: { url } });
   return {
     messages: [
       { role: "system", content: trimSystem(systemPrompt) },
-      { role: "user", content: user },
+      { role: "user", content },
     ],
-    image: imageUrl,
     max_tokens: defaults.max_tokens || 1200,
     ...defaults,
   };
+}
+
+/** OpenAI Responses API transport; the model is selected by the same D1
+ * registry as Workers AI. No built-in platform keys or hardcoded model lists.
+ */
+export async function executeOpenAiChat(env, model, systemPrompt, userMessage, routing, defaults = {}) {
+  if (!env.OPENAI_API_KEY) throw new Error('openai_credentials_unavailable');
+  if (!model?.model_id || !/^[a-zA-Z0-9][a-zA-Z0-9._:-]{1,120}$/.test(model.model_id))
+    throw new Error('invalid_registered_openai_model');
+  const messages = Array.isArray(routing.messages) && routing.messages.length
+    ? routing.messages : [{role:'system',content:trimSystem(systemPrompt)},{role:'user',content:String(userMessage||'').slice(0,4000)}];
+  const body={model:model.model_id,input:messages.map(item=>({role:item.role,content:item.content})),
+    max_output_tokens:Math.min(4096,Math.max(128,Number(defaults.max_output_tokens || defaults.max_tokens || 1024)))};
+  // External requests are server-side only. Never expose user keys to HTML.
+  const response=await fetch('https://api.openai.com/v1/responses',{
+    method:'POST',headers:{authorization:`Bearer ${env.OPENAI_API_KEY}`,'content-type':'application/json'},
+    body:JSON.stringify(body),signal:AbortSignal.timeout(45000),
+  });
+  if(!response.ok){
+    const code=response.status;
+    throw new Error('openai_responses_http_'+code);
+  }
+  const data=await response.json();
+  const parts=(data.output||[]).flatMap(item=>(item.content||[]).filter(part=>part.type==='output_text').map(part=>part.text||''));
+  const reply=String(data.output_text || parts.join('\n')).trim();
+  if(!reply)throw new Error('openai_empty_response');
+  return {reply,tool_calls:[]};
 }
 
 async function executeModel(env, model, systemPrompt, userMessage, routing) {
@@ -149,61 +180,72 @@ async function executeModel(env, model, systemPrompt, userMessage, routing) {
   const user = String(userMessage || "").slice(0, 4000);
 
   if (taskType === "image_generation") {
-    if (!env.OPENAI_API_KEY) throw new Error("missing_OPENAI_API_KEY_secret");
-
-    const imgRes = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-image-2",
-        prompt: user,
-        n: 1,
-        size: "1024x1024",
-        response_format: "b64_json",
-      }),
-    });
-
-    const rawText = await imgRes.text();
-    console.log("[image_gen] status:", imgRes.status, "body:", rawText.slice(0, 300));
-
-    if (!imgRes.ok) {
-      throw new Error(`openai_image_${imgRes.status}: ${rawText.slice(0, 200)}`);
-    }
-
-    const imgData = JSON.parse(rawText);
-    const b64 = imgData?.data?.[0]?.b64_json;
-    if (b64) {
-      return {
-        reply: "Here is your generated image.",
-        image_base64: b64,
-        mime_type: "image/png",
-      };
-    }
-    throw new Error("empty_b64_response: " + rawText.slice(0, 200));
+    return generateRegisteredImage(env, model, user, routing.image_options || {});
   }
+
+  if (model.provider === 'openai' && taskType !== 'image_generation') {
+    if (!['text_generation','code_generation','image_to_text'].includes(taskType))
+      throw new Error('openai_task_not_implemented');
+    if (taskType === 'image_to_text') {
+      if (model.supports_vision === false) throw new Error('model_does_not_support_vision');
+      const images = resolveVisionImages(routing);
+      if (!images.length) throw new Error('vision_requires_image');
+      // OpenAI Responses uses input_image, not Workers AI's image_url shape.
+      const parts = [];
+      if (user) parts.push({ type: 'input_text', text: user });
+      for (const url of images) parts.push({ type: 'input_image', image_url: url });
+      return executeOpenAiChat(env, model, systemPrompt, userMessage, {
+        ...routing,
+        messages: [
+          { role: 'system', content: trimSystem(systemPrompt) },
+          { role: 'user', content: parts },
+        ],
+      }, defaults);
+    }
+    return executeOpenAiChat(env,model,systemPrompt,userMessage,routing,defaults);
+  }
+  if (model.provider !== 'workers_ai' || !env.AGENTSAM_WAI?.run)
+    throw new Error('workers_ai_provider_unavailable');
 
   if (taskType === "image_to_text") {
     const payload = buildVisionPayload(model, systemPrompt, userMessage, routing, defaults);
-    const result = await env.AGENTSAM_WAI.run(model.model_id, payload, { gateway: { id: "ember-agentsam", skipCache: false } });
+    const result = await env.AGENTSAM_WAI.run(model.model_id, payload, { gateway: { id: "fuelnfreetime-agentsam", skipCache: false } });
     const reply = extractReply(result).trim();
     if (reply) return { reply };
     throw new Error("empty_vision_response");
   }
 
-  const result = await env.AGENTSAM_WAI.run(model.model_id, {
-    messages: [
-      { role: "system", content: trimSystem(systemPrompt) },
-      { role: "user", content: user },
-    ],
+  const messages =
+    Array.isArray(routing.messages) && routing.messages.length
+      ? routing.messages
+      : [
+          { role: "system", content: trimSystem(systemPrompt) },
+          { role: "user", content: user },
+        ];
+
+  const payload = {
+    messages,
     max_tokens: defaults.max_tokens || 1024,
     ...defaults,
-  }, { gateway: { id: "ember-agentsam", skipCache: false } });
+  };
+
+  if (
+    model.supports_tools &&
+    Array.isArray(routing.tool_definitions) &&
+    routing.tool_definitions.length
+  ) {
+    payload.tools = routing.tool_definitions;
+  }
+
+  const result = await env.AGENTSAM_WAI.run(
+    model.model_id,
+    payload,
+    { gateway: { id: "fuelnfreetime-agentsam", skipCache: false } },
+  );
 
   const reply = extractReply(result).trim();
-  if (reply) return { reply };
+  const toolCalls = extractToolCalls(result);
+  if (reply || toolCalls.length) return { reply, tool_calls: toolCalls };
   throw new Error("empty_response");
 }
 
@@ -294,8 +336,8 @@ async function runTextFallback(env, systemPrompt, userMessage, routing, trackOpt
 }
 
 export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}) {
-  if (!env.AGENTSAM_WAI) {
-    return { ok: false, stub: true, error: "AGENTSAM_WAI not bound" };
+  if (!env.AGENTSAM_WAI?.run && !env.OPENAI_API_KEY) {
+    return { ok: false, stub: true, error: "No configured AI provider credentials" };
   }
 
   const normalized = normalizeChatRouting(routing);
@@ -312,7 +354,15 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
   }
 
   const chain = await getFallbackChain(env, normalized);
-  const compatibleChain = chain.filter((m) => isModelCompatible(m, normalized.task_type, normalized));
+  const wantsTools =
+    Array.isArray(normalized.tool_definitions) && normalized.tool_definitions.length > 0;
+  // Optional tool declarations must not discard every conversational model.
+  // Prefer tool-capable models; text-only models still return reviewable advice
+  // with no tool execution or implied writes.
+  const compatible = chain.filter((m) => isModelCompatible(m, normalized.task_type, normalized));
+  const compatibleChain = wantsTools
+    ? [...compatible.filter((m) => m.supports_tools), ...compatible.filter((m) => !m.supports_tools)]
+    : compatible;
 
   const attemptedModels = [];
   let selectedModel = null;
@@ -336,7 +386,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
         normalized
       );
 
-      if (!output?.reply && !output?.image_base64) {
+      if (!output?.reply && !output?.image_base64 && !output?.tool_calls?.length) {
         throw new Error("empty_response");
       }
 
@@ -356,7 +406,9 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
       });
 
       const inputTokens = estimateTokens(userMessage) + estimateTokens(systemPrompt);
-      const outputTokens = estimateTokens(output.reply);
+      const outputTokens =
+        estimateTokens(output.reply) +
+        estimateTokens(output.tool_calls?.length ? JSON.stringify(output.tool_calls) : "");
       const aiLatencyMs = Date.now() - aiStarted;
       const costTier = model.cost_tier || "unknown";
       const estimatedCostUsd = estimateCostUsd(inputTokens, outputTokens, costTier);
@@ -367,7 +419,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
           event_type: "ai_model",
           event_name: "model_selected",
           status: "success",
-          provider: "workers_ai",
+          provider: model.provider || "workers_ai",
           model_id: model.model_id,
           model_lane: model.lane,
           task_type: normalized.task_type,
@@ -390,6 +442,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
         reply: output.reply,
         image_base64: output.image_base64 || null,
         mime_type: output.mime_type || null,
+        tool_calls: output.tool_calls || [],
         model: model.model_id,
         selected_model: model.model_id,
         model_lane: model.lane,
@@ -426,7 +479,7 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
           event_type: "ai_model",
           event_name: "model_fallback",
           status: "fallback",
-          provider: "workers_ai",
+          provider: model.provider || "workers_ai",
           model_id: model.model_id,
           model_lane: model.lane,
           task_type: normalized.task_type,
@@ -449,24 +502,14 @@ export async function runAgentSamAi(env, systemPrompt, userMessage, routing = {}
     }
   }
 
-  if (normalized.task_type === "image_to_text") {
-    const downgrade = await runTextFallback(env, systemPrompt, userMessage, normalized, trackOpts);
-    if (downgrade?.ok) {
-      return {
-        ...downgrade,
-        input_tokens: estimateTokens(userMessage) + estimateTokens(systemPrompt),
-        output_tokens: estimateTokens(downgrade.reply),
-        ai_latency_ms: Date.now() - aiStarted,
-        estimated_cost_usd: 0,
-      };
-    }
-  }
+  // A real image request must never silently fall back to text-only inference.
+  // Fail with actionable vision diagnostics; the merchant may choose a compatible model.
 
   const userReply =
     normalized.task_type === "image_generation"
       ? USER_REPLIES.image_gen_failed
       : normalized.task_type === "image_to_text"
-        ? USER_REPLIES.vision_failed
+        ? "I couldn't inspect the attached image. Choose a configured model with vision support and retry; your attachment has been retained."
         : USER_REPLIES.all_models_failed;
 
   await trackAgentSamEvent(

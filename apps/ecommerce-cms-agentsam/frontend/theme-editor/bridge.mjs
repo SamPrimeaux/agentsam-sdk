@@ -11,6 +11,7 @@ export function createThemeEditorBridge(adapter) {
   return {
     capabilities: adapter.capabilities || {},
     getRegistry: () => invoke('getRegistry'),
+    getThemeIdentity: () => typeof adapter.getThemeIdentity === 'function' ? adapter.getThemeIdentity() : Promise.resolve(null),
     resolvePreview: (slug, draft) => invoke('resolvePreview', slug, draft),
     uploadMedia: async (files) => new Response(JSON.stringify({ assets: await invoke('uploadMedia', files) }), { headers: { 'content-type': 'application/json' } }),
     async request(path, options = {}) {

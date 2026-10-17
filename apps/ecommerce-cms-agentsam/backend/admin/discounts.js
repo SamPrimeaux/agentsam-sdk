@@ -2,7 +2,7 @@
  * Discounts admin API — /api/admin/discounts/*
  */
 
-import { COMMERCE_ACCOUNT_ID } from "../agentsam/constants.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import {
   discountTypeLabel,
   mapDiscount,
@@ -57,13 +57,13 @@ async function getOverview(env) {
          COALESCE(SUM(uses_count), 0) AS total_uses
        FROM discounts WHERE account_id = ?`
     )
-      .bind(COMMERCE_ACCOUNT_ID)
+      .bind(requireApplicationAccountId())
       .first()
       .catch(() => ({ total: 0, active: 0, drafts: 0, total_uses: 0 })),
     env.DB.prepare(
       `SELECT * FROM discounts WHERE account_id = ? ORDER BY updated_at DESC LIMIT 8`
     )
-      .bind(COMMERCE_ACCOUNT_ID)
+      .bind(requireApplicationAccountId())
       .all()
       .catch(() => ({ results: [] })),
     env.DB.prepare(
@@ -92,7 +92,7 @@ async function listDiscounts(env, url) {
   const status = url.searchParams.get("status");
   const q = (url.searchParams.get("q") || "").trim();
   let sql = `SELECT * FROM discounts WHERE account_id = ?`;
-  const binds = [COMMERCE_ACCOUNT_ID];
+  const binds = [requireApplicationAccountId()];
 
   if (status) {
     sql += ` AND status = ?`;
@@ -120,7 +120,7 @@ async function createDiscount(request, env, user) {
     const existing = await env.DB.prepare(
       `SELECT id FROM discounts WHERE account_id = ? AND code = ? COLLATE NOCASE LIMIT 1`
     )
-      .bind(COMMERCE_ACCOUNT_ID, code)
+      .bind(requireApplicationAccountId(), code)
       .first();
     if (existing) return json({ error: "Discount code already exists" }, { status: 409 });
   }
@@ -138,7 +138,7 @@ async function createDiscount(request, env, user) {
   )
     .bind(
       id,
-      COMMERCE_ACCOUNT_ID,
+      requireApplicationAccountId(),
       body.title.trim(),
       code,
       method,
@@ -172,7 +172,7 @@ async function getDiscount(env, id) {
   const row = await env.DB.prepare(
     `SELECT * FROM discounts WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(COMMERCE_ACCOUNT_ID, id)
+    .bind(requireApplicationAccountId(), id)
     .first();
   if (!row) return json({ error: "Discount not found" }, { status: 404 });
 
@@ -198,7 +198,7 @@ async function updateDiscount(request, env, user, id) {
   const existing = await env.DB.prepare(
     `SELECT * FROM discounts WHERE account_id = ? AND id = ? LIMIT 1`
   )
-    .bind(COMMERCE_ACCOUNT_ID, id)
+    .bind(requireApplicationAccountId(), id)
     .first();
   if (!existing) return json({ error: "Discount not found" }, { status: 404 });
 
@@ -213,7 +213,7 @@ async function updateDiscount(request, env, user, id) {
     const dup = await env.DB.prepare(
       `SELECT id FROM discounts WHERE account_id = ? AND code = ? COLLATE NOCASE AND id != ? LIMIT 1`
     )
-      .bind(COMMERCE_ACCOUNT_ID, code, id)
+      .bind(requireApplicationAccountId(), code, id)
       .first();
     if (dup) return json({ error: "Discount code already exists" }, { status: 409 });
   }
@@ -257,7 +257,7 @@ async function updateDiscount(request, env, user, id) {
       status,
       JSON.stringify(body.metadata ?? parseJson(existing.metadata_json, {})),
       user.id,
-      COMMERCE_ACCOUNT_ID,
+      requireApplicationAccountId(),
       id
     )
     .run();
@@ -270,7 +270,7 @@ async function exportDiscounts(env) {
   const { results } = await env.DB.prepare(
     `SELECT * FROM discounts WHERE account_id = ? ORDER BY updated_at DESC`
   )
-    .bind(COMMERCE_ACCOUNT_ID)
+    .bind(requireApplicationAccountId())
     .all();
 
   const header = [
@@ -310,7 +310,7 @@ async function exportDiscounts(env) {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="commerce-discounts.csv"',
+      "Content-Disposition": 'attachment; filename="fnf-discounts.csv"',
     },
   });
 }

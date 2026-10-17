@@ -1,9 +1,9 @@
 import {
   IMAGE_PREVIEW_PRESETS,
   getImagePreviewPreset,
-  previewStyleForPreset,
   previewLabel,
 } from "/admin/media-kit/index.js";
+import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbench.js";
 
 /**
  * Provider-neutral virtual-folder media library.
@@ -60,10 +60,48 @@ import {
   };
   const selectedIds = new Set();
   let lastSelectedId = null;
+  let openMenuId = null;
+  let detailFetchSerial = 0;
+
+  function assetFromLocation() {
+    const raw = new URL(location.href).searchParams.get('asset');
+    const id = Number(raw);
+    return raw && Number.isSafeInteger(id) && id > 0 ? id : null;
+  }
+
+  function updateDetailUrl(id, mode = 'push') {
+    const url = new URL(location.href);
+    if (id) url.searchParams.set('asset', String(id));
+    else url.searchParams.delete('asset');
+    if (String(url) !== location.href) history[mode === 'replace' ? 'replaceState' : 'pushState']({ mediaAssetId: id || null }, '', url);
+  }
+
+  async function syncAssetFromLocation() {
+    const id = assetFromLocation();
+    const serial = ++detailFetchSerial;
+    if (!id) { closeDrawer({ updateHistory: false }); return; }
+    try {
+      const inPage = assets.find(asset => Number(asset.id) === id);
+      let asset = inPage;
+      if (!asset) {
+        const result = await adminFetch(`/api/admin/media/${id}`);
+        asset = result.asset;
+      }
+      if (serial !== detailFetchSerial) return;
+      if (!asset) throw new Error('This asset could not be found.');
+      openDrawer(asset, { updateHistory: false });
+    } catch (error) {
+      if (serial !== detailFetchSerial) return;
+      closeDrawer({ updateHistory: false });
+      els.grid?.insertAdjacentHTML('afterbegin', '<div class="admin-note" role="alert">Unable to open this asset. Return to the media library and select another image.</div>');
+      console.warn('Media detail unavailable:', error.message || error);
+    }
+  }
   let searchTimer = null;
 
   const els = {};
   let lifecycleController = null;
+  let mediaWorkbench = null;
   let mountGeneration = 0;
 
   function mountListener(target, type, handler, options = {}) {
@@ -74,6 +112,8 @@ import {
   }
 
   function destroyMediaLibrary() {
+    mediaWorkbench?.destroy();
+    mediaWorkbench = null;
     lifecycleController?.abort();
     lifecycleController = null;
     clearTimeout(searchTimer);
@@ -248,6 +288,7 @@ import {
       renderGrid();
       renderBatchBar();
       renderPagination();
+      if (assetFromLocation()) await syncAssetFromLocation();
     } catch (err) {
       els.grid.innerHTML = `<div class="admin-empty">${err.message}</div>`;
     }
@@ -293,6 +334,15 @@ import {
     });
 
     mountListener(els.albums, "click", (event) => {
+      if (event.target.closest("[data-media-album-create]")) {
+        openAlbumDialog();
+        return;
+      }
+      const deleteButton = event.target.closest("[data-media-album-delete]");
+      if (deleteButton && els.albums.contains(deleteButton)) {
+        void deleteAlbum(Number(deleteButton.dataset.mediaAlbumDelete));
+        return;
+      }
       const button = event.target.closest("[data-media-album]");
       if (!button || !els.albums.contains(button)) return;
       const id = Number(button.dataset.mediaAlbum || 0);
@@ -313,6 +363,36 @@ import {
       const item = event.target.closest(".media-item[data-id]");
       if (!item || !els.grid.contains(item) || item.classList.contains("is-dragging")) return;
       const id = item.dataset.id;
+      const asset = assets.find(a => String(a.id) === id);
+      const trigger = event.target.closest('[data-media-actions]');
+      if (trigger) {
+        const wasOpen = openMenuId === id;
+        closeCardMenu();
+        if (!wasOpen) {
+          openMenuId = id;
+          item.classList.add('has-open-menu');
+          const menu = item.querySelector('.media-card-menu');
+          menu.hidden = false;
+          trigger.setAttribute('aria-expanded', 'true');
+          menu.querySelector('button')?.focus();
+        }
+        return;
+      }
+      const action = event.target.closest('[data-media-action]');
+      if (action) {
+        closeCardMenu();
+        switch (action.dataset.mediaAction) {
+          case 'view': openDrawer(asset); break;
+          case 'edit': openDrawer(asset); els.fieldFilename?.focus(); break;
+          case 'gallery': if (!selectedIds.has(Number(id))) toggleSelection(id, false); openGalleryDialog(); break;
+          case 'download': if (asset) {
+            const a = document.createElement('a'); a.href = mediaUrl(asset); a.download = asset.filename || 'image'; a.rel = 'noopener'; document.body.append(a); a.click(); a.remove();
+          } break;
+          case 'delete': selected = asset; void deleteSelected(); break;
+        }
+        return;
+      }
+      closeCardMenu();
       if (event.target.closest("[data-media-select]") || event.metaKey || event.ctrlKey || event.shiftKey) {
         event.preventDefault();
         toggleSelection(id, event.shiftKey);
@@ -321,6 +401,27 @@ import {
       openDrawer(assets.find((asset) => String(asset.id) === id));
     });
     mountListener(els.grid, "keydown", (event) => {
+      const menu = event.target.closest('.media-card-menu');
+      if (menu && !menu.hidden) {
+        const items = Array.from(menu.querySelectorAll('button:not(:disabled)'));
+        const current = items.indexOf(event.target);
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          const trigger = menu.closest('.media-item')?.querySelector('[data-media-actions]');
+          closeCardMenu();
+          trigger?.focus();
+          return;
+        }
+        if (['ArrowDown','ArrowUp','Home','End'].includes(event.key)) {
+          event.preventDefault();
+          const index = event.key === 'Home' ? 0 : event.key === 'End' ? items.length-1
+            : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+          items[index]?.focus();
+          return;
+        }
+      }
+      // Let nested menu/selection controls handle Enter and Space natively.
+      if (event.target.closest('button, a, input, select, textarea')) return;
       const item = event.target.closest(".media-item[data-id]");
       if (!item || !els.grid.contains(item)) return;
       if (event.key !== "Enter" && event.key !== " ") return;
@@ -360,6 +461,8 @@ import {
     mountListener(els.batchBar, "click", (event) => {
       const action = event.target.closest("[data-media-batch]")?.dataset.mediaBatch;
       if (!action) return;
+      const moreMenu = event.target.closest(".media-batch-more");
+      if (moreMenu) moreMenu.open = false;
       if (action === "page") selectCurrentPage();
       else if (action === "clear") clearSelection();
       else if (action === "gallery") openGalleryDialog();
@@ -378,6 +481,7 @@ import {
           els.note.textContent = "SEO review is approval-based. Open an asset to review its suggestions; no metadata was changed.";
         }
       }
+      else if (action === "delete") void deleteSelection();
       else if (action === "new-album") openAlbumDialog();
       else if (action === "remove-album" && activeAlbumId) void runBatchAction("album_remove", { album_id: activeAlbumId });
     });
@@ -448,14 +552,16 @@ import {
       '<button type="button" class="media-album-chip' +
         (!activeAlbumId && !activeFolder ? ' is-active' : '') +
         '" data-media-album=""><span>All media</span><small>Library</small></button>',
+      '<button type="button" class="media-album-chip media-album-create-mobile" data-media-album-create aria-label="Create new album"><span>+ New album</span><small>Create group</small></button>',
       ...albums.map((album) =>
-        '<button type="button" class="media-album-chip' +
+        '<div class="media-album-item"><button type="button" class="media-album-chip' +
         (Number(activeAlbumId) === Number(album.id) ? ' is-active' : '') +
         '" data-media-album="' + Number(album.id) + '">' +
         '<span>' + escapeHtml(album.name) + '</span>' +
         '<small>' + (album.meta?.kind === "gallery" ? 'Gallery · ' : '') + Number(album.asset_count || 0) + ' asset' +
         (Number(album.asset_count || 0) === 1 ? '' : 's') +
-        '</small></button>'
+        '</small></button><button type="button" class="media-album-delete" data-media-album-delete="' + Number(album.id) +
+        '" aria-label="Delete album ' + escapeHtml(album.name) + '" title="Delete album without deleting its assets">×</button></div>'
       ),
     ];
     els.albums.innerHTML = buttons.join("");
@@ -652,6 +758,47 @@ import {
     emitSelection();
   }
 
+  async function deleteAlbum(albumId) {
+    const album = albums.find((item) => Number(item.id) === albumId);
+    if (!album || !confirm('Delete album "' + album.name + '"? Its media assets will remain in the library.')) return;
+    try {
+      await adminFetch('/api/admin/media/albums/' + encodeURIComponent(albumId), { method: 'DELETE' });
+      if (Number(activeAlbumId) === albumId) activeAlbumId = null;
+      page = 1;
+      await load();
+    } catch (err) {
+      if (els.note) {
+        els.note.className = 'admin-note error';
+        els.note.textContent = 'Could not delete album: ' + (err.message || 'Unknown error');
+        els.note.style.display = 'block';
+      }
+    }
+  }
+
+  async function deleteSelection() {
+    const ids = [...selectedIds];
+    if (!ids.length || !confirm('Permanently delete ' + ids.length + ' selected asset(s)? This also deletes their stored source objects where supported. This cannot be undone.')) return;
+    els.batchBar?.classList.add('is-busy');
+    let deleted = 0;
+    let failures = 0;
+    for (const id of ids) {
+      try {
+        await adminFetch('/api/admin/media/' + encodeURIComponent(id), { method: 'DELETE' });
+        selectedIds.delete(id);
+        deleted++;
+      } catch (_err) {
+        failures++;
+      }
+    }
+    els.batchBar?.classList.remove('is-busy');
+    await load();
+    if (els.note) {
+      els.note.className = failures ? 'admin-note error' : 'admin-note success';
+      els.note.textContent = deleted + ' asset(s) deleted.' + (failures ? ' ' + failures + ' failed; retry after checking their usage.' : '');
+      els.note.style.display = 'block';
+    }
+  }
+
   function clearSelection() {
     selectedIds.clear();
     renderGrid();
@@ -722,30 +869,35 @@ import {
       escapeHtml(album.name) + ' (' + Number(album.asset_count || 0) + ')</option>'
     ).join("");
 
+    // Keep the merchant's primary selection actions in view at every width.
+    // Secondary commands stay discoverable, without an invisible horizontal scrollbar.
     const parts = [
-      '<div class="media-batch-summary"><strong>' + count + '</strong> selected</div>',
+      '<div class="media-batch-summary" role="status" aria-live="polite"><strong>' + count + '</strong> asset' + (count === 1 ? '' : 's') + ' selected</div>',
       '<div class="media-batch-actions">',
-      '<button type="button" class="btn small" data-media-batch="page">Select this page</button>',
-      '<button type="button" class="btn small" data-media-batch="clear">Clear</button>',
       '<button type="button" class="btn primary small" data-media-batch="gallery">Create gallery</button>',
-      mediaCapabilities.can_materialize_derivatives ? '<button type="button" class="btn small" data-media-batch="optimize">Optimize</button>' : '',
-      '<button type="button" class="btn small" data-media-batch="seo">Review SEO</button>',
-      '<label class="media-batch-move"><span class="sr-only">Add selected assets to album</span>',
-      '<select class="media-lib-filter" data-media-batch-album>',
-      '<option value="">Add to album...</option>',
+      '<label class="media-batch-move media-batch-album"><span class="sr-only">Add selected assets to album</span>',
+      '<select class="media-lib-filter" data-media-batch-album ' + (albumOptions ? '' : 'disabled') + '>',
+      '<option value="">Add to album…</option>',
       albumOptions,
       '</select></label>',
-      '<button type="button" class="btn small" data-media-batch="new-album">+ Album</button>',
-      activeAlbumId
-        ? '<button type="button" class="btn small" data-media-batch="remove-album">Remove from this album</button>'
-        : '',
-      '<label class="media-batch-move"><span class="sr-only">Move selected assets</span>',
+      '<button type="button" class="btn small media-batch-clear" data-media-batch="clear" aria-label="Clear selection">Clear</button>',
+      '<details class="media-batch-more">',
+      '<summary class="btn small" aria-label="More selection actions">More actions <span aria-hidden="true">⌄</span></summary>',
+      '<div class="media-batch-menu" aria-label="More selection actions">',
+      '<button type="button" data-media-batch="page">Select current page</button>',
+      '<button type="button" data-media-batch="seo">Review SEO</button>',
+      mediaCapabilities.can_materialize_derivatives ? '<button type="button" data-media-batch="optimize">Optimize selected</button>' : '',
+      '<button type="button" data-media-batch="new-album">New album</button>',
+      '<button type="button" class="media-batch-danger" data-media-batch="delete">Delete selected assets…</button>',
+      activeAlbumId ? '<button type="button" data-media-batch="remove-album">Remove from current album</button>' : '',
+      '<label class="media-batch-menu-label">Move to folder',
       '<select class="media-lib-filter" data-media-batch-move>',
-      '<option value="">Move folder...</option>',
+      '<option value="">Choose folder…</option>',
       '<option value="images">Images</option>',
       '<option value="videos">Videos</option>',
       '<option value="products">Products</option>',
       '</select></label>',
+      '</div></details>',
       '</div>',
     ];
 
@@ -778,6 +930,17 @@ import {
 
   window.getSelectedMediaAssetIds = () => [...selectedIds];
 
+  function closeCardMenu() {
+    if (openMenuId === null) return;
+    openMenuId = null;
+    els.grid?.querySelectorAll('.has-open-menu').forEach(item => {
+      item.classList.remove('has-open-menu');
+      const menu = item.querySelector('.media-card-menu');
+      if (menu) menu.hidden = true;
+      item.querySelector('[data-media-actions]')?.setAttribute('aria-expanded', 'false');
+    });
+  }
+
   function renderGrid() {
     const list = visibleAssets();
     if (!list.length) {
@@ -801,6 +964,14 @@ import {
           <button type="button" class="media-select-toggle${selectedIds.has(Number(a.id)) ? " is-selected" : ""}" data-media-select="${a.id}" aria-label="${selectedIds.has(Number(a.id)) ? "Deselect" : "Select"} ${a.filename}" aria-pressed="${selectedIds.has(Number(a.id)) ? "true" : "false"}">
             ${selectedIds.has(Number(a.id)) ? "✓" : ""}
           </button>
+          <button type="button" class="media-card-menu-trigger" data-media-actions="${a.id}" aria-label="Actions for ${escapeHtml(a.filename)}" aria-haspopup="menu" aria-expanded="false">⋮</button>
+          <div class="media-card-menu" role="menu" aria-label="Asset actions" hidden>
+            <button type="button" role="menuitem" data-media-action="view">View image</button>
+            <button type="button" role="menuitem" data-media-action="edit">Edit details</button>
+            <button type="button" role="menuitem" data-media-action="gallery">Add to gallery</button>
+            <button type="button" role="menuitem" data-media-action="download">Download original</button>
+            <button type="button" role="menuitem" data-media-action="delete">Delete image</button>
+          </div>
           ${thumbHtml(a)}${
           (a.status === "processing" || a.status === "uploading")
             ? '<span class="media-status-badge is-processing">Processing…</span>'
@@ -1299,19 +1470,25 @@ import {
     if (!selected || assetKind(selected) !== "image") return;
     previewPresetId = getImagePreviewPreset(id)?.id || "original";
     const preset = getImagePreviewPreset(previewPresetId);
-    const style = previewStyleForPreset(preset, { focal: selected.meta?.focal_point });
-    const image = els.drawerPreview?.querySelector("img");
+    const image = els.drawerPreview?.querySelector('img');
+    const isOriginal = !preset || preset.id === 'original';
     if (els.drawerPreviewShell) {
-      els.drawerPreviewShell.style.aspectRatio = preset?.aspect_ratio || "auto";
-      els.drawerPreviewShell.classList.toggle("is-original", preset?.id === "original");
+      // Never resize or crop the stage itself when switching size presets.
+      els.drawerPreviewShell.style.aspectRatio = 'auto';
+      els.drawerPreviewShell.classList.toggle('is-original', isOriginal);
     }
     if (image) {
-      image.style.objectFit = style.objectFit;
-      image.style.objectPosition = style.objectPosition;
+      // Real visual sizing; browser-only. Never enlarge a thumbnail to fill the image stage.
+      image.style.objectFit = 'contain';
+      image.style.objectPosition = 'center center';
+      image.style.width = isOriginal ? '100%' : 'auto';
+      image.style.height = isOriginal ? '100%' : 'auto';
+      image.style.maxWidth = isOriginal ? '100%' : `${preset.width}px`;
+      image.style.maxHeight = isOriginal ? '100%' : `${preset.height}px`;
     }
-    if (els.previewNote) els.previewNote.textContent = preset?.id === "original"
-      ? "Original source preview."
-      : previewLabel(preset) + " browser preview — no derivative file is generated.";
+    if (els.previewNote) els.previewNote.textContent = isOriginal
+      ? 'Original source · fitted to the workspace. No image changes.'
+      : `${preset.label} preview · fits within ${preset.width} × ${preset.height} px; no upscaling or derivative generated.`;
     renderPreviewPresets(selected);
   }
 
@@ -1320,7 +1497,7 @@ import {
     const index = assets.findIndex((asset) => Number(asset.id) === Number(selected.id));
     if (index < 0) return;
     const next = assets[index + delta];
-    if (next) openDrawer(next);
+    if (next) openDrawer(next, { historyMode: 'replace' });
   }
 
   function renderSeoReview(asset) {
@@ -1430,14 +1607,18 @@ import {
     }
   }
 
-  function openDrawer(asset) {
+  function openDrawer(asset, { updateHistory = true, historyMode = 'push' } = {}) {
     if (!asset) return;
+    closeCardMenu();
     selected = asset;
+    mediaWorkbench?.setAsset(asset, { backgroundRemoval: Boolean(mediaCapabilities.can_remove_background) });
+    els.drawerPreview.dataset.agentsamMediaId = String(asset.id);
+    els.drawerPreview.dataset.agentsamMediaFilename = asset.filename || 'Image';
     previewPresetId = "original";
     els.drawerPreview.innerHTML = previewHtml(asset);
     if (els.drawerTitle) els.drawerTitle.textContent = asset.filename || "Asset";
     if (els.drawerStatus) els.drawerStatus.textContent = statusLabel(asset).replace("…", "");
-    renderPreviewPresets(asset);
+    applyPreviewPreset('original');
     setInspectorTab("details");
     els.fieldFilename.value = asset.filename || "";
     els.fieldAlt.value = asset.alt_text || "";
@@ -1540,9 +1721,17 @@ import {
         .map((preset) =>
           '<div class="media-version-row is-preview-only"><span>' + escapeHtml(preset.label) + '</span><small>Preview only · not generated</small></div>'
         );
+      const edit = asset.meta?.media_edit;
+      const lineageRow = edit?.source_media_asset_id
+        ? '<div class="media-version-group"><strong>Derivative provenance</strong><div class="media-version-row"><span>Edited from asset #' +
+          escapeHtml(edit.source_media_asset_id) + '</span><small>' + escapeHtml(edit.source_filename || "Source") +
+          ' · ' + escapeHtml((edit.operations || []).map((op) => op.type).filter(Boolean).join(" → ") || "Edit") +
+          '</small></div></div>'
+        : '';
       versions.innerHTML =
-        '<div class="media-version-group"><strong>Original</strong><div class="media-version-row"><span>' +
+        '<div class="media-version-group"><strong>Current asset</strong><div class="media-version-row"><span>' +
         escapeHtml(asset.filename || "Source") + '</span><small>' + escapeHtml(displayLine(asset) || "Source") + '</small></div></div>' +
+        lineageRow +
         (preparedRows.length ? '<div class="media-version-group"><strong>Prepared</strong>' + preparedRows.join("") + '</div>' : '') +
         '<div class="media-version-group"><strong>Preview only</strong>' + previewRows.join("") + '</div>';
     }
@@ -1566,16 +1755,23 @@ import {
       }
     }
 
-    document.body.classList.add("media-inspector-open");
-    els.backdrop.classList.add("is-open");
-    els.drawer.classList.add("is-open");
+    document.body.classList.add('media-detail-active');
+    els.detailPage.hidden = false;
+    window.dispatchEvent(new CustomEvent('agentsam:media-detail-change', { detail: { id: asset.id } }));
+    document.title = `${asset.filename || 'Image'} — Media | Fuel & Free Time`;
+    if (updateHistory) updateDetailUrl(asset.id, historyMode);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
-  function closeDrawer() {
+  function closeDrawer({ updateHistory = true } = {}) {
     selected = null;
-    document.body.classList.remove("media-inspector-open");
-    els.backdrop.classList.remove("is-open");
-    els.drawer.classList.remove("is-open");
+    mediaWorkbench?.setAsset(null);
+    document.body.classList.remove('media-detail-active');
+    if (els.detailPage) els.detailPage.hidden = true;
+    window.dispatchEvent(new CustomEvent('agentsam:media-detail-change', { detail: { id: null } }));
+    document.title = 'Content — Fuel & Free Time Admin';
+    if (updateHistory) updateDetailUrl(null, 'replace');
+    closeCardMenu();
   }
 
   async function saveDrawer() {
@@ -1633,11 +1829,16 @@ import {
   }
 
   async function uploadFiles(fileList, options = {}) {
-    const { albumId = activeAlbumId, reload = true, throwOnError = false } = options;
+    const { albumId = activeAlbumId, reload = true, throwOnError = false,
+      sourceMediaAssetId = null, editOperations = null, folder = activeFolder } = options;
     const form = new FormData();
     for (const f of fileList) form.append("files", f);
-    form.append("prefix", "intake/");
-    if (activeFolder) form.append("folder", activeFolder);
+    form.append("prefix", sourceMediaAssetId ? "derivatives/media-edit/" : "intake/");
+    if (folder) form.append("folder", folder);
+    if (sourceMediaAssetId != null) {
+      form.append("source_media_asset_id", String(sourceMediaAssetId));
+      form.append("edit_operations_json", JSON.stringify(editOperations || []));
+    }
 
     els.dropLabel.textContent = "Uploading " + fileList.length + " file(s)…";
     els.note.style.display = "none";
@@ -1647,8 +1848,19 @@ import {
         body: form,
         credentials: "include",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
+      const contentType = res.headers.get("content-type") || "";
+      const body = await res.text();
+      let data;
+      try {
+        data = JSON.parse(body);
+      } catch {
+        if (res.status === 413) throw new Error("Upload exceeds the server limit. Try a smaller file.");
+        if (res.status === 401 || res.status === 403) throw new Error("Your admin session expired. Sign in and retry.");
+        throw new Error(contentType.includes("html") || /^\s*</.test(body)
+          ? "The upload endpoint returned HTML instead of JSON (HTTP " + res.status + "). Check the deployed Worker route and upload limits."
+          : "Unexpected upload response (HTTP " + res.status + ").");
+      }
+      if (!res.ok) throw new Error(data?.error || "Upload failed (HTTP " + res.status + ")");
       const n = data.assets?.length || 0;
       const uploadedIds = (data.assets || []).map((asset) => Number(asset.id)).filter(Number.isInteger);
       if (albumId && uploadedIds.length) await addIdsToAlbum(uploadedIds, albumId);
@@ -1697,6 +1909,47 @@ import {
     mountListener(els.uploadBtn, "click", () => els.fileInput.click());
   }
 
+  function setupMediaWorkbench() {
+    const mount = document.getElementById("media-agent-workbench");
+    if (!mount) return;
+    mediaWorkbench = createMediaAssetWorkbench({
+      mount,
+      imageUrl: (asset) => {
+        // Prefer the first-party media route so browser canvas gets same-origin pixels.
+        const path = String(asset.url || "");
+        return path.startsWith("/media/") ? new URL(path, location.origin).href : mediaUrl(asset);
+      },
+      removeBackground: async ({ asset }) => {
+        const result = await adminFetch(`/api/admin/media/${encodeURIComponent(asset.id)}/remove-background`, {
+          method: "POST",
+        });
+        if (result?.asset) {
+          await load(); // refresh the authoritative library list
+          openDrawer(result.asset);
+        }
+        return result;
+      },
+      addComment: async ({ asset, text, x, y }) => {
+        const result = await adminFetch(`/api/admin/media/${encodeURIComponent(asset.id)}/comments`, {
+          method: "POST", body: JSON.stringify({ text, x, y }),
+        });
+        const index = assets.findIndex((candidate) => String(candidate.id) === String(asset.id));
+        if (index >= 0 && result.asset) assets[index] = result.asset;
+        if (selected && String(selected.id) === String(asset.id)) selected = result.asset;
+        return result;
+      },
+      saveDerivative: async ({ asset, file, operations }) => {
+        const outcome = await uploadFiles([file], {
+          folder: asset.folder || "images", sourceMediaAssetId: asset.id,
+          editOperations: operations, reload: true, throwOnError: true,
+        });
+        const newAsset = outcome.assets?.[0];
+        if (newAsset) openDrawer(newAsset);
+        return outcome;
+      },
+    });
+  }
+
   window.destroyMediaLibrary = destroyMediaLibrary;
 
   window.initMediaLibrary = function initMediaLibrary() {
@@ -1738,7 +1991,7 @@ import {
     els.batchBar = document.getElementById("media-batch-bar");
     els.paginationTop = document.getElementById("media-pagination-top");
     els.pagination = document.getElementById("media-pagination");
-    els.backdrop = document.getElementById("media-drawer-backdrop");
+    els.detailPage = document.getElementById('media-detail-page');
     els.drawer = document.getElementById("media-drawer");
     els.drawerPreview = document.getElementById("media-drawer-preview");
     els.drawerPreviewShell = document.getElementById("media-drawer-preview-shell");
@@ -1777,8 +2030,8 @@ import {
       ["drop zone", els.dropZone],
       ["file input", els.fileInput],
       ["upload button", els.uploadBtn],
-      ["drawer", els.drawer],
-      ["drawer backdrop", els.backdrop],
+      ["media detail view", els.drawer],
+      ["media detail page", els.detailPage],
     ];
     const missing = required.filter(([, element]) => !element).map(([name]) => name);
     if (missing.length) {
@@ -1786,6 +2039,8 @@ import {
       destroyMediaLibrary();
       return false;
     }
+
+    setupMediaWorkbench();
 
     // Core controls mount before optional 3D behavior.
     if (els.albumNew) mountListener(els.albumNew, "click", openAlbumDialog);
@@ -1817,18 +2072,40 @@ import {
         if (generation === mountGeneration) void load();
       }, 250);
     });
+    // Secondary search refinements collapse only on narrow screens. The desktop
+    // toolbar keeps every filter immediately visible and existing IDs unchanged.
+    const filterToggle = document.getElementById("media-filter-toggle");
+    const advancedFilters = document.getElementById("media-lib-advanced");
+    function syncFilterToggle() {
+      if (!filterToggle || !advancedFilters) return;
+      const activeCount = Number(kindFilter !== "all") +
+        Number(statusFilter !== "all") + Number(sortMode !== "newest");
+      filterToggle.textContent = "Filters" + (activeCount ? " (" + activeCount + ")" : "");
+      filterToggle.setAttribute("aria-expanded", advancedFilters.classList.contains("is-open") ? "true" : "false");
+      filterToggle.classList.toggle("has-active-filters", activeCount > 0);
+    }
+    if (filterToggle && advancedFilters) {
+      mountListener(filterToggle, "click", () => {
+        advancedFilters.classList.toggle("is-open");
+        syncFilterToggle();
+      });
+      syncFilterToggle();
+    }
     if (els.kindFilter) mountListener(els.kindFilter, "change", (event) => {
       kindFilter = event.target.value || "all";
+      syncFilterToggle();
       page = 1;
       void load();
     });
     if (els.statusFilter) mountListener(els.statusFilter, "change", (event) => {
       statusFilter = event.target.value || "all";
+      syncFilterToggle();
       page = 1;
       void load();
     });
     if (els.sortFilter) mountListener(els.sortFilter, "change", (event) => {
       sortMode = event.target.value || "newest";
+      syncFilterToggle();
       page = 1;
       void load();
     });
@@ -1857,7 +2134,15 @@ import {
       const tab = event.target.closest("[data-media-inspector-tab]");
       if (tab) setInspectorTab(tab.dataset.mediaInspectorTab);
     });
-    mountListener(els.backdrop, "click", closeDrawer);
+    mountListener(window, 'popstate', () => { void syncAssetFromLocation(); });
+    mountListener(document, 'click', event => {
+      if (!event.target.closest('.media-card-menu,.media-card-menu-trigger')) closeCardMenu();
+    });
+    mountListener(document, 'keydown', event => {
+      if (event.key === 'Escape' && openMenuId !== null) closeCardMenu();
+    });
+    const backLink = document.getElementById('media-detail-back');
+    mountListener(backLink, 'click', event => { event.preventDefault(); closeDrawer(); });
     bindDelegatedLibraryInteractions();
 
     bindUpload();

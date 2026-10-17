@@ -36,6 +36,8 @@ const PAGE_ALIASES = new Map([
   ["/pages/about/", "/about.html"],
   ["/pages/cart", "/cart.html"],
   ["/pages/cart/", "/cart.html"],
+  ["/checkout", "/cart.html"],
+  ["/checkout/", "/cart.html"],
   ["/cart", "/cart.html"],
   ["/cart/", "/cart.html"],
 ]);

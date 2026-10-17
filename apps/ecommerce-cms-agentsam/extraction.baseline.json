@@ -1,0 +1,5 @@
+{
+  "schema": "agentsam.extraction-baseline.v1",
+  "app": "apps/ecommerce-cms-agentsam",
+  "allowed": []
+}

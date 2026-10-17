@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>FNF · Bridge Fly Source Preview</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:#0c1018;color:#f4f5f2}
+.scene-editor-preview{min-height:100dvh;display:grid;grid-template-rows:auto minmax(500px,1fr) auto}
+.scene-intro{padding:clamp(15px,3vw,32px);display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#151a24}
+.scene-intro small{font-size:10px;letter-spacing:.15em;color:#e9ba85;font-weight:750}
+.scene-intro h1{font-size:clamp(20px,3vw,36px);letter-spacing:-.04em;margin:7px 0}
+.scene-intro p{font-size:13px;color:#b7bac4;line-height:1.5;max-width:60ch;margin:0}
+.scene-intro a{color:#17191b;background:#e9c291;padding:10px 13px;border-radius:8px;text-decoration:none;font-size:12px;font-weight:700}
+.scene-stage{background:#060b15;min-height:500px}
+.scene-stage iframe{display:block;width:100%;height:100%;min-height:500px;border:0}
+.scene-caption{padding:15px clamp(15px,3vw,32px);font-size:11px;line-height:1.6;color:#b4b8c0;background:#151a24}
+@media(max-width:700px){.scene-editor-preview{grid-template-rows:auto 65dvh auto}.scene-stage,.scene-stage iframe{min-height:370px}}
+</style>
+</head>
+<body>
+<main class="scene-editor-preview" data-cms-section="scene" aria-label="Bridge fly source preview">
+<header class="scene-intro"><div>
+<small>FNF / AVIATION CONCEPT / IN REVIEW</small>
+<h1>Golden Gate Flight Study</h1>
+<p>This real R2-backed flyover is a working interaction reference. Its motion and controls can inspire a future helicopter restoration experience; no aircraft model or public storefront section is implied.</p>
+</div><a href="/admin/scene-lab" target="_blank" rel="noopener">Open Scene Lab ↗</a></header>
+<section class="scene-stage" aria-label="Interactive original 3D scene">
+<iframe src="/media/cms/pages/bridge-fly/index.html" title="Original Golden Gate flyover" allow="fullscreen" loading="eager"></iframe>
+</section>
+<footer class="scene-caption">Source exploration, not a published storefront page. Choose a reusable renderer and approved story content before enabling publishing.</footer>
+</main>
+</body>
+</html>

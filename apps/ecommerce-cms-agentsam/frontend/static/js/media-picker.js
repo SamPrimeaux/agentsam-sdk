@@ -1,11 +1,10 @@
-/** Reusable R2 media picker modal — browse library, Shopify archive, attach to products */
+/** Reusable media picker — attach existing provider-backed assets to products. */
 
 (function () {
   const PICKER_TABS = [
     { id: "all", label: "All media", query: "view=all" },
     { id: "products", label: "Products", query: "folder=products" },
     { id: "images", label: "Images", query: "folder=images" },
-    { id: "archive", label: "Shopify archive", query: "prefix=archive/shopify-import" },
   ];
 
   let backdrop = null;
@@ -13,6 +12,8 @@
   let assets = [];
   let selected = new Set();
   let activeTab = "all";
+  let activeBucket = "";
+  let availableBuckets = [];
 
   function ensurePickerDom() {
     if (document.getElementById("media-picker-backdrop")) return;
@@ -24,13 +25,13 @@
       <div class="media-picker-modal" role="dialog" aria-modal="true" aria-labelledby="media-picker-title">
         <header class="media-picker-head">
           <div>
-            <h2 id="media-picker-title">Choose from library</h2>
-            <p class="media-picker-sub">Browse R2-stored images — including Shopify import assets.</p>
+            <h2 id="media-picker-title">Browse Media</h2>
           </div>
           <button type="button" class="media-picker-close" id="media-picker-close" aria-label="Close">×</button>
         </header>
         <div class="media-picker-toolbar">
           <div class="media-picker-tabs" id="media-picker-tabs"></div>
+          <select id="media-picker-bucket" aria-label="R2 bucket" style="display:none;max-width:180px;border:1px solid #c9c9c9;border-radius:8px;padding:8px;font-size:13px;background:white"><option value="">All connected buckets</option></select>
           <input type="search" id="media-picker-search" class="media-picker-search" placeholder="Search filename or path…">
           <button type="button" class="btn ghost small" id="media-picker-sync">Sync from R2</button>
         </div>
@@ -55,6 +56,7 @@
     document.getElementById("media-picker-confirm").addEventListener("click", confirmPick);
     document.getElementById("media-picker-search").addEventListener("input", renderGrid);
     document.getElementById("media-picker-sync").addEventListener("click", () => loadAssets(true));
+    document.getElementById("media-picker-bucket").addEventListener("change", (e) => { activeBucket = e.target.value; selected.clear(); renderGrid(); });
     document.getElementById("media-picker-tabs").addEventListener("click", (e) => {
       const btn = e.target.closest("[data-tab]");
       if (!btn) return;
@@ -107,6 +109,7 @@
     const q = (document.getElementById("media-picker-search")?.value || "").trim().toLowerCase();
     return assets.filter((a) => {
       if (!isImageAsset(a)) return false;
+      if (activeBucket && String(a.r2_bucket || a.bucket || "") !== activeBucket) return false;
       if (!q) return true;
       const hay = `${a.filename} ${a.r2_key || ""} ${a.url}`.toLowerCase();
       return hay.includes(q);
@@ -121,7 +124,7 @@
 
     if (!list.length) {
       grid.innerHTML =
-        '<p class="media-picker-empty">No images found. Try another tab or click <strong>Sync from R2</strong>.</p>';
+        '<p class="media-picker-empty">No media found.</p>';
       return;
     }
 
@@ -154,6 +157,16 @@
     try {
       const data = await adminFetch(`/api/admin/media?${tab.query}${syncParam}`);
       assets = data.assets || [];
+      // Only show buckets explicitly exposed by the authorized media provider
+      // or already represented by accessible assets; never enumerate unrelated account buckets.
+      const declared = Array.isArray(data.buckets) ? data.buckets.map((b) => typeof b === "string" ? b : b?.name).filter(Boolean) : [];
+      availableBuckets = [...new Set([...declared, ...assets.map((a) => a.r2_bucket || a.bucket).filter(Boolean)])].sort();
+      if (activeBucket && !availableBuckets.includes(activeBucket)) activeBucket = "";
+      const bucketInput = document.getElementById("media-picker-bucket");
+      bucketInput.replaceChildren(new Option("All connected buckets", ""));
+      availableBuckets.forEach((name) => bucketInput.add(new Option(name, name)));
+      bucketInput.style.display = availableBuckets.length ? "" : "none";
+      bucketInput.value = activeBucket;
       renderGrid();
     } catch (err) {
       if (grid) grid.innerHTML = `<p class="media-picker-empty">${err.message}</p>`;
@@ -168,10 +181,11 @@
     ensurePickerDom();
     selected = new Set(options.preselected || []);
     activeTab = "all";
+    activeBucket = "";
     if (options.multi === false) selected = new Set();
 
     const title = document.getElementById("media-picker-title");
-    if (title) title.textContent = options.title || "Choose from library";
+    if (title) title.textContent = options.title || "Browse Media";
 
     renderTabs();
     backdrop.classList.add("is-open");

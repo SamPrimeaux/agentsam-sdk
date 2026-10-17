@@ -2,7 +2,7 @@
  * Tool call traces for AgentSam chat UI (safe previews only).
  */
 
-import { COMMERCE_ACCOUNT_ID } from "./constants.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { IAM_LOGO } from "./quick-actions.js";
 
 const PREVIEW_MAX = 400;
@@ -35,7 +35,7 @@ function displayNameFor(meta) {
   if (meta.display_name) return meta.display_name;
   const key = meta.tool_key || meta.mcp_tool || "";
   if (/github_repo_list|github/.test(key)) return "Reading repository";
-  if (/semantic_search|commerce_semantic/.test(key)) return "Semantic search";
+  if (/semantic_search|fnf_semantic/.test(key)) return "Semantic search";
   if (/mcp/.test(meta.mcp_server || "")) return "Called tool";
   if (/d1/.test(key)) return "Querying D1";
   if (/r2|media/.test(key)) return "Listing media assets";
@@ -73,9 +73,36 @@ export function buildToolCallFromGithubMeta(meta, ids = {}) {
     duration_ms: meta.mcp_latency_ms ?? null,
     input_preview: clip(meta.github_operation || meta.input_preview || "GitHub context request"),
     output_preview: clip(
-      meta.output_preview || (meta.success ? `Repo: ${meta.github_repo || "ember"}` : meta.error || "Failed")
+      meta.output_preview || (meta.success ? `Repo: ${meta.github_repo || "fuelnfreetime"}` : meta.error || "Failed")
     ),
     icon: iconForTool(toolKey, provider),
+    conversation_id: ids.conversation_id,
+    message_id: ids.message_id,
+  };
+}
+
+export function buildToolCallTrace(tool, input, result, ids = {}, durationMs = null) {
+  const id = `tc_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
+  const status =
+    result?.ok === true
+      ? "complete"
+      : result?.approval_required || result?.confirmation_required
+        ? "approval_required"
+        : "failed";
+  return {
+    id,
+    tool_call_id: id,
+    tool_key: tool?.tool_key || "unknown_tool",
+    display_name: tool?.display_name || tool?.tool_key || "AgentSam tool",
+    subtitle: tool?.capability_key || tool?.app_id || tool?.handler_type || "",
+    provider: tool?.app_id || tool?.plugin_key || "agentsam",
+    server: tool?.handler_type || "internal",
+    status,
+    duration_ms: durationMs,
+    input_preview: clip(JSON.stringify(input || {})),
+    output_preview: clip(JSON.stringify(result || {})),
+    error: result?.error || null,
+    icon: iconForTool(tool?.tool_key, tool?.plugin_key || tool?.app_id),
     conversation_id: ids.conversation_id,
     message_id: ids.message_id,
   };
@@ -86,7 +113,7 @@ export async function getToolCallById(env, id) {
   const row = await env.DB.prepare(
     `SELECT * FROM agentsam_tool_call_log WHERE id = ? AND account_id = ? LIMIT 1`
   )
-    .bind(id, COMMERCE_ACCOUNT_ID)
+    .bind(id, requireApplicationAccountId())
     .first();
   if (!row) return null;
 
@@ -135,6 +162,9 @@ export function routeChipsFromRouting(routing, toolCalls = []) {
     if (tc.provider === "mcp") chips.push({ label: "Inner Animal MCP", kind: "tool" });
     if (/d1/i.test(tc.tool_key || "")) chips.push({ label: "D1", kind: "tool" });
     if (/r2|media/i.test(tc.tool_key || "")) chips.push({ label: "R2", kind: "tool" });
+    if (/growth|campaign/i.test(tc.tool_key || "")) chips.push({ label: "Growth", kind: "tool" });
+    if (/email|mailbox|resend/i.test(tc.tool_key || "")) chips.push({ label: "Email", kind: "tool" });
+    if (/product|catalog|completeful/i.test(tc.tool_key || "")) chips.push({ label: "Commerce", kind: "tool" });
   }
 
   const seen = new Set();

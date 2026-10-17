@@ -3,6 +3,10 @@
  * Used for: D1 seeding, admin field schemas, merge defaults on edit (not public fallback).
  */
 import { M } from "./media-paths.js";
+import reviseSite from "../../fixtures/fnf-revise-site.json" with { type: "json" };
+import reviseMediaMap from "../../fixtures/fnf-revise-media-map.json" with { type: "json" };
+import { reviseAtlas } from "../../packages/theme-contract/runtime/revise-atlas-source.js";
+
 
 /**
  * GUI field types supported by the CMS editor. Existing registry entries can keep
@@ -106,6 +110,83 @@ const COMMON_SECTION_SETTINGS = Object.freeze([
     min: 0,
     max: 160,
     step: 4,
+    unit: "px",
+  },
+  {
+    key: "__editor.spacing.paddingLeft",
+    label: "Left padding",
+    type: "range",
+    group: "spacing",
+    default: 0,
+    min: 0,
+    max: 160,
+    step: 4,
+    unit: "px",
+  },
+  {
+    key: "__editor.spacing.paddingRight",
+    label: "Right padding",
+    type: "range",
+    group: "spacing",
+    default: 0,
+    min: 0,
+    max: 160,
+    step: 4,
+    unit: "px",
+  },
+  {
+    key: "__editor.spacing.marginTop",
+    label: "Top margin",
+    type: "range",
+    group: "spacing",
+    default: 0,
+    min: -160,
+    max: 160,
+    step: 4,
+    unit: "px",
+  },
+  {
+    key: "__editor.spacing.marginBottom",
+    label: "Bottom margin",
+    type: "range",
+    group: "spacing",
+    default: 0,
+    min: -160,
+    max: 160,
+    step: 4,
+    unit: "px",
+  },
+  {
+    key: "__editor.spacing.marginLeft",
+    label: "Left margin",
+    type: "range",
+    group: "spacing",
+    default: 0,
+    min: -160,
+    max: 160,
+    step: 4,
+    unit: "px",
+  },
+  {
+    key: "__editor.spacing.marginRight",
+    label: "Right margin",
+    type: "range",
+    group: "spacing",
+    default: 0,
+    min: -160,
+    max: 160,
+    step: 4,
+    unit: "px",
+  },
+  {
+    key: "__editor.appearance.borderRadius",
+    label: "Corner radius",
+    type: "range",
+    group: "appearance",
+    default: 0,
+    min: 0,
+    max: 160,
+    step: 2,
     unit: "px",
   },
   {
@@ -220,8 +301,71 @@ export const PAGE_REGISTRY = {
   site: {
     title: "Site (global)",
     sections: {
-      brand: {
+      header: {
         sortOrder: 0,
+        label: "Header",
+        icon: "header",
+        capabilities: { reorder: false, duplicate: false, remove: false, blocks: true },
+        fields: [
+          { key: "logoUrl", label: "Logo", type: "media", group: "Brand" },
+          { key: "logoHeight", label: "Logo height", type: "range", group: "Brand", min: 40, max: 120, step: 2, unit: "px", default: 58 },
+          {
+            key: "preset",
+            label: "Header style",
+            type: "select",
+            group: "Layout",
+            default: "adaptive-bar",
+            options: [
+              { label: "Adaptive bar", value: "adaptive-bar" },
+              { label: "Frost pill", value: "frost-pill" },
+            ],
+          },
+          { key: "announcementEnabled", label: "Show announcement", type: "boolean", group: "Announcement", default: false },
+          { key: "announcementText", label: "Announcement text", type: "text", group: "Announcement" },
+          { key: "announcementHref", label: "Announcement link", type: "link", group: "Announcement" },
+        ],
+        blocks: [
+          {
+            key: "nav-link",
+            label: "Navigation link",
+            repeatable: true,
+            min: 1,
+            max: 12,
+            fields: [
+              { key: "label", label: "Label", type: "text" },
+              { key: "href", label: "Link", type: "link" },
+              { key: "visible", label: "Visible", type: "boolean", default: true },
+            ],
+            defaultContent: {
+              label: "New link",
+              href: "/",
+              visible: true,
+            },
+          },
+        ],
+        defaultContent: {
+          logoUrl: M.logo,
+          logoHeight: 58,
+          preset: "adaptive-bar",
+          announcementEnabled: false,
+          announcementText: "",
+          announcementHref: "",
+          nav1: { label: "Home", href: "/", visible: true },
+          nav2: { label: "Shop", href: "/shop", visible: true },
+          nav3: { label: "About", href: "/about", visible: true },
+          nav4: { label: "Community", href: "/community", visible: true },
+          __editor: {
+            blocks: [
+              { id: "nav1", templateKey: "nav-link", enabled: true },
+              { id: "nav2", templateKey: "nav-link", enabled: true },
+              { id: "nav3", templateKey: "nav-link", enabled: true },
+              { id: "nav4", templateKey: "nav-link", enabled: true },
+            ],
+          },
+        },
+      },
+      brand: {
+        sortOrder: 1,
         fields: [
           { key: "logoUrl", label: "Logo URL", type: "media" },
           { key: "tagline", label: "Tagline", type: "text" },
@@ -235,10 +379,13 @@ export const PAGE_REGISTRY = {
         },
       },
       footer: {
-        sortOrder: 1,
+        sortOrder: 2,
         label: "Global Footer",
         icon: "footer",
         fields: [
+          { key: "logoUrl", label: "Footer logo", type: "media", group: "Brand" },
+          { key: "tagline", label: "Tagline", type: "text", group: "Brand" },
+          { key: "description", label: "Description", type: "textarea", group: "Brand" },
           { key: "exploreTitle", label: "Explore heading", type: "text", group: "Explore" },
           { key: "exploreShopLabel", label: "Shop label", type: "text", group: "Explore" },
           { key: "exploreShopHref", label: "Shop link", type: "link", group: "Explore" },
@@ -270,6 +417,9 @@ export const PAGE_REGISTRY = {
           { key: "closingLine", label: "Closing line", type: "text", group: "Footer bottom" },
         ],
         defaultContent: {
+          logoUrl: M.logo,
+          tagline: "Time is the real flex.",
+          description: "For those who've earned their freedom through hard work, service, and dedication.",
           exploreTitle: "Explore",
           exploreShopLabel: "Shop",
           exploreShopHref: "/shop",
@@ -293,7 +443,7 @@ export const PAGE_REGISTRY = {
           newsletterTitle: "Get Updates",
           newsletterPlaceholder: "Your email",
           newsletterButtonLabel: "Join",
-          copyright: "Ember Supply. All rights reserved.",
+          copyright: "Fuel & Free Time. All rights reserved.",
           closingLine: "Built for those who've earned it.",
         },
       },
@@ -340,7 +490,7 @@ export const PAGE_REGISTRY = {
           line2: "We chase",
           highlight2: "hours.",
           body1:
-            "Ember Supply isn't about how fast you go — it's about finally having the time to go at all.",
+            "Fuel & Free Time isn't about how fast you go — it's about finally having the time to go at all.",
           body2:
             "Born in a Lafayette garage, built for those who've earned their freedom. Whether you're a veteran who's done your time, a weekend warrior stealing moments, or a young gun working toward that first real ride.",
           body3: "You get it. Time is everything money can't buy back.",
@@ -461,6 +611,17 @@ export const PAGE_REGISTRY = {
     sections: {
       hero: {
         sortOrder: 0,
+        settings: [
+          { key: "__editor.layout.heroHeight", label: "Hero height", type: "select", group: "layout", default: "theme",
+            options: [{value:"theme",label:"Theme default"},{value:"small",label:"Small"},{value:"medium",label:"Medium"},{value:"tall",label:"Tall"},{value:"screen",label:"Full screen"}] },
+          { key: "__editor.layout.heroVertical", label: "Content position", type: "select", group: "layout", default: "theme",
+            options: [{value:"theme",label:"Theme default"},{value:"top",label:"Top"},{value:"center",label:"Center"},{value:"bottom",label:"Bottom"}] },
+          { key: "__editor.layout.heroAlignment", label: "Content alignment", type: "select", group: "layout", default: "theme",
+            options: [{value:"theme",label:"Theme default"},{value:"left",label:"Left"},{value:"center",label:"Center"},{value:"right",label:"Right"}] },
+          { key: "__editor.layout.heroImageFocus", label: "Image focal point", type: "select", group: "media", default: "theme",
+            options: [{value:"theme",label:"Theme default"},{value:"left",label:"Left"},{value:"center",label:"Center"},{value:"right",label:"Right"}] },
+          { key: "__editor.layout.heroOverlay", label: "Image overlay", type: "range", group: "media", default: 100, min: 0, max: 100, step: 5, unit: "%" },
+        ],
         fields: [
           { key: "eyebrow", label: "Eyebrow", type: "text" },
           { key: "headline", label: "Headline", type: "text" },
@@ -476,7 +637,7 @@ export const PAGE_REGISTRY = {
           headline: "A lifestyle built from grit — and time.",
           subheadline:
             "Shop High Octane, Masters, and Essentials. Clean grid. Real stories. Fire-orange attitude.",
-          imageUrl: "/assets/presets/ember/earned-hours-hero.webp",
+          imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
           ctaPrimary: { label: "Shop the Drop", href: "#catalog" },
           ctaSecondary: { label: "Browse Collections", href: "/shop/collections" },
         },
@@ -520,16 +681,16 @@ export const PAGE_REGISTRY = {
             ],
             defaultContent: {
               name: "New collection",
-              imageUrl: "/assets/presets/ember/earned-hours-hero.webp",
+              imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
               href: "/shop/collections",
             },
           },
         ],
         defaultContent: {
           title: "Collections",
-          card1: { name: "High Octane Collection", imageUrl: "/assets/presets/ember/earned-hours-hero.webp", href: "/shop/collections/high-octane-performance-gear" },
-          card2: { name: "Masters Collection", imageUrl: "/assets/presets/ember/masters.webp", href: "/shop/collections/masters" },
-          card3: { name: "Everyday Essentials", imageUrl: "/assets/presets/ember/essentials.webp", href: "/shop/collections/essentials" },
+          card1: { name: "High Octane Collection", imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp", href: "/shop/collections/high-octane-performance-gear" },
+          card2: { name: "Masters Collection", imageUrl: "/assets/presets/fuel-free-time/masters.webp", href: "/shop/collections/masters" },
+          card3: { name: "Everyday Essentials", imageUrl: "/assets/presets/fuel-free-time/essentials.webp", href: "/shop/collections/essentials" },
           __editor: {
             blocks: [
               { id: "card1", templateKey: "collection-card", enabled: true },
@@ -539,8 +700,59 @@ export const PAGE_REGISTRY = {
           },
         },
       },
-      stories: {
+      "editorial-grid": {
         sortOrder: 2,
+        label: "Collections Editorial Grid",
+        icon: "collections",
+        fields: [],
+        blocks: [
+          {
+            key: "editorial-tile",
+            label: "Editorial tile",
+            repeatable: true,
+            min: 1,
+            max: 9,
+            fields: [
+              { key: "eyebrow", label: "Eyebrow", type: "text" },
+              { key: "headline", label: "Headline", type: "text" },
+              { key: "imageUrl", label: "Photo", type: "media" },
+              { key: "href", label: "Destination", type: "link" },
+            ],
+            defaultContent: {
+              eyebrow: "Collection",
+              headline: "A story worth telling",
+              imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp",
+              href: "/shop/collections",
+            },
+          },
+        ],
+        defaultContent: {
+          tile1: { eyebrow: "High Octane", headline: "Run it past redline", imageUrl: "/assets/presets/fuel-free-time/earned-hours-hero.webp", href: "/shop/collections/high-octane-performance-gear" },
+          tile2: { eyebrow: "The long way home", headline: "Wear the hours you earned", imageUrl: "/assets/presets/fuel-free-time/masters.webp", href: "#catalog" },
+          tile3: { eyebrow: "Essentials", headline: "Clock out. Get gone.", imageUrl: "/assets/presets/fuel-free-time/essentials.webp", href: "/shop/collections/essentials" },
+          __editor: {
+            blocks: [
+              { id: "tile1", templateKey: "editorial-tile", enabled: true },
+              { id: "tile2", templateKey: "editorial-tile", enabled: true },
+              { id: "tile3", templateKey: "editorial-tile", enabled: true },
+            ],
+          },
+        },
+      },
+      "products-grid": {
+        sortOrder: 3,
+        label: "Products Grid",
+        icon: "products",
+        fields: [
+          { key: "eyebrow", label: "Eyebrow", type: "text" },
+          { key: "title", label: "Heading", type: "text" },
+        ],
+        // Products, availability, prices, variants, filtering and purchases
+        // remain bound to the commerce API. No product rows in CMS settings.
+        defaultContent: { eyebrow: "Available now", title: "Shop all gear" },
+      },
+      stories: {
+        sortOrder: 4,
         fields: [
           { key: "title", label: "Title", type: "text" },
           { key: "body", label: "Body", type: "textarea" },
@@ -553,7 +765,7 @@ export const PAGE_REGISTRY = {
         },
       },
       newsletter: {
-        sortOrder: 3,
+        sortOrder: 5,
         fields: [
           { key: "title", label: "Title", type: "text" },
           { key: "buttonLabel", label: "Button label", type: "text" },
@@ -567,131 +779,1077 @@ export const PAGE_REGISTRY = {
   },
   about: {
     title: "About",
+    // Source-faithful Heuristic sections and field definitions.
     sections: {
-      hero: {
-        sortOrder: 0,
-        fields: [
-          { key: "meta1", label: "Meta line 1", type: "text" },
-          { key: "meta2", label: "Meta line 2", type: "text" },
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "subheadline", label: "Subheadline", type: "textarea" },
+      "hero": {
+        "label": "Hero",
+        "sortOrder": 0,
+        "sourceSection": "fnf.about.hero",
+        "fields": [
+          {
+            "key": "meta1",
+            "label": "Meta1",
+            "type": "text"
+          },
+          {
+            "key": "meta2",
+            "label": "Meta2",
+            "type": "text"
+          },
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "subheadline",
+            "label": "Subheadline",
+            "type": "textarea"
+          }
         ],
-        defaultContent: {
-          meta1: "Est. 2025",
-          meta2: "Made in Lafayette, Louisiana",
-          headline: "Built in the Garage",
-          subheadline:
-            "Born from blood, sweat, and years of earning our freedom. This is more than a brand — it's a brotherhood.",
-        },
+        "defaultContent": {
+          "meta1": "Est. 2025",
+          "meta2": "Made in Lafayette, Louisiana",
+          "headline": "Built in the Garage",
+          "subheadline": "Born around garage nights, hands-on projects, and one stubborn idea: the hours we earn should be ours to live. Apparel is part of the story; the machines, makers, and experiences are the rest."
+        }
       },
-      moment: {
-        sortOrder: 1,
-        fields: [
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "body", label: "Body", type: "textarea" },
-          { key: "videoUrl", label: "Video URL", type: "url", media: true },
+      "moment": {
+        "label": "Moment",
+        "sortOrder": 1,
+        "sourceSection": "fnf.about.moment",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "lead",
+            "label": "Lead",
+            "type": "text"
+          },
+          {
+            "key": "body",
+            "label": "Body",
+            "type": "textarea"
+          },
+          {
+            "key": "quote",
+            "label": "Quote",
+            "type": "text"
+          },
+          {
+            "key": "closing",
+            "label": "Closing",
+            "type": "textarea"
+          }
         ],
-        defaultContent: {
-          headline: "The Moment That Started It All",
-          body: "Late nights in the garage. Engines cooling. Stories flowing. That's where Ember Supply was born.",
-          videoUrl: M.videoAbout1,
-        },
+        "defaultContent": {
+          "headline": "The Moment Everything Changed",
+          "lead": "3:47 AM. Highway 90. Just outside Lafayette.",
+          "body": "After pulling a 16-hour shift, watching the sun rise over the Atchafalaya Basin from the seat of my bike, it hit me. I'd spent 20 years trading time for money, thinking someday I'd have enough to finally live. But watching those old-timers at the truck stop — guys who'd \"made it\" but were too broken or too late to enjoy it — I realized the real luxury wasn't in my bank account.",
+          "quote": "\"Time isn't money. Time is everything money can't buy back.\"",
+          "closing": "That morning, Fuel & Free Time was born. Not as a business plan, but as a middle finger to the lie that we should wait until retirement to live. Every piece we make is a reminder: the goal isn't to get rich enough to buy freedom. It's to be free enough to get rich in experiences."
+        }
       },
-      collections: {
-        sortOrder: 2,
-        fields: [
-          { key: "title", label: "Section title", type: "text" },
-          { key: "card1.title", label: "Card 1 title", type: "text" },
-          { key: "card1.imageUrl", label: "Card 1 image", type: "url", media: true },
-          { key: "card2.title", label: "Card 2 title", type: "text" },
-          { key: "card2.imageUrl", label: "Card 2 image", type: "url", media: true },
-          { key: "card3.title", label: "Card 3 title", type: "text" },
-          { key: "card3.imageUrl", label: "Card 3 image", type: "url", media: true },
+      "video": {
+        "label": "Video",
+        "sortOrder": 2,
+        "sourceSection": "fnf.about.video",
+        "fields": [
+          {
+            "key": "videoUrl",
+            "label": "Video Url",
+            "type": "video"
+          }
         ],
-        defaultContent: {
-          title: "Three Collections. One Brotherhood.",
-          card1: { title: "Ember Supply Core Collection", imageUrl: M.coreCollection },
-          card2: { title: "High Octane Performance Collection", imageUrl: M.vette },
-          card3: { title: "Masters Series Limited Edition", imageUrl: M.fuelUp },
-        },
+        "defaultContent": {
+          "videoUrl": "/media/archive/shopify-import/videos/video-2-48add6d0.mp4"
+        }
       },
-      origins: {
-        sortOrder: 3,
-        fields: [
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "body", label: "Body", type: "textarea" },
-          { key: "imageUrl", label: "Image", type: "url", media: true },
-          { key: "videoUrl", label: "Video URL", type: "url", media: true },
+      "collections": {
+        "label": "Collections",
+        "sortOrder": 3,
+        "sourceSection": "fnf.about.collections",
+        "fields": [
+          {
+            "key": "title",
+            "label": "Title",
+            "type": "text"
+          }
         ],
-        defaultContent: {
-          headline: "Ember Supply Origins",
-          body: "From Lafayette garages to open roads — every design starts with a story worth wearing.",
-          imageUrl: M.coreCollection,
-          videoUrl: M.videoAbout2,
-        },
-      },
-      lifestyle: {
-        sortOrder: 4,
-        fields: [
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "imageUrl", label: "Image", type: "url", media: true },
+        "blocks": [
+          {
+            "key": "collection-card",
+            "label": "Collection Card",
+            "max": 8,
+            "fields": [
+              {
+                "key": "href",
+                "label": "Href",
+                "type": "link"
+              },
+              {
+                "key": "badge",
+                "label": "Badge",
+                "type": "text"
+              },
+              {
+                "key": "imageUrl",
+                "label": "Image Url",
+                "type": "media"
+              },
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "text"
+              },
+              {
+                "key": "description",
+                "label": "Description",
+                "type": "text"
+              },
+              {
+                "key": "ctaLabel",
+                "label": "Cta Label",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "href": "/shop",
+              "badge": "Core Collection",
+              "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png",
+              "title": "The Essentials",
+              "description": "Daily drivers. The tees, hoodies, and gear that remind you why you grind — so you don't have to forever.",
+              "ctaLabel": "Explore Core →"
+            }
+          }
         ],
-        defaultContent: {
-          headline: "High Octane Lifestyle",
-          imageUrl: M.highOctane,
-        },
+        "defaultContent": {
+          "title": "The Gear That Gets It",
+          "card1": {
+            "href": "/shop",
+            "badge": "Core Collection",
+            "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png",
+            "title": "The Essentials",
+            "description": "Daily drivers. The tees, hoodies, and gear that remind you why you grind — so you don't have to forever.",
+            "ctaLabel": "Explore Core →"
+          },
+          "card2": {
+            "href": "/shop",
+            "badge": "High Octane",
+            "imageUrl": "/media/archive/shopify-import/graphics/Vette.png",
+            "title": "High Octane",
+            "description": "Performance gear for when you're burning rubber, not burning out. Technical fabrics meet garage style.",
+            "ctaLabel": "Shop Performance →"
+          },
+          "card3": {
+            "href": "/shop",
+            "badge": "Limited Drops",
+            "imageUrl": "/media/archive/shopify-import/graphics/fuel_up.png",
+            "title": "Masters Series",
+            "description": "Small batch. Big stories. Limited pieces honoring those who've mastered the art of living on their terms.",
+            "ctaLabel": "View Drops →"
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "card1",
+                "templateKey": "collection-card",
+                "enabled": true
+              },
+              {
+                "id": "card2",
+                "templateKey": "collection-card",
+                "enabled": true
+              },
+              {
+                "id": "card3",
+                "templateKey": "collection-card",
+                "enabled": true
+              }
+            ]
+          }
+        }
       },
-    },
+      "against": {
+        "label": "Against",
+        "sortOrder": 4,
+        "sourceSection": "fnf.about.against",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "belief-card",
+            "label": "Belief Card",
+            "max": 6,
+            "fields": [
+              {
+                "key": "icon",
+                "label": "Icon",
+                "type": "text"
+              },
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "text"
+              },
+              {
+                "key": "description",
+                "label": "Description",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "icon": "💼",
+              "title": "The 40-Year Plan",
+              "description": "Waiting until 65 to start living. We believe life happens now, not after four decades of postponement."
+            }
+          }
+        ],
+        "defaultContent": {
+          "headline": "What We Stand Against",
+          "card1": {
+            "icon": "💼",
+            "title": "The 40-Year Plan",
+            "description": "Waiting until 65 to start living. We believe life happens now, not after four decades of postponement."
+          },
+          "card2": {
+            "icon": "⏰",
+            "title": "Time Poverty",
+            "description": "Being cash rich but time broke. What good is a garage full of toys if you never have time to play?"
+          },
+          "card3": {
+            "icon": "🏢",
+            "title": "Corporate Chains",
+            "description": "Golden handcuffs and corner offices that become expensive prisons. Freedom isn't negotiable."
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "card1",
+                "templateKey": "belief-card",
+                "enabled": true
+              },
+              {
+                "id": "card2",
+                "templateKey": "belief-card",
+                "enabled": true
+              },
+              {
+                "id": "card3",
+                "templateKey": "belief-card",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "lafayette": {
+        "label": "Lafayette",
+        "sortOrder": 5,
+        "sourceSection": "fnf.about.lafayette",
+        "fields": [
+          {
+            "key": "badge",
+            "label": "Badge",
+            "type": "text"
+          },
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "body",
+            "label": "Body",
+            "type": "textarea"
+          }
+        ],
+        "defaultContent": {
+          "badge": "🔥 Louisiana Made 🔥",
+          "headline": "Crafted in Lafayette",
+          "body": "Rooted in Lafayette, Louisiana. Our perspective comes from the garage, the road, and the work happening between them. We're building a brand around what we make, where we go, and who comes along."
+        }
+      },
+      "origins": {
+        "label": "Origins",
+        "sortOrder": 6,
+        "sourceSection": "fnf.about.origins",
+        "fields": [
+          {
+            "key": "titleAccent",
+            "label": "Title Accent",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "story-photo",
+            "label": "Story Photo",
+            "max": 12,
+            "fields": [
+              {
+                "key": "body",
+                "label": "Body",
+                "type": "textarea"
+              },
+              {
+                "key": "imageUrl",
+                "label": "Image Url",
+                "type": "media"
+              }
+            ],
+            "defaultContent": {
+              "body": "Fuel & Free Time isn't backed by investors or focus groups. It started with grease under the fingernails and a realization that hit harder than Louisiana summer heat.",
+              "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png"
+            }
+          },
+          {
+            "key": "story-video",
+            "label": "Story Video",
+            "max": 12,
+            "fields": [
+              {
+                "key": "body",
+                "label": "Body",
+                "type": "textarea"
+              },
+              {
+                "key": "videoUrl",
+                "label": "Video Url",
+                "type": "video"
+              }
+            ],
+            "defaultContent": {
+              "body": "From apparel and artwork to repairs, rides, and the helicopter restoration, each project should say something about the hours we choose to spend. It's more than another product grid.",
+              "videoUrl": "/media/archive/shopify-import/videos/video-1-f506d934.mp4"
+            }
+          }
+        ],
+        "defaultContent": {
+          "titleAccent": "Full",
+          "story1": {
+            "body": "Fuel & Free Time isn't backed by investors or focus groups. It started with grease under the fingernails and a realization that hit harder than Louisiana summer heat.",
+            "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png"
+          },
+          "story2": {
+            "body": "From apparel and artwork to repairs, rides, and the helicopter restoration, each project should say something about the hours we choose to spend. It's more than another product grid.",
+            "videoUrl": "/media/archive/shopify-import/videos/video-1-f506d934.mp4"
+          },
+          "story3": {
+            "body": "From that first sunrise on Highway 90 to every late-night garage session since, we've stayed true to one principle: time is the only real currency.",
+            "imageUrl": "/media/archive/shopify-import/graphics/high_octane.jpg"
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "story1",
+                "templateKey": "story-photo",
+                "enabled": true
+              },
+              {
+                "id": "story2",
+                "templateKey": "story-video",
+                "enabled": true
+              },
+              {
+                "id": "story3",
+                "templateKey": "story-photo",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "lifestyle": {
+        "label": "Lifestyle",
+        "sortOrder": 7,
+        "sourceSection": "fnf.about.lifestyle",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "value-card",
+            "label": "Value Card",
+            "max": 8,
+            "fields": [
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "text"
+              },
+              {
+                "key": "body",
+                "label": "Body",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "title": "Time as Currency",
+              "body": "The only resource you can't earn back. We measure wealth in free hours, not dollar signs."
+            }
+          }
+        ],
+        "defaultContent": {
+          "headline": "What Drives Us",
+          "card1": {
+            "title": "Time as Currency",
+            "body": "The only resource you can't earn back. We measure wealth in free hours, not dollar signs."
+          },
+          "card2": {
+            "title": "Fuel Everything",
+            "body": "Gas, diesel, jet fuel, coffee — whatever powers your passion, we celebrate it."
+          },
+          "card3": {
+            "title": "Cross-Gen Unity",
+            "body": "Old heads and young bucks united by shared values, not shared birthdays."
+          },
+          "card4": {
+            "title": "Culture > Commerce",
+            "body": "Building a movement, not just moving product. Community first, sales second."
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "card1",
+                "templateKey": "value-card",
+                "enabled": true
+              },
+              {
+                "id": "card2",
+                "templateKey": "value-card",
+                "enabled": true
+              },
+              {
+                "id": "card3",
+                "templateKey": "value-card",
+                "enabled": true
+              },
+              {
+                "id": "card4",
+                "templateKey": "value-card",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "cta": {
+        "label": "Cta",
+        "sortOrder": 8,
+        "sourceSection": "fnf.about.cta",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "body",
+            "label": "Body",
+            "type": "text"
+          },
+          {
+            "key": "primary.href",
+            "label": "Primary Href",
+            "type": "link"
+          },
+          {
+            "key": "primary.label",
+            "label": "Primary Label",
+            "type": "text"
+          },
+          {
+            "key": "secondary.href",
+            "label": "Secondary Href",
+            "type": "link"
+          },
+          {
+            "key": "secondary.label",
+            "label": "Secondary Label",
+            "type": "text"
+          }
+        ],
+        "defaultContent": {
+          "headline": "Ready to Claim Your Time?",
+          "body": "Join a growing tribe that measures success in sunsets, not spreadsheets.",
+          "primary": {
+            "href": "/shop",
+            "label": "Shop the Collection"
+          },
+          "secondary": {
+            "href": "/community",
+            "label": "Join the Movement"
+          }
+        }
+      }
+    }
   },
   community: {
     title: "Community",
+    // Source-faithful Heuristic sections and field definitions.
     sections: {
-      hero: {
-        sortOrder: 0,
-        fields: [
-          { key: "headline", label: "Headline (before accent)", type: "text" },
-          { key: "headlineAccent", label: "Headline accent", type: "text" },
-          { key: "subheadline", label: "Subheadline", type: "textarea" },
-          { key: "stat1Value", label: "Stat 1 value", type: "text" },
-          { key: "stat1Label", label: "Stat 1 label", type: "text" },
-          { key: "stat2Value", label: "Stat 2 value", type: "text" },
-          { key: "stat2Label", label: "Stat 2 label", type: "text" },
-          { key: "stat3Value", label: "Stat 3 value", type: "text" },
-          { key: "stat3Label", label: "Stat 3 label", type: "text" },
-          { key: "stat4Value", label: "Stat 4 value", type: "text" },
-          { key: "stat4Label", label: "Stat 4 label", type: "text" },
+      "hero": {
+        "label": "Hero",
+        "sortOrder": 0,
+        "sourceSection": "fnf.community.hero",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "headlineAccent",
+            "label": "Headline Accent",
+            "type": "text"
+          },
+          {
+            "key": "subheadline",
+            "label": "Subheadline",
+            "type": "textarea"
+          },
+          {
+            "key": "stat1Value",
+            "label": "Stat1 Value",
+            "type": "text"
+          },
+          {
+            "key": "stat1Label",
+            "label": "Stat1 Label",
+            "type": "text"
+          },
+          {
+            "key": "stat2Value",
+            "label": "Stat2 Value",
+            "type": "text"
+          },
+          {
+            "key": "stat2Label",
+            "label": "Stat2 Label",
+            "type": "text"
+          },
+          {
+            "key": "stat3Value",
+            "label": "Stat3 Value",
+            "type": "text"
+          },
+          {
+            "key": "stat3Label",
+            "label": "Stat3 Label",
+            "type": "text"
+          },
+          {
+            "key": "stat4Value",
+            "label": "Stat4 Value",
+            "type": "text"
+          },
+          {
+            "key": "stat4Label",
+            "label": "Stat4 Label",
+            "type": "text"
+          }
         ],
-        defaultContent: {
-          headline: "Join the",
-          headlineAccent: "Movement",
-          subheadline:
-            "Where every mile has a story, every hour is earned, and every member is family. This is more than a brand — it's a brotherhood of freedom seekers.",
-          stat1Value: "5K+",
-          stat1Label: "Members Strong",
-          stat2Value: "23",
-          stat2Label: "Cities Connected",
-          stat3Value: "150+",
-          stat3Label: "Events Hosted",
-          stat4Value: "∞",
-          stat4Label: "Stories Shared",
-        },
+        "defaultContent": {
+          "headline": "Join the",
+          "headlineAccent": "Movement",
+          "subheadline": "From the garage floor to the open road—and an aircraft restoration still taking shape—this is a place for the projects and people that make free time worth chasing.",
+          "stat1Value": "BUILD",
+          "stat1Label": "Hands-On",
+          "stat2Value": "RIDE",
+          "stat2Label": "Open Roads",
+          "stat3Value": "FLY",
+          "stat3Label": "Restoration",
+          "stat4Value": "LIVE",
+          "stat4Label": "The Hours"
+        }
       },
-      join: {
-        sortOrder: 1,
-        fields: [
-          { key: "headline", label: "Headline", type: "text" },
-          { key: "body", label: "Body", type: "textarea" },
-          { key: "ctaLabel", label: "CTA label", type: "text" },
-          { key: "ctaHref", label: "CTA link", type: "text" },
+      "events": {
+        "label": "Events",
+        "sortOrder": 1,
+        "sourceSection": "fnf.community.events",
+        "fields": [
+          {
+            "key": "heading",
+            "label": "Heading",
+            "type": "text"
+          },
+          {
+            "key": "intro",
+            "label": "Intro",
+            "type": "textarea"
+          }
         ],
-        defaultContent: {
-          headline: "Ready to Ride With Us?",
-          body: "Join the movement. Get early access to drops, event invites, and the stories that matter.",
-          ctaLabel: "Join the Movement",
-          ctaHref: "#newsletter",
-        },
+        "blocks": [
+          {
+            "key": "event-card",
+            "label": "Event Card",
+            "max": 12,
+            "fields": [
+              {
+                "key": "imageUrl",
+                "label": "Image Url",
+                "type": "media"
+              },
+              {
+                "key": "badge",
+                "label": "Badge",
+                "type": "text"
+              },
+              {
+                "key": "date",
+                "label": "Date",
+                "type": "text"
+              },
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "text"
+              },
+              {
+                "key": "location",
+                "label": "Location",
+                "type": "text"
+              },
+              {
+                "key": "description",
+                "label": "Description",
+                "type": "text"
+              },
+              {
+                "key": "cta.href",
+                "label": "Cta Href",
+                "type": "link"
+              },
+              {
+                "key": "cta.label",
+                "label": "Cta Label",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "imageUrl": "/media/archive/shopify-import/graphics/Vette.png",
+              "badge": "Concept",
+              "date": "Date to be confirmed",
+              "title": "Garage Night LA",
+              "location": "📍 Downtown Los Angeles",
+              "description": "Talk shop, trade build stories, and meet the people behind the projects.",
+              "cta": {
+                "href": "/collaborate",
+                "label": "Help Plan It →"
+              }
+            }
+          }
+        ],
+        "defaultContent": {
+          "heading": "On the Drawing Board",
+          "intro": "These are gathering ideas, not confirmed events. Help shape what we build next—dates and locations come after plans are real.",
+          "event1": {
+            "imageUrl": "/media/archive/shopify-import/graphics/Vette.png",
+            "badge": "Concept",
+            "date": "Date to be confirmed",
+            "title": "Garage Night LA",
+            "location": "📍 Downtown Los Angeles",
+            "description": "Talk shop, trade build stories, and meet the people behind the projects.",
+            "cta": {
+              "href": "/collaborate",
+              "label": "Help Plan It →"
+            }
+          },
+          "event2": {
+            "imageUrl": "/media/archive/shopify-import/graphics/high_octane.jpg",
+            "badge": "Idea in Progress",
+            "date": "Not yet scheduled",
+            "title": "Miami Scavenger Hunt",
+            "location": "📍 Miami, FL",
+            "description": "A scavenger-hunt concept for a future gathering—no drop or event has been scheduled.",
+            "cta": {
+              "href": "/collaborate",
+              "label": "Share An Idea →"
+            }
+          },
+          "event3": {
+            "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png",
+            "badge": "Community Proposal",
+            "date": "Schedule to be decided",
+            "title": "Fuel Stop ATX",
+            "location": "📍 Austin, TX",
+            "description": "Coffee, machines and conversation. A meetup idea looking for a local host.",
+            "cta": {
+              "href": "/collaborate",
+              "label": "Become A Host →"
+            }
+          },
+          "event4": {
+            "imageUrl": "/media/archive/shopify-import/graphics/fuel_up.png",
+            "badge": "Long-Range Idea",
+            "date": "Route still being imagined",
+            "title": "Coast to Coast Run",
+            "location": "📍 Nationwide",
+            "description": "A coast-to-coast adventure worth dreaming about. The route is not yet planned.",
+            "cta": {
+              "href": "/collaborate",
+              "label": "Talk Routes →"
+            }
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "event1",
+                "templateKey": "event-card",
+                "enabled": true
+              },
+              {
+                "id": "event2",
+                "templateKey": "event-card",
+                "enabled": true
+              },
+              {
+                "id": "event3",
+                "templateKey": "event-card",
+                "enabled": true
+              },
+              {
+                "id": "event4",
+                "templateKey": "event-card",
+                "enabled": true
+              }
+            ]
+          }
+        }
       },
-    },
+      "gallery": {
+        "label": "Gallery",
+        "sortOrder": 2,
+        "sourceSection": "fnf.community.gallery",
+        "fields": [
+          {
+            "key": "heading",
+            "label": "Heading",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "gallery-item",
+            "label": "Gallery Item",
+            "max": 18,
+            "fields": [
+              {
+                "key": "imageUrl",
+                "label": "Image Url",
+                "type": "media"
+              },
+              {
+                "key": "caption",
+                "label": "Caption",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png",
+              "caption": "Hours outside the ordinary"
+            }
+          }
+        ],
+        "defaultContent": {
+          "heading": "Living the Life",
+          "item1": {
+            "imageUrl": "/media/archive/shopify-import/graphics/50C9CEB5.png",
+            "caption": "Hours outside the ordinary"
+          },
+          "item2": {
+            "imageUrl": "/media/archive/shopify-import/graphics/Vette.png",
+            "caption": "On the road, for the ride"
+          },
+          "item3": {
+            "imageUrl": "/media/archive/shopify-import/graphics/high_octane.jpg",
+            "caption": "High Octane · Garage inspiration"
+          },
+          "item4": {
+            "imageUrl": "/media/archive/shopify-import/graphics/Masters.png",
+            "caption": "Masters · In the making"
+          },
+          "item5": {
+            "imageUrl": "/media/archive/shopify-import/graphics/fuel_up.png",
+            "caption": "Fueled by the little things"
+          },
+          "item6": {
+            "imageUrl": "/media/archive/shopify-import/graphics/Gone_Fishing.png",
+            "caption": "The weekend is worth earning"
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "item1",
+                "templateKey": "gallery-item",
+                "enabled": true
+              },
+              {
+                "id": "item2",
+                "templateKey": "gallery-item",
+                "enabled": true
+              },
+              {
+                "id": "item3",
+                "templateKey": "gallery-item",
+                "enabled": true
+              },
+              {
+                "id": "item4",
+                "templateKey": "gallery-item",
+                "enabled": true
+              },
+              {
+                "id": "item5",
+                "templateKey": "gallery-item",
+                "enabled": true
+              },
+              {
+                "id": "item6",
+                "templateKey": "gallery-item",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "join": {
+        "label": "Join",
+        "sortOrder": 3,
+        "sourceSection": "fnf.community.join",
+        "fields": [
+          {
+            "key": "headline",
+            "label": "Headline",
+            "type": "text"
+          },
+          {
+            "key": "body",
+            "label": "Body",
+            "type": "textarea"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "join-card",
+            "label": "Join Card",
+            "max": 6,
+            "fields": [
+              {
+                "key": "icon",
+                "label": "Icon",
+                "type": "text"
+              },
+              {
+                "key": "title",
+                "label": "Title",
+                "type": "text"
+              },
+              {
+                "key": "description",
+                "label": "Description",
+                "type": "text"
+              },
+              {
+                "key": "cta.href",
+                "label": "Cta Href",
+                "type": "link"
+              },
+              {
+                "key": "cta.label",
+                "label": "Cta Label",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "icon": "📱",
+              "title": "Follow the Feed",
+              "description": "Daily inspiration, event updates, and member spotlights. Stay connected to the culture.",
+              "cta": {
+                "href": "#member-stories",
+                "label": "Follow Us"
+              }
+            }
+          }
+        ],
+        "defaultContent": {
+          "headline": "Get Connected",
+          "body": "Choose your path. Whether you're here for the gear, the gatherings, or the grind, there's a place for you in the movement.",
+          "card1": {
+            "icon": "📱",
+            "title": "Follow the Feed",
+            "description": "Daily inspiration, event updates, and member spotlights. Stay connected to the culture.",
+            "cta": {
+              "href": "#member-stories",
+              "label": "Follow Us"
+            }
+          },
+          "card2": {
+            "icon": "🎯",
+            "title": "Join Exclusive Drops",
+            "description": "Get early access to limited releases, scavenger hunt clues, and member-only gear.",
+            "cta": {
+              "href": "/shop",
+              "label": "Get Access"
+            }
+          },
+          "card3": {
+            "icon": "🤝",
+            "title": "Host an Event",
+            "description": "Want to bring Fuel & Free Time to your city? Let's build the movement together.",
+            "cta": {
+              "href": "/collaborate",
+              "label": "Collaborate"
+            }
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "card1",
+                "templateKey": "join-card",
+                "enabled": true
+              },
+              {
+                "id": "card2",
+                "templateKey": "join-card",
+                "enabled": true
+              },
+              {
+                "id": "card3",
+                "templateKey": "join-card",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "stories": {
+        "label": "Stories",
+        "sortOrder": 4,
+        "sourceSection": "fnf.community.stories",
+        "fields": [
+          {
+            "key": "heading",
+            "label": "Heading",
+            "type": "text"
+          }
+        ],
+        "blocks": [
+          {
+            "key": "member-story",
+            "label": "Member Story",
+            "max": 12,
+            "fields": [
+              {
+                "key": "quote",
+                "label": "Quote",
+                "type": "textarea"
+              },
+              {
+                "key": "author",
+                "label": "Author",
+                "type": "text"
+              },
+              {
+                "key": "role",
+                "label": "Role",
+                "type": "text"
+              }
+            ],
+            "defaultContent": {
+              "quote": "\"20 years in the service, now every sunrise ride reminds me what I was fighting for. Time is the only real freedom.\"",
+              "author": "Marcus T.",
+              "role": "Veteran Rider"
+            }
+          }
+        ],
+        "defaultContent": {
+          "heading": "Voices Worth Hearing",
+          "story1": {
+            "quote": "\"20 years in the service, now every sunrise ride reminds me what I was fighting for. Time is the only real freedom.\"",
+            "author": "Marcus T.",
+            "role": "Veteran Rider"
+          },
+          "story2": {
+            "quote": "\"Weekend warrior by necessity, but those Saturday morning garage sessions keep me sane. This community gets it.\"",
+            "author": "Sarah K.",
+            "role": "Weekend Warrior"
+          },
+          "story3": {
+            "quote": "\"Just got my first bike at 22. The old heads here taught me it's not about going fast, it's about going far.\"",
+            "author": "Jake R.",
+            "role": "Young Gun"
+          },
+          "__editor": {
+            "blocks": [
+              {
+                "id": "story1",
+                "templateKey": "member-story",
+                "enabled": true
+              },
+              {
+                "id": "story2",
+                "templateKey": "member-story",
+                "enabled": true
+              },
+              {
+                "id": "story3",
+                "templateKey": "member-story",
+                "enabled": true
+              }
+            ]
+          }
+        }
+      },
+      "social": {
+        "label": "Social",
+        "sortOrder": 5,
+        "sourceSection": "fnf.community.social",
+        "fields": [
+          {
+            "key": "heading",
+            "label": "Heading",
+            "type": "text"
+          },
+          {
+            "key": "hashtag",
+            "label": "Hashtag",
+            "type": "text"
+          },
+          {
+            "key": "cta.href",
+            "label": "Cta Href",
+            "type": "link"
+          },
+          {
+            "key": "cta.label",
+            "label": "Cta Label",
+            "type": "text"
+          }
+        ],
+        "defaultContent": {
+          "heading": "Share Your Story",
+          "hashtag": "#FuelAndFreeTime #TimeIsTheRealFlex",
+          "cta": {
+            "href": "/collaborate",
+            "label": "Tag Us In Your Journey"
+          }
+        }
+      }
+    }
   },
   collaborate: {
     title: "Collaborate",
@@ -705,7 +1863,7 @@ export const PAGE_REGISTRY = {
         ],
         defaultContent: {
           eyebrow: "Build something worth remembering",
-          headline: "Collaborate with Ember Supply",
+          headline: "Collaborate with Fuel & Free Time",
           intro:
             "Partnerships should feel earned, useful, and real. We are open to aligned brands, makers, events, creators, retailers, and community projects that respect the hours people put in.",
         },
@@ -733,7 +1891,7 @@ export const PAGE_REGISTRY = {
             "Garage nights, rides, launches, pop-ups, fundraisers, and experiences built around people instead of impressions.",
           retailTitle: "Retail & Wholesale",
           retailBody:
-            "Thoughtful retail relationships for shops and spaces that understand the Ember Supply customer.",
+            "Thoughtful retail relationships for shops and spaces that understand the Fuel & Free Time customer.",
           creatorTitle: "Creators & Stories",
           creatorBody:
             "Photography, film, editorial, machines, craft, travel, and earned-time stories that fit the world we are building.",
@@ -771,7 +1929,7 @@ export const PAGE_REGISTRY = {
           eyebrow: "Store policies",
           headline: "Straightforward by design",
           intro:
-            "This page is the working policy baseline for the Ember Supply storefront. Product-specific notices and checkout terms can add detail where needed.",
+            "This page is the working policy baseline for the Fuel & Free Time storefront. Product-specific notices and checkout terms can add detail where needed.",
         },
       },
       policy: {
@@ -820,9 +1978,9 @@ export const PAGE_REGISTRY = {
         ],
         defaultContent: {
           eyebrow: "Store terms",
-          headline: "Terms for using the Ember Supply storefront",
+          headline: "Terms for using the Fuel & Free Time storefront",
           intro:
-            "These terms provide a practical baseline for browsing the site and purchasing goods from Ember Supply. Product, checkout, promotion, and fulfillment notices shown at the time of purchase also apply.",
+            "These terms provide a practical baseline for browsing the site and purchasing goods from Fuel & Free Time. Product, checkout, promotion, and fulfillment notices shown at the time of purchase also apply.",
         },
       },
       terms: {
@@ -853,7 +2011,7 @@ export const PAGE_REGISTRY = {
             "Do not misuse the site, attempt unauthorized access, interfere with store operations, scrape protected account information, submit fraudulent orders, or use the storefront in a way that violates applicable law or the rights of others.",
           ipTitle: "Brand & Content",
           ipBody:
-            "Ember Supply names, marks, artwork, photography, product designs, copy, and other original storefront materials remain protected by their applicable intellectual-property rights unless a different license is expressly stated.",
+            "Fuel & Free Time names, marks, artwork, photography, product designs, copy, and other original storefront materials remain protected by their applicable intellectual-property rights unless a different license is expressly stated.",
           availabilityTitle: "Availability & Service",
           availabilityBody:
             "Inventory, product details, site features, and third-party services can change. We work to keep storefront information accurate, but temporary outages, fulfillment changes, supplier updates, and technical errors can occur.",
@@ -866,6 +2024,37 @@ export const PAGE_REGISTRY = {
   },
 };
 
+// Revise pages are native CMS documents, not generated HTML or a parallel store.
+// Use the same portable preset schemas the renderer and editor already share.
+// Do not override legacy Home/Shop or promote any draft to published.
+const reviseMediaUrls = Object.fromEntries(Object.entries(reviseMediaMap)
+  .map(([key, media]) => [key, media.url]));
+for (const page of reviseSite.pages) {
+  if (page.id === "home" || PAGE_REGISTRY[page.id]) continue;
+  const sections = Object.fromEntries(page.sections.map((section, index) => {
+    const preset = "revise-atlas/" + section.preset.split("/")[1];
+    const schema = reviseAtlas.schema(preset);
+    const content = reviseAtlas.fromSiteSection(section, reviseMediaUrls);
+    if (!schema || !content) throw new Error("Revise CMS preset unavailable: " + preset);
+    return [section.id, {
+      label: schema.label,
+      sortOrder: index * 10,
+      sourceSection: section.id,
+      fields: schema.fields,
+      blocks: schema.blocks,
+      settings: schema.settings,
+      capabilities: schema.capabilities,
+      guardrails: schema.guardrails,
+      defaultContent: content
+    }];
+  }));
+  PAGE_REGISTRY[page.id] = {
+    title: page.title,
+    defaultStatus: "draft",
+    sections
+  };
+}
+
 export const PAGE_SLUGS = Object.keys(PAGE_REGISTRY);
 
 export function getRegistryPage(slug) {
@@ -875,7 +2064,7 @@ export function getRegistryPage(slug) {
     .map(([key, sec]) => ({
       key,
       sort_order: sec.sortOrder,
-      status: "published",
+      status: def.defaultStatus || "published",
       content: structuredClone(sec.defaultContent),
       updated_at: null,
     }))
@@ -884,7 +2073,7 @@ export function getRegistryPage(slug) {
   return {
     slug,
     title: def.title,
-    status: "published",
+    status: def.defaultStatus || "published",
     sections,
     source: "registry",
   };
@@ -894,7 +2083,7 @@ export function listRegistryPages() {
   return PAGE_SLUGS.filter((s) => s !== "site").map((slug) => ({
     slug,
     title: PAGE_REGISTRY[slug].title,
-    status: "published",
+    status: PAGE_REGISTRY[slug].defaultStatus || "published",
     section_count: Object.keys(PAGE_REGISTRY[slug].sections).length,
     updated_at: null,
     source: "registry",

@@ -1,0 +1,37 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "agentsam-workbench",
+  "name": "AgentSam Workbench",
+  "role": "embedded-package",
+  "package": "@inneranimalmedia/agentsam-workbench",
+  "modes": [
+    "embedded"
+  ],
+  "surfaces": [
+    "mini-composer",
+    "resource-inspector",
+    "media-workbench"
+  ],
+  "provides": [
+    "agentsam.composer.mount",
+    "agentsam.resource.select",
+    "agentsam.composer.capabilities",
+    "agentsam.composer.attachments"
+  ],
+  "requires": [
+    "agentsam.runtime.send",
+    "agentsam.resource.authorize"
+  ],
+  "optional": [
+    "agentsam.voice",
+    "agentsam.generation.mount"
+  ],
+  "features": [
+    "agentsam.mini-composer"
+  ],
+  "runtime": {
+    "browser": "ready",
+    "framework": "agnostic"
+  },
+  "notes": "Portable browser interaction kit for contextual miniAgentSam and reusable workbench primitives. Hosts own resource discovery, authorization and transport. This package does not own the full AgentSam Chat/Work application or the persistent AgentSam Side Assistant."
+}

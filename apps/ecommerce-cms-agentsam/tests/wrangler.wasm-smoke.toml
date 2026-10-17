@@ -1,0 +1,9 @@
+name = "ecommerce-wasm-smoke-local"
+main = "./fixtures/worker-image-smoke.mjs"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = true

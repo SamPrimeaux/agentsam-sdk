@@ -67,6 +67,15 @@ export async function listTeamMembers(env, user) {
   });
 }
 
+const INVITE_ROLE_RANK = { viewer: 1, member: 2, admin: 3, owner: 4 };
+
+/** A role may only be granted by someone at or above it, and only these four roles exist. */
+export function canGrantRole(inviterRole, targetRole) {
+  const target = INVITE_ROLE_RANK[String(targetRole || "").toLowerCase()];
+  const inviter = INVITE_ROLE_RANK[String(inviterRole || "").toLowerCase()] || 0;
+  return Boolean(target) && target <= inviter;
+}
+
 export async function inviteTeamMember(request, env, user) {
   const denied = requireAdmin(user);
   if (denied) return denied;
@@ -82,7 +91,14 @@ export async function inviteTeamMember(request, env, user) {
   }
 
   const email = String(body.email).trim().toLowerCase();
-  const role = String(body.role || "member").toLowerCase();
+  const password = String(body.password);
+  const role = String(body.role || "member").trim().toLowerCase();
+  if (!INVITE_ROLE_RANK[role]) {
+    return Response.json({ error: "invalid_role" }, { status: 400 });
+  }
+  if (!canGrantRole(user.role, role)) {
+    return Response.json({ error: "role_not_grantable" }, { status: 403 });
+  }
   const displayName = String(body.display_name || body.name || email.split("@")[0]).trim();
   const localPart = slugifyLocalPart(body.mailbox_local || body.local_part || displayName.split(" ")[0]);
   const mailboxLabel = String(body.mailbox_label || displayName).trim();
@@ -90,15 +106,19 @@ export async function inviteTeamMember(request, env, user) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return Response.json({ error: "Invalid login email" }, { status: 400 });
   }
-  if (body.password.length < 8) {
+  if (password.length < 8) {
     return Response.json({ error: "Password must be at least 8 characters" }, { status: 400 });
   }
   if (!localPart) {
     return Response.json({ error: "mailbox_local required" }, { status: 400 });
   }
 
-  const { hash, salt } = await hashPassword(body.password);
-  const id = newAuthUserId();
+  // An invite creates a person. It must never rewrite someone who already exists.
+  const existingUser = await env.DB.prepare(`SELECT id FROM auth_users WHERE email = ?`).bind(email).first();
+  if (existingUser) {
+    return Response.json({ error: "user_already_exists" }, { status: 409 });
+  }
+
   const { getCompanyDomain } = await import("../lib/company.js");
   const domain = await getCompanyDomain(env);
   if (!domain) {
@@ -113,72 +133,39 @@ export async function inviteTeamMember(request, env, user) {
     return Response.json({ error: `${address} already exists` }, { status: 409 });
   }
 
-  await env.DB.prepare(
-    `INSERT INTO auth_users (
-       id, email, name, password_hash, salt, role, display_name,
-       default_account_id, is_verified, verified_at, status, timezone, account_type, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, unixepoch(), 'active', 'America/Chicago', 'human', datetime('now'))
-     ON CONFLICT(email) DO UPDATE SET
-       password_hash = excluded.password_hash,
-       salt = excluded.salt,
-       role = excluded.role,
-       name = excluded.name,
-       display_name = excluded.display_name,
-       default_account_id = excluded.default_account_id,
-       updated_at = datetime('now')`
-  )
-    .bind(
-      id,
-      email,
-      displayName,
-      hash,
-      salt,
-      role,
-      displayName,
-      accountId
-    )
-    .run();
-
-  const userRow = await env.DB.prepare(`SELECT id FROM auth_users WHERE email = ?`).bind(email).first();
-  const userId = userRow?.id || id;
-
-  await env.DB.prepare(
-    `INSERT INTO account_memberships (account_id, user_id, role)
-     VALUES (?, ?, ?)
-     ON CONFLICT(account_id, user_id) DO UPDATE SET role = excluded.role`
-  )
-    .bind(accountId, userId, role)
-    .run();
-
+  const { hash, salt } = await hashPassword(password);
+  const id = newAuthUserId();
   const mailboxId = `mb_${localPart}`;
 
-  await env.DB.prepare(
-    `INSERT INTO mail_mailboxes (
-       id, address, label, kind, owner_name, owner_auth_email, owner_user_id,
-       resend_from_name, access_json, sort_order
-     ) VALUES (?, ?, ?, 'personal', ?, ?, ?, ?, '{}', 100)
-     ON CONFLICT(id) DO UPDATE SET
-       address = excluded.address,
-       label = excluded.label,
-       owner_name = excluded.owner_name,
-       owner_auth_email = excluded.owner_auth_email,
-       owner_user_id = excluded.owner_user_id,
-       resend_from_name = excluded.resend_from_name`
-  )
-    .bind(
-      mailboxId,
-      address,
-      mailboxLabel,
-      displayName,
-      email,
-      userId,
-      displayName
-    )
-    .run();
+  // One atomic batch: the user, the membership and the mailbox all exist, or none do.
+  try {
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO auth_users (
+           id, email, name, password_hash, salt, role, display_name,
+           default_account_id, is_verified, verified_at, status, timezone, account_type, updated_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, unixepoch(), 'active', 'America/Chicago', 'human', datetime('now'))`
+      ).bind(id, email, displayName, hash, salt, role, displayName, accountId),
+      env.DB.prepare(`INSERT INTO account_memberships (account_id, user_id, role) VALUES (?, ?, ?)`).bind(
+        accountId,
+        id,
+        role
+      ),
+      env.DB.prepare(
+        `INSERT INTO mail_mailboxes (
+           id, address, label, kind, owner_name, owner_auth_email, owner_user_id,
+           resend_from_name, access_json, sort_order
+         ) VALUES (?, ?, ?, 'personal', ?, ?, ?, ?, '{}', 100)`
+      ).bind(mailboxId, address, mailboxLabel, displayName, email, id, displayName),
+    ]);
+  } catch (err) {
+    console.error("team_invite_failed:", String((err && err.message) || err));
+    return Response.json({ error: "invite_failed" }, { status: 409 });
+  }
 
   return Response.json({
     ok: true,
-    user_id: userId,
+    user_id: id,
     email,
     mailbox: address,
     message: `Invited ${displayName}. Login: ${email} · Inbox: ${address}`,

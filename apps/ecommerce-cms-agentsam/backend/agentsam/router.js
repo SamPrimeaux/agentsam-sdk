@@ -3,30 +3,32 @@
  * Prompt/context assembly is handled by prompt-registry + context-cache after routing.
  */
 
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { resolveAIRouting } from "./ai-registry.js";
-import { COMMERCE_ACCOUNT_ID, DRAWER_WORKFLOW_KEYS } from "./constants.js";
+import { DRAWER_WORKFLOW_KEYS } from "./constants.js";
 import { detectBlockedFeatureRequest } from "./feature-gates.js";
 import { formatMcpForPrompt, selectMcpServers } from "./mcp-servers.js";
 import { formatSkillsForPrompt, resolveSkillsForChat } from "./skills.js";
 import { formatToolsForPrompt, selectToolsForChat } from "./tools-registry.js";
+import { adminRouteForPath } from "../lib/route-manifest.js";
 
 const INTENT_RULES = [
   {
     intent: "content",
     re: /\b(copy|write|email|seo|publish|campaign|newsletter|headline|description|blog|caption|subject line|hero copy|product copy|meta description)\b/i,
-    workflow_key: "commerce_content_studio",
+    workflow_key: "fnf_content_studio",
     task_type: "content_generation",
   },
   {
     intent: "creative",
     re: /\b(image|banner|mockup|graphic|photo|visual|hero image|creative|promo|social post|thumbnail|redesign this image|generate.*visual)\b/i,
-    workflow_key: "commerce_creative_studio",
+    workflow_key: "fnf_creative_studio",
     task_type: "image_generation",
   },
   {
     intent: "brand",
     re: /\b(logo|brand|identity|refresh|typography|moodboard|visual identity|brand system|color palette)\b/i,
-    workflow_key: "commerce_brand_refresh",
+    workflow_key: "fnf_brand_refresh",
     task_type: "brand_design",
   },
   {
@@ -44,7 +46,7 @@ const INTENT_RULES = [
   {
     intent: "brainstorm",
     re: /\b(brainstorm|ideas|strategy|roadmap|what should|recommend|plan|next steps|prioritize)\b/i,
-    workflow_key: "commerce_agentsam_chat",
+    workflow_key: "fnf_agentsam_chat",
     task_type: "brainstorm",
   },
 ];
@@ -61,7 +63,7 @@ function parseJson(raw, fallback = null) {
 export function classifyIntent(message, context = {}) {
   const hay = [message, context.page || "", context.slug || "", context.topic || ""].join(" ");
 
-  let best = { intent: "general", score: 0, workflow_key: "commerce_agentsam_chat", task_type: "admin_chat" };
+  let best = { intent: "general", score: 0, workflow_key: "fnf_agentsam_chat", task_type: "admin_chat" };
 
   for (const rule of INTENT_RULES) {
     if (!rule.re.test(hay)) continue;
@@ -89,7 +91,7 @@ async function loadWorkflow(env, workflowKey) {
        WHERE workflow_key = ? AND account_id = ? AND is_active = 1
        LIMIT 1`
     )
-      .bind(workflowKey, COMMERCE_ACCOUNT_ID)
+      .bind(workflowKey, requireApplicationAccountId())
       .first();
   } catch {
     return null;
@@ -129,7 +131,7 @@ export async function routeAgentsamRequest(env, message, context = {}) {
       classification: {
         intent: "general",
         score: 0,
-        workflow_key: "commerce_agentsam_chat",
+        workflow_key: "fnf_agentsam_chat",
         task_type: "admin_chat",
         source: "feature_gate",
       },
@@ -139,11 +141,11 @@ export async function routeAgentsamRequest(env, message, context = {}) {
       mcp_servers: [],
       system_blocks: [],
       ai_routing: resolveAIRouting(
-        { intent: "general", task_type: "admin_chat", workflow_key: "commerce_agentsam_chat" },
+        { intent: "general", task_type: "admin_chat", workflow_key: "fnf_agentsam_chat" },
         message,
         context
       ),
-      account_id: COMMERCE_ACCOUNT_ID,
+      account_id: requireApplicationAccountId(),
     };
   }
 
@@ -173,6 +175,18 @@ export async function routeAgentsamRequest(env, message, context = {}) {
   });
   const mcpServers = selectMcpServers(classification.intent, message);
   const bridgeReady = Boolean(String(env.AGENTSAM_BRIDGE_KEY || "").trim());
+  const contextPage = String(context.page || "");
+  const routePath = (() => {
+    try {
+      if (/^https?:\/\//i.test(contextPage)) return new URL(contextPage).pathname;
+    } catch {
+      /* fall through to path cleanup */
+    }
+    return contextPage.split("?")[0].split("#")[0];
+  })();
+  const adminRoute = adminRouteForPath(routePath);
+  const routeAppId =
+    adminRoute?.owner?.kind === "app" ? adminRoute.owner.id : null;
   const tools = await selectToolsForChat(env, {
     intent: classification.intent,
     message,
@@ -185,6 +199,8 @@ export async function routeAgentsamRequest(env, message, context = {}) {
         : ai_routing.task_type === "image_generation"
           ? "cloudflare"
           : "general",
+    appId: routeAppId,
+    routeContext: adminRoute?.context || null,
   });
 
   const systemBlocks = [
@@ -216,7 +232,7 @@ export async function routeAgentsamRequest(env, message, context = {}) {
     })),
     system_blocks: systemBlocks,
     ai_routing,
-    account_id: COMMERCE_ACCOUNT_ID,
+    account_id: requireApplicationAccountId(),
   };
 }
 
@@ -231,12 +247,12 @@ export async function listDrawerWorkflows(env) {
        WHERE account_id = ? AND is_active = 1
          AND workflow_key IN (${placeholders})
        ORDER BY CASE workflow_key
-         WHEN 'commerce_content_studio' THEN 1
-         WHEN 'commerce_creative_studio' THEN 2
-         WHEN 'commerce_brand_refresh' THEN 3
+         WHEN 'fnf_content_studio' THEN 1
+         WHEN 'fnf_creative_studio' THEN 2
+         WHEN 'fnf_brand_refresh' THEN 3
          ELSE 99 END`
     )
-      .bind(COMMERCE_ACCOUNT_ID, ...DRAWER_WORKFLOW_KEYS)
+      .bind(requireApplicationAccountId(), ...DRAWER_WORKFLOW_KEYS)
       .all();
 
     return (results || []).map((row) => mapWorkflowRow(row));
@@ -267,10 +283,10 @@ export async function listStudioWorkflows(env) {
               risk_level, requires_approval, metadata_json
        FROM agentsam_workflows
        WHERE account_id = ? AND is_active = 1
-         AND workflow_key IN ('commerce_content_studio','commerce_creative_studio','commerce_brand_refresh','commerce_agentsam_chat')
+         AND workflow_key IN ('fnf_content_studio','fnf_creative_studio','fnf_brand_refresh','fnf_agentsam_chat')
        ORDER BY display_name ASC`
     )
-      .bind(COMMERCE_ACCOUNT_ID)
+      .bind(requireApplicationAccountId())
       .all();
 
     return (results || []).map((row) => mapWorkflowRow(row));

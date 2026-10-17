@@ -17,6 +17,9 @@ export default function StudioIcon({
     spark: (
       <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z" />
     ),
+    center: <><circle cx="12" cy="12" r="6" /><path d="M12 2v6m0 8v6M2 12h6m8 0h6" /></>,
+    rotate: <><path d="M20 8a8 8 0 1 0 1 7" /><path d="M20 3v5h-5" /></>,
+    flip: <><path d="M12 3v18M9 6 3 12l6 6m6-12 6 6-6 6" /></>,
     upload: <path d="M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6" />,
     image: (
       <>
