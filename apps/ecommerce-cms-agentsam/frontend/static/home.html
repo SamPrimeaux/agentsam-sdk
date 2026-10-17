@@ -51,7 +51,28 @@ renderShell("/admin/home", `
       <div class="fnf-home-templates__frame"><div class="fnf-home-templates__edge" data-template-scroll="-1" aria-hidden="true"></div><div class="fnf-home-templates__rail" id="home-templates-rail" role="group" aria-label="Creative templates"></div><div class="fnf-home-templates__edge fnf-home-templates__edge--right" data-template-scroll="1" aria-hidden="true"></div></div>
       <p id="home-templates-feedback" class="fnf-home-templates__feedback" role="status" aria-live="polite"></p>
     </section>
-    <section class="fnf-home-operations" aria-labelledby="fnf-home-operations-heading">
+    <section class="fnf-home-discover" aria-labelledby="fnf-home-discover-title">
+      <div class="fnf-home-discover__heading"><div><h2 id="fnf-home-discover-title">Explore products</h2><p>Start creating or find something to build on.</p></div><a href="/admin/products/create">Explore catalog <span aria-hidden="true">↗</span></a></div>
+      <div class="fnf-home-discover__grid">
+        <a class="fnf-home-discover__card fnf-home-discover__card--featured" href="/admin/products/create">
+          <div class="fnf-home-discover__copy"><span class="fnf-home-discover__overline">CREATE</span><h3>Create a product</h3><p>Start with a title, media, and the details that make it yours.</p><span class="fnf-home-discover__action">Create product <span aria-hidden="true">↗</span></span></div>
+          <span class="fnf-home-discover__art fnf-home-discover__art--product" aria-hidden="true"><span></span><span></span><span></span></span>
+        </a>
+        <a class="fnf-home-discover__card fnf-home-discover__card--digital" href="/admin/products/create">
+          <span class="fnf-home-discover__art fnf-home-discover__art--digital" aria-hidden="true"><span></span><span></span></span>
+          <div class="fnf-home-discover__copy"><h3>Digital products</h3><p>Apps, downloadable products and reusable tools.</p><span class="fnf-home-discover__action">Explore <span aria-hidden="true">↗</span></span></div>
+        </a>
+        <a class="fnf-home-discover__card fnf-home-discover__card--physical" href="/admin/products/create">
+          <span class="fnf-home-discover__art fnf-home-discover__art--physical" aria-hidden="true"><span></span><span></span></span>
+          <div class="fnf-home-discover__copy"><h3>Discover products</h3><p>Explore available product options and suppliers.</p><span class="fnf-home-discover__action">Browse catalog <span aria-hidden="true">↗</span></span></div>
+        </a>
+        <a class="fnf-home-discover__card fnf-home-discover__card--compact" href="/admin/store">
+          <span class="fnf-home-discover__art fnf-home-discover__art--theme" aria-hidden="true"><span></span><span></span></span>
+          <div class="fnf-home-discover__copy"><h3>Design your site</h3><p>Pages, themes and brand settings.</p><span class="fnf-home-discover__action">Open store <span aria-hidden="true">↗</span></span></div>
+        </a>
+      </div>
+    </section>
+    <section class="fnf-home-operations" hidden aria-labelledby="fnf-home-operations-heading">
       <div class="fnf-home-operations__heading"><div><h2 id="fnf-home-operations-heading">Store activity</h2><p>Your live operations at a glance</p></div><a href="/admin/products">Manage products <span aria-hidden="true">↗</span></a></div>
       <div class="console-stat-grid" id="home-stats">
         <div class="console-stat-card"><div class="label">Products</div><div class="value">—</div></div>
@@ -71,6 +92,16 @@ renderShell("/admin/home", `
 (async function () {
   try {
     const d = await adminFetch("/api/admin/overview");
+    const storeConfigured = Boolean(
+      d?.store?.configured === true ||
+      d?.store?.installed === true ||
+      d?.store?.active_theme_id ||
+      d?.store_configured === true ||
+      d?.store_installed === true ||
+      d?.active_theme_id
+    );
+    document.querySelector(".fnf-home-operations").hidden = !storeConfigured;
+    if (!storeConfigured) return;
     const cards = document.querySelectorAll("#home-stats .value");
     cards[0].textContent = d.products;
     cards[1].textContent = d.inventory_units;

@@ -99,3 +99,39 @@
   }
   .fnf-home-templates { margin-bottom: 20px; }
 }
+
+/* Discover product actions: existing Home layout and typography, restrained color. */
+.fnf-home-operations[hidden]{display:none!important}
+.fnf-home-discover{max-width:960px;margin:0 auto 28px;min-width:0}
+.fnf-home-discover__heading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:0 0 14px}
+.fnf-home-discover__heading h2{font-size:19px;letter-spacing:-.02em;font-weight:620;margin:0}
+.fnf-home-discover__heading p{font-size:12px;color:var(--home-muted);margin:5px 0 0}
+.fnf-home-discover__heading>a{font-size:12px;color:#595464;text-decoration:none;white-space:nowrap}
+.fnf-home-discover__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fnf-home-discover__card{min-width:0;min-height:208px;display:flex;flex-direction:column;overflow:hidden;position:relative;padding:0;border:1px solid var(--home-line);border-radius:14px;background:white;color:var(--home-ink);text-decoration:none;transition:border-color .16s,box-shadow .16s,transform .16s}
+.fnf-home-discover__card:hover{border-color:#c8bed9;box-shadow:0 9px 25px #31243a0d;transform:translateY(-2px)}
+.fnf-home-discover__card:focus-visible{outline:2px solid #8260ae;outline-offset:2px}
+.fnf-home-discover__card--featured{grid-column:span 2;display:grid;grid-template-columns:minmax(0,1fr) 45%;background:#f0f4f0}
+.fnf-home-discover__copy{padding:16px;display:flex;flex:1;align-items:flex-start;flex-direction:column}
+.fnf-home-discover__copy h3{font-size:14px;font-weight:650;letter-spacing:-.01em;margin:0 0 6px}
+.fnf-home-discover__copy p{font-size:11px;line-height:1.5;color:#77717d;margin:0;max-width:26ch}
+.fnf-home-discover__overline{font-size:9px;font-weight:700;letter-spacing:.12em;color:#687d68;margin-bottom:15px}
+.fnf-home-discover__action{margin-top:auto;padding-top:18px;font-size:11px;font-weight:650}
+.fnf-home-discover__art{height:100px;display:flex;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden;background:#f3f2f7}
+.fnf-home-discover__card--featured .fnf-home-discover__art{height:auto;background:linear-gradient(135deg,#edf3ee,#e4e9f4)}
+.fnf-home-discover__art--product span{height:110px;width:75px;border-radius:13px;background:#fff;box-shadow:0 9px 24px #313d4730;transform:rotate(-13deg)}
+.fnf-home-discover__art--product span:nth-child(2){background:#bdd8cc;transform:rotate(9deg) translate(-12px,12px)}
+.fnf-home-discover__art--product span:nth-child(3){background:#9d95ca;transform:rotate(-9deg) translate(-23px,-9px)}
+.fnf-home-discover__art--digital{background:linear-gradient(135deg,#ede9ff,#d8e5ff)}
+.fnf-home-discover__art--digital span{height:54px;width:66px;border:1px solid #aaa4d9;background:#fff;border-radius:9px;box-shadow:0 8px 15px #6861b333;transform:rotate(-10deg)}
+.fnf-home-discover__art--digital span:nth-child(2){background:#a797ed;transform:rotate(10deg) translate(-19px,7px)}
+.fnf-home-discover__art--physical{background:linear-gradient(135deg,#f7efe6,#ecd9c9)}
+.fnf-home-discover__art--physical span{width:55px;height:55px;background:#b98870;border-radius:14px 14px 20px 20px;transform:rotate(-12deg);box-shadow:0 10px 15px #80523e2c}
+.fnf-home-discover__art--physical span:nth-child(2){background:#ead1b0;transform:rotate(12deg) translate(-5px,0)}
+.fnf-home-discover__card--compact{min-height:182px;grid-column:span 3;display:grid;grid-template-columns:180px 1fr}
+.fnf-home-discover__art--theme{height:100%;background:#e8f0e8;gap:0}
+.fnf-home-discover__art--theme span{width:90px;height:66px;border:5px solid white;border-radius:8px;background:#c7dbc7;box-shadow:0 6px 13px #67806f29;transform:translateX(15px)}
+.fnf-home-discover__art--theme span:nth-child(2){background:#fff;transform:translateX(-24px) translateY(17px);height:52px}
+@media(max-width:700px){.fnf-home-discover__grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fnf-home-discover__card--featured,.fnf-home-discover__card--compact{grid-column:span 2}.fnf-home-discover__card--featured{grid-template-columns:1fr 40%}}
+@media(max-width:450px){.fnf-home-discover__grid{grid-template-columns:minmax(0,1fr)}.fnf-home-discover__card--featured,.fnf-home-discover__card--compact{grid-column:1}.fnf-home-discover__card--compact{grid-template-columns:110px 1fr}.fnf-home-discover__card{min-height:170px}}
+@media(prefers-reduced-motion:reduce){.fnf-home-discover__card{transition:none}}
