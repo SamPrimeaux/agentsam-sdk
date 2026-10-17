@@ -89,7 +89,6 @@ export function createGeneratedSamOperations({
       });
       continue;
     }
-    if (getSamOperation?.(record.name)) { installed.push({ name: record.name, status: 'existing' }); continue; }
     const operation = defineSamOperation({
       id: record.name, version: 1, module: record.name.split('.')[0],
       action: record.name.split('.').slice(1).join('.'),
