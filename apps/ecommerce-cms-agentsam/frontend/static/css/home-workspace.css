@@ -229,3 +229,14 @@
 .fnf-home-create-hero__scene:has(.fnf-home-create-hero__tile) .fnf-home-create-hero__empty{display:none}
 @media(max-width:700px){.fnf-home-create-hero{grid-template-columns:minmax(0,1fr) 44%}.fnf-home-create-hero__copy{padding:17px 0 17px 17px}.fnf-home-create-hero__copy h3{font-size:21px}}
 @media(max-width:450px){.fnf-home-create-hero{grid-template-columns:minmax(0,1fr) 41%}.fnf-home-create-hero__copy h3{font-size:18px}.fnf-home-create-hero__copy p{font-size:10px}.fnf-home-create-hero__action{padding:7px 9px}}
+
+/* Two purposeful browse entries; no redundant third supplier card. */
+.fnf-home-discover__card--featured,
+.fnf-home-discover__card--experience{grid-column:1/-1}
+.fnf-home-discover__card--featured{grid-template-columns:minmax(0,1fr) 48%}
+.fnf-home-discover__card--experience{grid-template-columns:minmax(0,1fr) 50%}
+@media(max-width:700px){
+ .fnf-home-discover__card--featured,.fnf-home-discover__card--experience{grid-column:1/-1}
+ .fnf-home-discover__card--experience{grid-template-columns:minmax(0,1fr) 50%}
+ .fnf-home-discover__glass{height:100%;order:0}
+}
