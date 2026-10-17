@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clay Site Blueprint</title>
+<style>
+:root{--bg:#f4f4f2;--ink:#1f1f1f;--mut:#666;--line:#a8a8a4;--fill:#e4e4e0;--hatch:#d3d3ce;--acc:#c2410c;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 ui-sans-serif,system-ui,sans-serif}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.w{max-width:1080px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:24px;margin:0 0 4px}h2{font-size:18px;margin:48px 0 4px;padding-top:16px;border-top:2px solid var(--ink)}h3{font-size:14px;margin:0 0 4px}
+.sub{color:var(--mut);margin:0 0 16px}
+.note{background:#fff7ed;border-left:3px solid var(--acc);padding:8px 12px;margin:12px 0;font-size:13px}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:800px){.g2,.g3{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);padding:12px}
+.spec{font-size:12px;color:var(--mut);margin-top:8px}
+.spec b{color:var(--ink)}
+/* wire primitives */
+.f{background:#fff;border:1px solid var(--line);padding:8px;position:relative}
+.im{background:repeating-linear-gradient(45deg,var(--fill),var(--fill) 6px,var(--hatch) 6px,var(--hatch) 7px);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:10px;color:#555;text-align:center}
+.im span{background:#fff;padding:1px 5px;border:1px solid var(--line)}
+.hd{height:12px;background:#444;margin-bottom:5px}.ln{height:5px;background:var(--fill);margin-bottom:4px}
+.dark{background:#0d0d0d;border-color:#444}.dark .hd{background:#ddd}.dark .ln{background:#444}.dark .im{background:repeating-linear-gradient(45deg,#2a2a2a,#2a2a2a 6px,#333 6px,#333 7px);color:#aaa}.dark .im span{background:#111;border-color:#555}
+.r{display:flex;gap:6px}.r>*{flex:1}
+.tag{display:inline-block;background:var(--ink);color:#fff;font-size:10px;padding:0 6px;border-radius:8px;margin-right:4px}
+table{border-collapse:collapse;width:100%;font-size:12.5px;background:#fff}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}th{background:var(--fill)}
+/* recipe strips */
+.strips{display:flex;gap:18px;align-items:flex-start;overflow-x:auto;padding:12px;background:#fff;border:1px solid var(--line)}
+.strip{flex:0 0 130px}.strip h3{font-size:12px;text-align:center}
+.strip .col{display:flex;flex-direction:column;gap:2px}
+.blk{font-size:9px;line-height:1.1;color:#fff;padding:2px 3px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;border:1px solid rgba(0,0,0,.25)}
+.lg{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;font-size:12px}.lg i{display:inline-block;width:12px;height:12px;vertical-align:-2px;margin-right:4px}
+ul{margin:6px 0;padding-left:20px}li{margin-bottom:3px}
+code{background:var(--fill);padding:0 4px;font-size:12px}
+.slot{border:1px dashed var(--acc);padding:8px;margin-bottom:8px;background:#fff}
+</style></head><body><div class="w">
+
+<h1>Clay site blueprint: case studies + services</h1>
+<p class="sub">Layout and structure library from clay.global, measured on desktop. Structure only; no content from Clay is reproduced. Ready for your own builds to be slotted in.</p>
+<div class="note"><b>Scope.</b> Case studies measured at 1280px: Sky, Slack, Meta, Eden, Nuant, plus the /work index. Marqeta (section 7) and the Services page (section 8) were measured at 1440px. Discover appears in the recipes from your pasted notes (914px viewport, not re-measured by me). Snapchat I only saw at phone width. Wealth, Grayscale, Serena &amp; Lily, Joe &amp; the Juice and Lulo were not analyzed because my measurement script was blocked on them. Mobile layouts were not measured.</div>
+
+<h2>1. The work index (/work)</h2>
+<p class="sub">Filter row, then a staggered grid. Each card is image + name + one-line description.</p>
+<div class="grid g2">
+<div class="card"><div class="f" style="background:#fafafa">
+<div class="hd" style="width:55%;height:16px"></div>
+<div class="r mono" style="font-size:10px;margin:6px 0 10px;flex:none;gap:12px"><span>● All Work 39</span><span>Digital Products 16</span><span>Websites 21</span><span>Branding 11</span></div>
+<div class="im" style="height:110px;width:82%;margin-left:10%"><span>WIDE card · ~984×678 · offset</span></div><div class="ln" style="width:30%;margin:4px 10%"></div>
+<div class="r" style="margin-top:10px;align-items:flex-start"><div><div class="im" style="height:100px"><span>~501×625</span></div><div class="ln" style="width:50%;margin-top:4px"></div></div><div style="margin-top:22px"><div class="im" style="height:120px"><span>~501×750</span></div><div class="ln" style="width:50%;margin-top:4px"></div></div></div>
+<div class="im" style="height:110px;width:82%;margin:10px 0 0 10%"><span>WIDE card again</span></div></div></div>
+<div class="card"><h3>Rules</h3><ul>
+<li><b>Page title:</b> one-line promise ("We bring your boldest ideas to life"), no hero image.</li>
+<li><b>Filter:</b> All / Digital Products / Websites / Branding, each with a count.</li>
+<li><b>Grid rhythm:</b> wide card, then a pair, then wide, repeating. In the pair, the left card is shorter (~625) and the right is taller (~750) and shifted down, so the columns never align.</li>
+<li><b>Card:</b> media on top (image or looping video), client name, one sentence stating the deliverable ("Web redesign for…", "Brand identity for…").</li>
+<li>Whole card is the link. 37 case studies, no pagination seen.</li></ul></div></div>
+
+<h2>2. Anatomy of every case study</h2>
+<p class="sub">All five measured pages follow the same skeleton. Only the middle changes.</p>
+<div class="card"><div class="grid g3" style="grid-template-columns:repeat(3,1fr)">
+<div><span class="tag">1</span><b>Hero</b><br>Name as H1 (64px), one-line subtitle stating the deliverable, then a ~712px full-bleed image or video.</div>
+<div><span class="tag">2</span><b>Intro split</b><br>Left: 1–2 paragraphs on client and brief (~446px wide). Right: list of services delivered (4–6 items, ~266px).</div>
+<div><span class="tag">3</span><b>Chapters ×7–20</b><br>Each is a short heading, one paragraph, and one media block, or a media-only follow-up beat.</div>
+<div><span class="tag">4</span><b>Breaker</b><br>Full-bleed image with no text, a final visual before leaving.</div>
+<div><span class="tag">5</span><b>Next case study</b><br>Label, client name, full-bleed preview. The entire block is one link. This is the only built-in exit.</div>
+<div><span class="tag">+</span><b>Global</b><br>Header is just logo + Contact pill + menu. No in-page nav, no progress bar, no metrics strip, no testimonial block seen in the measured pages.</div>
+</div></div>
+
+<h2>3. Type and spacing (desktop)</h2>
+<table><tr><th>Element</th><th>Measured</th></tr>
+<tr><td>H1</td><td>64px / 70px at 1280 wide, 74px / 81px at 1440 wide (it steps up by breakpoint), weight ~740. H2 stays 52px / 57px at both.</td></tr>
+<tr><td>H2 (chapter heading)</td><td>52px / 57px, weight ~740, left-aligned at ~6% margin</td></tr>
+<tr><td>Body paragraph</td><td>22px / ~30px, weight ~500, column ~446–500px (about 35–39% of width)</td></tr>
+<tr><td>Side margin</td><td>~72–75px (~6%) for text and inset media; full-bleed media at ~99%</td></tr>
+<tr><td>Chapter height</td><td>Typically 1,000–1,400px (header + paragraph + one media block)</td></tr>
+<tr><td>Copy per chapter</td><td>1 paragraph, ~140–300 characters; occasionally 2</td></tr>
+<tr><td>Heading style</td><td>2–5 word noun phrase ("Custom Iconography", "Optimized for Every Screen")</td></tr></table>
+
+<h2>4. Module library</h2>
+<p class="sub">Eight media layouts under the same text header, plus the structural modules. Every chapter is one text header + one of these.</p>
+<div class="grid g3">
+
+<div class="card"><h3>M1 · Hero</h3><div class="f"><div class="hd" style="width:25%;height:16px"></div><div class="ln" style="width:45%"></div><div class="im" style="height:70px;margin-top:6px"><span>full-bleed 99% × ~712</span></div></div><div class="spec"><b>Slots:</b> name, deliverable line, hero media (image or video).</div></div>
+
+<div class="card"><h3>M2 · Intro split</h3><div class="f r"><div style="flex:1.7"><div class="ln"></div><div class="ln"></div><div class="ln" style="width:70%"></div><div class="ln" style="margin-top:8px"></div><div class="ln" style="width:55%"></div></div><div><div class="ln" style="background:#444;width:70%"></div><div class="ln" style="background:#444;width:55%"></div><div class="ln" style="background:#444;width:65%"></div><div class="ln" style="background:#444;width:50%"></div></div></div><div class="spec"><b>Slots:</b> 1–2 brief paragraphs, 4–6 services.</div></div>
+
+<div class="card"><h3>M3 · Full-bleed</h3><div class="f"><div class="hd" style="width:45%"></div><div class="ln" style="width:55%"></div><div class="im" style="height:60px;margin:6px -8px -8px"><span>99% × 712–791</span></div></div><div class="spec"><b>Use:</b> hero shots, big moments, light/dark comparisons. Most common layout.</div></div>
+
+<div class="card"><h3>M4 · Inset</h3><div class="f"><div class="hd" style="width:45%"></div><div class="ln" style="width:55%"></div><div class="im" style="height:60px;margin:6px 6% 0"><span>87% × 627–697</span></div></div><div class="spec"><b>Use:</b> a single UI screenshot or poster that needs breathing room.</div></div>
+
+<div class="card"><h3>M5 · Two-up</h3><div class="f"><div class="hd" style="width:45%"></div><div class="ln" style="width:55%"></div><div class="r" style="margin:6px 6% 0"><div class="im" style="height:70px"><span>43% × 550</span></div><div class="im" style="height:70px"><span>43% × 550</span></div></div></div><div class="spec"><b>Use:</b> before/after, two states, two screens. Equal halves.</div></div>
+
+<div class="card"><h3>M6 · Offset single</h3><div class="f"><div class="hd" style="width:45%"></div><div class="ln" style="width:55%"></div><div class="im" style="height:60px;margin:6px 0 0 42%"><span>51% × 439–652, right-aligned</span></div></div><div class="spec"><b>Use:</b> a supporting visual that pairs with the paragraph above. Leaves white space on the left.</div></div>
+
+<div class="card"><h3>M7 · Desktop + mobile pair</h3><div class="f"><div class="hd" style="width:45%"></div><div class="ln" style="width:55%"></div><div class="r" style="margin:6px 6% 0;align-items:flex-end;gap:5%"><div class="im" style="height:70px;flex:2"><span>58% × 741</span></div><div class="im" style="height:45px;flex:1"><span>28% × 358</span></div></div></div><div class="spec"><b>Use:</b> responsive proof, same screen at two sizes.</div></div>
+
+<div class="card"><h3>M8 · Mosaic</h3><div class="f"><div class="hd" style="width:45%"></div><div class="ln" style="width:55%"></div><div class="r" style="margin:6px 6% 0"><div style="display:flex;flex-direction:column;gap:4px"><div class="im" style="height:33px"><span>43×369</span></div><div class="im" style="height:33px"><span>43×369</span></div></div><div class="im" style="height:70px"><span>43 × 754 tall</span></div></div></div><div class="spec"><b>Use:</b> two small assets stacked against one tall one. Good for logo + icon + app screen.</div></div>
+
+<div class="card"><h3>M9 · Carousel</h3><div class="f"><div class="hd" style="width:45%"></div><div class="ln" style="width:55%"></div><div style="display:flex;gap:6px;margin:6px -8px 0;overflow:hidden"><div class="im" style="height:60px;flex:0 0 62%"><span>78–80% wide slide</span></div><div class="im" style="height:60px;flex:0 0 62%"><span>next</span></div></div></div><div class="spec"><b>Use:</b> 3–5 slides, each ~78–80% of viewport, bleeding off the right edge. Captions beneath each slide on some pages. Drag or arrows.</div></div>
+
+<div class="card"><h3>M10 · Continuation beat</h3><div class="f"><div class="ln" style="width:50%"></div><div class="ln" style="width:42%"></div><div class="im" style="height:60px;margin-top:6px"><span>any media layout</span></div></div><div class="spec"><b>No heading.</b> Paragraph + media that continues the chapter above. About 40% of sections are this.</div></div>
+
+<div class="card"><h3>M11 · Breaker</h3><div class="f"><div class="im" style="height:70px;margin:-8px"><span>media only · full-bleed · ~712–791</span></div></div><div class="spec"><b>No text.</b> Appears before the next-case block and mid-page as a pause.</div></div>
+
+<div class="card"><h3>M12 · Dark chapter</h3><div class="f dark"><div class="hd" style="width:45%"></div><div class="ln" style="width:55%"></div><div class="im" style="height:60px;margin-top:6px"><span>same layouts on #050505</span></div></div><div class="spec"><b>Background switch,</b> not a separate layout. Used on Sky and Meta for "universe/night" chapters; any M3–M9 can sit on it.</div></div>
+
+<div class="card"><h3>M13 · Next case study</h3><div class="f" style="background:#efefec"><div class="ln" style="width:25%"></div><div class="hd" style="width:30%;height:16px"></div><div class="im" style="height:60px;margin-bottom:-8px"><span>full-bleed preview · whole block links</span></div></div><div class="spec"><b>Slots:</b> next project name and image. 1,021px tall.</div></div>
+</div>
+
+<h2>5. How the pacing works</h2>
+<div class="card"><ul>
+<li><b>Never the same layout twice in a row.</b> Full-bleed, inset, two-up, offset, pair, carousel, and mosaic rotate. A text header only appears every 1–2 beats.</li>
+<li><b>Zoom-in arc.</b> Overview and challenge first, then system and components, then specific features (dark mode, icons, localization) last.</li>
+<li><b>One idea per chapter.</b> Heading names the idea, paragraph says what you did and why, the media proves it.</li>
+<li><b>Palette cleanser.</b> A text-free full-bleed breaker every 5–8 chapters and again before the exit.</li>
+<li><b>Length scales with the project.</b> Meta is 11 sections, Nuant 10, Slack 13, Eden 16, Sky 24 (about 27,000px). Brand projects run longer because they have more deliverables to show.</li>
+<li><b>Media is a mix</b> of stills and looping video; the same layouts accept either.</li></ul></div>
+
+<h2>6. Page recipes (to scale)</h2>
+<p class="sub">Each column is one page, top to bottom. Block height is proportional to the real section height.</p>
+<div class="lg" id="lg"></div>
+<p class="sub" style="font-size:12px">Left edge stripe = section background (indigo, gray or dark), marked only on Marqeta and Discover; the other pages are mostly white with some dark chapters I didn't mark. *Discover comes from your pasted notes at a 914px viewport, so its heights aren't directly comparable.</p>
+<div class="strips" id="strips"></div>
+
+<h2>7. Marqeta: what it adds to the case-study kit</h2>
+<p class="sub">Measured at 1440px wide: 14,967px tall, 13 sections, same skeleton as the others. The difference is that it themes the page in the client's own color instead of staying white.</p>
+<div class="grid g3">
+<div class="card"><h3>M14 · Themed backgrounds</h3>
+<div class="f" style="padding:0"><div style="height:18px;background:#fff;border-bottom:1px solid var(--line)"></div><div style="height:30px;background:#2a206a"></div><div style="height:30px;background:#f5f5f7;border-bottom:1px solid var(--line)"></div><div style="height:18px;background:#2a206a"></div><div style="height:24px;background:#fff;border-bottom:1px solid var(--line)"></div><div style="height:22px;background:#2a206a"></div></div>
+<div class="spec"><b>Order:</b> white → indigo → light gray → indigo → white → indigo. Colors measured: indigo <code>#2a206a</code> (client brand), gray <code>#f5f5f7</code>, white. Share of page: ~51% white, ~32% indigo, ~17% gray. Headings turn white on indigo.</div></div>
+<div class="card"><h3>M15 · Browser-frame inset</h3>
+<div class="f dark" style="padding:8px 10%"><div style="background:#fff;border-radius:6px;padding:4px"><div class="im" style="height:46px"><span>site screenshot in rounded frame · 87% × ~781</span></div></div></div>
+<div class="spec"><b>Use:</b> full-page website shots on dark chapters. Frame has rounded corners (the page's own images stay square). Two of them sit back to back with a statement line between.</div></div>
+<div class="card"><h3>M16 · Statement block</h3>
+<div class="f dark"><div class="hd" style="width:50%;height:14px"></div><div class="hd" style="width:38%;height:14px"></div><div class="hd" style="width:44%;height:14px"></div></div>
+<div class="spec"><b>Heading only,</b> 52px, no paragraph, ~389px tall, on dark. A pause that states the point of the next screenshots.</div></div>
+<div class="card"><h3>M17 · Text-only block</h3>
+<div class="f"><div class="hd" style="width:35%"></div><div class="ln" style="width:55%"></div><div class="ln" style="width:48%"></div><div class="ln" style="width:30%"></div></div>
+<div class="spec"><b>Heading + paragraph, no media,</b> ~394px. Used right after the big-and-small pair to introduce the next run of screenshots ("The Card Journey").</div></div>
+<div class="card"><h3>Para / media / para / media</h3>
+<div class="f" style="background:#f5f5f7"><div class="hd" style="width:35%"></div><div class="ln" style="width:55%"></div><div class="im" style="height:34px;margin:4px 3%"><span>media</span></div><div class="ln" style="width:50%"></div><div class="ln" style="width:35%"></div><div class="im" style="height:34px;margin:4px 3%"><span>media</span></div></div>
+<div class="spec"><b>Light-gray chapter</b> (~2,400px): heading, paragraph, 89%-wide media (717px), a second paragraph, a second media. One idea told in two beats.</div></div>
+<div class="card"><h3>Hero and ending notes</h3>
+<ul style="font-size:12px;margin:0"><li><b>Hero (1,680px):</b> full-bleed 802px image, then a 3-paragraph intro with 5 services (Web Design, Content, Interaction Design, 3D Design, Development) and a link to the client's own site.</li>
+<li><b>Big + small pair:</b> 59% photo (1,090 tall) next to a 29% tall tile (657).</li>
+<li><b>Carousel:</b> 5 slides at 79% × 715, with arrow buttons top-right and a caption under each slide.</li>
+<li><b>Last chapter:</b> narrow mobile (20%) beside a wide desktop (91%) scroller.</li></ul></div>
+</div>
+<div class="note"><b>3D on this page:</b> there is no 3D layer in the body. The 3D objects are baked into the screenshots and videos. The only live canvas is the footer helix, the same one used on the services page. <b>Take-away for your case studies:</b> pick one brand color per project, use it for the dark chapters, and alternate white, tint and brand-color sections.</div>
+
+<h2>8. Services page (/services)</h2>
+<p class="sub">Measured at 1440px wide. Scale drawing on the left (about 0.32×); specs on the right. Hatched boxes = photographs/mockups, soft ellipses = the 3D (GLB) objects.</p>
+<div class="sv" style="display:grid;grid-template-columns:464px 1fr;gap:20px;align-items:start">
+<div id="svc" style="position:relative;width:460px;height:2463px;border:2px solid var(--ink);background:#fff;overflow:hidden;flex:none"></div>
+<div>
+<div class="card"><h3>Size and scroll</h3><ul>
+<li><b>Page height:</b> 7,713px at 1440 wide (about 8.6 screens at 900px tall). It's 3 blocks plus the header: hero, services list, industries, then the footer inside the last block.</li>
+<li><b>Hero:</b> 641px (0.7 screen), text only.</li>
+<li><b>Services list:</b> 4,432px for 5 services, ~918px each (about one screen per service).</li>
+<li><b>Industries:</b> 1,919px (about 2 screens).</li>
+<li><b>Footer:</b> 641px.</li>
+<li>Widths change the numbers: your own 1054px measure gave 7,086px.</li></ul></div>
+<div class="card" style="margin-top:12px"><h3>White vs dark balance</h3><ul>
+<li><b>Light:</b> hero 641 + services 4,432 + footer 641 = 5,714px (74%). <b>Dark:</b> Industries only, 1,919px (25%).</li>
+<li>One hard cut to dark at y=5,154 (67% down the page), colour <code>#171921</code>. After the dark block the footer returns to light gray.</li>
+<li>Nothing else on the page is dark or tinted, so all colour comes from the photographs.</li></ul></div>
+<div class="card" style="margin-top:12px"><h3>Titles and text</h3><ul>
+<li><b>H1:</b> "A full-service digital innovation partner", 74px / 81px, left at 5%, about 46% wide, two lines. Subtitle 28px / 39px, 39% wide, two lines.</li>
+<li><b>Service row:</b> H2 52px / 57px, paragraph 22px / 30px (about 260 characters, 5 lines), then a list of 6 service names in bold 22px-ish smaller type, stacked, no bullets.</li>
+<li>Text column is 36% wide. Paragraph and list live in the same column under the heading.</li>
+<li><b>Industries:</b> H2 52px, short intro, then 12 two-column rows (label left in white, client names right in muted gray), separated by hairlines. About 120px per row.</li></ul></div>
+<div class="card" style="margin-top:12px"><h3>Branding row, then Digital Products (the mirror)</h3><ul>
+<li><b>Branding:</b> text left (x 5–41%), picture right (x 58–94%, 518×679, a portrait about 3:4). Picture shows the brand in use: a poster in an outdoor frame.</li>
+<li><b>Digital Products:</b> everything flips. Text right (x 58%), picture left (x 5%). Picture is a dashboard UI on a saturated indigo field, cropped at the edge.</li>
+<li>Rows 3 and 5 repeat Branding's side; rows 4 repeat Digital Products' side. Strict left/right alternation, nothing else changes.</li>
+<li>Pictures are square-cornered, with no border, shadow or caption.</li></ul></div>
+<div class="card" style="margin-top:12px"><h3>3D (GLB) objects</h3><ul>
+<li><b>6 canvases:</b> one per service plus one in the footer, each a transparent layer 73% wide × 1050px tall, absolutely positioned behind the content. Models loaded: <code>orbs/branding</code>, <code>flatCircles/digital</code>, <code>squares/websites</code>, <code>doubleCone/content</code>, <code>corners/dev</code>, <code>helix/helix</code> (footer). Two <code>satellites</code> models also load; I didn't see where they appear on this page.</li>
+<li><b>Placement rule:</b> each object sits in the seam above its row, about 90px above the picture's top edge, hovering over the picture's top inner corner. Right-picture rows: centered at ~61% across. Left-picture rows: centered at ~39%. It overlaps the previous row's bottom, so objects tie rows together.</li>
+<li><b>Size:</b> roughly 330 × 420px, so about the width of a quarter of the screen.</li>
+<li><b>Look:</b> pale matte clay-white forms with faint lavender or blue translucency and very soft shadows. Low contrast on white, so text and pictures stay the focus.</li>
+<li><b>Shape per service:</b> branding = cluster of spheres, digital = stack of flat discs, websites = stacked panels/cubes, content = double cone, development = folded corner planes. Footer = a huge helix swoosh across the lower left.</li>
+<li><b>Motion:</b> I only captured still frames. I haven't confirmed whether the objects rotate or react to scroll or mouse; check on the live page.</li></ul></div>
+<div class="card" style="margin-top:12px"><h3>Footer</h3><ul>
+<li>Light gray with the helix swoosh behind it. "Let's Talk" as a large heading with email and phone, left.</li>
+<li>Right: nav in 2 columns (Work, Services, About, Contact | Clients, Industries, Blog), then 6 office addresses in a 3×2 grid.</li>
+<li>Bottom: social icons left, copyright and legal links right.</li></ul></div>
+</div></div>
+
+<h2>9. Briefs for your five images and GLB objects</h2>
+<p class="sub">Derived from the measurements above. Sizes are for a 1440px desktop layout; export at 2×.</p>
+<div class="grid g2">
+<div class="card"><h3>Five pictures (one per service)</h3><ul>
+<li><b>Size:</b> 518×679 displayed. Export at <b>1036×1358</b> (about 3:4 portrait).</li>
+<li><b>Content:</b> your own work shown in use, each in a different medium so the column doesn't look repetitive. Clay's five are an outdoor poster, a cropped dashboard UI, a phone held in a hand, a 3D character photographed on a desk, and an app UI collage.</li>
+<li><b>Colour:</b> one saturated field or a neutral photo per image. The page itself is white, so the pictures carry all the color.</li>
+<li><b>Treatment:</b> square corners, no border, no shadow, no caption, no text overlay.</li>
+<li><b>Order and sides:</b> picture 1 right, 2 left, 3 right, 4 left, 5 right.</li></ul></div>
+<div class="card"><h3>GLB objects (one per service + footer)</h3><ul>
+<li><b>Render:</b> transparent background, camera angled slightly from above, soft contact shadow.</li>
+<li><b>Materials:</b> matte white with a hint of lavender or pearl translucency, no saturated color, so objects never compete with text.</li>
+<li><b>Size:</b> about 330×420px on screen, canvas layer 73% × 1050px.</li>
+<li><b>Position:</b> in the seam above each row, about 90px above the picture's top inner corner, alternating ~61% / ~39% across.</li>
+<li><b>Shape idea per service:</b> one silhouette that hints at the service, kept simple enough to read at small size.</li>
+<li><b>Footer:</b> one oversized, cropped swoosh in light gray, left side, behind the "Let's Talk" block.</li></ul></div>
+</div>
+
+<h2>10. Your content slots</h2>
+<p class="sub">What each case study needs from you, so structure and content can be matched in the next phase.</p>
+<div class="grid g2">
+<div>
+<div class="slot"><b>Hero</b> · project name · one-line deliverable ("Design system for…") · 1 hero visual (≥1600px wide image or short loop)</div>
+<div class="slot"><b>Intro</b> · 1–2 paragraphs: who the client is, the brief · 4–6 services (e.g. Brand, UI/UX, Dev…)</div>
+<div class="slot"><b>Chapters (aim 6–10)</b> · each: 2–5 word heading · 140–300 char paragraph · 1 asset. Mark the layout you want from M3–M9.</div>
+</div><div>
+<div class="slot"><b>Breakers</b> · 1–2 text-free hero-quality visuals</div>
+<div class="slot"><b>Closing</b> · next-case link (auto from your project order) + a primary CTA. Clay only has a header Contact link; you can add a closing CTA or a short result/metric block, which Clay's pages don't show.</div>
+<div class="slot"><b>Per-project decisions</b> · light or dark chapters · which chapter, if any, gets a carousel · which proof shots need a desktop+mobile pair</div>
+</div></div>
+
+<div class="note"><b>Next step options.</b> (a) Give me your projects and I'll assign each to a recipe and draft the chapter outline. (b) I turn modules M1–M13 into reusable TypeScript components with a typed case-study schema (list of chapters, each with layout, heading, body, media). (c) Mid-fidelity wireframes with your real copy.</div>
+
+</div>
+<script>
+const C={HERO:['#444','Hero'],INTRO:['#777','Intro'],FULL:['#2563eb','Full-bleed'],INSET:['#0d9488','Inset'],TWO:['#9333ea','Two-up'],OFF:['#d97706','Offset'],PAIR:['#db2777','Big+small pair'],MOS:['#65a30d','Mosaic'],CAR:['#dc2626','Carousel'],BRK:['#94a3b8','Breaker'],NXT:['#111','Next'],TEXT:['#a16207','Text-only']};
+const R={
+'Nuant (10)':[['HERO',1283],['INSET',1006],['TWO',1072],['FULL',1202],['FULL',918],['CAR',1021],['FULL',729],['BRK',685],['NXT',926]],
+'Meta (11)':[['HERO',1533],['MOS',914],['INSET',1348],['FULL',1133],['INSET',1505],['CAR',814],['FULL',901],['INSET',1111],['TWO',879],['BRK',791],['NXT',1021]],
+'Slack (13)':[['HERO',1539],['INSET',1200],['FULL',1040],['INSET',1052],['FULL',1580],['BRK',791],['TWO',1053],['INSET',1052],['MOS',1225],['PAIR',1228],['INSET',1141],['BRK',791],['NXT',1021]],
+'Eden (16)':[['HERO',1592],['MOS',1454],['FULL',791],['TWO',1339],['INSET',857],['INSET',1171],['MOS',1570],['CAR',1214],['BRK',791],['INSET',1246],['FULL',1182],['FULL',1711],['FULL',1271],['INTRO',816],['BRK',712],['NXT',1021]],
+'Sky (24)':[['HERO',1622],['TWO',1110],['INSET',1158],['TWO',968],['FULL',2019],['OFF',812],['FULL',1133],['OFF',599],['INSET',1218],['PAIR',1129],['FULL',1181],['OFF',812],['INSET',1115],['CAR',912],['FULL',967],['PAIR',1301],['CAR',1098],['FULL',1271],['FULL',1162],['OFF',599],['INSET',1071],['INTRO',805],['BRK',712],['NXT',1021]],
+'Marqeta (13)':[['HERO',1680],['PAIR',1250],['TEXT',394],['INSET',967,'#2a206a'],['TEXT',389,'#2a206a'],['INSET',967,'#2a206a'],['INSET',1388,'#cfcfd4'],['INSET',1046,'#cfcfd4'],['INSET',967,'#2a206a'],['CAR',1298],['BRK',891],['PAIR',1408,'#2a206a'],['NXT',1122]],
+'Discover* (11)':[['HERO',1149],['PAIR',1011],['MOS',764],['FULL',1036],['TWO',674],['FULL',1215,'#161520'],['MOS',840,'#161520'],['FULL',889,'#161520'],['FULL',720,'#161520'],['NXT',747,'#09001a']]
+};
+document.getElementById('lg').innerHTML=Object.values(C).map(c=>`<span><i style="background:${c[0]}"></i>${c[1]}</span>`).join('');
+const S=40;
+document.getElementById('strips').innerHTML=Object.entries(R).map(([n,a])=>`<div class="strip"><h3>${n}</h3><div class="col">${a.map(([t,h,bg])=>`<div class="blk" style="height:${Math.round(h/S)}px;background:${C[t][0]};border-left:7px solid ${bg||'#fff'}">${C[t][1]}</div>`).join('')}</div></div>`).join('');
+</script>
+<script>
+(()=>{const el=document.getElementById('svc');if(!el)return;const s=460/1440,px=v=>Math.round(v*s);let h='';
+const bar=(x,y,w,hh,bg)=>`<div style="position:absolute;left:${x}%;top:${px(y)}px;width:${w}%;height:${Math.max(2,px(hh))}px;background:${bg||'#555'}"></div>`;
+const blk=(x,y,w,hh,st,inner)=>`<div style="position:absolute;left:${x}%;top:${px(y)}px;width:${w}%;height:${px(hh)}px;${st||''}">${inner||''}</div>`;
+const tg=(y,t)=>`<span class="tag" style="position:absolute;right:4px;top:${px(y)+2}px;font-size:9px;z-index:5">${t}</span>`;
+// header + hero
+h+=bar(2,30,6,40,'#bbb')+bar(55,40,5,14,'#ccc')+bar(62,40,5,14,'#ccc')+bar(69,40,5,14,'#ccc')+bar(76,40,5,14,'#ccc')+bar(90,28,8,36,'#333');
+h+=bar(5,200,46,70)+bar(5,281,30,70)+bar(5,403,39,22,'#bbb')+bar(5,442,28,22,'#bbb')+tg(0,'HERO · 641')+blk(0,641,100,0,'border-top:1px dashed #999');
+// service rows
+const names=['Branding','Digital Products','Websites','Content','Development'],objs=['orbs/branding','flatCircles/digital','squares/websites','doubleCone/content','corners/dev'];
+const imgY=[737,1695,2613,3532,4450],h2Y=[706,1624,2543,3461,4380],cx=[61,39,61,38,62];
+names.forEach((n,i)=>{const L=i%2===0,tx=L?5:58,ix=L?58:5;
+h+=bar(tx,h2Y[i],tx===5?20:22,57);
+for(let k=0;k<5;k++)h+=bar(tx,h2Y[i]+90+k*28,k===4?20:34,14,'#d6d6d2');
+for(let k=0;k<6;k++)h+=bar(tx,h2Y[i]+280+k*34,14+((k*7)%8),16,'#555');
+h+=blk(ix,imgY[i],36,679,'',`<div class="im" style="width:100%;height:100%"><span>${n} picture<br>518×679</span></div>`);
+const oy=imgY[i]-90;
+h+=blk(cx[i]-11.5,oy-210,23,420,'border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff 0%,#dedcec 55%,rgba(222,220,236,0) 72%);border:1px dashed #b3b0d6;display:flex;align-items:center;justify-content:center;z-index:3',`<span style="font-size:8px;color:#666;background:rgba(255,255,255,.8);padding:0 2px">${objs[i]}</span>`);
+h+=tg(641+i*918,'ROW '+(i+1)+' · '+(L?'text L / pic R':'text R / pic L'));});
+// industries
+h+=blk(0,5154,100,1919,'background:#171921','')+tg(5154,'INDUSTRIES · 1,919 · #171921');
+h+=bar(5,5274,18,57,'#eee')+bar(5,5350,32,14,'#777')+bar(5,5380,26,14,'#777');
+for(let i=0;i<12;i++){const y=5154+420+i*120;h+=bar(5,y,89,1,'#33363f')+bar(5,y+30,14,20,'#eee')+bar(30,y+34,i<2?56:(30+(i*5)%25),14,'#777');if(i<2)h+=bar(30,y+60,28,14,'#777');}
+// footer
+h+=blk(0,7072,100,641,'background:#f5f5f7;overflow:hidden',`<div style="position:absolute;left:-10%;top:30%;width:70%;height:40%;background:rgba(255,255,255,.9);transform:rotate(-35deg);border-radius:40px"></div>`)+tg(7072,'FOOTER · 641 · helix GLB');
+h+=bar(5,7072+90,22,80,'#222')+bar(5,7072+190,18,16,'#666')+bar(5,7072+220,14,16,'#666');
+h+=bar(52,7072+90,8,16,'#555')+bar(52,7072+125,8,16,'#555')+bar(52,7072+160,8,16,'#555')+bar(65,7072+90,8,16,'#555')+bar(65,7072+125,8,16,'#555');
+for(let r=0;r<2;r++)for(let c=0;c<3;c++)h+=bar(52+c*14,7072+300+r*90,10,40,'#bbb');
+el.innerHTML=h;})();
+</script></body></html>
