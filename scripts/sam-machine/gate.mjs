@@ -14,6 +14,8 @@ const checks=new Map((report.checks||[]).map(x=>[x.name,x.ok===true]));
 const gates={
   js:checks.get('js-public-api')===true && Number(report.kernel_handlers)>=21,
   python:checks.get('python-public-api')===true,
+  project_crud:checks.get('js-resource-crud')===true,
+  sqlite_crud:checks.get('js-resource-crud')===true,
   typescript:false,
   go:false,
   rust:false,

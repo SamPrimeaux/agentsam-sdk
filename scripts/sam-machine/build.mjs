@@ -50,6 +50,11 @@ const catalog={
   caveat:'Catalog membership does not prove authorization, runtime availability, or verified execution.',
 };
 await fs.writeFile(path.join(out,'catalog.json'),pretty(catalog));
+const crud=spawnSync(process.execPath,
+  [path.join(ROOT,'scripts/sam-machine/crud-coverage.mjs'),
+    '--out',path.join(out,'crud-coverage.json')],
+  {cwd:ROOT,encoding:'utf8',timeout:15000});
+if(crud.status!==0)throw new Error('sam_crud_coverage_generation_failed');
 
 const names=all.map(x=>x.id).sort();
 const q=JSON.stringify;
@@ -101,6 +106,8 @@ if(args.includes('--verify')){
   const tests=[
     ['js-public-api',process.execPath,['--test','test/integration/sam-machine-public-api.test.mjs']],
     ['python-public-api','python3',['-m','unittest','discover','-s','python/tests','-p','test_public_client.py']],
+    ['js-resource-crud',process.execPath,['--test',
+      'test/registry/resource-crud.test.mjs','test/registry/d1-provisioner.test.mjs']],
   ];
   for(const [name,command,argv] of tests){
     const result=spawnSync(command,argv,{cwd:ROOT,encoding:'utf8',timeout:120000,
@@ -118,5 +125,5 @@ const acceptance={
 };
 await fs.writeFile(path.join(out,'acceptance.json'),pretty(acceptance));
 process.stdout.write(pretty({ok:acceptance.ok,out,kernel:all.length,capabilities:capabilities.length,unbound_to_sam:missing.length,
-  tests:checks.map(x=>({name:x.name,ok:x.ok})),reports:['report.html','report.md','catalog.json','acceptance.json','manifest.json']}));
+  tests:checks.map(x=>({name:x.name,ok:x.ok})),reports:['report.html','report.md','catalog.json','crud-coverage.json','acceptance.json','manifest.json']}));
 if(!acceptance.ok)process.exitCode=1;
