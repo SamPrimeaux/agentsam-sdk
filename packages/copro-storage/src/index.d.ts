@@ -15,3 +15,19 @@ export declare class BrowserLocalStorageProjectStore {
   list(): Promise<CoProProject[]>;
   remove(id: string): Promise<void>;
 }
+export type CoProStoredMedia = {
+  id: string;
+  file: File | Blob;
+  name: string;
+  type: string;
+  size: number;
+  lastModified: number;
+};
+export declare class BrowserIndexedDbMediaStore {
+  constructor(options?: { indexedDB?: IDBFactory; databaseName?: string });
+  open(): Promise<IDBDatabase>;
+  save(id: string, file: File | Blob): Promise<{id: string;name: string;size: number}>;
+  load(id: string): Promise<CoProStoredMedia | null>;
+  loadMany(ids: Iterable<string>): Promise<CoProStoredMedia[]>;
+  remove(id: string): Promise<void>;
+}
