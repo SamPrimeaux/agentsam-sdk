@@ -17,72 +17,25 @@ renderShell('/admin/products', `
   <div class="admin-toolbar">
     <div>
       <h1 class="admin-page-title">Products</h1>
-      <p class="admin-page-sub">Manage any product type, its media, organization, versions, and availability.</p>
+      <p class="admin-page-sub">Manage catalog items, pricing, and status.</p>
     </div>
     <a href="/admin/products/create" class="btn primary">+ New Product</a>
   </div>
 
-  <div style="display:flex;gap:8px;margin:0 0 15px;align-items:center">
-    <button class="btn primary" id="view-commerce" type="button">Catalog</button>
-    <button class="btn ghost" id="view-builds" type="button">Source registry</button>
-    <span id="registry-notice" style="font-size:12px;color:#777;margin-left:8px">SDK catalog preview · no database writes</span>
-  </div>
-  <div class="admin-card" id="commerce-panel">
+  <div class="admin-card">
     <table class="admin-table">
-      <thead><tr><th>Product / Preview</th><th>Collection / Type</th><th>Price / Access</th><th>Status</th><th>Options / Version</th><th>Availability<th></th></tr></thead>
+      <thead><tr><th>Title</th><th>Collection</th><th>Price</th><th>Status</th><th>Variants</th><th>Inventory</th><th></th></tr></thead>
       <tbody id="products-body"><tr><td colspan="7" class="admin-empty">Loading…</td></tr></tbody>
-    </table>
-  </div>
-  <div class="admin-card" id="builds-panel" style="display:none">
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-      <input id="registry-search" type="search" placeholder="Search products, packages, SKUs" aria-label="Search builds" style="flex:1;min-width:180px;padding:9px;border:1px solid #ddd;border-radius:6px">
-      <select id="registry-kind" aria-label="Build type" style="padding:9px;border:1px solid #ddd;border-radius:6px"><option value="">All types</option></select>
-      <span id="registry-count" style="font-size:12px;color:#777">Loading…</span>
-    </div>
-    <table class="admin-table">
-      <thead><tr><th>Preview / Name</th><th>Kind</th><th>SKU candidate</th><th>Version</th><th>Source</th><th></th></tr></thead>
-      <tbody id="registry-rows"><tr><td colspan="6" class="admin-empty">Loading registry…</td></tr></tbody>
     </table>
   </div>
 `);
 
-let registryRecords=[];
-const registrySku = p => 'IAM-'+({'app':'APP','ui-component':'CMP','sdk-package':'SDK','theme':'THM','section':'SEC','block':'BLK','integration':'INT','service':'SVC','script':'TOOL'}[p.kind]||'ITEM')+'-'+p.slug.toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'');
-const registryEsc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-const registryPreview=p => {let d={};try{d=JSON.parse(localStorage.getItem('iam:registry:product-edits:v1')||'{}')}catch{}const url=d[p.id]?.previewUrl;if(typeof url==='string' && (url.startsWith('/admin/')||/^https:\/\/[^\s]+$/i.test(url))) return '<img src="'+registryEsc(url)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">';return registryEsc((p.kind||'item').slice(0,3).toUpperCase());};
-function drawRegistry() {
-  const term=document.getElementById('registry-search').value.toLowerCase();
-  const kind=document.getElementById('registry-kind').value;
-  const items=registryRecords.filter(p=>(!kind||p.kind===kind)&&(!term||[p.name,p.slug,p.package_name,registrySku(p)].some(v=>String(v||'').toLowerCase().includes(term))));
-  document.getElementById('registry-count').textContent=items.length+' / '+registryRecords.length+' catalog entries';
-  document.getElementById('registry-rows').innerHTML=items.map(p=>{
-    const initials=(p.kind||'item').slice(0,3).toUpperCase();
-    const url='/admin/product-edit?id='+encodeURIComponent(p.id);
-    const preview=registryPreview(p);
-    return '<tr><td><div style="display:flex;gap:12px;align-items:center"><span style="width:48px;height:48px;display:grid;place-items:center;background:#eeeaf6;border-radius:6px;color:#665587;font-size:11px;font-weight:700;overflow:hidden">'+preview+'</span><a href="'+url+'">'+registryEsc(p.name)+'</a></div></td><td>'+registryEsc(p.kind)+'</td><td><code>'+registryEsc(registrySku(p))+'</code></td><td>'+registryEsc(p.version||'—')+'</td><td>'+registryEsc(p.canonical_path||'—')+'</td><td><a class="btn ghost small" href="'+url+'">Edit</a></td></tr>';
-  }).join('') || '<tr><td colspan="6">No matching builds.</td></tr>';
+function escapeProduct(s) { return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+function productThumb(p) {
+  const url=p.thumbnail_url||p.image_url||p.primary_image_url||p.images?.[0]?.url;
+  if(typeof url==='string' && (/^https:\/\/[^\s]+$/i.test(url)||url.startsWith('/admin/'))) return '<img src="'+escapeProduct(url)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">';
+  return '<span style="font-size:11px;color:#aaa">—</span>';
 }
-document.getElementById('view-commerce').onclick=()=>{
- document.getElementById('commerce-panel').style.display='';
- document.getElementById('builds-panel').style.display='none';
- document.getElementById('view-commerce').className='btn primary';
- document.getElementById('view-builds').className='btn ghost';
-};
-document.getElementById('view-builds').onclick=()=>{
- document.getElementById('commerce-panel').style.display='none';
- document.getElementById('builds-panel').style.display='';
- document.getElementById('view-commerce').className='btn ghost';
- document.getElementById('view-builds').className='btn primary';
-};
-document.getElementById('registry-search').addEventListener('input',drawRegistry);
-document.getElementById('registry-kind').addEventListener('change',drawRegistry);
-fetch('/admin/registry/products-snapshot.json').then(r=>r.json()).then(d=>{
-  registryRecords=(d.items||[]).filter(p=>p.repository_id?.toLowerCase()==='github:samprimeaux/agentsam-sdk' || (p.repository_id==null && p.package_name?.includes('agentsam')));
-  const select=document.getElementById('registry-kind');
-  [...new Set(registryRecords.map(p=>p.kind))].sort().forEach(k=>select.add(new Option(k,k)));
-  drawRegistry();
-}).catch(e=>document.getElementById('registry-count').textContent='Registry preview unavailable');
-
 function badgeFor(status) {
   return `<span class="badge ${status}">${status}</span>`;
 }
@@ -97,7 +50,7 @@ function badgeFor(status) {
     }
     body.innerHTML = d.products.map(p => `
       <tr>
-        <td><a href="/admin/product-edit?id=${p.id}">${p.title}</a></td>
+        <td><div style="display:flex;align-items:center;gap:10px"><span style="display:grid;place-items:center;width:38px;height:38px;flex:none;border:1px solid #e9e9e9;border-radius:5px;background:#f5f5f5;overflow:hidden">${productThumb(p)}</span><a href="/admin/product-edit?id=${encodeURIComponent(p.id)}">${escapeProduct(p.title)}</a></div></td>
         <td>${p.collection || '—'}</td>
         <td>${centsToDollars(p.price_cents)}</td>
         <td>${badgeFor(p.status)}</td>
@@ -107,19 +60,17 @@ function badgeFor(status) {
       </tr>
     `).join('');
   } catch (err) {
-    // This isolated SDK showcase has no merchant backend. Display the SDK's registered
-    // apps and packages as products without changing the canonical merchant interface.
+    // Preview provider: same Products table, different merchant catalog data.
     try {
-      const snapshot=await fetch('/admin/registry/products-snapshot.json').then(r=>r.json());
-      const records=(snapshot.items||[]).filter(p=>p.repository_id?.toLowerCase()==='github:samprimeaux/agentsam-sdk' || (p.repository_id==null && p.package_name?.includes('agentsam')));
-      document.getElementById('registry-notice').textContent='AgentSam SDK products · read-only inventory snapshot';
-      document.getElementById('products-body').innerHTML=records.map(p=>{
-        const url='/admin/product-edit?id='+encodeURIComponent(p.id);
-        const img=registryPreview(p);
-        return '<tr><td><div style="display:flex;gap:12px;align-items:center"><span style="width:45px;height:45px;background:#f1eff7;color:#665587;display:grid;place-items:center;border-radius:6px;overflow:hidden;font-size:11px;font-weight:700">'+img+'</span><a href="'+url+'">'+registryEsc(p.name)+'</a></div></td><td>'+registryEsc(p.kind)+'</td><td>—</td><td><span class="badge">'+registryEsc(p.status)+'</span></td><td>'+registryEsc(p.version||'—')+'</td><td>Digital / package</td><td><a href="'+url+'" class="btn ghost small">Edit</a></td></tr>';
-      }).join('')||'<tr><td colspan="7" class="admin-empty">No catalog entries found.</td></tr>';
+      const data=await fetch('/admin/registry/products-snapshot.json').then(r=>r.json());
+      const items=(data.items||[]).filter(p=>p.repository_id?.toLowerCase()==='github:samprimeaux/agentsam-sdk' || (p.repository_id==null && p.package_name?.includes('agentsam')));
+      let drafts={};try{drafts=JSON.parse(localStorage.getItem('iam:registry:product-edits:v1')||'{}')}catch{}
+      document.getElementById('products-body').innerHTML=items.map(p=>{
+        const d=drafts[p.id]||{};
+        return '<tr><td><div style="display:flex;align-items:center;gap:10px"><span style="display:grid;place-items:center;width:38px;height:38px;flex:none;border:1px solid #e9e9e9;border-radius:5px;background:#f5f5f5;overflow:hidden">'+productThumb({thumbnail_url:d.previewUrl})+'</span><a href="/admin/product-edit?id='+encodeURIComponent(p.id)+'">'+escapeProduct(d.name||p.name)+'</a></div></td><td>'+escapeProduct(d.collection||p.kind)+'</td><td>—</td><td>'+badgeFor(p.status)+'</td><td>'+escapeProduct(p.version||'—')+'</td><td>—</td><td><a href="/admin/product-edit?id='+encodeURIComponent(p.id)+'" class="btn ghost small">Edit</a></td></tr>';
+      }).join('')||'<tr><td colspan="7" class="admin-empty">No products yet.</td></tr>';
     } catch {
-      document.getElementById('products-body').innerHTML='<tr><td colspan="7" class="admin-empty">No product provider connected.</td></tr>';
+      document.getElementById('products-body').innerHTML='<tr><td colspan="7" class="admin-empty">Unable to load products.</td></tr>';
     }
   }
 })();
