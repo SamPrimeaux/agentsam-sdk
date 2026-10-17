@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { compileToolSchema, restoreOptionalArguments } from '../../src/providers/tool-schema.js';
 import { createCapabilityAdapter } from '../../src/agent/capability-adapter.js';
+import { buildAgentToolSurface } from '../../src/agent/responses-runner.js';
 import { createOpenAIResponsesAdapter } from '../../src/providers/openai-responses.js';
 import { createGeminiGenerateContentAdapter } from '../../src/providers/gemini-generate-content.js';
 
@@ -83,4 +84,16 @@ test('Gemini preserves canonical conversation roles instead of JSON-stringifying
     { role: 'user', parts: [{ text: 'Show me a page.' }] },
   ]);
   assert.equal(body.contents[0].parts[0].text.includes('"role":"system"'), false);
+});
+
+test('headless coding reserves a bounded file reader instead of selecting only write tools',()=>{
+  const adapter=createCapabilityAdapter({projectRoot:process.cwd()});
+  const prompt='Implement SAM-001: inspect the repository manifest, operation registry, source files and tests';
+  const headless=buildAgentToolSurface(adapter,prompt,{headlessCoding:true,maxTools:8,schemaProvider:'openai'});
+  assert.equal(headless.tools.length<=8,true);
+  assert.ok(headless.descriptors.some(t=>t.name==='workspace.read'));
+  assert.equal(headless.descriptors.some(t=>t.name==='capability.invoke'),true);
+  const regular=buildAgentToolSurface(adapter,'What models are available?',{maxTools:8,schemaProvider:'openai'});
+  assert.equal(regular.descriptors.slice(0,4).map(t=>t.name).join(','),
+    'capability.search,capability.describe,capability.status,capability.invoke');
 });

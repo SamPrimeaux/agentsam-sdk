@@ -744,6 +744,7 @@ async function runInteractiveModelTurn(prompt, state) {
       // cost, or progress. `agent` (128 rounds) is the right default here;
       // preferences.runMode leaves room for a future explicit override.
       runMode: preferences.runMode || 'agent',
+      headlessCoding: state.interactive === false,
       previousProviderState,
       previousUsageSnapshot,
       cumulativeUsage: state.session?.cumulative_usage || null,
