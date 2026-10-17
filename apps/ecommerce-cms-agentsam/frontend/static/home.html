@@ -46,6 +46,14 @@ renderShell("/admin/home", `
       </div>
     </section>
 
+    <nav class="fnf-home-shortcuts" aria-label="Workspace shortcuts">
+      <div class="fnf-home-shortcuts__heading"><h2>Quick access</h2><span>Continue where you left off</span></div>
+      <div class="fnf-home-shortcuts__grid">
+        <a href="/admin/theme-editor?slug=home"><strong>Customize theme</strong><span>Edit pages, sections and brand settings</span><span aria-hidden="true">↗</span></a>
+        <a href="/admin/products"><strong>Products &amp; inventory</strong><span>Manage catalog, versions and inventory</span><span aria-hidden="true">↗</span></a>
+        <a href="/admin/content"><strong>Content &amp; media</strong><span>Browse assets, collections and content</span><span aria-hidden="true">↗</span></a>
+      </div>
+    </nav>
     <section class="fnf-home-templates" aria-labelledby="home-templates-title">
       <div class="fnf-home-templates__heading"><div><h2 id="home-templates-title">Templates</h2><p>Choose a starting point for your next build.</p></div><div class="fnf-home-templates__nav"><button id="home-templates-back" type="button" aria-label="Previous templates">←</button><button id="home-templates-forward" type="button" aria-label="Next templates">→</button></div></div>
       <div class="fnf-home-templates__frame"><div class="fnf-home-templates__edge" data-template-scroll="-1" aria-hidden="true"></div><div class="fnf-home-templates__rail" id="home-templates-rail" role="group" aria-label="Creative templates"></div><div class="fnf-home-templates__edge fnf-home-templates__edge--right" data-template-scroll="1" aria-hidden="true"></div></div>
@@ -80,11 +88,7 @@ renderShell("/admin/home", `
         <div class="console-stat-card"><div class="label">Orders</div><div class="value">—</div></div>
         <div class="console-stat-card"><div class="label">Subscribers</div><div class="value">—</div></div>
       </div>
-      <div class="fnf-home-operations__links">
-        <a href="/admin/theme-editor?slug=home"><strong>Customize theme</strong><span>Design and publish your actual storefront pages</span><span aria-hidden="true">↗</span></a>
-        <a href="/admin/products"><strong>Products &amp; inventory</strong><span>Review variants, availability and catalog</span><span aria-hidden="true">↗</span></a>
-        <a href="/admin/content"><strong>Content &amp; media</strong><span>Use your reusable media and content library</span><span aria-hidden="true">↗</span></a>
-      </div>
+
     </section>
   </div>
 `);

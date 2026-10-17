@@ -135,3 +135,30 @@
 @media(max-width:700px){.fnf-home-discover__grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fnf-home-discover__card--featured,.fnf-home-discover__card--compact{grid-column:span 2}.fnf-home-discover__card--featured{grid-template-columns:1fr 40%}}
 @media(max-width:450px){.fnf-home-discover__grid{grid-template-columns:minmax(0,1fr)}.fnf-home-discover__card--featured,.fnf-home-discover__card--compact{grid-column:1}.fnf-home-discover__card--compact{grid-template-columns:110px 1fr}.fnf-home-discover__card{min-height:170px}}
 @media(prefers-reduced-motion:reduce){.fnf-home-discover__card{transition:none}}
+
+
+/* Primary navigation belongs ahead of creative discovery. */
+.fnf-home-shortcuts{max-width:960px;margin:0 auto 30px;min-width:0}
+.fnf-home-shortcuts__heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:13px}
+.fnf-home-shortcuts__heading h2{font-size:16px;font-weight:620;letter-spacing:-.015em;margin:0}
+.fnf-home-shortcuts__heading span{font-size:11px;color:var(--home-muted)}
+.fnf-home-shortcuts__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fnf-home-shortcuts__grid a{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:95px;padding:15px 16px;background:#fff;border:1px solid var(--home-line);border-radius:13px;color:var(--home-ink);text-decoration:none;position:relative;transition:border-color .16s,background .16s}
+.fnf-home-shortcuts__grid a:hover{background:#f9f8fc;border-color:#cbbfe0}
+.fnf-home-shortcuts__grid a:focus-visible{outline:2px solid #8260ae;outline-offset:2px}
+.fnf-home-shortcuts__grid a strong{font-size:12px;font-weight:650}
+.fnf-home-shortcuts__grid a>span:nth-child(2){font-size:11px;color:var(--home-muted);line-height:1.45;padding-right:12px}
+.fnf-home-shortcuts__grid a>span:last-child{position:absolute;top:12px;right:14px;color:#837b8c;font-size:15px}
+.fnf-home-shortcuts__grid a:nth-child(1){background:linear-gradient(120deg,#faf8fe,#f4f0fa)}
+.fnf-home-shortcuts__grid a:nth-child(2){background:linear-gradient(120deg,#f7faff,#eff6ff)}
+.fnf-home-shortcuts__grid a:nth-child(3){background:linear-gradient(120deg,#f7fbf9,#eef8f5)}
+/* Maintain an intentional two-row mosaic rather than an orphaned half-row. */
+.fnf-home-discover__card--physical{grid-column:span 1}
+.fnf-home-discover__card--compact{grid-column:span 2;min-height:208px;grid-template-columns:44% minmax(0,1fr)}
+.fnf-home-discover__card--featured .fnf-home-discover__copy{padding:24px}
+.fnf-home-discover__card--featured .fnf-home-discover__copy h3{font-size:17px}
+.fnf-home-discover__card--featured .fnf-home-discover__copy p{font-size:12px}
+.fnf-home-discover__art--product span{height:125px;width:80px}
+.fnf-home-discover__art--digital,.fnf-home-discover__art--physical{height:116px}
+@media(max-width:700px){.fnf-home-shortcuts__grid{grid-template-columns:1fr 1fr}.fnf-home-shortcuts__grid a:last-child{grid-column:span 2}.fnf-home-discover__card--compact{grid-column:span 1;grid-template-columns:1fr;min-height:208px}.fnf-home-discover__art--theme{height:116px}}
+@media(max-width:450px){.fnf-home-shortcuts__grid{grid-template-columns:1fr}.fnf-home-shortcuts__grid a:last-child{grid-column:1}.fnf-home-discover__card--physical,.fnf-home-discover__card--compact{grid-column:1}.fnf-home-discover__card--compact{display:flex;flex-direction:column}.fnf-home-discover__card--compact .fnf-home-discover__art{height:116px}}
