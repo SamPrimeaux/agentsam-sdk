@@ -2,7 +2,8 @@ export type Sku = string;
 export type DefinitionKey = string;
 export type ArtifactId = string;
 export type AssetId = string;
-export type ThemeVariant = "light" | "tint" | "dark" | "brand";
+import type { InstalledThemeReference, ThemeVariant } from "./theme-contract.js";
+export type { InstalledThemeReference, ThemeVariant } from "./theme-contract.js";
 
 export type DiscoveryConfidence = "measured" | "observed" | "inferred" | "unknown";
 export interface SourceReceipt {
