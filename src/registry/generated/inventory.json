@@ -7,7 +7,7 @@
   ],
   "counts": {
     "commands": 76,
-    "capabilities": 60,
+    "capabilities": 73,
     "packages": 62
   },
   "commands": [
@@ -1321,6 +1321,110 @@
       "description": "Find evidence-based code-reuse proposals; no source modification or promotion.",
       "package": "@inneranimalmedia/agentsam-repository",
       "cli": "agentsam machine mine <path> --against <path> --json",
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.list",
+      "description": "List real workspace-owned projects without creating any new storage.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.get",
+      "description": "Read one workspace-owned project and its revision.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.create",
+      "description": "Create a real project folder with its own metadata and no unrelated content replacement.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.edit",
+      "description": "Update project metadata with optimistic concurrency; never silently replace source.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.delete",
+      "description": "Archive the project without erasing its original files, requiring explicit confirmation and revision.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.restore",
+      "description": "Restore an archived project into its workspace when the ID is free.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_list",
+      "description": "List the current workspace SQLite database resources",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_get",
+      "description": "Inspect an existing local SQLite resource and its tables",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_create",
+      "description": "Provision an empty local SQLite resource under current workspace without overwriting",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_delete",
+      "description": "Archive an existing local SQLite database (never replace D1)",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_restore",
+      "description": "Restore a previously archived local SQLite database",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_d1_create",
+      "description": "Provision a NEW Cloudflare D1 database through the authenticated customer installation Cloudflare provider. Never exposes or uses operator IAM D1 credentials. Requires provisionD1 host and approval.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_edit",
+      "description": "Rename a local workspace SQLite database resource with filesystem size/time concurrency checks and WAL protection.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
       "agent_callable": "requires-handler-check",
       "status": "stable"
     }

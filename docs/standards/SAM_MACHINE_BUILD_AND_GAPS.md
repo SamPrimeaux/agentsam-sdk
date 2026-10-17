@@ -68,3 +68,24 @@ receipt, installation context, PR and deployed consumer verification.
 5. Run machine verification and evaluate provenance/evidence.
 6. Merge; install the new package/host; prove the consumer workflow.
 7. Update the gap register with source, receipt, tests, PR and status.
+
+
+## Resource CRUD expansion · 2026-10-17
+
+Project resource lifecycle now binds project.list, project.get, project.create,
+project.edit, project.delete (archive) and project.restore against owned
+workspace directories. Local SQLite lifecycle binds agentsam_sqlite_list/get,
+create/edit/delete (archive)/restore and real disk database files. An explicit
+Cloudflare D1 REST provisioner exists behind a trusted customer installation
+credential resolver and host write authorization; the production MCP catalog
+entry is dormant pending IAM write-scope reconciliation.
+
+Run:
+
+    node scripts/sam-machine/crud-smoke.mjs
+    node scripts/sam-machine/crud-coverage.mjs --out /tmp/sam-resource-gaps.json
+    node scripts/sam-machine/gate.mjs --input /tmp/sam-machine-build/acceptance.json --require js,python,project_crud,sqlite_crud
+
+Cloudflare D1 **database resource** get/update/delete still need separate
+provider contracts; row SQL operations do not satisfy these lifecycle gates.
+Refer to docs/architecture/SAM_RESOURCE_CRUD_STANDARD.md.

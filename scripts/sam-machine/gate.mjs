@@ -14,6 +14,8 @@ const checks=new Map((report.checks||[]).map(x=>[x.name,x.ok===true]));
 const gates={
   js:checks.get('js-public-api')===true && Number(report.kernel_handlers)>=21,
   python:checks.get('python-public-api')===true,
+  project_crud:checks.get('js-resource-crud')===true,
+  sqlite_crud:checks.get('js-resource-crud')===true,
   typescript:false,
   go:false,
   rust:false,
@@ -24,6 +26,7 @@ const gates={
   iam_write_scope:false,
   durable_execution:false,
   artifact_storage:false,
+  resource_pack_parity:false,
 };
 const requested=String(opt('--require')||'js,python').split(',').map(x=>x.trim()).filter(Boolean);
 const expanded=requested.includes('all')?Object.keys(gates):requested;
