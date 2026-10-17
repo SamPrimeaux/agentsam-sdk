@@ -30,11 +30,28 @@ function writeStore(store, options = {}) {
   fs.renameSync(temp, filename);
 }
 
+// A saved grant must never authorize a different file, resource, script,
+// or command argument. Canonicalize input so JSON property order is immaterial.
+function canonical(value) {
+  if(Array.isArray(value))return value.map(canonical);
+  if(value&&typeof value==='object'){
+    return Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]));
+  }
+  return value;
+}
+function exactKey(id,input) {
+  const payload=JSON.stringify(canonical(input??{}));
+  const digest=createHash('sha256').update(payload).digest('hex').slice(0,24);
+  return `${id}:${digest}`;
+}
+
 export function toolApprovalKey(capabilityId, input = {}) {
   const id = clean(capabilityId);
   const command = clean(input?.command);
-  if (id === 'cloudflare.wrangler.native' && /^[A-Za-z0-9._-]+$/.test(command)) return `${id}:${command}`;
-  if (id === 'terminal.exec' && /^[A-Za-z0-9._+-]+$/.test(command)) return `${id}:${command}`;
+  if (id === 'cloudflare.wrangler.native' && /^[A-Za-z0-9._-]+$/.test(command) &&
+      Object.keys(input??{}).every(k=>k==='command'))return `${id}:${command}`;
+  if (id === 'terminal.exec' && /^[A-Za-z0-9._+-]+$/.test(command) &&
+      Object.keys(input??{}).every(k=>k==='command'))return `${id}:${command}`;
   if (id === 'sam.superbash') {
     // Always-allow applies to one script/artifact and relative cwd, not
     // to arbitrary future shell commands.
@@ -43,7 +60,7 @@ export function toolApprovalKey(capabilityId, input = {}) {
     const digest = createHash('sha256').update(source + '\0' + cwd).digest('hex').slice(0, 24);
     return 'sam.superbash:' + digest;
   }
-  return id;
+  return exactKey(id,input);
 }
 
 export function isExecutionApproved({ cwd, key }, options = {}) {

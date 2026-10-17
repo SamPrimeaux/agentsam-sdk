@@ -25,3 +25,25 @@ test('execution approvals are exact-command and project scoped', t => {
   assert.equal(isExecutionApproved({ cwd: two, key }, { home }), false);
   assert.equal(isExecutionApproved({ cwd: one, key: 'cloudflare.wrangler.native:versions.list' }, { home }), false);
 });
+
+test('write grants bind to exact file content and revision and cannot authorize a different edit',()=>{
+ const fileOne={path:'src/file.js',content:'const one=1',expected_sha256:'before1'};
+ const reordered={expected_sha256:'before1',content:'const one=1',path:'src/file.js'};
+ const different={...fileOne,content:'const one=2'};
+ const differentPath={...fileOne,path:'src/other.js'};
+ const differentRevision={...fileOne,expected_sha256:'before2'};
+ const key=toolApprovalKey('workspace.write',fileOne);
+ assert.equal(key,toolApprovalKey('workspace.write',reordered));
+ assert.notEqual(key,toolApprovalKey('workspace.write',different));
+ assert.notEqual(key,toolApprovalKey('workspace.write',differentPath));
+ assert.notEqual(key,toolApprovalKey('workspace.write',differentRevision));
+ assert.match(key,/^workspace\.write:[0-9a-f]{24}$/);
+});
+test('terminal argument changes and resource mutating inputs require separate approvals',()=>{
+ assert.notEqual(toolApprovalKey('terminal.exec',{command:'git',args:['status']}),
+   toolApprovalKey('terminal.exec',{command:'git',args:['push']}));
+ assert.notEqual(toolApprovalKey('project.delete',{id:'a',confirm_id:'a'}),
+   toolApprovalKey('project.delete',{id:'b',confirm_id:'b'}));
+ assert.notEqual(toolApprovalKey('agentsam_d1_create',{name:'test-a',confirm_name:'test-a'}),
+   toolApprovalKey('agentsam_d1_create',{name:'test-b',confirm_name:'test-b'}));
+});
