@@ -1,0 +1,53 @@
+{
+  "schema": "iam.cms.media-intake.v1",
+  "product_id": "prod_f7deb9f03c9429e4",
+  "product_slug": "agentsam-local-studio",
+  "product_name": "AgentSam Local Studio",
+  "product_kind": "app",
+  "collection_candidate": "Applications",
+  "product_family": "AgentSam SDK",
+  "media": [
+    {
+      "cloudflare_image_id": "9017b9cc-c5e7-4d48-e38f-456e9dd55100",
+      "role": "app-icon",
+      "alt": "AgentSam SDK official application icon",
+      "caption": "Official AgentSam SDK application icon",
+      "tags": ["agentsam-sdk", "application", "brand", "icon", "official"],
+      "source": "user-confirmed Cloudflare Images delivery URL",
+      "delivery_variant": "thumbnail",
+      "review_status": "source-id-confirmed"
+    },
+    {
+      "cloudflare_image_id": "a39b5154-8b51-4efa-4b71-6a97a37ff900",
+      "role": "desktop-screenshot",
+      "alt": "AgentSam Local Studio dark desktop interface with workspace and code editor",
+      "caption": "AgentSam Local Studio — dark workspace interface",
+      "tags": ["agentsam-sdk", "local-studio", "desktop", "dark", "workspace", "code-editor", "product-preview"],
+      "source": "user-confirmed Cloudflare Images delivery URL",
+      "delivery_variant": "medium",
+      "review_status": "source-id-confirmed"
+    }
+  ],
+  "seo_draft": {
+    "title": "AgentSam Local Studio | Desktop Developer Workspace",
+    "description": "Explore AgentSam Local Studio, a desktop workspace integrating projects, files, terminal sessions and developer tools with AgentSam SDK.",
+    "slug": "agentsam-local-studio"
+  },
+  "deployment": {
+    "version": "unverified",
+    "desktop_build_id": null,
+    "hosted_build_id": null,
+    "parity_status": "requires-verification",
+    "environments": ["desktop", "hosted"],
+    "note": "Desktop and hosted surfaces are separate build inventories; never infer parity from shared UI."
+  },
+  "storage_policy": {
+    "assets_authority": "cms_assets",
+    "catalog_authority": "agentsam_products",
+    "generated_artifacts_authority": "agentsam_artifacts",
+    "media_reference": "Cloudflare Images ID",
+    "deduplicate_by": ["cloudflare_image_id", "content_hash"],
+    "preserve_original": true
+  },
+  "status": "draft_not_published"
+}
