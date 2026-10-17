@@ -1,65 +1,36 @@
 # AgentSam Ecommerce + CMS
 
-`@inneranimalmedia/ecommerce-cms-agentsam` is the portable commerce + public-site authoring product used by AgentSam Local Studio and standalone customer installs.
+Fuel & Free Time is customer #1 and the first paying purchaser of
+@inneranimalmedia/ecommerce-cms-agentsam. It is not a donor project.
 
-It owns the complete application composition surface: CMS hub, public-site/theme editing, media, commerce administration, analytics, and Theme Studio. `@inneranimalmedia/client-cms-editor` is the reusable editor engine; consumers should enter through this package when they want the complete ecommerce/CMS product.
+This F&FT repository is the first production customer installation of the
+product. The app owns the shared navigation renderer and contextual inspector.
+React mounts content through a portal into the same shell used by CMS, product
+editor and media pages. The public shell and inspector are generated mirrors.
 
-## Public-site authoring
+Customer-specific brand identity, products, media, campaigns, credentials and
+provider selections belong to the F&FT installation. Reusable application
+capabilities belong to @inneranimalmedia/ecommerce-cms-agentsam.
 
-The package is composition-first: groups organize sections, sections contain blocks, and routes/pages are containers and publication targets rather than the primary editing primitive. It supports durable group/section/block authoring, real theme-project editing, composition revisions/restores, draft preview, publication, media selection/upload, design tokens, theme packages, and import/export. Hosted authority uses D1 + the configured `WEBSITE_ASSETS` R2 role. Packaged Local Studio uses the same surface and routes authenticated CMS calls through the native desktop service bridge.
+## Theme packages
 
-Site/account provisioning remains intentionally separate from content editing: the CMS edits a selected property but does not silently create/delete Cloudflare accounts, domains, or deployment resources.
+The current customer storefront uses the local
+@inneranimalmedia/heuristic-theme. Additional themes are additive packages,
+not replacements for customer data.
 
-Exports:
+The first packaged alternate theme is @inneranimalmedia/revise-theme, backed by
+@inneranimalmedia/site-contracts and
+@inneranimalmedia/section-library. The ecommerce CMS is responsible for theme
+registration/selection and for passing normalized customer content into the
+selected theme.
 
-- `@inneranimalmedia/ecommerce-cms-agentsam/cms`
-- `@inneranimalmedia/ecommerce-cms-agentsam/cms/capabilities`
-- `@inneranimalmedia/ecommerce-cms-agentsam/store/mount`
-- `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/mount`
-- `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/bridge`
-- `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project`
-- `@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/cms-adapter`
+App-local commands:
 
-## Portable runtime
+    node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs info
+    node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs doctor
+    node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs preview
+    node apps/ecommerce-cms-agentsam/bin/ecommerce.mjs scaffold /outside/empty-directory
 
-```bash
-npx agentsam-ecommerce doctor
-npx agentsam-ecommerce preview
-npx agentsam-ecommerce scaffold ./my-store
-```
+The package exposes the top-level ecommerce executable when installed or linked. SDK registration uses agentsam.app.json and its bin. The SDK app already has a separate preview executable; do not blindly replace its host adapter. This workspace-source package must travel with its runtime source to scaffold.
 
-Scaffolds exclude credentials, private customer state, and provider secrets. Each owner provisions its own deployment resources and provider accounts.
-
-## Canonical merchant Online Store surface
-
-The existing FNF Online Store DOM and responsive CSS is packaged as
-`store/mount`, with its runtime and styles emitted to `commerce-store/` by
-Local Studio's `themeSurfacesPlugin`. It is **not** a second CMS editor or a
-hardcoded FNF site: `mountOnlineStore(iframe, { loadStore, onEdit, baseUrl,
-storefrontUrl })` receives authorized site data from its host.
-
-- `/cms` opens the merchant Store for an authenticated, registered property.
-  The existing `/store` and `/themes` theme libraries remain available for
-  bundled theme draft workflows.
-- **Edit theme** opens the existing `theme-editor/mount` runtime with the
-  corresponding site's real registered page adapter.
-- Signed remote Worker CMS requests remain owned by each customer's Worker;
-  no shared-D1 fallback or silent site seeding is permitted.
-- An authorized public domain is used for live desktop/mobile store previews.
-  Missing or inaccessible storefront data is shown as unavailable, not replaced
-  with a fixture or Local Studio's own homepage.
-- Analytics, active-theme metadata, imported themes, and theme publishing must
-  stay unverified/disabled until the commerce site exposes the required real
-  contracts. Page publishing is **not** equivalent to publishing a theme.
-- Hosted and Tauri desktop share the same shipped assets. Offline desktop
-  without registered remote sites still opens local-project authoring.
-
-Verification:
-
-```bash
-npm run build:dev --prefix apps/local-studio
-npm run build:desktop --prefix apps/local-studio
-npm run smoke:commerce-store --prefix apps/local-studio
-npm run smoke:themes --prefix apps/local-studio
-node --test test/integration/cms-multisite-security.test.mjs
-```
+Scaffolds exclude credentials, local state, customer seeds and unrelated scripts. They retain sample storefront branding. Each owner provisions resources and provider accounts. Doctor checks source presence, not deployment readiness. See ecommerce-cms-agentsam.md for release gates.

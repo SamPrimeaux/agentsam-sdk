@@ -1,8 +1,8 @@
+import { requireApplicationAccountId } from "../lib/account-context.js";
 /**
  * AgentSam Workers AI model registry — D1-backed selection and fallback chains.
  */
 
-import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 
 const ACTIVE_STATUSES = ["active", "experimental"];
 const CHAT_TASK_TYPES = new Set([
@@ -87,7 +87,7 @@ function sortModels(models, message) {
 export function resolveAIRouting(classification, message, context = {}) {
   const intent = classification?.intent || "general";
   const workflowKey =
-    classification?.workflow_key || context.workflow_key || "commerce_agentsam_chat";
+    classification?.workflow_key || context.workflow_key || "fnf_agentsam_chat";
   const hay = String(message || "").toLowerCase();
 
   const attachmentImage = (context.attachments || []).find(
@@ -139,6 +139,15 @@ export function resolveAIRouting(classification, message, context = {}) {
     message,
     image_url: context.attachment_url || context.image_url || attachmentImage?.url || null,
     image_base64: context.image_base64 || attachmentImage?.image_base64 || null,
+    image_mime_type: context.image_mime_type || attachmentImage?.mime_type || null,
+    image_attachments: Array.isArray(context.attachments)
+      ? context.attachments.filter(item => item?.kind === "image" && (item.image_base64 || item.url))
+        .slice(0, 6).map(item => ({
+          image_base64: item.image_base64 || null,
+          url: item.url || null,
+          mime_type: item.mime_type || null,
+        }))
+      : [],
   };
 
   if (/\b(moderation|unsafe|policy violation|content guard|llama guard)\b/.test(hay)) {
@@ -159,6 +168,12 @@ export function resolveAIRouting(classification, message, context = {}) {
 
   if (/\b(text to speech|tts|voice output|speak this)\b/.test(hay)) {
     return { ...base, task_type: "text_to_speech", lane: "audio" };
+  }
+
+  // An explicit Studio generate action must not be demoted to text routing
+  // merely because its prompt omits the word "image".
+  if (context.task_type === "image_generation" && context.mode === "image") {
+    return { ...base, task_type: "image_generation", lane: context.lane || "image" };
   }
 
   // If image is attached, always route vision — no keywords required
@@ -212,7 +227,7 @@ export function normalizeChatRouting(routing) {
 }
 
 export async function getAIModels(env, options = {}) {
-  const accountId = options.account_id || COMMERCE_ACCOUNT_ID;
+  const accountId = options.account_id || requireApplicationAccountId();
   const includeDisabled = options.includeDisabled === true;
 
   if (!env.DB) return [];
@@ -256,20 +271,17 @@ export async function getAIModels(env, options = {}) {
 export async function getFallbackChain(env, routing = {}) {
   const normalized = normalizeChatRouting(routing);
   const { task_type, lane, workflow_key, message } = normalized;
-  const models = await getAIModels(env, {
-    task_type,
-    lane,
-    fallbackOnly: true,
-  });
-
-  let chain = models.filter((m) => matchesWorkflow(m, workflow_key));
-
-  if (!chain.length && lane !== "general") {
-    const broader = await getAIModels(env, { task_type, fallbackOnly: true });
-    chain = broader.filter((m) => matchesWorkflow(m, workflow_key));
-  }
-
-  chain = sortModels(chain, message);
+  // D1 is authoritative for configured models, INCLUDING the default.
+  // A fallback-only query incorrectly excludes is_default=1 rows, and a
+  // lane-only query can strand working alternate lanes after a runtime error.
+  const registered = await getAIModels(env, {task_type});
+  const allowed = registered.filter((model) => matchesWorkflow(model, workflow_key));
+  // The registry's default is primary even when a task's default lane
+  // differs from the request's conversational lane (e.g. standard/general).
+  const defaults = sortModels(allowed.filter((model) => model.is_default), message);
+  const laneModels = sortModels(allowed.filter((model) => !model.is_default && model.lane === lane), message);
+  const alternate = sortModels(allowed.filter((model) => !model.is_default && model.lane !== lane && model.is_fallback), message);
+  const chain = [...defaults, ...laneModels, ...alternate];
 
   if (!chain.length) {
     console.warn('[agentsam] no models found for routing', { task_type, lane, workflow_key });
@@ -298,7 +310,7 @@ export async function getDefaultModelId(env, taskType, lane) {
        ORDER BY priority ASC
        LIMIT 1`
     )
-      .bind(COMMERCE_ACCOUNT_ID, taskType, lane)
+      .bind(requireApplicationAccountId(), taskType, lane)
       .first();
     return row?.model_id || null;
   } catch {
@@ -307,9 +319,10 @@ export async function getDefaultModelId(env, taskType, lane) {
 }
 
 export async function getAIRegistryStatus(env) {
-  const bindingConfigured = Boolean(env.AGENTSAM_WAI);
+  const bindingConfigured = Boolean(env.AGENTSAM_WAI?.run);
 
   let aiRegistryCount = 0;
+  let openAiRegisteredCount = 0;
   let disabledModelCount = 0;
 
   try {
@@ -317,14 +330,18 @@ export async function getAIRegistryStatus(env) {
       const total = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status IN ('active','experimental')`
       )
-        .bind(COMMERCE_ACCOUNT_ID)
+        .bind(requireApplicationAccountId())
         .first();
       aiRegistryCount = total?.n ?? 0;
+      const openAiModels = await env.DB.prepare(
+        `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND provider = 'openai' AND status IN ('active','experimental')`
+      ).bind(requireApplicationAccountId()).first();
+      openAiRegisteredCount = openAiModels?.n ?? 0;
 
       const disabled = await env.DB.prepare(
         `SELECT COUNT(*) AS n FROM agentsam_ai WHERE account_id = ? AND status = 'disabled'`
       )
-        .bind(COMMERCE_ACCOUNT_ID)
+        .bind(requireApplicationAccountId())
         .first();
       disabledModelCount = disabled?.n ?? 0;
     }
@@ -346,6 +363,8 @@ export async function getAIRegistryStatus(env) {
 
   return {
     ai_binding_configured: bindingConfigured,
+    openai_key_configured: Boolean(env.OPENAI_API_KEY),
+    openai_registered_models: openAiRegisteredCount,
     ai_registry_count: aiRegistryCount,
     default_text_model: defaultTextModel,
     default_code_model: defaultCodeModel,

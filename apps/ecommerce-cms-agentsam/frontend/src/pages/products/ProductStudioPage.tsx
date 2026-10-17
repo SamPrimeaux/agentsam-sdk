@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { adminFetch } from "../../lib/api";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
-import StudioWorkspace from "./StudioWorkspace";
 import {
   catalogProductId,
   catalogVariantId,
@@ -23,9 +22,15 @@ import {
 } from "./studio-model";
 import "../../styles/product-studio.css";
 
+const StudioWorkspace = lazy(() => import("./StudioWorkspace"));
+
+type CatalogSyncHealth = { status: string; updated_at?: string | null;
+  completed_at?: string | null; last_error_code?: string | null;
+  last_error_message?: string | null; page_count?: number; product_count?: number };
+
 const collections = [
   { name: "Everything", query: "", caption: "Find your next idea" },
-  { name: "Tees", query: "shirt", caption: "Made to be worn" },
+  { name: "Apparel", query: "", category: "apparel", caption: "Shirts, layers & more" },
   { name: "Tumblers", query: "tumbler", caption: "Everyday essentials" },
   { name: "Framed decor", query: "frame", caption: "Make a space their own" },
   { name: "Hats", query: "hat", caption: "Small things. Big personality." },
@@ -33,8 +38,11 @@ const collections = [
 export default function ProductStudioPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
+  const location = useLocation();
+  const resumeDraftId = new URLSearchParams(location.search).get("resume");
   const surface = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -44,9 +52,14 @@ export default function ProductStudioPage() {
   const [error, setError] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [syncHealth, setSyncHealth] = useState<CatalogSyncHealth | null>(null);
   const [notice, setNotice] = useState("");
   const [detail, setDetail] = useState<ProductDetail | null>(null);
-  const [designing, setDesigning] = useState(false);
+  const [catalogWarning, setCatalogWarning] = useState("");
+  const [designing, setDesigning] = useState(Boolean(resumeDraftId));
+  useEffect(() => {
+    if (productId && resumeDraftId) setDesigning(true);
+  }, [productId, resumeDraftId]);
   const [gallery, setGallery] = useState("");
   const [selectedVariantId, setSelectedVariantId] = useState("");
   useEffect(() => {
@@ -73,6 +86,7 @@ export default function ProductStudioPage() {
       offset: String(offset),
       search,
     });
+    if (category) params.set("category", category);
     adminFetch<CatalogResponse>(`/api/admin/completeful/catalog?${params}`, {
       signal: controller.signal,
     })
@@ -93,7 +107,7 @@ export default function ProductStudioPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [search, offset, refresh, productId]);
+  }, [search, offset, refresh, productId, category]);
   useEffect(() => {
     if (!productId) return;
     const controller = new AbortController();
@@ -103,8 +117,8 @@ export default function ProductStudioPage() {
         setError("");
       }
     });
-    adminFetch<ProductDetail>(
-      `/api/admin/completeful/catalog/${encodeURIComponent(productId)}`,
+    adminFetch<ProductDetail & { catalog_warning?: string }>(
+      `/api/admin/completeful/catalog/${encodeURIComponent(productId)}?live=1`,
       { signal: controller.signal },
     )
       .then((d) => {
@@ -130,6 +144,7 @@ export default function ProductStudioPage() {
               ?.preview_url ||
             "";
           setDetail(normalized);
+          setCatalogWarning(d.catalog_warning || "");
           setSelectedVariantId(catalogVariantId(initialVariant));
           setGallery(initialImage);
         }
@@ -140,6 +155,14 @@ export default function ProductStudioPage() {
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
+    return () => controller.abort();
+  }, [productId, refresh]);
+  useEffect(() => {
+    if (productId) return;
+    const controller = new AbortController();
+    adminFetch<{ sync?: CatalogSyncHealth }>("/api/admin/completeful/status", { signal: controller.signal })
+      .then((data) => { if (!controller.signal.aborted) setSyncHealth(data.sync || null); })
+      .catch(() => { if (!controller.signal.aborted) setSyncHealth(null); });
     return () => controller.abort();
   }, [productId, refresh]);
   const stopSync = useRef(false);
@@ -224,11 +247,16 @@ export default function ProductStudioPage() {
       aria-label="Product Studio"
     >
       {designing && detail ? (
-        <StudioWorkspace
-          detail={detail}
-          initialVariantId={selectedVariantId}
-          onBack={() => setDesigning(false)}
-        />
+        <Suspense fallback={<div className="ps-workspace-loading" role="status">Loading studio…</div>}>
+          <StudioWorkspace
+            key={`${catalogProductId(detail.product)}:${resumeDraftId || 'new'}`}
+            detail={detail}
+            initialVariantId={selectedVariantId}
+            resumeDraftId={resumeDraftId}
+            catalogWarning={catalogWarning}
+            onBack={() => setDesigning(false)}
+          />
+        </Suspense>
       ) : (
         <div className="ps-container">
           <div className="ps-topline">
@@ -302,9 +330,9 @@ export default function ProductStudioPage() {
                 {collections.map((c, i) => (
                   <button
                     key={c.name}
-                    className={query === c.query ? "is-active" : ""}
-                    onClick={() => setQuery(c.query)}
-                    aria-pressed={query === c.query}
+                    className={query === c.query && category === (c.category || "") ? "is-active" : ""}
+                    onClick={() => { setCategory(c.category || ""); setQuery(c.query); setOffset(0); }}
+                    aria-pressed={query === c.query && category === (c.category || "")}
                   >
                     <span className="ps-collection-number">0{i + 1}</span>
                     <strong>{c.name}</strong>
@@ -312,6 +340,19 @@ export default function ProductStudioPage() {
                   </button>
                 ))}
               </div>
+              {(syncHealth?.status === "error" || syncHealth?.status === "partial") && (
+                <div className="ps-catalog-sync-alert" role="alert">
+                  <strong>{syncHealth.status === "error" ? "Completeful catalog refresh failed" : "Completeful catalog refresh incomplete"}</strong>
+                  <span>Existing products remain available, but supplier images and options may be out of date.
+                    Last attempt: {syncHealth.updated_at || "unknown"} UTC.</span>
+                  {syncHealth.last_error_code && <details><summary>Technical details</summary>
+                    {syncHealth.last_error_code}: {syncHealth.last_error_message || "No error detail recorded"}
+                  </details>}
+                  <button className="ps-button" disabled={syncing} onClick={() => void syncCatalog()}>
+                    {syncing ? "Retrying…" : "Resume catalog refresh"}
+                  </button>
+                </div>
+              )}
               <div id="studio-catalog" className="ps-catalog-heading">
                 <div>
                   <span className="ps-eyebrow">THE POSSIBILITIES</span>

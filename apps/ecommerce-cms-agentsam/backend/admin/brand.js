@@ -10,12 +10,67 @@
 import { getCompany, updateCompany } from "../lib/company.js";
 import { mediaPathForKey } from "../assets/product-optimize.js";
 
+// Shared, brand-neutral identity fields. Stored under company.meta.brand_profile;
+// no new tenant, CMS, or asset authority is introduced.
+export const BRAND_PROFILE_FIELDS = Object.freeze({
+  purpose: 1200,
+  mission: 1200,
+  vision: 1200,
+  originStory: 3000,
+  audience: 1200,
+  positioning: 1200,
+  promise: 1000,
+  values: 1000,
+  personality: 600,
+  voice: 1000,
+  voiceDo: 1200,
+  voiceDont: 1200,
+  keyMessage: 1000,
+  shortDescription: 400,
+  headlineFont: 160,
+  bodyFont: 160,
+  imageDirection: 1000,
+  secondaryColor: 7,
+  textColor: 7,
+  instagramUrl: 300,
+  facebookUrl: 300,
+  tiktokUrl: 300,
+  youtubeUrl: 300,
+});
+
+export function validateBrandProfile(input, current = {}) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("invalid_brand_profile");
+  const output = { ...current };
+  for (const [key, value] of Object.entries(input)) {
+    if (!Object.hasOwn(BRAND_PROFILE_FIELDS, key)) throw new Error("unsupported_brand_profile_field");
+    if (value != null && typeof value !== "string") throw new Error("invalid_brand_profile_value");
+    const cleaned = String(value || "").trim();
+    if (key.endsWith("Color") && cleaned && !/^#[0-9a-f]{6}$/i.test(cleaned)) {
+      throw new Error("invalid_brand_color");
+    }
+    if (cleaned.length > BRAND_PROFILE_FIELDS[key]) throw new Error("brand_profile_value_too_long");
+    if (key.endsWith("Url") && cleaned) {
+      try {
+        const parsed = new URL(cleaned);
+        if (!["https:", "http:"].includes(parsed.protocol)) throw new Error("invalid");
+      } catch {
+        throw new Error("invalid_brand_social_url");
+      }
+    }
+    output[key] = cleaned;
+  }
+  return output;
+}
+
 const BRAND_ROLES = Object.freeze({
   logo: { label: "Primary logo", coreField: "logoUrl", metaKey: "logo_asset_key" },
   favicon: { label: "Favicon", coreField: "faviconUrl", metaKey: "favicon_asset_key" },
   social_image: { label: "Social image", metaKey: "social_image_asset_key" },
   wordmark: { label: "Wordmark" },
   mark: { label: "Brand mark" },
+  logo_light: { label: "Light-background logo" },
+  logo_dark: { label: "Dark-background logo" },
+  brand_hero: { label: "Brand key visual" },
 });
 
 function json(data, init = {}) {
@@ -45,7 +100,7 @@ function currentRole(company, role) {
       label: def.label,
       media_asset_id: stored.media_asset_id ?? null,
       r2_key: stored.r2_key || null,
-      url: stored.url || null,
+      url: stored.r2_key ? mediaPathForKey(stored.r2_key) : stored.url || null,
     };
   }
 
@@ -129,15 +184,48 @@ async function listBrandCandidates(env) {
   return (results || []).map(cleanAsset);
 }
 
-export async function getBrandWorkspace(env) {
+// Paged, server-side search over the existing media_assets authority. The first
+// 120 recent files alone are insufficient to assign older logos and brand media.
+export async function searchBrandAssets(request, env) {
+  if (!env?.DB) return json({ ok: false, error: "media_unavailable" }, { status: 503 });
+  const url = new URL(request.url);
+  const search = String(url.searchParams.get("q") || "").trim().slice(0, 100).toLowerCase();
+  const page = Math.max(1, Math.min(200, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1));
+  const pageSize = 48;
+  const images = "(lower(COALESCE(content_type,'')) LIKE 'image/%' OR lower(COALESCE(filename,'')) GLOB '*.svg' OR lower(COALESCE(filename,'')) GLOB '*.png' OR lower(COALESCE(filename,'')) GLOB '*.jpg' OR lower(COALESCE(filename,'')) GLOB '*.jpeg' OR lower(COALESCE(filename,'')) GLOB '*.webp' OR lower(COALESCE(filename,'')) GLOB '*.avif')";
+  const filter = search
+    ? " AND (instr(lower(COALESCE(filename,'')),?) > 0 OR instr(lower(COALESCE(alt_text,'')),?) > 0 OR instr(lower(COALESCE(r2_key,'')),?) > 0)"
+    : "";
+  const binds = search ? [search, search, search] : [];
+  const countRow = await env.DB.prepare("SELECT COUNT(*) AS count FROM media_assets WHERE " + images + filter)
+    .bind(...binds).first();
+  const { results } = await env.DB.prepare(
+    "SELECT id,r2_key,filename,content_type,alt_text,folder FROM media_assets WHERE " +
+    images + filter + " ORDER BY id DESC LIMIT ? OFFSET ?"
+  ).bind(...binds, pageSize, (page - 1) * pageSize).all();
+  const count = Number(countRow?.count || 0);
+  return json({
+    ok: true,
+    assets: (results || []).map(cleanAsset),
+    page,
+    page_size: pageSize,
+    total: count,
+    has_more: page * pageSize < count,
+  });
+}
+
+export async function getBrandWorkspace(env, options = {}) {
   const company = await getCompany(env);
   if (!company) return json({ ok: false, error: "company_not_configured" }, { status: 404 });
 
   return json({
     ok: true,
     company,
+    profile: company.meta?.brand_profile || {},
     roles: Object.keys(BRAND_ROLES).map((role) => currentRole(company, role)),
-    assets: await listBrandCandidates(env),
+    // Existing consumers receive media candidates by default. New mobile
+    // workspaces request include_assets=0 and search on demand instead.
+    assets: options.includeAssets === false ? [] : await listBrandCandidates(env),
     authority: {
       identity: "company",
       assets: "media_assets",
@@ -157,21 +245,37 @@ export async function patchBrandWorkspace(request, env) {
   const company = await getCompany(env);
   if (!company) return json({ ok: false, error: "company_not_configured" }, { status: 404 });
 
-  if (body?.company && typeof body.company === "object") {
+  if (body?.profile != null && (typeof body.profile !== "object" || Array.isArray(body.profile))) {
+    return json({ ok: false, error: "invalid_brand_profile" }, { status: 400 });
+  }
+  if (body?.company || body?.profile) {
     const allowed = [
-      "name",
-      "legalName",
-      "logoUrl",
-      "faviconUrl",
-      "primaryColor",
-      "authBgColor",
-      "supportEmail",
-      "websiteUrl",
-      "tagline",
+      "name", "legalName", "logoUrl", "faviconUrl", "primaryColor",
+      "authBgColor", "supportEmail", "websiteUrl", "tagline",
     ];
     const patch = {};
     for (const key of allowed) {
-      if (Object.prototype.hasOwnProperty.call(body.company, key)) patch[key] = body.company[key];
+      if (Object.prototype.hasOwnProperty.call(body.company || {}, key)) {
+        patch[key] = body.company[key];
+      }
+    }
+    if (Object.hasOwn(patch, "name") && !String(patch.name || "").trim()) {
+      return json({ ok: false, error: "brand_name_required" }, { status: 400 });
+    }
+    for (const key of ["primaryColor", "authBgColor"]) {
+      if (patch[key] && !/^#[0-9a-f]{6}$/i.test(String(patch[key]))) {
+        return json({ ok: false, error: "invalid_brand_color" }, { status: 400 });
+      }
+    }
+    if (body.profile) {
+      try {
+        patch.meta = {
+          ...(company.meta || {}),
+          brand_profile: validateBrandProfile(body.profile, company.meta?.brand_profile || {}),
+        };
+      } catch (error) {
+        return json({ ok: false, error: error.message }, { status: 400 });
+      }
     }
     const result = await updateCompany(env, patch);
     if (!result.ok) return json(result, { status: 400 });

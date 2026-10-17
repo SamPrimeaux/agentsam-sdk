@@ -1,0 +1,14 @@
+-- Non-destructive seed of existing FNF component contracts. These remain draft
+-- until the editor/renderer resolves cms_definitions and R2 implementations.
+-- The live production migration was verified separately.
+-- Account-specific data should be inserted by a tenant-aware registry importer;
+-- do NOT hardcode a customer account ID into distributed migrations.
+-- Existing registry sources:
+-- backend/cms/registry.js (collections, collection-card)
+-- cms/block-types.json (feature, value, collection-card)
+-- Expected first registry keys:
+--   section: collections
+--   block: collection-card, feature, value
+-- Actual tenant seed was applied directly in D1 on 2026-10-07 as draft entries.
+-- Follow-up importer must upsert by (account_id, kind, definition_key, version)
+-- and graduate to status='active' only after renderer/catalog tests pass.

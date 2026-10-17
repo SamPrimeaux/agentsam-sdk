@@ -86,16 +86,21 @@ export async function updateCompany(env, patch = {}) {
     return { ok: false, error: "company_not_configured" };
   }
 
+  // PATCH must preserve explicit null: clearing media and optional fields is intentional.
+  const pick = (camel, snake, existing) =>
+    Object.hasOwn(patch, camel) ? patch[camel] :
+      Object.hasOwn(patch, snake) ? patch[snake] : existing;
+
   const next = {
-    name: patch.name ?? current.name,
-    legal_name: patch.legal_name ?? patch.legalName ?? current.legalName,
-    logo_url: patch.logo_url ?? patch.logoUrl ?? current.logoUrl,
-    favicon_url: patch.favicon_url ?? patch.faviconUrl ?? current.faviconUrl,
-    primary_color: patch.primary_color ?? patch.primaryColor ?? current.primaryColor,
-    auth_bg_color: patch.auth_bg_color ?? patch.authBgColor ?? current.authBgColor,
-    support_email: patch.support_email ?? patch.supportEmail ?? current.supportEmail,
-    website_url: patch.website_url ?? patch.websiteUrl ?? current.websiteUrl,
-    tagline: patch.tagline ?? current.tagline,
+    name: pick("name", "name", current.name),
+    legal_name: pick("legalName", "legal_name", current.legalName),
+    logo_url: pick("logoUrl", "logo_url", current.logoUrl),
+    favicon_url: pick("faviconUrl", "favicon_url", current.faviconUrl),
+    primary_color: pick("primaryColor", "primary_color", current.primaryColor),
+    auth_bg_color: pick("authBgColor", "auth_bg_color", current.authBgColor),
+    support_email: pick("supportEmail", "support_email", current.supportEmail),
+    website_url: pick("websiteUrl", "website_url", current.websiteUrl),
+    tagline: pick("tagline", "tagline", current.tagline),
     meta_json: JSON.stringify(
       patch.meta && typeof patch.meta === "object"
         ? { ...current.meta, ...patch.meta }

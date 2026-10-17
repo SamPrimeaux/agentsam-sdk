@@ -3,59 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Home — Ember Supply Admin</title>
+<title>Home — Fuel & Free Time Admin</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
+<link rel="stylesheet" href="/admin/css/home-workspace.css">
+<script defer src="/admin/js/agent-composer-menu.js"></script>
+<script defer src="/admin/js/home-workspace.js"></script>
 </head>
 <body>
 <script src="/admin/js/shell.js"></script>
 <script>
 renderShell("/admin/home", `
-  <div class="console-page">
-    <h1 class="admin-page-title" id="home-greeting">Welcome back</h1>
-    <div class="console-stat-grid" id="home-stats">
-      <div class="console-stat-card"><div class="label">Products</div><div class="value">—</div></div>
-      <div class="console-stat-card"><div class="label">Inventory units</div><div class="value">—</div></div>
-      <div class="console-stat-card"><div class="label">Orders</div><div class="value">—</div></div>
-      <div class="console-stat-card"><div class="label">Subscribers</div><div class="value">—</div></div>
-    </div>
+  <div class="fnf-home">
+    <section class="fnf-home-stage" aria-labelledby="fnf-home-heading">
+      <div class="fnf-site-preview">
+        <span class="fnf-site-preview__label">Your store <span aria-hidden="true">↗</span></span>
+        <span class="fnf-site-preview__browser"><span class="fnf-site-preview__address">fuelnfreetime.com</span><span class="fnf-site-preview__browser-dots" aria-hidden="true">···</span></span>
+        <span class="fnf-site-preview__viewport"><iframe src="/" title="Published Fuel & Free Time storefront preview" loading="lazy" tabindex="-1" aria-hidden="true"></iframe></span>
+        <span class="fnf-site-preview__hover">Customize Theme <span aria-hidden="true">↗</span></span>
+        <a class="fnf-site-preview__link" href="/admin/theme-editor?slug=home" aria-label="Customize Theme" title="Customize Theme"></a>
+      </div>
+      <h1 id="fnf-home-heading">Your store is taking shape.<br>What would you like to work on next?</h1>
+      <form id="home-agent-form" class="fnf-home-composer" aria-label="Ask AgentSam">
+        <label class="fnf-home-composer__label" for="home-agent-input">Work with AgentSam</label>
+        <textarea id="home-agent-input" rows="2" placeholder="Ask about your store or describe what you want to build" aria-label="Ask AgentSam about your store"></textarea>
+        <div class="fnf-home-composer__bottom">
+          <span class="fnf-home-composer__brand"><img src="/admin/brand/agentsam-mark.svg" alt=""> AgentSam</span>
+          <span class="fnf-home-composer__controls">
+            <button type="button" id="home-agent-open" class="fnf-home-composer__text-action" title="Continue in Side Assistant">Open chat</button>
+            <button type="button" id="home-agent-plus" class="fnf-home-composer__icon-action" aria-label="Add files, resources, skills or apps" aria-haspopup="menu" aria-expanded="false">+</button>
+            <button type="submit" id="home-agent-send" class="fnf-home-composer__send" aria-label="Send to AgentSam">↑</button>
+          </span>
+        </div>
+        <div class="fnf-home-composer__attachments" id="home-agent-attachments" aria-live="polite"></div>
+      </form>
+      <div class="fnf-home-suggestions" aria-label="Suggestions for AgentSam">
+        <button type="button" data-home-suggestion="Help me improve my storefront homepage">Plan my homepage</button>
+        <button type="button" data-home-suggestion="Which products should I feature on my homepage based on my real catalog?">Feature products</button>
+        <button type="button" data-home-suggestion="Summarize today's store activity using available live records">Review store activity</button>
+        <button type="button" data-home-suggestion="Help me create a new homepage section. Show a proposal before applying anything.">Create a section</button>
+        <button type="button" data-home-suggestion="What should I publish next based on our existing pages and products?">Plan my next update</button>
+      </div>
+    </section>
 
-    <div class="console-panel">
-      <h2>What can I help you with?</h2>
-      <p style="color:var(--c-muted);font-size:14px;margin:-8px 0 14px;">Ask Agent Sam about orders, inventory, pages, or what to publish next.</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <a href="/admin/agentsam" class="btn ghost small">Open AgentSam</a>
-        <button type="button" class="btn ghost small" data-agentsam-prompt="Summarize today's store activity">Summarize activity</button>
-        <button type="button" class="btn ghost small" data-agentsam-prompt="Which products are low on stock?">Low stock check</button>
-        <button type="button" class="btn ghost small" data-agentsam-prompt="Draft hero copy for the shop page">Draft shop hero</button>
-        <button type="button" class="btn ghost small" data-agentsam-prompt="What should I publish next on the site?">Publish ideas</button>
+    <section class="fnf-home-operations" aria-labelledby="fnf-home-operations-heading">
+      <div class="fnf-home-operations__heading"><div><h2 id="fnf-home-operations-heading">Store activity</h2><p>Your live operations at a glance</p></div><a href="/admin/products">Manage products <span aria-hidden="true">↗</span></a></div>
+      <div class="console-stat-grid" id="home-stats">
+        <div class="console-stat-card"><div class="label">Products</div><div class="value">—</div></div>
+        <div class="console-stat-card"><div class="label">Inventory units</div><div class="value">—</div></div>
+        <div class="console-stat-card"><div class="label">Orders</div><div class="value">—</div></div>
+        <div class="console-stat-card"><div class="label">Subscribers</div><div class="value">—</div></div>
       </div>
-    </div>
-
-    <h2 style="font-size:16px;font-weight:600;margin:8px 0 16px;">Set up your store</h2>
-    <div class="console-panel" style="display:flex;overflow:hidden;padding:0;">
-      <div style="flex:1;padding:24px;">
-        <div style="font-size:16px;font-weight:600;">Customize your storefront</div>
-        <p style="font-size:14px;color:var(--c-muted);margin-top:8px;line-height:1.5;max-width:440px;">Edit page heroes and publish live — no redeploy. Products, media, and CMS sections are wired.</p>
-        <a href="/admin/theme-editor?slug=shop" class="btn primary" style="margin-top:16px;display:inline-flex;">Open theme editor</a>
+      <div class="fnf-home-operations__links">
+        <a href="/admin/theme-editor?slug=home"><strong>Customize theme</strong><span>Design and publish your actual storefront pages</span><span aria-hidden="true">↗</span></a>
+        <a href="/admin/products"><strong>Products &amp; inventory</strong><span>Review variants, availability and catalog</span><span aria-hidden="true">↗</span></a>
+        <a href="/admin/content"><strong>Content &amp; media</strong><span>Use your reusable media and content library</span><span aria-hidden="true">↗</span></a>
       </div>
-      <div style="width:280px;flex:none;background:linear-gradient(135deg,#1a1310,#2a1c12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:20px;">
-        <div style="font-size:10px;letter-spacing:3px;color:#c9c9c9;">TIME IS THE</div>
-        <div style="font-size:22px;font-weight:800;background:linear-gradient(90deg,#f59e0b,#ea580c);-webkit-background-clip:text;background-clip:text;color:transparent;">HORSEPOWER</div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <div class="console-panel">
-        <div style="font-size:15px;font-weight:600;">Products</div>
-        <p style="font-size:13.5px;color:var(--c-muted);margin-top:6px;line-height:1.5;">Manage catalog, variants, and inventory.</p>
-        <a href="/admin/products" class="btn ghost" style="margin-top:14px;display:inline-flex;">View products</a>
-      </div>
-      <div class="console-panel">
-        <div style="font-size:15px;font-weight:600;">Content &amp; media</div>
-        <p style="font-size:13.5px;color:var(--c-muted);margin-top:6px;line-height:1.5;">Upload assets and attach them to products or page sections.</p>
-        <a href="/admin/content" class="btn ghost" style="margin-top:14px;display:inline-flex;">Open content</a>
-      </div>
-    </div>
+    </section>
   </div>
 `);
 

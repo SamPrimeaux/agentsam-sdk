@@ -6,6 +6,7 @@
 import { PAGE_REGISTRY } from "./registry.js";
 import {
   CmsSlotHandler,
+  CmsSectionScopeHandler,
   HeadEdgeHydratedHandler,
   HtmlEdgeHydratedHandler,
   loadEdgeHydrationContext,
@@ -33,6 +34,22 @@ function escapeAttr(value) {
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;");
+}
+
+/**
+ * Canonical public URL for a storefront request: origin + clean path, no
+ * query/hash, no .html suffix. Returns "" for anything that is not https.
+ */
+export function canonicalUrlFor(requestUrl) {
+  try {
+    const u = new URL(requestUrl);
+    if (u.protocol !== "https:") return "";
+    let path = u.pathname.replace(/\/index\.html$/i, "/").replace(/\.html$/i, "");
+    if (!path) path = "/";
+    return `${u.origin}${path}`;
+  } catch {
+    return "";
+  }
 }
 
 export function slugForStorefrontPath(pathname) {
@@ -76,6 +93,8 @@ async function buildHeadContext(env, slug) {
     title,
     description: prefs.metaDescription || "",
     socialImageUrl: prefs.socialImageUrl || "",
+    siteName: siteTitle,
+    canonicalUrl: "",
   };
 }
 
@@ -102,9 +121,10 @@ class HeadSeoAppendHandler {
     this.head = head;
   }
   element(el) {
-    const { title, description, socialImageUrl } = this.head;
+    const { title, description, socialImageUrl, canonicalUrl, siteName } = this.head;
     const imgTags = socialImageUrl
       ? `<meta property="og:image" content="${escapeAttr(socialImageUrl)}">
+<meta property="og:image:alt" content="${escapeAttr(title)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${escapeAttr(socialImageUrl)}">`
       : `<meta name="twitter:card" content="summary">`;
@@ -113,7 +133,7 @@ class HeadSeoAppendHandler {
       `<meta name="cms-edge-seo" content="1">
 <meta name="description" content="${escapeAttr(description)}">
 <meta property="og:type" content="website">
-<meta property="og:title" content="${escapeAttr(title)}">
+${siteName ? `<meta property="og:site_name" content="${escapeAttr(siteName)}">\n` : ""}${canonicalUrl ? `<link rel="canonical" href="${escapeAttr(canonicalUrl)}">\n<meta property="og:url" content="${escapeAttr(canonicalUrl)}">\n` : ""}<meta property="og:title" content="${escapeAttr(title)}">
 <meta property="og:description" content="${escapeAttr(description)}">
 <meta name="twitter:title" content="${escapeAttr(title)}">
 <meta name="twitter:description" content="${escapeAttr(description)}">
@@ -129,8 +149,35 @@ export async function transformStorefrontHtml(response, env, slug, request) {
     return response;
   }
 
-  const preview = request ? new URL(request.url).searchParams.has("preview") : false;
+  const preview = request ? new URL(request.url).searchParams.get("preview") === "1" : false;
+  if (preview) {
+    // A private CMS draft cannot be inserted into a public/cached HTML response.
+    const { getSessionUser } = await import("../lib/auth.js");
+    const user = await getSessionUser(request, env);
+    if (!user) {
+      return new Response("Authentication required for draft preview", {
+        status: 401,
+        headers: { "cache-control": "private, no-store", "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+    const { canReadCmsDraft } = await import("./api.js");
+    if (!(await canReadCmsDraft(env, slug, user.account_id))) {
+      return new Response("Draft not available for this account", {
+        status: 403,
+        headers: { "cache-control": "private, no-store", "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+  }
   const head = await buildHeadContext(env, slug);
+  head.canonicalUrl = preview ? "" : canonicalUrlFor(request?.url);
+  // Open Graph and Twitter require an absolute image URL to reliably fetch
+  // the chosen R2-backed image from social crawlers.
+  if (head.socialImageUrl) {
+    try {
+      const resolved = new URL(head.socialImageUrl, request?.url || "https://fuelnfreetime.com");
+      head.socialImageUrl = resolved.protocol === "https:" ? resolved.href : "";
+    } catch { head.socialImageUrl = ""; }
+  }
 
   let rewriter = new HTMLRewriter()
     .on("title", new TitleHandler(head.title))
@@ -145,14 +192,18 @@ export async function transformStorefrontHtml(response, env, slug, request) {
 
   let edgeHydrated = false;
 
-  if (!preview && slug) {
-    const hydration = await loadEdgeHydrationContext(env, slug);
+  if (slug) {
+    // Preserve source HTML/CSS and hydrate its CMS slots from the correct
+    // versioned authority: private draft for preview, publication for live.
+    const hydration = await loadEdgeHydrationContext(env, slug, { preview });
     if (hydration.hydrated) {
       edgeHydrated = true;
+      const scope = { stack: [] };
       rewriter = rewriter
         .on("html", new HtmlEdgeHydratedHandler())
         .on("head", new HeadEdgeHydratedHandler())
-        .on("[data-cms]", new CmsSlotHandler(hydration.sectionsByKey));
+        .on("[data-cms-section]", new CmsSectionScopeHandler(scope))
+        .on("[data-cms]", new CmsSlotHandler(hydration.sectionsByKey, scope));
     }
   }
 
@@ -160,6 +211,11 @@ export async function transformStorefrontHtml(response, env, slug, request) {
   const headers = new Headers(transformed.headers);
   if (edgeHydrated) {
     headers.set("X-CMS-Edge-Hydrate", "1");
+  }
+  if (preview) {
+    headers.set("Cache-Control", "private, no-store");
+    headers.set("Vary", "Cookie");
+    headers.set("X-CMS-Draft-Preview", "1");
   }
   return new Response(transformed.body, {
     status: transformed.status,

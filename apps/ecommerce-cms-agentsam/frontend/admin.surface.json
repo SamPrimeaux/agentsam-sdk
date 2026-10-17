@@ -1,0 +1,36 @@
+{
+  "schema": "agentsam.surface.v1",
+  "id": "admin",
+  "name": "Ecommerce Admin",
+  "kind": "core-surface",
+  "owner": "ecommerce-cms-agentsam",
+  "mount": "/admin",
+  "architecture": "hybrid",
+  "route_authority": "backend/lib/route-manifest.js",
+  "implementations": {
+    "shell": {
+      "source": "frontend/shell.js"
+    },
+    "inspector": {
+      "source": "frontend/inspector.js"
+    },
+    "documents": {
+      "root": "frontend/static",
+      "handler": "admin-html"
+    },
+    "react": {
+      "source": "frontend/src",
+      "entry": "frontend/index.html",
+      "handler": "admin-spa",
+      "asset_base": "/admin/_spa/"
+    }
+  },
+  "provides": [
+    "admin.shell.render",
+    "admin.nav.model",
+    "admin.chrome.theme",
+    "agentsam.side-assistant.host",
+    "agentsam.mini-composer.host"
+  ],
+  "notes": "Core application surface. It is not an installable App and is not classified as a feature."
+}

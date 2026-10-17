@@ -1,0 +1,69 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "growth",
+  "name": "Growth",
+  "role": "embedded-app",
+  "category": "marketing",
+  "status": "bundled",
+  "routes": [
+    "/admin/growth"
+  ],
+  "provides": [
+    "campaign.create",
+    "campaign.manage",
+    "campaign.analytics",
+    "attribution.read"
+  ],
+  "requires": [
+    "account.context",
+    "storage.sql"
+  ],
+  "optional": [
+    "email.send",
+    "cms.publish",
+    "commerce.catalog.read"
+  ],
+  "implementation": {
+    "frontend": [
+      "frontend/static/growth.html",
+      "frontend/static/js/growth.js",
+      "frontend/static/css/growth.css"
+    ],
+    "backend": [
+      "backend/admin/growth.js",
+      "backend/attribution"
+    ]
+  },
+  "navigation": {
+    "placement": "main",
+    "label": "Growth"
+  },
+  "agent": {
+    "status": "registered",
+    "tool_resolution": "agentsam_tools.capability_key + app_id=growth",
+    "resource_scope": "current application account + growth_campaigns/attribution resources",
+    "capabilities": {
+      "read": [
+        "campaign.overview.read",
+        "campaign.read"
+      ],
+      "write": [
+        "campaign.create",
+        "campaign.update",
+        "campaign.generate"
+      ],
+      "approval_required": [
+        "campaign.publish"
+      ]
+    },
+    "tools": [
+      "growth_overview_read",
+      "growth_campaigns_list",
+      "growth_campaign_create",
+      "growth_campaign_update",
+      "growth_campaign_generate",
+      "growth_campaign_publish"
+    ],
+    "notes": "Growth tools reuse the existing admin Growth API. Draft mutations require confirmation; campaign publish requires explicit approval."
+  }
+}

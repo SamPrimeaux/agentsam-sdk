@@ -7,6 +7,10 @@ const DEFAULT_MAX_PAGES = 1;
 const MAX_SYNC_PAGES = 1;
 const BATCH_SIZE = 75;
 const DETAIL_IMAGE_LIMIT = 24;
+// Provider products can contain thousands of gallery records (4,356+ seen in
+// production). Keep the COMPLETE source in R2, but only a representative,
+// deterministic hot mirror in D1. Never send thousands of INSERTs in one D1 batch.
+export const MAX_MIRRORED_IMAGES_PER_PRODUCT = 96;
 
 function jsonText(value) {
   if (value === undefined || value === null) return null;
@@ -169,7 +173,7 @@ export async function selectPrimaryCompletefulShop(env, shopId) {
   return true;
 }
 
-async function statementsForCatalogProduct(env, product, syncToken, requestId) {
+export async function statementsForCatalogProduct(env, product, syncToken, requestId) {
   const source = JSON.stringify(product);
   const sourceHash = await sha256Hex(source);
   const sourceKey = `completeful/catalog-source/${product.id}/${sourceHash}.json`;
@@ -357,7 +361,12 @@ async function statementsForCatalogProduct(env, product, syncToken, requestId) {
     );
   }
 
-  for (const image of product.images || []) {
+  const imagesForMirror = [...(product.images || [])]
+    .sort((a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary)) ||
+      Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0) ||
+      String(a.id || "").localeCompare(String(b.id || "")))
+    .slice(0, MAX_MIRRORED_IMAGES_PER_PRODUCT);
+  for (const image of imagesForMirror) {
     statements.push(
       env.DB.prepare(
         `INSERT INTO completeful_catalog_images (
@@ -404,6 +413,8 @@ async function statementsForCatalogProduct(env, product, syncToken, requestId) {
   return {
     statements,
     variantCount: (product.variants || []).length,
+    mirroredImages: imagesForMirror.length,
+    archivedImages: (product.images || []).length,
   };
 }
 
@@ -482,16 +493,25 @@ export async function syncCompletefulCatalog(env, options = {}) {
 
       for (const product of page.items) {
         if (!product?.id) continue;
-        const built = await statementsForCatalogProduct(
-          env,
-          product,
-          syncToken,
-          meta.request_id,
-        );
-        // D1 batch is transactional: keep the prior complete product if any child fails.
-        await env.DB.batch(built.statements);
-        productsSeen += 1;
-        variantsSeen += built.variantCount;
+        try {
+          const built = await statementsForCatalogProduct(
+            env,
+            product,
+            syncToken,
+            meta.request_id,
+          );
+          // Bounded mirror, atomic per product: the full provider payload has
+          // already been preserved in R2; D1 never receives unbounded images.
+          await env.DB.batch(built.statements);
+          productsSeen += 1;
+          variantsSeen += built.variantCount;
+        } catch (error) {
+          // Keep the page cursor unchanged so a scheduled retry replays this
+          // exact product, rather than silently skipping it.
+          error.syncProductId = product.id;
+          error.syncProductImages = product.images?.length || 0;
+          throw error;
+        }
       }
 
 
@@ -555,7 +575,7 @@ export async function syncCompletefulCatalog(env, options = {}) {
     )
       .bind(
         error?.code || "catalog_sync_failed",
-        String(error?.message || error).slice(0, 1000),
+        `product=${error?.syncProductId || "unknown"}, image_count=${error?.syncProductImages ?? "unknown"}: ${String(error?.message || error)}`.slice(0, 1000),
         error?.requestId || lastRequestId,
       )
       .run();
@@ -564,7 +584,7 @@ export async function syncCompletefulCatalog(env, options = {}) {
       error: "Catalog refresh paused. Existing products remain available.",
       code: error?.code || "catalog_sync_failed",
       detail: String(error?.message || error).slice(0, 500),
-      retryable: error?.status === 429 || error?.status >= 500 || /timeout|network|temporarily/i.test(String(error?.message)),
+      retryable: error?.status === 429 || error?.status >= 500 || /timeout|network|temporarily|SQLITE_TOOBIG/i.test(String(error?.message)),
       retry_after: 3,
     };
   }
@@ -575,6 +595,7 @@ export async function listCompletefulCatalogMirror(env, url) {
   const offset = clampInt(url.searchParams.get("offset"), 0, 0, 1000000);
   const search = (url.searchParams.get("search") || "").trim();
   const favorite = url.searchParams.get("favorite");
+  const category = url.searchParams.get("category");
 
   const where = [];
   const params = [];
@@ -586,6 +607,22 @@ export async function listCompletefulCatalogMirror(env, url) {
     )`);
     const q = `%${search}%`;
     params.push(q, q, q, q, q);
+  }
+
+  if (category === "apparel") {
+    // Explicit catalog category, not a text search for "shirt" that hides
+    // hoodies, sweaters, trousers and outerwear.
+    where.push(`(
+      lower(coalesce(p.product_type, '')) LIKE '%apparel%' OR
+      lower(coalesce(p.product_type, '')) LIKE '%clothing%' OR
+      lower(p.name) LIKE '%shirt%' OR lower(p.name) LIKE '%hood%' OR
+      lower(p.name) LIKE '%sweat%' OR lower(p.name) LIKE '%jacket%' OR
+      lower(p.name) LIKE '%polo%' OR lower(p.name) LIKE '%tank%' OR
+      lower(p.name) LIKE '%jersey%' OR lower(p.name) LIKE '%legging%' OR
+      lower(p.name) LIKE '%jogger%' OR lower(p.name) LIKE '%shorts%' OR
+      lower(p.name) LIKE '%pants%' OR lower(p.name) LIKE '%raglan%' OR
+      lower(p.name) LIKE '%vest%'
+    )`);
   }
 
   if (favorite === "1" || favorite === "true") {

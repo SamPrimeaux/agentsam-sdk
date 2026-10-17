@@ -59,6 +59,7 @@ export function normalizeAttachments(raw) {
       (mime_type.startsWith("image/") ? "image" : item.text_content != null ? "text" : "file");
 
     const entry = {
+      attachment_id: item.attachment_id ? String(item.attachment_id) : null,
       name,
       mime_type,
       kind,
@@ -169,6 +170,7 @@ export async function enrichContextFromAttachments(env, context, attachments, re
 
   base.has_image = Boolean(image.image_base64 || image.image_url);
   base.image_base64 = image.image_base64 || base.image_base64 || null;
+  base.image_mime_type = image.attachment?.mime_type || base.image_mime_type || null;
   base.image_url = image.image_url || base.image_url || base.attachment_url || null;
   base.attachment_url = base.image_url;
   base.attachment_meta = summarizeAttachments(attachments);

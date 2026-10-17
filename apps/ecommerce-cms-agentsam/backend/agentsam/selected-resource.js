@@ -76,10 +76,59 @@ async function resolveMediaSelection(env, resource) {
   };
 }
 
+async function resolveProductStudioArtwork(env, resource) {
+  const productId = String(resource.productId || "").trim();
+  const variantId = String(resource.variantId || "").trim();
+  const locationId = String(resource.locationId || "").trim();
+  if (!productId || productId.length > 128 ||
+      variantId.length > 128 || locationId.length > 128) {
+    throw new Error("Invalid Product Studio selection");
+  }
+  const product = await env.DB.prepare(
+    "SELECT completeful_product_id, name FROM completeful_catalog_products WHERE completeful_product_id = ?"
+  ).bind(productId).first();
+  if (!product) throw new Error("Product Studio catalog item unavailable");
+
+  const variant = variantId ? await env.DB.prepare(
+    "SELECT completeful_variant_id, variant_title FROM completeful_catalog_variants " +
+      "WHERE completeful_product_id = ? AND completeful_variant_id = ?"
+  ).bind(productId, variantId).first() : null;
+  if (variantId && !variant) throw new Error("Selected product variant unavailable");
+
+  const location = locationId ? await env.DB.prepare(
+    "SELECT print_location_id, name, file_width, file_height, unit, dpi " +
+      "FROM completeful_catalog_print_locations " +
+      "WHERE completeful_product_id = ? AND print_location_id = ? AND enabled = 1"
+  ).bind(productId, locationId).first() : null;
+  if (locationId && !location) throw new Error("Selected print location unavailable");
+
+  const assetId = Number(resource.assetId);
+  const asset = Number.isSafeInteger(assetId) && assetId > 0
+    ? (await loadMediaRows(env, [assetId]))[0] : null;
+  if (resource.assetId != null && !asset) throw new Error("Selected artwork unavailable");
+
+  return {
+    surface: "product-studio",
+    type: "product_artwork",
+    product: { id: product.completeful_product_id, name: product.name },
+    variant: variant ? { id: variant.completeful_variant_id, name: variant.variant_title } : null,
+    location: location ? {
+      id: location.print_location_id, name: location.name,
+      width: location.file_width, height: location.file_height,
+      unit: location.unit, dpi: location.dpi,
+    } : null,
+    artwork: asset ? mediaResourceFromRow(asset) : null,
+  };
+}
+
 /** Store-local session authorization precedes this lookup in the admin router. */
 export async function resolveSelectedResource(env, resource) {
   if (!resource || typeof resource !== "object") {
     throw new Error("Unsupported editable resource");
+  }
+
+  if (resource.surface === "product-studio" && resource.type === "product_artwork") {
+    return resolveProductStudioArtwork(env, resource);
   }
 
   if (resource.surface === "content-library" && resource.type === "media_asset") {

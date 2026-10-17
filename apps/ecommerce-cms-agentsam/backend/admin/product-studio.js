@@ -3,6 +3,9 @@ import {
   assertCompletefulMutationAllowed,
   completefulRequest,
 } from "../completeful/client.js";
+import {
+  planCompletefulMockupMatrix, renderCompletefulMockupMatrix, pollCompletefulMockupRender,
+} from "../completeful/mockup-renderer.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -50,7 +53,7 @@ function draftFromRow(row) {
 }
 
 function siteOrigin(env) {
-  const domain = String(env.APP_DOMAIN || "ember.example").trim();
+  const domain = String(env.APP_DOMAIN || "fuelnfreetime.com").trim();
   if (/^https?:\/\//i.test(domain)) return domain.replace(/\/$/, "");
   return `https://${domain.replace(/^\/+|\/+$/g, "")}`;
 }
@@ -165,6 +168,8 @@ function scopeMatches(scope, attrs) {
   });
 }
 
+// Legacy single-mockup route remains for existing draft consumers. The new
+// color x print-location matrix lives in completeful/mockup-renderer.js.
 async function resolveMockup(env, draft, selection) {
   const locationId = draft.print_location_ids[0];
   if (!locationId) return null;
@@ -178,7 +183,15 @@ async function resolveMockup(env, draft, selection) {
   const rows = results || [];
   if (!rows.length) return null;
   const attrs = variantAttributes(selection.variants[0]);
-  return rows.find((row) => scopeMatches(parseJson(row.variant_scope_json, {}), attrs)) || rows[0];
+  // Never silently render a different garment color. Completeful scopes
+  // mockups by attributes such as {"Color":"Moss"}.
+  return rows.find((row) => {
+    const scope = parseJson(row.variant_scope_json, {});
+    return Object.keys(scope).length > 0 && scopeMatches(scope, attrs);
+  }) || rows.find((row) => {
+    const scope = parseJson(row.variant_scope_json, {});
+    return Object.keys(scope).length === 0;
+  }) || null;
 }
 
 async function beginOperation(env, { operationKey, operationType, draftId, shopId, idempotencyKey }) {
@@ -279,15 +292,31 @@ async function saveDraft(request, env) {
     return json({ ok: false, error: error.message }, { status: error.status || 400 });
   }
 
-  let draft = body.id ? await loadDraft(env, String(body.id)) : await loadResumeDraft(env, selection.resolvedProductId);
+  // "Start designing" creates an independent design; "Edit design" updates
+  // the explicit draft ID only. Never silently reuse another color's draft.
+  if (body.force_new && (body.id || body.product_id)) {
+    return json({ ok: false, error: "A new design cannot reuse an existing draft or product ID" }, { status: 400 });
+  }
+  let draft = body.force_new ? null
+    : body.id ? await loadDraft(env, String(body.id))
+    : await loadResumeDraft(env, selection.resolvedProductId);
+  if (body.id && !draft) {
+    return json({ ok: false, error: "The requested design draft was not found" }, { status: 404 });
+  }
+  if (draft && draft.completeful_catalog_product_id !== selection.resolvedProductId) {
+    return json({ ok: false, error: "This design belongs to a different catalog garment" }, { status: 409 });
+  }
   const product = draft
     ? await env.DB.prepare(`SELECT * FROM products WHERE id = ?`).bind(draft.product_id).first()
-    : await ensureDraftProduct(env, body, selection.product);
+    : await ensureDraftProduct(env, body.force_new ? { ...body, product_id: null } : body, selection.product);
   if (!product) return json({ ok: false, error: "Draft product could not be resolved" }, { status: 500 });
 
-  const originalMediaId = body.original_media_asset_id ? Number(body.original_media_asset_id) : draft?.original_media_asset_id || null;
-  const preparedMediaId = body.prepared_media_asset_id ? Number(body.prepared_media_asset_id) : draft?.prepared_media_asset_id || null;
-  const previewMediaId = body.preview_media_asset_id ? Number(body.preview_media_asset_id) : draft?.preview_media_asset_id || null;
+  // Explicit null clears a stale placement/derivative; omitted fields retain the draft.
+  const mediaSelection = (field, previous) =>
+    Object.hasOwn(body, field) ? (body[field] ? Number(body[field]) : null) : (previous || null);
+  const originalMediaId = mediaSelection("original_media_asset_id", draft?.original_media_asset_id);
+  const preparedMediaId = mediaSelection("prepared_media_asset_id", draft?.prepared_media_asset_id);
+  const previewMediaId = mediaSelection("preview_media_asset_id", draft?.preview_media_asset_id);
   if (originalMediaId && !(await mediaById(env, originalMediaId))) {
     return json({ ok: false, error: "Original artwork is no longer in the media library" }, { status: 400 });
   }
@@ -301,13 +330,19 @@ async function saveDraft(request, env) {
   const shop = await primaryShop(env);
   const id = draft?.id || `psd_${crypto.randomUUID()}`;
   const title = String(body.title ?? draft?.title ?? selection.product.default_title ?? selection.product.name).trim();
-  const description = body.description ?? draft?.description ?? selection.product.default_description ?? null;
-  const price = Math.max(0, Math.round(Number(body.retail_price_cents ?? draft?.retail_price_cents ?? product.price_cents ?? 0)));
+  // Commercial title, description and price are owned by Product Editor.
+  // Studio's optional title is an internal design label; never overwrite product fields.
+  const description = product.description ?? null;
+  const price = Math.max(0, Number(product.price_cents || 0));
   const placement = {
     x: Number(body.placement?.x ?? draft?.placement?.x ?? 50),
     y: Number(body.placement?.y ?? draft?.placement?.y ?? 50),
     scale: Number(body.placement?.scale ?? draft?.placement?.scale ?? 80),
     rotation: Number(body.placement?.rotation ?? draft?.placement?.rotation ?? 0),
+    flipX: Boolean(body.placement?.flipX ?? draft?.placement?.flipX ?? false),
+    flipY: Boolean(body.placement?.flipY ?? draft?.placement?.flipY ?? false),
+    trimTransparent: Boolean(body.placement?.trimTransparent ?? draft?.placement?.trimTransparent ?? false),
+    removeFlatBackground: Boolean(body.placement?.removeFlatBackground ?? draft?.placement?.removeFlatBackground ?? false),
     notes: String(body.notes ?? draft?.placement?.notes ?? "").slice(0, 10000),
   };
   const state = preparedMediaId ? "prepared" : "draft";
@@ -321,6 +356,10 @@ async function saveDraft(request, env) {
       y: Number(value.placement?.y ?? 50),
       scale: Number(value.placement?.scale ?? 80),
       rotation: Number(value.placement?.rotation ?? 0),
+      flipX: Boolean(value.placement?.flipX ?? false),
+      flipY: Boolean(value.placement?.flipY ?? false),
+      trimTransparent: Boolean(value.placement?.trimTransparent ?? false),
+      removeFlatBackground: Boolean(value.placement?.removeFlatBackground ?? false),
     });
   const designChanged =
     !draft ||
@@ -352,10 +391,11 @@ async function saveDraft(request, env) {
     await env.DB.prepare(
       `UPDATE product_studio_drafts
         SET completeful_shop_id = ?, placement_json = ?, preview_media_asset_id = ?, title = ?, description = ?, retail_price_cents = ?,
+            state = CASE WHEN state = 'error' THEN ? ELSE state END,
             last_error_code = NULL, last_error_message = NULL, updated_at = datetime('now')
         WHERE id = ?`,
     )
-      .bind(shop?.completeful_shop_id || null, JSON.stringify(placement), previewMediaId, title, description, price, id)
+      .bind(shop?.completeful_shop_id || null, JSON.stringify(placement), previewMediaId, title, description, price, state, id)
       .run();
   } else {
     await env.DB.prepare(
@@ -385,11 +425,19 @@ async function saveDraft(request, env) {
       .run();
   }
 
-  await env.DB.prepare(
-    `UPDATE products SET title = ?, description = ?, price_cents = ?, updated_at = datetime('now') WHERE id = ?`,
-  )
-    .bind(title, description, price, product.id)
-    .run();
+  // Attach a saved placement approximation to the draft product (not source art).
+  if (previewMediaId) {
+    const preview = await mediaById(env, previewMediaId);
+    const priorImage = await env.DB.prepare(
+      "SELECT id FROM product_images WHERE product_id = ? LIMIT 1"
+    ).bind(product.id).first();
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO product_images (product_id, media_asset_id, position, is_primary) VALUES (?, ?, 0, ?)"
+    ).bind(product.id, previewMediaId, priorImage ? 0 : 1).run();
+    await env.DB.prepare(
+      "UPDATE products SET image_url = COALESCE(image_url, ?), updated_at = datetime('now') WHERE id = ?"
+    ).bind(preview.url, product.id).run();
+  }
 
   return json({ ok: true, draft: await loadDraft(env, id) });
 }
@@ -403,15 +451,27 @@ async function getDraft(request, env, url, id = null) {
 }
 
 async function createDesign(env, draft) {
+  // Provider designs must use the reviewed manufacturing derivative, never
+  // silently fall back to the original artwork or a browser placement preview.
+  if (!draft.prepared_media_asset_id) {
+    throw Object.assign(new Error("Prepare production artwork in Product Studio before creating a Completeful design"), {
+      status: 409, code: "production_artwork_not_prepared",
+    });
+  }
   const selection = await validateSelection(
     env,
     draft.completeful_catalog_product_id,
     draft.selected_variant_ids,
     draft.print_location_ids,
   );
-  const art = await mediaById(env, draft.prepared_media_asset_id || draft.original_media_asset_id);
+  const art = await mediaById(env, draft.prepared_media_asset_id);
+  if (!art || String(art.content_type || "").toLowerCase() !== "image/png") {
+    throw Object.assign(new Error("Prepared production artwork must be an uploaded PNG in the media library"), {
+      status: 409, code: "invalid_production_artwork",
+    });
+  }
   const artUrl = publicMediaUrl(env, art);
-  if (!artUrl) throw Object.assign(new Error("Add and prepare artwork before creating a Completeful design"), { status: 400 });
+  if (!artUrl) throw Object.assign(new Error("Prepared artwork has no public delivery URL"), { status: 409 });
   const shop = draft.completeful_shop_id ? { completeful_shop_id: draft.completeful_shop_id } : await primaryShop(env);
   if (!shop?.completeful_shop_id) throw Object.assign(new Error("Select a Completeful shop first"), { status: 409 });
 
@@ -726,13 +786,61 @@ async function createLocalMappings(env, draft, selection, providerProductId, des
 async function createProductFromDraft(request, env, id) {
   let draft = await loadDraft(env, id);
   if (!draft) return json({ ok: false, error: "Draft not found" }, { status: 404 });
-  if (Number(draft.retail_price_cents) <= 0) {
-    return json({ ok: false, error: "Set a retail price above $0 before creating the product" }, { status: 400 });
+  // A saved provider association must be reused, never duplicated. If a
+  // previous response succeeded upstream but a local mapping write failed,
+  // repair the mapping idempotently instead of submitting another product.
+  const link = await env.DB.prepare(
+    "SELECT * FROM completeful_product_links WHERE product_id = ? AND completeful_store_product_id IS NOT NULL LIMIT 1"
+  ).bind(draft.product_id).first();
+  if (link?.completeful_store_product_id) {
+    const linkedSelection = parseJson(link.selection_json, {});
+    const linkedIds = normalizeIds(linkedSelection.variant_ids || []);
+    const requestedIds = normalizeIds(draft.selected_variant_ids);
+    if (linkedIds.length !== requestedIds.length ||
+        linkedIds.some((variantId) => !requestedIds.includes(variantId))) {
+      return json({ ok: false,
+        error: "The saved supplier selection changed after creation. Reconcile the existing Completeful product before publishing.",
+        code: "supplier_selection_changed" }, { status: 409 });
+    }
+    try {
+      const selection = await validateSelection(
+        env, draft.completeful_catalog_product_id, requestedIds, draft.print_location_ids
+      );
+      const mappings = await createLocalMappings(
+        env, draft, selection, link.completeful_store_product_id,
+        link.completeful_design_id || draft.completeful_design_id, link.last_request_id
+      );
+      if (mappings.mapped.length !== requestedIds.length) {
+        throw new Error("Supplier variant mapping is incomplete");
+      }
+      await env.DB.prepare(
+        "UPDATE product_studio_drafts SET state = 'created', last_error_code = NULL, last_error_message = NULL, updated_at = datetime('now') WHERE id = ? AND state != 'published'"
+      ).bind(id).run();
+      return json({ ok: true, already_linked: true, product_id: draft.product_id,
+        completeful_store_product_id: link.completeful_store_product_id,
+        mapped_variants: mappings.mapped.length, draft: await loadDraft(env, id) });
+    } catch (error) {
+      return providerErrorResponse(error);
+    }
   }
-  if (!draft.prepared_media_asset_id && !draft.original_media_asset_id) {
-    return json({ ok: false, error: "Add artwork before creating the product" }, { status: 400 });
+  const product = await env.DB.prepare("SELECT * FROM products WHERE id = ?")
+    .bind(draft.product_id).first();
+  if (!product) return json({ ok: false, error: "Storefront product not found" }, { status: 404 });
+  if (Number(product.price_cents) <= 0) {
+    return json({ ok: false, error: "Set the retail price in Product Details before creating the Completeful product" }, { status: 400 });
   }
-
+  if (!draft.prepared_media_asset_id) {
+    return json({
+      ok: false,
+      error: "Prepare production artwork in Product Studio before creating the Completeful product",
+      code: "production_artwork_not_prepared",
+    }, { status: 409 });
+  }
+  // Snapshot the latest commercial values at provider-creation time.
+  await env.DB.prepare(
+    "UPDATE product_studio_drafts SET title = ?, description = ?, retail_price_cents = ?, updated_at = datetime('now') WHERE id = ?"
+  ).bind(product.title, product.description || null, product.price_cents, id).run();
+  draft = await loadDraft(env, id);
   try {
     const design = await createDesign(env, draft);
     draft = await loadDraft(env, id);
@@ -776,7 +884,7 @@ async function createProductFromDraft(request, env, id) {
               title: draft.title,
               description: draft.description || null,
               retail_price: Number(draft.retail_price_cents) / 100,
-              sku: `commerce-${draft.product_id}`,
+              sku: `fnf-${draft.product_id}`,
               design_id: design.designId,
               preview_url: draft.completeful_render_url || null,
               variants: providerSelection,
@@ -795,6 +903,9 @@ async function createProductFromDraft(request, env, id) {
     }
 
     const mappings = await createLocalMappings(env, draft, selection, providerProductId, design.designId, requestId);
+    if (mappings.mapped.length !== draft.selected_variant_ids.length) {
+      throw new Error("Supplier product created but not all selected variants were mapped");
+    }
     let image = null;
     if (draft.completeful_render_url && draft.completeful_render_status === "succeeded") {
       image = await persistProviderRender(env, draft);
@@ -907,6 +1018,30 @@ export async function handleProductStudioAdminApi(request, env, url) {
 
     match = path.match(/^\/api\/admin\/product-studio\/drafts\/([^/]+)\/design$/);
     if (match && method === "POST") return createDesignRoute(request, env, decodeURIComponent(match[1]));
+
+    match = path.match(/^\/api\/admin\/product-studio\/drafts\/([^/]+)\/render-batch$/);
+    if (match && (method === "GET" || method === "POST")) {
+      try {
+        const input = method === "POST" ? await readJson(request) : {};
+        const args = { ...input, draft_id: decodeURIComponent(match[1]) };
+        const out = method === "POST"
+          ? await renderCompletefulMockupMatrix(env, args)
+          : await planCompletefulMockupMatrix(env, args);
+        if (method === "GET") return json({
+          ok: true, draft_id: out.draft_id,
+          matrix: out.matrix, skipped: out.skipped,
+        });
+        return json(out);
+      } catch (error) {
+        return json({ ok: false, error: String(error?.code || error?.message || "render_batch_failed") }, { status: 400 });
+      }
+    }
+
+    match = path.match(/^\/api\/admin\/product-studio\/renders\/([^/]+)\/batch$/);
+    if (match && method === "GET") {
+      try { return json(await pollCompletefulMockupRender(env, decodeURIComponent(match[1]))); }
+      catch (error) { return json({ ok: false, error: String(error?.code || error?.message || "mockup_poll_failed") }, { status: 400 }); }
+    }
 
     match = path.match(/^\/api\/admin\/product-studio\/drafts\/([^/]+)\/render$/);
     if (match && method === "POST") return renderDraft(request, env, decodeURIComponent(match[1]));

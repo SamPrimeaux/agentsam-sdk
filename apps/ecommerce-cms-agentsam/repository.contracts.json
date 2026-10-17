@@ -1,0 +1,163 @@
+{
+  "schema": "agentsam.repository-contracts.v1",
+  "contracts": [
+    {
+      "contract_key": "runtime.agent-sam",
+      "contract_version": "1.0.0",
+      "contract_type": "runtime",
+      "name": "AgentSam runtime contract",
+      "description": "Repository-level AgentSam runtime guidance.",
+      "manifest_path": "AGENTSAM.md",
+      "status": "active",
+      "metadata": {
+        "family": "ecommerce-cms-agentsam"
+      }
+    },
+    {
+      "contract_key": "application.ecommerce-cms-agentsam",
+      "contract_version": "1.0.0",
+      "contract_type": "package",
+      "name": "Ecommerce + CMS application contract",
+      "description": "Canonical reusable Ecommerce application contract: core admin surface plus bundled Apps.",
+      "manifest_path": "apps/ecommerce-cms-agentsam/agentsam.app.json",
+      "status": "active",
+      "metadata": {
+        "classification": "application",
+        "apps_registry": "apps/ecommerce-cms-agentsam/apps/registry.json"
+      }
+    },
+    {
+      "contract_key": "surface.admin",
+      "contract_version": "1.0.0",
+      "contract_type": "runtime",
+      "name": "Ecommerce admin surface",
+      "description": "Core admin shell/surface contract; not an optional feature.",
+      "manifest_path": "apps/ecommerce-cms-agentsam/frontend/admin.surface.json",
+      "status": "active",
+      "metadata": {
+        "route_authority": "apps/ecommerce-cms-agentsam/backend/lib/route-manifest.js"
+      }
+    },
+    {
+      "contract_key": "app.product-studio",
+      "contract_version": "1.0.0",
+      "contract_type": "package",
+      "name": "Product Studio App",
+      "description": "Bundled commerce Product Studio App contract.",
+      "manifest_path": "apps/ecommerce-cms-agentsam/apps/product-studio/agentsam.app.json",
+      "status": "active",
+      "metadata": {
+        "app_id": "product-studio"
+      }
+    },
+    {
+      "contract_key": "app.growth",
+      "contract_version": "1.0.0",
+      "contract_type": "package",
+      "name": "Growth App",
+      "description": "Bundled Growth/marketing App contract.",
+      "manifest_path": "apps/ecommerce-cms-agentsam/apps/growth/agentsam.app.json",
+      "status": "active",
+      "metadata": {
+        "app_id": "growth"
+      }
+    },
+    {
+      "contract_key": "app.completeful",
+      "contract_version": "1.0.0",
+      "contract_type": "package",
+      "name": "Completeful App",
+      "description": "Bundled Completeful provider App contract.",
+      "manifest_path": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.app.json",
+      "status": "active",
+      "metadata": {
+        "app_id": "completeful",
+        "plugin_key": "completeful"
+      }
+    },
+    {
+      "contract_key": "app.resend",
+      "contract_version": "1.0.0",
+      "contract_type": "package",
+      "name": "Resend Email App",
+      "description": "Bundled Email/Resend provider App contract with mailbox-scoped authorization.",
+      "manifest_path": "apps/ecommerce-cms-agentsam/apps/resend/agentsam.app.json",
+      "status": "active",
+      "metadata": {
+        "app_id": "resend",
+        "plugin_key": "resend",
+        "mailbox_authority": "mail_mailboxes"
+      }
+    },
+    {
+      "contract_key": "schema.agentsam-tools",
+      "contract_version": "2.0.0",
+      "contract_type": "schema",
+      "name": "AgentSam tool authority",
+      "description": "agentsam_tools owns tool capability, App, operation and resource-scope metadata; agentsam_tool_capabilities is compatibility-only.",
+      "manifest_path": "db/migrate-agentsam-tools-authority-20261007.sql",
+      "status": "active",
+      "metadata": {
+        "tool_table": "agentsam_tools",
+        "capability_dictionary": "agentsam_capabilities",
+        "compatibility_view": "agentsam_tool_capabilities"
+      }
+    },
+    {
+      "contract_key": "package.completeful",
+      "contract_version": "1.0.0",
+      "contract_type": "package",
+      "name": "Completeful package compatibility alias",
+      "description": "Legacy contract key retained for compatibility; canonical ownership moved to app.completeful.",
+      "manifest_path": "apps/ecommerce-cms-agentsam/apps/completeful/agentsam.app.json",
+      "status": "deprecated",
+      "metadata": {
+        "canonical_contract": "app.completeful",
+        "plugin_key": "completeful",
+        "family": "ecommerce-cms-agentsam"
+      }
+    },
+    {
+      "contract_key": "schema.cms-data-family",
+      "contract_version": "1.0.0",
+      "contract_type": "schema",
+      "name": "CMS normalized data family",
+      "description": "Parallel normalized CMS page, section, block, revision and global tables with legacy provenance; renderer/editor authority remains on pages/page_sections during migration.",
+      "manifest_path": "db/migrate-cms-data-family-20261007.sql",
+      "status": "active",
+      "metadata": {
+        "tables": [
+          "cms_pages",
+          "cms_page_sections",
+          "cms_section_blocks",
+          "cms_revisions",
+          "cms_globals"
+        ],
+        "legacy_authority": [
+          "pages",
+          "page_sections"
+        ],
+        "migration_mode": "parallel-backfill"
+      }
+    },
+    {
+      "contract_key": "schema.cms-artifacts-block-system",
+      "contract_version": "1.0.0",
+      "contract_type": "schema",
+      "name": "CMS artifact + nested block system",
+      "description": "Canonical D1/SQLite CMS schema with artifact-backed custom blocks, nested groups, provider-neutral artifact provenance and block integrity guards.",
+      "manifest_path": "db/schema/cms.sql",
+      "status": "active",
+      "metadata": {
+        "tables": [
+          "cms_artifacts",
+          "cms_section_blocks"
+        ],
+        "canonical_schema": "db/schema/cms.sql",
+        "migration": "db/migrate-cms-artifacts-block-tree-20261007.sql",
+        "integrity_migration": "db/migrate-cms-block-integrity-20261007.sql",
+        "block_registry": "apps/ecommerce-cms-agentsam/cms/block-types.json"
+      }
+    }
+  ]
+}

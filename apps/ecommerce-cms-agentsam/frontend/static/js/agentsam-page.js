@@ -711,9 +711,9 @@ function applyPlatformData(data) {
   iamLogoUrl = data.iam_logo_url || IAM_LOGO_DEFAULT;
   connectUrls = data.connect_urls || connectUrls || {};
 
+  // No fixture/fallback MCP authority: the authenticated tools endpoint is
+  // the only source of server visibility and connected status.
   const incoming = Array.isArray(data.mcp_servers) ? data.mcp_servers : [];
-  // Server-confirmed capabilities only. Never synthesize MCP servers when
-  // discovery fails; disconnected services stay visible as setup options.
   mcpServers = incoming.filter((server) => server && typeof server.slug === "string");
   activeConnections = new Set([...activeConnections].filter((slug) =>
     mcpServers.some((server) => server.slug === slug && server.connected === true)));
@@ -899,7 +899,7 @@ function bindUi() {
         composeContext = {
           mode: "image",
           label: "Creative Studio",
-          workflow_key: plusMenuConfig.image.workflow_key || "commerce_creative_studio",
+          workflow_key: plusMenuConfig.image.workflow_key || "fnf_creative_studio",
           task_type: "image_generation",
           lane: "image",
         };

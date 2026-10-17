@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inneranimalmedia.com/schemas/theme-template-contract.v1.json",
+  "title": "InnerAnimalMedia Theme Template Contract v1",
+  "type": "object",
+  "required": ["contractVersion", "id", "layout", "sections"],
+  "additionalProperties": false,
+  "properties": {
+    "contractVersion": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "name": { "type": "string" },
+    "pageType": { "type": "string" },
+    "layout": {
+      "type": "object",
+      "required": ["headerGroup", "mainRegion", "footerGroup"],
+      "additionalProperties": false,
+      "properties": {
+        "headerGroup": { "type": "string", "minLength": 1 },
+        "mainRegion": { "type": "string", "minLength": 1 },
+        "footerGroup": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/sectionInstance" }
+    }
+  },
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "required": ["source"],
+      "additionalProperties": true,
+      "properties": {
+        "source": {
+          "enum": ["content", "media", "product", "collection", "navigation", "inventory", "customer", "manual"]
+        },
+        "ref": { "type": ["string", "null"] },
+        "query": { "type": ["object", "null"] }
+      }
+    },
+    "blockInstance": {
+      "type": "object",
+      "required": ["id", "type", "settings"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "enabled": { "type": "boolean", "default": true },
+        "settings": { "type": "object" },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/binding" }
+        }
+      }
+    },
+    "sectionInstance": {
+      "type": "object",
+      "required": ["id", "type", "preset", "settings", "blocks"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "preset": { "type": "string", "minLength": 1 },
+        "enabled": { "type": "boolean", "default": true },
+        "settings": { "type": "object" },
+        "blocks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/blockInstance" }
+        },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/binding" }
+        }
+      }
+    }
+  }
+}

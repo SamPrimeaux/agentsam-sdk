@@ -2,7 +2,7 @@
  * AgentSam compaction — roll hot D1 logs into daily stats and trim retention windows.
  */
 
-import { COMMERCE_ACCOUNT_ID } from "./constants.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { trackAgentSamEvent } from "./analytics.js";
 
 export const RETENTION = {
@@ -49,7 +49,7 @@ async function hasCompactionForDate(env, dateKey) {
      WHERE account_id = ? AND date_key = ? AND status = 'success'
      LIMIT 1`
   )
-    .bind(COMMERCE_ACCOUNT_ID, dateKey)
+    .bind(requireApplicationAccountId(), dateKey)
     .first();
   return Boolean(row?.id);
 }
@@ -62,7 +62,7 @@ async function startCompactionRun(env, dateKey, triggerSource) {
        id, account_id, date_key, trigger_source, status, started_at
      ) VALUES (?, ?, ?, ?, 'started', ?)`
   )
-    .bind(runId, COMMERCE_ACCOUNT_ID, dateKey, triggerSource, startedAt)
+    .bind(runId, requireApplicationAccountId(), dateKey, triggerSource, startedAt)
     .run();
   return { runId, startedAt };
 }
@@ -160,7 +160,7 @@ export async function rollupAnalyticsDaily(env, dateKey) {
        avg_ai_latency_ms = excluded.avg_ai_latency_ms,
        compacted_at = excluded.compacted_at`
   )
-    .bind(COMMERCE_ACCOUNT_ID, dateKey, COMMERCE_ACCOUNT_ID, dateKey)
+    .bind(requireApplicationAccountId(), dateKey, requireApplicationAccountId(), dateKey)
     .run();
 
   return { ok: true, rows: result.meta?.changes ?? 0 };
@@ -216,7 +216,7 @@ export async function rollupPromptUsageDaily(env, dateKey) {
        failed_count = excluded.failed_count,
        compacted_at = excluded.compacted_at`
   )
-    .bind(COMMERCE_ACCOUNT_ID, dateKey, COMMERCE_ACCOUNT_ID, dateKey)
+    .bind(requireApplicationAccountId(), dateKey, requireApplicationAccountId(), dateKey)
     .run();
 
   return { ok: true, rows: result.meta?.changes ?? 0 };
@@ -270,7 +270,7 @@ export async function rollupToolCallDaily(env, dateKey) {
        max_duration_ms = excluded.max_duration_ms,
        compacted_at = excluded.compacted_at`
   )
-    .bind(COMMERCE_ACCOUNT_ID, dateKey, COMMERCE_ACCOUNT_ID, start, end)
+    .bind(requireApplicationAccountId(), dateKey, requireApplicationAccountId(), start, end)
     .run();
 
   const lifetimeResult = await env.DB.prepare(
@@ -320,7 +320,7 @@ export async function rollupToolCallDaily(env, dateKey) {
        last_seen_at = excluded.last_seen_at,
        compacted_at = excluded.compacted_at`
   )
-    .bind(COMMERCE_ACCOUNT_ID, start, end, COMMERCE_ACCOUNT_ID, dateKey)
+    .bind(requireApplicationAccountId(), start, end, requireApplicationAccountId(), dateKey)
     .run()
     .catch(() => ({ meta: { changes: 0 } }));
 
@@ -342,21 +342,21 @@ export async function trimHotLogs(env, dateKey) {
     `DELETE FROM agentsam_analytics
      WHERE account_id = ? AND date_key <= ? AND created_at_unix < ?`
   )
-    .bind(COMMERCE_ACCOUNT_ID, dateKey, analyticsCutoff)
+    .bind(requireApplicationAccountId(), dateKey, analyticsCutoff)
     .run();
 
   const promptUsage = await env.DB.prepare(
     `DELETE FROM agentsam_prompt_usage
      WHERE account_id = ? AND date_key <= ? AND created_at_unix < ?`
   )
-    .bind(COMMERCE_ACCOUNT_ID, dateKey, promptCutoff)
+    .bind(requireApplicationAccountId(), dateKey, promptCutoff)
     .run();
 
   const toolCalls = await env.DB.prepare(
     `DELETE FROM agentsam_tool_call_log
      WHERE account_id = ? AND created_at < ?`
   )
-    .bind(COMMERCE_ACCOUNT_ID, toolCutoff)
+    .bind(requireApplicationAccountId(), toolCutoff)
     .run();
 
   const webhookPayloads = await env.DB.prepare(
@@ -374,7 +374,7 @@ export async function trimHotLogs(env, dateKey) {
        LIMIT ?
      )`
   )
-    .bind(COMMERCE_ACCOUNT_ID, RETENTION.webhookCleanupBatch)
+    .bind(requireApplicationAccountId(), RETENTION.webhookCleanupBatch)
     .run()
     .catch(() => ({ meta: { changes: 0 } }));
 
@@ -391,7 +391,7 @@ export async function trimHotLogs(env, dateKey) {
        LIMIT ?
      )`
   )
-    .bind(COMMERCE_ACCOUNT_ID, RETENTION.webhookCleanupBatch)
+    .bind(requireApplicationAccountId(), RETENTION.webhookCleanupBatch)
     .run()
     .catch(() => ({ meta: { changes: 0 } }));
 
@@ -407,7 +407,7 @@ export async function trimHotLogs(env, dateKey) {
        LIMIT ?
      )`
   )
-    .bind(COMMERCE_ACCOUNT_ID, RETENTION.webhookCleanupBatch)
+    .bind(requireApplicationAccountId(), RETENTION.webhookCleanupBatch)
     .run()
     .catch(() => ({ meta: { changes: 0 } }));
 
@@ -453,7 +453,7 @@ export async function refreshThreadSummaries(env, { limit = RETENTION.summaryRef
      ORDER BY last_active_unix DESC
      LIMIT ?`
   )
-    .bind(COMMERCE_ACCOUNT_ID, limit)
+    .bind(requireApplicationAccountId(), limit)
     .all();
 
   let refreshed = 0;
@@ -484,7 +484,7 @@ export async function refreshThreadSummaries(env, { limit = RETENTION.summaryRef
          SET summary = ?, updated_at = datetime('now')
          WHERE id = ? AND account_id = ?`
       )
-        .bind(excerpt.slice(0, 500), conv.id, COMMERCE_ACCOUNT_ID)
+        .bind(excerpt.slice(0, 500), conv.id, requireApplicationAccountId())
         .run();
 
       refreshed += 1;
@@ -512,7 +512,7 @@ export async function getCompactionStatus(env, { limit = 10 } = {}) {
        ORDER BY started_at DESC
        LIMIT ?`
     )
-      .bind(COMMERCE_ACCOUNT_ID, limit)
+      .bind(requireApplicationAccountId(), limit)
       .all();
 
     const totals = await env.DB.prepare(
@@ -525,12 +525,12 @@ export async function getCompactionStatus(env, { limit = 10 } = {}) {
          (SELECT COUNT(*) FROM agentsam_tool_call_daily WHERE account_id = ?) AS tool_call_daily`
     )
       .bind(
-        COMMERCE_ACCOUNT_ID,
-        COMMERCE_ACCOUNT_ID,
-        COMMERCE_ACCOUNT_ID,
-        COMMERCE_ACCOUNT_ID,
-        COMMERCE_ACCOUNT_ID,
-        COMMERCE_ACCOUNT_ID
+        requireApplicationAccountId(),
+        requireApplicationAccountId(),
+        requireApplicationAccountId(),
+        requireApplicationAccountId(),
+        requireApplicationAccountId(),
+        requireApplicationAccountId()
       )
       .first()
       .catch(() => null);

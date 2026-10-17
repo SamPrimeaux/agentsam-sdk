@@ -1,15 +1,15 @@
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { hydrateSkillRowFromR2, hydrateSkillWithFiles, hydrateSkillsFromR2 } from "./skill-r2.js";
-import { COMMERCE_ACCOUNT_ID } from "./constants.js";
 
 const MAX_CHAT_SKILLS = 3;
 
 const CLOUDFLARE_FALLBACK_SLUGS = [
-  "commerce-cloudflare-runtime",
+  "fnf-cloudflare-runtime",
   "workers-best-practices",
   "wrangler",
 ];
 
-const COMMERCE_FALLBACK_SLUGS = ["commerce-commerce-runtime", "stripe-best-practices"];
+const COMMERCE_FALLBACK_SLUGS = ["fnf-commerce-runtime", "stripe-best-practices"];
 
 function parseJsonArray(raw, fallback = []) {
   try {
@@ -111,7 +111,7 @@ export async function recordSkillInvocations(env, skills = []) {
              updated_at = datetime('now')
          WHERE id = ? AND account_id = ?`
       )
-        .bind(skill.id, COMMERCE_ACCOUNT_ID)
+        .bind(skill.id, requireApplicationAccountId())
         .run();
       updated += 1;
     } catch {
@@ -131,7 +131,7 @@ export async function listAgentSamSkills(env, { hydrate = false } = {}) {
      WHERE is_active = 1 AND account_id = ?
      ORDER BY sort_order ASC, name ASC`
   )
-    .bind(COMMERCE_ACCOUNT_ID)
+    .bind(requireApplicationAccountId())
     .all();
 
   if (!hydrate) return results || [];
@@ -142,7 +142,7 @@ export async function getAgentSamSkill(env, slug, { includeReferences = false } 
   const row = await env.DB.prepare(
     `SELECT * FROM agentsam_skill WHERE slug = ? AND account_id = ? AND is_active = 1 LIMIT 1`
   )
-    .bind(slug, COMMERCE_ACCOUNT_ID)
+    .bind(slug, requireApplicationAccountId())
     .first();
 
   if (!row) return null;
@@ -169,7 +169,7 @@ export async function resolveSkillsForChat(env, message, context = {}) {
   const { results: rows } = await env.DB.prepare(
     `SELECT * FROM agentsam_skill WHERE is_active = 1 AND account_id = ? ORDER BY sort_order ASC`
   )
-    .bind(COMMERCE_ACCOUNT_ID)
+    .bind(requireApplicationAccountId())
     .all();
 
   if (!rows?.length) return [];

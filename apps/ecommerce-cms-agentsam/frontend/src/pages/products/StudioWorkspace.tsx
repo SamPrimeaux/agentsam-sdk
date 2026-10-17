@@ -1,5 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { adminFetch } from "../../lib/api";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { createMiniAgentSam } from "../../../../packages/agentsam-workbench/src/mini-agentsam.js";
+import { selectStudioSideImage } from "./studio-side-image";
+import { blankGarmentImageSources } from "./studio-blank-image";
+import { updateSellingVariants, toggleSellingGroup } from "./studio-selling-variants";
+import { adminFetch, adminFormFetch } from "../../lib/api";
+import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
+import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality";
+import { suggestPrintScale } from "./studio-print-fit";
+import { alphaBounds } from "./studio-alpha-bounds";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
 import {
@@ -7,7 +15,6 @@ import {
   catalogVariantId,
   printPixelSize,
   printSizeLabel,
-  productImage,
   selectVariantForAxis,
   variantAttributes,
   variantAxes,
@@ -96,31 +103,17 @@ function removeConnectedFlatBackground(
   return removed;
 }
 
-function alphaBounds(pixels: Uint8ClampedArray, width: number, height: number) {
-  let left = width;
-  let top = height;
-  let right = -1;
-  let bottom = -1;
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      if (pixels[(y * width + x) * 4 + 3] <= 8) continue;
-      left = Math.min(left, x);
-      top = Math.min(top, y);
-      right = Math.max(right, x);
-      bottom = Math.max(bottom, y);
-    }
-  }
-  if (right < left || bottom < top) return { x: 0, y: 0, width, height };
-  return { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
-}
-
 type StudioDraft = {
   id: string;
+  completeful_catalog_product_id: string;
   product_id: number;
   state: "draft" | "prepared" | "rendering" | "rendered" | "created" | "published" | "error";
   selected_variant_ids: string[];
   print_location_ids: string[];
-  placement?: { x?: number; y?: number; scale?: number; rotation?: number; notes?: string };
+  placement?: {
+    x?: number; y?: number; scale?: number; rotation?: number; flipX?: boolean; flipY?: boolean;
+    trimTransparent?: boolean; removeFlatBackground?: boolean; notes?: string;
+  };
   original_media_asset_id?: number | null;
   prepared_media_asset_id?: number | null;
   preview_media_asset_id?: number | null;
@@ -134,38 +127,90 @@ type StudioDraft = {
   version: number;
 };
 
+function placementKey(assetId: number | null | undefined, variantId: string, locationId: string,
+  x: number, y: number, scale: number, rotation: number, flipX: boolean, flipY: boolean,
+  trimTransparent: boolean, removeFlatBackground: boolean) {
+  return JSON.stringify([assetId || null, variantId, locationId, x, y, scale, rotation, flipX, flipY,
+    trimTransparent, removeFlatBackground]);
+}
+
+// lucide pencil-sparkles: the Tools tab is the AI image toolkit.
+function PencilSparklesIcon({ size = 22 }: { size?: number }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10 3H8" /><path d="m15.007 5.008 3.987 3.986" /><path d="M20 15v4" />
+      <path d="M21.174 6.813a2.82 2.82 0 0 0-3.986-3.987L3.842 16.175a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+      <path d="M22 17h-4" /><path d="M4 5v4" /><path d="M6 7H2" /><path d="M9 2v2" />
+    </svg>
+  );
+}
+
 const tabs = [
   { id: "options", label: "Options", icon: "options" },
   { id: "upload", label: "Upload", icon: "upload" },
-  { id: "designs", label: "Designs", icon: "image" },
   { id: "layers", label: "Layers", icon: "layers" },
   { id: "tools", label: "Tools", icon: "tools" },
 ];
 export default function StudioWorkspace({
   detail,
   initialVariantId = "",
+  resumeDraftId = null,
+  catalogWarning = "",
   onBack,
 }: {
   detail: ProductDetail;
   initialVariantId?: string;
+  resumeDraftId?: string | null;
+  catalogWarning?: string;
   onBack: () => void;
 }) {
   const [tab, setTab] = useState("options");
+  const [manageVariants, setManageVariants] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [miniMapOpen, setMiniMapOpen] = useState(true);
+  const [fullPreviewOpen, setFullPreviewOpen] = useState(false);
+  useEffect(() => {
+    if (!fullPreviewOpen) return;
+    fullPreviewCloseRef.current?.focus();
+    const onKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFullPreviewOpen(false);
+    };
+    window.addEventListener("keydown", onKeydown);
+    return () => window.removeEventListener("keydown", onKeydown);
+  }, [fullPreviewOpen]);
+  const [canvasZoom, setCanvasZoom] = useState(100);
   const [media, setMedia] = useState<MediaAsset[]>([]);
+  const [albums, setAlbums] = useState<Array<{ id: number; name: string; asset_count?: number }>>([]);
+  const [albumId, setAlbumId] = useState(0);
+  const [mediaPage, setMediaPage] = useState(1);
+  const [mediaHasMore, setMediaHasMore] = useState(false);
   const [asset, setAsset] = useState<MediaAsset | null>(null);
   const [preparedAsset, setPreparedAsset] = useState<MediaAsset | null>(null);
+  const [preparedFor, setPreparedFor] = useState<string | null>(null);
   const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null);
   const [draft, setDraft] = useState<StudioDraft | null>(null);
+  const [restoringDraft, setRestoringDraft] = useState(Boolean(resumeDraftId));
   const [title, setTitle] = useState(detail.product.default_title || detail.product.name);
-  const [description, setDescription] = useState(detail.product.default_description || "");
-  const [retailPrice, setRetailPrice] = useState("");
   const [providerRenderUrl, setProviderRenderUrl] = useState<string | null>(null);
+  const [supplierMockups, setSupplierMockups] = useState<Array<{
+    mockup_id: string; variant_color: string; print_location_id: string;
+    render_id?: string; status: string; error?: string;
+    asset?: { url: string } | null;
+  }>>([]);
+
   const [trimTransparent, setTrimTransparent] = useState(false);
+  const [croppedPreview, setCroppedPreview] = useState<{
+    key: string; url: string; crop: ArtworkCrop;
+  } | null>(null);
+  const [cropError, setCropError] = useState("");
   const [removeFlatBackground, setRemoveFlatBackground] = useState(false);
+  const [subjectRemovalAvailable, setSubjectRemovalAvailable] = useState(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [locationId, setLocationId] = useState(
+    detail.print_locations.find((l) => l.enabled && /(?:^|[_\s-])front(?:$|[_\s-])/i.test(l.name || l.print_location_id))?.print_location_id ||
     detail.print_locations.find((l) => l.enabled)?.print_location_id || "",
   );
   const initialVariant =
@@ -175,29 +220,144 @@ export default function StudioWorkspace({
   const [variantId, setVariantId] = useState(
     catalogVariantId(initialVariant) || "",
   );
+  // The sellable assortment is not the one garment currently used for editing.
+  // Use only catalog variant IDs; do not synthesize color/size combinations.
+  const [selectedVariantIds, setSelectedVariantIds] = useState<string[]>(() =>
+    detail.variants.map(catalogVariantId).filter(Boolean),
+  );
   const [scale, setScale] = useState(80);
   const [x, setX] = useState(50);
   const [y, setY] = useState(50);
   const [rotation, setRotation] = useState(0);
+  const [flipX, setFlipX] = useState(false);
+  const [flipY, setFlipY] = useState(false);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [mediaSearch, setMediaSearch] = useState("");
+  // Default to artwork made or uploaded in Product Studio; the full media library is opt-in.
+  const [artworkScope, setArtworkScope] = useState<"studio" | "library">("studio");
+  // Image tools use the installed Model Catalog and preserve original artwork.
+  const [aiMode, setAiMode] = useState<"generate" | "edit">("generate");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editableModels, setEditableModels] = useState<Array<{ id: string; name: string }>>([]);
+  const [editModel, setEditModel] = useState("");
+  const [revisionCandidate, setRevisionCandidate] = useState<MediaAsset | null>(null);
+
+  const [aiBackground, setAiBackground] = useState<"auto" | "transparent" | "white">("auto");
+  const [aiSize, setAiSize] = useState<"auto" | "square" | "landscape" | "portrait">("auto");
+  const [aiQuality, setAiQuality] = useState<"auto" | "high" | "medium" | "low">("auto");
+  const [mediaQuery, setMediaQuery] = useState("");
   const [showArtwork, setShowArtwork] = useState(true);
-  const [guides, setGuides] = useState(true);
+  const [guides, setGuides] = useState(false);
   const [dimensions, setDimensions] = useState<{
     width: number;
     height: number;
   } | null>(null);
-  const [prompt, setPrompt] = useState("");
+  const [artworkSelected, setArtworkSelected] = useState(false);
+  const [agentVisible, setAgentVisible] = useState(false);
+  const miniRef = useRef<ReturnType<typeof createMiniAgentSam> | null>(null);
+  const miniSendRef = useRef<(message: string, signal: AbortSignal, resource: unknown) => Promise<{ reply: string }>>(async () => ({ reply: "" }));
+  const variantDialogRef = useRef<HTMLElement>(null);
+  const fullPreviewCloseRef = useRef<HTMLButtonElement>(null);
+  const dragRef = useRef<{ mode: "move" | "resize"; corner: "tl" | "tr" | "bl" | "br"; startX: number; startY: number; x: number; y: number; scale: number } | null>(null);
   const [reply, setReply] = useState("");
+  // Generated images remain candidates until explicitly accepted. A model
+  // response must not silently replace existing artwork or placement.
+  const [generatedCandidate, setGeneratedCandidate] = useState<{
+    base64: string; mime: string; prompt: string;
+  } | null>(null);
+
   const [conversationId, setConversationId] = useState<string>();
   const [notes, setNotes] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   const panel = useRef<HTMLElement>(null);
   const stage = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const mini = createMiniAgentSam({
+      preferAbove: true,
+      resultStatus: "Reply ready · review the result",
+      capabilities: { list: () => [] },
+      send: ({ prompt: text, signal, resource }) => miniSendRef.current(text, signal, resource),
+      onResult: (result) => setReply(result.reply),
+      onClose: () => setAgentVisible(false),
+    });
+    miniRef.current = mini;
+    return () => { mini.destroy(); if (miniRef.current === mini) miniRef.current = null; };
+  }, []);
+
+  function openMiniAgentSam() {
+    if (agentVisible) { miniRef.current?.close(); return; }
+    if (!miniRef.current) {
+      setError("miniAgentSam is unavailable. Reload the editor to try again.");
+      return;
+    }
+    miniRef.current.select(
+      { type: "product_artwork", surface: "product-studio",
+        productId: catalogId, variantId, locationId, assetId: asset?.id || null },
+      () => new DOMRect(window.innerWidth / 2, window.innerHeight - 96, 0, 0),
+    );
+    setAgentVisible(true);
+  }
+
+  // The global top-bar crosshair dispatches a cancelable `agentsam:mini-open`. Product Studio owns
+  // product/artwork context (and artwork generation), so it claims the request and opens its composer.
+  const openMiniRef = useRef(openMiniAgentSam);
+  openMiniRef.current = openMiniAgentSam;
+  useEffect(() => {
+    const claim = (event: Event) => { event.preventDefault(); openMiniRef.current(); };
+    window.addEventListener("agentsam:mini-open", claim);
+    return () => window.removeEventListener("agentsam:mini-open", claim);
+  }, []);
+  // Report composer state so the global crosshair stays lit while this page's composer is open.
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("agentsam:mini-state", { detail: { open: agentVisible } }));
+    return () => { window.dispatchEvent(new CustomEvent("agentsam:mini-state", { detail: { open: false } })); };
+  }, [agentVisible]);
+
+  // The actual image model and requested output settings are resolved by the
+  // server. Provider-incompatible options fail clearly instead of being ignored.
+  async function generateImage() {
+    try { await askAI(true, aiPrompt); } catch { /* askAI presents the failure */ }
+  }
+  const nextLabel = busy === "prepare" ? "Preparing print artwork…"
+    : busy === "save" ? "Saving design…" : "Next step · Product details";
+
+  function startDrag(event: PointerEvent<HTMLDivElement>, mode: "move" | "resize", corner: "tl" | "tr" | "bl" | "br" = "br") {
+    if (!asset || !showArtwork) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { mode, corner, startX: event.clientX, startY: event.clientY, x, y, scale };
+    setArtworkSelected(true);
+  }
+  function updateDrag(event: PointerEvent<HTMLDivElement>) {
+    const from = dragRef.current;
+    if (!from) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const dx = ((event.clientX - from.startX) / Math.max(1, rect.width)) * 100;
+    const dy = ((event.clientY - from.startY) / Math.max(1, rect.height)) * 100;
+    if (from.mode === "resize") {
+      // Each corner must grow when dragged AWAY from the artwork center.
+      const horizontal = from.corner.endsWith("r") ? dx : -dx;
+      const vertical = from.corner.startsWith("b") ? dy : -dy;
+      setScale(Math.max(5, Math.min(150, Math.round(from.scale + horizontal + vertical))));
+    }
+    else {
+      const snap = (value: number) => {
+        const rounded = Math.max(0, Math.min(100, Math.round(value)));
+        return snapEnabled && Math.abs(rounded - Math.round(rounded / 5) * 5) < 2
+          ? Math.round(rounded / 5) * 5 : rounded;
+      };
+      setX(snap(from.x + dx));
+      setY(snap(from.y + dy));
+    }
+  }
+
   function openTab(next: string) {
+    setManageVariants(false);
+    setPanelOpen((current) => next === tab ? !current : true);
     setTab(next);
-    if (window.matchMedia("(max-width: 760px)").matches)
-      requestAnimationFrame(() =>
-        panel.current?.scrollIntoView({ block: "start" }),
-      );
+    // On small screens the tools remain in a compact bottom pane; keep the canvas visible.
   }
   const location = detail.print_locations.find(
     (l) => l.print_location_id === locationId,
@@ -207,18 +367,128 @@ export default function StudioWorkspace({
     detail.variants[0];
   const selectedAttributes = variantAttributes(variant);
   const optionAxes = variantAxes(detail.variants);
-  const baseImage =
-    variantImage(variant) ||
-    productImage(detail.product) ||
-    detail.images[0]?.url ||
-    detail.mockups.find((mockup) => mockup.active && mockup.preview_url)
-      ?.preview_url;
+  // Blank garment source is NOT the supplier's decorated demonstration mockup.
+  // "realistic_image_url" and the generic mockup gallery can already contain
+  // another customer's artwork. Never position merchant artwork over those.
+  // Choose images scoped to the selected variant, never another color.
+  const blankVariantSources = blankGarmentImageSources(variant, detail.product);
+  const enabledLocations = detail.print_locations.filter((candidate) => candidate.enabled);
+  const isFrontLocation = /(?:^|[_\s-])front(?:$|[_\s-])/i.test(location?.name || locationId);
+  const hasDistinctProviderSideArtboard = Boolean(
+    !isFrontLocation && location?.artboard_image_url &&
+    enabledLocations.some((candidate) => candidate.print_location_id !== locationId) &&
+    enabledLocations.every((candidate) => candidate.print_location_id === locationId ||
+      (candidate.artboard_image_url && candidate.artboard_image_url !== location.artboard_image_url)),
+  );
+  const designImage = selectStudioSideImage(
+    // Supplier mockups and their "realistic" pictures may embed stock artwork.
+    // Do not treat those as blank manufacturer base images.
+    [], locationId, variantId, location?.artboard_image_url,
+    blankVariantSources[0], isFrontLocation, selectedAttributes,
+    hasDistinctProviderSideArtboard,
+  );
+  const designImageSources = designImage
+    ? (isFrontLocation
+      ? [...new Set([...blankVariantSources, location?.artboard_image_url].filter(
+          (url): url is string => Boolean(url)))]
+      : [designImage])
+    : [];
+  // Never use a generic silhouette to impersonate a provider garment photo.
+  // Unverified side/color combinations keep their print geometry, but no garment claim.
+  const artboardAspectRatio = location?.artboard_width && location?.artboard_height
+    ? Number(location.artboard_width) / Number(location.artboard_height)
+    : 4 / 5;
+  function choosePrintLocation(nextLocationId: string) {
+    if (nextLocationId === locationId) return;
+    setLocationId(nextLocationId);
+    setPreparedAsset(null);
+    setPreviewAsset(null);
+    setProviderRenderUrl(null);
+    setArtworkSelected(false);
+  }
   const catalogId = catalogProductId(detail.product);
+  useEffect(() => {
+    const controller = new AbortController();
+    adminFetch<{ capabilities?: { can_remove_background?: boolean } }>("/api/admin/media?limit=1", {
+      signal: controller.signal,
+    }).then((result) => {
+      if (!controller.signal.aborted) setSubjectRemovalAvailable(Boolean(result.capabilities?.can_remove_background));
+    }).catch(() => { if (!controller.signal.aborted) setSubjectRemovalAvailable(false); });
+    return () => controller.abort();
+  }, []);
+
 
   function chooseVariantOption(axis: string, value: string) {
     const next = selectVariantForAxis(detail.variants, variant, axis, value);
-    if (next) setVariantId(catalogVariantId(next));
+    if (next && catalogVariantId(next) !== variantId) {
+      setVariantId(catalogVariantId(next));
+      setProviderRenderUrl(null); // A render and composite belong to the previous variant.
+      setPreviewAsset(null);
+    }
   }
+  const selectedVariantSet = new Set(selectedVariantIds);
+  const catalogVariantIds = detail.variants.map(catalogVariantId).filter(Boolean);
+  function updateSelectedVariants(ids: string[], include: boolean) {
+    setSelectedVariantIds((current) => updateSellingVariants(catalogVariantIds, current, ids, include));
+  }
+  function toggleSellingAxis(axis: string, value: string) {
+    const ids = detail.variants.filter((candidate) =>
+      variantAttributes(candidate)[axis] === value).map(catalogVariantId).filter(Boolean);
+    setSelectedVariantIds((current) => toggleSellingGroup(catalogVariantIds, current, ids));
+  }
+  function toggleSellingVariant(id: string, included: boolean) {
+    updateSelectedVariants([id], included);
+  }
+  useEffect(() => {
+    if (!manageVariants) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = variantDialogRef.current;
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]',
+    ) || []);
+    focusable()[0]?.focus();
+    const onKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setManageVariants(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeydown);
+    return () => {
+      window.removeEventListener("keydown", onKeydown);
+      previousFocus?.focus();
+    };
+  }, [manageVariants]);
+  // Color thumbnails: one per color being sold, so every colorway can be reviewed without opening a menu.
+  // These are client composites (garment plate + current artwork placement), not stored mockups.
+  // These small color chips are local previews; exact per-color provider renders are saved in supplierMockups.
+  const colorAxis = optionAxes.find((axis) => /color|colour/i.test(axis));
+  const colorways = colorAxis
+    ? variantAxisValues(detail.variants, colorAxis).flatMap((value) => {
+        const sample = detail.variants.find((candidate) =>
+          variantAttributes(candidate)[colorAxis] === value && selectedVariantSet.has(catalogVariantId(candidate)));
+        if (!sample) return [];
+        const blank = blankGarmentImageSources(sample, detail.product);
+        const image = selectStudioSideImage(
+          [], locationId, catalogVariantId(sample), location?.artboard_image_url,
+          blank[0], isFrontLocation, variantAttributes(sample), hasDistinctProviderSideArtboard,
+        );
+        const sources = image ? (isFrontLocation && blank.length ? blank : [image]) : [];
+        return [{ value, sources }];
+      })
+    : [];
   const printPixels = printPixelSize(location);
   const ratio =
     location?.file_width && location.file_height
@@ -242,18 +512,27 @@ export default function StudioWorkspace({
       }
     : { aspectRatio: ratio };
   useEffect(() => {
+    // Starting from the supplier catalog is a NEW design, not a request to
+    // overwrite the most recently saved draft for this garment. Only the
+    // explicit Edit design deep link is permitted to restore persisted art.
+    if (!resumeDraftId) { setRestoringDraft(false); return; }
     const controller = new AbortController();
-    setBusy("restore");
+    queueMicrotask(() => { if (!controller.signal.aborted) { setBusy("restore"); setRestoringDraft(true); } });
     adminFetch<{ draft: StudioDraft | null }>(
-      `/api/admin/product-studio/drafts?catalog_product_id=${encodeURIComponent(catalogId)}`,
+      `/api/admin/product-studio/drafts/${encodeURIComponent(resumeDraftId)}`,
       { signal: controller.signal },
     )
       .then(async ({ draft: saved }) => {
-        if (!saved || controller.signal.aborted) return;
+        if (controller.signal.aborted) return;
+        if (saved?.id !== resumeDraftId || saved?.completeful_catalog_product_id !== catalogId) {
+          setError("Saved design could not be matched to this product. The design was not reset.");
+          return;
+        }
+        if (!saved) return;
         setDraft(saved);
         setTitle(saved.title || detail.product.default_title || detail.product.name);
-        setDescription(saved.description || "");
-        setRetailPrice(saved.retail_price_cents ? (saved.retail_price_cents / 100).toFixed(2) : "");
+        // Resume the entire assortment. An editing preview remains a single example.
+        setSelectedVariantIds(saved.selected_variant_ids || []);
         if (saved.selected_variant_ids?.[0]) setVariantId(saved.selected_variant_ids[0]);
         if (saved.print_location_ids?.[0]) setLocationId(saved.print_location_ids[0]);
         if (saved.placement) {
@@ -261,33 +540,54 @@ export default function StudioWorkspace({
           setY(Number(saved.placement.y ?? 50));
           setScale(Number(saved.placement.scale ?? 80));
           setRotation(Number(saved.placement.rotation ?? 0));
+          setFlipX(Boolean(saved.placement.flipX));
+          setFlipY(Boolean(saved.placement.flipY));
+          setTrimTransparent(Boolean(saved.placement.trimTransparent));
+          setRemoveFlatBackground(Boolean(saved.placement.removeFlatBackground));
           setNotes(String(saved.placement.notes || ""));
         }
         setProviderRenderUrl(saved.completeful_render_url || null);
-        if (saved.original_media_asset_id || saved.prepared_media_asset_id || saved.preview_media_asset_id) {
-          const library = await adminFetch<{ assets: MediaAsset[] }>("/api/admin/media?view=all", {
-            signal: controller.signal,
-          });
-          if (controller.signal.aborted) return;
-          const original = library.assets.find((item) => item.id === saved.original_media_asset_id) || null;
-          const prepared = library.assets.find((item) => item.id === saved.prepared_media_asset_id) || null;
-          const preview = library.assets.find((item) => item.id === saved.preview_media_asset_id) || null;
-          if (original) setAsset(original);
-          if (prepared) setPreparedAsset(prepared);
-          if (preview) setPreviewAsset(preview);
+        if (saved.prepared_media_asset_id) {
+          setPreparedFor(placementKey(saved.original_media_asset_id,
+            saved.selected_variant_ids?.[0] || "", saved.print_location_ids?.[0] || "",
+            Number(saved.placement?.x ?? 50), Number(saved.placement?.y ?? 50),
+            Number(saved.placement?.scale ?? 80), Number(saved.placement?.rotation ?? 0),
+            Boolean(saved.placement?.flipX), Boolean(saved.placement?.flipY),
+            Boolean(saved.placement?.trimTransparent), Boolean(saved.placement?.removeFlatBackground)));
         }
-        setNotice(`Restored ${saved.state} product draft.`);
+        if (saved.original_media_asset_id || saved.prepared_media_asset_id || saved.preview_media_asset_id) {
+          // Never search a paginated gallery to restore durable media references.
+          // Fetch the exact saved IDs; the artwork may be well beyond page one.
+          const ids = [saved.original_media_asset_id, saved.prepared_media_asset_id, saved.preview_media_asset_id];
+          const assets = await Promise.all(ids.map(async (id) => {
+            if (!id) return null;
+            const result = await adminFetch<{ asset: MediaAsset }>(`/api/admin/media/${id}`, { signal: controller.signal });
+            return result.asset;
+          }));
+          if (controller.signal.aborted) return;
+          if (assets[0]) setAsset(assets[0]);
+          if (assets[1]) setPreparedAsset(assets[1]);
+          if (assets[2]) setPreviewAsset(assets[2]);
+        }
+        // Restoring an existing draft is normal; no standing success notice.
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
       })
       .finally(() => {
-        if (!controller.signal.aborted) setBusy("");
+        if (!controller.signal.aborted) { setBusy(""); setRestoringDraft(false); }
       });
     return () => controller.abort();
-  }, [catalogId, detail.product.default_title, detail.product.name]);
+  }, [catalogId, detail.product.default_title, detail.product.name, resumeDraftId]);
   useEffect(() => {
-    if (tab !== "designs") return;
+    const timer = setTimeout(() => {
+      setMediaQuery(mediaSearch.trim());
+      setMediaPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [mediaSearch]);
+  useEffect(() => {
+    if (tab !== "upload" && tab !== "tools") return;
     const controller = new AbortController();
     queueMicrotask(() => {
       if (!controller.signal.aborted) {
@@ -295,14 +595,30 @@ export default function StudioWorkspace({
         setError("");
       }
     });
-    adminFetch<{ assets: MediaAsset[] }>("/api/admin/media?view=all", {
-      signal: controller.signal,
-    })
+    const query = new URLSearchParams({
+      view: "images", page_size: "48", page: String(mediaPage),
+      ...(albumId > 0 ? { album_id: String(albumId) } : {}),
+      ...(mediaQuery ? { q: mediaQuery } : {}),
+    });
+    adminFetch<{
+      assets: MediaAsset[];
+      albums?: Array<{ id: number; name: string; asset_count?: number }>;
+      pagination?: { has_next?: boolean };
+    }>(`/api/admin/media?${query}`, { signal: controller.signal })
       .then((d) => {
-        if (!controller.signal.aborted)
-          setMedia(
-            d.assets.filter((a) => a.content_type?.startsWith("image/")),
-          );
+        if (controller.signal.aborted) return;
+        // Generated derivatives (placement previews, prepared print files) are outputs, never inputs.
+        const isDerivative = (a: MediaAsset) =>
+          /\/studio\/(?:previews|prepared)\//.test(a.url || "") || /^(?:placement|prepared)-/i.test(a.filename || "");
+        const inStudioScope = (a: MediaAsset) => /\/studio\/artwork\//.test(a.url || "");
+        const artwork = d.assets.filter((a) =>
+          (a.content_type?.startsWith("image/") || /\.(png|jpe?g|webp|svg)$/i.test(a.filename)) &&
+          !isDerivative(a) && (artworkScope === "library" || inStudioScope(a)));
+        setMedia((current) => mediaPage === 1 ? artwork : [
+          ...current, ...artwork.filter((a) => !current.some((item) => item.id === a.id)),
+        ]);
+        setMediaHasMore(Boolean(d.pagination?.has_next));
+        if (d.albums) setAlbums(d.albums);
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(e.message);
@@ -311,7 +627,7 @@ export default function StudioWorkspace({
         if (!controller.signal.aborted) setBusy("");
       });
     return () => controller.abort();
-  }, [tab]);
+  }, [tab, albumId, mediaPage, mediaQuery, artworkScope]);
   useEffect(() => {
     if (!asset) return;
     let active = true;
@@ -328,64 +644,205 @@ export default function StudioWorkspace({
       active = false;
     };
   }, [asset]);
+  // Use the exact processing and alpha-bound logic used for print preparation
+  // so preview dimensions, source pixel counts, and exported pixels agree.
+  useEffect(() => {
+    if (!asset || (!trimTransparent && !removeFlatBackground)) return;
+    let active = true;
+    let objectUrl: string | null = null;
+    const key = JSON.stringify([asset.id, asset.url, trimTransparent, removeFlatBackground]);
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        if (canvas.width * canvas.height > 32_000_000) throw new Error("Artwork is too large to inspect in the browser");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) throw new Error("Cannot inspect artwork pixels");
+        context.drawImage(image, 0, 0);
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+        if (removeFlatBackground) {
+          removeConnectedFlatBackground(pixels.data, canvas.width, canvas.height);
+          context.putImageData(pixels, 0, 0);
+        }
+        const crop = trimTransparent
+          ? alphaBounds(pixels.data, canvas.width, canvas.height)
+          : { x: 0, y: 0, width: canvas.width, height: canvas.height };
+        const preview = document.createElement("canvas");
+        preview.width = crop.width;
+        preview.height = crop.height;
+        const previewContext = preview.getContext("2d");
+        if (!previewContext) throw new Error("Cannot preview trimmed artwork");
+        previewContext.drawImage(canvas, crop.x, crop.y, crop.width, crop.height,
+          0, 0, crop.width, crop.height);
+        preview.toBlob((blob) => {
+          if (!active) return;
+          if (!blob) {
+            setCropError("Unable to preview artwork crop");
+            return;
+          }
+          objectUrl = URL.createObjectURL(blob);
+          setCroppedPreview({ key, crop, url: objectUrl });
+          setCropError("");
+        }, "image/png");
+      } catch (e) {
+        if (active) setCropError(e instanceof Error ? e.message : "Unable to inspect artwork crop");
+      }
+    };
+    image.onerror = () => { if (active) setCropError("Unable to read artwork for print preparation"); };
+    image.src = asset.url;
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [asset, trimTransparent, removeFlatBackground]);
+
+  useEffect(() => {
+    if (aiMode !== "edit") return;
+    const controller = new AbortController();
+    adminFetch<{ models?: Array<{ id: string; name: string }> }>("/api/admin/media/image-models", {
+      signal: controller.signal,
+    }).then(({ models }) => {
+      if (controller.signal.aborted) return;
+      setEditableModels(models || []);
+      setEditModel((current) => current && models?.some((model) => model.id === current)
+        ? current : models?.[0]?.id || "");
+    }).catch(() => { if (!controller.signal.aborted) setEditableModels([]); });
+    return () => controller.abort();
+  }, [aiMode]);
+
+  async function reviseSelectedArtwork(kind: "ai-edit" | "resample") {
+    if (!asset || busy) return;
+    if (kind === "ai-edit" && (!editModel || !editPrompt.trim())) {
+      setError("Choose an available image editing model and describe the change.");
+      return;
+    }
+    const sourceId = asset.id;
+    setBusy(kind);
+    setError("");
+    try {
+      const result = await adminFetch<{ ok: boolean; asset: MediaAsset }>(
+        `/api/admin/media/${encodeURIComponent(sourceId)}/${kind}`, {
+          method: "POST",
+          body: JSON.stringify(kind === "ai-edit"
+            ? { model_id: editModel, prompt: editPrompt.trim() } : { scale: 2 }),
+        },
+      );
+      if (!result.ok || !result.asset) throw new Error("Image operation produced no asset.");
+      setMedia((current) => [result.asset, ...current.filter((item) => item.id !== result.asset.id)]);
+      setRevisionCandidate(result.asset);
+      setNotice("New version saved. Your selected original has not been replaced.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Image operation failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
   function choose(a: MediaAsset) {
     setDimensions(null);
+    setCroppedPreview(null);
+    setCropError("");
     setAsset(a);
+    setRevisionCandidate(null);
     setPreparedAsset(null);
+    setPreparedFor(null);
     setPreviewAsset(null);
     setProviderRenderUrl(null);
     setShowArtwork(true);
-    setNotice("Artwork added. Review its placement on the selected product and print area.");
+    setArtworkSelected(true);
+    setNotice("");
     if (window.matchMedia("(max-width: 760px)").matches)
       requestAnimationFrame(() =>
         stage.current?.scrollIntoView({ block: "start" }),
       );
   }
-  async function uploadMediaFile(file: File, prefix: string) {
+  async function removeBackgroundAI() {
+    if (!asset || busy || !subjectRemovalAvailable) return;
+    setBusy("remove-background");
+    setError("");
+    try {
+      const result = await adminFetch<{ ok: boolean; asset?: MediaAsset; provider?: string }>(
+        `/api/admin/media/${encodeURIComponent(asset.id)}/remove-background`, { method: "POST" },
+      );
+      if (!result.ok || !result.asset) throw new Error("Background removal did not produce a derivative.");
+      setMedia((current) => [result.asset!, ...current.filter((item) => item.id !== result.asset!.id)]);
+      choose(result.asset);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Subject segmentation failed.");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function uploadMediaFile(file: File, prefix: string, options: {
+    derivativeRole?: "original/master" | "manufacturing" | "mockup";
+    transformPolicy?: "auto" | "preserve";
+    sourceAsset?: MediaAsset | null;
+  } = {}) {
     const form = new FormData();
     form.append("files", file);
     form.append("folder", "images");
     form.append("prefix", prefix);
-    const response = await fetch("/api/admin/media", { method: "POST", body: form });
-    if (response.status === 401) {
-      window.location.href = "/admin/login";
-      throw new Error("Sign in again to continue");
-    }
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Upload failed");
-    return result.assets?.[0] as MediaAsset | undefined;
+    if (options.derivativeRole) form.append("derivative_role", options.derivativeRole);
+    if (options.transformPolicy) form.append("transform_policy", options.transformPolicy);
+    if (options.sourceAsset?.id) form.append("source_media_asset_id", String(options.sourceAsset.id));
+    const result = await adminFormFetch<{ assets?: MediaAsset[] }>("/api/admin/media", form);
+    return result.assets?.[0];
   }
 
-  async function upload(file?: File) {
-    if (!file) return;
+  async function upload(file?: File): Promise<boolean> {
+    if (!file) return false;
     if (!/\.(png|jpe?g|webp|svg|pdf)$/i.test(file.name)) {
       setError("Choose a PNG, JPG, WebP, SVG, or PDF file.");
-      return;
+      return false;
     }
     if (file.size > 20 * 1024 * 1024) {
       setError("Choose a file under the studio’s 20 MB upload limit.");
-      return;
+      return false;
     }
     setBusy("upload");
     setError("");
     try {
-      const uploaded = await uploadMediaFile(file, "studio/artwork");
+      const uploaded = await uploadMediaFile(file, "studio/artwork", {
+        derivativeRole: "original/master", transformPolicy: "preserve",
+      });
       if (file.type === "application/pdf") {
         setNotice(
           "Original PDF saved to the media library. Add a PNG preview to position it in the Studio; the PDF remains untouched.",
         );
       } else if (uploaded) {
+        if (albumId > 0) {
+          // Existing Media Album membership; no duplicate storage or new folder.
+          try {
+            await adminFetch("/api/admin/media/batch", {
+              method: "POST",
+              body: JSON.stringify({ action: "album_add", ids: [uploaded.id], album_id: albumId }),
+            });
+          } catch {
+            // Upload is still valid; do not lose the placed artwork because
+            // optional album organization failed.
+            setNotice("Artwork uploaded; adding it to the album needs a retry.");
+          }
+        }
+        setMedia((current) => [uploaded, ...current.filter((item) => item.id !== uploaded.id)]);
         choose(uploaded);
+        return true;
       }
+      return false;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
+      return false;
     } finally {
       setBusy("");
       if (fileInput.current) fileInput.current.value = "";
     }
   }
-  async function askAI(generate: boolean) {
-    if (!prompt.trim() || busy) return;
+  async function askAI(generate: boolean, text: string, signal?: AbortSignal, selectedResource?: unknown): Promise<{ reply: string }> {
+    if (!text.trim()) throw new Error("Describe what you would like AgentSam to make or change.");
+    if (busy) throw new Error("Another operation is running.");
     setBusy(generate ? "generate" : "ideas");
     setError("");
     try {
@@ -394,51 +851,85 @@ export default function StudioWorkspace({
             task_type: "image_generation",
             lane: "image",
             mode: "image",
-            workflow_key: "commerce_creative_studio",
+            workflow_key: "fnf_creative_studio",
+            image_options: {
+              background: aiBackground,
+              size: aiSize,
+              quality: aiQuality,
+              format: "png",
+              variations: 1,
+            },
           }
         : {};
       const result = await adminFetch<{
         reply: string;
         conversation_id?: string;
-        ai?: { image_base64?: string; mime_type?: string };
+        ai?: { image_base64?: string; mime_type?: string; error_code?: string };
       }>("/api/admin/agentsam/chat", {
         method: "POST",
+        signal,
         body: JSON.stringify({
-          message: `${generate ? "Create standalone artwork" : "Brainstorm three concise visual directions"} for ${detail.product.name}. ${prompt}`,
+          message: text.trim(),
           conversation_id: conversationId,
           ...creative,
-          context: { page: "/admin/products/create", ...creative },
+          context: {
+            page: "/admin/products/create",
+            workflow_key: "product_studio",
+            selected_resource: selectedResource,
+            ...creative,
+          },
         }),
       });
       setReply(result.reply);
       setConversationId(result.conversation_id);
-      if (result.ai?.image_base64) {
-        const mime = result.ai.mime_type || "image/png";
-        const bytes = Uint8Array.from(atob(result.ai.image_base64), (c) =>
-          c.charCodeAt(0),
-        );
-        await upload(
-          new File(
-            [bytes],
-            `studio-artwork-${Date.now()}.${mime === "image/jpeg" ? "jpg" : "png"}`,
-            { type: mime },
-          ),
-        );
+      if (generate) {
+        if (!result.ai?.image_base64) {
+          const error = result.ai?.error_code || "";
+          const guidance = error === "workers_ai_image_options_require_model_profile"
+            ? "This Workers AI model needs Auto background, size, and quality. Change those options and try again."
+            : error === "openai_credentials_unavailable" ? "OpenAI is not configured for this installation."
+            : error.startsWith("openai_image_http_") ? "The image provider rejected this request (" + error.replace("openai_image_http_", "HTTP ") + "). Check model access and options."
+            : error === "provider_returned_invalid_image" ? "The image provider returned an unreadable file. No artwork was changed."
+            : "No image was produced by the selected model. Check its media capability and try again.";
+          throw new Error(guidance);
+        }
+        setGeneratedCandidate({
+          base64: result.ai.image_base64,
+          mime: result.ai.mime_type || "image/png",
+          prompt: text.trim(),
+        });
       }
+      return { reply: result.reply };
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Creative request failed");
+      const message = e instanceof Error ? e.message : "Creative request failed";
+      setError(message);
+      throw new Error(message, { cause: e });
     } finally {
       setBusy("");
     }
   }
-  function currentRetailPriceCents() {
-    const value = Number(retailPrice);
-    return Number.isFinite(value) && value > 0 ? Math.round(value * 100) : 0;
+  useEffect(() => {
+    miniSendRef.current = (message, signal, resource) => {
+      const generate = /^\/image\b/i.test(message);
+      return askAI(generate, message, signal, resource);
+    };
+  });
+  async function acceptGeneratedCandidate() {
+    if (!generatedCandidate) return;
+    const candidate = generatedCandidate;
+    const bytes = Uint8Array.from(atob(candidate.base64), (c) => c.charCodeAt(0));
+    const ext = candidate.mime === "image/webp" ? "webp" : candidate.mime === "image/jpeg" ? "jpg" : "png";
+    const saved = await upload(new File([bytes], `studio-artwork-${crypto.randomUUID().slice(0, 12)}.${ext}`, { type: candidate.mime }));
+    if (saved) setGeneratedCandidate(null);
   }
 
-  async function saveDraft(nextPrepared: MediaAsset | null = preparedAsset, nextPreview: MediaAsset | null = previewAsset) {
-    if (!variantId || !locationId) {
-      setError("Choose a product option and print area before saving.");
+  async function saveDraft(nextPrepared: MediaAsset | null = preparedFor === currentPlacementKey ? preparedAsset : null,
+    nextPreview: MediaAsset | null = preparedFor === currentPlacementKey ? previewAsset : null,
+    placementScale: number = scale) {
+    if (!variantId || !locationId || !selectedVariantIds.length) {
+      setError("Choose at least one selling variant and a print area before saving.");
+      setTab("options");
+      setPanelOpen(true);
       return null;
     }
     setBusy("save");
@@ -449,22 +940,22 @@ export default function StudioWorkspace({
         body: JSON.stringify({
           id: draft?.id,
           product_id: draft?.product_id,
+          force_new: !draft && !resumeDraftId,
           catalog_product_id: catalogId,
-          selected_variant_ids: [variantId],
+          selected_variant_ids: selectedVariantIds,
           print_location_ids: [locationId],
           original_media_asset_id: asset?.id || null,
           prepared_media_asset_id: nextPrepared?.id || null,
           preview_media_asset_id: nextPreview?.id || null,
-          placement: { x, y, scale, rotation },
+          placement: { x, y, scale: placementScale, rotation, flipX, flipY, trimTransparent, removeFlatBackground },
           notes,
           title: title.trim() || detail.product.name,
-          description: description.trim() || null,
-          retail_price_cents: currentRetailPriceCents(),
         }),
       });
       setDraft(result.draft);
-      setProviderRenderUrl(result.draft.completeful_render_url || null);
-      setNotice(`Saved product draft · ${result.draft.state}.`);
+      setProviderRenderUrl(preparedFor === currentPlacementKey || Boolean(nextPrepared)
+        ? result.draft.completeful_render_url || null : null);
+      setNotice("");
       return result.draft;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save product draft");
@@ -474,7 +965,28 @@ export default function StudioWorkspace({
     }
   }
 
-  async function buildPreparedArtworkBlob() {
+  async function continueToProductDetails() {
+    // "Next step" must not silently strand the merchant at an original-only
+    // draft. Prepare the exact selected print file before handing off.
+    if (!asset || !showArtwork) {
+      setError("Select artwork before moving to Product Details.");
+      setTab("upload");
+      setPanelOpen(true);
+      return;
+    }
+    const needsPreparation = !preparedAsset || preparedFor !== currentPlacementKey;
+    const saved = needsPreparation ? await prepareArtwork() : await saveDraft();
+    if (!saved) return;
+    const productId = Number(saved.product_id);
+    if (!Number.isSafeInteger(productId) || productId <= 0) {
+      setError("The design was saved, but no storefront draft product was returned. Reopen the design before continuing.");
+      return;
+    }
+    // Local draft product, NOT a fulfillment-provider product or public listing.
+    window.location.assign("/admin/product-edit?id=" + encodeURIComponent(String(productId)));
+  }
+
+  async function buildPreparedArtworkBlob(placementScale: number = scale) {
     if (!asset || !showArtwork || !printPixels) {
       throw new Error("Add artwork and select a print area with known pixel dimensions first.");
     }
@@ -505,10 +1017,11 @@ export default function StudioWorkspace({
     canvas.height = height;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas preparation is unavailable");
-    const w = (width * scale) / 100;
+    const w = (width * placementScale) / 100;
     const h = (crop.height / crop.width) * w;
     ctx.translate((width * x) / 100, (height * y) / 100);
     ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
     ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, -w / 2, -h / 2, w, h);
     return new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(
@@ -519,7 +1032,10 @@ export default function StudioWorkspace({
   }
 
   async function persistPlacementPreview(prepared: MediaAsset) {
-    const backgroundUrl = location?.artboard_image_url || baseImage;
+    // A provider print-area URL can point at the FRONT even for the Back.
+    // Only produce a draft composite when the exact side/variant photo is verified.
+    // Otherwise leave preview_media_asset_id empty rather than persist a false mockup.
+    const backgroundUrl = designImage;
     if (!backgroundUrl || !location) return null;
     try {
       const background = new Image();
@@ -543,8 +1059,11 @@ export default function StudioWorkspace({
       const blob = await new Promise<Blob>((resolve, reject) =>
         canvas.toBlob((value) => (value ? resolve(value) : reject(new Error("Preview export failed"))), "image/png"),
       );
-      const filename = `placement-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${Date.now()}.png`;
-      return (await uploadMediaFile(new File([blob], filename, { type: "image/png" }), "studio/previews")) || null;
+      const filename = `placement-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${crypto.randomUUID().slice(0, 12)}.png`;
+      return (await uploadMediaFile(
+        new File([blob], filename, { type: "image/png" }), "studio/previews",
+        { derivativeRole: "mockup", transformPolicy: "preserve", sourceAsset: prepared },
+      )) || null;
     } catch (e) {
       console.warn("Placement preview could not be persisted", e);
       return null;
@@ -552,24 +1071,50 @@ export default function StudioWorkspace({
   }
 
   async function prepareArtwork() {
+    if (cropPending || cropError) {
+      setError("Wait for artwork inspection or fix the crop before preparation.");
+      return null;
+    }
     setBusy("prepare");
     setError("");
     try {
-      const blob = await buildPreparedArtworkBlob();
-      const filename = `prepared-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${Date.now()}.png`;
-      const uploaded = await uploadMediaFile(new File([blob], filename, { type: "image/png" }), "studio/prepared");
+      // The SDK manufacturing contract supplies the physical print PPI. For
+      // small deficits, preserve the original pixels and reduce placement
+      // width instead of upscaling or blocking the merchant.
+      const blockingIssues = manufacturingPreflight?.issues.filter((issue) =>
+        issue.status === "needs_variant" || issue.status === "unsupported") || [];
+      const fittedScale = suggestPrintScale({
+        currentScale: scale,
+        effectivePpi: manufacturingPreflight?.effectivePpi,
+        targetPpi: manufacturingPreflight?.target.ppi,
+      });
+      const canAutoFit = blockingIssues.length > 0 && fittedScale !== null &&
+        blockingIssues.every((issue) => issue.code === "insufficient_resolution");
+      if (manufacturingPreflight && ["unsupported", "needs_variant"].includes(manufacturingPreflight.status) && !canAutoFit) {
+        throw new Error(blockingIssues[0]?.message || manufacturingPreflight.issues[0]?.message ||
+          "Use a higher-resolution original or a smaller print placement.");
+      }
+      const finalScale = canAutoFit && fittedScale !== null ? fittedScale : scale;
+      const blob = await buildPreparedArtworkBlob(finalScale);
+      const filename = `prepared-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${crypto.randomUUID().slice(0, 12)}.png`;
+      const uploaded = await uploadMediaFile(
+        new File([blob], filename, { type: "image/png" }), "studio/prepared",
+        { derivativeRole: "manufacturing", transformPolicy: "preserve", sourceAsset: asset },
+      );
       if (!uploaded) throw new Error("Prepared artwork was not saved");
       setPreparedAsset(uploaded);
+      setPreparedFor(placementKey(asset?.id, variantId, locationId, x, y, finalScale, rotation, flipX, flipY, trimTransparent, removeFlatBackground));
+      setPreviewAsset(null);
       setProviderRenderUrl(null);
       const preview = await persistPlacementPreview(uploaded);
       if (preview) setPreviewAsset(preview);
-      const saved = await saveDraft(uploaded, preview || previewAsset);
-      if (saved) {
-        setNotice(
-          `Prepared a ${printPixels?.width} × ${printPixels?.height} transparent production PNG. Original artwork is unchanged.`,
-        );
+      const saved = await saveDraft(uploaded, preview || null, finalScale);
+      if (!saved) throw new Error("Prepared artwork was uploaded, but the design draft could not be saved");
+      if (canAutoFit) {
+        setScale(finalScale);
+        setNotice("Artwork placement was adjusted automatically for print quality. The original image was preserved.");
       }
-      return uploaded;
+      return saved;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Artwork preparation failed");
       return null;
@@ -578,387 +1123,412 @@ export default function StudioWorkspace({
     }
   }
 
-  async function renderMockup() {
-    let saved = await saveDraft();
-    if (!saved) return;
-    if (!preparedAsset) {
-      setError("Prepare the artwork first so Completeful receives the production raster, not a browser-only placement.");
+  async function renderSupplierMockups() {
+    if (!preparedAsset || preparedFor !== currentPlacementKey) {
+      setError("Prepare the current artwork before rendering supplier mockups.");
       return;
     }
-    setBusy("render");
-    setError("");
-    try {
-      const result = await adminFetch<{
-        mode: "provider_render" | "placement_preview";
-        provider_render: boolean;
-        status?: string;
-        render_id?: string;
-        render_url?: string | null;
-        message?: string;
-        draft?: StudioDraft;
-      }>(`/api/admin/product-studio/drafts/${encodeURIComponent(saved.id)}/render`, { method: "POST" });
-      if (result.draft) {
-        saved = result.draft;
-        setDraft(result.draft);
-      }
-      if (!result.provider_render) {
-        setProviderRenderUrl(null);
-        setNotice(result.message || "This product has no Completeful mockup target; showing the labeled placement preview.");
-        return;
-      }
-      if (result.render_url) {
-        setProviderRenderUrl(result.render_url);
-        setNotice("Completeful rendered the selected artwork on the selected product.");
-        return;
-      }
-      if (!result.render_id) {
-        setNotice("Completeful accepted the render but did not return a render id.");
-        return;
-      }
-      setNotice("Completeful render queued. Waiting for the provider result…");
-      for (let attempt = 0; attempt < 10; attempt += 1) {
-        await new Promise((resolve) => window.setTimeout(resolve, 1400));
-        const polled = await adminFetch<{
-          status: string;
-          render_id: string;
-          mockups?: { url: string; width: number; height: number }[];
-          error?: string;
-        }>(
-          `/api/admin/product-studio/renders/${encodeURIComponent(result.render_id)}?draft_id=${encodeURIComponent(saved.id)}`,
-        );
-        if (polled.status === "succeeded") {
-          const url = polled.mockups?.[0]?.url || null;
-          setProviderRenderUrl(url);
-          setDraft((current) =>
-            current
-              ? { ...current, state: "rendered", completeful_render_status: "succeeded", completeful_render_url: url }
-              : current,
-          );
-          setNotice("Completeful mockup render ready.");
-          return;
-        }
-        if (polled.status === "failed") throw new Error(polled.error || "Completeful mockup render failed");
-      }
-      setNotice("Completeful is still rendering. You can continue working and retry the render check shortly.");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Mockup render failed");
-    } finally {
-      setBusy("");
-    }
-  }
-
-  async function createProduct() {
     const saved = await saveDraft();
     if (!saved) return;
-    if (!preparedAsset) {
-      setError("Prepare the artwork before creating the fulfillment product.");
-      return;
-    }
-    if (currentRetailPriceCents() <= 0) {
-      setError("Set a retail price above $0 before creating the product.");
-      return;
-    }
-    setBusy("create-product");
+    setBusy("render-batch");
     setError("");
     try {
       const result = await adminFetch<{
-        product_id: number;
-        completeful_store_product_id: string;
-        mapped_variants: number;
-        draft: StudioDraft;
-      }>(`/api/admin/product-studio/drafts/${encodeURIComponent(saved.id)}/create-product`, { method: "POST" });
-      setDraft(result.draft);
-      setNotice(
-        `Created Completeful + storefront draft together. ${result.mapped_variants} variant${result.mapped_variants === 1 ? "" : "s"} mapped.`,
-      );
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Product creation failed");
+        ok: boolean; error?: string; skipped?: Array<{ reason: string }>;
+        rendered?: Array<{
+          mockup_id: string; variant_color: string; print_location_id: string;
+          render_id?: string; status: string; error?: string; asset?: { url: string } | null;
+        }>;
+      }>(`/api/admin/product-studio/drafts/${encodeURIComponent(saved.id)}/render-batch`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      if (!result.ok || !result.rendered?.length) {
+        throw new Error(result.error || "No color-verified supplier mockups were available.");
+      }
+      setSupplierMockups(result.rendered);
+      const missing = result.skipped?.length || 0;
+      setNotice(`Submitted ${result.rendered.length} exact-color supplier mockups.` +
+        (missing ? ` ${missing} combinations lack supplier imagery and were skipped.` : ""));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Supplier mockup rendering failed.");
     } finally {
       setBusy("");
     }
   }
 
-  async function publishProduct() {
-    if (!draft) return;
-    setBusy("publish");
-    setError("");
+  async function refreshSupplierMockups() {
+    const pending = supplierMockups.filter((item) => item.render_id && !item.asset && item.status !== "failed");
+    if (!pending.length || busy) return;
+    setBusy("refresh-mockups");
     try {
-      const result = await adminFetch<{ draft: StudioDraft; product_id: number }>(
-        `/api/admin/product-studio/drafts/${encodeURIComponent(draft.id)}/publish`,
-        { method: "POST" },
-      );
-      setDraft(result.draft);
-      setNotice(`Published product ${result.product_id} to the storefront.`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Publish failed");
+      const results = await Promise.all(pending.map(async (item) => {
+        try {
+          return await adminFetch<{
+            status: string; render_id: string; asset?: { url: string } | null;
+          }>(`/api/admin/product-studio/renders/${encodeURIComponent(item.render_id!)}/batch`);
+        } catch {
+          return null;
+        }
+      }));
+      setSupplierMockups((current) => current.map((item) => {
+        const next = results.find((result) => result?.render_id === item.render_id);
+        return next ? { ...item, status: next.status, asset: next.asset || item.asset } : item;
+      }));
+      setNotice("Supplier render statuses refreshed. Completed images are saved in Media Library.");
     } finally {
       setBusy("");
     }
   }
 
-  const quality =
-    dimensions && printPixels
-      ? dimensions.width / ((printPixels.width * scale) / 100)
-      : null;
+  const cropKey = asset ? JSON.stringify([asset.id, asset.url, trimTransparent, removeFlatBackground]) : "";
+  const cropPending = Boolean(asset && (trimTransparent || removeFlatBackground) &&
+    croppedPreview?.key !== cropKey);
+  const artworkCrop = trimTransparent && croppedPreview?.key === cropKey ? croppedPreview.crop : null;
+  const artworkPreviewUrl = croppedPreview?.key === cropKey ? croppedPreview.url : asset?.url;
+  const quality = studioArtworkQuality({
+    location, source: dimensions, crop: artworkCrop, cropPending, scalePercent: scale,
+    fileName: asset?.filename,
+  });
+  const lowResolution = quality.lowResolution;
+  const filteredMedia = media;
+  // Generated artwork is saved as studio-artwork-<id>.<ext> by upload() after askAI().
+  const aiImages = media.filter((item) => /^studio-artwork-/i.test(item.filename || ""));
+  const currentPlacementKey = placementKey(asset?.id, variantId, locationId, x, y, scale, rotation, flipX, flipY, trimTransparent, removeFlatBackground);
+  const preparedIsCurrent = Boolean(preparedAsset && preparedFor === currentPlacementKey);
+  const currentRenderUrl = preparedIsCurrent ? providerRenderUrl : null;
+  const manufacturingPreflight = dimensions && !cropPending && printPixels && asset && location
+    ? evaluateManufacturingCompatibility(
+        { format: asset.filename?.split(".").pop(),
+          widthPx: artworkCrop?.width ?? dimensions.width,
+          heightPx: artworkCrop?.height ?? dimensions.height, bytes: asset.size_bytes },
+        { id: "fnf.catalog-raster", manufacturer: "completeful",
+          process: String(detail.product.print_type || "catalog").toLowerCase(),
+          format: "png", allowRaster: true, allowVector: false,
+          ppi: Number(location.dpi) || 300,
+          source: { kind: "catalog-artboard", verified: false } },
+        { printWidthIn: ((printPixels.width * scale) / 100) / (Number(location.dpi) || 300),
+          printHeightIn: ((printPixels.width * scale) / 100) / (Number(location.dpi) || 300) *
+            (artworkCrop?.height ?? dimensions.height) / Math.max(1, artworkCrop?.width ?? dimensions.width) },
+      )
+    : null;
+  const resolutionFit = suggestPrintScale({ currentScale: scale,
+    effectivePpi: manufacturingPreflight?.effectivePpi,
+    targetPpi: manufacturingPreflight?.target.ppi });
+  const resolutionBlockers = manufacturingPreflight?.issues.filter((issue) =>
+    issue.status === "needs_variant" || issue.status === "unsupported") || [];
+  const autoFitAvailable = resolutionFit !== null && resolutionBlockers.length > 0 &&
+    resolutionBlockers.every((issue) => issue.code === "insufficient_resolution");
   return (
     <div className="ps-workspace" data-agentsam-resource="product-design-workspace">
       <header className="ps-workspace-header">
         <button
-          className="ps-text-button"
+          className="ps-text-button ps-icon-action ps-icon-action--ghost"
+          data-tip="Back to product details"
           onClick={onBack}
           aria-label="Back to product details"
         >
           <StudioIcon name="back" />
-          <span>Product details</span>
+          <span className="ps-sr-only">Product details</span>
         </button>
-        <div>
-          <small>YOUR WORKSPACE</small>
-          <h1>{detail.product.name}</h1>
-        </div>
+        <nav className="ps-steps" aria-label="Product creation progress">
+          <ol>
+            {["Choose product", "Design", "Product details", "Publish"].map((label, index) => (
+              <li key={label} className={index === 1 ? "is-current" : index < 1 ? "is-done" : ""}
+                aria-current={index === 1 ? "step" : undefined}>
+                <span className="ps-steps__dot" aria-hidden="true">{index < 1 ? "✓" : index + 1}</span>
+                <span>{label}</span>
+              </li>
+            ))}
+          </ol>
+        </nav>
         <div className="ps-workspace-actions">
-          <a className="ps-text-button" href="/admin/products/help/artwork">
-            <StudioIcon name="tools" size={15} />
-            <span>Artwork help</span>
-          </a>
-          <button className="ps-button" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
-            {busy === "save" ? "Saving…" : "Save draft"}
+          <button type="button" className="ps-icon-action" data-tip={busy === "save" ? "Saving…" : "Save design"}
+            aria-label="Save design" disabled={Boolean(busy)} onClick={() => void saveDraft()}>
+            {busy === "save" ? <span className="ps-icon-action__busy" aria-hidden="true" /> : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 17V3" /><path d="m6 11 6 6 6-6" /><path d="M19 21H5" />
+              </svg>
+            )}
+            <span className="ps-sr-only">Save design</span>
           </button>
+          <button type="button" className="ps-icon-action ps-icon-action--primary" data-tip={nextLabel}
+            aria-label={nextLabel} disabled={Boolean(busy)} onClick={() => void continueToProductDetails()}>
+            {busy === "prepare" ? <span className="ps-icon-action__busy" aria-hidden="true" /> : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M17 12H3" /><path d="m11 18 6-6-6-6" /><path d="M21 5v14" />
+              </svg>
+            )}
+            <span className="ps-sr-only">{nextLabel}</span>
+          </button>
+          {error && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{error}</p>}
+          {cropError && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{cropError}</p>}
+          {!error && !cropError && autoFitAvailable && (
+            <p className="ps-step-feedback" role="status">
+              We’ll automatically adjust this artwork to print clearly when you continue. The original file stays unchanged.
+            </p>
+          )}
+          {!error && !cropError && !autoFitAvailable && resolutionBlockers.some((issue) => issue.code === "insufficient_resolution") && (
+            <p className="ps-step-feedback ps-step-feedback--error" role="status">
+              This image needs a larger original or a smaller design placement for a clear print.
+            </p>
+          )}
+          {!error && notice && <p className="ps-step-feedback" role="status">{notice}</p>}
+        </div>
+        <div className="ps-header-artwork-tools">
+            {asset && !currentRenderUrl && artworkSelected && (
+              <div className="ps-artwork-toolbar" role="toolbar" aria-label="Selected artwork tools">
+                <button type="button" title="Edit artwork placement" aria-label="Edit artwork placement"
+                  onClick={() => { setTab("layers"); setPanelOpen(true); }}><StudioIcon name="pen" size={17} /></button>
+                <button type="button" title="Background cutout" aria-label="Background cutout"
+                  onClick={() => { setTab("tools"); setPanelOpen(true); setRemoveFlatBackground(true); }}><StudioIcon name="image" size={17} /></button>
+                <span className="ps-artwork-toolbar__divider" aria-hidden="true" />
+                <button type="button" title="Reduce artwork size" aria-label="Reduce artwork size"
+                  onClick={() => setScale((value) => Math.max(5, value - 5))}>−</button>
+                <output aria-label="Artwork size" className="ps-artwork-scale">{scale}%</output>
+                <button type="button" title="Increase artwork size" aria-label="Increase artwork size"
+                  onClick={() => setScale((value) => Math.min(150, value + 5))}>+</button>
+                <button type="button" title="Center artwork" aria-label="Center artwork"
+                  onClick={() => { setX(50); setY(50); }}><StudioIcon name="center" size={17} /></button>
+                <button type="button" title="Rotate 90 degrees" aria-label="Rotate artwork 90 degrees"
+                  onClick={() => setRotation((value) => ((value + 270) % 360) - 180)}><StudioIcon name="rotate" size={17} /></button>
+                <button type="button" title="Flip horizontally" aria-label="Flip artwork horizontally"
+                  aria-pressed={flipX} onClick={() => setFlipX((value) => !value)}><StudioIcon name="flip" size={17} /></button>
+                <span className="ps-artwork-toolbar__divider" aria-hidden="true" />
+                <output className={"ps-dpi-badge" + (lowResolution ? " is-low" : "")}
+                  aria-label={quality.aria} title={quality.detail}>
+                  {quality.badge}
+                </output>
+              </div>
+            )}
         </div>
       </header>
-      <div className="ps-workspace-body">
+      {catalogWarning && <p className="ps-restore-notice" role="alert">{catalogWarning}</p>}
+      {restoringDraft && <p className="ps-restore-notice" role="status">Restoring saved design and artwork…</p>}
+      <div className={`ps-workspace-body ${panelOpen ? "" : "is-panel-collapsed"}`}>
         <nav className="ps-toolrail" aria-label="Design tools">
           {tabs.map((t) => (
             <button
               key={t.id}
-              className={tab === t.id ? "is-active" : ""}
+              className={panelOpen && tab === t.id ? "is-active" : ""}
               onClick={() => openTab(t.id)}
-              aria-pressed={tab === t.id}
+              aria-pressed={panelOpen && tab === t.id}
+              aria-expanded={panelOpen && tab === t.id}
             >
-              <StudioIcon name={t.icon} />
+              {t.id === "tools" ? <PencilSparklesIcon /> : <StudioIcon name={t.icon} />}
               <span>{t.label}</span>
             </button>
           ))}
+          <a className="ps-toolrail__help" href="/admin/products/help/artwork" title="Artwork help">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+              <path d="M12 17h.01" /><path d="M9.1 9a3 3 0 0 1 5.82 1c0 2-3 3-3 3" />
+            </svg>
+            <span>Artwork help</span>
+          </a>
         </nav>
-        <aside className="ps-toolpanel" ref={panel}>
+        <aside className="ps-toolpanel" ref={panel} hidden={!panelOpen} aria-label="Selected design tool">
           <div className="ps-panel-heading">
-            <span className="ps-eyebrow">MAKE IT YOURS</span>
-            <h2>{tabs.find((t) => t.id === tab)?.label}</h2>
+            <div>
+              <span className="ps-eyebrow">MAKE IT YOURS</span>
+              <h2>{tabs.find((t) => t.id === tab)?.label}</h2>
+            </div>
+            <button type="button" className="ps-panel-dismiss" onClick={() => setPanelOpen(false)} aria-label="Collapse tool panel">×</button>
           </div>
           {tab === "options" && (
-            <>
-              <div className="ps-field">
-                <strong>Product option</strong>
-                {optionAxes.length ? (
-                  <div className="ps-option-groups ps-workspace-options">
-                    {optionAxes.map((axis) => (
-                      <div className="ps-option-group" key={axis}>
-                        <span>{axis}</span>
-                        <div className="ps-option-choices">
-                          {variantAxisValues(detail.variants, axis).map((value) => {
-                            const previewVariant = detail.variants.find(
-                              (candidate) =>
-                                variantAttributes(candidate)[axis] === value,
-                            );
-                            const showPreview =
-                              /color|finish|material|style|tone/i.test(axis);
-                            return (
-                              <button
-                                type="button"
-                                key={value}
-                                className={
-                                  selectedAttributes[axis] === value
-                                    ? "is-active"
-                                    : ""
-                                }
-                                onClick={() => chooseVariantOption(axis, value)}
-                                aria-pressed={selectedAttributes[axis] === value}
-                              >
-                                {showPreview && variantImage(previewVariant) && (
-                                  <ProductImage
-                                    sources={[variantImage(previewVariant)]}
-                                    alt=""
-                                  />
-                                )}
-                                <span>{value}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <select
-                    value={variantId}
-                    onChange={(e) => setVariantId(e.target.value)}
-                    aria-label="Product option"
-                  >
-                    {detail.variants.map((candidate) => (
-                      <option
-                        key={catalogVariantId(candidate)}
-                        value={catalogVariantId(candidate)}
-                      >
-                        {candidate.variant_title || candidate.name || "Default"}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-              {detail.variants.length > 0 && (
-                <p className="ps-selected-option">
-                  <strong>{variant?.variant_title || variant?.name || "Default option"}</strong>
-                  {variant?.sku ? ` · ${variant.sku}` : ""}
-                </p>
-              )}
-              <div className="ps-field">
-                <strong>Print area</strong>
-                <div className="ps-option-choices ps-option-choices--compact">
-                  {detail.print_locations
-                    .filter((candidate) => candidate.enabled)
-                    .map((candidate) => (
-                      <button
-                        type="button"
-                        key={candidate.print_location_id}
-                        className={
-                          locationId === candidate.print_location_id
-                            ? "is-active"
-                            : ""
-                        }
-                        onClick={() => setLocationId(candidate.print_location_id)}
-                        aria-pressed={
-                          locationId === candidate.print_location_id
-                        }
-                      >
-                        <span>{candidate.name}</span>
-                      </button>
-                    ))}
+            <div className="ps-selling-editor" aria-label="Product options">
+              <section className="ps-selling-section" aria-labelledby="ps-selling-heading">
+                <div className="ps-selling-heading">
+                  <strong id="ps-selling-heading">Selling options</strong>
+                  <output aria-live="polite">{selectedVariantIds.length} of {catalogVariantIds.length} selected</output>
                 </div>
+                <p className="ps-selling-help">Choose which actual supplier variants customers can buy.</p>
+                <div className="ps-selling-actions">
+                  <button type="button" onClick={() => setSelectedVariantIds(catalogVariantIds)}>Select all</button>
+                  <button type="button" onClick={() => setSelectedVariantIds([])}>Clear</button>
+                  <button type="button" className="ps-variant-manage" onClick={() => setManageVariants(true)}>Manage variants</button>
+                </div>
+                {optionAxes.map((axis) => (
+                  <div className="ps-selling-axis" key={axis}>
+                    <strong>{/size/i.test(axis) ? "Sizes offered" : /color|colour/i.test(axis) ? "Colors offered" : axis + " offered"}</strong>
+                    <div className="ps-selling-values" role="group" aria-label={`Selling ${axis}`}>
+                      {variantAxisValues(detail.variants, axis).map((value) => {
+                        const matching = detail.variants.filter((candidate) =>
+                          variantAttributes(candidate)[axis] === value);
+                        const includedCount = matching.filter((candidate) =>
+                          selectedVariantSet.has(catalogVariantId(candidate))).length;
+                        const allIncluded = matching.length > 0 && includedCount === matching.length;
+                        const sample = matching[0];
+                        return (
+                          <button type="button" key={value}
+                            className={allIncluded ? "is-selected" : includedCount ? "is-partial" : ""}
+                            aria-pressed={allIncluded}
+                            aria-label={`${value}, ${includedCount} of ${matching.length} variants selected for sale`}
+                            title={`${includedCount} of ${matching.length} supplier variants included`}
+                            onClick={() => toggleSellingAxis(axis, value)}>
+                            {/color|colour|finish|material/i.test(axis) && variantImage(sample) && (
+                              <ProductImage sources={[variantImage(sample)]} alt="" />
+                            )}
+                            <span>{value}</span>
+                            <span className="ps-selling-tick" aria-hidden="true">{allIncluded ? "✓" : includedCount ? "−" : "+"}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {!selectedVariantIds.length && (
+                  <p className="ps-selling-warning" role="status">Choose at least one variant before saving.</p>
+                )}
+              </section>
+              <section className="ps-editing-section" aria-labelledby="ps-editing-heading">
+                <strong id="ps-editing-heading">Editing preview</strong>
+                <p className="ps-selling-help">Change the garment shown on the canvas without changing the selling selection.</p>
+                <div className="ps-preview-fields">
+                  {optionAxes.map((axis) => (
+                    <label key={axis}>
+                      <span>{/size/i.test(axis) ? "Preview size" : /color|colour/i.test(axis) ? "Preview color" : "Preview " + axis}</span>
+                      <select value={selectedAttributes[axis] || ""}
+                        onChange={(event) => chooseVariantOption(axis, event.target.value)}>
+                        {variantAxisValues(detail.variants, axis).map((value) => (
+                          <option key={value} value={value}>{value}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                  {!optionAxes.length && (
+                    <label>
+                      <span>Preview variant</span>
+                      <select value={variantId} onChange={(event) => setVariantId(event.target.value)}>
+                        {detail.variants.map((candidate) => (
+                          <option key={catalogVariantId(candidate)} value={catalogVariantId(candidate)}>
+                            {candidate.variant_title || candidate.name || "Default"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </div>
+                <p className="ps-editing-summary">
+                  <strong>Editing: {variant?.variant_title || variant?.name || Object.values(selectedAttributes).join(" / ") || "Default"}</strong>
+                  <span>{selectedVariantSet.has(variantId) ? "Included for sale" : "Preview only · not included for sale"}</span>
+                </p>
+              </section>
+              <div className="ps-print-details" title="Provider print area dimensions">
+                <span>{printSizeLabel(location)}</span>
+                <span>{location?.dpi ? `Supplier target: ${location.dpi} DPI` : "Supplier target DPI: unavailable"}</span>
               </div>
-              <div className="ps-paper-note">
-                <StudioIcon name="tools" />
-                <strong>Designed for the details.</strong>
-                <p>{printSizeLabel(location)}</p>
-                <small>
-                  {location?.dpi || 300} DPI{" "}
-                  {location?.dpi
-                    ? "provider target"
-                    : "recommended for raster artwork"}
-                  . Keep important elements inside the safe area.
-                </small>
-              </div>
-              <div className="ps-merch-fields">
-                <label className="ps-field">
-                  Storefront title
-                  <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={180} />
-                </label>
-                <label className="ps-field">
-                  Retail price (USD)
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    inputMode="decimal"
-                    value={retailPrice}
-                    onChange={(e) => setRetailPrice(e.target.value)}
-                    placeholder="29.00"
-                  />
-                </label>
-                <label className="ps-field">
-                  Storefront description
-                  <textarea
-                    rows={5}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Describe the finished product…"
-                  />
-                </label>
-              </div>
-              <button
-                className="ps-button ps-wide"
-                onClick={() => setTab("upload")}
-              >
+              <button type="button" className="ps-button ps-wide" onClick={() => { setTab("upload"); setPanelOpen(true); }}>
                 <StudioIcon name="upload" /> Add your artwork
               </button>
-            </>
+              {manageVariants && (
+                <div className="ps-variant-overlay" onMouseDown={(event) => {
+                  if (event.currentTarget === event.target) setManageVariants(false);
+                }}>
+                  <section className="ps-variant-dialog" ref={variantDialogRef} role="dialog" aria-modal="true"
+                    aria-labelledby="ps-variant-dialog-title">
+                    <header className="ps-variant-dialog-heading">
+                      <div>
+                        <h3 id="ps-variant-dialog-title">Manage all variants</h3>
+                        <p>{selectedVariantIds.length} of {catalogVariantIds.length} valid combinations included</p>
+                      </div>
+                      <button type="button" aria-label="Close variant manager" onClick={() => setManageVariants(false)}>×</button>
+                    </header>
+                    <div className="ps-variant-dialog-actions">
+                      <button type="button" onClick={() => setSelectedVariantIds(catalogVariantIds)}>Select all</button>
+                      <button type="button" onClick={() => setSelectedVariantIds([])}>Clear</button>
+                    </div>
+                    <div className="ps-variant-dialog-list">
+                      {detail.variants.map((candidate) => {
+                        const id = catalogVariantId(candidate);
+                        return (
+                          <label key={id} className="ps-variant-row">
+                            <input type="checkbox" checked={selectedVariantSet.has(id)}
+                              onChange={(event) => toggleSellingVariant(id, event.target.checked)} />
+                            <span>
+                              <strong>{candidate.variant_title || candidate.name || Object.values(variantAttributes(candidate)).join(" / ") || "Default variant"}</strong>
+                              {candidate.sku && <small>{candidate.sku}</small>}
+                            </span>
+                            {id === variantId && <em>Previewing</em>}
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <footer className="ps-variant-dialog-footer">
+                      <span>{selectedVariantIds.length} selected</span>
+                      <button type="button" className="ps-button ps-primary" onClick={() => setManageVariants(false)}>Done</button>
+                    </footer>
+                  </section>
+                </div>
+              )}
+            </div>
           )}
           {tab === "upload" && (
-            <>
-              <button
-                className="ps-upload-zone"
-                disabled={Boolean(busy)}
+            <div className="ps-asset-rail">
+              <button type="button" className="ps-upload-zone" disabled={Boolean(busy)}
                 onClick={() => fileInput.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (!busy) void upload(e.dataTransfer.files[0]);
-                }}
-              >
-                <StudioIcon name="upload" size={32} />
-                <strong>
-                  {busy === "upload"
-                    ? "Uploading your artwork…"
-                    : "Drop an idea here."}
-                </strong>
-                <span>Or tap to choose a file</span>
-                <small>PNG, JPG, WebP, SVG, PDF · up to 20 MB</small>
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => { event.preventDefault(); if (!busy) void upload(event.dataTransfer.files[0]); }}>
+                <StudioIcon name="upload" size={21} />
+                <strong>{busy === "upload" ? "Uploading…" : "Choose files"}</strong>
+                <small>or drop artwork here</small>
               </button>
-              <input
-                ref={fileInput}
-                type="file"
-                hidden
-                accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
-                onChange={(e) => void upload(e.target.files?.[0])}
-              />
-              <div className="ps-upload-tips">
-                <h3>A better file. A better finish.</h3>
-                <a className="ps-upload-help-link" href="/admin/products/help/artwork">
-                  Review artwork requirements
-                </a>
-                <p>
-                  <strong>PNG</strong> for transparent backgrounds. JPG images
-                  include their background.
-                </p>
-                <p>
-                  <strong>SVG / PDF</strong> preserve vector artwork. Outline
-                  text or embed fonts. PDF originals are stored; use PNG for
-                  canvas previews.
-                </p>
-                <p>
-                  <strong>300 DPI</strong> at final print size is the raster
-                  target. Use RGB / sRGB and keep the highest quality original.
-                </p>
-                <p>
-                  Safe-area guides are an editing aid. Confirm the provider’s
-                  bleed and placement requirements before printing.
-                </p>
+              <input ref={fileInput} type="file" hidden accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
+                onChange={(event) => void upload(event.target.files?.[0])} />
+              <div className="ps-asset-rail__heading">
+                <strong>Artwork</strong>
+                <a href="/admin/media" title="Organize media albums" aria-label="Organize media albums">Manage</a>
               </div>
-            </>
-          )}
-          {tab === "designs" && (
-            <>
-              <p className="ps-panel-intro">
-                Your media library, right where you need it.
-              </p>
-              {busy === "library" && <p role="status">Loading your designs…</p>}
-              <div className="ps-media-grid">
-                {media.map((a) => (
-                  <button
-                    key={a.id}
-                    onClick={() => choose(a)}
-                    aria-label={`Use ${a.filename}`}
-                    className={asset?.id === a.id ? "is-active" : ""}
-                  >
-                    <img src={a.url} alt="" loading="lazy" />
-                    <span>{a.filename}</span>
+              <select className="ps-asset-album" value={albumId} aria-label="Artwork album"
+                onChange={(event) => { setAlbumId(Number(event.target.value)); setMediaPage(1); setMedia([]); }}>
+                <option value={0}>All artwork</option>
+                {albums.map((album) => (
+                  <option key={album.id} value={album.id}>{album.name} ({album.asset_count ?? 0})</option>
+                ))}
+              </select>
+              <div className="ps-asset-scope" role="group" aria-label="Artwork source">
+                {([["studio", "Studio artwork"], ["library", "Whole library"]] as const).map(([value, label]) => (
+                  <button type="button" key={value} className={artworkScope === value ? "is-active" : ""}
+                    aria-pressed={artworkScope === value}
+                    onClick={() => { setArtworkScope(value); setMediaPage(1); setMedia([]); }}>
+                    {label}
                   </button>
                 ))}
               </div>
-              {!busy && !media.length && (
-                <button className="ps-button" onClick={() => setTab("upload")}>
-                  Upload your first design
+              <label className="ps-asset-search">
+                <StudioIcon name="search" size={15} />
+                <input type="search" value={mediaSearch} onChange={(event) => setMediaSearch(event.target.value)}
+                  placeholder="Find artwork" aria-label="Search media library" />
+              </label>
+              {busy === "library" && <p className="ps-asset-status" role="status">Loading artwork…</p>}
+              <div className="ps-media-grid">
+                {filteredMedia.map((item) => (
+                  <button type="button" key={item.id} title={item.filename}
+                    aria-label={`Place ${item.filename}`}
+                    aria-pressed={asset?.id === item.id}
+                    onClick={() => choose(item)}
+                    className={asset?.id === item.id ? "is-active" : ""}>
+                    <img src={item.url} alt="" loading="lazy" />
+                    <span>{item.filename}</span>
+                  </button>
+                ))}
+              </div>
+              {!busy && filteredMedia.length === 0 && (
+                <p className="ps-asset-status">{mediaSearch ? "No matching artwork." :
+                  albumId ? "This album has no artwork yet." :
+                  artworkScope === "studio" ? "No studio artwork yet. Upload a file, or switch to Whole library." :
+                  "Choose or upload your first artwork."}</p>
+              )}
+              {mediaHasMore && (
+                <button type="button" className="ps-button ps-wide"
+                  disabled={busy === "library"} onClick={() => setMediaPage((page) => page + 1)}>
+                  Load more artwork
                 </button>
               )}
-            </>
+            </div>
           )}
           {tab === "layers" && (
             <>
@@ -1014,6 +1584,18 @@ export default function StudioWorkspace({
                       onChange={(e) => setRotation(Number(e.target.value))}
                     />
                   </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={flipY} onChange={(event) => setFlipY(event.target.checked)} />
+                    Flip vertically
+                  </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={guides} onChange={(event) => setGuides(event.target.checked)} />
+                    Show grid
+                  </label>
+                  <label className="ps-check">
+                    <input type="checkbox" checked={snapEnabled} onChange={(event) => setSnapEnabled(event.target.checked)} />
+                    Snap to grid
+                  </label>
                   <button
                     className="ps-button"
                     onClick={() => {
@@ -1031,7 +1613,7 @@ export default function StudioWorkspace({
                   <p>Your artwork layer will appear here.</p>
                   <button
                     className="ps-button"
-                    onClick={() => setTab("designs")}
+                    onClick={() => setTab("upload")}
                   >
                     Choose artwork
                   </button>
@@ -1040,289 +1622,437 @@ export default function StudioWorkspace({
             </>
           )}
           {tab === "tools" && (
-            <>
-              <label className="ps-field">
-                Design notes
-                <textarea
-                  rows={5}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Placement notes, color direction, changes for the next version…"
-                />
-              </label>
-              <p className="ps-panel-intro">
-                Notes belong to this product design. AgentSam annotation is intentionally limited to customer-facing storefront previews, never this admin shell.
-              </p>
-              <label className="ps-check">
-                <input
-                  type="checkbox"
-                  checked={guides}
-                  onChange={(e) => setGuides(e.target.checked)}
-                />{" "}
-                Show safe-area guide
-              </label>
-              <button
-                className="ps-button ps-wide"
-                disabled={!asset || Boolean(busy)}
-                onClick={() => void prepareArtwork()}
-              >
-                {busy === "prepare" ? "Preparing…" : preparedAsset ? "Rebuild production artwork" : "Prepare for print"}
-              </button>
-              <div className="ps-paper-note ps-prep-options">
-                <strong>Artwork preparation</strong>
-                <label className="ps-check">
-                  <input
-                    type="checkbox"
-                    checked={removeFlatBackground}
-                    onChange={(e) => setRemoveFlatBackground(e.target.checked)}
-                  />{" "}
-                  Remove connected flat background
-                </label>
-                <label className="ps-check">
-                  <input
-                    type="checkbox"
-                    checked={trimTransparent}
-                    onChange={(e) => setTrimTransparent(e.target.checked)}
-                  />{" "}
-                  Trim transparent edges
-                </label>
-                <small>
-                  Background removal is opt-in and deterministic: it removes only edge-connected pixels close to the sampled border color. Preview before using the derivative.
-                </small>
+            <div className="ps-ai-tools">
+              <div className="ps-ai-tabs" role="tablist" aria-label="AI image tools">
+                {([["generate", "Image generator"], ["edit", "Upscale & edit"]] as const).map(([id, label]) => (
+                  <button type="button" role="tab" key={id} aria-selected={aiMode === id}
+                    className={aiMode === id ? "is-active" : ""} onClick={() => setAiMode(id)}>
+                    {label}
+                  </button>
+                ))}
               </div>
-              <p className="ps-panel-intro">
-                Preparation creates a versioned transparent PNG at the provider print-area dimensions and leaves the original asset untouched.
-              </p>
-              {asset && preparedAsset && (
-                <div className="ps-derivative-compare" aria-label="Original and prepared artwork comparison">
-                  <figure>
-                    <img src={asset.url} alt="Original artwork" />
-                    <figcaption>Original · unchanged</figcaption>
-                  </figure>
-                  <figure>
-                    <img src={preparedAsset.url} alt="Prepared artwork derivative" />
-                    <figcaption>Prepared derivative</figcaption>
-                  </figure>
-                </div>
+              {aiMode === "generate" && (
+                <>
+                  <label className="ps-field ps-ai-prompt">
+                    Prompt
+                    <textarea rows={4} value={aiPrompt} maxLength={1000}
+                      onChange={(event) => setAiPrompt(event.target.value)}
+                      placeholder={'e.g. "Retro sunset badge, bold vector shapes, 2 colors"'} />
+                    <small className="ps-ai-count">{aiPrompt.length} / 1000</small>
+                  </label>
+                  <details className="ps-ai-options" open>
+                    <summary>More options</summary>
+                    <div className="ps-chip-group" role="group" aria-label="Background">
+                      <span>Background</span>
+                      {(["auto", "transparent", "white"] as const).map((value) => (
+                        <button type="button" key={value} className={aiBackground === value ? "is-active" : ""}
+                          aria-pressed={aiBackground === value} onClick={() => setAiBackground(value)}>
+                          {value === "auto" ? "Auto" : value === "transparent" ? "Transparent" : "White"}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="ps-chip-group" role="group" aria-label="Size">
+                      <span>Size</span>
+                      {(["auto", "square", "landscape", "portrait"] as const).map((value) => (
+                        <button type="button" key={value} className={aiSize === value ? "is-active" : ""}
+                          aria-pressed={aiSize === value} onClick={() => setAiSize(value)}>
+                          {{ auto: "Auto", square: "Square (1:1)", landscape: "Landscape (3:2)", portrait: "Portrait (2:3)" }[value]}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="ps-chip-group" role="group" aria-label="Quality">
+                      <span>Quality</span>
+                      {(["auto", "high", "medium", "low"] as const).map((value) => (
+                        <button type="button" key={value} className={aiQuality === value ? "is-active" : ""}
+                          aria-pressed={aiQuality === value} onClick={() => setAiQuality(value)}>
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="ps-ai-hint">Options are sent to the selected model. Some Workers AI models require Auto settings. Final print quality is verified separately.</p>
+                  </details>
+                  <button type="button" className="ps-button ps-primary ps-wide"
+                    disabled={!aiPrompt.trim() || Boolean(busy)} onClick={() => void generateImage()}>
+                    {busy === "generate" ? "Generating…" : "Generate image"}
+                  </button>
+                  {generatedCandidate && (
+                    <section className="ps-ai-source" aria-label="Generated artwork candidate">
+                      <img src={`data:${generatedCandidate.mime};base64,${generatedCandidate.base64}`}
+                        alt="Generated artwork preview; not yet applied" />
+                      <div>
+                        <strong>Review generated artwork</strong>
+                        <small>Not added to your design. The original is unchanged.</small>
+                        <div className="ps-ai-actions">
+                          <button type="button" className="ps-button ps-primary"
+                            disabled={Boolean(busy)} onClick={() => void acceptGeneratedCandidate()}>
+                            Accept and add to design
+                          </button>
+                          <button type="button" className="ps-button" disabled={Boolean(busy)}
+                            onClick={() => setGeneratedCandidate(null)}>Discard</button>
+                        </div>
+                      </div>
+                    </section>
+                  )}
+                  <div className="ps-ai-gallery-head">
+                    <strong>Your AI images</strong>
+                    <span className="ps-count">{aiImages.length}</span>
+                  </div>
+                  {aiImages.length ? (
+                    <div className="ps-media-grid ps-ai-gallery">
+                      {aiImages.map((item) => (
+                        <button type="button" key={item.id} title={item.filename}
+                          aria-label={`Place ${item.filename}`} aria-pressed={asset?.id === item.id}
+                          className={asset?.id === item.id ? "is-active" : ""} onClick={() => choose(item)}>
+                          <img src={item.url} alt="" loading="lazy" />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="ps-asset-status">Generated images appear here.</p>
+                  )}
+                </>
               )}
-              <button
-                className="ps-button ps-wide"
-                disabled={!preparedAsset || Boolean(busy)}
-                onClick={() => void renderMockup()}
-              >
-                {busy === "render" ? "Rendering with Completeful…" : "Render Completeful mockup"}
-              </button>
-              <button
-                className="ps-button ps-wide"
-                disabled={Boolean(busy)}
-                onClick={() => void saveDraft()}
-              >
-                Save product draft
-              </button>
-              <button
-                className="ps-button ps-wide ps-primary"
-                disabled={!preparedAsset || currentRetailPriceCents() <= 0 || Boolean(busy)}
-                onClick={() => void createProduct()}
-              >
-                {busy === "create-product" ? "Creating product…" : "Create Completeful + store product"}
-              </button>
-              {draft?.state === "created" && (
-                <button
-                  className="ps-button ps-wide"
-                  disabled={Boolean(busy)}
-                  onClick={() => void publishProduct()}
-                >
-                  {busy === "publish" ? "Publishing…" : "Publish to store"}
-                </button>
+              {aiMode === "edit" && (
+                <>
+                  <div className="ps-ai-source">
+                    {asset ? (
+                      <>
+                        <img src={asset.url} alt="" />
+                        <div><strong>{asset.filename}</strong><small>Selected artwork</small></div>
+                      </>
+                    ) : (
+                      <p className="ps-asset-status">Choose artwork to edit.</p>
+                    )}
+                    <button type="button" className="ps-button" onClick={() => openTab("upload")}>
+                      {asset ? "Change" : "Choose artwork"}
+                    </button>
+                  </div>
+                  <div className="ps-ai-actions">
+                    <strong>Edit</strong>
+                    <button type="button" className="ps-button ps-wide"
+                      disabled={!asset || Boolean(busy) || !subjectRemovalAvailable}
+                      title={subjectRemovalAvailable ? "Remove the background and save a cutout copy" : "Background removal is not configured for this install"}
+                      onClick={() => void removeBackgroundAI()}>
+                      {busy === "remove-background" ? "Removing background…" : "Remove background"}
+                    </button>
+                    <label className="ps-check">
+                      <input type="checkbox" checked={removeFlatBackground}
+                        onChange={(event) => setRemoveFlatBackground(event.target.checked)} />
+                      Remove connected flat background
+                    </label>
+                    <label className="ps-check">
+                      <input type="checkbox" checked={trimTransparent}
+                        onChange={(event) => setTrimTransparent(event.target.checked)} />
+                      Trim transparent edges
+                    </label>
+                    <button type="button" className="ps-button ps-wide"
+                      disabled={!asset || Boolean(busy)}
+                      onClick={() => void reviseSelectedArtwork("resample")}>
+                      {busy === "resample" ? "Resampling…" : "Resize to 2× pixels"}
+                    </button>
+                    <small>Resampling does not recover missing image detail or certify print readiness.</small>
+                    <label className="ps-field">
+                      AI edit model
+                      <select value={editModel} onChange={(event) => setEditModel(event.target.value)}
+                        disabled={!editableModels.length || Boolean(busy)}>
+                        {!editableModels.length && <option value="">No enabled image-edit models</option>}
+                        {editableModels.map((model) => (
+                          <option key={model.id} value={model.id}>{model.name || model.id}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="ps-field">
+                      Edit with a prompt
+                      <textarea rows={3} value={editPrompt} maxLength={1000}
+                        onChange={(event) => setEditPrompt(event.target.value)}
+                        placeholder="Describe exactly what should change in the selected artwork" />
+                    </label>
+                    <button type="button" className="ps-button ps-wide"
+                      disabled={!asset || !editPrompt.trim() || !editModel || Boolean(busy)}
+                      onClick={() => void reviseSelectedArtwork("ai-edit")}>
+                      {busy === "ai-edit" ? "Editing…" : "Generate edited version"}
+                    </button>
+                    {revisionCandidate && (
+                      <section className="ps-ai-source" aria-label="Artwork revision review">
+                        <img src={revisionCandidate.url} alt="Proposed new artwork version" />
+                        <div>
+                          <strong>New version · not selected</strong>
+                          <small>Saved separately in Media Library. Original remains unchanged.</small>
+                          <div className="ps-ai-actions">
+                            <button type="button" className="ps-button ps-primary"
+                              disabled={Boolean(busy)} onClick={() => choose(revisionCandidate)}>
+                              Use this version
+                            </button>
+                            <button type="button" className="ps-button" disabled={Boolean(busy)}
+                              onClick={() => setRevisionCandidate(null)}>
+                              Keep current version
+                            </button>
+                          </div>
+                        </div>
+                      </section>
+                    )}
+                  </div>
+                  <button type="button" className="ps-button ps-wide"
+                    disabled={!asset || Boolean(busy)} onClick={() => void prepareArtwork()}>
+                    {busy === "prepare" ? "Preparing…" : preparedIsCurrent ? "Rebuild production artwork" : "Prepare for print"}
+                  </button>
+                  <button type="button" className="ps-button ps-wide"
+                    disabled={!preparedIsCurrent || Boolean(busy)}
+                    onClick={() => void renderSupplierMockups()}>
+                    {busy === "render-batch" ? "Submitting supplier renders…" : "Render Completeful colorways"}
+                  </button>
+                  <small>Uses exact supplier color and print-area mockups. Missing color matches are not fabricated.</small>
+                  {supplierMockups.length > 0 && (
+                    <section className="ps-ai-gallery" aria-label="Supplier mockup results">
+                      <div className="ps-ai-gallery-head">
+                        <strong>Completeful renders</strong>
+                        <span className="ps-count">{supplierMockups.length}</span>
+                      </div>
+                      <div className="ps-media-grid">
+                        {supplierMockups.map((mockup) => (
+                          <figure key={mockup.mockup_id + mockup.variant_color + mockup.print_location_id}>
+                            {mockup.asset?.url
+                              ? <img src={mockup.asset.url} alt={`Completeful ${mockup.variant_color} ${mockup.print_location_id} mockup`} />
+                              : <div className="ps-asset-status" role="status">{mockup.status}</div>}
+                            <figcaption>{mockup.variant_color} · {mockup.print_location_id}</figcaption>
+                          </figure>
+                        ))}
+                      </div>
+                      {supplierMockups.some((mockup) => mockup.render_id && !mockup.asset && mockup.status !== "failed") && (
+                        <button type="button" className="ps-button"
+                          disabled={Boolean(busy)} onClick={() => void refreshSupplierMockups()}>
+                          {busy === "refresh-mockups" ? "Checking…" : "Refresh supplier renders"}
+                        </button>
+                      )}
+                    </section>
+                  )}
+                  {asset && preparedAsset && preparedIsCurrent && (
+                    <div className="ps-derivative-compare" aria-label="Original and prepared artwork comparison">
+                      <figure>
+                        <img src={asset.url} alt="Original artwork" />
+                        <figcaption>Original · unchanged</figcaption>
+                      </figure>
+                      <figure>
+                        <img src={preparedAsset.url} alt="Prepared artwork derivative" />
+                        <figcaption>Prepared derivative</figcaption>
+                      </figure>
+                    </div>
+                  )}
+                </>
               )}
-              <div className="ps-paper-note">
-                <strong>Draft status</strong>
-                <p>{draft?.state || "Not saved yet"}</p>
-                <small>
-                  {asset ? `Original #${asset.id}` : "No original artwork"}
-                  {preparedAsset ? ` · Prepared #${preparedAsset.id}` : " · Not prepared"}
-                  {previewAsset ? ` · Preview #${previewAsset.id}` : ""}
-                  {draft?.completeful_design_id ? " · Completeful design linked" : ""}
-                </small>
-              </div>
-            </>
+            </div>
           )}
         </aside>
         <div className="ps-stage-column" ref={stage}>
           <div className="ps-stage-toolbar">
-            <div>
-              <strong>Product design</strong>
-              <span className="ps-stage-subtitle">
-                {location?.name || "Choose a print area"}
-              </span>
+            <h1 className="ps-stage-title" title={detail.product.name}>{detail.product.name}</h1>
+            <div className="ps-stage-toolbar__controls">
+              {enabledLocations.length > 1 && (
+                <div className="ps-print-side-toggle" role="group" aria-label="Print location">
+                  {enabledLocations.map((candidate) => (
+                    <button type="button" key={candidate.print_location_id}
+                      className={locationId === candidate.print_location_id ? "is-active" : ""}
+                      aria-pressed={locationId === candidate.print_location_id}
+                      onClick={() => choosePrintLocation(candidate.print_location_id)}>
+                      {candidate.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="ps-canvas-controls">
+                <button type="button" onClick={() => setCanvasZoom(100)}>Fit</button>
+                <label><span className="ps-sr-only">Canvas zoom</span>
+                  <input type="range" min="50" max="160" step="5" value={canvasZoom}
+                    aria-label="Canvas zoom" onChange={(event) => setCanvasZoom(Number(event.target.value))} />
+                </label>
+                <span>{canvasZoom}%</span>
+              </div>
             </div>
-            <span>{providerRenderUrl ? "Completeful render" : "Placement preview · provider render comes next"}</span>
           </div>
           <div className="ps-stage" data-agentsam-resource="product-design-stage">
-            <div className="ps-product-design-preview">
+            <div className="ps-product-design-preview" style={{
+              transform: `scale(${canvasZoom / 100})`,
+              width: `min(100%, 880px, calc((100dvh - 350px) * ${artboardAspectRatio}))`,
+            }}>
               <div className="ps-product-design-image">
-                {providerRenderUrl ? (
-                  <>
+                <div className="ps-design-guide" style={{ aspectRatio: artboardAspectRatio }}
+                  aria-label={`${location?.name || "Selected"} garment design view`}>
+                  {designImage ? (
                     <ProductImage
-                      sources={[providerRenderUrl]}
-                      alt={`Completeful render of ${title || detail.product.name}`}
+                      key={`${variantId}:${locationId}:${designImage}`}
+                      className={"ps-design-product-image" + (hasProviderPlacementFrame ? " is-geometry-mapped" : "")}
+                      sources={designImageSources}
                       lazy={false}
+                      alt={`${location?.name || "Selected"} provider catalog reference`}
                     />
-                    <span className="ps-preview-badge ps-preview-badge--provider">COMPLETEFUL RENDER</span>
-                  </>
-                ) : (
-                  <>
-                    {baseImage ? (
-                      <ProductImage
-                        sources={[
-                          location?.artboard_image_url,
-                          baseImage,
-                          variant?.cover_image_url,
-                          detail.product.realistic_image_url,
-                          detail.product.cover_image_url,
-                          detail.images[0]?.url,
-                        ]}
-                        alt={detail.product.name}
-                        lazy={false}
+                  ) : (
+                    <div className="ps-unverified-garment" role="status">
+                      <strong>No verified {location?.name || "side"} mockup</strong>
+                      <span>This supplier catalog has no matching {variant?.variant_title || "variant"} garment photo. Place artwork using the print-area guide; this is not a product mockup.</span>
+                    </div>
+                  )}
+                  <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
+                    onPointerDown={(event) => {
+                      const target = event.target as HTMLElement;
+                      const cornerHandle = target.closest(".ps-selection-handle");
+                      if (cornerHandle) {
+                        const corner = cornerHandle.classList.contains("ps-selection-handle--tl") ? "tl"
+                          : cornerHandle.classList.contains("ps-selection-handle--tr") ? "tr"
+                          : cornerHandle.classList.contains("ps-selection-handle--bl") ? "bl" : "br";
+                        startDrag(event, "resize", corner);
+                      }
+                      else if (target.closest(".ps-artwork-layer")) startDrag(event, "move");
+                      else setArtworkSelected(false);
+                    }}
+                    onPointerMove={updateDrag}
+                    onPointerUp={() => { dragRef.current = null; }}
+                    onPointerCancel={() => { dragRef.current = null; }}
+                  >
+                    {guides && <>
+                      <span className="ps-design-crosshair-x" aria-hidden="true" />
+                      <span className="ps-design-crosshair-y" aria-hidden="true" />
+                    </>}
+                    {asset && showArtwork ? (
+                      <img
+                        className={"ps-artwork-layer ps-artwork-layer--interactive" + (artworkSelected ? " is-selected" : "")}
+                        src={artworkPreviewUrl}
+                        alt="Selected artwork — use arrow keys to nudge the placement"
+                        draggable={false}
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          const step = event.shiftKey ? 5 : 1;
+                          if (event.key === "ArrowLeft") setX((value) => Math.max(0, value - step));
+                          else if (event.key === "ArrowRight") setX((value) => Math.min(100, value + step));
+                          else if (event.key === "ArrowUp") setY((value) => Math.max(0, value - step));
+                          else if (event.key === "ArrowDown") setY((value) => Math.min(100, value + step));
+                          else return;
+                          event.preventDefault();
+                        }}
+                        style={{
+                          width: `${scale}%`,
+                          left: `${x}%`,
+                          top: `${y}%`,
+                          transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})`,
+                        }}
                       />
                     ) : (
-                      <div className="ps-canvas-empty">
-                        <StudioIcon name="box" size={40} />
-                        <p>No product image supplied.</p>
+                      <button className="ps-placement-empty" type="button"
+                        aria-label="Add artwork" title="Add artwork" onClick={() => openTab("upload")} />
+                    )}
+                    {asset && showArtwork && artworkSelected && (
+                      <div className="ps-selection-frame" aria-hidden="true" style={{
+                        left: x + "%", top: y + "%", width: scale + "%",
+                        aspectRatio: dimensions
+                          ? (artworkCrop?.width ?? dimensions.width) + "/" + (artworkCrop?.height ?? dimensions.height) : "1",
+                        transform: "translate(-50%, -50%) rotate(" + rotation + "deg)",
+                      }}>
+                        <span className="ps-selection-handle ps-selection-handle--tl" />
+                        <span className="ps-selection-handle ps-selection-handle--tr" />
+                        <span className="ps-selection-handle ps-selection-handle--bl" />
+                        <span className="ps-selection-handle ps-selection-handle--br" />
                       </div>
                     )}
-                    <div
-                      className="ps-placement-window"
-                      style={placementFrameStyle}
-                      aria-label={`${location?.name || "Print area"} placement preview`}
-                    >
-                      {guides && (
-                        <div className="ps-safe-area">
-                          <span>{location?.name || "PRINT AREA"}</span>
-                        </div>
-                      )}
-                      {asset && showArtwork ? (
-                        <img
-                          className="ps-artwork-layer"
-                          src={asset.url}
-                          alt="Your artwork placement"
-                          draggable={false}
-                          style={{
-                            width: `${scale}%`,
-                            left: `${x}%`,
-                            top: `${y}%`,
-                            transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
-                          }}
-                        />
-                      ) : (
-                        <button
-                          className="ps-placement-empty"
-                          type="button"
-                          onClick={() => openTab("upload")}
-                        >
-                          <StudioIcon name="upload" />
-                          Add artwork
-                        </button>
-                      )}
-                    </div>
-                    <span className="ps-preview-badge">PLACEMENT PREVIEW</span>
-                  </>
-                )}
+                  </div>
+                </div>
               </div>
               <div className="ps-product-design-caption">
                 <strong>{variant?.variant_title || variant?.name || detail.product.name}</strong>
                 <span>
-                  {providerRenderUrl
-                    ? `Rendered by Completeful · ${location?.name || "print area"}`
-                    : asset
-                      ? `${asset.filename} · ${location?.name || "choose a print area"}`
-                      : `No artwork selected · ${location?.name || "choose a print area"}`}
+                  {asset
+                    ? `${asset.filename} · ${location?.name || "choose a print area"}`
+                    : `No artwork selected · ${location?.name || "choose a print area"}`}
                 </span>
               </div>
             </div>
-          </div>
-          <details className="ps-reference-drawer">
-            <summary>Provider references ({detail.mockups.filter((m) => m.active && m.preview_url).length})</summary>
-            <div className="ps-mockup-grid">
-              {detail.mockups
-                .filter((m) => m.active && m.preview_url)
-                .map((m) => (
-                  <figure key={m.mockup_id}>
-                    <ProductImage sources={[m.preview_url]} alt={m.name} />
-                    <figcaption>{m.name}</figcaption>
-                  </figure>
-                ))}
-              {!detail.mockups.some((m) => m.active && m.preview_url) && (
-                <p>No provider reference images are supplied for this product.</p>
+            <div className="ps-mini-map">
+              <div className="ps-mini-head">
+                <strong>Product preview</strong>
+                <button type="button" onClick={() => setMiniMapOpen((value) => !value)} aria-expanded={miniMapOpen} aria-label={miniMapOpen ? "Hide product preview" : "Show product preview"}>{miniMapOpen ? "Hide" : "Show"}</button>
+              </div>
+              {miniMapOpen && (
+                <>
+                  <div className="ps-mini-image">
+                    {currentRenderUrl || designImage
+                      ? <ProductImage key={`${variantId}:${locationId}`} sources={currentRenderUrl ? [currentRenderUrl] : designImageSources} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
+                      : <div className="ps-mini-unverified">No verified {location?.name || "side"} mockup</div>}
+                    {!currentRenderUrl && asset && showArtwork && (
+                      <div className="ps-mini-placement" style={placementFrameStyle}>
+                        <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
+                      </div>
+                    )}
+                    <button type="button" className="ps-mini-expand-hitarea" aria-label="Enlarge product preview" title="Enlarge product preview"
+                      onClick={() => setFullPreviewOpen(true)} />
+                  </div>
+                  <small>{currentRenderUrl ? "Completeful render" : designImage
+                    ? hasDistinctProviderSideArtboard ? `${location?.name || "Selected"} · supplier print-area reference` : location?.name || "Selected view"
+                    : `${location?.name || "Selected"} · preview unavailable`}
+                    {" · "}{variant?.variant_title || variant?.name || "Selected color"}</small>
+                </>
               )}
-              <p className="ps-reference-note">
-                References show provider-supplied product views only. They are not rendered previews of your artwork.
-              </p>
-            </div>
-          </details>
-          <div className="ps-quality" aria-live="polite">
-            <span>
-              {dimensions
-                ? `${dimensions.width} × ${dimensions.height} px`
-                : "Original artwork preserved"}
-            </span>
-            <span
-              className={quality != null && quality < 1 ? "needs-review" : ""}
-            >
-              {quality == null
-                ? "Check print requirements before production"
-                : quality < 1
-                  ? "Resolution below print-area target at this size"
-                  : "Pixel dimensions meet this print-area target"}
-            </span>
-          </div>
-          <div className="ps-composer">
-            <div className="ps-composer-label">
-              <StudioIcon name="spark" size={17} />
-              <strong>A creative partner, on your canvas.</strong>
-            </div>
-            <textarea
-              aria-label="Creative brief"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="A vintage racing emblem, warm cream and burnt orange…"
-              rows={2}
-            />
-            <div className="ps-composer-actions">
-              <span>Powered by AgentSam</span>
-              <button
-                className="ps-text-button"
-                disabled={!prompt.trim() || Boolean(busy)}
-                onClick={() => askAI(false)}
-              >
-                {busy === "ideas" ? "Exploring…" : "Brainstorm"}
-              </button>
-              <button
-                className="ps-button ps-primary"
-                disabled={!prompt.trim() || Boolean(busy)}
-                onClick={() => askAI(true)}
-              >
-                {busy === "generate" ? "Creating…" : "Create artwork"}
-                <StudioIcon name="spark" size={16} />
-              </button>
             </div>
           </div>
+          {colorways.length > 1 && colorAxis && (
+            <div className="ps-colorway-rail" role="group" aria-label="Preview color">
+              {colorways.map(({ value, sources }) => (
+                <button type="button" key={value}
+                  className={"ps-colorway" + (selectedAttributes[colorAxis] === value ? " is-active" : "")}
+                  aria-pressed={selectedAttributes[colorAxis] === value}
+                  aria-label={`Preview ${value}`} title={value}
+                  onClick={() => chooseVariantOption(colorAxis, value)}>
+                  <span className="ps-colorway__thumb" style={{ aspectRatio: artboardAspectRatio }}>
+                    {sources.length
+                      ? <ProductImage sources={sources} alt="" />
+                      : <span className="ps-colorway__empty" aria-hidden="true" />}
+                    {sources.length > 0 && asset && showArtwork && (
+                      <span className="ps-mini-placement" style={placementFrameStyle}>
+                        <img src={artworkPreviewUrl} alt="" style={{
+                          width: `${scale}%`, left: `${x}%`, top: `${y}%`,
+                          transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})`,
+                        }} />
+                      </span>
+                    )}
+                  </span>
+                  <span className="ps-colorway__label">{value}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {fullPreviewOpen && (
+            <div className="ps-preview-overlay" onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setFullPreviewOpen(false);
+            }}>
+              <section className="ps-preview-dialog" role="dialog" aria-modal="true" aria-label="Enlarged product preview">
+                <header>
+                  <div>
+                    <strong>Product preview · {location?.name || "Selected side"}</strong>
+                    <small>{variant?.variant_title || variant?.name || detail.product.name}</small>
+                  </div>
+                  <button ref={fullPreviewCloseRef} type="button" aria-label="Close enlarged product preview"
+                    onClick={() => setFullPreviewOpen(false)}>Close ×</button>
+                </header>
+                <div className="ps-preview-enlarged-image">
+                  {currentRenderUrl || designImage
+                    ? <ProductImage key={`expanded:${variantId}:${locationId}`} sources={currentRenderUrl ? [currentRenderUrl] : designImageSources}
+                        alt={`${variant?.variant_title || variant?.name || detail.product.name}, ${location?.name || "selected view"}`} lazy={false} />
+                    : <div className="ps-mini-unverified">No verified photo is available for this side or variant.</div>}
+                  {!currentRenderUrl && designImage && asset && showArtwork && (
+                    <div className="ps-mini-placement" style={placementFrameStyle}>
+                      <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`,
+                        transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
+                    </div>
+                  )}
+                </div>
+                <footer>{currentRenderUrl ? "Completeful provider render" : designImage ? "Supplier garment reference with local artwork placement — not a final render" : "Preview unavailable"}</footer>
+              </section>
+            </div>
+          )}
           {reply && (
             <details open className="ps-ai-reply">
               <summary>Creative direction</summary>
               <p>{reply}</p>
             </details>
           )}
-          {error && (
-            <div className="ps-feedback" role="alert">
-              {error}
-            </div>
-          )}
-          {notice && (
-            <p className="ps-notice" role="status">
-              {notice}
-            </p>
-          )}
+
         </div>
       </div>
     </div>

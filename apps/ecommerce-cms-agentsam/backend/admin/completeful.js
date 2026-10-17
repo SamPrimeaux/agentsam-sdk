@@ -3,6 +3,7 @@ import {
   completefulApiBase,
   completefulKeyMode,
   completefulLiveWritesAllowed,
+  completefulRequest,
 } from "../completeful/client.js";
 import {
   getCompletefulCatalogProduct,
@@ -50,6 +51,58 @@ function providerErrorResponse(error) {
     },
     { status: 500 },
   );
+}
+
+
+/**
+ * Read through to the supplier for the currently opened product, not a bulk
+ * database resync. The mirrored catalog can be weeks out of date and lacks
+ * family-inherited side mockups; Completeful resolves those on its live GET.
+ * Keep legacy D1 shape for the existing Product Studio UI.
+ */
+export async function liveCatalogDetail(env, catalogId, mirrored) {
+  const { data } = await completefulRequest(env, "GET",
+    `/catalog/products/${encodeURIComponent(catalogId)}`, {
+      query: { include: "variants,print_locations,images,mockups,shipping" },
+    });
+  const provider = data?.product || data?.item || data?.data?.product || data;
+  if (!provider || typeof provider !== "object" || Array.isArray(provider)) {
+    throw new Error("Completeful returned no catalog product");
+  }
+  const normalVariant = (v) => ({
+    ...v,
+    completeful_variant_id: v.completeful_variant_id || v.catalog_variant_id || v.id,
+    catalog_variant_id: v.catalog_variant_id || v.completeful_variant_id || v.id,
+    variant_attributes_json: JSON.stringify(v.variant_attributes || v.attributes || {}),
+    attributes_json: JSON.stringify(v.attributes || {}),
+    fulfillment_cost_free_cents: v.fulfillment_cost_free_cents ?? mirrored?.variants?.find((old) =>
+      old.completeful_variant_id === (v.id || v.catalog_variant_id))?.fulfillment_cost_free_cents ?? null,
+  });
+  const normalLocation = (l) => ({
+    ...l, print_location_id: l.print_location_id || l.id,
+    enabled: l.enabled === false ? 0 : 1,
+  });
+  const normalMockup = (m) => ({
+    ...m, mockup_id: m.mockup_id || m.id,
+    active: m.active === false ? 0 : 1,
+    variant_scope_json: typeof m.variant_scope_json === "string" ? m.variant_scope_json
+      : m.variant_scope ? JSON.stringify(m.variant_scope) : null,
+  });
+  const arrayOrMirror = (key, transform) =>
+    Array.isArray(provider[key]) ? provider[key].map(transform) : mirrored[key];
+  return {
+    ...mirrored,
+    product: {
+      ...mirrored.product, ...provider,
+      completeful_product_id: provider.completeful_product_id || provider.catalog_product_id || provider.id || catalogId,
+      catalog_product_id: provider.catalog_product_id || provider.completeful_product_id || provider.id || catalogId,
+    },
+    variants: arrayOrMirror("variants", normalVariant),
+    print_locations: arrayOrMirror("print_locations", normalLocation),
+    images: arrayOrMirror("images", (img) => img),
+    mockups: arrayOrMirror("mockups", normalMockup),
+    catalog_source: "supplier_live",
+  };
 }
 
 async function status(env) {
@@ -149,10 +202,21 @@ export async function handleCompletefulAdminApi(request, env, url) {
       if (!result) {
         return json({ ok: false, error: "Completeful catalog product not found" }, { status: 404 });
       }
-      return json({ ok: true, ...result });
+      if (url.searchParams.get("live") === "1") {
+        try {
+          return json({ ok: true, ...(await liveCatalogDetail(env,
+            result.product.completeful_product_id || productId, result)) });
+        } catch (error) {
+          // Provider GET failures must not prevent opening an existing design.
+          console.warn("[completeful/catalog/live]", error?.code || error?.message || "failed");
+          return json({ ok: true, ...result, catalog_source: "mirror_fallback",
+            catalog_warning: "Supplier catalog refresh failed. Showing saved catalog images; verify the selected print side before proceeding." });
+        }
+      }
+      return json({ ok: true, ...result, catalog_source: "mirror" });
     }
 
-    // Plan SEO/CF tags + staging keys for a product R2 image (optimize via bin/commerce-assets).
+    // Plan SEO/CF tags + staging keys for a product R2 image (optimize via apps/ecommerce-cms-agentsam/bin/assets.mjs).
     if (path === "/api/admin/completeful/assets/optimize-plan" && method === "POST") {
       const body = await readJson(request);
       const r2Key = String(body.r2_key || body.key || "").replace(/^\/+/, "");
@@ -170,7 +234,7 @@ export async function handleCompletefulAdminApi(request, env, url) {
         ...plan,
         next: {
           cli: plan.execute_cli,
-          note: "Worker plans tags/staging; run bin/commerce-assets to execute sharp optimize against R2.",
+          note: "Worker plans tags/staging; run apps/ecommerce-cms-agentsam/bin/assets.mjs to execute sharp optimize against R2.",
         },
       });
     }

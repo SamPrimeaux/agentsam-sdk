@@ -14,11 +14,12 @@
   scroll-margin-top: 75px;
 }
 .product-studio-shell {
-  --ps-ink: #232720;
-  --ps-muted: #72776e;
-  --ps-line: #dedfd7;
-  --ps-accent: #d5e6ab;
-  --ps-paper: #fafbf6;
+  --ps-ink: #23212b;
+  --ps-muted: #6d6976;
+  --ps-line: #e2dfe9;
+  --ps-accent: var(--accent, #8b5cf6);
+  --ps-accent-soft: color-mix(in srgb, var(--ps-accent) 12%, white);
+  --ps-paper: #faf9fc;
   background: var(--ps-paper);
   color: var(--ps-ink);
   padding: 26px clamp(18px, 3.6vw, 64px) 48px;
@@ -1606,4 +1607,842 @@
 }
 .ps-preview-badge--provider {
   background: #304224e8;
+}
+
+/* Context-first product canvas: the tool rail stays available while panels collapse. */
+.ps-workspace-body.is-panel-collapsed { grid-template-columns: 76px minmax(0, 1fr); }
+.ps-toolpanel[hidden] { display: none !important; }
+.ps-panel-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.ps-panel-dismiss { border: 1px solid var(--ps-line); border-radius: 8px; background: white; min-width: 32px; min-height: 32px; font-size: 20px; }
+.ps-stage { position: relative; overflow: hidden; padding-bottom: 48px; }
+.ps-product-design-preview { transform-origin: center center; transition: transform .16s ease; }
+.ps-artwork-toolbar { margin: 4px auto 12px; width: fit-content; max-width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; padding: 5px; border: 1px solid var(--ps-line); border-radius: 10px; background: #fff; }
+.ps-artwork-toolbar button, .ps-canvas-controls button { min-height: 33px; padding: 6px 10px; border: 0; border-radius: 6px; background: #edf0e5; font-size: 11px; font-weight: 600; }
+.ps-artwork-toolbar span { min-width: 34px; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
+.ps-mini-map { position: absolute; bottom: 14px; right: 14px; width: clamp(120px, 18%, 168px); background: #fafbf9; border: 1px solid var(--ps-line); border-radius: 11px; overflow: hidden; box-shadow: 0 5px 22px #1c271523; z-index: 2; }
+.ps-mini-head { display: flex; gap: 4px; justify-content: space-between; align-items: center; padding: 8px 9px; font-size: 10px; }
+.ps-mini-head button { border: 0; background: transparent; text-decoration: underline; font-size: 10px; }
+.ps-mini-image { position: relative; aspect-ratio: 4 / 5; background: #fff; overflow: hidden; }
+.ps-mini-image > img, .ps-mini-image > .ps-image-fallback { width: 100%; height: 100%; object-fit: contain; }
+.ps-mini-silhouette { display: block; width: 100%; height: 100%; object-fit: contain; opacity: .8; }
+.ps-mini-placement { position: absolute; left: 50%; top: 50%; width: 34%; transform: translate(-50%,-50%); aspect-ratio: 1; pointer-events: none; }
+.ps-mini-placement img { position: absolute; max-height: none; object-fit: contain; }
+.ps-mini-map small { display: block; padding: 7px 8px; font-size: 9px; color: var(--ps-muted); line-height: 1.3; }
+.ps-canvas-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 8px; font-size: 11px; }
+.ps-canvas-controls label { display: flex; align-items: center; gap: 8px; }
+.ps-canvas-controls input { max-width: 150px; accent-color: #718a51; }
+@media (max-width: 1100px) and (min-width: 761px) {
+  .ps-workspace-body.is-panel-collapsed { grid-template-columns: 66px minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .ps-workspace-body.is-panel-collapsed { display: flex; flex-direction: column; }
+  .ps-stage { flex-wrap: wrap; padding: 14px; gap: 12px; }
+  .ps-mini-map { position: relative; inset: auto; width: min(100%, 220px); margin-left: auto; }
+  .ps-artwork-toolbar { margin-inline: 12px; }
+  .ps-artwork-toolbar button { font-size: 10px; }
+}
+
+/* Creative-to-commerce progression: distinct Save Design and Next Step actions. */
+.ps-workflow-note { display: grid; gap: 10px; justify-items: start; }
+.ps-workflow-note p { margin: 0; }
+.ps-workspace-actions .ps-primary { white-space: nowrap; }
+.ps-toolpanel .ps-field input:not([type="checkbox"]):not([type="range"]) { display: block; width: 100%; margin-top: 8px; min-height: 40px; border: 1px solid var(--ps-line); border-radius: 8px; padding: 9px 10px; background: #fff; color: var(--ps-ink); }
+@media (max-width: 760px) {
+ .ps-workspace-header { flex-wrap: wrap; }
+ .ps-workspace-actions { flex-wrap: wrap; min-width: 0 !important; }
+ .ps-workspace-actions .ps-primary { flex: 1; }
+}
+
+/* Flat production-coordinate editor. Photo and provider renders stay in the mini preview. */
+.ps-product-design-preview { width: min(100%, 590px); max-width: 100%; }
+.ps-product-design-image { background: transparent; border: 0; box-shadow: none; min-height: 0; overflow: visible; }
+.ps-design-guide { position: relative; width: 100%; min-height: 0; padding: 0; display: block; isolation: isolate; overflow: hidden; border-radius: 10px; }
+.ps-design-guide__identity { position: absolute; top: 17px; left: 18px; z-index: 2; display: grid; gap: 3px; }
+.ps-design-guide__identity span { color: #6d7865; font-size: 9px; font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+.ps-design-guide__identity strong { font-size: 13px; color: #2c3728; }
+.ps-design-guide__identity small { font-size: 10px; color: #687664; }
+.ps-design-garment-guide { position: absolute; width: 100%; height: 100%; max-height: none; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; opacity: .65; }
+.ps-design-print-area { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(44%, 290px); min-height: 0; max-height: none; overflow: hidden; border: 1px dashed #758e65; background: #ffffff0a; box-shadow: none; isolation: isolate; }
+.ps-design-print-area.is-gridded { background-image: linear-gradient(#7c987123 1px,transparent 1px),linear-gradient(90deg,#7c987123 1px,transparent 1px),linear-gradient(#4b714a24 1px,transparent 1px),linear-gradient(90deg,#4b714a24 1px,transparent 1px); background-size: 10% 10%,10% 10%,50% 50%,50% 50%; }
+.ps-design-crosshair-x,.ps-design-crosshair-y { position: absolute; z-index: 1; pointer-events: none; }
+.ps-design-crosshair-x { top: 50%; left: 0; right: 0; border-top: 1px dashed #71956891; }
+.ps-design-crosshair-y { left: 50%; top: 0; bottom: 0; border-left: 1px dashed #71956891; }
+.ps-design-safe-outline { position: absolute; inset: 7%; border: 1px dashed #8caa7c; pointer-events: none; }
+.ps-design-print-area .ps-artwork-layer { z-index: 3; }
+.ps-artwork-layer--interactive { cursor: move; outline: none; }
+.ps-artwork-layer--interactive:focus-visible { outline: 2px solid #2e5827; outline-offset: 4px; }
+.ps-design-dimensions { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); padding: 3px 6px; white-space: nowrap; font-size: 10px; font-weight: 600; color: #687663; background: #f8f7fae6; border-radius: 4px; }
+.ps-precision-control { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; color: #43553f; }
+.ps-precision-control input { width: 55px; min-height: 32px; border: 1px solid #c9d3c1; border-radius: 6px; background: #fff; padding: 3px 5px; font: inherit; }
+.ps-mini-map { width: clamp(145px, 22%, 210px); }
+.ps-mini-image { aspect-ratio: 4 / 5; }
+.ps-print-side-toggle { display: flex; align-items: center; justify-content: center; width: fit-content; max-width: 100%; margin: 12px auto 0; padding: 3px; gap: 3px; background: var(--ps-paper); border: 1px solid var(--ps-line); border-radius: 10px; }
+.ps-print-side-toggle button { min-height: 40px; min-width: 76px; border: 0; background: transparent; color: var(--ps-muted); border-radius: 7px; font-size: 12px; font-weight: 650; padding: 7px 14px; cursor: pointer; }
+.ps-print-side-toggle button.is-active { background: var(--ps-accent-soft); color: var(--ps-accent); }
+@media (max-width: 760px) { .ps-product-design-image,.ps-design-guide { min-height: 0; } .ps-mini-map { position: relative; width: min(100%, 210px); margin: 12px auto 0; } .ps-print-side-toggle { flex-wrap: wrap; } }
+
+/* Preserve the shell navigation on Product Studio catalog and editor routes.
+   The shared hamburger/mobile drawer must remain usable at every breakpoint. */
+body.product-studio-focused .console-main.admin-main,
+body.product-studio-focused .console-main.admin-main:not(.console-main--bleed) {
+  max-width: none; padding: 0; min-width: 0; overflow: clip;
+}
+body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc(100dvh - 52px); }
+.product-studio-shell .ps-workspace-header { background: var(--ps-paper); }
+.product-studio-shell .ps-toolrail, .product-studio-shell .ps-toolpanel { background: var(--ps-paper); }
+.product-studio-shell .ps-toolrail button.is-active { color: var(--ps-accent); background: var(--ps-accent-soft); }
+.product-studio-shell :focus-visible { outline-color: var(--ps-accent); }
+.product-studio-shell .ps-view-tabs button.is-active { color: var(--ps-accent); }
+.product-studio-shell .ps-stage { background-image: radial-gradient(#c8c1d3 0.8px, transparent 0.8px); }
+.product-studio-shell .ps-design-guide { background: #f8f7fa; }
+.product-studio-shell .ps-design-product-image {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: contain; object-position: center; pointer-events: none;
+}
+.product-studio-shell .ps-design-print-area {
+  background: rgba(255,255,255,.02); border: 1px dashed var(--ps-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb,var(--ps-accent) 10%, transparent);
+}
+.product-studio-shell .ps-design-print-area.is-gridded {
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--ps-accent) 12%, transparent) 1px, transparent 1px),
+  linear-gradient(to bottom, color-mix(in srgb, var(--ps-accent) 12%, transparent) 1px, transparent 1px);
+  background-size: 10% 10%;
+}
+.product-studio-shell .ps-design-crosshair-x { border-color: color-mix(in srgb,var(--ps-accent) 30%,transparent); }
+.product-studio-shell .ps-design-crosshair-y { border-color: color-mix(in srgb,var(--ps-accent) 30%,transparent); }
+.product-studio-shell .ps-design-product-image.is-geometry-mapped { object-fit: fill; }
+.product-studio-shell .ps-artwork-layer--interactive:focus-visible { outline-color: var(--ps-accent); }
+.product-studio-shell .ps-canvas-controls input { accent-color: var(--ps-accent); }
+@media (max-width: 760px) {
+  .product-studio-shell .ps-workspace-header { padding: 12px; }
+  .product-studio-shell .ps-workspace-body { min-height: 0; }
+  .product-studio-shell .ps-stage-column { padding: 0 8px 80px; }
+  .product-studio-shell .ps-stage { padding: 12px 6px; }
+  .product-studio-shell .ps-product-design-image, .product-studio-shell .ps-design-guide { min-height: 0; }
+  .product-studio-shell .ps-design-product-image { inset: 0; height: 100%; }
+}
+
+/* Product Studio interactive selection and contextual AgentSam */
+.product-studio-shell .ps-studio-context {
+  display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
+  gap: 8px; margin: 0 0 10px;
+}
+.product-studio-shell .ps-studio-context button {
+  min-height: 36px; display: inline-flex; align-items: center; justify-content: center;
+  gap: 7px; border: 1px solid var(--ps-line); background: #fff; color: var(--ps-ink);
+  border-radius: 9px; padding: 6px 11px; font-size: 12px;
+}
+.product-studio-shell .ps-studio-context .ps-agent-trigger,
+.product-studio-shell .ps-studio-context .ps-agent-trigger[aria-pressed="true"] {
+  border-color: color-mix(in srgb,var(--ps-accent) 36%, white);
+  color: var(--ps-accent);
+  background: var(--ps-accent-soft);
+}
+.product-studio-shell .ps-artwork-toolbar {
+  border-color: color-mix(in srgb,var(--ps-accent) 32%, white);
+  box-shadow: 0 4px 20px rgba(35,17,67,.06);
+}
+.product-studio-shell .ps-artwork-toolbar button,
+.product-studio-shell .ps-canvas-controls button {
+  background: var(--ps-accent-soft); color: var(--ps-ink);
+}
+.product-studio-shell .ps-artwork-layer--interactive.is-selected {
+  outline: 1.5px solid var(--ps-accent);
+  outline-offset: 2px;
+}
+.product-studio-shell .ps-design-print-area { touch-action: none; }
+.product-studio-shell .ps-selection-frame {
+  position: absolute; z-index: 5; border: 1px solid var(--ps-accent);
+  box-shadow: 0 0 0 1px #ffffffaa inset; pointer-events: none;
+}
+.product-studio-shell .ps-selection-handle {
+  position: absolute; display: block; width: 12px; height: 12px;
+  border: 2px solid var(--ps-accent); border-radius: 3px; background: white;
+  pointer-events: auto; touch-action: none; cursor: nwse-resize;
+}
+.product-studio-shell .ps-selection-handle--tl { top: -6px; left: -6px; }
+.product-studio-shell .ps-selection-handle--tr { top: -6px; right: -6px; }
+.product-studio-shell .ps-selection-handle--bl { bottom: -6px; left: -6px; }
+.product-studio-shell .ps-selection-handle--br { bottom: -6px; right: -6px; }
+.product-studio-shell .ps-design-print-area .ps-artwork-layer--interactive { touch-action: none; }
+@media (max-width: 760px) {
+  .product-studio-shell .ps-toolrail {
+    flex-direction: row; overflow-x: auto; position: sticky; top: 0; z-index: 5;
+    padding: 5px; scrollbar-width: thin;
+  }
+  .product-studio-shell .ps-toolrail button { min-width: 62px; min-height: 52px; padding: 5px 2px; }
+  .product-studio-shell .ps-toolpanel { padding: 12px; }
+  .product-studio-shell .ps-studio-context { justify-content: center; }
+  .product-studio-shell .ps-selection-handle { width: 16px; height: 16px; }
+}
+
+/* Contextual miniAgentSam identity: icon only; composer remains the editing surface. */
+.product-studio-shell .ps-studio-context .ps-agent-trigger--icon {
+  width: 40px; min-width: 40px; height: 40px; padding: 4px; border-radius: 50%;
+}
+.product-studio-shell .ps-agent-trigger--icon img {
+  display: block; width: 28px; height: 28px; object-fit: cover; border-radius: 50%;
+}
+.product-studio-shell .ps-quality--warning { color: #a65a21; }
+
+/* Product Studio polishing: content-first asset rail and icon tools. */
+.product-studio-shell .ps-toolpanel { padding-top: 14px; }
+.product-studio-shell .ps-panel-heading h2 { margin: 3px 0 12px; font-size: 19px; }
+.product-studio-shell .ps-eyebrow { display: none; }
+.product-studio-shell .ps-asset-rail { display: grid; align-content: start; gap: 10px; min-width: 0; }
+.product-studio-shell .ps-upload-zone {
+  flex-direction: row; flex-wrap: wrap; gap: 8px; min-height: 68px;
+  padding: 12px; border-radius: 9px; cursor: pointer; background: transparent;
+  color: var(--ps-ink); text-align: left;
+}
+.product-studio-shell .ps-upload-zone svg { flex: 0 0 20px; }
+.product-studio-shell .ps-upload-zone strong { font-size: 12px; }
+.product-studio-shell .ps-upload-zone small { margin-left: auto; font-size: 10px; }
+.product-studio-shell .ps-asset-rail__heading {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin: 6px 0 0; font-size: 12px;
+}
+.product-studio-shell .ps-asset-rail__heading span { color: var(--ps-muted); }
+.product-studio-shell .ps-asset-search {
+  display: flex; align-items: center; gap: 8px; border: 1px solid var(--ps-line);
+  border-radius: 8px; background: white; padding: 0 9px; min-height: 38px; color: var(--ps-muted);
+}
+.product-studio-shell .ps-asset-search input {
+  width: 100%; min-width: 0; border: 0; outline: 0; background: transparent;
+  font-size: 12px; color: var(--ps-ink);
+}
+.product-studio-shell .ps-media-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px;
+  max-height: min(60dvh, 620px); align-content: start;
+}
+.product-studio-shell .ps-media-grid button { cursor: pointer; padding: 3px; border-radius: 8px; }
+.product-studio-shell .ps-media-grid button.is-active {
+  border-color: var(--ps-accent); outline: 1px solid var(--ps-accent);
+}
+.product-studio-shell .ps-media-grid img { object-fit: contain; background: #ececf0; }
+.product-studio-shell .ps-media-grid span {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: block; max-width: 100%; font-size: 10px; padding: 3px;
+}
+.product-studio-shell .ps-asset-status { margin: 4px 0; font-size: 11px; color: var(--ps-muted); }
+
+/* Keep the garment central, while giving preview a real nonoverlapping lane. */
+.product-studio-shell .ps-stage-column { padding-inline: clamp(8px, 1.7vw, 24px); }
+.product-studio-shell .ps-stage-toolbar { padding: 9px 0 4px; }
+.product-studio-shell .ps-stage {
+  display: grid; grid-template-columns: minmax(0, 1fr) clamp(125px, 12vw, 170px);
+  justify-items: center; gap: 12px; padding: 12px; min-height: 0;
+}
+.product-studio-shell .ps-product-design-preview { width: min(100%, 720px); justify-self: center; }
+.product-studio-shell .ps-mini-map {
+  position: relative; inset: auto; width: 100%; align-self: end; justify-self: end;
+  margin: 0; max-width: 170px; box-shadow: 0 4px 16px #1c271516;
+}
+.product-studio-shell .ps-mini-image { aspect-ratio: 4 / 5; }
+.product-studio-shell .ps-studio-context { margin-bottom: 4px; }
+.product-studio-shell .ps-artwork-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  width: fit-content; max-width: 100%; gap: 3px; padding: 5px;
+  margin: 5px auto 8px; border: 1px solid var(--ps-line);
+  box-shadow: 0 4px 18px #2f22470a; position: relative; z-index: 2;
+}
+.product-studio-shell .ps-artwork-toolbar button {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 38px; min-height: 38px; padding: 7px; border-radius: 7px; cursor: pointer;
+}
+.product-studio-shell .ps-artwork-toolbar button[aria-pressed="true"] { background: #e1d5fa; }
+.product-studio-shell .ps-artwork-toolbar__divider { width: 1px; height: 22px; background: var(--ps-line); margin: 0 4px; }
+.product-studio-shell .ps-artwork-scale { min-width: 43px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; }
+.product-studio-shell .ps-dpi-badge {
+  padding: 8px; border-radius: 7px; font-size: 11px; font-weight: 700;
+  font-variant-numeric: tabular-nums; color: var(--ps-ink); background: var(--ps-paper);
+}
+.product-studio-shell .ps-dpi-badge.is-low { color: #a54524; background: #fff0e8; }
+.product-studio-shell .ps-stage .ps-design-guide { box-shadow: none; }
+.product-studio-shell .ps-design-dimensions { max-width: calc(100% - 12px); overflow: hidden; text-overflow: ellipsis; }
+.product-studio-shell .ps-quality--warning { width: fit-content; max-width: 100%; margin: 5px auto; }
+@media (min-width: 761px) and (max-width: 1080px) {
+  .product-studio-shell .ps-workspace-body:not(.is-panel-collapsed) {
+    grid-template-columns: 62px 216px minmax(0, 1fr);
+  }
+  .product-studio-shell .ps-stage { grid-template-columns: minmax(0, 1fr); }
+  .product-studio-shell .ps-mini-map { width: 120px; }
+}
+@media (max-width: 760px) {
+  .product-studio-shell .ps-stage-column { padding: 0 8px 35px; }
+  .product-studio-shell .ps-stage { display: flex; flex-direction: column; padding: 8px; gap: 8px; }
+  .product-studio-shell .ps-product-design-preview { width: min(100%, 460px); }
+  .product-studio-shell .ps-mini-map { width: 116px; margin-left: auto; }
+  .product-studio-shell .ps-media-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 150px; }
+  .product-studio-shell .ps-artwork-toolbar { width: 100%; max-width: 100%; }
+  .product-studio-shell .ps-artwork-toolbar button { min-width: 40px; min-height: 40px; }
+  .product-studio-shell .ps-asset-search input { font-size: 16px; }
+  .product-studio-shell .ps-toolpanel:not([hidden]) {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    z-index: 25; max-height: min(40dvh, 340px); overflow-y: auto;
+    padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
+    border: 1px solid var(--ps-line); border-bottom: 0;
+    border-radius: 16px 16px 0 0; box-shadow: 0 -8px 28px #1b172522;
+  }
+  .product-studio-shell .ps-toolpanel .ps-panel-heading h2 { font-size: 16px; margin: 0 0 7px; }
+  .product-studio-shell .ps-studio-context { justify-content: flex-end; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-studio-shell .ps-artwork-toolbar, .product-studio-shell .ps-toolpanel { transition: none; }
+}
+
+/* Canvas + gallery polish: make usable space follow the viewport, not a
+   small fixed artboard card. The product remains aspect-locked. */
+@media (min-width: 761px) {
+  .product-studio-shell .ps-stage-column {
+    min-height: calc(100dvh - 175px);
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 12px;
+  }
+  .product-studio-shell .ps-stage {
+    flex: 1 1 auto;
+    min-height: max(510px, calc(100dvh - 220px));
+    align-items: center;
+    align-content: center;
+    padding: 14px;
+  }
+  .product-studio-shell .ps-print-side-toggle,
+  .product-studio-shell .ps-canvas-controls { flex: 0 0 auto; }
+  .product-studio-shell .ps-mini-map {
+    align-self: center;
+    justify-self: end;
+  }
+}
+@media (min-width: 761px) and (max-width: 1080px) {
+  .product-studio-shell .ps-stage {
+    grid-template-columns: minmax(0, 1fr) minmax(100px, 128px);
+    min-height: max(490px, calc(100dvh - 215px));
+  }
+}
+
+/* Two real artwork tiles per row — never distribute 48 images across the
+   constrained panel height as tiny horizontal stripes. */
+.product-studio-shell .ps-asset-rail .ps-media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: max-content;
+  align-items: start;
+  align-content: start;
+  justify-content: stretch;
+  gap: 8px;
+  max-height: min(58dvh, 680px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px;
+}
+.product-studio-shell .ps-asset-rail .ps-media-grid button {
+  display: grid;
+  grid-template-rows: auto minmax(18px, auto);
+  align-content: start;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 4px;
+  border: 1px solid var(--ps-line);
+  background: #fff;
+  border-radius: 9px;
+}
+.product-studio-shell .ps-asset-rail .ps-media-grid button.is-active {
+  outline: 2px solid var(--ps-accent);
+  outline-offset: -2px;
+  border-color: var(--ps-accent);
+}
+.product-studio-shell .ps-asset-rail .ps-media-grid img {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: #f0f0f2;
+  border-radius: 5px;
+}
+.product-studio-shell .ps-asset-rail .ps-media-grid span {
+  display: block;
+  width: 100%;
+  padding: 5px 2px 2px;
+  min-height: 19px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.product-studio-shell .ps-asset-rail__heading a {
+  color: var(--ps-muted);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 11px;
+}
+.product-studio-shell .ps-asset-rail__heading a:hover,
+.product-studio-shell .ps-asset-rail__heading a:focus-visible { text-decoration: underline; }
+.product-studio-shell .ps-asset-album {
+  width: 100%; min-width: 0; min-height: 38px;
+  border: 1px solid var(--ps-line); border-radius: 8px;
+  background: white; color: var(--ps-ink); font-size: 12px; padding: 7px 10px;
+}
+@media (max-width: 760px) {
+  .product-studio-shell .ps-stage-column { min-height: 0; }
+  .product-studio-shell .ps-stage { min-height: 0; align-content: start; }
+  .product-studio-shell .ps-asset-rail .ps-media-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 185px;
+  }
+  .product-studio-shell .ps-asset-rail .ps-media-grid button { min-height: 0; }
+  .product-studio-shell .ps-asset-album { font-size: 16px; }
+}
+
+/* Empty print areas behave as guides, never white panels covering garments. */
+.product-studio-shell .ps-design-print-area .ps-placement-empty {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  cursor: pointer;
+}
+.product-studio-shell .ps-design-print-area .ps-placement-empty:hover {
+  background: color-mix(in srgb,var(--ps-accent) 5%, transparent);
+}
+.product-studio-shell .ps-design-print-area .ps-placement-empty:focus-visible {
+  outline: 2px solid var(--ps-accent);
+  outline-offset: -4px;
+}
+.product-studio-shell .ps-print-details {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px;
+  margin: 12px 0; padding: 9px 0;
+  border-top: 1px solid var(--ps-line); border-bottom: 1px solid var(--ps-line);
+  color: var(--ps-muted); font-size: 11px; line-height: 1.4;
+}
+.product-studio-shell .ps-print-details span:last-child { margin-left: auto; }
+
+/* Do not wash out verified variant fabric colors through semi-transparent SVG. */
+.product-studio-shell .ps-design-garment-guide,
+.product-studio-shell .ps-mini-silhouette { opacity: 1; }
+
+/* Product Studio miniAgentSam is a persistent header action, not a scrolled
+   canvas widget. Composer is still the shared agentsam-workbench instance. */
+.product-studio-shell .ps-workspace-header { position: relative; z-index: 8; }
+.product-studio-shell .ps-workspace-actions .ps-agent-trigger--header {
+  flex: 0 0 38px; width: 38px; height: 38px; min-width: 38px; padding: 4px;
+  display: inline-grid; place-items: center; cursor: pointer;
+  border: 1px solid var(--ps-line); background: transparent; border-radius: 11px;
+}
+.product-studio-shell .ps-workspace-actions .ps-agent-trigger--header[aria-pressed="true"] {
+  border-color: var(--ps-accent); background: var(--ps-accent-soft);
+}
+.product-studio-shell .ps-workspace-actions .ps-agent-trigger--header img {
+  width: 26px; height: 26px; object-fit: contain; display: block;
+}
+@media (max-width: 760px) {
+  .product-studio-shell .ps-workspace-actions .ps-agent-trigger--header {
+    width: 36px; height: 36px; min-width: 36px; flex-basis: 36px;
+  }
+}
+
+/* Trustworthy garment previews: never impersonate an absent provider back image. */
+.product-studio-shell .ps-unverified-garment {
+  position: absolute; inset: 0; display: grid; align-content: start; gap: 8px;
+  padding: clamp(12px, 4%, 30px); background: #f7f5fa;
+  color: var(--ps-ink); text-align: left; pointer-events: none;
+}
+.product-studio-shell .ps-unverified-garment strong { font-size: 13px; }
+.product-studio-shell .ps-unverified-garment span {
+  max-width: 34ch; font-size: 11px; line-height: 1.5; color: var(--ps-muted);
+}
+.product-studio-shell .ps-mini-unverified {
+  display: grid; place-items: center; width: 100%; height: 100%;
+  padding: 12px; color: var(--ps-muted); font-size: 11px; line-height: 1.45;
+  text-align: center; background: #f7f5fa;
+}
+.product-studio-shell .ps-restore-notice {
+  margin: 0; padding: 9px 28px; background: #f6f1ff; color: var(--ps-ink);
+  font-size: 12px; border-bottom: 1px solid var(--ps-line);
+}
+.product-studio-shell .ps-workspace-header { flex-wrap: wrap; row-gap: 6px; }
+.product-studio-shell .ps-header-artwork-tools {
+  display: flex; flex: 1 0 100%; justify-content: flex-end; min-width: 0;
+}
+.product-studio-shell .ps-header-artwork-tools .ps-artwork-toolbar {
+  margin: 0; box-shadow: none; padding: 3px 4px; gap: 3px;
+}
+.product-studio-shell .ps-header-artwork-tools:empty { display: none; }
+.product-studio-shell .ps-header-artwork-tools .ps-artwork-toolbar button { min-height: 30px; }
+.product-studio-shell .ps-selection-handle--tr,
+.product-studio-shell .ps-selection-handle--bl { cursor: nesw-resize; }
+@media (max-width: 760px) {
+  .product-studio-shell .ps-header-artwork-tools { justify-content: flex-start; }
+  .product-studio-shell .ps-header-artwork-tools .ps-artwork-toolbar {
+    margin: 0; flex-wrap: nowrap; max-width: 100%; overflow-x: auto;
+  }
+  .product-studio-shell .ps-restore-notice { padding: 8px 12px; }
+}
+
+/* Supplier sync health is visible in the merchant catalog, not console-only. */
+.product-studio-shell .ps-catalog-sync-alert {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin: 16px auto; max-width: 100%; padding: 12px 16px;
+  border: 1px solid #ddac56; border-radius: 12px;
+  background: #fff8e7; color: #55401b; font-size: 12px;
+}
+.product-studio-shell .ps-catalog-sync-alert strong { font-weight: 700; }
+.product-studio-shell .ps-catalog-sync-alert span { flex: 1 1 330px; }
+.product-studio-shell .ps-catalog-sync-alert details { flex-basis: 100%; overflow-wrap: anywhere; }
+.product-studio-shell .ps-catalog-sync-alert .ps-button { margin-left: auto; }
+@media (max-width: 760px) {
+  .product-studio-shell .ps-catalog-sync-alert { margin: 12px; }
+  .product-studio-shell .ps-catalog-sync-alert .ps-button { margin-left: 0; width: 100%; }
+}
+
+
+/* Product Studio assortment: independent selling choices and editing preview. */
+.ps-workspace-body:not(.is-panel-collapsed) { grid-template-columns: 76px 318px minmax(0, 1fr); }
+.ps-selling-editor { display: grid; gap: 14px; min-width: 0; padding-bottom: 16px; }
+.ps-selling-section, .ps-editing-section { display: grid; align-content: start; gap: 10px; }
+.ps-selling-section { padding-bottom: 16px; border-bottom: 1px solid var(--ps-line); }
+.ps-selling-heading { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.ps-selling-heading > strong, .ps-editing-section > strong { font-size: 13px; font-weight: 720; }
+.ps-selling-heading output { font-size: 11px; color: var(--ps-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ps-selling-help { margin: 0; color: var(--ps-muted); line-height: 1.45; font-size: 11px; }
+.ps-selling-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+.ps-selling-actions button, .ps-variant-dialog-actions button {
+  border: 1px solid var(--ps-line); border-radius: 7px; background: #fff; color: var(--ps-ink);
+  padding: 7px 9px; min-height: 34px; font-size: 11px; cursor: pointer;
+}
+.ps-selling-actions .ps-variant-manage { margin-left: auto; background: var(--ps-accent-soft); border-color: color-mix(in srgb, var(--ps-accent) 25%, white); }
+.ps-selling-axis { display: grid; gap: 7px; }
+.ps-selling-axis > strong { color: var(--ps-ink); font-size: 11px; font-weight: 650; }
+.ps-selling-values { display: flex; gap: 6px; flex-wrap: wrap; }
+.ps-selling-values button {
+  display: inline-flex; align-items: center; gap: 5px; min-height: 36px; max-width: 100%;
+  border: 1px solid var(--ps-line); border-radius: 8px; padding: 5px 7px; background: #fff;
+  font-size: 11px; cursor: pointer;
+}
+.ps-selling-values button img { width: 25px; height: 25px; object-fit: cover; border-radius: 5px; }
+.ps-selling-values button.is-selected { background: var(--ps-accent-soft); border-color: var(--ps-accent); }
+.ps-selling-values button.is-partial { border-style: dashed; border-color: var(--ps-accent); }
+.ps-selling-values .ps-selling-tick { display: inline-grid; place-items: center; font-size: 10px; min-width: 13px; color: var(--ps-accent); }
+.ps-selling-warning { color: #9e521f; font-size: 11px; margin: 0; }
+.ps-preview-fields { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
+.ps-preview-fields label { display: grid; gap: 5px; min-width: 0; color: var(--ps-muted); font-size: 10px; }
+.ps-preview-fields select { width: 100%; min-width: 0; min-height: 38px; border: 1px solid var(--ps-line); border-radius: 8px; background: #fff; color: var(--ps-ink); padding: 7px; font-size: 12px; }
+.ps-editing-summary { display: grid; gap: 2px; font-size: 11px; margin: 0; }
+.ps-editing-summary strong { overflow-wrap: anywhere; }
+.ps-editing-summary span { color: var(--ps-muted); }
+.ps-variant-overlay { position: fixed; z-index: 1200; inset: 0; background: #0c101aba; display: grid; place-items: center; padding: 18px; }
+.ps-variant-dialog { background: #faf9fc; border: 1px solid var(--ps-line); border-radius: 14px; width: min(100%, 670px); max-height: min(85dvh, 800px); display: flex; flex-direction: column; box-shadow: 0 24px 80px #0005; overflow: hidden; color: var(--ps-ink); }
+.ps-variant-dialog-heading { display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--ps-line); gap: 14px; }
+.ps-variant-dialog-heading h3 { margin: 0; font-size: 17px; }
+.ps-variant-dialog-heading p { margin: 5px 0 0; color: var(--ps-muted); font-size: 11px; }
+.ps-variant-dialog-heading button { min-width: 36px; min-height: 36px; align-self: start; border: 1px solid var(--ps-line); background: #fff; border-radius: 8px; font-size: 23px; }
+.ps-variant-dialog-actions { display: flex; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--ps-line); }
+.ps-variant-dialog-list { overflow-y: auto; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; padding: 12px 16px; }
+.ps-variant-row { display: flex; align-items: center; min-width: 0; gap: 9px; padding: 8px; background: #fff; border: 1px solid var(--ps-line); border-radius: 8px; cursor: pointer; }
+.ps-variant-row input { accent-color: var(--ps-accent); flex-shrink: 0; width: 17px; height: 17px; }
+.ps-variant-row > span { display: grid; gap: 3px; min-width: 0; }
+.ps-variant-row strong { font-size: 11px; overflow-wrap: anywhere; }
+.ps-variant-row small { font-size: 10px; color: var(--ps-muted); overflow-wrap: anywhere; }
+.ps-variant-row em { margin-left: auto; font-size: 9px; color: var(--ps-accent); }
+.ps-variant-dialog-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--ps-line); font-size: 11px; }
+@media (max-width: 1100px) and (min-width: 761px) {
+  .ps-workspace-body:not(.is-panel-collapsed) { grid-template-columns: 66px 270px minmax(0, 1fr); }
+}
+@media (max-width: 760px) {
+  .ps-workspace-body:not(.is-panel-collapsed) { display: flex; flex-direction: column; }
+  .ps-selling-editor { gap: 12px; }
+  .ps-variant-dialog-list { grid-template-columns: 1fr; }
+  .ps-preview-fields select { font-size: 16px; }
+  .ps-variant-overlay { padding: 10px; }
+  .ps-variant-dialog { max-height: 88dvh; }
+}
+
+/* Merchant-first error placement: immediate feedback by Save / Next Step. */
+.product-studio-shell .ps-workspace-actions { flex-wrap: wrap; justify-content: flex-end; }
+.product-studio-shell .ps-step-feedback {
+  flex-basis: 100%; margin: 3px 0 0; max-width: 560px; margin-left: auto;
+  padding: 9px 12px; border: 1px solid #b8cba7; border-radius: 8px;
+  background: #edf2e8; color: #314a2c; font-size: 11px;
+  line-height: 1.45; text-align: left; overflow-wrap: anywhere;
+}
+.product-studio-shell .ps-step-feedback--error {
+  border-color: #d79d89; color: #8e392b; background: #fff0e9;
+}
+/* The minimap is an inspectable control, not a decorative div. */
+.product-studio-shell .ps-mini-expand-hitarea {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; padding: 0; border: 0; background: transparent;
+  cursor: zoom-in; z-index: 2;
+}
+.product-studio-shell .ps-mini-expand-hitarea:focus-visible { outline: 3px solid var(--ps-accent); outline-offset: -3px; }
+.product-studio-shell .ps-mini-expand-hitarea::after {
+  content: "Expand preview"; position: absolute; right: 5px; bottom: 5px;
+  background: #fffdf4ee; border-radius: 5px; padding: 4px 6px;
+  color: #23212b; font-size: 9px; box-shadow: 0 1px 8px #0002;
+}
+.ps-preview-overlay {
+  position: fixed; z-index: 1500; inset: 0; padding: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: #101019d9;
+}
+.ps-preview-dialog {
+  display: flex; flex-direction: column; width: min(96vw, 760px); max-height: 94dvh;
+  border-radius: 13px; overflow: hidden; background: #fff; color: #23212b;
+  box-shadow: 0 15px 80px #0005;
+}
+.ps-preview-dialog > header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border-bottom: 1px solid #ddd; padding: 13px 16px;
+}
+.ps-preview-dialog > header > div { display: grid; gap: 4px; }
+.ps-preview-dialog > header strong { font-size: 13px; }
+.ps-preview-dialog > header small { font-size: 11px; color: #666; }
+.ps-preview-dialog > header button {
+  padding: 8px 12px; border: 1px solid #ddd; background: #f7f7f7;
+  border-radius: 7px; font-size: 12px; min-height: 40px;
+}
+.ps-preview-enlarged-image {
+  width: 100%; min-height: 0; max-height: calc(94dvh - 128px); aspect-ratio: 4 / 5;
+  overflow: auto; background: #f4f4f2; position: relative;
+  display: grid; place-items: center;
+}
+.ps-preview-enlarged-image > img { width: 100%; height: 100%; max-height: inherit; object-fit: contain; }
+.ps-preview-enlarged-image .ps-mini-placement { pointer-events: none; }
+.ps-preview-dialog > footer { padding: 10px 16px; font-size: 11px; color: #6d6976; }
+@media (max-width: 760px) {
+  .product-studio-shell .ps-workspace-actions { width: 100%; }
+  .product-studio-shell .ps-step-feedback { max-width: 100%; }
+  .ps-preview-overlay { padding: 6px; }
+  .ps-preview-dialog { width: 100%; max-height: calc(100dvh - 12px); }
+  .ps-preview-enlarged-image { max-height: calc(100dvh - 150px); }
+}
+
+/* ===== Product Studio editor layout v2 =====
+   Single-viewport editor: breadcrumb header, product-name stage title, Front/Back + zoom in the
+   stage toolbar, Artwork help in the tool rail, miniAgentSam composer dock at bottom-center. */
+.product-studio-shell .ps-sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+@media (min-width: 761px) {
+  .product-studio-shell .ps-workspace {
+    position: relative; display: flex; flex-direction: column;
+    height: calc(100dvh - 52px); min-height: 0; overflow: hidden;
+  }
+  .product-studio-shell .ps-workspace-body { flex: 1 1 auto; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .product-studio-shell .ps-toolpanel,
+  .product-studio-shell .ps-toolrail { min-height: 0; overflow-y: auto; }
+  .product-studio-shell .ps-stage-column { min-height: 0; height: 100%; overflow: hidden; padding-bottom: 8px; }
+  .product-studio-shell .ps-stage { min-height: 0; flex: 1 1 auto; }
+}
+
+/* Header: back | progress breadcrumbs | Save design + Next. Messages float instead of resizing the header. */
+.product-studio-shell .ps-workspace-header { flex: 0 0 auto; flex-wrap: nowrap; row-gap: 0; padding: 10px 24px; gap: 16px; }
+.product-studio-shell .ps-workspace-header > .ps-steps { flex: 1 1 auto; min-width: 0; }
+.product-studio-shell .ps-steps ol {
+  display: flex; align-items: center; justify-content: center; flex-wrap: nowrap;
+  gap: 4px; list-style: none; margin: 0; padding: 0;
+}
+.product-studio-shell .ps-steps li {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  font-size: 12px; color: var(--ps-muted);
+}
+.product-studio-shell .ps-steps li + li::before {
+  content: ""; width: 22px; height: 1px; margin: 0 6px 0 4px; background: var(--ps-line);
+}
+.product-studio-shell .ps-steps__dot {
+  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+  border: 1px solid var(--ps-line); background: #fff; font-size: 11px; font-weight: 700;
+}
+.product-studio-shell .ps-steps li.is-done .ps-steps__dot { background: #e6f4e8; border-color: #7cae85; color: #2f6b3b; }
+.product-studio-shell .ps-steps li.is-current { color: var(--ps-ink); font-weight: 700; }
+.product-studio-shell .ps-steps li.is-current .ps-steps__dot { background: var(--ps-accent); border-color: var(--ps-accent); color: #fff; }
+.product-studio-shell .ps-workspace-actions { position: relative; flex-wrap: nowrap; }
+.product-studio-shell .ps-step-feedback {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; flex-basis: auto;
+  width: min(440px, 90vw); max-width: none; margin: 0; box-shadow: 0 8px 28px rgba(35, 17, 67, .14);
+}
+/* Selected-artwork tools float under the stage toolbar rather than adding a header row. */
+.product-studio-shell .ps-header-artwork-tools {
+  position: absolute; top: calc(100% + 54px); left: 50%; transform: translateX(-50%);
+  z-index: 9; flex: none; width: auto; max-width: calc(100% - 32px); pointer-events: none;
+}
+.product-studio-shell .ps-header-artwork-tools .ps-artwork-toolbar {
+  pointer-events: auto; box-shadow: 0 6px 22px rgba(35, 17, 67, .12);
+}
+
+/* Stage toolbar: active product name on the left; Front/Back + zoom on the right. */
+.product-studio-shell .ps-stage-toolbar {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0 6px;
+}
+.product-studio-shell .ps-stage-title {
+  flex: 1 1 auto; min-width: 0; margin: 0; font-size: 14px; font-weight: 700; line-height: 1.3;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.product-studio-shell .ps-stage-toolbar__controls { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+.product-studio-shell .ps-stage-toolbar .ps-print-side-toggle { margin: 0; }
+.product-studio-shell .ps-stage-toolbar .ps-print-side-toggle button { min-height: 34px; min-width: 64px; padding: 5px 12px; }
+.product-studio-shell .ps-stage-toolbar .ps-canvas-controls { padding: 0; gap: 8px; flex-wrap: nowrap; }
+.product-studio-shell .ps-stage-toolbar .ps-canvas-controls input { width: 110px; }
+
+/* Left rail: Artwork help sits at the bottom of the tool rail. */
+.product-studio-shell .ps-toolrail__help {
+  margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 7px;
+  min-height: 62px; padding: 12px 3px; border-radius: 9px; font-size: 9px; text-align: center;
+  color: var(--ps-muted); text-decoration: none;
+}
+.product-studio-shell .ps-toolrail__help:hover { background: var(--ps-accent-soft); color: var(--ps-accent); }
+
+/* Header actions: compact icon buttons with tooltips (Save design, Next step, Back). */
+.product-studio-shell .ps-workspace-actions { gap: 8px; }
+.product-studio-shell .ps-icon-action {
+  position: relative; display: inline-grid; place-items: center; flex: 0 0 auto;
+  width: 40px; height: 40px; min-width: 40px; min-height: 40px; padding: 0; gap: 0;
+  border-radius: 10px; border: 1px solid var(--ps-line); background: #fff; color: var(--ps-ink);
+  cursor: pointer; transition: background .15s, border-color .15s;
+}
+.product-studio-shell .ps-icon-action:hover:not(:disabled) {
+  background: var(--ps-accent-soft); border-color: color-mix(in srgb, var(--ps-accent) 35%, white); text-decoration: none;
+}
+.product-studio-shell .ps-icon-action--primary { background: var(--ps-ink); border-color: var(--ps-ink); color: #fff; }
+.product-studio-shell .ps-icon-action--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ps-ink) 80%, var(--ps-accent)); border-color: transparent;
+}
+.product-studio-shell .ps-icon-action--ghost { border-color: transparent; background: transparent; }
+.product-studio-shell .ps-icon-action[data-tip]::after {
+  content: attr(data-tip); position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  padding: 5px 9px; border-radius: 7px; background: #1b1a22; color: #fff;
+  font-size: 11px; font-weight: 600; white-space: nowrap; opacity: 0; pointer-events: none;
+  transition: opacity .12s; z-index: 40;
+}
+.product-studio-shell .ps-icon-action--primary[data-tip]::after { left: auto; right: 0; transform: none; }
+.product-studio-shell .ps-icon-action--ghost[data-tip]::after { left: 0; transform: none; }
+.product-studio-shell .ps-icon-action[data-tip]:hover::after,
+.product-studio-shell .ps-icon-action[data-tip]:focus-visible::after { opacity: 1; }
+.product-studio-shell .ps-icon-action__busy {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor;
+  border-right-color: transparent; animation: ps-spin .7s linear infinite;
+}
+@keyframes ps-spin { to { transform: rotate(360deg); } }
+/* Breadcrumb labels collapse to the current step when the header is narrow (e.g. side chat open). */
+.product-studio-shell .ps-workspace-header { container-type: inline-size; }
+@container (max-width: 720px) {
+  .ps-steps li span:not(.ps-steps__dot) { display: none; }
+  .ps-steps li.is-current span:not(.ps-steps__dot) { display: inline; }
+}
+
+/* Artwork picker: scope toggle (studio artwork vs whole library). */
+.product-studio-shell .ps-asset-scope {
+  display: flex; gap: 3px; padding: 3px; background: var(--ps-paper);
+  border: 1px solid var(--ps-line); border-radius: 9px;
+}
+.product-studio-shell .ps-asset-scope button {
+  flex: 1; min-height: 32px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--ps-muted); font-size: 11px; font-weight: 650;
+}
+.product-studio-shell .ps-asset-scope button.is-active {
+  background: #fff; color: var(--ps-accent); box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+}
+
+@media (max-width: 760px) {
+  .product-studio-shell .ps-workspace-header { flex-wrap: wrap; padding: 10px 12px; }
+  .product-studio-shell .ps-workspace-header > .ps-steps { order: 3; flex: 1 0 100%; }
+  .product-studio-shell .ps-steps ol { justify-content: flex-start; overflow-x: auto; }
+  .product-studio-shell .ps-steps li span:not(.ps-steps__dot) { display: none; }
+  .product-studio-shell .ps-steps li.is-current span:not(.ps-steps__dot) { display: inline; }
+  .product-studio-shell .ps-workspace-actions { flex-wrap: wrap; }
+  .product-studio-shell .ps-stage-toolbar { flex-wrap: wrap; gap: 8px; }
+  .product-studio-shell .ps-stage-toolbar__controls { flex-wrap: wrap; width: 100%; }
+  .product-studio-shell .ps-toolrail__help { margin-top: 0; margin-left: auto; min-width: 52px; }
+}
+@media (max-width: 1080px) and (min-width: 761px) {
+  .product-studio-shell .ps-steps li span:not(.ps-steps__dot) { display: none; }
+  .product-studio-shell .ps-steps li.is-current span:not(.ps-steps__dot) { display: inline; }
+}
+
+/* ===== Studio v3: color thumbnails, AI Tools panel, mobile-first CTAs ===== */
+
+/* Color thumbnail rail: one thumbnail per color being sold; the main image stays the focus. */
+.product-studio-shell .ps-colorway-rail {
+  flex: 0 0 auto; display: flex; gap: 8px; overflow-x: auto; padding: 8px 2px 4px;
+  scrollbar-width: thin; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity;
+}
+.product-studio-shell .ps-colorway {
+  flex: 0 0 auto; display: grid; justify-items: center; gap: 4px; width: 64px; padding: 3px;
+  border: 1px solid var(--ps-line); border-radius: 10px; background: #fff;
+  scroll-snap-align: start; cursor: pointer;
+}
+.product-studio-shell .ps-colorway.is-active {
+  border-color: var(--ps-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ps-accent) 25%, transparent);
+}
+.product-studio-shell .ps-colorway__thumb { position: relative; display: block; width: 100%; overflow: hidden; border-radius: 7px; background: #eceae6; }
+.product-studio-shell .ps-colorway__thumb > img,
+.product-studio-shell .ps-colorway__thumb > .ps-image-fallback { width: 100%; height: 100%; object-fit: contain; }
+.product-studio-shell .ps-colorway__empty {
+  display: block; width: 100%; aspect-ratio: 1;
+  background: repeating-linear-gradient(45deg, #eee, #eee 6px, #f7f7f7 6px, #f7f7f7 12px);
+}
+.product-studio-shell .ps-colorway__label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: var(--ps-muted); }
+.product-studio-shell .ps-colorway.is-active .ps-colorway__label { color: var(--ps-ink); font-weight: 650; }
+
+/* Tools panel: AI image tools (Image generator / Upscale & edit). #UNFINISHEDTOOLS backends: see docs audit. */
+.product-studio-shell .ps-ai-tools { display: grid; gap: 12px; }
+.product-studio-shell .ps-ai-tabs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px;
+  background: var(--ps-paper); border: 1px solid var(--ps-line); border-radius: 10px;
+}
+.product-studio-shell .ps-ai-tabs button { min-height: 38px; border: 0; border-radius: 7px; background: transparent; font-size: 12px; font-weight: 650; color: var(--ps-muted); }
+.product-studio-shell .ps-ai-tabs button.is-active { background: #fff; color: var(--ps-accent); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+.product-studio-shell .ps-ai-prompt textarea { resize: vertical; min-height: 96px; }
+.product-studio-shell .ps-ai-count { display: block; text-align: right; color: var(--ps-muted); font-size: 10px; margin-top: 4px; }
+.product-studio-shell .ps-ai-options { border: 1px solid var(--ps-line); border-radius: 10px; padding: 4px 12px 12px; background: #fff; }
+.product-studio-shell .ps-ai-options > summary {
+  cursor: pointer; min-height: 34px; display: flex; align-items: center;
+  font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--ps-muted);
+}
+.product-studio-shell .ps-chip-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.product-studio-shell .ps-chip-group > span { flex: 0 0 100%; font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--ps-muted); }
+.product-studio-shell .ps-chip-group button {
+  min-height: 34px; padding: 6px 11px; border: 1px solid var(--ps-line); border-radius: 8px;
+  background: var(--ps-paper); font-size: 12px; text-transform: capitalize;
+}
+.product-studio-shell .ps-chip-group button.is-active { border-color: var(--ps-accent); background: var(--ps-accent-soft); color: var(--ps-accent); }
+.product-studio-shell .ps-ai-hint { margin: 8px 0 0; font-size: 10px; color: var(--ps-muted); }
+.product-studio-shell .ps-ai-gallery-head { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; font-size: 12px; }
+.product-studio-shell .ps-count { min-width: 22px; padding: 2px 7px; border-radius: 999px; background: var(--ps-accent-soft); color: var(--ps-accent); font-size: 11px; font-weight: 700; text-align: center; }
+.product-studio-shell .ps-ai-source {
+  display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center;
+  padding: 8px; border: 1px solid var(--ps-line); border-radius: 10px; background: #fff;
+}
+.product-studio-shell .ps-ai-source img { width: 44px; height: 44px; object-fit: contain; border-radius: 6px; background: #f0f0f2; }
+.product-studio-shell .ps-ai-source div { min-width: 0; display: grid; }
+.product-studio-shell .ps-ai-source strong { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.product-studio-shell .ps-ai-source small { font-size: 10px; color: var(--ps-muted); }
+.product-studio-shell .ps-ai-source .ps-asset-status { grid-column: 1 / 3; margin: 0; }
+.product-studio-shell .ps-ai-actions { display: grid; gap: 8px; }
+.product-studio-shell .ps-ai-actions .ps-wide { margin-top: 0; }
+.product-studio-shell .ps-soon {
+  margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--ps-paper);
+  border: 1px solid var(--ps-line); font-size: 9px; font-weight: 750; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ps-muted);
+}
+
+/* Mobile first: one compact header row, image-first canvas, no hover tooltips, no zoom bar. */
+@media (max-width: 760px) {
+  .product-studio-shell .ps-workspace-header { flex-wrap: nowrap; gap: 8px; padding: 8px 10px; align-items: center; }
+  .product-studio-shell .ps-workspace-header > .ps-steps { order: 0; flex: 1 1 auto; min-width: 0; }
+  .product-studio-shell .ps-steps ol { justify-content: center; overflow: hidden; }
+  .product-studio-shell .ps-steps li + li::before { width: 10px; margin: 0 2px; }
+  .product-studio-shell .ps-workspace-actions { flex-wrap: nowrap; }
+  .product-studio-shell .ps-icon-action { width: 38px; height: 38px; min-width: 38px; min-height: 38px; }
+  .product-studio-shell .ps-icon-action[data-tip]::after { display: none; }
+  .product-studio-shell .ps-canvas-controls { display: none; }
+  .product-studio-shell .ps-stage-toolbar { flex-wrap: nowrap; padding: 6px 0 4px; gap: 8px; }
+  .product-studio-shell .ps-stage-title { font-size: 12px; }
+  .product-studio-shell .ps-stage-toolbar__controls { width: auto; flex-wrap: nowrap; }
+  .product-studio-shell .ps-stage { padding: 4px; }
+  .product-studio-shell .ps-mini-map { display: none; }
+  .product-studio-shell .ps-colorway { width: 58px; }
+  .product-studio-shell .ps-colorway-rail { padding: 8px 4px 10px; }
 }
