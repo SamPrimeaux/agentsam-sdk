@@ -1,0 +1,27 @@
+{
+  "brand": "IAM",
+  "project": "portfolio",
+  "slug": "sample-case-study",
+  "tokens": {
+    "color.background": "#fff",
+    "color.text": "#171921"
+  },
+  "sources": [
+    {
+      "uri": "r2://CMS/originals/example-layout.html",
+      "kind": "r2",
+      "confidence": "unknown",
+      "permission": "needs_review",
+      "description": "Replace with an actual machine-discovered source and verified hash"
+    }
+  ],
+  "content": {
+    "case-hero": {
+      "title": "Case study title",
+      "intro": "Use sourced content, not a fabricated claim"
+    },
+    "case-chapter": {
+      "heading": "Process"
+    }
+  }
+}
