@@ -444,7 +444,7 @@ async function attachAssetsToProduct(assetIds) {
 
 async function openBrowseLibrary() {
   const picked = await openMediaPicker({
-    title: "Attach product images",
+    title: "Browse Media",
     multi: true,
   });
   if (!picked?.length) return;
