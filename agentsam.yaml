@@ -449,6 +449,7 @@ cli:
     - logout
     - whoami
     - resume
+    - exec
     - shell
     - start-local
     - ollama

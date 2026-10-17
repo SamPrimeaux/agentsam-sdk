@@ -6,7 +6,7 @@
     "packages/catalog/generated/packages.json"
   ],
   "counts": {
-    "commands": 75,
+    "commands": 76,
     "capabilities": 60,
     "packages": 62
   },
@@ -435,6 +435,17 @@
       "topic": "start",
       "usage": [
         "agentsam resume"
+      ],
+      "operation": null
+    },
+    {
+      "id": "exec",
+      "aliases": [],
+      "summary": "Run the existing AgentSam coding agent noninteractively with scoped permissions",
+      "topic": "work",
+      "usage": [
+        "agentsam exec --prompt-file <file> --cwd <directory> --model <provider:model> --json",
+        "agentsam exec --prompt <text> --cwd <directory> --json"
       ],
       "operation": null
     },

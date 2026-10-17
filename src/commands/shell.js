@@ -1241,22 +1241,22 @@ export async function runShell(argv = [], options = {}) {
     const value = (name) => { const i = argv.indexOf(name); return i < 0 ? null : argv[i + 1]; };
     const promptFile = value('--prompt-file');
     const directPrompt = value('--prompt');
-    if (Boolean(promptFile) === Boolean(directPrompt)) throw new Error('exec requires exactly one of --prompt-file or --prompt');
+    if (Boolean(promptFile) === Boolean(directPrompt)) throw new TypeError('exec requires exactly one of --prompt-file or --prompt');
     const requestedCwd = value('--cwd');
     const modelKey = value('--model');
     if (requestedCwd) {
-      if (!fs.existsSync(requestedCwd) || !fs.statSync(requestedCwd).isDirectory()) throw new Error('exec workspace directory not found');
+      if (!fs.existsSync(requestedCwd) || !fs.statSync(requestedCwd).isDirectory()) throw new TypeError('exec workspace directory not found');
       state.cwd = fs.realpathSync(requestedCwd);
       state.projectRoot = findCliProjectRoot(state.cwd);
     }
     const prompt = promptFile ? fs.readFileSync(path.resolve(state.cwd, promptFile), 'utf8') : directPrompt;
-    if (!prompt.trim()) throw new Error('exec prompt is empty');
-    if (prompt.length > 200000) throw new Error('exec prompt exceeds 200000 characters');
+    if (!prompt.trim()) throw new TypeError('exec prompt is empty');
+    if (prompt.length > 200000) throw new TypeError('exec prompt exceeds 200000 characters');
     const allowedFlags = new Set(['--exec', '--prompt-file', '--prompt', '--cwd', '--model', '--json']);
     for (let i = 1; i < argv.length; i++) {
       if (argv[i] === '--json') continue;
-      if (!allowedFlags.has(argv[i]) || argv[i] === '--exec') throw new Error(`unknown exec argument: ${argv[i]}`);
-      if (i + 1 >= argv.length || argv[i + 1].startsWith('--')) throw new Error(`exec option requires value: ${argv[i]}`);
+      if (!allowedFlags.has(argv[i]) || argv[i] === '--exec') throw new TypeError(`unknown exec argument: ${argv[i]}`);
+      if (i + 1 >= argv.length || argv[i + 1].startsWith('--')) throw new TypeError(`exec option requires value: ${argv[i]}`);
       i++;
     }
     state.interactive = false;
