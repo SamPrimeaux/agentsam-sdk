@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, rm } from 'node:fs/promises';
-import { AgentSamClient, createSamOS, createLocalMediaStore } from '../../../../src/sam/index.js';
+import { AgentSamClient, createSamOS, createLocalMediaStore } from '../../../index.js';
 
 const account = { accountId: 'acct_real', actorId: 'actor_real', installationId: 'install_real' };
 const intruder = { accountId: 'acct_other', actorId: 'actor_other', installationId: 'install_other' };
