@@ -15,7 +15,7 @@ const find=(p)=>{
  if(p==='/admin/registry-build-edit')return path.join(staticRoot,'registry-build-edit.html');
  if(p==='/admin/products/create')return path.join(staticRoot,'product-create-universal.html');
  if(p.startsWith('/admin/products/create/'))return path.join(staticRoot,'product-explore-universal.html');
- if(p==='/admin/product-edit')return path.join(staticRoot,'registry-build-edit.html');
+ if(p==='/admin/product-edit')return path.join(staticRoot,'product-edit.html');
  if(p==='/admin/_spa/'||p==='/admin/_spa')return path.join(distRoot,'index.html');
  if(p.startsWith('/admin/_spa/assets/'))return path.join(distRoot,p.slice('/admin/_spa/'.length));
  if(p==='/admin/js/shell.js')return path.join(root,'frontend/shell.js');
@@ -31,6 +31,21 @@ const find=(p)=>{
 const server=http.createServer(async(req,res)=>{
  try{
   const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+  const match=pathname.match(/^\/api\/admin\/products\/(prod_[a-z0-9]+)(\/images)?$/);
+  if(match){
+   const snapshot=JSON.parse(await readFile(path.join(staticRoot,'registry/products-snapshot.json'),'utf8'));
+   const item=snapshot.items.find(x=>x.id===match[1]);
+   if(!item){res.writeHead(404,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'not_found'}));return}
+   const demoImages=item.slug==='agentsam-local-studio'?[
+    {id:901,asset_id:901,url:'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/9017b9cc-c5e7-4d48-e38f-456e9dd55100/thumbnail',is_primary:1,filename:'agentsam-sdk-icon'},
+    {id:902,asset_id:902,url:'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/a39b5154-8b51-4efa-4b71-6a97a37ff900/medium',is_primary:0,filename:'local-studio-dark'}
+   ]:[];
+   if(req.method!=='GET'){res.writeHead(405,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'preview_read_only'}));return}
+   const product={id:item.id,title:item.name,slug:item.slug,description:item.slug==='agentsam-local-studio'?'AgentSam Local Studio is a desktop workspace for working with AgentSam SDK. Explore projects, files, terminal sessions and developer workflows in one interface.':'',seo_title:item.slug==='agentsam-local-studio'?'AgentSam Local Studio | Desktop Developer Workspace':'',seo_description:item.slug==='agentsam-local-studio'?'Explore AgentSam Local Studio, a desktop workspace integrating projects, files, terminal sessions and developer tools with AgentSam SDK.':'',collection:item.kind==='app'?'Applications':'',status:'draft',price_cents:0,kind:item.kind,sku:'IAM-APP-'+item.slug.toUpperCase().replace(/[^A-Z0-9]+/g,'-')};
+   const out=match[2]?{images:demoImages}:{product,variants:[],collection_ids:[],design_draft:null,fulfillment:null,source:null,selling_selection:null};
+   res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(out));return;
+  }
+  if(pathname==='/api/admin/collections'){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({collections:[]}));return}
   if(pathname.startsWith('/api/')){res.writeHead(503,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'preview_only',message:'This is an isolated UI preview. Backend APIs and tenant data are not connected.'}));return}
   if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405);res.end();return}
   let target=(pathname==='/admin/product-edit' && /^\d+$/.test(new URL(req.url,'http://localhost').searchParams.get('id')||''))?path.join(staticRoot,'product-edit.html'):find(pathname);
