@@ -12,17 +12,12 @@ import {
 } from "../lib/site-nav.js";
 import { getCompany, companyDomain } from "../lib/company.js";
 import { hashPassword, verifyPassword } from "../lib/auth.js";
-// Installed theme owns its appearance: never substitute a store-specific color
-// guess or force the FNF orange/light admin preset on unrelated CMS sites.
-import heuristicManifest from '../../../../packages/heuristic-theme/theme.json' with { type: 'json' };
-import heuristicTokens from '../../../../packages/heuristic-theme/presets/fuel-free-time/tokens.json' with { type: 'json' };
-
+import { listStoreThemes } from "./themes.js";
+// Theme appearance comes from the installed theme/tenant contract, never
+// a baked-in merchant preset in the reusable ecommerce application.
 function appearanceForInstalledPackage(theme) {
-  if (theme?.package_name === '@inneranimalmedia/heuristic-theme' &&
-      heuristicManifest.entry === 'presets/fuel-free-time/preset.json') {
-    return { theme_id: heuristicManifest.id, preset_id: 'fuel-free-time', tokens: heuristicTokens };
-  }
-  return null; // A new theme must supply its own registered visual contract.
+  const appearance = theme?.settings?.appearance ?? theme?.metadata?.appearance;
+  return appearance && typeof appearance === "object" ? appearance : null;
 }
 
 
@@ -49,6 +44,12 @@ const PACKAGE_STORE_DEFAULTS = {
   announcementEnabled: false,
   announcementText: "",
   announcementHref: "",
+  announcementStyle: "static",
+  announcementAuthority: "cms",
+  navigationAuthority: "cms",
+  logoAuthority: "cms",
+  announcementBgColor: "#161616",
+  announcementTextColor: "#ffffff",
   storePasswordHash: null,
   storePasswordSalt: null,
 };
@@ -64,6 +65,7 @@ function publicSettings(settings) {
     storePasswordHash: _h,
     storePasswordSalt: _s,
     storePassword: _p,
+    sceneReview: _scene,
     ...rest
   } = settings || {};
   return {
@@ -155,7 +157,10 @@ async function saveStorePreferences(env, incoming) {
     socialImageUrl: String(incoming.socialImageUrl ?? current.socialImageUrl).slice(0, 2048),
   };
 
-  if (incoming.navLogoUrl != null) next.navLogoUrl = String(incoming.navLogoUrl).slice(0, 2048);
+  if (incoming.navLogoUrl != null) {
+    next.navLogoUrl = String(incoming.navLogoUrl).slice(0, 2048);
+    next.logoAuthority = "preferences";
+  }
   if (incoming.navLogoHeight != null) {
     next.navLogoHeight = Math.min(120, Math.max(40, Number(incoming.navLogoHeight) || 58));
   }
@@ -163,13 +168,29 @@ async function saveStorePreferences(env, incoming) {
   if (incoming.navBrandAccentLight != null) {
     next.navBrandAccentLight = String(incoming.navBrandAccentLight).slice(0, 32);
   }
-  if (incoming.navItems != null) next.navItems = sanitizeNavItems(incoming.navItems);
-  if (incoming.announcementEnabled != null) next.announcementEnabled = incoming.announcementEnabled === true;
+  if (incoming.navItems != null) {
+    next.navItems = sanitizeNavItems(incoming.navItems);
+    next.navigationAuthority = "preferences";
+  }
+  if (incoming.announcementEnabled != null) {
+    next.announcementEnabled = incoming.announcementEnabled === true;
+    next.announcementAuthority = "preferences";
+  }
   if (incoming.announcementText != null) {
     next.announcementText = String(incoming.announcementText).trim().slice(0, 160);
   }
   if (incoming.announcementHref != null) {
     next.announcementHref = String(incoming.announcementHref).trim().slice(0, 512);
+  }
+  if (incoming.announcementStyle != null) {
+    next.announcementStyle = incoming.announcementStyle === "marquee" ? "marquee" : "static";
+  }
+  for (const key of ["announcementBgColor", "announcementTextColor"]) {
+    if (incoming[key] != null) {
+      const color = String(incoming[key]);
+      if (!/^#[0-9a-f]{6}$/i.test(color)) return { ok: false, error: "invalid_announcement_color" };
+      next[key] = color;
+    }
   }
 
   if (incoming.storePassword != null && incoming.storePassword !== "" && incoming.storePassword !== "••••••••") {
@@ -219,33 +240,10 @@ export async function verifyStorefrontPassword(env, password) {
   return verifyPassword(password, storePasswordHash, storePasswordSalt);
 }
 
-async function resolveThemes(env) {
-  // No fabricated themes. Prefer agentsam_products theme rows if present; else empty.
-  try {
-    const { results } = await env.DB.prepare(
-      `SELECT slug AS id, name, version, status, updated_at, package_name
-       FROM agentsam_products
-       WHERE kind = 'theme'
-       ORDER BY updated_at DESC
-       LIMIT 20`,
-    ).all();
-    const themes = (results || []).map((t) => ({
-      id: t.id,
-      name: t.name,
-      status: t.status || "draft",
-      version: t.version || null,
-      last_saved: t.updated_at || null,
-      edit_href: `/admin/theme-editor?slug=shop`,
-      preview_href: "/",
-      package_name: t.package_name || null,
-      appearance: appearanceForInstalledPackage(t),
-    }));
-    const active = themes.find((t) => t.status === "active" || t.status === "wired") || null;
-    const drafts = themes.filter((t) => t !== active);
-    return { active_theme: active, draft_themes: drafts };
-  } catch {
-    return { active_theme: null, draft_themes: [] };
-  }
+async function resolveThemes(env, accountId = null) {
+  // The installed theme inventory resolves from cms_artifacts and cms_globals.
+  // Never fall back to agentsam_products or a second theme-state family.
+  return listStoreThemes(env, accountId);
 }
 
 async function resolveStorePerformance(env) {
@@ -279,6 +277,18 @@ async function resolveStorePerformance(env) {
 }
 
 export { loadStorePreferences, resolveNavConfig, PACKAGE_STORE_DEFAULTS };
+
+/** Update only the scene review key without rewriting merchant preferences. */
+export async function saveSceneReviewSettings(env, sceneReview) {
+  if (!env.DB) throw new Error("Store database unavailable");
+  const result = await env.DB.prepare(
+    "UPDATE store_settings SET settings_json = json_set(COALESCE(settings_json, '{}'), '$.sceneReview', json(?)), updated_at = datetime('now') WHERE id = 1"
+  ).bind(JSON.stringify(sceneReview)).run();
+  if (!(result.meta?.changes > 0)) throw new Error("Store settings not initialized");
+  if (env.CMS_CACHE) await env.CMS_CACHE.delete(KV_PREFS_KEY);
+  return true;
+}
+
 
 export async function getStoreNav(env) {
   const loaded = await loadStorePreferences(env);
@@ -318,11 +328,25 @@ export async function postStorePreferences(request, env) {
   }
 
   const incoming = body?.settings || body;
+  // The picker normally supplies these URLs. The server must enforce safe
+  // destinations independently of the admin browser.
+  const validAssetUrl = (value) => {
+    const s = String(value ?? "").trim();
+    return !s || (/^\/(?!\/)[^\s\\]+$/.test(s) && !/[\u0000-\u001f]/.test(s)) || /^https:\/\/[^\s]+$/i.test(s);
+  };
+  if (!validAssetUrl(incoming.socialImageUrl) || !validAssetUrl(incoming.navLogoUrl)) {
+    return json({ error: "Images must use a local path or HTTPS URL." }, { status: 400 });
+  }
+  for (const key of ["announcementBgColor", "announcementTextColor"]) {
+    if (incoming[key] != null && !/^#[0-9a-f]{6}$/i.test(String(incoming[key]))) {
+      return json({ error: "Announcement colors must use a six-digit hex value." }, { status: 400 });
+    }
+  }
   if (incoming.announcementEnabled === true) {
     const announcementText = String(incoming.announcementText ?? "").trim();
     const announcementHref = String(incoming.announcementHref ?? "").trim();
     const validHref =
-      announcementHref.startsWith("/") ||
+      (announcementHref.startsWith("/") && !announcementHref.startsWith("//")) ||
       announcementHref.startsWith("#") ||
       announcementHref.startsWith("https://");
     if (!announcementText) {
@@ -344,12 +368,12 @@ export async function postStorePreferences(request, env) {
   });
 }
 
-export async function onlineStoreOverview(env) {
+export async function onlineStoreOverview(env, accountId = null) {
   const [pagesResult, sectionsMax, publishedPages, themes, performance, company] = await Promise.all([
     env.DB.prepare(`SELECT slug, title, status, updated_at FROM pages ORDER BY updated_at DESC`).all(),
     env.DB.prepare(`SELECT MAX(updated_at) AS last_saved FROM page_sections`).first(),
     env.DB.prepare(`SELECT COUNT(*) AS n FROM pages WHERE status = 'published'`).first(),
-    resolveThemes(env),
+    resolveThemes(env, accountId),
     resolveStorePerformance(env),
     getCompany(env),
   ]);
@@ -371,6 +395,9 @@ export async function onlineStoreOverview(env) {
       ? { ...themes.active_theme, last_saved: themes.active_theme.last_saved || sectionsMax?.last_saved || null }
       : null,
     draft_themes: themes.draft_themes,
+    preview_theme: themes.preview_theme,
+    themes: themes.themes,
+    theme_content_version: themes.content_version,
     pages: pagesResult.results || [],
   });
 }

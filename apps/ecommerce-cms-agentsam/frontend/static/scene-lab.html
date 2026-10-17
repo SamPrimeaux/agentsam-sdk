@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Aviation Scene Lab | FNF CMS</title>
+<link rel="stylesheet" href="/admin/css/admin.css">
+<style>
+:root{font-family:Inter,system-ui,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:#0b0e13;color:#f5f5f4}
+a{color:inherit}
+.scene-shell{max-width:1700px;margin:0 auto;padding:clamp(16px,2vw,32px)}
+.scene-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.scene-toolbar a{font-size:13px;text-decoration:none;padding:10px 14px;border:1px solid #434752;border-radius:9px}
+.scene-toolbar a:hover{background:#242a36}
+.scene-brand{display:flex;flex-direction:column;gap:5px}
+.scene-eyebrow{color:#dda977;font-size:11px;text-transform:uppercase;letter-spacing:.18em;font-weight:750}
+h1{font-size:clamp(26px,3vw,40px);letter-spacing:-.045em;margin:0}
+.scene-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(270px,325px);gap:18px;align-items:start}
+.scene-stage{border:1px solid #353943;border-radius:14px;overflow:hidden;background:#04050a;min-width:0}
+.scene-stage iframe{display:block;width:100%;height:min(77vh,890px);border:0;background:#03050b}
+.scene-status{display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between;padding:12px 16px;color:#c5c6cc;font-size:12px;border-top:1px solid #30313b}
+.scene-notes{background:#141821;border:1px solid #353943;border-radius:14px;padding:20px;line-height:1.55}
+.scene-notes h2{font-size:17px;margin:0 0 12px}
+.scene-notes p,.scene-notes li{font-size:13px;color:#bec0c9}
+.scene-notes ul{padding-left:18px}
+.scene-notes hr{border:0;border-top:1px solid #313641;margin:20px 0}
+.scene-notes strong{color:#f5f1e9}
+.scene-source{overflow-wrap:anywhere;font-family:ui-monospace,monospace;font-size:11px!important}
+.scene-review-access{padding:18px;margin-top:22px;background:#0c0e14;border:1px solid #444957;border-radius:11px}
+.scene-review-access label{display:block;font-size:12px;font-weight:650;margin:12px 0 7px;color:#f1f1f1}
+.scene-review-access input[type=password]{width:100%;background:#fff;color:#171717;border:1px solid #777;padding:12px;border-radius:7px;font:inherit}
+.scene-review-access .scene-checkbox{display:flex;align-items:center;gap:10px;font-weight:550}
+.scene-review-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:15px}
+.scene-review-actions button{font:650 12px system-ui;padding:11px 8px;cursor:pointer;background:#e5bc8a;color:#171717;border:0;border-radius:7px}
+.scene-review-actions button+button{background:#242c37;color:#eee;border:1px solid #4b5260}
+.scene-review-actions button:disabled{opacity:.4;cursor:not-allowed}
+.scene-review-feedback{margin-top:10px;color:#c4c4cb;font-size:11px;line-height:1.5}
+@media(max-width:390px){.scene-review-actions{grid-template-columns:1fr}}
+.scene-action{display:block;text-align:center;margin-top:18px;padding:11px;background:#edc69f;color:#17181b;border-radius:9px;text-decoration:none;font-weight:750;font-size:13px}
+@media(max-width:980px){.scene-layout{grid-template-columns:1fr}.scene-stage iframe{height:65vh}}
+@media(max-width:600px){.scene-stage iframe{height:55vh;min-height:340px}}
+</style>
+</head>
+<body>
+<main class="scene-shell">
+  <header class="scene-toolbar">
+    <div class="scene-brand"><span class="scene-eyebrow">Fuel &amp; Free Time · Experiences / Workbench</span><h1>Aviation Scene Lab</h1></div>
+    <nav aria-label="Scene workspace"><a href="/admin/pages">CMS pages</a> <a href="/admin/theme-editor?slug=community">Community editor</a> <a href="/review/bridge-fly" id="scene-open-review" target="_blank" rel="noopener">Open owner review ↗</a></nav>
+  </header>
+  <div class="scene-layout">
+    <section class="scene-stage" aria-label="Original R2 3D scene preview">
+      <iframe id="scene-preview" src="https://assets.fuelnfreetime.com/media/cms/pages/bridge-fly/index.html" title="R2 Golden Gate bridge flyover scene" loading="eager" allow="fullscreen" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-fullscreen"></iframe>
+      <div class="scene-status"><span>Actual R2 scene bundle · Preview only · Nothing published by this editor</span><span id="scene-state" role="status">Loading original scene…</span></div>
+    </section>
+    <aside class="scene-notes">
+      <span class="scene-eyebrow">FNF · Project experience exploration</span>
+      <h2>A scene with a purpose</h2>
+      <p>This is the <strong>Golden Gate bridge flyover prototype</strong> currently stored in FNF R2. It is not a helicopter restoration animation yet. The original bundle is preserved without rewriting its camera, mesh, or styling.</p>
+      <p>Review it here before deciding which parts can form an <strong>aviation / helicopter restoration</strong> experience.</p>
+      <hr>
+      <span class="scene-eyebrow">Design directions to validate</span>
+      <ul>
+        <li>Helicopter restoration journal, with real milestones and documentation</li>
+        <li>Interactive hangar / aircraft walkthrough as an optional campaign scene</li>
+        <li>A cinematic launch chapter tied to real progress, not invented capabilities</li>
+        <li>GPU, keyboard, touch and reduced-motion fallbacks before public rollout</li>
+      </ul>
+      <hr>
+      <p>This workbench preserves the original scene. Use it to judge the camera, controls, speed and visual tone before deciding whether the same technology helps tell a real restoration story.</p>
+      <section class="scene-review-access" aria-labelledby="scene-share-title">
+        <span class="scene-eyebrow">Owner feedback link</span>
+        <h2 id="scene-share-title">Share a controlled preview</h2>
+        <p>Send the site owner a clean review page. Keep the password separate from the link. This is a temporary preview gate—not full archival privacy while the original R2 public address exists.</p>
+        <label for="scene-review-password">Preview password (12+ characters)</label>
+        <input type="password" id="scene-review-password" autocomplete="new-password" placeholder="Set or rotate a reviewer password">
+        <label class="scene-checkbox"><input type="checkbox" id="scene-review-enabled"> Enable owner review access</label>
+        <div class="scene-review-actions">
+          <button type="button" id="scene-review-save">Save review access</button>
+          <button type="button" id="scene-review-copy" disabled aria-label="Share password-protected owner review"><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-5 5 5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg> Share preview</button>
+        </div>
+        <div id="scene-review-feedback" role="status" aria-live="polite" class="scene-review-feedback">Loading review settings…</div>
+      </section>
+      <a class="scene-action" href="/admin/theme-editor?slug=community">Explore reusable Community sections →</a>
+    </aside>
+  </div>
+</main>
+<script>
+const frame=document.getElementById('scene-preview');
+const status=document.getElementById('scene-state');
+frame.addEventListener('load',()=>{status.textContent='Scene document loaded · Inspect animation visually';});
+frame.addEventListener('error',()=>{status.textContent='Scene failed to load · Check the stored scene';});
+const accessEnabled=document.getElementById('scene-review-enabled');
+const accessPassword=document.getElementById('scene-review-password');
+const accessSave=document.getElementById('scene-review-save');
+const accessCopy=document.getElementById('scene-review-copy');
+const accessStatus=document.getElementById('scene-review-feedback');
+let hasPassword=false;
+let reviewUrl='/review/bridge-fly';
+function setReviewStatus(message){accessStatus.textContent=message;}
+async function loadAccess(){
+  try{
+    const res=await fetch('/api/admin/scene-review',{credentials:'include'});
+    if(!res.ok)throw new Error('Unable to load review access.');
+    const data=await res.json();
+    hasPassword=data.hasPassword;
+    accessEnabled.checked=data.enabled;
+    reviewUrl=data.reviewUrl||reviewUrl;
+    accessCopy.disabled=!(hasPassword&&data.enabled);
+    setReviewStatus(data.enabled?'Review link enabled. Shared visitors must enter the separate reviewer password.':'Review link is disabled. Save a password and enable it when ready.');
+  }catch(error){setReviewStatus(error.message);}
+}
+accessSave.addEventListener('click',async()=>{
+  if(accessPassword.value&&accessPassword.value.length<12){setReviewStatus('Use a password with at least 12 characters.');return;}
+  if(accessEnabled.checked&&!hasPassword&&!accessPassword.value){setReviewStatus('Choose a password before enabling review.');return;}
+  accessSave.disabled=true;
+  setReviewStatus('Saving review access…');
+  try{
+    const res=await fetch('/api/admin/scene-review',{method:'POST',credentials:'include',headers:{'content-type':'application/json'},body:JSON.stringify({enabled:accessEnabled.checked,password:accessPassword.value})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Could not save review access.');
+    hasPassword=data.hasPassword;
+    accessPassword.value='';
+    reviewUrl=data.reviewUrl||reviewUrl;
+    accessCopy.disabled=!(hasPassword&&data.enabled);
+    setReviewStatus(data.enabled?'Access enabled. Copy the share link and send the password separately.':'Review link disabled.');
+  }catch(error){setReviewStatus(error.message);}
+  finally{accessSave.disabled=false;}
+});
+accessCopy.addEventListener('click',async()=>{
+  const url=new URL(reviewUrl,location.origin).href;
+  try {
+    if (navigator.share) {
+      await navigator.share({title:'FNF · Aviation concept review',text:'A first look at the FNF aviation direction. I will send the access password separately.',url});
+      setReviewStatus('Share opened. Send the password separately.');
+    } else {
+      await navigator.clipboard.writeText(url);
+      setReviewStatus('Review link copied. Send the password separately.');
+    }
+  } catch(error) {
+    if (error?.name !== 'AbortError') setReviewStatus('Share this link: '+url);
+  }
+});
+loadAccess();
+</script>
+</body>
+</html>

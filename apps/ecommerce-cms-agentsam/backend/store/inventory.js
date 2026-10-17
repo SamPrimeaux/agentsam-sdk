@@ -9,22 +9,68 @@
 
 const DEFAULT_TTL_MINUTES = 30; // matches Stripe session expiry
 
-// (1) Available quantity = on-hand minus currently-held (non-expired) reservations.
-export async function availableQty(env, variantId) {
-  const row = await env.DB.prepare(
-    `SELECT (pv.inventory_qty - COALESCE(SUM(r.qty), 0)) AS available
-       FROM product_variants pv
-       LEFT JOIN inventory_reservations r
-         ON r.variant_id = pv.id AND r.status = 'held' AND r.expires_at > datetime('now')
-      WHERE pv.id = ?
-      GROUP BY pv.id`,
-  )
-    .bind(variantId)
-    .first();
+// A validated supplier link is orderable without local stock. This is NOT a
+// real-time Completeful stock quote. Incomplete links fail closed.
+function variantAvailabilitySql(where) {
+  return `SELECT v.id, v.sku, v.size, v.color, v.price_cents, v.inventory_qty,
+      vl.id AS supplier_link_id,
+      vl.completeful_catalog_variant_id AS supplier_catalog_variant_id,
+      pl.sync_status AS supplier_sync_status,
+      COALESCE(SUM(r.qty), 0) AS held_qty
+    FROM product_variants v
+    LEFT JOIN completeful_variant_links vl ON vl.variant_id = v.id
+    LEFT JOIN completeful_product_links pl
+      ON pl.id = vl.product_link_id AND pl.product_id = v.product_id
+    LEFT JOIN inventory_reservations r
+      ON r.variant_id = v.id AND r.status = 'held'
+      AND r.expires_at > datetime('now')
+    WHERE ${where}
+    GROUP BY v.id
+    ORDER BY v.id`;
+}
 
-  // Variant not found -> nothing available.
-  if (!row) return 0;
-  return Number(row.available) || 0;
+export function classifyVariantAvailability(row) {
+  if (!row) return { fulfillment: "stock", available: false, available_qty: 0 };
+  if (row.supplier_link_id != null) {
+    const ready = row.supplier_sync_status === "linked" &&
+      Boolean(String(row.supplier_catalog_variant_id || "").trim());
+    return {
+      fulfillment: "supplier",
+      available: ready,
+      available_qty: null,
+      supplier_status: ready ? "ready" : "not_ready",
+    };
+  }
+  const remaining = Math.max(0, Number(row.inventory_qty || 0) - Number(row.held_qty || 0));
+  return { fulfillment: "stock", available: remaining > 0, available_qty: remaining };
+}
+
+export async function getVariantAvailability(env, variantId) {
+  const row = await env.DB.prepare(variantAvailabilitySql("v.id = ?"))
+    .bind(variantId).first();
+  return classifyVariantAvailability(row);
+}
+
+export async function listProductVariantAvailability(env, productId) {
+  const { results } = await env.DB.prepare(variantAvailabilitySql("v.product_id = ?"))
+    .bind(productId).all();
+  return (results || []).map((row) => ({
+    id: row.id,
+    sku: row.sku,
+    size: row.size,
+    color: row.color,
+    price_cents: row.price_cents,
+    inventory_qty: row.inventory_qty,
+    ...classifyVariantAvailability(row),
+  }));
+}
+
+// Internal numeric stock guard: Infinity is never exposed through JSON.
+export async function availableQty(env, variantId) {
+  const availability = await getVariantAvailability(env, variantId);
+  return availability.fulfillment === "supplier" && availability.available
+    ? Number.POSITIVE_INFINITY
+    : (availability.available_qty ?? 0);
 }
 
 // (2) Hold inventory for an order. lineItems: [{ variant_id, qty }].
@@ -37,24 +83,33 @@ export async function holdInventory(
   lineItems,
   ttlMinutes = DEFAULT_TTL_MINUTES,
 ) {
+  // Aggregate duplicate cart lines before checking stock.
+  const totals = new Map();
   for (const item of lineItems) {
-    const available = await availableQty(env, item.variant_id);
-    if (available < item.qty) {
-      throw new Error(
-        `Insufficient inventory for variant ${item.variant_id}: requested ${item.qty}, available ${available}`,
-      );
+    const qty = Number(item.qty);
+    if (!Number.isInteger(qty) || qty < 1) throw new Error("Invalid reservation quantity");
+    totals.set(item.variant_id, (totals.get(item.variant_id) || 0) + qty);
+  }
+  const stockItems = [];
+  for (const [variantId, qty] of totals) {
+    const availability = await getVariantAvailability(env, variantId);
+    if (!availability.available ||
+        (availability.fulfillment === "stock" && availability.available_qty < qty)) {
+      throw new Error(`Insufficient inventory for variant ${variantId}: requested ${qty}`);
     }
+    // Supplier-fulfilled lines are not local stock and must not be reserved.
+    if (availability.fulfillment === "stock") stockItems.push({ variant_id: variantId, qty });
   }
 
-  // All items pass — insert one held row per item in a single atomic batch.
-  const statements = lineItems.map((item) =>
+  // Hold only stock-managed items. An all-supplier order needs no D1 stock rows.
+  const statements = stockItems.map((item) =>
     env.DB.prepare(
       `INSERT INTO inventory_reservations (order_id, variant_id, qty, status, expires_at)
        VALUES (?, ?, ?, 'held', datetime('now', '+' || ? || ' minutes'))`,
     ).bind(orderId, item.variant_id, item.qty, ttlMinutes),
   );
 
-  await env.DB.batch(statements);
+  if (statements.length) await env.DB.batch(statements);
 }
 
 // (3) Commit an order's held reservations: decrement stock (guarded) and flip

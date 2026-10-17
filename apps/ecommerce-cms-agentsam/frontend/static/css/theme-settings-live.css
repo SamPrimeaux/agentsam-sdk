@@ -1,0 +1,22 @@
+.ts-live{padding:17px 13px 50px;font:12px/1.5 system-ui,sans-serif;color:#252329;background:#fff;min-height:100%}
+.ts-live h2{font-size:14px;margin:0 0 20px;font-weight:700}
+.ts-live-group{border-top:1px solid #e9e7e9;padding:0 0 2px}
+.ts-live-group:last-of-type{border-bottom:1px solid #e9e7e9}
+.ts-live-group>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:650;padding:14px 2px}
+.ts-live-group>summary::-webkit-details-marker{display:none}
+.ts-live-group>summary:after{content:"⌄";color:#747279;font-size:16px}
+.ts-live-group:not([open])>summary:after{transform:rotate(-90deg)}
+.ts-live-group label{display:block;font-size:11px;font-weight:580;margin:8px 0 6px}
+.ts-live-colors{display:grid;gap:9px;padding:4px 0 17px}
+.ts-live-color__row{display:flex;align-items:center;gap:9px;min-width:0}
+.ts-live-color__row input[type=color]{width:39px;height:34px;cursor:pointer;border:1px solid #d6d2de;border-radius:7px;padding:3px;background:#fff;flex-shrink:0}
+.ts-live-color__row output{font-size:11px;color:#555160;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ts-live-color__row button,.ts-live-radius button{border:0;background:transparent;color:#6144a7;font-size:11px;cursor:pointer;padding:7px}
+.ts-live-color__row button:disabled{color:#a9a4b2;cursor:default}
+.ts-live-group select{width:100%;border:1px solid #dad7df;border-radius:7px;background:#fff;padding:10px;margin-bottom:16px;font:inherit}
+.ts-live-radius{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.ts-live-radius input{accent-color:#7151cc;flex:1;min-width:60px}
+.ts-live-radius output{font-size:11px;min-width:54px;text-align:right}
+.ts-live-group textarea{width:100%;max-width:100%;min-height:170px;border:1px solid #d8d5dd;border-radius:8px;background:#fafafa;font:12px/1.6 ui-monospace,SFMono-Regular,monospace;padding:12px;resize:vertical}
+.ts-live-css-error{color:#ac2c32;min-height:15px;font-size:11px;margin:4px 0 17px}
+.ts-live-status,.ts-live-wait{color:#6d6875;font-size:11px;margin-top:15px}

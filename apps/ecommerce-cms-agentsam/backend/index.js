@@ -1,23 +1,28 @@
 /**
- * Ember Supply — Worker entry point
+ * Fuel & Free Time — Worker entry point
  *
  * Bindings (see wrangler.toml):
- *   DB             D1 database "ember"
- *   WEBSITE_ASSETS R2 bucket "ember"
+ *   DB             D1 database "fuelnfreetime"
+ *   WEBSITE_ASSETS R2 bucket "fuelnfreetime"
  *   AGENTSAM_WAI   Workers AI
- *   CMS_CACHE      KV namespace "ember-cache"
+ *   CMS_CACHE      KV namespace "fuelnfreetime-cache"
  *   ASSETS         Static files served from /public (marketing pages + /admin dashboard)
  */
 
+import { ensureApplicationAccount } from "./lib/account-context.js";
 import { handleAdminApi } from "./admin/api.js";
+import { recordScheduledHealthProbe } from "./admin/analytics-health.js";
 import { serveCatalogImage } from "./completeful/images.js";
 import { runAgentsamCompaction } from "./agentsam/compaction.js";
-import { drainAssetJobs, processAssetJobById } from "./assets/product-optimize.js";
+import { drainAssetJobs, ensureAssetStorage, processAssetJobById } from "./assets/product-optimize.js";
 import { handleStoreApi } from "./store/api.js";
+import { decorateProductPage } from "./store/product-seo.js";
 import { handleAttributionApi } from "./attribution/api.js";
 import { handlePublicCmsApi } from "./cms/api.js";
 import { handleStudioCmsBridge } from "./cms/studio-bridge.js";
 import { handleCmsWarmInternal } from "./cms/deploy.js";
+import { handleSceneReview } from "./admin/scene-review.js";
+import { handlePublicSearchDiscovery } from "./store/search-discovery.js";
 import {
   serveStorefrontPage,
   slugForAssetPath,
@@ -33,7 +38,7 @@ import {
   redirectToAdminLogin,
 } from "./lib/admin-routes.js";
 import { redirectWww, resolveStorefrontPath, serveStaticAlias, STORE_HTML_REDIRECTS, PAGES_CLEAN_REDIRECTS } from "./lib/routes.js";
-import { ADMIN_REDIRECTS } from "./lib/route-manifest.js";
+import { ADMIN_REDIRECTS, adminRouteForPath } from "./lib/route-manifest.js";
 
 import {
   handleResendOutboundWebhook,
@@ -191,11 +196,16 @@ async function gateAdminPage(request, env, pathname) {
 
 export default {
   async fetch(request, env, ctx) {
+    await ensureApplicationAccount(env);
     const wwwRedirect = redirectWww(request);
     if (wwwRedirect) return wwwRedirect;
 
     const url = new URL(request.url);
     const path = url.pathname;
+    // Asset URLs are derived from the site's own domain; first request per isolate configures it.
+    await ensureAssetStorage(env, request).catch(() => null);
+    const searchDiscovery = await handlePublicSearchDiscovery(request, env, url);
+    if (searchDiscovery) return searchDiscovery;
     if (path === "/catalog-image") return serveCatalogImage(request, env, ctx);
 
     if (path === "/api/health") {
@@ -287,8 +297,19 @@ export default {
     if (path.startsWith("/api/internal/studio-cms/")) {
       return noStore(await handleStudioCmsBridge(request, env));
     }
+    if (path === "/api/admin/scene-review") {
+      const user = await getSessionUser(request, env);
+      if (!user) return noStore(Response.json({ error: "Unauthorized" }, { status: 401 }));
+      if (request.method !== "GET" && !["admin", "owner"].includes(user.role)) {
+        return noStore(Response.json({ error: "Not authorized to change review access" }, { status: 403 }));
+      }
+      return noStore(await handleSceneReview(request, env, url));
+    }
     if (path.startsWith("/api/admin/")) {
       return noStore(await handleAdminApi(request, env, url, ctx));
+    }
+    if (path === "/review/bridge-fly" || path.startsWith("/review/bridge-fly/")) {
+      return noStore(await handleSceneReview(request, env, url));
     }
 
     if (path.startsWith("/media/")) {
@@ -303,6 +324,12 @@ export default {
     // Legacy discounts scaffold URL → /admin/discounts
     if (path === "/admin/scaffold" && url.searchParams.get("view") === "discounts") {
       return noStore(Response.redirect(new URL("/admin/discounts", request.url), 301));
+    }
+
+    // The donor atlas is now a catalog in the canonical Theme Editor, not a
+    // second merchant editor. Keep old links working with a clean redirect.
+    if (path === "/admin/revise-atlas") {
+      return noStore(Response.redirect(new URL("/admin/theme-editor?slug=home&catalog=revise", request.url), 302));
     }
 
     // Clean admin URLs — /admin/login, /admin/home, …
@@ -331,11 +358,7 @@ export default {
       }
     }
 
-    // Analytics SPA — /admin/analytics/overview|finance|health (no .html)
-    const analyticsViewMatch = path.match(/^\/admin\/analytics\/(overview|finance|health)\/?$/);
-    const accountViewMatch = path === "/admin/account" || path === "/admin/account/";
-    const productStudioMatch = /^\/admin\/products\/create(?:\/[^/]+)?\/?$/.test(path);
-    const productArtworkHelpMatch = /^\/admin\/products\/help\/artwork\/?$/.test(path);
+    // SPA admin routes compile from the canonical route manifest.
     if (path === ADMIN_ANALYTICS_PREFIX || path === `${ADMIN_ANALYTICS_PREFIX}/`) {
       const user = await getSessionUser(request, env);
       if (!user) {
@@ -345,7 +368,8 @@ export default {
         Response.redirect(new URL(`${ADMIN_ANALYTICS_PREFIX}/overview`, request.url), 302)
       );
     }
-    if (analyticsViewMatch || accountViewMatch || productStudioMatch || productArtworkHelpMatch) {
+    const adminRoute = adminRouteForPath(path);
+    if (adminRoute?.handler === "admin-spa") {
       const user = await getSessionUser(request, env);
       if (!user) {
         return noStore(redirectToAdminLogin(request));
@@ -427,10 +451,30 @@ export default {
 
     const productMatch = path.match(/^\/products\/([^/]+)\/?$/);
     if (productMatch) {
+      let requestedSlug;
+      try {
+        requestedSlug = decodeURIComponent(productMatch[1]);
+      } catch {
+        return new Response("Invalid product handle", { status: 400 });
+      }
+      const product = await env.DB.prepare(
+        "SELECT slug, title, description, seo_title, seo_description, image_url FROM products WHERE slug = ? AND status = 'active' LIMIT 1"
+      ).bind(requestedSlug).first();
+      if (!product) {
+        const redirect = await env.DB.prepare(
+          "SELECT p.slug FROM product_slug_redirects r JOIN products p ON p.id = r.product_id WHERE r.old_slug = ? AND p.status = 'active' LIMIT 1"
+        ).bind(requestedSlug).first();
+        if (redirect?.slug) {
+          const destination = new URL(request.url);
+          destination.pathname = "/products/" + encodeURIComponent(redirect.slug);
+          return Response.redirect(destination.toString(), 301);
+        }
+      }
       const productUrl = new URL(request.url);
       productUrl.pathname = "/product.html";
       productUrl.searchParams.set("slug", productMatch[1]);
-      return env.ASSETS.fetch(new Request(productUrl, request));
+      const page = await env.ASSETS.fetch(new Request(productUrl, request));
+      return product && page.ok ? decorateProductPage(page, product, request.url) : page;
     }
 
     if (path === "/shop/collections" || path === "/shop/collections/") {
@@ -471,6 +515,14 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    await ensureApplicationAccount(env);
+    await ensureAssetStorage(env).catch(() => null);
+    // Explicit cron routing: do not let health probes trigger compaction.
+    if (event.cron === "*/30 * * * *") {
+      ctx.waitUntil(recordScheduledHealthProbe(env).catch(err =>
+        console.error("health probe failed", err?.message || err)));
+      return;
+    }
     // Hourly stale-job recovery — Queue is the primary asset processor.
     if (event.cron === "0 * * * *" || String(event.cron || "").startsWith("0 *")) {
       ctx.waitUntil(
@@ -485,6 +537,7 @@ export default {
       );
       return;
     }
+    if (event.cron !== "0 4 * * *") return;
     ctx.waitUntil(
       runAgentsamCompaction(env, {
         trigger_source: "cron",
@@ -496,6 +549,8 @@ export default {
   },
 
   async queue(batch, env) {
+    await ensureApplicationAccount(env);
+    await ensureAssetStorage(env).catch(() => null);
     for (const message of batch.messages) {
       const jobId = message.body?.job_id;
       if (!jobId) {

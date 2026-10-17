@@ -665,6 +665,7 @@
 .page-editor-media-dialog {
   width: min(920px, calc(100vw - 56px));
   height: min(700px, calc(100vh - 84px));
+  height: min(700px, calc(100dvh - 84px));
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   overflow: hidden;
@@ -793,16 +794,21 @@
     gap: 6px;
   }
 
+  /* The shell supplies side padding; keep one source. Bottom clearance is the dock's. */
   .pages-hub {
-    padding: 20px 16px 48px;
+    padding: 20px 0 calc(var(--admin-dock-clearance, 32px) + 16px);
   }
 
   .page-editor {
-    padding: 16px 16px 96px;
+    padding: 16px 0 calc(var(--admin-dock-clearance, 96px) + 16px);
+  }
+
+  body.admin-dock-visible.admin-dock-has-edit:not(.admin-dock-hidden) .page-editor-savebar {
+    display: none;
   }
 
   .page-editor-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .page-editor-savebar {

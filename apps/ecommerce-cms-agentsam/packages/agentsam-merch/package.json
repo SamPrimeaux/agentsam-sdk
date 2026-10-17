@@ -1,0 +1,35 @@
+{
+  "name": "@inneranimalmedia/agentsam-merch",
+  "version": "0.1.0",
+  "description": "Provider-neutral manufacturing profiles, preflight, derivative planning, and collection-lab primitives for AgentSam.",
+  "type": "module",
+  "files": [
+    "src",
+    "profiles",
+    "bin",
+    "README.md",
+    "schemas"
+  ],
+  "exports": {
+    ".": "./src/index.js",
+    "./profiles": "./src/profile.js",
+    "./registry": "./src/profile-registry.js",
+    "./product-spine": "./src/product-spine.js",
+    "./compatibility": "./src/compatibility.js",
+    "./derivatives": "./src/derivatives.js",
+    "./collection-lab": "./src/collection-lab.js",
+    "./adapters/completeful": "./src/adapters-completeful.js",
+    "./profiles/*": "./profiles/*"
+  },
+  "bin": {
+    "agentsam-merch": "./bin/agentsam-merch.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "types": "./src/index.d.ts"
+}

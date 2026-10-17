@@ -14,6 +14,10 @@ export function historyKey(slug, sectionKey, version) {
   return `cms/pages/${slug}/history/${sectionKey}.v${version}.json`;
 }
 
+export function publishedSnapshotKey(slug) {
+  return `cms/pages/${slug}/published/_page-snapshot.json`;
+}
+
 export function pageMetaKey(slug) {
   return `cms/pages/${slug}/meta.json`;
 }

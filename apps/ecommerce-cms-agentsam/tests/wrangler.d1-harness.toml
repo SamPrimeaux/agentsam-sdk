@@ -1,0 +1,9 @@
+name = "cms-d1-harness"
+main = "d1-harness.mjs"
+compatibility_date = "2026-01-20"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cms-d1-harness"
+database_id = "00000000-0000-4000-8000-0000000000d1"

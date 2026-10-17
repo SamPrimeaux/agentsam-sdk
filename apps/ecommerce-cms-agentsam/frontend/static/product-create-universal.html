@@ -1,0 +1,52 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Create Product — AgentSam SDK</title><link rel="stylesheet" href="/admin/css/admin.css"><link rel="stylesheet" href="/admin/css/console.css"><style>
+.product-shortcuts{display:flex;align-items:center;justify-content:flex-end;gap:20px;margin:0 0 17px;flex-wrap:wrap}
+.product-shortcut{display:inline-flex;align-items:center;gap:7px;min-height:30px;color:#444642;text-decoration:none!important;font:500 12px/1.25 Inter,system-ui,sans-serif;letter-spacing:-.005em;white-space:nowrap;transition:color .15s ease}
+.product-shortcut>svg:first-child{stroke:currentColor;stroke-width:1.45;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.product-shortcut .shortcut-arrow{stroke:currentColor;stroke-width:1.45;stroke-linecap:round;stroke-linejoin:round;margin-left:1px;opacity:.7;transition:transform .15s ease}
+.product-shortcut:hover{color:#20211f}.product-shortcut:hover .shortcut-arrow{transform:translateX(2px);opacity:1}
+.product-shortcut:focus-visible{outline:2px solid #738969;outline-offset:4px;border-radius:3px}
+@media(prefers-reduced-motion:reduce){.product-shortcut,.product-shortcut .shortcut-arrow{transition:none}}
+</style></head><body><script src="/admin/js/shell.js"></script><script>
+renderShell('/admin/products/create', `
+<div style="max-width:1160px;margin:auto">
+  <nav aria-label="Product shortcuts" class="product-shortcuts">
+    <a href="/admin/products" class="product-shortcut"><svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="6" height="6" rx="1.25"/><rect x="11.5" y="2.5" width="6" height="6" rx="1.25"/><rect x="2.5" y="11.5" width="6" height="6" rx="1.25"/><rect x="11.5" y="11.5" width="6" height="6" rx="1.25"/></svg><span>All products</span><svg class="shortcut-arrow" viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><path d="M3 8h10m-4-4 4 4-4 4"/></svg></a>
+    <a href="/admin/media" class="product-shortcut"><svg viewBox="0 0 20 20" width="15" height="15" fill="none" aria-hidden="true"><rect x="2.5" y="3.5" width="12" height="11" rx="1.6"/><circle cx="6.5" cy="7.4" r="1.1"/><path d="m4.5 12 3.1-3.1 2.6 2.6 2-2 2.3 2.3M15 6h1a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 16 17H6"/></svg><span>Media library</span><svg class="shortcut-arrow" viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true"><path d="M3 8h10m-4-4 4 4-4 4"/></svg></a>
+  </nav>
+  <section style="border-radius:20px;background:#eff1e8;min-height:305px;padding:clamp(26px,4vw,46px);display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:24px">
+    <div><p style="font-size:12px;color:#77836d">A little inspiration. Something entirely yours.</p><h1 style="font-size:clamp(34px,4vw,52px);line-height:1.08;letter-spacing:-.045em;margin:13px 0">Create & explore<br><span style="color:#7c9069">your next idea.</span></h1><p style="color:#687361;line-height:1.65">Discover something to build on. Make it your own.<br>Start with an existing product or a fresh idea.</p><button class="btn primary" id="jump-to-catalog" type="button">Explore the catalog →</button></div>
+    <div style="text-align:center;color:#91a579"><div style="font-size:38px">✧</div><div style="font-size:clamp(20px,2.5vw,36px);font-weight:800;letter-spacing:-.04em;line-height:1.1;margin:16px 0">GOOD IDEAS<br>START HERE.</div><small style="letter-spacing:.16em">YOUR IDEAS. REAL POSSIBILITIES.</small></div>
+  </section>
+  <div id="types" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:28px 0 48px"></div>
+  <section id="catalog"><div style="display:flex;justify-content:space-between;align-items:end;gap:12px"><h2 style="font-size:27px;letter-spacing:-.035em">Find your canvas.</h2><button id="reload" class="btn ghost" type="button">Refresh catalog</button></div>
+    <div style="display:flex;justify-content:space-between;gap:15px;align-items:center;margin:14px 0 20px"><input id="catalog-search" type="search" placeholder="Search products, packages, templates…" style="padding:13px;width:min(100%,550px);border:1px solid #ddd;border-radius:9px"><small id="catalog-count" style="color:#777"></small></div>
+    <div id="catalog-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:15px"></div>
+  </section>
+</div>
+`);
+document.querySelector('#jump-to-catalog').onclick=()=>document.querySelector('#catalog').scrollIntoView({behavior:'smooth'});
+
+const categories=[['Applications','applications','Apps and software'],['Apparel','apparel','Clothing and garments'],['Accessories','accessories','Goods and objects'],['Automations','automations','Agents and workflows'],['Templates','templates','Reusable starting points']];
+let current='applications',products=[];
+const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+function draft(kind){const id='draft_'+(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36));let entries={};try{entries=JSON.parse(localStorage.getItem('iam:registry:product-edits:v1')||'{}')}catch{}entries[id]={name:'Untitled '+kind,kind,sku:'',status:'draft',savedAt:new Date().toISOString()};localStorage.setItem('iam:registry:product-edits:v1',JSON.stringify(entries));location.href='/admin/product-edit?id='+encodeURIComponent(id);}
+document.getElementById('types').innerHTML=categories.map(([label,key,sub],i)=>'<button type="button" data-type="'+esc(key)+'" style="text-align:left;min-height:103px;border:1px solid #dedee3;background:'+(i===0?'#e6edda':'#faf9fc')+';border-radius:12px;padding:15px;cursor:pointer"><span style="display:block;font-size:12px;color:#8d9385">'+String(i+1).padStart(2,'0')+'</span><strong style="display:block;margin:7px 0">'+esc(label)+'</strong><small>'+esc(sub)+'</small></button>').join('');
+document.querySelectorAll('[data-type]').forEach(btn=>btn.onclick=()=>{current=btn.dataset.type;document.querySelectorAll('[data-type]').forEach(el=>el.style.background=el===btn?'#e6edda':'#faf9fc');render()});
+const matches=(p,category)=>{
+  if(category==='applications')return ['app','sdk-package','integration','service'].includes(p.kind)&&!/(automation|workflow)/i.test(p.slug||'');
+  if(category==='apparel')return /apparel|shirt|hood|hat|garment/i.test([p.kind,p.name,p.slug].join(' '));
+  if(category==='accessories')return /accessory|tumbler|mug|decor|engraving|physical/i.test([p.kind,p.name,p.slug].join(' '));
+  if(category==='automations')return /automation|workflow|agent|script/i.test([p.kind,p.name,p.slug].join(' ')) || p.kind==='script';
+  return ['theme','ui-component','section','block'].includes(p.kind)||/template|starter|theme/i.test(p.name||'');
+};
+function render(){
+ const q=document.querySelector('#catalog-search').value.toLowerCase();
+ const list=products.filter(p=>matches(p,current)&&(!q||[p.name,p.slug,p.package_name,p.kind].some(x=>String(x||'').toLowerCase().includes(q))));
+ document.querySelector('#catalog-count').textContent=list.length+' products';
+ document.querySelector('#catalog-grid').innerHTML=list.map(p=>'<a href="/admin/products/create/'+encodeURIComponent(p.id)+'" style="text-decoration:none;color:inherit;min-width:0"><div style="height:170px;background:#f2f3f0;border:1px solid #eeeeef;border-radius:12px;display:grid;place-items:center;color:#8b9484;font-weight:700;font-size:20px">'+esc((p.name||'').split(' ').slice(0,2).map(s=>s[0]).join(''))+'</div><div style="font-size:10px;text-transform:uppercase;color:#899086;letter-spacing:.09em;margin:12px 0 5px">'+esc(p.kind)+'</div><strong style="display:block;font-size:13px;line-height:1.35">'+esc(p.name)+'</strong><small style="color:#8d8d8d">'+esc(p.version||'Explore product')+'</small></a>').join('');
+ if(!list.length)document.querySelector('#catalog-grid').innerHTML='<div style="grid-column:1/-1;background:#f8f8f7;border:1px solid #e8e8e8;border-radius:12px;padding:25px;color:#777">No matching products in this collection yet.</div>';
+}
+
+document.getElementById('catalog-search').oninput=render;document.getElementById('reload').onclick=()=>location.reload();
+fetch('/admin/registry/products-snapshot.json').then(r=>r.json()).then(d=>{products=d.items||[];render()}).catch(()=>render());
+</script></body></html>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+<title id="title">miniAgentSam</title>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8e5bff"/><stop offset="1" stop-color="#5126c6"/></linearGradient></defs>
+<rect x="1" y="1" width="62" height="62" rx="17" fill="#161226"/>
+<rect x="4" y="4" width="56" height="56" rx="15" fill="url(#bg)"/>
+<path d="M14 25C14 15 22 11 32 11s18 4 18 14v11c0 10-7 17-18 17S14 46 14 36Z" fill="#e9e6ff"/>
+<path d="M17 30c0-6 5-10 12-10h6c7 0 12 4 12 10v8c0 5-5 9-12 9h-6c-7 0-12-4-12-9Z" fill="#231741"/>
+<ellipse cx="25.5" cy="34" rx="4" ry="4.6" fill="#9b70ff"/><ellipse cx="38.5" cy="34" rx="4" ry="4.6" fill="#9b70ff"/>
+<path d="M27 44q5 3 10 0" stroke="#e9e6ff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+<path d="M16 18 10 14l1 11M48 18l6-4-1 11" fill="#d6caff" stroke="#e9e6ff" stroke-width="2" stroke-linejoin="round"/>
+</svg>

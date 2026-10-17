@@ -6,6 +6,7 @@ import {
   getMailboxesForUser,
   assertMailboxAccess,
   getPrimaryMailboxForUser,
+  canAccessMailbox,
 } from "../lib/mail-mailboxes.js";
 
 const DEFAULT_SETTINGS = {
@@ -184,24 +185,40 @@ async function recordOutboundMessage(env, { id, from, to, subject, body, status 
     .catch(() => {});
 }
 
-async function resolveSendFrom(env, settings, body) {
+async function resolveSendFrom(env, settings, body, user = null) {
   const slug = body.fromMailbox || body.mailbox || null;
   if (slug) {
     const mailbox = await getMailboxBySlug(env, slug);
+    if (!mailbox) return { error: "mailbox_not_found", mailbox: null };
+    if (user && !canAccessMailbox(mailbox, user)) {
+      return { error: "mailbox_forbidden", mailbox };
+    }
+    return {
+      from: `${mailbox.resend_from_name || mailbox.label} <${mailbox.address}>`,
+      mailbox,
+    };
+  }
+  if (body.fromProvider === "payments") {
+    const mailbox = await getMailboxBySlug(env, "payments");
+    if (!mailbox) return { error: "mailbox_not_found", mailbox: null };
+    if (user && !canAccessMailbox(mailbox, user)) {
+      return { error: "mailbox_forbidden", mailbox };
+    }
+    const addr = settings.resendPaymentsFrom || mailbox.address || "";
+    return {
+      from: `${mailbox.resend_from_name || "Payments"} <${addr}>`,
+      mailbox,
+    };
+  }
+  if (user) {
+    const mailbox = await getPrimaryMailboxForUser(env, user);
     if (mailbox) {
       return {
         from: `${mailbox.resend_from_name || mailbox.label} <${mailbox.address}>`,
         mailbox,
       };
     }
-  }
-  if (body.fromProvider === "payments") {
-    const mailbox = await getMailboxBySlug(env, "payments");
-    const addr = settings.resendPaymentsFrom || mailbox?.address || "";
-    return {
-      from: `${mailbox?.resend_from_name || "Payments"} <${addr}>`,
-      mailbox,
-    };
+    return { error: "mailbox_forbidden", mailbox: null };
   }
   return { from: settings.resendFrom, mailbox: null };
 }
@@ -367,7 +384,7 @@ export async function hydrateInboundMessage(env, user, messageId) {
   });
 }
 
-export async function sendMailPreview(request, env) {
+export async function sendMailPreview(request, env, user = null) {
   const body = await request.json().catch(() => null);
   if (!body?.to || !body?.subject) {
     return Response.json({ error: "to and subject required" }, { status: 400 });
@@ -375,7 +392,14 @@ export async function sendMailPreview(request, env) {
 
   const settings = await loadSettings(env);
   const provider = "resend";
-  const { from: resolvedFrom, mailbox } = await resolveSendFrom(env, settings, body);
+  const resolved = await resolveSendFrom(env, settings, body, user);
+  if (resolved.error) {
+    return Response.json(
+      { ok: false, error: resolved.error, mailbox: resolved.mailbox?.id || null },
+      { status: resolved.error === "mailbox_forbidden" ? 403 : 404 },
+    );
+  }
+  const { from: resolvedFrom, mailbox } = resolved;
   const payload = {
     from: resolvedFrom,
     to: body.to,
@@ -458,7 +482,7 @@ export async function getResendStatus(env) {
   const domain = settings.resendDomain || "";
   const status = await getResendDomainStatus(env, domain);
   const { getCompanyDomain } = await import("../lib/company.js");
-  const appDomain = (await getCompanyDomain(env)) || domain || "ember.example";
+  const appDomain = (await getCompanyDomain(env)) || domain || "fuelnfreetime.com";
   return Response.json({
     ok: true,
     configured: resendConfigured(env),

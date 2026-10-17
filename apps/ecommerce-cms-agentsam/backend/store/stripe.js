@@ -3,7 +3,7 @@
 // Paths are code constants, NOT wrangler.toml [vars]. Only Stripe keys are secrets.
 
 export const CHECKOUT_SUCCESS_PATH = "/order-confirmation";
-export const CHECKOUT_CANCEL_PATH = "/cart.html";
+export const CHECKOUT_CANCEL_PATH = "/checkout";
 
 export function checkoutUrls(request) {
   const base = new URL(request.url).origin;

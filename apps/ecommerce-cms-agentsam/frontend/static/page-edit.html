@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Page Editor — Ember Supply Admin</title>
+<title>Page Editor — Fuel & Free Time Admin</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/pages.css">
@@ -88,7 +88,7 @@ renderShell("/admin/pages", `
           </div>
           <div class="page-editor-seo-preview">
             <div class="page-editor-seo-title" id="seo-title">Fuel &amp; Free Time</div>
-            <div class="page-editor-seo-url" id="seo-url">https://ember.example › …</div>
+            <div class="page-editor-seo-url" id="seo-url">https://fuelnfreetime.com › …</div>
             <div class="page-editor-seo-desc" id="seo-desc">Page description preview</div>
           </div>
         </div>
@@ -147,6 +147,19 @@ renderShell("/admin/pages", `
 function setDirty(next = true) {
   dirty = next;
   document.getElementById("save-btn").disabled = !dirty;
+  syncDockEdit();
+}
+
+/** Mirrors the fixed save bar into the mobile dock (admin-dock edit mode). */
+function syncDockEdit(saving = false) {
+  window.publishDockEdit?.({
+    active: true,
+    hint: saving ? "Saving…" : dirty ? "Unsaved changes" : "All changes saved",
+    dirty,
+    canSave: dirty && !saving,
+    saveLabel: saving ? "Saving…" : "Save",
+    onSave: () => document.getElementById("save-btn")?.click(),
+  });
 }
 
 function showNote(msg, kind) {
@@ -163,10 +176,10 @@ function showNote(msg, kind) {
 function updateSeoPreview() {
   const title = document.getElementById("page-title-input")?.value.trim() || pageData?.title || "Page";
   document.getElementById("page-crumb-title").textContent = title;
-  document.getElementById("seo-title").textContent = `${title} – Ember Supply`;
+  document.getElementById("seo-title").textContent = `${title} – Fuel & Free Time`;
 
   const path = slug === "home" ? "" : slug;
-  document.getElementById("seo-url").textContent = `https://ember.example › ${path || "home"}`;
+  document.getElementById("seo-url").textContent = `https://fuelnfreetime.com › ${path || "home"}`;
 
   const section = pageData?.sections?.[0];
   const schema = SECTION_FIELDS[slug]?.[section?.key] || [];
@@ -439,6 +452,7 @@ document.addEventListener("keydown", (event) => {
 async function savePage() {
   const saveBtn = document.getElementById("save-btn");
   saveBtn.disabled = true;
+  syncDockEdit(true);
 
   try {
     const title = document.getElementById("page-title-input").value.trim();
@@ -504,12 +518,12 @@ document.addEventListener("click", () => {
 
 document.getElementById("title-ai-btn")?.addEventListener("click", () => {
   window.openAgentsamDrawer?.();
-  window.sendAgentsamMessage?.(`Suggest a stronger page title for the ${slug} page on Ember Supply.`);
+  window.sendAgentsamMessage?.(`Suggest a stronger page title for the ${slug} page on Fuel & Free Time.`);
 });
 
 document.getElementById("content-ai-btn")?.addEventListener("click", () => {
   window.openAgentsamDrawer?.();
-  window.sendAgentsamMessage?.(`Draft hero copy for the ${slug} page on Ember Supply.`);
+  window.sendAgentsamMessage?.(`Draft hero copy for the ${slug} page on Fuel & Free Time.`);
 });
 
 async function initPageEditor() {

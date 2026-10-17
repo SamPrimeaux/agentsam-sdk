@@ -17,9 +17,11 @@ export default function AdminLayout() {
 
   useEffect(() => {
     document.body.classList.remove("admin-nav-open");
+    document.body.classList.toggle("product-studio-focused", location.pathname.startsWith("/products/create"));
     if (window.__shellUser) {
       window.hydrateShellNav(window.__shellUser, "/admin" + location.pathname);
     }
+    return () => document.body.classList.remove("product-studio-focused");
   }, [location.pathname]);
 
   return <Outlet />;

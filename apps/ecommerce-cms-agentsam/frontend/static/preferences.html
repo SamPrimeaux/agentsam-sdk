@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Preferences — Ember Supply Admin</title>
+<title>Preferences — Fuel & Free Time Admin</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/preferences.css">
@@ -14,7 +14,7 @@
 let settings = {};
 let navItems = [];
 let dirty = false;
-let domain = "ember.example";
+let domain = "fuelnfreetime.com";
 
 renderShell("/admin/preferences", `
   <div class="prefs-hub">
@@ -35,7 +35,7 @@ renderShell("/admin/preferences", `
           <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6"/></svg>
           <div>
             <div class="prefs-row-title">Password protection</div>
-            <div class="prefs-row-desc">Restrict access to visitors with the password.</div>
+            <div class="prefs-row-desc">Storewide password rules are saved in preferences but are not yet enforced on the public storefront. Use <a href="/admin/scene-lab">Aviation Scene Lab</a> for the separate reviewer-password experience. Do not rely on this switch for access control.</div>
             <div class="prefs-password-field" id="password-field" hidden>
               <div class="prefs-field">
                 <label for="store-password">Store password</label>
@@ -44,7 +44,7 @@ renderShell("/admin/preferences", `
             </div>
           </div>
         </div>
-        <label class="prefs-switch"><input type="checkbox" id="password-protection" data-pref="passwordProtection"><span class="prefs-switch-slider"></span></label>
+        <label class="prefs-switch" title="Not available until public-storefront gate is installed"><input type="checkbox" id="password-protection" data-pref="passwordProtection" disabled><span class="prefs-switch-slider"></span></label>
       </div>
       <div class="prefs-row">
         <div class="prefs-row-copy">
@@ -59,30 +59,46 @@ renderShell("/admin/preferences", `
     </section>
 
     <section class="prefs-card">
-      <h2>Social sharing image and SEO</h2>
+      <h2>Search appearance and social sharing</h2><p>Set the page title and description search engines receive, and choose a real image from your media library. The preview is a guide, not a guarantee of how a platform displays your page.</p>
       <div class="prefs-seo-grid">
+        <div class="prefs-seo-previews">
         <div class="prefs-social-preview">
-          <img id="social-image" src="" alt="">
+          <img id="social-image" src="" alt="Chosen social sharing graphic" hidden><div class="prefs-social-placeholder" id="social-placeholder">Choose a sharing image to preview your store’s social card.</div>
           <div class="prefs-social-meta">
             <div class="prefs-social-domain" id="social-domain">FUELNFREETIME.COM</div>
             <div class="prefs-social-title" id="social-preview-title">Fuel &amp; Free Time</div>
             <div class="prefs-social-desc" id="social-preview-desc">Store description preview</div>
           </div>
         </div>
+        <div class="prefs-serp" aria-label="Search result preview">
+          <span class="prefs-serp-label">Search result preview</span>
+          <div class="prefs-serp-url" id="serp-url">fuelnfreetime.com</div>
+          <div class="prefs-serp-title" id="serp-title">Fuel &amp; Free Time</div>
+          <div class="prefs-serp-desc" id="serp-desc"></div>
+        </div>
+        </div>
         <div>
           <div class="prefs-field">
             <label for="home-title">Home page title</label>
             <input type="text" id="home-title" maxlength="70" data-pref="homeTitle">
-            <div class="prefs-counter"><span id="title-count">0</span> of 70 characters used</div>
+            <div class="prefs-counter" id="title-counter"><span id="title-count">0</span> of 70 characters used<span class="prefs-counter-hint" id="title-hint"></span></div>
           </div>
           <div class="prefs-field">
             <label for="meta-description">Meta description</label>
             <textarea id="meta-description" maxlength="320" data-pref="metaDescription" placeholder="Enter a description to be shown on search engines like Google"></textarea>
-            <div class="prefs-counter"><span id="meta-count">0</span> of 320 characters used</div>
+            <div class="prefs-counter" id="meta-counter"><span id="meta-count">0</span> of 320 characters used<span class="prefs-counter-hint" id="meta-hint"></span></div>
           </div>
           <div class="prefs-field">
-            <label for="social-image-url">Social sharing image URL</label>
-            <input type="url" id="social-image-url" data-pref="socialImageUrl">
+            <label>Sharing image <span class="prefs-optional">Recommended 1200 × 630 px (1.91:1)</span></label>
+            <div class="prefs-media-choice">
+              <img id="social-asset-thumb" alt="" hidden>
+              <div class="prefs-media-choice__info"><strong id="social-asset-name">No image selected</strong><span>Use an existing logo, cover artwork, or upload a new image.</span></div>
+              <button type="button" class="btn ghost small" data-pick-asset="social">Choose image</button>
+              <button type="button" class="btn ghost small" data-clear-asset="social" aria-label="Remove sharing image">Remove</button>
+            </div>
+            <p class="prefs-image-hint" id="social-image-hint" role="status" hidden></p>
+            <input type="hidden" id="social-image-url" data-pref="socialImageUrl">
+            <details class="prefs-advanced"><summary>Advanced image URL</summary><label for="social-image-url-advanced">Image address</label><input type="text" id="social-image-url-advanced" placeholder="/media/…" autocomplete="off"><p>Usually you won't need this. Use Choose image above.</p></details>
           </div>
         </div>
       </div>
@@ -90,11 +106,13 @@ renderShell("/admin/preferences", `
 
     <section class="prefs-card">
       <h2>Site navigation</h2>
-      <p>Header and footer use this same ordered route list. Add, hide, move, or remove a page here and both public shell surfaces update together.</p>
+      <p>Manage the pages visitors see in your header and footer. Choose your logo above, then rename, reorder or hide navigation links below.</p>
       <div class="prefs-seo-grid" style="grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
         <div class="prefs-field">
-          <label for="nav-logo-url">Logo URL</label>
-          <input type="url" id="nav-logo-url" placeholder="https://…">
+          <label>Storefront logo</label>
+          <div class="prefs-media-choice prefs-media-choice--logo"><img id="nav-asset-thumb" alt="Storefront logo preview" hidden><div class="prefs-media-choice__info"><strong id="nav-asset-name">Use current logo</strong><span>PNG, SVG, WEBP or transparent artwork</span></div><button type="button" class="btn ghost small" data-pick-asset="nav">Choose logo</button><button type="button" class="btn ghost small" data-clear-asset="nav" aria-label="Remove custom logo">Remove</button></div>
+          <input type="hidden" id="nav-logo-url">
+          <details class="prefs-advanced"><summary>Advanced logo URL</summary><label for="nav-logo-url-advanced">Logo address</label><input type="text" id="nav-logo-url-advanced" placeholder="/media/…" autocomplete="off"></details>
         </div>
         <div class="prefs-field">
           <label for="nav-logo-height">Logo height (px)</label>
@@ -116,12 +134,16 @@ renderShell("/admin/preferences", `
     <section class="prefs-card">
       <h2>Announcement banner</h2>
       <div class="prefs-row">
-        <div class="prefs-row-copy"><div><div class="prefs-row-title">Show announcement</div><div class="prefs-row-desc">Displays a compact orange banner above the public header.</div></div></div>
+        <div class="prefs-row-copy"><div><div class="prefs-row-title">Show announcement</div><div class="prefs-row-desc">Use a calm fixed message or a seamless scrolling announcement. Preview the appearance before saving.</div></div></div>
         <label class="prefs-switch"><input type="checkbox" id="announcement-enabled"><span class="prefs-switch-slider"></span></label>
       </div>
+      <div class="prefs-announcement-preview" id="announcement-preview" aria-label="Announcement preview"><span id="announcement-preview-copy">Your announcement will appear here</span></div>
       <div class="prefs-seo-grid prefs-seo-grid--equal">
-        <div class="prefs-field"><label for="announcement-text">Message</label><input type="text" id="announcement-text" maxlength="160" placeholder="Free shipping on orders over $100"></div>
-        <div class="prefs-field"><label for="announcement-href">Link</label><input type="text" id="announcement-href" placeholder="/shop"></div>
+        <div class="prefs-field"><label for="announcement-text">Announcement message</label><input type="text" id="announcement-text" maxlength="160" placeholder="Built in Lafayette · Fuel hard. Live free."></div>
+        <div class="prefs-field"><label for="announcement-href">Where it links</label><input type="text" id="announcement-href" placeholder="/shop"></div>
+        <div class="prefs-field"><label for="announcement-style">Display</label><select id="announcement-style"><option value="static">Simple banner</option><option value="marquee">Subtle scrolling marquee</option></select></div>
+        <div class="prefs-field prefs-color-field"><label for="announcement-bg">Background color</label><input type="color" id="announcement-bg" value="#161616"></div>
+        <div class="prefs-field prefs-color-field"><label for="announcement-color">Text color</label><input type="color" id="announcement-color" value="#ffffff"></div>
       </div>
     </section>
 
@@ -151,7 +173,7 @@ renderShell("/admin/preferences", `
 
     <section class="prefs-card">
       <h2>Spam protection</h2>
-      <p>Enabling hCaptcha can protect your store from spam. Some customers may need to complete the hCaptcha task.</p>
+      <p>This screen currently stores protection preferences, but does not yet verify challenge responses. These options are not active security defenses until server-side verification is connected. <strong>Do not treat an enabled switch as protection.</strong></p><div class="prefs-warning">Status: verification integration required. Existing choices are shown for planning only.</div>
       <div class="prefs-row">
         <div class="prefs-row-copy">
           <svg class="prefs-row-icon" viewBox="0 0 24 24" fill="none"><path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.6"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6"/></svg>
@@ -159,7 +181,7 @@ renderShell("/admin/preferences", `
             <div class="prefs-row-title">Enable on contact and comment forms</div>
           </div>
         </div>
-        <label class="prefs-switch"><input type="checkbox" id="hcaptcha-contact" data-pref="hcaptchaContact"><span class="prefs-switch-slider"></span></label>
+        <label class="prefs-switch" title="Challenge verification not installed"><input type="checkbox" id="hcaptcha-contact" data-pref="hcaptchaContact" disabled><span class="prefs-switch-slider"></span></label>
       </div>
       <div class="prefs-row">
         <div class="prefs-row-copy">
@@ -168,28 +190,66 @@ renderShell("/admin/preferences", `
             <div class="prefs-row-title">Enable on login, create account and password recovery pages</div>
           </div>
         </div>
-        <label class="prefs-switch"><input type="checkbox" id="hcaptcha-account" data-pref="hcaptchaAccount"><span class="prefs-switch-slider"></span></label>
+        <label class="prefs-switch" title="Challenge verification not installed"><input type="checkbox" id="hcaptcha-account" data-pref="hcaptchaAccount" disabled><span class="prefs-switch-slider"></span></label>
       </div>
     </section>
 
-    <section class="prefs-card">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <section class="prefs-card" id="search-discovery-card" aria-labelledby="search-discovery-title">
+      <div class="prefs-crawler-heading">
         <div>
-          <h2 style="margin-bottom:6px;">Crawler access</h2>
-          <p style="margin:0;">Authorize external tools to crawl your store. Copy the full values for Signature, Signature-Input, and Signature-Agent, then paste them into your HTTP crawler requests.</p>
+          <h2 id="search-discovery-title" style="margin-bottom:6px;">Search engine discovery</h2>
+          <p style="margin:0;">Search engines find your store through <code>robots.txt</code> and your sitemap. Both are generated automatically from your published pages and active products &mdash; nothing to maintain by hand.</p>
         </div>
-        <button type="button" class="btn ghost small" id="create-signature-btn">Create signature</button>
+        <span class="prefs-status-pill" id="crawler-status-pill" role="status">Checking…</span>
       </div>
-      <div class="prefs-tabs" role="tablist">
-        <button type="button" class="prefs-tab is-active" data-tab="all">All</button>
-        <button type="button" class="prefs-tab" data-tab="active">Active</button>
-        <button type="button" class="prefs-tab" data-tab="expired">Expired</button>
+      <div class="prefs-crawler-site">
+        <div><span class="prefs-crawler-label">Storefront</span><strong id="crawler-site-name">Loading store…</strong><small id="crawler-site-domain"></small></div>
+        <div class="prefs-crawler-discovery">
+          <a id="crawler-robots-link" href="/robots.txt" target="_blank" rel="noopener">Open robots.txt</a>
+          <a id="crawler-sitemap-link" href="/sitemap.xml" target="_blank" rel="noopener">Open sitemap.xml</a>
+        </div>
       </div>
-      <div class="prefs-empty" id="crawler-empty">No crawler signatures yet.</div>
+      <div class="prefs-crawler-metrics" aria-label="Public search discovery counts">
+        <div><strong id="crawler-routes-count">—</strong><span>Public pages</span></div>
+        <div><strong id="crawler-products-count">—</strong><span>Active products</span></div>
+        <div><strong id="crawler-sitemap-count">—</strong><span>URLs in live sitemap</span></div>
+        <div><strong id="crawler-sync-status">—</strong><span>Sitemap vs. catalog</span></div>
+      </div>
+      <ul class="prefs-check-list" id="crawler-checks" aria-live="polite">
+        <li data-check="robots"><span class="prefs-check-dot"></span><span><strong>robots.txt</strong> <em>Checking…</em></span></li>
+        <li data-check="sitemap"><span class="prefs-check-dot"></span><span><strong>sitemap.xml</strong> <em>Checking…</em></span></li>
+      </ul>
+      <div class="prefs-crawler-controls">
+        <p class="prefs-crawler-run">Tell search engines about your sitemap so new products are picked up faster.
+          <a href="https://search.google.com/search-console" target="_blank" rel="noopener">Google Search Console</a> ·
+          <a href="https://www.bing.com/webmasters" target="_blank" rel="noopener">Bing Webmaster Tools</a></p>
+        <div class="prefs-crawler-buttons"><button type="button" class="btn ghost small" id="crawler-refresh-btn">Re-check now</button></div>
+      </div>
+      <div class="prefs-crawler-notice" id="crawler-notice" role="status" hidden></div>
+      <div class="prefs-import-row" data-capability="site.scrape">
+        <div>
+          <strong>Website import <span class="prefs-optional">Optional</span></strong>
+          <p id="crawler-runtime-note">Copy content and images from an existing website into your store using AgentSam’s site scraper. It runs outside this store and never affects what search engines see.</p>
+        </div>
+        <span class="prefs-status-pill" id="crawler-runtime-status">Not connected</span>
+      </div>
+      <details class="prefs-crawler-help">
+        <summary>What gets published</summary>
+        <ul>
+          <li><code>robots.txt</code> keeps search engines out of admin, API, account, cart, checkout and review pages.</li>
+          <li><code>sitemap.xml</code> lists your public pages and active products. Draft products are never listed.</li>
+        </ul>
+      </details>
     </section>
 
     <div class="prefs-note" id="prefs-note"></div>
   </div>
+  <dialog class="prefs-assets-dialog" id="prefs-assets-dialog" aria-labelledby="prefs-assets-title">
+    <div class="prefs-assets-header"><div><small>FNF media library</small><h2 id="prefs-assets-title">Choose an image</h2></div><button type="button" id="prefs-assets-close" class="btn ghost small" aria-label="Close media library">Close</button></div>
+    <div class="prefs-assets-tools"><input type="search" id="prefs-assets-search" placeholder="Search uploaded graphics, logos, and artwork" aria-label="Search media"><label class="btn ghost small prefs-upload-button">Upload new image<input type="file" id="prefs-assets-upload" accept="image/*" multiple hidden></label></div>
+    <div class="prefs-assets-grid" id="prefs-assets-grid" role="list"></div>
+    <p class="prefs-assets-status" id="prefs-assets-status" role="status"></p>
+  </dialog>
 
   <footer class="prefs-savebar">
     <button type="button" class="btn primary" id="save-prefs-btn" disabled>Save</button>
@@ -199,6 +259,19 @@ renderShell("/admin/preferences", `
 function setDirty(next = true) {
   dirty = next;
   document.getElementById("save-prefs-btn").disabled = !dirty;
+  syncDockEdit();
+}
+
+/** Mirrors the fixed save bar into the mobile dock (admin-dock edit mode). */
+function syncDockEdit(saving = false) {
+  window.publishDockEdit?.({
+    active: true,
+    hint: saving ? "Saving…" : dirty ? "Unsaved changes" : "All changes saved",
+    dirty,
+    canSave: dirty && !saving,
+    saveLabel: saving ? "Saving…" : "Save",
+    onSave: () => document.getElementById("save-prefs-btn")?.click(),
+  });
 }
 
 function showNote(msg, kind) {
@@ -212,20 +285,127 @@ function showNote(msg, kind) {
   el.textContent = msg;
 }
 
+const TITLE_SOFT_LIMIT = 60;
+const DESC_SOFT_LIMIT = 160;
+function clip(text, max) {
+  const t = String(text || "").trim();
+  return t.length > max ? t.slice(0, max - 1).trimEnd() + "…" : t;
+}
 function updateCounters() {
   const title = document.getElementById("home-title").value;
   const meta = document.getElementById("meta-description").value;
   document.getElementById("title-count").textContent = title.length;
   document.getElementById("meta-count").textContent = meta.length;
+  const titleLong = title.length > TITLE_SOFT_LIMIT;
+  const metaLong = meta.length > DESC_SOFT_LIMIT;
+  document.getElementById("title-counter").classList.toggle("is-long", titleLong);
+  document.getElementById("meta-counter").classList.toggle("is-long", metaLong);
+  document.getElementById("title-hint").textContent = titleLong
+    ? ` · search results usually show about ${TITLE_SOFT_LIMIT}` : "";
+  document.getElementById("meta-hint").textContent = metaLong
+    ? ` · search results usually show about ${DESC_SOFT_LIMIT}` : "";
+  const desc = meta || "Enter a description to be shown on search engines like Google.";
   document.getElementById("social-preview-title").textContent = title || domain;
-  document.getElementById("social-preview-desc").textContent =
-    meta || "Enter a description to be shown on search engines like Google.";
+  document.getElementById("social-preview-desc").textContent = desc;
+  document.getElementById("serp-url").textContent = domain;
+  document.getElementById("serp-title").textContent = clip(title || domain, TITLE_SOFT_LIMIT);
+  document.getElementById("serp-desc").textContent = clip(desc, DESC_SOFT_LIMIT);
 }
 
+function setChosenAsset(kind, url, { notify = true } = {}) {
+  const input = document.getElementById(kind === "nav" ? "nav-logo-url" : "social-image-url");
+  const preview = document.getElementById(kind === "nav" ? "nav-asset-thumb" : "social-asset-thumb");
+  const name = document.getElementById(kind === "nav" ? "nav-asset-name" : "social-asset-name");
+  const advanced = document.getElementById(kind === "nav" ? "nav-logo-url-advanced" : "social-image-url-advanced");
+  input.value = url || "";
+  advanced.value = url || "";
+  preview.hidden = !url;
+  preview.onerror = () => { preview.hidden = true; };
+  preview.onload = () => { preview.hidden = false; };
+  if (url) preview.src = url;
+  else preview.removeAttribute("src");
+  name.textContent = url ? decodeURIComponent(url.split("/").pop().split("?")[0] || "Selected asset") :
+    (kind === "nav" ? "Use current logo" : "No image selected");
+  if (kind === "social") updateSocialImage();
+  if (notify) setDirty(true);
+}
+
+const SOCIAL_IDEAL_RATIO = 1200 / 630;
+let socialImageToken = 0;
+async function explainImageFailure(url) {
+  try {
+    const res = await fetch(url, { method: "HEAD", credentials: "same-origin", cache: "no-store" });
+    if (res.status === 404) return "This image no longer exists in your media library. Choose another image.";
+    if (!res.ok) return `This image could not be loaded (HTTP ${res.status}). Choose another image.`;
+    const type = res.headers.get("content-type") || "";
+    if (!type.startsWith("image/")) return `This file is not an image (${type || "unknown type"}). Choose another image.`;
+    return "Your browser could not display this image file. It may be damaged or in an unsupported format. Choose another image.";
+  } catch {
+    return "This image address could not be reached. Check the address or choose another image.";
+  }
+}
 function updateSocialImage() {
   const url = document.getElementById("social-image-url").value.trim();
   const img = document.getElementById("social-image");
-  if (url) img.src = url;
+  const placeholder = document.getElementById("social-placeholder");
+  const hint = document.getElementById("social-image-hint");
+  const token = ++socialImageToken;
+  hint.hidden = true;
+  hint.className = "prefs-image-hint";
+  img.hidden = true;
+  if (!url) {
+    img.removeAttribute("src");
+    placeholder.hidden = false;
+    placeholder.textContent = "Choose a sharing image to preview your store’s social card.";
+    return;
+  }
+  placeholder.hidden = false;
+  placeholder.textContent = "Loading preview…";
+  img.onload = () => {
+    if (token !== socialImageToken) return;
+    placeholder.hidden = true;
+    img.hidden = false;
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h) return;
+    const off = Math.abs(w / h - SOCIAL_IDEAL_RATIO) / SOCIAL_IDEAL_RATIO > 0.25;
+    const small = w < 600;
+    if (off || small) {
+      hint.textContent = `${w} × ${h} px. ` +
+        (small ? "This is small for a social card. " : "") +
+        (off ? "Platforms will crop it to a wide card, so keep the subject centered. " : "") +
+        "Recommended 1200 × 630 px.";
+      hint.classList.add("is-warning");
+      hint.hidden = false;
+    }
+  };
+  img.onerror = async () => {
+    if (token !== socialImageToken) return;
+    img.hidden = true;
+    placeholder.hidden = false;
+    placeholder.textContent = "Preview unavailable";
+    hint.textContent = await explainImageFailure(url);
+    hint.classList.add("is-error");
+    hint.hidden = false;
+  };
+  img.src = url;
+}
+
+function updateAnnouncementPreview() {
+  const element = document.getElementById("announcement-preview");
+  const value = document.getElementById("announcement-text").value.trim() || "Your announcement will appear here";
+  const marquee = document.getElementById("announcement-style").value === "marquee";
+  element.style.backgroundColor = document.getElementById("announcement-bg").value;
+  element.style.color = document.getElementById("announcement-color").value;
+  element.dataset.style = marquee ? "marquee" : "static";
+  element.replaceChildren();
+  const track = document.createElement("span");
+  track.className = "prefs-announcement-preview__track";
+  for (let i = 0; i < (marquee ? 4 : 1); i++) {
+    const segment = document.createElement("span");
+    segment.textContent = value;
+    track.appendChild(segment);
+  }
+  element.appendChild(track);
 }
 
 function togglePasswordField() {
@@ -253,13 +433,10 @@ function renderNavItems() {
         <input type="text" class="nav-label" value="${escapeAttr(item.label)}" maxlength="40">
       </div>
       <div class="prefs-field" style="margin:0">
-        <label>Link (href)</label>
+        <label>Destination</label>
         <input type="text" class="nav-href" value="${escapeAttr(item.href)}" placeholder="/about">
       </div>
-      <div class="prefs-field" style="margin:0">
-        <label>Match prefixes (comma-separated)</label>
-        <input type="text" class="nav-prefixes" value="${escapeAttr((item.matchPrefixes || []).join(", "))}" placeholder="/about">
-      </div>
+      <details class="prefs-nav-advanced"><summary>Advanced: active menu paths</summary><label>Additional matching paths</label><input type="text" class="nav-prefixes" value="${escapeAttr((item.matchPrefixes || []).join(", "))}" placeholder="/about"><span>Only needed when several URLs share one navigation item.</span></details>
       <label class="prefs-switch" title="Visible in menu" style="margin-bottom:.35rem"><input type="checkbox" class="nav-visible" ${item.visible !== false ? "checked" : ""}><span class="prefs-switch-slider"></span></label>
       <div class="prefs-nav-actions"><button type="button" class="btn ghost small nav-up" aria-label="Move up" ${idx === 0 ? "disabled" : ""}>↑</button><button type="button" class="btn ghost small nav-down" aria-label="Move down" ${idx === navItems.length - 1 ? "disabled" : ""}>↓</button><button type="button" class="btn ghost small nav-remove" aria-label="Remove">×</button></div>
     </div>`
@@ -318,17 +495,21 @@ function applySettings(data) {
 
   document.getElementById("home-title").value = settings.homeTitle || "";
   document.getElementById("meta-description").value = settings.metaDescription || "";
-  document.getElementById("social-image-url").value = settings.socialImageUrl || "";
+  setChosenAsset("social", settings.socialImageUrl || "", { notify: false });
   document.getElementById("store-password").value = settings.storePassword || "";
 
-  document.getElementById("nav-logo-url").value = data.nav?.logoUrl || settings.navLogoUrl || "";
+  setChosenAsset("nav", settings.navLogoUrl || data.nav?.logoUrl || "", { notify: false });
   document.getElementById("nav-logo-height").value = data.nav?.logoHeight || settings.navLogoHeight || 68;
   document.getElementById("nav-brand-accent").value = data.nav?.brandAccent || settings.navBrandAccent || "#ff4500";
   document.getElementById("nav-brand-accent-light").value =
     data.nav?.brandAccentLight || settings.navBrandAccentLight || "#E5A558";
   document.getElementById("announcement-enabled").checked = data.nav?.announcement?.enabled === true;
   document.getElementById("announcement-text").value = data.nav?.announcement?.text || "";
-  document.getElementById("announcement-href").value = data.nav?.announcement?.href || "";
+  document.getElementById("announcement-href").value = settings.announcementHref || data.nav?.announcement?.href || "";
+  document.getElementById("announcement-style").value = settings.announcementStyle === "marquee" ? "marquee" : "static";
+  document.getElementById("announcement-bg").value = /^#[0-9a-f]{6}$/i.test(settings.announcementBgColor || "") ? settings.announcementBgColor : "#161616";
+  document.getElementById("announcement-color").value = /^#[0-9a-f]{6}$/i.test(settings.announcementTextColor || "") ? settings.announcementTextColor : "#ffffff";
+  updateAnnouncementPreview();
 
   renderNavItems();
   togglePasswordField();
@@ -357,6 +538,9 @@ function collectSettings() {
     announcementEnabled: document.getElementById("announcement-enabled").checked,
     announcementText: document.getElementById("announcement-text").value.trim(),
     announcementHref: document.getElementById("announcement-href").value.trim(),
+    announcementStyle: document.getElementById("announcement-style").value,
+    announcementBgColor: document.getElementById("announcement-bg").value,
+    announcementTextColor: document.getElementById("announcement-color").value,
   };
 }
 
@@ -377,9 +561,9 @@ document.getElementById("nav-add-item")?.addEventListener("click", () => {
   document.getElementById(id)?.addEventListener("change", () => setDirty(true));
 });
 
-["announcement-enabled", "announcement-text", "announcement-href"].forEach((id) => {
-  document.getElementById(id)?.addEventListener("input", () => setDirty(true));
-  document.getElementById(id)?.addEventListener("change", () => setDirty(true));
+["announcement-enabled", "announcement-text", "announcement-href", "announcement-style", "announcement-bg", "announcement-color"].forEach((id) => {
+  document.getElementById(id)?.addEventListener("input", () => { setDirty(true); updateAnnouncementPreview(); });
+  document.getElementById(id)?.addEventListener("change", () => { setDirty(true); updateAnnouncementPreview(); });
 });
 
 document.querySelectorAll("[data-pref]").forEach((el) => {
@@ -397,6 +581,7 @@ document.querySelectorAll("[data-pref]").forEach((el) => {
 document.getElementById("save-prefs-btn").addEventListener("click", async () => {
   const btn = document.getElementById("save-prefs-btn");
   btn.disabled = true;
+  syncDockEdit(true);
   try {
     const d = await adminFetch("/api/admin/store/preferences", {
       method: "POST",
@@ -410,17 +595,184 @@ document.getElementById("save-prefs-btn").addEventListener("click", async () => 
   }
 });
 
-document.getElementById("create-signature-btn").addEventListener("click", () => {
-  alert("Crawler signature creation is coming soon.");
-});
+function crawlerNotice(message, kind = "info") {
+  const notice = document.getElementById("crawler-notice");
+  notice.textContent = message || "";
+  notice.hidden = !message;
+  notice.className = `prefs-crawler-notice${message ? ` is-${kind}` : ""}`;
+}
 
-document.querySelectorAll(".prefs-tab").forEach((tab) => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".prefs-tab").forEach((t) => t.classList.remove("is-active"));
-    tab.classList.add("is-active");
+function setCheck(name, ok, text) {
+  const li = document.querySelector(`#crawler-checks [data-check="${name}"]`);
+  if (!li) return;
+  li.dataset.state = ok === null ? "pending" : ok ? "ok" : "bad";
+  li.querySelector("em").textContent = text;
+}
+async function verifyDiscoveryFiles(site) {
+  setCheck("robots", null, "Checking…");
+  setCheck("sitemap", null, "Checking…");
+  let sitemapUrls = null;
+  const fetchText = async (url) => {
+    const res = await fetch(url, { cache: "no-store", credentials: "omit" });
+    return { res, body: res.ok ? await res.text() : "" };
+  };
+  try {
+    const { res, body } = await fetchText(site.robots_url || "/robots.txt");
+    if (!res.ok) setCheck("robots", false, `Not reachable (HTTP ${res.status})`);
+    else if (!/user-agent/i.test(body)) setCheck("robots", false, "Reachable, but no rules found");
+    else setCheck("robots", true, /sitemap:/i.test(body) ? "Live, and points to your sitemap" : "Live, but does not list your sitemap");
+  } catch { setCheck("robots", false, "Could not be checked from this browser"); }
+  try {
+    const { res, body } = await fetchText(site.sitemap_url || "/sitemap.xml");
+    if (!res.ok) setCheck("sitemap", false, `Not reachable (HTTP ${res.status})`);
+    else {
+      sitemapUrls = (body.match(/<loc>/g) || []).length;
+      setCheck("sitemap", sitemapUrls > 0, sitemapUrls > 0 ? `Live, ${sitemapUrls} URLs` : "Reachable, but empty");
+    }
+  } catch { setCheck("sitemap", false, "Could not be checked from this browser"); }
+  return sitemapUrls;
+}
+
+async function refreshCrawlerDashboard() {
+  const button = document.getElementById("crawler-refresh-btn");
+  const pill = document.getElementById("crawler-status-pill");
+  if (button) button.disabled = true;
+  try {
+    const data = await adminFetch("/api/admin/store/crawler");
+    const site = data.site || {};
+    const counts = data.public_discovery || {};
+    const bindingPresent = data.crawler_binding_present === true;
+    document.getElementById("crawler-site-name").textContent = site.name || "Storefront";
+    document.getElementById("crawler-site-domain").textContent = site.domain || "Configure a public HTTPS website URL in Company settings.";
+    document.getElementById("crawler-robots-link").href = site.robots_url || "/robots.txt";
+    document.getElementById("crawler-sitemap-link").href = site.sitemap_url || "/sitemap.xml";
+    const expected = Number(counts.sitemap_url_count || 0);
+    document.getElementById("crawler-routes-count").textContent = String(Number(counts.indexable_routes || 0));
+    document.getElementById("crawler-products-count").textContent = String(Number(counts.active_products || 0));
+    const runtime = document.getElementById("crawler-runtime-status");
+    runtime.textContent = bindingPresent ? "Connected" : "Not connected";
+    runtime.className = `prefs-status-pill${bindingPresent ? " is-ready" : ""}`;
+    const live = await verifyDiscoveryFiles(site);
+    document.getElementById("crawler-sitemap-count").textContent = live === null ? "—" : String(live);
+    const sync = document.getElementById("crawler-sync-status");
+    if (live === null) sync.textContent = "—";
+    else sync.textContent = live === expected ? "In sync" : `${live > expected ? "+" : "−"}${Math.abs(live - expected)} off`;
+    const filesOk = document.querySelectorAll('#crawler-checks [data-state="bad"]').length === 0;
+    const ready = Boolean(site.origin) && filesOk && live !== null && live === expected;
+    pill.textContent = !site.origin ? "Domain required" : ready ? "Search-ready" : "Needs attention";
+    pill.className = `prefs-status-pill${ready ? " is-ready" : " is-warning"}`;
+    crawlerNotice(counts.sitemap_truncated
+      ? "The sitemap listing reached its 48,000-product cap. A sitemap index is needed before this catalog can publish more product URLs."
+      : (live !== null && live !== expected
+        ? "The live sitemap does not match your catalog. Refresh in a minute; if it persists, the sitemap cache may be stale."
+        : ""), counts.sitemap_truncated || (live !== null && live !== expected) ? "warning" : "info");
+  } catch (error) {
+    pill.textContent = "Unavailable";
+    pill.className = "prefs-status-pill is-warning";
+    if (error.status === 409) crawlerNotice("Configure a valid public HTTPS storefront domain before publishing search discovery files.", "warning");
+    else crawlerNotice(error.message || "Search discovery status could not be loaded.", "error");
+    for (const id of ["crawler-routes-count", "crawler-products-count", "crawler-sitemap-count", "crawler-sync-status"]) {
+      document.getElementById(id).textContent = "—";
+    }
+    setCheck("robots", false, "Status unavailable");
+    setCheck("sitemap", false, "Status unavailable");
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+document.getElementById("crawler-refresh-btn").addEventListener("click", refreshCrawlerDashboard);
+refreshCrawlerDashboard();
+
+const assetDialog = document.getElementById("prefs-assets-dialog");
+let pickerKind = "social";
+let availableAssets = [];
+
+function showAssetStatus(message) {
+  document.getElementById("prefs-assets-status").textContent = message || "";
+}
+function renderAvailableAssets(query = "") {
+  const list = document.getElementById("prefs-assets-grid");
+  const needle = query.trim().toLowerCase();
+  const assets = availableAssets.filter((asset) =>
+    String(asset.content_type || "").startsWith("image/") &&
+    ((asset.filename || "") + " " + (asset.folder || "")).toLowerCase().includes(needle));
+  list.replaceChildren();
+  if (!assets.length) {
+    const empty = document.createElement("p");
+    empty.className = "prefs-assets-empty";
+    empty.textContent = availableAssets.length ? "No matching images." : "No images in the library yet. Upload one to begin.";
+    list.appendChild(empty);
+    return;
+  }
+  for (const asset of assets) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "prefs-asset-tile";
+    button.setAttribute("role", "listitem");
+    const img = document.createElement("img");
+    img.src = asset.url;
+    img.loading = "lazy";
+    img.alt = "";
+    const label = document.createElement("span");
+    label.textContent = asset.filename || "Uploaded asset";
+    button.append(img, label);
+    button.addEventListener("click", () => {
+      setChosenAsset(pickerKind, asset.url);
+      assetDialog.close();
+    });
+    list.append(button);
+  }
+}
+async function loadAvailableAssets() {
+  showAssetStatus("Loading your uploaded media…");
+  const data = await adminFetch("/api/admin/media?limit=120");
+  availableAssets = data.assets || data.items || [];
+  renderAvailableAssets(document.getElementById("prefs-assets-search").value);
+  showAssetStatus(availableAssets.length + " assets available.");
+}
+document.querySelectorAll("[data-pick-asset]").forEach((button) => button.addEventListener("click", async () => {
+  pickerKind = button.dataset.pickAsset;
+  document.getElementById("prefs-assets-title").textContent = pickerKind === "nav" ? "Choose a storefront logo" : "Choose a social sharing image";
+  assetDialog.showModal();
+  try { await loadAvailableAssets(); } catch (error) { showAssetStatus(error.message || "Unable to load media."); }
+}));
+document.getElementById("prefs-assets-close").addEventListener("click", () => assetDialog.close());
+document.getElementById("prefs-assets-search").addEventListener("input", (event) => renderAvailableAssets(event.target.value));
+document.querySelectorAll("[data-clear-asset]").forEach((button) => button.addEventListener("click", () => {
+  setChosenAsset(button.dataset.clearAsset, "");
+}));
+["social", "nav"].forEach((kind) => {
+  const id = kind === "social" ? "social-image-url-advanced" : "nav-logo-url-advanced";
+  document.getElementById(id).addEventListener("change", (event) => {
+    const value = event.target.value.trim();
+    if (value && !value.startsWith("/") && !/^https:\/\//i.test(value)) {
+      showNote("Image URL must be an internal path or an HTTPS address.", "error");
+      return;
+    }
+    setChosenAsset(kind, value);
   });
 });
-
+document.getElementById("prefs-assets-upload").addEventListener("change", async (event) => {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  if (files.some((file) => !file.type.startsWith("image/"))) {
+    showAssetStatus("Please choose image files only."); return;
+  }
+  const form = new FormData();
+  for (const file of files) form.append("files", file);
+  form.append("prefix", "uploads/store-preferences/");
+  showAssetStatus("Uploading your image…");
+  try {
+    const response = await fetch("/api/admin/media", { method: "POST", credentials: "include", body: form });
+    if (!response.ok) throw new Error("Upload failed (" + response.status + ")");
+    const data = await response.json();
+    availableAssets = (data.assets || []).concat(availableAssets);
+    renderAvailableAssets();
+    showAssetStatus("Uploaded. Select the image to use it.");
+  } catch (error) { showAssetStatus(error.message || "Upload failed."); }
+  finally { event.target.value = ""; }
+});
 (async function () {
   try {
     const d = await adminFetch("/api/admin/store/preferences");

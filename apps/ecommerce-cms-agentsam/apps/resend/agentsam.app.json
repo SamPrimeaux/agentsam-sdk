@@ -1,0 +1,59 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "resend",
+  "name": "Email",
+  "provider": "Resend",
+  "role": "provider-app",
+  "category": "communications",
+  "status": "bundled",
+  "routes": [
+    "/admin/email"
+  ],
+  "provides": [
+    "email.send",
+    "email.batch.send",
+    "email.webhook.receive",
+    "email.delivery.status"
+  ],
+  "implementation": {
+    "frontend": [
+      "frontend/static/dashboard/email.html"
+    ],
+    "backend": [
+      "backend/admin/mail.js",
+      "backend/lib/mail-mailboxes.js",
+      "backend/lib/resend.js",
+      "backend/webhooks/resend.js"
+    ]
+  },
+  "configuration": {
+    "plugin_key": "resend",
+    "credential_secret": "RESEND_API_KEY"
+  },
+  "navigation": {
+    "placement": "apps",
+    "label": "Email"
+  },
+  "agent": {
+    "status": "registered",
+    "tool_resolution": "agentsam_tools.capability_key + enabled plugin_key=resend",
+    "resource_scope_source": "agentsam_plugins.resource_scope_json + mail_mailboxes authorization",
+    "capabilities": {
+      "read": [
+        "email.mailbox.read",
+        "email.message.read",
+        "email.provider.status"
+      ],
+      "approval_required": [
+        "email.send"
+      ]
+    },
+    "tools": [
+      "email_mailboxes_list",
+      "email_messages_list",
+      "email_send",
+      "email_provider_status"
+    ],
+    "notes": "Mailbox reads and sends reuse mail_mailboxes owner_user_id/owner_auth_email/access_json authorization. Email send is approval/confirmation gated."
+  }
+}

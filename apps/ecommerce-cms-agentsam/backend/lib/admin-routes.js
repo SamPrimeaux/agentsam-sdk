@@ -1,35 +1,21 @@
-/** Clean admin URLs — /admin/login instead of /admin/login.html */
+/**
+ * Clean admin URL helpers compiled from the canonical route manifest.
+ */
 
-import { ADMIN_REDIRECTS } from "./route-manifest.js";
+import { ADMIN_REDIRECTS, ADMIN_ROUTE_MANIFEST, adminRouteForPath } from "./route-manifest.js";
 
-export const ADMIN_CLEAN_PAGES = new Set([
-  "login",
-  "home",
-  "orders",
-  "products",
-  "product-edit",
-  "inventory",
-  "subscribers",
-  "growth",
-  "discounts",
-  "scaffold",
-  "content",
-  "pages",
-  "page-edit",
-  "theme-editor",
-  "store",
-  "preferences",
-  "email",
-  "agentsam",
-]);
+const HTML_ROUTES = ADMIN_ROUTE_MANIFEST.filter((route) => route.handler === "admin-html");
 
-/** Pages reachable without a session */
-export const ADMIN_PUBLIC_PAGES = new Set(["login"]);
+/** Compatibility exports; values now compile from route-manifest.js. */
+export const ADMIN_CLEAN_PAGES = new Set(HTML_ROUTES.map((route) => route.page).filter(Boolean));
 
-/** Clean path → static asset file */
-export const ADMIN_CLEAN_ALIASES = {
-  "/admin/email": "/admin/dashboard/email.html",
-};
+export const ADMIN_PUBLIC_PAGES = new Set(
+  HTML_ROUTES.filter((route) => route.policy?.auth === "public").map((route) => route.page).filter(Boolean),
+);
+
+export const ADMIN_CLEAN_ALIASES = Object.fromEntries(
+  HTML_ROUTES.filter((route) => route.asset).map((route) => [route.path, route.asset]),
+);
 
 /** Legacy .html paths → clean canonical URL (301) — from route-manifest */
 export const ADMIN_HTML_TO_CLEAN = Object.fromEntries(ADMIN_REDIRECTS);
@@ -39,12 +25,11 @@ export function adminLoginPath() {
 }
 
 export function adminHtmlFile(pathname) {
-  const normalized = pathname.replace(/\/+$/, "") || "/";
-  if (ADMIN_CLEAN_ALIASES[normalized]) return ADMIN_CLEAN_ALIASES[normalized];
-
-  const match = normalized.match(/^\/admin\/([a-z0-9-]+)$/);
-  if (!match || !ADMIN_CLEAN_PAGES.has(match[1])) return null;
-  return `/admin/${match[1]}.html`;
+  const route = adminRouteForPath(pathname);
+  if (!route || route.handler !== "admin-html") return null;
+  if (route.asset) return route.asset;
+  if (!route.page) return null;
+  return `/admin/${route.page}.html`;
 }
 
 export function adminCleanUrl(pathname) {
@@ -52,17 +37,16 @@ export function adminCleanUrl(pathname) {
 
   const match = pathname.match(/^\/admin\/([a-z0-9-]+)\.html$/);
   if (!match || !ADMIN_CLEAN_PAGES.has(match[1])) return null;
-  return `/admin/${match[1]}`;
+  const route = HTML_ROUTES.find((candidate) => candidate.page === match[1]);
+  return route?.path || null;
 }
 
 export function isAdminPublicPath(pathname) {
-  const clean = pathname.match(/^\/admin\/([a-z0-9-]+)\/?$/);
-  if (clean) return ADMIN_PUBLIC_PAGES.has(clean[1]);
+  const route = adminRouteForPath(pathname.replace(/\.html$/, ""));
+  if (route) return route.policy?.auth === "public";
 
   const html = pathname.match(/^\/admin\/([a-z0-9-]+)\.html$/);
-  if (html) return ADMIN_PUBLIC_PAGES.has(html[1]);
-
-  return false;
+  return Boolean(html && ADMIN_PUBLIC_PAGES.has(html[1]));
 }
 
 export function redirectToAdminLogin(request, { status = 302 } = {}) {

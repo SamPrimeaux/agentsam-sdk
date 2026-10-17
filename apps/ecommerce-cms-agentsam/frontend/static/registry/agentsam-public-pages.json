@@ -1,0 +1,72 @@
+{
+  "schema": "iam.cms.page-discovery.v1",
+  "site": "agentsam.inneranimalmedia.com",
+  "scope": "public-site-url-inventory",
+  "status_note": "Observed public URLs are not evidence of CMS publication, editable section composition, or tenant ownership.",
+  "pages": [
+    {
+      "slug": "home",
+      "title": "Home",
+      "route": "/",
+      "source": "public_url_observed",
+      "cms_status": "not_verified",
+      "sections": []
+    },
+    {
+      "slug": "learn",
+      "title": "Learn",
+      "route": "/learn",
+      "source": "public_url_observed",
+      "cms_status": "not_verified",
+      "sections": []
+    },
+    {
+      "slug": "themes",
+      "title": "Themes",
+      "route": "/themes/",
+      "source": "public_url_observed",
+      "cms_status": "not_verified",
+      "sections": []
+    },
+    {
+      "slug": "sdk-help",
+      "title": "SDK Help",
+      "route": "/packages/sdk/help/",
+      "source": "public_url_observed",
+      "cms_status": "not_verified",
+      "sections": []
+    },
+    {
+      "slug": "sam-docs",
+      "title": "SAM Docs",
+      "route": "/docs/sam/",
+      "source": "public_url_observed",
+      "cms_status": "not_verified",
+      "sections": []
+    },
+    {
+      "slug": "structured-decisions",
+      "title": "Structured Decisions",
+      "route": "/docs/sam/structured-decisions",
+      "source": "public_url_observed",
+      "cms_status": "not_verified",
+      "sections": []
+    },
+    {
+      "slug": "infrastructure-cookbooks",
+      "title": "Infrastructure Cookbooks",
+      "route": "/docs/sam/infrastructure-cookbooks",
+      "source": "public_url_observed",
+      "cms_status": "not_verified",
+      "sections": []
+    },
+    {
+      "slug": "native-runtime",
+      "title": "Native Go Runtime",
+      "route": "/docs/sam/native-runtime",
+      "source": "public_url_observed",
+      "cms_status": "not_verified",
+      "sections": []
+    }
+  ]
+}

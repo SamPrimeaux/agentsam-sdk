@@ -4,10 +4,12 @@ export default function ProductImage({
   sources,
   alt = "",
   lazy = true,
+  className,
 }: {
   sources: (string | undefined)[];
   alt?: string;
   lazy?: boolean;
+  className?: string;
 }) {
   const [failed, setFailed] = useState<string[]>([]);
   const src = sources.find((s) => s && !failed.includes(s));
@@ -15,6 +17,7 @@ export default function ProductImage({
     ? "/catalog-image?src=" + encodeURIComponent(src) : null;
   return src ? (
     <img
+      className={className}
       src={proxy ? proxy + "&w=640" : src}
       srcSet={proxy ? [320, 640, 1200].map(w => proxy + "&w=" + w + " " + w + "w").join(", ") : undefined}
       sizes="(max-width: 760px) 50vw, (max-width: 1200px) 25vw, 320px"
@@ -25,7 +28,7 @@ export default function ProductImage({
     />
   ) : (
     <span
-      className="ps-image-fallback"
+      className={["ps-image-fallback", className].filter(Boolean).join(" ")}
       role="img"
       aria-label={alt || "Product image unavailable"}
     >
