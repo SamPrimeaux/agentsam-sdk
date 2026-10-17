@@ -117,6 +117,10 @@ export function createMediaHandlers({ assetStore, sharp: suppliedSharp, subjectS
       return { assetId: source.id, ...inspectGlb(source.bytes) };
     };
     handlers['media.model.validateStructural'] = handlers['media.model.inspect']; // no claim of Khronos conformance
+    handlers['media.model.validate'] = async (input, ctx) => {
+      const inspection = await handlers['media.model.validateStructural'](input, ctx);
+      return { ...inspection, validationLevel: 'structural_only', conformanceVerified: false };
+    };
   }
   if (typeof imageProvider === 'function') {
     for (const [name, legacy] of [['media.image.generate', 'imgx_generate_image'], ...(imageEditEnabled ? [['media.image.edit', 'imgx_edit_image']] : [])]) {
