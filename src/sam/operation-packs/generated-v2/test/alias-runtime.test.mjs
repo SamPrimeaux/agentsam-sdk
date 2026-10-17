@@ -34,9 +34,7 @@ test('legacy media operation alias executes the canonical handler but is not dou
   assert.equal(os.status().generated_unavailable.some(x=>x.name===alias),false);
   assert.deepEqual(os.status().generated_aliases.find(x=>x.name===alias),
     {name:alias,aliasFor:canonical,bound:true});
-  assert.throws(()=>os.install([{id:alias,version:1,module:'media',action:'background.remove',
-    summary:'wrong',execution:{},input_schema:{type:'object'},output_schema:{type:'object'},
-    risk:'write',handler:async()=>({ok:true})}]),/sam_os_duplicate_operation/);
+  assert.throws(()=>os.install([{...os.get(canonical),id:alias}]),/sam_os_duplicate_operation/);
 });
 
 test('aliases never fabricate a handler when the canonical implementation is missing',()=>{
