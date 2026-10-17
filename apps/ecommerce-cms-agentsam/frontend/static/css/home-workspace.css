@@ -162,3 +162,14 @@
 .fnf-home-discover__art--digital,.fnf-home-discover__art--physical{height:116px}
 @media(max-width:700px){.fnf-home-shortcuts__grid{grid-template-columns:1fr 1fr}.fnf-home-shortcuts__grid a:last-child{grid-column:span 2}.fnf-home-discover__card--compact{grid-column:span 1;grid-template-columns:1fr;min-height:208px}.fnf-home-discover__art--theme{height:116px}}
 @media(max-width:450px){.fnf-home-shortcuts__grid{grid-template-columns:1fr}.fnf-home-shortcuts__grid a:last-child{grid-column:1}.fnf-home-discover__card--physical,.fnf-home-discover__card--compact{grid-column:1}.fnf-home-discover__card--compact{display:flex;flex-direction:column}.fnf-home-discover__card--compact .fnf-home-discover__art{height:116px}}
+
+/* Featured digital product experience: shared card treatment, original SVG artwork. */
+.fnf-home-discover__card--experience{grid-template-columns:48% 52%;background:#cfe5fa;isolation:isolate}
+.fnf-home-discover__card--experience .fnf-home-discover__copy{z-index:1;position:relative;padding:19px 0 18px 20px}
+.fnf-home-discover__card--experience .fnf-home-discover__copy h3{font-size:17px;line-height:1.2}
+.fnf-home-discover__card--experience .fnf-home-discover__copy p{font-size:11px;line-height:1.5;color:#4b5e79;max-width:26ch}
+.fnf-home-discover__card--experience .fnf-home-discover__overline{color:#4d6091}
+.fnf-home-discover__card--experience .fnf-home-discover__action{font-size:10px}
+.fnf-home-discover__glass{display:block;width:100%;height:100%;object-fit:cover;object-position:46% center;min-width:0}
+@media(max-width:700px){.fnf-home-discover__card--experience{grid-column:span 1;grid-template-columns:1fr}.fnf-home-discover__glass{height:116px;order:-1}.fnf-home-discover__card--experience .fnf-home-discover__copy{padding:16px}}
+@media(max-width:450px){.fnf-home-discover__card--experience{grid-column:1;grid-template-columns:1fr 1fr;min-height:205px}.fnf-home-discover__glass{height:100%;order:0}.fnf-home-discover__card--experience .fnf-home-discover__copy{padding:14px}}
