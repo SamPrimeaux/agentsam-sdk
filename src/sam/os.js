@@ -102,7 +102,7 @@ export function createSamOS({ core = true, generated = null, cms = null, authori
       // Validate the entire pack before modifying this instance. A duplicate ID
       // inside the batch must not leave a partially installed capability set.
       const pending = [...defs].map(def => defineSamOperation(def));
-      const seen = new Set(registry.keys());
+      const seen = new Set([...registry.keys(), ...aliases.keys()]);
       for (const def of pending) {
         if (seen.has(def.id)) throw new Error('sam_os_duplicate_operation:' + def.id);
         seen.add(def.id);
