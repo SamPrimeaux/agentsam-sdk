@@ -74,6 +74,12 @@ export function createGeneratedSamOperations({
       aliases.push({ name: record.name, aliasFor: record.aliasFor });
       continue;
     }
+    // An existing domain owner is already bound; do not misreport it as
+    // unavailable solely because generated-v2 was not given a second handler.
+    if (getSamOperation?.(record.name)) {
+      installed.push({ name: record.name, status: 'existing' });
+      continue;
+    }
     const fn = all[record.name];
     if (typeof fn !== 'function') {
       unavailable.push({
