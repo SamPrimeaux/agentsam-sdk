@@ -99,3 +99,17 @@ test('headless coding reserves a bounded file reader instead of selecting only w
   assert.equal(regular.descriptors.slice(0,4).map(t=>t.name).join(','),
     'capability.search,capability.describe,capability.status,capability.invoke');
 });
+
+test('headless coding defaults include inspection, scoped editing and test execution without granting them',()=>{
+ const adapter=createCapabilityAdapter({projectRoot:process.cwd()});
+ const turn=buildAgentToolSurface(adapter,
+   'Inspect, edit the repository source and execute the npm unit test',
+   {headlessCoding:true,schemaProvider:'openai'});
+ assert.ok(turn.tools.length<=10);
+ for(const id of ['capability.search','capability.describe','capability.status','capability.invoke',
+   'workspace.list','workspace.search','workspace.read','workspace.write','test.run']){
+   assert.ok(turn.descriptors.some(d=>d.name===id),'required coding tool '+id);
+ }
+ assert.equal(turn.descriptors.find(d=>d.name==='workspace.write').side_effects,'filesystem-write');
+ assert.equal(turn.descriptors.find(d=>d.name==='test.run').side_effects,'filesystem-write');
+});
