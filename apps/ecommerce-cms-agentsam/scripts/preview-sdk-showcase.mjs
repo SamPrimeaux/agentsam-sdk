@@ -56,7 +56,6 @@ const server=http.createServer(async(req,res)=>{
   const ext=path.extname(target);
   if(ext==='.html'){
    let html=data.toString().replaceAll('Fuel & Free Time Admin','AgentSam SDK Commerce · Local Preview').replaceAll('Fuel & Free Time','AgentSam SDK');
-   html=html.replace('</body>', '<div style="position:fixed;bottom:12px;right:12px;z-index:2147483647;background:#121621;color:#fff;border:1px solid #61677a;border-radius:8px;padding:8px 12px;font:11px system-ui;box-shadow:0 4px 20px #0005">AgentSam SDK · isolated UI preview · no live CMS writes</div></body>');
    data=Buffer.from(html);
   }
   res.writeHead(200,{'Content-Type':mime[ext]||'application/octet-stream','Cache-Control':'no-store'});if(req.method==='HEAD')res.end();else res.end(data);
