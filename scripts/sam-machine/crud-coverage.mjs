@@ -6,6 +6,7 @@
  */
 import fs from 'node:fs/promises';
 import manifest from '../../protocol/capabilities/manifest.json' with { type:'json' };
+import inventory from '../../src/registry/generated/inventory.json' with { type:'json' };
 const resources=new Map();
 const verbs=['create','list','read','update','delete'];
 function add(resource,verb,id){
@@ -44,7 +45,25 @@ const report=[...resources].map(([resource,declared])=>{
   return {resource,missing,operations:ops,mixed_semantics:misleading.map(x=>x.id),
     note:'Manifest entries are declarations. Host binding and permissions must be separately verified.'};
 });
-const output={schema:'sam.crud.coverage.v1',resources:report,open_resource_gaps:report.filter(x=>x.missing.length).length};
+// Legacy action/packs must be classified as resource-lifecycle or stateless
+// action before claiming parity. Do not invent CRUD verbs for model inference.
+const unclassified=Object.values(manifest.capabilities||{})
+  .filter(x=>!x.resource)
+  .map(x=>({id:x.id,domain:x.domain,
+    classification:'requires_resource_or_action_only_review'}));
+const packages=Array.isArray(inventory.packages)?inventory.packages.map(x=>({
+  id:x.id||x.name||x.package||String(x),
+  classification:'requires_owner_resource_mapping_review',
+})): [];
+const output={schema:'sam.crud.coverage.v1',
+  resources:report,
+  open_resource_gaps:report.filter(x=>x.missing.length).length,
+  unclassified_capability_count:unclassified.length,
+  unclassified_capabilities:unclassified,
+  package_review_count:packages.length,
+  packages,
+  universal_resource_parity_verified:false,
+  note:'Unclassified capabilities/packages need owner review; not all commands are persistent CRUD resources.'};
 const argv=process.argv.slice(2), out=argv.indexOf('--out');
 const data=JSON.stringify(output,null,2)+'\n';
 if(out>=0){if(!argv[out+1])throw Error('crud_out_path_required');await fs.writeFile(argv[out+1],data);}

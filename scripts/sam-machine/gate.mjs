@@ -26,6 +26,7 @@ const gates={
   iam_write_scope:false,
   durable_execution:false,
   artifact_storage:false,
+  resource_pack_parity:false,
 };
 const requested=String(opt('--require')||'js,python').split(',').map(x=>x.trim()).filter(Boolean);
 const expanded=requested.includes('all')?Object.keys(gates):requested;

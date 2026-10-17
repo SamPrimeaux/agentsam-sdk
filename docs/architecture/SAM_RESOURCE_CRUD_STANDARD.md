@@ -79,3 +79,18 @@ supplied automatically or inferred from an operator's account.
 Keep each resource's canonical ID, owner, versioned schemas, side-effect class,
 per-actor access, revision preconditions, and execution receipts.
 No manifest-only tools labeled as executable; no customer access to operator D1.
+
+
+## Whole-ecosystem audit policy
+
+The resource CRUD report also lists all unclassified capability operations
+and packages. Those are REVIEW obligations rather than invented missing CRUD
+handlers. A specialist's persistent entities (asset, composition, project,
+media version, ticket, shipment, design scene) need first-class lifecycle
+capabilities from their actual execution owner. Stateless actions (scan,
+inspect, execute, inference, evaluation) must be explicitly classified
+action-only instead of receiving meaningless delete/create endpoints.
+
+The machine's resource_pack_parity release gate intentionally fails until
+owners classify the remaining families, implement missing lifecycle verbs,
+and prove authorization, installation scoping and receipts per host.
