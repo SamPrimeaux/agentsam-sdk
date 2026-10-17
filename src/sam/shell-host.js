@@ -20,6 +20,7 @@ const LOCAL_SCRIPT_OPERATIONS = Object.freeze(['sam.script.save', 'sam.script.ge
 
 const LOCAL_MEDIA_OPERATIONS = Object.freeze([
   'media.local.import',
+  'media.asset.inspect',
   'media.image.inspect',
   'media.image.background.remove',
   'media.image.optimize',
