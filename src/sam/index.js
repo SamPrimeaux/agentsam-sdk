@@ -1,7 +1,8 @@
 /**
  * SAM — Systematic Autonomous Machinery
  *
- * AgentSam = product / SDK / CLI
+ * agentsam = machine-level API / CLI
+ * AgentSam = AI wrapper over SAM; AgentSamClient is the developer facade
  * SAM = execution architecture underneath AgentSam
  * sam = conventional AgentSamClient variable (machinery, not a person)
  *

@@ -1,3 +1,5 @@
+/** AgentSam AI-facing harness. SAM = Systematic Autonomous Machinery.
+ * This HTTP surface does not itself grant SAM operation permissions. */
 import { json, notFound, readJson } from './lib/responses.js';
 import { createSession, getSession } from './lib/sessions.js';
 import { routeIntent } from './lib/router.js';
