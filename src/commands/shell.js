@@ -670,7 +670,9 @@ async function ensureShellHookExperience(state) {
 
 async function runInteractiveModelTurn(prompt, state) {
   const hookExperience = await ensureShellHookExperience(state);
-  const resolved = await resolveModelForTurn(state.cwd, state);
+  const resolved = await resolveModelForTurn(state.cwd, state.execModelKey
+    ? { ...state, hookEffectiveConfig: { ...(state.hookEffectiveConfig || {}), model_key: state.execModelKey } }
+    : state);
   const { preferences, model, credential } = resolved;
   const provider = createProviderAdapter({
     modelRecord: model,
@@ -1259,7 +1261,7 @@ export async function runShell(argv = [], options = {}) {
     }
     state.interactive = false;
     state.persistFooter = false;
-    if (modelKey) state.hookEffectiveConfig = { model_key: modelKey };
+    if (modelKey) state.execModelKey = modelKey;
     const json = argv.includes('--json');
     // A headless call cannot click an approval dialog. Existing project grants
     // and host authorization still apply; unapproved side effects fail closed.
