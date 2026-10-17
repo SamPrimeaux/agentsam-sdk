@@ -70,3 +70,78 @@ export class BrowserLocalStorageProjectStore {
     this.storage.removeItem(this.key(id));
   }
 }
+
+/**
+ * Durable browser-local source-media bytes. Projects remain portable CoPro documents:
+ * source files are stored independently and referenced by their stable assetId.
+ * No Cloudflare/IAM/account identity is introduced in this portable adapter.
+ */
+export class BrowserIndexedDbMediaStore {
+  constructor({ indexedDB = globalThis.indexedDB, databaseName = "copro.media.v1" } = {}) {
+    this.factory = indexedDB;
+    this.databaseName = databaseName;
+    this.dbPromise = null;
+  }
+
+  async open() {
+    if (!this.factory) throw new Error("copro_media_indexeddb_unavailable");
+    if (!this.dbPromise) {
+      this.dbPromise = new Promise((resolve, reject) => {
+        const request = this.factory.open(this.databaseName, 1);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains("media")) db.createObjectStore("media", { keyPath: "id" });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error ?? new Error("copro_media_open_failed"));
+        request.onblocked = () => reject(new Error("copro_media_open_blocked"));
+      }).catch((error) => { this.dbPromise = null; throw error; });
+    }
+    return this.dbPromise;
+  }
+
+  async save(id, file) {
+    if (typeof id !== "string" || !id) throw new Error("copro_media_id_required");
+    if (!(file instanceof Blob)) throw new Error("copro_media_blob_required");
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction("media", "readwrite");
+      transaction.objectStore("media").put({
+        id, file,
+        name: typeof file.name === "string" ? file.name : id,
+        type: file.type || "application/octet-stream",
+        size: file.size, lastModified: file.lastModified ?? Date.now(),
+      });
+      // Success means the write transaction has committed, not merely been queued.
+      transaction.oncomplete = () => resolve({ id, name: file.name ?? id, size: file.size });
+      transaction.onabort = () => reject(transaction.error ?? new Error("copro_media_save_aborted"));
+      transaction.onerror = () => reject(transaction.error ?? new Error("copro_media_save_failed"));
+    });
+  }
+
+  async load(id) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const request = db.transaction("media", "readonly").objectStore("media").get(id);
+      request.onsuccess = () => resolve(request.result ?? null);
+      request.onerror = () => reject(request.error ?? new Error("copro_media_load_failed"));
+    });
+  }
+
+  async loadMany(ids) {
+    const unique = [...new Set(ids)].filter((id) => typeof id === "string" && id);
+    const found = await Promise.all(unique.map((id) => this.load(id)));
+    return found.filter(Boolean);
+  }
+
+  async remove(id) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction("media", "readwrite");
+      transaction.objectStore("media").delete(id);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error ?? new Error("copro_media_remove_failed"));
+      transaction.onabort = () => reject(transaction.error ?? new Error("copro_media_remove_aborted"));
+    });
+  }
+}
