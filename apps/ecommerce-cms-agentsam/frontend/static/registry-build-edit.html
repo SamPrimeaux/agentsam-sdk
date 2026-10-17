@@ -1,25 +1,26 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Build — AgentSam SDK Commerce</title><link rel="stylesheet" href="/admin/css/admin.css"><link rel="stylesheet" href="/admin/css/console.css"></head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Build — AgentSam SDK Commerce</title><link rel="stylesheet" href="/admin/css/admin.css"><link rel="stylesheet" href="/admin/css/console.css"><link rel="stylesheet" href="/admin/css/product-edit.css"><style>.product-editor .product-card,.product-editor .product-sidebar-card{margin-bottom:12px}.product-editor .product-card h3,.product-editor .product-sidebar-card h3{font-size:13px;margin:0 0 12px}.product-editor label{font-size:12px}.product-editor .admin-page-sub{font-size:11px;line-height:1.5}@media(max-width:860px){.product-editor-grid{grid-template-columns:1fr}}</style></head><body>
 <script src="/admin/js/shell.js"></script><script>
 renderShell('/admin/products', `
+<div class="product-editor">
 <div class="admin-toolbar"><div><p class="admin-page-sub"><a href="/admin/products">Products</a> › Product catalog</p><h1 class="admin-page-title" id="build-title">Edit product</h1></div><div style="display:flex;gap:8px"><button id="save-build" class="btn primary">Save draft</button><button id="export-build" class="btn ghost">Export</button></div></div>
-<div style="display:grid;grid-template-columns:minmax(0,1.7fr) minmax(240px,.8fr);gap:16px;align-items:start">
-<div>
-<section class="admin-card" style="margin-bottom:16px"><h2>Product details</h2><div style="display:grid;gap:14px">
+<div class="product-editor-grid">
+<div class="product-editor-main">
+<section class="product-card" style="margin-bottom:16px"><h3>Product details</h3><div style="display:grid;gap:14px">
 <label>Title<input id="b-name" style="display:block;width:100%;padding:9px;margin-top:6px"></label>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><label>SKU<input id="b-sku" style="display:block;width:100%;padding:9px;margin-top:6px"></label><label>Kind<select id="b-kind" style="display:block;width:100%;padding:9px;margin-top:6px"><option>app</option><option>website</option><option>physical</option><option>ui-component</option><option>section</option><option>block</option><option>theme</option><option>sdk-package</option><option>integration</option><option>service</option><option>script</option><option>product</option><option>collection</option><option>solution</option></select></label></div>
 <label>Collection / category<input id="b-collection" style="display:block;width:100%;padding:9px;margin-top:6px"></label><label>Description<textarea id="b-description" style="display:block;width:100%;min-height:100px;padding:9px;margin-top:6px"></textarea></label><label>Tags<input id="b-tags" style="display:block;width:100%;padding:9px;margin-top:6px"></label><label>Notes<textarea id="b-notes" style="display:block;width:100%;min-height:100px;padding:9px;margin-top:6px"></textarea></label>
 </div></section>
-<section class="admin-card" style="margin-bottom:16px"><h2>Search engine listing</h2><p class="admin-page-sub">Preview how this product will appear when published.</p><div id="seo-preview" style="border:1px solid #e8e8e8;border-radius:7px;padding:15px;margin:10px 0"><a href="#" id="seo-title-preview">Product title</a><p id="seo-desc-preview" style="font-size:12px"></p></div><label>SEO page title<input id="b-seo-title" maxlength="180" style="display:block;width:100%;padding:9px;margin-top:6px"></label><label>Meta description<textarea id="b-seo-desc" maxlength="320" style="display:block;width:100%;min-height:80px;padding:9px;margin-top:6px"></textarea></label><label>URL handle<input id="b-handle" style="display:block;width:100%;padding:9px;margin-top:6px"></label></section><section class="admin-card"><h2>Source and version</h2><p id="b-source" style="white-space:pre-wrap;font-size:12px"></p><p class="admin-page-sub">Source and version apply to software products. Other product types may use different fulfillment, inventory and access records.</p></section>
-</div><aside>
-<section class="admin-card" style="margin-bottom:16px"><h2>Media</h2>
+<section class="product-card" style="margin-bottom:16px"><h3>Media</h3>
 <p class="admin-page-sub">Product imagery, screenshots and installation previews.</p>
 <div id="b-photo" style="aspect-ratio:4/3;display:grid;place-items:center;background:#f8f8f8;border:1px solid #ddd;border-radius:7px;margin-bottom:12px;overflow:hidden">No media assigned</div>
 <div id="b-gallery" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px"></div>
 <div style="display:flex;gap:8px"><button id="b-choose-icon" class="btn ghost" type="button">App icon</button><button id="b-choose-screen" class="btn ghost" type="button">Studio screen</button></div>
 <div class="admin-page-sub" style="margin-top:10px">Media is linked by asset identity when the CMS provider is connected.</div>
 <input id="b-image" type="hidden"></section>
-<section class="admin-card"><h2>Organization</h2><p id="b-evidence" class="admin-page-sub"></p><p id="b-feedback" role="status" class="admin-page-sub">Local draft only. No D1 writes.</p></section>
-</aside></div>
+<section class="product-card"><h3>Source and version</h3><p id="b-source" style="white-space:pre-wrap;font-size:12px"></p><p class="admin-page-sub">Source and version apply to software products. Other product types may use different fulfillment, inventory and access records.</p></section>
+</div><aside class="product-editor-sidebar">
+<section class="product-sidebar-card" style="margin-bottom:16px"><h3>Search engine listing</h3><p class="admin-page-sub">Preview how this product will appear when published.</p><div id="seo-preview" style="border:1px solid #e8e8e8;border-radius:7px;padding:15px;margin:10px 0"><a href="#" id="seo-title-preview">Product title</a><p id="seo-desc-preview" style="font-size:12px"></p></div><label>SEO page title<input id="b-seo-title" maxlength="180" style="display:block;width:100%;padding:9px;margin-top:6px"></label><label>Meta description<textarea id="b-seo-desc" maxlength="320" style="display:block;width:100%;min-height:80px;padding:9px;margin-top:6px"></textarea></label><label>URL handle<input id="b-handle" style="display:block;width:100%;padding:9px;margin-top:6px"></label></section><section class="product-sidebar-card"><h3>Organization</h3><p id="b-evidence" class="admin-page-sub"></p><p id="b-feedback" role="status" class="admin-page-sub">Local draft only. No D1 writes.</p></section>
+</aside></div></div>
 `);
 const qs=s=>document.querySelector(s),id=new URLSearchParams(location.search).get('id'),key='iam:registry:product-edits:v1';
 const read=()=>{try{return JSON.parse(localStorage.getItem(key)||'{}')}catch{return {}}};
