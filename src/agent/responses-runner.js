@@ -137,7 +137,11 @@ export function buildAgentToolSurface(capabilityAdapter, objective, options = {}
   const maxTools = options.maxTools ?? 8;
   // These are the four bootstrap calls required for progressive, typed
   // discovery. Keyword ranking may otherwise hide describe/status/invoke.
-  const bootstrapIds = ['capability.search','capability.describe','capability.status','capability.invoke'];
+  // Headless coding cannot discover source boundaries without its bounded
+  // workspace file reader. Reserve one of the advertised slots rather than
+  // letting keyword matching replace reading with a write tool.
+  const bootstrapIds = ['capability.search','capability.describe','capability.status','capability.invoke',
+    ...(options.headlessCoding ? ['workspace.read'] : [])];
   const bootstrap = bootstrapIds.map(id=>catalog.find(row=>row.name===id)).filter(Boolean).slice(0,maxTools);
   const remaining = catalog.filter(row=>!bootstrapIds.includes(row.name));
   const searched = searchToolCards(remaining, objective, {
