@@ -54,6 +54,7 @@ export interface CaseStudyIntake {
   brand: string;
   pagePresetSku?: Sku;
   tokens: Record<string, string>;
+  theme?: InstalledThemeReference;
   sources: SourceReceipt[];
   sections: SectionInstanceProposal[];
   lifecycle: "draft_pending_review";
