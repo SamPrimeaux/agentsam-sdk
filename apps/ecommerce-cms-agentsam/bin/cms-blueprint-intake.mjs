@@ -11,6 +11,8 @@ const input=JSON.parse(fs.readFileSync(path.resolve(inputArg),"utf8"));
 if(!input || typeof input!=="object" || !Array.isArray(input.sources))throw Error("sources[] discovery receipts required");
 const brand=String(input.brand||"IAM").toUpperCase();
 if(!/^[A-Z][A-Z0-9]{1,5}$/.test(brand))throw Error("brand must be 2-6 alphanumeric characters");
+const theme=input.theme ?? null;
+if(theme && (typeof theme.themeId!=="string" || !theme.themeId.trim() || !(theme.tenantId===null || typeof theme.tenantId==="string"))) throw Error("theme must reference a cms_themes.themeId and tenantId (string or null)");
 const sources=input.sources.map((s,i)=>{
  if(!s.uri||!["repository","r2","file","url"].includes(s.kind))throw Error("Invalid source "+i);
  return {uri:s.uri,sha256:s.sha256||null,kind:s.kind,permission:s.permission||null,confidence:s.confidence||"unknown",description:s.description||""};
