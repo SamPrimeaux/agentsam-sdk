@@ -78,6 +78,12 @@ export function createSamOS({ core = true, generated = null, cms = null, authori
       ...generated,
     });
     unavailable.push(...result.unavailable);
+    for (const alias of result.aliases || []) {
+      if (registry.has(alias.name) || aliases.has(alias.name)) {
+        throw new Error('sam_os_duplicate_operation:' + alias.name);
+      }
+      aliases.set(alias.name, alias.aliasFor);
+    }
   }
   const os = {
     get,
