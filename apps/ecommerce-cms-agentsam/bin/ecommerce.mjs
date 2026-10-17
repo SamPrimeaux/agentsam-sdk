@@ -21,7 +21,7 @@ const missing = [
   "packages/theme-contract/runtime/portable-sections.js",
   "packages/media-kit/src/index.js",
   "packages/agentsam-workbench/src/media-asset-workbench.js",
-  "package-lock.json",
+  "npm-shrinkwrap.json",
   "AGENTS.md",
 ].filter((f) => !fs.existsSync(path.join(app, f)));
 const [command = "info", ...args] = process.argv.slice(2);

@@ -5,7 +5,8 @@
   "type": "module",
   "bin": {
     "ecommerce": "bin/ecommerce.mjs",
-    "assets": "bin/assets.mjs"
+    "assets": "bin/assets.mjs",
+    "agentsam-ecommerce": "bin/ecommerce.mjs"
   },
   "scripts": {
     "doctor": "node bin/ecommerce.mjs doctor",
@@ -19,7 +20,9 @@
     "typecheck:cms": "tsc --project tsconfig.cms.json",
     "verify:cms": "npm run typecheck:cms && node --test tests/cms-setting-contract.test.mjs",
     "typecheck:tools": "tsc --project tsconfig.tools.json",
-    "test:tools": "npm run typecheck:tools && node --test tests/typed-tool-registry.test.mjs tests/core-tools-readonly.test.mjs tests/d1-crud.test.mjs && node backend/tools/doctor.mjs"
+    "test:tools": "npm run typecheck:tools && node --test tests/typed-tool-registry.test.mjs tests/core-tools-readonly.test.mjs tests/d1-crud.test.mjs && node backend/tools/doctor.mjs",
+    "test:release": "node --test tests/release-artifact.test.mjs",
+    "prepack": "npm run build && npm run test:release"
   },
   "dependencies": {
     "@inneranimalmedia/revise-theme": "0.2.0",
@@ -34,5 +37,36 @@
     "wrangler": "4.149.0",
     "typescript": "~6.0.2",
     "json-schema-to-ts": "3.1.1"
+  },
+  "files": [
+    ".agentsam/app.json",
+    "AGENTS.md",
+    "README.md",
+    "agentsam.app.json",
+    "npm-shrinkwrap.json",
+    "apps/",
+    "backend/",
+    "bin/",
+    "cms/",
+    "db/",
+    "dist/",
+    "docs/",
+    "frontend/",
+    "packages/",
+    "registry/",
+    "scripts/",
+    "shared/",
+    "templates/",
+    "tests/",
+    "theme/",
+    "repository.contracts.json",
+    "tsconfig.cms.json",
+    "tsconfig.tools.json"
+  ],
+  "exports": {
+    "./manifest": "./agentsam.app.json",
+    "./admin/surface": "./frontend/admin.surface.json",
+    "./apps/registry": "./apps/registry.json",
+    "./backend/routes": "./backend/lib/route-manifest.js"
   }
 }
