@@ -117,5 +117,5 @@ export function createGeneratedSamOperations({
     registerSamOperation(operation);
     installed.push({ name: record.name, status: 'registered' });
   }
-  return { registered: installed, unavailable };
+  return { registered: installed, unavailable, aliases };
 }
