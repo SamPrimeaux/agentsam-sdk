@@ -56,22 +56,24 @@ renderShell("/admin/home", `
     </nav>
     <section class="fnf-home-templates" aria-labelledby="home-templates-title">
       <div class="fnf-home-templates__heading"><div><h2 id="home-templates-title">Templates</h2><p>Choose a starting point for your next build.</p></div><div class="fnf-home-templates__nav"><button id="home-templates-back" type="button" aria-label="Previous templates">←</button><button id="home-templates-forward" type="button" aria-label="Next templates">→</button></div></div>
-      <div class="fnf-home-templates__frame"><div class="fnf-home-templates__edge" data-template-scroll="-1" aria-hidden="true"></div><div class="fnf-home-templates__rail" id="home-templates-rail" role="group" aria-label="Creative templates"></div><div class="fnf-home-templates__edge fnf-home-templates__edge--right" data-template-scroll="1" aria-hidden="true"></div></div>
+      <div class="fnf-home-templates__browse"><div class="fnf-home-templates__frame"><div class="fnf-home-templates__edge" data-template-scroll="-1" aria-hidden="true"></div><div class="fnf-home-templates__rail" id="home-templates-rail" role="group" aria-label="Creative templates"></div><div class="fnf-home-templates__edge fnf-home-templates__edge--right" data-template-scroll="1" aria-hidden="true"></div></div>
       <p id="home-templates-feedback" class="fnf-home-templates__feedback" role="status" aria-live="polite"></p>
     </section>
     <section class="fnf-home-discover" aria-labelledby="fnf-home-discover-title">
       <div class="fnf-home-discover__heading"><div><h2 id="fnf-home-discover-title">Explore products</h2><p>Start creating or find something to build on.</p></div><a href="/admin/products/create">Explore catalog <span aria-hidden="true">↗</span></a></div>
       <div class="fnf-home-discover__grid">
         <a class="fnf-home-discover__card fnf-home-discover__card--featured" href="/admin/products/create">
-          <div class="fnf-home-discover__copy"><span class="fnf-home-discover__overline">CREATE</span><h3>Create a product</h3><p>Start with a title, media, and the details that make it yours.</p><span class="fnf-home-discover__action">Create product <span aria-hidden="true">↗</span></span></div>
-          <span class="fnf-home-discover__art fnf-home-discover__art--product" aria-hidden="true"><span></span><span></span><span></span></span>
+          <div class="fnf-home-discover__copy"><span class="fnf-home-discover__overline">CREATE</span><h3>Create something worth sharing.</h3><p>Bring your ideas to life with a thoughtful starting point. Shape the product, make it yours, then publish when you’re ready.</p><span class="fnf-home-discover__action">Create product <span aria-hidden="true">↗</span></span></div>
+          <span class="fnf-home-discover__art fnf-home-discover__art--product" aria-hidden="true">
+            <span class="fnf-home-product-scene"><i class="fnf-home-product-scene__page"></i><i class="fnf-home-product-scene__device"></i><i class="fnf-home-product-scene__package"></i></span>
+          </span>
         </a>
         <a class="fnf-home-discover__card fnf-home-discover__card--physical" href="/admin/products/create">
           <span class="fnf-home-discover__art fnf-home-discover__art--physical" aria-hidden="true"><span></span><span></span></span>
           <div class="fnf-home-discover__copy"><h3>Discover products</h3><p>Explore available product options and suppliers.</p><span class="fnf-home-discover__action">Browse catalog <span aria-hidden="true">↗</span></span></div>
         </a>
         <a class="fnf-home-discover__card fnf-home-discover__card--compact fnf-home-discover__card--experience" href="/admin/products/create">
-          <div class="fnf-home-discover__copy"><span class="fnf-home-discover__overline">DIGITAL</span><h3>Digital products</h3><p>Create and offer branded digital experiences, interactive tools, downloadable kits and reusable systems.</p><span class="fnf-home-discover__action">Explore digital products <span aria-hidden="true">↗</span></span></div>
+          <div class="fnf-home-discover__copy"><span class="fnf-home-discover__overline">DIGITAL</span><h3>Digital experiences</h3><p>Craft interactive products, reusable systems and experiences with a purpose—not just another app.</p><span class="fnf-home-discover__action">Explore digital products <span aria-hidden="true">↗</span></span></div>
           <img class="fnf-home-discover__glass" src="/admin/assets/digital-experiences-glass.svg" alt="" loading="lazy" decoding="async">
         </a>
       </div>

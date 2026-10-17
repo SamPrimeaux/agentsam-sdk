@@ -2446,3 +2446,10 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
   .product-studio-shell .ps-colorway { width: 58px; }
   .product-studio-shell .ps-colorway-rail { padding: 8px 4px 10px; }
 }
+
+/* Small maintenance action; deliberately subordinate to the catalog. */
+.ps-catalog-refresh{width:33px;height:33px;display:inline-grid;place-items:center;flex:none;appearance:none;border:1px solid #dedce3;border-radius:9px;background:transparent;color:#6a6471;cursor:pointer;transition:background .15s,border-color .15s}
+.ps-catalog-refresh:hover{background:#f5f3f8;border-color:#bdb7c9;color:#34303b}
+.ps-catalog-refresh:focus-visible{outline:2px solid #886bbc;outline-offset:2px}
+.ps-catalog-refresh:disabled{opacity:.42;cursor:wait}
+@media(prefers-reduced-motion:reduce){.ps-catalog-refresh{transition:none}}

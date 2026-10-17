@@ -150,34 +150,52 @@
 
 (function initHomeTemplates(){
  "use strict";
- const rail=document.getElementById("home-templates-rail");if(!rail||rail.dataset.ready)return;rail.dataset.ready="1";
- // Preset identity is lifted from IAM's TEMPLATE_CARDS. Actual authoring capabilities
- // are resolved separately: the current Studio only supports supplier-backed designs.
- const cards=[
- ["start-anywhere","Start anywhere","Add a file and design","plus",true],
- ["card-slides","Slides","Decks & reviews","slides",false],
- ["card-prototype","Prototype","Clickable & interactive","cursor",false],
- ["card-wireframe","Product wireframe","Lo-fi screens & flows","square",false],
- ["card-doc","Doc","Resumes, PDFs, etc.","file",false],
- ["card-animation","Animation","Motion & video","film",false],
- ["card-blank-canvas","Blank canvas","Start from scratch","square",false],
- ["card-flowchart","Flowchart","Diagrams & maps","flow",false],
- ["card-component-set","Component set","Reusable UI pieces","spark",false]];
+ const rail=document.getElementById("home-templates-rail");
+ if(!rail||rail.dataset.ready)return;rail.dataset.ready="1";
+ const entries=[
+  ["digital-products","card-prototype","Prototype","Clickable & interactive","cursor",false],
+  ["digital-products","card-wireframe","Product wireframe","Lo-fi screens & flows","square",false],
+  ["digital-products","card-component-set","Component set","Reusable UI pieces","spark",false],
+  ["website","start-anywhere","Start anywhere","Add a file and design","plus",true],
+  ["website","card-blank-canvas","Blank canvas","Start from scratch","square",false],
+  ["branding","card-slides","Slides","Decks & reviews","slides",false],
+  ["workflows","card-doc","Doc","Resumes, PDFs, etc.","file",false],
+  ["workflows","card-animation","Animation","Motion & video","film",false],
+  ["workflows","card-flowchart","Flowchart","Diagrams & maps","flow",false]
+ ];
+ const names={"digital-products":"Digital Products",website:"Website",branding:"Branding",workflows:"Workflows"};
  const icons={plus:'<path d="M12 4v16M4 12h16"/>',slides:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 9h8M8 13h5"/>',cursor:'<path d="m5 3 14 9-7 1-3 7z"/>',square:'<rect x="4" y="4" width="16" height="16" rx="2"/>',file:'<path d="M6 3h8l5 5v13H6zM14 3v6h5"/>',film:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14m10-14v14"/>',flow:'<rect x="2" y="3" width="8" height="6" rx="1"/><rect x="14" y="15" width="8" height="6" rx="1"/><path d="M6 9v9h8"/>',spark:'<path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5z"/>'};
  const feedback=document.getElementById("home-templates-feedback");
- for(const [slug,name,description,icon,supported] of cards){
- const btn=document.createElement("button");btn.className="fnf-home-template";btn.type="button";btn.dataset.templateSlug=slug;btn.setAttribute("aria-label",name+": "+description);
- btn.innerHTML='<span class="fnf-home-template__icon"><svg viewBox="0 0 24 24" aria-hidden="true">'+icons[icon]+'</svg></span>';
- const label=document.createElement("span");label.className="fnf-home-template__name";label.textContent=name;
- const sub=document.createElement("span");sub.className="fnf-home-template__description";sub.textContent=description;btn.append(label,sub);
- btn.onclick=()=>{if(supported){location.assign("/admin/products/create?template="+encodeURIComponent(slug));}else{feedback.textContent=name+" is not available in Product Studio yet.";}};rail.append(btn);
+ const firstByGroup={};const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+ for(const [group,slug,name,description,icon,supported] of entries){
+   const card=document.createElement("article");card.className="fnf-home-template";card.dataset.templateSlug=slug;card.dataset.templateGroup=group;
+   if(!firstByGroup[group])firstByGroup[group]=card;
+   const preview=document.createElement("div");preview.className="fnf-home-template__preview";preview.dataset.previewKind=icon;
+   preview.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+icons[icon]+'</svg>';
+   const category=document.createElement("span");category.className="fnf-home-template__category";category.textContent=names[group];
+   const title=document.createElement("h3");title.className="fnf-home-template__name";title.textContent=name;
+   const caption=document.createElement("p");caption.className="fnf-home-template__description";caption.textContent=description;
+   const action=document.createElement("button");action.type="button";action.className="fnf-home-template__create";
+   action.textContent="Create";action.setAttribute("aria-label","Create "+name);
+   if(supported){action.onclick=()=>location.assign("/admin/products/create?template="+encodeURIComponent(slug));}
+   else {action.onclick=()=>{feedback.textContent=name+" cannot be created yet. The required editable workspace is not installed.";};action.setAttribute("aria-describedby","home-templates-feedback");}
+   card.append(preview,category,title,caption,action);rail.append(card);
  }
- let frame=0,direction=0;const reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
- const stop=()=>{direction=0;cancelAnimationFrame(frame)};
- const tick=()=>{if(!direction)return;rail.scrollLeft+=direction*6;frame=requestAnimationFrame(tick)};
+ const controls=[...document.querySelectorAll("[data-template-group]")];
+ const setActive=(group)=>controls.forEach(b=>{const selected=b.dataset.templateGroup===group;b.classList.toggle("is-active",selected);b.setAttribute("aria-current",selected?"true":"false")});
+ const jump=(group)=>{const card=firstByGroup[group];if(!card)return;rail.scrollTo({left:card.offsetLeft-rail.offsetLeft-2,behavior:reduced?"auto":"smooth"});setActive(group)};
+ controls.forEach(b=>b.onclick=()=>jump(b.dataset.templateGroup));
+ let frame=0,direction=0;const stop=()=>{direction=0;cancelAnimationFrame(frame)};
+ const tick=()=>{if(!direction)return;rail.scrollLeft+=direction*5;frame=requestAnimationFrame(tick)};
  document.querySelectorAll("[data-template-scroll]").forEach(edge=>{edge.onpointerenter=()=>{if(reduced)return;stop();direction=Number(edge.dataset.templateScroll);frame=requestAnimationFrame(tick)};edge.onpointerleave=stop});
- rail.onpointerdown=stop;
- for(const [id,delta] of [["home-templates-back",-1],["home-templates-forward",1]])document.getElementById(id).onclick=()=>rail.scrollBy({left:delta*rail.clientWidth*.75,behavior:reduced?"auto":"smooth"});
- const update=()=>{document.getElementById("home-templates-back").disabled=rail.scrollLeft<=2;document.getElementById("home-templates-forward").disabled=rail.scrollLeft+rail.clientWidth>=rail.scrollWidth-2};
+ rail.onpointerdown=stop;rail.onfocusin=stop;
+ for(const [id,delta] of [["home-templates-back",-1],["home-templates-forward",1]])document.getElementById(id).onclick=()=>rail.scrollBy({left:delta*rail.clientWidth*.8,behavior:reduced?"auto":"smooth"});
+ const update=()=>{
+  document.getElementById("home-templates-back").disabled=rail.scrollLeft<=2;
+  document.getElementById("home-templates-forward").disabled=rail.scrollLeft+rail.clientWidth>=rail.scrollWidth-2;
+  let group=entries[0][0],distance=Infinity;
+  for(const [g,el] of Object.entries(firstByGroup)){const d=Math.abs(el.offsetLeft-rail.offsetLeft-rail.scrollLeft);if(d<distance){distance=d;group=g}}
+  setActive(group);
+ };
  rail.addEventListener("scroll",update,{passive:true});window.addEventListener("resize",update);update();
 })();

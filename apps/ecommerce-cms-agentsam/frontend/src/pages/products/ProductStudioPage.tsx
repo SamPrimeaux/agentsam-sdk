@@ -359,11 +359,19 @@ export default function ProductStudioPage() {
                   <h2>Find your canvas.</h2>
                 </div>
                 <button
-                  className="ps-text-button"
+                  className="ps-catalog-refresh"
+                  type="button"
                   disabled={syncing}
                   onClick={syncCatalog}
+                  aria-label={syncing ? "Refreshing catalog" : "Refresh catalog"}
+                  title={syncing ? "Refreshing catalog" : "Refresh catalog"}
                 >
-                  {syncing ? "Refreshing…" : "Refresh catalog"}
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M20 7v5h-5" />
+                    <path d="M4 17v-5h5" />
+                    <path d="M6.2 9A7 7 0 0 1 18 7l2 5" />
+                    <path d="M18 15a7 7 0 0 1-11.8 2L4 12" />
+                  </svg>
                 </button>
               </div>
               <div className="ps-search-row">
