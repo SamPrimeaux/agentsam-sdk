@@ -14,6 +14,7 @@ const find=(p)=>{
  if(p==='/')return path.join(staticRoot,'home.html');
  if(p==='/admin/registry-build-edit')return path.join(staticRoot,'registry-build-edit.html');
  if(p==='/admin/products/create')return path.join(staticRoot,'product-create-universal.html');
+ if(p.startsWith('/admin/products/create/'))return path.join(staticRoot,'product-explore-universal.html');
  if(p==='/admin/product-edit')return path.join(staticRoot,'registry-build-edit.html');
  if(p==='/admin/_spa/'||p==='/admin/_spa')return path.join(distRoot,'index.html');
  if(p.startsWith('/admin/_spa/assets/'))return path.join(distRoot,p.slice('/admin/_spa/'.length));
