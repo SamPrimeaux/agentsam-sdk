@@ -199,3 +199,21 @@
  };
  rail.addEventListener("scroll",update,{passive:true});window.addEventListener("resize",update);update();
 })();
+
+// Product Studio's hero sources its cards from the existing supplier catalog.
+// Reuse those same live source images, without tenant-specific hardcoded products.
+(async function initHomeCreateHero(){
+ const scene=document.getElementById('home-create-hero-scene');if(!scene)return;
+ try{
+  const response=await adminFetch('/api/admin/completeful/catalog?limit=3&offset=0');
+  const items=Array.isArray(response?.items)?response.items:[];
+  for(const [index,item] of items.slice(0,3).entries()){
+   const src=[item.realistic_image_url,item.cover_image_url,item.main_icon_url,item.image_url].find(v=>typeof v==='string'&&/^https?:\/\//.test(v));
+   if(!src)continue;
+   const tile=document.createElement('div');tile.className='fnf-home-create-hero__tile';
+   const image=document.createElement('img');image.src=src;image.alt='';image.loading='lazy';
+   const tag=document.createElement('span');tag.textContent=String(item.product_type||'Make it yours').slice(0,30);
+   tile.append(image,tag);scene.insertBefore(tile,scene.querySelector('.fnf-home-create-hero__empty'));
+  }
+ }catch(e){/* The source Product Studio also has a catalog-empty scene. */}
+})();

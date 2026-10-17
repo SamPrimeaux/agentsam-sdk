@@ -62,11 +62,17 @@ renderShell("/admin/home", `
     <section class="fnf-home-discover" aria-labelledby="fnf-home-discover-title">
       <div class="fnf-home-discover__heading"><div><h2 id="fnf-home-discover-title">Explore products</h2><p>Start creating or find something to build on.</p></div><a href="/admin/products/create">Explore catalog <span aria-hidden="true">↗</span></a></div>
       <div class="fnf-home-discover__grid">
-        <a class="fnf-home-discover__card fnf-home-discover__card--featured" href="/admin/products/create">
-          <div class="fnf-home-discover__copy"><span class="fnf-home-discover__overline">CREATE</span><h3>Create something worth sharing.</h3><p>Bring your ideas to life with a thoughtful starting point. Shape the product, make it yours, then publish when you’re ready.</p><span class="fnf-home-discover__action">Create product <span aria-hidden="true">↗</span></span></div>
-          <span class="fnf-home-discover__art fnf-home-discover__art--product" aria-hidden="true">
-            <span class="fnf-home-product-scene"><i class="fnf-home-product-scene__page"></i><i class="fnf-home-product-scene__device"></i><i class="fnf-home-product-scene__package"></i></span>
-          </span>
+        <a class="fnf-home-discover__card fnf-home-discover__card--featured fnf-home-create-hero" href="/admin/products/create">
+          <div class="fnf-home-create-hero__copy">
+            <span class="fnf-home-create-hero__kicker">A little inspiration. Something entirely yours.</span>
+            <h3>Create &amp; explore<br><em>your next idea.</em></h3>
+            <p>Discover a product you love. Make it your own.<br>Bring your artwork, or start with a spark.</p>
+            <span class="fnf-home-create-hero__action">Explore the catalog <span aria-hidden="true">→</span></span>
+          </div>
+          <div class="fnf-home-create-hero__scene" id="home-create-hero-scene" aria-hidden="true">
+            <div class="fnf-home-create-hero__empty">GOOD IDEAS<br>START HERE.</div>
+            <span class="fnf-home-create-hero__stamp">YOUR IDEAS.<br>REAL POSSIBILITIES.</span>
+          </div>
         </a>
         <a class="fnf-home-discover__card fnf-home-discover__card--physical" href="/admin/products/create">
           <span class="fnf-home-discover__art fnf-home-discover__art--physical" aria-hidden="true"><span></span><span></span></span>
