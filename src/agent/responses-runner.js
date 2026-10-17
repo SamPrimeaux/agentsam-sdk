@@ -505,7 +505,7 @@ async function runAgentSamTurnCore(options = {}) {
             tool: capabilityId,
             reason: 'tool_permission_denied',
             stage: 'authorize',
-            message: `Tool execution was not approved: ${capabilityId}`,
+            message: `tool_execution_not_approved:${capabilityId}`,
           });
           denied.legacy_code = 'AGENTSAM_TOOL_NOT_APPROVED';
           const diagnostic = diagnosticFromError(denied, { source: 'tool', kind: 'tool_execution_denied' });
