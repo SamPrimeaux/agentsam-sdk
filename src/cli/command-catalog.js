@@ -69,6 +69,7 @@ export const CLI_COMMAND_CATALOG = Object.freeze([
   { id: 'logout', summary: 'Sign out locally', topic: 'start', skill: 'agentsam-app-fundamentals' },
   { id: 'whoami', summary: 'Authenticated account + tokenPermissions', topic: 'start', skill: 'agentsam-app-fundamentals', common: true },
   { id: 'resume', summary: 'Resume a saved AgentSam session', topic: 'start', skill: 'agentsam-app-fundamentals' },
+  { id: 'exec', summary: 'Run the existing AgentSam coding agent noninteractively with scoped permissions', topic: 'work', skill: 'agentsam-app-fundamentals', usage: ['agentsam exec --prompt-file <file> --cwd <directory> --model <provider:model> --json', 'agentsam exec --prompt <text> --cwd <directory> --json'] },
   { id: 'shell', summary: 'Interactive slash-command shell', topic: 'inside', skill: 'agentsam-app-fundamentals' },
   { id: 'start-local', summary: 'Local PTY WebSocket service', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
   { id: 'ollama', summary: 'Local Ollama setup/status/models', topic: 'runtime', skill: 'agentsam-app-fundamentals' },
