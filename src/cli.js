@@ -621,6 +621,16 @@ if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
     reportCliError(e);
     process.exitCode = 1;
   }
+} else if (command === 'exec') {
+  try {
+    const { runShell } = await import('./commands/shell.js');
+    const result = await runShell(['--exec', ...rest], { interactive: false });
+    if (result?.ok === false) process.exitCode = 1;
+  } catch (e) {
+    if (rest.includes('--json')) console.log(JSON.stringify({ schema:'agentsam.exec.v1', ok:false, error: { code: e?.code || 'exec_failed', message: e?.message || String(e) } }));
+    else reportCliError(e);
+    process.exitCode = 1;
+  }
 } else if (command === 'shell') {
   try {
     await runShell(rest);

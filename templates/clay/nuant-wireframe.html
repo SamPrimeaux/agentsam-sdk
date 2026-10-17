@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nuant Page Wireframe</title>
+<style>
+:root{--bg:#f4f4f2;--ink:#222;--line:#9a9a9a;--fill:#e2e2df;--hatch:#d4d4d0;--note:#c2410c;--tint:#e9e6fb}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;padding:24px 16px 64px}
+.top{max-width:1000px;margin:0 auto 20px}
+.top h1{font-size:16px;margin:0 0 4px}.top p{margin:0;color:#666}
+.wrap{max-width:1000px;margin:0 auto;display:grid;grid-template-columns:1fr 150px;gap:16px;align-items:start}
+.page{border:2px solid var(--ink);background:#fff}
+.sec{position:relative;border-bottom:1px dashed var(--line)}
+.sec:last-child{border-bottom:0}
+.tag{position:absolute;top:6px;right:6px;background:var(--ink);color:#fff;font-size:10px;padding:1px 6px;border-radius:9px;z-index:2}
+.pad{padding:32px 4%}
+.h2{height:22px;width:42%;background:#555;margin-bottom:12px}
+.line{height:8px;background:var(--fill);margin-bottom:7px}
+.img{position:relative;background:repeating-linear-gradient(45deg,var(--fill),var(--fill) 8px,var(--hatch) 8px,var(--hatch) 9px);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;text-align:center;color:#555;font-size:11px;padding:8px}
+.img::before,.img::after{content:"";position:absolute;inset:0;pointer-events:none}
+.img b{background:#fff;border:1px solid var(--line);padding:3px 8px}
+.full{width:100%;border-left:0;border-right:0}
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:14px 4%;border-bottom:1px solid var(--line)}
+.logo{width:70px;height:20px;border:2px solid var(--ink);border-radius:10px 4px 4px 10px}
+.pill{border:2px solid var(--ink);border-radius:20px;padding:4px 14px;font-size:11px}
+.burger{width:22px;height:14px;border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);position:relative}
+.burger::after{content:"";position:absolute;left:0;right:0;top:4px;border-top:2px solid var(--ink)}
+.hero{background:var(--tint);padding:56px 4% 40px}
+.hero .big{height:38px;width:20%;background:#333;margin-bottom:14px}
+.row{display:flex;gap:4%}
+.col{flex:1}
+.chips div{border:1px solid var(--ink);padding:3px 8px;margin-bottom:6px;font-size:11px;width:max-content}
+.carousel{display:flex;gap:2%;overflow:hidden;padding:0 4% 8px}
+.carousel .item{flex:0 0 62%}
+.cap{font-size:10px;color:#555;margin-top:4px}
+.arrows{display:flex;gap:6px;justify-content:flex-end;padding:0 4% 24px}
+.arrows i{width:22px;height:22px;border:1px solid var(--ink);border-radius:50%;display:block}
+.next{background:#efefec;padding:32px 4% 0}
+.next .lbl{font-size:11px;color:#555;margin-bottom:6px}
+.next .name{height:26px;width:24%;background:#333;margin-bottom:20px}
+.arr{display:inline-block;margin-left:8px}
+.side{position:sticky;top:16px;font-size:11px;color:#444}
+.side h3{margin:0 0 8px;font-size:12px}
+.side ol{padding-left:18px;margin:0 0 16px}
+.side li{margin-bottom:5px}
+.legend span{display:inline-block;width:12px;height:12px;vertical-align:middle;margin-right:6px}
+.n{color:var(--note);font-size:11px;padding:6px 4%;background:#fff7ed;border-top:1px dashed var(--note)}
+@media(max-width:760px){.wrap{grid-template-columns:1fr}.side{position:static}}
+</style></head><body>
+<div class="top"><h1>clay.global/work/nuant — low-fi wireframe</h1>
+<p>Desktop layout (~1217px wide, ~9,650px tall). Hatched boxes = imagery. Gray bars = text. Heights are proportional to the real page.</p></div>
+
+<div class="wrap">
+<div class="page">
+
+<div class="sec"><span class="tag">01 Header</span>
+<div class="hdr"><div class="logo"></div><div style="display:flex;gap:16px;align-items:center"><span class="pill">Contact</span><div class="burger"></div></div></div></div>
+
+<div class="sec"><span class="tag">02 Hero</span>
+<div class="hero"><div class="big"></div><div class="line" style="width:34%;height:10px;background:#bbb"></div></div>
+<div class="img full" style="aspect-ratio:1217/685"><b>FULL-BLEED PHOTO · person holding tablet showing Nuant dark dashboard</b></div>
+<div class="pad"><div class="row"><div class="col" style="flex:1.6">
+<div class="line" style="width:95%"></div><div class="line" style="width:88%"></div><div class="line" style="width:92%"></div><div class="line" style="width:60%"></div><br>
+<div class="line" style="width:90%"></div><div class="line" style="width:75%"></div></div>
+<div class="col chips"><div>Visual Identity</div><div>UI/UX Design</div><div>Design System</div></div></div></div>
+<div class="n">Intro: 2-col — project description left, services list right</div></div>
+
+<div class="sec"><span class="tag">03 Fintech Experience</span>
+<div class="pad"><div class="h2"></div><div class="line" style="width:60%"></div><div class="line" style="width:52%"></div></div>
+<div style="padding:0 4% 32px"><div class="img" style="aspect-ratio:1114/696"><b>Orb portfolio page (browser/app screenshot)</b></div></div></div>
+
+<div class="sec"><span class="tag">04 Optimized Widgets</span>
+<div class="pad"><div class="h2"></div><div class="line" style="width:60%"></div><div class="line" style="width:50%"></div></div>
+<div class="row" style="padding:0 3% 32px;gap:2%">
+<div class="img col" style="aspect-ratio:561/763"><b>Dai Fees page widgets</b></div>
+<div class="img col" style="aspect-ratio:561/763"><b>Dai Supply in DeFi widgets</b></div></div></div>
+
+<div class="sec"><span class="tag">05 Evolving Visual Design</span>
+<div class="pad"><div class="h2"></div><div class="line" style="width:60%"></div><div class="line" style="width:45%"></div></div>
+<div class="img full" style="aspect-ratio:1217/980"><b>FULL-BLEED · collage of multiple Orb pages</b></div></div>
+
+<div class="sec"><span class="tag">06 Design System</span>
+<div class="pad"><div class="h2"></div><div class="line" style="width:60%"></div><div class="line" style="width:50%"></div></div>
+<div class="img full" style="aspect-ratio:1217/673"><b>FULL-BLEED · light vs. dark mode side by side</b></div></div>
+
+<div class="sec"><span class="tag">07 Dark Mode</span>
+<div class="pad"><div class="h2"></div><div class="line" style="width:60%"></div><div class="line" style="width:40%"></div></div>
+<div class="carousel">
+<div class="item"><div class="img" style="aspect-ratio:1021/638"><b>Plan Selection</b></div><div class="cap">Plan Selection Screen</div></div>
+<div class="item"><div class="img" style="aspect-ratio:1021/638"><b>KYC</b></div><div class="cap">KYC Address Stage</div></div>
+<div class="item"><div class="img" style="aspect-ratio:1021/638"><b>Dashboard</b></div><div class="cap">Dashboard Customization</div></div>
+<div class="item"><div class="img" style="aspect-ratio:1021/638"><b>Screen 4</b></div></div></div>
+<div class="arrows"><i></i><i></i></div>
+<div class="n">Horizontal scroll/drag carousel — 4 slides with captions, bleeds off both edges</div></div>
+
+<div class="sec"><span class="tag">08 Iconography</span>
+<div class="pad"><div class="h2"></div><div class="line" style="width:60%"></div><div class="line" style="width:35%"></div></div>
+<div class="img full" style="aspect-ratio:1217/507"><b>FULL-BLEED · custom icon grid</b></div><div style="height:32px"></div></div>
+
+<div class="sec"><span class="tag">09 Closing Visual</span>
+<div class="img full" style="aspect-ratio:1217/685"><b>FULL-BLEED · closing product image</b></div></div>
+
+<div class="sec"><span class="tag">10 Next Case Study</span>
+<div class="next"><div class="lbl">Next Case Study <span class="arr">→</span></div><div class="name"></div>
+<div class="img full" style="aspect-ratio:1217/685"><b>Serena &amp; Lily — preview image (entire block is a link)</b></div></div></div>
+
+</div>
+
+<aside class="side">
+<h3>Page flow</h3>
+<ol><li>Header</li><li>Hero + intro</li><li>Fintech experience</li><li>Widgets (2-up)</li><li>Visual design</li><li>Design system</li><li>Dark mode carousel</li><li>Iconography</li><li>Closing visual</li><li>Next case study</li></ol>
+<h3>Pattern</h3>
+<p>Repeating block: <br>H2 + short paragraph → large image. Rhythm alternates full-bleed, inset, 2-up, and carousel.</p>
+<h3>Legend</h3>
+<div class="legend"><span style="background:#555"></span>Heading<br><span style="background:var(--fill)"></span>Body text<br><span style="background:repeating-linear-gradient(45deg,var(--fill),var(--fill) 3px,var(--hatch) 3px,var(--hatch) 4px);border:1px solid var(--line)"></span>Image<br><span style="background:var(--tint)"></span>Hero tint</div>
+</aside>
+</div>
+</body></html>
