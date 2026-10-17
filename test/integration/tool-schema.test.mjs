@@ -91,7 +91,9 @@ test('headless coding reserves a bounded file reader instead of selecting only w
   const prompt='Implement SAM-001: inspect the repository manifest, operation registry, source files and tests';
   const headless=buildAgentToolSurface(adapter,prompt,{headlessCoding:true,maxTools:8,schemaProvider:'openai'});
   assert.equal(headless.tools.length<=8,true);
-  assert.ok(headless.descriptors.some(t=>t.name==='workspace.read'));
+  for(const id of ['workspace.list','workspace.search','workspace.read']){
+    assert.ok(headless.descriptors.some(t=>t.name===id),'headless coding requires '+id);
+  }
   assert.equal(headless.descriptors.some(t=>t.name==='capability.invoke'),true);
   const regular=buildAgentToolSurface(adapter,'What models are available?',{maxTools:8,schemaProvider:'openai'});
   assert.equal(regular.descriptors.slice(0,4).map(t=>t.name).join(','),
