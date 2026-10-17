@@ -19,6 +19,7 @@ export type CapabilitySpec = {
   approval: CapabilityApproval;
   effect: CapabilityEffect;
   handler: string;
+  providerCapability?: "video.generate" | "media.transcribe" | "render.video" | "media.store" | "media.stream" | "media.convert";
   requires?: readonly string[];
   help: string;
 };
@@ -58,15 +59,19 @@ export const CAPABILITIES = {
   "inspector.audio.fade": {surface:"inspector", actors:["user","agent"], scope:"clip",gate:"verified",approval:"user",effect:"write",handler:"inspector.audio.fade",help:"Adjust source audio fade-in/out using rendered automation."},
   "inspector.clip.speed": {surface:"inspector", actors:["user","agent"], scope:"clip",gate:"supported",approval:"user",effect:"write",handler:"inspector.clip.speed",help:"Set exact clip playback speed."},
   "inspector.clip.keyframe": {surface:"inspector", actors:["user","agent"], scope:"clip",gate:"verified",approval:"user",effect:"write",handler:"inspector.clip.keyframe",help:"Create serialized animation keyframes evaluated in preview and render."},
+  "composition.sticker.create": {surface:"composition",actors:["user","agent"],scope:"project",gate:"supported",approval:"user",effect:"write",handler:"composition.sticker.create",help:"Insert an editable timed graphic mark or annotation."},
   "composition.text.create": {surface:"composition", actors:["user","agent"], scope:"project",gate:"supported",approval:"user",effect:"write",handler:"composition.text.create",help:"Create editable title/sticker layers."},
   "composition.caption.edit": {surface:"composition", actors:["user","agent"], scope:"project",gate:"supported",approval:"user",effect:"write",handler:"composition.caption.edit",help:"Create and edit timed captions."},
   "composition.template.apply": {surface:"composition", actors:["user","agent"], scope:"project",gate:"verified",approval:"user",effect:"write",handler:"composition.template.apply",help:"Apply a versioned reusable MovieMode template."},
   "generation.image.create": {surface:"generation", actors:["user","agent"], scope:"project",gate:"verified",approval:"external",effect:"external",handler:"generation.image.create",help:"Generate an image using a connected authorized provider."},
-  "generation.video.create": {surface:"generation", actors:["user","agent"], scope:"project",gate:"verified",approval:"external",effect:"external",handler:"generation.video.create",help:"Generate footage using a connected authorized provider."},
-  "generation.audio.transcribe": {surface:"generation", actors:["user","agent"], scope:"asset",gate:"verified",approval:"external",effect:"external",handler:"generation.audio.transcribe",help:"Transcribe audio using an approved service or local model."},
+  "generation.video.create": {surface:"generation", actors:["user","agent"], scope:"project",gate:"verified",approval:"external",effect:"external",handler:"generation.video.create",providerCapability:"video.generate",help:"Generate footage using a connected authorized provider."},
+  "generation.audio.transcribe": {surface:"generation", actors:["user","agent"], scope:"asset",gate:"verified",approval:"external",effect:"external",handler:"generation.audio.transcribe",providerCapability:"media.transcribe",help:"Transcribe audio using an approved service or local model."},
   "export.project.save": {surface:"export", actors:["user","agent"], scope:"project",gate:"supported",approval:"user",effect:"write",handler:"export.project.save",help:"Save a portable editable project document."},
-  "export.video.render": {surface:"export", actors:["user","agent"], scope:"project",gate:"verified",approval:"external",effect:"external",handler:"export.video.render",help:"Render the actual edited composition to a verified media file."},
+  "export.video.render": {surface:"export", actors:["user","agent"], scope:"project",gate:"verified",approval:"external",effect:"external",handler:"export.video.render",providerCapability:"render.video",help:"Render the actual edited composition to a verified media file."},
   "export.media.verify": {surface:"export", actors:["user","agent","system"], scope:"asset",gate:"verified",approval:"none",effect:"read",handler:"export.media.verify",help:"Probe exported bytes and attach reproducible verification receipts."},
+  "agent.capability.discover": {surface:"agent",actors:["agent","user"],scope:"workspace",gate:"supported",approval:"none",effect:"read",handler:"agent.capability.discover",help:"Discover available handlers, blocked dependencies and verified provider readiness."},
+  "agent.context.read": {surface:"agent",actors:["agent","user"],scope:"selection",gate:"supported",approval:"none",effect:"read",handler:"agent.context.read",help:"Read the explicitly scoped active project, timeline and selected clip."},
+  "agent.execution.receipt": {surface:"agent",actors:["agent","user","system"],scope:"project",gate:"verified",approval:"none",effect:"read",handler:"agent.execution.receipt",help:"Read tool execution and rendered media verification receipts."},
   "agent.proposal.create": {surface:"agent", actors:["agent"], scope:"project",gate:"verified",approval:"none",effect:"write",handler:"agent.proposal.create",help:"Suggest edits from the user's current selection without silently applying them."},
   "agent.proposal.apply": {surface:"agent", actors:["user","agent"], scope:"project",gate:"verified",approval:"user",effect:"write",handler:"agent.proposal.apply",requires:["agent.proposal.create"],help:"Apply reviewed and explicitly approved edit proposals."},
 } as const satisfies Record<string,CapabilitySpec>;
@@ -81,6 +86,7 @@ export type CapabilityRuntime = {
   handlers: ReadonlySet<string>;
   verified?: ReadonlySet<CapabilityId>;
   granted?: ReadonlySet<CapabilityId>;
+  providerCapabilities?: ReadonlySet<string>;
 };
 export type CapabilityResolution = {
   capability: CapabilityId;
@@ -88,7 +94,7 @@ export type CapabilityResolution = {
   supported: boolean;
   verified: boolean;
   enabled: boolean;
-  reason?: "handler" | "verification" | "approval" | "dependency" | "actor";
+  reason?: "handler" | "provider" | "verification" | "approval" | "dependency" | "actor";
   blockedBy?: CapabilityId[];
 };
 
@@ -98,12 +104,14 @@ export function resolveCapabilities(runtime: CapabilityRuntime, actor: Capabilit
   const results=new Map<CapabilityId,CapabilityResolution>();
   for (const id of ids) {
     const c:CapabilitySpec=CAPABILITIES[id];
-    const supported=runtime.handlers.has(c.handler);
+    const handlerOk=runtime.handlers.has(c.handler);
+    const providerOk=!c.providerCapability || Boolean(runtime.providerCapabilities?.has(c.providerCapability));
+    const supported=handlerOk && providerOk;
     const verified=c.gate==="supported" || Boolean(runtime.verified?.has(id));
     const actorAllowed=c.actors.includes(actor);
     const approved=actor==="user" || c.approval==="none" || Boolean(runtime.granted?.has(id));
     const enabled=supported && verified && actorAllowed && approved;
-    results.set(id,{capability:id,surface:c.surface,supported,verified,enabled,reason:!supported?"handler":!verified?"verification":!actorAllowed?"actor":!approved?"approval":undefined});
+    results.set(id,{capability:id,surface:c.surface,supported,verified,enabled,reason:!handlerOk?"handler":!providerOk?"provider":!verified?"verification":!actorAllowed?"actor":!approved?"approval":undefined});
   }
   // Fixed point handles arbitrary dependency depth, unlike a single shallow pass.
   let changed=true;

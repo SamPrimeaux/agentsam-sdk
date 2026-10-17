@@ -35,6 +35,7 @@ export type CoProProjectView = {
 
 type TimelineProps = {
   project: CoProProjectView;
+  mediaThumbnails?: Readonly<Record<string, string[]>>;
   selectedClipId?: string | null;
   playheadUs: number;
   onSelectClip?: (clipId: string) => void;
@@ -52,6 +53,7 @@ const MAX_PPS = 220;
 
 export function CoProTimeline({
   project,
+  mediaThumbnails = {},
   selectedClipId,
   playheadUs,
   onSelectClip,
@@ -325,7 +327,11 @@ export function CoProTimeline({
                           <span className="copro-text-clip">{text ?? clip.assetId.replace(/^asset:/, "")}</span>
                         ) : (
                           <div className="copro-clip-filmstrip" aria-hidden="true">
-                            {Array.from({ length: Math.max(2, Math.ceil(width / 48)) }, (_, index) => <span key={index} />)}
+                            {Array.from({ length: Math.max(2, Math.ceil(width / 65)) }, (_, index) => {
+                              const frames=mediaThumbnails[clip.assetId];
+                              const frame=frames?.length?frames[Math.floor(index*frames.length/Math.max(2,Math.ceil(width/65)))%frames.length]:null;
+                              return <span key={index} style={frame?{backgroundImage:`url(${frame})`,backgroundPosition:'center',backgroundSize:'cover'}:undefined}/>;
+                            })}
                           </div>
                         )}
 

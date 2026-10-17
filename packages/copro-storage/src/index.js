@@ -127,6 +127,7 @@ export class BrowserIndexedDbMediaStore {
       kind: item.kind,
       durationUs: item.durationUs,
       waveform: item.waveform,
+      thumbnails: item.thumbnails,
       file: item.file,
       savedAt: new Date().toISOString(),
     };

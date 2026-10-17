@@ -122,3 +122,50 @@ export async function extractBrowserAudioWaveform(blob, sampleCount = 96) {
     await context.close().catch(() => undefined);
   }
 }
+
+/**
+ * Create real visual preview derivatives by seeking imported browser-playable video.
+ * These images are optional cache data; original bytes remain the authoritative file.
+ * Decode failures are returned as reasons rather than invented screenshot thumbnails.
+ */
+export async function createBrowserVideoThumbnails(url, {count=8, width=176, height=100} = {}) {
+  if (typeof document === 'undefined') return {ok:false,reason:'browser_unavailable',frames:[]};
+  const video=document.createElement('video');
+  video.muted=true; video.playsInline=true; video.preload='auto';
+  const wait=(event, timeout=6500)=>new Promise((resolve,reject)=>{
+    let done=false;
+    const clean=()=>{if(done)return;done=true;clearTimeout(timer);video.removeEventListener(event,success);video.removeEventListener('error',failed)};
+    const success=()=>{clean();resolve(undefined)};
+    const failed=()=>{clean();reject(new Error('media_decode_failed'))};
+    const timer=setTimeout(()=>{clean();reject(new Error('media_seek_timeout'))},timeout);
+    video.addEventListener(event,success,{once:true});video.addEventListener('error',failed,{once:true});
+  });
+  try {
+    const loaded=wait('loadedmetadata');
+    video.src=url;
+    video.load();
+    await loaded;
+    if(!video.videoWidth||!video.videoHeight)return {ok:false,reason:'unsupported_video_codec',frames:[]};
+    const canvas=document.createElement('canvas');
+    canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)return {ok:false,reason:'canvas_unavailable',frames:[]};
+    const duration=Number.isFinite(video.duration)?video.duration:0;
+    const samples=Math.max(1,Math.min(12,Math.round(count)));
+    const frames=[];
+    for(let i=0;i<samples;i++) {
+      const seek=wait('seeked',4500);
+      video.currentTime=Math.max(0,Math.min(duration-.01, (i+.5)*duration/samples));
+      await seek;
+      ctx.fillStyle='#17191b';ctx.fillRect(0,0,width,height);
+      const naturalRatio=video.videoWidth/video.videoHeight;
+      const targetRatio=width/height;
+      const drawWidth=naturalRatio>targetRatio?height*naturalRatio:width;
+      const drawHeight=naturalRatio>targetRatio?height:width/naturalRatio;
+      ctx.drawImage(video,(width-drawWidth)/2,(height-drawHeight)/2,drawWidth,drawHeight);
+      frames.push(canvas.toDataURL('image/jpeg',.7));
+    }
+    return {ok:true,frames};
+  }catch(error) {return {ok:false,reason:error instanceof Error?error.message:'thumbnail_failed',frames:[]};}
+  finally {video.pause();video.removeAttribute('src');video.load();}
+}

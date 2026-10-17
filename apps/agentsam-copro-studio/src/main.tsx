@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
 import { createCoProProject, createTrack, createClip, serializeCoProProject } from "@inneranimalmedia/copro-project";
 import { BrowserLocalStorageProjectStore, BrowserIndexedDbMediaStore } from "@inneranimalmedia/copro-storage";
-import { extractBrowserAudioWaveform } from "@inneranimalmedia/copro-media";
+import { extractBrowserAudioWaveform, createBrowserVideoThumbnails } from "@inneranimalmedia/copro-media";
 import {
   CoProProjectsScreen,
   CoProStudio,
@@ -199,7 +199,7 @@ function App() {
         if (!existingUrl) mediaUrlsRef.current.set(record.id, url);
         return {
           id:record.id, name:record.name, kind:record.kind, url,
-          durationUs:record.durationUs, file:record.file, waveform:record.waveform,
+          durationUs:record.durationUs, file:record.file, waveform:record.waveform, thumbnails:record.thumbnails,
         };
       });
       setMediaItems((current) => {
@@ -373,7 +373,7 @@ function App() {
     if (existing) {
       if (sourceStore) void sourceStore.put({
         id:existing.id, name:existing.name, kind:existing.kind, file:existing.file,
-        durationUs:existing.durationUs, waveform:existing.waveform,
+        durationUs:existing.durationUs, waveform:existing.waveform, thumbnails:existing.thumbnails,
       }).then(() => setMediaPersistenceError(null)).catch(() => setMediaPersistenceError("Source media could not be saved. Check available device storage."));
       return existing;
     }
@@ -410,6 +410,19 @@ function App() {
       }
     } else {
       setMediaPersistenceError("Original media bytes could not be persisted. This browser has no IndexedDB storage.");
+    }
+    // Build real visual derivatives in the background; no invented timeline frames.
+    // Raw original bytes are already in IndexedDB before this asynchronous pass.
+    if (kind === "video") {
+      void createBrowserVideoThumbnails(item.url,{count:8}).then(async result => {
+        if (!result.ok || !result.frames.length) return;
+        const frames=result.frames;
+        setMediaItems(current=>current.map(media=>media.id===id?{...media,thumbnails:frames}:media));
+        if (sourceStore) {
+          try { await sourceStore.put({id,name:item.name,kind,file,durationUs,waveform,thumbnails:frames}); }
+          catch(error){console.warn("CoPro thumbnail cache could not persist",error);}
+        }
+      }).catch(error=>console.warn("Video thumbnail preparation unavailable",error));
     }
     return item;
   }

@@ -8,6 +8,7 @@ export type CoProMediaShelfItem = {
   kind: "video" | "audio" | "image";
   url: string;
   durationUs?: number;
+  thumbnails?: string[];
 };
 
 export type CoProToolPanelProps = {
@@ -142,7 +143,7 @@ export function CoProToolPanel({
           </dl>
         ) : tool === "transform" ? (
           <div className="mm-transform-controls">
-            <div className="mm-inspector-tabs"><span className="is-active">Video</span><span>Transform</span><span>Basic</span></div>
+            <div className="mm-transform-subheading">Basic properties <span>Exact transform values</span></div>
             <h3>Transform <small>Real-time preview</small></h3>
             {([
               ["scale", "Scale", 5, 600, 1, "%", 100],
@@ -262,7 +263,7 @@ export function CoProToolPanel({
                 {mediaItems.filter((item)=>!isAudio||item.kind==="audio").map((item)=>(
                   <article className="copro-media-shelf-item" key={item.id}>
                     <div className="copro-media-shelf-preview">
-                      {item.kind==="image"?<img src={item.url} alt=""/>:item.kind==="video"?<video src={item.url} muted playsInline preload="metadata"/>:<FileAudio size={25}/>}
+                      {item.kind==="image"?<img src={item.url} alt=""/>:item.kind==="video" && item.thumbnails?.length?<img src={item.thumbnails[0]} alt="Video frame preview"/>:item.kind==="video"?<video src={item.url} muted playsInline preload="auto"/>:<FileAudio size={25}/>}
                     </div>
                     <div className="copro-media-shelf-copy"><strong>{item.name}</strong><small>{item.kind}{item.durationUs?" · "+formatDuration(item.durationUs):""}</small></div>
                     <button onClick={()=>onMediaAdd?.(item.id)}>Add</button>

@@ -23,6 +23,7 @@ export type CoProStoredMediaItem = {
   file: File;
   durationUs?: number;
   waveform?: number[];
+  thumbnails?: string[];
   savedAt?: string;
 };
 

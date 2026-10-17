@@ -30,10 +30,18 @@ test('verified remote operations, authorization and dependencies are independent
     handlers:new Set(['generation.video.create','agent.proposal.create','agent.proposal.apply']),
     verified:new Set(['generation.video.create','agent.proposal.create','agent.proposal.apply']),
     granted:new Set(['generation.video.create','agent.proposal.apply']),
+    providerCapabilities:new Set(['video.generate']),
   };
   assert.equal(canDo(runtime,'generation.video.create','agent').enabled,true);
   assert.equal(canDo({...runtime,verified:new Set()},'generation.video.create','agent').reason,'verification');
   assert.equal(canDo(runtime,'agent.proposal.apply','agent').enabled,true);
   assert.equal(canDo({...runtime,handlers:new Set(['agent.proposal.apply'])},'agent.proposal.apply','agent').reason,'dependency');
   assert.equal(canDo(runtime,'generation.video.create','system').reason,'actor');
+});
+
+
+test('an advertised AI video handler cannot run without its actual provider adapter',()=>{
+  const runtime={handlers:new Set(['generation.video.create']),verified:new Set(['generation.video.create']),granted:new Set(['generation.video.create'])};
+  assert.equal(canDo(runtime,'generation.video.create','agent').reason,'provider');
+  assert.equal(canDo({...runtime,providerCapabilities:new Set(['video.generate'])},'generation.video.create','agent').enabled,true);
 });

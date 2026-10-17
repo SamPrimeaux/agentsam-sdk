@@ -114,6 +114,7 @@ export function CoProStudio({
   onAction,
 }: CoProStudioProps) {
   const [playing, setPlaying] = useState(false);
+  const [previewDecodeWarning, setPreviewDecodeWarning] = useState<string|null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(initialTool);
   const [categoryTool, setCategoryTool] = useState<string>(initialTool ?? "media");
   const [browserSection, setBrowserSection] = useState<"import" | "media" | "subprojects" | "yours" | "generate" | "spaces" | "library">("import");
@@ -224,6 +225,7 @@ export function CoProStudio({
     if (drag.nextX !== drag.x || drag.nextY !== drag.y) onAction?.({type:"transform",clipId:drag.clipId,patch:{x:drag.nextX,y:drag.nextY}});
   }
   const effectivePreviewSrc = activeMedia ? activeMedia.url : (mediaItems.length ? null : previewSrc);
+  useEffect(()=>setPreviewDecodeWarning(null),[effectivePreviewSrc]);
   const effectivePreviewKind = activeMedia?.kind === "image" ? "image"
     : activeMedia?.kind === "video" ? "video"
     : mediaItems.length ? null : previewKind;
@@ -426,7 +428,7 @@ export function CoProStudio({
               <button type="button" aria-label={layout.playerFloating ? "Dock player" : "Undock player"} title={layout.playerFloating ? "Dock player" : "Float and drag player"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(old=>({...old,playerFloating:!old.playerFloating}))}>{layout.playerFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button>
             </div>
             <section className="copro-preview-stage">
-            <div className="copro-preview-device">
+            <div className={`copro-preview-device${effectivePreviewSrc?"":" is-empty"}`}>
               {effectivePreviewSrc && effectivePreviewKind === "video" ? (
                 <video
                   ref={videoRef}
@@ -435,6 +437,11 @@ export function CoProStudio({
                   playsInline
                   style={mediaTransformStyle}
                   onPointerDown={startVisualDrag} onPointerMove={moveVisualDrag} onPointerUp={endVisualDrag} onPointerCancel={endVisualDrag}
+                  onLoadedData={event => {
+                    const player=event.currentTarget;
+                    setPreviewDecodeWarning(player.videoWidth && player.videoHeight ? null : "This file imported, but the browser cannot decode its video track. Try H.264 MP4 or browser-compatible WebM. Your original is preserved.");
+                  }}
+                  onError={() => setPreviewDecodeWarning("The browser could not decode this video. Relink a supported H.264 or WebM source; the original is preserved.")}
                   onPlay={() => setPlaying(true)}
                   onPause={() => setPlaying(false)}
                   onTimeUpdate={(event) => {
@@ -452,11 +459,12 @@ export function CoProStudio({
                 />
               ) : (
                 <div className="copro-preview-placeholder">
-                  <div className="copro-preview-mark">{hasUnavailableFootage ? "Media unavailable" : "Your story starts here"}</div>
-                  <p>{hasUnavailableFootage ? "This timeline needs its original files reattached." : "Import video or images to start editing."}</p>
+                  <div className="copro-preview-mark">{hasUnavailableFootage ? "Media unavailable" : "Preview ready"}</div>
+                  <p>{hasUnavailableFootage ? "Relink the original files in Media to restore this project." : "Import media or drag a clip to the timeline."}</p>
                 </div>
               )}
 
+              {previewDecodeWarning && activeMedia?.kind === "video" && <div className="mm-video-decoding-alert" role="alert">{previewDecodeWarning}</div>}
               <div className="copro-canvas-overlays" aria-live="polite">
                 {activeCanvasText.map((item) => (
                   <button
@@ -483,13 +491,24 @@ export function CoProStudio({
           </section>{/* Player and transport remain one resizable, movable unit. */}
 
           {showInspector && inspectorTool && (
-            <aside id="copro-tool-inspector" className={`copro-inspector-slot${inspectorFloating?" is-floating":""}`} aria-label={`${inspectorTool} inspector`}
+            <aside id="copro-tool-inspector" className={`copro-inspector-slot${inspectorFloating?" is-floating":""}`} data-inspector-tool={inspectorTool} aria-label={`${inspectorTool} inspector`}
               style={inspectorFloating ? {position:"fixed",left:layout.inspectorX,top:layout.inspectorY,width:inspectorWidth,height:layout.inspectorFloatHeight,zIndex:41} : undefined}
               onPointerUp={inspectorFloating ? event => saveFloatingSize(event,"inspector") : undefined}>
               <div className="mm-inspector-dock-header" onPointerDown={inspectorFloating ? event=>moveFloating(event,"inspector") : undefined}>
                 <span>{inspectorFloating && <GripVertical size={14}/>}<strong>{selectedTrack?.kind === "audio"?"Audio":selectedClip?"Clip properties":"Project Details"}</strong></span>
                 <button type="button" aria-label={inspectorFloating?"Dock inspector":"Undock inspector"} title={inspectorFloating?"Dock inspector":"Float and drag inspector"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(value=>({...value,inspectorFloating:!value.inspectorFloating}))}>{inspectorFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button>
               </div>
+              {selectedClip && <nav className="mm-selection-tabs" aria-label="Selected clip property categories">
+                {((selectedTrack?.kind === "audio" ? [
+                  ["volume","Audio",true], ["speed","Speed",true], ["animation","Animation",false]
+                ] : [
+                  ["transform","Video",true], ["volume","Audio",true], ["speed","Speed",true],
+                  ["animation","Animation",false], ["effects","Effects",true], ["transitions","Transitions",true]
+                ]) as Array<[string,string,boolean]>).map(([tool,label,ready]) => <button type="button" key={tool}
+                  className={inspectorTool===tool?"is-active":""} aria-pressed={inspectorTool===tool}
+                  disabled={!ready} title={ready ? `Edit ${label.toLowerCase()} properties of the selected clip` : "Animation keyframes require a verified preview and render implementation"}
+                  onClick={()=>setActiveTool(tool)}>{label}</button>)}
+              </nav>}
               <CoProToolPanel
                 tool={inspectorTool}
                 onClose={() => setLayout(value => ({ ...value, inspectorOpen: false }))}
@@ -537,6 +556,7 @@ export function CoProStudio({
           <ResizeHandle axis="y" className="copro-timeline-divider" label="Resize timeline" value={timelineHeight} min={isCompact ? 115 : 150} max={Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 320 : 230))} direction={-1} onChange={height => setLayout(value => ({ ...value, timelineHeight: height }))}/>
           <CoProTimeline
             project={project}
+            mediaThumbnails={Object.fromEntries(mediaItems.filter(item=>item.thumbnails?.length).map(item=>[item.id,item.thumbnails!]))}
             selectedClipId={selectedClipId}
             playheadUs={playheadUs}
             onSelectClip={onSelectClip}
