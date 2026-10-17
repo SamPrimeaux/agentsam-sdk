@@ -148,16 +148,18 @@
   const showOutlines = true;
   const autoPreview = true;
 
-  const fallbackPages = host ? [] : [
-    { slug: 'home', title: 'Home page', route: '/' },
-    { slug: 'shop', title: 'Shop', route: '/shop' },
-    { slug: 'about', title: 'About', route: '/about' },
-    { slug: 'community', title: 'Community', route: '/community' },
-    { slug: 'collaborate', title: 'Collaborate', route: '/collaborate' },
-    { slug: 'policies', title: 'Policies', route: '/policies' },
-    { slug: 'terms', title: 'Terms', route: '/terms' }
+  // Public URL inventory for the SDK site; not CMS publication evidence.
+  // Tenant-owned CMS pages from /api/admin/cms/pages always take precedence.
+  const fallbackPages = [
+    { slug: 'home', title: 'Home', route: '/' },
+    { slug: 'learn', title: 'Learn', route: '/learn' },
+    { slug: 'themes', title: 'Themes', route: '/themes/' },
+    { slug: 'sdk-help', title: 'SDK Help', route: '/packages/sdk/help/' },
+    { slug: 'sam-docs', title: 'SAM Docs', route: '/docs/sam/' },
+    { slug: 'structured-decisions', title: 'Structured Decisions', route: '/docs/sam/structured-decisions' },
+    { slug: 'infrastructure-cookbooks', title: 'Infrastructure Cookbooks', route: '/docs/sam/infrastructure-cookbooks' },
+    { slug: 'native-runtime', title: 'Native Go Runtime', route: '/docs/sam/native-runtime' }
   ];
-
   const icon = {
     page: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 3h9l3 3v15H6z" stroke="currentColor" stroke-width="1.7"/><path d="M15 3v4h4" stroke="currentColor" stroke-width="1.7"/></svg>',
     section: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
