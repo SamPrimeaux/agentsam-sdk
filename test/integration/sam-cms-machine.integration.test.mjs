@@ -222,6 +222,24 @@ test('old section/block operation names execute canonical SDK machinery without 
 });
 
 
+test('generated-v2 detects all existing portable CMS operations instead of falsely marking them unavailable',async()=>{
+  const dir=await mkdtemp(path.join(os.tmpdir(),'sam-cms-registry-reconcile-'));
+  let db;
+  try {
+    db=await createNodeSqliteCmsRepository({filename:path.join(dir,'cms.sqlite')});
+    const osRuntime=createSamOS({core:false,cms:cmsOptions(db),generated:{
+      resolveTrustedContext:async()=>principal,authorize:async()=>true,
+    }});
+    const missing=osRuntime.status().generated_unavailable.filter(x=>x.name.startsWith('cms.'));
+    assert.deepEqual(missing,[],'real CMS authority must not be misclassified unbound');
+    assert.equal(osRuntime.list().filter(x=>x.id.startsWith('cms.')).length,25);
+    const result=await new AgentSamClient({os:osRuntime}).invoke('cms.definition.list',{});
+    assert.equal(result.ok,true,JSON.stringify(result.error));
+    const aliases=osRuntime.list().filter(x=>x.id.startsWith('cms.')&&x.model_visible===false);
+    assert.ok(aliases.some(x=>x.id==='cms.section.create'));
+  } finally {db?.close();await rm(dir,{recursive:true,force:true});}
+});
+
 test('portable CMS package pins the authoritative SDK cms-runtime schema verbatim',async()=>{
   const [original,packaged]=await Promise.all([
     readFile(new URL('../../packages/cms-runtime/schemas/sqlite/cms-local-runtime.v1.sql',import.meta.url)),
