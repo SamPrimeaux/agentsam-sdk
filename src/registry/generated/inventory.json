@@ -7,7 +7,7 @@
   ],
   "counts": {
     "commands": 76,
-    "capabilities": 73,
+    "capabilities": 75,
     "packages": 62
   },
   "commands": [
@@ -999,6 +999,22 @@
     {
       "id": "workspace.read",
       "description": "Read a bounded UTF-8 file from the selected project workspace without escaping its root.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "workspace.list",
+      "description": "List a bounded, safe set of repository source paths without traversing symlinks, dependency trees or credential stores.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "workspace.search",
+      "description": "Search bounded local UTF-8 source files by exact text and return line-numbered evidence; never crawl credential stores.",
       "package": "@inneranimalmedia/agentsam-sdk/capabilities",
       "cli": null,
       "agent_callable": "requires-handler-check",

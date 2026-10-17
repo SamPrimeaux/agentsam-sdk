@@ -142,7 +142,7 @@ export function buildAgentToolSurface(capabilityAdapter, objective, options = {}
   // workspace file reader. Reserve one of the advertised slots rather than
   // letting keyword matching replace reading with a write tool.
   const bootstrapIds = ['capability.search','capability.describe','capability.status','capability.invoke',
-    ...(options.headlessCoding ? ['workspace.read'] : [])];
+    ...(options.headlessCoding ? ['workspace.list','workspace.search','workspace.read'] : [])];
   const bootstrap = bootstrapIds.map(id=>catalog.find(row=>row.name===id)).filter(Boolean).slice(0,maxTools);
   const remaining = catalog.filter(row=>!bootstrapIds.includes(row.name));
   const searched = searchToolCards(remaining, objective, {
