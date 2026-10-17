@@ -104,3 +104,20 @@ test('Remote agentsam_d1_create requires an explicit customer installation provi
   });
   await assert.rejects(denyAdapter.invoke('agentsam_d1_create',{name:'not-approved'}),/capability_not_authorized/);
 });
+
+test('all new resource tool schemas compile for strict OpenAI and Gemini', async()=>{
+  const {compileToolSchema}=await import('../../src/providers/tool-schema.js');
+  const {getCapability}=await import('../../src/capabilities/manifest.js');
+  for(const id of [
+    'project.list','project.get','project.create','project.edit','project.delete','project.restore',
+    'agentsam_sqlite_list','agentsam_sqlite_get','agentsam_sqlite_create',
+    'agentsam_sqlite_edit','agentsam_sqlite_delete','agentsam_sqlite_restore','agentsam_d1_create',
+  ]){
+    const schema=getCapability(id)?.input_schema;
+    assert.ok(schema,'missing schema '+id);
+    for(const provider of ['openai','gemini']){
+      const compiled=compileToolSchema({provider,canonicalSchema:schema,name:id});
+      assert.ok(compiled.hash,id+' '+provider);
+    }
+  }
+});
