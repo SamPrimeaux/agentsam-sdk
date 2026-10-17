@@ -2474,6 +2474,16 @@ ERROR_REASON_POLICY = {
     "remediation_action": "inspect_platform",
     "default_stage": "transform"
   },
+  "tool_approval_required": {
+    "code": "FAILED_PRECONDITION",
+    "domain": "tool",
+    "failure_class": "authorization",
+    "severity": "blocking_user_fixable",
+    "retryable": False,
+    "resolution_owner": "user",
+    "remediation_action": "request_permission",
+    "default_stage": "authorize"
+  },
   "tool_permission_denied": {
     "code": "PERMISSION_DENIED",
     "domain": "tool",

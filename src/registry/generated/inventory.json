@@ -444,7 +444,7 @@
       "summary": "Run the existing AgentSam coding agent noninteractively with scoped permissions",
       "topic": "work",
       "usage": [
-        "agentsam exec --prompt-file <file> --cwd <directory> --model <provider:model> --json",
+        "agentsam exec --prompt-file <file> --cwd <directory> --model <provider:model> --approval-mode <pending|prompt> --json",
         "agentsam exec --prompt <text> --cwd <directory> --json"
       ],
       "operation": null

@@ -2472,6 +2472,16 @@ export const ERROR_REASON_POLICY = Object.freeze({
     "remediation_action": "inspect_platform",
     "default_stage": "transform"
   },
+  "tool_approval_required": {
+    "code": "FAILED_PRECONDITION",
+    "domain": "tool",
+    "failure_class": "authorization",
+    "severity": "blocking_user_fixable",
+    "retryable": false,
+    "resolution_owner": "user",
+    "remediation_action": "request_permission",
+    "default_stage": "authorize"
+  },
   "tool_permission_denied": {
     "code": "PERMISSION_DENIED",
     "domain": "tool",
