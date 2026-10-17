@@ -25,3 +25,15 @@ test('exec rejects unknown flags before provider invocation',()=>{
  const r=cli('--prompt','test','--unsupported','value','--json');
  assert.equal(r.exit,1);assert.match(JSON.parse(r.output).error.message,/unknown exec argument/);
 });
+test('headless terminal approval mode requires a real TTY',()=>{
+ const r=cli('--prompt','test','--approval-mode','prompt','--json');
+ assert.equal(r.exit,1);
+ const result=JSON.parse(r.output);
+ assert.equal(result.ok,false);
+ assert.match(result.error.message,/requires a terminal/);
+});
+test('headless approval mode rejects invalid values',()=>{
+ const r=cli('--prompt','test','--approval-mode','allow-all','--json');
+ assert.equal(r.exit,1);
+ assert.match(JSON.parse(r.output).error.message,/prompt or pending/);
+});
