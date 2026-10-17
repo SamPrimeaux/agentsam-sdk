@@ -31,7 +31,7 @@ test('co-worker conversation also uses the same persistent surface', async () =>
   );
   assert.match(source, /function CoworkerChat/);
   assert.match(source, /<AgentConversationSurface/);
-  assert.match(source, /AgentRuntimeField/);
+  assert.match(source, /composer=\{\s*<Composer/);
   assert.match(source, /targetKind="side"/);
 });
 
@@ -50,7 +50,8 @@ test('legacy Local Studio TrailThread also uses the portable conversation surfac
     'utf8',
   );
   assert.match(source, /AgentConversationSurface/);
-  assert.match(source, /AgentRuntimeField/);
+  assert.match(source, /composer=\{<Composer/);
+  assert.match(source, /targetKind="trail"/);
 });
 
 

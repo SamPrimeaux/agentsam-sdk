@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clay Blueprint Template</title>
+<style>
+:root{--bg:#f4f4f2;--ink:#1d1d1d;--mut:#666;--line:#c9c9c4;--fill:#e6e6e2;--hatch:#d6d6d1;--acc:#c2410c;--ok:#15803d;--bad:#b91c1c;--card:#fff;--ctl:#1d1d1d}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 ui-sans-serif,system-ui,sans-serif}
+code,.mono,input.sku,.sku,.pre{font-family:ui-monospace,Menlo,Consolas,monospace}
+.top{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:12px}
+.top h1{font-size:14px;margin:0 12px 0 0;font-weight:700}
+.top label{display:flex;gap:6px;align-items:center}
+.top input[type=text]{width:70px;background:#333;color:#fff;border:1px solid #666;padding:3px 6px;font:inherit;text-transform:uppercase}
+.top button,.btn{background:#fff;color:var(--ink);border:1px solid var(--ink);padding:4px 10px;font:inherit;font-size:12px;cursor:pointer;border-radius:3px}
+.top button:hover,.btn:hover{background:#ffedd5}
+.stat{margin-left:auto;color:#ddd}.stat b{color:#fff}
+.layout{display:grid;grid-template-columns:170px minmax(0,1fr);gap:24px;max-width:1280px;margin:0 auto;padding:20px 16px 80px}
+main,.grid>*,.sv>*{min-width:0}
+.card table,.card input,.card select{max-width:100%}
+.sv>div:last-child{overflow-x:auto}
+table{table-layout:auto}
+.card,.sv,details>div{overflow-wrap:anywhere}
+nav.side{position:sticky;top:60px;align-self:start;font-size:12px}
+nav.side a{display:block;padding:4px 8px;color:var(--ink);text-decoration:none;border-left:3px solid var(--line)}
+nav.side a:hover{border-color:var(--acc);background:#fff}
+@media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}nav.side{position:static;display:flex;flex-wrap:wrap;gap:4px}nav.side a{border:1px solid var(--line)}}
+h2{font-size:20px;margin:44px 0 4px;padding-top:14px;border-top:2px solid var(--ink)}h2:first-child{margin-top:0}
+h3{font-size:14px;margin:0}
+.sub{color:var(--mut);margin:0 0 14px}
+.note{background:#fff7ed;border-left:3px solid var(--acc);padding:8px 12px;margin:10px 0;font-size:13px}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:1100px){.g3{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:760px){.g2,.g3{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px}
+.card .hd{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.badge{font-size:10px;background:var(--ink);color:#fff;padding:1px 7px;border-radius:9px;white-space:nowrap}
+.src{font-size:10px;padding:1px 6px;border-radius:9px;border:1px solid var(--line);color:var(--mut);white-space:nowrap}
+.src.m{border-color:var(--ok);color:var(--ok)}.src.n{border-color:#1d4ed8;color:#1d4ed8}.src.i{border-color:var(--acc);color:var(--acc)}
+input.sku{width:100%;font-size:12px;padding:4px 6px;border:1px solid var(--line);background:#fafaf8;color:var(--ink)}
+input.sku.dup,.sku.dup{border-color:var(--bad);background:#fee2e2;color:var(--bad)}
+input.sku.bad{border-color:var(--acc);background:#ffedd5}
+.sku{font-size:11.5px;background:var(--fill);padding:0 5px;border-radius:3px}
+table{border-collapse:collapse;width:100%;font-size:12px;background:#fff}
+th,td{border:1px solid var(--line);padding:4px 7px;text-align:left;vertical-align:top}th{background:var(--fill);font-weight:600}
+td.k{width:34%;color:var(--mut)}
+td.mono{white-space:nowrap}
+.fields{display:grid;grid-template-columns:1fr 100px;gap:6px}
+.fields input,.fields select,td input,td select{width:100%;font:inherit;font-size:12px;padding:3px 6px;border:1px solid var(--line);background:#fff}
+.diag{position:relative;height:96px;background:#fafaf8;border:1px solid var(--line);overflow:hidden}
+.diag i{position:absolute;background:repeating-linear-gradient(45deg,var(--fill),var(--fill) 5px,var(--hatch) 5px,var(--hatch) 6px);border:1px solid #999;font:9px/1 ui-monospace,monospace;color:#555;display:flex;align-items:center;justify-content:center;font-style:normal}
+.diag.dk{background:#171921}
+.comp{display:flex;flex-wrap:wrap;gap:4px;font-size:11px}
+.comp span.i{border:1px solid var(--line);padding:1px 5px;border-radius:3px;background:#fff}
+.pre{background:#1d1d1d;color:#e8e8e8;padding:12px;overflow:auto;font-size:12px;line-height:1.5;border-radius:4px;white-space:pre}
+details{background:#fff;border:1px solid var(--line);margin-bottom:10px}
+details>summary{cursor:pointer;padding:8px 12px;font-weight:600;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+details>div{padding:0 12px 12px}
+.strips{display:flex;gap:6px;align-items:flex-start;overflow-x:auto;padding:10px;background:#fff;border:1px solid var(--line);margin:8px 0}
+.strip{flex:0 0 118px}.strip h4{margin:0 0 4px;font-size:11px;text-align:center}
+.blk{font:9px/1.1 ui-sans-serif,sans-serif;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;border:1px solid rgba(0,0,0,.25);margin-bottom:1px}
+.lg{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;margin:6px 0}.lg i{display:inline-block;width:11px;height:11px;vertical-align:-1px;margin-right:4px}
+textarea{width:100%;min-height:90px;font:12px ui-monospace,monospace;padding:6px;border:1px solid var(--line)}
+ul{margin:4px 0;padding-left:20px}li{margin-bottom:2px}
+.sv{display:grid;grid-template-columns:464px 1fr;gap:18px;align-items:start}
+@media(max-width:1000px){.sv{grid-template-columns:minmax(0,1fr);overflow-x:auto}.sv>div:first-child{flex:none}}
+.tag{background:var(--ink);color:#fff;font-size:9px;padding:0 6px;border-radius:8px}
+</style></head><body>
+
+<div class="top">
+<h1>Clay Blueprint Template</h1>
+<label>Prefix <input type="text" id="prefix" value="IA" maxlength="6"></label>
+<label><input type="radio" name="mode" value="seq" checked> Sequential (01, 02…)</label>
+<label><input type="radio" name="mode" value="rnd"> Random (4-char)</label>
+<button id="bRand">Randomize all</button>
+<button id="bReset">Reset to suggested</button>
+<button id="bCsv">Export CSV</button>
+<button id="bJson">Export JSON</button>
+<button id="bImp">Import JSON</button>
+<span class="stat" id="stat"></span>
+</div>
+
+<div class="layout">
+<nav class="side">
+<a href="#start">0 · How SKUs work</a><a href="#tokens">1 · Tokens</a><a href="#media">2 · Media layouts</a><a href="#components">3 · Components</a><a href="#sections">4 · Sections</a><a href="#pages">5 · Page templates</a><a href="#services">6 · Services page</a><a href="#schema">7 · Typed schema</a><a href="#intake">8 · Content intake</a><a href="#notes">9 · Confidence notes</a>
+</nav>
+<main>
+
+<h2 id="start">0 · How the SKU system works</h2>
+<p class="sub">Every reusable piece of the Clay layouts gets one SKU. Edit any SKU in place, or use the bar above to set a prefix and regenerate. Export when you are ready to build.</p>
+<div class="grid g2">
+<div class="card"><h3>Format</h3>
+<p class="mono" style="margin:0;font-size:13px">{PREFIX}-{LAYER}-{CODE}-{SUFFIX}</p>
+<table><tr><th>Part</th><th>Meaning</th></tr>
+<tr><td class="mono">PREFIX</td><td>Your brand or project code, 2–6 characters (default IA). Change it once above; every non-edited SKU follows.</td></tr>
+<tr><td class="mono">LAYER</td><td><b>TKN</b> token · <b>MED</b> media layout · <b>CMP</b> component · <b>SEC</b> section · <b>PG</b> page template · <b>GLB</b> 3D object</td></tr>
+<tr><td class="mono">CODE</td><td>Short name for the structure (HERO, CHAP, FULL…). Fixed by the registry.</td></tr>
+<tr><td class="mono">SUFFIX</td><td>Sequential (01, 02) for readable lists, or random 4 characters (no 0/O/1/I) if you want unguessable, collision-proof IDs.</td></tr></table></div>
+<div class="card"><h3>Normalization rules</h3><ul>
+<li><b>One SKU per DOM structure.</b> Create a new SKU only when the element tree changes.</li>
+<li><b>Variants are parameters, not SKUs:</b> theme (light, tint, dark, brand), side (left/right mirror), slide count, tile aspect.</li>
+<li><b>Sections compose components and media.</b> A chapter is one section SKU plus one media SKU, never a new SKU per layout combination.</li>
+<li><b>Pages are ordered stacks of section SKUs.</b> A new case study is a list, not new markup.</li>
+<li><b>Edited SKUs are locked.</b> Randomize and prefix changes skip anything you typed yourself. Duplicates turn red.</li></ul></div>
+</div>
+<div class="note"><b>Source tags</b> on every spec: <span class="src m">measured</span> I measured it on the live page · <span class="src n">your notes</span> taken from the audit text you pasted, not re-measured by me · <span class="src i">inferred</span> read from screenshots or derived from other numbers. Measurements are at 1280px (older case studies) or 1440px (Marqeta and Services). Heights scale with viewport width; widths are given as % of viewport.</div>
+<div id="impbox" style="display:none"><textarea id="impta" placeholder="Paste exported JSON here"></textarea><button class="btn" id="bImpGo">Apply</button></div>
+
+<h2 id="tokens">1 · Tokens (TKN)</h2>
+<p class="sub">The values everything else reads from. Define these once as variables in your build.</p>
+<div id="tokensBox"></div>
+
+<h2 id="media">2 · Media layouts (MED)</h2>
+<p class="sub">Each layout is defined by horizontal position, width and aspect ratio. Heights follow from those. Diagrams are to scale in width.</p>
+<div class="grid g3" id="mediaBox"></div>
+
+<h2 id="components">3 · Components (CMP)</h2>
+<p class="sub">Atoms and molecules. Sections are built from these.</p>
+<div class="grid g3" id="compBox"></div>
+
+<h2 id="sections">4 · Sections (SEC)</h2>
+<p class="sub">Full-width page blocks. Each lists the components and media it composes, the themes it accepts, and its content slots.</p>
+<div class="grid g2" id="secBox"></div>
+
+<h2 id="pages">5 · Page templates (PG)</h2>
+<p class="sub">Observed stacks, to scale (1 block pixel = 50 page pixels). Open one to see its ordered SKU list.</p>
+<div class="lg" id="lg"></div>
+<div class="strips" id="strips"></div>
+<div id="pgBox"></div>
+
+<h2 id="services">6 · Services page, in detail</h2>
+<p class="sub">Measured at 1440px. Scale drawing (about 0.32×) and the per-row map. The 3D (GLB) objects are registry items too.</p>
+<div class="sv"><div id="svc" style="position:relative;width:460px;height:2463px;border:2px solid var(--ink);background:#fff;overflow:hidden"></div><div id="svcSpec"></div></div>
+
+<h2 id="schema">7 · Typed schema (TypeScript)</h2>
+<p class="sub">A SKU names a reusable definition. A page is an ordered list of section instances, each with its own id, typed settings, blocks, asset-backed media and a cms_themes reference. Shapes mirror the SDK intake CLI output (page-proposal.json). Nothing here is published by compiling.</p>
+<div class="pre" id="tsBox"></div>
+
+<h2 id="intake">8 · Content intake (per case study)</h2>
+<p class="sub">Fill this in only to hand-seed a case study. The real path is machine-produced: run the SDK CLI against discovery receipts (command below). This form builds the receipt it consumes.</p>
+<div id="intakeBox"></div>
+
+<h2 id="notes">9 · Confidence notes</h2>
+<div class="card"><ul>
+<li><b>Fully measured:</b> Sky, Slack, Meta, Eden and Nuant at 1280px; Marqeta and Services at 1440px. Positions, widths and heights come from the live DOM.</li>
+<li><b>From your pasted audit (not re-measured):</b> the 914px type sizes, Discover's section list, the 768/1250/1440/1550 breakpoints, the three-phone parallax offset, and the "videos are muted and loop" note.</li>
+<li><b>Inferred:</b> exact vertical rhythm inside rows (list pitch, industry-row pitch), the services-page GLB center positions (read from screenshots), and the purpose of the Eden/Sky closing block.</li>
+<li><b>Not covered:</b> mobile and tablet layouts, hover and scroll animation, and the six case studies my script was blocked on (Wealth, Grayscale, Serena &amp; Lily, Joe &amp; the Juice, Lulo, Snapchat at desktop width).</li>
+<li><b>Counts that will drift:</b> the work-index filter counts (39/16/21/11) and the client lists are as of the audit date.</li></ul></div>
+
+</main></div>
+<script>
+/* ===== REGISTRY DATA ===== */
+const ITEMS=[],BY={},CNT={};
+function add(o){const g=o.L+'-'+o.c;CNT[g]=(CNT[g]||0)+1;o.seq=CNT[g];o.s=o.s||[];o.slots=o.slots||[];o.comp=o.comp||[];ITEMS.push(o);BY[o.k]=o;return o}
+const SRC={m:'<span class="src m">measured</span>',n:'<span class="src n">your notes</span>',i:'<span class="src i">inferred</span>'};
+const SLM=[['src','url','—','yes'],['kind','image | video','video plays muted, looping','yes'],['alt','string','≤125 characters','yes'],['poster','url','video only','no']];
+const TK=(k,c,n,v,src)=>add({k,L:'TKN',c,n,v,src});
+TK('T_FONT','FONT','Typeface','Universal Sans (computed family <code>UniversalSans-500</code>). Weights: 500 body, 740 headings and labels.','m');
+TK('T_H1','H1','Heading 1','64 / 70.4px @1280 · 74 / 81.4px @1440 · 40 / 44px @914 (notes). Weight 740. Left edge 5%; wraps inside 46–53% width.','m');
+TK('T_H2','H2','Heading 2 (chapter)','52 / 57.2px @1280 and @1440 · 30 / 36px @914 (notes). Weight 740. Left edge 5–6%; wraps inside ≤36% width (two lines).','m');
+TK('T_LEAD','LEAD','Lead / subtitle','28 / 39.2px @1440 (services hero, 39% wide, two lines) · 18px @914 (notes). Weight 500.','m');
+TK('T_BODY','BODY','Body paragraph','22 / 29.7px, weight 500 @1280 and @1440 · 16px @914 (notes). Column 35–36% of viewport (446px @1280, 518px @1440). Paragraphs run 96–300 characters.','m');
+TK('T_LABEL','LABEL','Row label (H3)','22 / 29.7px, weight 740 (industry labels, white on dark). Next-case label: 28 / 39.2px @1440.','m');
+TK('T_C_LIGHT','CLITE','Color · light','#ffffff page. Ink on white: #050411 in the hero and #161520 in body copy (notes).','n');
+TK('T_C_TINT','CTINT','Color · tint','#f5f5f7 (rgb 245,245,247): Marqeta light-gray chapters.','m');
+TK('T_C_DARK','CDARK','Color · dark','#171921 (rgb 23,25,33): Services Industries block. Discover uses #161520, with #09001a for its next-case block (notes).','m');
+TK('T_C_BRAND','CBRND','Color · client brand','Per project. Marqeta fills its dark chapters with its own indigo #2a206a (rgb 42,32,106).','m');
+TK('T_GUTTER','GUTR','Gutters','Text left edge 5% (72px @1440, 72–75px @1280). Inset media starts at 6%, width 85–89%. Full-bleed media: x 0, width 99–100%.','m');
+TK('T_TCOL','TCOL','Text column','35–36% of viewport. A heading may be wider, but the paragraph never exceeds this column.','m');
+TK('T_GAP','GAP','Tile gap','≈1% (13px) between two-up tiles @1280; 16px between stacked mosaic tiles (derived from 369 + 369 + 16 = 754).','m');
+TK('T_RADIUS','RAD','Corner radius','0 on every image and video. Rounded corners appear only on device and browser frames (radius not measured).','m');
+TK('T_HEADER','HDR','Header','90px tall (measured @1232). Logo left; links Work, Clients, Services, Industries▾, About, Blog; dark "Contact" pill. At phone width: pill + menu icon.','m');
+TK('T_ASPECT','ASPR','Aspect ratios in use','16:9 and 16:10 (full, inset, carousel) · 1:1 (two-up, offset, pairs) · 3:2 and ≈3:4 (mosaic tiles) · ≈3:4 (service picture, 518×679). Tall full-bleed collages run from 7:5 down to ≈4:5.','i');
+TK('T_BP','BP','Breakpoints','768 / 1250 / 1440 / 1550 (notes, unverified). Type steps up between 1280 and 1440 (measured).','n');
+
+const MD=(k,c,n,d,src,s,diag)=>add({k,L:'MED',c,n,d,src,s,diag,slots:SLM});
+MD('MED_FULL','FULL','Full-bleed media','Edge-to-edge image or video. Used for hero, breakers and key moments.','m',[['x','0 (edge to edge)'],['width','99–100%'],['aspect','16:9 (712px tall @1280) or 16:10 (791px @1280; hero 802px and photo 891px @1440)'],['tall variants','collages up to 1,625px (Sky), 1,203px (Eden), 980px (Nuant) @1280'],['corners','0, no border or shadow']],[[0,8,100,80,'']]);
+MD('MED_INSET','INSET','Inset media','One screenshot, poster or framed browser that needs air.','m',[['x','6%'],['width','85–89% (87% typical)'],['aspect','16:9 (627px @1280, 717px @1440) or 16:10 (697px @1280, 781px @1440)']],[[6,10,87,76,'']]);
+MD('MED_TWOUP','TWO','Two-up','Two equal tiles: before/after, two states, two screens.','m',[['x','6% and 50%'],['width','43% + 43% (gap ≈1%, 13px)'],['tile aspect','1:1 (550×550 @1280, Sky) or ≈3:4 portrait (561×763 @1217, Nuant, tiles 46% wide)']],[[6,10,43,76,''],[50,10,43,76,'']]);
+MD('MED_OFFSET','OFFS','Offset single','Supporting visual hung on the right, leaving white space on the left.','m',[['x','42%'],['width','51% (right edge at 93%)'],['aspect','1:1 (652px @1280) or 3:2 (439px)']],[[42,10,51,76,'']]);
+MD('MED_PAIR_SQ','PAIR','Pair · big + small square','A large square beside a small one: desktop screen plus mobile screen.','m',[['x','6% and 65%'],['width','58% + 28%'],['tile aspect','1:1 each (741px and 358px @1280)'],['vertical alignment','not verified']],[[6,8,58,80,''],[65,40,28,48,'']]);
+MD('MED_PAIR_PT','PAIRP','Pair · portrait','A tall photo beside a tall detail tile (Marqeta, after the hero).','m',[['x','5% and 65%'],['width','59% + 29%'],['height','1,090px and 657px @1440 (≈0.78 and 0.64 ratio)']],[[5,8,59,82,''],[65,24,29,66,'']]);
+MD('MED_MOSAIC','MOSC','Mosaic (2 small + 1 tall)','Two small assets stacked against one tall one.','m',[['columns','x 6% and x 50%, each 43% wide'],['small tile','43% × 369px (3:2) @1280, stacked, 16px gap'],['tall tile','43% × 754px (≈3:4) @1280'],['mirror','tall on the right (Eden, Meta) or on the left (Eden second, Slack). One SKU, parameter side.']],[[6,8,43,38,''],[6,50,43,38,''],[50,8,43,80,'']]);
+MD('MED_CAROUSEL','CARO','Carousel','3–5 slides in a horizontal scroller bleeding off the right edge.','m',[['slides','3–5'],['x','first slide at 6%; step ≈84% (6, 90, 174, 258, 342)'],['slide width','78–84% of viewport'],['aspect','16:10 (625–646px tall @1280; 715px @1440)'],['controls','two circular arrow buttons top-right of the section; optional caption under each slide']],[[6,10,78,76,''],[86,10,78,76,'']]);
+MD('MED_DEVICE','DEVC','Device pair · mobile + desktop','Responsive proof: a narrow mobile shot beside or over a wide desktop shot.','m',[['mobile','19–20% wide × 537–614px'],['desktop','89–91% wide × 637–817px; overlaps or scrolls beside the mobile'],['seen on','Slack, Marqeta']],[[6,36,20,52,''],[30,8,63,80,'']]);
+MD('MED_TRIO','TRIO','Trio of tall phones','Three app screens in sequence.','n',[['tiles','3 tall phones'],['size','195 × 421px each @914'],['pitch','≈305px; each 100px lower than the last (likely scroll parallax, unverified)']],[[8,12,18,76,''],[32,12,18,76,''],[56,12,18,76,'']]);
+MD('MED_SVCPIC','SVCP','Service picture','Portrait picture beside each service. Mirrors every row.','m',[['x','58% (picture right) or 5% (picture left)'],['width','36%'],['height','679px @1440 (518×679 ≈ 3:4)'],['corners','0; no border, shadow or caption']],[[58,4,36,88,'']]);
+
+add({k:'MED_ORBIT',L:'MED',c:'ORBT',n:'Interactive · orbit stage',d:'Scroll-driven "one becomes many": layered spheres plus a frosted-glass disc converge on a hub and spread out as the stage scrolls. Mined from the clay-orbit web component on orbit-demo.',src:'m',
+ s:[['stage','tall wrapper (default 320vh) with one sticky child; progress = −top / (height − viewport)'],['aspect','1313 : 622 (manifest width × height)'],['layers','sphere + accent + dot are pre-rendered webp images; frost is a CSS disc with backdrop-filter blur (no image)'],['motion','each layer translates and scales from the hub (s0 0.35–0.94) to its final position; ease 1−(1−q)³; delay 0.1 × distance from hub'],['labels','optional pills fade in after progress 0.8'],['reduced motion','progress is forced to 1 and the stage stops being sticky'],['theme keys','label, labelBg, frost, shadow (come from the selected cms_themes row, not hard-coded)']],
+ diag:[[8,8,84,84,'orbit']],
+ slots:[['scene.layers','{name,kind,assetRole,cx,cy,w,h,s0,fade}[]','3–5 layers; image layers carry assetRole, never a URL','yes'],['assets','MediaReference[]','one cms_assets id per image layer','yes'],['converge','number','hub layer index, default 0','no'],['labels','{text,cx,cy}[]','0–4','no'],['stageHeight','string','default 320vh','no']]});
+
+const CP=(k,c,n,d,src,s,slots)=>add({k,L:'CMP',c,n,d,src,s,slots});
+CP('CMP_NAV','NAV','Global header','Logo, links and one pill button. No in-page nav.','m',[['height','90px'],['links','Work, Clients, Services, Industries (dropdown), About, Blog'],['cta','dark pill "Contact"'],['phone width','pill + menu icon']],[['links','list','6 items','yes'],['cta','string','1 word','yes']]);
+CP('CMP_TITLE','TITL','Title block','H1 plus one-line deliverable.','m',[['H1','74 / 81.4px @1440, left 5%, 46–53% wide'],['subtitle','22–28px, ≤2 lines'],['gap','≈98px from H1 to subtitle @1280']],[['name','string','1–3 words','yes'],['deliverable','string','≤70 characters, says what was delivered','yes']]);
+CP('CMP_INTRO','INTR','Intro split','Brief on the left, services delivered on the right.','m',[['left','x 6%, width 35% (446px @1280), 1–3 paragraphs'],['right','x 72%, width 21% (266px @1280), 4–7 items at 40px pitch'],['link','optional underlined client link under the list']],[['paragraphs','string[]','1–3, ≤300 characters each','yes'],['services','string[]','4–7 items','yes'],['clientUrl','url','optional','no']]);
+CP('CMP_HEADP','HEDP','Chapter header','Heading and paragraph. Four variants: heading+paragraph, heading only, paragraph only, heading+two paragraphs.','m',[['H2','52 / 57px at x 5–6%, ≤36% wide'],['paragraph','22 / 29.7px, starts 85px below the H2 top (57 + 28 gap)'],['length','96–300 characters, ≤5 lines']],[['heading','string','2–5 words, noun phrase','variant'],['body','string','140–300 characters','variant'],['body2','string','second paragraph','no']]);
+CP('CMP_CAPT','CAPT','Slide caption','Small gray caption under each carousel slide.','i',[['size','not measured; visibly ≈12px, gray'],['use','carousel slides only']],[['caption','string','≤40 characters','no']]);
+CP('CMP_ARROWS','ARRW','Carousel arrows','Two circular arrow buttons at the top-right of a carousel.','i',[['position','top-right, above the first slide'],['behavior','scroll one slide']],[]);
+CP('CMP_FRAME','FRAM','Device / browser frame','Rounded frame around screenshots (Marqeta browser, Nuant tablet).','i',[['placement','inside MED_INSET, 87% wide'],['radius','not measured (visibly rounded)']],[['kind','browser | tablet | phone','—','yes']]);
+CP('CMP_NEXTC','NEXC','Next-case link','Label, client name and a full-bleed preview. The whole block is one link.','m',[['label','28 / 39.2px @1440'],['block height','1,021px @1280; 1,122px @1440'],['background','slightly deeper than the page (Discover #09001a, notes)']],[['label','string','"Next Case Study"','yes'],['name','string','1–3 words','yes'],['href','url','—','yes']]);
+CP('CMP_SVCLIST','SLST','Service list (6 names)','Six stacked service names, bold, no bullets.','i',[['items','6'],['pitch','≈34px (read from screenshot)']],[['items','string[]','6 items, ≤30 characters each','yes']]);
+CP('CMP_SVCROW','SROW','Service row','Heading, paragraph, service list, picture and 3D object, mirrored on alternate rows.','m',[['row pitch','918px @1440'],['text column','x 5% (rows 1,3,5) or 58% (rows 2,4), width 36%'],['H2 top','706 / 1624 / 2543 / 3461 / 4380px'],['picture top','737 / 1695 / 2613 / 3532 / 4450px'],['paragraph','≈260 characters, 5 lines (149px)']],[['heading','string','1–3 words','yes'],['body','string','≈260 characters','yes'],['items','string[]','6','yes'],['mirror','boolean','alternates by row','auto']]);
+CP('CMP_INDROW','INDR','Industry row','White label left, muted client names right, hairline divider.','i',[['label','x 5%, 19% wide, 22 / 29.7px weight 740'],['clients','x 30%, muted gray, 1–2 lines'],['pitch','≈120px (one line) / ≈144px (two lines)']],[['label','string','1–4 words','yes'],['clients','string[]','3–12 names','yes']]);
+CP('CMP_OFFICES','OFFC','Office grid','Six offices in a 3×2 grid: city bold, two-line address.','m',[['grid','3 columns × 2 rows'],['cell','city + 2-line address']],[['offices','{city,address}[]','up to 6','yes']]);
+CP('CMP_FOOTCTA','FCTA','Footer CTA','"Let\'s Talk" scale heading plus email and phone.','m',[['heading','large, left, ≈52–74px (not measured)'],['below','email, phone']],[['heading','string','2–3 words','yes'],['email','string','—','yes'],['phone','string','—','no']]);
+CP('CMP_FOOTNAV','FNAV','Footer nav','Two columns of links.','m',[['columns','2'],['links','3–4 each']],[['links','{label,href}[]','6–8','yes']]);
+CP('CMP_FOOTLEG','FLEG','Footer legal row','Social icons left; copyright and legal links right.','m',[['left','5 social icons'],['right','copyright, Privacy, Terms, Sitemap']],[['social','{icon,href}[]','≤6','no'],['legal','{label,href}[]','≤4','yes']]);
+CP('CMP_FILTER','FILT','Work filter','Category tabs with counts.','m',[['tabs','All Work 39 · Digital Products 16 · Websites 21 · Branding 11 (as of audit date)']],[['tabs','{label,count}[]','3–5','yes']]);
+CP('CMP_WCARD','WCRD','Work card','Media, client name, one-line deliverable. The whole card is a link.','m',[['wide card','984 × 678px @1280, offset (x 75 or 206)'],['pair cards','501 × 625px left, 501 × 750px right (right sits lower)'],['copy','name + one sentence starting with the deliverable']],[['name','string','1–3 words','yes'],['line','string','≤90 characters','yes'],['media','MediaItem','image or looping video','yes'],['href','url','—','yes']]);
+
+const SE=(k,c,n,d,src,s,comp,themes,slots)=>add({k,L:'SEC',c,n,d,src,s,comp,themes,slots});
+SE('SEC_HERO','HERO','Hero','Title, large hero media and intro split.','m',[['height','1,283–1,680px (@1217–1440), including 685–802px of media'],['order','title block → full-bleed media → intro split'],['title area','may carry a client tint (Nuant: pale lavender)']],['CMP_NAV','CMP_TITLE','MED_FULL','CMP_INTRO'],'light + optional tint',[['name','string','1–3 words','yes'],['deliverable','string','≤70 characters','yes'],['hero','MED_FULL','16:9 or 16:10','yes'],['intro','string[]','1–3 paragraphs','yes'],['services','string[]','4–7','yes']]);
+SE('SEC_CHAP','CHAP','Chapter','Heading, paragraph, one media block. The workhorse.','m',[['height','599–2,019px; typically 1,000–1,400px'],['media','exactly one MED-* SKU'],['rhythm','never the same MED layout twice in a row']],['CMP_HEADP','MED_FULL','MED_INSET','MED_TWOUP','MED_OFFSET','MED_PAIR_SQ','MED_PAIR_PT','MED_MOSAIC','MED_CAROUSEL','MED_DEVICE','MED_TRIO','MED_ORBIT'],'light · tint · dark · brand',[['heading','string','2–5 words','yes'],['body','string','140–300 characters','yes'],['media','MED-*','one layout','yes'],['theme','enum','light|tint|dark|brand','yes']]);
+SE('SEC_BEAT','BEAT','Beat','Paragraph and media, no heading. Continues the chapter above.','m',[['height','599–1,505px'],['paragraph','1–4 short paragraphs']],['CMP_HEADP','MED_FULL','MED_INSET','MED_TWOUP','MED_OFFSET','MED_PAIR_SQ','MED_CAROUSEL'],'light · tint · dark · brand',[['body','string','≤300 characters','yes'],['media','MED-*','one layout','yes'],['theme','enum','—','yes']]);
+SE('SEC_MEDIA','MEDI','Media only','Media with no text. A pause or a proof shot.','m',[['height','599–1,250px']],['MED_FULL','MED_INSET','MED_MOSAIC','MED_PAIR_PT','MED_CAROUSEL'],'light · tint · dark · brand',[['media','MED-*','one layout','yes'],['theme','enum','—','yes']]);
+SE('SEC_STMT','STMT','Statement','Heading only, no paragraph or media.','m',[['height','≈389px @1440'],['use','introduces the next run of screenshots']],['CMP_HEADP'],'dark · brand',[['heading','string','≤12 words','yes'],['theme','enum','dark|brand','yes']]);
+SE('SEC_TEXT','TEXT','Text only','Heading and paragraph, no media.','m',[['height','≈394px @1440']],['CMP_HEADP'],'light',[['heading','string','2–5 words','yes'],['body','string','140–300 characters','yes']]);
+SE('SEC_BREAK','BRKR','Breaker','Full-bleed media, no text. A pause and a final visual.','m',[['height','685–901px'],['placement','every 5–8 chapters and again before the next-case block']],['MED_FULL'],'light · dark',[['media','MED_FULL','16:9 or 16:10','yes']]);
+SE('SEC_CLOSE','CLOS','Closing note','Two short paragraphs and a small logo. Purpose not confirmed (credits, result or testimonial).','i',[['height','805–816px'],['content','2 paragraphs + 72px-high small image']],['CMP_HEADP'],'light · dark',[['body','string[]','2 paragraphs','yes'],['logo','image','≈72px high','no']]);
+SE('SEC_NEXT','NEXT','Next case','Link block to the next project.','m',[['height','1,021px @1280; 1,122px @1440']],['CMP_NEXTC','MED_FULL'],'deeper than page',[['label','string','—','yes'],['name','string','—','yes'],['media','MED_FULL','—','yes'],['href','url','—','yes']]);
+SE('SEC_SVCHERO','SHRO','Services hero','Text-only hero. No media; the first 3D object overlaps its bottom edge.','m',[['height','641px @1440'],['H1','74 / 81.4px, two lines, x 5%, 46% wide'],['lead','28 / 39.2px, two lines, 39% wide']],['CMP_NAV','CMP_TITLE'],'light',[['heading','string','≤6 words','yes'],['lead','string','≤2 lines','yes']]);
+SE('SEC_SVCLIST','SLIS','Services list','Five mirrored service rows with 3D objects behind them.','m',[['height','4,432px @1440 (5 × 918px; 81px spacer before the next block)'],['rows','5, alternating text-left / text-right']],['CMP_SVCROW','MED_SVCPIC','GLB_ORB','GLB_DISC','GLB_CUBE','GLB_CONE','GLB_CORNER'],'light',[['rows','CMP_SVCROW[5]','—','yes']]);
+SE('SEC_IND','INDS','Industries','Dark block: heading, intro and 12 two-column rows.','m',[['height','1,919px @1440'],['background','#171921'],['rows','12; label white, client names muted']],['CMP_HEADP','CMP_INDROW'],'dark',[['heading','string','1 word','yes'],['body','string','≤2 lines','yes'],['rows','CMP_INDROW[12]','—','yes']]);
+SE('SEC_FOOT','FOOT','Footer','Light-gray footer with the helix 3D object behind the CTA.','m',[['height','641px @1440'],['layout','CTA left; nav and offices right; legal row at the bottom']],['CMP_FOOTCTA','CMP_FOOTNAV','CMP_OFFICES','CMP_FOOTLEG','GLB_HELIX'],'tint',[['cta','CMP_FOOTCTA','—','yes'],['nav','CMP_FOOTNAV','—','yes'],['offices','CMP_OFFICES','—','no'],['legal','CMP_FOOTLEG','—','yes']]);
+SE('SEC_WKHEAD','WKHD','Work header','One-line promise as page title, then filter tabs.','m',[['title','one sentence, no hero image'],['filter','CMP_FILTER under the title']],['CMP_TITLE','CMP_FILTER'],'light',[['title','string','≤8 words','yes'],['filter','CMP_FILTER','—','yes']]);
+SE('SEC_WKGRID','WKGR','Work grid','Staggered card grid: wide card, then an offset pair, repeating.','m',[['rhythm','wide → pair → wide…'],['pair','left card shorter (625px), right card taller (750px) and shifted down'],['desktop height','not measured']],['CMP_WCARD'],'light',[['cards','CMP_WCARD[]','37 on the Clay index','yes']]);
+
+SE('SEC_CONV','CONV','Conversion chapter · orbit','Tint chapter: heading and paragraph, a scroll-driven orbit stage, then a closing paragraph. Copy is slot-based; never paste another studio\'s text.','m',[['height','head ≈ 400px + stage 320vh + tail ≈ 300px'],['order','CMP_HEADP → MED_ORBIT (sticky) → paragraph'],['appearance','tint (light scene) or dark (midnight scene); theme identity is a cms_themes reference'],['preview file','enhancing-conversion-section.html']],['CMP_HEADP','MED_ORBIT'],'tint · dark',[['heading','string','2–5 words','yes'],['body1','string','140–300 characters','yes'],['body2','string','140–300 characters','yes'],['caption','string','≤90 characters','no'],['orbit','MED_ORBIT','scene + asset ids','yes'],['theme','InstalledThemeReference','cms_themes.id','yes']]);
+SE('SEC_CUST','CUST','Website customizer · interactive demo','Drop-in "try customizing a website" card: a live preview with an editable heading and four accent swatches. Scoped to [data-iam-customizer]; no requests, storage or CMS writes. Lives inside the case study.','m',[['source file','website-customizer-section.html (Downloads), unmodified'],['scope','[data-iam-customizer]; supports several independent instances'],['accent vars','--iam-accent, --iam-panel, --iam-hairline'],['default accent','#3c67b5 (cobalt)'],['swatches','forest #406959 · cobalt #3c67b5 · terracotta #b76c4b · charcoal #343b43, plus Reset'],['pill','"Illustrative interaction" (keep: it labels the demo as illustrative)']],['CMP_TITLE'],'light · tint',[['title','string','≤6 words','yes'],['subtitle','string','≤120 characters','yes'],['pill','string','≤30 characters','no'],['preview','{mark,eyebrow,heading,copy,cta}','one preview card','yes'],['defaultHeading','string','≤40 characters','yes'],['swatches','{label,hex}[]','2–6','yes'],['defaultAccent','hex','one of the swatches','yes']]);
+
+const GB=(k,c,n,file,shape,src)=>add({k,L:'GLB',c,n,d:'3D object rendered on a transparent canvas behind page content. '+shape,src,s:[['model slot',file],['canvas','73% wide × 1050px, absolute, transparent'],['canvas x','25% on picture-right rows; 1% on picture-left rows'],['object center','≈61% across (picture-right rows) or ≈39% (picture-left rows)'],['vertical','center ≈90px above the picture top edge, overlapping the previous row'],['object size','≈330 × 420px on screen'],['material','matte clay-white, faint lavender or blue translucency, very soft shadow']],slots:[['file','.glb/.gltf','your own model','yes'],['row','1–5','which service row','yes'],['scale','number','≈1','no']]});
+GB('GLB_ORB','ORB','3D · orb cluster','Clay file: models/orbs/branding.gltf','Cluster of spheres (row 1).','m');
+GB('GLB_DISC','DISC','3D · stacked discs','Clay file: models/flatCircles/digital.gltf','Stack of flat discs (row 2).','m');
+GB('GLB_CUBE','CUBE','3D · stacked panels','Clay file: models/squares/websites.gltf','Stacked cubes or panels (row 3).','m');
+GB('GLB_CONE','CONE','3D · double cone','Clay file: models/doubleCone/content.gltf','Double cone (row 4).','m');
+GB('GLB_CORNER','CORN','3D · folded corners','Clay file: models/corners/dev.gltf','Folded corner planes (row 5).','m');
+add({k:'GLB_HELIX',L:'GLB',c:'HELX',n:'3D · helix swoosh',d:'Oversized, cropped swoosh behind the footer. Also the only live canvas on Marqeta.',src:'m',s:[['model slot','Clay file: models/helix/helix.gltf'],['canvas','70% wide × 641px at the footer'],['look','light gray on light gray, crosses the lower left']],slots:[['file','.glb/.gltf','your own model','yes']]});
+add({k:'GLB_SAT',L:'GLB',c:'SATL',n:'3D · satellites (unseen)',d:'Two models (satellite_big, satellite_small) load on /services, but I did not see where they appear.',src:'i',s:[['model slots','models/satellites/satellite_big.gltf, satellite_small.gltf']],slots:[['file','.glb/.gltf','—','no']]});
+
+/* page templates: row = [section, media, theme, height] */
+const SK={H:'SEC_HERO',C:'SEC_CHAP',B:'SEC_BEAT',M:'SEC_MEDIA',S:'SEC_STMT',T:'SEC_TEXT',K:'SEC_BREAK',X:'SEC_CLOSE',N:'SEC_NEXT'};
+const MK={F:'MED_FULL',I:'MED_INSET','2':'MED_TWOUP',O:'MED_OFFSET',P:'MED_PAIR_SQ',Q:'MED_PAIR_PT','3':'MED_MOSAIC',R:'MED_CAROUSEL',D:'MED_DEVICE',V:'MED_TRIO'};
+const MC={F:'#2563eb',I:'#0d9488','2':'#9333ea',O:'#d97706',P:'#db2777',Q:'#be185d','3':'#65a30d',R:'#dc2626',D:'#0891b2',V:'#7c3aed'};
+const SC={H:'#444',K:'#94a3b8',N:'#111',S:'#a16207',T:'#a16207',X:'#777'};
+const SN={H:'Hero',K:'Breaker',N:'Next',S:'Statement',T:'Text',X:'Closing'},MN={F:'Full','I':'Inset','2':'Two-up',O:'Offset',P:'Pair',Q:'Pair·P','3':'Mosaic',R:'Carousel',D:'Device',V:'Trio'};
+const TC={l:'#fff',t:'#cfcfd4',d:'#171921',b:'#2a206a'},TN={l:'light',t:'tint',d:'dark',b:'brand'};
+const EX={
+'Nuant (9 · 9,656px @1217)':[['H','F','l',1283],['C','I','l',1006],['C','2','l',1072],['C','F','l',1202],['C','F','l',918],['C','R','l',1021],['C','F','l',729],['K','F','l',685],['N','F','l',926]],
+'Meta (11 · 12,862px @1280)':[['H','F','l',1533],['M','3','l',914],['C','I','l',1348],['C','F','l',1133],['B','I','d',1505],['M','R','d',814],['M','F','l',901],['C','I','d',1111],['B','2','l',879],['K','F','l',791],['N','F','l',1021]],
+'Slack (13 · 15,623px @1280)':[['H','F','l',1539],['C','I','l',1200],['B','F','l',1040],['C','I','l',1052],['C','F','l',1580],['K','F','l',791],['C','2','d',1053],['C','I','d',1052],['C','3','d',1225],['C','D','d',1228],['C','I','d',1141],['K','F','d',791],['N','F','d',1021]],
+'Eden (16 · 20,129px @1280)':[['H','F','l',1592],['C','3','l',1454],['M','F','l',791],['C','2','l',1339],['M','I','l',857],['C','I','l',1171],['C','3','l',1570],['C','R','l',1214],['K','F','l',791],['C','I','l',1246],['C','F','l',1182],['C','F','d',1711],['C','F','l',1271],['X',null,'l',816],['K','F','l',712],['N','F','l',1021]],
+'Sky (24 · 27,188px @1280)':[['H','F','l',1622],['C','2','l',1110],['C','I','l',1158],['B','2','l',968],['C','F','d',2019],['C','O','d',812],['C','F','d',1133],['B','O','l',599],['C','I','l',1218],['B','P','l',1129],['C','F','l',1181],['B','O','l',812],['B','I','l',1115],['B','R','l',912],['C','F','l',967],['C','P','l',1301],['C','R','l',1098],['C','F','l',1271],['C','F','d',1162],['B','O','d',599],['C','I','d',1071],['X',null,'d',805],['K','F','d',712],['N','F','l',1021]],
+'Marqeta (13 · 14,967px @1440)':[['H','F','l',1680],['M','Q','l',1250],['T',null,'l',394],['M','I','b',967],['S',null,'b',389],['M','I','b',967],['C','I','t',1388],['B','I','t',1046],['M','I','b',967],['C','R','l',1298],['K','F','l',891],['C','D','b',1408],['N','F','l',1122]],
+'Discover* (10 · notes, 914px, not comparable)':[['H','F','l',1149],['C','Q','l',1011],['B','V','l',764],['C','F','l',1036],['M','2','l',674],['B','F','d',1215],['C','3','d',840],['C','F','d',889],['B','F','d',720],['N','F','d',747]]
+};
+const PG=(k,c,n,d,src,s,ex)=>add({k,L:'PG',c,n,d,src,s,ex});
+PG('PG_CS_SHORT','CSS','Case study · short','9–11 sections. Tight story, one idea per screen.','m',[['height','9.7k–12.9k px'],['examples','Nuant, Meta']],['Nuant (9 · 9,656px @1217)','Meta (11 · 12,862px @1280)']);
+PG('PG_CS_MID','CSM','Case study · standard','13–16 sections. The default for a full project.','m',[['height','15.6k–20.1k px'],['examples','Slack, Eden']],['Slack (13 · 15,623px @1280)','Eden (16 · 20,129px @1280)']);
+PG('PG_CS_LONG','CSL','Case study · long (brand)','24 sections. Brand projects with many deliverables.','m',[['height','≈27.2k px'],['example','Sky']],['Sky (24 · 27,188px @1280)']);
+PG('PG_CS_THEME','CST','Case study · client-themed','13 sections, chapters alternate white / tint / client color.','m',[['height','≈15.0k px @1440'],['example','Marqeta; Discover from notes']],['Marqeta (13 · 14,967px @1440)','Discover* (10 · notes, 914px, not comparable)']);
+PG('PG_SERVICES','SVC','Services page','Hero, five mirrored service rows, dark Industries block, footer.','m',[['height','7,713px @1440 (≈8.6 screens)'],['stack','SEC_SVCHERO 641 → SEC_SVCLIST 4,432 → (81px spacer) → SEC_IND 1,919 → SEC_FOOT 641'],['light / dark','74% / 25% (footer light gray)']],[]);
+PG('PG_WORK','WRK','Work index','Title and filter, then the staggered card grid.','m',[['stack','SEC_WKHEAD → SEC_WKGRID → SEC_FOOT (footer assumed, not confirmed)'],['desktop height','not measured']],[]);
+const SVCSTACK=[['SEC_SVCHERO','—','light',641],['SEC_SVCLIST','MED_SVCPIC ×5 + GLB ×5','light',4432],['spacer','—','—',81],['SEC_IND','—','dark',1919],['SEC_FOOT','GLB_HELIX','tint',641]];
+
+/* ===== STATE + SKU ENGINE ===== */
+const S={prefix:'IA',mode:'seq',sku:{},lock:{},alias:{},status:{},svc:[0,1,2,3,4].map(i=>({name:'',pic:'',glb:['GLB_ORB','GLB_DISC','GLB_CUBE','GLB_CONE','GLB_CORNER'][i]})),intake:{name:'',deliv:'',services:'',themeId:'',tenantId:'',slug:'',brand:'IA',ch:[]}};
+for(let i=0;i<8;i++)S.intake.ch.push({sec:i===0?'SEC_CHAP':'SEC_CHAP',med:'MED_INSET',theme:'light',h:'',b:'',f:''});
+const CH='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const rnd=()=>Array.from(crypto.getRandomValues(new Uint8Array(4)),b=>CH[b%CH.length]).join('');
+const gen=it=>S.prefix+'-'+it.L+'-'+it.c+'-'+(S.mode==='rnd'?rnd():String(it.seq).padStart(2,'0'));
+function regen(){ITEMS.forEach(it=>{if(!S.lock[it.k])S.sku[it.k]=gen(it)})}
+function rePrefix(){ITEMS.forEach(it=>{if(!S.lock[it.k])S.sku[it.k]=S.sku[it.k].replace(/^[^-]*/,S.prefix)})}
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const sp=k=>'<span class="sku" data-k="'+k+'"></span>';
+const inp=k=>'<input class="sku" data-k="'+k+'" spellcheck="false">';
+const nm=k=>BY[k]?BY[k].n:k;
+function updateAll(){
+  const seen={};Object.values(S.sku).forEach(v=>seen[v]=(seen[v]||0)+1);
+  document.querySelectorAll('[data-k]').forEach(el=>{const k=el.dataset.k,v=S.sku[k]||'';
+    if(el.tagName==='INPUT'){if(document.activeElement!==el)el.value=v}else el.textContent=v;
+    el.classList.toggle('dup',seen[v]>1);el.classList.toggle('bad',!/^[A-Z0-9]+(-[A-Z0-9]+){2,}$/.test(v));});
+  const dups=Object.values(seen).filter(n=>n>1).length,built=Object.values(S.status).filter(v=>v==='built'||v==='shipped').length;
+  document.getElementById('stat').innerHTML='<b>'+ITEMS.length+'</b> SKUs · <b'+(dups?' style="color:#fca5a5"':'')+'>'+dups+'</b> duplicates · <b>'+built+'</b> built';
+  const ts=document.getElementById('tsBox');if(ts)ts.textContent=buildTS();
+}
+
+/* ===== RENDER ===== */
+const srcTag=s=>SRC[s]||'';
+const specRows=a=>a&&a.length?'<table>'+a.map(r=>'<tr><td class="k">'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('')+'</table>':'';
+const slotRows=a=>a&&a.length?'<table><tr><th>Slot</th><th>Type</th><th>Limit</th><th>Req.</th></tr>'+a.map(r=>'<tr><td class="mono">'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td></tr>').join('')+'</table>':'';
+const diagH=it=>it.diag?'<div class="diag">'+it.diag.map(b=>'<i style="left:'+b[0]+'%;top:'+b[1]+'px;width:'+b[2]+'%;height:'+b[3]+'px">'+(b[4]||'')+'</i>').join('')+'</div>':'';
+const stOpts=['todo','designed','built','shipped'];
+const trackH=k=>'<div class="fields"><input data-f="alias:'+k+'" placeholder="your component / file name"><select data-f="status:'+k+'">'+stOpts.map(o=>'<option>'+o+'</option>').join('')+'</select></div>';
+function card(it){
+  const comp=it.comp&&it.comp.length?'<div class="comp">'+it.comp.map(c=>'<span class="i">'+esc(nm(c))+' '+sp(c)+'</span>').join('')+'</div>':'';
+  return '<div class="card" id="c_'+it.k+'"><div class="hd"><h3>'+esc(it.n)+'</h3>'+srcTag(it.src)+'</div>'+inp(it.k)+
+  '<div style="color:var(--mut);font-size:12px">'+it.d+'</div>'+diagH(it)+specRows(it.s)+(it.themes?'<div style="font-size:12px"><b>Themes:</b> '+it.themes+'</div>':'')+comp+slotRows(it.slots)+trackH(it.k)+'</div>';
+}
+function renderTokens(){
+  document.getElementById('tokensBox').innerHTML='<table><tr><th style="width:190px">SKU</th><th style="width:170px">Token</th><th>Value</th><th style="width:90px">Source</th></tr>'+
+  ITEMS.filter(i=>i.L==='TKN').map(i=>'<tr><td>'+inp(i.k)+'</td><td><b>'+esc(i.n)+'</b></td><td>'+i.v+'</td><td>'+srcTag(i.src)+'</td></tr>').join('')+'</table>';
+}
+function renderCards(){
+  const by=L=>ITEMS.filter(i=>i.L===L).map(card).join('');
+  document.getElementById('mediaBox').innerHTML=by('MED');
+  document.getElementById('compBox').innerHTML=by('CMP');
+  document.getElementById('secBox').innerHTML=by('SEC');
+}
+function stripBlock(r){const[s,m,t,h]=r;const col=s==='C'||s==='B'||s==='M'?MC[m]:SC[s];const lab=s==='C'||s==='B'||s==='M'?MN[m]:SN[s];return '<div class="blk" style="height:'+Math.max(5,Math.round(h/50))+'px;background:'+col+';border-left:7px solid '+TC[t]+'" title="'+h+'px">'+lab+'</div>'}
+function renderPages(){
+  document.getElementById('lg').innerHTML=Object.entries(MN).map(([k,v])=>'<span><i style="background:'+MC[k]+'"></i>'+v+'</span>').join('')+Object.entries(SN).map(([k,v])=>'<span><i style="background:'+SC[k]+'"></i>'+v+'</span>').join('')+'<span>Left edge: <i style="background:#fff;border:1px solid #999"></i>light <i style="background:#cfcfd4"></i>tint <i style="background:#171921"></i>dark <i style="background:#2a206a"></i>brand</span>';
+  document.getElementById('strips').innerHTML=Object.entries(EX).map(([n,rows])=>'<div class="strip"><h4>'+n.split(' (')[0]+'</h4>'+rows.map(stripBlock).join('')+'</div>').join('');
+  document.getElementById('pgBox').innerHTML=ITEMS.filter(i=>i.L==='PG').map(it=>{
+    let body='';
+    it.ex.forEach(n=>{const rows=EX[n],tot=rows.reduce((a,r)=>a+r[3],0);
+      body+='<h4 style="margin:10px 0 4px;font-size:12px">'+esc(n)+' · stack total '+tot.toLocaleString()+'px</h4><table><tr><th>#</th><th>Section SKU</th><th>Media SKU</th><th>Appearance</th><th>Height</th></tr>'+
+      rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+sp(SK[r[0]])+' <span style="color:var(--mut)">'+nm(SK[r[0]])+'</span></td><td>'+(r[1]?sp(MK[r[1]])+' <span style="color:var(--mut)">'+nm(MK[r[1]])+'</span>':'—')+'</td><td>'+TN[r[2]]+'</td><td>'+r[3].toLocaleString()+'</td></tr>').join('')+'</table>';});
+    if(it.k==='PG_SERVICES')body='<table><tr><th>#</th><th>Section SKU</th><th>Contains</th><th>Appearance</th><th>Height @1440</th></tr>'+SVCSTACK.map((r,i)=>{const sk=BY[r[0]];const cn=r[1].replace(/MED_SVCPIC/,'§P').replace(/GLB/,'3D');return '<tr><td>'+(i+1)+'</td><td>'+(sk?sp(r[0])+' <span style="color:var(--mut)">'+esc(sk.n)+'</span>':r[0])+'</td><td>'+(r[1].includes('MED_SVCPIC')?sp('MED_SVCPIC')+' ×5 + 3D objects ×5':r[1]==='GLB_HELIX'?sp('GLB_HELIX'):'—')+'</td><td>'+r[2]+'</td><td>'+r[3].toLocaleString()+'</td></tr>'}).join('')+'</table><div class="note">Sum of block heights is 7,633px; the page is 7,713px because of the 81px spacer.</div>';
+    if(it.k==='PG_WORK')body='<table><tr><th>#</th><th>Section SKU</th></tr><tr><td>1</td><td>'+sp('SEC_WKHEAD')+' Work header</td></tr><tr><td>2</td><td>'+sp('SEC_WKGRID')+' Work grid</td></tr><tr><td>3</td><td>'+sp('SEC_FOOT')+' Footer</td></tr></table>';
+    return '<details><summary>'+esc(it.n)+' '+sp(it.k)+' '+srcTag(it.src)+'</summary><div><div style="color:var(--mut);font-size:12px;margin:6px 0">'+it.d+'</div><div class="fields" style="margin:6px 0 8px;max-width:560px"><input class="sku" data-k="'+it.k+'" spellcheck="false"><span></span></div>'+specRows(it.s)+body+trackH(it.k)+'</div></details>';}).join('');
+}
+
+/* services wireframe + map */
+function renderServices(){
+  const el=document.getElementById('svc'),s=460/1440,px=v=>Math.round(v*s);let h='';
+  const bar=(x,y,w,hh,bg)=>'<div style="position:absolute;left:'+x+'%;top:'+px(y)+'px;width:'+w+'%;height:'+Math.max(2,px(hh))+'px;background:'+(bg||'#555')+'"></div>';
+  const blk=(x,y,w,hh,st,inner)=>'<div style="position:absolute;left:'+x+'%;top:'+px(y)+'px;width:'+w+'%;height:'+px(hh)+'px;'+(st||'')+'">'+(inner||'')+'</div>';
+  const tg=(y,t)=>'<span class="tag" style="position:absolute;right:4px;top:'+(px(y)+2)+'px;z-index:5">'+t+'</span>';
+  h+=bar(2,30,6,40,'#bbb')+bar(55,40,5,14,'#ccc')+bar(62,40,5,14,'#ccc')+bar(69,40,5,14,'#ccc')+bar(76,40,5,14,'#ccc')+bar(90,28,8,36,'#333');
+  h+=bar(5,200,46,70)+bar(5,281,30,70)+bar(5,403,39,22,'#bbb')+bar(5,442,28,22,'#bbb')+tg(0,'SEC_SVCHERO · 641');
+  const imgY=[737,1695,2613,3532,4450],h2Y=[706,1624,2543,3461,4380],cx=[61,39,61,38,62];
+  for(let i=0;i<5;i++){const L=i%2===0,tx=L?5:58,ix=L?58:5;
+    h+=bar(tx,h2Y[i],22,57);for(let k=0;k<5;k++)h+=bar(tx,h2Y[i]+90+k*28,k===4?20:34,14,'#d6d6d2');for(let k=0;k<6;k++)h+=bar(tx,h2Y[i]+280+k*34,14+((k*7)%8),16);
+    h+=blk(ix,imgY[i],36,679,'','<div style="width:100%;height:100%;background:repeating-linear-gradient(45deg,#e6e6e2,#e6e6e2 6px,#d6d6d1 6px,#d6d6d1 7px);border:1px solid #999;display:flex;align-items:center;justify-content:center;font:10px ui-monospace,monospace;color:#555;text-align:center">picture '+(i+1)+'<br>518×679</div>');
+    h+=blk(cx[i]-11.5,imgY[i]-300,23,420,'border-radius:50%;background:radial-gradient(circle at 38% 32%,#fff 0%,#dedcec 55%,rgba(222,220,236,0) 72%);border:1px dashed #b3b0d6;z-index:3;display:flex;align-items:center;justify-content:center','<span style="font:8px ui-monospace,monospace;color:#666;background:rgba(255,255,255,.8);padding:0 2px">3D '+(i+1)+'</span>');
+    h+=tg(641+i*918,'ROW '+(i+1)+' · '+(L?'text L / pic R':'text R / pic L'));}
+  h+=blk(0,5154,100,1919,'background:#171921','')+tg(5154,'SEC_IND · 1,919 · #171921');
+  h+=bar(5,5274,18,57,'#eee')+bar(5,5350,32,14,'#777')+bar(5,5380,26,14,'#777');
+  for(let i=0;i<12;i++){const y=5154+420+i*120;h+=bar(5,y,89,1,'#33363f')+bar(5,y+30,14,20,'#eee')+bar(30,y+34,i<2?56:(30+(i*5)%25),14,'#777');if(i<2)h+=bar(30,y+60,28,14,'#777');}
+  h+=blk(0,7072,100,641,'background:#f5f5f7;overflow:hidden','<div style="position:absolute;left:-10%;top:30%;width:70%;height:40%;background:rgba(255,255,255,.9);transform:rotate(-35deg);border-radius:40px"></div>')+tg(7072,'SEC_FOOT · 641');
+  h+=bar(5,7162,22,80,'#222')+bar(5,7262,18,16,'#666')+bar(5,7292,14,16,'#666')+bar(52,7162,8,16)+bar(52,7197,8,16)+bar(52,7232,8,16)+bar(65,7162,8,16)+bar(65,7197,8,16);
+  for(let r=0;r<2;r++)for(let c=0;c<3;c++)h+=bar(52+c*14,7372+r*90,10,40,'#bbb');
+  el.innerHTML=h;
+  const L=(t,items)=>'<div class="card" style="margin-bottom:10px"><h3>'+t+'</h3><ul>'+items.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
+  document.getElementById('svcSpec').innerHTML=
+  L('Size and scroll',['<b>7,713px</b> tall @1440 (≈8.6 screens at 900px). Hero 641 · services 4,432 (5 × 918) · spacer 81 · Industries 1,919 · footer 641.','Your own 1054px measure gave 7,086px; heights scale with width.'])+
+  L('Light vs dark',['<b>74% light, 25% dark.</b> Light: hero 641 + services 4,432 + footer 641. Dark: Industries only, #171921, one hard cut at y 5,154 (67% down).','Nothing else is tinted, so all color comes from the pictures.'])+
+  L('Branding row, then the mirrored row',['Row 1: text left (x 5–41%), picture right (x 58–94%, 518×679).','Row 2: everything flips. Text right (x 58%), picture left (x 5%). Rows 3 and 5 repeat row 1; row 4 repeats row 2.','Corners square; no border, shadow or caption.'])+
+  L('3D objects',['One per row plus one in the footer, in a transparent 73% × 1050px canvas behind the content. Each object hovers ≈90px above the picture top, over its inner top corner (center ≈61% on picture-right rows, ≈39% on picture-left rows) and overlaps the previous row.','Pale clay-white forms with faint lavender or blue translucency. I only captured still frames; check rotation or scroll response on the live page.'])+
+  '<div class="card"><h3>Your row map (editable, exported with the JSON)</h3><table><tr><th>#</th><th>Your service</th><th>Layout</th><th>3D SKU</th><th>Picture file</th></tr>'+
+  S.svc.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><input data-s="'+i+':name" placeholder="Service '+(i+1)+'"></td><td>'+(i%2===0?'text L / pic R':'text R / pic L')+'</td><td><select data-s="'+i+':glb">'+ITEMS.filter(x=>x.L==='GLB').map(g=>'<option value="'+g.k+'"'+(g.k===r.glb?' selected':'')+'>'+g.n+'</option>').join('')+'</select><div>'+sp(r.glb)+'</div></td><td><input data-s="'+i+':pic" placeholder="file.jpg (1036×1358)"></td></tr>').join('')+'</table></div>'+
+  '<div class="grid g2" style="margin-top:10px">'+ITEMS.filter(i=>i.L==='GLB').map(card).join('')+'</div>';
+}
+
+/* typed schema */
+function buildTS(){
+  const k=x=>JSON.stringify(S.sku[x]||x);
+  return [
+'// Aligned with the agentsam-sdk CMS contract (cms-blueprint-intake CLI + cms_* tables).',
+'// SKU names a REUSABLE DEFINITION. An instance is a row with its own id. Generated from the registry above.',
+'',
+'type Origin = "package" | "tenant" | "artifact";',
+'type Lifecycle = "draft_pending_review" | "approved" | "published";   // compiling never publishes',
+'',
+'interface ReusableDefinitionRef {',
+'  definitionKey: string;        // e.g. "case-chapter" (Git is source of truth for definitions)',
+'  definitionVersion: string;    // semver, e.g. "1.0.0"',
+'  inventorySku?: string;        // registry SKU above, e.g. '+k('SEC_CHAP'),
+'  origin: Origin;',
+'  artifactId?: string;          // agentsam_artifacts.id when origin = "artifact"',
+'}',
+'',
+'interface MediaReference {      // media goes through the asset authority, never a bare URL',
+'  assetId: string;              // cms_assets.id',
+'  r2Key?: string;               // resolved from the asset, not typed by hand',
+'  role?: string;                // slot role, e.g. "hero", "orbit.sphere"',
+'  layoutSku: string;            // a MED-* SKU, e.g. '+k('MED_INSET'),
+'  alt: string;',
+'  provenance: { source: "upload" | "generated" | "derived"; rightsCleared: boolean; sha256?: string };',
+'}',
+'',
+'interface InstalledThemeReference {   // theme identity lives in cms_themes',
+'  themeId: string;              // cms_themes.id',
+'  tenantId: string | null;      // null = platform theme',
+'  variant?: string;             // a variant the theme itself defines',
+'  tokenOverrides?: Record<string, string>;',
+'}',
+'type Appearance = "light" | "tint" | "dark" | "brand";   // presentation only, not theme identity',
+'',
+'interface BlockInstanceProposal {',
+'  id?: string;                  // cms_section_blocks.id (assigned on persist)',
+'  blockType: string;',
+'  order: number;',
+'  settings: Record<string, unknown>;',
+'  media?: MediaReference[];',
+'}',
+'',
+'interface SectionInstanceProposal {',
+'  id?: string;                  // cms_page_sections.id; NOT the SKU',
+'  definition: ReusableDefinitionRef;',
+'  order: number;',
+'  status: "active" | "hidden";',
+'  settings: Record<string, unknown>;   // typed per definition: heading, body, caption, …',
+'  blocks: BlockInstanceProposal[];',
+'  media: Record<string, MediaReference>;   // keyed by slot name',
+'  theme?: InstalledThemeReference;',
+'  appearance?: Appearance;',
+'}',
+'',
+'interface PageProposal {        // matches page-proposal.json from the intake CLI',
+'  schema: "iam.cms.case-study-intake.v1";',
+'  slug: string;',
+'  brand: string;',
+'  pagePresetSku: string;        // a PG-* SKU, e.g. '+k('PG_CS_MID'),
+'  theme: InstalledThemeReference | null;',
+'  sections: SectionInstanceProposal[];',
+'  lifecycle: Lifecycle;',
+'}',
+'',
+'// Example (one section; the CLI writes the rest)',
+'const section: SectionInstanceProposal = {',
+'  definition: { definitionKey: "case-conversion", definitionVersion: "1.0.0", inventorySku: '+k('SEC_CONV')+', origin: "package" },',
+'  order: 3, status: "active",',
+'  settings: { heading: "…", body1: "…", body2: "…", caption: "…" },',
+'  blocks: [],',
+'  media: { "orbit.sphere": { assetId: "…", role: "orbit.sphere", layoutSku: '+k('MED_ORBIT')+', alt: "", provenance: { source: "upload", rightsCleared: false } } },',
+'  theme: { themeId: "…", tenantId: null },',
+'  appearance: "tint"',
+'};'
+].join('\n');
+}
+
+/* intake */
+function renderIntake(){
+  const I=S.intake,secs=['SEC_CHAP','SEC_BEAT','SEC_MEDIA','SEC_STMT','SEC_TEXT','SEC_BREAK','SEC_CLOSE'],meds=ITEMS.filter(i=>i.L==='MED').map(i=>i.k);
+  const opt=(a,v)=>a.map(x=>'<option value="'+x+'"'+(x===v?' selected':'')+'>'+(BY[x]?BY[x].n:x)+'</option>').join('');
+  document.getElementById('intakeBox').innerHTML='<div class="card"><div class="grid g2"><div><label>Project name (1–3 words)<input data-i="name" value="'+esc(I.name)+'"></label></div><div><label>Deliverable line (≤70 characters) <span class="mono" id="dl">0/70</span><input data-i="deliv" maxlength="70" value="'+esc(I.deliv)+'"></label></div><div><label>Services (comma-separated, 4–7)<input data-i="services" value="'+esc(I.services)+'"></label></div><div><label>cms_themes.id (themeId)<input data-i="themeId" placeholder="theme_…" value="'+esc(I.themeId)+'"></label></div><div><label>tenantId (blank = platform)<input data-i="tenantId" value="'+esc(I.tenantId)+'"></label></div><div><label>Slug<input data-i="slug" value="'+esc(I.slug)+'"></label></div></div>'+
+  '<table style="margin-top:10px"><tr><th>#</th><th>Section</th><th>Media layout</th><th>Appearance</th><th>Heading (2–5 words)</th><th>Body (140–300 chars)</th><th>Asset file</th></tr>'+
+  I.ch.map((c,i)=>'<tr><td>'+(i+1)+'</td><td><select data-c="'+i+':sec">'+opt(secs,c.sec)+'</select></td><td><select data-c="'+i+':med">'+opt(meds,c.med)+'</select></td><td><select data-c="'+i+':theme">'+['light','tint','dark','brand'].map(t=>'<option'+(t===c.theme?' selected':'')+'>'+t+'</option>').join('')+'</select></td><td><input data-c="'+i+':h" value="'+esc(c.h)+'"></td><td><input data-c="'+i+':b" value="'+esc(c.b)+'"><span class="mono" style="font-size:10px" id="bl'+i+'">'+c.b.length+'</span></td><td><input data-c="'+i+':f" value="'+esc(c.f)+'"></td></tr>').join('')+'</table>'+
+  '<div style="margin-top:8px;display:flex;gap:8px"><button class="btn" id="addCh">Add chapter</button><button class="btn" id="outInt">Build case-study JSON</button></div></div>';
+  document.getElementById('addCh').onclick=()=>{S.intake.ch.push({sec:'SEC_CHAP',med:'MED_INSET',theme:'light',h:'',b:'',f:''});renderIntake();updateAll();bindTrack()};
+  document.getElementById('outInt').onclick=()=>{
+    const content={};I.ch.filter(c=>c.h||c.b||c.f).forEach((c,n)=>{content['case-chapter'+(n?'-'+(n+1):'')]={heading:c.h,body:c.b,appearance:c.theme,mediaLayout:S.sku[c.med],assetFile:c.f}});
+    const o={schema:'iam.cms.machine-receipt.v1',brand:S.prefix,project:I.name||null,slug:I.slug||I.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''),
+      theme:I.themeId?{themeId:I.themeId,tenantId:I.tenantId||null}:null,tokens:{},
+      sources:[{kind:'file',uri:'intake-form://'+(I.slug||'case-study'),confidence:'manual',description:'Hand-entered in blueprint template; replace with discovery receipts'}],content};
+    showOut(JSON.stringify(o,null,2)+'\n\n// then: node apps/ecommerce-cms-agentsam/bin/cms-blueprint-intake.mjs machine-receipt.json ./out\n// writes intake.json, content-intake.json, page-proposal.json, inventory.csv (draft_pending_review, published:false)','machine-receipt.json')};
+}
+
+/* export / import */
+function showOut(text,file){const box=document.getElementById('impbox'),ta=document.getElementById('impta');ta.value=text;box.style.display='block';box.scrollIntoView({block:'center'});
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text]));a.download=file;document.body.appendChild(a);a.click();a.remove()}catch(e){}}
+const specText=it=>(it.v?it.v.replace(/<[^>]+>/g,''):it.s.map(r=>r[0]+': '+String(r[1]).replace(/<[^>]+>/g,'')).join('; '));
+function exportJson(){return JSON.stringify({version:1,prefix:S.prefix,mode:S.mode,items:ITEMS.map(it=>({layer:it.L,key:it.k,sku:S.sku[it.k],name:it.n,alias:S.alias[it.k]||'',status:S.status[it.k]||'todo',locked:!!S.lock[it.k],source:it.src,specs:specText(it)})),servicesMap:S.svc,intake:S.intake},null,2)}
+function exportCsv(){const q=v=>'"'+String(v).replace(/"/g,'""')+'"';return 'layer,key,sku,name,alias,status,source,specs\n'+ITEMS.map(it=>[it.L,it.k,S.sku[it.k],it.n,S.alias[it.k]||'',S.status[it.k]||'todo',({m:'measured',n:'notes',i:'inferred'})[it.src],specText(it)].map(q).join(',')).join('\n')}
+function importJson(t){const o=JSON.parse(t);if(o.prefix){S.prefix=o.prefix;document.getElementById('prefix').value=o.prefix}if(o.mode){S.mode=o.mode;document.querySelector('input[name=mode][value='+o.mode+']').checked=true}
+  (o.items||[]).forEach(x=>{if(BY[x.key]){S.sku[x.key]=x.sku;if(x.locked)S.lock[x.key]=true;S.alias[x.key]=x.alias||'';S.status[x.key]=x.status||'todo'}});
+  if(o.servicesMap)S.svc=o.servicesMap;if(o.intake)S.intake=o.intake;renderAll()}
+
+/* wiring */
+function bindTrack(){document.querySelectorAll('[data-f]').forEach(el=>{const[f,k]=el.dataset.f.split(':');if(f==='alias')el.value=S.alias[k]||'';else el.value=S.status[k]||'todo'})}
+document.addEventListener('input',e=>{const t=e.target;
+  if(t.dataset.k){S.sku[t.dataset.k]=t.value.toUpperCase().replace(/\s+/g,'');S.lock[t.dataset.k]=true;updateAll()}
+  else if(t.dataset.f){const[f,k]=t.dataset.f.split(':');(f==='alias'?S.alias:S.status)[k]=t.value;updateAll()}
+  else if(t.dataset.s){const[i,f]=t.dataset.s.split(':');S.svc[i][f]=t.value;if(f==='glb')renderServices(),updateAll(),bindTrack()}
+  else if(t.dataset.i){S.intake[t.dataset.i]=t.value;if(t.dataset.i==='deliv')document.getElementById('dl').textContent=t.value.length+'/70'}
+  else if(t.dataset.c){const[i,f]=t.dataset.c.split(':');S.intake.ch[i][f]=t.value;if(f==='b')document.getElementById('bl'+i).textContent=t.value.length}
+});
+document.getElementById('prefix').addEventListener('input',e=>{S.prefix=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'')||'IA';rePrefix();updateAll()});
+document.querySelectorAll('input[name=mode]').forEach(r=>r.addEventListener('change',e=>{S.mode=e.target.value;regen();updateAll()}));
+document.getElementById('bRand').onclick=()=>{S.mode='rnd';document.querySelector('input[name=mode][value=rnd]').checked=true;regen();updateAll()};
+document.getElementById('bReset').onclick=()=>{S.mode='seq';document.querySelector('input[name=mode][value=seq]').checked=true;S.lock={};regen();updateAll()};
+document.getElementById('bCsv').onclick=()=>showOut(exportCsv(),'sku-registry.csv');
+document.getElementById('bJson').onclick=()=>showOut(exportJson(),'sku-registry.json');
+document.getElementById('bImp').onclick=()=>{const b=document.getElementById('impbox');b.style.display=b.style.display==='none'?'block':'none';document.getElementById('impta').value='';};
+document.getElementById('bImpGo').onclick=()=>{try{importJson(document.getElementById('impta').value)}catch(e){alert('Could not read that JSON: '+e.message)}};
+function renderAll(){renderTokens();renderCards();renderPages();renderServices();renderIntake();bindTrack();document.querySelectorAll('[data-s]').forEach(el=>{const[i,f]=el.dataset.s.split(':');if(el.tagName==='INPUT')el.value=S.svc[i][f]||''});updateAll()}
+regen();renderAll();
+</script>
+</body></html>

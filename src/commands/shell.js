@@ -670,7 +670,9 @@ async function ensureShellHookExperience(state) {
 
 async function runInteractiveModelTurn(prompt, state) {
   const hookExperience = await ensureShellHookExperience(state);
-  const resolved = await resolveModelForTurn(state.cwd, state);
+  const resolved = await resolveModelForTurn(state.cwd, state.execModelKey
+    ? { ...state, hookEffectiveConfig: { ...(state.hookEffectiveConfig || {}), model_key: state.execModelKey } }
+    : state);
   const { preferences, model, credential } = resolved;
   const provider = createProviderAdapter({
     modelRecord: model,
@@ -1235,6 +1237,51 @@ export async function runShell(argv = [], options = {}) {
   const sub = argv[0] || '';
   hydrateSecureCredentials(process.env, { home: state.home });
   if (sub === 'list' || sub === 'status') { write(renderShellCatalog()); return; }
+  if (sub === '--exec') {
+    const value = (name) => { const i = argv.indexOf(name); return i < 0 ? null : argv[i + 1]; };
+    const promptFile = value('--prompt-file');
+    const directPrompt = value('--prompt');
+    if (Boolean(promptFile) === Boolean(directPrompt)) throw new TypeError('exec requires exactly one of --prompt-file or --prompt');
+    const requestedCwd = value('--cwd');
+    const modelKey = value('--model');
+    if (requestedCwd) {
+      if (!fs.existsSync(requestedCwd) || !fs.statSync(requestedCwd).isDirectory()) throw new TypeError('exec workspace directory not found');
+      state.cwd = fs.realpathSync(requestedCwd);
+      state.projectRoot = findCliProjectRoot(state.cwd);
+    }
+    const prompt = promptFile ? fs.readFileSync(path.resolve(state.cwd, promptFile), 'utf8') : directPrompt;
+    if (!prompt.trim()) throw new TypeError('exec prompt is empty');
+    if (prompt.length > 200000) throw new TypeError('exec prompt exceeds 200000 characters');
+    const allowedFlags = new Set(['--exec', '--prompt-file', '--prompt', '--cwd', '--model', '--json']);
+    for (let i = 1; i < argv.length; i++) {
+      if (argv[i] === '--json') continue;
+      if (!allowedFlags.has(argv[i]) || argv[i] === '--exec') throw new TypeError(`unknown exec argument: ${argv[i]}`);
+      if (i + 1 >= argv.length || argv[i + 1].startsWith('--')) throw new TypeError(`exec option requires value: ${argv[i]}`);
+      i++;
+    }
+    state.interactive = false;
+    state.persistFooter = false;
+    if (modelKey) state.execModelKey = modelKey;
+    const json = argv.includes('--json');
+    // A headless call cannot click an approval dialog. Existing project grants
+    // and host authorization still apply; unapproved side effects fail closed.
+    if (json) state.write = () => {};
+    const result = await runInteractiveModelTurn(prompt, state);
+    const payload = {
+      schema: 'agentsam.exec.v1',
+      ok: result?.ok !== false && result?.status !== 'failed',
+      status: result?.status || 'turn_completed',
+      cwd: state.cwd,
+      output: result?.output_text || '',
+      model: result?.model || null,
+      usage: result?.usage_snapshot || null,
+      tool_receipts: result?.tool_receipts || [],
+      note: 'Turn completion is not proof that requested repository changes were accepted; inspect the receipts, changes and tests.',
+    };
+    if (json) write(JSON.stringify(payload) + '\n');
+    return payload;
+  }
+
   if (sub === '--command' || sub === '--once') {
     const line = argv.slice(1).join(' ');
     if (!line) throw new Error(`${sub} requires a slash command`);

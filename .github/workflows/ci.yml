@@ -77,6 +77,13 @@ jobs:
       - name: Verify SDK
         run: npm run verify
 
+      # Prevent typed CAD operations and public asset access from silently
+      # regressing while UI branches/docs are being merged.
+      - name: Verify CAD runtime modes, authorizations and asset boundary
+        run: |
+          node --test test/integration/cad-operator-capabilities.test.mjs test/integration/cad-run-modes.test.mjs
+          node --test apps/local-studio/backend/worker/cad-chess-assets.test.mjs
+
       # Settings-specific rendered evidence complements the general UI contract
       # checks above and blocks shipping when browser interaction/AA checks fail.
       - name: Install Studio browser-test dependencies

@@ -17,8 +17,35 @@ import {
   syncServerToClient,
   writeMcpServer,
 } from '../mcp/index.js';
+import { authenticateViaBrowser } from '../lib/auth.js';
+import {
+  IAM_MCP_RESOURCE, IAM_MCP_SCOPE, IAM_MCP_WRITE_SCOPE, IAM_MCP_SERVER, describeMcpServer, resolveMcpResourceServer, McpResourceError,
+} from '../mcp/oauth-connection.js';
 import { createMcpServerProject } from '../lib/scaffold/mcp-server.js';
 import { listMcpServerPresets } from '../lib/scaffold/templates/mcp-server/presets.js';
+
+async function probeMcpServer(server, name, options) {
+  if (name !== IAM_MCP_SERVER) return { server, error: null };
+  try {
+    return { server: await (options.resolveMcpServerImpl || resolveMcpResourceServer)({
+      home: options.home,
+    }), error: null };
+  } catch (error) {
+    return { server: null, error: error.code || 'mcp_resource_authority_unavailable',
+      next: error.next || 'agentsam mcp connect inneranimalmedia' };
+  }
+}
+
+function publicMcpServer(server) {
+  if (!server) return null;
+  const { auth, ...safe } = server;
+  return { ...safe, auth: {
+    type: auth?.type || null,
+    configured: Boolean(auth?.token),
+    refreshable: Boolean(auth?.refresh_token),
+    expires_at: auth?.expires_at || null,
+  } };
+}
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
@@ -45,6 +72,7 @@ export function parseMcpArgs(argv = []) {
   let audience = '';
   let displayName = '';
   let authMode = '';
+  let writeAccess = false;
   let force = false;
 
   for (let i = 1; i < argv.length; i += 1) {
@@ -60,6 +88,7 @@ export function parseMcpArgs(argv = []) {
     else if (arg === '--display-name') displayName = argv[++i] || '';
     else if (arg === '--public') authMode = 'public';
     else if (arg === '--oauth') authMode = 'oauth';
+    else if (arg === '--write') writeAccess = true;
     else if (arg === '--force') force = true;
     else if (arg === '--json') json = true;
     else if (arg === '--catalog' || arg === '--all') catalog = true;
@@ -80,6 +109,7 @@ export function parseMcpArgs(argv = []) {
     audience,
     displayName,
     authMode,
+    writeAccess,
     force,
     json,
     catalog,
@@ -118,6 +148,7 @@ function renderHelp(options = {}) {
   Usage:
     agentsam mcp create <name> [--preset <preset>] [--output <dir>] [--issuer <url>] [--audience <url>] [--oauth|--public] [--force]
     agentsam mcp add <name> [--client <client>|all] [--url <url>] [--token <token>]
+    agentsam mcp connect inneranimalmedia [--write]     Authorize resource-scoped MCP via existing IAM PKCE
     agentsam mcp list [--catalog|--bundles] [--json]
     agentsam mcp status [<name>] [--json]
     agentsam mcp doctor [<name>] [--json]
@@ -184,6 +215,59 @@ export async function runMcp(argv = [], options = {}) {
     return result;
   }
 
+  if (subcommand === 'connect') {
+    const name = target || IAM_MCP_SERVER;
+    if (name !== IAM_MCP_SERVER) throw new McpResourceError('mcp_oauth_connection_unsupported:' + name);
+    // This is user-consented, resource-scoped OAuth. Do not reuse the CLI
+    // account token: its scope/audience may be invalid for the MCP worker.
+    const login = options.authenticateImpl || authenticateViaBrowser;
+    const grant = await login({
+      home: options.home, env: options.env || process.env,
+      input: options.input, output: options.output,
+      scope: args.writeAccess ? IAM_MCP_WRITE_SCOPE : IAM_MCP_SCOPE,
+      resource: IAM_MCP_RESOURCE,
+      saveSession: false,
+    });
+    const grantedScopes = clean(grant?.scope).split(/\s+/);
+    if (!clean(grant?.access_token) || !grantedScopes.includes('mcp:tools')) {
+      throw new McpResourceError('mcp_oauth_scope_not_granted');
+    }
+    if (args.writeAccess && !grantedScopes.includes('iam:agent')) {
+      throw new McpResourceError('mcp_oauth_agent_scope_not_granted');
+    }
+    if (grant.audience && grant.audience !== IAM_MCP_RESOURCE) {
+      throw new McpResourceError('mcp_oauth_wrong_audience');
+    }
+    const lifetime = Number(grant.expires_in);
+    const expiresAt = Number.isFinite(lifetime) && lifetime > 0
+      ? new Date(Date.now() + lifetime * 1000).toISOString() : null;
+    const existing = readMcpServer(name, options);
+    const record = writeMcpServer(name, {
+      name,
+      url: IAM_MCP_RESOURCE,
+      protocol: 'streamable_http',
+      clients: existing?.clients?.length ? existing.clients : ['agentsam'],
+      metadata: { ...(existing?.metadata || {}), provider: 'inneranimalmedia', resource_scoped_oauth: true },
+      auth: {
+        type: 'oauth',
+        token: grant.access_token,
+        refresh_token: grant.refresh_token || null,
+        client_id: grant.client_id,
+        scope: grant.scope,
+        resource: IAM_MCP_RESOURCE,
+        expires_at: expiresAt,
+      },
+    }, options);
+    const status = describeMcpServer(record);
+    if (args.json) write(JSON.stringify({ ok: true, connection: status }, null, 2) + '\n');
+    else {
+      write('  InnerAnimalMedia MCP OAuth connection saved.\n');
+      write('  Resource: ' + IAM_MCP_RESOURCE + '\n');
+      write('  Next: agentsam mcp doctor inneranimalmedia --json\n');
+    }
+    return { ok: true, connection: status };
+  }
+
   if (subcommand === 'list') {
     if (args.bundles) {
       const bundles = listCloudflareMcpBundles().map((b) => ({
@@ -223,8 +307,8 @@ export async function runMcp(argv = [], options = {}) {
 
     const servers = listMcpServers(options);
     if (args.json) {
-      write(JSON.stringify({ servers }, null, 2) + '\n');
-      return servers;
+      write(JSON.stringify({ servers: servers.map(publicMcpServer) }, null, 2) + '\n');
+      return servers.map(publicMcpServer);
     }
     if (servers.length === 0) {
       write('  No MCP servers configured yet. Add one with: agentsam mcp add inneranimalmedia\n');
@@ -340,7 +424,7 @@ export async function runMcp(argv = [], options = {}) {
     if (args.json) {
       const payload = {
         ok: true,
-        server: written,
+        server: publicMcpServer(written),
         syncedAdapters,
         ping,
         cloudflare_bundle: cfBundle
@@ -374,7 +458,7 @@ export async function runMcp(argv = [], options = {}) {
       write(`                  (CF-connected users: ensure agentsam pack includes mcp-portals.*)\n`);
     }
     write('\n');
-    return { ok: true, server: written, syncedAdapters, ping };
+    return { ok: true, server: publicMcpServer(written), syncedAdapters, ping };
   }
 
   if (subcommand === 'status') {
@@ -385,11 +469,14 @@ export async function runMcp(argv = [], options = {}) {
         write(JSON.stringify({ ok: false, error: 'server_not_configured', name }) + '\n');
         return null;
       }
-      write(`  MCP server "${name}" is not configured. Run: agentsam mcp add ${name}\n`);
+      write(`  MCP server "${name}" is not configured. Run: agentsam mcp connect ${name}\n`);
       return null;
     }
 
-    const ping = await pingMcpServer(server, options);
+    const resource = await probeMcpServer(server, name, options);
+    const ping = resource.error
+      ? { ok:false, error:resource.error, next:resource.next }
+      : await pingMcpServer(resource.server, options);
     const clientStatuses = (server.clients || ['cursor']).map((c) =>
       inspectClientAdapter(c, name, options),
     );
@@ -432,11 +519,14 @@ export async function runMcp(argv = [], options = {}) {
     }
 
     const preset = resolveServerPreset(name, options);
-    const ping = await pingMcpServer(server, options);
+    const resource = await probeMcpServer(server, name, options);
+    const ping = resource.error
+      ? { ok:false, error:resource.error, next:resource.next }
+      : await pingMcpServer(resource.server, options);
     const clientStatuses = (server.clients || ['cursor']).map((c) =>
       inspectClientAdapter(c, name, options),
     );
-    const toolsProbe = ping.ok ? await listMcpTools(server, options) : { count: 0, tools: [] };
+    const toolsProbe = ping.ok ? await listMcpTools(resource.server, options) : { count: 0, tools: [] };
 
     const detectedClients = detectInstalledClients(options);
     const cfBundle = getCloudflareMcpBundle(name);

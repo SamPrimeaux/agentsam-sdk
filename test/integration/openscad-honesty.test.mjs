@@ -1,5 +1,5 @@
 import test from 'node:test'; import assert from 'node:assert/strict';
-import { openScadCompile } from '../src/lib/cad/openscad.js';
+import { openScadCompile } from '../../src/lib/cad/openscad.js';
 test('missing OpenSCAD never reports native success (throws or success:false)', async () => {
   let r = null, threw = false;
   try { r = await openScadCompile({ source: 'cube([10,10,10]);', openscadBin: '/nonexistent/openscad' }); } catch { threw = true; }
