@@ -7,6 +7,7 @@ import { codebaseindexIngestOp } from '../operations/codebaseindex-ingest.js';
 import { planningAstarOp } from '../operations/planning-astar.js';
 import { planningGoapOp } from '../operations/planning-goap.js';
 import { decisionEvaluateOp } from '../operations/decision-evaluate.js';
+import { artifactRenderOp } from '../operations/artifact-render.js';
 import { packageAuditOp } from '../operations/package-audit.js';
 import { roboticsOps } from '../operations/robotics.js';
 
@@ -21,5 +22,6 @@ export const CORE_OPERATIONS = [
   planningGoapOp,
   decisionEvaluateOp,
   packageAuditOp,
+  artifactRenderOp,
   ...roboticsOps,
 ];

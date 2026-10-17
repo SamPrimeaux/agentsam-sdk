@@ -7,3 +7,7 @@ runtime.contract.HARD_LAW_NOTE.
 """
 
 __version__ = "0.1.0"
+
+# Public local SAM client. Remote ACP, MCP and app-specific authorities remain
+# separately scoped; their mere existence does not grant this client access.
+from .client import AgentSamClient, AsyncAgentSamClient, Choose, Check, Score, SamClientError
