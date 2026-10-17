@@ -52,7 +52,7 @@ test('CLI model catalog uses authenticated local SAM handlers, imports source, c
     const removed=await agentAdapter.invoke('media.image.background.remove',{assetId:imported.data.assetId});
     assert.equal(removed.ok,true,JSON.stringify(removed.error));
     assert.ok(removed.data.derivativeAssetId);
-    assert.deepEqual(permissions,['media.local.import','media.image.background.remove']);
+    assert.deepEqual(permissions,['media.local.import','media.asset.inspect','media.image.background.remove']);
     const denied=await agentAdapter.invoke('media.local.import',{relativePath:'../outside.png'});
     assert.equal(denied.ok,false);
     assert.match(denied.error.message,/media_path_outside_project/);
