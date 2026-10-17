@@ -1,0 +1,69 @@
+{
+  "schema": "sam.machine.acceptance.v1",
+  "source_commit": "c37123c2",
+  "generated_at": "2026-10-17T08:03:39.727Z",
+  "kernel_handlers": 21,
+  "generated_language_id_projections": [
+    "typescript",
+    "python",
+    "go",
+    "rust",
+    "cpp"
+  ],
+  "language_clients_verified": [
+    "javascript",
+    "python-local-safe-subset"
+  ],
+  "language_clients_not_certified": [
+    "typescript-typed-public-client",
+    "go",
+    "rust",
+    "cpp",
+    "python-remote-acp"
+  ],
+  "checks": [
+    {
+      "name": "js-public-api",
+      "ok": true,
+      "exit_code": 0,
+      "tail": [
+        "  ...",
+        "1..9",
+        "# tests 9",
+        "# suites 0",
+        "# pass 9",
+        "# fail 0",
+        "# cancelled 0",
+        "# skipped 0",
+        "# todo 0",
+        "# duration_ms 402.862375"
+      ]
+    },
+    {
+      "name": "python-public-api",
+      "ok": true,
+      "exit_code": 0,
+      "tail": [
+        ".....",
+        "----------------------------------------------------------------------",
+        "Ran 5 tests in 3.720s",
+        "",
+        "OK"
+      ]
+    }
+  ],
+  "ok": true,
+  "release_complete": false,
+  "release_blockers": [
+    "typescript",
+    "go",
+    "rust",
+    "cpp",
+    "cms",
+    "copro",
+    "media",
+    "iam_write_scope",
+    "durable_execution",
+    "artifact_storage"
+  ]
+}

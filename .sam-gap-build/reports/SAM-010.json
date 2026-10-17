@@ -1,0 +1,14 @@
+{
+  "ticket": "SAM-010",
+  "title": "Progressive capability selection",
+  "dependencies": [
+    "SAM-003",
+    "SAM-008"
+  ],
+  "head_before": "44328f3b",
+  "agent": "not_executed",
+  "diff_check": true,
+  "head_after": "44328f3b",
+  "working_tree": "?? .sam-gap-build/",
+  "completion": "REVIEW_REQUIRED"
+}

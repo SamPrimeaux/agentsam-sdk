@@ -1,0 +1,8 @@
+# Generated evidence stays on this machine; re-create it with scripts/verify.sh.
+/logs/
+/machine-acceptance/
+# Editor and agent scratch files
+*.tmp
+*.swp
+*.bak
+.DS_Store

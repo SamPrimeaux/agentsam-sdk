@@ -1,0 +1,14 @@
+{
+  "ticket": "SAM-005",
+  "title": "Receipt and side-effect proof",
+  "dependencies": [
+    "SAM-002",
+    "SAM-004"
+  ],
+  "head_before": "44328f3b",
+  "agent": "not_executed",
+  "diff_check": true,
+  "head_after": "44328f3b",
+  "working_tree": "?? .sam-gap-build/",
+  "completion": "REVIEW_REQUIRED"
+}
