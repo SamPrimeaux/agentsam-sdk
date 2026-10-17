@@ -93,6 +93,9 @@ export function createSamOS({ core = true, generated = null, cms = null, authori
       core_count: CORE_OPERATIONS.filter(op => registry.has(op.id)).length,
       available: [...registry.keys()].sort(),
       generated_unavailable: [...unavailable],
+      generated_aliases: [...aliases].map(([name, aliasFor]) => ({
+        name, aliasFor, bound: registry.has(aliasFor),
+      })),
     }),
     // Explicitly installed adapters may register additional real SAM operations.
     install: (defs) => {
