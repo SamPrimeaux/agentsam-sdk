@@ -74,3 +74,28 @@
 .fnf-home-templates__edge{position:absolute;top:0;bottom:12px;width:30px;z-index:1;left:0}.fnf-home-templates__edge--right{left:auto;right:0}
 .fnf-home-templates__feedback{min-height:15px;font-size:11px;color:var(--home-muted);margin:0}
 @media(max-width:640px){.fnf-home-template{flex-basis:142px}.fnf-home-templates__edge{display:none}}@media(prefers-reduced-motion:reduce){.fnf-home-template{transition:none}.fnf-home-templates__rail{scroll-behavior:auto}}
+
+
+/* Home vertical rhythm: keep the preview and composer together without a
+   full-screen spacer between them and Templates. */
+.fnf-home-stage {
+  min-height: 0;
+  padding-top: clamp(48px, 8vh, 90px);
+  padding-bottom: clamp(28px, 5vh, 50px);
+}
+.fnf-home-templates { margin-bottom: 24px; }
+@media (max-width: 900px) {
+  .fnf-home-stage {
+    min-height: 0;
+    padding-top: clamp(36px, 6vh, 62px);
+    padding-bottom: 30px;
+  }
+}
+@media (max-width: 620px) {
+  .fnf-home-stage {
+    min-height: 0;
+    padding-top: 34px;
+    padding-bottom: 26px;
+  }
+  .fnf-home-templates { margin-bottom: 20px; }
+}
