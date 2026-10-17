@@ -58,6 +58,28 @@ export class AgentSamClient {
     }
 
     /** Domain projections → sam.invoke(canonicalId, …) */
+    this.projects = Object.freeze({
+      list: opts => this.invoke('project.list',{},opts),
+      get: (id,opts) => this.invoke('project.get',{id},opts),
+      create: (input,opts) => this.invoke('project.create',input,opts),
+      edit: (input,opts) => this.invoke('project.edit',input,opts),
+      delete: (input,opts) => this.invoke('project.delete',input,opts),
+      restore: (input,opts) => this.invoke('project.restore',input,opts),
+    });
+    this.databases = Object.freeze({
+      sqlite:Object.freeze({
+        list: opts => this.invoke('agentsam_sqlite_list',{},opts),
+        get: (name,opts) => this.invoke('agentsam_sqlite_get',{name},opts),
+        create: (input,opts) => this.invoke('agentsam_sqlite_create',input,opts),
+        edit: (input,opts) => this.invoke('agentsam_sqlite_edit',input,opts),
+        delete: (input,opts) => this.invoke('agentsam_sqlite_delete',input,opts),
+        restore: (input,opts) => this.invoke('agentsam_sqlite_restore',input,opts),
+      }),
+      d1:Object.freeze({
+        list: opts => this.invoke('agentsam_cf_d1_list',{},opts),
+        create: (input,opts) => this.invoke('agentsam_d1_create',input,opts),
+      }),
+    });
     this.repository = {
       inspect: (input = {}, opts) => this.invoke('repository.inspect', normalizeRootInput(input, this.cwd), opts),
     };
