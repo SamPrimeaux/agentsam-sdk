@@ -58,9 +58,12 @@ export function getOSStatus() {
 export function createSamOS({ core = true, generated = null, cms = null, authoring = null, cad = null } = {}) {
   const registry = new Map();
   const unavailable = [];
-  const get = (id) => registry.get(id) || null;
+  const aliases = new Map();
+  // Compatibility aliases resolve to their canonical handler without creating
+  // duplicate model tools or relaxing the canonical execution authorization.
+  const get = (id) => registry.get(id) || registry.get(aliases.get(id)) || null;
   const register = (def) => {
-    if (registry.has(def.id)) throw new Error('sam_os_duplicate_operation:' + def.id);
+    if (registry.has(def.id) || aliases.has(def.id)) throw new Error('sam_os_duplicate_operation:' + def.id);
     registry.set(def.id, def);
     return def;
   };
