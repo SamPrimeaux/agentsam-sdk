@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SEC_SHOWCASE + SEC_CONV · remake</title>
+<style>
+html,body{margin:0}
+body{font-family:"Universal Sans",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:#fff;-webkit-font-smoothing:antialiased}
+
+/* ================= shared tokens (fallbacks only; real values come from the selected cms_themes row) ================= */
+.iam-sc{
+  --sc-brand:var(--ia-brand,#2a2066);          /* dark chapter */
+  --sc-brand-deep:var(--ia-brand-deep,#33297a);/* polygon + device body */
+  --sc-accent:var(--ia-accent,#5be3a8);        /* CTA / code highlights */
+  --sc-tint:var(--ia-tint,#f5f5f7);
+  --sc-ink:var(--ia-text,#0d0d12);
+  --sc-gutter:9%;
+  font-family:inherit;box-sizing:border-box
+}
+.iam-sc *{box-sizing:border-box}
+
+/* ================= A · SEC_SHOWCASE: dark chapter + site-in-a-frame ================= */
+.sc-show{background:var(--sc-brand);color:#fff;overflow:hidden;position:relative;padding:clamp(40px,3.2vw,64px) 0 0}
+.sc-show h2{margin:0 0 0 var(--sc-gutter);max-width:40%;font-weight:500;font-size:clamp(28px,3.25vw,64px);line-height:1.12;letter-spacing:-.012em}
+.sc-frame{margin:clamp(70px,10.3vw,206px) var(--sc-gutter) 0;aspect-ratio:1640/1010;background:#fff;border-radius:clamp(24px,3.4vw,68px) clamp(24px,3.4vw,68px) 0 0;position:relative;overflow:hidden;color:#2a2066}
+.sc-frame>.in{position:absolute;inset:0;container-type:inline-size}
+/* media housing: a video slot with an animated demo scene as stand-in internals */
+.sc-media{position:absolute;left:6%;right:6%;top:6.2%;aspect-ratio:16/10;border-radius:1.4cqw;overflow:hidden;background:linear-gradient(160deg,#3a3189,#241b5e);box-shadow:0 2.4cqw 4cqw rgba(42,32,102,.22),inset 0 0 0 .15cqw rgba(160,160,240,.3);color:#e9e7ff;font-size:1cqw}
+.sc-media video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;z-index:2}
+.sc-media.has-video video{display:block}
+.sc-media.has-video .demo{display:none}
+.demo{position:absolute;inset:0}
+.demo .bar{position:absolute;left:0;right:0;top:0;height:4.2cqw;display:flex;align-items:center;gap:.7cqw;padding:0 1.6cqw;background:rgba(255,255,255,.06);border-bottom:.1cqw solid rgba(255,255,255,.1)}
+.demo .bar i{width:.8cqw;height:.8cqw;border-radius:50%;background:rgba(255,255,255,.28)}
+.demo .bar b{margin-left:1.2cqw;font-weight:500;font-size:1.05cqw;color:#cfcbff}
+.demo .bar em{margin-left:auto;font-style:normal;font-size:.95cqw;padding:.45cqw 1cqw;border-radius:2cqw;background:var(--sc-accent);color:#10231b;font-weight:600}
+.demo .side{position:absolute;left:0;top:4.2cqw;bottom:0;width:11cqw;border-right:.1cqw solid rgba(255,255,255,.1);padding:1.6cqw}
+.demo .side span{display:block;height:1.1cqw;border-radius:.5cqw;background:rgba(255,255,255,.16);margin-bottom:1.3cqw}
+.demo .side span:nth-child(1){width:70%;background:rgba(255,255,255,.34)}.demo .side span:nth-child(3){width:55%}.demo .side span:nth-child(5){width:80%}
+.demo .cards{position:absolute;left:12.6cqw;right:1.8cqw;top:6cqw;display:grid;grid-template-columns:repeat(3,1fr);gap:1.2cqw}
+.demo .card{height:14cqw;border-radius:1cqw;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 .1cqw rgba(255,255,255,.12);padding:1.4cqw;display:flex;flex-direction:column;justify-content:flex-end;gap:.5cqw;position:relative;overflow:hidden}
+.demo .card small{font-size:.85cqw;color:#a9a4e6}
+.demo .card strong{font-size:2.3cqw;font-weight:500;color:#fff;letter-spacing:-.01em}
+.demo .spark{position:absolute;left:1.4cqw;right:1.4cqw;top:1.4cqw;height:6cqw;display:flex;align-items:flex-end;gap:.35cqw}
+.demo .spark u{flex:1;border-radius:.3cqw .3cqw 0 0;background:linear-gradient(#8f8cf0,#5b52c4);height:30%;animation:sparkl 6s ease-in-out infinite;animation-delay:calc(var(--i)*-.45s)}
+.demo .card:nth-child(2) .spark u{background:linear-gradient(#7bf3c7,#2f9f78)}
+@keyframes sparkl{0%,100%{height:28%}50%{height:92%}}
+.demo .run{position:absolute;left:12.6cqw;right:1.8cqw;top:22cqw;bottom:2cqw;border-radius:1cqw;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 .1cqw rgba(255,255,255,.1);padding:1.4cqw;overflow:hidden}
+.demo .run h4{margin:0 0 1cqw;font-weight:500;font-size:1.05cqw;color:#cfcbff}
+.demo .row{display:flex;align-items:center;gap:1cqw;height:3cqw;border-radius:.7cqw;padding:0 1cqw;margin-bottom:.7cqw;background:rgba(255,255,255,.07);opacity:0;transform:translateY(1cqw);animation:rowin 12s ease-in-out infinite;animation-delay:calc(var(--r)*1.3s)}
+.demo .row i{width:1.2cqw;height:1.2cqw;border-radius:50%;background:var(--sc-accent);flex:none}
+.demo .row span{flex:1;height:.8cqw;border-radius:.4cqw;background:rgba(255,255,255,.2)}
+.demo .row em{font-style:normal;font-size:.85cqw;color:#a9a4e6;flex:none}
+@keyframes rowin{0%{opacity:0;transform:translateY(1cqw)}8%,78%{opacity:1;transform:none}90%,100%{opacity:0;transform:translateY(-.6cqw)}}
+.demo .cursor{position:absolute;width:1.8cqw;height:1.8cqw;z-index:3;animation:curs 12s ease-in-out infinite;filter:drop-shadow(0 .2cqw .3cqw rgba(0,0,0,.4))}
+.demo .cursor svg{width:100%;height:100%;display:block}
+@keyframes curs{0%{left:20%;top:70%}25%{left:44%;top:30%}50%{left:78%;top:52%}75%{left:34%;top:62%}100%{left:20%;top:70%}}
+@media (prefers-reduced-motion:reduce){.demo *{animation:none!important}.demo .row{opacity:1;transform:none}}
+
+/* ================= B · SEC_CONV: tint chapter + slow auto sphere scene ================= */
+.sc-conv{background:var(--sc-tint);color:var(--sc-ink);padding:clamp(40px,4.4vw,88px) 0 clamp(40px,6vw,120px)}
+.sc-conv h2{margin:0 0 0 var(--sc-gutter);font-weight:500;font-size:clamp(30px,3.25vw,64px);line-height:1.1;letter-spacing:-.012em;color:#0a0a0f}
+.sc-conv p.lead{margin:clamp(14px,1.7vw,34px) 0 0 var(--sc-gutter);max-width:46%;font-size:clamp(15px,1.45vw,29px);line-height:1.38}
+.sc-stage{position:relative;margin:clamp(30px,5.3vw,106px) var(--sc-gutter) 0;aspect-ratio:1640/760;--u:1}
+/* faint stacked rounded rectangles behind the scene (the soft halo in the original) */
+.sc-stage::before,.sc-stage::after{content:"";position:absolute;border-radius:6%;pointer-events:none}
+.sc-stage::before{inset:0;box-shadow:0 0 70px 24px rgba(255,255,255,.28) inset}
+.sc-stage::after{inset:7% 7%;box-shadow:0 0 90px 30px rgba(255,255,255,.3) inset}
+.sc-stage .orb{z-index:1;position:absolute;border-radius:50%;left:0;top:0;transform:translate(-50%,-50%);will-change:left}
+/* sizes are % of stage width so the scene scales with the page */
+.o-white{width:36.6%;aspect-ratio:1;background:radial-gradient(circle at 36% 24%,#fff 0,#fbfbfc 18%,#e4e4e7 48%,#bdbdc1 74%,#979799 100%);box-shadow:0 3% 6% rgba(0,0,0,.05)}
+.o-purple{width:25.8%;aspect-ratio:1;background:radial-gradient(circle at 42% 14%,#a4a5ee 0,#8c8ce0 16%,#5a52b0 46%,#3a3084 74%,#2a2166 100%);box-shadow:inset 0 -2% 4% rgba(180,170,255,.55),inset 0 1% 3% rgba(255,255,255,.18)}
+.o-frost{width:26.8%;aspect-ratio:1;background:rgba(244,243,250,.72);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.7),0 0 0 1px rgba(150,145,200,.18)}
+.o-dot{width:4.9%;aspect-ratio:1;background:radial-gradient(circle at 36% 24%,#7bf3c7 0,#52d8a1 40%,#2c9a72 100%);box-shadow:0 .4% 1% rgba(0,0,0,.08)}
+.sc-conv .lead2{margin:clamp(24px,3vw,60px) 0 0 var(--sc-gutter);max-width:46%;font-size:clamp(15px,1.45vw,29px);line-height:1.38}
+@media(max-width:760px){
+  .sc-show h2{max-width:80%}.sc-conv p.lead,.sc-conv .lead2{max-width:84%}
+  .sc-frame{margin-top:56px;--x:1}
+}
+
+/* ================= C · SEC_BEYOND: carousel with arrow pointers (white chapter) ================= */
+.sc-beyond{background:#fff;color:#0a0a0f;padding:clamp(48px,6vw,120px) 0 clamp(48px,6vw,110px);position:relative}
+.sc-beyond h2{margin:0 0 0 var(--sc-gutter);font-weight:500;font-size:clamp(30px,3.25vw,64px);line-height:1.1;letter-spacing:-.012em}
+.sc-beyond p.lead{margin:clamp(14px,1.7vw,34px) 0 0 var(--sc-gutter);max-width:44%;font-size:clamp(15px,1.45vw,29px);line-height:1.38}
+.bt-arrows{position:absolute;right:var(--sc-gutter);top:clamp(70px,9vw,150px);display:flex;gap:32px}
+.bt-arrows button{width:40px;height:40px;border:0;background:none;padding:0;cursor:pointer;color:#06070a;font-size:24px;line-height:1;display:grid;place-items:center;transition:opacity .2s}
+.bt-arrows button svg{width:1em;height:.75em;display:block}
+.bt-arrows button[disabled]{opacity:.5;cursor:default}
+.bt-arrows button:focus-visible{outline:2px solid #06070a;outline-offset:2px}
+.bt-view{margin-top:clamp(30px,4vw,80px);overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;cursor:grab}
+.bt-view::-webkit-scrollbar{display:none}
+.bt-view.drag{cursor:grabbing;scroll-snap-type:none}
+.bt-track{display:flex;gap:5.8vw;padding:0 8.7%;width:max-content;min-width:100%}
+.bt-card{width:min(80vw,1200px);flex:none;scroll-snap-align:start;scroll-margin-left:8.7vw;user-select:none}
+.bt-card .bt-shot{border:clamp(4px,.6vw,10px) solid #0b0b10;border-radius:clamp(14px,1.9vw,30px);box-shadow:none}
+.bt-cap{margin-top:1.1vw;font-size:clamp(12px,1vw,16px);color:#8b8b95}
+.bt-shot{aspect-ratio:16/10;border-radius:1.6vw;background:#fff;overflow:hidden;position:relative;container-type:inline-size;color:#2a2066}
+.bt-shot .nv{position:absolute;left:0;right:0;top:0;height:7cqw;display:flex;align-items:center;gap:2cqw;padding:0 4cqw;font-size:1.2cqw;color:#55557a;border-bottom:.15cqw solid #eceaf6}
+.bt-shot .nv b{letter-spacing:.2em;color:#2a2066;margin-right:3cqw}
+.bt-shot .nv em{margin-left:auto;font-style:normal;background:var(--sc-accent);color:#fff;padding:.7cqw 1.4cqw;border-radius:.7cqw}
+.bt-shot .pg{position:absolute;left:4cqw;right:4cqw;top:10cqw;bottom:3cqw}
+.bt-shot .t{height:3.6cqw;width:48%;border-radius:.8cqw;background:#2a2066;margin-bottom:1.4cqw}
+.bt-shot .l{height:1.1cqw;border-radius:.6cqw;background:#e4e2f2;margin-bottom:1cqw}
+.bt-shot .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:2cqw;margin-top:3cqw}
+.bt-shot .tile{height:22cqw;border-radius:1.6cqw;background:linear-gradient(160deg,#ece9ff,#d6d1fb);position:relative;overflow:hidden}
+.bt-shot .tile:nth-child(2){background:linear-gradient(160deg,#dff9ee,#bdeedb)}.bt-shot .tile:nth-child(3){background:linear-gradient(160deg,#4a3fa3,#2a2066)}
+.bt-shot .tile::after{content:"";position:absolute;width:9cqw;height:9cqw;border-radius:50%;right:-2cqw;bottom:-2cqw;background:rgba(255,255,255,.55)}
+.bt-shot .price{display:grid;grid-template-columns:repeat(3,1fr);gap:2cqw;margin-top:3cqw}
+.bt-shot .plan{border-radius:1.6cqw;border:.2cqw solid #e4e2f2;padding:2.4cqw;height:30cqw}
+.bt-shot .plan:nth-child(2){background:#2a2066;border-color:#2a2066}
+.bt-shot .plan:nth-child(2) *{--c:rgba(255,255,255,.25)}
+.bt-shot .plan i{display:block;font-style:normal;font-size:5cqw;font-weight:500;color:#2a2066;margin:2cqw 0}
+.bt-shot .plan:nth-child(2) i{color:#fff}.bt-shot .plan span{display:block;height:1cqw;border-radius:.5cqw;background:var(--c,#e4e2f2);margin-bottom:1.2cqw}
+.bt-shot .art{display:grid;grid-template-columns:1.1fr 1fr;gap:3cqw}
+.bt-shot .art .big{height:36cqw;border-radius:1.6cqw;background:linear-gradient(150deg,#8c8ce0,#2a2066)}
+.bt-shot .art .row{display:flex;gap:1.6cqw;align-items:center;margin-bottom:2.2cqw}
+.bt-shot .art .row u{width:8cqw;height:6cqw;border-radius:1cqw;background:#e4e2f2;flex:none}
+.bt-shot .art .row div{flex:1}
+.bt-shot .pd{display:grid;grid-template-columns:1fr 1fr;gap:3cqw;align-items:center;height:100%}
+.bt-shot .pd .sph{aspect-ratio:1;border-radius:50%;width:78%;margin:auto;background:radial-gradient(circle at 36% 24%,#fff,#e4e4e7 50%,#97979c);box-shadow:0 3cqw 5cqw rgba(42,32,102,.18);position:relative}
+.bt-shot .pd .sph::after{content:"";position:absolute;width:42%;aspect-ratio:1;border-radius:50%;left:-14%;top:30%;background:radial-gradient(circle at 42% 14%,#a4a5ee,#5a52b0 50%,#2a2166)}
+.bt-shot .btn{display:inline-block;margin-top:2cqw;height:3.6cqw;width:14cqw;border-radius:.9cqw;background:var(--sc-accent)}
+.bt-shot .form{display:grid;grid-template-columns:1fr 1fr;gap:3cqw}
+.bt-shot .fld{height:4.6cqw;border-radius:1cqw;border:.2cqw solid #dcd9ee;margin-bottom:1.6cqw}
+.bt-shot .map{height:100%;min-height:30cqw;border-radius:1.6cqw;background:repeating-linear-gradient(35deg,#efedfb 0 3cqw,#e6e3f7 3cqw 3.2cqw),#efedfb;position:relative}
+.bt-shot .map::after{content:"";position:absolute;left:46%;top:40%;width:3cqw;height:3cqw;border-radius:50%;background:var(--sc-accent);box-shadow:0 0 0 1.4cqw rgba(91,227,168,.3)}
+@media(max-width:760px){.sc-beyond p.lead{max-width:84%}.bt-arrows{position:static;margin:20px var(--sc-gutter) 0;justify-content:flex-end;gap:16px}.bt-card{width:84vw}}
+@media (prefers-reduced-motion:reduce){.bt-view{scroll-behavior:auto}}
+/* ================= D · SEC_CUST wrapper ================= */
+.sc-cust{background:var(--sc-tint);padding:clamp(48px,6vw,120px) var(--sc-gutter)}
+</style></head><body>
+
+<!-- SEC_SHOWCASE · definition_key "case-showcase" · media slot "frame" (MED_FRAME) replaces the mock -->
+<section class="iam-sc sc-show" data-definition="case-showcase" data-definition-version="1.0.0" data-theme-id="" data-appearance="brand">
+  <h2 data-slot="heading">We design websites that entice users to keep scrolling and exploring</h2>
+  <div class="sc-frame">
+    <div class="in" data-slot="frame">
+      <!-- MED_FRAME media slot: set data-src to your video (mp4/webm); the demo scene shows until it loads -->
+      <div class="sc-media" data-media data-src="" data-poster="">
+        <video muted loop playsinline preload="metadata" aria-hidden="true"></video>
+        <div class="demo" aria-hidden="true">
+          <div class="bar"><i></i><i></i><i></i><b>Workspace</b><em>Run</em></div>
+          <div class="side"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="cards">
+            <div class="card"><div class="spark"><u style="--i:0"></u><u style="--i:1"></u><u style="--i:2"></u><u style="--i:3"></u><u style="--i:4"></u><u style="--i:5"></u><u style="--i:6"></u><u style="--i:7"></u></div><small>Demo metric</small><strong>128</strong></div>
+            <div class="card"><div class="spark"><u style="--i:3"></u><u style="--i:1"></u><u style="--i:5"></u><u style="--i:2"></u><u style="--i:6"></u><u style="--i:0"></u><u style="--i:4"></u><u style="--i:7"></u></div><small>Demo metric</small><strong>94%</strong></div>
+            <div class="card"><div class="spark"><u style="--i:6"></u><u style="--i:2"></u><u style="--i:0"></u><u style="--i:5"></u><u style="--i:1"></u><u style="--i:7"></u><u style="--i:3"></u><u style="--i:4"></u></div><small>Demo metric</small><strong>3.2s</strong></div>
+          </div>
+          <div class="run"><h4>Activity</h4>
+            <div class="row" style="--r:0"><i></i><span style="max-width:46%"></span><em>done</em></div>
+            <div class="row" style="--r:1"><i></i><span style="max-width:62%"></span><em>done</em></div>
+            <div class="row" style="--r:2"><i></i><span style="max-width:38%"></span><em>running</em></div>
+            <div class="row" style="--r:3"><i></i><span style="max-width:54%"></span><em>queued</em></div>
+          </div>
+          <div class="cursor"><svg viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#241b5e" stroke-width="1.2" stroke-linejoin="round"/></svg></div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEC_CONV · definition_key "case-conversion" -->
+<section class="iam-sc sc-conv" data-definition="case-conversion" data-definition-version="1.0.0" data-theme-id="" data-appearance="tint">
+  <h2 data-slot="heading">Enhancing conversion</h2>
+  <p class="lead" data-slot="body1">Our design approach harmonized realistic forms and materials along with vector and text objects. The result is a truly balanced UI, featuring proper distribution of accents and delightful animations</p>
+  <div class="sc-stage" data-orbit-auto data-period="16">
+    <div class="orb o-white" data-x="0.7104" data-s="1"></div>
+    <div class="orb o-purple" data-x="0.5671" data-s="1"></div>
+    <div class="orb o-frost" data-x="0.4073" data-s="1"></div>
+    <div class="orb o-dot" data-x="0.1262" data-s="1"></div>
+  </div>
+  <p class="lead2" data-slot="body2">The micro-animations were utilized to bring the objects into focus, showcasing AgentSam's solutions through unique visual storytelling</p>
+</section>
+
+
+<!-- SEC_BEYOND · definition_key "case-vignettes" · arrows scroll one slide; replace each .bt-shot with a screenshot or video -->
+<section class="iam-sc sc-beyond" data-definition="case-vignettes" data-definition-version="1.0.0" data-theme-id="" data-appearance="light" data-carousel>
+  <h2 data-slot="heading">Beyond the Homepage</h2>
+  <p class="lead" data-slot="body1">Incorporating visual vignettes to present different features was a key aspect of the homepage. For consistency, a similar content structure was applied to the inner pages of the site.</p>
+  <div class="bt-arrows"><button type="button" data-prev aria-label="Previous slide"><svg viewBox="0 0 24 18" fill="none"><path d="M4.322 7.926 9.91 2.179 8.437.664.335 8.997l8.102 8.334 1.473-1.515-5.588-5.747h19.346V7.926H4.322Z" fill="currentColor"/></svg></button><button type="button" data-next aria-label="Next slide"><svg viewBox="0 0 24 18" fill="none"><path d="M19.678 7.926 14.09 2.179 15.563.664l8.102 8.333-8.102 8.334-1.473-1.515 5.588-5.747H.332V7.926h19.346Z" fill="currentColor"/></svg></button></div>
+  <div class="bt-view" data-view><div class="bt-track"><div class="bt-card"><div class="bt-shot" data-slot="card1"><div class="nv"><b>YOURBRAND</b><span>Platform</span><span>Solutions</span><span>Resources</span><em>Contact</em></div><div class="pg"><div class="t"></div><div class="l" style="width:60%"></div><div class="l" style="width:44%"></div><div class="g3"><div class="tile"></div><div class="tile"></div><div class="tile"></div></div></div></div><div class="bt-cap" data-slot="card1.label">Platform</div></div><div class="bt-card"><div class="bt-shot" data-slot="card2"><div class="nv"><b>YOURBRAND</b><span>Platform</span><span>Solutions</span><span>Resources</span><em>Contact</em></div><div class="pg"><div class="t" style="width:36%"></div><div class="l" style="width:50%"></div><div class="price"><div class="plan"><span style="width:40%"></span><i>$</i><span></span><span style="width:80%"></span><span style="width:60%"></span></div><div class="plan"><span style="width:40%"></span><i>$$</i><span></span><span style="width:80%"></span><span style="width:60%"></span></div><div class="plan"><span style="width:40%"></span><i>$$$</i><span></span><span style="width:80%"></span><span style="width:60%"></span></div></div></div></div><div class="bt-cap" data-slot="card2.label">Pricing</div></div><div class="bt-card"><div class="bt-shot" data-slot="card3"><div class="nv"><b>YOURBRAND</b><span>Platform</span><span>Solutions</span><span>Resources</span><em>Contact</em></div><div class="pg"><div class="art"><div class="big"></div><div><div class="t" style="width:70%"></div><div class="row"><u></u><div><div class="l" style="width:90%"></div><div class="l" style="width:55%"></div></div></div><div class="row"><u></u><div><div class="l" style="width:90%"></div><div class="l" style="width:55%"></div></div></div><div class="row"><u></u><div><div class="l" style="width:90%"></div><div class="l" style="width:55%"></div></div></div></div></div></div></div><div class="bt-cap" data-slot="card3.label">Resources</div></div><div class="bt-card"><div class="bt-shot" data-slot="card4"><div class="nv"><b>YOURBRAND</b><span>Platform</span><span>Solutions</span><span>Resources</span><em>Contact</em></div><div class="pg"><div class="pd"><div class="sph"></div><div><div class="t" style="width:70%"></div><div class="l"></div><div class="l" style="width:82%"></div><div class="l" style="width:64%"></div><span class="btn"></span></div></div></div></div><div class="bt-cap" data-slot="card4.label">Product</div></div><div class="bt-card"><div class="bt-shot" data-slot="card5"><div class="nv"><b>YOURBRAND</b><span>Platform</span><span>Solutions</span><span>Resources</span><em>Contact</em></div><div class="pg"><div class="form"><div><div class="t" style="width:60%"></div><div class="fld"></div><div class="fld"></div><div class="fld" style="height:12cqw"></div><span class="btn"></span></div><div class="map"></div></div></div></div><div class="bt-cap" data-slot="card5.label">Contact</div></div></div></div>
+</section>
+
+<!-- SEC_CUST · definition_key "case-customizer" · fragment below is website-customizer-section.html, unmodified -->
+<section class="iam-sc sc-cust" data-definition="case-customizer" data-definition-version="1.0.0" data-theme-id="" data-appearance="tint">
+<!-- InnerAnimalMedia / Portable website customizer section.
+     Drop-in fragment: CSS, markup and JS are scoped to data-iam-customizer.
+     No framework, requests, browser storage, CMS writes or external assets. -->
+<style>
+  [data-iam-customizer] {
+    --iam-accent: #3c67b5;
+    --iam-panel: #141820;
+    --iam-hairline: #343944;
+    box-sizing: border-box;
+    isolation: isolate;
+    display: block;
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: clamp(22px, 4.2vw, 56px);
+    border: 1px solid var(--iam-hairline);
+    border-radius: 24px;
+    color: #f5f6f8;
+    background: radial-gradient(circle at 90% 0%, #242a36 0%, transparent 38%), linear-gradient(135deg, #171b23, #101318 70%);
+    box-shadow: 0 24px 85px rgba(0,0,0,.20), inset 0 1px rgba(255,255,255,.035);
+    font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  [data-iam-customizer], [data-iam-customizer] * { box-sizing: border-box; }
+  [data-iam-customizer] .iam-customizer__intro {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px 32px;
+    margin-bottom: clamp(26px, 3.5vw, 37px);
+  }
+  [data-iam-customizer] .iam-customizer__title {
+    margin: 0;
+    color: #fafbfc;
+    font-weight: 620;
+    letter-spacing: -.042em;
+    line-height: 1.08;
+    font-size: clamp(27px, 3.7vw, 43px);
+  }
+  [data-iam-customizer] .iam-customizer__subtitle {
+    margin: 11px 0 0;
+    color: #b1bac7;
+    font-size: clamp(13px, 1.4vw, 16px);
+    line-height: 1.5;
+  }
+  [data-iam-customizer] .iam-customizer__pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 33px;
+    margin-top: 4px;
+    padding: 6px 13px;
+    border: 1px solid #3b424e;
+    border-radius: 99px;
+    background: rgba(255,255,255,.035);
+    color: #d4dae3;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  [data-iam-customizer] .iam-customizer__preview {
+    overflow: hidden;
+    min-height: clamp(280px, 35vw, 370px);
+    border-radius: 15px;
+    border: 1px solid rgba(255,255,255,.75);
+    color: #222723;
+    background: radial-gradient(ellipse at 78% 66%, rgba(177,187,176,.13), transparent 58%), #f7f7f3;
+    box-shadow: 0 10px 30px rgba(0,0,0,.13);
+  }
+  [data-iam-customizer] .iam-customizer__site-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 23px clamp(20px, 3vw, 36px);
+  }
+  [data-iam-customizer] .iam-customizer__site-mark,
+  [data-iam-customizer] .iam-customizer__menu {
+    margin: 0;
+    color: #303831;
+    font-size: 10px;
+    letter-spacing: .13em;
+    font-weight: 650;
+    text-transform: uppercase;
+  }
+  [data-iam-customizer] .iam-customizer__menu {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .12em;
+  }
+  [data-iam-customizer] .iam-customizer__site-body {
+    padding: clamp(34px, 6.8vw, 72px) clamp(20px, 4.2vw, 50px) clamp(43px, 6.8vw, 74px);
+    max-width: 780px;
+  }
+  [data-iam-customizer] .iam-customizer__eyebrow {
+    margin: 0 0 13px;
+    color: var(--iam-accent);
+    font-size: 11px;
+    font-weight: 670;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    transition: color .15s ease;
+  }
+  [data-iam-customizer] .iam-customizer__site-title {
+    margin: 0;
+    color: #202622;
+    font-weight: 630;
+    letter-spacing: -.042em;
+    line-height: 1.11;
+    font-size: clamp(31px, 4.9vw, 59px);
+    overflow-wrap: anywhere;
+  }
+  [data-iam-customizer] .iam-customizer__site-copy {
+    margin: 16px 0 24px;
+    max-width: 565px;
+    color: #646a65;
+    font-size: clamp(12px, 1.55vw, 15px);
+    line-height: 1.65;
+  }
+  [data-iam-customizer] .iam-customizer__site-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 17px;
+    min-height: 42px;
+    border-radius: 9px;
+    background: var(--iam-accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(10,14,25,.10);
+    transition: background-color .15s ease;
+  }
+  [data-iam-customizer] .iam-customizer__controls {
+    display: grid;
+    gap: 21px;
+    margin-top: clamp(22px, 3vw, 31px);
+  }
+  [data-iam-customizer] .iam-customizer__field { display: grid; gap: 9px; }
+  [data-iam-customizer] .iam-customizer__label {
+    display: block;
+    color: #d5d9df;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  [data-iam-customizer] .iam-customizer__input {
+    width: 100%;
+    height: 48px;
+    padding: 11px 15px;
+    border: 1px solid #414854;
+    border-radius: 10px;
+    outline: none;
+    background: #11151c;
+    color: #f7f8fa;
+    font: inherit;
+    font-size: 14px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  [data-iam-customizer] .iam-customizer__input:hover { border-color: #727a87; }
+  [data-iam-customizer] .iam-customizer__input:focus-visible {
+    border-color: #87a5ea;
+    box-shadow: 0 0 0 3px rgba(106,153,240,.18);
+  }
+  [data-iam-customizer] .iam-customizer__swatch-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+  }
+  [data-iam-customizer] .iam-customizer__swatch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: none;
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+  [data-iam-customizer] .iam-customizer__swatch::after {
+    content: "";
+    display: block;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: var(--swatch);
+    box-shadow: 0 0 0 1px rgba(255,255,255,.15);
+  }
+  [data-iam-customizer] .iam-customizer__swatch[aria-pressed="true"] { border-color: #90aff7; }
+  [data-iam-customizer] .iam-customizer__swatch:focus-visible,
+  [data-iam-customizer] .iam-customizer__reset:focus-visible {
+    outline: 3px solid #94b3f7;
+    outline-offset: 3px;
+  }
+  [data-iam-customizer] .iam-customizer__swatch:hover { border-color: #647082; }
+  [data-iam-customizer] .iam-customizer__swatch[aria-pressed="true"]:hover { border-color: #90aff7; }
+  [data-iam-customizer] .iam-customizer__reset {
+    margin-left: auto;
+    padding: 6px 17px;
+    min-height: 35px;
+    background: transparent;
+    border: 1px solid #48505e;
+    border-radius: 99px;
+    color: #edf0f4;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color .15s ease, background-color .15s ease;
+  }
+  [data-iam-customizer] .iam-customizer__reset:hover { border-color: #99a2b2; background: rgba(255,255,255,.05); }
+  @media (max-width: 560px) {
+    [data-iam-customizer] { border-radius: 17px; padding: 20px; }
+    [data-iam-customizer] .iam-customizer__intro { gap: 10px; margin-bottom: 20px; }
+    [data-iam-customizer] .iam-customizer__pill { display: none; }
+    [data-iam-customizer] .iam-customizer__preview { min-height: 310px; }
+    [data-iam-customizer] .iam-customizer__site-top { padding: 20px; }
+    [data-iam-customizer] .iam-customizer__site-body { padding: 51px 20px 39px; }
+    [data-iam-customizer] .iam-customizer__site-title { font-size: clamp(30px, 8vw, 43px); }
+    [data-iam-customizer] .iam-customizer__swatch-row { gap: 7px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-iam-customizer] *, [data-iam-customizer] *::before, [data-iam-customizer] *::after { transition-duration: 0s !important; }
+  }
+</style>
+<section class="iam-customizer" data-iam-customizer aria-labelledby="iam-customizer-heading">
+  <div class="iam-customizer__intro">
+    <div>
+      <h2 class="iam-customizer__title" id="iam-customizer-heading">Try customizing a website</h2>
+      <p class="iam-customizer__subtitle">Two simple changes. See the result immediately.</p>
+    </div>
+    <span class="iam-customizer__pill">Illustrative interaction</span>
+  </div>
+
+  <div class="iam-customizer__preview" aria-label="Example website preview">
+    <div class="iam-customizer__site-top">
+      <span class="iam-customizer__site-mark">Grove / Concept Preview</span>
+      <span class="iam-customizer__menu">Menu</span>
+    </div>
+    <div class="iam-customizer__site-body">
+      <p class="iam-customizer__eyebrow">Spaces made personal</p>
+      <h3 class="iam-customizer__site-title" data-iam-preview-heading>A better space begins here.</h3>
+      <p class="iam-customizer__site-copy">Thoughtful interiors, beautiful materials, and a space that feels like yours.</p>
+      <span class="iam-customizer__site-cta">Explore our work <span aria-hidden="true">↗</span></span>
+    </div>
+  </div>
+
+  <div class="iam-customizer__controls">
+    <div class="iam-customizer__field">
+      <label class="iam-customizer__label" for="iam-customizer-text">Change the heading</label>
+      <input class="iam-customizer__input" id="iam-customizer-text" data-iam-heading-input
+             type="text" value="A better space begins here." maxlength="90" autocomplete="off" spellcheck="true" />
+    </div>
+    <div class="iam-customizer__field">
+      <span class="iam-customizer__label" id="iam-customizer-color-label">Choose an accent color</span>
+      <div class="iam-customizer__swatch-row" role="group" aria-labelledby="iam-customizer-color-label">
+        <button class="iam-customizer__swatch" type="button" data-iam-color="#406959" style="--swatch:#406959" aria-label="Forest green" aria-pressed="false"></button>
+        <button class="iam-customizer__swatch" type="button" data-iam-color="#3c67b5" style="--swatch:#3c67b5" aria-label="Cobalt blue" aria-pressed="true"></button>
+        <button class="iam-customizer__swatch" type="button" data-iam-color="#b76c4b" style="--swatch:#b76c4b" aria-label="Terracotta" aria-pressed="false"></button>
+        <button class="iam-customizer__swatch" type="button" data-iam-color="#343b43" style="--swatch:#343b43" aria-label="Charcoal" aria-pressed="false"></button>
+        <button class="iam-customizer__reset" type="button" data-iam-reset>Reset</button>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+  (() => {
+    const defaultHeading = 'A better space begins here.';
+    const defaultAccent = '#3c67b5';
+    // Supports multiple independent copies of this section on a page.
+    document.querySelectorAll('[data-iam-customizer]:not([data-iam-initialized])').forEach(section => {
+      section.dataset.iamInitialized = 'true';
+      const input = section.querySelector('[data-iam-heading-input]');
+      const heading = section.querySelector('[data-iam-preview-heading]');
+      const swatches = [...section.querySelectorAll('[data-iam-color]')];
+      const reset = section.querySelector('[data-iam-reset]');
+
+      input.addEventListener('input', () => {
+        heading.textContent = input.value || 'Your heading here';
+      });
+      function chooseAccent(value) {
+        section.style.setProperty('--iam-accent', value);
+        swatches.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.iamColor === value)));
+      }
+      swatches.forEach(button => button.addEventListener('click', () => chooseAccent(button.dataset.iamColor)));
+      reset.addEventListener('click', () => {
+        input.value = defaultHeading;
+        heading.textContent = defaultHeading;
+        chooseAccent(defaultAccent);
+      });
+    });
+  })();
+</script>
+
+</section>
+
+<script>
+/* Slow auto scene: time-driven, no scroll dependency.
+   Spread state matches the first screenshot; the loop eases toward the purple sphere (the hub) and back. */
+(function(){
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('[data-orbit-auto]').forEach(function(st){
+    var orbs=[].slice.call(st.querySelectorAll('.orb')),
+        hub=+st.querySelector('.o-purple').dataset.x,
+        period=(+st.dataset.period||16)*1000, MIN=0.5, vis=true, t0=null, y=0.5;
+    orbs.forEach(function(o){o.style.top='50%'});
+    function place(t){ // t = 1 spread, MIN near hub
+      orbs.forEach(function(o){var x=+o.dataset.x;o.style.left=((hub+(x-hub)*t)*100)+'%'});
+    }
+    function frame(ts){
+      if(t0===null)t0=ts;
+      var c=0.5+0.5*Math.cos(2*Math.PI*(ts-t0)/period);   // 1 -> 0 -> 1, starts spread
+      var e=c*c*(3-2*c);                                   // smoothstep: lingers at both ends
+      place(MIN+(1-MIN)*e);
+      if(vis)requestAnimationFrame(frame);
+    }
+    place(1);
+    if(reduce)return;
+    if('IntersectionObserver' in window)new IntersectionObserver(function(es){
+      var v=es[0].isIntersecting;if(v&&!vis){vis=true;requestAnimationFrame(frame)}else vis=v;
+    }).observe(st);
+    requestAnimationFrame(frame);
+  });
+})();
+(function(){
+  document.querySelectorAll('[data-media]').forEach(function(m){
+    var src=m.dataset.src;if(!src)return;
+    var v=m.querySelector('video');if(m.dataset.poster)v.poster=m.dataset.poster;
+    v.addEventListener('canplay',function(){m.classList.add('has-video');v.play&&v.play().catch(function(){})},{once:true});
+    v.src=src;
+  });
+})();
+(function(){
+  document.querySelectorAll('[data-carousel]').forEach(function(sec){
+    var view=sec.querySelector('[data-view]'),prev=sec.querySelector('[data-prev]'),next=sec.querySelector('[data-next]');
+    var cards=[].slice.call(view.querySelectorAll('.bt-card'));
+    function step(){return cards.length>1?cards[1].offsetLeft-cards[0].offsetLeft:view.clientWidth}
+    function upd(){prev.disabled=view.scrollLeft<4;next.disabled=view.scrollLeft>view.scrollWidth-view.clientWidth-4}
+    prev.onclick=function(){view.scrollBy({left:-step(),behavior:'smooth'})};
+    next.onclick=function(){view.scrollBy({left:step(),behavior:'smooth'})};
+    view.addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);upd();
+    var down=false,sx=0,sl=0;
+    view.addEventListener('pointerdown',function(e){if(e.pointerType!=='mouse')return;down=true;sx=e.clientX;sl=view.scrollLeft;view.classList.add('drag')});
+    addEventListener('pointermove',function(e){if(down)view.scrollLeft=sl-(e.clientX-sx)});
+    addEventListener('pointerup',function(){if(!down)return;down=false;view.classList.remove('drag');var i=Math.round(view.scrollLeft/step());view.scrollTo({left:i*step(),behavior:'smooth'})});
+  });
+})();
+</script>
+</body></html>
