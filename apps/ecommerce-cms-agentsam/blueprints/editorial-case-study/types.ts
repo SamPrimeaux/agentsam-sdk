@@ -46,7 +46,7 @@ export interface SectionInstanceProposal {
   settings: Record<string, unknown>;
   blocks: BlockInstanceProposal[];
   media: Record<string, MediaReference | MediaReference[]>;
-  themeVariant?: ThemeVariant;
+  theme?: InstalledThemeReference;
 }
 export interface CaseStudyIntake {
   schema: "iam.cms.case-study-intake.v1";
