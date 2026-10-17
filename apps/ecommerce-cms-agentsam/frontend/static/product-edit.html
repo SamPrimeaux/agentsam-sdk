@@ -874,6 +874,26 @@ function renderStudioDesign(draft, fulfillment, source = null, sellingSelection 
   designContext = draft ? { draft, fulfillment } : null;
   card.hidden = isNew;
   root.replaceChildren();
+  const productKind = window.__productKind || "physical";
+  if (["app", "website", "sdk-package", "theme", "ui-component", "section", "block", "service", "integration"].includes(productKind)) {
+    const guidance = document.createElement("p");
+    guidance.className = "product-card-hint";
+    guidance.textContent = productKind === "website" || productKind === "theme"
+      ? "Arrange pages, sections, media and design tokens in the existing layout workspace."
+      : "Organize the product's interface previews and reusable design surfaces in the existing CMS workspace.";
+    root.append(guidance);
+    const actions = document.createElement("div");
+    actions.className = "product-design-actions";
+    const open = document.createElement("a");
+    open.className = "btn ghost small";
+    open.href = productKind === "website" || productKind === "theme"
+      ? "/admin/theme-editor?slug=" + encodeURIComponent(productSlug || "home")
+      : "/admin/pages";
+    open.textContent = "Open layout workspace";
+    actions.append(open);
+    root.append(actions);
+    return;
+  }
   // Provider account integration is handled centrally. Product-specific
   // creation state must never be mislabeled as an API connection.
   if (source?.kind === "connected_provider" && fulfillment?.completeful_store_product_id) {
@@ -970,6 +990,7 @@ async function loadProduct() {
   try {
     const d = await adminFetch(`/api/admin/products/${productId}`);
     const p = d.product;
+    window.__productKind = p.kind || "physical";
     document.getElementById("title").value = p.title;
     document.getElementById("slug").value = p.slug;
     document.getElementById("slug").dataset.manual = "1";

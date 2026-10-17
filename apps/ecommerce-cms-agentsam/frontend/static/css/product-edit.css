@@ -285,6 +285,23 @@
     background 0.15s;
 }
 
+/* Match the compact FNF upload tile: center all content as one group. */
+.product-media-add {
+  text-align: center;
+  box-sizing: border-box;
+  padding: 10px 8px;
+  line-height: 1.3;
+}
+.product-media-add > svg { flex: none; margin-inline: auto; }
+.product-media-add > span { display: block; max-width: 100%; margin-inline: auto; }
+.product-media-add .product-media-browse-link {
+  display: block;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 0;
+  text-align: center;
+  line-height: 1.35;
+}
 .product-media-add:hover,
 .product-media-add.is-dragover {
   border-color: #2c6ecb;
