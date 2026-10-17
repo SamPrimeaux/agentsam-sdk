@@ -312,7 +312,13 @@ async function runAgentSamTurnCore(options = {}) {
       .map((i) => i.content)
       .join('\n\n');
     const ruleContent = resolvedContext.rules?.content || '';
-    instructions = [cardContent, extraContent, ruleContent].filter(Boolean).join('\n\n');
+    instructions = [cardContent, extraContent, ruleContent, [
+      'REPOSITORY NAVIGATION: The project card and lockedBy field describe the current conversation workspace, not a prohibition on user-authorized Git operations.',
+      'When the user explicitly asks to work on another branch, worktree, or repository, inspect git status, git worktree list, and the destination before acting. Use approved terminal.exec with git -C <existing checkout> for targeted Git operations. Do not claim a workspace lock prevents inspection or modification.',
+      'A branch already checked out by another worktree must be operated on from that worktree, not switched into this checkout. Do not force a checkout, discard uncommitted changes, or remove a worktree. If no safe checkout exists, use git worktree add only with appropriate authorization.',
+      'The session cwd does not automatically change when git -C targets another checkout; describe that honestly. For edits requiring an alternate project-root capability, use an explicitly supported workspace/session selection and never imply terminal.exec changed the active project root.',
+      'Respect individual tool approval and permission checks for writes, commits, and pushes. If a tool is unavailable or denied, describe that concrete limitation rather than inventing a blanket repository boundary.'
+    ].join('\n')].filter(Boolean).join('\n\n');
   } else {
     instructions = String(options.instructions);
   }
