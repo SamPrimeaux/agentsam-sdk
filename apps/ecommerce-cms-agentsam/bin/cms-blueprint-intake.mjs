@@ -31,7 +31,7 @@ const rows=blueprint.map(([key,code,slots])=>{
  return {sku,definition_key:key,definition_version:"1.0.0",origin:"package",kind:"section",status:"draft",slots,source_uris:sources.map(s=>s.uri),settings:content[key]||{},needs_validation:true};
 });
 const sortedSources=sources.map(s=>({...s,receiptHash:crypto.createHash("sha256").update(JSON.stringify(s)).digest("hex")}));
-const output={schema:"iam.cms.machine-intake.v1",brand,project:input.project||null,tokens:input.tokens||{},sources:sortedSources,items:rows,requirements:["source integrity","rights review","D1 SKU collision check","type/schema check","media binding","renderer preview","approval"]};
+const output={schema:"iam.cms.machine-intake.v1",brand,project:input.project||null,tokens:input.tokens||{},theme,sources:sortedSources,items:rows,requirements:["source integrity","rights review","D1 SKU collision check","type/schema check","media binding","renderer preview","approval"]};
 const proposal={schema:"iam.cms.case-study-intake.v1",slug:input.slug||"untitled-case-study",brand,pagePresetSku:brand+"-PG-CSM-V1",tokens:input.tokens||{},sources:sortedSources,sections:rows.map((r,i)=>({definition:{definitionKey:r.definition_key,definitionVersion:r.definition_version,inventorySku:r.sku,origin:r.origin},order:i,status:"active",settings:r.settings,blocks:[],media:{}})),lifecycle:"draft_pending_review"};
 const out=path.resolve(dirArg);fs.mkdirSync(out,{recursive:true});
 const write=(n,data)=>fs.writeFileSync(path.join(out,n),JSON.stringify(data,null,2)+"\n");
