@@ -50,6 +50,19 @@ const MIN_CLIP_US = 100_000;
 const MIN_PPS = 36;
 const MAX_PPS = 220;
 
+const MIN_TRACK_HEIGHT = 48;
+const MAX_TRACK_HEIGHT = 168;
+function storedTrackHeights(projectId:string):Record<string,number>{
+  if(typeof window==="undefined")return {};
+  try{
+    const parsed=JSON.parse(window.localStorage.getItem("copro.timeline.track-heights.v1:"+projectId)??"{}");
+    if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))return {};
+    return Object.fromEntries(Object.entries(parsed).filter(([id,height])=>
+      typeof id==="string"&&typeof height==="number"&&Number.isFinite(height)).map(([id,height])=>[id,Math.max(MIN_TRACK_HEIGHT,Math.min(MAX_TRACK_HEIGHT,Number(height)))]));
+  }catch{return {};}
+}
+
+
 export function CoProTimeline({
   project,
   selectedClipId,
@@ -63,6 +76,18 @@ export function CoProTimeline({
   onTrackReorder,
 }: TimelineProps) {
   const scroller = useRef<HTMLDivElement>(null);
+  const labelsRef = useRef<HTMLDivElement>(null);
+  const [trackHeights,setTrackHeights] = useState<Record<string,number>>(()=>storedTrackHeights(project.id));
+  React.useEffect(()=>{setTrackHeights(storedTrackHeights(project.id));},[project.id]);
+  const rowHeight=(id:string)=>trackHeights[id]??68;
+  const resizeTrack=(id:string,delta:number)=>{
+    setTrackHeights(previous=>{
+      const next={...previous,[id]:Math.max(MIN_TRACK_HEIGHT,Math.min(MAX_TRACK_HEIGHT,(previous[id]??68)+delta))};
+      try{window.localStorage.setItem("copro.timeline.track-heights.v1:"+project.id,JSON.stringify(next));}catch{}
+      return next;
+    });
+  };
+  const trackDrag=useRef<{id:string;y:number}|null>(null);
   const pinchStart = useRef<{ distance: number; pixelsPerSecond: number } | null>(null);
   const [pixelsPerSecond, setPixelsPerSecond] = useState(76);
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -122,10 +147,10 @@ export function CoProTimeline({
       </header>
 
       <div className="copro-timeline-layout">
-        <div className="copro-track-labels">
+        <div className="copro-track-labels" ref={labelsRef}>
           <div className="copro-track-label-spacer" />
           {project.tracks.map((track, trackIndex) => (
-            <div className="copro-track-label" key={track.id}>
+            <div className="copro-track-label" key={track.id} style={{height:rowHeight(track.id)}}>
               <div>
                 <strong>{track.name ?? humanTrackKind(track.kind)}</strong>
                 <small>{track.kind}</small>
@@ -157,6 +182,38 @@ export function CoProTimeline({
                   onClick={() => onTrackReorder?.(track.id, trackIndex + 1)}
                 >↓</button>
               </div>
+              <button className="copro-track-height-grip" role="separator" type="button"
+                aria-label={"Resize "+(track.name??track.kind)+" track height"}
+                aria-orientation="horizontal" aria-valuemin={MIN_TRACK_HEIGHT}
+                aria-valuemax={MAX_TRACK_HEIGHT} aria-valuenow={rowHeight(track.id)}
+                title="Drag to resize track, use arrows, double-click to reset"
+                onDoubleClick={()=>resizeTrack(track.id,68-rowHeight(track.id))}
+                onPointerDown={(event)=>{
+                  if(event.button!==0)return;
+                  event.preventDefault();event.stopPropagation();
+                  trackDrag.current={id:track.id,y:event.clientY};
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                }}
+                onPointerMove={(event)=>{
+                  const drag=trackDrag.current;if(!drag||drag.id!==track.id)return;
+                  const delta=event.clientY-drag.y;drag.y=event.clientY;
+                  if(delta)resizeTrack(track.id,delta);
+                }}
+                onPointerUp={(event)=>{
+                  trackDrag.current=null;
+                  if(event.currentTarget.hasPointerCapture(event.pointerId))
+                    event.currentTarget.releasePointerCapture(event.pointerId);
+                }}
+                onPointerCancel={()=>{trackDrag.current=null;}}
+                onKeyDown={(event)=>{
+                  if(!["ArrowUp","ArrowDown","Home","End"].includes(event.key))return;
+                  event.preventDefault();
+                  const current=rowHeight(track.id);
+                  const next=event.key==="Home"?MIN_TRACK_HEIGHT:event.key==="End"?MAX_TRACK_HEIGHT:
+                    current+(event.key==="ArrowUp"?-1:1)*(event.shiftKey?24:8);
+                  resizeTrack(track.id,next-current);
+                }}
+              ><span/></button>
             </div>
           ))}
           <button className="copro-add-track-label" type="button" onClick={onAddTrack}>＋ Track</button>
@@ -165,6 +222,9 @@ export function CoProTimeline({
         <div
           ref={scroller}
           className="copro-timeline-scroll"
+          onScroll={(event)=>{
+            if(labelsRef.current) labelsRef.current.scrollTop=event.currentTarget.scrollTop;
+          }}
           onWheel={(event) => {
             if (!event.ctrlKey && !event.metaKey) return;
             event.preventDefault();
@@ -195,7 +255,7 @@ export function CoProTimeline({
             onSeek?.(timeFromPointer(event.clientX));
           }}
         >
-          <div className="copro-timeline-stage" style={{ width: timelineWidth }}>
+          <div className="copro-timeline-stage" style={{ width: timelineWidth, minHeight: Math.max(190, 42 + project.tracks.reduce((total,track)=>total+rowHeight(track.id)+4,0)) }}>
             <div className="copro-ruler">
               {ticks.map((second) => (
                 <div
@@ -222,6 +282,7 @@ export function CoProTimeline({
                 <div
                   className={"copro-track-row copro-track-" + track.kind + (track.visible === false ? " is-hidden-track" : "")}
                   key={track.id}
+                  style={{height:rowHeight(track.id)}}
                 >
                   {track.clips.map((clip) => {
                     const selected = clip.id === selectedClipId;
@@ -233,7 +294,7 @@ export function CoProTimeline({
                         key={clip.id}
                         data-copro-clip
                         className={"copro-clip copro-clip-" + track.kind + " " + (selected ? "is-selected" : "")}
-                        style={{ left, width }}
+                        style={{ left, width, height:Math.max(32,rowHeight(track.id)-8) }}
                         onPointerDown={(event) => {
                           event.stopPropagation();
                           if (track.locked) return;
