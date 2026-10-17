@@ -53,7 +53,8 @@ function draftFromRow(row) {
 }
 
 function siteOrigin(env) {
-  const domain = String(env.APP_DOMAIN || "fuelnfreetime.com").trim();
+  const domain = String(env.APP_DOMAIN || "").trim();
+  if (!domain) return ""; // Same-origin media URLs when no public origin is configured.
   if (/^https?:\/\//i.test(domain)) return domain.replace(/\/$/, "");
   return `https://${domain.replace(/^\/+|\/+$/g, "")}`;
 }

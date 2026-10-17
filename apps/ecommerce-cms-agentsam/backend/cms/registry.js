@@ -3,9 +3,6 @@
  * Used for: D1 seeding, admin field schemas, merge defaults on edit (not public fallback).
  */
 import { M } from "./media-paths.js";
-import reviseSite from "../../fixtures/fnf-revise-site.json" with { type: "json" };
-import reviseMediaMap from "../../fixtures/fnf-revise-media-map.json" with { type: "json" };
-import { reviseAtlas } from "../../packages/theme-contract/runtime/revise-atlas-source.js";
 
 
 /**
@@ -2024,36 +2021,10 @@ export const PAGE_REGISTRY = {
   },
 };
 
-// Revise pages are native CMS documents, not generated HTML or a parallel store.
-// Use the same portable preset schemas the renderer and editor already share.
-// Do not override legacy Home/Shop or promote any draft to published.
-const reviseMediaUrls = Object.fromEntries(Object.entries(reviseMediaMap)
-  .map(([key, media]) => [key, media.url]));
-for (const page of reviseSite.pages) {
-  if (page.id === "home" || PAGE_REGISTRY[page.id]) continue;
-  const sections = Object.fromEntries(page.sections.map((section, index) => {
-    const preset = "revise-atlas/" + section.preset.split("/")[1];
-    const schema = reviseAtlas.schema(preset);
-    const content = reviseAtlas.fromSiteSection(section, reviseMediaUrls);
-    if (!schema || !content) throw new Error("Revise CMS preset unavailable: " + preset);
-    return [section.id, {
-      label: schema.label,
-      sortOrder: index * 10,
-      sourceSection: section.id,
-      fields: schema.fields,
-      blocks: schema.blocks,
-      settings: schema.settings,
-      capabilities: schema.capabilities,
-      guardrails: schema.guardrails,
-      defaultContent: content
-    }];
-  }));
-  PAGE_REGISTRY[page.id] = {
-    title: page.title,
-    defaultStatus: "draft",
-    sections
-  };
-}
+// Installation-owned CMS pages, drafts, and media must come from D1 or the
+// explicitly selected theme package. Do not load the historical FNF Revise
+// site/media fixtures into every customer's registry at Worker startup.
+// The fixture sources remain preserved under fixtures/ for explicit review.
 
 export const PAGE_SLUGS = Object.keys(PAGE_REGISTRY);
 

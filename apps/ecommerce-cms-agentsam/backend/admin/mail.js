@@ -482,7 +482,8 @@ export async function getResendStatus(env) {
   const domain = settings.resendDomain || "";
   const status = await getResendDomainStatus(env, domain);
   const { getCompanyDomain } = await import("../lib/company.js");
-  const appDomain = (await getCompanyDomain(env)) || domain || "fuelnfreetime.com";
+  const appDomain = (await getCompanyDomain(env)) || domain || null;
+  const webhookUrl = (endpoint) => appDomain ? `https://${appDomain}${endpoint}` : null;
   return Response.json({
     ok: true,
     configured: resendConfigured(env),
@@ -490,9 +491,9 @@ export async function getResendStatus(env) {
     resend: status,
     providers: providerStatus(settings, env),
     webhooks: {
-      outbound_url: `https://${appDomain}/api/webhooks/resend/outbound`,
-      inbound_url: `https://${appDomain}/api/webhooks/resend/inbound`,
-      legacy_url: `https://${appDomain}/api/agentsam/webhooks/resend`,
+      outbound_url: webhookUrl("/api/webhooks/resend/outbound"),
+      inbound_url: webhookUrl("/api/webhooks/resend/inbound"),
+      legacy_url: webhookUrl("/api/agentsam/webhooks/resend"),
       outbound_events: [
         "email.sent",
         "email.delivered",
