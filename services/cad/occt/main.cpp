@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     if (argc == 2 && std::string(argv[1]) == "--doctor") {
       std::cout << "AGENTSAM_RESULT={\"ok\":true,\"engine\":\"occt\",\"version\":\""
                 << OCC_VERSION_COMPLETE
-                << "\",\"capabilities\":[\"solid.box.create\",\"solid.inspect.step\",\"solid.export.step\"]}"
+                << "\",\"capabilities\":[\"solid.box.create\",\"solid.cut\",\"solid.inspect.step\",\"solid.export.step\"]}"
                 << std::endl;
       return 0;
     }
