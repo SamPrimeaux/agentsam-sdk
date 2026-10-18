@@ -8,11 +8,16 @@ export function installProjectRoutes(app: Express) {
  const listeners=new Set<any>();
  const projects=path.join(root,'.agentsam/cad/projects');
  fs.mkdirSync(projects,{recursive:true});
- fs.watch(projects,{recursive:true},(_event,filename)=>{
-  if(!filename||!String(filename).endsWith('head.json'))return;
-  const id=String(filename).split(path.sep)[0];
-  runtime.execute('design_project_get',{project_id:id}).then(row=>{for(const res of listeners)res.write('data: '+JSON.stringify(row)+'\n\n');}).catch(()=>{});
- });
+ // Filesystem notifications are best-effort. The in-process save callback below
+ // remains authoritative and must work when macOS watcher limits are exhausted.
+ try {
+  const watcher=fs.watch(projects,{recursive:true},(_event,filename)=>{
+   if(!filename||!String(filename).endsWith('head.json'))return;
+   const id=String(filename).split(path.sep)[0];
+   runtime.execute('design_project_get',{project_id:id}).then(row=>{for(const res of listeners)res.write('data: '+JSON.stringify(row)+'\n\n');}).catch(()=>{});
+  });
+  watcher.on('error',()=>watcher.close());
+ }catch { /* OS watcher unavailable: explicit app saves still broadcast */ }
 
  const runtime=localProjectRuntime(root,row=>{for(const res of listeners)res.write('data: '+JSON.stringify(row)+'\n\n');});
  const local=(req: Request)=>{
