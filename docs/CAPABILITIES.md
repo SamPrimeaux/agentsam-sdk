@@ -20,6 +20,34 @@ agentsam capabilities repository.snapshot --json
 
 This registry is intended to drive CLI/terminal UI discovery, AgentSam/MCP tool selection, docs, verification, and workflow capability resolution. It is deliberately not a second hosted tools database.
 
+## Current registry inventory (source-backed)
+
+The checked-in [generated registry reference](reference/AGENTSAM-REGISTRY.generated.md) lists **every** declared capability/primitive, registered CLI root, native setup recipe, top-level APP manifest and catalogued package from this checkout. It is derived directly from their actual source authorities and drift-gated by `npm run verify:registry` rather than manually maintained here.
+
+```bash
+agentsam capabilities --inventory --json
+agentsam capabilities --inventory --commands --search machine
+agentsam capabilities --inventory --packages --search brand
+agentsam explain capability workspace.write
+agentsam explain command app
+npm run docs:registry:check
+```
+
+A manifest entry with `status: stable` is still **a declaration**, not universal proof of a bound handler or an authorized runtime. `capability.status` reports handler binding; `capability.invoke` only invokes allowlisted operations under host authorization. Some entries explicitly set `deterministic: false`, and `repository.audit` is an `agent_primitive` requiring an injected reasoner. Do not call everything in the registry deterministic merely because the list is printed under that CLI heading.
+
+### Separate authorities, one discoverable product system
+
+| Inventory | Canonical owner | Meaning |
+| --- | --- | --- |
+| CLI commands | `src/cli/command-catalog.js` | Registered `agentsam ...` entrypoints; the [cheat-sheet and workflow guide](reference/AGENTSAM-CLI-WORKFLOWS.md) are user-facing projections |
+| Capabilities | `protocol/capabilities/manifest.json` + host adapter | Operation IDs, effects and schemas; actual handler availability and approvals are resolved separately |
+| Native tooling recipes | `src/lib/setup/recipes.js` | Installable prerequisites; see [setup contract](contracts/capability-install-planner.md) |
+| Applications and installs | `agentsam.app.json`, platform product catalog and host installation records | Definition, commercial catalog, bundle inclusion and account installation are distinct facts |
+
+AgentSam CLI/SDK orchestrates substantial existing applications and domain packages, not disposable demos. Precise status wording remains important: *declared*, *packaged*, *implemented*, *verified*, *merged*, *deployed*, or *shipped*. See [delivery closure](standards/DELIVERY_CLOSURE.md).
+
+Portable public CMS authority covers editable public websites, branding, media, sections, navigation, drafts, previews and publications; CAD, commerce, manufacturing and machine data keep separate product-domain ownership. An app-local `packages/` path is a packaging location, not automatic evidence that each module is intentionally private or unavailable for future public SDK reuse.
+
 ## repository.snapshot
 
 `repository.snapshot` is the first canonical composition primitive. It performs one read-only evidence collection pass over the current checkout and combines existing SDK mechanics:

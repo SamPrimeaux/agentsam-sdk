@@ -4,6 +4,12 @@
 **Schema:** `protocol/apps/agentsam.app.v1.schema.json`  
 **CLI:** `agentsam app validate` · `agentsam app list` · `agentsam app inspect <id>`
 
+## Runtime installation versus distribution
+
+`agentsam app list` / `inspect` / `validate` discover and validate APP manifests in the current source checkout. The current `agentsam app install <id>` implementation **prints** the manifest's npm/curl distribution command; it does not execute an install, create account-scoped host state, update installed-app records, or activate a Local Studio route.
+
+`included_apps` and `embed` control **build-time packaging**. Installing an APP after Local Studio is already downloaded requires an actual runtime installation record, permission/connection checks, launcher/mount resolution, and verification/receipt. That must be distinct from npm installation, native `agentsam setup` recipes, and plugin OAuth registration. A manifested product can be genuine and usable before that particular host-install bridge is finished.
+
 ## Artifact taxonomy
 
 | Type | Meaning | Canonical manifest |
