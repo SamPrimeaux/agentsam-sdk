@@ -32,7 +32,7 @@ test('resolveDockerServiceConfig resolves URL and token from env or options', ()
   assert.equal(conf2.url, 'http://env-host:8888');
   assert.equal(conf2.token, 'env-tok');
 
-  const confDefault = resolveDockerServiceConfig({ env: {} });
+  const confDefault = resolveDockerServiceConfig({ env: {}, tokenSearchPaths: [] });
   assert.equal(confDefault.url, DEFAULT_CAD_DOCKER_URL);
   assert.equal(confDefault.token, null);
 });

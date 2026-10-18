@@ -57,23 +57,62 @@ def _read_token() -> str:
 
 
 def _tool_version(name: str) -> dict[str, Any]:
+    if name == "freecad":
+        binary = shutil.which("python3")
+        module = Path("/usr/lib/freecad/lib/FreeCAD.so")
+
+        if not binary or not module.is_file():
+            return {"installed": False, "binary": None, "version": None}
+
+        env = os.environ.copy()
+        env["PYTHONPATH"] = "/usr/lib/freecad/lib"
+
+        probe = subprocess.run(
+            [binary, "-c",
+             "import FreeCAD, Part; "
+             "assert Part.makeBox(1,2,3).isValid(); "
+             "print('.'.join(FreeCAD.Version()[:3]))"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
+            check=False,
+        )
+
+        if probe.returncode != 0:
+            return {
+                "installed": False,
+                "binary": binary,
+                "version": None,
+                "error": (probe.stderr or "FreeCAD kernel probe failed")[-500:],
+            }
+
+        return {
+            "installed": True,
+            "binary": binary,
+            "version": probe.stdout.strip(),
+            "kernel": "OCCT",
+        }
+
     command = TOOL_COMMANDS[name]
     binary = shutil.which(command[0])
+
     if not binary:
-        # Debian sometimes exposes FreeCADCmd in /usr/lib/freecad/bin only.
-        if name == "freecad":
-            candidate = Path("/usr/lib/freecad/bin/FreeCADCmd")
-            if candidate.exists():
-                binary = str(candidate)
-                command = [binary, "--version"]
-        if not binary:
-            return {"installed": False, "binary": None, "version": None}
+        return {"installed": False, "binary": None, "version": None}
+
     try:
-        proc = subprocess.run(command, capture_output=True, text=True, timeout=5, check=False)
-        text = (proc.stdout or proc.stderr or "").strip().splitlines()
-        version = text[0][:240] if text else None
-    except Exception as exc:  # health must never crash the service
+        probe = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        lines = (probe.stdout or probe.stderr or "").strip().splitlines()
+        version = lines[0][:240] if lines else None
+    except Exception as exc:
         version = f"version check failed: {exc}"
+
     return {"installed": True, "binary": binary, "version": version}
 
 
