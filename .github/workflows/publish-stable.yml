@@ -1,0 +1,64 @@
+name: Publish AgentSam SDK stable release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact approved SDK train version
+        required: true
+        default: "2.6.13"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: agentsam-npm-stable
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout clean release
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Configure npm and Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - name: Install exact dependency graph
+        run: npm ci
+      - name: Check approved release train
+        env:
+          APPROVED_VERSION: ${{ inputs.version }}
+        run: |
+          node -e 'if(require("./package.json").version!==process.env.APPROVED_VERSION)throw Error("release_version_mismatch")'
+          npm run release:train:check
+          npm run release:registry:intent
+          node scripts/sdk-release-publish.mjs --plan
+      - name: Run release verification
+        run: npm run verify:release
+      - name: Clean-main publish preflight
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm run release:publish:preflight
+      - name: Publish pinned public dependencies and SDK
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: node scripts/sdk-release-publish.mjs --publish
+      - name: Verify external npm consumer
+        env:
+          APPROVED_VERSION: ${{ inputs.version }}
+        run: |
+          npm view "@inneranimalmedia/agentsam-sdk@$APPROVED_VERSION" version
+          mkdir -p "$RUNNER_TEMP/agentsam-consumer"
+          cd "$RUNNER_TEMP/agentsam-consumer"
+          npm init -y
+          npm install "@inneranimalmedia/agentsam-sdk@$APPROVED_VERSION"
+          node --input-type=module -e 'import("@inneranimalmedia/agentsam-sdk/cad-project-v2").then(m=>{if(m.CAD_PROJECT_V2!=="cad.project.v2")throw Error("cad_v2_export_missing");console.log("CAD_V2_INSTALLED_CONSUMER_PASS")})'
