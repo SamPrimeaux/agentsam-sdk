@@ -86,9 +86,23 @@ export function createCadOperations({
     const projectId = input?.project_id ?? input?.project?.id;
     if (!projectId || typeof projectId !== 'string') {
       throw new Error('sam_cad_project_id_required');
- 
-… output truncated …
-description: tool.description,
+    }
+    if (await authorize({ principal, action, projectId, jobId: input?.job_id }) !== true) {
+      throw new Error('sam_cad_access_denied');
+    }
+    if (approve && await requestApproval({ principal, action, projectId, input }) !== true) {
+      throw new Error('sam_cad_approval_required');
+    }
+    return { principal, signal: ctx?.signal };
+  };
+
+  const project = projectTools ? CAD_PROJECT_TOOLS.map(tool => {
+    const id = PROJECT_NAMES[tool.name];
+    if (!id) throw new Error('sam_cad_unmapped_project_tool:' + tool.name);
+    const write = needsApproval.has(tool.name);
+    return defineSamOperation({
+      id, version: 1, module: 'cad', action: id.slice(4),
+      summary: tool.description, description: tool.description,
       execution: {
         lanes: ['local', 'remote'], model: 'never', network: 'required',
         sideEffects: write ? 'remote_write' : 'none',
