@@ -61,23 +61,3 @@ describe('Local Studio npm 10 product lock', () => {
     assert.match(r.stdout, /lru-cache@11\.5\.2/);
   });
 });
-),
-        key + ' must resolve from the npm registry tarball'
-      );
-      assert.ok(sdk?.integrity, key + ' must carry registry integrity metadata');
-    }
-
-    const lru = packages['node_modules/lru-cache'];
-    assert.equal(lru?.version, '11.5.2');
-    assert.match(lru?.resolved || '', /lru-cache-11\.5\.2\.tgz/);
-    assert.ok(lru?.integrity);
-  });
-
-  it('verify-npm10-lock script exits 0 against the current product lock', () => {
-    const script = path.join(appRoot, 'scripts/verify-npm10-lock.mjs');
-    const r = spawnSync(process.execPath, [script], { encoding: 'utf8' });
-    assert.equal(r.status, 0, r.stderr || r.stdout);
-    assert.match(r.stdout, /product workspaces aligned/);
-    assert.match(r.stdout, /lru-cache@11\.5\.2/);
-  });
-});
