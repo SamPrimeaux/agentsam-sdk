@@ -245,6 +245,11 @@ def scan(root, rules):
             except ValueError:
                 continue
             for key in ("id", "package"):
+                # A narrowly allowlisted provider-app manifest may use the
+                # actual provider identifier required by its stable registry.
+                # This is not an exemption for package names or other apps.
+                if key == "id" and data.get("role") == "provider-app" and name_allowed(rel, rules):
+                    continue
                 for m in mk.in_name(str(data.get(key, ""))):
                     out.append(finding("E002", "error", rel, f"app {key} contains the mark {m['name']}: {data[key]}"))
 
