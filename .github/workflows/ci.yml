@@ -74,6 +74,11 @@ jobs:
           }
           NODE
 
+      - name: Verify stable release-train and dependency publication order
+        run: |
+          npm run release:train:check
+          node scripts/sdk-release-publish.mjs --plan
+
       - name: Verify SDK
         run: npm run verify
 
