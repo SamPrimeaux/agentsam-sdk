@@ -76,6 +76,16 @@ export { CMS_OPERATION_CONTRACTS, CMS_CONTRACTS_BY_NAME } from './packs/cms/cont
 export { CMS_COMPATIBILITY_ALIASES } from './packs/cms/aliases.js';
 
 export { createAuthoringOperations } from './packs/authoring/index.js';
+export { createEvidenceOperations } from './packs/evidence/index.js';
+export { createLocalEvidenceStore } from './packs/evidence/store.js';
+export { createFfprobeMedia } from './packs/evidence/media.js';
+export { createPlaywrightSource } from './packs/evidence/driver-playwright.js';
+export { createBlenderSource, createLocalBlenderExec } from './packs/evidence/driver-blender.js';
+export { createDeriver } from './packs/evidence/derive.js';
+export { createCoproExporter } from './packs/evidence/exporter-copro.js';
+export { createGitFacts } from './packs/evidence/facts.js';
+export { createLocalEvidenceHost } from './packs/evidence/host-local.js';
+export { EVIDENCE_VIEWPORTS, JOURNEY_VIEWPORTS, RESPONSIVE_VIEWPORTS } from './packs/evidence/viewports.js';
 
 export { createCadOperations, CAD_DONOR_OPERATOR_MAPPINGS } from './packs/cad/index.js';
 
