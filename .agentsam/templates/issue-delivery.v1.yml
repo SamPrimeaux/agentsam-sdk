@@ -1,0 +1,38 @@
+# Advisory contract for turning GitHub issue-form evidence into existing SAM work.
+# This file is not a second capability registry, planner, or executable policy.
+schema: agentsam.issue-delivery.v1
+intake:
+  source: github_issue
+  forms:
+    scoped_task: .github/ISSUE_TEMPLATE/agent_task.yml
+    bug: .github/ISSUE_TEMPLATE/bug_report.yml
+    product: .github/ISSUE_TEMPLATE/product_journey.yml
+  default_state: needs_triage
+  agent_ready_requires:
+    - user_outcome
+    - bounded_scope
+    - identified_or_explicitly_unknown_authority
+    - testable_acceptance
+    - delivery_verification_route
+workflow:
+  - stage: discover
+    existing_operations: [repository.inspect, brand.scan, package.audit]
+    evidence: [existing_owner, source_snapshot, current_behavior]
+  - stage: plan
+    existing_operations: [planning.goap, planning.astar, decision.evaluate]
+    evidence: [bounded_plan, dependencies, approvals, non_goals]
+  - stage: implement
+    existing_operations: [terminal.exec]
+    authorization: explicit_per_effect
+    evidence: [changed_files, tests, failure_cases]
+  - stage: verify
+    existing_operations: [decision.evaluate, artifact.render]
+    evidence: [real_execution_receipt, negative_tests, regression_proof]
+  - stage: deliver
+    existing_operations: [package.audit, artifact.render]
+    evidence: [source_sha, installed_or_hosted_entrypoint, smoke_receipt, open_gaps]
+closure:
+  implemented_is_not_deployed: true
+  merge_alone_does_not_close_surface_delivery: true
+  remote_branch_pruning_only_after_merge_and_preservation: true
+  reference: docs/standards/DELIVERY_CLOSURE.md
