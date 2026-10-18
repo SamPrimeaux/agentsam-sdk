@@ -19,6 +19,11 @@ export function installProjectRoutes(app: Express) {
   try {return ['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress||'')&&['localhost','127.0.0.1','[::1]'].includes(new URL('http://'+req.headers.host).hostname);}
   catch{return false;}
  };
+ app.get('/api/cad/project/native/doctor',async(req,res)=>{
+  if(!local(req))return res.status(403).json({error:'local_design_host_only'});
+  try{return res.json(await runtime.nativeDoctor());}
+  catch{return res.status(503).json({engine:'occt',available:false,ready:false,reason:'native_probe_failed'});}
+ });
  app.post('/api/cad/project/tools/:name',async(req,res)=>{
   if(!local(req))return res.status(403).json({error:'local_design_host_only'});
   if(req.headers.origin&&req.headers.origin!==req.protocol+'://'+req.headers.host)return res.status(403).json({error:'origin_mismatch'});
@@ -32,7 +37,7 @@ export function installProjectRoutes(app: Express) {
  });
  app.get('/api/cad/project/artifact/:id/:revision/:file',(req,res)=>{
   if(!local(req))return res.sendStatus(403);
-  if(!/^[A-Za-z0-9_-]{1,100}$/.test(req.params.id)||!/^\d+$/.test(req.params.revision)||!['courtyard.png','model.glb','model.blend','model.obj','model.stl'].includes(req.params.file))return res.sendStatus(400);
+  if(!/^[A-Za-z0-9_-]{1,100}$/.test(req.params.id)||!/^\d+$/.test(req.params.revision)||!['courtyard.png','model.glb','model.blend','model.obj','model.stl','model.step'].includes(req.params.file))return res.sendStatus(400);
   const file=path.join(root,'.agentsam/cad/artifacts',req.params.id,req.params.revision,req.params.file);
   if(!fs.existsSync(file))return res.sendStatus(404);
   return res.sendFile(file);
