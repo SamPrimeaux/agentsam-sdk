@@ -65,6 +65,14 @@
   ],
   "exports": {
     "./manifest": "./agentsam.app.json",
+    "./cms": {
+      "types": "./frontend/cms/index.d.ts",
+      "import": "./frontend/cms/index.mjs"
+    },
+    "./cms/capabilities": {
+      "types": "./frontend/cms/capabilities.d.ts",
+      "import": "./frontend/cms/capabilities.mjs"
+    },
     "./admin/surface": "./frontend/admin.surface.json",
     "./apps/registry": "./apps/registry.json",
     "./backend/routes": "./backend/lib/route-manifest.js"

@@ -112,9 +112,9 @@ def _tool_version(name: str) -> dict[str, Any]:
 
         probe = subprocess.run(
             [binary, "-c",
-             "import FreeCAD, Part; "
-             "assert Part.makeBox(1,2,3).isValid(); "
-             "print('.'.join(FreeCAD.Version()[:3]))"],
+             ("import FreeCAD, Part; "
+              "assert Part.makeBox(1,2,3).isValid(); "
+              "print('.'.join(FreeCAD.Version()[:3]))")],
             capture_output=True,
             text=True,
             timeout=10,

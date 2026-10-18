@@ -95,7 +95,7 @@ export interface LightingConfig {
 // PARAMETRIC & OPENSCAD DOMAIN MODEL
 // ---------------------------------------------------------------------------
 
-export type ParametricGeneratorType = 'openscad' | 'procedural_csg' | 'custom_script';
+export type ParametricGeneratorType = 'openscad' | 'procedural_csg' | 'custom_script' | 'occt';
 
 export interface ParametricParameterDef {
   name: string;
@@ -125,7 +125,7 @@ export interface ParametricObject {
     rotationY?: number; // rotation around Y axis in degrees
     rotationZ?: number;
   };
-  source: string; // OpenSCAD source code (.scad)
+  source: string; // OpenSCAD source (.scad) or a native kernel recipe identifier (e.g. occt:box)
   generatedArtifacts?: DesignArtifactSummary[];
   updatedAt?: number;
 }

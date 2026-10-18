@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-sdk",
-  "version": "2.6.12",
+  "version": "2.6.13",
   "description": "Portable AgentSam SDK and CLI kits for local scaffolding, repository intelligence, incremental indexing, identity adapters, and verified dependency maintenance.",
   "type": "module",
   "main": "./src/index.js",
@@ -106,6 +106,9 @@
     "./skills": "./src/skills/index.js",
     "./skills/catalog": "./skills/catalog.json",
     "./cad-project": "./src/lib/cad/project-cli.js",
+    "./cad-project-v2": "./src/lib/cad/project-v2.js",
+    "./cad-delivery-profiles": "./src/lib/cad/delivery-profiles.js",
+    "./cad-production-operations": "./src/lib/cad/production-operations.js",
     "./providers/completeful": "./packages/providers/completeful/src/index.js",
     "./theme/heuristic": "./packages/heuristic-theme/src/index.js",
     "./theme/cypress": "./packages/theme-cypress/src/index.js",
@@ -204,6 +207,7 @@
     "services/knowledge/package-lock.json",
     "services/cad/server.py",
     "services/cad/blender",
+    "services/cad/occt",
     "bin",
     "README.md",
     "LICENSE",
@@ -254,7 +258,8 @@
     "packages/agentsam-workbench/tsconfig.json",
     "packages/agentsam-merch",
     "TRADEMARKS.md",
-    "packages/agentsam-site-scrape"
+    "packages/agentsam-site-scrape",
+    "packages/agentsam-desktop-shell/scripts/app-discovery.mjs"
   ],
   "workspaces": [
     "packages/agentsam-analytics",
@@ -321,7 +326,9 @@
   "scripts": {
     "verify:ui-quality": "node --test scripts/ui-quality/*.test.mjs && node scripts/ui-quality/contrast.mjs",
     "verify:ui-quality:source": "node scripts/ui-quality/check-source.mjs --changed-from origin/main",
-    "verify:registry": "node scripts/registry/generate.mjs --check && node scripts/registry/generate-error-docs.mjs --check && python3 scripts/catalog/build_catalog.py --repo . --check && node scripts/registry/check-plain-command-errors.mjs && node --test test/registry/*.test.mjs",
+    "docs:registry": "node scripts/registry/generate-docs.mjs",
+    "docs:registry:check": "node scripts/registry/generate-docs.mjs --check",
+    "verify:registry": "node scripts/registry/generate-docs.mjs --check && node scripts/registry/generate.mjs --check && node scripts/registry/generate-error-docs.mjs --check && python3 scripts/catalog/build_catalog.py --repo . --check && node scripts/registry/check-plain-command-errors.mjs && node --test test/registry/*.test.mjs",
     "catalog:check": "python3 scripts/catalog/build_catalog.py --repo . --check",
     "test": "npm run test:standard && npm --prefix packages/identity test && npm --prefix packages/agentsam-brand test && npm run test:connectors && npm run test:providers",
     "test:brand": "npm --prefix packages/agentsam-brand test",
@@ -414,7 +421,7 @@
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "@grpc/grpc-js": "^1.14.4",
-    "@inneranimalmedia/agentsam-errors": "2.6.12",
+    "@inneranimalmedia/agentsam-errors": "2.6.13",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "fast-xml-parser": "^5.11.2",
     "google-protobuf": "^3.21.4",

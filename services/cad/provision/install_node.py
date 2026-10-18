@@ -44,7 +44,6 @@ def main(argv: list[str]) -> int:
             return 1
         prefix.mkdir(parents=True, exist_ok=True)
         # Python 3.11.2 (Debian 12) predates tarfile extraction filters, so refuse unsafe paths ourselves.
-        kwargs = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
         with tarfile.open(archive, "r:xz") as tar:
             for member in tar.getmembers():
                 member.name = member.name.split("/", 1)[1] if "/" in member.name else ""
@@ -53,7 +52,13 @@ def main(argv: list[str]) -> int:
                 if member.name.startswith("/") or ".." in Path(member.name).parts:
                     print(f"refusing unsafe path in archive: {member.name}", file=sys.stderr)
                     return 1
-                tar.extract(member, prefix, **kwargs)
+                if hasattr(tarfile, "data_filter"):
+                    tar.extract(member, prefix, filter="data")
+                else:
+                    # Old Python lacks extraction filters; reject links and special files.
+                    if not (member.isfile() or member.isdir()):
+                        raise ValueError(f"unsafe archive member type: {member.name}")
+                    tar.extract(member, prefix)
     print(f"node {version} installed at {prefix}")
     return 0
 

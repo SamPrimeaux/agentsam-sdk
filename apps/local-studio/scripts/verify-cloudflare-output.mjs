@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { planIncludedApps } from "./build-included-apps.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const backend = path.join(root, "backend");
@@ -52,24 +53,15 @@ const desktopManifestPath = path.resolve(
   root,
   "../../packages/agentsam-desktop-shell/manifests/local-studio.json",
 );
-let includedApps = [];
-if (fs.existsSync(desktopManifestPath)) {
-  try {
-    const manifest = JSON.parse(fs.readFileSync(desktopManifestPath, "utf8"));
-    includedApps = Array.isArray(manifest.included_apps) ? manifest.included_apps : [];
-  } catch {
-    includedApps = [];
+const { plans: includedPlans } = planIncludedApps({ manifestPath: desktopManifestPath });
+if (includedPlans.length === 0) console.log("No included apps declared (host Local Studio only)");
+for (const plan of includedPlans) {
+  const html = path.join(assetsDir, plan.stage, "index.html");
+  assert.ok(fs.existsSync(html), `${plan.id} frontend index must be staged into Worker assets (/${plan.stage}/)`);
+  const assetRef = new RegExp(`(?:src|href)="(/${plan.stage}/assets/[^"]+)"`, "g");
+  for (const match of fs.readFileSync(html, "utf8").matchAll(assetRef)) {
+    assert.ok(fs.existsSync(path.join(assetsDir, match[1])), `${plan.id} asset missing: ${match[1]}`);
   }
-}
-
-if (includedApps.includes("cad-creator")) {
-  const cadHtml = path.join(assetsDir, "cad-creator", "index.html");
-  assert.ok(fs.existsSync(cadHtml), "CAD frontend index must be staged into Worker assets");
-  for (const match of fs.readFileSync(cadHtml, "utf8").matchAll(/(?:src|href)="(\/cad-creator\/assets\/[^\"]+)"/g)) {
-    assert.ok(fs.existsSync(path.join(assetsDir, match[1])), `CAD asset missing: ${match[1]}`);
-  }
-} else {
-  console.log("CAD assets not required (included_apps omits cad-creator)");
 }
 
 

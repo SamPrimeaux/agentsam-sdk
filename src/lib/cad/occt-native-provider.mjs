@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -60,7 +61,7 @@ function millimeters(value, units) {
  * Engine availability is established from a real process receipt, never a UI claim.
  */
 export function createOcctNativeProvider({
-  binary = process.env.AGENTSAM_OCCT_BIN,
+  binary = process.env.AGENTSAM_OCCT_BIN || path.join(os.homedir(), '.agentsam', 'bin', 'agentsam-occt'),
   runProcess = defaultRun,
   timeoutMs = 20000,
 } = {}) {

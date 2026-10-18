@@ -29,48 +29,8 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-function readManifest(manifestPath, fallbackId) {
-  try {
-    const manifest = readJson(manifestPath);
-    return {
-      id: manifest.id || fallbackId,
-      name: manifest.name || fallbackId,
-      dir: path.dirname(manifestPath),
-      manifestPath,
-      bin: manifest.bin || null,
-      commands: manifest.commands || {},
-      manifest,
-    };
-  } catch {
-    return null;
-  }
-}
-
-export function listAppManifests(root = REPO_ROOT) {
-  const out = [];
-  const seen = new Set();
-
-  function addFromDir(parent, entryName) {
-    const dir = path.join(parent, entryName);
-    const manifestPath = path.join(dir, 'agentsam.app.json');
-    if (!fs.existsSync(manifestPath)) return;
-    const row = readManifest(manifestPath, entryName);
-    if (!row || seen.has(row.id)) return;
-    seen.add(row.id);
-    out.push(row);
-  }
-
-  for (const parentName of ['apps', 'packages']) {
-    const parent = path.join(root, parentName);
-    if (!fs.existsSync(parent)) continue;
-    for (const entry of fs.readdirSync(parent, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      addFromDir(parent, entry.name);
-    }
-  }
-
-  return out.sort((a, b) => a.id.localeCompare(b.id));
-}
+import {listAppManifests} from '../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
+export {listAppManifests};
 
 function resolveApp(id, root = REPO_ROOT) {
   const apps = listAppManifests(root);
@@ -176,8 +136,41 @@ function npmDistributionWarnings(app) {
   return warnings;
 }
 
+/**
+ * `embed` tells a host (Local Studio) how to build/stage this app when it is listed in the host's
+ * included_apps. Hosts read this; they must not hardcode per-app build logic.
+ */
+export function validateEmbed(manifest, label) {
+  const errors = [];
+  const embed = manifest?.embed;
+  if (embed === undefined) return errors;
+  if (!embed || typeof embed !== 'object' || Array.isArray(embed)) return [`${label}: embed must be an object`];
+  const argv = (v) => Array.isArray(v) && v.length > 0 && v.every((x) => typeof x === 'string' && x.length > 0);
+  const relative = (v) => typeof v === 'string' && v.length > 0 && !v.startsWith('/') && !v.split('/').includes('..');
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(embed.stage ?? '')) {
+    errors.push(`${label}: embed.stage must be a lowercase kebab-case path segment`);
+  }
+  const build = embed.build;
+  if (build !== undefined) {
+    if (!build || typeof build !== 'object' || Array.isArray(build)) {
+      errors.push(`${label}: embed.build must be an object`);
+    } else {
+      if (!argv(build.command)) errors.push(`${label}: embed.build.command must be a non-empty string array`);
+      if (!relative(build.output)) errors.push(`${label}: embed.build.output must be a relative path without ".."`);
+      if (build.cwd !== undefined && !relative(build.cwd) && build.cwd !== '.') {
+        errors.push(`${label}: embed.build.cwd must be a relative path without ".."`);
+      }
+      if (build.install !== undefined && !argv(build.install?.command)) {
+        errors.push(`${label}: embed.build.install.command must be a non-empty string array`);
+      }
+    }
+  }
+  return errors;
+}
+
 function validateOneApp(app, knownIds, root) {
   const errors = [];
+  errors.push(...validateEmbed(app.manifest, app.id));
   const warnings = [];
   const m = app.manifest;
 
@@ -261,7 +254,7 @@ function validateOneApp(app, knownIds, root) {
   return { id: app.id, errors, warnings };
 }
 
-function validateDesktopManifests(root, knownIds) {
+function validateDesktopManifests(root, knownIds, apps = []) {
   const errors = [];
   const warnings = [];
   const dir = path.join(root, 'packages/agentsam-desktop-shell/manifests');
@@ -302,6 +295,12 @@ function validateDesktopManifests(root, knownIds) {
           `desktop ${name}: included_apps entry "${bundledId}" does not resolve to a known APP manifest`,
         );
       }
+      const target = apps.find((a) => a.id === bundledId);
+      if (target && !target.manifest.embed?.build) {
+        errors.push(
+          `desktop ${name}: included app "${bundledId}" declares no embed.build in its agentsam.app.json`,
+        );
+      }
     }
   }
   return { errors, warnings };
@@ -339,7 +338,7 @@ export function validateApps(options = {}) {
   }
 
   if (!filterId) {
-    const desktop = validateDesktopManifests(root, knownIds);
+    const desktop = validateDesktopManifests(root, knownIds, apps);
     allErrors.push(...desktop.errors);
     allWarnings.push(...desktop.warnings);
   }

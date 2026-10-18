@@ -71,5 +71,9 @@ apps/agentsam-go-worker/runtime/.agentsam-build-source
 
 # Per-repository media choice and local asset objects
 .agentsam/media/
-# agent evidence captures (screenshots can contain real data)
+
+# Per-worktree SAM gap build logs and machine-local receipts
+.sam-gap-build/
+
+# Agent evidence captures may contain private source data
 .agentsam/evidence/
