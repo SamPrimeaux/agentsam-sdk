@@ -58,9 +58,12 @@ export function getOSStatus() {
 export function createSamOS({ core = true, generated = null, cms = null, authoring = null, cad = null } = {}) {
   const registry = new Map();
   const unavailable = [];
-  const get = (id) => registry.get(id) || null;
+  const aliases = new Map();
+  // Compatibility aliases resolve to their canonical handler without creating
+  // duplicate model tools or relaxing the canonical execution authorization.
+  const get = (id) => registry.get(id) || registry.get(aliases.get(id)) || null;
   const register = (def) => {
-    if (registry.has(def.id)) throw new Error('sam_os_duplicate_operation:' + def.id);
+    if (registry.has(def.id) || aliases.has(def.id)) throw new Error('sam_os_duplicate_operation:' + def.id);
     registry.set(def.id, def);
     return def;
   };
@@ -75,6 +78,12 @@ export function createSamOS({ core = true, generated = null, cms = null, authori
       ...generated,
     });
     unavailable.push(...result.unavailable);
+    for (const alias of result.aliases || []) {
+      if (registry.has(alias.name) || aliases.has(alias.name)) {
+        throw new Error('sam_os_duplicate_operation:' + alias.name);
+      }
+      aliases.set(alias.name, alias.aliasFor);
+    }
   }
   const os = {
     get,
@@ -84,13 +93,16 @@ export function createSamOS({ core = true, generated = null, cms = null, authori
       core_count: CORE_OPERATIONS.filter(op => registry.has(op.id)).length,
       available: [...registry.keys()].sort(),
       generated_unavailable: [...unavailable],
+      generated_aliases: [...aliases].map(([name, aliasFor]) => ({
+        name, aliasFor, bound: registry.has(aliasFor),
+      })),
     }),
     // Explicitly installed adapters may register additional real SAM operations.
     install: (defs) => {
       // Validate the entire pack before modifying this instance. A duplicate ID
       // inside the batch must not leave a partially installed capability set.
       const pending = [...defs].map(def => defineSamOperation(def));
-      const seen = new Set(registry.keys());
+      const seen = new Set([...registry.keys(), ...aliases.keys()]);
       for (const def of pending) {
         if (seen.has(def.id)) throw new Error('sam_os_duplicate_operation:' + def.id);
         seen.add(def.id);

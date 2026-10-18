@@ -68,12 +68,27 @@ export function createGeneratedSamOperations({
   const native = createMediaHandlers({ assetStore, sharp, subjectSegmenter, imageProvider, imageEditEnabled });
   const nativeScripts = createScriptHandlers({ scriptStore, processRuntime });
   const all = { ...native, ...nativeScripts, ...handlers };
-  const installed = [], unavailable = [];
+  const installed = [], unavailable = [], aliases = [];
   for (const record of OPERATION_CATALOG) {
-    if (record.aliasFor) { unavailable.push({ name: record.name, reason: 'alias_not_independently_advertised' }); continue; }
+    if (record.aliasFor) {
+      aliases.push({ name: record.name, aliasFor: record.aliasFor });
+      continue;
+    }
+    // An existing domain owner is already bound; do not misreport it as
+    // unavailable solely because generated-v2 was not given a second handler.
+    if (getSamOperation?.(record.name)) {
+      installed.push({ name: record.name, status: 'existing' });
+      continue;
+    }
     const fn = all[record.name];
-    if (typeof fn !== 'function') { unavailable.push({ name: record.name, reason: 'handler_not_bound' }); continue; }
-    if (getSamOperation?.(record.name)) { installed.push({ name: record.name, status: 'existing' }); continue; }
+    if (typeof fn !== 'function') {
+      unavailable.push({
+        name: record.name, reason: 'handler_not_bound',
+        owner: record.policy?.pack || record.name.split('.')[0],
+        nextAction: 'connect_authorized_host_handler_or_implement',
+      });
+      continue;
+    }
     const operation = defineSamOperation({
       id: record.name, version: 1, module: record.name.split('.')[0],
       action: record.name.split('.').slice(1).join('.'),
@@ -107,5 +122,5 @@ export function createGeneratedSamOperations({
     registerSamOperation(operation);
     installed.push({ name: record.name, status: 'registered' });
   }
-  return { registered: installed, unavailable };
+  return { registered: installed, unavailable, aliases };
 }

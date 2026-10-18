@@ -82,6 +82,17 @@ export function createMediaHandlers({ assetStore, sharp: suppliedSharp, subjectS
     handlers['media.asset.background.remove'] = handlers['media.image.background.remove']; // legacy alias, catalog should advertise only canonical
   }
   if (assetStore?.getOwnedAsset) {
+    // Read the owning store's authoritative metadata; image codecs are not
+    // needed and arbitrary model/3D/document assets remain inspectable.
+    handlers['media.asset.inspect'] = async (input, ctx) => {
+      const source = await getSource(assetStore, input, ctx);
+      return {
+        ok: true, assetId: source.id, contentType: source.contentType || 'application/octet-stream',
+        byteLength: source.bytes.byteLength, sha256: source.sha256 || hash(Buffer.from(source.bytes)),
+        sourceAssetId: source.sourceAssetId || null, createdAt: source.createdAt || null,
+        transformations: source.transformations || [],
+      };
+    };
     handlers['media.image.inspect'] = async (input, ctx) => {
       const source = await getSource(assetStore, input, ctx);
       const sharp = await getSharp(suppliedSharp);
@@ -106,6 +117,10 @@ export function createMediaHandlers({ assetStore, sharp: suppliedSharp, subjectS
       return { assetId: source.id, ...inspectGlb(source.bytes) };
     };
     handlers['media.model.validateStructural'] = handlers['media.model.inspect']; // no claim of Khronos conformance
+    handlers['media.model.validate'] = async (input, ctx) => {
+      const inspection = await handlers['media.model.validateStructural'](input, ctx);
+      return { ...inspection, validationLevel: 'structural_only', conformanceVerified: false };
+    };
   }
   if (typeof imageProvider === 'function') {
     for (const [name, legacy] of [['media.image.generate', 'imgx_generate_image'], ...(imageEditEnabled ? [['media.image.edit', 'imgx_edit_image']] : [])]) {
