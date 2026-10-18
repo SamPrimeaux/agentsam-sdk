@@ -41,7 +41,7 @@ describe('Local Studio npm 10 product lock', () => {
       assert.notEqual(sdk?.link, true, key + ' must not be a local link');
       assert.match(
         sdk?.resolved || '',
-        new RegExp('agentsam-sdk-' + sdkRelease.version.replace(/\./g, '\\.') + '\\.tgz),
+        new RegExp('agentsam-sdk-' + sdkRelease.version.replace(/\./g, '\\.') + '\\.tgz$'),
         key + ' must resolve from the npm registry tarball'
       );
       assert.ok(sdk?.integrity, key + ' must carry registry integrity metadata');
