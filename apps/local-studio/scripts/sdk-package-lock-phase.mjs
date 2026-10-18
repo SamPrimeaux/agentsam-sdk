@@ -8,7 +8,9 @@ import path from 'node:path';
  */
 export function expectedSdkTarballVersion(repoRoot, appVersion, { requirePublished = false } = {}) {
   const yaml = fs.readFileSync(path.join(repoRoot, 'agentsam.yaml'), 'utf8');
-  const block = yaml.match(/^release:\s*\n\s+root_sdk:\s*\n([\s\S]*?)(?=\n\S|$)/m)?.[1];
+  const marker = '\nrelease:\n';
+  const offset = yaml.indexOf(marker);
+  const block = offset >= 0 ? yaml.slice(offset + marker.length) : null;
   if (!block) throw Error('canonical_sdk_release_authority_missing');
   const target = block.match(/^\s+target_version:\s*"([^"]+)"/m)?.[1];
   const current = block.match(/^\s+current_latest:\s*"([^"]+)"/m)?.[1];
