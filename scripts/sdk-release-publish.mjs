@@ -57,9 +57,8 @@ function visit(name){
   }
  active.delete(name);seen.add(name);order.push(x);
 }
-for(const name of allowed.keys())if(name!==sdk.name)visit(name);
-visit(sdk.name);
-if(order.at(-1)?.name!==sdk.name)throw Error('sdk_root_must_publish_last');
+for(const name of allowed.keys())visit(name);
+if(!order.some(x=>x.name===sdk.name))throw Error('sdk_release_node_missing');
 if(!sdk.exports?.['./cad-project-v2']||!sdk.files?.includes('services/cad/occt'))
  throw Error('cad_v2_or_occt_missing_from_distribution');
 for(const name of ['src/lib/cad/project-v2.js','services/cad/occt/main.cpp','protocol/cad/cad.project.v2.schema.json'])
@@ -86,8 +85,11 @@ for(const item of order){
  const dir=item.cwd;
  console.log('PUBLISH '+item.name+'@'+version);
  const workspace=path.relative(root,dir).replaceAll(path.sep,'/');
- if(dir!==root&&!sdk.workspaces?.includes(workspace)&&fs.existsSync(path.join(dir,'package-lock.json')))
+ if(dir!==root&&!sdk.workspaces?.includes(workspace)&&fs.existsSync(path.join(dir,'package-lock.json'))){
+  // Resolve newly-published SDK dependencies only after they exist on npm.
+  npm(['install','--package-lock-only','--ignore-scripts'],dir);
   npm(['ci','--ignore-scripts'],dir);
+ }
  npm(['publish','--access','public','--provenance'],dir);
  let confirmed=false;
  for(let attempt=0;attempt<5;attempt++){
