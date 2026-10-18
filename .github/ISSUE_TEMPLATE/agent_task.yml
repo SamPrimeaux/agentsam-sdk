@@ -1,0 +1,83 @@
+name: "AgentSam — Scoped implementation"
+description: "A bounded change with an owner, testable outcome, and honest delivery gate."
+title: "[Task] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the user outcome, not a guessed implementation. SAM should inspect the
+        existing implementation and source of truth before creating operations, tables,
+        packages, routes, or new branch families. This form creates a ticket, not approval
+        to execute destructive changes or deploy.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: "User journey and desired outcome"
+      description: "What should a real user be able to do when this is finished?"
+      placeholder: "From an existing workspace, the user can complete the task and inspect the result without relying on an undocumented CLI."
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: "Where is the outcome experienced?"
+      multiple: true
+      options:
+        - "SDK / public API"
+        - "CLI"
+        - "Web / hosted interface"
+        - "Desktop / local interface"
+        - "Worker / service"
+        - "Package / extension"
+        - "Database / internal contract"
+        - "Other / needs discovery"
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: "Observed behavior and evidence"
+      description: "What exists today? Link relevant errors, screenshots, previous PRs, or working examples. No secrets."
+      placeholder: "Observed behavior, evidence or links; say 'discovery needed' if unknown."
+  - type: textarea
+    id: authority
+    attributes:
+      label: "Existing owner and reusable implementation"
+      description: "Identify likely canonical modules, data owners, capabilities or packages. Say 'unknown — inspect first' rather than inventing an authority."
+      placeholder: "Existing source / package / registry / host if known; otherwise 'inspect first'."
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: "Scope and non-goals"
+      description: "Constrain behavior and blast radius, not arbitrary paths. State anything that must be preserved."
+      placeholder: "In scope: …\nOut of scope: …\nPreserve: existing data, user-created content and unrelated surfaces."
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "Acceptance criteria and failure paths"
+      description: "Include the happy path, invalid inputs, permissions, recovery, and regressions. Evidence matters more than checkmarks."
+      placeholder: |
+        - [ ] User completes the end-to-end journey with real data.
+        - [ ] Denied/invalid actions fail safely without corrupting state.
+        - [ ] Existing supported paths still work.
+        - [ ] Tests and execution receipts are attached.
+    validations:
+      required: true
+  - type: textarea
+    id: delivery
+    attributes:
+      label: "Delivery / installation / verification route"
+      description: "For a surface: a stable real URL and post-deploy smoke test. For CLI/SDK: install + command/API invocation. Specify 'not applicable' with reason."
+      placeholder: "Target host or install route, source revision, test command, output and live acceptance criteria (no assumed URL)."
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: "Prerequisites, dependencies, and approvals"
+      description: "Credentials, migrations, provider costs, destructive changes, or user approvals needed. Do not paste secrets."
+      placeholder: "None known / needs discovery / list relevant blockers."
