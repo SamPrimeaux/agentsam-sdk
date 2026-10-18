@@ -37,10 +37,19 @@ if (!/^\d+\.\d+\.\d+(?:[-+].+)?$/.test(targetVersion || '')) {
   throw new Error(`invalid release train version: ${targetVersion || '<empty>'}`);
 }
 
+// Applications distributed under their own product release version must not
+// be silently coerced to the root AgentSam SDK release train. Keep the SDK
+// train for SDK-owned packages and apps; independently packaged products are
+// validated by their own build/prepack/release tests.
+const independentProductRoots = ['apps/ecommerce-cms-agentsam'];
+function isIndependentProduct(file) {
+  const rel = path.relative(root, file).split(path.sep).join('/');
+  return independentProductRoots.some((app) => rel.startsWith(app + '/'));
+}
 const files = [
   rootManifestPath,
   ...walkPackageJson(path.join(root, 'packages')),
-  ...walkPackageJson(path.join(root, 'apps')),
+  ...walkPackageJson(path.join(root, 'apps')).filter((file) => !isIndependentProduct(file)),
 ];
 
 const workspaces = files
