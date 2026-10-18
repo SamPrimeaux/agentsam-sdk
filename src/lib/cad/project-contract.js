@@ -1,1 +1,1 @@
-export * from '../../../apps/cad-creator/shared/cad/src/domain/project-contract.js';
+export * from './editable-project-contract.js';

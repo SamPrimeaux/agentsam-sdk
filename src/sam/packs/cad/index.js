@@ -1,5 +1,5 @@
 import { defineSamOperation } from '../../define.js';
-import { CAD_PROJECT_TOOLS } from '../../../../apps/cad-creator/shared/cad/src/domain/project-tools.js';
+import { CAD_PROJECT_TOOLS } from '../../../lib/cad/project-tools.js';
 
 /**
  * Donor compatibility only. UI labels never grant tool execution permission.
