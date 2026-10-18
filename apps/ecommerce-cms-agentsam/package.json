@@ -21,7 +21,7 @@
     "verify:cms": "npm run typecheck:cms && node --test tests/cms-setting-contract.test.mjs",
     "typecheck:tools": "tsc --project tsconfig.tools.json",
     "test:tools": "npm run typecheck:tools && node --test tests/typed-tool-registry.test.mjs tests/core-tools-readonly.test.mjs tests/d1-crud.test.mjs && node backend/tools/doctor.mjs",
-    "test:release": "node --test tests/release-artifact.test.mjs tests/analytics-hosts.test.mjs",
+    "test:release": "node --test tests/release-artifact.test.mjs tests/analytics-hosts.test.mjs tests/side-assistant-portability.test.mjs",
     "prepack": "npm run build && npm run test:release"
   },
   "dependencies": {

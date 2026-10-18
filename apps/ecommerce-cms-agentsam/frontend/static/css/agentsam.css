@@ -523,4 +523,4 @@ body.agentsam-focus-mode .agentsam-drawer{animation:asm-focus-enter .26s cubic-b
 .asm-attachment-notice { grid-column: 1 / -1; color: #a22f1e; font-size: 12px; padding: 2px 4px; }
 .agentsam-message-attachments { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .agentsam-compose.is-attachment-drop-target,
-.fnf-home-composer.is-attachment-drop-target { outline: 2px dashed #8b5cf6; outline-offset: -3px; background: #f7f2ff; }
+.commerce-home-composer.is-attachment-drop-target { outline: 2px dashed var(--te-accent, currentColor); outline-offset: -3px; background: var(--te-surface, #f7f2ff); }

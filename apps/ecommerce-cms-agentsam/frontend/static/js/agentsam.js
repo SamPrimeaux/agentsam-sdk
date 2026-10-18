@@ -425,6 +425,16 @@ async function sendAgentsamMessage(text, options = {}) {
   }
 }
 
+// Open-state is a UI preference, not conversation history. Do not let a shared
+// Studio host persist one customer's drawer state into another installation.
+function agentsamOpenStateKey() {
+  const ctx = window.__agentsamPageContext || {};
+  const instance = String(ctx.installation_id || ctx.installationId ||
+    ctx.site_id || ctx.siteId || document.body?.dataset?.agentsamInstallationId || "").trim();
+  if (!instance) return null;
+  return `agentsam.ecommerce.side-assistant.open.v1:${encodeURIComponent(instance)}`;
+}
+
 function openAgentsamDrawer() {
   document.body.classList.add("agentsam-open");
   document.getElementById("agentsam-drawer")?.setAttribute("aria-hidden", "false");
@@ -433,7 +443,8 @@ function openAgentsamDrawer() {
   document.getElementById("agentsam-toggle")?.setAttribute("aria-expanded", "true");
   document.getElementById("agentsam-toggle")?.classList.add("is-agentsam-active");
   try {
-    sessionStorage.setItem("fnf_agentsam_open", "1");
+    const key = agentsamOpenStateKey();
+    if (key) sessionStorage.setItem(key, "1");
   } catch {
     /* ignore */
   }
@@ -449,7 +460,8 @@ function closeAgentsamDrawer() {
   document.getElementById("agentsam-toggle")?.setAttribute("aria-expanded", "false");
   document.getElementById("agentsam-toggle")?.classList.remove("is-agentsam-active");
   try {
-    sessionStorage.setItem("fnf_agentsam_open", "0");
+    const key = agentsamOpenStateKey();
+    if (key) sessionStorage.setItem(key, "0");
   } catch {
     /* ignore */
   }
@@ -550,7 +562,8 @@ function initAgentsamDrawer() {
   loadAgentsamMeta();
 
   try {
-    if (sessionStorage.getItem("fnf_agentsam_open") === "1") openAgentsamDrawer();
+    const key = agentsamOpenStateKey();
+    if (key && sessionStorage.getItem(key) === "1") openAgentsamDrawer();
   } catch {
     /* ignore */
   }
