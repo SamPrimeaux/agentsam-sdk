@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-workbench",
-  "version": "2.6.12",
+  "version": "2.6.13",
   "description": "Reusable AgentSam workbench primitives for agent threads, composer, browser, terminal and resizable work surfaces.",
   "type": "module",
   "main": "./dist/index.js",
@@ -50,7 +50,10 @@
       "import": "./dist/widgets/index.js"
     },
     "./widgets/widgets.css": "./dist/widgets/widgets.css",
-    "./knowledge": { "types": "./dist/knowledge/index.d.ts", "import": "./dist/knowledge/index.js" },
+    "./knowledge": {
+      "types": "./dist/knowledge/index.d.ts",
+      "import": "./dist/knowledge/index.js"
+    },
     "./knowledge/autorag-workflow.css": "./dist/knowledge/autorag-workflow.css"
   },
   "scripts": {
@@ -60,8 +63,8 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-contracts": "2.6.12",
-    "@inneranimalmedia/agentsam-loading-scene": "2.6.12",
+    "@inneranimalmedia/agentsam-contracts": "2.6.13",
+    "@inneranimalmedia/agentsam-loading-scene": "2.6.13",
     "lucide-react": "^0.510.0"
   },
   "peerDependencies": {

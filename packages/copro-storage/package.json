@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-storage",
-  "version": "2.6.12",
+  "version": "2.6.13",
   "description": "Portable CoPro project persistence adapters for memory and browser local storage.",
   "type": "module",
   "license": "MIT",
@@ -22,7 +22,7 @@
     "pack:dry": "npm pack --dry-run"
   },
   "dependencies": {
-    "@inneranimalmedia/copro-project": "2.6.12"
+    "@inneranimalmedia/copro-project": "2.6.13"
   },
   "publishConfig": {
     "access": "public"
