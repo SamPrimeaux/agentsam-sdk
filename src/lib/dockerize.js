@@ -521,7 +521,7 @@ export async function dockerize(targetDir, appType, opts = {}) {
       hashtag: plan.hashtag,
       repo: opts.repoLabel || path.basename(targetDir),
       ref: plan.imageTag,
-      note: `agentsam dockerize --type ${appType} --port ${plan.hostPort} (${targetDir})`,
+      note: `agentsam dockerize --type ${appType} --port ${plan.hostPort}`,
     });
   }
 

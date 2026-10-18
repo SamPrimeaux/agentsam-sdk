@@ -4,7 +4,7 @@
   "base": "origin/main",
   "baseline": "c37123c2",
   "branch": "feat/sam-p0-gap-implementation-20261017",
-  "worktree": "/Users/samprimeaux/agent-worktrees/sam-p0-gap-implementation-20261017",
+  "worktree": ".",
   "tickets": [
     {
       "ticket": "SAM-001",
@@ -20,25 +20,25 @@
       "check": "sam-decision",
       "status": "PASS",
       "exit": 0,
-      "log": "/Users/samprimeaux/agent-worktrees/sam-p0-gap-implementation-20261017/.sam-gap-build/logs/check-sam-decision.log"
+      "log": ".sam-gap-build/logs/check-sam-decision.log"
     },
     {
       "check": "sam-client",
       "status": "PASS",
       "exit": 0,
-      "log": "/Users/samprimeaux/agent-worktrees/sam-p0-gap-implementation-20261017/.sam-gap-build/logs/check-sam-client.log"
+      "log": ".sam-gap-build/logs/check-sam-client.log"
     },
     {
       "check": "sam-machine",
       "status": "PASS",
       "exit": 0,
-      "log": "/Users/samprimeaux/agent-worktrees/sam-p0-gap-implementation-20261017/.sam-gap-build/logs/check-sam-machine.log"
+      "log": ".sam-gap-build/logs/check-sam-machine.log"
     },
     {
       "check": "source-boundaries",
       "status": "PASS",
       "exit": 0,
-      "log": "/Users/samprimeaux/agent-worktrees/sam-p0-gap-implementation-20261017/.sam-gap-build/logs/check-source-boundaries.log"
+      "log": ".sam-gap-build/logs/check-source-boundaries.log"
     }
   ],
   "merge_ready": false,
