@@ -596,6 +596,18 @@ agentsam cad project ...
 
 Project writes are revision-guarded. Builds and downstream artifacts are tied back to project revision/content evidence rather than treated as anonymous files.
 
+### Verified native OCCT integration (2026-10-18)
+
+The current SDK already contains a real C++ OpenCascade engine at `services/cad/occt/`. The local host build was tested with OpenCascade **7.9.3** and installed as `~/.agentsam/bin/agentsam-occt`. Its existing `createOcctNativeProvider` implements actual kernel doctor, STEP export/reopen, volume inspection, and SHA-256 artifact verification.
+
+CAD Creator now consumes this engine **through the same `cad.project.v1` nine-tool vocabulary**. A saved editable `parametricObjects` entry with `generator: "occt"`, `generatorTemplate: "box"`, and `source: "occt:box"` can be built by `design_model_build` with `engine: "occt"` and its `parametric_object_id`. `design_model_inspect` and `design_model_export` with `format: "step"` then verify the exact revision and deliver its STEP artifact. The existing Blender scene build/render remains the default. This proves a **native precision solid**, not yet a complete IFC/BIM architectural compiler.
+
+The actual `MiniAgentSam` component is consumed from `@inneranimalmedia/agentsam-workbench/agent` (v2.6.12). In Local Studio's embedded CAD Creator, bounded descriptive selections are submitted over the existing host-controlled conversation bridge, where authentication, approvals, proposals and writes remain host responsibilities. Standalone mode saves a copyable request draft, not an unapproved AI edit. Do not describe the copilot as an independently authorized model runner.
+
+Host engine discovery is explicit: the verified local OCCT, OpenSCAD, and Blender engines are distinct from FreeCAD's currently failing CLI probe and absent build123d/IfcOpenShell Python dependencies. The company D1 inventory records these as **disabled host-scoped engine connections**, and the existing hosted CAD tools remain **inactive** pending deployed dispatcher authorization/verification. The draft `cad.occt_step_roundtrip` workflow is cataloged with validation, save, build, inspection, export and receipt stages.
+
+For reproducible commands, exact evidence, original native receipts, the registry reconciliation and outstanding desktop/hosted delivery gates, see [Native OCCT project round-trip acceptance](docs/acceptance/NATIVE_OCCT_PROJECT_ROUNDTRIP.md).
+
 ### Next capability packs
 
 Expand outward from `cad.project.v1`; do not bypass it with app-only integrations.
