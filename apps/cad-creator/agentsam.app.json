@@ -109,5 +109,32 @@
       "/install/cad",
       "/install/cad-creator"
     ]
+  },
+  "embed": {
+    "stage": "cad-creator",
+    "build": {
+      "cwd": ".",
+      "install": {
+        "lockfile": "package-lock.json",
+        "check": [
+          "node_modules/vite/package.json",
+          "node_modules/@tailwindcss/vite/package.json"
+        ],
+        "command": [
+          "npm",
+          "ci"
+        ]
+      },
+      "command": [
+        "npm",
+        "run",
+        "build",
+        "-w",
+        "@inneranimalmedia/agentsam-cad-frontend",
+        "--",
+        "--base={base}"
+      ],
+      "output": "frontend/dist"
+    }
   }
 }

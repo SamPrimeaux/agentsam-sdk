@@ -2,6 +2,8 @@
   "schema": "agentsam.app.v1",
   "id": "ecommerce-cms-agentsam",
   "name": "AgentSam Ecommerce + CMS",
+  "kind": "app",
+  "package": "@inneranimalmedia/ecommerce-cms-agentsam",
   "version": "0.2.0",
   "role": "application",
   "modes": [
