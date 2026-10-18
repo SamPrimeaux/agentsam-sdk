@@ -52,6 +52,8 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: node scripts/sdk-release-publish.mjs --publish
+      - name: Verify standalone packed SDK with published first-party dependencies
+        run: AGENTSAM_REQUIRE_PUBLISHED_SDK=1 node --test test/integration/goap-packed-consumer.test.mjs
       - name: Reconcile Local Studio to newly published SDK integrity
         run: |
           npm install --package-lock-only --ignore-scripts --prefix apps/local-studio
