@@ -22,7 +22,7 @@ function run(command, args, cwd) {
   }).trim();
 }
 
-test('standalone SDK tarball installs and launches without a local CMS workspace or companion tarballs', () => {
+test('standalone SDK tarball installs and launches with authenticated release dependencies', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-sdk-packed-'));
   try {
     const packDir = path.join(tmp, 'packs');
@@ -37,8 +37,20 @@ test('standalone SDK tarball installs and launches without a local CMS workspace
       type: 'module',
     }, null, 2) + '\n');
 
-    // Install ONLY the SDK tarball. npm must resolve its public dependencies.
-    // No sibling workspaces, second checkout, CMS tarball, or NODE_PATH.
+    // A pending npm release cannot fetch a version that does not exist.
+    // In CI candidate mode, first seed the EXACT matching errors-package
+    // tarball from this checkout, without linking a monorepo workspace.
+    // Postpublication verifies a standalone root-tarball install instead.
+    if (process.env.AGENTSAM_REQUIRE_PUBLISHED_SDK !== '1') {
+      const errorTar = run('npm', [
+        'pack', '--silent', '--pack-destination', packDir,
+      ], path.join(root, 'packages/agentsam-errors'));
+      run('npm', [
+        'install', '--ignore-scripts', '--no-audit', '--no-fund',
+        path.join(packDir, errorTar),
+      ], consumer);
+    }
+    // No sibling workspaces, second checkout, CMS source dependency or NODE_PATH.
     run('npm', [
       'install', '--ignore-scripts', '--no-audit', '--no-fund',
       path.join(packDir, rootTar),
