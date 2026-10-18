@@ -29,48 +29,8 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
-function readManifest(manifestPath, fallbackId) {
-  try {
-    const manifest = readJson(manifestPath);
-    return {
-      id: manifest.id || fallbackId,
-      name: manifest.name || fallbackId,
-      dir: path.dirname(manifestPath),
-      manifestPath,
-      bin: manifest.bin || null,
-      commands: manifest.commands || {},
-      manifest,
-    };
-  } catch {
-    return null;
-  }
-}
-
-export function listAppManifests(root = REPO_ROOT) {
-  const out = [];
-  const seen = new Set();
-
-  function addFromDir(parent, entryName) {
-    const dir = path.join(parent, entryName);
-    const manifestPath = path.join(dir, 'agentsam.app.json');
-    if (!fs.existsSync(manifestPath)) return;
-    const row = readManifest(manifestPath, entryName);
-    if (!row || seen.has(row.id)) return;
-    seen.add(row.id);
-    out.push(row);
-  }
-
-  for (const parentName of ['apps', 'packages']) {
-    const parent = path.join(root, parentName);
-    if (!fs.existsSync(parent)) continue;
-    for (const entry of fs.readdirSync(parent, { withFileTypes: true })) {
-      if (!entry.isDirectory()) continue;
-      addFromDir(parent, entry.name);
-    }
-  }
-
-  return out.sort((a, b) => a.id.localeCompare(b.id));
-}
+import {listAppManifests} from '../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
+export {listAppManifests};
 
 function resolveApp(id, root = REPO_ROOT) {
   const apps = listAppManifests(root);
