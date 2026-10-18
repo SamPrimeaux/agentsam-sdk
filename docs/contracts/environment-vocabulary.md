@@ -23,12 +23,12 @@ Provider API keys (`OPENAI_*`, `CLOUDFLARE_API_TOKEN`, …) are a **fourth** lan
 ### Customer mental model
 
 ```text
-User 123 is accredited by Inner Animal Media (company/platform Identity)
+User 123 opts into the configured AgentSam platform Identity (when connected)
      ↓
 On User 123's machine:
-  source ~/.agentsam/load-agent-env.sh
+  source ~/.agentsam/load-agent-env.sh (connected-platform example)
     → eval "$(agentsam env shell --profile default)"
-    → loads THEIR AGENTSAM_API_KEY + IAM_CLIENT_ID + IAM_OAUTH_ISSUER
+    → loads THEIR account credential and applicable Identity configuration
        from THEIR keychain/vault (never another user's home)
      ↓
 User 123 runs `agentsam terminal enroll … --pair`
@@ -143,7 +143,7 @@ See also: [`docs/contracts/google-cloud-oauth-setup.md`](./google-cloud-oauth-se
 | `AGENTSAM_BRIDGE_KEY` | That machine’s `~/.execos/profiles/<instance_id>.env` via `agentsam terminal enroll … --pair` |
 | Provider API keys | Encrypted vault + OS keychain (`agentsam providers` / `agentsam env`) |
 | OAuth client secrets | Wrangler secrets / vault — never frontend bundles |
-| `gcloud` user session | gcloud ADC (outside AgentSam until GCP Connection ships) |
+| `gcloud` user session | Provider-owned gcloud/ADC tokens or explicitly selected AgentSam GCP OAuth connection; distinct authority stores |
 | `gh` | macOS keyring (`gh auth`) |
 | Compat plaintext | `~/.agentsam/env.d/*.env` only via `agentsam env export` — opt-in per-user fallback under **their** home |
 
@@ -173,7 +173,7 @@ When auth/capability fails, AgentSam must not stop at “denied.” Mirror gclou
 4. **Optional browser path** — “Press Enter to open …” for OAuth/consent/scopes
 5. **Cheatsheet link** — `agentsam cheat-sheet` / docs URL
 
-Target CLI surface (proposal):
+Existing CLI surface (verify availability with the command catalog):
 
 ```text
 agentsam                  top-level groups (gcloud-like)
