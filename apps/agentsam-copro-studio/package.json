@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --experimental-strip-types --test test/evidence-import.test.mjs",
     "prebuild": "npm --prefix ../../packages/copro-ui run build",
     "pretypecheck": "npm --prefix ../../packages/copro-ui run build"
   },

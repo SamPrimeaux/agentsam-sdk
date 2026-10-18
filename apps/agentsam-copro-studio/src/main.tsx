@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { coproAppManifest } from "./app-manifest";
+import { importEvidencePackage } from "./evidence-import";
 import { createRoot } from "react-dom/client";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
 import { createCoProProject, createTrack, createClip, serializeCoProProject } from "@inneranimalmedia/copro-project";
@@ -144,6 +145,9 @@ function makeImportedProject(file: File) {
   return project;
 }
 
+// React StrictMode runs effects twice in development; an evidence link must import once.
+let evidenceImportStarted = false;
+
 function App() {
   const [screen, setScreen] = useState<Screen>("projects");
   const homeFileRef = useRef<HTMLInputElement>(null);
@@ -251,6 +255,35 @@ function App() {
     setProjectSeed((value) => value + 1);
     void store.save(next).then(() => refreshSavedProjects());
   }
+
+  useEffect(() => {
+    // Open a delivered evidence package: /?evidence=<manifest-url> (loopback only; see evidence-import.ts).
+    const manifestUrl = new URLSearchParams(window.location.search).get("evidence");
+    if (!manifestUrl || evidenceImportStarted) return;
+    evidenceImportStarted = true;
+    void (async () => {
+      try {
+        const result = await importEvidencePackage({ manifestUrl, projectStore: store, mediaStore: sourceStore });
+        const cleaned = new URL(window.location.href);
+        cleaned.searchParams.delete("evidence");
+        window.history.replaceState(null, "", cleaned.toString());
+        const imported = result.media.map((record) => {
+          const existing = mediaUrlsRef.current.get(record.id);
+          const url = existing ?? URL.createObjectURL(record.file);
+          if (!existing) mediaUrlsRef.current.set(record.id, url);
+          return { id: record.id, name: record.name, kind: record.kind, url, durationUs: record.durationUs, file: record.file } as SessionMediaItem;
+        });
+        setMediaItems((current) => {
+          const known = new Set(current.map((item) => item.id));
+          return [...current, ...imported.filter((item) => !known.has(item.id))];
+        });
+        await refreshSavedProjects();
+        await openProject(result.projectId);
+      } catch (error) {
+        setMediaPersistenceError("Evidence package could not be opened: " + (error instanceof Error ? error.message : "unknown error"));
+      }
+    })();
+  }, []);
 
   async function openProject(id: string) {
     const summary = projects.find((item) => item.id === id);
