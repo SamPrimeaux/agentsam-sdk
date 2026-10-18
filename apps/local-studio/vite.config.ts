@@ -431,6 +431,10 @@ export default defineConfig(({ command, isPreview }) => ({
         replacement: resolvePath(cmsProductSource, "index.mjs"),
       },
       {
+        find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/backend\/routes$/,
+        replacement: resolvePath(studioRoot, "../ecommerce-cms-agentsam/backend/lib/route-manifest.js"),
+      },
+      {
         find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/cms\/capabilities$/,
         replacement: resolvePath(cmsProductSource, "capabilities.mjs"),
       },

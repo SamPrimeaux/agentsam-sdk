@@ -249,5 +249,29 @@
       },
       "model_policy": "agentsam_ai:code_generation"
     }
-  ]
+  ],
+  "embed": {
+    "stage": "ecommerce-cms-agentsam",
+    "build": {
+      "cwd": ".",
+      "install": {
+        "lockfile": "package-lock.json",
+        "check": [
+          "node_modules/esbuild/package.json",
+          "frontend/node_modules/vite/package.json"
+        ],
+        "command": [
+          "npm",
+          "run",
+          "install:studio"
+        ]
+      },
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "output": "dist/assets"
+    }
+  }
 }

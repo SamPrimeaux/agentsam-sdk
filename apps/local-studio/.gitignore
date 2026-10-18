@@ -16,3 +16,4 @@ screenshots/
 !.agentsam/.gitignore
 .output/
 frontend/public/cad-creator/
+frontend/public/ecommerce-cms-agentsam/
