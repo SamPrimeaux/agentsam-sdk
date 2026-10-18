@@ -1,41 +1,5 @@
-const DEFAULT_MAILBOXES = [
-  {
-    id: "mb_sam",
-    address: "owner@ember.example",
-    label: "Sam",
-    kind: "personal",
-    owner_name: "Demo Owner",
-    owner_auth_email: "info@inneranimals.com",
-    owner_user_id: null,
-    resend_from_name: "Demo Owner",
-    access_json: "{}",
-    sort_order: 10,
-  },
-  {
-    id: "mb_connor",
-    address: "operator@ember.example",
-    label: "Operator",
-    kind: "personal",
-    owner_name: "Demo Operator",
-    owner_auth_email: "operator@example.com",
-    owner_user_id: null,
-    resend_from_name: "Demo Operator",
-    access_json: "{}",
-    sort_order: 20,
-  },
-  {
-    id: "mb_payments",
-    address: "payments@ember.example",
-    label: "Payments",
-    kind: "payments",
-    owner_name: "Ember Supply",
-    owner_auth_email: null,
-    owner_user_id: null,
-    resend_from_name: "Ember Supply Payments",
-    access_json: '{"roles":["owner"],"emails":["info@inneranimals.com"]}',
-    sort_order: 30,
-  },
-];
+/** Mailboxes are install data (the mail_mailboxes table), never source code. */
+const DEFAULT_MAILBOXES = [];
 
 function parseAccess(box) {
   try {

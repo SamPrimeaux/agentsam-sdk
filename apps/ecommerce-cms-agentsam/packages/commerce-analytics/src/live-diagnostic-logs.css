@@ -1,0 +1,44 @@
+
+.live-log-terminal {
+  max-height: 320px; min-height: 150px; overflow: auto;
+  border: 1px solid var(--line-soft); border-radius: 8px;
+  background: oklch(.13 .01 270); color: var(--fg-1);
+  padding: 8px 4px; font: 11px/1.55 var(--mono, monospace);
+  scrollbar-color: var(--fg-3) transparent; overscroll-behavior: contain;
+}
+.live-log-empty {padding: 22px 13px; color: var(--fg-3); line-height: 1.6;}
+.live-log-line {position:relative;min-width:0;border-radius:5px;margin:1px 4px;}
+.live-log-line:hover,.live-log-line.is-selected {background:color-mix(in srgb,var(--accent) 17%,transparent);}
+.live-log-row {
+  display:flex;gap:10px;align-items:center;text-align:left; width:100%; box-sizing:border-box;
+  border:0; background:transparent; color:inherit; cursor:pointer;
+  font:inherit; padding:5px 34px 5px 8px; min-width:0; user-select:text;
+}
+.live-log-row:focus-visible,.live-log-more:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;}
+.live-log-time {flex:none;color:var(--fg-3);font-variant-numeric:tabular-nums;}
+.live-log-level {flex:none;width:42px;font-weight:700;}
+.live-log-level.is-error {color:var(--bad);}
+.live-log-level.is-warn {color:var(--warn);}
+.live-log-level.is-info {color:var(--info);}
+.live-log-service {flex:none;max-width:140px;overflow:hidden;text-overflow:ellipsis;color:var(--fg-2);}
+.live-log-message {flex:1 1 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.live-log-status,.live-log-duration{flex:none;color:var(--fg-3);}
+.live-log-more {
+  position:absolute;top:3px;right:3px;visibility:hidden;min-width:25px;height:25px;
+  border:0;border-radius:4px;background:var(--bg-2);color:inherit;cursor:pointer;
+}
+.live-log-line:hover .live-log-more,.live-log-more:focus-visible,.live-log-line.is-selected .live-log-more{visibility:visible;}
+.live-log-row-actions {position:absolute;z-index:3;right:4px;top:30px;display:flex;gap:4px;flex-wrap:wrap;
+  padding:6px;border:1px solid var(--line-soft);border-radius:8px;background:var(--bg-2);box-shadow:0 12px 32px #0005;}
+.live-log-row-actions button {padding:5px 8px;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;}
+.live-log-row-actions button:hover {background:var(--bg-3);}
+.live-log-details {padding:10px 12px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;
+  background:var(--bg-2);border-radius:5px;color:var(--fg-2);user-select:text;}
+@media(max-width:640px){
+  .live-log-row{gap:5px;padding-right:28px;}
+  .live-log-service{max-width:65px;}
+  .live-log-duration{display:none;}
+  .live-log-more{visibility:visible;}
+  .live-log-controls{align-items:stretch;}
+}
+@media(prefers-reduced-motion:reduce){.live-log-terminal,.live-log-line{scroll-behavior:auto;transition:none;}}

@@ -186,5 +186,5 @@
 .account-toast.open { opacity: 1; }
 
 @media (max-width: 820px) {
-  .account-grid, .account-form-grid { grid-template-columns: 1fr; }
+  .account-grid, .account-form-grid { grid-template-columns: minmax(0, 1fr); }
 }

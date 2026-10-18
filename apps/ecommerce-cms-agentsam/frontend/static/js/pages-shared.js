@@ -23,6 +23,12 @@ window.loadCmsRegistry = async function loadCmsRegistry() {
     ? await window.AgentSamThemeEditorHost.adapter.getRegistry()
     : await adminFetch("/api/admin/cms/registry");
   window.cmsRegistry = data;
+  // D1 definition read-model; PAGE_REGISTRY is not a source for new components.
+  // The old templates remain readable until their persisted renderer-backed
+  // placements are migrated, without creating a second editor or a page list.
+  window.cmsAuthoring = window.AgentSamCmsAuthoring
+    ? window.AgentSamCmsAuthoring.createAuthoringEngine(data.definitions || [])
+    : null;
   window.SECTION_FIELDS = {};
   window.SECTION_SCHEMAS = {};
   for (const [slug, page] of Object.entries(data.pages || {})) {
@@ -94,4 +100,3 @@ window.visibilityBadge = function visibilityBadge(status) {
   }
   return { label: "Hidden", cls: "pages-badge pages-badge--hidden" };
 };
-

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Product — Ember Supply Admin</title>
+<title>Product — Fuel & Free Time Admin</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/product-edit.css">
@@ -20,6 +20,11 @@ const isNew = !productId;
 let productSlug = "";
 let dirty = false;
 let saveInFlight = false;
+let saveFailed = false;
+let designContext = null;
+let selectedCollectionIds = new Set();
+let availableCollections = [];
+let variantOriginals = new Map();
 let variantCount = 0;
 /** @type {{ id: number, url: string, filename?: string }[]} */
 let pendingImages = [];
@@ -33,14 +38,57 @@ function slugify(text) {
 }
 
 function setDirty(next) {
-  dirty = next;
+  dirty = Boolean(next);
   const hint = document.getElementById("save-hint");
   const btn = document.getElementById("save-btn");
+  const discard = document.getElementById("discard-btn");
   if (hint) {
-    hint.textContent = dirty ? "Unsaved changes" : isNew ? "Create this product to add images and variants" : "All changes saved";
+    hint.textContent = saveInFlight ? "Saving…" : saveFailed ? "Save failed" :
+      dirty ? "Unsaved changes" :
+      isNew ? "Enter product details" : "All changes saved";
     hint.classList.toggle("is-dirty", dirty);
+    hint.classList.toggle("is-error", saveFailed);
+    hint.setAttribute("role", "status");
   }
-  if (btn) btn.disabled = !dirty || saveInFlight;
+  const canPublish = !isNew && document.getElementById("status-sidebar")?.value === "active" &&
+    Boolean(designContext?.draft && designContext.draft.state !== "published");
+  if (btn) {
+    btn.disabled = (!dirty && !canPublish) || saveInFlight;
+    btn.textContent = saveInFlight ? "Working…" : canPublish ? "Publish" : isNew ? "Create" : "Save";
+    btn.classList.toggle("primary", canPublish || isNew);
+    btn.classList.toggle("ghost", !canPublish && !isNew);
+  }
+  if (discard) discard.disabled = !dirty || saveInFlight;
+  const publishButton = document.getElementById("publish-btn");
+  if (publishButton) {
+    publishButton.hidden = isNew || !designContext?.draft || designContext.draft.state === "published" ||
+      document.getElementById("status-sidebar")?.value === "active";
+    publishButton.disabled = saveInFlight;
+  }
+  const createProvider = document.getElementById("create-provider-product-btn");
+  if (createProvider) {
+    createProvider.disabled = dirty || saveInFlight ||
+      !designContext?.draft?.prepared_media_asset_id ||
+      Number(document.getElementById("price")?.value || 0) <= 0;
+  }
+  syncDockEdit();
+}
+
+/** Mirrors the sticky save bar into the mobile dock (admin-dock edit mode). Harmless when no dock is mounted. */
+function syncDockEdit() {
+  const hint = document.getElementById("save-hint");
+  const btn = document.getElementById("save-btn");
+  const detail = {
+    active: true,
+    // Short strings: the dock is ~294px wide on a 390pt phone.
+    hint: isNew && !dirty ? "New product" : hint ? hint.textContent : "",
+    dirty,
+    canSave: Boolean(btn) && !btn.disabled,
+    saveLabel: saveInFlight ? "Working…" : document.getElementById("save-btn")?.textContent || "Save",
+    onSave: () => document.getElementById("save-btn")?.click(),
+    discardHref: isNew ? "/admin/products" : location.pathname + location.search,
+  };
+  window.publishDockEdit?.(detail);
 }
 
 function imgNote(msg, kind) {
@@ -52,11 +100,12 @@ function imgNote(msg, kind) {
 }
 
 function showNote(msg, kind) {
-  const el = document.getElementById("form-note");
+  const el = document.getElementById("editor-action-note");
   if (!el) return;
   el.textContent = msg || "";
-  el.className = "product-note" + (kind ? ` is-${kind}` : "");
-  el.style.display = msg ? "block" : "none";
+  el.className = "product-note product-editor-action-note" + (kind ? ` is-${kind}` : "");
+  el.hidden = !msg;
+  el.setAttribute("role", kind === "error" ? "alert" : "status");
   if (msg && kind === "error") {
     el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
@@ -75,25 +124,22 @@ function statusBadge(status) {
 function updateHeaderTitle(title) {
   const h1 = document.getElementById("crumb-title");
   if (h1) h1.textContent = title || (isNew ? "New product" : "Product");
-  document.title = (title || "Product") + " — Ember Supply Admin";
+  document.title = (title || "Product") + " — Fuel & Free Time Admin";
 }
 
 function updateSeoPreview() {
   const title = document.getElementById("title")?.value.trim() || "Product title";
-  const slugField = document.getElementById("slug");
-  const slug = slugField?.value.trim() || slugify(title) || "product";
-  const desc = document.getElementById("description")?.value.trim() || "";
-  const price = document.getElementById("price")?.value || "0.00";
-  const previewTitle = document.getElementById("seo-title");
-  const previewUrl = document.getElementById("seo-url");
-  const previewDesc = document.getElementById("seo-desc");
-  if (previewTitle) previewTitle.textContent = title;
-  if (previewUrl) previewUrl.textContent = `https://ember.example/products/${slug}`;
-  if (previewDesc) {
-    previewDesc.textContent = desc
-      ? desc.slice(0, 160)
-      : `$${Number(price).toFixed(2)} USD`;
-  }
+  const slug = document.getElementById("slug")?.value.trim() || slugify(title) || "product";
+  const description = document.getElementById("description")?.value.trim() || "";
+  const price = Number(document.getElementById("price")?.value || 0);
+  const seoTitle = document.getElementById("seo-title-input")?.value.trim() || "";
+  const seoDescription = document.getElementById("seo-description-input")?.value.trim() || "";
+  document.getElementById("seo-title").textContent = seoTitle || title;
+  document.getElementById("seo-url").textContent = location.origin + "/products/" + slug;
+  document.getElementById("seo-desc").textContent =
+    (seoDescription || description || (Number.isFinite(price) ? "$" + price.toFixed(2) + " USD" : "Product details")).slice(0, 320);
+  document.getElementById("seo-title-count").textContent = seoTitle.length + " / 180";
+  document.getElementById("seo-description-count").textContent = seoDescription.length + " / 320";
 }
 
 function syncStatusUi() {
@@ -129,7 +175,12 @@ renderShell("/admin/products", `
         ${isNew ? "" : statusBadge("draft")}
       </div>
       <div class="product-editor-top-actions">
-        <button type="button" class="btn ghost small" id="duplicate-btn" ${isNew ? "disabled" : ""}>Duplicate</button>
+        <div class="product-editor-save-actions">
+          <span class="product-editor-bar-hint" id="save-hint" role="status">Loading…</span>
+          <button type="button" class="btn ghost small" id="discard-btn" disabled>Discard</button>
+          <button type="button" class="btn ghost small" id="save-btn" disabled>Save</button>
+          <button type="button" class="btn primary small" id="publish-btn" hidden>Publish</button>
+        </div>
         <a href="#" class="btn ghost small" id="view-btn" target="_blank" rel="noopener" style="${isNew ? "visibility:hidden" : ""}">View</a>
         <div class="product-editor-more">
           <button type="button" class="btn ghost small" id="more-btn">More actions</button>
@@ -140,6 +191,7 @@ renderShell("/admin/products", `
         </div>
       </div>
     </header>
+    <p id="editor-action-note" class="product-note product-editor-action-note" role="status" hidden></p>
 
     <div class="product-editor-grid">
       <div class="product-editor-main">
@@ -150,13 +202,6 @@ renderShell("/admin/products", `
 
         <div class="product-card">
           <label for="description">Description</label>
-          <div class="product-toolbar" aria-hidden="true">
-            <button type="button" disabled><strong>B</strong></button>
-            <button type="button" disabled><em>I</em></button>
-            <button type="button" disabled>U</button>
-            <button type="button" disabled>🔗</button>
-            <button type="button" disabled>≡</button>
-          </div>
           <textarea id="description" placeholder="Describe this product for the storefront…"></textarea>
         </div>
 
@@ -177,12 +222,35 @@ renderShell("/admin/products", `
           <p class="product-note" id="img-note" style="display:none"></p>
         </div>
 
-        <div class="product-card">
-          <label for="collection">Category / collection</label>
-          <input type="text" id="collection" placeholder="Essentials, High Octane, Masters…">
-          <p class="product-card-hint">Used for grouping in the admin and storefront filters.</p>
+        <div class="product-card" id="studio-design-card" hidden>
+          <div class="product-card-head">
+            <label>Product design</label>
+          </div>
+          <div id="studio-design-content"></div>
         </div>
 
+        <div class="product-card">
+          <label for="collection">Category</label>
+          <input type="text" id="collection">
+        </div>
+
+        <div class="product-card" id="product-collections-card">
+          <div class="product-card-head">
+            <label>Collections</label>
+            <span class="product-card-hint">A product can belong to several</span>
+          </div>
+          <div id="collections-list" aria-label="Product collections" class="product-collection-list"></div>
+          <div class="product-collection-create">
+            <label for="new-collection-name">New collection</label>
+            <input type="text" id="new-collection-name" placeholder="Collection name" maxlength="120">
+            <select id="new-collection-status" aria-label="New collection publishing status">
+              <option value="draft">Draft collection</option>
+              <option value="active">Publish collection now</option>
+            </select>
+            <button type="button" class="btn ghost small" id="new-collection-btn">Create</button>
+          </div>
+          <p class="product-card-hint">Selection saves with product details. Creating a collection saves the collection immediately; publishing products remains a separate decision.</p>
+        </div>
         <div class="product-card">
           <label for="price">Price</label>
           <div class="product-price-row">
@@ -282,37 +350,41 @@ renderShell("/admin/products", `
           <h3>Search engine listing</h3>
           <div class="product-seo-preview">
             <div class="seo-title" id="seo-title">Product title</div>
-            <div class="seo-url" id="seo-url">https://ember.example/products/…</div>
+            <div class="seo-url" id="seo-url">https://fuelnfreetime.com/products/…</div>
             <div class="seo-desc" id="seo-desc">$0.00 USD</div>
           </div>
+          <label class="product-seo-field" for="seo-title-input">
+            SEO page title <small id="seo-title-count">0 / 180</small>
+            <input type="text" id="seo-title-input" maxlength="180" placeholder="Use product title">
+          </label>
+          <label class="product-seo-field" for="seo-description-input">
+            Meta description <small id="seo-description-count">0 / 320</small>
+            <textarea id="seo-description-input" rows="3" maxlength="320" placeholder="Use product description"></textarea>
+          </label>
+          <p class="product-card-hint">These overrides change the search listing; the visible product description remains independent.</p>
         </div>
       </aside>
     </div>
 
-    <p class="product-note" id="form-note" style="display:none"></p>
   </div>
 
-  <footer class="product-editor-bar">
-    <span class="product-editor-bar-hint" id="save-hint">${isNew ? "Create this product to add images and variants" : "Loading…"}</span>
-    <div class="product-editor-bar-actions">
-      <a href="/admin/products" class="btn ghost">Discard</a>
-      <button type="button" class="btn primary" id="save-btn" disabled>${isNew ? "Save product" : "Save"}</button>
-    </div>
-  </footer>
+
 `);
 
 document.body.classList.add("console-body-bleed");
 
 function bindDirtyFields() {
-  ["title", "description", "collection", "price", "slug", "status-sidebar"].forEach((id) => {
+  ["title", "description", "seo-title-input", "seo-description-input", "collection", "price", "slug", "status-sidebar"].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener("input", () => {
+      saveFailed = false;
       setDirty(true);
       updateSeoPreview();
       if (id === "status-sidebar") syncStatusUi();
     });
     el.addEventListener("change", () => {
+      saveFailed = false;
       setDirty(true);
       updateSeoPreview();
       if (id === "status-sidebar") syncStatusUi();
@@ -371,7 +443,7 @@ async function attachAssetsToProduct(assetIds) {
 
 async function openBrowseLibrary() {
   const picked = await openMediaPicker({
-    title: "Attach product images",
+    title: "Browse Media",
     multi: true,
   });
   if (!picked?.length) return;
@@ -560,38 +632,150 @@ function variantNote(msg, kind) {
   el.style.display = msg ? "block" : "none";
 }
 
-function renderInventory(variants) {
+function renderInventory(variants, supplierDraft = false) {
   const body = document.getElementById("inventory-body");
+  // Supplier stock is not locally authoritative, even once SKUs have been mapped.
+  // Hide the warehouse quantity table for supplier-backed products.
+  const card = document.getElementById("inventory-card");
+  if (card) card.hidden = Boolean(supplierDraft);
   if (!body) return;
   if (!variants.length) {
-    body.innerHTML = '<tr><td colspan="4" class="pages-empty">No variants — inventory tracked when you add SKUs</td></tr>';
+    body.innerHTML = supplierDraft
+      ? '<tr><td colspan="4" class="pages-empty">Your selected sizes and colors are saved. Inventory is managed by the supplier after creation.</td></tr>'
+      : '<tr><td colspan="4" class="pages-empty">No variants — inventory tracked when you add SKUs</td></tr>';
     return;
   }
   body.innerHTML = variants
     .map((v) => {
       const label = [v.size, v.color].filter(Boolean).join(" / ") || "Default";
       return `<tr>
-        <td>Default</td>
-        <td>${label}</td>
-        <td>${v.sku}</td>
-        <td>${v.inventory_qty}</td>
+        <td data-label="Location">Default</td>
+        <td data-label="Variant">${label}</td>
+        <td data-label="SKU">${v.sku}</td>
+        <td data-label="Available">${v.inventory_qty}</td>
       </tr>`;
     })
     .join("");
 }
 
-function renderVariants(variants) {
+// Supplier options are already selected in Studio. Before a provider product is
+// created they are a read-only assortment preview, NOT local warehouse stock.
+function renderSupplierSelection(container, selection) {
+  if (!selection || !Array.isArray(selection.variants)) return;
+  const heading = document.createElement("strong");
+  heading.className = "product-supplier-selection-heading";
+  heading.textContent = selection.selected_count + " variants selected in Product Studio";
+  container.append(heading);
+  const summary = document.createElement("p");
+  summary.className = "product-card-hint";
+  summary.textContent = [
+    selection.sizes?.length ? selection.sizes.length + " sizes" : "",
+    selection.colors?.length ? selection.colors.length + " colors" : ""
+  ].filter(Boolean).join(" · ") + " · No manual SKU entry required.";
+  container.append(summary);
+  if (selection.unavailable_count) {
+    const problem = document.createElement("p");
+    problem.className = "product-note is-error";
+    problem.textContent = selection.unavailable_count + " supplier combinations could not be resolved. Reopen Product Studio to reconcile them before creation.";
+    container.append(problem);
+  }
+  const details = document.createElement("details");
+  details.className = "product-supplier-selection-details";
+  const summaryLabel = document.createElement("summary");
+  summaryLabel.textContent = "View " + selection.variants.length + " size and color combinations";
+  details.append(summaryLabel);
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "product-supplier-selection-table-wrap";
+  const table = document.createElement("table");
+  table.className = "product-supplier-selection-table";
+  const head = document.createElement("thead");
+  const titleRow = document.createElement("tr");
+  for (const label of ["Color", "Size", "Supplier SKU"]) {
+    const th = document.createElement("th");
+    th.textContent = label;
+    titleRow.append(th);
+  }
+  head.append(titleRow);
+  table.append(head);
+  const body = document.createElement("tbody");
+  for (const item of selection.variants) {
+    const row = document.createElement("tr");
+    for (const value of [item.color || "—", item.size || "—", item.provider_sku || "Unavailable"]) {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.append(cell);
+    }
+    body.append(row);
+  }
+  table.append(body);
+  tableWrap.append(table);
+  details.append(tableWrap);
+  container.append(details);
+  const foot = document.createElement("p");
+  foot.className = "product-card-hint";
+  foot.textContent = "No manual variant or SKU entry needed.";
+  container.append(foot);
+}
+
+function renderVariants(variants, supplierDraft = false, sellingSelection = null) {
   variantCount = variants.length;
+  variantOriginals = new Map(variants.map((v) => [Number(v.id), {
+    sku: v.sku || "", size: v.size || "", color: v.color || "",
+    price_cents: v.price_cents == null ? null : Number(v.price_cents),
+    inventory_qty: Number(v.inventory_qty || 0),
+  }]));
   const empty = document.getElementById("variants-empty");
   const wrap = document.getElementById("variants-table-wrap");
   const form = document.getElementById("variant-form");
   const body = document.getElementById("variants-body");
 
+  if (supplierDraft && variants.length) {
+    // Supplier SKUs already exist and are mapped upstream. Never ask a merchant
+    // to enter local warehouse quantities for 90 color/size combinations.
+    wrap.style.display = "none";
+    form.style.display = "none";
+    empty.style.display = "block";
+    empty.classList.add("has-supplier-selection");
+    const sizes = [...new Set(variants.map(v => String(v.size || "").trim()).filter(Boolean))];
+    const colors = [...new Set(variants.map(v => String(v.color || "").trim()).filter(Boolean))];
+    const hint = empty.querySelector("p");
+    if (hint) hint.textContent = "Your supplier assortment is linked. Stock is managed by Completeful.";
+    const add = document.getElementById("show-variant-form");
+    if (add) add.hidden = true;
+    empty.querySelector(".product-supplier-selection")?.remove();
+    const summary = document.createElement("div");
+    summary.className = "product-supplier-selection";
+    const heading = document.createElement("strong");
+    heading.textContent = variants.length + " linked combinations";
+    const detail = document.createElement("p");
+    detail.textContent = [sizes.length ? sizes.length + " sizes" : "",
+      colors.length ? colors.length + " colors" : ""].filter(Boolean).join(" · ") +
+      " · No manual stock entry";
+    summary.append(heading, detail);
+    empty.append(summary);
+    renderInventory([], true);
+    return;
+  }
+  empty.classList.remove("has-supplier-selection");
   if (!variants.length) {
+    empty.classList.toggle("has-supplier-selection", supplierDraft);
     empty.style.display = "block";
     wrap.style.display = "none";
     form.style.display = "none";
-    renderInventory([]);
+    const hint = empty.querySelector("p");
+    const add = document.getElementById("show-variant-form");
+    if (hint) hint.textContent = supplierDraft
+      ? "Your selected supplier options are carried forward from Product Studio."
+      : "Add options like size or color for separate SKUs and inventory.";
+    if (add) add.hidden = supplierDraft;
+    empty.querySelector(".product-supplier-selection")?.remove();
+    if (supplierDraft) {
+      const selectionRoot = document.createElement("div");
+      selectionRoot.className = "product-supplier-selection";
+      empty.append(selectionRoot);
+      renderSupplierSelection(selectionRoot, sellingSelection);
+    }
+    renderInventory([], supplierDraft);
     return;
   }
 
@@ -603,13 +787,12 @@ function renderVariants(variants) {
     .map(
       (v) => `
     <tr data-id="${v.id}">
-      <td><input class="v-sku" value="${v.sku}"></td>
-      <td><input class="v-size" value="${v.size || ""}"></td>
-      <td><input class="v-color" value="${v.color || ""}"></td>
-      <td><input class="v-price" type="number" step="0.01" value="${v.price_cents != null ? (v.price_cents / 100).toFixed(2) : ""}"></td>
-      <td><input class="v-qty" type="number" value="${v.inventory_qty}"></td>
-      <td>
-        <button type="button" class="btn ghost small v-save">Save</button>
+      <td data-label="SKU"><input class="v-sku" value="${v.sku}"></td>
+      <td data-label="Size"><input class="v-size" value="${v.size || ""}"></td>
+      <td data-label="Color"><input class="v-color" value="${v.color || ""}"></td>
+      <td data-label="Price"><input class="v-price" type="number" step="0.01" value="${v.price_cents != null ? (v.price_cents / 100).toFixed(2) : ""}"></td>
+      <td data-label="Qty"><input class="v-qty" type="number" value="${v.inventory_qty}"></td>
+      <td class="v-actions">
         <button type="button" class="btn ghost small v-delete">Delete</button>
       </td>
     </tr>`
@@ -618,25 +801,11 @@ function renderVariants(variants) {
 
   body.querySelectorAll("tr").forEach((row) => {
     const id = row.dataset.id;
-    row.querySelector(".v-save").addEventListener("click", async () => {
-      try {
-        await adminFetch(`/api/admin/variants/${id}`, {
-          method: "PUT",
-          body: JSON.stringify({
-            sku: row.querySelector(".v-sku").value.trim(),
-            size: row.querySelector(".v-size").value.trim(),
-            color: row.querySelector(".v-color").value.trim(),
-            price_cents: row.querySelector(".v-price").value
-              ? Math.round(parseFloat(row.querySelector(".v-price").value) * 100)
-              : null,
-            inventory_qty: row.querySelector(".v-qty").value,
-          }),
-        });
-        variantNote("Variant saved.", "success");
-        loadProduct();
-      } catch (err) {
-        variantNote(err.message, "error");
-      }
+    row.querySelectorAll(".v-sku, .v-size, .v-color, .v-price, .v-qty").forEach((input) => {
+      input.addEventListener("input", () => {
+        saveFailed = false;
+        setDirty(true); // Top-right Save owns both product details and variant edits.
+      });
     });
     row.querySelector(".v-delete").addEventListener("click", async () => {
       if (!confirm("Delete this variant?")) return;
@@ -652,6 +821,162 @@ function renderVariants(variants) {
   renderInventory(variants);
 }
 
+function renderCollections() {
+  const container = document.getElementById("collections-list");
+  if (!container) return;
+  container.replaceChildren();
+  if (!availableCollections.length) {
+    const hint = document.createElement("p");
+    hint.className = "product-card-hint";
+    hint.textContent = "No collections yet. Create one below to organize products.";
+    container.append(hint);
+  }
+  for (const collection of availableCollections) {
+    const label = document.createElement("label");
+    label.className = "product-collection-option";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = selectedCollectionIds.has(Number(collection.id));
+    checkbox.disabled = isNew;
+    checkbox.value = String(collection.id);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) selectedCollectionIds.add(Number(collection.id));
+      else selectedCollectionIds.delete(Number(collection.id));
+      saveFailed = false;
+      setDirty(true);
+    });
+    const name = document.createElement("span");
+    name.textContent = collection.title;
+    const status = document.createElement("small");
+    status.textContent = collection.status === "active" ? "Published" : "Draft";
+    label.append(checkbox, name, status);
+    container.append(label);
+  }
+  document.getElementById("new-collection-btn").disabled = isNew;
+}
+
+async function loadCollections() {
+  try {
+    const { collections } = await adminFetch("/api/admin/collections");
+    availableCollections = collections || [];
+    renderCollections();
+  } catch (error) {
+    const container = document.getElementById("collections-list");
+    if (container) container.textContent = "Could not load collections: " + error.message;
+  }
+}
+
+function renderStudioDesign(draft, fulfillment, source = null, sellingSelection = null) {
+  const card = document.getElementById("studio-design-card");
+  const root = document.getElementById("studio-design-content");
+  if (!card || !root) return;
+  designContext = draft ? { draft, fulfillment } : null;
+  card.hidden = isNew;
+  root.replaceChildren();
+  const productKind = window.__productKind || "physical";
+  if (["app", "website", "sdk-package", "theme", "ui-component", "section", "block", "service", "integration"].includes(productKind)) {
+    const guidance = document.createElement("p");
+    guidance.className = "product-card-hint";
+    guidance.textContent = productKind === "website" || productKind === "theme"
+      ? "Arrange pages, sections, media and design tokens in the existing layout workspace."
+      : "Organize the product's interface previews and reusable design surfaces in the existing CMS workspace.";
+    root.append(guidance);
+    const actions = document.createElement("div");
+    actions.className = "product-design-actions";
+    const open = document.createElement("a");
+    open.className = "btn ghost small";
+    open.href = productKind === "website" || productKind === "theme"
+      ? "/admin/theme-editor?slug=" + encodeURIComponent(productSlug || "home")
+      : "/admin/pages";
+    open.textContent = "Open layout workspace";
+    actions.append(open);
+    root.append(actions);
+    return;
+  }
+  // Provider account integration is handled centrally. Product-specific
+  // creation state must never be mislabeled as an API connection.
+  if (source?.kind === "connected_provider" && fulfillment?.completeful_store_product_id) {
+    const supplier = document.createElement("span");
+    supplier.className = "product-design-status";
+    supplier.textContent = "Completeful product ready";
+    root.append(supplier);
+  }
+  if (!draft) {
+    const guidance = document.createElement("p");
+    guidance.className = "product-card-hint";
+    guidance.textContent = "Add a design to make a custom product.";
+    root.append(guidance);
+    return;
+  }
+
+
+  if (!fulfillment?.completeful_store_product_id) {
+    const selectionStatus = document.createElement("p");
+    selectionStatus.className = "product-design-selection-summary";
+    selectionStatus.textContent = sellingSelection
+      ? sellingSelection.selected_count + " selected supplier variants saved · " +
+        sellingSelection.resolved_count + " catalog options verified"
+      : "Loading selected supplier options";
+    root.append(selectionStatus);
+    const explanation = document.createElement("p");
+    explanation.className = "product-card-hint";
+    explanation.textContent = draft.prepared_media_asset_id
+      ? "Artwork ready. Set your price, then Publish to create the supplier product and storefront listing."
+      : "Finish preparing your artwork in Product Studio, then return here to publish.";
+    root.append(explanation);
+  }
+  const actions = document.createElement("div");
+  actions.className = "product-design-actions";
+  const edit = document.createElement("a");
+  edit.className = "btn ghost small";
+  edit.textContent = "Edit design";
+  edit.href = "/admin/products/create/" + encodeURIComponent(draft.completeful_catalog_product_id) +
+    "?resume=" + encodeURIComponent(draft.id);
+  actions.append(edit);
+
+  const linkId = fulfillment?.completeful_store_product_id;
+  if (!linkId) {
+    const create = document.createElement("button");
+    create.type = "button";
+    create.className = "btn ghost small";
+    create.id = "create-provider-product-btn";
+    create.textContent = "Create with Completeful";
+    create.title = "Creates this product and your saved Studio variant selection in Completeful; does not publish.";
+    const pending = document.createElement("p");
+    pending.className = "product-card-hint product-design-next-action";
+    pending.textContent = !draft.prepared_media_asset_id
+      ? "Return to Product Studio to prepare artwork."
+      : Number(document.getElementById("price")?.value || 0) <= 0
+        ? "Enter a retail price to continue."
+        : "You can create the supplier listing now, or select Active and Publish in one step.";
+    actions.append(pending);
+    create.addEventListener("click", async () => {
+      if (dirty || saveInFlight) {
+        showNote("Save product details before creating the supplier product.", "error");
+        return;
+      }
+      if (!window.confirm("Create this product in your connected Completeful shop? This will not publish the storefront listing.")) return;
+      create.disabled = true;
+      create.textContent = "Creating product…";
+      try {
+        const result = await adminFetch(
+          "/api/admin/product-studio/drafts/" + encodeURIComponent(draft.id) + "/create-product",
+          { method: "POST" }
+        );
+        await loadProduct();
+        showNote(result.already_linked ? "Supplier product already exists." :
+          "Product created with Completeful. Storefront listing remains a draft.", "success");
+      } catch (error) {
+        showNote(error.message || "Could not create supplier product", "error");
+        create.textContent = "Retry product creation";
+        create.disabled = false;
+      }
+    });
+    actions.append(create);
+  }
+  root.append(actions);
+}
+
 async function loadProduct() {
   if (isNew) {
     updateHeaderTitle("New product");
@@ -664,19 +989,26 @@ async function loadProduct() {
   try {
     const d = await adminFetch(`/api/admin/products/${productId}`);
     const p = d.product;
+    window.__productKind = p.kind || "physical";
     document.getElementById("title").value = p.title;
     document.getElementById("slug").value = p.slug;
     document.getElementById("slug").dataset.manual = "1";
     productSlug = p.slug;
     document.getElementById("description").value = p.description || "";
+    document.getElementById("seo-title-input").value = p.seo_title || "";
+    document.getElementById("seo-description-input").value = p.seo_description || "";
     document.getElementById("collection").value = p.collection || "";
     document.getElementById("status-sidebar").value = p.status;
     document.getElementById("price").value = (p.price_cents / 100).toFixed(2);
     updateHeaderTitle(p.title);
     syncStatusUi();
     updateSeoPreview();
-    renderVariants(d.variants);
+    renderVariants(d.variants, Boolean(d.design_draft?.completeful_catalog_product_id || d.fulfillment?.completeful_store_product_id), d.selling_selection);
+    selectedCollectionIds = new Set((d.collection_ids || []).map(Number));
+    renderCollections();
+    renderStudioDesign(d.design_draft, d.fulfillment, d.source, d.selling_selection);
     loadImages();
+    saveFailed = false;
     setDirty(false);
 
     const menuView = document.getElementById("menu-view");
@@ -686,13 +1018,47 @@ async function loadProduct() {
   }
 }
 
+function collectVariantChanges() {
+  const changes = [];
+  document.querySelectorAll("#variants-body tr[data-id]").forEach((row) => {
+    const id = Number(row.dataset.id);
+    const initial = variantOriginals.get(id);
+    if (!initial) return;
+    const rawPrice = row.querySelector(".v-price").value;
+    const current = {
+      sku: row.querySelector(".v-sku").value.trim(),
+      size: row.querySelector(".v-size").value.trim(),
+      color: row.querySelector(".v-color").value.trim(),
+      price_cents: rawPrice ? Math.round(Number(rawPrice) * 100) : null,
+      inventory_qty: Number(row.querySelector(".v-qty").value),
+    };
+    const patch = { id };
+    for (const [key, value] of Object.entries(current)) {
+      if (value !== initial[key]) patch[key] = value;
+    }
+    if (Object.keys(patch).length > 1) changes.push(patch);
+  });
+  return changes;
+}
+
+function updateVariantOriginals(changes) {
+  for (const patch of changes) {
+    const original = variantOriginals.get(Number(patch.id));
+    if (original) Object.assign(original, patch);
+  }
+}
+
 function collectPayload() {
   const priceVal = parseFloat(document.getElementById("price").value || "0");
   return {
     title: document.getElementById("title").value.trim(),
     slug: document.getElementById("slug").value.trim() || slugify(document.getElementById("title").value),
     description: document.getElementById("description").value.trim(),
+    seo_title: document.getElementById("seo-title-input").value.trim(),
+    seo_description: document.getElementById("seo-description-input").value.trim(),
     collection: document.getElementById("collection").value.trim(),
+    collection_ids: [...selectedCollectionIds],
+    variants: collectVariantChanges(),
     status: document.getElementById("status-sidebar").value,
     price_cents: Number.isFinite(priceVal) ? Math.round(priceVal * 100) : 0,
   };
@@ -700,28 +1066,40 @@ function collectPayload() {
 
 async function saveProduct() {
   const payload = collectPayload();
+  const publishSupplier = !isNew && payload.status === "active" &&
+    Boolean(designContext?.draft && designContext.draft.state !== "published");
+  const supplierDraftId = designContext?.draft?.id;
+  // The local product details must be saved as a draft before provider creation.
+  // Publication is explicit (Active → Publish) and is completed only after
+  // supplier mapping and the server's storefront readiness checks both succeed.
+  if (publishSupplier) payload.status = "draft";
   if (!payload.title) {
     showNote("Title is required.", "error");
     return;
   }
 
-  if (payload.status === "active" && !isNew) {
-    const issues = [];
-    if (variantCount === 0) issues.push("Add at least one size variant so customers can purchase");
-    if (payload.price_cents <= 0 && variantCount === 0) issues.push("Set a base price or variant pricing");
-    if (issues.length) {
-      const ok = confirm(
-        "This product is active but not ready for checkout:\n\n• " +
-          issues.join("\n• ") +
-          "\n\nCustomers will see the product page but cannot add to cart. Save anyway?"
-      );
-      if (!ok) return;
-    }
+  if (publishSupplier && payload.price_cents <= 0) {
+    showNote("Enter a retail price above $0 to publish.", "error");
+    return;
+  }
+  if (publishSupplier && !designContext?.draft?.prepared_media_asset_id) {
+    showNote("Finish preparing the artwork in Product Studio before publishing.", "error");
+    return;
+  }
+  if (payload.status === "active" && !isNew && variantCount === 0 && !publishSupplier) {
+    // Saving metadata is never blocked by a missing sellable option.
+    // This applies to hats, accessories and other products with no size axis.
+    showNote("Product details can be saved. Add a sellable option before customers can purchase.", "info");
   }
 
+  // Keep changes made during an in-flight save unsaved until they persist.
+  const saveSnapshot = JSON.stringify(payload);
+  let detailsSaved = false;
+  saveFailed = false;
   saveInFlight = true;
   setDirty(dirty);
-  document.getElementById("save-btn").textContent = isNew ? "Saving…" : "Saving…";
+  document.getElementById("save-btn").textContent = "Saving…";
+  syncDockEdit();
 
   try {
     if (isNew) {
@@ -744,27 +1122,110 @@ async function saveProduct() {
       window.location.href = `/admin/product-edit?id=${newId}`;
       return;
     }
-    await adminFetch(`/api/admin/products/${productId}`, { method: "PUT", body: JSON.stringify(payload) });
-    productSlug = payload.slug;
-    updateHeaderTitle(payload.title);
-    syncStatusUi();
+    await adminFetch("/api/admin/products/" + productId, { method: "PUT", body: JSON.stringify(payload) });
+    // Do not report success on an optimistic UI update; verify persisted fields.
+    const verified = await adminFetch("/api/admin/products/" + productId);
+    const stored = verified.product;
+    if (!stored ||
+      String(stored.title || "") !== payload.title ||
+      String(stored.slug || "") !== payload.slug ||
+      String(stored.description || "") !== payload.description ||
+      String(stored.seo_title || "") !== payload.seo_title ||
+      String(stored.seo_description || "") !== payload.seo_description ||
+      String(stored.collection || "") !== payload.collection ||
+      JSON.stringify((verified.collection_ids || []).map(Number).sort((a,b)=>a-b)) !==
+        JSON.stringify(payload.collection_ids.slice().sort((a,b)=>a-b)) ||
+      !payload.variants.every((patch) => {
+        const row = (verified.variants || []).find((variant) => Number(variant.id) === patch.id);
+        return row && Object.entries(patch).every(([field, value]) =>
+          field === "id" || (value == null ? row[field] == null :
+            String(row[field] ?? "") === String(value)));
+      }) ||
+      Number(stored.price_cents) !== payload.price_cents ||
+      String(stored.status) !== payload.status) {
+      throw new Error("Save did not verify against the stored product. Check the fields and retry.");
+    }
+    detailsSaved = true;
+    if (publishSupplier) {
+      showNote("Details saved. Checking your Completeful product…", "info");
+      if (!verified.fulfillment?.completeful_store_product_id) {
+        const result = await adminFetch(
+          "/api/admin/product-studio/drafts/" + encodeURIComponent(supplierDraftId) + "/create-product",
+          { method: "POST" }
+        );
+        const expected = Number(verified.selling_selection?.selected_count || 0);
+        if (!result.already_linked && Number(result.mapped_variants) !== expected) {
+          throw new Error("Completeful variant mapping is incomplete. Expected " + expected +
+            " variants, received " + Number(result.mapped_variants || 0) + ".");
+        }
+      }
+      const refreshed = await adminFetch("/api/admin/products/" + productId);
+      if (!refreshed.fulfillment?.completeful_store_product_id) {
+        throw new Error("Completeful did not return a linked supplier product.");
+      }
+      showNote("Supplier product ready. Checking the storefront listing…", "info");
+      await adminFetch(
+        "/api/admin/product-studio/drafts/" + encodeURIComponent(supplierDraftId) + "/publish",
+        { method: "POST" }
+      );
+      const live = await adminFetch("/api/admin/products/" + productId);
+      if (live.product?.status !== "active") {
+        throw new Error("Storefront publication did not persist.");
+      }
+      await loadProduct();
+      showNote("Published successfully with " + (live.variants?.length || 0) + " supplier variants.", "success");
+      return;
+    }
+    productSlug = stored.slug;
+    updateHeaderTitle(stored.title);
     updateSeoPreview();
-    setDirty(false);
-    showNote("Product saved.", "success");
+    renderStudioDesign(verified.design_draft, verified.fulfillment, verified.source, verified.selling_selection);
+    const additionalEdits = JSON.stringify(collectPayload()) !== saveSnapshot;
+    updateVariantOriginals(payload.variants);
+    setDirty(additionalEdits);
+    syncStatusUi();
+    showNote(additionalEdits ? "Earlier changes saved; newer edits still need saving." :
+      "Product saved and verified.", "success");
   } catch (err) {
-    showNote(err.message, "error");
-    setDirty(true);
+    if (publishSupplier && detailsSaved) {
+      // The product details were persisted. Do not report them as unsaved merely
+      // because a later provider operation or storefront publication failed.
+      document.getElementById("status-sidebar").value = "draft";
+      syncStatusUi();
+      saveFailed = false;
+      setDirty(JSON.stringify(collectPayload()) !== saveSnapshot);
+      showNote("Saved as Draft. Publication couldn't finish: " + (err.message || "Unknown error") +
+        ". Your artwork, price and selected supplier variants are retained. Retry Publish once the issue is resolved.", "error");
+    } else {
+      saveFailed = true;
+      showNote(err.message, "error");
+      setDirty(true);
+    }
   } finally {
     saveInFlight = false;
-    document.getElementById("save-btn").textContent = isNew ? "Save product" : "Save";
     setDirty(dirty);
   }
 }
 
-document.getElementById("save-btn").addEventListener("click", saveProduct);
-
-document.getElementById("duplicate-btn")?.addEventListener("click", () => {
-  alert("Duplicate product is coming soon.");
+document.getElementById("save-btn").addEventListener("click", () => saveProduct());
+document.getElementById("publish-btn")?.addEventListener("click", () => {
+  if (saveInFlight) return;
+  document.getElementById("status-sidebar").value = "active";
+  saveFailed = false;
+  setDirty(true);
+  syncStatusUi();
+  saveProduct();
+});
+document.getElementById("discard-btn")?.addEventListener("click", async () => {
+  if (!dirty || saveInFlight) return;
+  if (!confirm("Discard unsaved changes and restore the last saved product details?")) return;
+  saveFailed = false;
+  if (isNew) {
+    window.location.assign("/admin/products");
+    return;
+  }
+  await loadProduct();
+  showNote("Restored last saved product details.", "success");
 });
 
 document.getElementById("more-btn")?.addEventListener("click", (e) => {
@@ -823,8 +1284,41 @@ document.getElementById("add-variant-btn")?.addEventListener("click", async () =
   }
 });
 
+document.getElementById("new-collection-btn")?.addEventListener("click", async () => {
+  if (isNew) return;
+  const input = document.getElementById("new-collection-name");
+  const title = input.value.trim();
+  if (!title) {
+    showNote("Enter a collection name.", "error");
+    return;
+  }
+  const button = document.getElementById("new-collection-btn");
+  button.disabled = true;
+  try {
+    const { collection } = await adminFetch("/api/admin/collections", {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        status: document.getElementById("new-collection-status").value,
+      }),
+    });
+    availableCollections.push(collection);
+    selectedCollectionIds.add(Number(collection.id));
+    input.value = "";
+    saveFailed = false;
+    renderCollections();
+    setDirty(true);
+    showNote("Collection created. Save product details to assign this product.", "success");
+  } catch (error) {
+    showNote(error.message || "Collection creation failed", "error");
+  } finally {
+    button.disabled = false;
+  }
+});
+
 bindDirtyFields();
 bindMediaToolbar();
+loadCollections();
 loadProduct();
 </script>
 </body>

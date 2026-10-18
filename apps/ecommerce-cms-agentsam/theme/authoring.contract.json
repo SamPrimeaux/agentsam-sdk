@@ -1,0 +1,451 @@
+{
+  "schema": "agentsam.theme-authoring.v1",
+  "version": "1.1.0",
+  "authority": {
+    "page": "cms_pages",
+    "section_instance": "cms_page_sections",
+    "block_instance": "cms_section_blocks",
+    "definition": "cms_definitions",
+    "implementation": "cms_artifacts",
+    "revision": "cms_revisions",
+    "global": "cms_globals",
+    "media": "media_assets"
+  },
+  "composition": {
+    "hierarchy": [
+      "page",
+      "section",
+      "block",
+      "setting"
+    ],
+    "definition_kinds": [
+      "section",
+      "block"
+    ],
+    "definition_origins": [
+      "built_in",
+      "package",
+      "imported",
+      "generated",
+      "app"
+    ],
+    "required_identity": [
+      "definition_key",
+      "version",
+      "kind"
+    ],
+    "instance_identity": [
+      "id",
+      "definition_key",
+      "definition_version"
+    ],
+    "settings_are_public_api": true,
+    "stable_instance_ids": true,
+    "resource_data_as_references": true,
+    "definition_vs_instance": {
+      "definition_answers": "what reusable semantic component is this",
+      "instance_answers": "where is it placed and what values are configured",
+      "origins_are_provenance_not_editor_types": true
+    },
+    "static_dynamic_policy": {
+      "policy_owner": "definition",
+      "static_slot": {
+        "placement": "definition_owned",
+        "stable_identity_required": true,
+        "settings_editable": true,
+        "merchant_reorderable": false,
+        "merchant_removable": false
+      },
+      "dynamic_slot": {
+        "placement": "merchant_managed",
+        "eligibility": "definition.allowed_blocks",
+        "maximum": "definition.max_blocks",
+        "duplicateable": true,
+        "reorderable": true
+      },
+      "status": "definition-level target; verify runtime enforcement before relying on it"
+    }
+  },
+  "editor": {
+    "working_revision": "auto_restore_or_create",
+    "autosave": "private",
+    "published_mutation": "publish_only",
+    "catalog_preview": "same_renderer_as_storefront",
+    "catalog_contexts": [
+      "sections",
+      "blocks",
+      "apps"
+    ],
+    "block_eligibility": "section_definition.allowed_blocks",
+    "selection": "stable_across_assistant_toggle",
+    "generated_is_native": true
+  },
+  "artifact": {
+    "implementation_storage": "cms_artifacts/R2",
+    "instance_values_storage": "cms_page_sections or cms_section_blocks",
+    "shared_values_storage": "cms_globals",
+    "media_storage": "media_assets",
+    "namespace_prefix": "agentsam_gen_",
+    "immutable_versions": true,
+    "scope_styles_to_instance": true,
+    "require_reduced_motion": true,
+    "selector_scope": {
+      "every_selector_rooted_in_placed_instance_scope": true,
+      "global_selectors": "forbidden",
+      "allowed_exceptions": [
+        "scoped_at_rules",
+        "namespaced_keyframes"
+      ]
+    },
+    "visual_settings": "scoped_custom_properties",
+    "provenance_is_metadata_not_namespace": true
+  },
+  "agent": {
+    "before_edit": [
+      "inspect_existing_owner",
+      "resolve_definition",
+      "read_settings_schema",
+      "read_current_revision",
+      "read_authoring_contract_version",
+      "resolve_package_authority",
+      "check_for_existing_semantic_definition"
+    ],
+    "generate": [
+      "classify_implementation",
+      "propose",
+      "temporary_tree_entry",
+      "implement",
+      "normalize",
+      "validate",
+      "store_immutable_artifact",
+      "register_definition",
+      "insert_instance",
+      "focus_inspector"
+    ],
+    "followup": "version_existing_definition_unless_semantic_type_changes",
+    "forbidden_types": [
+      "custom",
+      "ai-section",
+      "imported-section",
+      "legacy-section"
+    ],
+    "forbidden_new_tables": [
+      "cms_section_templates",
+      "cms_generated_sections",
+      "cms_custom_sections",
+      "cms_ai_sections",
+      "cms_imported_sections"
+    ],
+    "required_rules": [
+      "definition_key_is_semantic_not_instance_namespaced",
+      "artifact_static_must_be_script_free",
+      "artifact_interactive_is_unavailable_until_runtime_contract_is_wired",
+      "declared_setting_schema_is_authoritative",
+      "visual_settings_bind_through_instance_scoped_css_custom_properties",
+      "mined_code_requires_source_provenance_and_explicit_promotion"
+    ]
+  },
+  "verification": [
+    "definition_schema",
+    "allowed_blocks",
+    "artifact_integrity",
+    "stable_ids",
+    "namespace_isolation",
+    "scoped_css",
+    "settings_roundtrip",
+    "media_references",
+    "accessibility",
+    "responsive",
+    "reduced_motion",
+    "duplicate_instance",
+    "editor_reload",
+    "private_autosave",
+    "publish_only",
+    "implementation_class_supported",
+    "artifact_contract_version_supported",
+    "package_authority_checked",
+    "duplicate_semantic_definition_checked",
+    "declared_settings_schema_preserved",
+    "visual_settings_have_scoped_css_variable_bindings",
+    "interactive_capabilities_declared",
+    "source_provenance_present",
+    "crawl_receipt_and_relationship_evidence_present_for_mined_code"
+  ],
+  "ownership": {
+    "package_definition_source": "owning_package_manifest",
+    "installed_runtime_projection": "cms_definitions",
+    "package_projection_is_not_upstream_authority": true,
+    "artifact_id_nullable": true,
+    "definition_runtime_fields": [
+      "implementation_class",
+      "artifact_contract_version",
+      "capabilities_required",
+      "package_key"
+    ],
+    "do_not_add_cms_tables_for_provenance_or_origin": true
+  },
+  "implementation": {
+    "definition_field": "implementation_class",
+    "classes": {
+      "native": {
+        "artifact_required": false,
+        "status": "supported",
+        "description": "Theme/runtime semantic primitive with no generated implementation artifact required."
+      },
+      "artifact_static": {
+        "artifact_required": true,
+        "formats": [
+          "html",
+          "css"
+        ],
+        "javascript": "forbidden",
+        "status": "supported",
+        "description": "Current safe generated-section lane; script-free implementation artifact."
+      },
+      "artifact_interactive": {
+        "artifact_required": true,
+        "javascript": "capability_declared",
+        "status": "not_wired",
+        "acceptance": "reject_until_interactive_runtime_exists",
+        "description": "Do not infer that the older generated-block harness is installable through the production section acceptance path."
+      },
+      "app": {
+        "artifact_required": false,
+        "status": "separate_app_contract",
+        "owner": "app_contract"
+      }
+    },
+    "artifact_id_required_for": [
+      "artifact_static",
+      "artifact_interactive"
+    ],
+    "artifact_id_nullable_for": [
+      "native",
+      "app"
+    ],
+    "artifact_compatibility": {
+      "version_source": "artifact_manifest.schema",
+      "version_required": true,
+      "unknown_versions": "reject",
+      "accepted_artifacts_are_immutable": true,
+      "upgrade": "create a new compatible artifact version; never rewrite an accepted artifact in place"
+    },
+    "interactive_capabilities": {
+      "declaration_required": true,
+      "allowlist": [
+        "dom.observe",
+        "scroll.read",
+        "timer",
+        "navigation"
+      ],
+      "network": "denied",
+      "global_mutation": "denied",
+      "status": "not_wired"
+    }
+  },
+  "settings_contract": {
+    "schema_authority": "definition.settings_schema",
+    "schema_version_required": true,
+    "declared_type_is_authoritative": true,
+    "initial_values_define_schema": false,
+    "preserve_declared_schema": true,
+    "bindings": {
+      "content": {
+        "mechanism": "data-cms",
+        "attributes": [
+          "textContent",
+          "href",
+          "src",
+          "alt",
+          "title"
+        ],
+        "resource_values": "references_only"
+      },
+      "visual": {
+        "mechanism": "scoped_css_custom_property",
+        "pattern": "--__UID__-setting-<key>",
+        "scope": "placed_instance",
+        "status": "contract_target_runtime_support_pending"
+      }
+    },
+    "prefer_theme_or_global_tokens_for": [
+      "color",
+      "font_role",
+      "typography_preset",
+      "radius",
+      "spacing",
+      "shared_layout"
+    ],
+    "never_infer_public_type_from_initial_value": true,
+    "contract_field_types": [
+      "text",
+      "textarea",
+      "rich_text",
+      "number",
+      "range",
+      "boolean",
+      "select",
+      "color",
+      "media",
+      "video",
+      "link",
+      "font_role",
+      "typography_preset",
+      "product",
+      "collection",
+      "variant",
+      "alignment",
+      "spacing"
+    ],
+    "runtime_must_reject_unimplemented_field_types": true,
+    "schema_status": "typed schema is the target authority; current acceptance may support only a subset"
+  },
+  "identity": {
+    "definition_key": "stable_semantic_kebab_case; never namespaced per instance",
+    "placed_instance_key": "stable section_key or block_key; duplicate creates a new placed identity",
+    "compatibility_alias": "blockId",
+    "preserve_compatibility_alias_during_v1": true,
+    "generated_namespace": {
+      "semantic_namespace": "agentsam",
+      "per_instance_prefix": "agentsam_gen_",
+      "applies_to": "per_instance_implementation_ids_classes_custom_elements_and_css_variables_only",
+      "duplicate": "new_instance_namespace_reuses_immutable_artifact"
+    }
+  },
+  "provenance": {
+    "generator_namespace": "agentsam",
+    "provider_and_model_are_provenance_not_namespace": true,
+    "generated_fields": [
+      "generator",
+      "generation_id",
+      "source_agent",
+      "provider",
+      "model",
+      "prompt_hash",
+      "source_ref",
+      "normalized_by",
+      "created_at"
+    ],
+    "refurbished_fields": [
+      "source_repo",
+      "source_commit",
+      "source_path",
+      "source_hash",
+      "license_or_ownership_evidence",
+      "refurbishment_receipt"
+    ],
+    "missing_evidence": "mark_unverified; do_not_invent",
+    "generated_requirements_status": "target for accepted new artifacts; legacy records may lack these fields and must be marked unknown",
+    "refurbished_requirements_status": "required before promoting mined code"
+  },
+  "refurbishment": {
+    "discovery_authority": "AgentSam Machine/Repository adapters, outside the FNF Worker",
+    "fnf_role": "normalization_and_promotion_contract_for_theme_components",
+    "concepts": {
+      "scan": "enumerate a known container",
+      "crawl": "bounded seeded traversal of discovered relationships",
+      "index": "make discovered evidence searchable",
+      "inspect": "analyze evidence and ownership",
+      "refurbish": "propose a normalized reusable definition and artifact with provenance"
+    },
+    "intake_requires": [
+      "deterministic_crawl_receipt",
+      "source_resource_identity",
+      "relationship_evidence",
+      "source_provenance"
+    ],
+    "candidate_workflow": [
+      "inventory",
+      "fingerprint",
+      "build_relationship_graph",
+      "resolve_existing_owner",
+      "classify_semantic_component",
+      "normalize_settings_and_resources",
+      "verify",
+      "propose_patch",
+      "human_approve",
+      "promote"
+    ],
+    "discovery_is_read_only": true,
+    "promotion_mutates_runtime_only_after_approval": true,
+    "resource_kinds": [
+      "file",
+      "symbol",
+      "package",
+      "route",
+      "database_table",
+      "binding",
+      "worker",
+      "queue",
+      "r2_bucket",
+      "vector_index",
+      "cli_command",
+      "skill",
+      "plugin",
+      "theme_component"
+    ],
+    "relationship_kinds": [
+      "imports",
+      "depends_on",
+      "reads_from",
+      "writes_to",
+      "binds_to",
+      "serves",
+      "calls",
+      "references",
+      "owns",
+      "generated_by"
+    ],
+    "crawl_receipt_fields": [
+      "crawl_id",
+      "seed",
+      "resources_discovered",
+      "edges_discovered",
+      "errors",
+      "started_at",
+      "completed_at",
+      "snapshot_hash"
+    ],
+    "code_refinery": {
+      "passes": {
+        "inventory": "deterministic facts about files, packages, imports, exports, routes, schemas, bindings, commands, and tests",
+        "similarity": "candidate grouping from exact/normalized hashes, symbols, dependency signatures, AST fingerprints, and test evidence",
+        "refurbishment": "compare evidence and ownership, select a canonical owner, specify gaps, and prepare a reviewable migration proposal"
+      },
+      "candidate_record": {
+        "required": [
+          "capability_key",
+          "implementations",
+          "evidence_edges"
+        ],
+        "implementation_fields": [
+          "repository",
+          "commit",
+          "path",
+          "content_hash",
+          "license_or_ownership_evidence"
+        ],
+        "status_semantics": "similarity creates a candidate, not proof of equivalent behavior"
+      },
+      "fingerprints": [
+        "exact_hash",
+        "normalized_source_hash",
+        "ast_fingerprint",
+        "symbol_signature",
+        "dependency_signature",
+        "test_signature"
+      ],
+      "automatic_source_rewrite": "forbidden",
+      "human_approval_before_promotion": true
+    }
+  },
+  "maturity": {
+    "native_primitives": "supported",
+    "artifact_static": "current_script_free_acceptance_lane",
+    "artifact_interactive": "unavailable_until_runtime_contract_is_implemented",
+    "typed_settings": "not_fully_implemented; generated-section acceptance still infers some types from values",
+    "visual_css_variable_bindings": "contract_target_not_yet_integrated_end_to_end",
+    "repository_and_machine_crawl": "owned_by_shared_AgentSam_Machine_or_Repository; not_FNF",
+    "selector_scope": "strict in generated-section acceptance; legacy generated-block linter still needs the shared per-selector validator"
+  }
+}

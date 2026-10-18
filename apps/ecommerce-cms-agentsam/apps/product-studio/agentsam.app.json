@@ -1,0 +1,120 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "product-studio",
+  "name": "Product Studio",
+  "role": "embedded-app",
+  "category": "commerce",
+  "status": "bundled",
+  "routes": [
+    "/admin/products/create",
+    "/admin/products/create/:productId",
+    "/admin/products/help/artwork"
+  ],
+  "provides": [
+    "commerce.product.draft",
+    "commerce.product.studio",
+    "commerce.catalog.browse",
+    "commerce.artwork.studio"
+  ],
+  "requires": [
+    "commerce.catalog.read"
+  ],
+  "optional": [
+    "media.assets",
+    "agentsam.mini-composer",
+    "agentsam.side-assistant"
+  ],
+  "implementation": {
+    "frontend": [
+      "frontend/src/pages/products/ProductStudioPage.tsx",
+      "frontend/src/pages/products/StudioWorkspace.tsx",
+      "frontend/src/pages/products/ArtworkHelpPage.tsx",
+      "frontend/src/pages/products/studio-*",
+      "frontend/src/pages/products/StudioIcon.tsx",
+      "frontend/src/pages/products/ProductImage.tsx",
+      "frontend/src/styles/product-studio.css"
+    ],
+    "backend": [
+      "backend/admin/product-studio.js",
+      "backend/admin/product-selling-selection.js",
+      "backend/admin/media-background.js"
+    ],
+    "packages": [
+      "packages/agentsam-merch",
+      "packages/agentsam-workbench"
+    ]
+  },
+  "navigation": {
+    "placement": "products"
+  },
+  "events": {
+    "listens": [
+      "agentsam:mini-open"
+    ],
+    "emits": [
+      "agentsam:mini-state"
+    ],
+    "notes": "The global top-bar crosshair dispatches a cancelable agentsam:mini-open; Product Studio claims it (preventDefault) and opens its own miniAgentSam composer with product/variant/print-area/artwork context. Product Studio emits agentsam:mini-state {open} so the crosshair can show its active state."
+  },
+  "agent": {
+    "tool_resolution": "agentsam_tools.capability_key",
+    "resource_scope": "current tenant + selected commerce/media resources",
+    "capabilities": {
+      "read": [
+        "commerce.catalog.read",
+        "commerce.catalog.search"
+      ],
+      "write": [
+        "commerce.design.create",
+        "commerce.product.sync",
+        "media.image.generate",
+        "media.image.background.remove",
+        "media.image.edit",
+        "media.image.upscale",
+        "commerce.artwork.preflight",
+        "commerce.artwork.prepare",
+        "commerce.mockup.render"
+      ],
+      "approval_required": [
+        "commerce.product.publish"
+      ],
+      "optional_tool_capabilities": [
+        "media.library.read",
+        "media.image.variant.plan",
+        "commerce.products.read"
+      ]
+    },
+    "notes": "Capabilities use the canonical domain namespace. Anything under execution.unfinished is declared but has NO agent-callable executor; search the code for #UNFINISHEDTOOLS. Planned definitions: backend/tools/packs/media.planned.ts. Findings: docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md.",
+    "execution": {
+      "callable_now": [
+        "commerce.catalog.read",
+        "commerce.catalog.search",
+        "media.library.read",
+        "commerce.products.read"
+      ],
+      "studio_only_not_agent_callable": [
+        "media.image.generate (chat route; OpenAI gpt-image-2 at 1024x1024; size/quality/background ignored)",
+        "media.image.background.remove (POST /api/admin/media/:id/remove-background)",
+        "commerce.artwork.prepare (browser canvas in StudioWorkspace)",
+        "commerce.mockup.render (admin route; first selected variant only; never run in production)"
+      ],
+      "provider_executor_pending": [
+        "commerce.design.create",
+        "commerce.product.sync",
+        "commerce.product.publish"
+      ],
+      "unfinished": [
+        "media.image.edit",
+        "media.image.upscale",
+        "commerce.artwork.preflight (pure core exists in packages/agentsam-merch; no tool wrapper)",
+        "commerce.mockup.render.per_color",
+        "commerce.design.print_files (multi-location)"
+      ]
+    },
+    "tracking": [
+      "tkt_13207989954e4171",
+      "tkt_a6482217d8ca4be4",
+      "tkt_f7caf8bc4f124de8"
+    ]
+  }
+}

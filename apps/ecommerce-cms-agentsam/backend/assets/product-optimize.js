@@ -1,39 +1,41 @@
 /**
- * Re-export Worker-safe asset planning + job runner into the ecommerce Worker tree.
+ * Worker-facing surface of the asset pipeline (planning, jobs, storage bootstrap).
  * Raster transforms run in-Worker via @jsquash; CLI can also drain with Sharp.
  */
 export {
   planProductAssetOptimization,
   planAssetIngest,
-} from "../../shared/assets/worker-hook.js";
+} from "./worker-hook.js";
 export {
   buildAssetTags,
   inferProductContextFromKey,
-} from "../../shared/assets/tags.js";
+} from "./tags.js";
 export {
-  ASSET_STORAGE,
+  ASSET_DEFAULTS,
+  assetStorage,
   publicUrlsForKey,
   deliveryUrlForKey,
   mediaPathForKey,
-} from "../../shared/assets/config.js";
+} from "./config.js";
 export {
   classifyMediaAsset,
   routePipelineWorkflow,
   guessMimeFromKey,
   canonicalKeyForPromotion,
-} from "../../shared/assets/classify.js";
+} from "./classify.js";
 export {
   buildDeterministicSuggestions,
   applyAcceptedSuggestions,
-} from "../../shared/assets/suggestions.js";
+} from "./suggestions.js";
 export {
   createAssetJob,
   enqueueAssetJob,
   newJobId,
   getAssetJob,
-} from "../../shared/assets/jobs.js";
+} from "./jobs.js";
 export {
   processAssetJobById,
   drainAssetJobs,
   finalizeMediaAsset,
-} from "../../shared/assets/process-job.js";
+} from "./process-job.js";
+export { ensureAssetStorage } from "./runtime.js";

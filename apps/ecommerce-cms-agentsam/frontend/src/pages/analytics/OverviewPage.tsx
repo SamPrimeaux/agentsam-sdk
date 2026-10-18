@@ -66,12 +66,13 @@ export default function OverviewPage({ range, tenant = "all" }: PageProps) {
       <div className="page-head">
         <div>
           <h1 className="page-title">Overview</h1>
-          <p className="page-sub">Store performance & traffic • Last refreshed 12s ago</p>
+          <p className="page-sub" role="status">Illustrative analytics preview · Sample figures, not live merchant metrics</p>
         </div>
         <div className="page-actions">
-          <button className="btn ghost"><Icon name="filter" size={12} /> Filters</button>
-          <button className="btn"><Icon name="download" size={12} /> Export</button>
-          <button className="btn primary"><Icon name="plus" size={12} /> New report</button>
+          <span className="pill" aria-label="Illustrative data only">Sample data</span>
+          <button className="btn ghost" disabled title="Available when a real analytics source is connected"><Icon name="filter" size={12} /> Filters</button>
+          <button className="btn" disabled title="Cannot export illustrative data"><Icon name="download" size={12} /> Export</button>
+          <button className="btn primary" disabled title="Requires a connected reporting source"><Icon name="plus" size={12} /> New report</button>
         </div>
       </div>
 
@@ -94,7 +95,7 @@ export default function OverviewPage({ range, tenant = "all" }: PageProps) {
               <div className="card-sub">Requests across storefront and admin</div>
             </div>
             <div className="row gap-2">
-              <span className="pill"><span className="live-dot" /> Live</span>
+              <span className="pill">Example trend</span>
               <div className="seg">
                 <button className="active">Requests</button>
                 <button>Bandwidth</button>

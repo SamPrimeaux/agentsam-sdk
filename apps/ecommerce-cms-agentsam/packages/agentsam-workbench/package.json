@@ -1,0 +1,20 @@
+{
+  "name": "@inneranimalmedia/agentsam-workbench",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "src",
+    "agentsam.app.json",
+    "agentsam.feature.json",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./src/index.js",
+    "./mini": "./src/mini-agentsam.js",
+    "./composer": "./src/composer.js",
+    "./media": "./src/media-asset-workbench.js"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs"
+  }
+}

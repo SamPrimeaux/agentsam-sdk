@@ -1,3 +1,5 @@
+import { removeMediaBackground } from "./media-background.js";
+import { editImageWithPrompt, resampleImage, listEditableImageModels } from "../media/image-operations.js";
 import {
   hashPassword,
   verifyPassword,
@@ -31,7 +33,9 @@ import {
 } from "../lib/mail-mailboxes.js";
 import {
   uploadMedia,
+  addMediaReviewComment,
   listMedia,
+  getMediaAsset,
   listMediaAlbums,
   createMediaAlbum,
   updateMediaAlbum,
@@ -48,8 +52,11 @@ import {
   setPrimaryProductImage,
 } from "./media.js";
 import { planProductAssetOptimization } from "../assets/product-optimize.js";
+import { groupProductInventory, resolveProductSource, validateInventoryAdjustment } from "../../packages/agentsam-merch/src/product-spine.js";
 import { handleAdminCmsApi } from "../cms/api.js";
 import { getFinanceAnalytics } from "./analytics-finance.js";
+import { getHealthAnalytics } from "./analytics-health.js";
+import { fetchCloudflareLiveLogs } from "./analytics-live-logs.js";
 import {
   agentsamChat,
   agentsamAiModelsList,
@@ -85,12 +92,18 @@ import {
   agentsamGithubOAuthStatus,
 } from "./agentsam-github.js";
 import { onlineStoreOverview, getStorePreferences, postStorePreferences } from "./store.js";
+import { getStoreTheme, publishStoreTheme, setThemePublishReady, selectThemePreview } from "./themes.js";
+// The second store_theme_pages editor is retired; Theme Studio uses CMS routes.
 import { retryAssetJob, runAdminCompaction } from "./ops.js";
 import { handleGrowthApi } from "./growth.js";
 import { handleDiscountsApi } from "./discounts.js";
 import { handleCompletefulAdminApi } from "./completeful.js";
 import { handleProductStudioAdminApi } from "./product-studio.js";
-import { getBrandWorkspace, patchBrandWorkspace } from "./brand.js";
+import { readProductSupplierSelection } from "./product-selling-selection.js";
+import { getBrandWorkspace, patchBrandWorkspace, searchBrandAssets } from "./brand.js";
+import { getStoreSearchDiscovery } from "./search-discovery.js";
+import { handleGenerateBlockRequest } from "./generate-block-stream.js";
+import { handleWorkersAiCodeProvider } from "./code-provider-workers-ai.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -236,7 +249,40 @@ async function listProducts(request, env) {
   return json({ ok: true, products: results });
 }
 
-async function getProduct(request, env, id) {
+// Admin merchandising uses the existing storefront collections and membership tables.
+export async function listAdminCollections(request, env) {
+  const { results } = await env.DB.prepare(
+    "SELECT c.*, COUNT(cp.product_id) AS product_count FROM store_collections c " +
+    "LEFT JOIN store_collection_products cp ON cp.collection_id = c.id " +
+    "GROUP BY c.id ORDER BY c.sort_order ASC, lower(c.title) ASC"
+  ).all();
+  return json({ ok: true, collections: results || [] });
+}
+
+export async function createAdminCollection(request, env) {
+  const body = await readJson(request);
+  const title = String(body?.title || "").trim();
+  if (!title || title.length > 120) return json({ error: "Collection name is required (maximum 120 characters)" }, { status: 400 });
+  const slug = slugify(body?.slug || title);
+  if (!slug || slug.length > 180) return json({ error: "Invalid collection URL handle" }, { status: 400 });
+  const status = body?.status === "active" ? "active" : "draft";
+  try {
+    const result = await env.DB.prepare(
+      "INSERT INTO store_collections(slug,title,description,image_url,seo_title,seo_description,status,updated_at) " +
+      "VALUES (?,?,?,?,?,?,?,datetime('now'))"
+    ).bind(slug, title, String(body.description || ""), body.image_url || null,
+      body.seo_title || null, body.seo_description || null, status).run();
+    const collection = await env.DB.prepare("SELECT * FROM store_collections WHERE id = ?")
+      .bind(result.meta.last_row_id).first();
+    return json({ ok: true, collection }, { status: 201 });
+  } catch (error) {
+    const message = /unique|constraint/i.test(String(error?.message || error))
+      ? "A collection with that URL handle already exists" : "Could not create collection";
+    return json({ error: message }, { status: 409 });
+  }
+}
+
+export async function getProduct(request, env, id) {
   const product = await env.DB.prepare(`SELECT * FROM products WHERE id = ?`).bind(id).first();
   if (!product) return json({ error: "Not found" }, { status: 404 });
 
@@ -246,7 +292,27 @@ async function getProduct(request, env, id) {
     .bind(id)
     .all();
 
-  return json({ ok: true, product, variants });
+  const designDraft = await env.DB.prepare(
+    "SELECT id, product_id, completeful_catalog_product_id, state, version, selected_variant_ids_json, original_media_asset_id, prepared_media_asset_id, preview_media_asset_id, completeful_design_id, completeful_render_status FROM product_studio_drafts WHERE product_id = ?"
+  ).bind(id).first();
+  const sellingSelection = designDraft ? await readProductSupplierSelection(env, designDraft) : null;
+  let fulfillment = null;
+  try {
+    fulfillment = await env.DB.prepare(
+      "SELECT completeful_store_product_id, completeful_catalog_product_id, sync_status FROM completeful_product_links WHERE product_id = ? ORDER BY id DESC LIMIT 1"
+    ).bind(id).first();
+  } catch {
+    // Manual product editing still works without a connected provider table.
+  }
+  const { results: memberships } = await env.DB.prepare(
+    "SELECT collection_id FROM store_collection_products WHERE product_id = ? ORDER BY sort_order, collection_id"
+  ).bind(id).all();
+  return json({ ok: true, product, variants, design_draft: designDraft || null,
+    selling_selection: sellingSelection, fulfillment: fulfillment || null,
+    source: resolveProductSource(product, fulfillment || (designDraft?.completeful_catalog_product_id
+      ? { completeful_catalog_product_id: designDraft.completeful_catalog_product_id, sync_status: "not_connected" }
+      : null)),
+    collection_ids: (memberships || []).map((row) => Number(row.collection_id)) });
 }
 
 async function createProduct(request, env) {
@@ -260,13 +326,15 @@ async function createProduct(request, env) {
 
   try {
     const result = await env.DB.prepare(
-      `INSERT INTO products (slug, title, description, collection, price_cents, image_url, status, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+      `INSERT INTO products (slug, title, description, seo_title, seo_description, collection, price_cents, image_url, status, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
     )
       .bind(
         slug,
         String(body.title).trim(),
         body.description || null,
+        body.seo_title || null,
+        body.seo_description || null,
         body.collection || null,
         priceCents,
         body.image_url || null,
@@ -317,7 +385,7 @@ function extractR2KeyFromMediaUrl(url) {
   if (!s) return null;
   const mediaIdx = s.indexOf("/media/");
   if (mediaIdx !== -1) return s.slice(mediaIdx + "/media/".length).replace(/^\/+/, "");
-  const cdn = "https://assets.ember.example/";
+  const cdn = "https://assets.fuelnfreetime.com/";
   if (s.startsWith(cdn)) return s.slice(cdn.length);
   if (!s.includes("://") && !s.startsWith("/")) return s;
   return null;
@@ -340,53 +408,144 @@ function productDbError(err, fallback) {
   return fallback;
 }
 
-async function updateProduct(request, env, id) {
+export async function updateProduct(request, env, id) {
   const body = await readJson(request);
   if (!body) return json({ error: "Invalid body" }, { status: 400 });
-  if (!String(body.title || "").trim()) {
-    return json({ error: "Title required" }, { status: 400 });
-  }
+  const title = String(body.title || "").trim();
+  if (!title) return json({ error: "Title required" }, { status: 400 });
+
+  const previous = await env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(id).first();
+  if (!previous) return json({ error: "Product not found" }, { status: 404 });
 
   const priceCents = parsePriceCents(body.price_cents ?? body.price ?? 0);
-  const slug = body.slug?.trim();
-  const title = String(body.title).trim();
+  const slug = String(body.slug || previous.slug).trim().toLowerCase();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 180) {
+    return json({ error: "Use a URL handle with letters, numbers and hyphens" }, { status: 400 });
+  }
+  const seoTitle = String(body.seo_title ?? previous.seo_title ?? "").trim();
+  const seoDescription = String(body.seo_description ?? previous.seo_description ?? "").trim();
+  if (seoTitle.length > 180 || seoDescription.length > 320) {
+    return json({ error: "SEO title must be under 180 characters and description under 320" }, { status: 400 });
+  }
+  const status = body.status || previous.status || "draft";
 
   try {
-    if (slug) {
-      await env.DB.prepare(
-        `UPDATE products
-         SET slug = ?, title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
-         WHERE id = ?`
-      )
-        .bind(
-          slug,
-          title,
-          body.description || null,
-          body.collection || null,
-          priceCents,
-          body.image_url || null,
-          body.status || "draft",
-          id
-        )
-        .run();
-    } else {
-      await env.DB.prepare(
-        `UPDATE products
-         SET title = ?, description = ?, collection = ?, price_cents = ?, image_url = ?, status = ?, updated_at = datetime('now')
-         WHERE id = ?`
-      )
-        .bind(
-          title,
-          body.description || null,
-          body.collection || null,
-          priceCents,
-          body.image_url || null,
-          body.status || "draft",
-          id
-        )
-        .run();
+    if (status === "active") {
+      const design = await env.DB.prepare(
+        "SELECT id FROM product_studio_drafts WHERE product_id = ?"
+      ).bind(id).first();
+      if (design) {
+        const link = await env.DB.prepare(
+          "SELECT id FROM completeful_product_links WHERE product_id = ? AND completeful_store_product_id IS NOT NULL LIMIT 1"
+        ).bind(id).first();
+        const count = await env.DB.prepare(
+          "SELECT COUNT(*) AS count FROM product_variants WHERE product_id = ?"
+        ).bind(id).first();
+        const issues = [];
+        if (!link) issues.push("Create and map this product with Completeful before publishing");
+        if (Number(count?.count || 0) < 1) issues.push("Product needs at least one mapped variant");
+        if (!(previous.image_url || body.image_url)) issues.push("Attach an approved product image");
+        if (priceCents <= 0) issues.push("Retail price must be above zero");
+        if (issues.length) return json({
+          error: "Cannot publish this design yet: " + issues.join("; "), problems: issues
+        }, { status: 409 });
+      }
     }
 
+    const update = env.DB.prepare(
+      `UPDATE products SET slug = ?, title = ?, description = ?, seo_title = ?, seo_description = ?,
+       collection = ?, price_cents = ?, image_url = COALESCE(?, image_url),
+       status = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(
+      slug, title, body.description || null, seoTitle || null, seoDescription || null,
+      body.collection || null, priceCents, body.image_url || null, status, id
+    );
+    const changesSlug = previous.status === "active" && previous.slug !== slug;
+    const writes = [update];
+    if (changesSlug) {
+      // D1 batch is a transaction: never break a public URL without its redirect.
+      const redirect = env.DB.prepare(
+        `INSERT INTO product_slug_redirects (old_slug, product_id)
+         VALUES (?, ?)
+         ON CONFLICT(old_slug) DO UPDATE SET product_id = excluded.product_id`
+      ).bind(previous.slug, id);
+      writes.push(redirect);
+    }
+    if (Array.isArray(body.collection_ids)) {
+      const ids = [...new Set(body.collection_ids.map(Number))];
+      if (ids.length > 100 || ids.some((n) => !Number.isSafeInteger(n) || n <= 0)) {
+        return json({ error: "Invalid collection selection" }, { status: 400 });
+      }
+      if (ids.length) {
+        const placeholders = ids.map(() => "?").join(",");
+        const { results: found } = await env.DB.prepare(
+          "SELECT id FROM store_collections WHERE id IN (" + placeholders + ")"
+        ).bind(...ids).all();
+        if ((found || []).length !== ids.length) {
+          return json({ error: "A selected collection no longer exists" }, { status: 400 });
+        }
+      }
+      writes.push(env.DB.prepare("DELETE FROM store_collection_products WHERE product_id = ?").bind(id));
+      ids.forEach((collectionId, index) => writes.push(
+        env.DB.prepare(
+          "INSERT INTO store_collection_products (collection_id, product_id, sort_order) VALUES (?, ?, ?)"
+        ).bind(collectionId, id, index)
+      ));
+    }
+    if (Array.isArray(body.variants)) {
+      if (body.variants.length > 100) {
+        return json({ error: "Too many variant changes" }, { status: 400 });
+      }
+      const seenVariants = new Set();
+      for (const patch of body.variants) {
+        const variantId = Number(patch?.id);
+        if (!Number.isSafeInteger(variantId) || variantId <= 0 || seenVariants.has(variantId)) {
+          return json({ error: "Invalid or duplicate variant ID" }, { status: 400 });
+        }
+        seenVariants.add(variantId);
+        const row = await env.DB.prepare(
+          "SELECT id FROM product_variants WHERE id = ? AND product_id = ?"
+        ).bind(variantId, id).first();
+        if (!row) return json({ error: "Variant does not belong to this product" }, { status: 400 });
+        const updates = [];
+        const values = [];
+        for (const column of ["sku", "size", "color", "price_cents", "inventory_qty"]) {
+          if (!Object.hasOwn(patch, column)) continue;
+          let value = patch[column];
+          if (column === "sku") {
+            value = String(value || "").trim();
+            if (!value || value.length > 160) {
+              return json({ error: "Variant SKU is required (maximum 160 characters)" }, { status: 400 });
+            }
+          } else if (column === "size" || column === "color") {
+            value = String(value || "").trim() || null;
+            if (value && value.length > 120) {
+              return json({ error: "Variant option is too long" }, { status: 400 });
+            }
+          } else if (column === "price_cents") {
+            if (value != null && (!Number.isSafeInteger(Number(value)) || Number(value) < 0)) {
+              return json({ error: "Variant price must be a valid nonnegative cent amount" }, { status: 400 });
+            }
+            value = value == null ? null : Number(value);
+          } else if (column === "inventory_qty") {
+            if (!Number.isSafeInteger(Number(value)) || Number(value) < 0) {
+              return json({ error: "Inventory must be a nonnegative whole number" }, { status: 400 });
+            }
+            value = Number(value);
+          }
+          updates.push(column + " = ?");
+          values.push(value);
+        }
+        if (updates.length) {
+          writes.push(env.DB.prepare(
+            "UPDATE product_variants SET " + updates.join(", ") +
+            ", updated_at = datetime('now') WHERE id = ? AND product_id = ?"
+          ).bind(...values, variantId, id));
+        }
+      }
+    }
+    // One D1 batch commits product, variants, redirects, and collections together.
+    await env.DB.batch(writes);
     return json({ ok: true });
   } catch (err) {
     console.error("[products/update]", err?.message || err);
@@ -448,19 +607,34 @@ async function updateVariant(request, env, id) {
   return json({ ok: true });
 }
 
-async function patchVariantInventory(request, env, id) {
+export async function patchVariantInventory(request, env, id) {
   const body = await readJson(request);
-  if (!body || body.inventory_qty == null) {
-    return json({ error: "inventory_qty required" }, { status: 400 });
+  const variantId = Number(id);
+  if (!Number.isSafeInteger(variantId) || variantId <= 0) {
+    return json({ error: "Invalid variant" }, { status: 400 });
   }
-
-  await env.DB.prepare(
-    `UPDATE product_variants SET inventory_qty = ?, updated_at = datetime('now') WHERE id = ?`
-  )
-    .bind(Math.round(Number(body.inventory_qty)), id)
-    .run();
-
-  return json({ ok: true });
+  let adjustment;
+  try {
+    adjustment = validateInventoryAdjustment(body?.inventory_qty, body?.expected_inventory_qty);
+  } catch (error) {
+    return json({ error: error.message }, { status: 400 });
+  }
+  const { quantity: qty, expected } = adjustment;
+  const sql = expected == null
+    ? "UPDATE product_variants SET inventory_qty = ?, updated_at = datetime('now') WHERE id = ?"
+    : "UPDATE product_variants SET inventory_qty = ?, updated_at = datetime('now') WHERE id = ? AND inventory_qty = ?";
+  const args = expected == null ? [qty, variantId] : [qty, variantId, Number(expected)];
+  const outcome = await env.DB.prepare(sql).bind(...args).run();
+  if (Number(outcome.meta?.changes || 0) !== 1) {
+    const actual = await env.DB.prepare("SELECT id, inventory_qty FROM product_variants WHERE id = ?")
+      .bind(variantId).first();
+    if (!actual) return json({ error: "Variant no longer exists" }, { status: 404 });
+    return json({
+      error: "Inventory changed since you opened this product. Reload the latest quantity before saving.",
+      code: "stale_inventory", inventory_qty: actual.inventory_qty,
+    }, { status: 409 });
+  }
+  return json({ ok: true, id: variantId, inventory_qty: qty });
 }
 
 async function deleteVariant(request, env, id) {
@@ -470,15 +644,29 @@ async function deleteVariant(request, env, id) {
 
 // ----- Inventory (flat view) -----
 
-async function listInventory(request, env) {
+export async function listInventory(request, env) {
   const { results } = await env.DB.prepare(
     `SELECT v.id, v.sku, v.size, v.color, v.inventory_qty, v.price_cents AS variant_price_cents,
             p.id AS product_id, p.title AS product_title, p.price_cents AS product_price_cents, p.status
      FROM product_variants v
      JOIN products p ON p.id = v.product_id
-     ORDER BY v.inventory_qty ASC, p.title ASC`
+     ORDER BY p.title ASC, v.id ASC`
   ).all();
-  return json({ ok: true, inventory: results });
+  // Existing provider linkage is optional; it never becomes product identity.
+  // A local/wholesale product without a connector remains merchant-managed.
+  let links = [];
+  let providerLinksAvailable = true;
+  try {
+    const query = await env.DB.prepare(
+      "SELECT product_id, completeful_store_product_id, completeful_catalog_product_id, sync_status FROM completeful_product_links ORDER BY id DESC"
+    ).all();
+    links = query.results || [];
+  } catch {
+    providerLinksAvailable = false;
+  }
+  return json({ ok: true, inventory: results || [],
+    groups: groupProductInventory(results || [], links),
+    provider_links_available: providerLinksAvailable });
 }
 
 // ----- Orders -----
@@ -530,13 +718,58 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
   if (path === "/api/admin/overview" && method === "GET") return overview(request, env);
   if (path === "/api/admin/store/online" && method === "GET") {
-    return onlineStoreOverview(env);
+    return onlineStoreOverview(env, user.account_id);
   }
   if (path === "/api/admin/store/preferences" && method === "GET") {
     return getStorePreferences(env);
   }
   if (path === "/api/admin/store/preferences" && method === "POST") {
     return postStorePreferences(request, env);
+  }
+  if (path === "/api/admin/store/crawler" && method === "GET") {
+    return getStoreSearchDiscovery(env);
+  }
+
+  if (path === "/api/admin/store/theme-selection" && method === "PUT") {
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const result = await selectThemePreview(env, body.slug, user.account_id,
+      body.expected_version ?? null);
+    return json(result, { status: result.status || 200 });
+  }
+
+  // Retired: the old package workspace depended on store_theme_pages, a
+  // second and uninstalled CMS table family. Do not continue its write path.
+  if (/^\/api\/admin\/store\/themes\/[^/]+\/(?:pages(?:\/[a-z0-9-]+)?|preview)$/.test(path)) {
+    return json({ error: "Use the canonical CMS Theme Studio for page and theme editing.",
+      edit_href: "/admin/theme-editor?slug=shop", code: "retired_theme_workspace" }, { status: 410 });
+  }
+
+  let themeMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)$/);
+  if (themeMatch && method === "GET") {
+    const theme = await getStoreTheme(env, decodeURIComponent(themeMatch[1]), user.account_id);
+    return theme ? json({ ok: true, theme }) : json({ error: "Theme not found" }, { status: 404 });
+  }
+
+  themeMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)\/publish$/);
+  if (themeMatch && method === "POST") {
+    const result = await publishStoreTheme(env, decodeURIComponent(themeMatch[1]), user?.id || null, user.account_id);
+    return result.ok ? json(result) : json(result, { status: result.status || 500 });
+  }
+
+  themeMatch = path.match(/^\/api\/admin\/store\/themes\/([^/]+)\/publish-ready$/);
+  if (themeMatch && method === "POST") {
+    let body = {};
+    try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const result = await setThemePublishReady(
+      env,
+      decodeURIComponent(themeMatch[1]),
+      body.ready === true,
+      user?.id || null,
+      user.account_id,
+    );
+    return result.ok ? json(result) : json(result, { status: result.status || 500 });
   }
 
   if (path === "/api/admin/agentsam/maintenance/compact" && method === "POST") {
@@ -547,6 +780,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (m && method === "POST") {
     return retryAssetJob(request, env, m[1], url);
   }
+
+  if (path === "/api/admin/collections" && method === "GET") return listAdminCollections(request, env);
+  if (path === "/api/admin/collections" && method === "POST") return createAdminCollection(request, env);
 
   if (path === "/api/admin/products" && method === "GET") return listProducts(request, env);
   if (path === "/api/admin/products" && method === "POST") return createProduct(request, env);
@@ -572,9 +808,13 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (orderMatch && method === "GET") return getOrder(request, env, orderMatch[1]);
   if (path === "/api/admin/subscribers" && method === "GET") return listSubscribers(request, env);
 
-  if (path === "/api/admin/brand" && method === "GET") return getBrandWorkspace(env);
+  if (path === "/api/admin/brand" && method === "GET") return getBrandWorkspace(env, { includeAssets: url.searchParams.get("include_assets") !== "0" });
+  if (path === "/api/admin/brand/assets" && method === "GET") return searchBrandAssets(request, env);
   if (path === "/api/admin/brand" && method === "PATCH") return patchBrandWorkspace(request, env);
 
+  if (path === "/api/admin/media/image-models" && method === "GET") {
+    return json({ ok: true, models: await listEditableImageModels(env) });
+  }
   if (path === "/api/admin/media" && method === "POST") return uploadMedia(request, env, executionCtx);
   if (path === "/api/admin/media" && method === "GET") return listMedia(request, env, url);
   if (path === "/api/admin/media/batch" && method === "POST") return batchMedia(request, env);
@@ -590,7 +830,39 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (m && method === "PATCH") return updateMediaAlbum(request, env, m[1]);
   if (m && method === "DELETE") return deleteMediaAlbum(request, env, m[1]);
 
+  m = path.match(/^\/api\/admin\/media\/(\d+)\/(ai-edit|resample)$/);
+  if (m && method === "POST") {
+    const input = await readJson(request);
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      return json({ ok: false, error: "invalid_image_operation" }, { status: 400 });
+    }
+    try {
+      const result = m[2] === "ai-edit"
+        ? await editImageWithPrompt(env, {
+            media_asset_id: Number(m[1]), prompt: input.prompt,
+            model_id: input.model_id, actor_id: user.id,
+          })
+        : await resampleImage(env, {
+            media_asset_id: Number(m[1]), scale: input.scale, actor_id: user.id,
+          });
+      return json(result, { status: 201 });
+    } catch (error) {
+      const code = String(error?.message || "image_operation_failed");
+      const status = code.startsWith("openai_image_edit_http_") ? 502
+        : code === "media_asset_not_found" || code === "media_source_object_not_found" ? 404
+        : code === "media_storage_unavailable" ? 503 : 400;
+      return json({ ok: false, error: code }, { status });
+    }
+  }
+
+  m = path.match(/^\/api\/admin\/media\/(\d+)\/remove-background$/);
+  if (m && method === "POST") return removeMediaBackground(request, env, m[1], user);
+
+  m = path.match(/^\/api\/admin\/media\/(\d+)\/comments$/);
+  if (m && method === "POST") return addMediaReviewComment(request, env, m[1], user);
+
   m = path.match(/^\/api\/admin\/media\/(\d+)$/);
+  if (m && method === "GET") return getMediaAsset(request, env, m[1]);
   if (m && method === "PATCH") return updateMedia(request, env, m[1]);
   if (m && method === "DELETE") return deleteMedia(request, env, m[1]);
 
@@ -629,7 +901,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/mail/mailboxes" && method === "POST") {
     return createMailbox(request, env, user);
   }
-  if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env);
+  if (path === "/api/admin/mail/send" && method === "POST") return sendMailPreview(request, env, user);
   if (path === "/api/admin/mail/resend/status" && method === "GET") return getResendStatus(env);
 
   if (path.startsWith("/api/admin/growth/")) {
@@ -648,6 +920,12 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
     return handleCompletefulAdminApi(request, env, url);
   }
 
+  if (path === "/api/admin/agentsam/providers/workers-ai/code" && method === "POST") {
+    return handleWorkersAiCodeProvider(request, env, user);
+  }
+  if (path === "/api/admin/agentsam/generate-block" && method === "POST") {
+    return handleGenerateBlockRequest(request);
+  }
   if (path === "/api/admin/agentsam/chat" && method === "POST") {
     return agentsamChat(request, env, executionCtx);
   }
@@ -712,6 +990,17 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   if (path === "/api/admin/agentsam/compaction/run" && method === "POST") {
     return agentsamCompactionRun(request, env, executionCtx);
   }
+  if (path === "/api/admin/analytics/logs/recent" && method === "GET") {
+    // Production diagnostic traces contain privileged operational metadata.
+    // The same admin session gate applies; restrict to administrator roles.
+    if (!["admin","owner","super_admin"].includes(String(user.role||"").toLowerCase()))
+      return json({error:"logs_admin_permission_required"},{status:403,headers:{"cache-control":"no-store"}});
+    const result=await fetchCloudflareLiveLogs(env,{windowSeconds:url.searchParams.get("window")||180});
+    return json(result,{status:result.ok?200:result.status,headers:{"cache-control":"no-store"}});
+  }
+  if (path === "/api/admin/analytics/health" && method === "GET") {
+    return json(await getHealthAnalytics(env, url.searchParams.get("range") || "30d"));
+  }
   if (path === "/api/admin/analytics/finance" && method === "GET") {
     const range = url.searchParams.get("range") || "30d";
     const data = await getFinanceAnalytics(env, range);
@@ -748,7 +1037,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
     return agentsamSkillGet(env, skillMatch[1], url);
   }
 
-  const cmsResponse = await handleAdminCmsApi(request, env, url);
+  const cmsResponse = await handleAdminCmsApi(request, env, url, { accountId: user.account_id });
   if (cmsResponse) return cmsResponse;
 
   return json({ error: "Not found" }, { status: 404 });

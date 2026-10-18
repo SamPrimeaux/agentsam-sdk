@@ -3,10 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inventory — Ember Supply Admin</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<title>Inventory — Fuel & Free Time Admin</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 </head>
@@ -14,58 +11,179 @@
 <script src="/admin/js/shell.js"></script>
 <script>
 renderShell('/admin/inventory', `
-  <h1 class="admin-page-title">Inventory</h1>
-  <p class="admin-page-sub">Every SKU across every product, lowest stock first.</p>
-
-  <div class="admin-card">
-    <table class="admin-table">
-      <thead><tr><th>Product</th><th>SKU</th><th>Size</th><th>Color</th><th>Qty</th><th></th></tr></thead>
-      <tbody id="inv-body"><tr><td colspan="6" class="admin-empty">Loading…</td></tr></tbody>
-    </table>
-  </div>
+  <style>
+    .inventory-space { max-width: 1120px; margin: 0 auto; padding-bottom: 54px; }
+    .inventory-heading { display:flex; align-items:end; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .inventory-heading h1 { margin-bottom:8px; }
+    .inventory-intro { max-width:620px; margin:0; color:var(--text-muted,#667169); font-size:13px; line-height:1.6; }
+    .inventory-toolbar { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:24px 0 16px; }
+    .inventory-search { flex:1 1 260px; min-width:0; max-width:550px; border:1px solid var(--border,#d9ded7); border-radius:11px; background:#fff; color:#252e25; padding:12px 14px; font:inherit; }
+    .inventory-filter { padding:10px 12px; border:1px solid var(--border,#d9ded7); background:#fff; border-radius:10px; color:#252e25; font:inherit; font-size:12px; }
+    .inventory-counts { display:flex; gap:12px; flex-wrap:wrap; margin:0 0 15px; color:#697368; font-size:12px; }
+    .inventory-counts strong { color:#263226; font-weight:700; }
+    .inventory-groups { display:grid; gap:12px; }
+    .inventory-product { background:#fff; border:1px solid #dadfd6; border-radius:14px; box-shadow:0 2px 10px #17241408; overflow:hidden; }
+    .inventory-product[open] { border-color:#a4b299; }
+    .inventory-product summary { list-style:none; display:flex; align-items:center; gap:16px; padding:18px 20px; cursor:pointer; }
+    .inventory-product summary::-webkit-details-marker { display:none; }
+    .inventory-product summary:focus-visible { outline:2px solid #668851; outline-offset:-3px; }
+    .inventory-chevron { display:inline-grid; place-items:center; font-size:18px; color:#667562; transition:transform .15s; }
+    .inventory-product[open] .inventory-chevron { transform:rotate(90deg); }
+    .inventory-product-title { min-width:0; flex:1; }
+    .inventory-product-title strong { display:block; font-size:14px; color:#263226; overflow-wrap:anywhere; }
+    .inventory-meta { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:7px; color:#737e73; font-size:11px; }
+    .inventory-chip { display:inline-flex; border:1px solid #dae3d4; border-radius:6px; padding:3px 7px; font-size:10px; color:#586e50; background:#f5f8f1; }
+    .inventory-chip.is-warning { background:#fff3e3; color:#9a5b1a; border-color:#f6e2bd; }
+    .inventory-total { text-align:right; white-space:nowrap; }
+    .inventory-total strong { display:block; font-size:17px; color:#293b29; }
+    .inventory-total small { font-size:11px; color:#737e73; }
+    .inventory-variant-wrap { overflow-x:auto; border-top:1px solid #e4e8e0; }
+    .inventory-table { width:100%; border-collapse:collapse; min-width:625px; }
+    .inventory-table th { text-align:left; text-transform:uppercase; color:#899289; letter-spacing:.07em; font-size:10px; padding:13px 16px; background:#fafbf8; }
+    .inventory-table td { padding:11px 16px; border-top:1px solid #eef0ed; color:#374436; font-size:12px; }
+    .inventory-table td:first-child { font-weight:650; }
+    .inventory-table .inv-qty { width:85px; padding:8px; border:1px solid #d5dcd1; border-radius:8px; background:#fff; font:inherit; color:#263226; }
+    .inventory-table .inv-save { padding:8px 12px; border:1px solid #b4c4ac; background:#f2f6ed; border-radius:8px; color:#354c32; font-size:11px; cursor:pointer; }
+    .inventory-table .inv-save:disabled { opacity:.4; cursor:not-allowed; }
+    .inventory-row-status { display:block; min-height:14px; font-size:10px; margin-top:4px; color:#57794b; }
+    .inventory-row-status.is-error { color:#af4133; }
+    .inventory-link { font-size:11px; white-space:nowrap; color:#486840; text-decoration:underline; text-underline-offset:3px; }
+    .inventory-empty { padding:38px; border:1px dashed #c8d3c3; border-radius:13px; text-align:center; color:#6b7769; background:#fff; }
+    @media(max-width:720px) {
+      .inventory-product summary { padding:14px 12px; gap:8px; }
+      .inventory-product-title strong { font-size:13px; }
+      .inventory-heading h1 { font-size:24px; }
+      .inventory-total strong { font-size:14px; }
+      .inventory-search { max-width:none; }
+      .inventory-toolbar { margin-top:18px; }
+      .inventory-table th, .inventory-table td { padding:10px; }
+    }
+    @media(prefers-reduced-motion:reduce) { .inventory-chevron { transition:none; } }
+  </style>
+  <main class="inventory-space">
+    <div class="inventory-heading">
+      <div><h1 class="admin-page-title">Inventory</h1>
+        <p class="inventory-intro">Products first, variants underneath. Adjust store-managed quantities here; connected suppliers keep their own fulfillment records.</p>
+      </div>
+      <a class="inventory-link" href="/admin/products/create">Create product ↗</a>
+    </div>
+    <div class="inventory-toolbar">
+      <input id="inventory-search" class="inventory-search" type="search" placeholder="Search products, variants, or SKUs" aria-label="Search inventory">
+      <select id="inventory-filter" class="inventory-filter" aria-label="Filter inventory">
+        <option value="all">All products</option>
+        <option value="low">Needs attention</option>
+        <option value="draft">Draft products</option>
+      </select>
+    </div>
+    <div class="inventory-counts" id="inventory-counts" aria-live="polite"></div>
+    <div id="inventory-groups" class="inventory-groups" aria-live="polite"><div class="inventory-empty">Loading inventory…</div></div>
+  </main>
 `);
 
-async function load() {
-  try {
-    const d = await adminFetch('/api/admin/inventory');
-    const body = document.getElementById('inv-body');
-    if (!d.inventory.length) {
-      body.innerHTML = '<tr><td colspan="6" class="admin-empty">No variants yet — add products and variants first.</td></tr>';
+(() => {
+  const view = document.getElementById('inventory-groups');
+  const counts = document.getElementById('inventory-counts');
+  const search = document.getElementById('inventory-search');
+  const filter = document.getElementById('inventory-filter');
+  const escape = value => String(value ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  let groups = [];
+  const open = new Set();
+
+  function render() {
+    const q = search.value.trim().toLowerCase();
+    const filtered = groups.filter(group => {
+      if (filter.value === 'low' && group.low_stock_count === 0) return false;
+      if (filter.value === 'draft' && group.status !== 'draft') return false;
+      return !q || [group.title, group.source?.label, ...group.variants.flatMap(v => [v.sku, v.size, v.color])]
+        .some(value => String(value || '').toLowerCase().includes(q));
+    });
+    const allVariants = groups.reduce((sum, group) => sum + group.variants.length, 0);
+    const lowProducts = groups.filter(g => g.low_stock_count).length;
+    counts.innerHTML = '<span><strong>' + groups.length + '</strong> products</span>' +
+      '<span><strong>' + allVariants + '</strong> variants</span>' +
+      '<span><strong>' + lowProducts + '</strong> needing attention</span>';
+    if (!filtered.length) {
+      view.innerHTML = '<div class="inventory-empty">' +
+        (groups.length ? 'No products match your current filters.' : 'No inventory yet. Create your first product to get started.') +
+        '</div>';
       return;
     }
-    body.innerHTML = d.inventory.map(v => `
-      <tr data-id="${v.id}">
-        <td><a href="/admin/product-edit?id=${v.product_id}">${v.product_title}</a></td>
-        <td>${v.sku}</td>
-        <td>${v.size || '—'}</td>
-        <td>${v.color || '—'}</td>
-        <td>
-          <input class="admin-inline-qty inv-qty" type="number" value="${v.inventory_qty}">
-          ${v.inventory_qty <= 3 ? '<span class="badge low">low</span>' : ''}
-        </td>
-        <td><button class="btn ghost small inv-save">Save</button></td>
-      </tr>
-    `).join('');
-
-    body.querySelectorAll('tr').forEach(row => {
-      const id = row.dataset.id;
-      row.querySelector('.inv-save').addEventListener('click', async () => {
-        try {
-          await adminFetch(`/api/admin/variants/${id}/inventory`, {
-            method: 'PATCH',
-            body: JSON.stringify({ inventory_qty: row.querySelector('.inv-qty').value }),
-          });
-          load();
-        } catch (err) {
-          alert(err.message);
-        }
-      });
-    });
-  } catch (err) {
-    document.getElementById('inv-body').innerHTML = `<tr><td colspan="6" class="admin-empty">${err.message}</td></tr>`;
+    view.innerHTML = filtered.map(group => {
+      const source = group.source || {label:'Store-managed',kind:'merchant_managed'};
+      const linked = source.kind === 'connected_provider';
+      const status = group.status === 'active' ? 'Published' : group.status === 'draft' ? 'Draft' : group.status;
+      return '<details class="inventory-product" data-product-id="' + group.id + '"' + (open.has(group.id) || q ? ' open' : '') + '>' +
+        '<summary><span class="inventory-chevron" aria-hidden="true">›</span><div class="inventory-product-title"><strong>' + escape(group.title) +
+        '</strong><div class="inventory-meta"><span class="inventory-chip">' + escape(status) +
+        '</span><span class="inventory-chip">' + escape(source.label) +
+        '</span><span>' + group.variants.length + ' variants</span>' +
+        (group.low_stock_count ? '<span class="inventory-chip is-warning">' + group.low_stock_count + ' low</span>' : '') +
+        '</div></div><div class="inventory-total"><strong>' + group.total_available +
+        '</strong><small>recorded units</small></div></summary>' +
+        '<div class="inventory-variant-wrap"><table class="inventory-table"><thead><tr><th>SKU</th><th>Size</th><th>Color</th><th>Available</th><th></th></tr></thead><tbody>' +
+        group.variants.map(v => '<tr data-variant-id="' + v.id + '"><td>' + escape(v.sku) + '</td><td>' +
+          escape(v.size || '—') + '</td><td>' + escape(v.color || '—') + '</td><td>' +
+          '<input class="inv-qty" aria-label="Inventory for ' + escape(v.sku) + '" type="number" min="0" step="1" value="' + v.inventory_qty +
+          '" data-original="' + v.inventory_qty + '"' + (linked ? ' title="A connected supplier may control fulfillment stock"' : '') +
+          '></td><td><button type="button" class="inv-save" disabled>Save</button>' +
+          '<small class="inventory-row-status" role="status"></small></td></tr>').join('') +
+        '</tbody></table><div style="padding:10px 16px;display:flex;justify-content:flex-end"><a class="inventory-link" href="/admin/product-edit?id=' +
+        group.id + '">Edit product details →</a></div></div></details>';
+    }).join('');
   }
-}
-load();
+
+  view.addEventListener('toggle', event => {
+    const target = event.target;
+    if (target instanceof HTMLDetailsElement && target.dataset.productId) {
+      const id = Number(target.dataset.productId);
+      if (target.open) open.add(id); else open.delete(id);
+    }
+  }, true);
+  view.addEventListener('input', event => {
+    if (!(event.target instanceof HTMLInputElement) || !event.target.classList.contains('inv-qty')) return;
+    const row = event.target.closest('[data-variant-id]');
+    const button = row?.querySelector('.inv-save');
+    if (button) button.disabled = event.target.value === event.target.dataset.original || !/^\d+$/.test(event.target.value);
+  });
+  view.addEventListener('click', async event => {
+    const button = event.target.closest('.inv-save');
+    if (!button || button.disabled) return;
+    const row = button.closest('[data-variant-id]');
+    const input = row?.querySelector('.inv-qty');
+    const status = row?.querySelector('.inventory-row-status');
+    if (!input || !status) return;
+    const requested = Number(input.value);
+    const expected = Number(input.dataset.original);
+    if (!Number.isSafeInteger(requested) || requested < 0 || !Number.isSafeInteger(expected)) {
+      status.textContent = 'Enter a whole number of units.'; status.classList.add('is-error'); return;
+    }
+    button.disabled = true; status.classList.remove('is-error'); status.textContent = 'Saving…';
+    try {
+      await adminFetch('/api/admin/variants/' + encodeURIComponent(row.dataset.variantId) + '/inventory', {
+        method: 'PATCH', body: JSON.stringify({inventory_qty: requested, expected_inventory_qty: expected}),
+      });
+      status.textContent = 'Saved'; input.dataset.original = String(requested);
+      await load();
+    } catch (error) {
+      status.classList.add('is-error');
+      status.textContent = (error.message || 'Could not save') + ' Refresh to reconcile.';
+      button.disabled = false;
+    }
+  });
+  search.addEventListener('input', render);
+  filter.addEventListener('change', render);
+  async function load() {
+    try {
+      const data = await adminFetch('/api/admin/inventory');
+      groups = Array.isArray(data.groups) ? data.groups : [];
+      render();
+    } catch (error) {
+      view.innerHTML = '<div class="inventory-empty">' + escape(error.message || 'Could not load inventory') + '</div>';
+    }
+  }
+  load();
+})();
 </script>
 </body>
 </html>

@@ -84,6 +84,8 @@ export type ProductDetail = {
     name: string;
     preview_url?: string;
     active: number;
+    print_location_id?: string | null;
+    variant_scope_json?: string | null;
   }[];
 };
 

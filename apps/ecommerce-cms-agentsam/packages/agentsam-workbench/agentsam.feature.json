@@ -1,0 +1,47 @@
+{
+  "schema": "agentsam.feature.v1",
+  "id": "agentsam.mini-composer",
+  "name": "miniAgentSam Composer",
+  "kind": "composer",
+  "status": "extracted",
+  "distribution": {
+    "kind": "package",
+    "package": "@inneranimalmedia/agentsam-workbench"
+  },
+  "provides": [
+    "agentsam.composer.mount",
+    "agentsam.resource.select",
+    "agentsam.composer.capabilities",
+    "agentsam.composer.attachments"
+  ],
+  "requires": [
+    "agentsam.runtime.send",
+    "agentsam.resource.authorize"
+  ],
+  "optional": [
+    "agentsam.voice",
+    "agentsam.generation.mount"
+  ],
+  "runtime": [
+    "browser"
+  ],
+  "contributes": {
+    "ui": [
+      "mini-composer",
+      "resource-inspector",
+      "capability-menu",
+      "attachment-controller"
+    ]
+  },
+  "host_contract": {
+    "required": [
+      "send({prompt,resource,capabilities,attachments,signal,onPhase})",
+      "server_side_resource_authorization"
+    ],
+    "forbidden": [
+      "host_specific_resource_ids",
+      "secrets_in_preview",
+      "tool_payloads_in_pseudo_preview"
+    ]
+  }
+}

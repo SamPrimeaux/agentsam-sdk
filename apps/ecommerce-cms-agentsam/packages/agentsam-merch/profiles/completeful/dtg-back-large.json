@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "agentsam.manufacturing-profile.v1",
+  "id": "completeful.dtg.back-large",
+  "manufacturer": "completeful",
+  "process": "dtg",
+  "format": "png",
+  "colorSpace": "srgb",
+  "alpha": true,
+  "ppi": 300,
+  "maxBytes": 20000000,
+  "preferredPrintWidthIn": 13,
+  "allowRaster": true,
+  "allowVector": false,
+  "match": {
+    "manufacturer": "completeful",
+    "process": "dtg",
+    "locationName": "back",
+    "minWidthIn": 10
+  },
+  "source": {
+    "kind": "operator-defined",
+    "verified": false
+  }
+}

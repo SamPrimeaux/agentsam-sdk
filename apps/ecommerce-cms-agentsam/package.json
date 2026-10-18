@@ -1,61 +1,72 @@
 {
   "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "version": "2.6.12",
-  "private": false,
+  "version": "0.2.0",
+  "private": true,
   "type": "module",
   "bin": {
-    "agentsam-ecommerce": "bin/agentsam-ecommerce.mjs"
+    "ecommerce": "bin/ecommerce.mjs",
+    "assets": "bin/assets.mjs",
+    "agentsam-ecommerce": "bin/ecommerce.mjs"
   },
   "scripts": {
-    "doctor": "node bin/agentsam-ecommerce.mjs doctor",
-    "preview": "node bin/agentsam-ecommerce.mjs preview",
-    "test:cms": "node --test frontend/cms/*.test.mjs",
-    "verify:cms-product": "node scripts/verify-cms-product.mjs"
+    "doctor": "node bin/ecommerce.mjs doctor",
+    "preview": "node bin/ecommerce.mjs preview",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:assets": "node bin/build-assets.mjs",
+    "build": "npm run verify:cms && npm run build:frontend && npm run build:assets",
+    "dev": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
+    "test:package": "node --test tests/package-boundaries.test.mjs && npm run test:tools",
+    "typecheck:cms": "tsc --project tsconfig.cms.json",
+    "verify:cms": "npm run typecheck:cms && node --test tests/cms-setting-contract.test.mjs",
+    "typecheck:tools": "tsc --project tsconfig.tools.json",
+    "test:tools": "npm run typecheck:tools && node --test tests/typed-tool-registry.test.mjs tests/core-tools-readonly.test.mjs tests/d1-crud.test.mjs && node backend/tools/doctor.mjs",
+    "test:release": "node --test tests/release-artifact.test.mjs tests/analytics-hosts.test.mjs tests/side-assistant-portability.test.mjs",
+    "prepack": "npm run build && npm run test:release"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-content": "2.6.12",
-    "@inneranimalmedia/client-cms-editor": "2.6.12",
-    "@inneranimalmedia/cms-runtime": "2.6.12",
     "@inneranimalmedia/revise-theme": "0.2.0",
     "@inneranimalmedia/section-library": "0.1.0",
-    "@inneranimalmedia/site-contracts": "0.1.0"
+    "@jsquash/jpeg": "1.6.0",
+    "@jsquash/png": "3.1.1",
+    "@jsquash/resize": "2.1.1",
+    "@jsquash/webp": "1.5.0"
   },
-  "publishConfig": {
-    "access": "public"
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "wrangler": "4.149.0",
+    "typescript": "~6.0.2",
+    "json-schema-to-ts": "3.1.1"
   },
   "files": [
+    ".agentsam/app.json",
+    "AGENTS.md",
+    "README.md",
+    "agentsam.app.json",
+    "npm-shrinkwrap.json",
+    "apps/",
     "backend/",
     "bin/",
+    "cms/",
+    "db/",
+    "dist/",
+    "docs/",
     "frontend/",
+    "packages/",
+    "registry/",
+    "scripts/",
     "shared/",
-    ".agentsam/app.json",
-    "agentsam.app.json",
-    "README.md",
-    "templates/"
+    "templates/",
+    "tests/",
+    "theme/",
+    "repository.contracts.json",
+    "tsconfig.cms.json",
+    "tsconfig.tools.json"
   ],
-  "description": "Portable AgentSam ecommerce CMS runtime, scaffolding, media, analytics, and admin application package.",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@github.com/SamPrimeaux/agentsam-sdk.git"
-  },
   "exports": {
-    "./theme-editor/mount": "./frontend/theme-editor/mount.mjs",
-    "./store/mount": "./frontend/store/mount.mjs",
-    "./theme-editor/bridge": "./frontend/theme-editor/bridge.mjs",
-    "./theme-editor/project": "./frontend/theme-editor/project.mjs",
-    "./theme-editor/cms-adapter": "./frontend/theme-editor/cms-adapter.mjs",
-    "./cms": {
-      "types": "./frontend/cms/index.d.ts",
-      "import": "./frontend/cms/index.mjs"
-    },
-    "./cms/capabilities": {
-      "types": "./frontend/cms/capabilities.d.ts",
-      "import": "./frontend/cms/capabilities.mjs"
-    }
-  },
-  "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "./manifest": "./agentsam.app.json",
+    "./admin/surface": "./frontend/admin.surface.json",
+    "./apps/registry": "./apps/registry.json",
+    "./backend/routes": "./backend/lib/route-manifest.js"
   }
 }

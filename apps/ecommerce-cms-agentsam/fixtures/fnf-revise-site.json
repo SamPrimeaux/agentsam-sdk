@@ -1,0 +1,1420 @@
+{
+  "schemaVersion": "fnf-revise-atlas-v1",
+  "source": {
+    "repository": "SamPrimeaux/inneranimalmedia-cms",
+    "commit": "aa74f3064b06af3127a678d153a96e912b72988d",
+    "site": "examples/revise-foundation"
+  },
+  "brand": {
+    "name": "Fuel & Free Time"
+  },
+  "catalog": [
+    {
+      "id": "revise/sticky-curtain",
+      "title": "Sticky Curtain",
+      "type": "media-hero"
+    },
+    {
+      "id": "revise/wardrobe-rail",
+      "title": "Wardrobe Rail",
+      "type": "media-gallery"
+    },
+    {
+      "id": "revise/dark-promo-grid",
+      "title": "Dark Promo Grid",
+      "type": "editorial-grid"
+    },
+    {
+      "id": "revise/editorial-statement",
+      "title": "Editorial Statement",
+      "type": "statement"
+    },
+    {
+      "id": "revise/story-rings",
+      "title": "Story Rings",
+      "type": "stories"
+    },
+    {
+      "id": "revise/tabbed-products",
+      "title": "Tabbed Products",
+      "type": "collection-track"
+    },
+    {
+      "id": "revise/scroll-text-reveal",
+      "title": "Scroll Text Reveal",
+      "type": "fullscreen-media-product"
+    },
+    {
+      "id": "revise/parallax-diptych",
+      "title": "Parallax Diptych",
+      "type": "split-media"
+    },
+    {
+      "id": "revise/hotspot-lookbook",
+      "title": "Hotspot Lookbook",
+      "type": "shop-the-look"
+    },
+    {
+      "id": "revise/pinned-pdp",
+      "title": "Pinned Pdp",
+      "type": "featured-product"
+    },
+    {
+      "id": "revise/commerce-marquee",
+      "title": "Commerce Marquee",
+      "type": "marquee"
+    },
+    {
+      "id": "revise/logo-track",
+      "title": "Logo Track",
+      "type": "logo-track"
+    },
+    {
+      "id": "revise/testimonials",
+      "title": "Testimonials",
+      "type": "testimonials"
+    },
+    {
+      "id": "revise/newsletter",
+      "title": "Newsletter",
+      "type": "cta-band"
+    },
+    {
+      "id": "revise/faq",
+      "title": "Faq",
+      "type": "faq"
+    },
+    {
+      "id": "revise/trust-row",
+      "title": "Trust Row",
+      "type": "trust-row"
+    },
+    {
+      "id": "revise/merch-lab",
+      "title": "Merch Lab",
+      "type": "commerce-offers"
+    },
+    {
+      "id": "revise/sticky-summary",
+      "title": "Sticky Summary",
+      "type": "bundle-builder"
+    },
+    {
+      "id": "revise/pinned-media-grid",
+      "title": "Pinned Media Grid",
+      "type": "collection-split-media"
+    },
+    {
+      "id": "revise/brand-film",
+      "title": "Brand Film",
+      "type": "brand-film"
+    },
+    {
+      "id": "revise/campaign-teaser",
+      "title": "Campaign Teaser",
+      "type": "campaign-teaser"
+    },
+    {
+      "id": "revise/before-after",
+      "title": "Before After",
+      "type": "before-after"
+    },
+    {
+      "id": "revise/sticky-card-deck",
+      "title": "Sticky Card Deck",
+      "type": "editorial-posts"
+    },
+    {
+      "id": "revise/full-bleed-grid",
+      "title": "Full Bleed Grid",
+      "type": "social-gallery"
+    }
+  ],
+  "media": {
+    "fnf.hero": "https://fuelnfreetime.com/assets/presets/fuel-free-time/earned-hours-hero.webp",
+    "fnf.masters": "https://fuelnfreetime.com/assets/presets/fuel-free-time/masters.webp",
+    "fnf.essentials": "https://fuelnfreetime.com/assets/presets/fuel-free-time/essentials.webp",
+    "fnf.graphic.core": "https://fuelnfreetime.com/media/archive/shopify-import/graphics/50C9CEB5.png",
+    "fnf.graphic.vette": "https://fuelnfreetime.com/media/archive/shopify-import/graphics/Vette.png",
+    "fnf.graphic.fuel-up": "https://fuelnfreetime.com/media/archive/shopify-import/graphics/fuel_up.png",
+    "fnf.high-octane": "https://fuelnfreetime.com/media/archive/shopify-import/graphics/high_octane.jpg",
+    "fnf.tee.front": "https://fuelnfreetime.com/media/products/shirts/fft-tee-frontside.webp",
+    "fnf.tee.back": "https://fuelnfreetime.com/media/products/shirts/earn-your-freetime-teeshirt-backside.webp",
+    "fnf.hat": "https://fuelnfreetime.com/media/products/fuel-n-freetime-hat/fuel-n-freetime-hat.webp",
+    "fnf.adventure-tee": "https://fuelnfreetime.com/media/archive/shopify-import/photos/IMG_1509.jpg",
+    "fnf.build.dirt.1": "https://fuelnfreetime.com/media/uploads/staging/images/preview/img-9439.webp",
+    "fnf.build.dirt.2": "https://fuelnfreetime.com/media/uploads/staging/images/preview/img-9440.webp",
+    "fnf.build.dirt.3": "https://fuelnfreetime.com/media/uploads/staging/images/preview/img-9441.webp",
+    "fnf.build.dirt.4": "https://fuelnfreetime.com/media/uploads/staging/images/preview/img-9442.webp",
+    "fnf.build.dirt.5": "https://fuelnfreetime.com/media/uploads/staging/images/preview/img-9443.webp",
+    "fnf.build.heli.1": "https://fuelnfreetime.com/media/uploads/staging/images/preview/img-8533.webp",
+    "fnf.build.heli.2": "https://fuelnfreetime.com/media/uploads/staging/images/preview/img-8568.webp",
+    "fnf.build.heli.3": "https://fuelnfreetime.com/media/uploads/staging/images/preview/img-9191.webp",
+    "fnf.build.heli.4": "https://fuelnfreetime.com/media/uploads/staging/images/preview/img-9194.webp",
+    "fnf.film.garage": "https://fuelnfreetime.com/media/archive/shopify-import/videos/video-2-48add6d0.mp4",
+    "fnf.film.story": "https://fuelnfreetime.com/media/archive/shopify-import/videos/video-1-f506d934.mp4",
+    "completeful.heavyweight-tee": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-47d3afff-3e4c-492a-8e8b-2dcfca38caa1/covers/f5efc1e0-4964-4e62-91be-96cdcf1f932f-clothing-mockups15.png",
+    "completeful.long-sleeve": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-3722768a-157d-4f7e-9f48-bec2bd0cb0c6/covers/7b76b7e0-43fa-4f90-9aea-f20205f2b3be-clothing-mockups12.png",
+    "completeful.hoodie": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/2f195507-5f6b-4992-8018-b34de51e3ea8/cover/bd8d7c16-d466-4d51-ae04-2ff02c5019be.png",
+    "completeful.coffee-mug": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-5b3cf047-8af0-4bd8-9397-6cbae9d64490/covers/a73acb88-1ab3-48d3-8fda-f4ad39740c5c-ceramic-mug-ai-center.jpg",
+    "completeful.glass-coffee-can": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-ab6f79dd-51de-4c33-9148-9cfec81e3870/covers/b6e9432f-a08a-4092-83bb-97ccd92bf461-glass-can-w-bamboo-lid-center.jpg",
+    "completeful.bamboo-sunglasses": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-af7b535b-bed4-4c1f-9db3-b09676091842/covers/3bad2a79-f988-48ec-be78-d1e45fbb6d44-sunglasses-ai-center.jpg",
+    "completeful.luggage-tag": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-0687f9d6-b826-47e3-adbf-84c331f365d6/covers/7b11e02b-a694-4028-aea4-1b0df43fa621-luggage-tag-ai-center.jpg",
+    "completeful.pet-tag": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-aaaa06e9-fc31-4edb-81cf-6353d9bd58f0/covers/6eb5a540-8ab5-4615-89f8-4d310e8f511a-pet-tag-silver-black-rock-center.png",
+    "completeful.pet-feeder": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-8b94108b-120e-462c-b77f-ccdc3cbb96ef/covers/bc878d33-f0b6-4863-9f54-369140515c6f-pet-bowl-ai-center.jpg",
+    "completeful.bookmark": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-80cd9ddf-d034-49b4-b76c-c2b21f14b4f4/covers/52f8c725-f977-4cae-8b2f-a0a93984f8f3-bookmark-ai-center.jpg",
+    "completeful.framed-decor": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-fcc6321b-96c7-4052-8bd8-a695410357bd/covers/f9747f5b-dca7-43ba-9cde-2221def0d429-framed-sign-ai-1.jpg",
+    "completeful.stainless-tumbler": "https://jvkydnvdajcfnqysmuwt.supabase.co/storage/v1/object/public/product-images/product-0dc6cade-4e94-4d30-89c7-c489e136ce1d/covers/6f067017-f442-42fd-b1ac-c9e65407923b-16oz-tumblers-white-center.png"
+  },
+  "pages": [
+    {
+      "id": "home",
+      "path": "/",
+      "title": "Earned Hours",
+      "description": "A place for the gear, builds and experiences that earn our time.",
+      "sections": [
+        {
+          "id": "home-sticky-curtain-1",
+          "type": "media-hero",
+          "preset": "revise/sticky-curtain",
+          "settings": {
+            "surface": "image"
+          },
+          "data": {
+            "eyebrow": "The Earned Hours Collection",
+            "heading": "Time is the real horsepower.",
+            "body": "Hard-wearing essentials for garage nights, early launches, long roads, and every hour you fought to make your own.",
+            "mediaKey": "fnf.hero",
+            "mediaAlt": "Fuel & Free Time lifestyle in the garage at sunset",
+            "primaryAction": {
+              "label": "Preview the drop",
+              "href": "/products/"
+            },
+            "secondaryAction": {
+              "label": "See campaign directions",
+              "href": "/campaigns/"
+            }
+          }
+        },
+        {
+          "id": "home-wardrobe-rail-2",
+          "type": "media-gallery",
+          "preset": "revise/wardrobe-rail",
+          "settings": {
+            "surface": "paper"
+          },
+          "blocks": [
+            {
+              "id": "home-block-0",
+              "type": "item",
+              "data": {
+                "title": "Earned Hours",
+                "label": "Earned Hours",
+                "mediaKey": "fnf.hero",
+                "href": "/campaigns/"
+              }
+            },
+            {
+              "id": "home-block-1",
+              "type": "item",
+              "data": {
+                "title": "High Octane",
+                "label": "High Octane",
+                "mediaKey": "fnf.high-octane",
+                "href": "/campaigns/"
+              }
+            },
+            {
+              "id": "home-block-2",
+              "type": "item",
+              "data": {
+                "title": "Masters",
+                "label": "Masters",
+                "mediaKey": "fnf.masters",
+                "href": "/campaigns/"
+              }
+            },
+            {
+              "id": "home-block-3",
+              "type": "item",
+              "data": {
+                "title": "Essentials",
+                "label": "Essentials",
+                "mediaKey": "fnf.essentials",
+                "href": "/products/"
+              }
+            },
+            {
+              "id": "home-block-4",
+              "type": "item",
+              "data": {
+                "title": "Project Stories",
+                "label": "Project Stories",
+                "mediaKey": "fnf.build.heli.2",
+                "href": "/stories/"
+              }
+            }
+          ],
+          "data": {
+            "heading": "Every hour has a story.",
+            "items": [
+              {
+                "title": "Earned Hours",
+                "label": "Earned Hours",
+                "mediaKey": "fnf.hero",
+                "href": "/campaigns/"
+              },
+              {
+                "title": "High Octane",
+                "label": "High Octane",
+                "mediaKey": "fnf.high-octane",
+                "href": "/campaigns/"
+              },
+              {
+                "title": "Masters",
+                "label": "Masters",
+                "mediaKey": "fnf.masters",
+                "href": "/campaigns/"
+              },
+              {
+                "title": "Essentials",
+                "label": "Essentials",
+                "mediaKey": "fnf.essentials",
+                "href": "/products/"
+              },
+              {
+                "title": "Project Stories",
+                "label": "Project Stories",
+                "mediaKey": "fnf.build.heli.2",
+                "href": "/stories/"
+              }
+            ],
+            "eyebrow": "The worlds of F&FT"
+          }
+        },
+        {
+          "id": "home-editorial-statement-3",
+          "type": "statement",
+          "preset": "revise/editorial-statement",
+          "settings": {
+            "surface": "canvas"
+          },
+          "data": {
+            "eyebrow": "Brand thesis / existing copy",
+            "heading": "Some chase horsepower. We chase hours.",
+            "body": "Fuel & Free Time isn't about how fast you go — it's about finally having the time to go at all. Born in a Lafayette garage, built for those who've earned their freedom. Time is everything money can't buy back."
+          }
+        },
+        {
+          "id": "home-campaign-teaser-4",
+          "type": "campaign-teaser",
+          "preset": "revise/campaign-teaser",
+          "settings": {
+            "surface": "image"
+          },
+          "data": {
+            "eyebrow": "From the shop floor",
+            "heading": "Project Stories",
+            "body": "Behind every finished machine are the people, long nights, setbacks, and small wins that brought it to life.",
+            "mediaKey": "fnf.build.heli.2",
+            "mediaAlt": "Helicopter buildout project",
+            "action": {
+              "label": "See the stories",
+              "href": "/stories/"
+            },
+            "anchor": "fnf-stories"
+          }
+        },
+        {
+          "id": "home-brand-film-5",
+          "type": "brand-film",
+          "preset": "revise/brand-film",
+          "settings": {
+            "surface": "inverse"
+          },
+          "data": {
+            "eyebrow": "Existing F&FT footage / film treatment",
+            "heading": "The gear is part of the story. The time is the point.",
+            "mediaKey": "fnf.film.garage",
+            "mediaAlt": "Fuel & Free Time brand film",
+            "posterKey": "fnf.hero"
+          }
+        },
+        {
+          "id": "home-newsletter-6",
+          "type": "cta-band",
+          "preset": "revise/newsletter",
+          "settings": {
+            "surface": "inverse"
+          },
+          "data": {
+            "eyebrow": "Existing brand CTA",
+            "heading": "Stay fueled up",
+            "body": "Get first access to drops, event invites, and the stories that matter.",
+            "action": {
+              "label": "Join the list",
+              "href": "#"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "products",
+      "path": "/products/",
+      "title": "The Shop",
+      "description": "Well-made essentials with somewhere to go.",
+      "sections": [
+        {
+          "id": "products-tabbed-products-1",
+          "type": "collection-track",
+          "preset": "revise/tabbed-products",
+          "settings": {
+            "surface": "paper"
+          },
+          "data": {
+            "eyebrow": "The Goods / Existing & Next",
+            "heading": "Built to wear. Made to go.",
+            "tabs": [
+              {
+                "id": "live",
+                "label": "Live / existing",
+                "items": [
+                  {
+                    "title": "Fuel N Free Time Tee",
+                    "price": "$34",
+                    "mediaKey": "fnf.tee.front",
+                    "badge": "Live"
+                  },
+                  {
+                    "title": "Fresh Till Death Hat",
+                    "price": "$34.99",
+                    "mediaKey": "fnf.hat",
+                    "badge": "Live"
+                  },
+                  {
+                    "title": "Fuel + Adventure Tee",
+                    "price": "Existing",
+                    "mediaKey": "fnf.adventure-tee",
+                    "badge": "Live asset"
+                  },
+                  {
+                    "title": "Earn Your Free Time Back Print",
+                    "price": "Existing",
+                    "mediaKey": "fnf.tee.back",
+                    "badge": "Existing art"
+                  }
+                ]
+              },
+              {
+                "id": "next",
+                "label": "Next product ideas",
+                "items": [
+                  {
+                    "title": "Heavyweight Garment-Dyed Tee",
+                    "price": "Demo $32",
+                    "mediaKey": "completeful.heavyweight-tee",
+                    "badge": "Catalog"
+                  },
+                  {
+                    "title": "16oz Glass Coffee Can",
+                    "price": "Demo $24",
+                    "mediaKey": "completeful.glass-coffee-can",
+                    "badge": "Catalog"
+                  },
+                  {
+                    "title": "16oz Stainless Tumbler",
+                    "price": "Demo $28",
+                    "mediaKey": "completeful.stainless-tumbler",
+                    "badge": "Catalog"
+                  },
+                  {
+                    "title": "Bamboo Frame Sunglasses",
+                    "price": "Demo $24",
+                    "mediaKey": "completeful.bamboo-sunglasses",
+                    "badge": "Catalog"
+                  }
+                ]
+              },
+              {
+                "id": "graphics",
+                "label": "Artwork directions",
+                "items": [
+                  {
+                    "title": "Redline Sedan",
+                    "price": "Graphic direction",
+                    "mediaKey": "fnf.graphic.core"
+                  },
+                  {
+                    "title": "Drive · Explore · Relax",
+                    "price": "Graphic direction",
+                    "mediaKey": "fnf.graphic.vette"
+                  },
+                  {
+                    "title": "Work Hard · Play Harder",
+                    "price": "Brand mark",
+                    "mediaKey": "fnf.graphic.fuel-up"
+                  }
+                ]
+              }
+            ],
+            "anchor": "fnf-products"
+          }
+        },
+        {
+          "id": "products-pinned-pdp-2",
+          "type": "featured-product",
+          "preset": "revise/pinned-pdp",
+          "settings": {
+            "surface": "paper"
+          },
+          "data": {
+            "eyebrow": "Live product / existing store",
+            "heading": "Fuel N Free Time Tee",
+            "body": "Earned-not-given energy on premium cotton. Front graphic with full back print. Built for those who fuel hard and live free.",
+            "price": "$34",
+            "media": [
+              {
+                "key": "fnf.tee.front",
+                "alt": "Fuel N Free Time Tee front"
+              },
+              {
+                "key": "fnf.tee.back",
+                "alt": "Fuel N Free Time Tee back"
+              },
+              {
+                "key": "fnf.adventure-tee",
+                "alt": "Fuel & Free Time apparel lifestyle"
+              }
+            ],
+            "actions": [
+              {
+                "label": "Preview product direction",
+                "href": "/products/"
+              }
+            ]
+          }
+        },
+        {
+          "id": "products-hotspot-lookbook-3",
+          "type": "shop-the-look",
+          "preset": "revise/hotspot-lookbook",
+          "settings": {
+            "surface": "muted"
+          },
+          "data": {
+            "heading": "The Earned Hours kit",
+            "mediaKey": "fnf.hero",
+            "mediaAlt": "Fuel & Free Time garage lifestyle",
+            "hotspots": [
+              {
+                "x": 61,
+                "y": 49,
+                "title": "Fuel N Free Time Tee",
+                "price": "$34"
+              },
+              {
+                "x": 73,
+                "y": 30,
+                "title": "Fresh Till Death Hat",
+                "price": "$34.99"
+              },
+              {
+                "x": 82,
+                "y": 69,
+                "title": "16oz Stainless Tumbler",
+                "price": "Demo $28"
+              }
+            ]
+          }
+        },
+        {
+          "id": "products-sticky-summary-4",
+          "type": "bundle-builder",
+          "preset": "revise/sticky-summary",
+          "settings": {
+            "surface": "muted"
+          },
+          "blocks": [
+            {
+              "id": "products-block-0",
+              "type": "item",
+              "data": {
+                "title": "Fuel N Free Time Tee",
+                "price": "$34",
+                "mediaKey": "fnf.tee.front",
+                "badge": "Live"
+              }
+            },
+            {
+              "id": "products-block-1",
+              "type": "item",
+              "data": {
+                "title": "Fresh Till Death Hat",
+                "price": "$34.99",
+                "mediaKey": "fnf.hat",
+                "badge": "Live"
+              }
+            },
+            {
+              "id": "products-block-2",
+              "type": "item",
+              "data": {
+                "title": "Glass Coffee Can",
+                "price": "Demo $24",
+                "mediaKey": "completeful.glass-coffee-can",
+                "badge": "Catalog idea"
+              }
+            }
+          ],
+          "data": {
+            "eyebrow": "Bundle concept / existing + sourced",
+            "heading": "The Earned Hours Starter Kit",
+            "body": "A concrete first upsell test: one live F&FT product, one existing accessory, and one easy sourced drinkware add-on.",
+            "total": "Concept $74",
+            "items": [
+              {
+                "title": "Fuel N Free Time Tee",
+                "price": "$34",
+                "mediaKey": "fnf.tee.front",
+                "badge": "Live"
+              },
+              {
+                "title": "Fresh Till Death Hat",
+                "price": "$34.99",
+                "mediaKey": "fnf.hat",
+                "badge": "Live"
+              },
+              {
+                "title": "Glass Coffee Can",
+                "price": "Demo $24",
+                "mediaKey": "completeful.glass-coffee-can",
+                "badge": "Catalog idea"
+              }
+            ]
+          }
+        },
+        {
+          "id": "products-trust-row-5",
+          "type": "trust-row",
+          "preset": "revise/trust-row",
+          "settings": {
+            "surface": "canvas"
+          },
+          "blocks": [
+            {
+              "id": "products-block-0",
+              "type": "item",
+              "data": {
+                "title": "Existing assets",
+                "body": "Real F&FT media and copy."
+              }
+            },
+            {
+              "id": "products-block-1",
+              "type": "item",
+              "data": {
+                "title": "Live products",
+                "body": "Current store pieces stay identifiable."
+              }
+            },
+            {
+              "id": "products-block-2",
+              "type": "item",
+              "data": {
+                "title": "Sourced ideas",
+                "body": "Catalog concepts are labeled."
+              }
+            },
+            {
+              "id": "products-block-3",
+              "type": "item",
+              "data": {
+                "title": "In the works",
+                "body": "New directions begin with real ideas."
+              }
+            }
+          ],
+          "data": {
+            "items": [
+              {
+                "title": "Existing assets",
+                "body": "Real F&FT media and copy."
+              },
+              {
+                "title": "Live products",
+                "body": "Current store pieces stay identifiable."
+              },
+              {
+                "title": "Sourced ideas",
+                "body": "Catalog concepts are labeled."
+              },
+              {
+                "title": "In the works",
+                "body": "New directions begin with real ideas."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "stories",
+      "path": "/stories/",
+      "title": "Project Stories",
+      "description": "Real builders, machines and works in progress.",
+      "sections": [
+        {
+          "id": "stories-campaign-teaser-1",
+          "type": "campaign-teaser",
+          "preset": "revise/campaign-teaser",
+          "settings": {
+            "surface": "image"
+          },
+          "data": {
+            "eyebrow": "From the shop floor",
+            "heading": "Project Stories",
+            "body": "Behind every finished machine are the people, long nights, setbacks, and small wins that brought it to life.",
+            "mediaKey": "fnf.build.heli.2",
+            "mediaAlt": "Helicopter buildout project",
+            "action": {
+              "label": "See the stories",
+              "href": "/stories/"
+            },
+            "anchor": "fnf-stories"
+          }
+        },
+        {
+          "id": "stories-sticky-card-deck-2",
+          "type": "editorial-posts",
+          "preset": "revise/sticky-card-deck",
+          "settings": {
+            "surface": "paper"
+          },
+          "blocks": [
+            {
+              "id": "stories-block-0",
+              "type": "item",
+              "data": {
+                "title": "Garage Build Notes",
+                "meta": "Concept · existing dirt-bike album",
+                "body": "A photo-sequence format for build stages, parts, lessons, and the people doing the work.",
+                "mediaKey": "fnf.build.dirt.1"
+              }
+            },
+            {
+              "id": "stories-block-1",
+              "type": "item",
+              "data": {
+                "title": "Project Story: Helicopter Buildout",
+                "meta": "Concept · existing helicopter album",
+                "body": "A longer-form collaboration story with progress photography, collaborator credits, and optional product capsule.",
+                "mediaKey": "fnf.build.heli.2"
+              }
+            },
+            {
+              "id": "stories-block-2",
+              "type": "item",
+              "data": {
+                "title": "Made in Lafayette",
+                "meta": "Existing brand story",
+                "body": "Origin, garage culture, regional identity, and the philosophy behind earning your hours.",
+                "mediaKey": "fnf.graphic.fuel-up"
+              }
+            }
+          ],
+          "data": {
+            "eyebrow": "Work worth remembering",
+            "heading": "Every machine has a story.",
+            "items": [
+              {
+                "title": "Garage Build Notes",
+                "meta": "Concept · existing dirt-bike album",
+                "body": "A photo-sequence format for build stages, parts, lessons, and the people doing the work.",
+                "mediaKey": "fnf.build.dirt.1"
+              },
+              {
+                "title": "Project Story: Helicopter Buildout",
+                "meta": "Concept · existing helicopter album",
+                "body": "A longer-form collaboration story with progress photography, collaborator credits, and optional product capsule.",
+                "mediaKey": "fnf.build.heli.2"
+              },
+              {
+                "title": "Made in Lafayette",
+                "meta": "Existing brand story",
+                "body": "Origin, garage culture, regional identity, and the philosophy behind earning your hours.",
+                "mediaKey": "fnf.graphic.fuel-up"
+              }
+            ]
+          }
+        },
+        {
+          "id": "stories-full-bleed-grid-3",
+          "type": "social-gallery",
+          "preset": "revise/full-bleed-grid",
+          "settings": {
+            "surface": "paper"
+          },
+          "blocks": [
+            {
+              "id": "stories-block-0",
+              "type": "item",
+              "data": {
+                "title": "Earned Hours",
+                "mediaKey": "fnf.hero"
+              }
+            },
+            {
+              "id": "stories-block-1",
+              "type": "item",
+              "data": {
+                "title": "High Octane",
+                "mediaKey": "fnf.high-octane"
+              }
+            },
+            {
+              "id": "stories-block-2",
+              "type": "item",
+              "data": {
+                "title": "F&FT Tee",
+                "mediaKey": "fnf.tee.back"
+              }
+            },
+            {
+              "id": "stories-block-3",
+              "type": "item",
+              "data": {
+                "title": "Weekend Build",
+                "mediaKey": "fnf.build.dirt.4"
+              }
+            },
+            {
+              "id": "stories-block-4",
+              "type": "item",
+              "data": {
+                "title": "Project Story",
+                "mediaKey": "fnf.build.heli.4"
+              }
+            },
+            {
+              "id": "stories-block-5",
+              "type": "item",
+              "data": {
+                "title": "Masters",
+                "mediaKey": "fnf.masters"
+              }
+            }
+          ],
+          "data": {
+            "eyebrow": "Out there / In the making",
+            "heading": "The moments in between.",
+            "items": [
+              {
+                "title": "Earned Hours",
+                "mediaKey": "fnf.hero"
+              },
+              {
+                "title": "High Octane",
+                "mediaKey": "fnf.high-octane"
+              },
+              {
+                "title": "F&FT Tee",
+                "mediaKey": "fnf.tee.back"
+              },
+              {
+                "title": "Weekend Build",
+                "mediaKey": "fnf.build.dirt.4"
+              },
+              {
+                "title": "Project Story",
+                "mediaKey": "fnf.build.heli.4"
+              },
+              {
+                "title": "Masters",
+                "mediaKey": "fnf.masters"
+              }
+            ]
+          }
+        },
+        {
+          "id": "stories-brand-film-4",
+          "type": "brand-film",
+          "preset": "revise/brand-film",
+          "settings": {
+            "surface": "inverse"
+          },
+          "data": {
+            "eyebrow": "Existing F&FT footage / film treatment",
+            "heading": "The gear is part of the story. The time is the point.",
+            "mediaKey": "fnf.film.garage",
+            "mediaAlt": "Fuel & Free Time brand film",
+            "posterKey": "fnf.hero"
+          }
+        }
+      ]
+    },
+    {
+      "id": "campaigns",
+      "path": "/campaigns/",
+      "title": "Our Worlds",
+      "description": "Different ways of moving. One reason for making the time.",
+      "sections": [
+        {
+          "id": "campaigns-dark-promo-grid-1",
+          "type": "editorial-grid",
+          "preset": "revise/dark-promo-grid",
+          "settings": {
+            "surface": "inverse"
+          },
+          "blocks": [
+            {
+              "id": "campaigns-block-0",
+              "type": "item",
+              "data": {
+                "label": "Concept 01 · Performance",
+                "title": "High Octane",
+                "body": "For the late nights in the garage and the roads that make them worth it.",
+                "mediaKey": "fnf.high-octane",
+                "href": "/campaigns/#campaigns-pinned-media-grid-2"
+              }
+            },
+            {
+              "id": "campaigns-block-1",
+              "type": "item",
+              "data": {
+                "label": "Concept 02 · Refined",
+                "title": "Masters",
+                "body": "Less noise. More purpose. Essentials that speak for themselves.",
+                "mediaKey": "fnf.masters",
+                "href": "/campaigns/#campaigns-before-after-3"
+              }
+            },
+            {
+              "id": "campaigns-block-2",
+              "type": "item",
+              "data": {
+                "label": "Concept 03 · Editorial",
+                "title": "Project Stories",
+                "body": "The makers, machines, and places behind the things we love.",
+                "mediaKey": "fnf.build.heli.2",
+                "href": "/stories/"
+              }
+            }
+          ],
+          "data": {
+            "eyebrow": "Fuel & Free Time / Three worlds",
+            "heading": "Three ways to make the time count.",
+            "items": [
+              {
+                "label": "Concept 01 · Performance",
+                "title": "High Octane",
+                "body": "For the late nights in the garage and the roads that make them worth it.",
+                "mediaKey": "fnf.high-octane",
+                "href": "/campaigns/"
+              },
+              {
+                "label": "Concept 02 · Refined",
+                "title": "Masters",
+                "body": "Less noise. More purpose. Essentials that speak for themselves.",
+                "mediaKey": "fnf.masters",
+                "href": "/campaigns/"
+              },
+              {
+                "label": "Concept 03 · Editorial",
+                "title": "Project Stories",
+                "body": "The makers, machines, and places behind the things we love.",
+                "mediaKey": "fnf.build.heli.2",
+                "href": "/stories/"
+              }
+            ],
+            "anchor": "fnf-campaigns"
+          }
+        },
+        {
+          "id": "campaigns-pinned-media-grid-2",
+          "type": "collection-split-media",
+          "preset": "revise/pinned-media-grid",
+          "settings": {
+            "surface": "inverse"
+          },
+          "blocks": [
+            {
+              "id": "campaigns-block-0",
+              "type": "item",
+              "data": {
+                "title": "Heavyweight Tee",
+                "price": "Demo $32",
+                "mediaKey": "completeful.heavyweight-tee",
+                "badge": "Catalog"
+              }
+            },
+            {
+              "id": "campaigns-block-1",
+              "type": "item",
+              "data": {
+                "title": "Bamboo Sunglasses",
+                "price": "Demo $24",
+                "mediaKey": "completeful.bamboo-sunglasses",
+                "badge": "Catalog"
+              }
+            },
+            {
+              "id": "campaigns-block-2",
+              "type": "item",
+              "data": {
+                "title": "Stainless Tumbler",
+                "price": "Demo $28",
+                "mediaKey": "completeful.stainless-tumbler",
+                "badge": "Catalog"
+              }
+            },
+            {
+              "id": "campaigns-block-3",
+              "type": "item",
+              "data": {
+                "title": "Luggage Tag",
+                "price": "Demo $16",
+                "mediaKey": "completeful.luggage-tag",
+                "badge": "Catalog"
+              }
+            }
+          ],
+          "data": {
+            "eyebrow": "Collection concept / existing brand direction",
+            "heading": "High Octane",
+            "body": "Performance-minded gear for garage nights, open roads, and redline living.",
+            "mediaKey": "fnf.high-octane",
+            "mediaAlt": "Fuel & Free Time High Octane action imagery",
+            "items": [
+              {
+                "title": "Heavyweight Tee",
+                "price": "Demo $32",
+                "mediaKey": "completeful.heavyweight-tee",
+                "badge": "Catalog"
+              },
+              {
+                "title": "Bamboo Sunglasses",
+                "price": "Demo $24",
+                "mediaKey": "completeful.bamboo-sunglasses",
+                "badge": "Catalog"
+              },
+              {
+                "title": "Stainless Tumbler",
+                "price": "Demo $28",
+                "mediaKey": "completeful.stainless-tumbler",
+                "badge": "Catalog"
+              },
+              {
+                "title": "Luggage Tag",
+                "price": "Demo $16",
+                "mediaKey": "completeful.luggage-tag",
+                "badge": "Catalog"
+              }
+            ]
+          }
+        },
+        {
+          "id": "campaigns-before-after-3",
+          "type": "before-after",
+          "preset": "revise/before-after",
+          "settings": {
+            "surface": "paper"
+          },
+          "data": {
+            "eyebrow": "Brand tension",
+            "heading": "Fuel on one side. Free time on the other.",
+            "beforeKey": "fnf.masters",
+            "afterKey": "fnf.essentials",
+            "beforeAlt": "Garage and automotive lifestyle",
+            "afterAlt": "Lakeside free-time lifestyle"
+          }
+        },
+        {
+          "id": "campaigns-testimonials-4",
+          "type": "testimonials",
+          "preset": "revise/testimonials",
+          "settings": {
+            "surface": "muted"
+          },
+          "blocks": [
+            {
+              "id": "campaigns-block-0",
+              "type": "item",
+              "data": {
+                "quote": "Time isn't money. Time is everything money can't buy back.",
+                "by": "About / brand story"
+              }
+            },
+            {
+              "id": "campaigns-block-1",
+              "type": "item",
+              "data": {
+                "quote": "Every mile has a story. Every hour is earned.",
+                "by": "Community"
+              }
+            },
+            {
+              "id": "campaigns-block-2",
+              "type": "item",
+              "data": {
+                "quote": "Real people, real stories, real freedom.",
+                "by": "Home / community value"
+              }
+            }
+          ],
+          "data": {
+            "eyebrow": "Existing brand language",
+            "heading": "Words we live by.",
+            "items": [
+              {
+                "quote": "Time isn't money. Time is everything money can't buy back.",
+                "by": "About / brand story"
+              },
+              {
+                "quote": "Every mile has a story. Every hour is earned.",
+                "by": "Community"
+              },
+              {
+                "quote": "Real people, real stories, real freedom.",
+                "by": "Home / community value"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "ideas",
+      "path": "/ideas/",
+      "title": "What Comes Next",
+      "description": "Working ideas and proposed pieces. Nothing here is on sale yet.",
+      "sections": [
+        {
+          "id": "ideas-merch-lab-1",
+          "type": "commerce-offers",
+          "preset": "revise/merch-lab",
+          "settings": {
+            "surface": "paper"
+          },
+          "data": {
+            "eyebrow": "In development",
+            "heading": "Good ideas take time.",
+            "body": "Exploring new essentials, useful extras, and pieces for the road. These are concepts, not available F&FT products; prices and fulfillment are still under review.",
+            "sourceNote": "Source snapshot: F&FT Completeful mirror · available + marketplace-eligible products · 2026-10-02. Proposed retail and bundle prices are illustrative, not provider pricing. Estimated gross margin uses mirrored fulfillment cost only and excludes shipping, payment fees, tax, discounts, and returns.",
+            "currency": "USD",
+            "showEconomics": true,
+            "products": [
+              {
+                "id": "heavyweight-tee",
+                "title": "Heavyweight Garment-Dyed Tee",
+                "sourceLabel": "DTG · Unisex Garment-Dyed Heavyweight T-Shirt-Comfort Colors 1717",
+                "role": "Core product",
+                "body": "A dependable hero SKU for graphic drops, collections, and bundle anchors.",
+                "mediaKey": "completeful.heavyweight-tee",
+                "mediaAlt": "Heavyweight Garment-Dyed Tee",
+                "fulfillmentCostCents": 1100,
+                "proposedRetailCents": 3200
+              },
+              {
+                "id": "long-sleeve",
+                "title": "Ultra Cotton Long Sleeve",
+                "sourceLabel": "DTG · Unisex Ultra Cotton® Long Sleeve T-Shirt- Gildan 2400",
+                "role": "Seasonal core",
+                "body": "A higher-ticket apparel step-up that works naturally with accessories.",
+                "mediaKey": "completeful.long-sleeve",
+                "mediaAlt": "Ultra Cotton Long Sleeve",
+                "fulfillmentCostCents": 1300,
+                "proposedRetailCents": 3800
+              },
+              {
+                "id": "hoodie",
+                "title": "Sponge Fleece Full-Zip Hoodie",
+                "sourceLabel": "DTG · Unisex Sponge Fleece Full-Zip Hoodie Sweatshirt- Bella + Canvas 3739",
+                "role": "Premium anchor",
+                "body": "A premium apparel anchor for higher-AOV bundles or limited capsule offers.",
+                "mediaKey": "completeful.hoodie",
+                "mediaAlt": "Sponge Fleece Full-Zip Hoodie",
+                "fulfillmentCostCents": 2850,
+                "proposedRetailCents": 6400
+              },
+              {
+                "id": "coffee-mug",
+                "title": "Ceramic Coffee Mug",
+                "sourceLabel": "SUBLIMATION · Coffee Mug",
+                "role": "Cart add-on",
+                "body": "Low fulfillment cost and familiar utility make this a clean post-product add-on.",
+                "mediaKey": "completeful.coffee-mug",
+                "mediaAlt": "Ceramic Coffee Mug",
+                "fulfillmentCostCents": 450,
+                "proposedRetailCents": 1800
+              },
+              {
+                "id": "glass-coffee-can",
+                "title": "16oz Glass Coffee Can",
+                "sourceLabel": "UV · 16oz Glass Coffee Can",
+                "role": "Lifestyle upsell",
+                "body": "A visually distinctive drinkware add-on that photographs well beside apparel.",
+                "mediaKey": "completeful.glass-coffee-can",
+                "mediaAlt": "16oz Glass Coffee Can",
+                "fulfillmentCostCents": 700,
+                "proposedRetailCents": 2400
+              },
+              {
+                "id": "bamboo-sunglasses",
+                "title": "Bamboo Frame Sunglasses",
+                "sourceLabel": "ENGRAVING · Bamboo Frame Sunglasses",
+                "role": "Accessory cross-sell",
+                "body": "An easy visual cross-sell for summer, travel, outdoor, and lifestyle collections.",
+                "mediaKey": "completeful.bamboo-sunglasses",
+                "mediaAlt": "Bamboo Frame Sunglasses",
+                "fulfillmentCostCents": 750,
+                "proposedRetailCents": 2400
+              },
+              {
+                "id": "luggage-tag",
+                "title": "Aluminum Luggage Tag",
+                "sourceLabel": "ETCHING · Aluminum Luggage Tags",
+                "role": "Low-friction upsell",
+                "body": "Small personalized add-on with a low fulfillment baseline and clear travel story.",
+                "mediaKey": "completeful.luggage-tag",
+                "mediaAlt": "Aluminum Luggage Tag",
+                "fulfillmentCostCents": 400,
+                "proposedRetailCents": 1600
+              },
+              {
+                "id": "pet-tag",
+                "title": "Circle Pet Tag",
+                "sourceLabel": "ETCHING · Circle Pet Tag",
+                "role": "Personalization add-on",
+                "body": "A tiny personalized SKU that can attach naturally to pet-oriented collections.",
+                "mediaKey": "completeful.pet-tag",
+                "mediaAlt": "Circle Pet Tag",
+                "fulfillmentCostCents": 350,
+                "proposedRetailCents": 1400
+              },
+              {
+                "id": "pet-feeder",
+                "title": "Bamboo Pet Bowl Feeder",
+                "sourceLabel": "ENGRAVING · Bamboo Pet Bowl Feeders",
+                "role": "Giftable anchor",
+                "body": "A personalized home/pet anchor that pairs with the low-cost tag for a complete offer.",
+                "mediaKey": "completeful.pet-feeder",
+                "mediaAlt": "Bamboo Pet Bowl Feeder",
+                "fulfillmentCostCents": 1500,
+                "proposedRetailCents": 3400
+              },
+              {
+                "id": "bookmark",
+                "title": "Acrylic Bookmark",
+                "sourceLabel": "UV · Acrylic Bookmark with Tassel",
+                "role": "Checkout add-on",
+                "body": "A compact low-cost add-on for editorial, book, education, or gift-driven stores.",
+                "mediaKey": "completeful.bookmark",
+                "mediaAlt": "Acrylic Bookmark",
+                "fulfillmentCostCents": 400,
+                "proposedRetailCents": 1400
+              },
+              {
+                "id": "framed-decor",
+                "title": "6×6 Wooden Framed Decor",
+                "sourceLabel": "UV · 1:1 Wooden Framed Decor",
+                "role": "Giftable add-on",
+                "body": "A small personalized decor piece that can raise AOV without competing with the hero SKU.",
+                "mediaKey": "completeful.framed-decor",
+                "mediaAlt": "6×6 Wooden Framed Decor",
+                "fulfillmentCostCents": 651,
+                "proposedRetailCents": 2400
+              },
+              {
+                "id": "stainless-tumbler",
+                "title": "16oz Stainless Tumbler",
+                "sourceLabel": "ETCHING · 16 oz Tumbler - Stainless",
+                "role": "Premium add-on",
+                "body": "A durable mid-ticket drinkware option for bundle step-ups.",
+                "mediaKey": "completeful.stainless-tumbler",
+                "mediaAlt": "16oz Stainless Tumbler",
+                "fulfillmentCostCents": 1150,
+                "proposedRetailCents": 2800
+              }
+            ],
+            "offers": [
+              {
+                "id": "launch-kit",
+                "badge": "Starter bundle",
+                "title": "Launch Kit",
+                "body": "One hero apparel item plus two easy lifestyle add-ons. A clean default bundle for a new drop.",
+                "productIds": [
+                  "heavyweight-tee",
+                  "glass-coffee-can",
+                  "luggage-tag"
+                ],
+                "compareAtCents": 7200,
+                "offerPriceCents": 5800,
+                "fulfillmentCostCents": 2200,
+                "ctaLabel": "Add launch kit"
+              },
+              {
+                "id": "desk-drop",
+                "badge": "High attach potential",
+                "title": "Desk Drop",
+                "body": "A low-cost gift trio that demonstrates cross-category bundling without requiring apparel sizing.",
+                "productIds": [
+                  "coffee-mug",
+                  "bookmark",
+                  "framed-decor"
+                ],
+                "compareAtCents": 5600,
+                "offerPriceCents": 4400,
+                "fulfillmentCostCents": 1501,
+                "ctaLabel": "Add desk drop"
+              },
+              {
+                "id": "weekend-carry",
+                "badge": "AOV step-up",
+                "title": "Weekend Carry",
+                "body": "Seasonal apparel with two practical accessories, built to demonstrate a higher-value cross-sell.",
+                "productIds": [
+                  "long-sleeve",
+                  "bamboo-sunglasses",
+                  "stainless-tumbler"
+                ],
+                "compareAtCents": 9000,
+                "offerPriceCents": 7200,
+                "fulfillmentCostCents": 3200,
+                "ctaLabel": "Add weekend carry"
+              },
+              {
+                "id": "pet-personalization",
+                "badge": "Personalized pair",
+                "title": "Pet Personalization",
+                "body": "A giftable anchor plus a tiny personalized add-on — useful for demonstrating conditional upsells.",
+                "productIds": [
+                  "pet-feeder",
+                  "pet-tag"
+                ],
+                "compareAtCents": 4800,
+                "offerPriceCents": 4200,
+                "fulfillmentCostCents": 1850,
+                "ctaLabel": "Add pet pair"
+              }
+            ],
+            "anchor": "fnf-merch-lab"
+          }
+        },
+        {
+          "id": "ideas-commerce-marquee-2",
+          "type": "marquee",
+          "preset": "revise/commerce-marquee",
+          "settings": {
+            "surface": "inverse"
+          },
+          "blocks": [
+            {
+              "id": "ideas-block-0",
+              "type": "item",
+              "data": "Time is the real horsepower"
+            },
+            {
+              "id": "ideas-block-1",
+              "type": "item",
+              "data": "Earned not given"
+            },
+            {
+              "id": "ideas-block-2",
+              "type": "item",
+              "data": "Built in Lafayette"
+            },
+            {
+              "id": "ideas-block-3",
+              "type": "item",
+              "data": "Work hard. Play harder."
+            },
+            {
+              "id": "ideas-block-4",
+              "type": "item",
+              "data": "Every mile has a story"
+            }
+          ],
+          "data": {
+            "items": [
+              "Time is the real horsepower",
+              "Earned not given",
+              "Built in Lafayette",
+              "Work hard. Play harder.",
+              "Every mile has a story"
+            ]
+          }
+        },
+        {
+          "id": "ideas-faq-3",
+          "type": "faq",
+          "preset": "revise/faq",
+          "settings": {
+            "surface": "paper"
+          },
+          "blocks": [
+            {
+              "id": "ideas-block-0",
+              "type": "item",
+              "data": {
+                "q": "What is already real today?",
+                "a": "The F&FT brand copy and collection directions, the Fuel N Free Time Tee, Fresh Till Death hat, Fuel + Adventure tee imagery, archived graphics/video, and the project/gallery media shown here already exist in the current buildout."
+              }
+            },
+            {
+              "id": "ideas-block-1",
+              "type": "item",
+              "data": {
+                "q": "What is sourced but not yet a live F&FT product?",
+                "a": "The highlighted drinkware, sunglasses, luggage tag, heavyweight tee, and other add-ons come from the current available Completeful catalog mirror. They still need product creation, artwork, final pricing, shipping validation, and publish steps."
+              }
+            },
+            {
+              "id": "ideas-block-2",
+              "type": "item",
+              "data": {
+                "q": "What is a campaign concept?",
+                "a": "Earned Hours, High Octane, Masters, and Project Stories are being arranged here as customer-facing campaign directions using existing F&FT source material. The purpose is to approve the vibe before we scaffold campaign/product records around it."
+              }
+            }
+          ],
+          "data": {
+            "eyebrow": "What this preview means",
+            "heading": "Existing, sourced, and concept are kept separate.",
+            "items": [
+              {
+                "q": "What is already real today?",
+                "a": "The F&FT brand copy and collection directions, the Fuel N Free Time Tee, Fresh Till Death hat, Fuel + Adventure tee imagery, archived graphics/video, and the project/gallery media shown here already exist in the current buildout."
+              },
+              {
+                "q": "What is sourced but not yet a live F&FT product?",
+                "a": "The highlighted drinkware, sunglasses, luggage tag, heavyweight tee, and other add-ons come from the current available Completeful catalog mirror. They still need product creation, artwork, final pricing, shipping validation, and publish steps."
+              },
+              {
+                "q": "What is a campaign concept?",
+                "a": "Earned Hours, High Octane, Masters, and Project Stories are being arranged here as customer-facing campaign directions using existing F&FT source material. The purpose is to approve the vibe before we scaffold campaign/product records around it."
+              }
+            ]
+          }
+        },
+        {
+          "id": "ideas-newsletter-4",
+          "type": "cta-band",
+          "preset": "revise/newsletter",
+          "settings": {
+            "surface": "inverse"
+          },
+          "data": {
+            "eyebrow": "Existing brand CTA",
+            "heading": "Stay fueled up",
+            "body": "Get first access to drops, event invites, and the stories that matter.",
+            "action": {
+              "label": "Join the list",
+              "href": "#"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

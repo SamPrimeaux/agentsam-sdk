@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inneranimalmedia.com/schemas/agentsam/collection-candidate.v1.json",
+  "title": "AgentSam Collection Lab Candidate",
+  "type": "object",
+  "required": ["id", "designId", "state"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "designId": { "type": "string", "minLength": 1 },
+    "collectionPath": { "type": "array", "items": { "type": "string" } },
+    "state": {
+      "enum": ["concept", "approved-art", "production-ready", "sample-ordered", "sample-approved", "published", "retired"]
+    },
+    "products": { "type": "array", "items": { "type": "object" } },
+    "approvals": {
+      "type": "object",
+      "properties": {
+        "artwork": { "type": "boolean" },
+        "wording": { "type": "boolean" },
+        "palette": { "type": "boolean" },
+        "visualIdentity": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": true
+}

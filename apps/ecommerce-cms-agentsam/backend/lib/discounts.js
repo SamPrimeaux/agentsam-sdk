@@ -1,8 +1,8 @@
+import { requireApplicationAccountId } from "./account-context.js";
 /**
  * Shared discount validation + amount calculation (admin + storefront).
  */
 
-import { COMMERCE_ACCOUNT_ID } from "../agentsam/constants.js";
 
 export function parseJson(raw, fallback) {
   try {
@@ -151,7 +151,7 @@ export async function loadDiscountByCode(env, code) {
   return env.DB.prepare(
     `SELECT * FROM discounts WHERE account_id = ? AND code = ? COLLATE NOCASE LIMIT 1`
   )
-    .bind(COMMERCE_ACCOUNT_ID, normalized)
+    .bind(requireApplicationAccountId(), normalized)
     .first();
 }
 
