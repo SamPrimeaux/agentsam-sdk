@@ -254,7 +254,8 @@
     "packages/agentsam-workbench/tsconfig.json",
     "packages/agentsam-merch",
     "TRADEMARKS.md",
-    "packages/agentsam-site-scrape"
+    "packages/agentsam-site-scrape",
+    "packages/agentsam-desktop-shell/scripts/app-discovery.mjs"
   ],
   "workspaces": [
     "packages/agentsam-analytics",

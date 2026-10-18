@@ -31,7 +31,9 @@ import { TemplateLibraryModal } from '../components/TemplateLibraryModal';
 import { CadCreatorShell } from './CadCreatorShell';
 import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
-import { installCadPreviewGuestBridge } from '../lib/agentsam-preview-bridge';
+import { installCadPreviewGuestBridge, type CadOutbound } from '../lib/agentsam-preview-bridge';
+import { MiniAgentSam } from '@inneranimalmedia/agentsam-workbench/agent';
+import '@inneranimalmedia/agentsam-workbench/agent/mini-agentsam.css';
 import { buildSelectionContext, verifiedSelectionRevision, type CadSelectionContext } from '../lib/cad/selection';
 import { useCadTools } from '../lib/execution/useCadTools';
 import {
@@ -93,8 +95,18 @@ export function CadCreatorApp({
   const onVerifiedRevision = useCallback((revision:number|null, projectId:string) => {
     setVerifiedProjectRevision(revision === null ? null : {projectId,revision});
   }, []);
-  const bridgeRef = React.useRef<{ post: (m: never) => void; dispose: () => void } | null>(null);
+  const bridgeRef = React.useRef<{ post: (m: CadOutbound) => void; dispose: () => void } | null>(null);
   const [chromeFolded, setChromeFolded] = useState(false);
+  const [annotating, setAnnotating] = useState(false);
+  const [copilotDraft, setCopilotDraft] = useState('');
+  const [assistantReply, setAssistantReply] = useState('');
+  useEffect(() => {
+    const handle = (event: Event) => {
+      setAssistantReply((event as CustomEvent<string>).detail || 'No assistant response');
+    };
+    window.addEventListener('agentsam:cad-assistant-response', handle);
+    return () => window.removeEventListener('agentsam:cad-assistant-response', handle);
+  }, []);
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   // Robotics is an optional heavy workspace.
@@ -296,8 +308,8 @@ export function CadCreatorApp({
         onRedo={handleRedo}
         isDarkMode={isDarkMode}
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-        isSidebarOpen={!chromeFolded}
-        onToggleSidebar={() => setChromeFolded((v) => !v)}
+        isSidebarOpen={annotating}
+        onToggleSidebar={() => setAnnotating((v) => !v)}
         onExport={() => setIsExportPublishOpen(true)}
         presentation={presentation}
         showDiagnostics={showRoboticsDiagnostics}
@@ -666,6 +678,33 @@ export function CadCreatorApp({
         </section>
       </main>
 
+      {/* Reuse the SDK's real miniAgentSam selection/composer. The CAD host
+          owns conversation transport and every geometry-changing operation. */}
+      <MiniAgentSam selecting={annotating} onSelectingChange={setAnnotating}
+        onSubmit={async (prompt, selection) => {
+          const context = {
+            workspace: activeWorkspace, project_id: project.id,
+            project_name: project.name, revision: verifiedProjectRevision?.revision ?? null,
+            interface_selection: selection,
+          };
+          const message = prompt.trim() + '\n\nCAD workspace context (descriptive only; not edit authority): ' + JSON.stringify(context);
+          if (presentation !== 'embedded' || !bridgeRef.current) {
+            setCopilotDraft(message);
+            setAssistantReply('Open this CAD project in Local Studio to submit the draft through the authorized AgentSam conversation.');
+            return;
+          }
+          setCopilotDraft('');
+          setAssistantReply('Request sent to the AgentSam host.');
+          bridgeRef.current.post({type:'assistant.request',
+            request_id:crypto.randomUUID(),prompt:message,
+            selection:cadSelection && verifiedProjectRevision?.projectId===project.id ? cadSelection : null});
+        }}
+      />
+      {(copilotDraft || assistantReply) && <aside data-annotation-control="" aria-label="CAD copilot status" className="fixed bottom-14 right-4 z-[100] w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-white/20 bg-slate-950 px-3 py-2 text-xs text-white shadow-2xl">
+        <div className="flex items-center justify-between gap-2"><strong>AgentSam CAD copilot</strong><button type="button" aria-label="Dismiss copilot status" onClick={() => {setCopilotDraft('');setAssistantReply('');}}>Close</button></div>
+        {assistantReply && <p role="status" className="mt-2 whitespace-pre-wrap">{assistantReply}</p>}
+        {copilotDraft && <><textarea readOnly value={copilotDraft} aria-label="CAD request draft" rows={4} className="mt-2 w-full rounded bg-slate-800 p-2 text-white"/><button type="button" onClick={() => void navigator.clipboard.writeText(copilotDraft)}>Copy request</button></>}
+      </aside>}
       {/* 4. Unified CAD Bottom Status Contract */}
       <CadStatusStrip
         workspace={currentWorkspaceDescriptor}
