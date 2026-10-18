@@ -3,6 +3,14 @@ import type {DesignProject} from '@inneranimalmedia/agentsam-cad-shared';
 export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRevision}:{project:DesignProject;onLoad:(p:DesignProject)=>void;readOnly?:boolean;onVerifiedRevision?:(revision:number|null,projectId:string)=>void}){
  const [revision,setRevision]=useState(0),[status,setStatus]=useState('Unsaved'),[busy,setBusy]=useState(false),[loadId,setLoadId]=useState(project.id),[restoreRevision,setRestoreRevision]=useState('1');
  const [artifact,setArtifact]=useState('');
+ const [artifactLabel,setArtifactLabel]=useState('View courtyard render');
+ const [occtDoctor,setOcctDoctor]=useState<{ready:boolean;version?:string;reason?:string}|null>(null);
+ const [solidDimensions,setSolidDimensions]=useState({width:'24',depth:'12',height:'6'});
+ useEffect(()=>{let mounted=true;fetch('/api/cad/project/native/doctor')
+  .then(async r=>{if(!r.ok)throw new Error('Native host unavailable');return r.json();})
+  .then(v=>{if(mounted)setOcctDoctor(v);})
+  .catch(()=>{if(mounted)setOcctDoctor({ready:false,reason:'Native host unavailable'});});
+  return()=>{mounted=false;};},[]);
  const current=useRef(project),synced=useRef(''),adoptedId=useRef('');
  current.current=project;
  async function call(name:string,args:any){const res=await fetch('/api/cad/project/tools/'+name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(args)});const body=await res.json();if(!res.ok||!body.ok)throw new Error(body.error||'Project operation failed');return body.result;}
@@ -25,7 +33,26 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
  async function run(action:string){if(readOnly&&action!=='load')return;setBusy(true);setArtifact('');try{
   if(action==='load'){const r=await call('design_project_get',{project_id:loadId});adopt(r);setStatus('Loaded revision '+r.revision);}
   if(action==='save'||action==='render'){const r=await call('design_project_save',{project,expected_revision:revision});adopt(r);setStatus('Saved revision '+r.revision);
-   if(action==='render'){const input={project_id:project.id,revision:r.revision};await call('design_model_build',input);await call('design_model_inspect',input);await call('design_model_export',{...input,format:'glb'});await call('design_model_render',input);setArtifact('/api/cad/project/artifact/'+project.id+'/'+r.revision+'/courtyard.png');setStatus('Built and rendered revision '+r.revision);}
+   if(action==='render'){const input={project_id:project.id,revision:r.revision};await call('design_model_build',input);await call('design_model_inspect',input);await call('design_model_export',{...input,format:'glb'});await call('design_model_render',input);setArtifact('/api/cad/project/artifact/'+project.id+'/'+r.revision+'/courtyard.png');setArtifactLabel('View courtyard render');setStatus('Built and rendered revision '+r.revision);}
+  }
+  if(action==='solid'){
+   if(!occtDoctor?.ready)throw new Error(occtDoctor?.reason||'OCCT native kernel unavailable');
+   const values=Object.values(solidDimensions).map(Number);
+   if(values.some(v=>!Number.isFinite(v)||v<=0||v*25.4>1000000))throw new Error('Solid dimensions must be positive inches');
+   const id='occt_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
+   const primitive={id,name:'OCCT box',generator:'occt' as const,generatorTemplate:'box',
+    parameters:{width:values[0],depth:values[1],height:values[2]},
+    transform:{x:0,y:0,z:0},source:'occt:box',updatedAt:Date.now()};
+   const updated={...project,parametricObjects:[...(project.parametricObjects||[]),primitive]};
+   const saved=await call('design_project_save',{project:updated,expected_revision:revision});
+   adopt(saved);
+   const input={project_id:saved.project.id,revision:saved.revision};
+   const build=await call('design_model_build',{...input,engine:'occt',parametric_object_id:id});
+   await call('design_model_inspect',{...input,engine:'occt'});
+   await call('design_model_export',{...input,format:'step'});
+   setArtifact('/api/cad/project/artifact/'+saved.project.id+'/'+saved.revision+'/model.step');
+   setArtifactLabel('Download verified STEP');
+   setStatus('OCCT '+build.native_version+' STEP verified · revision '+saved.revision);
   }
   if(action==='restore'){const r=await call('design_project_restore',{project_id:project.id,revision:Number(restoreRevision),expected_revision:revision});adopt(r);setStatus('Restored as revision '+r.revision);}
  }catch(e:any){setStatus(e.message);}finally{setBusy(false);}}
@@ -34,6 +61,9 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
   <button disabled={busy} onClick={()=>run('load')}>Open saved</button><button disabled={busy||readOnly} onClick={()=>run('save')}>Save revision</button>
   <input aria-label="Revision to restore" type="number" min="1" className="text-black w-12" value={restoreRevision} onChange={e=>setRestoreRevision(e.target.value)}/>
   <button disabled={busy||readOnly||revision===0} onClick={()=>run('restore')}>Restore</button><button disabled={busy||readOnly} onClick={()=>run('render')}>Build & render</button>
-  <span role="status">{busy?'Working…':status}</span>{artifact&&<a href={artifact} target="_blank" rel="noreferrer">View courtyard render</a>}
+  <span className="text-slate-300" title={occtDoctor?.reason||'Native OCCT kernel status'}>{occtDoctor===null?'Checking OCCT…':occtDoctor.ready?'OCCT '+occtDoctor.version:'OCCT unavailable'}</span>
+  {(['width','depth','height'] as const).map(key=><label key={key} className="flex items-center gap-1">{key[0].toUpperCase()}<input aria-label={'OCCT box '+key+' in inches'} type="number" min="0.001" step="any" className="text-black w-14 px-1" value={solidDimensions[key]} onChange={e=>setSolidDimensions(old=>({...old,[key]:e.target.value}))}/></label>)}
+  <span>in</span><button disabled={busy||readOnly||!occtDoctor?.ready} onClick={()=>run('solid')}>Build OCCT solid</button>
+  <span role="status">{busy?'Working…':status}</span>{artifact&&<a href={artifact} target="_blank" rel="noreferrer" download={artifactLabel.startsWith('Download')?'model.step':undefined}>{artifactLabel}</a>}
  </div>;
 }
