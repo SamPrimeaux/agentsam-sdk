@@ -33,7 +33,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
-import { listAppManifests } from '../../../src/commands/app.js';
+import { listAppManifests } from '../../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const LOCAL_STUDIO = path.resolve(HERE, '..');
