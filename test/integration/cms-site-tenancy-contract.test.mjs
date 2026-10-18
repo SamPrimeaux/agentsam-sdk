@@ -91,10 +91,11 @@ test('CMS D1 queries all enforce project-scoped tenancy without cross-tenant lea
 test('Local Studio consumes the portable ecommerce CMS product boundary', () => {
   const route = read('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'cms.tsx');
   const ecommercePkg = JSON.parse(read('apps', 'ecommerce-cms-agentsam', 'package.json'));
-  const rootPkg = JSON.parse(read('package.json'));
+  const appManifest = JSON.parse(read('apps', 'ecommerce-cms-agentsam', 'agentsam.app.json'));
 
   assert.equal(ecommercePkg.name, '@inneranimalmedia/ecommerce-cms-agentsam');
-  assert.equal(ecommercePkg.version, rootPkg.version);
+  assert.equal(ecommercePkg.version, appManifest.version, 'APP owns its independent package version');
+  assert.equal(ecommercePkg.name, appManifest.package, 'APP package identity matches its manifest');
   assert.ok(ecommercePkg.exports?.['./cms'], 'ecommerce CMS product must export ./cms');
   assert.match(route, /from ['"]@inneranimalmedia\/ecommerce-cms-agentsam\/cms['"]/);
   assert.doesNotMatch(route, /from ['"]@inneranimalmedia\/agentsam-cms-(?:frontend|backend|shared)/);
