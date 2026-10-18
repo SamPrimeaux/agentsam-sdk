@@ -73,7 +73,8 @@
     }
   },
   "included_apps": [
-    "cad-creator"
+    "cad-creator",
+    "ecommerce-cms-agentsam"
   ],
   "theme": {
     "primary_color": "#0a0a0c",
