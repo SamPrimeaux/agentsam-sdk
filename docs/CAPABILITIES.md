@@ -20,6 +20,48 @@ agentsam capabilities repository.snapshot --json
 
 This registry is intended to drive CLI/terminal UI discovery, AgentSam/MCP tool selection, docs, verification, and workflow capability resolution. It is deliberately not a second hosted tools database.
 
+## Current registry inventory (source-backed)
+
+The manifest at `protocol/capabilities/manifest.json` is the declaration SSOT; `src/registry/index.js` joins it to the command catalog and package inventory. The entries below are **stable declarations in this checked revision**, not a promise that every operation is bound or authorized on every host. Entries marked **†** explicitly have `deterministic: false` in the manifest, even though they share the same capability namespace.
+
+| Domain | Stable capability IDs |
+| --- | --- |
+| database | `agentsam_cf_d1_list †`, `agentsam_d1_query †`, `agentsam_d1_write †`, `agentsam_d1_delete †`, `cloudflare.d1.schema`, `agentsam_sqlite_list`, `agentsam_sqlite_get`, `agentsam_sqlite_create`, `agentsam_sqlite_delete`, `agentsam_sqlite_restore`, `agentsam_d1_create †`, `agentsam_sqlite_edit` |
+| planning | `plan.list`, `plan.show`, `plan.next`, `plan.create`, `plan.step.add`, `plan.step.status`, `plan.step.evidence`, `plan.step.accept`, `plan.step.depends`, `plan.status`, `planning.goap` |
+| repository | `project.discover`, `machine.inspect`, `workspace.read`, `workspace.list`, `workspace.search`, `workspace.write`, `repository.snapshot`, `repository.audit †`, `repository.intelligence`, `knowledge.index`, `knowledge.search`, `repository.crawl`, `repository.mine`, `project.list`, `project.get`, `project.create`, `project.edit`, `project.delete`, `project.restore` |
+| tool | `test.run †`, `capability.search`, `capability.describe`, `capability.status`, `capability.invoke` |
+| integrity | `merkle.snapshot` |
+| delivery | `deploy.receipt` |
+| security | `security.scan` |
+| brand | `brand.scan`, `brand.resolve`, `brand.plan` |
+| app | `identity.init`, `scaffold.create` |
+| agent | `recon.pack` |
+
+Additional entries, including CAD/Blender, site scraping, workgraph, terminal execution, and cloud profiling, carry `experimental` manifest status. Inspect the current manifest/registry rather than silently promoting them to stable or pretending they are absent.
+
+```bash
+agentsam capabilities --inventory --json
+agentsam capabilities --inventory --commands --search machine
+agentsam capabilities --inventory --packages --search brand
+agentsam explain capability workspace.write
+agentsam explain command app
+```
+
+The host must still resolve a real handler, platform/provider installation, runtime availability, actor and project scope, and operation-specific authorization. `capability.status` reports handler binding/availability; `capability.invoke` only calls an allowlisted handler with host approval. A manifest `status: stable` is **not** evidence of a healthy execution backend or a shipped end-user application. `repository.audit` is an `agent_primitive` requiring an injected reasoner rather than a deterministic collector.
+
+### Four distinct inventories
+
+| Inventory | Canonical owner | Meaning |
+| --- | --- | --- |
+| CLI commands | `src/cli/command-catalog.js` | Actual `agentsam ...` entrypoints and help; the [cheat-sheet](reference/AGENTSAM-CLI-WORKFLOWS.md) is a curated view |
+| Capabilities | `protocol/capabilities/manifest.json` + host adapter | Protocol IDs, schemas, side effects, status, optional `cli`; binding and authorization are separate |
+| Toolchain recipes | `src/lib/setup/recipes.js` | Four provider-native prerequisite recipes, not all capability IDs; see [setup contract](contracts/capability-install-planner.md) |
+| APP products and plugin installs | `agentsam.app.json` / platform product registry / host installation records / plugin account registry | A reusable app definition, a platform catalog record, a local build inclusion and an account-installed application are different facts |
+
+**Product model:** AgentSam CLI/SDK orchestrates a substantial collection of existing applications and domain packages. Docs should document working entrypoints and independent domain ownership rather than call them demos; equally, unverified host journeys should remain labeled *implemented*, *verified*, *deployed*, or *shipped* using the [delivery closure contract](standards/DELIVERY_CLOSURE.md).
+
+The portable public CMS contract is for editable public website content, themes, sections, branding, media and publication—not CAD, commerce, manufacturing, billing or machine resource records. Specialized products compose with CMS without surrendering their domain tables to it. App-local `packages/` directories are a packaging location, **not automatic proof** that every contained package is intentionally private or ineligible for SDK reuse.
+
 ## repository.snapshot
 
 `repository.snapshot` is the first canonical composition primitive. It performs one read-only evidence collection pass over the current checkout and combines existing SDK mechanics:
