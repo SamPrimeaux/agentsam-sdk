@@ -99,7 +99,13 @@ const target = 'docs/reference/AGENTSAM-REGISTRY.generated.md';
 const check=process.argv.includes('--check');
 if(check) {
   if (!fs.existsSync(path.join(root,target)) || read(target)!==out) {
+    const committed=fs.existsSync(path.join(root,target))?read(target):'';
+    let first=0;
+    while(first<Math.min(committed.length,out.length)&&committed[first]===out[first]) first++;
     console.error('Documentation drift: '+target+'; regenerate with node scripts/registry/generate-docs.mjs');
+    console.error('Difference at offset '+first+'; actual length='+committed.length+', expected length='+out.length);
+    console.error('Committed context: '+JSON.stringify(committed.slice(Math.max(0,first-90),first+140)));
+    console.error('Generated context: '+JSON.stringify(out.slice(Math.max(0,first-90),first+140)));
     process.exitCode=1;
   } else console.log('Registry docs PASS: '+commands.length+' commands, '+capabilities.length+' capabilities, '+recipes.length+' recipes, '+apps.length+' APPs, '+packages.length+' packages');
 } else {
