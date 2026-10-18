@@ -168,6 +168,17 @@ do not run just because a user enters a repository. Precompiled npm-native
 platform binaries remain a separate future distribution lane; the current managed
 installer uses Cargo and therefore requires a Rust/Cargo toolchain.
 
+## Product and capability map
+
+AgentSam is a working CLI/SDK and application ecosystem, not a single demo application. Its command catalog, deterministic capability contracts, native package setup recipes, standalone APP manifests, reusable packages, and per-host/account installation records are **different authorities**.
+
+- [Generated registry reference](docs/reference/AGENTSAM-REGISTRY.generated.md) — current commands, all declared capabilities, four setup recipes, APP manifests and package inventory. Regenerate with `npm run docs:registry`; `npm run verify:registry` fails if the generated reference drifts.
+- [CLI workflows](docs/reference/AGENTSAM-CLI-WORKFLOWS.md) — practical command-to-outcome map, including brand, Machine, plans, database, runtime, apps and release evidence.
+- [Capability install planner](docs/contracts/capability-install-planner.md) — provider-native prerequisites vs `agentsamd` runtime placement vs actual app/plugin installations.
+- [APP contract](docs/architecture/AGENTSAM_APPLICATION_CONTRACT.md) — portable product identity; build-time `included_apps` does not install new apps for an existing customer.
+
+`agentsam app install <id>` currently **prints** distribution instructions; a durable post-download Local Studio APP installation/activation is a distinct product gate. `agentsam capabilities` prints declarations, not proof that every host has the required handler and authorization. See [Delivery closure](docs/standards/DELIVERY_CLOSURE.md) before labeling a workflow shipped.
+
 ## Capability discovery and available kits
 
 The canonical machine-readable capability registry is available through `agentsam capabilities --json`
