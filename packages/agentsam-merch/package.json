@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-merch",
-  "version": "2.6.12",
+  "version": "2.6.13",
   "description": "Provider-neutral manufacturing profiles, preflight, derivative planning, and collection-lab primitives for AgentSam.",
   "type": "module",
   "files": [
