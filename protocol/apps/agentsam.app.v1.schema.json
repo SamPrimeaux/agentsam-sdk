@@ -127,7 +127,33 @@
         "additionalProperties": true
       }
     },
-    "secrets": { "type": "object", "additionalProperties": true }
+    "secrets": { "type": "object", "additionalProperties": true },
+    "embed": {
+      "type": "object",
+      "description": "How a host (e.g. Local Studio) builds and stages this APP when it is listed in the host's included_apps. Hosts must not hardcode per-app build logic.",
+      "required": ["stage"],
+      "properties": {
+        "stage": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "Path segment the APP is served from (/<stage>/)." },
+        "build": {
+          "type": "object",
+          "required": ["command", "output"],
+          "properties": {
+            "cwd": { "type": "string", "description": "Relative to the APP directory." },
+            "install": {
+              "type": "object",
+              "required": ["command"],
+              "properties": {
+                "lockfile": { "type": "string" },
+                "check": { "type": "array", "items": { "type": "string" }, "description": "Files whose presence means dependencies are already installed." },
+                "command": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+              }
+            },
+            "command": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "argv; {base} is replaced with /<stage>/." },
+            "output": { "type": "string", "description": "Build output directory, relative to cwd." }
+          }
+        }
+      }
+    }
   },
   "additionalProperties": true
 }
