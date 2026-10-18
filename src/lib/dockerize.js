@@ -298,7 +298,7 @@ export async function stopDockerContainer(name) {
  */
 export async function replaceManagedContainer(name, expectedType) {
   const inspect = await runCommand('docker', [
-    'inspect',
+    'container', 'inspect',
     '--format', '{{json .Config.Labels}}',
     name,
   ]);
@@ -415,7 +415,7 @@ export async function dockerize(targetDir, appType, opts = {}) {
   const plan = buildDockerDeployPlan(appType, opts);
   const isolatedContext = knowledge || cad;
   const written = writeDockerFileSet(targetDir, plan.files, plan.hash, { overwrite: opts.overwrite, isolatedContext });
-  const buildContext = knowledge ? stageKnowledgeContext(written.versionDir) : cad ? stageCadContext(written.versionDir) : targetDir;
+  const buildContext = knowledge ? stageKnowledgeContext(written.versionDir) : cad ? stageCadContext(written.versionDir, opts) : targetDir;
   const manifest = writeManifestEntry(targetDir, plan.hash, {
     appType,
     appSlug: plan.slug,
