@@ -1,4 +1,5 @@
 import { defineSamOperation } from '../../define.js';
+import { createCadProductionOperations } from '../../../lib/cad/production-operations.js';
 import { CAD_PROJECT_TOOLS } from '../../../../apps/cad-creator/shared/cad/src/domain/project-tools.js';
 
 /**
