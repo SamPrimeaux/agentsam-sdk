@@ -197,7 +197,7 @@ Run `agentsam setup --list` for the current recipe catalog. `agentsam setup runt
 | `cad-creator` | AgentSam CAD Creator | `@inneranimalmedia/agentsam-cad-creator` | `bin/agentsam-cad-creator.mjs` |
 | `client-cms-editor` | AgentSam Website + CMS Kit | `@inneranimalmedia/client-cms-editor` | `bin/agentsam-cms.js` |
 | `database-editor` | AgentSam Database Editor | `@inneranimalmedia/agentsam-database-editor` | `bin/agentsam-database-editor.mjs` |
-| `ecommerce-cms-agentsam` | AgentSam Ecommerce + CMS | — | `bin/ecommerce.mjs` |
+| `ecommerce-cms-agentsam` | AgentSam Ecommerce + CMS | `@inneranimalmedia/ecommerce-cms-agentsam` | `bin/ecommerce.mjs` |
 | `local-studio` | AgentSam Local Studio | `@inneranimalmedia/agentsam-local-studio` | `bin/agentsam-studio.mjs` |
 
 An APP definition is not a user-scoped installation. `agentsam app install <id>` currently prints distribution instructions; it does not persist an installed APP record or activate its runtime.
