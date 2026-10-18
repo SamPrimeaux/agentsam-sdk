@@ -9,6 +9,7 @@ import { createGeneratedSamOperations } from './operation-packs/generated-v2/ope
 import { defineSamOperation } from './define.js';
 import { createCmsOperations } from './packs/cms/machine.js';
 import { createAuthoringOperations } from './packs/authoring/index.js';
+import { createEvidenceOperations } from './packs/evidence/index.js';
 import { createCadOperations } from './packs/cad/index.js';
 
 const packs = new Map();
@@ -55,7 +56,7 @@ export function getOSStatus() {
  * Unlike the legacy global registry, no state is shared with other OS instances.
  * The host must inject a real resource-scoped store, identity and authorization.
  */
-export function createSamOS({ core = true, generated = null, cms = null, authoring = null, cad = null } = {}) {
+export function createSamOS({ core = true, generated = null, cms = null, authoring = null, cad = null, evidence = null } = {}) {
   const registry = new Map();
   const unavailable = [];
   const aliases = new Map();
@@ -71,6 +72,7 @@ export function createSamOS({ core = true, generated = null, cms = null, authori
   if (cms) for (const op of createCmsOperations(cms)) register(op);
   if (authoring) for (const op of createAuthoringOperations(authoring)) register(op);
   if (cad) for (const op of createCadOperations(cad)) register(op);
+  if (evidence) for (const op of createEvidenceOperations(evidence)) register(op);
   if (generated) {
     const result = createGeneratedSamOperations({
       defineSamOperation, getSamOperation: get,

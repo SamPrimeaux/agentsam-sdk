@@ -107,11 +107,14 @@ test('FreeCAD solid kernel executes precision B-Rep operations and exports valid
     ],
   };
 
-  const buildResult = await freeCadBuild({
-    recipe,
-    output: stepOutput,
-    format: 'step',
-  });
+  let buildResult;
+  try {
+    buildResult = await freeCadBuild({ recipe, output: stepOutput, format: 'step' });
+  } catch (error) {
+    // A FreeCAD launcher on PATH is not a usable kernel; the containerized service probe covers the real kernel.
+    if (/FreeCAD libraries unavailable/.test(error?.message || '')) return t.skip('FreeCAD launcher found but its kernel library is not loadable on this host');
+    throw error;
+  }
 
   assert.equal(buildResult.ok, true);
   assert.equal(buildResult.capability, 'freecad.build');

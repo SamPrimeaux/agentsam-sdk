@@ -10,6 +10,10 @@ import { OPERATION_CATALOG } from '../sam/operation-packs/generated-v2/catalog.j
 import { createShellSamAdapter, resolveShellSamIdentity } from '../sam/shell-host.js';
 
 export async function runSam(argv = [], options = {}) {
+  if (argv[0] === 'evidence') {
+    const { runSamEvidence } = await import('./sam-evidence.js');
+    return runSamEvidence(argv.slice(1), { root: options.state?.projectRoot || options.state?.cwd || process.cwd(), write: options.write });
+  }
   if (argv[0] === 'media') {
     const { runSamMedia } = await import('./sam-media.js');
     const result = await runSamMedia(argv.slice(1), {
