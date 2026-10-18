@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { expectedSdkTarballVersion } from './sdk-package-lock-phase.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(here, '..');
@@ -15,6 +16,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(appRoot, 'package.json'), 
 const lock = JSON.parse(fs.readFileSync(path.join(appRoot, 'package-lock.json'), 'utf8'));
 const packages = lock.packages || {};
 const version = manifest.version;
+const sdkRelease = expectedSdkTarballVersion(path.resolve(appRoot, '../..'), version, { requirePublished: process.env.AGENTSAM_REQUIRE_PUBLISHED_SDK === '1' });
 
 function fail(message) {
   console.error(message);
@@ -57,15 +59,15 @@ const sdkEntries = Object.entries(packages)
   .filter(([key]) => key === sdkPackageSuffix || key.endsWith('/' + sdkPackageSuffix));
 
 if (sdkEntries.length === 0) {
-  fail('Local Studio product lock is missing @inneranimalmedia/agentsam-sdk@' + version);
+  fail('Local Studio product lock is missing a verified npm SDK tarball');
 }
 
 for (const [key, sdk] of sdkEntries) {
-  if (sdk?.version !== version || sdk?.link) {
-    fail('Local Studio must consume published @inneranimalmedia/agentsam-sdk@' + version + ' at ' + key);
+  if (sdk?.version !== sdkRelease.version || sdk?.link) {
+    fail('Local Studio must consume actual npm SDK tarball @' + sdkRelease.version + ' (' + sdkRelease.phase + ') at ' + key);
   }
   if (
-    !String(sdk.resolved || '').includes('/agentsam-sdk-' + version + '.tgz') ||
+    !String(sdk.resolved || '').includes('/agentsam-sdk-' + sdkRelease.version + '.tgz') ||
     !sdk.integrity
   ) {
     fail('Local Studio SDK lock entry is missing registry resolution/integrity metadata at ' + key);
@@ -82,5 +84,5 @@ if (!String(lru.resolved || '').includes('lru-cache-11.5.2.tgz') || !lru.integri
 
 console.log(
   'ok Local Studio lock: ' + version +
-  ' · product workspaces aligned · canonical source links present · lru-cache@11.5.2'
+  ' · product workspaces aligned · SDK npm tarball ' + sdkRelease.version + ' (' + sdkRelease.phase + ') · canonical source links present · lru-cache@11.5.2'
 );
