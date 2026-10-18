@@ -67,7 +67,7 @@ const needsApproval = new Set(['design_apply_operation', 'design_project_save', 
 export function createCadOperations({
   projectTools, jobs, production, resolveTrustedContext, authorize, requestApproval,
 } = {}) {
-  if (!projectTools && !jobs) throw new Error('sam_cad_host_adapter_required');
+  if (!projectTools && !jobs && !production) throw new Error('sam_cad_host_adapter_required');
   if (typeof resolveTrustedContext !== 'function' || typeof authorize !== 'function'
       || typeof requestApproval !== 'function') {
     throw new Error('sam_cad_trusted_authorization_and_approval_required');
