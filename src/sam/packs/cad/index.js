@@ -65,7 +65,7 @@ const needsApproval = new Set(['design_apply_operation', 'design_project_save', 
  * Do not install the pack at all if no real authorized service exists.
  */
 export function createCadOperations({
-  projectTools, jobs, resolveTrustedContext, authorize, requestApproval,
+  projectTools, jobs, production, resolveTrustedContext, authorize, requestApproval,
 } = {}) {
   if (!projectTools && !jobs) throw new Error('sam_cad_host_adapter_required');
   if (typeof resolveTrustedContext !== 'function' || typeof authorize !== 'function'
