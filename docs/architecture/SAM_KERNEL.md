@@ -152,6 +152,41 @@ Handlers reuse existing implementations. New work asks: **What module owns this 
 
 ---
 
+## Script operations — Superbash ($0 machinery for repetitive work)
+
+`sam.superbash`, `sam.script.save` and `sam.script.get` are kernel operations (generated-v2 pack; registered through the shell adapter when a trusted identity and Bash are available). They exist so repetitive, deterministic work is **scripted once and referenced by hash** instead of being re-reasoned by a model every turn. Runtime, approval and security contract: `docs/engineering/SUPERBASH_LOCAL_RUNTIME.md`.
+
+| Operation ID | Effect | Authorization | model |
+|--------------|--------|---------------|-------|
+| `sam.script.save` | `script_artifact_write` — immutable versions, compare-and-swap `expectedVersion` | script write permission | never |
+| `sam.script.get` | read — one immutable version, scoped to account / actor / installation | script read permission | never |
+| `sam.superbash` | `shell_execution` — inline `script` **or** `scriptArtifactRef` (exactly one) | execution grant, bound to the exact artifact + cwd | never |
+
+### Lane order — cheapest correct lane first
+
+1. An existing deterministic operation (`repository.inspect`, `security.scan`, …).
+2. A saved script run by `scriptArtifactRef` — the model sends a ~100-byte reference, not the script.
+3. An inline script — save it the second time it is needed.
+4. A model — only for judgment: classification, writing, design, ambiguous diagnosis.
+
+### Digest contract
+
+A script returns **one bounded JSON line** — `schema`, counts, top-N items, `truncated` — never raw logs or diffs. The model reads the digest; the evidence stays on disk. A non-zero exit is a structured failure that still returns the digest and the receipt. Starter library: `scripts/superbash/` (`repo-state`, `worktree-sweep`, `diff-digest`, `leftovers`, `gate-digest`) — read-only, zero-argument, covered by `test/integration/superbash-digests.test.mjs`.
+
+### What the receipt proves
+
+`execution.model_used === false` and `usage.provider_calls === 0`, plus `scriptHash`, exit code and duration. The same `scriptHash` in the same cwd against the same repository state gives the same answer; memoizing on that key is a host option, not something the runtime provides.
+
+### Promotion path
+
+inline script → saved script → **named operation** in the module that owns the domain (`module.action`, `model: never`, the digest as its output schema). A script that humans and models both run repeatedly belongs in a module, not in a prompt.
+
+### Boundaries (normative)
+
+Bash is **not** a sandbox. No profile/rc files; environment stripped of API keys and cloud credentials; cwd confined to the authorized root (symlinks resolved); bounded time and output (defaults: 120 s, 256 KiB, 200 KB script); redacted diagnostics. `idempotencyKey` is a correlation hash, **not** exactly-once — hosts must not retry an uncertain run. Work that needs real isolation requires a separately consented isolated executor; do not downgrade to this runner to save cost.
+
+---
+
 ## Go / agentsamd (next lane — Slice H)
 
 Local durable machine service (`agentsamd`) owns PTY, jobs, local invoke — **not** a Tauri rewrite. `AGENTSAM_API_KEY` authenticates **remote/platform** operations; local capabilities stay key-optional. Tauri may later consume the same daemon.
@@ -169,6 +204,10 @@ See: Go Worker product lane already live; expand carefully.
 | `protocol/sam/registry.seed.json` | Seed operation registry |
 | `src/sam/` | Kernel registry + `AgentSamClient` / `invoke` / `describe` / `discover` |
 | `protocol/capabilities/manifest.json` | Existing capability cards (migrate into ops over time) |
+| `src/sam/operation-packs/generated-v2/scripts.js` | `sam.superbash` / `sam.script.*` handlers |
+| `src/sam/adapters/local-script-runtime.js` · `local-script-store.js` | Local Bash runtime and versioned script store |
+| `docs/engineering/SUPERBASH_LOCAL_RUNTIME.md` | Superbash runtime, approval and security contract |
+| `scripts/superbash/` | Starter digest scripts (one JSON line each) |
 
 ---
 
@@ -179,3 +218,4 @@ See: Go Worker product lane already live; expand carefully.
 - Letting CLI command strings define internal operation IDs
 - Requiring `AGENTSAM_API_KEY` for local inspect/merkle/security
 - Documenting APIs by hand that should be projections of the registry
+- Asking a model to re-derive a deterministic sweep (git state, gate results, diff statistics) every turn instead of running a saved script
