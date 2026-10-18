@@ -317,10 +317,12 @@ export async function probeGitHubViaBridge(env) {
     return { connected: false, needs_oauth: true, error: body.error };
   }
   const repos = body?.repos || body?.data?.repos;
-  const hasFnf = Array.isArray(repos)
-    ? repos.some((r) => String(r?.full_name || r?.name || "").includes("fuelnfreetime"))
-    : body?.ok === true;
-  return { connected: body?.ok !== false, has_fnf_repo: hasFnf, sample: body };
+  const installation = await resolveGithubRepo(env);
+  const expected = installation.ok ? String(installation.repo || "").toLowerCase() : "";
+  const hasConfiguredRepo = Boolean(expected && Array.isArray(repos) &&
+    repos.some((r) => String(r?.full_name || r?.name || "").toLowerCase() === expected));
+  return { connected: body?.ok !== false, has_configured_repo: hasConfiguredRepo,
+    configured_repo: expected || null, sample: body };
 }
 
 export async function fetchGithubContextForChat(env, message, userId = null, logCtx = {}) {

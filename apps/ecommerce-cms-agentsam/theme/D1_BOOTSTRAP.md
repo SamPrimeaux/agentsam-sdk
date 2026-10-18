@@ -11,4 +11,3 @@ The live `cms_artifacts` table currently has **zero rows** and has a different s
 R2 bucket `fuelnfreetime` is accessible and contains `cms/pages/about/draft/*` and `cms/pages/about/history/*` data. No R2 code-bundle write was made or claimed. Existing media delivery and asset references remain unchanged.
 
 Next: produce an idempotent tenant-aware importer using the existing section/block registry; wire definition resolution to the current Theme Studio and artifact schema; verify renderer/edit/reload/publish before activating catalog entries.
-

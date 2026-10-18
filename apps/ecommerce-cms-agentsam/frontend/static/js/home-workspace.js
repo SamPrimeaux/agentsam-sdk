@@ -86,10 +86,10 @@
       if (typeof window.sendAgentsamMessage !== "function") throw new Error("AgentSam has not loaded. Please refresh the page.");
     }
     function report(message) {
-      let feedback = form.querySelector(".fnf-home-composer__feedback");
+      let feedback = form.querySelector(".commerce-home-composer__feedback");
       if (!feedback) {
         feedback = document.createElement("div");
-        feedback.className = "fnf-home-composer__feedback";
+        feedback.className = "commerce-home-composer__feedback";
         feedback.setAttribute("role", "status");
         form.append(feedback);
       }

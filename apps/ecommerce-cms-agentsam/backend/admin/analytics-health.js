@@ -1,10 +1,11 @@
 /**
- * FNF host adapter: reads the existing account-scoped D1 AgentSam event ledger
+ * Installation-scoped host adapter: reads the existing account-scoped D1 AgentSam event ledger
  * and Cloudflare Analytics SQL Worker binding. No synthetic operational data.
  * Reusable contracts/query orchestration belong to agentsam-analytics and the
  * Cloudflare connector; this file supplies tenant/resource configuration.
  */
 import { requireApplicationAccountId } from "../lib/account-context.js";
+import { getCompanyDomain } from "../lib/company.js";
 import { trackAgentSamEvent } from "../agentsam/analytics.js";
 
 const ranges = { "24h":86400, "7d":604800, "30d":2592000, "90d":7776000 };
@@ -68,18 +69,32 @@ async function ledger(env, since) {
     return {...unavailable("analytics_ledger_unavailable"),totals:null,timeline:[],operations:[],failures:[],repository:[],probes:null};
   }
 }
+/** Exact installation hostname, never another merchant's telemetry. */
+export function analyticsHosts(domain) {
+  const raw = String(domain || "").trim().toLowerCase();
+  if (!raw) return null;
+  let hostname;
+  try { hostname = new URL(raw.includes("://") ? raw : `https://${raw}`).hostname; }
+  catch { return null; }
+  if (!hostname || hostname === "localhost" || !/^[a-z0-9.-]+$/.test(hostname)) return null;
+  return {host:hostname,www:hostname.startsWith("www.") ? hostname.slice(4) : `www.${hostname}`};
+}
 async function cloudflare(env, start, seconds) {
   if (typeof env.ANALYTICS_SQL?.query !== 'function')
     return {...unavailable("analytics_sql_binding_not_configured"),source:"Cloudflare Analytics SQL",requests:null,errors:null,errorRate:null,rpm:null,byStatus:[]};
   try {
     // Account scope comes from Analytics SQL Worker binding; hostname filters
     // the app on accounts where additional sites/apps are also hosted.
+    const domain = await getCompanyDomain(env);
+    const hosts = analyticsHosts(domain);
+    if (!hosts) return {...unavailable("company_domain_not_configured"),
+      source:"Cloudflare Analytics SQL",requests:null,errors:null,errorRate:null,rpm:null,byStatus:[]};
     const result=await env.ANALYTICS_SQL.query({
       query:`SELECT edgeResponseStatus AS status, COUNT(*) AS requests
         FROM events.httpRequests
         WHERE timestamp >= $start AND clientRequestHTTPHost IN ($host, $www)
         GROUP BY edgeResponseStatus ORDER BY requests DESC LIMIT 100`,
-      params:{start,host:"fuelnfreetime.com",www:"www.fuelnfreetime.com"},
+      params:{start,host:hosts.host,www:hosts.www},
     });
     const rows=Array.isArray(result?.data)?result.data:null;
     if(!rows)throw new Error("analytics_sql_invalid_response");

@@ -59,7 +59,7 @@
     notify();
   }
   function renderDrafts(root) {
-    const holder = root.querySelector(".fnf-home-composer__attachments, .agentsam-attachment-list");
+    const holder = root.querySelector(".commerce-home-composer__attachments, .agentsam-attachment-list");
     if (!holder) return;
     holder.replaceChildren();
     const chips = [];
