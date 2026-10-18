@@ -31,7 +31,7 @@ import { TemplateLibraryModal } from '../components/TemplateLibraryModal';
 import { CadCreatorShell } from './CadCreatorShell';
 import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
-import { installCadPreviewGuestBridge } from '../lib/agentsam-preview-bridge';
+import { installCadPreviewGuestBridge, type CadOutbound } from '../lib/agentsam-preview-bridge';
 import { MiniAgentSam } from '@inneranimalmedia/agentsam-workbench/agent';
 import '@inneranimalmedia/agentsam-workbench/agent/mini-agentsam.css';
 import { buildSelectionContext, verifiedSelectionRevision, type CadSelectionContext } from '../lib/cad/selection';
@@ -95,7 +95,7 @@ export function CadCreatorApp({
   const onVerifiedRevision = useCallback((revision:number|null, projectId:string) => {
     setVerifiedProjectRevision(revision === null ? null : {projectId,revision});
   }, []);
-  const bridgeRef = React.useRef<{ post: (m: never) => void; dispose: () => void } | null>(null);
+  const bridgeRef = React.useRef<{ post: (m: CadOutbound) => void; dispose: () => void } | null>(null);
   const [chromeFolded, setChromeFolded] = useState(false);
   const [annotating, setAnnotating] = useState(false);
   const [copilotDraft, setCopilotDraft] = useState('');
