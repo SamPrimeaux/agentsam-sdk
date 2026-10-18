@@ -148,5 +148,9 @@ export function createCadOperations({
       { ...JOB_INPUT, required: ['project_id', 'workspace_id', 'job_id'] },
       (input, scope) => jobs.execute(input, scope), true),
   ];
-  return [...project, ...jobOps];
+  const productionOps = production ? createCadProductionOperations({
+    provider: production.provider, supportedOperationIds: production.supportedOperationIds,
+    resolveTrustedContext, authorize, requestApproval,
+  }) : [];
+  return [...project, ...jobOps, ...productionOps];
 }
