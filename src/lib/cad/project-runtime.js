@@ -5,7 +5,7 @@ import {createOcctNativeProvider} from './occt-native-provider.mjs';
 import {validateProject,applyProjectOperation} from './project-contract.js';
 import {projectToBlenderRecipe} from './project-recipe.js';
 import {blenderBuild,blenderInspect,blenderRenderPreview,blenderExport} from './blender.js';
-import {CAD_PROJECT_TOOLS} from '../../../apps/cad-creator/shared/cad/src/domain/project-tools.js';
+import {CAD_PROJECT_TOOLS} from './project-tools.js';
 export {CAD_PROJECT_TOOLS};
 export function createProjectRuntime({store,artifactRoot,native={blenderBuild,blenderInspect,blenderRenderPreview,blenderExport},occt=createOcctNativeProvider(),onProjectChanged=()=>{}}){
  const root=path.resolve(artifactRoot);

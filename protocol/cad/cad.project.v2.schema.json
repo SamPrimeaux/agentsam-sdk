@@ -1,0 +1,451 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentsam.inneranimalmedia.com/protocol/cad/cad.project.v2.schema.json",
+  "title": "AgentSam Portable CAD Project v2",
+  "description": "Universal CAD project authority. Domain modules contain specialized data; generated artifact claims require provider receipts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "id",
+    "name",
+    "domain",
+    "revision",
+    "coordinateSystem",
+    "geometry",
+    "modules",
+    "assets",
+    "views",
+    "sheets",
+    "scenes",
+    "productions",
+    "outputs",
+    "packages",
+    "receipts",
+    "revisions",
+    "professionalReview"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cad.project.v2"
+    },
+    "id": {
+      "$ref": "#/$defs/id"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "domain": {
+      "enum": [
+        "architecture.building",
+        "mechanical.part",
+        "mechanical.assembly",
+        "product.design",
+        "site.landscape",
+        "general.cad"
+      ]
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "coordinateSystem": {
+      "type": "object",
+      "required": [
+        "unit",
+        "upAxis",
+        "handedness",
+        "origin"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "enum": [
+            "in",
+            "mm",
+            "cm",
+            "m",
+            "ft"
+          ]
+        },
+        "upAxis": {
+          "const": "Z"
+        },
+        "handedness": {
+          "const": "right"
+        },
+        "origin": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "worldTransform": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    },
+    "geometry": {
+      "type": "object",
+      "required": [
+        "entities",
+        "relationships",
+        "constraints"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "kind"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sourceGroup": {
+                "type": "string"
+              },
+              "data": {
+                "type": "object"
+              },
+              "parameters": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "relationships": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "from",
+              "to"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "from": {
+                "$ref": "#/$defs/id"
+              },
+              "to": {
+                "$ref": "#/$defs/id"
+              },
+              "kind": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "intent": {
+      "type": "object",
+      "properties": {
+        "references": {
+          "type": "array"
+        },
+        "decisions": {
+          "type": "array"
+        },
+        "assumptions": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": true
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "role"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "role": {
+            "enum": [
+              "reference",
+              "source",
+              "derived",
+              "published"
+            ]
+          },
+          "uri": {
+            "type": "string"
+          },
+          "sha256": {
+            "$ref": "#/$defs/sha"
+          },
+          "status": {
+            "enum": [
+              "planned",
+              "available",
+              "restricted"
+            ]
+          },
+          "mediaType": {
+            "type": "string"
+          },
+          "sourceRevision": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "sheets": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "productions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "format",
+          "capability",
+          "state",
+          "sourceRevision",
+          "dependencies"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "capability": {
+            "$ref": "#/$defs/id"
+          },
+          "state": {
+            "enum": [
+              "planned",
+              "queued",
+              "running",
+              "generated",
+              "validated",
+              "approved",
+              "stale",
+              "failed",
+              "blocked"
+            ]
+          },
+          "sourceRevision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "elementIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "artifact": {
+            "type": "object",
+            "properties": {
+              "uri": {
+                "type": "string"
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha"
+              }
+            },
+            "additionalProperties": true
+          },
+          "receiptId": {
+            "$ref": "#/$defs/id"
+          },
+          "executor": {
+            "type": "object"
+          },
+          "professionalReviewRequired": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "profile",
+          "outputIds",
+          "permitReady",
+          "sealed"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "outputIds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            }
+          },
+          "state": {
+            "type": "string"
+          },
+          "permitReady": {
+            "const": false
+          },
+          "sealed": {
+            "const": false
+          },
+          "release": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "receipts": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "revisions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "professionalReview": {
+      "type": "object",
+      "required": [
+        "permitReady",
+        "sealed",
+        "issues",
+        "reviews"
+      ],
+      "properties": {
+        "permitReady": {
+          "const": false
+        },
+        "sealed": {
+          "const": false
+        },
+        "issues": {
+          "type": "array"
+        },
+        "reviews": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": false
+    },
+    "compatibility": {
+      "type": "object",
+      "properties": {
+        "sourceSchema": {
+          "type": "string"
+        },
+        "sourceDocument": {
+          "type": "object"
+        },
+        "migration": {
+          "type": "string"
+        },
+        "sourceScale": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+    },
+    "sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

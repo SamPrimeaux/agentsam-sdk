@@ -1,5 +1,6 @@
 import { defineSamOperation } from '../../define.js';
-import { CAD_PROJECT_TOOLS } from '../../../../apps/cad-creator/shared/cad/src/domain/project-tools.js';
+import { createCadProductionOperations } from '../../../lib/cad/production-operations.js';
+import { CAD_PROJECT_TOOLS } from '../../../lib/cad/project-tools.js';
 
 /**
  * Donor compatibility only. UI labels never grant tool execution permission.
@@ -64,9 +65,9 @@ const needsApproval = new Set(['design_apply_operation', 'design_project_save', 
  * Do not install the pack at all if no real authorized service exists.
  */
 export function createCadOperations({
-  projectTools, jobs, resolveTrustedContext, authorize, requestApproval,
+  projectTools, jobs, production, resolveTrustedContext, authorize, requestApproval,
 } = {}) {
-  if (!projectTools && !jobs) throw new Error('sam_cad_host_adapter_required');
+  if (!projectTools && !jobs && !production) throw new Error('sam_cad_host_adapter_required');
   if (typeof resolveTrustedContext !== 'function' || typeof authorize !== 'function'
       || typeof requestApproval !== 'function') {
     throw new Error('sam_cad_trusted_authorization_and_approval_required');
@@ -147,5 +148,9 @@ export function createCadOperations({
       { ...JOB_INPUT, required: ['project_id', 'workspace_id', 'job_id'] },
       (input, scope) => jobs.execute(input, scope), true),
   ];
-  return [...project, ...jobOps];
+  const productionOps = production ? createCadProductionOperations({
+    provider: production.provider, supportedOperationIds: production.supportedOperationIds,
+    resolveTrustedContext, authorize, requestApproval,
+  }) : [];
+  return [...project, ...jobOps, ...productionOps];
 }

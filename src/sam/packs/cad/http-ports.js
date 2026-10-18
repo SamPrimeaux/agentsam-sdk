@@ -1,4 +1,4 @@
-import { CAD_PROJECT_TOOLS } from '../../../../apps/cad-creator/shared/cad/src/domain/project-tools.js';
+import { CAD_PROJECT_TOOLS } from '../../../lib/cad/project-tools.js';
 
 /**
  * Reuse existing CAD API routes with an already authenticated host request.
