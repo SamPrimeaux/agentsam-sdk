@@ -778,3 +778,72 @@ body:has(.copro-studio) { margin:0; }
 .copro-studio .mm-player-pane .copro-preview-device.is-empty .copro-preview-placeholder {display:flex;flex-direction:column;justify-content:center;align-items:center;padding:10px 12px;background:#202225;}
 .copro-studio .mm-player-pane .copro-preview-device.is-empty .copro-preview-placeholder p {max-width:min(90%,340px);font-size:11px;letter-spacing:0;line-height:1.35;margin-top:5px;}
 @media(max-width:600px) { .copro-studio .mm-player-pane .copro-preview-device.is-empty .copro-preview-mark {font-size:15px;line-height:1.15;} }
+
+/* IconAction: visible contextual help on keyboard focus, not mouse-only title text. */
+.copro-icon-action:not(.copro-trim-handle):not(.mm-project-open):not(.mm-project-more) { position: relative; }
+.copro-icon-action:focus-visible::after,
+.copro-icon-action:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 120;
+  inset: auto auto calc(100% + 7px) 0;
+  pointer-events: none;
+  display: block;
+  width: max-content;
+  max-width: 18rem;
+  border-radius: 0.4rem;
+  background: #171b24;
+  border: 1px solid #444a57;
+  color: #f7f8fa;
+  font: 500 0.72rem/1.35 system-ui, sans-serif;
+  padding: 0.4rem 0.55rem;
+  white-space: normal;
+  box-shadow: 0 5px 16px #0006;
+}
+
+.copro-hidden-source-input { display: none; }
+.copro-source-storage-warning {
+  position: fixed; z-index: 30; bottom: 78px; left: 12px; right: 12px;
+  max-width: 720px; margin: 0 auto; padding: 13px 16px;
+  background: #442a24; color: #fff5e9; border: 1px solid #bd816d;
+  border-radius: 12px; box-shadow: 0 12px 36px #0006; font-size: 13px;
+}
+.copro-storage-warning-dismiss {
+  margin-left: 12px; color: inherit; background: transparent;
+  border: 1px solid #cba08c; padding: 4px 8px; border-radius: 7px; cursor: pointer;
+}
+
+/* Runtime timeline geometry belongs in CSS custom properties, not inline declarations. */
+.copro-timeline-stage { width: var(--copro-timeline-width); }
+.copro-tick { left: var(--copro-tick-left); }
+.copro-playhead { left: var(--copro-playhead-left); }
+.copro-clip { left: var(--copro-clip-left); width: var(--copro-clip-width); }
+.copro-waveform i { height: var(--copro-waveform-height); }
+.copro-clip-filmstrip span.is-decoded-frame {
+  background-image: var(--copro-frame-image);
+  background-position: center;
+  background-size: cover;
+}
+
+/* Dockable/floating panels use bounded runtime measurements through CSS variables. */
+.copro-studio .copro-browser-slot.is-floating {
+  position: fixed; z-index: 40;
+  left: var(--copro-floating-left); top: var(--copro-floating-top);
+  width: var(--copro-floating-width); height: var(--copro-floating-height);
+}
+.copro-studio .copro-inspector-slot.is-floating {
+  position: fixed; z-index: 41;
+  left: var(--copro-floating-left); top: var(--copro-floating-top);
+  width: var(--copro-floating-width); height: var(--copro-floating-height);
+}
+.copro-studio .mm-player-pane.is-floating {
+  position: fixed; z-index: 42;
+  left: var(--copro-floating-left); top: var(--copro-floating-top);
+  width: var(--copro-floating-width); height: var(--copro-floating-height);
+}
+.copro-studio .copro-preview-media {
+  transform: var(--copro-media-transform, none);
+  opacity: var(--copro-media-opacity, 1);
+  cursor: var(--copro-media-cursor, auto);
+  touch-action: none;
+}

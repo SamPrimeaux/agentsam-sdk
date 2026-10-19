@@ -1,3 +1,4 @@
+import { IconAction } from "./icon-action.js";
 import React, { useMemo, useRef, useState } from "react";
 import {
   collectSnapPointsUs,
@@ -212,13 +213,13 @@ export function CoProTimeline({
             onSeek?.(timeFromPointer(event.clientX));
           }}
         >
-          <div className="copro-timeline-stage" style={{ width: timelineWidth }}>
+          <div className="copro-timeline-stage" style={{ "--copro-timeline-width": timelineWidth + "px" } as React.CSSProperties}>
             <div className="copro-ruler">
               {ticks.map((second) => (
                 <div
                   className="copro-tick"
                   key={second}
-                  style={{ left: second * pixelsPerSecond }}
+                  style={{ "--copro-tick-left": (second * pixelsPerSecond) + "px" } as React.CSSProperties}
                 >
                   <i />
                   <span>{formatTime(second)}</span>
@@ -228,7 +229,7 @@ export function CoProTimeline({
 
             <div
               className="copro-playhead"
-              style={{ left: timeUsToPixels(playheadUs, { pixelsPerSecond }) }}
+              style={{ "--copro-playhead-left": timeUsToPixels(playheadUs, { pixelsPerSecond }) + "px" } as React.CSSProperties}
               aria-label="Playhead"
             >
               <b />
@@ -250,7 +251,7 @@ export function CoProTimeline({
                         key={clip.id}
                         data-copro-clip
                         className={"copro-clip copro-clip-" + track.kind + " " + (selected ? "is-selected" : "")}
-                        style={{ left, width }}
+                        style={{ "--copro-clip-left": left + "px", "--copro-clip-width": width + "px" } as React.CSSProperties}
                         onPointerDown={(event) => {
                           event.stopPropagation();
                           if (track.locked) return;
@@ -275,7 +276,7 @@ export function CoProTimeline({
                         }}
                       >
                         {selected && !track.locked && (
-                          <button
+                          <IconAction
                             className="copro-trim-handle copro-trim-left"
                             aria-label="Trim clip start"
                             onPointerDown={(event) => {
@@ -319,7 +320,7 @@ export function CoProTimeline({
                               <i
                                 key={index}
                                 className={Array.isArray(clip.metadata?.waveform) ? "is-decoded" : "is-fallback"}
-                                style={{ height: Math.max(8, Math.min(100, Number(sample) * 100)) + "%" }}
+                                style={{ "--copro-waveform-height": Math.max(8, Math.min(100, Number(sample) * 100)) + "%" } as React.CSSProperties}
                               />
                             ))}
                           </div>
@@ -330,7 +331,7 @@ export function CoProTimeline({
                             {Array.from({ length: Math.max(2, Math.ceil(width / 65)) }, (_, index) => {
                               const frames=mediaThumbnails[clip.assetId];
                               const frame=frames?.length?frames[Math.floor(index*frames.length/Math.max(2,Math.ceil(width/65)))%frames.length]:null;
-                              return <span key={index} style={frame?{backgroundImage:`url(${frame})`,backgroundPosition:'center',backgroundSize:'cover'}:undefined}/>;
+                              return <span key={index} className={frame ? "is-decoded-frame" : undefined} style={{ "--copro-frame-image": frame ? "url(" + frame + ")" : "none" } as React.CSSProperties}/>;
                             })}
                           </div>
                         )}
@@ -345,7 +346,7 @@ export function CoProTimeline({
                         ) : null}
 
                         {selected && !track.locked && (
-                          <button
+                          <IconAction
                             className="copro-trim-handle copro-trim-right"
                             aria-label="Trim clip end"
                             onPointerDown={(event) => {
