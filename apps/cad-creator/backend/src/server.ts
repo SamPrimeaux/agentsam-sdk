@@ -423,6 +423,77 @@ app.get('/api/cad/tools', async (req, res) => {
   }
 });
 
+/**
+ * Read-only projection of the existing tool probes, not a second CAD registry.
+ * A binary being discovered does not prove an operation executed, and a
+ * provider without a bound host route must never advertise execution readiness.
+ */
+const CAD_PROVIDER_ROUTES: Record<string, string> = {
+  openscad: '/api/cad/execute',
+  freecad: '/api/cad/freecad/execute',
+  blender: '/api/cad/blender/execute',
+  occt: '/api/cad/project/tools/design_model_build',
+};
+
+app.get('/api/cad/providers', async (_req, res) => {
+  try {
+    const report = await probeAllCadTools(process.env);
+    const providers: Array<Record<string, unknown>> = report.tools.map((tool) => ({
+      id: tool.tool,
+      name: tool.name,
+      discovered: tool.available,
+      available: tool.available,
+      execution_lane: tool.execution_lane,
+      version: tool.version,
+      formats: tool.supportedFormats,
+      host_bound: Boolean(CAD_PROVIDER_ROUTES[tool.tool]),
+      execution_route: CAD_PROVIDER_ROUTES[tool.tool] || null,
+      execution_verified: false,
+      readiness: !tool.available ? 'unavailable'
+        : CAD_PROVIDER_ROUTES[tool.tool] ? 'probe_ready_execution_unverified' : 'host_adapter_missing',
+      reason: tool.error || null,
+    }));
+    // These are requested integration targets, not proven execution services.
+    for (const id of ['ifc', 'remotion']) {
+      if (!providers.some((provider) => provider.id === id)) providers.push({
+        id, name: id === 'ifc' ? 'IfcOpenShell' : 'Remotion',
+        discovered: false, available: false, execution_lane: 'unbound',
+        version: null, formats: [], host_bound: false, execution_route: null,
+        execution_verified: false, readiness: 'host_adapter_missing',
+        reason: 'no_authorized_cad_host_adapter_registered',
+      });
+    }
+    return res.json({ schema: 'agentsam.cad.providers.v1', providers,
+      note: 'Provider discovery does not establish actual execution or grant project authority.' });
+  } catch (err: any) {
+    return res.status(503).json({ ok: false, error: 'cad_provider_discovery_failed',
+      message: err?.message || 'Provider discovery failed' });
+  }
+});
+
+app.get('/api/cad/providers/:id/health', async (req, res) => {
+  const id = req.params.id;
+  if (!['openscad', 'freecad', 'blender', 'occt', 'ifc', 'remotion', 'meshy', 'mujoco'].includes(id)) {
+    return res.status(404).json({ ready: false, error: 'cad_provider_unknown' });
+  }
+  if (!CAD_PROVIDER_ROUTES[id]) return res.status(501).json({
+    ready: false, available: false, host_bound: false,
+    error: 'cad_provider_host_adapter_missing', provider: id,
+  });
+  try {
+    const report = await probeAllCadTools(process.env);
+    const tool = report.tools.find((row) => row.tool === id);
+    return res.json({ provider: id, ready: Boolean(tool?.available),
+      available: Boolean(tool?.available), host_bound: true,
+      execution_verified: false, execution_route: CAD_PROVIDER_ROUTES[id],
+      execution_lane: tool?.execution_lane || null, version: tool?.version || null,
+      reason: tool?.error || null });
+  } catch (err: any) {
+    return res.status(503).json({ ready: false, available: false,
+      error: 'cad_provider_health_failed', message: err?.message || 'Probe failed' });
+  }
+});
+
 app.get('/api/cad/health', async (req, res) => {
   try {
     const report = await probeAllCadTools(process.env);
