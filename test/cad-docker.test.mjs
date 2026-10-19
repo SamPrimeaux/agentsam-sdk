@@ -107,6 +107,9 @@ test('all-tools image pins every production dependency and verifies Node by chec
   const { dockerfile } = generateCadDocker({ appSlug: 'agentsam-cad', tools: 'all' });
   assert.match(dockerfile, new RegExp(`ifcopenshell==${CAD_PINS.ifcopenshell.replaceAll('.', '\\.')}`));
   assert.match(dockerfile, new RegExp(`ezdxf==${CAD_PINS.ezdxf.replaceAll('.', '\\.')}`));
+  assert.match(dockerfile, new RegExp(`pymupdf==${CAD_PINS.pymupdf.replaceAll('.', '\\.')}`));
+  assert.match(dockerfile, new RegExp(`pillow==${CAD_PINS.pillow.replaceAll('.', '\\.')}`));
+  assert.match(dockerfile, /fonts-dejavu-core/);
   assert.match(dockerfile, new RegExp(`@gltf-transform/cli@${CAD_PINS.gltfTransformCli.replaceAll('.', '\\.')}`));
   assert.match(dockerfile, /install_node\.py v\d+\.\d+\.\d+ \/opt\/node/);
   assert.doesNotMatch(dockerfile, /pip install[^\n]*\s(ifcopenshell|ezdxf)(\s|$)/, 'no unpinned pip installs');

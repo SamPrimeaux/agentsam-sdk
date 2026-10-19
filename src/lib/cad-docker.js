@@ -11,13 +11,13 @@ export const CAD_TOOLS = Object.freeze(['openscad', 'freecad', 'blender', 'ifc',
 // Pinned so every build, on any machine, gets the same toolchain. ifcopenshell 0.9.x wheels need a newer
 // glibc than Debian 12 ships; 0.8.4.post1 is the newest that imports on bookworm. The distro Node is too
 // old for current glTF tooling, so Node is installed from a checksum-verified tarball.
-export const CAD_PINS = Object.freeze({ ifcopenshell: '0.8.4.post1', ezdxf: '1.4.5', gltfTransformCli: '4.5.1', node: 'v20.20.2' });
+export const CAD_PINS = Object.freeze({ ifcopenshell: '0.8.4.post1', ezdxf: '1.4.5', pymupdf: '1.28.2', pillow: '13.0.0', gltfTransformCli: '4.5.1', node: 'v20.20.2' });
 
 const APT_PACKAGES = Object.freeze({
   openscad: ['openscad', 'xvfb', 'xauth'],
   freecad: ['freecad'],
   blender: ['blender'],
-  ifc: ['python3-venv'],
+  ifc: ['python3-venv', 'fonts-dejavu-core'],
   media: ['ffmpeg'],
   occt: ['libocct-data-exchange-7.6', 'libocct-modeling-algorithms-7.6', 'libocct-modeling-data-7.6', 'libocct-foundation-7.6'],
 });
@@ -66,7 +66,7 @@ export function generateCadDocker(opts = {}) {
   if (tools.includes('blender')) copyLines.push('COPY blender/ /srv/blender/');
   const provision = [];
   if (tools.includes('ifc')) {
-    provision.push(`RUN python3 -m venv /opt/agentsam-venv \\\n && /opt/agentsam-venv/bin/pip install --no-cache-dir ifcopenshell==${CAD_PINS.ifcopenshell} ezdxf==${CAD_PINS.ezdxf}`);
+    provision.push(`RUN python3 -m venv /opt/agentsam-venv \\\n && /opt/agentsam-venv/bin/pip install --no-cache-dir ifcopenshell==${CAD_PINS.ifcopenshell} ezdxf==${CAD_PINS.ezdxf} pymupdf==${CAD_PINS.pymupdf} pillow==${CAD_PINS.pillow}`);
   }
   if (tools.includes('media')) {
     provision.push('COPY provision/install_node.py /tmp/install_node.py');
@@ -100,7 +100,7 @@ RUN apt-get update \\
  && chown -R cad:cad /work
 ${provision.length ? provision.join('\n') + '\n' : ''}WORKDIR /srv
 ${copyLines.join('\n')}
-ENV${extraEnv.length ? ' ' + extraEnv.join(' ') : ''} PORT=${port} AGENTSAM_CAD_TOKEN_FILE=/config/service.token AGENTSAM_CAD_WORK_ROOT=/work AGENTSAM_CAD_TOOLS=${tools.join(',')} QT_QPA_PLATFORM=offscreen PYTHONUNBUFFERED=1 HOME=/tmp/home XDG_CACHE_HOME=/tmp/cache XDG_CONFIG_HOME=/tmp/config
+ENV${extraEnv.length ? ' ' + extraEnv.join(' ') : ''} PORT=${port} AGENTSAM_CAD_TOKEN_FILE=[REDACTED] AGENTSAM_CAD_WORK_ROOT=/work AGENTSAM_CAD_TOOLS=${tools.join(',')} QT_QPA_PLATFORM=offscreen PYTHONUNBUFFERED=1 HOME=/tmp/home XDG_CACHE_HOME=/tmp/cache XDG_CONFIG_HOME=/tmp/config
 EXPOSE ${port}
 USER cad
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=4 CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${port}/healthz', timeout=3).read()"
@@ -212,7 +212,7 @@ export function cadRunArguments(opts = {}) {
     '--tmpfs', '/work:rw,noexec,nosuid,size=512m,mode=1777',
     '--log-opt=max-size=10m',
     '--log-opt=max-file=3',
-    '-e', 'AGENTSAM_CAD_TOKEN_FILE=/config/service.token',
+    '-e', 'AGENTSAM_CAD_TOKEN_FILE=[REDACTED]
     '-e', `AGENTSAM_CAD_TOOLS=${normalizeCadTools(opts.tools).join(',')}`,
     '--mount', `type=bind,src=${config},dst=/config,readonly`,
   ];

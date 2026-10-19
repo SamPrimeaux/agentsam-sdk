@@ -93,6 +93,18 @@ test('freeCadStatus probes version and returns deterministic receipt', async (t)
   assert.deepEqual(calls[0], { command: fs.realpathSync(binary), args: ['--version'] });
 });
 
+test('freeCadStatus includes recovery guidance when a discovered launcher fails', async (t) => {
+  const { binary } = makeFixture(t, 'FreeCADCmd');
+  const status = await freeCadStatus({
+    freecadBin: binary,
+    platform: 'darwin',
+    runProcessImpl: async () => ({ code: 1, stdout: '', stderr: 'native launcher failed' }),
+  });
+  assert.equal(status.available, false);
+  assert.match(status.error, /native launcher failed/);
+  assert.equal(status.install_guidance.command, 'brew install --cask freecad');
+});
+
 test('meshyStatus discovers API key configuration via environment', () => {
   const noKey = meshyStatus({ env: {} });
   assert.equal(noKey.available, false);

@@ -8,6 +8,7 @@ Runs INSIDE the agentsam-cad container (it needs the real engines):
   docker cp agentsam-cad:/work/proof ./cad-proof
 
 Stages (each its own interpreter/engine):
+  (also: DXF -> ARCH E PDF at 3/16 in = 1 ft, checked for page size, scale and rendered dimensions)
   freecad  Part booleans: shell = outer - inner - openings  -> STEP + OBJ + exact volume
   occt     the native agentsam-occt binary re-opens FreeCAD's STEP (cross-toolchain interchange)
   ifc      ifcopenshell builds IFC4 (walls, voids, windows, door), re-reads it, meshes it, measures volume
@@ -189,6 +190,44 @@ def stage_ifc(out: Path):
            "dimensions": len(back.modelspace().query("DIMENSION")), "ezdxf": ezdxf.__version__}
     (out / "dxf.json").write_text(json.dumps(dxf, indent=2))
 
+    # ARCH E sheet at 3/16 in = 1 ft (1/64 of inches), rendered from the DXF just written
+    pdf = {}
+    try:
+        import pymupdf
+        from ezdxf.addons.drawing import Frontend, RenderContext, layout, config
+        from ezdxf.addons.drawing import pymupdf as ezpdf
+
+        def sheet(with_dims):
+            d = ezdxf.readfile(str(out / "plan.dxf"))
+            if not with_dims:
+                d.layers.get("A-DIMS").off()
+            backend = ezpdf.PyMuPdfBackend()
+            cfg = config.Configuration(background_policy=config.BackgroundPolicy.WHITE,
+                                       color_policy=config.ColorPolicy.MONOCHROME_LIGHT_BG)
+            Frontend(RenderContext(d), backend, config=cfg).draw_layout(d.modelspace())
+            page = layout.Page(48, 36, layout.Units.inch, margins=layout.Margins.all(0.5))
+            # DXF model units are inches. The ezdxf renderer uses millimetres for the
+            # page-space layout transformation, so convert inches to mm before 1:64.
+            return backend.get_pdf_bytes(page, settings=layout.Settings(scale=25.4 / 64, fit_page=False))
+
+        def dark_pixels(doc):
+            pix = doc[0].get_pixmap(dpi=72, alpha=False)
+            # Read the pixel buffer exactly once: each access to pix.samples copies it.
+            samples = pix.samples
+            return sum(1 for i in range(0, len(samples), pix.n) if samples[i] < 128)
+
+        full, bare = sheet(True), sheet(False)
+        (out / "sheet-A101-proof.pdf").write_bytes(full)
+        d_full, d_bare = pymupdf.open(stream=full, filetype="pdf"), pymupdf.open(stream=bare, filetype="pdf")
+        page_w = d_bare[0].rect.width
+        shapes = [r["rect"] for r in d_bare[0].get_drawings() if r.get("rect") and r["rect"].width < page_w - 5]  # skip the page background
+        pdf = {"pages": len(d_full), "page_pt": [round(d_full[0].rect.width), round(d_full[0].rect.height)],
+               "plan_in": [round((max(r.x1 for r in shapes) - min(r.x0 for r in shapes)) / 72, 3), round((max(r.y1 for r in shapes) - min(r.y0 for r in shapes)) / 72, 3)] if shapes else None,
+               "dark_with_dims": dark_pixels(d_full), "dark_without_dims": dark_pixels(d_bare), "bytes": len(full), "pymupdf": pymupdf.__version__}
+    except Exception as error:  # the PDF toolchain is optional on older images; report it, never hide it
+        pdf = {"error": f"{type(error).__name__}: {error}"}
+    (out / "pdf.json").write_text(json.dumps(pdf, indent=2))
+
 
 # --------------------------------------------------------------------------- stage: blender
 def stage_blender(out: Path):
@@ -275,6 +314,13 @@ def all_stages(out: Path):
           "INSUNITS=1, 2 wall + 3 opening polylines, 2 dimensions", {k: dxf[k] for k in ("insunits", "wall_polylines", "opening_polylines", "dimensions")})
     check("dxf-footprint-matches-analytic", dxf["footprint_in2"] is not None and rel(dxf["footprint_in2"], want["footprint_in2"]) < 1e-9, want["footprint_in2"], dxf["footprint_in2"], "1e-9")
 
+    pdf = json.loads((out / "pdf.json").read_text())
+    ok_page = bool(pdf.get("page_pt")) and pdf["pages"] == 1 and abs(pdf["page_pt"][0] - 3456) <= 1 and abs(pdf["page_pt"][1] - 2592) <= 1
+    check("dxf-renders-to-arch-e-pdf", ok_page, "1 page, 3456 x 2592 pt (ARCH E, 48 x 36 in)", pdf.get("page_pt") or pdf.get("error"))
+    plan = pdf.get("plan_in")
+    check("pdf-scale-is-3-16-per-foot", bool(plan) and abs(plan[0] - 7.5) <= 0.03 and abs(plan[1] - 4.5) <= 0.03, "40 x 24 ft plan = 7.500 x 4.500 in on paper", plan or pdf.get("error"))
+    check("pdf-dimensions-actually-render", bool(plan) and pdf["dark_with_dims"] > pdf["dark_without_dims"], "more ink with the dimension layer on", f"{pdf.get('dark_with_dims')} vs {pdf.get('dark_without_dims')} dark px" if plan else pdf.get("error"))
+
     frames = sorted((out / "frames").glob("frame_*.png"))
     check("blender-rendered-all-frames", len(frames) == PARAMS["frames"] and all(f.stat().st_size > 2000 for f in frames), PARAMS["frames"], len(frames))
 
@@ -297,7 +343,7 @@ def all_stages(out: Path):
                 "ffmpeg": run(["ffmpeg", "-version"]).stdout.splitlines()[0][:48], "gltf-transform": run(["gltf-transform", "--version"]).stdout.strip().splitlines()[-1],
                 "agentsam-occt": json.loads(re.search(r"AGENTSAM_RESULT=(\{.*\})", run(["agentsam-occt", "--doctor"]).stdout).group(1))["version"]}
     artifacts = [{"path": str(a.relative_to(out)), "bytes": a.stat().st_size, "sha256": sha256(a)} for a in
-                 [out / n for n in ("shell.step", "shell.ifc", "plan.dxf", "model.glb", "model.opt.glb", "turntable.mp4")] if a.is_file()]
+                 [out / n for n in ("shell.step", "shell.ifc", "plan.dxf", "sheet-A101-proof.pdf", "model.glb", "model.opt.glb", "turntable.mp4")] if a.is_file()]
     receipt = {"schema": "agentsam.cad.toolchain-proof.v1", "status": "passed" if all(c["passed"] for c in checks) else "failed",
                "parameters": PARAMS, "analytic": want, "versions": versions, "checks": checks, "artifacts": artifacts}
     (out / "receipt.json").write_text(json.dumps(receipt, indent=2))

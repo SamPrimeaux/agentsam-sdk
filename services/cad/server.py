@@ -69,12 +69,14 @@ def _extended_tool_version(name: str) -> dict[str, Any]:
         python = os.environ.get("AGENTSAM_CAD_PYTHON", "/opt/agentsam-venv/bin/python")
         if not Path(python).is_file():
             return {"installed": False, "binary": None, "version": None}
-        probe = _probe([python, "-c", "import ifcopenshell, ezdxf; print(ifcopenshell.version, ezdxf.__version__)"])
+        probe = _probe([python, "-c", "import ifcopenshell, ezdxf\ntry:\n import pymupdf; p = pymupdf.__version__\nexcept Exception:\n p = '-'\ntry:\n import PIL; q = PIL.__version__\nexcept Exception:\n q = '-'\nprint(ifcopenshell.version, ezdxf.__version__, p, q)"])
         if probe.returncode != 0:
             return {"installed": False, "binary": python, "version": None, "error": (probe.stderr or "import failed")[-300:]}
-        ifc_version, dxf_version = probe.stdout.split()
-        return {"installed": True, "binary": python, "version": f"ifcopenshell {ifc_version}; ezdxf {dxf_version}",
-                "modules": {"ifcopenshell": ifc_version, "ezdxf": dxf_version}}
+        ifc_version, dxf_version, pdf_version, pil_version = probe.stdout.split()
+        pdf_ready = pdf_version != "-" and pil_version != "-"
+        return {"installed": True, "binary": python, "version": f"ifcopenshell {ifc_version}; ezdxf {dxf_version}" + (f"; pymupdf {pdf_version}" if pdf_ready else ""),
+                "pdf": pdf_ready,
+                "modules": {"ifcopenshell": ifc_version, "ezdxf": dxf_version, "pymupdf": pdf_version, "pillow": pil_version}}
     if name == "media":
         ffmpeg, gltf = shutil.which("ffmpeg"), shutil.which("gltf-transform")
         if not ffmpeg or not gltf:
