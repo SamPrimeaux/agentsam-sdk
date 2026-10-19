@@ -1,0 +1,335 @@
+{
+  "schema": "agentsam.distribution-roadmap.v1",
+  "title": "Road to Real Distribution",
+  "github": {
+    "repo": "SamPrimeaux/agentsam-sdk",
+    "issueIdentity": "repository+issue_number",
+    "createPolicy": "manual approval; do not auto-create issues from the plan"
+  },
+  "authority": "docs/roadmaps/ROAD_TO_REAL_DISTRIBUTION.md",
+  "state": "proposed-not-shipped",
+  "phases": [
+    {
+      "id": "P0",
+      "name": "Authority and ticket synchronization",
+      "goal": "Confirm canonical release contracts and issue-to-ticket projection before implementing installers."
+    },
+    {
+      "id": "P1",
+      "name": "Bundle and embedded assets",
+      "goal": "Evidence-backed SEA spike, stable assets and dynamic dependencies."
+    },
+    {
+      "id": "P2",
+      "name": "Go daemon and platform lifecycle",
+      "goal": "One PTY owner and verified native daemon targets."
+    },
+    {
+      "id": "P3",
+      "name": "Binary artifacts and provenance",
+      "goal": "Five target binaries, SBOM/checksums, notarization/signing policy."
+    },
+    {
+      "id": "P4",
+      "name": "Universal install and upgrade",
+      "goal": "Extend existing installers with safe signed installation and rollback."
+    },
+    {
+      "id": "P5",
+      "name": "Distribution proof and owner approval",
+      "goal": "No-Node installation and click-through evidence before publishing."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "DIST-00",
+      "title": "Establish distribution ownership and release-channel policy",
+      "phase": "P0",
+      "dependsOn": [],
+      "labels": [
+        "type: chore",
+        "priority: p1-high",
+        "scope: release",
+        "size: S",
+        "status: needs-triage"
+      ],
+      "outcome": "Decide Go bootstrap vs full CLI SEA support, artifact names, authority, approval boundaries, npm and GitHub Release responsibilities.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-01",
+      "title": "Bundle the AgentSam CLI and execute a Node SEA smoke test",
+      "phase": "P1",
+      "dependsOn": [
+        "DIST-00"
+      ],
+      "labels": [
+        "type: feature",
+        "priority: p1-high",
+        "scope: cli",
+        "size: M",
+        "status: needs-triage"
+      ],
+      "outcome": "Build on scripts/build-sea.mjs; bundle a self-contained CLI entry; run --version and doctor without Node installed; record unsupported dynamic imports.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-02",
+      "title": "Implement a shared embedded/runtime asset resolver",
+      "phase": "P1",
+      "dependsOn": [
+        "DIST-01"
+      ],
+      "labels": [
+        "type: refactor",
+        "priority: p1-high",
+        "scope: sdk",
+        "size: L",
+        "status: needs-triage"
+      ],
+      "outcome": "Resolve protocol, templates, migrations, skills and docs identically from installed npm source and embedded SEA assets.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-03",
+      "title": "Move TypeScript and native add-ons off the SEA hot path",
+      "phase": "P1",
+      "dependsOn": [
+        "DIST-01"
+      ],
+      "labels": [
+        "type: refactor",
+        "priority: p2-medium",
+        "scope: cli",
+        "size: M",
+        "status: needs-triage"
+      ],
+      "outcome": "Audit lazy TypeScript usage, node-pty/native modules and dynamic imports; preserve supported npm CLI workflows.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-04",
+      "title": "Converge CLI terminal/PTy control on existing agentsamd",
+      "phase": "P2",
+      "dependsOn": [
+        "DIST-00"
+      ],
+      "labels": [
+        "type: refactor",
+        "priority: p1-high",
+        "scope: daemon",
+        "size: L",
+        "status: needs-triage"
+      ],
+      "outcome": "Verify Go PTY stream, cancellation, recovery and authorization; remove binary hot-path node-pty dependence without replacing ExecOS lanes.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-05",
+      "title": "Prove Windows agentsamd installation and lifecycle",
+      "phase": "P2",
+      "dependsOn": [
+        "DIST-04"
+      ],
+      "labels": [
+        "type: feature",
+        "priority: p1-high",
+        "scope: daemon",
+        "size: L",
+        "status: needs-triage"
+      ],
+      "outcome": "Cross-compile Windows target and exercise process/service lifecycle, cancellation and uninstall on a Windows runner; align docs with real evidence.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-06",
+      "title": "Build five-target reproducible preview binaries",
+      "phase": "P3",
+      "dependsOn": [
+        "DIST-02",
+        "DIST-03",
+        "DIST-05"
+      ],
+      "labels": [
+        "type: chore",
+        "priority: p1-high",
+        "scope: release",
+        "size: L",
+        "status: needs-triage"
+      ],
+      "outcome": "Deliver darwin-arm64, darwin-x64, linux-x64, linux-arm64, win-x64 with digests, SBOM, version and provenance; no public release yet.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-07",
+      "title": "Sign and attest verified release artifacts",
+      "phase": "P3",
+      "dependsOn": [
+        "DIST-06"
+      ],
+      "labels": [
+        "type: security",
+        "priority: p1-high",
+        "scope: release",
+        "size: L",
+        "status: needs-triage"
+      ],
+      "outcome": "Sign and notarize macOS as applicable, Authenticode Windows, and attest/checksum each artifact; block promotion if mandatory signatures missing.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-08",
+      "title": "Unify native install scripts, verification and receipts",
+      "phase": "P4",
+      "dependsOn": [
+        "DIST-07"
+      ],
+      "labels": [
+        "type: feature",
+        "priority: p1-high",
+        "scope: infra",
+        "size: L",
+        "status: needs-triage"
+      ],
+      "outcome": "Extend existing scripts/install.sh rather than duplicate it; add Windows PowerShell; verify digest/signature, safe PATH changes, uninstall and canonical receipts.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-09",
+      "title": "Implement safe upgrade and rollback with receipts",
+      "phase": "P4",
+      "dependsOn": [
+        "DIST-08"
+      ],
+      "labels": [
+        "type: feature",
+        "priority: p2-medium",
+        "scope: cli",
+        "size: M",
+        "status: needs-triage"
+      ],
+      "outcome": "Check compatible artifact channels; atomically replace after digest/signature verification; roll back and preserve previous install on failure.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-10",
+      "title": "Gate distribution in a runtime-free clean room",
+      "phase": "P5",
+      "dependsOn": [
+        "DIST-08",
+        "DIST-09"
+      ],
+      "labels": [
+        "type: chore",
+        "priority: p1-high",
+        "scope: release",
+        "size: L",
+        "status: needs-triage"
+      ],
+      "outcome": "Install from produced artifacts on clean macOS/Linux/Windows VMs or containers; run init/doctor/PTY and negative tamper tests without Node preinstalled.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-11",
+      "title": "Complete owner visual approval and artifact promotion",
+      "phase": "P5",
+      "dependsOn": [
+        "DIST-10"
+      ],
+      "labels": [
+        "type: chore",
+        "priority: p1-high",
+        "scope: release",
+        "size: S",
+        "status: needs-triage"
+      ],
+      "outcome": "Verify user click-through, artifact SHA, install receipts, recovery and release URL; require explicit owner approval before npm 2.6.13 and public binary promotion.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    },
+    {
+      "id": "DIST-12",
+      "title": "Project GitHub delivery issues into AgentSam Tickets and Projects",
+      "phase": "P0",
+      "dependsOn": [
+        "DIST-00"
+      ],
+      "labels": [
+        "type: enhancement",
+        "priority: p2-medium",
+        "scope: work",
+        "size: M",
+        "status: needs-triage"
+      ],
+      "outcome": "Use trusted GitHub issue id and URLs with account-owned agent tickets, projection timestamps and human-controlled state; do not duplicate or silently overwrite shipped status.",
+      "acceptance": [
+        "Real executable or interaction evidence attached to the GitHub issue and linked AgentSam Ticket.",
+        "Negative/failure path verified; existing owner contracts preserved.",
+        "Source SHA and install/delivery status recorded separately from merge."
+      ]
+    }
+  ],
+  "releaseGate": {
+    "candidate": "2.6.13",
+    "npmCurrent": "2.6.12 at planning time (verify before release)",
+    "requires": [
+      "clean-merged-main",
+      "tested-runtime-install",
+      "verified-ui-clickthrough",
+      "distribution-receipts",
+      "owner-approval"
+    ],
+    "prohibits": [
+      "auto-npm-publish",
+      "auto-issue-close-on-merge",
+      "binary-claim-from-config-only"
+    ]
+  }
+}

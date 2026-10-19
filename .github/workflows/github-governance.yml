@@ -1,0 +1,63 @@
+name: GitHub governance — labels and safe triage
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Label catalog synchronization (no deletions)"
+        required: true
+        type: choice
+        default: dry-run
+        options:
+          - dry-run
+          - apply
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  triage:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Always load scripts from the trusted base branch. Never checkout or execute
+      # proposed PR code under the write-capable pull_request_target token.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node scripts/github/triage.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  label-catalog:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate or synchronize canonical GitHub labels
+        run: |
+          if [ "${{ inputs.mode }}" = apply ]; then
+            node scripts/github/sync-labels.mjs --apply
+          else
+            node scripts/github/sync-labels.mjs --dry-run
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
