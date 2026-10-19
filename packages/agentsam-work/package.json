@@ -46,7 +46,7 @@
     "README.md"
   ],
   "description": "Portable AgentSam Work product surface: shared work contracts, fixture and HTTP hosts, project/ticket/mail/calendar/artifact views, and host-neutral React UI.",
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {

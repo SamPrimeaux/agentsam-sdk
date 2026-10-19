@@ -3,7 +3,7 @@
   "version": "2.6.13",
   "description": "Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote, publish, verify).",
   "type": "module",
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "engines": {
     "node": ">=22 <25"
   },

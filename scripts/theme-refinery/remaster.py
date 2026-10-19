@@ -935,7 +935,7 @@ def create_resolve_package(theme: dict[str, Any], apply: bool) -> None:
         "scripts": {"test": "node --test test/*.test.mjs"},
         "engines": {"node": ">=22 <25"},
         "publishConfig": {"access": "public"},
-        "license": "MIT",
+        "license": "FSL-1.1-MIT",
         "agentsam": {
             "kind": "theme",
             "slug": theme["id"],

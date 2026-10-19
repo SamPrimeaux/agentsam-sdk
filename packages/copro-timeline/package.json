@@ -3,7 +3,7 @@
   "version": "2.6.13",
   "description": "Headless CoPro timeline projection, ordering, duration, and viewport math.",
   "type": "module",
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "engines": {
     "node": ">=22 <25"
   },

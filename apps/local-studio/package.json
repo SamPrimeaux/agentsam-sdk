@@ -129,5 +129,5 @@
     ]
   },
   "description": "Portable AgentSam Local Studio desktop and hosted workbench for local-first projects, terminals, providers, and packaged apps.",
-  "license": "MIT"
+  "license": "FSL-1.1-MIT"
 }

@@ -78,6 +78,6 @@
     "README.md"
   ],
   "types": "./dist/index.d.ts",
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "sideEffects": false
 }

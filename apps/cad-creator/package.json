@@ -3,7 +3,7 @@
   "version": "2.6.13",
   "description": "Prepackaged AgentSam CAD, spatial design, and robotics application kit.",
   "type": "module",
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "workspaces": [
     "frontend",
     "backend",

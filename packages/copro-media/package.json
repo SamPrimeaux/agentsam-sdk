@@ -3,7 +3,7 @@
   "version": "2.6.13",
   "description": "Provider-neutral CoPro media asset identity, provenance, and repository contracts.",
   "type": "module",
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "engines": {
     "node": ">=22 <25"
   },

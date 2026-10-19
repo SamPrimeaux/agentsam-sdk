@@ -58,7 +58,7 @@
     "agentsam.app.json",
     "README.md"
   ],
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "scripts": {
     "build": "node scripts/build-ui.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",

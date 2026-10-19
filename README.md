@@ -298,7 +298,7 @@ tarball fixtures in unrelated repositories, Python tests, and a complete depende
 [Development](DEVELOPMENT.md) · [Release receipts](docs/RELEASES.md) ·
 [Branch archive](docs/branch-archive-2026-09-02.md).
 
-License: MIT. Optional visual experiments and host-specific integrations retain their
+License: FSL-1.1-MIT (source-available; each version converts to MIT two years after release). The Python client and shared contract packages stay MIT; see [LICENSING.md](LICENSING.md). Optional visual experiments and host-specific integrations retain their
 documented boundaries; they are not automatically installed into customer applications.
 
 <!-- agentsam:trademark-notice -->

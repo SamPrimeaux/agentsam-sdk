@@ -91,6 +91,6 @@
     "dist",
     "README.md"
   ],
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "types": "./dist/index.d.ts"
 }
