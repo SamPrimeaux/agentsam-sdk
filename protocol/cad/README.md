@@ -14,6 +14,57 @@
 - `normalizeArchitecturalSource` preserves the locked SD-02 contract as original source; it does not rescale, redraw or override approved dimensions.
 - Application-specific view state may be layered by CAD Creator; SDK-owned contracts must not import app-owned source.
 
+## Strict modular schema pack (opt-in)
+
+The canonical project document remains `cad.project.v2` at
+`protocol/cad/cad.project.v2.schema.json`. A versioned, additive CAD schema
+library now resides under `protocol/cad/v2/` with its authoritative index
+`schema-pack.manifest.json`. The full pack is mirrored to
+`inneranimalmedia-schemas/apps/cad-creator/schemas/v2/` and staged byte-for-byte
+into the CAD Creator npm application.
+
+### Contract groups
+
+- `core/`: stable entity and subshape identities, engineering coordinate frames,
+  precision, parametric feature nodes, typed constraints, BIM relationships,
+  immutable revisions and output receipts.
+- `modules/`: parametric, architecture, mechanical, landscape and product
+  design domains with explicit module schemas and versions.
+- `interchange/`: native BREP/STEP/FCStd/BLEND source provenance, IFC mappings,
+  stable GlobalId associations and IDS/bSDD/BCF references.
+- `presentation/`: model-bound views, dimensioned sheets, scenes and real
+  walkthrough/cinematic camera paths.
+- `intent/`: human-approved locked requirements and non-destructive alternatives.
+- `validation/`: document, semantic, native-geometry and deliverable results.
+
+**Compatibility boundary:** legacy v2 geometry entities intentionally have
+`additionalProperties: false`. New placement, feature, topology and type fields
+must not be inserted into legacy `geometry.entities` without a lossless,
+explicit migration. During migration the strict feature graph can be represented
+in a versioned `modules` payload, preserving existing project data. The
+schema pack is opt-in until runtime constructors, TypeScript types, serializers,
+validators, fixtures and exporters enforce the same contracts.
+
+**Engineering gate:** JSON Schema validates structure; it cannot prove ID
+referential integrity, solvable sketch constraints, valid BREP topology,
+appropriate BIM relationships, correct IFC round-tripping, professional
+engineering suitability or render correctness. Those need SAM semantic,
+native-provider and deliverable validators with correlated revision receipts.
+
+Before beginning Astra's first full BIM build, validate approved SD-02 source
+continuity, unique entity and subshape IDs, all relative $refs, coordinate
+round-trips, native editable source preservation and an actual model-derived
+walkthrough. Do not infer completed functionality from schema publication alone.
+
+### Verification
+
+`node --test test/integration/cad-v2-modular-schemas.test.mjs` checks
+schema-pack identities, paths, references and essential required fields.
+
+`npm --prefix apps/cad-creator run package:verify` stages the canonical pack
+and checks exact source-to-archive byte parity. R2 publishing must compare
+downloaded objects against the SDK source before claiming a finished release.
+
 ## SAM operation authority
 
 Existing stable normalized routes remain: `cad.project.get/validate/apply/save/restore`, `cad.model.build/inspect/render/export`, and authorized `cad.job.*` routes.
