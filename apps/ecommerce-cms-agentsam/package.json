@@ -1,6 +1,7 @@
 {
   "name": "@inneranimalmedia/ecommerce-cms-agentsam",
   "version": "2.6.13",
+  "description": "Installable AgentSam ecommerce and website CMS application with product and inventory management, theme editing, media, analytics, and provider integrations.",
   "private": false,
   "type": "module",
   "bin": {
