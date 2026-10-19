@@ -16,10 +16,12 @@ test('release train check enforces one first-party workspace version and exact i
 });
 
 
-test('independent ecommerce product release version remains distinct from root SDK train', () => {
+test('independent ecommerce product publication follows the coordinated SDK release version', () => {
   const manifest = JSON.parse(readFileSync(path.join(root, 'apps/ecommerce-cms-agentsam/package.json'), 'utf8'));
   const sdkManifest = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.notEqual(manifest.version, sdkManifest.version);
+  assert.equal(manifest.version, sdkManifest.version);
+  assert.notEqual(manifest.name, sdkManifest.name);
+  assert.equal(manifest.publishConfig?.access, 'public');
   const check = execFileSync(process.execPath, ['scripts/release-train.mjs', 'check'], {
     cwd: root, encoding: 'utf8',
   });

@@ -31,5 +31,6 @@
     "node": ">=20"
   },
   "license": "MIT",
-  "types": "./src/index.d.ts"
+  "types": "./src/index.d.ts",
+  "private": true
 }
