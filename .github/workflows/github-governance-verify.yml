@@ -1,0 +1,37 @@
+name: GitHub governance — policy verification
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/github-governance*.yml'
+      - 'protocol/governance/**'
+      - 'scripts/github/**'
+      - 'test/governance/**'
+      - 'docs/roadmaps/ROAD_TO_REAL_DISTRIBUTION.md'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/github-governance*.yml'
+      - 'protocol/governance/**'
+      - 'scripts/github/**'
+      - 'test/governance/**'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate canonical labels and distribution dependency graph
+        run: node --test test/governance/road-to-real-distribution.test.mjs
+      - name: Validate all governance modules
+        run: |
+          node --check scripts/github/triage.mjs
+          node --check scripts/github/sync-labels.mjs
+          node --check scripts/github/label-policy.mjs

@@ -1,0 +1,232 @@
+{
+  "schema": "agentsam.github-labels.v1",
+  "governance": "docs/roadmaps/ROAD_TO_REAL_DISTRIBUTION.md",
+  "managedPrefixes": [
+    "type:",
+    "priority:",
+    "status:",
+    "scope:",
+    "size:"
+  ],
+  "recommendation": {
+    "issueCore": [
+      "type",
+      "priority",
+      "scope"
+    ],
+    "optional": [
+      "status",
+      "size"
+    ],
+    "autoAssigned": [
+      "status: needs-triage"
+    ],
+    "manualDecisions": [
+      "priority",
+      "type",
+      "size"
+    ]
+  },
+  "labels": [
+    {
+      "name": "type: bug",
+      "color": "d73a4a",
+      "description": "Existing behavior is broken or regressed."
+    },
+    {
+      "name": "type: feature",
+      "color": "1d76db",
+      "description": "New supported product capability."
+    },
+    {
+      "name": "type: enhancement",
+      "color": "a2eeef",
+      "description": "Improvement to an existing capability or UX."
+    },
+    {
+      "name": "type: docs",
+      "color": "7057ff",
+      "description": "Documentation, examples or public contracts."
+    },
+    {
+      "name": "type: refactor",
+      "color": "e99695",
+      "description": "Structural maintenance without intended behavior change."
+    },
+    {
+      "name": "type: security",
+      "color": "b60205",
+      "description": "Security, permissions, supply-chain or compliance."
+    },
+    {
+      "name": "type: chore",
+      "color": "cfd3d7",
+      "description": "Build, CI, dependencies or engineering maintenance."
+    },
+    {
+      "name": "priority: p0-urgent",
+      "color": "b60205",
+      "description": "Active outage, exploited risk or confirmed release-stopping incident; owner intervention."
+    },
+    {
+      "name": "priority: p1-high",
+      "color": "d93f0b",
+      "description": "High-impact active sprint or release prerequisite."
+    },
+    {
+      "name": "priority: p2-medium",
+      "color": "fbca04",
+      "description": "Normal planned backlog work."
+    },
+    {
+      "name": "priority: p3-low",
+      "color": "0e8a16",
+      "description": "Low-impact work or optional refinement."
+    },
+    {
+      "name": "status: needs-triage",
+      "color": "fef2c0",
+      "description": "Submitted; awaits owner validation and source discovery."
+    },
+    {
+      "name": "status: needs-info",
+      "color": "d4c5f9",
+      "description": "Waiting on reproducible evidence, details or owner decision."
+    },
+    {
+      "name": "status: blocked",
+      "color": "e11d48",
+      "description": "Cannot proceed until a named dependency or decision resolves."
+    },
+    {
+      "name": "status: ready",
+      "color": "0e8a16",
+      "description": "Scoped, accepted and ready for implementation."
+    },
+    {
+      "name": "status: in-progress",
+      "color": "1d76db",
+      "description": "Active implementation underway; not necessarily verified."
+    },
+    {
+      "name": "scope: api",
+      "color": "d4d7db",
+      "description": "SDK/API contracts or external protocol."
+    },
+    {
+      "name": "scope: backend",
+      "color": "d4d7db",
+      "description": "Hosted Worker, server and service runtime."
+    },
+    {
+      "name": "scope: frontend",
+      "color": "d4d7db",
+      "description": "Browser UI, routing and interactive screens."
+    },
+    {
+      "name": "scope: sdk",
+      "color": "d4d7db",
+      "description": "SAM kernel, packages and SDK machinery."
+    },
+    {
+      "name": "scope: cli",
+      "color": "d4d7db",
+      "description": "User-facing CLI commands and workflows."
+    },
+    {
+      "name": "scope: daemon",
+      "color": "d4d7db",
+      "description": "Go agentsamd, terminal PTY and native runtime."
+    },
+    {
+      "name": "scope: desktop",
+      "color": "d4d7db",
+      "description": "Local Studio, native shell and device integrations."
+    },
+    {
+      "name": "scope: infra",
+      "color": "d4d7db",
+      "description": "Infrastructure, automation and developer tooling."
+    },
+    {
+      "name": "scope: release",
+      "color": "d4d7db",
+      "description": "Build, package, installer, update and artifact distribution."
+    },
+    {
+      "name": "scope: storage",
+      "color": "d4d7db",
+      "description": "D1, R2, SQLite, databases and source assets."
+    },
+    {
+      "name": "scope: media",
+      "color": "d4d7db",
+      "description": "MovieMode/CoPro, footage, editing and rendering."
+    },
+    {
+      "name": "scope: cad",
+      "color": "d4d7db",
+      "description": "CAD, BIM and geometric engines."
+    },
+    {
+      "name": "scope: ecommerce",
+      "color": "d4d7db",
+      "description": "Ecommerce CMS full-stack product."
+    },
+    {
+      "name": "scope: work",
+      "color": "d4d7db",
+      "description": "AgentSam Tickets, Projects, Work, GOAP and receipts."
+    },
+    {
+      "name": "scope: docs",
+      "color": "d4d7db",
+      "description": "Documentation, examples and discoverability."
+    },
+    {
+      "name": "size: XS",
+      "color": "bfdadc",
+      "description": "Small and bounded; likely under two hours (estimate only)."
+    },
+    {
+      "name": "size: S",
+      "color": "9fc5e8",
+      "description": "Typically about half a day (estimate only)."
+    },
+    {
+      "name": "size: M",
+      "color": "fce8b2",
+      "description": "Typically one to two days (estimate only)."
+    },
+    {
+      "name": "size: L",
+      "color": "f4b89e",
+      "description": "Typically three to five days (estimate only)."
+    },
+    {
+      "name": "size: XL",
+      "color": "e5b7d4",
+      "description": "Epic or multi-week outcome; split into verifiable tickets."
+    },
+    {
+      "name": "good first issue",
+      "color": "7057ff",
+      "description": "Low-complexity work suitable for a new contributor."
+    },
+    {
+      "name": "help wanted",
+      "color": "008672",
+      "description": "Maintainers are inviting external contributions."
+    },
+    {
+      "name": "wontfix",
+      "color": "ffffff",
+      "description": "Closed with an explicit reason; intentionally not planned."
+    },
+    {
+      "name": "duplicate",
+      "color": "cfd3d7",
+      "description": "Closed with a link to the canonical issue."
+    }
+  ]
+}
