@@ -9,12 +9,12 @@
 | Source authority | Count | Meaning |
 | --- | ---: | --- |
 | `src/cli/command-catalog.js` | 76 | Registered top-level CLI command entries |
-| `protocol/capabilities/manifest.json` | 75 | Capability and agent-primitive declarations |
+| `protocol/capabilities/manifest.json` | 81 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 5 | APP manifests discoverable from this checkout |
 | `packages/catalog/generated/packages.json` | 62 | Package inventory rows (not npm publication proof) |
 
-Manifest status: 56 stable, 19 experimental, 14 explicitly non-deterministic. Host binding and approval remain separate.
+Manifest status: 56 stable, 25 experimental, 14 explicitly non-deterministic. Host binding and approval remain separate.
 
 ## CLI command authority
 
@@ -159,6 +159,12 @@ Manifest status: 56 stable, 19 experimental, 14 explicitly non-deterministic. Ho
 | `repository.intelligence` | repository | capability | stable | yes | `none` | `agentsam repo snapshot` |
 | `repository.mine` | repository | capability | stable | yes | `local-state` | `agentsam machine mine <path> --against <path> --json` |
 | `repository.snapshot` | repository | capability | stable | yes | `none` | `agentsam inspect --json` |
+| `sam.evidence.begin` | evidence | capability | experimental | yes | `local_write` | — |
+| `sam.evidence.capture` | evidence | capability | experimental | yes | `local_write` | — |
+| `sam.evidence.compare` | evidence | capability | experimental | yes | `local_write` | — |
+| `sam.evidence.deliver` | evidence | capability | experimental | yes | `local_write` | — |
+| `sam.evidence.ingest` | evidence | capability | experimental | yes | `local_write` | — |
+| `sam.evidence.seal` | evidence | capability | experimental | yes | `local_write` | — |
 | `scaffold.create` | app | capability | stable | yes | `filesystem` | `agentsam create <name> --preset <preset>` |
 | `security.scan` | security | capability | stable | yes | `network-optional` | `agentsam security scan` |
 | `site.scrape` | web | capability | experimental | no | `network+filesystem;R2-only-with-explicit-authorization` | `agentsam site scrape` |
