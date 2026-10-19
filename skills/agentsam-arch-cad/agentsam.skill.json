@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-arch-cad",
+  "name": "Precision CAD drawings",
+  "description": "Apply model space, dimension style and DXF drafting conventions",
+  "version": "0.1.0",
+  "slash": {
+    "suggested": "/arch-cad"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}

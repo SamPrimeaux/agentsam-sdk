@@ -10,6 +10,7 @@ import { decisionEvaluateOp } from '../operations/decision-evaluate.js';
 import { artifactRenderOp } from '../operations/artifact-render.js';
 import { packageAuditOp } from '../operations/package-audit.js';
 import { roboticsOps } from '../operations/robotics.js';
+import { architecturalKnowledgeOps } from '../operations/architectural-knowledge.js';
 
 export const CORE_OPERATIONS = [
   repositoryInspect,
@@ -24,4 +25,5 @@ export const CORE_OPERATIONS = [
   packageAuditOp,
   artifactRenderOp,
   ...roboticsOps,
+  ...architecturalKnowledgeOps,
 ];

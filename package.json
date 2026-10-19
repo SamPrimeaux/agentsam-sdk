@@ -259,7 +259,20 @@
     "packages/agentsam-merch",
     "TRADEMARKS.md",
     "packages/agentsam-site-scrape",
-    "packages/agentsam-desktop-shell/scripts/app-discovery.mjs"
+    "packages/agentsam-desktop-shell/scripts/app-discovery.mjs",
+    "skills/agentsam-arch-materials",
+    "skills/agentsam-arch-specifications",
+    "skills/agentsam-arch-cad",
+    "skills/agentsam-arch-geometry",
+    "skills/agentsam-arch-bim",
+    "skills/agentsam-arch-assemblies",
+    "skills/agentsam-arch-codes",
+    "skills/agentsam-arch-accessibility",
+    "skills/agentsam-arch-coordination",
+    "skills/agentsam-arch-documents",
+    "skills/agentsam-arch-verify",
+    "skills/agentsam-arch-orchestrate",
+    "packages/agentsam-architectural-intelligence"
   ],
   "workspaces": [
     "packages/agentsam-analytics",

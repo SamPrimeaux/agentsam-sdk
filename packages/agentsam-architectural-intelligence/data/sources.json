@@ -1,0 +1,15 @@
+{
+  "schema":"agentsam.arch.references.v1",
+  "reviewed":"2026-10-19",
+  "sources":[
+    {"id":"awc-sizes","title":"AWC actual lumber sizes","url":"https://awc.org/faq/how-do-i-convert-to-metric-lumber-sizes/","access":"public","scope":"surfaced dry lumber"},
+    {"id":"awc-nds","title":"AWC 2024 NDS","url":"https://awc.org/resources/2024-nds/","access":"edition-controlled","scope":"wood design"},
+    {"id":"ncs7","title":"NCS Version 7","url":"https://www.nationalcadstandard.org/resources/standards/ncs7/","access":"licensed standard","scope":"CAD documentation"},
+    {"id":"ifc43","title":"IFC 4.3 ADD2","url":"https://standards.buildingsmart.org/IFC/RELEASE/IFC4_3/index.html","access":"public","scope":"BIM data schema"},
+    {"id":"ids","title":"buildingSMART IDS v1","url":"https://github.com/buildingSMART/IDS/releases/tag/v1.0.0","access":"public","scope":"BIM information validation"},
+    {"id":"csi2026","title":"CSI MasterFormat 2026","url":"https://www.csiresources.org/standards/masterformat2026","access":"licensed standard","scope":"construction specifications"},
+    {"id":"dxF","title":"AutoCAD 2026 DXF Reference","url":"https://help.autodesk.com/cloudhelp/2026/ENU/AutoCAD-DXF/files/GUID-2553CF98-44F6-4828-82DD-FE3BC7448113.htm","access":"public","scope":"DXF exchange"},
+    {"id":"icc","title":"ICC code adoptions overview","url":"https://www.iccsafe.org/about/overview/international-code-adoptions/","access":"public","scope":"codes; must verify AHJ"},
+    {"id":"ada","title":"U.S. Access Board ADA","url":"https://www.access-board.gov/ada/","access":"public","scope":"federal accessibility scoping"}
+  ]
+}

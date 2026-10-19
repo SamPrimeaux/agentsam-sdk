@@ -165,6 +165,138 @@
       "entry": "agentsam-sdk-orientation/SKILL.md",
       "references": [],
       "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-materials",
+      "aliases": [
+        "arch-materials"
+      ],
+      "title": "Nominal and actual building materials",
+      "description": "Look up real product sizes and distinguish dimensions from trade names",
+      "entry": "agentsam-arch-materials/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-specifications",
+      "aliases": [
+        "arch-specifications"
+      ],
+      "title": "Construction specifications",
+      "description": "Use classification and verified manufacturer source data instead of model guesses",
+      "entry": "agentsam-arch-specifications/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-cad",
+      "aliases": [
+        "arch-cad"
+      ],
+      "title": "Precision CAD drawings",
+      "description": "Apply model space, dimension style and DXF drafting conventions",
+      "entry": "agentsam-arch-cad/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-geometry",
+      "aliases": [
+        "arch-geometry"
+      ],
+      "title": "OCCT and parametric geometry",
+      "description": "Execute real solid-modeling kernels and inspect resulting topology",
+      "entry": "agentsam-arch-geometry/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-bim",
+      "aliases": [
+        "arch-bim"
+      ],
+      "title": "Semantic BIM and IFC",
+      "description": "Model typed building objects and validate IFC data requirements",
+      "entry": "agentsam-arch-bim/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-assemblies",
+      "aliases": [
+        "arch-assemblies"
+      ],
+      "title": "Architectural assemblies",
+      "description": "Compute detailed walls, roof, floors and openings from constituent layers",
+      "entry": "agentsam-arch-assemblies/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-codes",
+      "aliases": [
+        "arch-codes"
+      ],
+      "title": "Jurisdiction and adopted codes",
+      "description": "Determine applicable adopted building codes rather than assuming newest ICC edition",
+      "entry": "agentsam-arch-codes/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-accessibility",
+      "aliases": [
+        "arch-accessibility"
+      ],
+      "title": "Accessibility and measured clearances",
+      "description": "Check accessibility scoping and real finished dimensions",
+      "entry": "agentsam-arch-accessibility/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-coordination",
+      "aliases": [
+        "arch-coordination"
+      ],
+      "title": "Site datum and discipline coordination",
+      "description": "Coordinate survey, building coordinates and external structural/MEP references",
+      "entry": "agentsam-arch-coordination/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-documents",
+      "aliases": [
+        "arch-documents"
+      ],
+      "title": "Architectural sheets and construction documents",
+      "description": "Produce coordinated SD/DD/CD sheets and artifact evidence",
+      "entry": "agentsam-arch-documents/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-verify",
+      "aliases": [
+        "arch-verify"
+      ],
+      "title": "Independent geometry and document verification",
+      "description": "Enforce evidence over process exit codes",
+      "entry": "agentsam-arch-verify/SKILL.md",
+      "references": [],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-arch-orchestrate",
+      "aliases": [
+        "arch-orchestrate"
+      ],
+      "title": "Architecture work orchestration",
+      "description": "Coordinate intent, facts, models, operations, validation and delivery",
+      "entry": "agentsam-arch-orchestrate/SKILL.md",
+      "references": [],
+      "user_invocable": true
     }
   ]
 }

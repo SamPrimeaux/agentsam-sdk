@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-arch-bim",
+  "name": "Semantic BIM and IFC",
+  "description": "Model typed building objects and validate IFC data requirements",
+  "version": "0.1.0",
+  "slash": {
+    "suggested": "/arch-bim"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}
