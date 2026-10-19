@@ -100,7 +100,7 @@ RUN apt-get update \\
  && chown -R cad:cad /work
 ${provision.length ? provision.join('\n') + '\n' : ''}WORKDIR /srv
 ${copyLines.join('\n')}
-ENV${extraEnv.length ? ' ' + extraEnv.join(' ') : ''} PORT=${port} AGENTSAM_CAD_TOKEN_FILE=[REDACTED] AGENTSAM_CAD_WORK_ROOT=/work AGENTSAM_CAD_TOOLS=${tools.join(',')} QT_QPA_PLATFORM=offscreen PYTHONUNBUFFERED=1 HOME=/tmp/home XDG_CACHE_HOME=/tmp/cache XDG_CONFIG_HOME=/tmp/config
+ENV${extraEnv.length ? ' ' + extraEnv.join(' ') : ''} PORT=${port} AGENTSAM_CAD_TOKEN_FILE=/config/service.token AGENTSAM_CAD_WORK_ROOT=/work AGENTSAM_CAD_TOOLS=${tools.join(',')} QT_QPA_PLATFORM=offscreen PYTHONUNBUFFERED=1 HOME=/tmp/home XDG_CACHE_HOME=/tmp/cache XDG_CONFIG_HOME=/tmp/config
 EXPOSE ${port}
 USER cad
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=4 CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${port}/healthz', timeout=3).read()"
@@ -212,7 +212,7 @@ export function cadRunArguments(opts = {}) {
     '--tmpfs', '/work:rw,noexec,nosuid,size=512m,mode=1777',
     '--log-opt=max-size=10m',
     '--log-opt=max-file=3',
-    '-e', 'AGENTSAM_CAD_TOKEN_FILE=[REDACTED]
+    '-e', 'AGENTSAM_CAD_TOKEN_FILE=/config/service.token',
     '-e', `AGENTSAM_CAD_TOOLS=${normalizeCadTools(opts.tools).join(',')}`,
     '--mount', `type=bind,src=${config},dst=/config,readonly`,
   ];
