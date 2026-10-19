@@ -19,6 +19,18 @@ for (const relative of [
   'backend/wrangler.jsonc'
 ]) must(relative);
 
+const schemaPath = path.join(root, 'schemas', 'cad.project.v2.schema.json');
+const sourcePath = path.join(root, '..', '..', 'protocol', 'cad', 'cad.project.v2.schema.json');
+must('schemas/cad.project.v2.schema.json');
+if (!fs.existsSync(sourcePath) || fs.readFileSync(schemaPath, 'utf8') !== fs.readFileSync(sourcePath, 'utf8')) {
+  throw new Error('CAD v2 npm schema differs from SDK canonical protocol');
+}
+const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+if (schema.$id !== 'https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/cad.project.v2.schema.json' ||
+    schema.properties?.schema?.const !== 'cad.project.v2') {
+  throw new Error('CAD v2 schema identity or contract mismatch');
+}
+
 const assetsDir = path.join(root, 'frontend', 'dist', 'assets');
 const assets = fs.readdirSync(assetsDir);
 if (!assets.some((name) => name.startsWith('RoboticsWorkspace-') && name.endsWith('.js'))) {

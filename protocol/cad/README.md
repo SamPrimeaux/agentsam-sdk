@@ -5,6 +5,9 @@
 ## V2 project
 
 - Source of truth: `src/lib/cad/project-v2.js`, types `project-v2.d.ts`, JSON Schema `cad.project.v2.schema.json`.
+- Public schema mirror: `https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/cad.project.v2.schema.json` in R2 bucket `inneranimalmedia-schemas`. The bucket-root `apps/cad-creator/` prefix is app-owned; do not nest CAD Creator inside `agentsam/`.
+- The SDK's `protocol/cad/cad.project.v2.schema.json` remains the canonical source. The CAD Creator release stages an exact copy at `apps/cad-creator/schemas/cad.project.v2.schema.json`; the npm package-verification gate compares the two byte-for-byte. R2 publishing must use that same canonical artifact.
+- Existing `agentsam/cad/` schema assets are legacy-compatible and should not be deleted or silently replaced during this migration.
 - Projects contain typed identity, coordinate authority, editable entity data, domain modules, design intent, asset references, revision history, view/scene/film requests, output DAGs, receipts, delivery profiles and professional-review state.
 - `architecture.building` requires an architecture module. `mechanical.part` is valid without roofs or bedrooms.
 - Native units are declared explicitly. Migration from v1 retains original editable inches, element IDs, all source arrays and unknown extension fields in `compatibility.sourceDocument`.

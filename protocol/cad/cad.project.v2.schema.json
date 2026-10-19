@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://agentsam.inneranimalmedia.com/protocol/cad/cad.project.v2.schema.json",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/cad.project.v2.schema.json",
   "title": "AgentSam Portable CAD Project v2",
   "description": "Universal CAD project authority. Domain modules contain specialized data; generated artifact claims require provider receipts.",
   "type": "object",
