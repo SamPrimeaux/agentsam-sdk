@@ -60,6 +60,9 @@ test("real npm archive doctors and scaffolds outside the monorepo", () => {
   try {
     const name = execFileSync("npm", ["pack", "--silent", "--ignore-scripts", "--pack-destination", tmp], {
       cwd: app, encoding: "utf8", timeout: 30000,
+      // An outer npm pack --dry-run --json must not turn this real consumer
+      // archive test into another dry-run or JSON listing.
+      env: { ...process.env, npm_config_dry_run: 'false', npm_config_json: 'false' },
     }).trim().split("\n").pop();
     assert.ok(name?.endsWith(".tgz"), "npm did not produce an archive");
     const unpacked = path.join(tmp, "unpacked");

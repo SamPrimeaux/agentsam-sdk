@@ -24,6 +24,7 @@ test('normalizeGitRemote handles HTTPS and SSH GitHub remotes', () => {
 test('resolveGitContext derives repository identity from Git without user/workspace env', () => {
   const root = mkdtempSync(join(tmpdir(), 'agentsam-sdk-git-'));
   execFileSync('git', ['init'], { cwd: root, stdio: 'ignore' });
+  execFileSync('git', ['config', 'commit.gpgsign', 'false'], { cwd: root });
   execFileSync('git', ['config', 'user.email', 'sdk-test@example.com'], { cwd: root });
   execFileSync('git', ['config', 'user.name', 'SDK Test'], { cwd: root });
   execFileSync('git', ['remote', 'add', 'origin', 'git@github.com:SamPrimeaux/example-repo.git'], { cwd: root });

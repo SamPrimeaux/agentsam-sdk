@@ -70,14 +70,26 @@ test('architecture SD-02 profile is additive and does not alter its locked sourc
   assert.ok(v2.geometry.entities.some(e => e.id === 'wings:wing_01'));
 });
 
-test('real locked DreamHouse SD-02 bundle, when accessible, preserves all approved elements', () => {
+test('real locked DreamHouse SD-02 bundle, when accessible, preserves all approved elements', (t) => {
   const root = path.join(os.homedir(), 'Documents/DreamHouse/SD02-RC1_bundle/dreamhouse_check');
   if (!fs.existsSync(root)) return;
   const folder = fs.readdirSync(root).find(x => x.startsWith('DreamHouse_SD02-RC1_'));
   if (!folder) return;
   const file = path.join(root, folder, '01_project_contract', 'dream_house.sd02.project.json');
   if (!fs.existsSync(file)) return;
-  const original = json(file), before = fs.readFileSync(file);
+  let before;
+  try {
+    before = fs.readFileSync(file);
+  } catch (error) {
+    // macOS File Provider can expose a dataless cloud placeholder. This optional
+    // external project check must not require a local user's cloud hydration.
+    if (error?.errno === -11 || ['EAGAIN', 'EDEADLK'].includes(error?.code)) {
+      t.skip('DreamHouse bundle is present but its cloud-backed bytes are unavailable');
+      return;
+    }
+    throw error;
+  }
+  const original = JSON.parse(before.toString('utf8'));
   const migrated = normalizeArchitecturalSource(original);
   sameSchema(migrated);
   assert.equal(original.rooms.length, 27);

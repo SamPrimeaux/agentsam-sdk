@@ -18,6 +18,7 @@ function fixture() {
   fs.mkdirSync(path.join(root, 'src'));
   fs.writeFileSync(path.join(root, 'src', 'index.js'), 'export const value = 1;\n');
   git(root, ['init', '-q']);
+  git(root, ['config', 'commit.gpgsign', 'false']);
   git(root, ['config', 'user.email', 'test@example.com']);
   git(root, ['config', 'user.name', 'AgentSam Test']);
   git(root, ['add', '.']);

@@ -126,7 +126,7 @@ test('repair plans never execute commands; incomplete scans cannot apply', async
 test('repair isolates lock updates, verifies and rescans while preserving source checkout', async t => {
   const f=fixture(t);
   const g=(...args)=>execFileSync('git',args,{cwd:f.root,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
-  g('init');g('add','.');g('-c','user.name=Test','-c','user.email=test@example.invalid','commit','-m','fixture');
+  g('init');g('config','commit.gpgsign','false');g('add','.');g('-c','user.name=Test','-c','user.email=test@example.invalid','commit','-m','fixture');
   const original=fs.readFileSync(path.join(f.root,'package-lock.json'),'utf8');
   const calls=[];
   const scan=options=>scanProjectSecurity({...options,fetch:async (url,request)=>Response.json(JSON.parse(request.body).version==='4.17.20'?{vulns:[advisory()]}:{})});
@@ -153,7 +153,7 @@ test('repair isolates lock updates, verifies and rescans while preserving source
 test('repair retains failed candidates and never labels failed verification as fixed', async t => {
   const f=fixture(t);
   const g=(...args)=>execFileSync('git',args,{cwd:f.root,encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
-  g('init');g('add','.');g('-c','user.name=Test','-c','user.email=test@example.invalid','commit','-m','fixture');
+  g('init');g('config','commit.gpgsign','false');g('add','.');g('-c','user.name=Test','-c','user.email=test@example.invalid','commit','-m','fixture');
   const scan=options=>scanProjectSecurity({...options,fetch:async()=>Response.json({vulns:[advisory()]})});
   const run=async(command,args,options)=>{
     if(command!=='npm')return runProcess(command,args,options);

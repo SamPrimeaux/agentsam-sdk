@@ -17,6 +17,7 @@ async function fixture(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'agentsam-deploy-receipt-'));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   execFileSync('git', ['init', '-q', root]);
+  execFileSync('git', ['-C', root, 'config', 'commit.gpgsign', 'false']);
   execFileSync('git', ['-C', root, 'config', 'user.email', 'receipt-test@example.invalid']);
   execFileSync('git', ['-C', root, 'config', 'user.name', 'Receipt Test']);
   await fs.mkdir(path.join(root, 'src'), { recursive: true });
