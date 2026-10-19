@@ -154,7 +154,7 @@
     "scripts/brand-compliance/*"
   ],
   "license": {
-    "spdx": "MIT",
+    "spdx": "FSL-1.1-MIT",
     "replace": [
       "UNLICENSED"
     ],

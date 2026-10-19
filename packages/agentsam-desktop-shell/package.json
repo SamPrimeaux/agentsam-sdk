@@ -33,7 +33,7 @@
     "multi-brand"
   ],
   "author": "Inner Animal Media <sam@inneranimalmedia.com>",
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/SamPrimeaux/agentsam-sdk.git",

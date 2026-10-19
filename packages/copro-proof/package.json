@@ -3,7 +3,7 @@
   "version": "2.6.13",
   "description": "Mechanical vertical proof that CoPro project, media, editor, timeline, render, templates, and provider contracts compose correctly.",
   "type": "module",
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "engines": {
     "node": ">=22 <25"
   },

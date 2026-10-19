@@ -13,6 +13,6 @@
   "peerDependencies": {
     "react": ">=19"
   },
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "private": true
 }

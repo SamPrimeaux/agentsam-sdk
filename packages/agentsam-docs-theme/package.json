@@ -20,5 +20,5 @@
     "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
     "directory": "packages/agentsam-docs-theme"
   },
-  "license": "MIT"
+  "license": "FSL-1.1-MIT"
 }

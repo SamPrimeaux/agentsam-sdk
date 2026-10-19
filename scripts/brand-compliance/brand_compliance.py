@@ -136,7 +136,7 @@ def repo_urls(root):
 def owner_name(root):
     lic = root / "LICENSE"
     if lic.exists():
-        m = re.search(r"Copyright \(c\) \d{4}\s+(.+)", lic.read_text(encoding="utf-8"))
+        m = re.search(r"Copyright (?:\(c\)\s+)?\d{4}\s+(.+)", lic.read_text(encoding="utf-8"))
         if m:
             return m.group(1).strip()
     return "the project owners"

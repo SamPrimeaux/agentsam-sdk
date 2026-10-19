@@ -20,5 +20,5 @@
     "src"
   ],
   "description": "Portable Cloudflare capability connector for AgentSam applications and SDK consumers. Independent project; not affiliated with Cloudflare, Inc..",
-  "license": "MIT"
+  "license": "FSL-1.1-MIT"
 }

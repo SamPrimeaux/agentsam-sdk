@@ -24,7 +24,7 @@
   "scripts": {
     "test": "node --test test/*.test.mjs"
   },
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",

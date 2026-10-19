@@ -3,7 +3,7 @@
   "version": "2.6.13",
   "description": "Deterministic headless CoPro edit command engine with undo and redo.",
   "type": "module",
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "engines": {
     "node": ">=22 <25"
   },

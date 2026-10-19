@@ -24,7 +24,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "agentsam": {
     "kind": "theme",
     "slug": "ember",

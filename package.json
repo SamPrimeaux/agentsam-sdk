@@ -211,6 +211,7 @@
     "bin",
     "README.md",
     "LICENSE",
+    "LICENSING.md",
     "DEVELOPMENT.md",
     "AGENTSAM.md",
     "apps/cad-creator/shared/cad",
@@ -464,7 +465,7 @@
     "workers"
   ],
   "author": "Sam Primeaux <sam@inneranimalmedia.com>",
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "bugs": {
     "url": "https://github.com/SamPrimeaux/agentsam-sdk/issues"
   },

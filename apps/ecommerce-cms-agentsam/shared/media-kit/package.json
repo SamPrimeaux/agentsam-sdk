@@ -13,7 +13,7 @@
     "./preview": "./src/preview.js",
     "./collections": "./src/collections.js"
   },
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "publishConfig": {
     "access": "public"
   },

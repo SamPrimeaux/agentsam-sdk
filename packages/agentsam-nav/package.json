@@ -13,7 +13,7 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "license": "MIT",
+  "license": "FSL-1.1-MIT",
   "publishConfig": {
     "access": "public"
   },
