@@ -7,7 +7,8 @@
     "dev": "tsx src/server.ts",
     "build": "esbuild src/server.ts --bundle --platform=node --format=esm --target=node18 --sourcemap --outfile=dist/server.mjs --external:express --external:ws --external:@google/genai --external:dotenv --external:vite",
     "start": "NODE_ENV=production node dist/server.mjs",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --import tsx --test test/*.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

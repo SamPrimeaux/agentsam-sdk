@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -278,7 +279,20 @@ export async function executeOpenScadDocker(options: DockerOpenScadRequest): Pro
 
     const durationMs = Date.now() - startTime;
     const base64Data = body.artifact_base64 || '';
+    if (typeof base64Data !== 'string' || !base64Data || !/^[A-Za-z0-9+/]*={0,2}$/.test(base64Data)) {
+      throw new Error('cad_openscad_artifact_missing_or_invalid_base64');
+    }
     const buffer = Buffer.from(base64Data, 'base64');
+    if (!buffer.length || buffer.toString('base64') !== base64Data) {
+      throw new Error('cad_openscad_artifact_decode_failed');
+    }
+    const digest = createHash('sha256').update(buffer).digest('hex');
+    if (body.size_bytes !== buffer.length ||
+        typeof body.sha256 !== 'string' ||
+        !/^[a-f0-9]{64}$/i.test(body.sha256) ||
+        body.sha256.toLowerCase() !== digest) {
+      throw new Error('cad_openscad_artifact_integrity_mismatch');
+    }
     const isText = format === 'stl' || format === 'dxf' || format === 'svg' || format === 'scad' || format === 'csg';
     const artifactContent = isText ? buffer.toString('utf8') : base64Data;
 
@@ -302,7 +316,7 @@ export async function executeOpenScadDocker(options: DockerOpenScadRequest): Pro
       filename: body.filename || filename,
       outputFormat: format,
       sizeBytes: body.size_bytes || buffer.length,
-      sha256: body.sha256 || null,
+      sha256: digest,
       durationMs,
       executionTimeMs: durationMs,
       logs: [

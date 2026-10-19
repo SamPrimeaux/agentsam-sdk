@@ -23,6 +23,8 @@ export interface OpenScadExecutionResult {
   mimeType: string;
   filename: string;
   sizeBytes: number;
+  /** SHA-256 of compiler-produced artifact bytes; null for preview-only output. */
+  sha256?: string | null;
   durationMs: number;
   logs: string[];
   error?: string;

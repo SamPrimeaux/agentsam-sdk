@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createHash } from 'node:crypto';
 import { discoverOpenScad } from './discovery';
 import { probeDockerServiceHealth, executeOpenScadDocker } from './docker-executor';
 
@@ -57,6 +58,9 @@ export interface OpenScadExecuteResult {
   mimeType: string;
   filename: string;
   sizeBytes: number;
+  // Content hash of actual compiler output bytes, not its JSON/base64 representation.
+  // Null means preview-only content has not passed a real compiler.
+  sha256: string | null;
   durationMs: number;
   executionTimeMs: number;
   logs: string[];
@@ -121,6 +125,7 @@ export async function executeOpenScadCompiler({
         mimeType: format === 'stl' ? 'model/stl' : format === 'dxf' ? 'image/vnd.dxf' : 'text/plain',
         filename,
         sizeBytes: buffer.length,
+        sha256: createHash('sha256').update(buffer).digest('hex'),
         durationMs,
         executionTimeMs: durationMs,
         logs: [
@@ -153,7 +158,8 @@ export async function executeOpenScadCompiler({
       };
     }
   } catch (err: any) {
-    // Docker service error or not reachable -> fall through to procedural fallback
+    if (String(err?.message || '').startsWith('cad_openscad_artifact_')) throw err;
+    // Docker service unavailable: preview-only return is unverified.
   }
 
   // Graceful fallback for environments lacking local OpenSCAD binary
@@ -200,6 +206,7 @@ export async function executeOpenScadCompiler({
     mimeType: format === 'stl' ? 'model/stl' : format === 'dxf' ? 'image/vnd.dxf' : 'text/plain',
     filename,
     sizeBytes: Buffer.byteLength(artifactContent),
+    sha256: null, // Fallback is preview-only, never a production-verified artifact.
     durationMs,
     executionTimeMs: durationMs,
     logs: [
