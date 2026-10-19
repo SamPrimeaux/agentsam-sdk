@@ -10,7 +10,12 @@ const ENGINES = new Set(['CYCLES', 'BLENDER_WORKBENCH']);
 const MODEL_EXT = new Set(['glb', 'gltf', 'blend']);
 
 export const BLENDER_RENDER_SCRIPT = String.raw`import bpy, json, sys
+import numpy as np
 from mathutils import Vector
+# Blender 3.4's bundled glTF importer uses numpy aliases that NumPy >= 1.24 removed; real models crash without this.
+for alias, real in (("bool", bool), ("int", int), ("float", float), ("object", object), ("str", str)):
+    if not hasattr(np, alias):
+        setattr(np, alias, real)
 args = json.loads(sys.argv[sys.argv.index("--") + 1])
 model = args["model"]
 if model.rsplit(".", 1)[-1].lower() == "blend":
