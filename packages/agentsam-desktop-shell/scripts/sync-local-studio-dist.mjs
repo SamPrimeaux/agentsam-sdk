@@ -84,10 +84,18 @@ const sdkVersion = existsSync(pkgPath)
   ? JSON.parse(readFileSync(pkgPath, 'utf8')).version
   : '0.0.0';
 
+// Provenance metadata must be portable. Never serialize the build machine's
+// absolute workspace path into the published desktop artifact.
+const sourceRelative = path.relative(REPO_ROOT, source);
+const portableSource = sourceRelative && !sourceRelative.startsWith('..' + path.sep) &&
+  sourceRelative !== '..' && !path.isAbsolute(sourceRelative)
+  ? sourceRelative.split(path.sep).join('/')
+  : 'external-build-output';
+
 const meta = {
   schema: 'agentsam.desktop.dist.v1',
   product: 'local-studio',
-  source,
+  source: portableSource,
   sdk_version: sdkVersion,
   synced_at: new Date().toISOString(),
   client_mode: 'desktop_spa',
