@@ -1,10 +1,9 @@
 /**
- * Portable CoPro app presentation metadata.
- * Replace the single icon URL when CoPro gets its final identity.
- * No external icon is requested until a verified brand asset is registered.
+ * MovieMode presentation metadata in the reusable CoPro SDK host.
+ * CoPro remains the editing engine and EditPilot companion.
  */
 export const coproAppManifest = {
-  name:"CoPro",
+  name:"MovieMode",
   family:"media-production",
-  iconBaseUrl:"",
+  iconBaseUrl:"https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/b158fce7-8824-48a3-70d9-d114a7dd3600",
 } as const;

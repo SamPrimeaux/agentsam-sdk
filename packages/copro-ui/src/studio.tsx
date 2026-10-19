@@ -1,18 +1,19 @@
-import React, { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, AudioLines, Captions, Copy, Film,
   Layers, Play, Pause, Redo2, Scissors, SlidersHorizontal, Sparkles,
-  PanelLeftClose, PanelRightClose, PanelsTopLeft, RotateCcw, GripVertical, ExternalLink,
-  Trash2, Type, Undo2, X, Gauge, Volume2, Replace, Clapperboard,
+  Trash2, Type, Undo2, X, Gauge, Volume2, Replace, Clapperboard, PanelLeftClose, PanelRightClose, PanelsTopLeft, RotateCcw,
+  Sticker, Palette, SlidersVertical, Folder, Download, Film as FilmIcon, GripVertical, PanelsTopLeft as DockIcon, ExternalLink,
 } from "lucide-react";
-import { CoProTimeline, type CoProProjectView } from "./timeline";
-import { CoProToolPanel, type CoProMediaShelfItem } from "./tool-sheet";
-import {CoProResizeHandle,useCoProWorkspaceLayout,useWorkspaceContainer,bounded,DEFAULT_WORKSPACE_LAYOUT,type WorkspacePane} from "./workspace-layout";
+import { CoProTimeline, type CoProProjectView } from "./timeline.js";
+import { CoProToolPanel, type CoProMediaShelfItem } from "./tool-sheet.js";
+import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout-moviemode.js";
 
 
 export type CoProStudioAction =
   | { type: "back" }
   | { type: "export-project" }
+  | { type: "browse-templates" }
   | { type: "undo" }
   | { type: "redo" }
   | { type: "split"; clipId: string; atUs: number }
@@ -22,6 +23,7 @@ export type CoProStudioAction =
   | { type: "trim"; clipId: string; patch: { startUs?: number; inUs?: number; durationUs?: number } }
   | { type: "speed"; clipId: string; playbackRate: number }
   | { type: "volume"; clipId: string; volume: number }
+  | { type: "transform"; clipId: string; patch: { scale?: number; x?: number; y?: number; rotation?: number; opacity?: number } }
   | { type: "text"; clipId: string; text: string }
   | { type: "effect"; clipId: string; effect: string }
   | { type: "transition"; clipId: string; transition: string; durationUs?: number }
@@ -34,7 +36,6 @@ export type CoProStudioAction =
 export type CoProStudioProps = {
   project: CoProProjectView;
   initialTool?: "text" | "captions" | null;
-  mediaError?: string | null;
   playheadUs: number;
   selectedClipId?: string | null;
   canUndo?: boolean;
@@ -54,7 +55,10 @@ const PRIMARY_TOOLS = [
   ["audio", "Audio", "♫"],
   ["text", "Text", "T"],
   ["captions", "Captions", "CC"],
+  ["stickers", "Stickers", "☆"],
   ["effects", "Effects", "✦"],
+  ["filters", "Filters", "◐"],
+  ["adjustments", "Adjustment", "☷"],
   ["transitions", "Transitions", "◇"],
   ["templates", "Templates", "▦"],
 ] as const;
@@ -77,6 +81,9 @@ function renderToolIcon(id: string) {
     case "audio": return <AudioLines size={size}/>;
     case "text": return <Type size={size}/>;
     case "captions": return <Captions size={size}/>;
+    case "stickers": return <Sticker size={size}/>;
+    case "filters": return <Palette size={size}/>;
+    case "adjustments": return <SlidersVertical size={size}/>;
     case "effects": return <Sparkles size={size}/>;
     case "transitions": return <Layers size={size}/>;
     case "templates": return <Clapperboard size={size}/>;
@@ -93,7 +100,6 @@ function renderToolIcon(id: string) {
 export function CoProStudio({
   project,
   initialTool = null,
-  mediaError = null,
   playheadUs,
   selectedClipId,
   canUndo = false,
@@ -108,25 +114,31 @@ export function CoProStudio({
   onAction,
 }: CoProStudioProps) {
   const [playing, setPlaying] = useState(false);
-  const {layout,update: updateLayout,reset: resetLayout}=useCoProWorkspaceLayout();
-  const sourceTool=layout.sourceTool;
-  const inspectorTool=layout.inspectorTool;
-  const activePane=layout.activePane;
-  const workspaceRef=useRef<HTMLDivElement>(null);
-  const {width:containerWidth,mode}=useWorkspaceContainer(workspaceRef);
-  useEffect(()=>{
-    if(initialTool)updateLayout({sourceTool:initialTool,activePane:"source",sourceOpen:true});
-  // Initial category is a one-time navigation input, not a permanent override.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[initialTool]);
-  const floatingDrag=useRef<{x:number;y:number}|null>(null);
-  useEffect(()=>{
-    if(mode==="mobile"&&layout.floating)updateLayout({floating:null});
-  // Follow actual container-size changes, never the global browser width.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[mode,layout.floating]);
+  const [previewDecodeWarning, setPreviewDecodeWarning] = useState<string|null>(null);
+  const [activeTool, setActiveTool] = useState<string | null>(initialTool);
+  const [categoryTool, setCategoryTool] = useState<string>(initialTool ?? "media");
+  const [browserSection, setBrowserSection] = useState<"import" | "media" | "subprojects" | "yours" | "generate" | "spaces" | "library">("import");
+  const [panePreference, setPanePreference] = useState<"browser" | "inspector">("browser");
+  const { layout, setLayout, resetLayout } = useWorkspaceLayout();
+  const workspaceRef = useRef<HTMLElement>(null);
+  const [workspaceWidth, setWorkspaceWidth] = useState(1440);
+  const [workspaceHeight, setWorkspaceHeight] = useState(800);
+
+  useEffect(() => {
+    if (!workspaceRef.current || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      setWorkspaceWidth(entry.contentRect.width);
+      setWorkspaceHeight(entry.contentRect.height);
+    });
+    observer.observe(workspaceRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => { if (selectedClipId) setPanePreference("inspector"); }, [selectedClipId]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const dragStartRef = useRef<{startX:number;startY:number;x:number;y:number;clipId:string;nextX:number;nextY:number}|null>(null);
 
   const selectedEntry = useMemo(() => {
     for (const track of project.tracks) {
@@ -138,52 +150,30 @@ export function CoProStudio({
 
   const selectedClip = selectedEntry?.clip ?? null;
   const selectedTrack = selectedEntry?.track ?? null;
-
-  useEffect(()=>{
-    if(!selectedClipId)return;
-    updateLayout({
-      inspectorTool:selectedEntry?.track.kind==="audio"?"volume":
-        selectedEntry?.track.kind==="captions"?"captions":
-        selectedEntry?.track.kind==="overlay"?"text":"trim",
-      activePane:"inspector",inspectorOpen:true,
-    });
-  // Recompute only when selection changes, not for every timeline edit.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[selectedClipId]);
-
-  const sourceDocked=layout.sourceOpen && layout.floating!=="source";
-  const inspectorDocked=layout.inspectorOpen && layout.floating!=="inspector";
-  const widthOf=(pane:WorkspacePane)=>pane==="source"?layout.sourceWidth:layout.inspectorWidth;
-  const adjustWidth=(pane:WorkspacePane,delta:number)=>{
-    const max=Math.min(pane==="source"?500:510,Math.max(240,containerWidth-440));
-    updateLayout(pane==="source"?{sourceWidth:bounded(layout.sourceWidth+delta,220,max)}:
-      {inspectorWidth:bounded(layout.inspectorWidth+delta,240,max)});
-  };
-  const adjustTimeline=(delta:number)=>{
-    const max=Math.max(150,workspaceRef.current?.clientHeight??600)-180;
-    updateLayout({timelineHeight:bounded(layout.timelineHeight-delta,150,Math.max(150,Math.min(550,max)))});
-  };
-  const activateSource=(id:string)=>{
-    updateLayout({sourceTool:id,activePane:"source",sourceOpen:true});
-  };
-  const activateInspector=(id:string)=>{
-    updateLayout({inspectorTool:id,activePane:"inspector",inspectorOpen:true});
-  };
-  const showPane=(pane:WorkspacePane)=> {
-    updateLayout(pane==="source"?{activePane:pane,sourceOpen:!layout.sourceOpen}:{activePane:pane,inspectorOpen:!layout.inspectorOpen});
-  };
-  const setFloat=(pane:WorkspacePane)=>{
-    updateLayout({floating:layout.floating===pane?null:pane,
-      sourceOpen:pane==="source"?true:layout.sourceOpen,
-      inspectorOpen:pane==="inspector"?true:layout.inspectorOpen});
-  };
-  const floatMove=(event:React.PointerEvent<HTMLButtonElement>)=>{
-    if(!floatingDrag.current || !layout.floating)return;
-    const dx=event.clientX-floatingDrag.current.x,dy=event.clientY-floatingDrag.current.y;
-    floatingDrag.current={x:event.clientX,y:event.clientY};
-    updateLayout({floatX:bounded(layout.floatX+dx,0,Math.max(0,containerWidth-260)),
-      floatY:bounded(layout.floatY+dy,0,Math.max(0,(workspaceRef.current?.clientHeight??700)-130))});
-  };
+  const isNarrow = workspaceWidth < 1180;
+  const isCompact = workspaceWidth < 760;
+  const clipSpecificTools = ["trim", "speed", "volume", "effects", "transitions", "text", "captions", "transform", "filters", "adjustments"];
+  const canonicalTool = (tool: string | null) => tool === "filters" ? "effects" : tool === "adjustments" ? "transform" : tool;
+  const inspectorTool = activeTool === "export" ? "export" : selectedClip
+    ? (activeTool && clipSpecificTools.includes(activeTool) ? canonicalTool(activeTool) : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" ? "text" : "transform")
+    : "project";
+  const inspectorAvailable = Boolean(inspectorTool);
+  const showInspector = inspectorAvailable && layout.inspectorOpen && (!isNarrow || panePreference === "inspector" || !layout.browserOpen);
+  const showBrowser = layout.browserOpen && (!isNarrow || !showInspector);
+  const browserFloating = !isNarrow && showBrowser && layout.browserFloating;
+  const inspectorFloating = !isNarrow && showInspector && layout.inspectorFloating;
+  const dockBrowser = showBrowser && !browserFloating;
+  const dockInspector = showInspector && !inspectorFloating;
+  const browserWidth = clampWorkspaceSize(layout.browserWidth, 260, Math.max(260, workspaceWidth - (dockInspector ? layout.inspectorWidth : 0) - 330));
+  const inspectorWidth = clampWorkspaceSize(layout.inspectorWidth, 260, Math.max(260, workspaceWidth - (dockBrowser ? browserWidth : 0) - 330));
+  const timelineHeight = clampWorkspaceSize(layout.timelineHeight || Math.round(workspaceHeight * .45), isCompact ? 115 : 150, Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 300 : 225)));
+  const gridStyle = {
+    "--copro-browser-width": dockBrowser ? `${browserWidth}px` : "0px",
+    "--copro-browser-handle": dockBrowser ? "8px" : "0px",
+    "--copro-inspector-width": dockInspector ? `${inspectorWidth}px` : "0px",
+    "--copro-inspector-handle": dockInspector ? "8px" : "0px",
+    "--copro-timeline-height": `${timelineHeight}px`,
+  } as React.CSSProperties;
 
   const activeVisualClip = useMemo(() => {
     for (const track of project.tracks) {
@@ -202,7 +192,40 @@ export function CoProStudio({
   const activeMedia = activeVisualClip
     ? mediaItems.find((item) => item.id === activeVisualClip.assetId) ?? null
     : null;
+  const activeTransform = (activeVisualClip?.metadata?.transform ?? {}) as { scale?:number; x?:number; y?:number; rotation?:number; opacity?:number };
+  const mediaTransformStyle: React.CSSProperties = {
+    transform: `translate(${activeTransform.x ?? 0}%, ${activeTransform.y ?? 0}%) scale(${activeTransform.scale ?? 1}) rotate(${activeTransform.rotation ?? 0}deg)`,
+    opacity: activeTransform.opacity ?? 1,
+    cursor: activeVisualClip ? "grab" : undefined,
+    touchAction: "none",
+  };
+  function startVisualDrag(event: React.PointerEvent<HTMLVideoElement | HTMLImageElement>) {
+    if (!activeVisualClip || event.button !== 0) return;
+    onSelectClip?.(activeVisualClip.id);
+    dragStartRef.current = {startX:event.clientX,startY:event.clientY,x:activeTransform.x ?? 0,y:activeTransform.y ?? 0,clipId:activeVisualClip.id,nextX:activeTransform.x ?? 0,nextY:activeTransform.y ?? 0};
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  }
+  function moveVisualDrag(event: React.PointerEvent<HTMLVideoElement | HTMLImageElement>) {
+    const drag = dragStartRef.current;
+    if (!drag) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const dx = 100*(event.clientX-drag.startX)/rect.width;
+    const dy = 100*(event.clientY-drag.startY)/rect.height;
+    drag.nextX = Math.max(-1000,Math.min(1000,Math.round((drag.x+dx)*10)/10));
+    drag.nextY = Math.max(-1000,Math.min(1000,Math.round((drag.y+dy)*10)/10));
+    event.currentTarget.style.transform = `translate(${drag.nextX}%, ${drag.nextY}%) scale(${activeTransform.scale ?? 1}) rotate(${activeTransform.rotation ?? 0}deg)`;
+  }
+  function endVisualDrag(event: React.PointerEvent<HTMLVideoElement | HTMLImageElement>) {
+    const drag = dragStartRef.current;
+    dragStartRef.current = null;
+    if (!drag) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    if (drag.nextX !== drag.x || drag.nextY !== drag.y) onAction?.({type:"transform",clipId:drag.clipId,patch:{x:drag.nextX,y:drag.nextY}});
+  }
   const effectivePreviewSrc = activeMedia ? activeMedia.url : (mediaItems.length ? null : previewSrc);
+  useEffect(()=>setPreviewDecodeWarning(null),[effectivePreviewSrc]);
   const effectivePreviewKind = activeMedia?.kind === "image" ? "image"
     : activeMedia?.kind === "video" ? "video"
     : mediaItems.length ? null : previewKind;
@@ -289,8 +312,9 @@ export function CoProStudio({
   }
 
   function runTool(id: string) {
+    if (id === "templates") { onAction?.({type:"browse-templates"}); return; }
     if (!selectedClip) {
-      activateSource(id);
+      setActiveTool(id);
       return;
     }
     if (id === "split") {
@@ -303,118 +327,121 @@ export function CoProStudio({
     }
     if (id === "delete") {
       onAction?.({ type: "delete", clipId: selectedClip.id });
-      updateLayout({inspectorTool:"trim"});
+      setActiveTool(null);
       return;
     }
-    activateInspector(id);
+    setActiveTool(id);
+    setPanePreference("inspector");
+    setLayout(current => ({ ...current, inspectorOpen: true }));
+  }
+
+  function moveFloating(event: React.PointerEvent<HTMLElement>, panel: "browser" | "inspector" | "player") {
+    if (event.button !== 0 || (event.target as HTMLElement).closest("button")) return;
+    const xKey = panel === "browser" ? "browserX" : panel === "inspector" ? "inspectorX" : "playerX";
+    const yKey = panel === "browser" ? "browserY" : panel === "inspector" ? "inspectorY" : "playerY";
+    const startX = event.clientX, startY = event.clientY;
+    const originalX = layout[xKey], originalY = layout[yKey];
+    const previous = document.body.style.userSelect;
+    document.body.style.userSelect = "none";
+    function drag(e: PointerEvent) {
+      setLayout(old => ({...old,[xKey]:Math.max(0,Math.min(window.innerWidth-150,originalX+e.clientX-startX)),[yKey]:Math.max(0,Math.min(window.innerHeight-90,originalY+e.clientY-startY))}));
+    }
+    function end() {window.removeEventListener("pointermove",drag);window.removeEventListener("pointerup",end);window.removeEventListener("pointercancel",end);document.body.style.userSelect=previous;}
+    window.addEventListener("pointermove",drag);window.addEventListener("pointerup",end);window.addEventListener("pointercancel",end);
+  }
+  function saveFloatingSize(event: React.PointerEvent<HTMLElement>, panel: "browser" | "inspector" | "player") {
+    if (event.target !== event.currentTarget) return;
+    const element = event.currentTarget;
+    const widthKey = panel === "browser" ? "browserWidth" : panel === "inspector" ? "inspectorWidth" : "playerFloatWidth";
+    const heightKey = panel === "browser" ? "browserFloatHeight" : panel === "inspector" ? "inspectorFloatHeight" : "playerFloatHeight";
+    const size = element.getBoundingClientRect();
+    setLayout(old=>({...old,[widthKey]:clampWorkspaceSize(size.width,panel === "player" ? 360 : 260,panel === "player" ? 2000 : 800),[heightKey]:clampWorkspaceSize(size.height,250,1500)}));
+  }
+
+  function selectCategory(id: string) {
+    if (id === "templates") { onAction?.({type:"browse-templates"}); return; }
+    setCategoryTool(id);
+    setLayout(value => ({...value,browserOpen:true}));
+    setPanePreference("browser");
+    if (selectedClip && ["effects","transitions","filters","adjustments"].includes(id)) setActiveTool(id);
   }
 
   return (
-    <section className="copro-studio" data-inspector-open={layout.inspectorOpen} data-workspace-mode={mode}>
+    <section className="copro-studio" data-inspector-open={Boolean(activeTool)}>
       <header className="copro-topbar">
         <button className="copro-icon-button" aria-label="Back to projects" onClick={() => onAction?.({ type: "back" })}><ArrowLeft size={22}/></button>
         <div className="copro-title-block">
           <strong>{projectTitle}</strong>
-          <span>CoPro</span>
+          <span>MovieMode</span>
         </div>
         <div className="copro-topbar-actions">
-          <button className="copro-icon-button" aria-label="Undo" disabled={!canUndo} onClick={() => onAction?.({ type: "undo" })}><Undo2 size={20}/></button>
-          <button className="copro-icon-button" aria-label="Redo" disabled={!canRedo} onClick={() => onAction?.({ type: "redo" })}><Redo2 size={20}/></button>
-          <button className="copro-icon-button copro-layout-wide-only" aria-label="Toggle source browser" title="Show or hide source browser" onClick={()=>showPane("source")}><PanelsTopLeft size={20}/></button>
-          <button className="copro-icon-button copro-layout-wide-only" aria-label="Toggle selection inspector" title="Show or hide selection inspector" onClick={()=>showPane("inspector")}><PanelRightClose size={19}/></button>
-          <button className="copro-icon-button copro-layout-wide-only" aria-label="Reset workspace layout" title="Reset panel sizes and docking" onClick={resetLayout}><RotateCcw size={18}/></button>
-          <details className="copro-layout-menu">
-            <summary aria-label="Workspace layout menu" title="Panels and layout"><PanelsTopLeft size={20}/></summary>
-            <div className="copro-layout-menu-content">
-              <button onClick={()=>showPane("source")}>{layout.sourceOpen?"Hide":"Show"} source browser</button>
-              <button onClick={()=>showPane("inspector")}>{layout.inspectorOpen?"Hide":"Show"} selection inspector</button>
-              <button onClick={()=>updateLayout({swapped:!layout.swapped})}>Swap panel sides</button>
-              <button onClick={resetLayout}>Reset panel layout</button>
-            </div>
-          </details>
-          <button className="copro-export-button" onClick={()=>activateInspector("export")}>Export</button>
+          <button className="copro-icon-button copro-history-button" aria-label="Undo" disabled={!canUndo} onClick={() => onAction?.({ type: "undo" })}><Undo2 size={20}/></button>
+          <button className="copro-icon-button copro-history-button" aria-label="Redo" disabled={!canRedo} onClick={() => onAction?.({ type: "redo" })}><Redo2 size={20}/></button>
+          <button className="copro-icon-button" type="button" title={layout.browserOpen ? "Collapse media browser" : "Show media browser"} aria-label={layout.browserOpen ? "Collapse media browser" : "Show media browser"} aria-pressed={layout.browserOpen} onClick={() => { setLayout(value => ({ ...value, browserOpen: !value.browserOpen })); setPanePreference("browser"); }}><PanelLeftClose size={18}/></button>
+          <button className="copro-icon-button" type="button" title={layout.inspectorOpen ? "Collapse inspector" : "Show inspector"} aria-label={layout.inspectorOpen ? "Collapse inspector" : "Show inspector"} aria-pressed={layout.inspectorOpen} onClick={() => { setLayout(value => ({ ...value, inspectorOpen: !value.inspectorOpen })); setPanePreference("inspector"); }}><PanelRightClose size={18}/></button>
+          <button className="copro-icon-button copro-wide-layout-control" type="button" title="Swap dock positions of browser and inspector" aria-label="Swap browser and inspector" onClick={() => setLayout(value => ({ ...value, reversed: !value.reversed }))}><PanelsTopLeft size={18}/></button>
+          <label className="mm-workspace-preset" title="Choose a saved-panel layout preset"><span>Layout</span><select aria-label="Workspace layout preset" defaultValue="custom" onChange={event=>{
+            const choice=event.currentTarget.value;
+            if (choice === "balanced") resetLayout();
+            if (choice === "media") setLayout(old=>({...old,browserWidth:590,inspectorWidth:300,timelineHeight:Math.round(workspaceHeight*.36),browserOpen:true,inspectorOpen:true,browserFloating:false,inspectorFloating:false}));
+            if (choice === "timeline") setLayout(old=>({...old,browserWidth:390,inspectorWidth:300,timelineHeight:Math.round(workspaceHeight*.55),browserOpen:true,inspectorOpen:true,browserFloating:false,inspectorFloating:false}));
+          }}><option value="custom">Custom</option><option value="balanced">Balanced</option><option value="media">Media focus</option><option value="timeline">Timeline focus</option></select></label>
+          <button className="copro-icon-button copro-wide-layout-control" type="button" title="Restore default panel widths, docking and timeline height" aria-label="Reset workspace layout" onClick={() => { resetLayout(); setPanePreference("browser"); }}><RotateCcw size={18}/></button>
+          <button className="copro-export-button" aria-expanded={activeTool === "export"} aria-controls="copro-tool-inspector" onClick={() => { setActiveTool("export"); setLayout(value => ({ ...value, inspectorOpen: true })); setPanePreference("inspector"); }}>Export</button>
         </div>
       </header>
 
-      {mediaError&&<div role="alert" className="copro-media-error">{mediaError}</div>}
-      <main className="copro-workspace">
-        <aside className="copro-desktop-rail">
-          {PRIMARY_TOOLS.map(([id, label]) => (
-            <button key={id} type="button" aria-pressed={sourceTool === id && layout.sourceOpen} aria-expanded={sourceTool === id && layout.sourceOpen} aria-controls="copro-source-browser" className={sourceTool === id && layout.sourceOpen ? "is-active" : ""} disabled={id === "templates"} title={id === "templates" ? "Template catalog not connected" : label} onClick={() => activateSource(id)}>
-              <i>{renderToolIcon(id)}</i><span>{label}</span>
-            </button>
-          ))}
-          {selectedClip ? (
-            <div className="copro-rail-clip-tools" aria-label="Selected clip tools">
-              <span className="copro-rail-section-label">CLIP</span>
-              {CLIP_TOOLS.filter(([id]) => !["effects","transitions"].includes(id)).map(([id,label]) => (
-                <button key={id} type="button" aria-pressed={inspectorTool === id && layout.inspectorOpen} aria-controls="copro-tool-inspector" className={[inspectorTool === id && layout.inspectorOpen ? "is-active" : "",id === "delete" ? "is-danger" : ""].join(" ")} onClick={() => runTool(id)}>
-                  <i>{renderToolIcon(id)}</i><span>{label}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </aside>
-
-        <div ref={workspaceRef} className="copro-editing-grid copro-dockable-grid"
-          data-layout-mode={mode}
-          data-active-pane={activePane}
-          data-source-open={layout.sourceOpen}
-          data-inspector-open={layout.inspectorOpen}
-          data-source-docked={sourceDocked}
-          data-inspector-docked={inspectorDocked}
-          data-swapped={layout.swapped}
-          style={{
-            "--copro-left-col":(layout.swapped?inspectorDocked?layout.inspectorWidth:0:sourceDocked?layout.sourceWidth:0)+"px",
-            "--copro-right-col":(layout.swapped?sourceDocked?layout.sourceWidth:0:inspectorDocked?layout.inspectorWidth:0)+"px",
-            "--copro-compact-col":(activePane==="source"?layout.sourceOpen?layout.sourceWidth:0:layout.inspectorOpen?layout.inspectorWidth:0)+"px",
-            "--copro-timeline-size":layout.timelineHeight+"px",
-          } as CSSProperties}>
-          {layout.sourceOpen && <aside id="copro-source-browser"
-              className={"copro-source-slot copro-pane-slot"+(layout.floating==="source"?" is-floating":"")}
-              style={layout.floating==="source"?{left:layout.floatX,top:layout.floatY,width:layout.sourceWidth}:undefined}
-              aria-label="Source browser">
-            <div className="copro-pane-controls">
-              <span>Source browser</span>
-              <button aria-label="Drag source panel" title="Drag panel when undocked" className="copro-pane-grip"
-                disabled={layout.floating!=="source"}
-                onPointerDown={e=>{floatingDrag.current={x:e.clientX,y:e.clientY};e.currentTarget.setPointerCapture(e.pointerId);}}
-                onPointerMove={floatMove}
-                onPointerUp={e=>{floatingDrag.current=null;if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);}}><GripVertical size={16}/></button>
-              <button title="Dock or undock source browser" aria-label="Dock or undock source browser" onClick={()=>setFloat("source")}><ExternalLink size={17}/></button>
-              <button title="Switch source and inspector sides" aria-label="Swap panel sides" onClick={()=>updateLayout({swapped:!layout.swapped})}><PanelsTopLeft size={17}/></button>
-              <button title="Collapse source browser" aria-label="Collapse source browser" onClick={()=>updateLayout({sourceOpen:false})}><PanelLeftClose size={17}/></button>
-            </div>
-            <CoProToolPanel
-              tool={sourceTool}
-              onClose={()=>updateLayout({sourceOpen:false})}
-              hasSelectedClip={sourceTool==="audio"?false:Boolean(selectedClip)}
-              selectedClipKind={selectedTrack?.kind}
+      <main className="copro-workspace" ref={workspaceRef}>
+        <div className={["copro-editing-grid", showBrowser ? "has-browser" : "", showInspector ? "has-inspector" : "", isNarrow ? "is-narrow" : "", isCompact ? "is-compact" : "", layout.reversed ? "is-reversed" : ""].filter(Boolean).join(" ")} style={gridStyle} data-layout-mode={isCompact ? "mobile" : isNarrow ? "single-pane" : "wide"}>
+          {showBrowser && <aside id="copro-tool-browser" className={`copro-browser-slot mm-browser${browserFloating ? " is-floating" : ""}`} aria-label={`${categoryTool} browser`}
+            style={browserFloating ? { position:"fixed",left:layout.browserX,top:layout.browserY,width:browserWidth,height:layout.browserFloatHeight,zIndex:40 } : undefined}
+            onPointerUp={browserFloating ? (event) => saveFloatingSize(event,"browser") : undefined}>
+      <nav className="mm-editor-categories" aria-label="MovieMode editing categories">
+        {PRIMARY_TOOLS.map(([id,label]) => <button key={id} type="button" className={categoryTool===id?"is-active":""} aria-pressed={categoryTool===id} title={id==="templates"?"Browse editable composition templates":`${label}: open the creation browser`} onClick={()=>selectCategory(id)}>
+          {renderToolIcon(id)}<span>{label}</span>
+        </button>)}
+      </nav>
+            <div className="mm-browser-top" onPointerDown={browserFloating ? event => moveFloating(event,"browser") : undefined}><span>{browserFloating && <GripVertical size={14} aria-hidden="true"/>}<strong>{categoryTool.charAt(0).toUpperCase()+categoryTool.slice(1)}</strong></span><div className="mm-panel-window-buttons"><button type="button" aria-label={browserFloating ? "Dock Media browser" : "Undock Media browser"} title={browserFloating ? "Dock Media browser back into workspace" : "Float and drag Media browser"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(value=>({...value,browserFloating:!value.browserFloating}))}>{browserFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button><strong>{categoryTool.charAt(0).toUpperCase()+categoryTool.slice(1)}</strong><button type="button" aria-label="Collapse media browser" title="Collapse panel" onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(value=>({...value,browserOpen:false}))}>×</button></div></div>
+            {categoryTool === "media" && <nav className="mm-media-subnav" aria-label="Media collections">
+              {([ ["import","Import"], ["media","Media"], ["subprojects","Subprojects"], ["yours","Yours"], ["generate","Generate"], ["spaces","Spaces"], ["library","Library"] ] as const).map(([id,label]) => <button type="button" key={id} className={browserSection===id?"is-active":""} aria-pressed={browserSection===id} onClick={()=>setBrowserSection(id)}>{label}</button>)}
+            </nav>}
+            {categoryTool === "media" && ["subprojects","generate","spaces"].includes(browserSection) ? <div className="mm-browser-unavailable"><strong>{browserSection==="subprojects"?"Compound clips":browserSection==="generate"?"Media generation":"Connected spaces"}</strong><p>{browserSection==="generate"?"Generation requires an authorized provider. Open miniAgentSam to explore connected capabilities; no fake generations here.":browserSection==="spaces"?"Connect a permitted workspace to browse remote files; imported local files remain in Media and Yours.":"Build compositions by adding clips to tracks. Compound-clip browsing requires the linked subproject engine."}</p><button onClick={()=>setBrowserSection("media")}>Browse imported media</button></div> : <CoProToolPanel tool={categoryTool==="filters"?"effects":categoryTool==="adjustments"?"transform":categoryTool==="stickers"?"stickers":categoryTool} onClose={() => setLayout(value => ({ ...value, browserOpen: false }))}
+              mediaItems={mediaItems} onMediaAdd={(id) => onMediaAdd?.(id,playheadUs)}
+              onMediaPicked={(file) => onAction?.({type:"import-media",file,atUs:playheadUs})}
+              onTextCommit={(text,kind) => onAction?.({type:"create-text",kind,text,atUs:playheadUs})}
+              onEffectChange={(effect) => selectedClip && onAction?.({type:"effect",clipId:selectedClip.id,effect})}
+              onTransitionChange={(transition) => selectedClip && onAction?.({type:"transition",clipId:selectedClip.id,transition,durationUs:300_000})}
+              onTransformChange={(patch) => selectedClip && onAction?.({type:"transform",clipId:selectedClip.id,patch})}
+              transform={selectedClip?.metadata?.transform as {scale?:number;x?:number;y?:number;rotation?:number;opacity?:number}|undefined}
+              hasSelectedClip={Boolean(selectedClip && ["effects","transitions","filters","adjustments"].includes(categoryTool))}
               selectedClipId={selectedClipId}
-              mediaItems={mediaItems}
-              onMediaPicked={(file)=>onAction?.({type:"import-media",file,atUs:playheadUs})}
-              onMediaAdd={(id)=>onMediaAdd?.(id,playheadUs)}
-              onTextCommit={(text,kind)=>onAction?.({type:"create-text",kind,text,atUs:playheadUs})}
-              onEffectChange={(effect)=>selectedClip&&onAction?.({type:"effect",clipId:selectedClip.id,effect})}
-              onTransitionChange={(transition)=>selectedClip&&onAction?.({type:"transition",clipId:selectedClip.id,transition,durationUs:300_000})}
-            />
+              onProjectExport={() => onAction?.({type:"export-project"})}
+            />}
           </aside>}
-          {sourceDocked && <CoProResizeHandle label="Resize source browser" orientation="vertical"
-            value={layout.sourceWidth} min={220} max={500} className="copro-source-divider"
-            onDelta={(delta)=>adjustWidth("source",layout.swapped?-delta:delta)}
-            onReset={()=>updateLayout({sourceWidth:DEFAULT_WORKSPACE_LAYOUT.sourceWidth})}/>}
-          {inspectorDocked && <CoProResizeHandle label="Resize selection inspector" orientation="vertical"
-            value={layout.inspectorWidth} min={240} max={510} className="copro-inspector-divider"
-            onDelta={(delta)=>adjustWidth("inspector",layout.swapped?delta:-delta)}
-            onReset={()=>updateLayout({inspectorWidth:DEFAULT_WORKSPACE_LAYOUT.inspectorWidth})}/>}
-          <section className="copro-preview-stage">
-            <div className="copro-preview-device">
+          {dockBrowser && !isNarrow && <ResizeHandle axis="x" className="copro-browser-divider" label="Resize tool browser" value={browserWidth} min={240} max={Math.max(260,workspaceWidth - (showInspector ? inspectorWidth : 0) - 410)} direction={layout.reversed ? -1 : 1} onChange={width => setLayout(value => ({ ...value, browserWidth: width }))}/>}
+
+          <section className={`mm-player-pane${layout.playerFloating && !isNarrow?" is-floating":""}`} aria-label="MovieMode player"
+            style={layout.playerFloating && !isNarrow ? {position:"fixed",left:layout.playerX,top:layout.playerY,width:layout.playerFloatWidth,height:layout.playerFloatHeight,zIndex:42} : undefined}
+            onPointerUp={layout.playerFloating && !isNarrow?event=>saveFloatingSize(event,"player"):undefined}>
+            <div className="mm-player-pane-header" onPointerDown={layout.playerFloating && !isNarrow?event=>moveFloating(event,"player"):undefined}>
+              <span>{layout.playerFloating && !isNarrow && <GripVertical size={14}/>}Player · Timeline 01</span>
+              <button type="button" aria-label={layout.playerFloating ? "Dock player" : "Undock player"} title={layout.playerFloating ? "Dock player" : "Float and drag player"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(old=>({...old,playerFloating:!old.playerFloating}))}>{layout.playerFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button>
+            </div>
+            <section className="copro-preview-stage">
+            <div className={`copro-preview-device${effectivePreviewSrc?"":" is-empty"}`}>
               {effectivePreviewSrc && effectivePreviewKind === "video" ? (
                 <video
                   ref={videoRef}
                   className={"copro-preview-media copro-preview-effect-" + String(selectedClip?.metadata?.effect ?? "none")}
                   src={effectivePreviewSrc}
                   playsInline
+                  style={mediaTransformStyle}
+                  onPointerDown={startVisualDrag} onPointerMove={moveVisualDrag} onPointerUp={endVisualDrag} onPointerCancel={endVisualDrag}
+                  onLoadedData={event => {
+                    const player=event.currentTarget;
+                    setPreviewDecodeWarning(player.videoWidth && player.videoHeight ? null : "This file imported, but the browser cannot decode its video track. Try H.264 MP4 or browser-compatible WebM. Your original is preserved.");
+                  }}
+                  onError={() => setPreviewDecodeWarning("The browser could not decode this video. Relink a supported H.264 or WebM source; the original is preserved.")}
                   onPlay={() => setPlaying(true)}
                   onPause={() => setPlaying(false)}
                   onTimeUpdate={(event) => {
@@ -427,14 +454,17 @@ export function CoProStudio({
                   className={"copro-preview-media copro-preview-effect-" + String(selectedClip?.metadata?.effect ?? "none")}
                   src={effectivePreviewSrc}
                   alt="Project footage"
+                  style={mediaTransformStyle}
+                  onPointerDown={startVisualDrag} onPointerMove={moveVisualDrag} onPointerUp={endVisualDrag} onPointerCancel={endVisualDrag}
                 />
               ) : (
                 <div className="copro-preview-placeholder">
-                  <div className="copro-preview-mark">{hasUnavailableFootage ? "Media unavailable" : "Your story starts here"}</div>
-                  <p>{hasUnavailableFootage ? "This timeline needs its original files reattached." : "Import video or images to start editing."}</p>
+                  <div className="copro-preview-mark">{hasUnavailableFootage ? "Media unavailable" : "Preview ready"}</div>
+                  <p>{hasUnavailableFootage ? "Relink the original files in Media to restore this project." : "Import media or drag a clip to the timeline."}</p>
                 </div>
               )}
 
+              {previewDecodeWarning && activeMedia?.kind === "video" && <div className="mm-video-decoding-alert" role="alert">{previewDecodeWarning}</div>}
               <div className="copro-canvas-overlays" aria-live="polite">
                 {activeCanvasText.map((item) => (
                   <button
@@ -458,34 +488,47 @@ export function CoProStudio({
             <button className="copro-icon-button" aria-label="Timeline controls" onClick={() => onSelectClip?.(null)}><SlidersHorizontal size={18}/></button>
           </section>
 
-          {layout.inspectorOpen && (
-            <aside id="copro-tool-inspector" className={"copro-inspector-slot copro-pane-slot"+(layout.floating==="inspector"?" is-floating":"")}
-              style={layout.floating==="inspector"?{left:layout.floatX,top:layout.floatY,width:layout.inspectorWidth}:undefined}
-              aria-label="Selection inspector">
-              <div className="copro-pane-controls">
-                <span>Selection inspector</span>
-                <button aria-label="Drag inspector panel" title="Drag when undocked" className="copro-pane-grip"
-                  disabled={layout.floating!=="inspector"}
-                  onPointerDown={e=>{floatingDrag.current={x:e.clientX,y:e.clientY};e.currentTarget.setPointerCapture(e.pointerId);}}
-                  onPointerMove={floatMove}
-                  onPointerUp={e=>{floatingDrag.current=null;if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);}}><GripVertical size={16}/></button>
-                <button title="Dock or undock inspector" aria-label="Dock or undock inspector" onClick={()=>setFloat("inspector")}><ExternalLink size={17}/></button>
-                <button title="Collapse inspector" aria-label="Collapse inspector" onClick={()=>updateLayout({inspectorOpen:false})}><PanelRightClose size={17}/></button>
+          </section>{/* Player and transport remain one resizable, movable unit. */}
+
+          {showInspector && inspectorTool && (
+            <aside id="copro-tool-inspector" className={`copro-inspector-slot${inspectorFloating?" is-floating":""}`} data-inspector-tool={inspectorTool} aria-label={`${inspectorTool} inspector`}
+              style={inspectorFloating ? {position:"fixed",left:layout.inspectorX,top:layout.inspectorY,width:inspectorWidth,height:layout.inspectorFloatHeight,zIndex:41} : undefined}
+              onPointerUp={inspectorFloating ? event => saveFloatingSize(event,"inspector") : undefined}>
+              <div className="mm-inspector-dock-header" onPointerDown={inspectorFloating ? event=>moveFloating(event,"inspector") : undefined}>
+                <span>{inspectorFloating && <GripVertical size={14}/>}<strong>{selectedTrack?.kind === "audio"?"Audio":selectedClip?"Clip properties":"Project Details"}</strong></span>
+                <button type="button" aria-label={inspectorFloating?"Dock inspector":"Undock inspector"} title={inspectorFloating?"Dock inspector":"Float and drag inspector"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(value=>({...value,inspectorFloating:!value.inspectorFloating}))}>{inspectorFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button>
               </div>
+              {selectedClip && <nav className="mm-selection-tabs" aria-label="Selected clip property categories">
+                {((selectedTrack?.kind === "audio" ? [
+                  ["volume","Audio",true], ["speed","Speed",true], ["animation","Animation",false]
+                ] : [
+                  ["transform","Video",true], ["volume","Audio",true], ["speed","Speed",true],
+                  ["animation","Animation",false], ["effects","Effects",true], ["transitions","Transitions",true]
+                ]) as Array<[string,string,boolean]>).map(([tool,label,ready]) => <button type="button" key={tool}
+                  className={inspectorTool===tool?"is-active":""} aria-pressed={inspectorTool===tool}
+                  disabled={!ready} title={ready ? `Edit ${label.toLowerCase()} properties of the selected clip` : "Animation keyframes require a verified preview and render implementation"}
+                  onClick={()=>setActiveTool(tool)}>{label}</button>)}
+              </nav>}
               <CoProToolPanel
                 tool={inspectorTool}
-                onClose={() => updateLayout({inspectorOpen:false})}
+                onClose={() => setLayout(value => ({ ...value, inspectorOpen: false }))}
                 selectedClipId={selectedClipId}
+                projectTitle={projectTitle}
+                projectTrackCount={project.tracks.length}
+                projectClipCount={project.tracks.reduce((total,track) => total + track.clips.length,0)}
+                projectDurationUs={Math.max(0,...project.tracks.flatMap(track=>track.clips.map(clip=>clip.startUs+clip.durationUs)))}
                 hasSelectedClip={Boolean(selectedClip)}
                 selectedClipKind={selectedTrack?.kind}
                 selectedClipStartUs={selectedClip?.startUs ?? 0}
                 selectedClipDurationUs={selectedClip?.durationUs ?? 0}
                 initialSpeed={selectedClip?.playbackRate ?? 1}
                 initialVolume={selectedClip?.volume ?? 1}
+                transform={selectedClip?.metadata?.transform as {scale?:number;x?:number;y?:number;rotation?:number;opacity?:number}|undefined}
+                onTransformChange={(patch) => selectedClip && onAction?.({type:"transform",clipId:selectedClip.id,patch})}
                 initialText={typeof selectedClip?.metadata?.text === "string" ? selectedClip.metadata.text : ""}
                 hasSelection={Boolean(selectedClip &&
-                  ((inspectorTool === "text" && selectedTrack?.kind === "overlay") ||
-                   (inspectorTool === "captions" && selectedTrack?.kind === "captions")))}
+                  ((activeTool === "text" && selectedTrack?.kind === "overlay") ||
+                   (activeTool === "captions" && selectedTrack?.kind === "captions")))}
                 onTrimChange={(patch) => selectedClip && onAction?.({type:"trim",clipId:selectedClip.id,patch})}
                 onSpeedChange={(playbackRate) => selectedClip && onAction?.({type:"speed",clipId:selectedClip.id,playbackRate})}
                 onVolumeChange={(volume) => selectedClip && onAction?.({type:"volume",clipId:selectedClip.id,volume})}
@@ -509,12 +552,11 @@ export function CoProStudio({
             </aside>
           )}
 
-          <CoProResizeHandle label="Resize timeline height" orientation="horizontal"
-            value={layout.timelineHeight} min={150} max={550} className="copro-timeline-divider"
-            onDelta={adjustTimeline}
-            onReset={()=>updateLayout({timelineHeight:DEFAULT_WORKSPACE_LAYOUT.timelineHeight})}/>
+          {dockInspector && !isNarrow && <ResizeHandle axis="x" className="copro-inspector-divider" label="Resize clip inspector" value={inspectorWidth} min={250} max={Math.max(270, workspaceWidth - (showBrowser ? browserWidth : 0) - 410)} direction={layout.reversed ? 1 : -1} onChange={width => setLayout(value => ({ ...value, inspectorWidth: width }))}/>}
+          <ResizeHandle axis="y" className="copro-timeline-divider" label="Resize timeline" value={timelineHeight} min={isCompact ? 115 : 150} max={Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 320 : 230))} direction={-1} onChange={height => setLayout(value => ({ ...value, timelineHeight: height }))}/>
           <CoProTimeline
             project={project}
+            mediaThumbnails={Object.fromEntries(mediaItems.filter(item=>item.thumbnails?.length).map(item=>[item.id,item.thumbnails!]))}
             selectedClipId={selectedClipId}
             playheadUs={playheadUs}
             onSelectClip={onSelectClip}
@@ -527,9 +569,11 @@ export function CoProStudio({
           />
 
           <section className="copro-context-tools" aria-label="Editing tools">
+            <button type="button" disabled={!canUndo} aria-label="Undo last edit" title="Undo (⌘Z)" onClick={() => onAction?.({ type: "undo" })}><i><Undo2 size={19}/></i><span>Undo</span></button>
+            <button type="button" disabled={!canRedo} aria-label="Redo last edit" title="Redo (⇧⌘Z)" onClick={() => onAction?.({ type: "redo" })}><i><Redo2 size={19}/></i><span>Redo</span></button>
             {selectedClip ? <button className="copro-deselect-button" onClick={() => onSelectClip?.(null)}><X size={20}/><span>Done</span></button> : null}
             {(selectedClip ? CLIP_TOOLS : PRIMARY_TOOLS).map(([id, label]) => (
-              <button key={id} disabled={id === "templates"} aria-pressed={inspectorTool === id && layout.inspectorOpen} className={[id === "delete" ? "is-danger" : "", inspectorTool === id && layout.inspectorOpen ? "is-active" : ""].join(" ")} onClick={() => runTool(id)}>
+              <button key={id} aria-pressed={activeTool === id} className={[id === "delete" ? "is-danger" : "", activeTool === id ? "is-active" : ""].join(" ")} onClick={() => runTool(id)}>
                 <i>{renderToolIcon(id)}</i><span>{label}</span>
               </button>
             ))}

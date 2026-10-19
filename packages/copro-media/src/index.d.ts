@@ -58,3 +58,8 @@ export declare function extractBrowserAudioWaveform(
   | { ok: true; durationUs: number; samples: number[] }
   | { ok: false; reason: string; samples: number[] }
 >;
+
+export declare function createBrowserVideoThumbnails(
+  url: string,
+  options?: { count?: number; width?: number; height?: number },
+): Promise<{ok:true;frames:string[]} | {ok:false;reason:string;frames:string[]}>;

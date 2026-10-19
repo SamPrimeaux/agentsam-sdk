@@ -23,9 +23,24 @@ export type CoProStoredMedia = {
   size: number;
   lastModified: number;
 };
+export type CoProStoredMediaItem = {
+  id: string;
+  name: string;
+  kind: "video" | "image" | "audio";
+  file: File | Blob;
+  durationUs?: number;
+  waveform?: number[];
+  thumbnails?: string[];
+  savedAt?: string;
+  lastModified?: number;
+};
+
 export declare class BrowserIndexedDbMediaStore {
-  constructor(options?: { indexedDB?: IDBFactory; databaseName?: string });
+  constructor(options?: { indexedDB?: IDBFactory; databaseName?: string; name?: string; storeName?: string });
   open(): Promise<IDBDatabase>;
+  put(item: CoProStoredMediaItem): Promise<CoProStoredMediaItem>;
+  get(id: string): Promise<CoProStoredMediaItem | null>;
+  list(): Promise<CoProStoredMediaItem[]>;
   save(id: string, file: File | Blob): Promise<{id: string;name: string;size: number}>;
   load(id: string): Promise<CoProStoredMedia | null>;
   loadMany(ids: Iterable<string>): Promise<CoProStoredMedia[]>;

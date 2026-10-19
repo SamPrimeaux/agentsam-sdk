@@ -15,3 +15,8 @@ This is a browser-local persistence adapter, **not** remote/cloud backup or
 permissioned multi-tenant storage. Exports containing only the CoPro document
 do not embed the original source bytes. Hosts may use OPFS/native or
 permissioned remote storage behind the same media-identity boundary.
+
+### MovieMode source media and metadata
+The same IndexedDB store keeps original File/Blob bytes separately from CoPro projects.
+The stable save/load/loadMany API remains available, alongside put/get/list for
+waveform and thumbnail records. Existing sources stores migrate to media.

@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { coproAppManifest } from "./app-manifest";
+import { importEvidencePackage } from "./evidence-import";
 import { createRoot } from "react-dom/client";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
 import { createCoProProject, createTrack, createClip, serializeCoProProject } from "@inneranimalmedia/copro-project";
 import { BrowserLocalStorageProjectStore, BrowserIndexedDbMediaStore } from "@inneranimalmedia/copro-storage";
-import { extractBrowserAudioWaveform } from "@inneranimalmedia/copro-media";
+import { extractBrowserAudioWaveform, createBrowserVideoThumbnails } from "@inneranimalmedia/copro-media";
 import {
   CoProProjectsScreen,
-  CoProSheet,
   CoProStudio,
   type CoProProjectSummary,
   type CoProStudioAction,
@@ -41,7 +41,9 @@ function installCoProBrandIcons() {
 }
 
 const store = new BrowserLocalStorageProjectStore({ prefix:"agentsam.copro.project:" });
-const mediaStore = new BrowserIndexedDbMediaStore({ databaseName:"agentsam.copro.media.v1" });
+// Browser-level source authority: project JSON stores IDs, original File bytes live in IndexedDB.
+const sourceStore = typeof globalThis.indexedDB === "undefined" ? null :
+  new BrowserIndexedDbMediaStore({ name:"agentsam.copro.media.v1" });
 
 function makeDemoProject(id = "project:demo", title = "Weekend cut") {
   const project = createCoProProject({ id, title, now:"2026-10-04T00:00:00.000Z" });
@@ -104,32 +106,17 @@ async function probeMediaDurationUs(file: File): Promise<number> {
     media.preload = "metadata";
     media.src = url;
 
-    await new Promise<void>((resolve,reject)=>{
-      const timeout=window.setTimeout(()=>reject(new Error("copro_media_metadata_timeout")),4000);
-      const complete=()=>{window.clearTimeout(timeout);resolve();};
-      media.addEventListener("loadedmetadata",complete,{once:true});
-      media.addEventListener("error",()=>{
-        window.clearTimeout(timeout);
-        reject(new Error("copro_media_unsupported_or_corrupt"));
-      },{once:true});
+    const duration = await new Promise<number>((resolve) => {
+      const done = () => {
+        const seconds = Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 8;
+        resolve(seconds);
+      };
+      media.addEventListener("loadedmetadata", done, { once:true });
+      media.addEventListener("error", () => resolve(8), { once:true });
+      window.setTimeout(() => resolve(8), 2500);
     });
 
-    // Browser-produced WebM often has Infinity/NaN in its container metadata.
-    // Seek to its actual end rather than inventing an 8-second duration.
-    let seconds=media.duration;
-    if (!Number.isFinite(seconds) || seconds<=0) {
-      const reachedEnd=new Promise<number>((resolve,reject)=>{
-        const timeout=window.setTimeout(()=>reject(new Error("copro_media_duration_unavailable")),4000);
-        media.addEventListener("seeked",()=>{
-          window.clearTimeout(timeout);
-          resolve(media.currentTime);
-        },{once:true});
-      });
-      media.currentTime=10_000_000;
-      seconds=await reachedEnd;
-    }
-    if(!Number.isFinite(seconds)||seconds<=0)throw new Error("copro_media_duration_unavailable");
-    return Math.max(100_000, Math.round(seconds * 1_000_000));
+    return Math.max(100_000, Math.round(duration * 1_000_000));
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -139,29 +126,35 @@ function mediaIdForFile(file: File) {
   return "asset:" + file.name + ":" + file.lastModified + ":" + file.size;
 }
 
-function makeImportedProject(file: File, durationUs: number) {
+function makeImportedProject(file: File) {
   const project = createCoProProject({
     id:"project:import:" + file.name + ":" + Date.now(),
     title:file.name.replace(/\.[^.]+$/, ""),
     now:new Date(),
   });
 
-  const kind = file.type.startsWith("audio/") ? "audio" : file.type.startsWith("image/") ? "overlay" : "video";
+  const kind = file.type.startsWith("audio/") ? "audio" : "video";
   const track = createTrack({ id:"track:" + kind, kind, name:kind === "audio" ? "Audio" : "Video" });
   track.clips.push(createClip({
     id:"clip:imported",
     assetId:mediaIdForFile(file),
     startUs:0,
-    durationUs,
-    metadata:{fileName:file.name,mimeType:file.type,persistedAsset:true},
+    durationUs:8_000_000,
   }));
   project.tracks.push(track);
   return project;
 }
 
+// React StrictMode runs effects twice in development; an evidence link must import once.
+let evidenceImportStarted = false;
+
 function App() {
   const [screen, setScreen] = useState<Screen>("projects");
-  const [createOpen, setCreateOpen] = useState(false);
+  const homeFileRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const captureStreamRef = useRef<MediaStream | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
   const [projectSeed, setProjectSeed] = useState(0);
   const sessionRef = useRef(new CoProEditorSession(makeDemoProject()));
   const [project, setProject] = useState(sessionRef.current.project);
@@ -171,9 +164,11 @@ function App() {
   const [previewKind, setPreviewKind] = useState<"video" | "image" | null>(null);
   const [restored, setRestored] = useState(false);
   const [mediaItems, setMediaItems] = useState<SessionMediaItem[]>([]);
-  const [mediaError,setMediaError] = useState<string|null>(null);
+  const mediaUrlsRef = useRef(new Map<string,string>());
+  const [mediaPersistenceError, setMediaPersistenceError] = useState<string | null>(null);
 
   const [savedProjects, setSavedProjects] = useState<CoProProjectSummary[]>([]);
+  const [homeSection, setHomeSection] = useState<"home" | "templates">("home");
   const [initialTool, setInitialTool] = useState<"text" | "captions" | null>(null);
 
   async function refreshSavedProjects() {
@@ -192,6 +187,47 @@ function App() {
   }
 
   const projects = useMemo(() => [...savedProjects, ...FIXTURE_PROJECTS], [savedProjects]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!sourceStore) {
+      setMediaPersistenceError("Durable media storage isn't available in this browser. Imported files may need to be relinked after reopening.");
+      return;
+    }
+    // Hydrate original File bytes before media references are needed by the player.
+    void sourceStore.list().then((records) => {
+      if (cancelled) return;
+      const recovered: SessionMediaItem[] = records.map((record) => {
+        // Older CoPro sources may be saved as Blob rather than File. Rewrap without
+        // transcoding, so both source-store generations reopen the exact bytes.
+        const file = record.file instanceof File ? record.file :
+          new File([record.file], record.name || record.id, {
+            type: record.file.type || "application/octet-stream",
+            lastModified: record.lastModified || Date.now(),
+          });
+        const kind = record.kind || (file.type.startsWith("audio/") ? "audio" :
+          file.type.startsWith("image/") ? "image" : "video");
+        const existingUrl = mediaUrlsRef.current.get(record.id);
+        const url = existingUrl ?? URL.createObjectURL(file);
+        if (!existingUrl) mediaUrlsRef.current.set(record.id, url);
+        return {
+          id:record.id, name:record.name || file.name, kind, url,
+          durationUs:record.durationUs, file, waveform:record.waveform, thumbnails:record.thumbnails,
+        };
+      });
+      setMediaItems((current) => {
+        const known = new Set(current.map((item) => item.id));
+        return [...current, ...recovered.filter((item) => !known.has(item.id))];
+      });
+      setMediaPersistenceError(null);
+    }).catch((error) => {
+      if (!cancelled) {
+        console.error("CoPro source recovery failed", error);
+        setMediaPersistenceError("Saved source media could not be loaded. Check browser storage permissions and relink unavailable files.");
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     installCoProBrandIcons();
@@ -220,35 +256,6 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [project, restored]);
 
-  async function restoreProjectMedia(next: any) {
-    const ids:string[] = [...new Set<string>(next.tracks.flatMap((track:any) =>
-      track.clips.map((clip:any) => String(clip.assetId)).filter((id:string)=>id.startsWith("asset:"))))];
-    if(!ids.length) {
-      setMediaItems([]);setPreviewSrc(null);setPreviewKind(null);setMediaError(null);
-      return;
-    }
-    try {
-      const records=await mediaStore.loadMany(ids);
-      const items:SessionMediaItem[]=await Promise.all(records.map(async (record)=>{
-        const file=record.file instanceof File ? record.file
-          : new File([record.file],record.name,{type:record.type,lastModified:record.lastModified});
-        const kind:SessionMediaItem["kind"]=file.type.startsWith("audio/")?"audio":
-          file.type.startsWith("image/")?"image":"video";
-        return {id:record.id,name:record.name,file,kind,
-          url:URL.createObjectURL(file),durationUs:await probeMediaDurationUs(file)};
-      }));
-      setMediaItems(items);
-      const firstVisual=items.find(item=>item.kind==="video"||item.kind==="image");
-      setPreviewSrc(firstVisual?.url??null);
-      setPreviewKind(firstVisual?.kind==="image"?"image":firstVisual?.kind==="video"?"video":null);
-      const missing=ids.filter(id=>!records.some(record=>record.id===id));
-      setMediaError(missing.length ? missing.length+" original media file(s) missing from this browser. Reimport or relink them." : null);
-    }catch(error){
-      setMediaError("Could not restore source media: "+String(error));
-      setMediaItems([]);setPreviewSrc(null);setPreviewKind(null);
-    }
-  }
-
   function installProject(next: any, selectedId: string | null = null) {
     sessionRef.current = new CoProEditorSession(next);
     setProject(sessionRef.current.project);
@@ -258,6 +265,35 @@ function App() {
     void store.save(next).then(() => refreshSavedProjects());
   }
 
+  useEffect(() => {
+    // Open a delivered evidence package: /?evidence=<manifest-url> (loopback only; see evidence-import.ts).
+    const manifestUrl = new URLSearchParams(window.location.search).get("evidence");
+    if (!manifestUrl || evidenceImportStarted) return;
+    evidenceImportStarted = true;
+    void (async () => {
+      try {
+        const result = await importEvidencePackage({ manifestUrl, projectStore: store, mediaStore: sourceStore });
+        const cleaned = new URL(window.location.href);
+        cleaned.searchParams.delete("evidence");
+        window.history.replaceState(null, "", cleaned.toString());
+        const imported = result.media.map((record) => {
+          const existing = mediaUrlsRef.current.get(record.id);
+          const url = existing ?? URL.createObjectURL(record.file);
+          if (!existing) mediaUrlsRef.current.set(record.id, url);
+          return { id: record.id, name: record.name, kind: record.kind, url, durationUs: record.durationUs, file: record.file } as SessionMediaItem;
+        });
+        setMediaItems((current) => {
+          const known = new Set(current.map((item) => item.id));
+          return [...current, ...imported.filter((item) => !known.has(item.id))];
+        });
+        await refreshSavedProjects();
+        await openProject(result.projectId);
+      } catch (error) {
+        setMediaPersistenceError("Evidence package could not be opened: " + (error instanceof Error ? error.message : "unknown error"));
+      }
+    })();
+  }, []);
+
   async function openProject(id: string) {
     const summary = projects.find((item) => item.id === id);
     const saved = summary?.example ? null : await store.load(id);
@@ -265,8 +301,9 @@ function App() {
     const next = saved ?? makeDemoProject("project:example-copy:" + Date.now(), (summary?.title ?? "CoPro") + " (example)");
     installProject(next);
     setInitialTool(null);
+    setPreviewSrc(null);
+    setPreviewKind(null);
     setScreen("editor");
-    await restoreProjectMedia(next);
   }
 
   async function renameProject(id: string, title: string) {
@@ -284,28 +321,87 @@ function App() {
     const next = createCoProProject({ id:"project:new:" + Date.now(), title:"Untitled project" });
     next.tracks.push(createTrack({ id:"track:video", kind:"video", name:"Video" }));
     installProject(next, null);
-    setMediaItems([]);
-    setMediaError(null);
     setPreviewSrc(null);
     setPreviewKind(null);
-    setCreateOpen(false);
     setInitialTool(tool);
     setScreen("editor");
   }
 
-  async function importFile(file: File) {
+  function importFile(file: File) {
+    const old = previewSrc;
+    if (old) URL.revokeObjectURL(old);
+    const url = URL.createObjectURL(file);
+    const next = makeImportedProject(file);
+    installProject(next, "clip:imported");
+    void registerSessionMedia(file);
+    setPreviewSrc(url);
+    setPreviewKind(file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : null);
+    setInitialTool(null);
+    setScreen("editor");
+  }
+
+
+  function stopScreenRecording() {
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+    captureStreamRef.current?.getTracks().forEach(track => track.stop());
+    captureStreamRef.current = null;
+    setRecording(false);
+  }
+
+  async function startScreenRecording() {
+    if (recording) { stopScreenRecording(); return; }
     try {
-      const item=await registerSessionMedia(file);
-      const next=makeImportedProject(file,item.durationUs??3_000_000);
-      installProject(next,"clip:imported");
-      setMediaItems([item]);
-      setPreviewSrc(item.kind==="video"||item.kind==="image"?item.url:null);
-      setPreviewKind(item.kind==="image"?"image":item.kind==="video"?"video":null);
-      setMediaError(null);
-      setCreateOpen(false);
-      setInitialTool(null);
-      setScreen("editor");
-    }catch(error){setMediaError("Media import failed: "+String(error));}
+      if (!navigator.mediaDevices?.getDisplayMedia || typeof MediaRecorder === "undefined") {
+        setCaptureError("Screen recording is not supported in this browser. Import a recording made on your device instead.");
+        return;
+      }
+      // Permission prompt must run as a direct user action, never on page load.
+      const stream = await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
+      captureStreamRef.current = stream;
+      const preferredTypes = ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+      const mimeType = preferredTypes.find(type => MediaRecorder.isTypeSupported(type));
+      const recorder = mimeType ? new MediaRecorder(stream,{mimeType}) : new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      recorderRef.current = recorder;
+      recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+      recorder.onerror = () => setCaptureError("Screen capture failed. Try again or import an existing recording.");
+      recorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop());
+        captureStreamRef.current = null;
+        recorderRef.current = null;
+        setRecording(false);
+        if (!chunks.length) { setCaptureError("Recording ended without a file. Capture at least one second before stopping."); return; }
+        const type = recorder.mimeType || "video/webm";
+        const ext = type.includes("mp4") ? "mp4" : "webm";
+        const file = new File(chunks,`moviemode-screen-${new Date().toISOString().replace(/[:.]/g,"-")}.${ext}`,{type,lastModified:Date.now()});
+        importFile(file);
+      };
+      stream.getVideoTracks().forEach(track => track.addEventListener("ended",() => {
+        if (recorder.state !== "inactive") recorder.stop();
+      },{once:true}));
+      recorder.start(500);
+      setRecording(true);
+      setCaptureError(null);
+    } catch (error) {
+      const reason = error instanceof Error ? error.name : "capture_failed";
+      setCaptureError(reason === "NotAllowedError" ? "Screen sharing was cancelled or denied. Allow capture to record or import an existing file." : "Could not start screen capture. Verify the screen sharing permission and try again.");
+      setRecording(false);
+      captureStreamRef.current?.getTracks().forEach(track => track.stop());
+      captureStreamRef.current = null;
+    }
+  }
+
+  async function deleteSavedProject(id: string) {
+    await store.remove(id);
+    await refreshSavedProjects();
+  }
+
+  async function duplicateSavedProject(id: string) {
+    const original = await store.load(id);
+    if (!original) return;
+    await store.save({ ...original, id:`project:copy:${Date.now()}:${Math.random().toString(36).slice(2,6)}`, title:`${original.title} (copy)`, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() });
+    await refreshSavedProjects();
   }
 
   async function registerSessionMedia(file: File): Promise<SessionMediaItem> {
@@ -316,7 +412,13 @@ function App() {
 
     const id = mediaIdForFile(file);
     const existing = mediaItems.find((item) => item.id === id);
-    if (existing) return existing;
+    if (existing) {
+      if (sourceStore) void sourceStore.put({
+        id:existing.id, name:existing.name, kind:existing.kind, file:existing.file,
+        durationUs:existing.durationUs, waveform:existing.waveform, thumbnails:existing.thumbnails,
+      }).then(() => setMediaPersistenceError(null)).catch(() => setMediaPersistenceError("Source media could not be saved. Check available device storage."));
+      return existing;
+    }
 
     let durationUs = await probeMediaDurationUs(file);
     let waveform: number[] | undefined;
@@ -333,21 +435,37 @@ function App() {
       id,
       name:file.name,
       kind,
-      url:URL.createObjectURL(file),
+      url:mediaUrlsRef.current.get(id) ?? URL.createObjectURL(file),
       durationUs,
       file,
       waveform,
     };
-
-    try {
-      await mediaStore.save(id,file);
-    }catch(error){
-      URL.revokeObjectURL(item.url);
-      setMediaError("Source file could not be saved in browser storage. Import not completed: "+String(error));
-      throw error;
+    mediaUrlsRef.current.set(id,item.url);
+    setMediaItems((current) => current.some((candidate) => candidate.id === id) ? current : [...current, item]);
+    if (sourceStore) {
+      try {
+        await sourceStore.put({ id, name:item.name, kind, file, durationUs, waveform });
+        setMediaPersistenceError(null);
+      } catch (error) {
+        console.error("CoPro media source save failed", error);
+        setMediaPersistenceError("Imported media is available for this session, but its original bytes were not saved. Free device storage or reimport before closing.");
+      }
+    } else {
+      setMediaPersistenceError("Original media bytes could not be persisted. This browser has no IndexedDB storage.");
     }
-    setMediaItems((current) => current.some((entry)=>entry.id===item.id)?current:[...current,item]);
-    setMediaError(null);
+    // Build real visual derivatives in the background; no invented timeline frames.
+    // Raw original bytes are already in IndexedDB before this asynchronous pass.
+    if (kind === "video") {
+      void createBrowserVideoThumbnails(item.url,{count:8}).then(async result => {
+        if (!result.ok || !result.frames.length) return;
+        const frames=result.frames;
+        setMediaItems(current=>current.map(media=>media.id===id?{...media,thumbnails:frames}:media));
+        if (sourceStore) {
+          try { await sourceStore.put({id,name:item.name,kind,file,durationUs,waveform,thumbnails:frames}); }
+          catch(error){console.warn("CoPro thumbnail cache could not persist",error);}
+        }
+      }).catch(error=>console.warn("Video thumbnail preparation unavailable",error));
+    }
     return item;
   }
 
@@ -380,7 +498,7 @@ function App() {
       metadata:{
         fileName:item.name,
         mimeType:item.file.type,
-        persistedAsset:true,
+        localSessionOnly:true,
         ...(item.waveform ? { waveform:item.waveform } : {}),
       },
     });
@@ -401,7 +519,8 @@ function App() {
   async function commit(action: CoProStudioAction) {
     const session = sessionRef.current;
 
-    if (action.type === "back") { setScreen("projects"); return; }
+    if (action.type === "back") { setHomeSection("home"); setScreen("projects"); return; }
+    if (action.type === "browse-templates") { setHomeSection("templates"); setScreen("projects"); return; }
     if (action.type === "export-project") {
       const json = serializeCoProProject(session.project);
       const blob = new Blob([json], { type:"application/json" });
@@ -421,6 +540,7 @@ function App() {
     if (action.type === "trim") { setProject(session.execute({ type:"clip.trim", payload:{ clipId:action.clipId, ...action.patch } })); return; }
     if (action.type === "speed") { setProject(session.execute({ type:"clip.set_speed", payload:{ clipId:action.clipId, playbackRate:action.playbackRate } })); return; }
     if (action.type === "volume") { setProject(session.execute({ type:"clip.set_volume", payload:{ clipId:action.clipId, volume:action.volume } })); return; }
+    if (action.type === "transform") { setProject(session.execute({ type:"clip.set_transform", payload:{ clipId:action.clipId, ...action.patch } })); return; }
     if (action.type === "text") { setProject(session.execute({ type:"clip.set_text", payload:{ clipId:action.clipId, text:action.text } })); return; }
     if (action.type === "effect") { setProject(session.execute({ type:"clip.set_effect", payload:{ clipId:action.clipId, effect:action.effect } })); return; }
     if (action.type === "transition") { setProject(session.execute({ type:"clip.set_transition", payload:{ clipId:action.clipId, transition:action.transition, durationUs:action.durationUs } })); return; }
@@ -428,12 +548,8 @@ function App() {
     if (action.type === "track-reorder") { setProject(session.execute({ type:"track.reorder", payload:{ trackId:action.trackId, index:action.index } })); return; }
 
     if (action.type === "import-media") {
-      try {
-        const item=await registerSessionMedia(action.file);
-        addSessionMediaToTimeline(item,action.atUs);
-      }catch(error){
-        setMediaError("Source media import failed: "+String(error));
-      }
+      const item = await registerSessionMedia(action.file);
+      addSessionMediaToTimeline(item, action.atUs);
       return;
     }
 
@@ -502,46 +618,43 @@ function App() {
   }
 
   if (!restored) {
-    return <div className="copro-boot"><span>CoPro</span><small>Restoring project…</small></div>;
+    return <div className="copro-boot"><span>MovieMode</span><small>Restoring your projects…</small></div>;
   }
 
   if (screen === "projects") {
     return <>
-      {mediaError && <div role="alert" className="copro-media-error">{mediaError}</div>}
       <CoProProjectsScreen
         projects={projects}
+        initialSection={homeSection}
         onOpenProject={openProject}
-        onCreate={() => setCreateOpen(true)}
-        onImport={() => setCreateOpen(true)}
+        onCreate={() => createBlank()}
+        onImport={() => homeFileRef.current?.click()}
+        recording={recording}
+        onRecord={() => void startScreenRecording()}
+        onStopRecording={stopScreenRecording}
         onOpenTool={(tool) => createBlank(tool)}
         onRenameProject={(id,title) => void renameProject(id,title)}
+        onDeleteProject={(id) => void deleteSavedProject(id)}
+        onDuplicateProject={(id) => void duplicateSavedProject(id)}
         appIconUrl={coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
       />
-      <CoProSheet open={createOpen} title="Create" detent="half" onClose={() => setCreateOpen(false)}>
-        <div className="copro-create-options">
-          <button onClick={() => createBlank()}><i>＋</i><span><strong>New video</strong><small>Blank timeline</small></span></button>
-          <label className="copro-create-option-file">
-            <input
-              type="file"
-              accept="video/*,image/*,audio/*"
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                if (file) void importFile(file);
-              }}
-            />
-            <i>⇧</i><span><strong>Import media</strong><small>From this device</small></span>
-          </label>
-          <button disabled title="Template library lands in the next UI slice"><i>▦</i><span><strong>From template</strong><small>Requires template browser</small></span></button>
-          <button disabled title="Recording requires camera capability"><i>●</i><span><strong>Record</strong><small>Requires camera capability</small></span></button>
-        </div>
-      </CoProSheet>
+      <input ref={homeFileRef} type="file" accept="video/*,image/*,audio/*" style={{display:"none"}} aria-label="Select a video, image or audio file" onChange={(event) => {
+        const file = event.currentTarget.files?.[0];
+        if (file) importFile(file);
+        event.currentTarget.value = "";
+      }}/>
+      {captureError && <div role="alert" className="mm-capture-error">{captureError}<button onClick={() => setCaptureError(null)} aria-label="Dismiss error">×</button></div>}
     </>;
   }
 
-  return <CoProStudio
+  return <>
+    {mediaPersistenceError && <div role="alert" className="copro-source-storage-warning" style={{position:"fixed",zIndex:30,bottom:78,left:12,right:12,maxWidth:720,margin:"0 auto",padding:"13px 16px",background:"#442a24",color:"#fff5e9",border:"1px solid #bd816d",borderRadius:12,boxShadow:"0 12px 36px #0006",fontSize:13}}>
+      <strong>Source storage needs attention. </strong>{mediaPersistenceError}
+      <button type="button" onClick={() => setMediaPersistenceError(null)} aria-label="Dismiss storage warning" style={{marginLeft:12,color:"inherit",background:"transparent",border:"1px solid #cba08c",padding:"4px 8px",borderRadius:7,cursor:"pointer"}}>Dismiss</button>
+    </div>}
+    <CoProStudio
     key={projectSeed}
     initialTool={initialTool}
-    mediaError={mediaError}
     project={project as any}
     projectTitle={project.title}
     playheadUs={playheadUs}
@@ -558,7 +671,8 @@ function App() {
     onSeek={setPlayheadUs}
     onSelectClip={setSelectedClipId}
     onAction={commit}
-  />;
+  />
+  </>;
 }
 
 createRoot(document.getElementById("root")!).render(<React.StrictMode><App /></React.StrictMode>);

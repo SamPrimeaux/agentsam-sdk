@@ -6,3 +6,4 @@ export * from "./tool-sheet";
 export * from "./export-sheet";
 export {CoProResizeHandle,useCoProWorkspaceLayout,useWorkspaceContainer,bounded,normalizeWorkspaceLayout,layoutModeFromContainer,DEFAULT_WORKSPACE_LAYOUT,WORKSPACE_STORAGE_KEY} from "./workspace-layout";
 export type {WorkspaceLayout,LayoutMode,WorkspacePane} from "./workspace-layout";
+export * from "./capabilities";

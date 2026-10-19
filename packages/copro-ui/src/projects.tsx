@@ -1,8 +1,9 @@
 import React, { useMemo, useRef, useState } from "react";
 import {
-  ArrowRight, AudioLines, Captions, Check, ChevronRight, Clapperboard,
-  Clock3, Film, FolderOpen, Home, Image as ImageIcon, Import, Layers3,
-  MoreHorizontal, Plus, Search, Scissors, Sparkles, Subtitles, Type, WandSparkles,
+  AudioLines, Captions, ChevronDown, ChevronRight, Clapperboard, Clock3,
+  FileVideo2, Film, FolderOpen, Grid2X2, Home, Import, LayoutList,
+  MoreHorizontal, Plus, Search, Scissors, ScreenShare, Sparkles, Type,
+  Video, WandSparkles, X,
 } from "lucide-react";
 
 export type CoProProjectSummary = {
@@ -18,7 +19,6 @@ export type CoProProjectSummary = {
   starred?: boolean;
   shared?: boolean;
   thumbnailTone?: "cyan" | "violet" | "amber" | "slate";
-  /** Bundled timeline demonstration; no source footage or real export receipt is implied. */
   example?: boolean;
 };
 
@@ -27,173 +27,137 @@ type ProjectsProps = {
   onOpenProject: (id: string) => void;
   onCreate: () => void;
   onImport: () => void;
+  onRecord?: () => void;
+  recording?: boolean;
+  onStopRecording?: () => void;
   onOpenTool?: (tool: "text" | "captions") => void;
   onRenameProject?: (id: string, title: string) => void;
+  onDeleteProject?: (id: string) => void;
+  onDuplicateProject?: (id: string) => void;
   appIconUrl?: string;
+  initialSection?: "home" | "projects" | "templates";
 };
 
 const FILTERS = ["All", "Video", "Image", "Audio", "Template"] as const;
 
+function shortDate(value: string) {
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? new Date(time).toLocaleDateString(undefined, {month:"short",day:"numeric"}) : "Draft";
+}
+function duration(ms?: number) {
+  if (!ms) return "00:00";
+  const seconds = Math.floor(ms / 1000);
+  return `${String(Math.floor(seconds / 60)).padStart(2,"0")}:${String(seconds % 60).padStart(2,"0")}`;
+}
+
 export function CoProProjectsScreen({
-  projects, onOpenProject, onCreate, onImport, onOpenTool, onRenameProject, appIconUrl,
+  projects, onOpenProject, onCreate, onImport, onRecord, recording = false,
+  onStopRecording, onOpenTool, onRenameProject, onDeleteProject, onDuplicateProject,
+  appIconUrl, initialSection = "home",
 }: ProjectsProps) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
+  const [sort, setSort] = useState<"recent" | "name">("recent");
+  const [view, setView] = useState<"grid" | "list">("grid");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
-  const [section, setSection] = useState<"home" | "projects">("home");
+  const [active, setActive] = useState<"home" | "projects" | "templates">(initialSection);
   const [iconFailed, setIconFailed] = useState(false);
-  const projectsRef = useRef<HTMLDivElement>(null);
-  const topRef = useRef<HTMLElement>(null);
-  const saved = useMemo(() => projects.filter((project) => !project.example), [projects]);
-  const examples = useMemo(() => projects.filter((project) => project.example), [projects]);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const projectRef = useRef<HTMLElement>(null);
 
-  const visible = useMemo(() => saved.filter((project) => {
-    const matchesQuery = !query || (project.title + " " + (project.subtitle ?? "")).toLowerCase().includes(query.toLowerCase());
-    const matchesFilter = filter === "All" || project.kind === filter.toLowerCase();
-    return matchesQuery && matchesFilter;
-  }), [saved, query, filter]);
+  const saved = useMemo(() => projects.filter(p => !p.example), [projects]);
+  const examples = useMemo(() => projects.filter(p => p.example), [projects]);
+  const visible = useMemo(() => saved.filter(p =>
+    (filter === "All" || p.kind === filter.toLowerCase()) &&
+    (!query || `${p.title} ${p.subtitle ?? ""}`.toLowerCase().includes(query.toLowerCase()))
+  ).sort((a,b) => sort === "name" ? a.title.localeCompare(b.title) : b.updatedAt.localeCompare(a.updatedAt)), [saved,filter,query,sort]);
 
-  const navigate = (next: "home" | "projects") => {
-    setSection(next);
-    if (next === "home") topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    else projectsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  return (
-    <section className="copro-projects" ref={topRef}>
-      <aside className="copro-family-rail" aria-label="Creative production navigation">
-        <button className={section === "home" ? "is-active" : ""} onClick={() => navigate("home")} aria-label="Home" title="Home"><Home size={21} strokeWidth={1.8}/></button>
-        <button onClick={onCreate} aria-label="New project" title="Create"><Plus size={22} strokeWidth={1.8}/></button>
-        <button className={section === "projects" ? "is-active" : ""} onClick={() => navigate("projects")} aria-label="Projects" title="Projects"><FolderOpen size={21} strokeWidth={1.8}/></button>
-      </aside>
-      <div className="copro-home-flow">
-        <header className="copro-projects-hero">
-          <div className="copro-projects-brand">
-            <span className="copro-brand-mark">
-              {appIconUrl && !iconFailed ? <img src={appIconUrl} width="40" height="40" loading="eager" alt="CoPro" onError={() => setIconFailed(true)}/> : <Clapperboard size={22} aria-hidden="true"/>}
-            </span>
-            <div><strong>CoPro</strong><span>Media Production</span></div>
-            <span className="copro-brand-edition">STUDIO</span>
-          </div>
-          <div className="copro-projects-copy">
-            <p className="copro-eyebrow">THE CREATIVE WORKSPACE</p>
-            <h1>Create. Edit.<br/><em>Communicate.</em></h1>
-            <p>Turn your footage, ideas and audio into a story that moves. Start with real tools—not empty demos.</p>
-          </div>
-          <div className="copro-hero-actions">
-            <button className="copro-hero-action copro-hero-action-primary" onClick={onCreate}>
-              <span className="copro-action-icon"><Plus size={25} strokeWidth={1.8}/></span>
-              <span className="copro-action-copy"><strong>New project</strong><small>Open a blank editing timeline</small></span>
-              <ArrowRight size={19} aria-hidden="true"/>
-            </button>
-            <button className="copro-hero-action" onClick={onImport}>
-              <span className="copro-action-icon"><Import size={23} strokeWidth={1.8}/></span>
-              <span className="copro-action-copy"><strong>Import media</strong><small>Start with files from your device</small></span>
-              <ArrowRight size={19} aria-hidden="true"/>
-            </button>
-          </div>
-        </header>
-
-        <main className="copro-projects-content">
-          <div className="copro-projects-titlebar" ref={projectsRef}>
-            <div><p className="copro-eyebrow">CONTINUE CREATING</p><h2>Your projects</h2></div>
-            <label className="copro-project-search">
-              <Search size={19} aria-hidden="true"/>
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a project" aria-label="Search projects"/>
-            </label>
-          </div>
-          <div className="copro-filter-row" role="group" aria-label="Project filters">
-            {FILTERS.map((item) => <button key={item} aria-pressed={filter === item} className={filter === item ? "is-active" : ""} onClick={() => setFilter(item)}>{item}</button>)}
-          </div>
-
-          {visible.length ? <div className="copro-project-list">
-            {visible.map((project) => (
-              <article className="copro-project-card" key={project.id}>
-                <button className="copro-card-main" onClick={() => onOpenProject(project.id)} aria-label={"Open " + project.title}>
-                  <ProjectThumb project={project}/>
-                  <span className="copro-project-card-copy">
-                    <strong>{project.title}</strong><span>{project.subtitle ?? humanStatus(project.status)}</span>
-                    <small><Clock3 size={13}/>{formatProjectMeta(project)}</small>
-                  </span>
-                  <ChevronRight size={19} className="copro-card-chevron" aria-hidden="true"/>
-                </button>
-                {onRenameProject ? (
-                  <div className="copro-project-card-tail">
-                    <button aria-label={"More options for " + project.title} aria-expanded={openMenu === project.id} onClick={() => setOpenMenu(openMenu === project.id ? null : project.id)}><MoreHorizontal size={19}/></button>
-                    {openMenu === project.id && <div className="copro-card-menu">
-                      <button onClick={() => { setOpenMenu(null); onOpenProject(project.id); }}>Open editor</button>
-                      <button onClick={() => {
-                        setOpenMenu(null);
-                        const title = window.prompt("Project name", project.title)?.trim();
-                        if (title && title !== project.title) onRenameProject(project.id, title);
-                      }}>Rename project</button>
-                    </div>}
-                  </div>
-                ) : null}
-              </article>
-            ))}
-          </div> : (
-            <div className="copro-project-empty">
-              <div className="copro-empty-art"><Clapperboard size={28}/><span/><span/></div>
-              <strong>{query || filter !== "All" ? "No projects match your search" : "Your next project starts here"}</strong>
-              <p>{query || filter !== "All" ? "Change the filters to see more projects." : "Your saved edits will appear here. Create a timeline or import a file to begin."}</p>
-              {!(query || filter !== "All") && <button onClick={onCreate}>Create your first project <ArrowRight size={16}/></button>}
-            </div>
-          )}
-
-          <section className="copro-creative-tools" aria-label="Creative tools">
-            <div className="copro-section-heading">
-              <div><p className="copro-eyebrow">YOUR TOOLKIT</p><h2>Make something new.</h2></div>
-              <span>Built-in editing tools</span>
-            </div>
-            <div className="copro-tool-catalog">
-              <button onClick={onImport}><span className="copro-tool-tile-icon is-primary"><Film size={25}/></span><strong>Media</strong><small>Import video &amp; images</small></button>
-              <button onClick={() => onOpenTool?.("text")} disabled={!onOpenTool}><span className="copro-tool-tile-icon"><Type size={24}/></span><strong>Text</strong><small>Titles &amp; overlays</small></button>
-              <button onClick={() => onOpenTool?.("captions")} disabled={!onOpenTool}><span className="copro-tool-tile-icon"><Captions size={25}/></span><strong>Captions</strong><small>Edit words on canvas</small></button>
-              <button onClick={onCreate}><span className="copro-tool-tile-icon"><Scissors size={24}/></span><strong>Timeline</strong><small>Trim &amp; arrange clips</small></button>
-            </div>
-            <p className="copro-tools-guidance"><Check size={16}/> Effects, transitions, speed and audio controls are available inside the editor when you select a clip.</p>
-          </section>
-
-          {examples.length ? <section className="copro-examples" aria-label="Example timelines">
-            <div className="copro-section-heading"><div><p className="copro-eyebrow">EXPLORE THE EDITOR</p><h2>Example timelines</h2></div><span>No source footage included</span></div>
-            <div className="copro-example-grid">
-              {examples.map((project) => <button key={project.id} className="copro-example-card" onClick={() => onOpenProject(project.id)}>
-                <ProjectThumb project={project}/>
-                <span><strong>{project.title}</strong><small>{project.subtitle ?? "Sample timeline"}</small></span>
-                <ArrowRight size={18}/>
-              </button>)}
-            </div>
-            <p className="copro-sample-note">Examples demonstrate editing structure only. Import your own media to see footage in the preview.</p>
-          </section> : null}
-        </main>
-      </div>
-      <nav className="copro-mobile-nav" aria-label="CoPro navigation">
-        <button className={section === "home" ? "is-active" : ""} onClick={() => navigate("home")}><Home size={22}/><span>Home</span></button>
-        <button onClick={onImport}><Import size={22}/><span>Import</span></button>
-        <button className="copro-create-dock" onClick={onCreate}><Plus size={25}/><span>Create</span></button>
-        <button className={section === "projects" ? "is-active" : ""} onClick={() => navigate("projects")}><FolderOpen size={22}/><span>Projects</span></button>
-      </nav>
-    </section>
-  );
-}
-
-function ProjectThumb({ project }: { project: CoProProjectSummary }) {
-  const Icon = project.kind === "audio" ? AudioLines : project.kind === "image" ? ImageIcon : project.kind === "template" ? Layers3 : Film;
-  return <span className={"copro-project-thumb copro-thumb-" + (project.thumbnailTone ?? "slate")}><Icon size={27} strokeWidth={1.4} aria-hidden="true"/></span>;
-}
-
-function humanStatus(status: CoProProjectSummary["status"]) {
-  return status.charAt(0).toUpperCase() + status.slice(1);
-}
-
-function formatProjectMeta(project: CoProProjectSummary) {
-  const pieces: string[] = [];
-  if (project.durationMs) {
-    const seconds = Math.round(project.durationMs / 1000);
-    pieces.push(Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0"));
+  function navigate(target: "home" | "projects" | "templates") {
+    setActive(target);
+    if (target === "projects") projectRef.current?.scrollIntoView({behavior:"smooth", block:"start"});
+    else window.scrollTo({top:0,behavior:"smooth"});
   }
-  if (project.aspectRatio) pieces.push(project.aspectRatio);
-  pieces.push(new Date(project.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }));
-  return pieces.join("  ·  ");
+  function rename(p: CoProProjectSummary) {
+    const title = window.prompt("Rename project",p.title)?.trim();
+    if (title && title !== p.title) onRenameProject?.(p.id,title);
+    setOpenMenu(null);
+  }
+  function remove(p: CoProProjectSummary) {
+    if (window.confirm(`Delete “${p.title}”? This removes the saved project; imported original files remain available.`)) onDeleteProject?.(p.id);
+    setOpenMenu(null);
+  }
+  return <section className="mm-home" aria-label="MovieMode home">
+    <aside className="mm-home-sidebar" aria-label="MovieMode navigation">
+      <div className="mm-brand">
+        {appIconUrl && !iconFailed ? <img src={appIconUrl} width="34" height="34" alt="" onError={() => setIconFailed(true)}/> : <Clapperboard size={28}/>}
+        <div><strong>MovieMode</strong><span>Production Studio</span></div>
+      </div>
+      <button className="mm-sidebar-create" onClick={onCreate} title="Create an editable project and open the timeline"><Plus size={18}/> Create project</button>
+      <span className="mm-sidebar-caption">WORKSPACE</span>
+      <button className={active === "home" ? "is-active" : ""} onClick={() => navigate("home")}><Home size={18}/> Home</button>
+      <button className={active === "projects" ? "is-active" : ""} onClick={() => navigate("projects")}><FolderOpen size={18}/> Projects <span className="mm-nav-count">{saved.length}</span></button>
+      <button className={active === "templates" ? "is-active" : ""} onClick={() => navigate("templates")}><Clapperboard size={18}/> Templates</button>
+      <span className="mm-sidebar-caption">CREATE</span>
+      <button onClick={onImport}><Import size={18}/> Import media</button>
+      <button onClick={recording ? onStopRecording : onRecord} disabled={!recording && !onRecord} title={recording ? "Stop and import the screen recording" : "Capture your screen and import the recording"}><ScreenShare size={18}/> {recording ? "Stop recording" : "Record screen"}</button>
+      <button onClick={() => onOpenTool?.("text")} disabled={!onOpenTool}><Type size={18}/> Title studio</button>
+      <button onClick={() => onOpenTool?.("captions")} disabled={!onOpenTool}><Captions size={18}/> Captions</button>
+      <div className="mm-sidebar-footer"><span className="mm-connection-dot"/> Browser-local editing <small>CoPro / EditPilot assistance in editor</small></div>
+    </aside>
+
+    <main className="mm-home-main">
+      <header className="mm-home-header">
+        <div><span>CREATIVE WORKSPACE</span><strong>MovieMode</strong></div>
+        <div className="mm-home-header-actions"><button title="Import video, images and audio" onClick={onImport}><Import size={17}/> Import</button><button onClick={onCreate}><Plus size={17}/> New project</button></div>
+      </header>
+      {active === "templates" ? <section className="mm-templates-page">
+        <div className="mm-heading"><div><span>CREATIVE STARTERS</span><h1>Editable timelines</h1><p>Begin with a composition structure; bring your own footage.</p></div></div>
+        <div className="mm-template-list">
+          {examples.map(p => <button key={p.id} onClick={() => onOpenProject(p.id)}><span className="mm-template-cover"><Film size={34}/></span><strong>{p.title}</strong><small>{p.subtitle ?? "Template with editable timeline clips"}</small><span>Open editor <ChevronRight size={15}/></span></button>)}
+          <button onClick={onCreate}><span className="mm-template-cover"><Plus size={34}/></span><strong>Blank composition</strong><small>Start a new editable project</small><span>Open editor <ChevronRight size={15}/></span></button>
+        </div>
+      </section> : <>
+        <section className="mm-home-quickstart" aria-label="Start creating">
+          <button className="mm-create-banner" onClick={onCreate}><span><Plus size={23}/></span><strong>Create project</strong><small>Open the full timeline editor</small><ChevronRight size={21}/></button>
+          <div className="mm-home-quick-grid">
+            <button onClick={onImport} className="mm-start-card"><span className="mm-start-icon"><Film size={28}/></span><span><strong>Video Studio</strong><small>Import video, photographs, audio or screen captures</small></span><ChevronRight size={20}/></button>
+            <button onClick={recording ? onStopRecording : onRecord} disabled={!recording && !onRecord} className="mm-start-card"><span className="mm-start-icon"><ScreenShare size={28}/></span><span><strong>{recording ? "Finish recording" : "Record screen"}</strong><small>{recording ? "Stop capture to add video" : "Capture walkthroughs and bug reports"}</small></span><ChevronRight size={20}/></button>
+            <button onClick={() => navigate("templates")} className="mm-start-card mm-start-template"><span className="mm-start-icon"><Clapperboard size={28}/></span><span><strong>Template Studio</strong><small>Start from an editable composition</small></span><ChevronRight size={20}/></button>
+          </div>
+        </section>
+        <section className="mm-tools-strip" aria-label="Editing tools">
+          <div className="mm-heading"><div><h2>More tools</h2><p>Open a real editing workspace for every creation.</p></div></div>
+          <div className="mm-tools-grid">
+            <button onClick={onImport}><Film size={21}/><strong>Import media</strong></button>
+            <button onClick={() => onOpenTool?.("text")}><Type size={21}/><strong>Text & titles</strong></button>
+            <button onClick={() => onOpenTool?.("captions")}><Captions size={21}/><strong>Captions</strong></button>
+            <button onClick={recording ? onStopRecording : onRecord}><ScreenShare size={21}/><strong>Screen capture</strong></button>
+            <button onClick={onCreate}><Scissors size={21}/><strong>Timeline</strong></button>
+            <button onClick={() => navigate("templates")}><WandSparkles size={21}/><strong>Templates</strong></button>
+          </div>
+        </section>
+        <section className="mm-projects-section" ref={projectRef} aria-label="Projects">
+          <div className="mm-heading mm-projects-heading"><div><h2>Your projects</h2><p>Continue an edit, browse your recordings, or begin a new project.</p></div><button className="mm-projects-add" onClick={onCreate}><Plus size={16}/> New project</button></div>
+          <div className="mm-project-toolbar">
+            <label className="mm-search"><Search size={17}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search projects" aria-label="Search projects"/></label>
+            <div className="mm-filter-group" role="group" aria-label="Filter projects">{FILTERS.map(f => <button key={f} className={filter === f ? "is-active" : ""} onClick={() => setFilter(f)}>{f}</button>)}</div>
+            <label className="mm-sort" title="Sort projects"><span>Sort</span><select value={sort} onChange={e => setSort(e.target.value as "recent" | "name")} aria-label="Project sort"><option value="recent">Recently edited</option><option value="name">Name</option></select><ChevronDown size={14}/></label>
+            <div className="mm-view-switch" role="group" aria-label="Project layout"><button aria-pressed={view === "grid"} onClick={() => setView("grid")} title="Grid view"><Grid2X2 size={17}/></button><button aria-pressed={view === "list"} onClick={() => setView("list")} title="List view"><LayoutList size={17}/></button></div>
+          </div>
+          {visible.length ? <div className={`mm-project-grid is-${view}`}>
+            {visible.map(p => <article className="mm-project-tile" key={p.id}>
+              <button className="mm-project-open" onClick={() => onOpenProject(p.id)} aria-label={`Open ${p.title}`}>
+                <span className={`mm-project-cover tone-${p.thumbnailTone ?? "slate"}`}><FileVideo2 size={32}/><span>{p.kind}</span></span>
+                <span className="mm-project-details"><strong>{p.title}</strong><span>{shortDate(p.updatedAt)} · {duration(p.durationMs)} · {p.aspectRatio ?? "Project"}</span><small>{p.subtitle ?? "Saved project"}</small></span>
+              </button>
+              <button className="mm-project-more" aria-label={`Project actions for ${p.title}`} aria-expanded={openMenu === p.id} onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}><MoreHorizontal size={18}/></button>
+              {openMenu === p.id && <div className="mm-project-menu" role="group" aria-label={`Actions for ${p.title}`}><button onClick={() => {setOpenMenu(null);onOpenProject(p.id);}}>Open</button><button onClick={() => rename(p)}>Rename</button><button disabled={!onDuplicateProject} onClick={() => {onDuplicateProject?.(p.id);setOpenMenu(null);}}>Duplicate</button><button disabled={!onDeleteProject} onClick={() => remove(p)}>Delete</button><button onClick={() => setOpenMenu(null)}>Cancel</button></div>}
+            </article>)}
+          </div> : <div className="mm-project-empty"><FolderOpen size={29}/><strong>{query || filter !== "All" ? "No projects match" : "Your projects will appear here"}</strong><p>{query || filter !== "All" ? "Try a different search or filter." : "Create a timeline or import a real recording to start."}</p><button onClick={onCreate}>Create project <ChevronRight size={17}/></button></div>}
+        </section>
+      </>}
+      <footer className="mm-home-bottom"><span>MovieMode — visual creation and editing</span><span>CoPro / EditPilot · contextual collaboration inside the editor</span></footer>
+    </main>
+    <nav className="mm-home-mobile-nav" aria-label="Mobile navigation"><button aria-label="Home" onClick={() => navigate("home")}><Home size={20}/>Home</button><button onClick={() => navigate("projects")}><FolderOpen size={20}/>Projects</button><button className="is-create" onClick={onCreate}><Plus size={23}/>Create</button><button onClick={onImport}><Import size={20}/>Import</button></nav>
+  </section>;
 }

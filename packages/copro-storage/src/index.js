@@ -77,9 +77,11 @@ export class BrowserLocalStorageProjectStore {
  * No Cloudflare/IAM/account identity is introduced in this portable adapter.
  */
 export class BrowserIndexedDbMediaStore {
-  constructor({ indexedDB = globalThis.indexedDB, databaseName = "copro.media.v1" } = {}) {
+  constructor({ indexedDB = globalThis.indexedDB, databaseName, name, storeName } = {}) {
+    if (storeName && !["media","sources"].includes(storeName)) throw new Error("copro_media_store_invalid");
+    if (!indexedDB || typeof indexedDB.open !== "function") throw new Error("copro_media_indexeddb_unavailable");
     this.factory = indexedDB;
-    this.databaseName = databaseName;
+    this.databaseName = databaseName ?? name ?? "copro.media.v1";
     this.dbPromise = null;
   }
 
@@ -87,10 +89,22 @@ export class BrowserIndexedDbMediaStore {
     if (!this.factory) throw new Error("copro_media_indexeddb_unavailable");
     if (!this.dbPromise) {
       this.dbPromise = new Promise((resolve, reject) => {
-        const request = this.factory.open(this.databaseName, 1);
+        const request = this.factory.open(this.databaseName, 2);
         request.onupgradeneeded = () => {
           const db = request.result;
-          if (!db.objectStoreNames.contains("media")) db.createObjectStore("media", { keyPath: "id" });
+          const media = db.objectStoreNames.contains("media")
+            ? request.transaction?.objectStore("media")
+            : db.createObjectStore("media", { keyPath: "id" });
+          // Move legacy MovieMode files into the canonical store without dropping originals.
+          if (request.transaction && media && db.objectStoreNames.contains("sources")) {
+            const cursor = request.transaction.objectStore("sources").openCursor();
+            cursor.onsuccess = () => {
+              if (!cursor.result) return;
+              const source = cursor.result.value;
+              if (source?.id && source?.file) media.put(source);
+              cursor.result.continue();
+            };
+          }
         };
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error ?? new Error("copro_media_open_failed"));
@@ -98,6 +112,34 @@ export class BrowserIndexedDbMediaStore {
       }).catch((error) => { this.dbPromise = null; throw error; });
     }
     return this.dbPromise;
+  }
+
+  // Preserve the original File bytes alongside MovieMode timeline metadata.
+  async put(item) {
+    if (typeof item?.id !== "string" || !item.id || !(item.file instanceof Blob)) throw new Error("copro_media_invalid_source");
+    const db = await this.open();
+    const record = {
+      ...item, name: item.name ?? item.file.name ?? item.id,
+      type: item.file.type || "application/octet-stream",
+      size: item.file.size, lastModified: item.file.lastModified ?? Date.now(),
+      savedAt: new Date().toISOString(),
+    };
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction("media", "readwrite");
+      transaction.objectStore("media").put(record);
+      transaction.oncomplete = () => resolve(record);
+      transaction.onabort = () => reject(transaction.error ?? new Error("copro_media_put_aborted"));
+      transaction.onerror = () => reject(transaction.error ?? new Error("copro_media_put_failed"));
+    });
+  }
+  async get(id) { return (await this.load(id)) ?? null; }
+  async list() {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const request = db.transaction("media", "readonly").objectStore("media").getAll();
+      request.onsuccess = () => resolve(request.result ?? []);
+      request.onerror = () => reject(request.error ?? new Error("copro_media_list_failed"));
+    });
   }
 
   async save(id, file) {

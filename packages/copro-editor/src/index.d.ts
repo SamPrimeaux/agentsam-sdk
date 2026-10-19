@@ -8,6 +8,7 @@ export type CoProCommand =
   | { type: "clip.duplicate"; payload: { clipId: string; newClipId: string; startUs?: number } }
   | { type: "clip.set_speed"; payload: { clipId: string; playbackRate: number } }
   | { type: "clip.set_volume"; payload: { clipId: string; volume: number } }
+  | { type: "clip.set_transform"; payload: { clipId: string; scale?: number; x?: number; y?: number; rotation?: number; opacity?: number } }
   | { type: "clip.set_text"; payload: { clipId: string; text: string } }
   | { type: "clip.set_effect"; payload: { clipId: string; effect: string } }
   | { type: "clip.set_transition"; payload: { clipId: string; transition: string; durationUs?: number } }
