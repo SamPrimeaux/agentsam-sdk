@@ -140,5 +140,12 @@
     "ref": "agentsam-cad:956c7e2d7a",
     "note": "agentsam dockerize --type cad_service --port 8793",
     "date": "2026-10-18T20:54:55Z"
+  },
+  {
+    "tag": "#docker-agentsam-cad-a201eebefd",
+    "repo": "agentsam-sdk",
+    "ref": "agentsam-cad:a201eebefd",
+    "note": "agentsam dockerize --type cad_service --port 8793",
+    "date": "2026-10-19T08:44:39Z"
   }
 ]

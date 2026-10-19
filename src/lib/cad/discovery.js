@@ -429,16 +429,21 @@ export async function freeCadStatus({
     const raw = String(proc.stdout || proc.stderr || '').trim();
     const match = raw.match(/FreeCAD\s+([^\r\n]+)/i);
     const line = match ? match[0].trim() : raw.split(/\r?\n/).find(Boolean)?.trim() || null;
+    const available = proc.code === 0 && Boolean(line);
 
     return {
       tool: 'freecad',
       name: 'FreeCAD / OpenCASCADE',
       category: 'solid_kernel',
-      available: proc.code === 0,
+      available,
       binary: discovery.binary,
       version: line,
       source: discovery.source,
       execution_lane: 'native',
+      ...(available ? {} : {
+        error: `FreeCAD version probe failed (exit ${proc.code}): ${(proc.stderr || proc.stdout || 'no version output').trim().slice(0, 200)}`,
+        install_guidance: getInstallGuidance('freecad', platform),
+      }),
       supportedFormats: ['step', 'iges', 'brep', 'fcstd'],
     };
   } catch (err) {
