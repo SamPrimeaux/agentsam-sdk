@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-arch-codes",
+  "name": "Jurisdiction and adopted codes",
+  "description": "Determine applicable adopted building codes rather than assuming newest ICC edition",
+  "version": "0.1.0",
+  "slash": {
+    "suggested": "/arch-codes"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}

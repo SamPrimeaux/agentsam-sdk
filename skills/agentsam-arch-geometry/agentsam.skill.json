@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.skill.v1",
+  "id": "agentsam-arch-geometry",
+  "name": "OCCT and parametric geometry",
+  "description": "Execute real solid-modeling kernels and inspect resulting topology",
+  "version": "0.1.0",
+  "slash": {
+    "suggested": "/arch-geometry"
+  },
+  "instructions": {
+    "source": "local_file",
+    "ref": "SKILL.md"
+  },
+  "execution": {
+    "mode": "turn",
+    "tools": [],
+    "operations": [],
+    "capabilities": []
+  }
+}
