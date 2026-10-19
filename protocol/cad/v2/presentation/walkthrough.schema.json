@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/presentation/walkthrough.schema.json",
+  "title": "Model-derived walk and cinematic camera path",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "sceneId",
+    "sourceRevision",
+    "mode",
+    "cameraPath",
+    "navigation"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "sceneId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "sourceRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "mode": {
+      "enum": [
+        "interactive",
+        "camera-path",
+        "cinematic",
+        "immersive-vr"
+      ]
+    },
+    "cameraPath": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "timeSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "position": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minItems": 3,
+            "maxItems": 3,
+            "items": false
+          },
+          "rotation": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minItems": 4,
+            "maxItems": 4,
+            "items": false
+          },
+          "fieldOfView": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "targetElementIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "timeSeconds",
+          "position",
+          "rotation"
+        ]
+      }
+    },
+    "navigation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "collisionEnabled": {
+          "type": "boolean"
+        },
+        "eyeHeight": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "walkSpeed": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "doorBehavior": {
+          "enum": [
+            "static",
+            "interactive",
+            "open-at-waypoint"
+          ]
+        },
+        "comfortMode": {
+          "enum": [
+            "continuous",
+            "teleport",
+            "hybrid"
+          ]
+        }
+      },
+      "required": [
+        "collisionEnabled",
+        "eyeHeight",
+        "walkSpeed"
+      ]
+    },
+    "render": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 16
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 16
+        },
+        "fps": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "engine": {
+          "type": "string",
+          "minLength": 1
+        },
+        "format": {
+          "enum": [
+            "MP4",
+            "WEBM",
+            "PNG_SEQUENCE",
+            "EXR_SEQUENCE",
+            "GLB",
+            "USD"
+          ]
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "fps",
+        "engine",
+        "format"
+      ]
+    },
+    "sourceHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "outputIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "uniqueItems": true
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

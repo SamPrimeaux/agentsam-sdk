@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/intent/design-option.schema.json",
+  "title": "Non-destructive design alternative and revision branch",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "baseRevision",
+    "operationIds",
+    "overrides",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "baseRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "operationIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "uniqueItems": true
+    },
+    "overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "targetId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "value": {}
+        },
+        "required": [
+          "targetId",
+          "path",
+          "value"
+        ]
+      }
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "proposed",
+        "approved",
+        "rejected",
+        "merged"
+      ]
+    },
+    "comparisonReceiptIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "uniqueItems": true
+    },
+    "authorId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

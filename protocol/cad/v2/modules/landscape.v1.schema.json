@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/modules/landscape.v1.schema.json",
+  "title": "Landscape terrain and site coordination",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "terrain",
+    "vegetation",
+    "hardscape",
+    "drainage"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cad.module.landscape.v1"
+    },
+    "version": {
+      "const": 1
+    },
+    "terrain": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "representationRef": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "surveySourceId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "frameId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          }
+        },
+        "required": [
+          "id",
+          "representationRef",
+          "frameId"
+        ]
+      }
+    },
+    "vegetation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "speciesRef": {
+            "type": "string",
+            "minLength": 1
+          },
+          "placement": {
+            "$ref": "../core/coordinate-system.schema.json#/$defs/placement"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "speciesRef",
+          "placement"
+        ]
+      }
+    },
+    "hardscape": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "entityIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          },
+          "materialId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          }
+        },
+        "required": [
+          "id",
+          "entityIds"
+        ]
+      }
+    },
+    "drainage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "kind": {
+            "enum": [
+              "swale",
+              "catch-basin",
+              "pipe",
+              "grade-break",
+              "retention"
+            ]
+          },
+          "elementIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "elementIds"
+        ]
+      }
+    },
+    "georeferenceFrameId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

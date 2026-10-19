@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/validation/result.schema.json",
+  "title": "Four-layer document semantic geometry deliverable validation",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "projectId",
+    "sourceRevision",
+    "layer",
+    "validator",
+    "status",
+    "issues",
+    "inputHash",
+    "executedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "projectId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "sourceRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "layer": {
+      "enum": [
+        "document",
+        "semantic",
+        "geometry",
+        "deliverable"
+      ]
+    },
+    "validator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "engine": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "passed-with-warnings",
+        "failed",
+        "blocked"
+      ]
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "blocker"
+            ]
+          },
+          "targetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "standardRef": {
+            "type": "string",
+            "minLength": 1
+          },
+          "remediation": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "severity",
+          "targetIds",
+          "message"
+        ]
+      }
+    },
+    "inputHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "outputReceiptId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "executedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

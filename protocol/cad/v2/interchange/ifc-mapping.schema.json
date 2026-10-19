@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/interchange/ifc-mapping.schema.json",
+  "title": "IFC building semantics and stable export IDs",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "ifcVersion",
+    "projectRevision",
+    "elementMappings"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "ifcVersion": {
+      "enum": [
+        "IFC2X3",
+        "IFC4",
+        "IFC4.3"
+      ]
+    },
+    "projectRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "elementMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "elementId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "ifcClass": {
+            "type": "string",
+            "pattern": "^Ifc[A-Za-z0-9]+$"
+          },
+          "ifcGlobalId": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 32
+          },
+          "typeId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "representationId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "propertySetRefs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "elementId",
+          "ifcClass",
+          "ifcGlobalId"
+        ]
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "$ref": "../core/geometry-relationship.schema.json"
+      }
+    },
+    "standards": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "IDS",
+              "bSDD",
+              "BCF"
+            ]
+          },
+          "uri": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "kind",
+          "uri",
+          "version"
+        ]
+      }
+    },
+    "classificationMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "elementId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "system": {
+            "type": "string",
+            "minLength": 1
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uri": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "elementId",
+          "system",
+          "code"
+        ]
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

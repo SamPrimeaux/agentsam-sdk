@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/presentation/scene.schema.json",
+  "title": "Revision-addressed model-derived presentation scene",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "projectId",
+    "sourceRevision",
+    "objectMappings",
+    "materials",
+    "lights"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "projectId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "sourceRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "objectMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entityId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "representationId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "sceneObjectId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "materialId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          }
+        },
+        "required": [
+          "entityId",
+          "representationId",
+          "sceneObjectId"
+        ]
+      }
+    },
+    "materials": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "assetRef": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      }
+    },
+    "lights": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "kind": {
+            "enum": [
+              "area",
+              "point",
+              "spot",
+              "sun",
+              "environment"
+            ]
+          },
+          "position": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minItems": 3,
+            "maxItems": 3,
+            "items": false
+          },
+          "intensity": {
+            "type": "number",
+            "minimum": 0
+          },
+          "unit": {
+            "enum": [
+              "lux",
+              "lumens",
+              "watts",
+              "relative"
+            ]
+          },
+          "color": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "intensity",
+          "unit"
+        ]
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "background": {
+          "type": "string",
+          "minLength": 1
+        },
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "northRotation": {
+          "type": "number"
+        }
+      },
+      "required": []
+    },
+    "cameras": {
+      "type": "array",
+      "items": {
+        "$ref": "./view.schema.json"
+      }
+    },
+    "geometryAssetRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "uniqueItems": true
+    },
+    "contentHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

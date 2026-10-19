@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/modules/product-design.v1.schema.json",
+  "title": "Manufactured product and component contract",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "components",
+    "methods",
+    "quality"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cad.module.product-design.v1"
+    },
+    "version": {
+      "const": 1
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "entityIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          },
+          "materialId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "partNumber": {
+            "type": "string",
+            "minLength": 1
+          },
+          "revisionId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          }
+        },
+        "required": [
+          "id",
+          "entityIds",
+          "partNumber"
+        ]
+      }
+    },
+    "methods": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "kind": {
+            "enum": [
+              "CNC",
+              "additive",
+              "casting",
+              "sheet-metal",
+              "injection-molding",
+              "printing",
+              "assembly",
+              "other"
+            ]
+          },
+          "componentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          },
+          "profileRef": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "componentIds"
+        ]
+      }
+    },
+    "quality": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "targetId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "kind": {
+            "enum": [
+              "dimensional",
+              "surface",
+              "material",
+              "functional"
+            ]
+          },
+          "tolerance": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "unit": {
+                "enum": [
+                  "mm",
+                  "cm",
+                  "m",
+                  "in",
+                  "ft",
+                  "deg",
+                  "rad",
+                  "kg",
+                  "g",
+                  "N",
+                  "kN",
+                  "Pa",
+                  "MPa",
+                  "s"
+                ]
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ]
+          },
+          "standardRef": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "id",
+          "targetId",
+          "kind"
+        ]
+      }
+    },
+    "bomArtifactRef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

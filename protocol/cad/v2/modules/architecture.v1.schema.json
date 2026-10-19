@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/modules/architecture.v1.schema.json",
+  "title": "Semantic BIM spatial hierarchy",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "sites",
+    "buildings",
+    "storeys",
+    "spaces",
+    "relationships"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cad.module.architecture.v1"
+    },
+    "version": {
+      "const": 1
+    },
+    "sites": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "frameId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "buildingIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "frameId",
+          "buildingIds"
+        ]
+      }
+    },
+    "buildings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "siteId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "storeyIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "siteId",
+          "name",
+          "storeyIds"
+        ]
+      }
+    },
+    "storeys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "buildingId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "elevation": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "unit": {
+                "enum": [
+                  "mm",
+                  "cm",
+                  "m",
+                  "in",
+                  "ft",
+                  "deg",
+                  "rad",
+                  "kg",
+                  "g",
+                  "N",
+                  "kN",
+                  "Pa",
+                  "MPa",
+                  "s"
+                ]
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ]
+          },
+          "elementIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          },
+          "spaceIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "buildingId",
+          "name",
+          "elevation",
+          "elementIds"
+        ]
+      }
+    },
+    "spaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "storeyId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "boundaryElementIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          },
+          "classificationRefs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "storeyId",
+          "name",
+          "boundaryElementIds"
+        ]
+      }
+    },
+    "systems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "kind": {
+            "enum": [
+              "structural",
+              "mechanical",
+              "electrical",
+              "plumbing",
+              "fire",
+              "envelope",
+              "civil"
+            ]
+          },
+          "elementIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "elementIds"
+        ]
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "$ref": "../core/geometry-relationship.schema.json"
+      }
+    },
+    "idsRequirementRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "uniqueItems": true
+    },
+    "classificationRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "uniqueItems": true
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

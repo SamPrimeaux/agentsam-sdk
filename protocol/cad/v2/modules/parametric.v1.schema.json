@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/modules/parametric.v1.schema.json",
+  "title": "Parametric history and regeneration module",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "features",
+    "constraints",
+    "relationships"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cad.module.parametric.v1"
+    },
+    "version": {
+      "const": 1
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "$ref": "../core/geometry-feature.schema.json"
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "$ref": "../core/geometry-constraint.schema.json"
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": {
+        "$ref": "../core/geometry-relationship.schema.json"
+      }
+    },
+    "recompute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dirtyFeatureIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "uniqueItems": true
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "uniqueItems": true
+        },
+        "solver": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lastReceiptId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+        }
+      },
+      "required": [
+        "dirtyFeatureIds",
+        "order"
+      ]
+    },
+    "nativeRepresentationRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "uniqueItems": true
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

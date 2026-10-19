@@ -1,0 +1,325 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/modules/mechanical.v1.schema.json",
+  "title": "Mechanical parts assemblies and kinematics",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "parts",
+    "assemblies",
+    "joints"
+  ],
+  "properties": {
+    "schema": {
+      "const": "cad.module.mechanical.v1"
+    },
+    "version": {
+      "const": 1
+    },
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "entityIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          },
+          "materialId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "mass": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "unit": {
+                "enum": [
+                  "mm",
+                  "cm",
+                  "m",
+                  "in",
+                  "ft",
+                  "deg",
+                  "rad",
+                  "kg",
+                  "g",
+                  "N",
+                  "kN",
+                  "Pa",
+                  "MPa",
+                  "s"
+                ]
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ]
+          },
+          "profileId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          }
+        },
+        "required": [
+          "id",
+          "entityIds"
+        ]
+      }
+    },
+    "assemblies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "componentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          },
+          "frameId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "mateIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "componentIds",
+          "frameId",
+          "mateIds"
+        ]
+      }
+    },
+    "joints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "kind": {
+            "enum": [
+              "revolute",
+              "prismatic",
+              "fixed",
+              "spherical",
+              "planar",
+              "six-dof"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "targetId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "axis": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minItems": 3,
+            "maxItems": 3,
+            "items": false
+          },
+          "limits": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "minimum": {
+                "type": "number"
+              },
+              "maximum": {
+                "type": "number"
+              },
+              "unit": {
+                "enum": [
+                  "mm",
+                  "deg",
+                  "rad"
+                ]
+              }
+            },
+            "required": [
+              "minimum",
+              "maximum",
+              "unit"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "sourceId",
+          "targetId"
+        ]
+      }
+    },
+    "tolerances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "featureId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "nominal": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "unit": {
+                "enum": [
+                  "mm",
+                  "cm",
+                  "m",
+                  "in",
+                  "ft",
+                  "deg",
+                  "rad",
+                  "kg",
+                  "g",
+                  "N",
+                  "kN",
+                  "Pa",
+                  "MPa",
+                  "s"
+                ]
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ]
+          },
+          "plus": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "unit": {
+                "enum": [
+                  "mm",
+                  "cm",
+                  "m",
+                  "in",
+                  "ft",
+                  "deg",
+                  "rad",
+                  "kg",
+                  "g",
+                  "N",
+                  "kN",
+                  "Pa",
+                  "MPa",
+                  "s"
+                ]
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ]
+          },
+          "minus": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "type": "number"
+              },
+              "unit": {
+                "enum": [
+                  "mm",
+                  "cm",
+                  "m",
+                  "in",
+                  "ft",
+                  "deg",
+                  "rad",
+                  "kg",
+                  "g",
+                  "N",
+                  "kN",
+                  "Pa",
+                  "MPa",
+                  "s"
+                ]
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "featureId",
+          "nominal"
+        ]
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

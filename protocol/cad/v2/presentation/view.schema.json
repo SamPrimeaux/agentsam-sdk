@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/presentation/view.schema.json",
+  "title": "Plan drawing and 3D viewport contract",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "sourceRevision",
+    "kind",
+    "camera"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "sourceRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kind": {
+      "enum": [
+        "plan",
+        "elevation",
+        "section",
+        "detail",
+        "isometric",
+        "perspective",
+        "orthographic",
+        "walkthrough"
+      ]
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "position": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3,
+          "items": false
+        },
+        "target": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3,
+          "items": false
+        },
+        "up": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3,
+          "items": false
+        },
+        "projection": {
+          "enum": [
+            "perspective",
+            "orthographic"
+          ]
+        },
+        "fov": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "orthographicHeight": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "near": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "far": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "position",
+        "target",
+        "up",
+        "projection",
+        "near",
+        "far"
+      ]
+    },
+    "visibleElementIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "uniqueItems": true
+    },
+    "hiddenElementIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "uniqueItems": true
+    },
+    "scale": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "clippingPlanes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "normal": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "minItems": 3,
+            "maxItems": 3,
+            "items": false
+          },
+          "offset": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "normal",
+          "offset"
+        ]
+      }
+    },
+    "annotationRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "uniqueItems": true
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}

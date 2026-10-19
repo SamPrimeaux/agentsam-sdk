@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/interchange/native-document.schema.json",
+  "title": "Native CAD source and BREP representation provenance",
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "uri",
+    "sha256",
+    "byteSize",
+    "format",
+    "provider",
+    "sourceProjectId",
+    "sourceRevision",
+    "unit"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "uri": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "byteSize": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "format": {
+      "enum": [
+        "BREP",
+        "STEP",
+        "IGES",
+        "FCStd",
+        "BLEND",
+        "IFC",
+        "DXF",
+        "DWG",
+        "GLB",
+        "GLTF",
+        "OBJ",
+        "STL",
+        "3MF",
+        "SCAD",
+        "USD",
+        "other"
+      ]
+    },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ]
+    },
+    "sourceProjectId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "sourceRevision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "unit": {
+      "enum": [
+        "mm",
+        "cm",
+        "m",
+        "in",
+        "ft"
+      ]
+    },
+    "elementMap": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "elementId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
+          "nativeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "topologyId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          }
+        },
+        "required": [
+          "elementId",
+          "nativeId"
+        ]
+      }
+    },
+    "immutable": {
+      "type": "boolean"
+    },
+    "licenseRef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  }
+}
