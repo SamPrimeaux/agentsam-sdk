@@ -1,0 +1,87 @@
+name: publish-python
+
+# Publishes python/ to PyPI via Trusted Publishing (OIDC) - no API token is stored.
+# Trigger: push a tag named py-v<version> that matches python/agentsam_sdk/__init__.py.
+on:
+  push:
+    tags:
+      - 'py-v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-python
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and verify
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Tag must point at a commit on main
+        working-directory: .
+        run: |
+          git fetch origin main --quiet
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+            || { echo "::error::$GITHUB_REF_NAME is not on main"; exit 1; }
+
+      - name: Tag must match package version
+        run: |
+          version=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' agentsam_sdk/__init__.py)
+          [ -n "$version" ] || { echo "::error::could not read __version__"; exit 1; }
+          [ "$GITHUB_REF_NAME" = "py-v$version" ] \
+            || { echo "::error::tag $GITHUB_REF_NAME does not match __version__ $version"; exit 1; }
+
+      - name: Install build tooling
+        run: python -m pip install --upgrade build twine
+
+      - name: Build wheel and sdist
+        run: python -m build
+
+      - name: Check metadata
+        run: |
+          python -m twine check dist/*
+          python scripts/check-dist.py dist
+
+      - name: Smoke test the built wheel in a clean venv
+        run: |
+          python -m venv "$RUNNER_TEMP/smoke"
+          "$RUNNER_TEMP/smoke/bin/pip" install dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/smoke/bin/agentsam" --help
+          "$RUNNER_TEMP/smoke/bin/python" -c "import agentsam_sdk; print(agentsam_sdk.__version__)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: python/dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/agentsam-sdk/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1

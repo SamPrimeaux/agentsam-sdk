@@ -1,17 +1,34 @@
-# agentsam_sdk (Python) — npm mirror
+# agentsam-sdk (Python)
 
 Core repository/data commands remain **stdlib-only** (`dependencies = []`).
 Rich is an optional renderer dependency used by the SDK's internal terminal preview lab;
 it is not exposed as an installed-user renderer command.
 
 ```bash
-cd python && pip install -e .
+pip install agentsam-sdk            # stdlib-only core
+pip install "agentsam-sdk[tui]"     # optional Rich terminal renderer
 agentsam repository inventory --repo-root /path/to/repo --format json
-python3 -m unittest discover -s tests -v
-./scripts/check-host-tooling.sh
 ```
 
-Protocol: [`../protocol/README.md`](../protocol/README.md). Do not advance this tree without mirroring the monorepo (or the reverse).
+Requires Python 3.10+. For development from a checkout: `cd python && pip install -e .`
+then `python -m unittest discover -s tests -v`.
+
+### `AgentSamClient.invoke()`
+
+The repository, data, hooks and `agentsam` CLI tools run entirely in Python. The local
+SAM client (`AgentSamClient`) delegates to the Node SAM kernel, so it needs Node 20+ and
+the npm package in the project or a parent directory:
+
+```bash
+npm install @inneranimalmedia/agentsam-sdk
+```
+
+The bridge is found automatically from the working directory. It is read-only by design:
+write, D1, CMS and terminal operations are refused (`sam_bridge_operation_not_allowed`).
+Without the npm package, `invoke()` raises `sam_bridge_not_installed`.
+
+
+Protocol: [`../protocol/README.md`](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/protocol/README.md). 
 
 ## Portable lifecycle hooks
 
@@ -30,14 +47,14 @@ result = await hooks.dispatch("pre_tool_use", {
 })
 ```
 
-See [`../packages/agentsam-hooks/README.md`](../packages/agentsam-hooks/README.md)
+See [`../packages/agentsam-hooks/README.md`](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/packages/agentsam-hooks/README.md)
 for composition, permission, and subprocess transport rules.
 
 ## Optional sibling packages (not part of stdlib core)
 
 | Package | Path | Notes |
 |---------|------|-------|
-| `agentsam-site-scrape` | [`../packages/agentsam-site-scrape/`](../packages/agentsam-site-scrape/) | Optional/network (`requests`); crawl→R2. Dual-homed with IAM `tools/agentsam-site-scrape/`. Does **not** fold into `agentsam_sdk`. |
+| `agentsam-site-scrape` | [`../packages/agentsam-site-scrape/`](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/packages/agentsam-site-scrape/) | Optional/network (`requests`); crawl→R2. Dual-homed with IAM `tools/agentsam-site-scrape/`. Does **not** fold into `agentsam_sdk`. |
 
 
 ## Internal Rich renderer preview
