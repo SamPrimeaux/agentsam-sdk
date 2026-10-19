@@ -1,12 +1,12 @@
 {
   "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "version": "0.2.0",
+  "version": "2.6.13",
   "lockfileVersion": 3,
   "requires": true,
   "packages": {
     "": {
       "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-      "version": "0.2.0",
+      "version": "2.6.13",
       "dependencies": {
         "@inneranimalmedia/revise-theme": "0.2.0",
         "@inneranimalmedia/section-library": "0.1.0",
