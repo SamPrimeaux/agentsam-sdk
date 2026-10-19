@@ -4,6 +4,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { expectedSdkTarballVersion } from '../apps/local-studio/scripts/sdk-package-lock-phase.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const appRoot = path.join(root, 'apps/local-studio');
@@ -14,6 +15,7 @@ describe('Local Studio npm 10 product lock', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(appRoot, 'package.json'), 'utf8'));
     const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
     const packages = lock.packages || {};
+    const sdkRelease = expectedSdkTarballVersion(root, pkg.version, { requirePublished: process.env.AGENTSAM_REQUIRE_PUBLISHED_SDK === '1' });
 
     assert.equal(lock.lockfileVersion, 3);
     assert.equal(lock.version, pkg.version);
@@ -35,11 +37,11 @@ describe('Local Studio npm 10 product lock', () => {
 
     assert.ok(sdkEntries.length > 0, 'published SDK resolution must be present');
     for (const [key, sdk] of sdkEntries) {
-      assert.equal(sdk?.version, pkg.version, key + ' must match product version');
+      assert.equal(sdk?.version, sdkRelease.version, key + ' must match verified npm SDK version during ' + sdkRelease.phase);
       assert.notEqual(sdk?.link, true, key + ' must not be a local link');
       assert.match(
         sdk?.resolved || '',
-        new RegExp('agentsam-sdk-' + pkg.version.replace(/\./g, '\\.') + '\\.tgz$'),
+        new RegExp('agentsam-sdk-' + sdkRelease.version.replace(/\./g, '\\.') + '\\.tgz$'),
         key + ' must resolve from the npm registry tarball'
       );
       assert.ok(sdk?.integrity, key + ' must carry registry integrity metadata');
@@ -53,7 +55,7 @@ describe('Local Studio npm 10 product lock', () => {
 
   it('verify-npm10-lock script exits 0 against the current product lock', () => {
     const script = path.join(appRoot, 'scripts/verify-npm10-lock.mjs');
-    const r = spawnSync(process.execPath, [script], { encoding: 'utf8' });
+    const r = spawnSync(process.execPath, [script], { encoding: 'utf8', env: process.env });
     assert.equal(r.status, 0, r.stderr || r.stdout);
     assert.match(r.stdout, /product workspaces aligned/);
     assert.match(r.stdout, /lru-cache@11\.5\.2/);

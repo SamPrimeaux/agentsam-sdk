@@ -8,7 +8,7 @@ import { ThemeEditorFrame } from '@/components/themes/ThemeEditorFrame';
 import { ThemeProjectEditor } from '@/components/themes/ThemeProjectEditor';
 import { studioCmsFetch } from '@/lib/cms/transport';
 import { useMemo, useState, useEffect } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { ContentStudioPage } from "@/components/content/ContentStudioPage";
 import type { CmsPanel } from "@/lib/cms/parseCmsNavigatePath";
 
@@ -144,6 +144,16 @@ function CmsPage() {
     return <p role="alert" className="p-8 text-sm text-destructive">
       You do not have editing permission for this website.
     </p>;
+  }
+
+  // Worker-backed merchant websites use the complete installed Ecommerce
+  // application. This is its actual admin shell, routes, and own Worker APIs,
+  // not a second client-cms-editor facade in Local Studio.
+  if (!localThemeProjectId && ownedSite?.source === 'worker') {
+    const page = isEditorView
+      ? '/admin/theme-editor' + (search.page ? '?slug=' + encodeURIComponent(search.page) : '')
+      : '/admin/store';
+    return <Navigate to="/apps/ecommerce-cms-agentsam" search={{ site: ownedSite.slug, page }} replace />;
   }
 
   // The merchant-facing Online Store from ecommerce-cms-agentsam is the CMS

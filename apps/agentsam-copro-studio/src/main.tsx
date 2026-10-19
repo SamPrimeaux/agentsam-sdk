@@ -198,12 +198,21 @@ function App() {
     void sourceStore.list().then((records) => {
       if (cancelled) return;
       const recovered: SessionMediaItem[] = records.map((record) => {
+        // Older CoPro sources may be saved as Blob rather than File. Rewrap without
+        // transcoding, so both source-store generations reopen the exact bytes.
+        const file = record.file instanceof File ? record.file :
+          new File([record.file], record.name || record.id, {
+            type: record.file.type || "application/octet-stream",
+            lastModified: record.lastModified || Date.now(),
+          });
+        const kind = record.kind || (file.type.startsWith("audio/") ? "audio" :
+          file.type.startsWith("image/") ? "image" : "video");
         const existingUrl = mediaUrlsRef.current.get(record.id);
-        const url = existingUrl ?? URL.createObjectURL(record.file);
+        const url = existingUrl ?? URL.createObjectURL(file);
         if (!existingUrl) mediaUrlsRef.current.set(record.id, url);
         return {
-          id:record.id, name:record.name, kind:record.kind, url,
-          durationUs:record.durationUs, file:record.file, waveform:record.waveform, thumbnails:record.thumbnails,
+          id:record.id, name:record.name || file.name, kind, url,
+          durationUs:record.durationUs, file, waveform:record.waveform, thumbnails:record.thumbnails,
         };
       });
       setMediaItems((current) => {

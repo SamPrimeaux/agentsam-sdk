@@ -4,6 +4,9 @@ const WIDTHS = new Set([320, 640, 1200]);
 export function catalogImageSource(value, env = {}) {
   try {
     const url = new URL(value);
+    // #NOTDONE: the default is Completeful's public storage host hardcoded inline. It is a provider CDN, not a
+    // secret, but should be one named constant sourced from the app config/manifest so a clone is not coupled
+    // to a literal project id. Audit F7: docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md.
     const origins = (env.CATALOG_IMAGE_ORIGINS || "https://jvkydnvdajcfnqysmuwt.supabase.co").split(",");
     if (url.protocol !== "https:" || url.username || url.password || url.search ||
         !origins.includes(url.origin) ||
@@ -39,17 +42,18 @@ export async function serveCatalogImage(request, env, ctx) {
   let upstream;
   let optimized = false;
   try {
-    const image = {
-      width,
-      fit: "scale-down",
-      quality: width <= 320 ? 78 : width <= 640 ? 82 : 86,
-      ...(format ? { format } : {}),
-    };
     upstream = await fetch(source, {
       signal: AbortSignal.timeout(15000),
-      headers: { Accept: request.headers.get("accept") || "image/avif,image/webp,image/png,image/*" },
+      headers: {
+        Accept: request.headers.get("accept") || "image/avif,image/webp,image/png,image/*",
+      },
       cf: {
-        image,
+        image: {
+          width,
+          fit: "scale-down",
+          quality: width <= 320 ? 78 : width <= 640 ? 82 : 86,
+          ...(format ? { format } : {}),
+        },
         cacheEverything: true,
         cacheTtl: 86400,
       },
@@ -60,14 +64,14 @@ export async function serveCatalogImage(request, env, ctx) {
     optimized = true;
   } catch {
     try {
-      // Fail open to the sanitized provider original when Image Resizing is
-      // unavailable for this zone/origin. The response advertises the fallback
-      // so production checks can tell whether real derivatives are active.
+      // Preserve the sanitized provider fallback when edge image transforms
+      // are unavailable. Expose the fallback state for production verification.
       upstream = await fetch(source, { signal: AbortSignal.timeout(15000) });
     } catch {
       return new Response("Image temporarily unavailable", { status: 502 });
     }
   }
+
   if (!upstream.ok || !upstream.headers.get("content-type")?.startsWith("image/")) {
     return new Response("Image unavailable", { status: 502 });
   }

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "agentsam.manufacturing-profile.v1",
+  "id": "completeful.laser-engraving",
+  "manufacturer": "completeful",
+  "process": "engraving",
+  "preferredFormat": "svg",
+  "colorMode": "monochrome",
+  "allowRaster": false,
+  "allowVector": true,
+  "allowGradients": false,
+  "requireClosedPaths": true,
+  "outlineText": true,
+  "match": {
+    "manufacturer": "completeful",
+    "process": ["engraving", "etching"]
+  },
+  "source": {
+    "kind": "operator-defined",
+    "verified": false
+  }
+}

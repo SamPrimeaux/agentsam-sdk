@@ -319,7 +319,10 @@ export class RenderSystem {
 
     dispose() {
         window.removeEventListener('resize', this.onResize);
-        this.renderer.dispose();
         this.controls.dispose();
+        this.renderer.dispose();
+        // StrictMode and workspace switching recreate the runtime. Dispose GPU
+        // resources AND detach its canvas or a dead one can cover the live view.
+        this.renderer.domElement.remove();
     }
 }

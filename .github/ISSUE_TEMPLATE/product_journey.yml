@@ -1,0 +1,67 @@
+name: "Product capability — complete journey"
+description: "Specify an installable end-to-end product experience, not an isolated operation."
+title: "[Product] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A standalone operation is not necessarily a usable product. Describe what users
+        receive immediately after install, which existing SAM building blocks compose it,
+        and which user-visible steps must work before claiming the product is ready.
+  - type: textarea
+    id: persona
+    attributes:
+      label: "Who installs this and what do they expect?"
+      description: "First-run goal, expected result, and what they can accomplish without discovering hidden tool packs."
+    validations:
+      required: true
+  - type: textarea
+    id: journey
+    attributes:
+      label: "End-to-end user journey"
+      description: "Include onboarding, creation/opening, edits, preview, approval, completion, return visit and recovery as applicable."
+      placeholder: "Install → open workspace → create/import → inspect → refine → preview → approve → save/publish/export → reopen/restore."
+    validations:
+      required: true
+  - type: textarea
+    id: lifecycle
+    attributes:
+      label: "Resource and action lifecycle"
+      description: "What entities need create/list/read/update/delete/restore? What actions need plan/run/verify/publish? Explain 'not applicable' where appropriate."
+    validations:
+      required: true
+  - type: textarea
+    id: ownership
+    attributes:
+      label: "Existing source of truth and reuse"
+      description: "Map current SDK packages, operations, manifests, host authorities and data stores; mark unknowns for inspection."
+    validations:
+      required: true
+  - type: textarea
+    id: experience
+    attributes:
+      label: "User-visible interaction and states"
+      description: "What should appear on web, desktop or CLI? Include loading, empty, denied, failed and successful states."
+    validations:
+      required: true
+  - type: textarea
+    id: portability
+    attributes:
+      label: "Installation, host dependencies, and data control"
+      description: "Local/remote/cloud behavior, offline limits, tenant isolation, optional integrations and any provider costs."
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "Product readiness and evidence"
+      description: "A complete use case with negative tests, traceable receipts and source protection. A passing build is not delivery."
+    validations:
+      required: true
+  - type: textarea
+    id: distribution
+    attributes:
+      label: "How users open it after delivery"
+      description: "Stable hosted URL for web UI, application launcher entry, or a documented install command for headless SDK/CLI. Do not invent deployments."
+    validations:
+      required: true

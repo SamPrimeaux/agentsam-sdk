@@ -2,7 +2,7 @@
 
 Canonical AgentSam error classification and remediation contracts.
 
-This package currently defines 17 canonical codes, 260 reason records, 25 domains, and 32 remediation actions.
+This package currently defines 17 canonical codes, 261 reason records, 25 domains, and 32 remediation actions.
 
 CLI commands should create typed failures through usageError / processError and render them through renderCliError.
 Usage errors exit with 2; execution failures exit with 1. --json preserves the canonical envelope.

@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { CoProTimeline, type CoProProjectView } from "./timeline.js";
 import { CoProToolPanel, type CoProMediaShelfItem } from "./tool-sheet.js";
-import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout.js";
+import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout-moviemode.js";
 
 
 export type CoProStudioAction =

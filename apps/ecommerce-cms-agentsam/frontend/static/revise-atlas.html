@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>FNF Section Atlas | Existing CMS</title>
+<link rel="stylesheet" href="/admin/css/revise-atlas.css">
+<style>
+*{box-sizing:border-box}
+:root{color-scheme:light;font-family:Inter,system-ui,sans-serif}
+body{margin:0;background:#f4f3ef;color:#1b1c1b}
+button,select,input,textarea{font:inherit}
+.atlas-header{background:#161719;color:#f7f6f1;min-height:75px;padding:15px clamp(15px,2vw,34px);display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.atlas-logo{display:flex;flex-direction:column;gap:3px}.atlas-eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.19em;color:#bfbea9;font-weight:750}
+.atlas-header h1{font-size:21px;letter-spacing:-.04em;margin:0}
+.atlas-header nav{display:flex;gap:9px;align-items:center}
+.atlas-header nav a{font-size:12px;color:#f6f4ed;text-decoration:none;border:1px solid #555656;border-radius:8px;padding:10px 13px}
+.atlas-header nav a:hover{background:#383a3b}
+.atlas-bar{background:#fff;border-bottom:1px solid #deddd5;display:flex;align-items:center;justify-content:space-between;padding:12px clamp(16px,2vw,30px);gap:12px;flex-wrap:wrap}
+.atlas-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.atlas-tabs button{padding:9px 15px;border:1px solid #deddd8;border-radius:8px;background:#f8f8f5;cursor:pointer;color:#3e423e;font-size:12px;font-weight:650}
+.atlas-tabs button[aria-current="page"]{background:#242522;color:#fff;border-color:#242522}
+.atlas-origin{font-size:11px;color:#73756e}
+.atlas-workspace{display:grid;grid-template-columns:240px minmax(0,1fr) 305px;min-height:calc(100dvh - 142px);max-width:1800px;margin:0 auto}
+.atlas-tree,.atlas-inspector{background:#fff;padding:20px 15px;overflow-y:auto;max-height:calc(100dvh - 142px)}
+.atlas-tree{border-right:1px solid #deddd5}
+.atlas-inspector{border-left:1px solid #deddd5}
+.atlas-tree h2,.atlas-inspector h2{font-size:15px;margin:0 0 7px}
+.atlas-small{font-size:12px;color:#777872;line-height:1.55}
+.atlas-section-list{display:flex;flex-direction:column;gap:7px;margin-top:19px}
+.atlas-section-list button{border:1px solid transparent;border-radius:9px;background:#f5f5f1;padding:12px 10px;text-align:left;cursor:pointer;color:#343632}
+.atlas-section-list button[aria-selected="true"]{border-color:#b9b3d9;background:#efecff}
+.atlas-section-list button strong,.atlas-section-list button small{display:block}
+.atlas-section-list button strong{font-size:12px}.atlas-section-list button small{font-size:10px;margin-top:5px;color:#797974}
+.atlas-stage{min-width:0;background:#eeeae2}
+.atlas-stage-intro{padding:18px 24px;background:#f7f5f0;border-bottom:1px solid #e3e0d8}
+.atlas-stage-intro span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:#8a857b;font-weight:750}
+.atlas-stage-intro h2{margin:7px 0 5px;font-size:25px;letter-spacing:-.04em}
+.atlas-stage-intro p{margin:0;color:#737067;font-size:13px}
+.atlas-rendered{min-width:0}
+.atlas-rendered .ps-revise-atlas{outline:0 solid transparent;transition:outline .12s;scroll-margin-top:10px}
+.atlas-rendered .ps-revise-atlas:hover{outline:2px dashed #988fe2;outline-offset:-2px}
+.atlas-rendered .ps-revise-atlas.is-selected{outline:3px solid #6958cf;outline-offset:-3px}
+.atlas-rendered img{max-width:100%}
+.atlas-inspector .atlas-inspector-top{padding-bottom:14px;border-bottom:1px solid #eeece7;margin-bottom:15px}
+.atlas-field{display:block;margin:15px 0 0}.atlas-field label{display:flex;justify-content:space-between;gap:8px;margin-bottom:6px;font-size:11px;font-weight:700;color:#535650}
+.atlas-field input,.atlas-field textarea,.atlas-field select{width:100%;border:1px solid #d4d2ce;border-radius:8px;background:#fff;color:#222;padding:10px;font-size:12px;min-width:0}
+.atlas-field textarea{resize:vertical;min-height:74px}.atlas-field textarea[data-json]{font:11px/1.5 ui-monospace,SFMono-Regular,monospace;min-height:150px}
+.atlas-field input:focus,.atlas-field textarea:focus{border-color:#6d5de1;outline:2px solid #e5dfff}
+.atlas-field [aria-invalid="true"]{border-color:#b91c1c;background:#fff5f4}
+.atlas-block{margin-top:17px;padding-top:11px;border-top:1px solid #deded8}.atlas-block h3{font-size:12px;color:#444;margin:0}
+.atlas-actions{padding-top:18px;border-top:1px solid #ebe9e4;margin-top:20px;display:grid;gap:10px}
+.atlas-actions button{padding:11px;border:0;border-radius:8px;background:#151615;color:#fff;font-size:12px;font-weight:750;cursor:pointer}
+.atlas-actions button:hover{background:#444343}
+.atlas-actions select{width:100%;padding:10px;border:1px solid #d4d2ce;border-radius:8px}
+#atlas-message{font-size:12px;color:#484a44;min-height:20px;line-height:1.4}
+.atlas-mobile-tabs{display:none}
+@media(max-width:1060px){.atlas-workspace{grid-template-columns:190px minmax(0,1fr) 270px}}
+@media(max-width:790px){
+.atlas-mobile-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;background:#fff;padding:9px}
+.atlas-mobile-tabs button{border:1px solid #deddd5;padding:10px;background:#f4f3ef;border-radius:8px}
+.atlas-mobile-tabs button[aria-current="true"]{background:#282926;color:#fff}
+.atlas-workspace{display:block;min-height:0}
+.atlas-tree,.atlas-inspector{max-height:none;min-height:calc(100dvh - 210px);border:0}
+.atlas-tree,.atlas-inspector{display:none}
+body[data-pane="sections"] .atlas-tree,body[data-pane="inspector"] .atlas-inspector{display:block}
+body[data-pane="sections"] .atlas-stage,body[data-pane="inspector"] .atlas-stage{display:none}
+body[data-pane="canvas"] .atlas-stage{display:block}
+}
+</style>
+</head>
+<body data-pane="canvas">
+<header class="atlas-header"><div class="atlas-logo"><span class="atlas-eyebrow">Fuel &amp; Free Time · Existing CMS</span><h1>Reusable Section Atlas</h1></div>
+<nav><a href="/admin/pages">CMS pages</a><a href="/admin/theme-editor?slug=shop">Open real editor ↗</a><a href="/admin/scene-lab">Aviation lab</a></nav></header>
+<div class="atlas-bar"><div class="atlas-tabs" id="atlas-pages" aria-label="Donor page sources"></div><span class="atlas-origin" id="atlas-origin">Loading real source layouts…</span></div>
+<div class="atlas-mobile-tabs" id="atlas-mobile"><button data-pane="sections">Sections</button><button data-pane="canvas" aria-current="true">Preview</button><button data-pane="inspector">Edit</button></div>
+<div class="atlas-workspace">
+<aside class="atlas-tree"><h2>Page structure</h2><p class="atlas-small" id="atlas-tree-info">Select a section to inspect and edit its real contract.</p><div class="atlas-section-list" id="atlas-sections"></div></aside>
+<main class="atlas-stage"><div class="atlas-stage-intro"><span id="atlas-page-path"></span><h2 id="atlas-page-title">Loading</h2><p id="atlas-page-desc"></p></div><div class="atlas-rendered" id="atlas-rendered"></div></main>
+<aside class="atlas-inspector"><div class="atlas-inspector-top"><span class="atlas-eyebrow">Same section API as the paid CMS</span><h2 id="atlas-selected">Select a section</h2><p class="atlas-small" id="atlas-detail">Edits in this atlas are local until you explicitly import a section into a CMS draft.</p></div><div id="atlas-fields"></div><div class="atlas-actions"><label class="atlas-small" for="atlas-target">Import selected section to this CMS page</label><select id="atlas-target"><option value="shop">Shop</option><option value="home">Home</option><option value="about">About</option><option value="community">Community</option><option value="collaborate">Collaborate</option></select><button id="atlas-import" type="button">Add this real section to CMS draft</button><span id="atlas-message" role="status" aria-live="polite"></span></div></aside>
+</div>
+<script src="/admin/js/portable-sections.js"></script>
+<script src="/admin/js/revise-atlas.js"></script>
+<script src="/admin/js/revise-atlas-view.js"></script>
+</body></html>

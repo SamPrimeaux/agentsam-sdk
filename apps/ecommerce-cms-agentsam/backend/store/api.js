@@ -8,12 +8,26 @@ import {
   validateDiscountForCheckout,
 } from "../lib/discounts.js";
 import { checkoutUrls, createCheckoutSession, createCoupon } from "./stripe.js";
-import { availableQty, holdInventory, releaseReservations } from "./inventory.js";
+import { availableQty, getVariantAvailability, listProductVariantAvailability, holdInventory, releaseReservations } from "./inventory.js";
 import { handleStripeWebhook } from "./stripe-webhook.js";
 import { getStoreCollection, listStoreCollections } from "./collections.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
+}
+
+function mediaColor(value) {
+  try {
+    const metadata = typeof value === "string" ? JSON.parse(value) : (value || {});
+    return String(metadata.variant_color || metadata.product_color || metadata.color || "").trim() || null;
+  } catch { return null; }
+}
+
+function parseMockupColor(value) {
+  try {
+    const scope = typeof value === "string" ? JSON.parse(value) : (value || {});
+    return String(scope.Color || scope.color || "").trim() || null;
+  } catch { return null; }
 }
 
 function formatProduct(row) {
@@ -22,6 +36,8 @@ function formatProduct(row) {
     slug: row.slug,
     title: row.title,
     description: row.description,
+    seo_title: row.seo_title || null,
+    seo_description: row.seo_description || null,
     collection: row.collection,
     price_cents: row.price_cents,
     price: (row.price_cents / 100).toFixed(2),
@@ -74,15 +90,10 @@ export async function getStoreProduct(env, slug) {
 
   if (!product) return json({ error: "Product not found" }, { status: 404 });
 
-  const { results: variants } = await env.DB.prepare(
-    `SELECT id, sku, size, color, price_cents, inventory_qty
-     FROM product_variants WHERE product_id = ? ORDER BY id`
-  )
-    .bind(product.id)
-    .all();
+  const variants = await listProductVariantAvailability(env, product.id);
 
   const { results: images } = await env.DB.prepare(
-    `SELECT m.id, m.url, m.filename, m.alt_text, pi.position, pi.is_primary
+    `SELECT m.id, m.url, m.filename, m.alt_text, m.meta_json, pi.position, pi.is_primary
      FROM product_images pi
      JOIN media_assets m ON m.id = pi.media_asset_id
      WHERE pi.product_id = ?
@@ -90,6 +101,26 @@ export async function getStoreProduct(env, slug) {
   )
     .bind(product.id)
     .all();
+
+  // Read existing supplier catalog imagery as optional color references.
+  // It is not a product artwork render and never changes merchant gallery records.
+  const { results: supplierReferences } = await env.DB.prepare(
+    `SELECT cm.preview_url AS url, cm.variant_scope_json
+     FROM completeful_product_links pl
+     JOIN completeful_catalog_mockups cm
+       ON cm.completeful_product_id = pl.completeful_catalog_product_id
+     WHERE pl.product_id = ? AND cm.active = 1 AND cm.preview_url IS NOT NULL
+     ORDER BY cm.sort_order ASC LIMIT 100`,
+  ).bind(product.id).all();
+  const seenReferences = new Set();
+  const colorImages = (supplierReferences || []).flatMap((entry) => {
+    const color = parseMockupColor(entry.variant_scope_json);
+    const key = color?.toLocaleLowerCase("en-US");
+    const imageKey = key + "|" + String(entry.url || "");
+    if (!color || !/^https:\/\//i.test(entry.url || "") || seenReferences.has(imageKey)) return [];
+    seenReferences.add(imageKey);
+    return [{ url: entry.url, color, source: "supplier_reference" }];
+  });
 
   return json({
     ok: true,
@@ -99,7 +130,11 @@ export async function getStoreProduct(env, slug) {
         primary_image: images.find((i) => i.is_primary)?.url || product.image_url,
         sizes: variants.map((v) => v.size).filter(Boolean).join(","),
       }),
-      images,
+      images: images.map(({ meta_json, ...image }) => ({
+        ...image,
+        color: mediaColor(meta_json),
+      })),
+      color_images: colorImages,
     },
     variants,
   });
@@ -142,13 +177,15 @@ export async function createStoreCheckout(request, env) {
     }
 
     const qty = Math.max(1, Math.min(10, Math.round(Number(item.qty || 1))));
-    if (variant.inventory_qty < qty) {
-      return json({ error: `Only ${variant.inventory_qty} left for ${variant.size}` }, { status: 400 });
+    const availability = await getVariantAvailability(env, variant.id);
+    if (!availability.available ||
+        (availability.fulfillment === "stock" && availability.available_qty < qty)) {
+      return json({ error: `Variant ${variant.id} unavailable` }, { status: 400 });
     }
 
     const unitCents = variant.price_cents ?? (await env.DB.prepare(`SELECT price_cents FROM products WHERE id = ?`).bind(variant.product_id).first())?.price_cents ?? 0;
     totalCents += unitCents * qty;
-    lineItems.push({ variant, qty, unitCents });
+    lineItems.push({ variant, qty, unitCents, fulfillment: availability.fulfillment });
   }
 
   const subtotalCents = totalCents;
@@ -203,7 +240,7 @@ export async function createStoreCheckout(request, env) {
     await attachAttributionToOrder(env, orderId, attribution);
   }
 
-  for (const { variant, qty, unitCents } of lineItems) {
+  for (const { variant, qty, unitCents, fulfillment } of lineItems) {
     await env.DB.prepare(
       `INSERT INTO order_items (order_id, variant_id, title, qty, price_cents)
        VALUES (?, ?, ?, ?, ?)`
@@ -211,11 +248,13 @@ export async function createStoreCheckout(request, env) {
       .bind(orderId, variant.id, `${variant.title} — ${variant.size || variant.sku}`, qty, unitCents)
       .run();
 
-    await env.DB.prepare(
-      `UPDATE product_variants SET inventory_qty = inventory_qty - ?, updated_at = datetime('now') WHERE id = ?`
-    )
-      .bind(qty, variant.id)
-      .run();
+    if (fulfillment === "stock") {
+      await env.DB.prepare(
+        `UPDATE product_variants SET inventory_qty = inventory_qty - ?, updated_at = datetime('now') WHERE id = ?`
+      )
+        .bind(qty, variant.id)
+        .run();
+    }
   }
 
   if (discountId) {

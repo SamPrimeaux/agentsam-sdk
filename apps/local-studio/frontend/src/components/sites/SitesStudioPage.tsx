@@ -74,9 +74,16 @@ export function SitesWorkspace() {
             <h3 className="mt-4 truncate text-lg font-semibold">{site.name}</h3>
             <p className="mt-1 truncate text-xs text-muted-foreground">{site.domain || site.slug}</p>
             <div className="mt-auto flex items-center justify-between pt-5"><span className="text-xs capitalize text-muted-foreground">{site.role} · {site.can_edit ? 'Editor access' : 'View only'}</span>
-              <button className={control} disabled={!site.can_edit} onClick={() => { void navigate({ to: '/cms', search: { site: site.slug, view: 'editor' } }); }}>
-                <Pencil size={14}/> Edit website
-              </button>
+              <div className="flex flex-wrap gap-2">
+                {site.source === 'worker' && site.can_edit && <button className={control} onClick={() => {
+                  window.location.assign('/apps/ecommerce-cms-agentsam?site=' + encodeURIComponent(site.slug));
+                }}>
+                  <ArrowUpRight size={14}/> Open Ecommerce
+                </button>}
+                <button className={control} disabled={!site.can_edit} onClick={() => { void navigate({ to: '/cms', search: { site: site.slug, view: 'editor' } }); }}>
+                  <Pencil size={14}/> Edit website
+                </button>
+              </div>
             </div>
           </article>)}
         </div>

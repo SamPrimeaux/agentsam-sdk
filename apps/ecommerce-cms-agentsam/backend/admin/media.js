@@ -1,7 +1,7 @@
 /**
  * Media library control plane.
  *
- * The reusable CMS must not assume one storage vendor. Ember Supply currently
+ * The reusable CMS must not assume one storage vendor. Fuel & Free Time currently
  * uses the R2 adapter (WEBSITE_ASSETS), while the portable media contract also
  * supports provider-backed assets such as Cloudflare Images, Google Drive, or a
  * local filesystem/runtime. Folder membership and display_order are metadata
@@ -17,7 +17,7 @@ import {
   deliveryUrlForKey,
   mediaPathForKey,
   publicUrlsForKey,
-  ASSET_STORAGE,
+  assetStorage,
   createAssetJob,
   enqueueAssetJob,
   processAssetJobById,
@@ -41,6 +41,7 @@ export function mediaCapabilitySummary(env = {}) {
     transform_provider: transformProvider,
     browser_preview: true,
     can_materialize_derivatives: Boolean(transformProvider),
+    can_remove_background: Boolean(env.IMAGES?.input),
   };
 }
 
@@ -147,7 +148,7 @@ function publicUrlFields(row) {
       url: mediaPathForKey(key),
       delivery_url: deliveryUrlForKey(key, { preferWorker: true }),
       cdn_url: urls.cdn,
-      public_base_url: ASSET_STORAGE.publicBaseUrl,
+      public_base_url: assetStorage().publicBaseUrl,
     };
   }
 
@@ -208,23 +209,28 @@ async function readJson(request) {
 }
 
 async function uniqueKey(env, prefix, filename) {
+  // Earlier failed uploads may have left R2 objects without D1 rows.
+  // Never overwrite those originals just because D1 lacks a matching key.
+  async function taken(key) {
+    const row = await env.DB.prepare(`SELECT 1 FROM media_assets WHERE r2_key = ?`)
+      .bind(key).first();
+    if (row) return true;
+    return typeof env.WEBSITE_ASSETS?.head === "function" &&
+      Boolean(await env.WEBSITE_ASSETS.head(key));
+  }
   let key = prefix + filename;
-  const existing = await env.DB.prepare(`SELECT 1 FROM media_assets WHERE r2_key = ?`)
-    .bind(key)
-    .first();
-  if (!existing) return key;
+  if (!(await taken(key))) return key;
 
   const lastDot = filename.lastIndexOf(".");
   const base = lastDot === -1 ? filename : filename.slice(0, lastDot);
   const ext = lastDot === -1 ? "" : filename.slice(lastDot);
   for (let i = 2; i < 1000; i++) {
     key = `${prefix}${base}-${i}${ext}`;
-    const row = await env.DB.prepare(`SELECT 1 FROM media_assets WHERE r2_key = ?`)
-      .bind(key)
-      .first();
-    if (!row) return key;
+    if (!(await taken(key))) return key;
   }
-  return `${prefix}${base}-${Date.now()}${ext}`;
+  key = `${prefix}${base}-${Date.now()}-${crypto.randomUUID()}${ext}`;
+  if (await taken(key)) throw new Error("Unable to allocate an unused media key");
+  return key;
 }
 
 async function nextDisplayOrder(env, folder) {
@@ -416,7 +422,7 @@ export async function syncMediaFromR2(env) {
   await env.DB.prepare(
     `UPDATE media_assets
      SET url = '/media/' || r2_key
-     WHERE url IS NULL OR url = '' OR url LIKE 'https://assets.ember.example/%'`
+     WHERE url IS NULL OR url = '' OR url LIKE 'https://assets.fuelnfreetime.com/%'`
   ).run();
 
   return { ok: true, scanned, inserted, counts: await folderCounts(env) };
@@ -429,7 +435,54 @@ export async function uploadMedia(request, env, executionCtx = null) {
 
   const category = form.get("category") ? form.get("category").toString() : null;
   const folderHint = form.get("folder") ? normalizeFolder(form.get("folder").toString()) : null;
-  let prefix = (form.get("prefix") || "intake/").toString();
+  // Provider-neutral derivative intent: source identity and lineage are always
+  // verified on this store's D1, never accepted as browser-supplied authority.
+  const derivativeRole = String(form.get("derivative_role") || "").trim().toLowerCase() || null;
+  const allowedRoles = new Set(["original/master", "manufacturing", "mockup", "storefront/gallery", "thumbnail", "social"]);
+  if (derivativeRole && !allowedRoles.has(derivativeRole)) {
+    return json({ error: "Unsupported media derivative role" }, { status: 400 });
+  }
+  const requestedTransformPolicy = String(form.get("transform_policy") || "auto").trim().toLowerCase();
+  if (!["auto", "preserve"].includes(requestedTransformPolicy)) {
+    return json({ error: "Transform policy must be auto or preserve" }, { status: 400 });
+  }
+  const transformPolicy = (derivativeRole === "manufacturing" || derivativeRole === "original/master")
+    ? "preserve" : requestedTransformPolicy;
+  const originParam = form.get("source_media_asset_id");
+  const editParam = form.get("edit_operations_json");
+  let editedSource = null;
+  let editOperations = [];
+  const browserEdit = editParam != null;
+  if (originParam != null) {
+    const originId = Number(originParam);
+    if (!Number.isSafeInteger(originId) || originId < 1 || files.length !== 1) {
+      return json({ error: "Invalid media source selection" }, { status: 400 });
+    }
+    editedSource = await env.DB.prepare(
+      "SELECT id, filename, content_type, r2_key FROM media_assets WHERE id = ?"
+    ).bind(originId).first();
+    if (!editedSource) return json({ error: "Source media asset not found" }, { status: 404 });
+    if (browserEdit && (!String(editedSource.content_type || "").startsWith("image/") ||
+        String(files[0].type || "") !== "image/png")) {
+      return json({ error: "The browser editor must export PNG from an image source" }, { status: 400 });
+    }
+    if (browserEdit) {
+      try { editOperations = JSON.parse(String(editParam)); }
+      catch { return json({ error: "Invalid image edit history" }, { status: 400 }); }
+      const allowed = new Set(["markup", "erase", "resize", "undo"]);
+      if (!Array.isArray(editOperations) || editOperations.length > 40 ||
+          editOperations.some((op) => !op || !allowed.has(op.type) || JSON.stringify(op).length > 300)) {
+        return json({ error: "Unsupported image edit operations" }, { status: 400 });
+      }
+    }
+  } else if (browserEdit) {
+    return json({ error: "Image edits require an original asset" }, { status: 400 });
+  }
+  const claimedSourceKey = String(form.get("source_key") || "").trim();
+  if (claimedSourceKey && (!editedSource || claimedSourceKey !== editedSource.r2_key)) {
+    return json({ error: "Source media key does not match the selected asset" }, { status: 400 });
+  }
+  let prefix = browserEdit ? "derivatives/media-edit/" : (form.get("prefix") || "intake/").toString();
   if (!prefix.endsWith("/")) prefix += "/";
   prefix = prefix.replace(/^\/+/, "");
 
@@ -450,12 +503,29 @@ export async function uploadMedia(request, env, executionCtx = null) {
       bytes: buf.byteLength,
       filename,
       folder,
+      derivativeRole: derivativeRole || (browserEdit ? "mockup" : null),
+      transformPolicy: browserEdit ? "preserve" : transformPolicy,
+      sourceAssetId: editedSource?.id || null,
+      sourceKey: editedSource?.r2_key || null,
+      production: derivativeRole === "manufacturing" || derivativeRole === "original/master"
+        ? { requiresMaster: true } : null,
     });
 
-    const urls = publicUrlFields(intakeKey);
+    // Use the same provider-aware descriptor as rowToAsset(). Passing a raw
+    // key here hides r2_key from mediaSourceFromRow(), yielding a null URL and
+    // violating the live media_assets.url NOT NULL contract after R2 put.
+    const urls = publicUrlFields({ r2_key: intakeKey });
+    if (!urls.url) throw new Error("Unable to resolve a delivery URL for the uploaded media source");
     const meta = {
       ...plan.meta,
-      lifecycle: "processing",
+      ...(browserEdit && editedSource ? { media_edit: {
+        source_media_asset_id: Number(editedSource.id),
+        source_filename: editedSource.filename,
+        method: "browser_canvas",
+        operations: editOperations,
+        created_at: new Date().toISOString(),
+      } } : {}),
+      lifecycle: plan.execution?.mode === "none" ? "ready" : "processing",
       intelligence: plan.intelligence,
       tags: plan.tags,
       // Keep workflow keys in diagnostics only — never operator-facing.
@@ -511,18 +581,20 @@ export async function uploadMedia(request, env, executionCtx = null) {
     const mediaId = result.meta.last_row_id;
     let jobId = null;
     let queued = false;
-    try {
-      jobId = await createAssetJob(env, {
-        mediaAssetId: mediaId,
-        intakeKey,
-        canonicalKey: plan.canonical_key,
-        pipeline: plan.classification?.pipeline,
-        plan,
-      });
-      const enq = await enqueueAssetJob(env, jobId, { media_asset_id: mediaId });
-      queued = !!enq?.queued;
-    } catch (err) {
-      console.error("[media/upload] job create/enqueue failed", err?.message || err);
+    if (plan.execution?.mode !== "none") {
+      try {
+        jobId = await createAssetJob(env, {
+          mediaAssetId: mediaId,
+          intakeKey,
+          canonicalKey: plan.canonical_key,
+          pipeline: plan.classification?.pipeline,
+          plan,
+        });
+        const enq = await enqueueAssetJob(env, jobId, { media_asset_id: mediaId });
+        queued = !!enq?.queued;
+      } catch (err) {
+        console.error("[media/upload] job create/enqueue failed", err?.message || err);
+      }
     }
 
     // Queue is primary. Inline/waitUntil only when ASSET_JOBS binding is absent.
@@ -871,6 +943,15 @@ export async function listMedia(request, env, url) {
   });
 }
 
+/** Single-asset detail lookup, scoped to the authenticated merchant admin route. */
+export async function getMediaAsset(request, env, id) {
+  const assetId = Number(id);
+  if (!Number.isSafeInteger(assetId) || assetId <= 0) return json({ error: 'Invalid media asset' }, { status: 400 });
+  const row = await env.DB.prepare(`${MEDIA_SELECT} WHERE m.id = ? AND ${browsableMediaSql('m')}`).bind(assetId).first();
+  if (!row) return json({ error: 'Media asset not found' }, { status: 404 });
+  return json({ ok: true, asset: rowToAsset(row), capabilities: mediaCapabilitySummary(env) });
+}
+
 export async function batchMedia(request, env) {
   const body = await readJson(request);
   const ids = Array.isArray(body?.ids)
@@ -1090,6 +1171,43 @@ export async function updateMedia(request, env, id) {
 
   const updated = await env.DB.prepare(`SELECT * FROM media_assets WHERE id = ?`).bind(id).first();
   return json({ ok: true, asset: rowToAsset(updated) });
+}
+
+/** Append a resource-bound review comment without replacing unrelated media metadata. */
+export async function addMediaReviewComment(request, env, id, actor = null) {
+  const body = await readJson(request);
+  const note = String(body?.text || "").trim();
+  const x = Number(body?.x);
+  const y = Number(body?.y);
+  if (!note || note.length > 1200 || !Number.isFinite(x) || !Number.isFinite(y) ||
+      x < 0 || x > 1 || y < 0 || y > 1) {
+    return json({ error: "Comment must be 1–1200 characters with a valid image position" }, { status: 400 });
+  }
+  const comment = {
+    id: crypto.randomUUID(), text: note, x, y,
+    actor_id: actor?.id ?? null, created_at: new Date().toISOString(),
+  };
+  // Optimistic compare-and-swap avoids losing another editor's concurrent notes.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const row = await env.DB.prepare("SELECT * FROM media_assets WHERE id = ?").bind(id).first();
+    if (!row) return json({ error: "Asset not found" }, { status: 404 });
+    if (!String(row.content_type || "").startsWith("image/")) {
+      return json({ error: "Comments require an image" }, { status: 400 });
+    }
+    const meta = parseMeta(row.meta_json) || {};
+    const notes = Array.isArray(meta.review_notes) ? meta.review_notes : [];
+    if (notes.length >= 100) return json({ error: "Comment limit reached for this asset" }, { status: 409 });
+    const oldJson = row.meta_json || "";
+    const nextJson = JSON.stringify({ ...meta, review_notes: [...notes, comment] });
+    const outcome = await env.DB.prepare(
+      `UPDATE media_assets SET meta_json = ?, updated_at = datetime('now')
+       WHERE id = ? AND COALESCE(meta_json, '') = ?`
+    ).bind(nextJson, id, oldJson).run();
+    if (Number(outcome?.meta?.changes || 0) === 1) {
+      return json({ ok: true, comment, asset: rowToAsset({ ...row, meta_json: nextJson }) });
+    }
+  }
+  return json({ error: "Asset changed while commenting; retry" }, { status: 409 });
 }
 
 export async function reorderMedia(request, env) {

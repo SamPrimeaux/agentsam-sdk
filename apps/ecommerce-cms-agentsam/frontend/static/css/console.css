@@ -1,4 +1,4 @@
-/* Ember Supply — Admin Console shell (Design Studio port) */
+/* Fuel & Free Time — Admin Console shell (Design Studio port) */
 
 :root {
   --c-bg: #f1f1f1;
@@ -298,7 +298,7 @@ body.console-theme {
 }
 
 body.agentsam-open .agentsam-dock {
-  width: min(400px, 36vw);
+  width: min(var(--admin-agent-w, 400px), 36vw);
   border-left-width: 1px;
 }
 
@@ -619,6 +619,15 @@ body.console-theme.console-body-bleed .console-shell {
 
 body.console-theme.console-body-bleed .console-main--bleed {
   height: calc(100dvh - var(--c-topbar-h));
+}
+
+/* Theme Studio does not mount the normal admin topbar. Do not reserve
+   --c-topbar-h (56px) inside its full-bleed main: the editor already owns
+   the entire shell viewport, including the mobile Sections/Preview/Edit row.
+   This override is editor-only: dashboard pages retain topbar clearance. */
+body.console-theme.console-body-bleed.shell-mode-theme-editor .console-main--bleed {
+  height: 100%;
+  min-height: 0;
 }
 
 body.console-shell-loading .admin-drawer,
@@ -1153,14 +1162,17 @@ body.console-theme .admin-login-logo span.brand-tag {
 }
 
 .online-store-preview {
+  position: relative;
+  isolation: isolate;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #e3e3e3;
-  background: #120c09;
+  background: #f4f1ed;
 }
 
 .online-store-preview--desktop {
   flex: 1;
+  min-width: 0;
   aspect-ratio: 16 / 10;
   min-height: 220px;
 }
@@ -1172,23 +1184,58 @@ body.console-theme .admin-login-logo span.brand-tag {
 }
 
 .online-store-preview iframe {
+  display: block;
+  position: absolute;
+  inset: 0 auto auto 0;
   width: 100%;
   height: 100%;
   border: 0;
   pointer-events: none;
   transform-origin: top left;
+  background: #fff;
 }
 
-.online-store-preview--desktop iframe {
-  transform: scale(0.55);
-  width: 182%;
-  height: 182%;
+.online-store-preview-caption {
+  position: absolute;
+  z-index: 2;
+  bottom: 10px;
+  left: 10px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 650;
+  border-radius: 7px;
+  color: #fff;
+  background: rgba(16, 16, 17, .72);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
 }
 
-.online-store-preview--mobile iframe {
-  transform: scale(0.32);
-  width: 312%;
-  height: 312%;
+.online-store-preview[data-preview-status="loading"]::after {
+  content: "Loading published storefront…";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  color: #565656;
+  font-size: 13px;
+  background: #f4f1ed;
+}
+
+.online-store-preview[data-preview-status="failed"] iframe { opacity: 0; }
+
+.online-store-preview-message {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  text-align: center;
+  color: #393939;
+  font-size: 13px;
+  background: #f4f1ed;
 }
 
 .online-store-theme-meta {
@@ -1366,7 +1413,7 @@ body.console-theme .admin-login-logo span.brand-tag {
   }
 
   .theme-editor-body {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .theme-editor-preview {
@@ -1726,7 +1773,7 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 
 @media (max-width: 900px) {
   .account-card-body {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1795,4 +1842,98 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
   font-size: 13px;
   color: #6b6b6b;
   margin: 8px 0 0;
+}
+
+/* ---- Compact shell (<= 900px): in-flow topbar, dock clearance, tap targets ----
+   The legacy .admin-main padding (68px top) predates the in-flow console topbar and
+   double-counted it. Safe-area insets resolve because shell.js adds viewport-fit=cover. */
+@media (max-width: 900px) {
+  body.console-theme .console-main.admin-main:not(.console-main--bleed) {
+    padding:
+      16px
+      max(16px, env(safe-area-inset-right, 0px))
+      calc(var(--admin-dock-clearance, 0px) + 16px)
+      max(16px, env(safe-area-inset-left, 0px));
+  }
+  body.console-theme .console-main .btn {
+    min-height: 44px;
+  }
+  body.console-theme .console-main .admin-table .btn {
+    min-height: 36px;
+  }
+}
+
+/* ---- Touch sizing: width picks the layout, pointer picks the size ----
+   An iPad in landscape is wider than 900px (so it gets the desktop rail) but is still touch. */
+@media (pointer: coarse) {
+  body.console-theme .console-icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+  body.console-theme .console-nav-item,
+  body.console-theme .console-nav-child {
+    min-height: 44px;
+    height: auto;
+  }
+  body.console-theme .console-main .btn {
+    min-height: 44px;
+  }
+  body.console-theme .console-main .admin-table .btn {
+    min-height: 36px;
+  }
+  /* 16px stops iOS zooming on focus; applies at every width on touch devices. */
+  body.console-theme .console-main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  body.console-theme .console-main select,
+  body.console-theme .console-main textarea {
+    font-size: 16px;
+  }
+}
+
+/* ---- Wide screens: content stops stretching, the agent panel grows ----
+   Tiers (CSS px): desktop 1200-1599, wide 1600-2199, ultra/TV >= 2200.
+   Boundaries are PROPOSED until measured on the real Mac and TV (see docs/operating responsive spec). */
+:root {
+  --admin-content-max: 1440px;
+  --admin-agent-w: 400px;
+}
+
+@media (min-width: 1600px) {
+  :root {
+    --admin-agent-w: 440px;
+  }
+  body.console-theme .console-main.admin-main:not(.console-main--bleed) {
+    padding-left: max(40px, calc((100% - var(--admin-content-max)) / 2));
+    padding-right: max(40px, calc((100% - var(--admin-content-max)) / 2));
+  }
+}
+
+@media (min-width: 2200px) {
+  :root {
+    --admin-content-max: 1760px;
+    --admin-agent-w: 520px;
+  }
+}
+
+/* Feature panel: fixed-width art beside the copy on wide screens, stacked on phones. */
+.console-feature-panel__art {
+  width: 280px;
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .console-feature-panel {
+    flex-direction: column;
+  }
+  .console-feature-panel__art {
+    width: auto;
+    padding: 16px;
+  }
+}
+
+/* Wide tables scroll inside their own card instead of being clipped by .console-main (overflow-x: hidden).
+   Applies at every width; cards whose table fits look exactly as before. Restacking into cards is polish-pass work. */
+.console-main .admin-card:has(.admin-table),
+.console-main .pages-card:has(.pages-table) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }

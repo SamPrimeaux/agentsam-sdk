@@ -1,0 +1,18 @@
+{
+  "name": "@inneranimalmedia/theme-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "README.md",
+    "*.schema.json",
+    "examples",
+    "editor"
+  ],
+  "exports": {
+    "./editor/bridge": "./editor/bridge.mjs",
+    "./editor/project": "./editor/project.mjs",
+    "./editor/cms-adapter": "./editor/cms-adapter.mjs",
+    "./runtime/theme-preview-registry": "./runtime/theme-preview-registry.js"
+  }
+}

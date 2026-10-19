@@ -297,7 +297,7 @@ packages:
   # END AGENTSAM GENERATED INVENTORY
   root_sdk:
     name: "@inneranimalmedia/agentsam-sdk"
-    version: "2.6.12"
+    version: "2.6.13"
     path: .
     private: false
     registry: npm
@@ -310,7 +310,7 @@ packages:
       - agentsam-auth-portal
   identity:
     name: "@inneranimalmedia/agentsam-identity"
-    version: "2.6.12"
+    version: "2.6.13"
     path: packages/identity
     private: false
     separately_published: true
@@ -318,19 +318,19 @@ packages:
     public_import_prefix: "@inneranimalmedia/agentsam-sdk/identity"
   agentsam_contracts:
     name: "@inneranimalmedia/agentsam-contracts"
-    version: "2.6.12"
+    version: "2.6.13"
     path: packages/agentsam-contracts
     private: false
     separately_published: true
   agentsam_workbench:
     name: "@inneranimalmedia/agentsam-workbench"
-    version: "2.6.12"
+    version: "2.6.13"
     path: packages/agentsam-workbench
     private: false
     separately_published: true
   shell_kit:
     name: "@inneranimalmedia/agentsam-shell-kit"
-    version: "2.6.12"
+    version: "2.6.13"
     path: packages/agentsam-shell-kit
     private: false
     separately_published: true
@@ -449,6 +449,7 @@ cli:
     - logout
     - whoami
     - resume
+    - exec
     - shell
     - start-local
     - ollama
@@ -540,10 +541,10 @@ security_contract:
 
 release:
   root_sdk:
-    target_version: "2.6.12"
+    target_version: "2.6.13"
     state: candidate
     registry: npm
-    current_latest: "2.6.8"
+    current_latest: "2.6.12"
     current_alpha: "2.0.0-alpha.identity.12"
     candidate_base_head: 2d7c8214809bf9a947f6151e9745d98695892f46
     published_at_utc: "2026-10-02T05:00:55.232Z"

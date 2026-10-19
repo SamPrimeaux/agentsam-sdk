@@ -1,0 +1,8 @@
+{
+  "ticket": "SAM-001",
+  "title": "Canonical operation identity",
+  "dependencies": [],
+  "head_before": "c37123c2",
+  "agent": "missing_executable",
+  "agent_exit": 127
+}

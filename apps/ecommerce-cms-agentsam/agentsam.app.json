@@ -2,18 +2,56 @@
   "schema": "agentsam.app.v1",
   "id": "ecommerce-cms-agentsam",
   "name": "AgentSam Ecommerce + CMS",
-  "version": "2.6.11",
-  "bin": "bin/agentsam-ecommerce.mjs",
+  "kind": "app",
+  "package": "@inneranimalmedia/ecommerce-cms-agentsam",
+  "version": "2.6.13",
+  "role": "application",
+  "modes": [
+    "standalone",
+    "embedded"
+  ],
+  "surfaces": {
+    "admin": {
+      "kind": "core-surface",
+      "contract": "frontend/admin.surface.json",
+      "mount": "/admin"
+    }
+  },
+  "apps": {
+    "registry": "apps/registry.json",
+    "bundled": [
+      "product-studio",
+      "growth",
+      "completeful",
+      "resend"
+    ]
+  },
+  "context": {
+    "route_authority": "backend/lib/route-manifest.js",
+    "capability_policy": "audited-per-route-and-resource"
+  },
+  "bin": "bin/ecommerce.mjs",
   "commands": {
-    "info": "agentsam-ecommerce info",
-    "doctor": "agentsam-ecommerce doctor",
-    "preview": "agentsam-ecommerce preview",
-    "scaffold": "agentsam-ecommerce scaffold <directory>"
+    "info": "ecommerce info",
+    "doctor": "ecommerce doctor",
+    "preview": "ecommerce preview",
+    "scaffold": "ecommerce scaffold <directory>"
   },
   "runtime": {
-    "local_preview": "ready",
-    "source_scaffold": "ready",
+    "local_preview": "worker",
+    "source_scaffold": "workspace-source",
     "cloudflare": "requires-owner-provisioning"
+  },
+  "generation": {
+    "namespace": "agentsam",
+    "capabilities": {
+      "create": "code.generate",
+      "edit": "code.edit"
+    },
+    "output_contracts": {
+      "create": "cms.generated-definition.v1",
+      "edit": "cms.generated-patch.v1"
+    }
   },
   "capabilities": {
     "products": true,
@@ -21,36 +59,219 @@
     "media": true,
     "catalog": true,
     "annotation": true,
-    "fulfillment_automation": false,
-    "pages": true,
-    "theme_editor": true,
-    "preview": true,
-    "publish": true,
-    "routes": true,
-    "groups": true,
-    "sections": true,
-    "blocks": true,
-    "composition_revisions": true
+    "fulfillment_automation": false
   },
-  "modes": [
-    "standalone",
-    "embedded"
-  ],
   "features": [
-    "admin.shell-nav",
-    "agentsam.mini-composer",
-    "commerce.product-studio",
-    "growth.campaigns",
-    "provider.completeful",
-    "provider.resend"
+    "admin.mobile-dock",
+    "agentsam.mini-composer"
   ],
-  "notes": "Portable AgentSam Ecommerce + CMS application. Authoring is group/section/block-first; routes/pages are containers. Customer identity, content, providers, and credentials remain installation-owned.",
-  "kind": "app",
-  "package": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "preview": {
-    "kind": "web",
-    "bridge": "agentsam.preview.v1",
-    "entry": "/admin",
-    "port": 4174
+  "dock": {
+    "startHidden": false,
+    "agent": {
+      "label": "AgentSam",
+      "accent": "#7c3aed"
+    },
+    "tabs": [
+      {
+        "id": "home",
+        "label": "Home",
+        "href": "/admin/home",
+        "icon": "home"
+      },
+      {
+        "id": "products",
+        "label": "Products",
+        "href": "/admin/products",
+        "icon": "products",
+        "match": [
+          "/admin/products",
+          "/admin/products/*",
+          "/admin/product-edit",
+          "/admin/inventory"
+        ]
+      },
+      {
+        "id": "agent",
+        "label": "AgentSam",
+        "action": "agent",
+        "icon": "sparkle"
+      },
+      {
+        "id": "orders",
+        "label": "Orders",
+        "href": "/admin/orders",
+        "icon": "orders"
+      },
+      {
+        "id": "menu",
+        "label": "More",
+        "action": "nav",
+        "icon": "menu"
+      }
+    ],
+    "scopes": [
+      {
+        "id": "store",
+        "label": "Store overview",
+        "match": [
+          "/admin/home"
+        ],
+        "chips": [
+          {
+            "label": "Summarize activity",
+            "prompt": "Summarize recent store activity: orders, inventory changes, and anything that needs my attention."
+          },
+          {
+            "label": "Low stock check",
+            "prompt": "Check inventory and list products that are low or out of stock."
+          },
+          {
+            "label": "Draft shop hero",
+            "prompt": "Draft options for the shop hero headline and subtext."
+          }
+        ]
+      },
+      {
+        "id": "products",
+        "label": "All products",
+        "match": [
+          "/admin/products",
+          "/admin/inventory"
+        ],
+        "chips": [
+          {
+            "label": "Low stock check",
+            "prompt": "Check inventory and list products that are low or out of stock."
+          },
+          {
+            "label": "Product ideas",
+            "prompt": "Suggest product ideas that fit the current catalog and brand."
+          }
+        ]
+      },
+      {
+        "id": "product",
+        "label": "This product",
+        "match": [
+          "/admin/products/*",
+          "/admin/product-edit"
+        ],
+        "chips": [
+          {
+            "label": "Rewrite description",
+            "prompt": "Rewrite the description of the product I am viewing. Keep the brand voice and give me options."
+          },
+          {
+            "label": "Write alt text",
+            "prompt": "Write alt text for the images on the product I am viewing."
+          },
+          {
+            "label": "Suggest price",
+            "prompt": "Suggest a price for the product I am viewing and explain the reasoning."
+          }
+        ]
+      },
+      {
+        "id": "orders",
+        "label": "Orders",
+        "match": [
+          "/admin/orders",
+          "/admin/orders/*"
+        ],
+        "chips": [
+          {
+            "label": "Flag problems",
+            "prompt": "Review recent orders and flag any that look stuck, unpaid, or unfulfilled."
+          },
+          {
+            "label": "Draft customer reply",
+            "prompt": "Draft a friendly reply to a customer asking about their order status."
+          }
+        ]
+      },
+      {
+        "id": "page",
+        "label": "This page",
+        "match": [
+          "*"
+        ],
+        "chips": []
+      }
+    ]
+  },
+  "compatibility": {
+    "legacy_feature_manifests": "../../features/*/agentsam.feature.json",
+    "note": "Legacy feature manifests remain readable during the Apps/core-surface refactor. They are compatibility contracts, not the canonical ownership model."
+  },
+  "notes": "Reusable Ecommerce + CMS application contract. Core admin UI is defined by frontend/admin.surface.json. Bundled Apps are defined by apps/registry.json. Customer brand/data/credentials/resource bindings belong to the host installation.",
+  "accounts": {
+    "maxDepth": 3,
+    "kinds": [
+      "organization",
+      "reseller",
+      "client"
+    ],
+    "roles": [
+      "owner",
+      "admin",
+      "editor",
+      "viewer"
+    ],
+    "plans": {
+      "free": {
+        "entitlements": {
+          "brand.powered_by.visible": true
+        }
+      },
+      "agency": {
+        "entitlements": {
+          "brand.powered_by.visible": false
+        }
+      }
+    }
+  },
+  "cms": {
+    "blocks": {
+      "maxDepth": 2
+    }
+  },
+  "providers": [
+    {
+      "name": "workers-ai",
+      "endpoint": "/api/admin/agentsam/providers/workers-ai/code",
+      "capabilities": [
+        "code.generate",
+        "code.edit"
+      ],
+      "supports": {
+        "structured_output": true,
+        "abort": true
+      },
+      "model_policy": "agentsam_ai:code_generation"
+    }
+  ],
+  "embed": {
+    "stage": "ecommerce-cms-agentsam",
+    "build": {
+      "cwd": ".",
+      "install": {
+        "lockfile": "package-lock.json",
+        "check": [
+          "node_modules/esbuild/package.json",
+          "frontend/node_modules/vite/package.json"
+        ],
+        "command": [
+          "npm",
+          "run",
+          "install:studio"
+        ]
+      },
+      "command": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "output": "dist/assets"
+    }
   }
 }

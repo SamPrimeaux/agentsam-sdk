@@ -3,7 +3,8 @@
  * Only /api/admin/cms/ registry/pages operations are exposed. Never invokes
  * generic /api/admin/*, orders, identity, checkout, or customer records.
  */
-import { handleAdminCmsApi } from './api.js';
+// Load the full CMS rendering/authoring engine only for an authorized CMS route.
+// Signature verification and Store Overview must not require optional theme packages.
 import { onlineStoreOverview } from '../admin/store.js';
 import { verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from './studio-bridge-protocol.js';
 
@@ -55,6 +56,7 @@ export async function handleStudioCmsBridge(request,env){
   const opts={method,headers};
   if(WRITE_METHODS.has(method))opts.body=request.body;
   try{
+    const { handleAdminCmsApi } = await import('./api.js');
     const upstream=await handleAdminCmsApi(new Request(adminUrl,opts),env,adminUrl);
     if(!upstream)return error('cms_bridge_route_not_found',404);
     const response=new Response(upstream.body,upstream);

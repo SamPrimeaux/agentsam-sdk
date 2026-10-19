@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Products — Ember Supply Admin</title>
+<title>Products — Fuel & Free Time Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
@@ -30,6 +30,12 @@ renderShell('/admin/products', `
   </div>
 `);
 
+function escapeProduct(s) { return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+function productThumb(p) {
+  const url=p.thumbnail_url||p.image_url||p.primary_image_url||p.images?.[0]?.url;
+  if(typeof url==='string' && (/^https:\/\/[^\s]+$/i.test(url)||url.startsWith('/admin/'))) return '<img src="'+escapeProduct(url)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover">';
+  return '<span style="font-size:11px;color:#aaa">—</span>';
+}
 function badgeFor(status) {
   return `<span class="badge ${status}">${status}</span>`;
 }
@@ -44,7 +50,7 @@ function badgeFor(status) {
     }
     body.innerHTML = d.products.map(p => `
       <tr>
-        <td><a href="/admin/product-edit?id=${p.id}">${p.title}</a></td>
+        <td><div style="display:flex;align-items:center;gap:10px"><span style="display:grid;place-items:center;width:38px;height:38px;flex:none;border:1px solid #e9e9e9;border-radius:5px;background:#f5f5f5;overflow:hidden">${productThumb(p)}</span><a href="/admin/product-edit?id=${encodeURIComponent(p.id)}">${escapeProduct(p.title)}</a></div></td>
         <td>${p.collection || '—'}</td>
         <td>${centsToDollars(p.price_cents)}</td>
         <td>${badgeFor(p.status)}</td>
@@ -54,8 +60,18 @@ function badgeFor(status) {
       </tr>
     `).join('');
   } catch (err) {
-    document.getElementById('products-body').innerHTML =
-      `<tr><td colspan="7" class="admin-empty">${err.message}</td></tr>`;
+    // Preview provider: same Products table, different merchant catalog data.
+    try {
+      const data=await fetch('/admin/registry/products-snapshot.json').then(r=>r.json());
+      const items=(data.items||[]).filter(p=>p.repository_id?.toLowerCase()==='github:samprimeaux/agentsam-sdk' || (p.repository_id==null && p.package_name?.includes('agentsam')));
+      let drafts={};try{drafts=JSON.parse(localStorage.getItem('iam:registry:product-edits:v1')||'{}')}catch{}
+      document.getElementById('products-body').innerHTML=items.map(p=>{
+        const d=drafts[p.id]||{};
+        return '<tr><td><div style="display:flex;align-items:center;gap:10px"><span style="display:grid;place-items:center;width:38px;height:38px;flex:none;border:1px solid #e9e9e9;border-radius:5px;background:#f5f5f5;overflow:hidden">'+productThumb({thumbnail_url:d.previewUrl})+'</span><a href="/admin/product-edit?id='+encodeURIComponent(p.id)+'">'+escapeProduct(d.name||p.name)+'</a></div></td><td>'+escapeProduct(d.collection||p.kind)+'</td><td>—</td><td>'+badgeFor(p.status)+'</td><td>'+escapeProduct(p.version||'—')+'</td><td>—</td><td><a href="/admin/product-edit?id='+encodeURIComponent(p.id)+'" class="btn ghost small">Edit</a></td></tr>';
+      }).join('')||'<tr><td colspan="7" class="admin-empty">No products yet.</td></tr>';
+    } catch {
+      document.getElementById('products-body').innerHTML='<tr><td colspan="7" class="admin-empty">Unable to load products.</td></tr>';
+    }
   }
 })();
 </script>

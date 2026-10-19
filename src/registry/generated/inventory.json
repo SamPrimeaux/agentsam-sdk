@@ -6,8 +6,8 @@
     "packages/catalog/generated/packages.json"
   ],
   "counts": {
-    "commands": 75,
-    "capabilities": 60,
+    "commands": 76,
+    "capabilities": 81,
     "packages": 62
   },
   "commands": [
@@ -435,6 +435,17 @@
       "topic": "start",
       "usage": [
         "agentsam resume"
+      ],
+      "operation": null
+    },
+    {
+      "id": "exec",
+      "aliases": [],
+      "summary": "Run the existing AgentSam coding agent noninteractively with scoped permissions",
+      "topic": "work",
+      "usage": [
+        "agentsam exec --prompt-file <file> --cwd <directory> --model <provider:model> --approval-mode <pending|prompt> --json",
+        "agentsam exec --prompt <text> --cwd <directory> --json"
       ],
       "operation": null
     },
@@ -994,6 +1005,22 @@
       "status": "stable"
     },
     {
+      "id": "workspace.list",
+      "description": "List a bounded, safe set of repository source paths without traversing symlinks, dependency trees or credential stores.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "workspace.search",
+      "description": "Search bounded local UTF-8 source files by exact text and return line-numbered evidence; never crawl credential stores.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
       "id": "workspace.write",
       "description": "Write a bounded UTF-8 file in the selected workspace; updating existing files requires expected_sha256 and host approval.",
       "package": "@inneranimalmedia/agentsam-sdk/capabilities",
@@ -1312,6 +1339,158 @@
       "cli": "agentsam machine mine <path> --against <path> --json",
       "agent_callable": "requires-handler-check",
       "status": "stable"
+    },
+    {
+      "id": "project.list",
+      "description": "List real workspace-owned projects without creating any new storage.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.get",
+      "description": "Read one workspace-owned project and its revision.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.create",
+      "description": "Create a real project folder with its own metadata and no unrelated content replacement.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.edit",
+      "description": "Update project metadata with optimistic concurrency; never silently replace source.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.delete",
+      "description": "Archive the project without erasing its original files, requiring explicit confirmation and revision.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "project.restore",
+      "description": "Restore an archived project into its workspace when the ID is free.",
+      "package": "@inneranimalmedia/agentsam-sdk/agent",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_list",
+      "description": "List the current workspace SQLite database resources",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_get",
+      "description": "Inspect an existing local SQLite resource and its tables",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_create",
+      "description": "Provision an empty local SQLite resource under current workspace without overwriting",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_delete",
+      "description": "Archive an existing local SQLite database (never replace D1)",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_restore",
+      "description": "Restore a previously archived local SQLite database",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_d1_create",
+      "description": "Provision a NEW Cloudflare D1 database through the authenticated customer installation Cloudflare provider. Never exposes or uses operator IAM D1 credentials. Requires provisionD1 host and approval.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "agentsam_sqlite_edit",
+      "description": "Rename a local workspace SQLite database resource with filesystem size/time concurrency checks and WAL protection.",
+      "package": "@inneranimalmedia/agentsam-sdk/capabilities",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "stable"
+    },
+    {
+      "id": "sam.evidence.begin",
+      "description": "Declare flows, steps, states, viewports and checks before capturing. Fails with evidence_project_unresolved when no project is provided.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "sam.evidence.capture",
+      "description": "Capture one asset against a declared state, across the declared viewport matrix when one exists, or a 01-Brief/02-Recon asset by name.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "sam.evidence.seal",
+      "description": "Verify coverage and codecs, derive web copies and covers, compute facts, write the screenplay and review page, then the manifest last.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "sam.evidence.deliver",
+      "description": "Serve a sealed run read-only on loopback (port 0 unless requested) and return the manifest and review-page URLs.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "sam.evidence.compare",
+      "description": "Pair the same state across two sealed runs of one project and crop what changed (then | now); written under the newer run.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "sam.evidence.ingest",
+      "description": "Plan (default) or apply importing an existing folder of captures into the canonical layout. Originals are never moved or renamed.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
     }
   ],
   "packages": [

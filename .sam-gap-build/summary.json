@@ -1,0 +1,47 @@
+{
+  "schema": "sam.gap.build.v1",
+  "created_utc": "2026-10-17T08:03:55.394054+00:00",
+  "base": "origin/main",
+  "baseline": "c37123c2",
+  "branch": "feat/sam-p0-gap-implementation-20261017",
+  "worktree": "<local-worktree>",
+  "tickets": [
+    {
+      "ticket": "SAM-001",
+      "title": "Canonical operation identity",
+      "dependencies": [],
+      "head_before": "c37123c2",
+      "agent": "missing_executable",
+      "agent_exit": 127
+    }
+  ],
+  "checks": [
+    {
+      "check": "sam-decision",
+      "status": "PASS",
+      "exit": 0,
+      "log": "<local-worktree>/.sam-gap-build/logs/check-sam-decision.log"
+    },
+    {
+      "check": "sam-client",
+      "status": "PASS",
+      "exit": 0,
+      "log": "<local-worktree>/.sam-gap-build/logs/check-sam-client.log"
+    },
+    {
+      "check": "sam-machine",
+      "status": "PASS",
+      "exit": 0,
+      "log": "<local-worktree>/.sam-gap-build/logs/check-sam-machine.log"
+    },
+    {
+      "check": "source-boundaries",
+      "status": "PASS",
+      "exit": 0,
+      "log": "<local-worktree>/.sam-gap-build/logs/check-source-boundaries.log"
+    }
+  ],
+  "merge_ready": false,
+  "security_blocker": "SAM-007 remains OPEN until consent/token/server/SDK write-denial proof is reviewed",
+  "notes": "No claim of full implementation; audit and merge must be performed by independent agent."
+}

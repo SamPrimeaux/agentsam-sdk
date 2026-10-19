@@ -1,0 +1,26 @@
+{
+  "schema": "agentsam.app-registry.v1",
+  "owner": "ecommerce-cms-agentsam",
+  "apps": [
+    {
+      "id": "product-studio",
+      "contract": "apps/product-studio/agentsam.app.json",
+      "bundled": true
+    },
+    {
+      "id": "growth",
+      "contract": "apps/growth/agentsam.app.json",
+      "bundled": true
+    },
+    {
+      "id": "completeful",
+      "contract": "apps/completeful/agentsam.app.json",
+      "bundled": true
+    },
+    {
+      "id": "resend",
+      "contract": "apps/resend/agentsam.app.json",
+      "bundled": true
+    }
+  ]
+}

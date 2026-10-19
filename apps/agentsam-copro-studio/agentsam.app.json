@@ -1,0 +1,38 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "agentsam-copro-studio",
+  "name": "MovieMode / CoPro Studio",
+  "kind": "app",
+  "package": "@inneranimalmedia/agentsam-copro-studio",
+  "version": "2.6.13",
+  "entrypoints": {
+    "frontend": "./src/main.tsx"
+  },
+  "capabilities": [
+    "media",
+    "video",
+    "timeline",
+    "editing",
+    "evidence"
+  ],
+  "surfaces": [
+    "projects",
+    "editor",
+    "timeline",
+    "media"
+  ],
+  "embed": {
+    "stage": "moviemode",
+    "build": {
+      "cwd": ".",
+      "command": [
+        "npm",
+        "run",
+        "build",
+        "--",
+        "--base={base}"
+      ],
+      "output": "dist"
+    }
+  }
+}

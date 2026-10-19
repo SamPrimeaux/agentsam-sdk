@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-labelledby="agentsam-sidekick-title">
+  <title id="agentsam-sidekick-title">AgentSam Sidekick</title>
+  <path d="M5.3 18.7 10.6 5.2c.23-.59.72-1 1.39-1h.87c.66 0 1.16.39 1.4 1l5.34 13.5" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8.2 14.7h7.75" stroke="currentColor" stroke-width="2.15" stroke-linecap="round"/>
+  <circle cx="5.3" cy="18.7" r="1.55" fill="currentColor"/>
+  <circle cx="19.6" cy="18.7" r="1.55" fill="currentColor"/>
+  <circle cx="12.43" cy="4.2" r="1.1" fill="currentColor"/>
+</svg>

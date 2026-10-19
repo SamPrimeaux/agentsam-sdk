@@ -188,6 +188,8 @@ export function CadCreatorShell({
         <button
           type="button"
           onClick={onToggleSidebar}
+          data-annotation-control=""
+          aria-pressed={isSidebarOpen}
           className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
             isSidebarOpen
               ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm shadow-indigo-500/20'

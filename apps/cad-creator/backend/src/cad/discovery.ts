@@ -4,6 +4,7 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { probeDockerServiceHealth } from './docker-executor';
+import { localProjectRuntime } from '../../runtime/project-cli.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -494,11 +495,22 @@ export function probeMujoco(): CadToolDiscoveryReceipt {
   };
 }
 
+export async function probeOcct(env = process.env): Promise<CadToolDiscoveryReceipt> {
+ // This invokes the exact native provider bundled from the SDK, not a second probe.
+ const health = await localProjectRuntime(process.cwd()).nativeDoctor();
+ return {tool:'occt',name:'OpenCascade (OCCT)',category:'solid_kernel',
+  available:health.ready,binary:health.binary||null,version:health.version||null,
+  source:health.ready?(env.AGENTSAM_OCCT_BIN?'env':'standard_install'):'none',
+  execution_lane:'native',supportedFormats:['step'],
+  error:health.ready?null:(health.reason||'occt_native_not_ready')};
+}
+
 export async function probeAllCadTools(env = process.env, cache = true): Promise<CadToolsResponse> {
-  const [openscad, freecad, blender] = await Promise.all([
+  const [openscad, freecad, blender, occt] = await Promise.all([
     probeOpenScad(env),
     probeFreeCad(env),
     probeBlender(env),
+    probeOcct(env),
   ]);
 
   // If any CAD tools are missing natively on host, probe the containerized Docker service
@@ -542,7 +554,7 @@ export async function probeAllCadTools(env = process.env, cache = true): Promise
   const meshy = probeMeshy(env);
   const mujoco = probeMujoco();
 
-  const tools = [openscad, freecad, blender, meshy, mujoco];
+  const tools = [openscad, freecad, occt, blender, meshy, mujoco];
   const availableCount = tools.filter(t => t.available).length;
 
   if (cache) {
@@ -571,7 +583,7 @@ export async function probeAllCadTools(env = process.env, cache = true): Promise
     timestamp: new Date().toISOString(),
     total_tools: tools.length,
     available_tools: availableCount,
-    all_systems_ready: availableCount >= 4,
+    all_systems_ready: openscad.available && freecad.available && occt.available && blender.available,
     tools,
   };
 }

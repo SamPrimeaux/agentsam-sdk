@@ -1,0 +1,68 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "completeful",
+  "name": "Completeful",
+  "role": "provider-app",
+  "category": "fulfillment",
+  "status": "bundled",
+  "provides": [
+    "commerce.catalog.read",
+    "commerce.catalog.sync",
+    "commerce.fulfillment.orders",
+    "commerce.provider.webhooks"
+  ],
+  "requires": [
+    "storage.sql"
+  ],
+  "implementation": {
+    "backend": [
+      "backend/admin/completeful.js",
+      "backend/completeful",
+      "backend/webhooks/completeful.js",
+      "backend/agentsam/completeful-tools.js"
+    ]
+  },
+  "configuration": {
+    "plugin_key": "completeful",
+    "credential_secret": "CAPP_KEY",
+    "live_writes_gate": "COMPLETEFUL_ALLOW_LIVE_WRITES"
+  },
+  "extensions": [
+    "product-studio"
+  ],
+  "agent": {
+    "tool_resolution": "agentsam_tools.capability_key + enabled plugin_key=completeful",
+    "resource_scope_source": "agentsam_plugins.resource_scope_json",
+    "capabilities": {
+      "read": [
+        "commerce.catalog.read",
+        "commerce.catalog.search",
+        "commerce.order.quote"
+      ],
+      "write": [
+        "commerce.catalog.sync",
+        "commerce.design.create",
+        "commerce.product.sync"
+      ],
+      "approval_required": [
+        "commerce.order.create",
+        "commerce.product.publish"
+      ]
+    },
+    "notes": "Catalog read/search/sync are backed by the curated Completeful AgentSam adapter. Other registered provider operations stay degraded until that adapter implements them; approval gates remain declared for order creation and product publishing.",
+    "execution": {
+      "callable_now": [
+        "commerce.catalog.read",
+        "commerce.catalog.search",
+        "commerce.catalog.sync"
+      ],
+      "registered_but_degraded": [
+        "commerce.design.create",
+        "commerce.order.quote",
+        "commerce.order.create",
+        "commerce.product.sync",
+        "commerce.product.publish"
+      ]
+    }
+  }
+}

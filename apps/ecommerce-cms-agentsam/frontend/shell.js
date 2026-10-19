@@ -1,3 +1,5 @@
+// Brand asset path for the side-assistant trigger (served from the app's /admin/brand folder).
+const AGENT_TRIGGER_ICON = "/admin/brand/mini-agentsam-trigger.svg";
 const LOGO_URL =
   "https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail";
 
@@ -92,6 +94,149 @@ const NAV = {
 // expand/collapse the way the old per-render DOM-class toggling did.
 const navToggleState = new Map();
 
+const ADMIN_EXIT_ROUTES = [
+  "/admin/home",
+  "/admin/store",
+  "/admin/pages",
+  "/admin/page-edit",
+  "/admin/content",
+  "/admin/orders",
+  "/admin/products",
+  "/admin/product-edit",
+  "/admin/inventory",
+  "/admin/preferences",
+  "/admin/agentsam",
+  "/admin/account",
+  "/admin/analytics/overview",
+  "/admin/analytics/finance",
+  "/admin/analytics/health",
+  "/admin/discounts",
+  "/admin/growth",
+  "/admin/subscribers",
+  "/admin/email",
+  "/admin/scaffold",
+];
+const EDITOR_RETURN_KEY = "agentsam.editorReturn";
+
+const SHELL_MODES = {
+  admin: { id: "admin", hideAdminNav: false, shortcuts: [], exitFallback: "/admin/store", exitRoutes: ADMIN_EXIT_ROUTES },
+  "theme-editor": {
+    id: "theme-editor",
+    hideAdminNav: true,
+    exitFallback: "/admin/store",
+    exitRoutes: ADMIN_EXIT_ROUTES,
+    shortcuts: [
+      { id: "drawer-sections", combo: "meta+ctrl+1", drawer: "sections" },
+      { id: "drawer-theme-settings", combo: "meta+ctrl+2", drawer: "theme-settings" },
+      { id: "drawer-app-embeds", combo: "meta+ctrl+3", drawer: "app-embeds" },
+    ],
+  },
+};
+
+function resolveShellMode(options = {}) {
+  const requested = options.shellMode;
+  return (requested && SHELL_MODES[requested]) || SHELL_MODES.admin;
+}
+
+function decodeExitPath(value) {
+  let current = String(value || "");
+  for (let i = 0; i < 2; i += 1) {
+    try {
+      const next = decodeURIComponent(current);
+      if (next === current) break;
+      current = next;
+    } catch (error) { break; }
+  }
+  return current;
+}
+function normalizeAdminPath(value) {
+  const decoded = decodeExitPath(value).split(String.fromCharCode(92)).join("/");
+  if (!decoded || /[ -\s]/.test(decoded)) return "";
+  if (/^[a-z][a-z0-9+.-]*:/i.test(decoded)) return "";
+  if (decoded.includes("://") || decoded.startsWith("//")) return "";
+  const path = decoded.split("?")[0].split("#")[0];
+  if (!path.startsWith("/")) return "";
+  const parts = [];
+  for (const part of path.split("/")) {
+    if (!part || part === ".") continue;
+    if (part === "..") {
+      if (!parts.length) return "";
+      parts.pop();
+      continue;
+    }
+    parts.push(part);
+  }
+  return "/" + parts.join("/");
+}
+function isAllowlistedAdminPath(pathname, routes) {
+  const path = normalizeAdminPath(pathname);
+  if (!path.startsWith("/admin/") || path.startsWith("/admin/theme-editor") || path.startsWith("/admin/theme-workspace")) return false;
+  return (routes || ADMIN_EXIT_ROUTES).some(function(route) {
+    return path === route || path.startsWith(route + "/");
+  });
+}
+
+function rememberEditorReturn(pathname) {
+  if (!isAllowlistedAdminPath(pathname)) return;
+  try { sessionStorage.setItem(EDITOR_RETURN_KEY, pathname); } catch (error) {}
+}
+
+function resolveExitTarget(candidate) {
+  const mode = SHELL_MODES["theme-editor"];
+  const fallback = mode.exitFallback || "/admin/store";
+  let stored = "";
+  try { stored = sessionStorage.getItem(EDITOR_RETURN_KEY) || ""; } catch (error) { stored = ""; }
+  const direct = normalizeAdminPath(candidate);
+  const remembered = normalizeAdminPath(stored);
+  const path = isAllowlistedAdminPath(direct, mode.exitRoutes) ? direct : remembered;
+  return isAllowlistedAdminPath(path, mode.exitRoutes) ? path : fallback;
+}
+
+let shellShortcutAbort = null;
+function shortcutTargetIsField(event) {
+  const el = event.target;
+  if (!el || !el.closest) return false;
+  return Boolean(el.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"));
+}
+function comboMatches(event, combo) {
+  const parts = String(combo || "").split("+");
+  const key = parts[parts.length - 1];
+  if (event.key !== key) return false;
+  if (parts.includes("meta") && !event.metaKey) return false;
+  if (parts.includes("ctrl") && !event.ctrlKey) return false;
+  if (event.altKey || event.shiftKey) return false;
+  return true;
+}
+function unbindShellShortcuts() {
+  if (shellShortcutAbort) shellShortcutAbort.abort();
+  shellShortcutAbort = null;
+}
+function bindShellShortcuts(modeId, onShortcut) {
+  unbindShellShortcuts();
+  const mode = SHELL_MODES[modeId];
+  if (!mode || !mode.shortcuts || !mode.shortcuts.length) return;
+  shellShortcutAbort = new AbortController();
+  document.addEventListener("keydown", function(event) {
+    if (shortcutTargetIsField(event)) return;
+    for (const shortcut of mode.shortcuts) {
+      if (comboMatches(event, shortcut.combo)) {
+        event.preventDefault();
+        onShortcut(shortcut);
+      }
+    }
+  }, { signal: shellShortcutAbort.signal });
+}
+
+document.addEventListener("click", function(event) {
+  const link = event.target && event.target.closest && event.target.closest("a[href]");
+  if (!link) return;
+  try {
+    const url = new URL(link.getAttribute("href"), location.origin);
+    if (url.origin !== location.origin) return;
+    rememberEditorReturn(url.pathname);
+  } catch (error) {}
+});
+
 function ensureConsoleAssets() {
   document.body.classList.add("console-theme");
   if (!document.getElementById("console-css")) {
@@ -108,6 +253,14 @@ function ensureConsoleAssets() {
     link.href = "/admin/css/agentsam.css";
     document.head.appendChild(link);
   }
+  if (!document.getElementById("admin-dock-css")) {
+    const link = document.createElement("link");
+    link.id = "admin-dock-css";
+    link.rel = "stylesheet";
+    link.href = "/admin/dock/dock.css";
+    document.head.appendChild(link);
+  }
+  ensureViewportCover();
   if (!document.querySelector('link[href*="fonts.googleapis.com"]')) {
     const pre1 = document.createElement("link");
     pre1.rel = "preconnect";
@@ -181,7 +334,7 @@ function adminPathBase(href) {
 
 function mailNavFromHref(href) {
   try {
-    const u = new URL(href || "/admin/email", "https://ember.example");
+    const u = new URL(href || "/admin/email", "https://fuelnfreetime.com");
     return {
       folder: u.searchParams.get("folder") || "inbox",
       mailbox: u.searchParams.get("mailbox") || "all",
@@ -362,6 +515,16 @@ function buildUserNav(user) {
   return nav;
 }
 
+function safeAvatarUrl(value) {
+  if (typeof value !== "string" || /[\s<>"']/.test(value)) return "";
+  try {
+    const url = new URL(value, window.location.origin);
+    if (value.startsWith("https://") && url.protocol === "https:") return url.href;
+    if (value.startsWith("/") && !value.startsWith("//") && url.origin === window.location.origin) return url.href;
+  } catch (error) {}
+  return "";
+}
+
 function hydrateShellProfile(user) {
   if (!user) return;
   const name = user.display_name || user.email || "Account";
@@ -374,7 +537,17 @@ function hydrateShellProfile(user) {
   });
   document.querySelectorAll("[data-profile-avatar]").forEach((el) => {
     if (user.avatar_url) {
-      el.innerHTML = `<img src="${user.avatar_url}" alt="" referrerpolicy="no-referrer">`;
+      const src = safeAvatarUrl(user.avatar_url);
+      if (!src) {
+        el.textContent = user.initials || "??";
+        el.classList.remove("has-image");
+        return;
+      }
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = "";
+      img.referrerPolicy = "no-referrer";
+      el.replaceChildren(img);
       el.classList.add("has-image");
     } else {
       el.textContent = user.initials || "??";
@@ -438,9 +611,12 @@ function stabilizeShellDrawers() {
 
 function renderShell(activeHref, mainHtml, options = {}) {
   const { fullBleed = false, onReady, includeMobileDrawer = false } = options;
+  const shellMode = resolveShellMode(options);
   ensureConsoleAssets();
   ensureConsoleLayout();
 
+  document.body.dataset.shellMode = shellMode.id;
+  document.body.classList.toggle("shell-mode-theme-editor", shellMode.id === "theme-editor");
   document.body.classList.remove("agentsam-open", "admin-nav-open", "console-body-bleed", "admin-body-bleed");
   document.body.classList.add("console-shell-loading");
 
@@ -462,8 +638,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
   const mobileDrawerTrigger = includeMobileDrawer ? `<button type="button" class="console-nav-ghost-toggle admin-menu-toggle" id="admin-menu-toggle" aria-label="Show sidebar" title="Show sidebar" aria-expanded="false" aria-controls="admin-drawer">
           ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
         </button>` : "";
-  document.getElementById("console-app").innerHTML = `
-    <div class="console-shell admin-shell" data-nav-packages="persistent-frosted-rail${includeMobileDrawer ? " mobile-glass-drawer" : ""}">
+  const adminChrome = shellMode.hideAdminNav ? "" : `
       <header class="console-topbar">
         <div class="console-topbar-spacer" aria-hidden="true"></div>
         <div class="console-search-wrap">
@@ -475,7 +650,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
         </div>
         <div class="console-topbar-actions">
           <button type="button" class="console-icon-btn" id="agentsam-toggle" aria-label="Agent Sam" aria-expanded="false" title="Agent Sam">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <img src="${AGENT_TRIGGER_ICON}" alt="" width="22" height="22" aria-hidden="true" style="display:block;border-radius:50%;object-fit:cover">
           </button>
           <button type="button" class="console-icon-btn" aria-label="Notifications">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -483,13 +658,15 @@ function renderShell(activeHref, mainHtml, options = {}) {
           </button>
         </div>
       </header>
+`;
+  document.getElementById("console-app").innerHTML = `
+    <div class="console-shell admin-shell${shellMode.hideAdminNav ? " is-editor-mode" : ""}" data-shell-mode="${shellMode.id}" data-nav-packages="persistent-frosted-rail${includeMobileDrawer ? " mobile-glass-drawer" : ""}">
+      ${adminChrome}
       <div class="console-body">
-        <aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>
-        ${mobileDrawerTrigger}
-        <button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">
-          ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
-        </button>
-        ${mobileDrawerMarkup}
+        ${shellMode.hideAdminNav ? "" : `<aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>`}
+        ${shellMode.hideAdminNav ? "" : mobileDrawerTrigger}
+        ${shellMode.hideAdminNav ? "" : `<button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">${icon("textAlignStart", 21, "console-nav-ghost-icon")}</button>`}
+        ${shellMode.hideAdminNav ? "" : mobileDrawerMarkup}
         <div class="console-workspace">
           <main class="${mainClass}">${mainHtml}</main>
           <aside id="agentsam-dock" class="agentsam-dock" aria-hidden="true"></aside>
@@ -499,6 +676,8 @@ function renderShell(activeHref, mainHtml, options = {}) {
   `;
 
   if (fullBleed) document.body.classList.add("console-body-bleed", "admin-body-bleed");
+  // Full-bleed tool pages own the whole viewport and have not reserved dock clearance; hide the dock there.
+  document.body.classList.toggle("admin-dock-off", fullBleed);
 
   bindConsoleGlobalHandlers();
   import('/admin/profile-popup/index.js')
@@ -516,9 +695,9 @@ function renderShell(activeHref, mainHtml, options = {}) {
   // bindConsoleGlobalHandlers() now handles every [data-toggle] click for
   // the life of the page, across any number of innerHTML replacements.
 
-  if (window.__shellUser) hydrateShellProfile(window.__shellUser);
+  if (!shellMode.hideAdminNav && window.__shellUser) hydrateShellProfile(window.__shellUser);
 
-  loadShellUser()
+  if (!shellMode.hideAdminNav) loadShellUser()
     .then((d) => {
       if (d) {
         hydrateShellNav(d, activeHref);
@@ -535,7 +714,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
       }
     });
 
-  initPersistentNav();
+  if (!shellMode.hideAdminNav) initPersistentNav();
   if (includeMobileDrawer) initMobileNav();
   window.initEcommerceInspector?.();
   if (!window.initEcommerceInspector && !document.getElementById("ecommerce-inspector-script")) {
@@ -547,6 +726,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
   initAgentsamShell();
   wireAgentsamTriggers();
   stabilizeShellDrawers();
+  mountShellDock();
 
   document.querySelectorAll("[data-agentsam-open]").forEach((el) => {
     el.addEventListener("click", (e) => {
@@ -623,14 +803,54 @@ function syncPersistentNavState() {
 
 function setPersistentNav(open) {
   document.body.classList.toggle("console-nav-collapsed", !open);
-  try { localStorage.setItem("commerce-console-nav", open ? "open" : "collapsed"); } catch {}
+  try { localStorage.setItem("fnf-console-nav", open ? "open" : "collapsed"); } catch {}
   syncPersistentNavState();
 }
 
 function initPersistentNav() {
   let open = true;
-  try { open = localStorage.getItem("commerce-console-nav") !== "collapsed"; } catch {}
+  try { open = localStorage.getItem("fnf-console-nav") !== "collapsed"; } catch {}
   setPersistentNav(open);
+}
+
+/** Safe-area insets only resolve when the viewport opts in to full-bleed. Idempotent. */
+function ensureViewportCover() {
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) return;
+  const content = meta.getAttribute("content") || "";
+  if (!/viewport-fit\s*=/.test(content)) {
+    meta.setAttribute("content", `${content}${content ? ", " : ""}viewport-fit=cover`);
+  }
+}
+
+/** Pages publish save state to the dock: publishDockEdit({ active, hint, dirty, canSave, saveLabel, onSave, discardHref }). */
+window.publishDockEdit = function publishDockEdit(detail) {
+  window.__adminDockEdit = detail;
+  document.dispatchEvent(new CustomEvent("admin-dock:edit", { detail }));
+};
+
+/** Mobile/tablet dock. Config comes from the app manifest (built into dock.config.json). Non-fatal. */
+async function mountShellDock() {
+  try {
+    const [{ mountAdminDock }, config] = await Promise.all([
+      import("/admin/dock/index.js"),
+      fetch("/admin/dock/dock.config.json", { credentials: "include" }).then((res) => (res.ok ? res.json() : null)),
+    ]);
+    if (!config) return;
+    mountAdminDock({
+      config,
+      host: {
+        open: () => window.openAgentsamDrawer?.(),
+        send: (prompt, opts) => {
+          if (typeof window.sendAgentsamMessage !== "function") throw new Error("AgentSam is still loading. Try again in a moment.");
+          return window.sendAgentsamMessage(prompt, opts);
+        },
+        openNav: () => (document.getElementById("admin-menu-toggle") || document.querySelector("[data-console-nav-toggle]"))?.click(),
+      },
+    });
+  } catch (err) {
+    console.warn("[admin-dock] not mounted", err);
+  }
 }
 
 function initAgentsamShell() {
@@ -723,3 +943,4 @@ function initMobileNav() {
 window.hydrateShellProfile = hydrateShellProfile;
 window.hydrateShellNav = hydrateShellNav;
 window.loadShellUser = loadShellUser;
+window.AgentSamShell = { modes: SHELL_MODES, resolveShellMode, resolveExitTarget, rememberEditorReturn, bindShellShortcuts, unbindShellShortcuts };

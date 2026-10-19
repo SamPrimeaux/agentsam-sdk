@@ -265,6 +265,7 @@ export {
 } from './cloudflare/index.js';
 export {
   createCapabilityAdapter,
+  createCloudflareD1Provisioner,
   buildAgentToolSurface,
   capabilityFunctionName,
   runAgentSamModelTurn,

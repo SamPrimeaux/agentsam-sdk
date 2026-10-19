@@ -1,0 +1,172 @@
+
+/* InnerAnimalMedia · Theme Settings isolated review surface.
+   All 18 menus use one set of control geometry and state rules. */
+[data-drawer-panel="theme-settings"] {
+  min-width:0;
+  height:100%;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  background:#fff;
+  color:#252529;
+}
+.ts-theme-root {--ts-border:#e6e6e8;--ts-muted:#747479;--ts-focus:#6744cf;font:12px/1.4 Inter,system-ui,-apple-system,sans-serif;color:#29292d;min-width:0;}
+.ts-theme-root *, .ts-scrim * {box-sizing:border-box}
+.ts-theme-root [hidden], .ts-scrim [hidden] {display:none!important}
+.ts-heading {position:sticky;top:0;z-index:6;background:#fff;min-height:53px;border-bottom:1px solid #e6e6e8;display:flex;align-items:center;justify-content:space-between;padding:0 16px;}
+.ts-heading h2 {font:600 14px/1.3 Inter,system-ui,sans-serif;letter-spacing:-.015em;margin:0;color:#242428;}
+.ts-heading span {font-size:10px;padding:3px 6px;border:1px solid #e7e6ea;border-radius:5px;color:#85818d;}
+.ts-categories {padding:0 0 10px}
+.ts-category {border-bottom:1px solid #e6e6e8;min-width:0}
+.ts-category h3 {padding:0;margin:0}
+.ts-category > h3 > button {height:46px;min-height:46px;width:100%;border:0;border-radius:0;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:transparent;cursor:pointer;color:#343439;text-align:left;font:600 12.5px/1.3 Inter,system-ui,sans-serif;}
+.ts-category > h3 > button:hover {background:#f8f8fa}
+.ts-category > h3 > button[aria-expanded="true"] {background:#f5f5f7}
+.ts-category > h3 > button svg {flex:none;transform:rotate(0deg);transition:transform .15s ease}
+.ts-category > h3 > button[aria-expanded="true"] svg {transform:rotate(180deg)}
+.ts-category-content {padding:10px 15px 18px;min-width:0}
+.ts-category-content[hidden] {display:none!important}
+.ts-group {font:650 13px/1.3 Inter,system-ui,sans-serif;color:#303035;margin:18px 0 12px;padding-top:12px;border-top:1px solid #e6e6e8;}
+.ts-category-content > .ts-group:first-child {border-top:0;margin-top:1px;padding-top:0}
+.ts-helper {font:400 11px/1.55 Inter,system-ui,sans-serif;color:#77777e;margin:4px 0 14px;overflow-wrap:anywhere}
+.ts-field {display:grid;grid-template-columns:minmax(76px,1fr) minmax(114px,1.1fr);align-items:center;gap:9px;min-height:40px;padding:5px 0}
+.ts-field > label {font:500 11.5px/1.35 Inter,system-ui,sans-serif;overflow-wrap:anywhere;color:#48484c;}
+.ts-field > select, .ts-select, .ts-field > button {min-width:0}
+.ts-select {width:100%;height:34px;background:#fff;border:1px solid #babac0;border-radius:7px;padding:0 9px;font:500 11.5px/1.25 Inter,system-ui,sans-serif;color:#26262a;cursor:pointer;}
+.ts-select:hover {border-color:#898991}
+.ts-resource {text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ts-switch {justify-self:end;width:35px;height:21px;border-radius:12px;border:0;background:#aaaab0;padding:3px;display:flex;align-items:center;cursor:pointer;transition:background .12s ease}
+.ts-switch[aria-checked="true"] {background:#333339}
+.ts-switch span {display:block;width:15px;height:15px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0003;transform:translateX(0);transition:transform .12s ease}
+.ts-switch[aria-checked="true"] span {transform:translateX(14px)}
+.ts-segment {min-width:0;display:flex;padding:2px;gap:1px;border-radius:8px;background:#eeeeef;width:100%;}
+.ts-segment > button {min-width:0;flex:1 1 0;padding:6px 3px;font:500 10.5px/1.3 Inter,system-ui,sans-serif;color:#48484e;cursor:pointer;border:1px solid transparent;background:transparent;border-radius:6px;overflow-wrap:anywhere;}
+.ts-segment > button.is-selected {background:#fff;border-color:#d4d4da;box-shadow:0 1px 3px #00000014;color:#222226}
+.ts-range {display:flex;min-width:0;align-items:center;gap:7px}
+.ts-range > input[type=range] {width:100%;min-width:0;flex:1 1 35px;accent-color:#2f2f32;cursor:pointer;height:12px}
+.ts-numeric {width:69px;flex:0 0 69px;height:34px;display:flex;align-items:center;border:1px solid #bcbcc2;border-radius:7px;overflow:hidden;background:#fff}
+.ts-numeric:focus-within {outline:2px solid #775bd8;outline-offset:1px}
+.ts-numeric input {font:500 11px/1.4 Inter,system-ui,sans-serif;width:100%;min-width:0;text-align:right;border:0;outline:0;padding:0 3px;background:transparent;color:#27272a;appearance:textfield;-moz-appearance:textfield}
+.ts-numeric input::-webkit-inner-spin-button,.ts-numeric input::-webkit-outer-spin-button {-webkit-appearance:none;margin:0}
+.ts-numeric span {font:400 10px Inter,system-ui,sans-serif;color:#73737a;padding:0 5px 0 1px}
+.ts-color {height:34px;width:100%;min-width:0;display:flex;align-items:center;gap:7px;padding:3px 7px;border:1px solid #bababf;border-radius:7px;background:#fff;text-align:left;cursor:pointer;color:#3a3a3f;font:500 11px/1.25 Inter,system-ui,sans-serif;}
+.ts-color > span:nth-child(2) {flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ts-chip {flex:0 0 19px;height:19px;width:19px;border:1px solid #dedee1;border-radius:4px;display:block}
+.ts-chip.transparent,.ts-palette-chip.transparent {background:linear-gradient(135deg,#fff 48%,#aaa 49%,#aaa 51%,#fff 52%)!important}
+.ts-palette {display:flex;align-items:center;gap:7px;padding:8px 0 12px;flex-wrap:wrap}
+.ts-palette-chip {height:30px;min-width:30px;width:30px;border:1px solid #d8d8da;border-radius:8px;cursor:pointer}
+.ts-palette-plus {width:30px;height:30px;border:1px dashed #babac0;border-radius:8px;background:#fff;cursor:pointer;font:18px system-ui}
+.ts-media-field {display:grid;grid-template-columns:minmax(72px,1fr) minmax(122px,1.1fr);gap:10px;margin:12px 0;align-items:start}
+.ts-media-field > label {font:500 11.5px/1.4 Inter,system-ui,sans-serif;padding-top:5px}
+.ts-media-empty {min-height:88px;padding:10px 8px;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;border:1px dashed #c7c7cb;border-radius:7px}
+.ts-media-empty > button:not(.ts-link) {height:30px;min-width:32px;padding:0 8px;border:1px solid #c1c1c5;border-radius:6px;background:#fff;cursor:pointer}
+.ts-link {border:0;padding:0;color:#62626b;text-decoration:underline;background:transparent;cursor:pointer;font:400 11px/1.35 Inter,system-ui,sans-serif}
+.ts-name-row {padding:6px 0 12px}
+.ts-media-selected {border:1px dashed #c7c7cb;border-radius:7px;padding:8px;text-align:center;min-width:0}
+.ts-media-selected img {max-width:100%;max-height:70px;object-fit:contain;display:block;margin:auto auto 7px}
+.ts-media-selected button {background:#fff;border:1px solid #ccc;border-radius:5px;font:11px system-ui;padding:5px 6px;margin:2px;cursor:pointer}
+.ts-code-field {min-width:0}
+.ts-code-field label {display:block;margin:10px 0 8px}
+.ts-code {position:relative;border:1px solid #bfc0c4;border-radius:7px;min-height:155px;overflow:hidden;background:#fbfbfc}
+.ts-code pre, .ts-code textarea {margin:0;padding:12px 12px 12px 32px;width:100%;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:2;white-space:pre-wrap;overflow-wrap:break-word;}
+.ts-code pre {position:absolute;inset:0;color:#303039;pointer-events:none;overflow:auto}
+.ts-code textarea {position:relative;resize:vertical;min-height:155px;background:transparent;border:0;outline:0;color:transparent;caret-color:#252532;z-index:1}
+.ts-code textarea::selection {background:#b9a9ed88;color:transparent}
+.ts-css-selector {color:#7342c3}.ts-css-prop {color:#216c8f}
+.ts-code-field > .ts-link {margin:10px 0}
+.ts-preview {margin:20px 0 0;padding:13px;border:1px solid #ececef;border-radius:9px;background:#fcfcfd;min-width:0}
+.ts-preview-title {display:flex;justify-content:space-between;align-items:center;font:650 11px Inter,system-ui,sans-serif;margin-bottom:12px;color:#45454c}
+.ts-preview-title span {font:400 10px Inter,system-ui,sans-serif;color:#8b8a91}
+.ts-preview p {font:11px/1.5 system-ui;color:#67676f;overflow-wrap:anywhere}
+.ts-preview button {cursor:pointer}
+.ts-demo-colors,.ts-demo-swatches,.ts-demo-variants,.ts-button-examples {display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
+.ts-demo-colors span {height:34px;width:34px;border:1px solid #ddd;border-radius:7px}
+.ts-page-example {border:1px solid #e2e2e6;border-radius:6px;padding:16px;width:100%}
+.ts-page-example > div {height:45px;margin:0 auto;display:grid;place-items:center;border:1px dashed #aaa;color:#555;font:11px system-ui}
+.ts-motion-card,.ts-badge-example {border-radius:8px;padding:18px;background:#ececed;border:1px solid #dedee0;min-height:90px;}
+.ts-motion-card {transition:transform .2s ease, opacity .2s ease}
+.ts-motion-card.subtle-lift:hover,.ts-motion-card.subtle-lift:focus {transform:translateY(-4px)}
+.ts-motion-card.image-zoom:hover,.ts-motion-card.image-zoom:focus {transform:scale(1.02)}
+.ts-motion-card.soft-fade:hover,.ts-motion-card.soft-fade:focus {opacity:.65}
+.ts-badge-example {display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start}
+.ts-badge-example span {padding:5px 8px;font:600 10px system-ui;border:1px solid #ddd}
+.ts-button-examples button,.ts-demo-variants button {padding:9px 11px;font:600 11px system-ui;min-height:34px}
+.ts-demo-lines {display:grid;gap:8px}
+.ts-demo-lines > div {display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #e8e8ea;padding-bottom:7px}
+.ts-demo-lines small {color:#888;font-size:10px}
+.ts-demo-lines > button,.ts-preview > [data-ts-demo-content] > button {padding:8px 12px;border-radius:6px;border:1px solid #c9c9cd;background:#fff;font:600 11px system-ui}
+.ts-demo-lines textarea {max-width:100%;min-height:50px;border:1px solid #ccc;border-radius:5px;padding:7px;font-size:11px}
+.ts-input-demo {display:grid;gap:6px}
+.ts-input-demo input {min-width:0;width:100%;height:33px;border:var(--input-thickness) solid var(--input-border);background:var(--input-bg);color:var(--input-text);border-radius:var(--input-radius);padding:0 9px;font-size:11px}
+.ts-input-demo input[aria-invalid="true"] {outline:1px solid #ca4455}
+.ts-input-demo input:focus {outline:2px solid #8b6be6;outline-offset:1px}
+.ts-product {padding:8px;border:1px solid #dedee0;border-radius:7px;display:grid;gap:6px;max-width:220px}
+.ts-product strong,.ts-product small {font-size:11px}
+.ts-product-image {height:90px;display:flex;align-items:flex-end;justify-content:space-between;border-radius:5px;padding:6px;color:#fff}
+.ts-product-image button {padding:3px 8px;margin:2px;border:1px solid #ffffff88;background:#2225;color:#fff;border-radius:5px}
+.ts-product-image span {font:10px system-ui}
+.ts-product > button {border:1px solid #c5c5c9;background:#fff;border-radius:6px;padding:6px}
+.ts-demo-search {display:grid;gap:8px}
+.ts-demo-search > input {min-width:0;height:34px;border:1px solid #ccc;border-radius:6px;padding:8px;font-size:11px}
+.ts-search-result {display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e0e0e2;padding:7px}
+.ts-search-art {height:38px;width:38px;flex:none;background:#aeb7b4;display:block}
+.ts-demo-search small {font:10px system-ui;color:#86868a}
+.ts-demo-swatches > button {display:grid;place-items:center;color:#fff;min-width:0;padding:0}
+.ts-demo-variants.is-fill > button {flex:1}
+.ts-demo-variants button[aria-pressed="true"],.ts-demo-swatches button[aria-pressed="true"] {outline:2px solid #6b54bd;outline-offset:2px}
+.ts-demo-swatches button:disabled {opacity:.35;cursor:not-allowed}
+.ts-theme-style {display:flex;align-items:center;justify-content:space-between;padding:15px 16px;color:#888;border-top:1px solid #e6e6e8}
+.ts-review-note {margin:0;padding:5px 16px 20px;color:#73737b;font:10px/1.5 system-ui;}
+.ts-theme-root button:focus-visible,.ts-theme-root select:focus-visible,.ts-theme-root input:focus-visible,.ts-theme-root textarea:focus-visible,.ts-scrim button:focus-visible,.ts-scrim input:focus-visible {outline:2px solid #7052d1;outline-offset:2px}
+.ts-theme-root button:disabled {opacity:.45;cursor:not-allowed}
+.ts-scrim {position:fixed;z-index:2147481000;inset:0;display:flex;align-items:center;justify-content:center;padding:12px;background:#1a18224a}
+.ts-modal {width:min(355px,calc(100vw - 24px));max-height:min(520px,90dvh);overflow:auto;border-radius:12px;background:#fff;color:#29292d;box-shadow:0 18px 60px #0004;font:12px Inter,system-ui,sans-serif;border:1px solid #e4e4e7}
+.ts-modal-header {height:47px;display:flex;justify-content:space-between;align-items:center;padding:0 16px;border-bottom:1px solid #e5e5e8}
+.ts-modal-close {border:0;background:transparent;font-size:21px;cursor:pointer}
+.ts-modal-body {padding:15px;display:grid;gap:10px}
+.ts-modal-body label {display:grid;gap:6px;font-size:12px}
+.ts-modal-body input:not([type=file]):not([type=checkbox]) {height:35px;border:1px solid #babac0;border-radius:6px;padding:5px 9px;font:12px system-ui;min-width:0}
+.ts-modal-body input[type=color] {height:90px;padding:4px;width:100%;cursor:pointer}
+.ts-modal-body .ts-palette {padding:4px 0}
+.ts-modal-footer {display:flex;justify-content:flex-end;gap:7px;border-top:1px solid #e5e5e8;padding:10px 14px}
+.ts-modal-footer button {border:1px solid #c4c4ca;background:#fff;color:#26262a;border-radius:7px;padding:8px 13px;font:600 12px system-ui;cursor:pointer}
+.ts-modal-footer button.ts-apply {background:#29292d;color:#fff;border-color:#29292d}
+.ts-modal-body [data-ts-error] {color:#ad2033;font-size:11px}
+.ts-media-choices {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.ts-media-choices button {padding:0;border:2px solid transparent;background:#eee;border-radius:6px;overflow:hidden;cursor:pointer}
+.ts-media-choices button:focus,.ts-media-choices button:hover {border-color:#765bd3}
+.ts-media-choices img {width:100%;height:60px;object-fit:cover;display:block}
+.ts-upload {border:1px dashed #aaa;border-radius:7px;padding:10px;cursor:pointer}
+.ts-resource-choice {border:1px solid #ddd;border-radius:6px;background:#fff;text-align:left;padding:8px}
+.ts-resource-choice[aria-pressed="true"] {background:#f2edff;border-color:#7557d0}
+.ts-scrim .ts-palette-chip {color:transparent}
+@media(max-width:900px) {
+ [data-drawer-panel="theme-settings"] {height:auto;max-height:min(75dvh,750px)}
+ .ts-heading {top:0}
+}
+@media(max-width:380px) {
+ .ts-category-content {padding:9px 11px 16px}
+ .ts-field {grid-template-columns:minmax(64px,1fr) minmax(112px,1.05fr);gap:6px}
+ .ts-numeric {flex-basis:63px;width:63px}
+ .ts-heading {padding:0 12px}
+ .ts-category > h3 > button {padding:0 12px}
+}
+@media(prefers-reduced-motion:reduce) {
+ .ts-theme-root *, .ts-scrim * {transition:none!important;animation:none!important}
+}
+
+/* Shared storefront preview surfaces. These remain inside the review overlay. */
+.ts-modal.ts-preview-drawer {
+ position:fixed;inset:0 0 0 auto;border-radius:0!important;
+ width:min(380px,100vw);max-height:100dvh;height:100dvh;
+ display:flex;flex-direction:column;
+}
+.ts-preview-drawer .ts-modal-body {flex:1;overflow-y:auto;align-content:start}
+.ts-modal.ts-preview-popover {
+ position:fixed;inset:auto auto auto auto;
+ width:min(280px,calc(100vw - 20px));max-height:min(330px,65dvh);
+}
+.ts-motion-card.is-playing {animation:ts-motion-review .35s ease both;}
+.ts-motion-status {margin:10px 0}
+@keyframes ts-motion-review {0%{opacity:.35;transform:translateY(7px)}100%{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.ts-motion-card.is-playing{animation:none}}

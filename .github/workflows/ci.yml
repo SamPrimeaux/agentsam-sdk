@@ -74,8 +74,20 @@ jobs:
           }
           NODE
 
+      - name: Verify stable release-train and dependency publication order
+        run: |
+          npm run release:train:check
+          node scripts/sdk-release-publish.mjs --plan
+
       - name: Verify SDK
         run: npm run verify
+
+      # Prevent typed CAD operations and public asset access from silently
+      # regressing while UI branches/docs are being merged.
+      - name: Verify CAD runtime modes, authorizations and asset boundary
+        run: |
+          node --test test/integration/cad-operator-capabilities.test.mjs test/integration/cad-run-modes.test.mjs
+          node --test apps/local-studio/backend/worker/cad-chess-assets.test.mjs
 
       # Settings-specific rendered evidence complements the general UI contract
       # checks above and blocks shipping when browser interaction/AA checks fail.

@@ -1,7 +1,8 @@
 /**
  * SAM — Systematic Autonomous Machinery
  *
- * AgentSam = product / SDK / CLI
+ * agentsam = machine-level API / CLI
+ * AgentSam = AI wrapper over SAM; AgentSamClient is the developer facade
  * SAM = execution architecture underneath AgentSam
  * sam = conventional AgentSamClient variable (machinery, not a person)
  *
@@ -75,8 +76,19 @@ export { CMS_OPERATION_CONTRACTS, CMS_CONTRACTS_BY_NAME } from './packs/cms/cont
 export { CMS_COMPATIBILITY_ALIASES } from './packs/cms/aliases.js';
 
 export { createAuthoringOperations } from './packs/authoring/index.js';
+export { createEvidenceOperations } from './packs/evidence/index.js';
+export { createLocalEvidenceStore } from './packs/evidence/store.js';
+export { createFfprobeMedia } from './packs/evidence/media.js';
+export { createPlaywrightSource } from './packs/evidence/driver-playwright.js';
+export { createBlenderSource, createLocalBlenderExec } from './packs/evidence/driver-blender.js';
+export { createDeriver } from './packs/evidence/derive.js';
+export { createCoproExporter } from './packs/evidence/exporter-copro.js';
+export { createGitFacts } from './packs/evidence/facts.js';
+export { createLocalEvidenceHost } from './packs/evidence/host-local.js';
+export { EVIDENCE_VIEWPORTS, JOURNEY_VIEWPORTS, RESPONSIVE_VIEWPORTS } from './packs/evidence/viewports.js';
 
 export { createCadOperations, CAD_DONOR_OPERATOR_MAPPINGS } from './packs/cad/index.js';
 
 export { createCadHttpPorts } from "./packs/cad/http-ports.js";
 export { createCadModelTools } from "./packs/cad/model-tools.js";
+export { CAD_RUN_MODES, executeCadRunMode } from "./packs/cad/modes.js";

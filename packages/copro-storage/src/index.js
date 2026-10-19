@@ -72,70 +72,118 @@ export class BrowserLocalStorageProjectStore {
 }
 
 /**
- * Browser-owned original media bytes. Project JSON stores stable IDs, never object URLs.
- * No network, tenant IDs, or duplicate project writer. IndexedDB's structured clone
- * preserves File/Blob bytes, which can be reopened after a page or desktop relaunch.
+ * Durable browser-local source-media bytes. Projects remain portable CoPro documents:
+ * source files are stored independently and referenced by their stable assetId.
+ * No Cloudflare/IAM/account identity is introduced in this portable adapter.
  */
 export class BrowserIndexedDbMediaStore {
-  #dbPromise = null;
-
-  constructor({ indexedDB = globalThis.indexedDB, name = 'copro.media.v1', storeName = 'sources' } = {}) {
-    if (!indexedDB || typeof indexedDB.open !== 'function') throw new Error('copro_media_indexeddb_unavailable');
+  constructor({ indexedDB = globalThis.indexedDB, databaseName, name, storeName } = {}) {
+    if (storeName && !["media","sources"].includes(storeName)) throw new Error("copro_media_store_invalid");
+    if (!indexedDB || typeof indexedDB.open !== "function") throw new Error("copro_media_indexeddb_unavailable");
     this.factory = indexedDB;
-    this.name = name;
-    this.storeName = storeName;
+    this.databaseName = databaseName ?? name ?? "copro.media.v1";
+    this.dbPromise = null;
   }
 
-  open() {
-    if (!this.#dbPromise) {
-      this.#dbPromise = new Promise((resolve, reject) => {
-        const request = this.factory.open(this.name, 1);
+  async open() {
+    if (!this.factory) throw new Error("copro_media_indexeddb_unavailable");
+    if (!this.dbPromise) {
+      this.dbPromise = new Promise((resolve, reject) => {
+        const request = this.factory.open(this.databaseName, 2);
         request.onupgradeneeded = () => {
           const db = request.result;
-          if (!db.objectStoreNames.contains(this.storeName)) db.createObjectStore(this.storeName, { keyPath: 'id' });
+          const media = db.objectStoreNames.contains("media")
+            ? request.transaction?.objectStore("media")
+            : db.createObjectStore("media", { keyPath: "id" });
+          // Move legacy MovieMode files into the canonical store without dropping originals.
+          if (request.transaction && media && db.objectStoreNames.contains("sources")) {
+            const cursor = request.transaction.objectStore("sources").openCursor();
+            cursor.onsuccess = () => {
+              if (!cursor.result) return;
+              const source = cursor.result.value;
+              if (source?.id && source?.file) media.put(source);
+              cursor.result.continue();
+            };
+          }
         };
-        request.onsuccess = () => {
-          const db = request.result;
-          db.onversionchange = () => { db.close(); this.#dbPromise = null; };
-          resolve(db);
-        };
-        request.onerror = () => reject(request.error ?? new Error('copro_media_open_failed'));
-        request.onblocked = () => reject(new Error('copro_media_upgrade_blocked'));
-      }).catch((error) => { this.#dbPromise = null; throw error; });
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error ?? new Error("copro_media_open_failed"));
+        request.onblocked = () => reject(new Error("copro_media_open_blocked"));
+      }).catch((error) => { this.dbPromise = null; throw error; });
     }
-    return this.#dbPromise;
+    return this.dbPromise;
   }
 
-  async #transaction(mode, operation) {
+  // Preserve the original File bytes alongside MovieMode timeline metadata.
+  async put(item) {
+    if (typeof item?.id !== "string" || !item.id || !(item.file instanceof Blob)) throw new Error("copro_media_invalid_source");
+    const db = await this.open();
+    const record = {
+      ...item, name: item.name ?? item.file.name ?? item.id,
+      type: item.file.type || "application/octet-stream",
+      size: item.file.size, lastModified: item.file.lastModified ?? Date.now(),
+      savedAt: new Date().toISOString(),
+    };
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction("media", "readwrite");
+      transaction.objectStore("media").put(record);
+      transaction.oncomplete = () => resolve(record);
+      transaction.onabort = () => reject(transaction.error ?? new Error("copro_media_put_aborted"));
+      transaction.onerror = () => reject(transaction.error ?? new Error("copro_media_put_failed"));
+    });
+  }
+  async get(id) { return (await this.load(id)) ?? null; }
+  async list() {
     const db = await this.open();
     return new Promise((resolve, reject) => {
-      let result;
-      const transaction = db.transaction(this.storeName, mode);
-      const request = operation(transaction.objectStore(this.storeName));
-      request.onsuccess = () => { result = request.result; };
-      transaction.oncomplete = () => resolve(result);
-      transaction.onabort = () => reject(transaction.error ?? request.error ?? new Error('copro_media_transaction_aborted'));
-      transaction.onerror = () => reject(transaction.error ?? request.error ?? new Error('copro_media_transaction_failed'));
+      const request = db.transaction("media", "readonly").objectStore("media").getAll();
+      request.onsuccess = () => resolve(request.result ?? []);
+      request.onerror = () => reject(request.error ?? new Error("copro_media_list_failed"));
     });
   }
 
-  async put(item) {
-    if (!item?.id || !item?.file || typeof item.name !== 'string') throw new Error('copro_media_invalid_source');
-    const stored = {
-      id: item.id,
-      name: item.name,
-      kind: item.kind,
-      durationUs: item.durationUs,
-      waveform: item.waveform,
-      thumbnails: item.thumbnails,
-      file: item.file,
-      savedAt: new Date().toISOString(),
-    };
-    await this.#transaction('readwrite', (store) => store.put(stored));
-    return stored;
+  async save(id, file) {
+    if (typeof id !== "string" || !id) throw new Error("copro_media_id_required");
+    if (!(file instanceof Blob)) throw new Error("copro_media_blob_required");
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction("media", "readwrite");
+      transaction.objectStore("media").put({
+        id, file,
+        name: typeof file.name === "string" ? file.name : id,
+        type: file.type || "application/octet-stream",
+        size: file.size, lastModified: file.lastModified ?? Date.now(),
+      });
+      // Success means the write transaction has committed, not merely been queued.
+      transaction.oncomplete = () => resolve({ id, name: file.name ?? id, size: file.size });
+      transaction.onabort = () => reject(transaction.error ?? new Error("copro_media_save_aborted"));
+      transaction.onerror = () => reject(transaction.error ?? new Error("copro_media_save_failed"));
+    });
   }
 
-  async get(id) { return (await this.#transaction('readonly', (store) => store.get(id))) ?? null; }
-  async list() { return (await this.#transaction('readonly', (store) => store.getAll())) ?? []; }
-  async remove(id) { await this.#transaction('readwrite', (store) => store.delete(id)); }
+  async load(id) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const request = db.transaction("media", "readonly").objectStore("media").get(id);
+      request.onsuccess = () => resolve(request.result ?? null);
+      request.onerror = () => reject(request.error ?? new Error("copro_media_load_failed"));
+    });
+  }
+
+  async loadMany(ids) {
+    const unique = [...new Set(ids)].filter((id) => typeof id === "string" && id);
+    const found = await Promise.all(unique.map((id) => this.load(id)));
+    return found.filter(Boolean);
+  }
+
+  async remove(id) {
+    const db = await this.open();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction("media", "readwrite");
+      transaction.objectStore("media").delete(id);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error ?? new Error("copro_media_remove_failed"));
+      transaction.onabort = () => reject(transaction.error ?? new Error("copro_media_remove_aborted"));
+    });
+  }
 }

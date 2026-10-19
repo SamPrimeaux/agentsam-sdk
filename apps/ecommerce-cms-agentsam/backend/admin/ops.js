@@ -3,7 +3,7 @@
  * No secret-header /api/internal endpoints.
  */
 
-import { enqueueAssetJob, getAssetJob } from "../../shared/assets/jobs.js";
+import { enqueueAssetJob, getAssetJob } from "../assets/jobs.js";
 import { processAssetJobById } from "../assets/product-optimize.js";
 import { runAgentsamCompaction } from "../agentsam/compaction.js";
 

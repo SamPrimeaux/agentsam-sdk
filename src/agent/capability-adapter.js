@@ -9,13 +9,15 @@ import { runWranglerNative, summarizeCloudflareCpuProfileFile, runCloudflareCpuA
 import { runRepositoryAudit } from './repository-audit.js';
 import { terminalExec } from '../capabilities/terminal-exec.js';
 import { createRegistry } from '../registry/index.js';
-import { workspaceRead, workspaceWrite } from '../capabilities/workspace-files.js';
+import { workspaceRead, workspaceWrite, workspaceList, workspaceSearch } from '../capabilities/workspace-files.js';
 import { machineInspect, machineAvailable } from '../capabilities/machine-inspect.js';
 import { testRun } from '../capabilities/test-run.js';
 import { PLAN_READ_OPERATIONS, PLAN_WRITE_OPERATIONS } from '../capabilities/plan-operation-ids.js';
 import { inspectRemoteD1Schema } from '../knowledge/d1-schema.js';
 import { repositoryIntelligence, repositoryCrawl, repositoryMine } from '../capabilities/repository-awareness.js';
 import { discoverProjectCapabilities } from './project-discovery.js';
+import {listProjects,getProject,createProject,editProject,deleteProject,restoreProject} from './project-resources.js';
+import {createLocalDatabase,inspectLocalDatabase,listLocalDatabases,editLocalDatabase,deleteLocalDatabase,restoreLocalDatabase} from '../capabilities/local-sqlite-resources.js';
 import { createMcpD1Bridge, MCP_D1_TOOLS } from '../capabilities/mcp-d1-bridge.js';
 import { knowledgeIndex, knowledgeSearch, contextResolve, knowledgeStatus, knowledgeGenerationStatus } from '../capabilities/knowledge-operations.js';
 
@@ -30,15 +32,70 @@ function loadSchema(value) {
   catch (error) { throw new Error(`capability_schema_unreadable:${value}:${error?.message || error}`); }
 }
 
-export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot = process.cwd(), authorizeCapability = null, samAdapter = null, mcpD1Bridge = null, allowedRepositories = [projectRoot] } = {}) {
+export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot = process.cwd(), authorizeCapability = null, samAdapter = null, mcpD1Bridge = null, allowedRepositories = [projectRoot], provisionD1 = null, installationContext = null } = {}) {
   const d1Bridge = mcpD1Bridge || createMcpD1Bridge();
+  const WRITE_RESOURCE_CAPABILITIES = new Set([
+    'project.create','project.edit','project.delete','project.restore',
+    'agentsam_sqlite_create','agentsam_sqlite_edit','agentsam_sqlite_delete','agentsam_sqlite_restore',
+    'agentsam_d1_create',
+  ]);
+  async function authorizedResourceWrite(id,input){
+    const capability=getCapability(id);
+    if(!capability || typeof authorizeCapability!=='function' ||
+       await authorizeCapability({capability,id,input,side_effects:capability.side_effects})!==true){
+      const error=new Error('capability_not_authorized');
+      error.code='capability_not_authorized';
+      throw error;
+    }
+  }
+  function safeD1CreateInput(input={}){
+    if(!input||typeof input!=='object'||Array.isArray(input)||
+      Object.keys(input).some(x=>!['name','confirm_name','jurisdiction'].includes(x))||
+      typeof input.name!=='string'|| !/^[a-z][a-z0-9-]{0,63}$/.test(input.name)||
+      input.confirm_name!==input.name||
+      (input.jurisdiction!==undefined&&!['eu','fedramp'].includes(input.jurisdiction))){
+      const e=new Error('d1_create_invalid_input');e.code='d1_create_invalid_input';throw e;
+    }
+    return {name:input.name,confirm_name:input.confirm_name,
+      ...(input.jurisdiction?{jurisdiction:input.jurisdiction}:{})};
+  }
+  async function provisionDatabase(input={}){
+    // Never treat the caller-supplied database_id/account_id as authority.
+    const args=safeD1CreateInput(input);
+    if(typeof provisionD1!=='function'||!installationContext?.installationId||
+      !installationContext?.actorId){
+      const e=new Error('d1_create_host_not_configured');e.code='d1_create_host_not_configured';throw e;
+    }
+    const result=await provisionD1({...args,installation:structuredClone(installationContext)});
+    if(!result?.ok || typeof result.database_id!=='string'){
+      const e=new Error(result?.error||'d1_create_provider_failed');e.code='d1_create_provider_failed';throw e;
+    }
+    return {schema:'agentsam.d1.provision.v1',engine:'cloudflare-d1',
+      database_id:result.database_id,name:args.name,
+      installation_id:installationContext.installationId,created:true,
+      provider_receipt:result.receipt||null};
+  }
   const cad = localProjectRuntime(projectRoot);
   const cadDescriptors = CAD_PROJECT_TOOLS.map(t=>({...t,id:t.name,version:'1.0.0',domain:'design',kind:'tool',status:'active',side_effects:['design_project_get','design_project_validate','design_model_inspect'].includes(t.name)?'none':'filesystem-write',deterministic:true,model_required:false}));
   const executable = new Map([
-    ...(d1Bridge.available ? MCP_D1_TOOLS.map(id=>[id,(input={})=>d1Bridge.invoke(id,input)]) : []),
+    ...(d1Bridge.available ? (d1Bridge.allowedTools || MCP_D1_TOOLS).map(id=>[id,(input={})=>d1Bridge.invoke(id,input)]) : []),
     ...[...PLAN_READ_OPERATIONS, ...PLAN_WRITE_OPERATIONS].map(id =>
       [id, async (input = {}) => (await import('../capabilities/plan-operations.js')).invokePlanOperation(id, input, projectRoot)]),
     ['project.discover', () => discoverProjectCapabilities(projectRoot)],
+    ['project.list', () => listProjects(projectRoot)],
+    ['project.get', input => getProject(projectRoot,input)],
+    ['project.create', input => createProject(projectRoot,input)],
+    ['project.edit', input => editProject(projectRoot,input)],
+    ['project.delete', input => deleteProject(projectRoot,input)],
+    ['project.restore', input => restoreProject(projectRoot,input)],
+    ['agentsam_sqlite_list', () => listLocalDatabases(projectRoot)],
+    ['agentsam_sqlite_get', input => inspectLocalDatabase(projectRoot,input)],
+    ['agentsam_sqlite_create', input => createLocalDatabase(projectRoot,input)],
+    ['agentsam_sqlite_edit', input => editLocalDatabase(projectRoot,input)],
+    ['agentsam_sqlite_delete', input => deleteLocalDatabase(projectRoot,input)],
+    ['agentsam_sqlite_restore', input => restoreLocalDatabase(projectRoot,input)],
+    ...(typeof provisionD1==='function' && installationContext?.installationId && installationContext?.actorId
+      ? [['agentsam_d1_create',provisionDatabase]] : []),
     ['repository.snapshot', (input = {}) => {
       const days=Number(input.churnDays??input.churn_days??30);
       if(!Number.isInteger(days)||days<1||days>3650)throw new Error('repository_churn_days_invalid');
@@ -56,6 +113,8 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     }],
     ['repository.mine', (input = {}) => repositoryMine(input,projectRoot,{allowedRoots:allowedRepositories})],
     ['workspace.read', (input = {}) => workspaceRead(input,projectRoot)],
+    ['workspace.list', (input = {}) => workspaceList(input,projectRoot)],
+    ['workspace.search', (input = {}) => workspaceSearch(input,projectRoot)],
     ['workspace.write', (input = {}) => workspaceWrite(input,projectRoot)],
     ['machine.inspect', (input = {}) => machineInspect(input,projectRoot)],
     ['test.run', (input = {}) => testRun(input,projectRoot)],
@@ -69,6 +128,15 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     ...cadDescriptors.map(t=>[t.id,(input)=>cad.execute(t.id,input)]),
     ...Object.entries(handlers),
   ]);
+  // Guard direct and registry invocation equally. A manifest is not permission.
+  for(const id of WRITE_RESOURCE_CAPABILITIES){
+    if(!executable.has(id))continue;
+    const handler=executable.get(id);
+    executable.set(id,async(input={})=>{
+      await authorizedResourceWrite(id,input);
+      return handler(input);
+    });
+  }
   // Registry exposes only the first, genuinely bound operation families.
   // invoke is not a shell escape hatch: it requires the host to authorize the
   // underlying operation with its actual side-effect profile.
@@ -76,16 +144,28 @@ export function createCapabilityAdapter({ handlers = {}, reasoner, projectRoot =
     ...MCP_D1_TOOLS,
     ...PLAN_READ_OPERATIONS, ...PLAN_WRITE_OPERATIONS,
     'project.discover',
+    'project.list','project.get','project.create','project.edit','project.delete','project.restore',
+    'agentsam_sqlite_list','agentsam_sqlite_get','agentsam_sqlite_create',
+    'agentsam_sqlite_edit','agentsam_sqlite_delete','agentsam_sqlite_restore',
+    ...(typeof provisionD1==='function'&&installationContext?.installationId&&installationContext?.actorId
+      ? ['agentsam_d1_create'] : []),
     'repository.snapshot','repository.intelligence','repository.crawl','repository.mine',
     'knowledge.index','knowledge.search','context.resolve',
-    'workspace.read','workspace.write','machine.inspect','terminal.exec','test.run',
+    'workspace.read','workspace.list','workspace.search','workspace.write','machine.inspect','terminal.exec','test.run',
     'cloudflare.d1.schema',
   ]);
   const registry = createRegistry({ capabilityAdapter: {
     canInvoke: (id) => executable.has(id) && (!['machine.inspect','repository.crawl','repository.mine'].includes(id) || machineAvailable()),
     availability: (id) => {
+      if(id==='agentsam_d1_create'&&!executable.has(id))
+        return {readiness:'unavailable',reason:'d1_create_provider_not_configured',
+          next:'Connect a customer-owned Cloudflare provisioning adapter and approve creation'};
       if(MCP_D1_TOOLS.includes(id) && !d1Bridge.available)
         return {readiness:'unavailable',reason:d1Bridge.reason||'mcp_d1_connection_not_configured',next:d1Bridge.next||null};
+      if(MCP_D1_TOOLS.includes(id) && !executable.has(id))
+        return {readiness:'unavailable',reason:'mcp_d1_write_scope_missing',next:'agentsam mcp connect inneranimalmedia --write'};
+      if(MCP_D1_TOOLS.includes(id))
+        return {readiness:d1Bridge.readiness||'unverified',reason:d1Bridge.reason||'remote_mcp_connection_not_probed',next:d1Bridge.next||null};
       if(id==='cloudflare.d1.schema')return {readiness:'unverified',reason:'remote_credentials_not_probed',next:'agentsam db sources'};
       if (['machine.inspect','repository.crawl','repository.mine'].includes(id) && !machineAvailable())
         return {readiness:'unavailable',reason:'machine_runtime_not_installed',next:'agentsam machine install'};

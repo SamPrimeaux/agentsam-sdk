@@ -2,7 +2,7 @@
  * AgentSam file uploads — R2 bodies + D1 metadata.
  */
 
-import { COMMERCE_ACCOUNT_ID } from "./constants.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { isFeatureEnabled } from "./feature-gates.js";
 import { getSessionUser } from "../lib/auth.js";
 
@@ -69,7 +69,7 @@ export async function getAttachmentById(env, id) {
   return env.DB.prepare(
     `SELECT * FROM agentsam_attachments WHERE id = ? AND account_id = ? AND status != 'deleted' LIMIT 1`
   )
-    .bind(id, COMMERCE_ACCOUNT_ID)
+    .bind(id, requireApplicationAccountId())
     .first();
 }
 
@@ -107,12 +107,16 @@ async function readTextFromAttachment(env, row) {
 
 export async function hydrateAttachmentsForChat(env, attachments, requestUrl) {
   const { enrichContextFromAttachments, normalizeAttachments } = await import("./attachments.js");
+  if (!Array.isArray(attachments) || attachments.length > 6) {
+    throw new Error("Up to 6 valid attachments may be sent.");
+  }
   const hydrated = [];
 
   for (const item of attachments) {
+    if (!item || typeof item !== "object") throw new Error("Malformed attachment reference.");
     if (item.attachment_id) {
       const row = await getAttachmentById(env, item.attachment_id);
-      if (!row) continue;
+      if (!row) throw new Error("Attachment not found or not authorized for this account.");
       const entry = {
         attachment_id: row.id,
         name: row.file_name,
@@ -123,7 +127,8 @@ export async function hydrateAttachmentsForChat(env, attachments, requestUrl) {
       };
       if (entry.kind === "image") {
         const buf = await loadAttachmentBytes(env, row);
-        if (buf) {
+        if (!buf) throw new Error("Attachment image is not available in storage.");
+        {
           const u8 = new Uint8Array(buf);
           let binary = "";
           const chunk = 0x8000;
@@ -138,6 +143,7 @@ export async function hydrateAttachmentsForChat(env, attachments, requestUrl) {
       hydrated.push(entry);
       continue;
     }
+    // Legacy inline attachments remain accepted by the existing connector path.
     hydrated.push(item);
   }
 
@@ -194,7 +200,7 @@ export async function agentsamFileUpload(request, env) {
   )
     .bind(
       attachmentId,
-      COMMERCE_ACCOUNT_ID,
+      requireApplicationAccountId(),
       conversationId,
       user.id || null,
       fileName,
@@ -241,7 +247,7 @@ export async function agentsamFileDelete(env, id) {
   await env.DB.prepare(
     `UPDATE agentsam_attachments SET status = 'deleted' WHERE id = ? AND account_id = ?`
   )
-    .bind(id, COMMERCE_ACCOUNT_ID)
+    .bind(id, requireApplicationAccountId())
     .run();
   return json({ ok: true, deleted: true });
 }

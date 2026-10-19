@@ -34,6 +34,9 @@ TOOL_COMMANDS = {
     "openscad": ["openscad", "--version"],
     "freecad": ["FreeCADCmd", "--version"],
     "blender": ["blender", "--version"],
+    "ifc": ["python3", "--version"],
+    "media": ["ffmpeg", "-version"],
+    "occt": ["agentsam-occt", "--doctor"],
 }
 
 OPENSCAD_FORMATS = {"stl", "3mf", "dxf", "svg", "csg", "off", "amf"}
@@ -56,24 +59,103 @@ def _read_token() -> str:
         return ""
 
 
+def _probe(command: list[str], env: dict[str, str] | None = None, timeout: int = 20) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(command, capture_output=True, text=True, timeout=timeout, env=env, check=False)
+
+
+def _extended_tool_version(name: str) -> dict[str, Any]:
+    """Probe the production-pipeline tools by actually exercising them, not by checking a binary exists."""
+    if name == "ifc":
+        python = os.environ.get("AGENTSAM_CAD_PYTHON", "/opt/agentsam-venv/bin/python")
+        if not Path(python).is_file():
+            return {"installed": False, "binary": None, "version": None}
+        probe = _probe([python, "-c", "import ifcopenshell, ezdxf; print(ifcopenshell.version, ezdxf.__version__)"])
+        if probe.returncode != 0:
+            return {"installed": False, "binary": python, "version": None, "error": (probe.stderr or "import failed")[-300:]}
+        ifc_version, dxf_version = probe.stdout.split()
+        return {"installed": True, "binary": python, "version": f"ifcopenshell {ifc_version}; ezdxf {dxf_version}",
+                "modules": {"ifcopenshell": ifc_version, "ezdxf": dxf_version}}
+    if name == "media":
+        ffmpeg, gltf = shutil.which("ffmpeg"), shutil.which("gltf-transform")
+        if not ffmpeg or not gltf:
+            return {"installed": False, "binary": None, "version": None,
+                    "missing": [n for n, b in (("ffmpeg", ffmpeg), ("gltf-transform", gltf)) if not b]}
+        ff = _probe([ffmpeg, "-version"]).stdout.splitlines()[:1]
+        gl = [line for line in _probe([gltf, "--version"]).stdout.splitlines() if line[:1].isdigit()][:1]
+        if not gl:
+            return {"installed": False, "binary": gltf, "version": None, "error": "gltf-transform did not report a version"}
+        return {"installed": True, "binary": ffmpeg, "version": f"{ff[0][:40] if ff else 'ffmpeg'}; gltf-transform {gl[0]}"}
+    binary = shutil.which("agentsam-occt")
+    if not binary:
+        return {"installed": False, "binary": None, "version": None}
+    probe = _probe([binary, "--doctor"])
+    for line in probe.stdout.splitlines():
+        if line.startswith("AGENTSAM_RESULT="):
+            result = json.loads(line.split("=", 1)[1])
+            return {"installed": bool(result.get("ok")), "binary": binary, "version": result.get("version"),
+                    "kernel": "OCCT", "capabilities": result.get("capabilities", [])}
+    return {"installed": False, "binary": binary, "version": None, "error": "agentsam-occt --doctor gave no result"}
+
+
 def _tool_version(name: str) -> dict[str, Any]:
+    if name in ("ifc", "media", "occt"):
+        return _extended_tool_version(name)
+    if name == "freecad":
+        binary = shutil.which("python3")
+        module = Path("/usr/lib/freecad/lib/FreeCAD.so")
+
+        if not binary or not module.is_file():
+            return {"installed": False, "binary": None, "version": None}
+
+        env = os.environ.copy()
+        env["PYTHONPATH"] = "/usr/lib/freecad/lib"
+
+        probe = subprocess.run(
+            [binary, "-c",
+             ("import FreeCAD, Part; "
+              "assert Part.makeBox(1,2,3).isValid(); "
+              "print('.'.join(FreeCAD.Version()[:3]))")],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
+            check=False,
+        )
+
+        if probe.returncode != 0:
+            return {
+                "installed": False,
+                "binary": binary,
+                "version": None,
+                "error": (probe.stderr or "FreeCAD kernel probe failed")[-500:],
+            }
+
+        return {
+            "installed": True,
+            "binary": binary,
+            "version": probe.stdout.strip(),
+            "kernel": "OCCT",
+        }
+
     command = TOOL_COMMANDS[name]
     binary = shutil.which(command[0])
+
     if not binary:
-        # Debian sometimes exposes FreeCADCmd in /usr/lib/freecad/bin only.
-        if name == "freecad":
-            candidate = Path("/usr/lib/freecad/bin/FreeCADCmd")
-            if candidate.exists():
-                binary = str(candidate)
-                command = [binary, "--version"]
-        if not binary:
-            return {"installed": False, "binary": None, "version": None}
+        return {"installed": False, "binary": None, "version": None}
+
     try:
-        proc = subprocess.run(command, capture_output=True, text=True, timeout=5, check=False)
-        text = (proc.stdout or proc.stderr or "").strip().splitlines()
-        version = text[0][:240] if text else None
-    except Exception as exc:  # health must never crash the service
+        probe = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        lines = (probe.stdout or probe.stderr or "").strip().splitlines()
+        version = lines[0][:240] if lines else None
+    except Exception as exc:
         version = f"version check failed: {exc}"
+
     return {"installed": True, "binary": binary, "version": version}
 
 

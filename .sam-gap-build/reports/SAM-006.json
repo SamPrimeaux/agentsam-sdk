@@ -1,0 +1,13 @@
+{
+  "ticket": "SAM-006",
+  "title": "Execution-time resource authorization",
+  "dependencies": [
+    "SAM-002"
+  ],
+  "head_before": "44328f3b",
+  "agent": "not_executed",
+  "diff_check": true,
+  "head_after": "44328f3b",
+  "working_tree": "?? .sam-gap-build/",
+  "completion": "REVIEW_REQUIRED"
+}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Content — Ember Supply Admin</title>
+<title>Content — Fuel & Free Time Admin</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/media-library.css">
@@ -29,6 +29,9 @@ renderShell("/admin/content", `
           <span class="sr-only">Search content</span>
           <input type="search" id="media-search" placeholder="Search assets" autocomplete="off">
         </label>
+        <div class="media-lib-advanced" id="media-lib-advanced">
+          <button type="button" class="media-lib-advanced-toggle" id="media-filter-toggle" aria-expanded="false" aria-controls="media-advanced-controls">Filters</button>
+          <div class="media-lib-advanced-controls" id="media-advanced-controls">
         <select id="media-kind-filter" class="media-lib-filter" aria-label="Filter by type">
           <option value="all">All types</option>
           <option value="image">Images</option>
@@ -48,9 +51,11 @@ renderShell("/admin/content", `
           <option value="largest">Largest</option>
           <option value="manual">Manual order</option>
         </select>
+          </div>
+        </div>
         <input type="file" id="media-file-input" multiple accept="image/*,video/*,.glb,.usdz">
         <button type="button" class="btn small" id="media-upload-btn">Upload</button>
-        <button type="button" class="btn primary small" id="media-gallery-new">+ Create gallery</button>
+        <button type="button" class="btn primary small" id="media-gallery-new"><span class="media-label-desktop">+ Create gallery</span><span class="media-label-mobile">+ Gallery</span></button>
       </div>
     </div>
 
@@ -132,40 +137,107 @@ renderShell("/admin/content", `
   <section class="brand-workspace" id="content-view-brand" data-content-panel="brand" hidden>
     <div class="brand-workspace-head">
       <div>
-        <p class="brand-eyebrow">Brand system</p>
-        <h1>Identity & assets</h1>
-        <p>Manage the identity and reusable assets used across storefront, auth, social previews, and content.</p>
+        <p class="brand-eyebrow">Brand workspace</p>
+        <h1>Identity, story &amp; visual system</h1>
+        <p>One source for your brand's purpose, audience, messaging, visual direction, and reusable assets.</p>
+        <p class="brand-source-note" id="brand-source-note" hidden role="note"></p>
       </div>
-      <button type="button" class="btn primary" id="brand-save">Save brand</button>
+      <div class="brand-head-actions">
+        <span class="brand-save-status" id="brand-save-status" role="status">Loading brand…</span>
+        <button type="button" class="btn primary" id="brand-save" disabled>Save brand</button>
+      </div>
     </div>
+    <nav class="brand-workspace-nav" aria-label="Brand workspace sections">
+      <a href="#brand-foundation">Identity</a>
+      <a href="#brand-story">Foundation</a>
+      <a href="#brand-messaging">Voice &amp; messaging</a>
+      <a href="#brand-visual">Visual direction</a>
+      <a href="#brand-assets">Assets</a>
+      <a href="#brand-channels">Channels</a>
+    </nav>
 
-    <div class="brand-overview">
+    <div class="brand-overview" id="brand-foundation">
       <div class="brand-preview-card">
         <div class="brand-preview-mark" id="brand-preview-mark"></div>
         <div>
+          <span class="brand-preview-kicker">Primary brand</span>
           <strong id="brand-preview-name">Brand</strong>
           <p id="brand-preview-tagline">Loading…</p>
+          <div class="brand-preview-swatches" id="brand-preview-swatches" aria-label="Brand colors"></div>
         </div>
       </div>
-
       <div class="brand-fields">
-        <label>Brand name<input type="text" id="brand-name" autocomplete="organization"></label>
-        <label>Tagline<input type="text" id="brand-tagline"></label>
-        <label>Website<input type="url" id="brand-website" autocomplete="url"></label>
-        <label>Support email<input type="email" id="brand-support-email" autocomplete="email"></label>
+        <label>Brand name<input type="text" id="brand-name" autocomplete="organization" maxlength="140"></label>
+        <label>Tagline<input type="text" id="brand-tagline" maxlength="240" placeholder="Your brand in one line"></label>
+        <label>Website<input type="url" id="brand-website" autocomplete="url" placeholder="https://example.com"></label>
+        <label>Support email<input type="email" id="brand-support-email" autocomplete="email" placeholder="hello@example.com"></label>
         <label>Primary color<div class="brand-color-row"><input type="color" id="brand-primary-color-picker"><input type="text" id="brand-primary-color" placeholder="#000000"></div></label>
         <label>Auth background<div class="brand-color-row"><input type="color" id="brand-auth-bg-picker"><input type="text" id="brand-auth-bg" placeholder="#ffffff"></div></label>
       </div>
     </div>
 
-    <div class="brand-section-head">
-      <div>
-        <h2>Brand assets</h2>
-        <p>Each role points to an asset already managed in the Content library.</p>
-      </div>
+    <div class="brand-studio-grid">
+      <section class="brand-studio-panel" id="brand-story" aria-labelledby="brand-story-title">
+        <div class="brand-studio-panel-head"><span class="brand-panel-number">01 / Foundation</span><h2 id="brand-story-title">What your brand stands for</h2>
+          <p>A clear position for your team, customers, campaigns, and future products.</p></div>
+        <div class="brand-profile-fields">
+          <label>Purpose <span>Why this brand exists</span><textarea id="brand-profile-purpose" data-brand-profile="purpose" rows="3" maxlength="1200" placeholder="Why do you exist beyond selling products?"></textarea></label>
+          <label>Mission <span>What you do and for whom</span><textarea id="brand-profile-mission" data-brand-profile="mission" rows="3" maxlength="1200" placeholder="Describe what your brand sets out to accomplish."></textarea></label>
+          <label>Vision <span>Where this is heading</span><textarea id="brand-profile-vision" data-brand-profile="vision" rows="3" maxlength="1200" placeholder="What future are you working toward?"></textarea></label>
+          <label>Origin story <span>The story worth remembering</span><textarea id="brand-profile-originStory" data-brand-profile="originStory" rows="4" maxlength="3000" placeholder="How did your brand begin?"></textarea></label>
+          <label>Audience <span>People and problems you serve</span><textarea id="brand-profile-audience" data-brand-profile="audience" rows="3" maxlength="1200" placeholder="Who is this for, and what matters to them?"></textarea></label>
+          <label>Positioning <span>Your distinct place in the market</span><textarea id="brand-profile-positioning" data-brand-profile="positioning" rows="3" maxlength="1200" placeholder="What makes you the right choice?"></textarea></label>
+          <label>Brand promise <span>The expectation you always deliver</span><textarea id="brand-profile-promise" data-brand-profile="promise" rows="3" maxlength="1000" placeholder="What can customers count on?"></textarea></label>
+          <label>Core values <span>The principles behind decisions</span><textarea id="brand-profile-values" data-brand-profile="values" rows="3" maxlength="1000" placeholder="What do you refuse to compromise?"></textarea></label>
+        </div>
+      </section>
+
+      <section class="brand-studio-panel" id="brand-messaging" aria-labelledby="brand-messaging-title">
+        <div class="brand-studio-panel-head"><span class="brand-panel-number">02 / Expression</span><h2 id="brand-messaging-title">Voice &amp; messaging</h2>
+          <p>Guidance for product descriptions, website copy, email, social posts, and AI-assisted content.</p></div>
+        <div class="brand-profile-fields">
+          <label>Personality <span>How the brand feels</span><textarea id="brand-profile-personality" data-brand-profile="personality" rows="2" maxlength="600" placeholder="Choose a few consistent traits."></textarea></label>
+          <label>Voice &amp; tone <span>How the brand speaks</span><textarea id="brand-profile-voice" data-brand-profile="voice" rows="3" maxlength="1000" placeholder="The style of language to use."></textarea></label>
+          <label>Do say <span>Preferred language and examples</span><textarea id="brand-profile-voiceDo" data-brand-profile="voiceDo" rows="3" maxlength="1200" placeholder="Phrases, language, and approaches to favor."></textarea></label>
+          <label>Don't say <span>Words and approaches to avoid</span><textarea id="brand-profile-voiceDont" data-brand-profile="voiceDont" rows="3" maxlength="1200" placeholder="Phrases or claims that don't sound like your brand."></textarea></label>
+          <label>Key message <span>The idea customers should remember</span><textarea id="brand-profile-keyMessage" data-brand-profile="keyMessage" rows="3" maxlength="1000" placeholder="Your single most important message."></textarea></label>
+          <label>Short description <span>For profiles, metadata &amp; social</span><textarea id="brand-profile-shortDescription" data-brand-profile="shortDescription" rows="3" maxlength="400" placeholder="A useful description in one or two sentences."></textarea></label>
+        </div>
+      </section>
     </div>
-    <div class="brand-role-grid" id="brand-role-grid"><div class="admin-empty">Loading brand assets…</div></div>
-    <div class="admin-note" id="brand-note" style="display:none;"></div>
+
+    <section class="brand-studio-panel brand-studio-panel--wide" id="brand-visual" aria-labelledby="brand-visual-title">
+      <div class="brand-studio-panel-head"><span class="brand-panel-number">03 / Design language</span><h2 id="brand-visual-title">Visual direction</h2>
+        <p>Record how your brand should look across site templates, campaigns, packaging, and applications.</p></div>
+      <div class="brand-profile-fields brand-profile-fields--three">
+        <label>Secondary color <span>Supporting color token</span><div class="brand-color-row"><input type="color" id="brand-secondary-color-picker" data-brand-color-picker="secondaryColor"><input type="text" id="brand-profile-secondaryColor" data-brand-profile="secondaryColor" maxlength="7" placeholder="#000000"></div></label>
+        <label>Text color <span>Default type color token</span><div class="brand-color-row"><input type="color" id="brand-text-color-picker" data-brand-color-picker="textColor"><input type="text" id="brand-profile-textColor" data-brand-profile="textColor" maxlength="7" placeholder="#111111"></div></label>
+        <label>Headline typography <span>Preferred display font / style</span><input type="text" id="brand-profile-headlineFont" data-brand-profile="headlineFont" maxlength="160" placeholder="Font family or visual direction"></label>
+        <label>Body typography <span>Preferred reading font / style</span><input type="text" id="brand-profile-bodyFont" data-brand-profile="bodyFont" maxlength="160" placeholder="Font family or visual direction"></label>
+        <label class="brand-field-wide">Photography &amp; imagery <span>Subject matter, treatment, composition &amp; exclusions</span><textarea id="brand-profile-imageDirection" data-brand-profile="imageDirection" rows="3" maxlength="1000" placeholder="Describe your image direction."></textarea></label>
+      </div>
+    </section>
+
+    <section class="brand-assets-section" id="brand-assets" aria-labelledby="brand-assets-title">
+      <div class="brand-section-head">
+        <div><p class="brand-panel-number">04 / Asset roles</p><h2 id="brand-assets-title">Brand assets</h2><p>Choose actual assets from your media library. Changes are saved against the existing company record.</p></div>
+        <div class="brand-section-tools"><span id="brand-asset-count" class="brand-asset-count">Loading…</span><button type="button" class="btn small" id="brand-open-library">Open media library</button></div>
+      </div>
+      <div class="brand-role-grid" id="brand-role-grid"><div class="admin-empty">Loading brand assets…</div></div>
+    </section>
+
+    <section class="brand-studio-panel brand-studio-panel--wide" id="brand-channels" aria-labelledby="brand-channels-title">
+      <div class="brand-studio-panel-head"><span class="brand-panel-number">05 / Presence</span><h2 id="brand-channels-title">Channels &amp; links</h2>
+        <p>Keep public profiles together for consistent cross-channel campaigns and brand pages.</p></div>
+      <div class="brand-profile-fields brand-profile-fields--two">
+        <label>Instagram URL <input type="url" id="brand-profile-instagramUrl" data-brand-profile="instagramUrl" maxlength="300" placeholder="https://instagram.com/..."></label>
+        <label>Facebook URL <input type="url" id="brand-profile-facebookUrl" data-brand-profile="facebookUrl" maxlength="300" placeholder="https://facebook.com/..."></label>
+        <label>TikTok URL <input type="url" id="brand-profile-tiktokUrl" data-brand-profile="tiktokUrl" maxlength="300" placeholder="https://tiktok.com/@..."></label>
+        <label>YouTube URL <input type="url" id="brand-profile-youtubeUrl" data-brand-profile="youtubeUrl" maxlength="300" placeholder="https://youtube.com/@..."></label>
+      </div>
+    </section>
+    <div class="brand-bottom-actions"><span>Review all changes before saving. Brand media assignments save when chosen.</span><button type="button" class="btn primary" id="brand-save-bottom" disabled>Save brand</button></div>
+    <div class="admin-note" id="brand-note" role="status" aria-live="polite" style="display:none;"></div>
   </section>
 
   <div class="brand-picker-backdrop" id="brand-picker-backdrop"></div>
@@ -178,12 +250,13 @@ renderShell("/admin/content", `
       <button type="button" class="btn ghost small" id="brand-picker-close">Close</button>
     </div>
     <div class="brand-picker-search"><input type="search" id="brand-picker-query" placeholder="Search image assets"></div>
-    <div class="brand-picker-grid" id="brand-picker-grid"></div>
+    <div class="brand-picker-grid" id="brand-picker-grid"></div>\n    <div class="brand-picker-footer"><span id="brand-picker-page-status" role="status"></span><button type="button" class="btn small" id="brand-picker-more" hidden>Load more</button></div>
   </section>
 
-  <div class="media-drawer-backdrop" id="media-drawer-backdrop"></div>
-  <aside class="media-drawer" id="media-drawer" aria-label="Asset details">
+  <section class="media-detail-page" id="media-detail-page" aria-label="Image details" hidden>
+  <div class="media-detail-workspace" id="media-drawer" aria-label="Image details">
     <div class="media-drawer-head">
+      <a class="media-detail-back" id="media-detail-back" href="/admin/content" aria-label="Back to media library">← All media</a>
       <div class="media-drawer-title">
         <strong id="media-drawer-title">Asset</strong>
         <span class="media-status-pill" id="media-drawer-status">Ready</span>
@@ -191,15 +264,19 @@ renderShell("/admin/content", `
       <div class="media-drawer-nav">
         <button type="button" class="btn ghost small" id="media-drawer-prev" aria-label="Previous asset">‹</button>
         <button type="button" class="btn ghost small" id="media-drawer-next" aria-label="Next asset">›</button>
-        <button type="button" class="btn ghost small" id="media-drawer-close">Close</button>
+        <button type="button" class="btn ghost small" id="media-drawer-close">Back to library</button>
       </div>
     </div>
-    <div class="media-drawer-body">
+    <div class="media-drawer-body media-workspace-body">
+      <div class="media-workspace-canvas">
       <div class="media-drawer-preview-shell" id="media-drawer-preview-shell">
         <div class="media-drawer-preview" id="media-drawer-preview"></div>
       </div>
       <div class="media-preview-presets" id="media-preview-presets" aria-label="Preview sizes"></div>
       <p class="media-preview-note" id="media-preview-note">Preview only — no derivative file is generated.</p>
+      <div id="media-agent-workbench" class="media-agent-workbench"></div>
+      </div>
+      <div class="media-workspace-settings">
       <div class="media-inspector-tabs" role="tablist" aria-label="Asset inspector">
         <button type="button" class="is-active" data-media-inspector-tab="details">Details</button>
         <button type="button" data-media-inspector-tab="optimize">Optimize</button>
@@ -291,6 +368,7 @@ renderShell("/admin/content", `
           <div id="media-drawer-versions"></div>
         </div>
       </div>
+      </div>
     </div>
     <div class="media-drawer-foot">
       <div class="media-drawer-foot-links">
@@ -302,7 +380,8 @@ renderShell("/admin/content", `
         <button type="button" class="btn primary small" id="media-drawer-save">Save</button>
       </div>
     </div>
-  </aside>
+  </div>
+  </section>
 `, { onReady: async () => { const media = await import("/admin/js/media-library.js"); media.initMediaLibrary(); initBrandWorkspace(); } });
 </script>
 </body>

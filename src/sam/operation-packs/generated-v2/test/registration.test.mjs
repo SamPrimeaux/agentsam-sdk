@@ -28,6 +28,22 @@ test('only bound domain tools are registered, no magical Bash dependency',async(
   assert.ok(info.unavailable.some(x=>x.name==='sam.superbash'&&x.reason==='handler_not_bound'));
   assert.equal((await registry.get('cms.page.inspect').handler({pageId:'x'},{})).id,'p');
 });
+test('already owned CMS domain operations are not misreported as generated-v2 unavailable',()=>{
+  const existing = new Set(['cms.definition.list','cms.page.createDraft','cms.page.publish']);
+  const info = createGeneratedSamOperations({
+    defineSamOperation:x=>x,
+    registerSamOperation:()=>{throw new Error('should_not_register_existing');},
+    getSamOperation:id=>existing.has(id)?{id}:null,
+    resolveTrustedContext:async()=>identity,
+    authorize:async()=>true,
+  });
+  for(const name of existing) {
+    assert.ok(info.registered.some(x=>x.name===name&&x.status==='existing'));
+    assert.equal(info.unavailable.some(x=>x.name===name),false);
+  }
+  assert.equal(info.unavailable.some(x=>x.name==='cms.section.updateDraft'),true);
+});
+
 test('sam.superbash requires exactly one source, not both',()=>{
   const schema=OPERATION_CATALOG.find(x=>x.name==='sam.superbash').input_schema;
   assert.throws(()=>validateSamInput({},schema),/exactly_one_source/);

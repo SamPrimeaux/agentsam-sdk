@@ -60,7 +60,9 @@ export class MujocoSim {
 
         this.ikSys = new IkSystem(this.mujoco, this.renderSys.camera, this.renderSys.renderer.domElement, this.renderSys.controls);
         this.renderSys.simGroup.add(this.ikSys.target);
-        this.renderSys.scene.add(this.ikSys.control as unknown as THREE.Object3D);
+        // TransformControls is not an Object3D; its renderable helper belongs in the scene.
+        this.renderSys.scene.add(this.ikSys.control.getHelper());
+        this.ikSys.control.getHelper().visible = false;
 
         this.sequenceAnimator = new SequenceAnimator();
 

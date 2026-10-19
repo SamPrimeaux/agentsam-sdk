@@ -33,6 +33,8 @@ test('CLI model catalog uses authenticated local SAM handlers, imports source, c
     });
     assert.ok(samAdapter);
     assert.equal(samAdapter.canInvoke('media.local.import'),true);
+    assert.equal(samAdapter.canInvoke('media.asset.inspect'),true);
+    assert.equal(samAdapter.canInvoke('media.model.validate'),true);
     assert.equal(samAdapter.canInvoke('sam.superbash'),true);
     assert.equal(samAdapter.canInvoke('sam.script.save'),true);
     assert.equal(samAdapter.canInvoke('sam.script.get'),true);
@@ -44,10 +46,13 @@ test('CLI model catalog uses authenticated local SAM handlers, imports source, c
     assert.ok(selected.descriptors.some(x=>x.name==='media.image.background.remove'));
     const imported=await agentAdapter.invoke('media.local.import',{relativePath:'source.png'});
     assert.equal(imported.ok,true,JSON.stringify(imported.error));
+    const inspected=await agentAdapter.invoke('media.asset.inspect',{assetId:imported.data.assetId});
+    assert.equal(inspected.ok,true,JSON.stringify(inspected.error));
+    assert.equal(inspected.data.contentType,'image/png');
     const removed=await agentAdapter.invoke('media.image.background.remove',{assetId:imported.data.assetId});
     assert.equal(removed.ok,true,JSON.stringify(removed.error));
     assert.ok(removed.data.derivativeAssetId);
-    assert.deepEqual(permissions,['media.local.import','media.image.background.remove']);
+    assert.deepEqual(permissions,['media.local.import','media.asset.inspect','media.image.background.remove']);
     const denied=await agentAdapter.invoke('media.local.import',{relativePath:'../outside.png'});
     assert.equal(denied.ok,false);
     assert.match(denied.error.message,/media_path_outside_project/);

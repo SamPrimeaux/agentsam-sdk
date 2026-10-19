@@ -39,7 +39,7 @@ export function resolveDockerServiceConfig(options = {}) {
 
   if (!token) {
     const cwd = options.cwd || process.cwd();
-    const candidates = [
+    const candidates = options.tokenSearchPaths ?? [
       path.join(cwd, '.agentsam/docker/cad/agentsam-cad/service.token'),
       path.join(os.homedir(), '.agentsam/docker/cad/agentsam-cad/service.token'),
       path.join(cwd, '.agentsam/docker/cad/service.token'),

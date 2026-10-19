@@ -84,3 +84,18 @@ test('IndexedDB media source preserves actual Blob bytes after reopening the sto
 test('IndexedDB media store reports unsupported browsers', () => {
   assert.throws(() => new BrowserIndexedDbMediaStore({ indexedDB: null }), /copro_media_indexeddb_unavailable/);
 });
+
+test('mainline save/loadMany and MovieMode get/list retain the same source bytes', async () => {
+  const factory = makeIndexedDbFixture();
+  const store = new BrowserIndexedDbMediaStore({ indexedDB: factory, databaseName: 'interoperability' });
+  const original = new Blob(['persisted original, not a thumbnail'], { type: 'video/mp4' });
+  await store.save('asset:legacy', original);
+  const recovered = await store.get('asset:legacy');
+  assert.equal(await recovered.file.text(), 'persisted original, not a thumbnail');
+  assert.equal((await store.list()).length, 1);
+  await store.put({ id: 'asset:movie', name: 'movie.mp4', kind: 'video', file: original, thumbnails: ['data:image/png;base64,aGVsbG8='] });
+  const loaded = await store.loadMany(['asset:legacy', 'asset:movie']);
+  assert.equal(loaded.length, 2);
+  assert.equal((await loaded[1].file.text()), 'persisted original, not a thumbnail');
+  assert.equal(loaded[1].thumbnails.length, 1);
+});

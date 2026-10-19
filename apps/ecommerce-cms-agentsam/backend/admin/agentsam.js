@@ -2,6 +2,7 @@ import { ensureConversation } from "../agentsam/conversations.js";
 import { resolveSelectedResource } from "../agentsam/selected-resource.js";
 import { formatAttachmentsForPrompt } from "../agentsam/attachments.js";
 import { hydrateAttachmentsForChat } from "../agentsam/files.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { buildAgentsamUiConfig } from "../agentsam/quick-actions.js";
 import {
   BLOCKED_FEATURE_MESSAGES,
@@ -9,7 +10,11 @@ import {
   getAgentFeatures,
 } from "../agentsam/feature-gates.js";
 import { persistChatExchange } from "../agentsam/threads.js";
-import { buildToolCallFromGithubMeta, routeChipsFromRouting } from "../agentsam/tool-traces.js";
+import {
+  buildToolCallFromGithubMeta,
+  buildToolCallTrace,
+  routeChipsFromRouting,
+} from "../agentsam/tool-traces.js";
 import { runAgentSamAi } from "../agentsam/ai-run.js";
 import {
   createAnalyticsIds,
@@ -27,7 +32,17 @@ import {
 } from "../agentsam/prompt-cache.js";
 import { listPromptFragments, listPromptTemplates } from "../agentsam/prompt-registry.js";
 import { getCompactionStatus, runAgentsamCompaction } from "../agentsam/compaction.js";
-import { getActiveToolsHash, listToolsGrouped, getToolsRegistryStatus } from "../agentsam/tools-registry.js";
+import {
+  getActiveToolsHash,
+  getToolsRegistryStatus,
+  listToolsGrouped,
+  logToolCall,
+  toolsForWorkersAi,
+} from "../agentsam/tools-registry.js";
+import {
+  executeAgentSamTool,
+  isAgentSamToolExecutable,
+} from "../agentsam/tool-handlers.js";
 import {
   bridgeConfigured,
   fetchGithubContextForChat,
@@ -38,7 +53,7 @@ import {
 import {
   formatSemanticSearchForPrompt,
   maybeRunSemanticSearch,
-} from "../agentsam/commerce-vectorize.js";
+} from "../agentsam/fnf-vectorize.js";
 import { listMcpServersForUi, mcpRuntimeConfig } from "../agentsam/mcp-servers.js";
 import { listDrawerWorkflows, listStudioWorkflows, routeAgentsamRequest } from "../agentsam/router.js";
 import { getAgentSamSkill, listAgentSamSkills, buildSkillHash, recordSkillInvocations } from "../agentsam/skills.js";
@@ -212,11 +227,16 @@ export async function agentsamChat(request, env, executionCtx = null) {
     rawContext.annotation = normalizeAnnotation(rawContext.annotation);
   }
 
-  const hydrated = await hydrateAttachmentsForChat(
-    env,
-    body?.attachments || rawContext.attachments || [],
-    request.url
-  );
+  let hydrated;
+  try {
+    hydrated = await hydrateAttachmentsForChat(
+      env,
+      body?.attachments || rawContext.attachments || [],
+      request.url
+    );
+  } catch (error) {
+    return json({ error: error?.message || "Invalid or inaccessible attachment." }, { status: 400 });
+  }
   const attachments = hydrated.attachments;
   const context = {
     ...rawContext,
@@ -243,6 +263,19 @@ export async function agentsamChat(request, env, executionCtx = null) {
     workflowKey: context.workflow_key,
   });
   const conversationId = conversation?.id || body?.conversation_id || null;
+
+  // Account-scoped uploaded assets bind to the actual conversation on first use.
+  for (const item of attachments) {
+    if (!item.attachment_id || !conversationId) continue;
+    const update = await env.DB.prepare(
+      `UPDATE agentsam_attachments SET conversation_id = ?
+         WHERE id = ? AND account_id = ?
+           AND (conversation_id IS NULL OR conversation_id = ?)`
+    ).bind(conversationId, item.attachment_id, requireApplicationAccountId(), conversationId).run();
+    if (!update?.meta?.changes) {
+      return json({ error: "Attachment belongs to another conversation or is unavailable." }, { status: 400 });
+    }
+  }
 
   const ids = createAnalyticsIds(
     { ...body, conversation_id: conversationId },
@@ -295,7 +328,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
       routing: {
         classification: {
           intent: "general",
-          workflow_key: "commerce_agentsam_chat",
+          workflow_key: "fnf_agentsam_chat",
           task_type: "admin_chat",
           source: "feature_gate",
         },
@@ -540,11 +573,16 @@ export async function agentsamChat(request, env, executionCtx = null) {
     );
   }
 
-  const ai = await runAgentSamAi(env, systemPrompt, message, {
+  const callableTools = (routing.tools || []).filter(isAgentSamToolExecutable);
+  const toolDefinitions = toolsForWorkersAi(callableTools);
+
+  let ai = await runAgentSamAi(env, systemPrompt, message, {
     ...aiRouting,
+    tool_definitions: toolDefinitions,
     has_image: aiRouting.has_image || context.has_image,
     image_base64: aiRouting.image_base64 || context.image_base64,
     image_url: aiRouting.image_url || context.image_url,
+    image_options: context.image_options || {},
     image_mime_type:
       aiRouting.image_mime_type ||
       attachments.find((a) => a.mime_type?.startsWith("image/"))?.mime_type ||
@@ -571,13 +609,125 @@ export async function agentsamChat(request, env, executionCtx = null) {
     },
   });
 
+  if (ai.ok && Array.isArray(ai.tool_calls) && ai.tool_calls.length) {
+    const selectedByKey = new Map(callableTools.map((tool) => [tool.tool_key, tool]));
+    const toolResults = [];
+
+    for (const call of ai.tool_calls.slice(0, 4)) {
+      const tool = selectedByKey.get(call.name);
+      if (!tool) {
+        toolResults.push({
+          tool_key: call.name,
+          ok: false,
+          error: "tool_not_selected_for_request",
+        });
+        continue;
+      }
+
+      const started = Date.now();
+      const result = await executeAgentSamTool(env, tool.tool_key, call.arguments || {}, {
+        user,
+        request,
+        approved: false,
+        confirmed: false,
+      });
+      const durationMs = Date.now() - started;
+      const trace = buildToolCallTrace(
+        tool,
+        call.arguments || {},
+        result,
+        ids,
+        durationMs,
+      );
+      toolCalls.push(trace);
+      toolResults.push({
+        tool_key: tool.tool_key,
+        capability_key: tool.capability_key,
+        result,
+      });
+
+      await logToolCall(
+        env,
+        {
+          id: trace.id,
+          session_id: ids.session_id,
+          conversation_id: conversationId,
+          message_id: ids.message_id,
+          run_id: ids.run_id,
+          user_id: user?.id || null,
+          tool_name: tool.tool_name || tool.tool_key,
+          tool_key: tool.tool_key,
+          agentsam_tools_id: tool.id,
+          tool_category: tool.tool_category,
+          mcp_server_key: tool.mcp_server_key,
+          handler_type: tool.handler_type,
+          status:
+            result?.ok === true
+              ? "success"
+              : result?.approval_required || result?.confirmation_required
+                ? "approval_required"
+                : "failed",
+          duration_ms: durationMs,
+          error_message: result?.error || null,
+          input_summary: JSON.stringify(call.arguments || {}),
+          output_summary: JSON.stringify(result || {}),
+        },
+        {
+          ctx: executionCtx,
+          session_id: ids.session_id,
+          conversation_id: conversationId,
+          message_id: ids.message_id,
+          run_id: ids.run_id,
+          user_id: user?.id || null,
+        },
+      );
+    }
+
+    const toolResultBlock = toolResults
+      .map(
+        (entry) =>
+          `TOOL ${entry.tool_key} (${entry.capability_key || "unknown"}):\n${JSON.stringify(entry.result)}`,
+      )
+      .join("\n\n");
+
+    const finalSystemPrompt =
+      `${systemPrompt}\n\nTOOL EXECUTION RESULTS:\n${toolResultBlock}\n\n` +
+      "Use these results as authority. Never claim a write occurred when a tool returned approval_required, confirmation_required, or an error.";
+
+    const finalAi = await runAgentSamAi(env, finalSystemPrompt, message, {
+      ...aiRouting,
+      workflow_key: workflowKey,
+      intent: routing.classification.intent,
+      tool_definitions: [],
+      analytics: {
+        execution_ctx: executionCtx,
+        ...ids,
+        workflow_key: workflowKey,
+        workflow_id: routing.workflow?.id || null,
+        user_id: user?.id || null,
+        admin_user_id: user?.id || null,
+        user_email: user?.email || null,
+        intent: routing.classification.intent,
+      },
+    });
+
+    if (finalAi?.ok) {
+      ai = {
+        ...finalAi,
+        tool_calls: ai.tool_calls,
+        tool_results: toolResults,
+        tool_model: ai.selected_model,
+      };
+    }
+  }
+
   const totalLatencyMs = Date.now() - chatStarted;
 
   if (ai.stub) {
     return json({
       ok: true,
       reply:
-        "Agent Sam is ready but Workers AI (AGENTSAM_WAI) is not bound in this environment. Routing and workflows are live — bind AGENTSAM_WAI in wrangler.toml for AI responses.",
+        "AgentSam cannot answer yet: this project needs either its Workers AI binding or its configured OpenAI API credential.",
       stub: true,
       routing,
       mcp: { bridge: bridgeConfigured(env), github_context: !!mcpContext },
@@ -665,7 +815,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
     console.error("agentsam chat ai failure", ai.error);
     return json(
       {
-        error: "Agent Sam could not reach Workers AI. Try again in a moment.",
+        error: "AgentSam could not reach a configured AI model. Try again in a moment.",
         detail: ai.error,
         analytics: { session_id: ids.session_id, message_id: ids.message_id, tracked: true },
       },
@@ -747,6 +897,7 @@ export async function agentsamChat(request, env, executionCtx = null) {
       registry: ai.registry ?? true,
       image_base64: ai.image_base64 || null,
       mime_type: ai.mime_type || null,
+      error_code: ai.ok ? null : String(ai.error || "image_generation_failed").slice(0, 120),
       input_tokens: ai.input_tokens,
       output_tokens: ai.output_tokens,
       estimated_cost_usd: ai.estimated_cost_usd,
@@ -944,7 +1095,7 @@ export async function agentsamSemanticSearch(request, env) {
   if (!query) return json({ error: "query required" }, { status: 400 });
 
   const { executeAgentSamTool } = await import("../agentsam/tool-handlers.js");
-  const result = await executeAgentSamTool(env, "commerce_semantic_search", {
+  const result = await executeAgentSamTool(env, "fnf_semantic_search", {
     query,
     top_k: body.top_k || body.limit || 8,
     source_type: body.source_type || null,

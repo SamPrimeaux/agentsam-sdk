@@ -17,7 +17,7 @@ export default function AnalyticsShell() {
 
   useEffect(() => {
     const title = TITLES[segment] || "Analytics";
-    document.title = `${title} — Ember Supply Admin`;
+    document.title = `${title} — Ecommerce Analytics`;
   }, [segment]);
 
   return (

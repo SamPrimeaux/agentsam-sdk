@@ -4,6 +4,19 @@ Local-first project persistence for CoPro.
 
 The package starts with memory and browser local-storage adapters. The contract is intentionally small so IndexedDB/OPFS/native/remote stores can replace the implementation without changing the project model.
 
-## Persistent browser source media (IndexedDB)
+## Browser source-media durability
 
-`BrowserIndexedDbMediaStore` retains user-imported original `File`/`Blob` bytes in the browser's IndexedDB storage. The CoPro project document continues to store stable asset IDs; temporary `blob:` URLs are regenerated from retained bytes upon reopening. This is a browser-local adapter, **not** cross-device synchronization or hosted storage. Browsers may deny storage or exhaust quota; the application must show actionable save/recovery errors and never claim a media source is durable when `put()` fails. Asset bytes are not uploaded in the background. The existing `BrowserLocalStorageProjectStore` remains the authoritative project writer; there is no duplicate project table or schema.
+Use `BrowserIndexedDbMediaStore` to persist original video/audio/image `Blob` or
+`File` bytes separately from the serializable `copro.project.v1` editing
+document. `save(assetId, file)` resolves only after the IndexedDB transaction
+commits; `loadMany(assetIds)` returns source records on project reopen.
+
+This is a browser-local persistence adapter, **not** remote/cloud backup or
+permissioned multi-tenant storage. Exports containing only the CoPro document
+do not embed the original source bytes. Hosts may use OPFS/native or
+permissioned remote storage behind the same media-identity boundary.
+
+### MovieMode source media and metadata
+The same IndexedDB store keeps original File/Blob bytes separately from CoPro projects.
+The stable save/load/loadMany API remains available, alongside put/get/list for
+waveform and thumbnail records. Existing sources stores migrate to media.

@@ -2,10 +2,11 @@
  * AgentSam conversation metadata — D1 index + KV recent cache + R2 thread keys.
  */
 
-import { COMMERCE_ACCOUNT_ID } from "./constants.js";
+import { requireApplicationAccountId } from "../lib/account-context.js";
 import { getSessionUser } from "../lib/auth.js";
 
-const KV_RECENT_KEY = `agentsam:recent:${COMMERCE_ACCOUNT_ID}`;
+/** Computed on use, never at module load: the account is resolved by the entry point. */
+const kvRecentKey = () => `agentsam:recent:${requireApplicationAccountId()}`;
 const RECENT_LIMIT = 20;
 const PREVIEW_MAX = 120;
 
@@ -51,7 +52,7 @@ export async function listConversations(env, { limit = RECENT_LIMIT, status = "a
        ORDER BY last_active_unix DESC
        LIMIT ?`
     )
-      .bind(COMMERCE_ACCOUNT_ID, status, limit)
+      .bind(requireApplicationAccountId(), status, limit)
       .all();
     return results || [];
   } catch {
@@ -64,7 +65,7 @@ export async function getConversation(env, id) {
   return env.DB.prepare(
     `SELECT * FROM agentsam_conversations WHERE id = ? AND account_id = ? AND status != 'deleted' LIMIT 1`
   )
-    .bind(id, COMMERCE_ACCOUNT_ID)
+    .bind(id, requireApplicationAccountId())
     .first();
 }
 
@@ -83,12 +84,12 @@ export async function createConversation(env, { title, createdBy, workflowKey } 
   )
     .bind(
       id,
-      COMMERCE_ACCOUNT_ID,
+      requireApplicationAccountId(),
       safeTitle,
       workflowKey || null,
       r2Key,
       summaryR2Key(id),
-      KV_RECENT_KEY,
+      kvRecentKey(),
       createdBy || null,
       now,
       now
@@ -147,7 +148,7 @@ export async function touchConversation(
       attachmentDelta,
       now,
       conversationId,
-      COMMERCE_ACCOUNT_ID
+      requireApplicationAccountId()
     )
     .run();
 }
@@ -157,7 +158,7 @@ export async function softDeleteConversation(env, id) {
   await env.DB.prepare(
     `UPDATE agentsam_conversations SET status = 'deleted', updated_at = datetime('now') WHERE id = ? AND account_id = ?`
   )
-    .bind(id, COMMERCE_ACCOUNT_ID)
+    .bind(id, requireApplicationAccountId())
     .run();
   return true;
 }
@@ -174,7 +175,7 @@ export async function cacheRecentConversations(env, conversations) {
         workflow_key: c.workflow_key,
       }))
     );
-    await env.CMS_CACHE.put(KV_RECENT_KEY, payload, { expirationTtl: 86400 });
+    await env.CMS_CACHE.put(kvRecentKey(), payload, { expirationTtl: 86400 });
   } catch {
     /* non-blocking */
   }
@@ -183,7 +184,7 @@ export async function cacheRecentConversations(env, conversations) {
 export async function getRecentConversationsCached(env) {
   if (env?.CMS_CACHE) {
     try {
-      const raw = await env.CMS_CACHE.get(KV_RECENT_KEY);
+      const raw = await env.CMS_CACHE.get(kvRecentKey());
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length) return parsed;

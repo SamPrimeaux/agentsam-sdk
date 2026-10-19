@@ -3278,6 +3278,18 @@
       "aliases": []
     },
     {
+      "name": "tool_approval_required",
+      "code": "FAILED_PRECONDITION",
+      "domain": "tool",
+      "failure_class": "authorization",
+      "severity": "blocking_user_fixable",
+      "retryable": false,
+      "resolution_owner": "user",
+      "remediation_action": "request_permission",
+      "default_stage": "authorize",
+      "aliases": []
+    },
+    {
       "name": "tool_permission_denied",
       "code": "PERMISSION_DENIED",
       "domain": "tool",

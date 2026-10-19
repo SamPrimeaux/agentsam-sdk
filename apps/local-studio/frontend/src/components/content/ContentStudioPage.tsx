@@ -105,6 +105,9 @@ function ContentStudioPageMounted({
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">{heading}</span>
+        <a href="/moviemode/" className="ml-auto rounded-md border border-border px-3 py-1 font-medium text-foreground hover:bg-muted">
+          Open MovieMode
+        </a>
         <span className="truncate pl-4">
           {user.id} · {capsLabel} · {localLabel}
         </span>

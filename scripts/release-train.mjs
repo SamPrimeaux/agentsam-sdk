@@ -37,10 +37,23 @@ if (!/^\d+\.\d+\.\d+(?:[-+].+)?$/.test(targetVersion || '')) {
   throw new Error(`invalid release train version: ${targetVersion || '<empty>'}`);
 }
 
+// Ecommerce is independently installable, but its version is coordinated with
+// the SDK train. Preserve exact independently versioned provider dependencies.
+const independentProductRoots = ['apps/ecommerce-cms-agentsam'];
+const coordinatedProductVersionFiles = [
+  'apps/ecommerce-cms-agentsam/package.json',
+  'apps/ecommerce-cms-agentsam/agentsam.app.json',
+  'apps/ecommerce-cms-agentsam/package-lock.json',
+  'apps/ecommerce-cms-agentsam/npm-shrinkwrap.json',
+];
+function isIndependentProduct(file) {
+  const rel = path.relative(root, file).split(path.sep).join('/');
+  return independentProductRoots.some((app) => rel.startsWith(app + '/'));
+}
 const files = [
   rootManifestPath,
   ...walkPackageJson(path.join(root, 'packages')),
-  ...walkPackageJson(path.join(root, 'apps')),
+  ...walkPackageJson(path.join(root, 'apps')).filter((file) => !isIndependentProduct(file)),
 ];
 
 const workspaces = files
@@ -113,6 +126,17 @@ function check() {
     if (value !== targetVersion) failures.push(`${rel}: version ${value || '<missing>'} != ${targetVersion}`);
   }
   failures.push(...releaseManifestDrift());
+  for (const rel of coordinatedProductVersionFiles) {
+    const file = path.join(root, rel);
+    if (!fs.existsSync(file)) { failures.push(rel + ': coordinated product metadata missing'); continue; }
+    const manifest = read(file);
+    if (manifest.version !== targetVersion)
+      failures.push(rel + ': ecommerce product release ' + manifest.version + ' != SDK ' + targetVersion);
+    if (manifest.packages?.['']?.version && manifest.packages[''].version !== targetVersion)
+      failures.push(rel + ': ecommerce lockfile root != SDK ' + targetVersion);
+    if (rel.endsWith('/package.json') && (manifest.private || manifest.publishConfig?.access !== 'public'))
+      failures.push(rel + ': ecommerce product must be publishable to npm');
+  }
 
   const publicCount = workspaces.filter(({ manifest }) => manifest.private !== true && manifest.publishConfig?.access === 'public').length;
   const privateCount = workspaces.filter(({ manifest }) => manifest.private === true).length;
@@ -166,6 +190,18 @@ function align() {
     changedVersions += 1;
     if (!dryRun) fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
     console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} candidate metadata ${rel}@${targetVersion}`);
+  }
+  for (const rel of coordinatedProductVersionFiles) {
+    const file = path.join(root, rel);
+    if (!fs.existsSync(file)) throw new Error('coordinated ecommerce metadata missing: ' + rel);
+    const manifest = read(file);
+    if (manifest.version === targetVersion && (!manifest.packages?.[''] || manifest.packages[''].version === targetVersion)) continue;
+    manifest.version = targetVersion;
+    if (manifest.packages?.['']) manifest.packages[''].version = targetVersion;
+    changedFiles += 1;
+    changedVersions += 1;
+    if (!dryRun) fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
+    console.log(`${dryRun ? 'WOULD ALIGN' : 'ALIGNED'} coordinated ecommerce product ${rel}@${targetVersion}`);
   }
   console.log(`${dryRun ? 'DRY RUN' : 'DONE'} files=${changedFiles} versions=${changedVersions} dependency_pins=${changedEdges}`);
 }
