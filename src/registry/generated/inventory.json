@@ -7,7 +7,7 @@
   ],
   "counts": {
     "commands": 76,
-    "capabilities": 75,
+    "capabilities": 81,
     "packages": 62
   },
   "commands": [
@@ -1443,6 +1443,54 @@
       "cli": null,
       "agent_callable": "requires-handler-check",
       "status": "stable"
+    },
+    {
+      "id": "sam.evidence.begin",
+      "description": "Declare flows, steps, states, viewports and checks before capturing. Fails with evidence_project_unresolved when no project is provided.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "sam.evidence.capture",
+      "description": "Capture one asset against a declared state, across the declared viewport matrix when one exists, or a 01-Brief/02-Recon asset by name.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "sam.evidence.seal",
+      "description": "Verify coverage and codecs, derive web copies and covers, compute facts, write the screenplay and review page, then the manifest last.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "sam.evidence.deliver",
+      "description": "Serve a sealed run read-only on loopback (port 0 unless requested) and return the manifest and review-page URLs.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "sam.evidence.compare",
+      "description": "Pair the same state across two sealed runs of one project and crop what changed (then | now); written under the newer run.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
+    },
+    {
+      "id": "sam.evidence.ingest",
+      "description": "Plan (default) or apply importing an existing folder of captures into the canonical layout. Originals are never moved or renamed.",
+      "package": "@inneranimalmedia/agentsam-sdk",
+      "cli": null,
+      "agent_callable": "requires-handler-check",
+      "status": "experimental"
     }
   ],
   "packages": [
