@@ -71,6 +71,21 @@ for (const packageSrc of walk(path.join(root, 'packages')).filter((file) => file
   }
 }
 
+// These two source-checkout CAD re-export shims predate package-level
+// consumption of @inneranimalmedia/agentsam-sdk/cad. They must remain EXACTLY
+// the canonical one-line re-export; all new application deep imports fail.
+// Remove this exception when the CAD product's packaged SDK dependency is
+// verified in a standalone installation.
+const CAD_COMPAT_REEXPORTS = new Map([
+  [
+    'apps/cad-creator/shared/cad/src/domain/project-contract.js',
+    '../../../../../../src/lib/cad/editable-project-contract.js',
+  ],
+  [
+    'apps/cad-creator/shared/cad/src/domain/project-tools.js',
+    '../../../../../../src/lib/cad/project-tools.js',
+  ],
+]);
 for (const appFile of walk(path.join(root, 'apps'))) {
   const text = fs.readFileSync(appFile, 'utf8');
   if (text.includes('@inneranimalmedia/agentsam-sdk/src/')) {
@@ -78,7 +93,13 @@ for (const appFile of walk(path.join(root, 'apps'))) {
   }
   for (const match of text.matchAll(IMPORT_RE)) {
     const resolved = resolveRelativeImport(appFile, match[1]);
-    if (resolved && resolved.startsWith(rootSrc)) failures.push(`${path.relative(root, appFile)} reaches into root src via ${match[1]}`);
+    if (resolved && resolved.startsWith(rootSrc)) {
+      const rel = path.relative(root, appFile).split(path.sep).join('/');
+      const expected = CAD_COMPAT_REEXPORTS.get(rel);
+      const exactCompat = expected === match[1] &&
+        text.trim() === `// Compatibility export; SDK is canonical.\nexport * from '${expected}';`;
+      if (!exactCompat) failures.push(`${rel} reaches into root src via ${match[1]}`);
+    }
   }
 }
 

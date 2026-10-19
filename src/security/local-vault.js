@@ -38,9 +38,14 @@ function ensureVaultDirectory(options = {}) {
 }
 
 function getMachineFingerprint() {
+  // os.userInfo() can throw ENOENT under a macOS user-hosted terminal
+  // even when USER/USERNAME and the home directory remain available.
+  // Preserve the existing username precedence and fallback on lookup errors.
+  let username;
+  try { username = os.userInfo?.()?.username; } catch { /* use environment below */ }
   const parts = [
     os.hostname(),
-    os.userInfo?.()?.username || process.env.USER || process.env.USERNAME || 'unknown-user',
+    username || process.env.USER || process.env.USERNAME || 'unknown-user',
     os.homedir(),
     process.arch,
     process.platform,
