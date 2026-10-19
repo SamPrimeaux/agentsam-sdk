@@ -12,6 +12,14 @@ Authority: `AGENTSAM.md`, repository architecture, IAM policy, Experience Standa
 6. Close out before switching tasks: scan the sibling worktrees; remove each clean, fully merged worktree and its merged local branch with Git's ordinary safe delete. If dirty, ahead, or diverged: preserve and report; never force prune/reset. Check remote PR branches explicitly before remote deletion.
 7. If work is deliberately experimental, label it `prototype/not-integrated`; link the canonical destination and don't present it as shipping progress.
 
+## Agents own the full lifecycle
+Whoever starts the work finishes it. Never leave a finished branch as an open PR waiting for the owner.
+1. Start in a dedicated worktree off `origin/main`: branch `<type>/<slug>-<YYYYMMDD>`, path `~/agent-worktrees/<slug>-<YYYYMMDD>`.
+2. Implement, test, commit, push, open the PR and squash-merge it yourself once the required checks pass, or fail only on named pre-existing failures that you list in the PR.
+3. Confirm the commit is reachable from `origin/main`, then prune: `node scripts/git/delivery-closure.mjs --prune-merged`.
+
+Hand back to the owner only for a blocker you cannot clear (name the failing gate and preserve the work), publishing that needs the owner's login (npm, PyPI), and decisions that are the owner's to make (licensing, pricing, anything destructive outside your own branch).
+
 ## Hard wording gates
 - **Implemented:** code exists and is committed, not necessarily visible anywhere.
 - **Verified:** tested behaviors have traceable evidence against the stated source revision and runtime.
@@ -30,4 +38,4 @@ not documentation-only. Keep secrets, private tokens and unrelated personal cont
 ## Audit & safe prune
 Run `node scripts/git/delivery-closure.mjs` to audit. Pass `--prune-merged`
 only after a merged PR is confirmed and no sibling is actively working in the tree.
-The tool refuses dirty and unmerged worktrees by default; it does not delete remote branches.
+The tool refuses dirty, unmerged and empty (no commits of their own) worktrees by default; it does not delete remote branches. A branch counts as merged when its tip is reachable from `origin/main`, or when a merged PR's head commit equals the tip (a squash merge; needs `gh`). Merged local branches without a worktree are pruned the same way. `.agentsam/hooks.json` runs it with `--hook` at session start and end, so merged work is pruned without anyone remembering.
