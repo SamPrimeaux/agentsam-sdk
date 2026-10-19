@@ -33,6 +33,36 @@ export function normalizeCadTools(input) {
   return CAD_TOOLS.filter(tool => unique.includes(tool));
 }
 
+/**
+ * Operator-authorized writable project mounts. Aliases are stable capability names,
+ * not arbitrary container paths or user-supplied shell arguments.
+ */
+export function normalizeCadMounts(input = []) {
+  const entries = Array.isArray(input) ? input : [input];
+  const mounts = [];
+  const names = new Set();
+  for (const entry of entries.filter(Boolean)) {
+    const index = String(entry).indexOf('=');
+    if (index < 1) throw new Error('CAD mount requires alias=/absolute/host/directory');
+    const name = String(entry).slice(0, index);
+    const host = String(entry).slice(index + 1);
+    if (!/^[a-z][a-z0-9_-]{0,39}$/.test(name) || name === 'work' || names.has(name))
+      throw new Error('CAD mount alias invalid or duplicated');
+    if (!path.isAbsolute(host) || /[\n\r,]/.test(host)) throw new Error('CAD mount requires an absolute host directory');
+    const source = fs.realpathSync(host);
+    if (!fs.statSync(source).isDirectory()) throw new Error('CAD mount is not a directory');
+    names.add(name);
+    mounts.push({ name, source, target: '/mounts/' + name });
+  }
+  return mounts;
+}
+
+function cadStorage(opts, slug) {
+  const volume = String(opts.volume || slug + '-data');
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/.test(volume)) throw new Error('CAD volume name invalid');
+  return { volume, mounts: normalizeCadMounts(opts.mounts || []) };
+}
+
 export function cadDefaultResources(tools) {
   const selected = normalizeCadTools(tools);
   if (selected.includes('blender')) return { memory: '4g', cpus: '2' };
@@ -56,6 +86,8 @@ export function generateCadDocker(opts = {}) {
   const port = opts.port ?? 8793;
   const tools = normalizeCadTools(opts.tools);
   const resources = cadDefaultResources(tools);
+  const storage = cadStorage(opts, slug);
+  const fileRoots = { work: '/work', ...Object.fromEntries(storage.mounts.map(m => [m.name, m.target])) };
   if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) throw new Error('CAD service name must be a lowercase Docker slug.');
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Port must be 1..65535.');
 
@@ -100,7 +132,7 @@ RUN apt-get update \\
  && chown -R cad:cad /work
 ${provision.length ? provision.join('\n') + '\n' : ''}WORKDIR /srv
 ${copyLines.join('\n')}
-ENV${extraEnv.length ? ' ' + extraEnv.join(' ') : ''} PORT=${port} AGENTSAM_CAD_TOKEN_FILE=/config/service.token AGENTSAM_CAD_WORK_ROOT=/work AGENTSAM_CAD_TOOLS=${tools.join(',')} QT_QPA_PLATFORM=offscreen PYTHONUNBUFFERED=1 HOME=/tmp/home XDG_CACHE_HOME=/tmp/cache XDG_CONFIG_HOME=/tmp/config
+ENV${extraEnv.length ? ' ' + extraEnv.join(' ') : ''} PORT=${port} AGENTSAM_CAD_TOKEN_FILE=/config/service.token AGENTSAM_CAD_WORK_ROOT=/work AGENTSAM_CAD_FILE_ROOTS='${JSON.stringify(fileRoots)}' AGENTSAM_CAD_TOOLS=${tools.join(',')} QT_QPA_PLATFORM=offscreen PYTHONUNBUFFERED=1 HOME=/tmp/home XDG_CACHE_HOME=/tmp/cache XDG_CONFIG_HOME=/tmp/config
 EXPOSE ${port}
 USER cad
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=4 CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:${port}/healthz', timeout=3).read()"
@@ -117,7 +149,7 @@ CMD ["python3", "/srv/server.py"]
     ports: [${q(`127.0.0.1:${port}:${port}`)}]
     restart: unless-stopped
     init: true
-    read_only: true
+    read_only: ${opts.writableRoot === true ? 'false' : 'true'}
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     mem_limit: ${q(opts.memory || resources.memory)}
@@ -125,23 +157,26 @@ CMD ["python3", "/srv/server.py"]
     pids_limit: 256
     tmpfs:
       - "/tmp:rw,noexec,nosuid,size=128m"
-      - "/work:rw,noexec,nosuid,size=512m,mode=1777"
     environment:
       AGENTSAM_CAD_TOKEN_FILE: /config/service.token
       AGENTSAM_CAD_TOOLS: ${q(tools.join(','))}
+      AGENTSAM_CAD_FILE_ROOTS: ${q(JSON.stringify(fileRoots))}
     labels:
       agentsam.managed: "true"
       agentsam.type: cad_service
       agentsam.cad.tools: ${q(tools.join(','))}
     volumes:
       - ${q({ type: 'bind', source: configDir, target: '/config', read_only: true })}
+      - ${q({ type: 'volume', source: storage.volume, target: '/work' })}
+${storage.mounts.map(m => '      - ' + q({ type: 'bind', source: m.source, target: m.target, read_only: false })).join('\n')}
 `;
-  return { dockerfile, compose, dockerignore: '.git\n.env*\n.agentsam\nnode_modules\ndist\nbuild\n', tools };
+  return { dockerfile, compose, storage, dockerignore: '.git\n.env*\n.agentsam\nnode_modules\ndist\nbuild\n', tools };
 }
 
 export function prepareCadDeployment(targetDir, opts = {}) {
   const slug = opts.appSlug || 'agentsam-cad';
   const tools = normalizeCadTools(opts.tools);
+  const storage = cadStorage(opts, slug);
   const configurationDir = path.join(targetDir, '.agentsam/docker/cad', slug);
   fs.mkdirSync(configurationDir, { recursive: true, mode: 0o700 });
   for (const dir of [configurationDir, path.join(targetDir, '.agentsam/docker')]) {
@@ -161,11 +196,13 @@ export function prepareCadDeployment(targetDir, opts = {}) {
     service: 'agentsam-cad',
     slug,
     tools,
+    volume: storage.volume,
+    mounts: storage.mounts.map(({ name, target }) => ({ name, target })),
     port: opts.port ?? 8793,
     createdAt: new Date().toISOString(),
   }, null, 2) + '\n', { mode: 0o600 });
   if (/[,\n\r]/.test(configurationDir)) throw new Error('CAD deployment path cannot contain commas or newlines.');
-  return { ...opts, configurationDir, tokenFile, tools };
+  return { ...opts, configurationDir, tokenFile, tools, volume: storage.volume, mounts: opts.mounts || [] };
 }
 
 export function stageCadContext(versionDir, opts = {}) {
@@ -204,16 +241,18 @@ export function cadRunArguments(opts = {}) {
   return [
     '--restart', 'unless-stopped',
     '--init',
-    '--read-only',
+    ...(opts.writableRoot === true ? [] : ['--read-only']),
     '--cap-drop=ALL',
     '--security-opt=no-new-privileges',
     '--pids-limit=256',
     '--tmpfs', '/tmp:rw,noexec,nosuid,size=128m',
-    '--tmpfs', '/work:rw,noexec,nosuid,size=512m,mode=1777',
     '--log-opt=max-size=10m',
     '--log-opt=max-file=3',
     '-e', 'AGENTSAM_CAD_TOKEN_FILE=/config/service.token',
     '-e', `AGENTSAM_CAD_TOOLS=${normalizeCadTools(opts.tools).join(',')}`,
+    '-e', `AGENTSAM_CAD_FILE_ROOTS=${JSON.stringify({ work: '/work', ...Object.fromEntries(normalizeCadMounts(opts.mounts || []).map(m => [m.name, m.target])) })}`,
     '--mount', `type=bind,src=${config},dst=/config,readonly`,
+    '--mount', `type=volume,src=${cadStorage(opts, opts.appSlug || 'agentsam-cad').volume},dst=/work`,
+    ...normalizeCadMounts(opts.mounts || []).flatMap(m => ['--mount', `type=bind,src=${m.source},dst=${m.target}`]),
   ];
 }

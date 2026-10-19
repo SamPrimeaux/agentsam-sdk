@@ -77,6 +77,7 @@ export { CMS_COMPATIBILITY_ALIASES } from './packs/cms/aliases.js';
 
 export { createAuthoringOperations } from './packs/authoring/index.js';
 export { createEvidenceOperations } from './packs/evidence/index.js';
+export { createHostedEvidenceStore } from './packs/evidence/store-hosted.js';
 export { createLocalEvidenceStore } from './packs/evidence/store.js';
 export { createFfprobeMedia } from './packs/evidence/media.js';
 export { createPlaywrightSource } from './packs/evidence/driver-playwright.js';

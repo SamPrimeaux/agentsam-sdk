@@ -1,5 +1,6 @@
 import { getRoboticsPerceptionCapabilities, runRoboticsPerception } from '../src/robotics/perception.ts';
 import appManifest from '../../agentsam.app.json';
+import { handleCadArtifact, handleCadEvidence } from './cad-storage.js';
 
 /**
  * Canonical Cloudflare Worker boundary for CAD Creator.
@@ -39,6 +40,20 @@ export default {
           requires_approval: true,
         },
       });
+    }
+    if (url.pathname.startsWith("/api/cad/evidence/")) {
+      try { return await handleCadEvidence(request, env); }
+      catch (error) {
+        console.error('cad_evidence_operation_failed', String(error?.name || 'Error'));
+        return json({ ok: false, error: 'cad_evidence_backend_unavailable' }, 503);
+      }
+    }
+    if (url.pathname.startsWith("/api/cad/artifacts/")) {
+      try { return await handleCadArtifact(request, env); }
+      catch (error) {
+        console.error('cad_artifact_operation_failed', String(error?.name || 'Error'));
+        return json({ ok: false, error: 'cad_artifact_backend_unavailable' }, 503);
+      }
     }
     if (request.method === "POST" && url.pathname === "/api/cad/execute") {
       return json({

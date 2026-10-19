@@ -136,5 +136,24 @@
       ],
       "output": "frontend/dist"
     }
+  },
+  "storage": {
+    "artifactBinding": "WEBSITE_ASSETS",
+    "databaseBinding": "DB",
+    "objectPrefix": "projects",
+    "principal": "oauth_token_verifier",
+    "requiredScopes": [
+      "cad:artifact.read",
+      "cad:artifact.write",
+      "cad:artifact.delete",
+      "cad:evidence.read",
+      "cad:evidence.write",
+      "cad:evidence.delete"
+    ],
+    "limits": {
+      "maxArtifactBytes": 26214400
+    },
+    "evidenceEndpoint": "/api/cad/evidence",
+    "bucketName": "cad"
   }
 }
