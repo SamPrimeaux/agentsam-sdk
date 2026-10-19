@@ -68,3 +68,33 @@ jobs:
           npm init -y
           npm install "@inneranimalmedia/agentsam-sdk@$APPROVED_VERSION"
           node --input-type=module -e 'import("@inneranimalmedia/agentsam-sdk/cad-project-v2").then(m=>{if(m.CAD_PROJECT_V2!=="cad.project.v2")throw Error("cad_v2_export_missing");console.log("CAD_V2_INSTALLED_CONSUMER_PASS")})'
+      - name: Install Ecommerce build dependencies
+        run: |
+          npm ci --prefix apps/ecommerce-cms-agentsam --ignore-scripts --no-audit --no-fund
+          npm ci --prefix apps/ecommerce-cms-agentsam/frontend --ignore-scripts --no-audit --no-fund
+      - name: Verify full Ecommerce CMS product
+        run: npm --prefix apps/ecommerce-cms-agentsam run release:verify
+      - name: Publish coordinated Ecommerce CMS product
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          APPROVED_VERSION: ${{ inputs.version }}
+        run: |
+          node -e 'const root=require("./package.json"),product=require("./apps/ecommerce-cms-agentsam/package.json"); if(root.version!==process.env.APPROVED_VERSION||product.version!==root.version||product.private)throw Error("ecommerce_release_train_mismatch")'
+          if npm view "@inneranimalmedia/ecommerce-cms-agentsam@$APPROVED_VERSION" version --fetch-retries=0 >/dev/null 2>&1; then
+            echo "Ecommerce product already published at $APPROVED_VERSION"
+          else
+            npm publish --prefix apps/ecommerce-cms-agentsam --access public --provenance
+          fi
+          npm view "@inneranimalmedia/ecommerce-cms-agentsam@$APPROVED_VERSION" version
+      - name: Verify Ecommerce CMS from a fresh npm installation
+        env:
+          APPROVED_VERSION: ${{ inputs.version }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ecommerce-consumer"
+          cd "$RUNNER_TEMP/ecommerce-consumer"
+          npm init -y
+          npm install "@inneranimalmedia/ecommerce-cms-agentsam@$APPROVED_VERSION"
+          node -e 'const p=require("@inneranimalmedia/ecommerce-cms-agentsam/manifest"); if(p.version!==process.env.APPROVED_VERSION||p.id!=="ecommerce-cms-agentsam") throw Error("ecommerce_manifest_mismatch");console.log("ECOMMERCE_CMS_NPM_MANIFEST_PASS")'
+          test -f node_modules/@inneranimalmedia/ecommerce-cms-agentsam/dist/assets/admin/store.html
+          test -f node_modules/@inneranimalmedia/ecommerce-cms-agentsam/dist/assets/admin/_spa/index.html
+          echo "ECOMMERCE_FULL_ADMIN_NPM_INSTALL_PASS"
