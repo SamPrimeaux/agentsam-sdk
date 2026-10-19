@@ -77,3 +77,5 @@ apps/agentsam-go-worker/runtime/.agentsam-build-source
 
 # Agent evidence captures may contain private source data
 .agentsam/evidence/
+# Generated CAD Creator offline schema bundle (canonical source: protocol/cad/v2/)
+/apps/cad-creator/schemas/
