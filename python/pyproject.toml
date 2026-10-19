@@ -1,19 +1,49 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentsam-sdk"
-version = "0.1.0"
-description = "Stdlib-first Agent Sam repository/data CLI with optional Rich terminal UI."
+dynamic = ["version"]
+description = "Stdlib-first Agent Sam repository/data CLI and local SAM client, with an optional Rich terminal UI."
+readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Sam Primeaux", email = "sam@inneranimalmedia.com" }]
+keywords = ["agentsam", "sam", "agents", "sdk", "repository", "cli"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
 dependencies = []
 
 [project.optional-dependencies]
 tui = ["rich>=13.7.0"]
 
+[project.urls]
+Homepage = "https://github.com/SamPrimeaux/agentsam-sdk"
+Repository = "https://github.com/SamPrimeaux/agentsam-sdk"
+Issues = "https://github.com/SamPrimeaux/agentsam-sdk/issues"
+npm = "https://www.npmjs.com/package/@inneranimalmedia/agentsam-sdk"
+
 [project.scripts]
 agentsam = "agentsam_sdk.cli:main"
 
+[tool.setuptools.dynamic]
+version = { attr = "agentsam_sdk.__version__" }
+
 [tool.setuptools.packages.find]
 include = ["agentsam_sdk*"]
+
+[tool.setuptools.package-data]
+agentsam_sdk = ["py.typed"]

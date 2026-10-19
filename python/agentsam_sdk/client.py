@@ -49,13 +49,31 @@ class Score:
     def question(self) -> dict:
         return {"type":"score","levels":list(self.levels),"instructions":self.instructions,"evaluator_hint":"heuristic"}
 
-def _bridge_path(explicit: str | None) -> Path:
+_BRIDGE_REL = Path("src/sam/bridge/stdio.mjs")
+_NPM_PACKAGE = Path("node_modules/@inneranimalmedia/agentsam-sdk")
+
+
+def _discover_bridge(cwd: str | Path | None) -> Path | None:
+    """Find the Node bridge without configuration.
+
+    Order: this tree's own npm/monorepo layout, then the working directory and
+    its parents (a checkout, or an installed ``@inneranimalmedia/agentsam-sdk``).
+    """
+    roots = [Path(__file__).resolve().parents[2]]
+    if cwd is not None:
+        start = Path(cwd).expanduser().resolve()
+        roots.extend([start, *start.parents])
+    for root in roots:
+        for candidate in (root / _BRIDGE_REL, root / _NPM_PACKAGE / _BRIDGE_REL):
+            if candidate.is_file():
+                return candidate
+    return None
+
+
+def _bridge_path(explicit: str | None, cwd: str | Path | None = None) -> Path:
     candidate = explicit or os.environ.get("AGENTSAM_SDK_JS_BRIDGE")
-    if candidate:
-        path = Path(candidate).expanduser().resolve()
-    else:
-        path = Path(__file__).resolve().parents[2] / "src/sam/bridge/stdio.mjs"
-    if not path.is_file():
+    path = Path(candidate).expanduser().resolve() if candidate else _discover_bridge(cwd)
+    if path is None or not path.is_file():
         raise SamClientError("sam_bridge_not_installed")
     return path
 
@@ -147,7 +165,7 @@ class AgentSamClient:
     def __init__(self, *, cwd: str | Path = ".", node: str | None = None, bridge: str | None = None, control_plane_url: str | None = None, control_plane_token: str | None = None):
         self.cwd = str(Path(cwd).resolve())
         self.node = _binary(node)
-        self.bridge = str(_bridge_path(bridge))
+        self.bridge = str(_bridge_path(bridge, self.cwd))
         self.control_plane = _ControlPlane(control_plane_url,control_plane_token or "") if control_plane_url else None
     def _request(self, method: str, **kwargs) -> Any:
         result = subprocess.run([self.node,self.bridge], input=json.dumps({"method":method,**kwargs}),
