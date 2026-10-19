@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runSam } from '../../src/commands/sam.js';
+import { CORE_OPERATIONS } from '../../src/sam/packs/core.js';
 import { ensureOS, getOSStatus, registerOSPack } from '../../src/sam/os.js';
 import { defineSamOperation } from '../../src/sam/define.js';
 import { registerSamOperation, getSamOperation } from '../../src/sam/registry.js';
 
 test('SAM OS bootstraps its offline packaged core without D1', () => {
   const status = ensureOS();
-  assert.equal(status.core_count, 21); // 10 original core + 10 deterministic robotics + artifact.render
+  assert.equal(status.core_count, CORE_OPERATIONS.length);
+  for (const operation of CORE_OPERATIONS) assert.ok(status.available.includes(operation.id), operation.id);
   assert.ok(status.available.includes('repository.inspect'));
   assert.ok(status.available.includes('artifact.render'));
   assert.ok(status.available.includes('robotics.scene.inspect'));
