@@ -31,6 +31,22 @@ if (schema.$id !== 'https://schemas.inneranimalmedia.com/apps/cad-creator/schema
   throw new Error('CAD v2 schema identity or contract mismatch');
 }
 
+const modularRoot = path.join(root, '..', '..', 'protocol', 'cad', 'v2');
+const manifestSource = path.join(modularRoot, 'schema-pack.manifest.json');
+const manifestTarget = path.join(root, 'schemas', 'v2', 'schema-pack.manifest.json');
+if (!fs.existsSync(manifestTarget) || !fs.readFileSync(manifestTarget).equals(fs.readFileSync(manifestSource))) {
+  throw new Error('CAD modular schema manifest missing or differs from SDK authority');
+}
+const pack = JSON.parse(fs.readFileSync(manifestSource, 'utf8'));
+if (pack.modules.length < 20) throw new Error('CAD v2 modular schema pack incomplete');
+for (const item of pack.modules) {
+  const sdkFile = path.join(modularRoot, item.path);
+  const npmFile = path.join(root, 'schemas', 'v2', item.path);
+  if (!fs.existsSync(npmFile) || !fs.readFileSync(sdkFile).equals(fs.readFileSync(npmFile))) {
+    throw new Error('CAD npm schema module missing or differs from canonical SDK: ' + item.path);
+  }
+}
+
 const assetsDir = path.join(root, 'frontend', 'dist', 'assets');
 const assets = fs.readdirSync(assetsDir);
 if (!assets.some((name) => name.startsWith('RoboticsWorkspace-') && name.endsWith('.js'))) {
