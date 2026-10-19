@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
-import { Box, Database, FileCode, Globe, Layers, Plus, SquareTerminal, Target, Upload, Users, X } from "lucide-react";
+import { Box, Database, FileCode, Globe, Layers, Plus, SquareTerminal, Target, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,7 +14,6 @@ import { MessageList } from "@/components/workbench/thread";
 import { BrowserStage } from "@/components/workbench/browser";
 import { FilesStage } from "@/components/workbench/files";
 import { ArtifactsStage } from "@/components/workbench/artifacts";
-import { DeployStage } from "@/components/workbench/deploy";
 import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
 import { DatabaseStage } from "@/components/workbench/database-stage";
 import { TerminalPane } from "@/components/workbench/terminal";
@@ -29,7 +28,6 @@ function TabIcon({ kind }: { kind: string }) {
   if (kind === "chat") return <Users className="size-3.5" />;
   if (kind === "browser") return <Globe className="size-3.5" />;
   if (kind === "artifacts") return <Box className="size-3.5" />;
-  if (kind === "deploy") return <Upload className="size-3.5" />;
   if (kind === "app") return <Layers className="size-3.5" />;
   if (kind === "goal") return <Target className="size-3.5" />;
   if (kind === "database") return <Database className="size-3.5" />;
@@ -89,7 +87,7 @@ export function SideStage() {
               {SIDE_STAGE_ACTIONS.map((item) => {
                 const Icon = {
                   goal: Target, coworker: Users, browser: Globe, files: FileCode,
-                  artifacts: Box, ship: Upload, cad: Layers, database: Database, cli: SquareTerminal,
+                  artifacts: Box, cad: Layers, database: Database, cli: SquareTerminal,
                 }[item.id];
                 return (
                   <DropdownMenuItem key={item.id} onSelect={() => {
@@ -123,7 +121,6 @@ export function SideStage() {
         {tab?.kind === "browser" ? <BrowserStage tab={tab} /> : null}
         {tab?.kind === "files" ? <FilesStage tab={tab} /> : null}
         {tab?.kind === "artifacts" ? <ArtifactsStage /> : null}
-        {tab?.kind === "deploy" ? <DeployStage /> : null}
         {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
         {tab?.kind === "terminal" ? <TerminalPane variant="side" /> : null}

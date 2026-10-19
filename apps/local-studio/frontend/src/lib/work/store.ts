@@ -301,7 +301,7 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
         : { ...DEFAULT_SELECTION },
     modelSelectionMode: raw?.modelSelectionMode === "manual" ? "manual" : "auto",
     runModes: normalizedRunModes(raw?.runModes),
-    sideTabs: (raw?.sideTabs ?? []).map((t) => {
+    sideTabs: (raw?.sideTabs ?? []).filter((t) => t.kind !== "deploy").map((t) => {
       const tab = t as SideTab;
       return {
         ...tab,

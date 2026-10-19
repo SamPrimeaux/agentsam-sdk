@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -32,6 +33,11 @@ test('real repo: included apps resolve from their own manifests', () => {
   assert.ok(cad.cwd.endsWith(path.join('apps', 'cad-creator')));
   assert.ok(cad.output.endsWith(path.join('frontend', 'dist')));
   assert.ok(cad.publicDir.endsWith(path.join('frontend', 'public', 'cad-creator')));
+  const movie = plans.find((p) => p.id === 'agentsam-copro-studio');
+  assert.ok(movie, 'MovieMode must be an included application');
+  assert.equal(movie.base, '/moviemode/');
+  assert.deepEqual(movie.command.slice(-1), ['--base=/moviemode/']);
+  assert.ok(movie.output.endsWith(path.join('agentsam-copro-studio', 'dist')));
 });
 
 test('a new app needs only an embed block — no host code change', () => {
@@ -88,4 +94,12 @@ test('every included stage is gitignored (generated output never gets committed)
     assert.ok(ignore.includes(`frontend/public/${p.stage}/`), `.gitignore must list frontend/public/${p.stage}/`);
   }
   assert.ok(REPO_ROOT.length > 0);
+});
+
+test('generic --only flag stages one registered application without building other apps', () => {
+  const command = path.join(LOCAL_STUDIO, 'scripts', 'build-included-apps.mjs');
+  const output = execFileSync(process.execPath, [command, '--dry-run', '--only', 'agentsam-copro-studio'], { encoding: 'utf8' });
+  const plans = JSON.parse(output);
+  assert.deepEqual(plans.map((plan) => plan.id), ['agentsam-copro-studio']);
+  assert.equal(plans[0].base, '/moviemode/');
 });

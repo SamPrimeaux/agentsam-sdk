@@ -8,7 +8,6 @@ export const SIDE_STAGE_ACTIONS = [
   { id: 'browser', tab: 'browser', label: 'Browser', icon: 'globe', description: 'Focus the browser' },
   { id: 'files', tab: 'files', label: 'Files', icon: 'file-code', description: 'Open files' },
   { id: 'artifacts', tab: 'artifacts', label: 'Artifacts', icon: 'box', description: 'Open generated artifacts' },
-  { id: 'ship', tab: 'deploy', label: 'Ship', icon: 'upload', description: 'Open deployment tools' },
   { id: 'cad', tab: 'app', label: 'CAD Creator', icon: 'layers', description: 'Open the CAD workspace' },
   { id: 'database', tab: 'database', label: 'Database', icon: 'database', description: 'Open the database editor' },
   { id: 'cli', tab: 'terminal', label: 'CLI', icon: 'square-terminal', description: 'Open the terminal' },

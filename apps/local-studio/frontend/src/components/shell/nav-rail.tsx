@@ -15,7 +15,6 @@ import {
   Palette,
   Settings,
   SquareTerminal,
-  Upload,
 } from "lucide-react";
 import { Nav } from "@inneranimalmedia/agentsam-nav";
 import { StudioMark } from "@/components/mark";
@@ -107,7 +106,6 @@ export function NavRail() {
                 Themes
               </Nav.MenuButton>
             </Nav.MenuItem>
-            <Nav.MenuItem><Nav.MenuButton icon={Upload} active={pathname.startsWith("/ship")} itemId="ship" onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/ship" } }))}>Ship</Nav.MenuButton></Nav.MenuItem>
           </Nav.Menu>
         </Nav.Group>
       </Nav.Content>

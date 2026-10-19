@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Command } from "cmdk";
-import { Box, FileCode, FolderGit2, Globe, MessageSquare, Plus, Search, SquareTerminal, Upload } from "lucide-react";
+import { Box, FileCode, FolderGit2, Globe, MessageSquare, Plus, Search, SquareTerminal } from "lucide-react";
 import { useWorkStore } from "@/lib/work/store";
 
 export function CommandPalette() {
@@ -102,15 +102,6 @@ export function CommandPalette() {
           >
             <Box className="size-4" />
             Open artifacts
-          </Command.Item>
-          <Command.Item
-            onSelect={() => {
-              void navigate({ to: "/ship" });
-              setOpen(false);
-            }}
-          >
-            <Upload className="size-4" />
-            Ship
           </Command.Item>
           <Command.Item
             onSelect={() => {

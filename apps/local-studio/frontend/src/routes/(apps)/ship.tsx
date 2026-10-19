@@ -1,14 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { DeployStage } from "@/components/workbench/deploy";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 
+// Retired legacy destination: use authorized Keys & secrets instead.
 export const Route = createFileRoute("/(apps)/ship")({
-  component: ShipPage,
+  component: () => <Navigate to="/settings/keys" replace />,
 });
-
-function ShipPage() {
-  return (
-    <div className="h-full min-h-0 overflow-y-auto">
-      <DeployStage />
-    </div>
-  );
-}

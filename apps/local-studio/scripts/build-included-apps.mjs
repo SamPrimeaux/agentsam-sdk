@@ -26,6 +26,7 @@
  *   node scripts/build-included-apps.mjs                 build + copy into frontend/public/<stage>
  *   node scripts/build-included-apps.mjs --stage         copy frontend/public/<stage> into .output/public/<stage>
  *   node scripts/build-included-apps.mjs --dry-run       print the resolved plan, run nothing
+ *   node scripts/build-included-apps.mjs --only <app-id> build/stage just one registered app
  *   node scripts/build-included-apps.mjs --manifest <path-to-desktop-manifest.json>
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
@@ -159,6 +160,7 @@ function main() {
       stage: { type: 'boolean', default: false },
       'dry-run': { type: 'boolean', default: false },
       manifest: { type: 'string' },
+      only: { type: 'string' },
     },
     allowPositionals: false,
     strict: true,
@@ -178,11 +180,16 @@ function main() {
     console.log('[included-apps] none declared — host Local Studio only');
     return;
   }
+  if (flags.only && !result.plans.some((plan) => plan.id === flags.only)) {
+    console.error(`[included-apps] ERROR: included app "${flags.only}" is not registered`);
+    process.exit(1);
+  }
+  const selected = flags.only ? result.plans.filter((plan) => plan.id === flags.only) : result.plans;
   if (flags['dry-run']) {
-    console.log(JSON.stringify(result.plans, null, 2));
+    console.log(JSON.stringify(selected, null, 2));
     return;
   }
-  for (const plan of result.plans) {
+  for (const plan of selected) {
     try {
       if (flags.stage) stage(plan);
       else build(plan);

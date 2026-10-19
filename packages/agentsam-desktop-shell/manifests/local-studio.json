@@ -74,7 +74,8 @@
   },
   "included_apps": [
     "cad-creator",
-    "ecommerce-cms-agentsam"
+    "ecommerce-cms-agentsam",
+    "agentsam-copro-studio"
   ],
   "theme": {
     "primary_color": "#0a0a0c",
