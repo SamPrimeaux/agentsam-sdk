@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,6 +22,12 @@ test('CAD v2 modular schema pack is complete and does not replace the base proje
   assert.equal(manifest.status, 'additive-opt-in');
   assert.equal(manifest.modules.length, 22);
   assert.equal(records.size, 22);
+  assert.equal(manifest.integrityAlgorithm, 'sha256');
+  for (const mod of manifest.modules) {
+    const bytes = fs.readFileSync(path.join(source, mod.path));
+    assert.equal(bytes.length, mod.byteSize, mod.path + ': size drift');
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), mod.sha256, mod.path + ': content digest drift');
+  }
   const base = JSON.parse(fs.readFileSync(path.join(root, 'protocol/cad/cad.project.v2.schema.json')));
   assert.equal(base.properties.schema.const, 'cad.project.v2');
   assert.equal(base.$id, 'https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/cad.project.v2.schema.json');
