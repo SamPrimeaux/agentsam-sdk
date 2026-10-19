@@ -142,8 +142,8 @@ agentsam dockerize cad --tools openscad,freecad
 agentsam dockerize cad --tools all
 ```
 
-The service binds to `127.0.0.1:8793`, runs as a non-root user with a read-only root
-filesystem, drops Linux capabilities, uses temporary `/work` storage, and writes a
+The service binds to `127.0.0.1:8793`, runs as a non-root user with a writable root
+filesystem (add `--cad-read-only-root` only if you want the hardening), drops Linux capabilities, keeps `/work` on a persistent named volume, and writes a
 random service token under `.agentsam/docker/cad/<name>/service.token`. It is persistent
 (`restart unless-stopped`) but the native CAD applications are not resident in memory
 while idle; stop it whenever you do not want the local API available:

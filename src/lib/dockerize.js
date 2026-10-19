@@ -426,12 +426,12 @@ export async function dockerize(targetDir, appType, opts = {}) {
     dockerfilePath: written.dockerfilePath,
     composePath: written.composePath,
     createdAt: new Date().toISOString(),
-    ...(cad ? { tools: opts.tools, volume: opts.volume, mounts: opts.mounts, writableRoot: opts.writableRoot } : {}),
+    ...(cad ? { tools: opts.tools, volume: opts.volume, mounts: opts.mounts, readOnlyRoot: opts.readOnlyRoot } : {}),
   });
 
   const result = { plan, written, manifest, build: null, run: null, tagRegistration: null, cancelAutoStop: null,
     ...(knowledge ? { configurationDir: opts.configurationDir, tokenFile: opts.tokenFile, volume: opts.volume } : {}),
-    ...(cad ? { configurationDir: opts.configurationDir, tokenFile: opts.tokenFile, tools: opts.tools, volume: opts.volume, mounts: opts.mounts, writableRoot: opts.writableRoot } : {}) };
+    ...(cad ? { configurationDir: opts.configurationDir, tokenFile: opts.tokenFile, tools: opts.tools, volume: opts.volume, mounts: opts.mounts, readOnlyRoot: opts.readOnlyRoot } : {}) };
   if (opts.writeOnly) return result;
 
   result.build = await buildDockerImage(buildContext, {

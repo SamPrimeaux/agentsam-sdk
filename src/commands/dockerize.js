@@ -27,7 +27,7 @@ export function parseDockerizeArgs(argv) {
     repositories: [],
     tools: undefined,
     mounts: [],
-    writableRoot: false,
+    readOnlyRoot: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
@@ -46,7 +46,8 @@ export function parseDockerizeArgs(argv) {
     else if (a === '--repository') opts.repositories.push(argv[++i] || '');
     else if (a === '--volume') opts.volume = argv[++i] || '';
     else if (a === '--cad-mount') opts.mounts.push(argv[++i] || '');
-    else if (a === '--cad-writable-root') opts.writableRoot = true;
+    else if (a === '--cad-read-only-root') opts.readOnlyRoot = true;
+    else if (a === '--cad-writable-root') opts.readOnlyRoot = false; // the default; still accepted by existing scripts
     else if (a === '--memory') opts.memory = argv[++i] || '';
     else if (a === '--cpus') opts.cpus = argv[++i] || '';
     else if (a === '--tools' || a === '--cad-tools') opts.tools = argv[++i] || undefined;
@@ -81,7 +82,7 @@ export function printDockerizeHelp() {
     --repository <alias=path> Read-only repository for knowledge_service (repeatable)
     --volume <name>   Persistent data volume (CAD defaults to <name>-data)
     --cad-mount <alias=/absolute/path>  Mount an operator-authorized project directory read/write (repeatable)
-    --cad-writable-root  Allow writes to container root filesystem (operator opt-in)
+    --cad-read-only-root  Make the container root filesystem read-only (explicit hardening opt-in; writable by default)
     --memory <size>   Memory cap (knowledge: 768m; CAD: 1g/2g/4g by selected tools)
     --cpus <number>   CPU cap (CAD defaults: 1 core OpenSCAD; 2 with FreeCAD/Blender)
     --tools <list>     CAD tools: openscad (default), freecad, blender, comma-separated, or all
@@ -100,7 +101,7 @@ ${DOCKER_APP_TYPES.map((t) => `    ${t.padEnd(14)} ${DOCKER_APP_TYPE_LABELS[t].l
   run prints the exact stop command so nothing is ever silently left running.
   knowledge_service is persistent: localhost only, restart unless-stopped, durable data
   volume, read-only repository mounts, generated token, and no embedding calls by default.
-  cad_service is localhost-only, token-authenticated, read-only/rootless, and persistent until
+  cad_service is localhost-only, token-authenticated, rootless, writable by default, and persistent until
   stopped. 'agentsam dockerize cad' installs OpenSCAD by default; add --tools all only when
   you actually need the much larger FreeCAD/Blender toolchain.
   `);

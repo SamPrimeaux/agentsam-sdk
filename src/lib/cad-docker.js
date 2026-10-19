@@ -149,15 +149,13 @@ CMD ["python3", "/srv/server.py"]
     ports: [${q(`127.0.0.1:${port}:${port}`)}]
     restart: unless-stopped
     init: true
-    read_only: ${opts.writableRoot === true ? 'false' : 'true'}
+    read_only: ${opts.readOnlyRoot === true ? 'true' : 'false'}
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
     mem_limit: ${q(opts.memory || resources.memory)}
     cpus: ${q(String(opts.cpus || resources.cpus))}
     pids_limit: 256
-    tmpfs:
-      - "/tmp:rw,noexec,nosuid,size=128m"
-    environment:
+${opts.readOnlyRoot === true ? '    tmpfs:\n      - "/tmp:rw,nosuid,size=1g"\n' : ''}    environment:
       AGENTSAM_CAD_TOKEN_FILE: /config/service.token
       AGENTSAM_CAD_TOOLS: ${q(tools.join(','))}
       AGENTSAM_CAD_FILE_ROOTS: ${q(JSON.stringify(fileRoots))}
@@ -166,7 +164,7 @@ CMD ["python3", "/srv/server.py"]
       agentsam.type: cad_service
       agentsam.cad.tools: ${q(tools.join(','))}
     volumes:
-      - ${q({ type: 'bind', source: configDir, target: '/config', read_only: true })}
+      - ${q({ type: 'bind', source: configDir, target: '/config', read_only: false })}
       - ${q({ type: 'volume', source: storage.volume, target: '/work' })}
 ${storage.mounts.map(m => '      - ' + q({ type: 'bind', source: m.source, target: m.target, read_only: false })).join('\n')}
 `;
@@ -241,17 +239,16 @@ export function cadRunArguments(opts = {}) {
   return [
     '--restart', 'unless-stopped',
     '--init',
-    ...(opts.writableRoot === true ? [] : ['--read-only']),
+    ...(opts.readOnlyRoot === true ? ['--read-only', '--tmpfs', '/tmp:rw,nosuid,size=1g'] : []),
     '--cap-drop=ALL',
     '--security-opt=no-new-privileges',
     '--pids-limit=256',
-    '--tmpfs', '/tmp:rw,noexec,nosuid,size=128m',
     '--log-opt=max-size=10m',
     '--log-opt=max-file=3',
     '-e', 'AGENTSAM_CAD_TOKEN_FILE=/config/service.token',
     '-e', `AGENTSAM_CAD_TOOLS=${normalizeCadTools(opts.tools).join(',')}`,
     '-e', `AGENTSAM_CAD_FILE_ROOTS=${JSON.stringify({ work: '/work', ...Object.fromEntries(normalizeCadMounts(opts.mounts || []).map(m => [m.name, m.target])) })}`,
-    '--mount', `type=bind,src=${config},dst=/config,readonly`,
+    '--mount', `type=bind,src=${config},dst=/config`,
     '--mount', `type=volume,src=${cadStorage(opts, opts.appSlug || 'agentsam-cad').volume},dst=/work`,
     ...normalizeCadMounts(opts.mounts || []).flatMap(m => ['--mount', `type=bind,src=${m.source},dst=${m.target}`]),
   ];
