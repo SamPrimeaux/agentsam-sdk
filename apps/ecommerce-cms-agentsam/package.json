@@ -1,7 +1,7 @@
 {
   "name": "@inneranimalmedia/ecommerce-cms-agentsam",
-  "version": "0.2.0",
-  "private": true,
+  "version": "2.6.13",
+  "private": false,
   "type": "module",
   "bin": {
     "ecommerce": "bin/ecommerce.mjs",
@@ -23,7 +23,8 @@
     "test:tools": "npm run typecheck:tools && node --test tests/typed-tool-registry.test.mjs tests/core-tools-readonly.test.mjs tests/d1-crud.test.mjs && node backend/tools/doctor.mjs",
     "test:release": "node --test tests/release-artifact.test.mjs tests/analytics-hosts.test.mjs tests/side-assistant-portability.test.mjs",
     "prepack": "npm run build && npm run test:release",
-    "install:studio": "npm ci --ignore-scripts --no-audit --no-fund && npm ci --prefix frontend --ignore-scripts --no-audit --no-fund"
+    "install:studio": "npm ci --ignore-scripts --no-audit --no-fund && npm ci --prefix frontend --ignore-scripts --no-audit --no-fund",
+    "release:verify": "npm run build && npm run test:package && npm run test:release"
   },
   "dependencies": {
     "@inneranimalmedia/revise-theme": "0.2.0",
@@ -77,5 +78,14 @@
     "./admin/surface": "./frontend/admin.surface.json",
     "./apps/registry": "./apps/registry.json",
     "./backend/routes": "./backend/lib/route-manifest.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "apps/ecommerce-cms-agentsam"
   }
 }
