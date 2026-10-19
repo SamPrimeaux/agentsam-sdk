@@ -25,6 +25,11 @@
     "test": "node --test test/*.test.mjs"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
+    "directory": "packages/agentsam-cms"
+  },
   "publishConfig": {
     "access": "public"
   }
