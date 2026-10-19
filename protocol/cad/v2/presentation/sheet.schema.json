@@ -1,0 +1,254 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/sheet.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "properties": {
+    "annotations": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "dimension",
+              "text",
+              "leader",
+              "tag",
+              "symbol",
+              "schedule"
+            ]
+          },
+          "targetIds": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "text": {
+            "type": "string"
+          },
+          "value": {
+            "additionalProperties": false,
+            "properties": {
+              "unit": {
+                "enum": [
+                  "mm",
+                  "cm",
+                  "m",
+                  "in",
+                  "ft",
+                  "deg",
+                  "rad",
+                  "kg",
+                  "g",
+                  "N",
+                  "kN",
+                  "Pa",
+                  "MPa",
+                  "s"
+                ]
+              },
+              "value": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "targetIds"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "drawingStatus": {
+      "enum": [
+        "working",
+        "review",
+        "approved",
+        "issued",
+        "superseded"
+      ]
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "issueRevision": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "number": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "paper": {
+      "additionalProperties": false,
+      "properties": {
+        "height": {
+          "additionalProperties": false,
+          "properties": {
+            "unit": {
+              "enum": [
+                "mm",
+                "cm",
+                "m",
+                "in",
+                "ft",
+                "deg",
+                "rad",
+                "kg",
+                "g",
+                "N",
+                "kN",
+                "Pa",
+                "MPa",
+                "s"
+              ]
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "value",
+            "unit"
+          ],
+          "type": "object"
+        },
+        "orientation": {
+          "enum": [
+            "landscape",
+            "portrait"
+          ]
+        },
+        "width": {
+          "additionalProperties": false,
+          "properties": {
+            "unit": {
+              "enum": [
+                "mm",
+                "cm",
+                "m",
+                "in",
+                "ft",
+                "deg",
+                "rad",
+                "kg",
+                "g",
+                "N",
+                "kN",
+                "Pa",
+                "MPa",
+                "s"
+              ]
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "value",
+            "unit"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "orientation"
+      ],
+      "type": "object"
+    },
+    "sourceRevision": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "standardsRefs": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "viewports": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "position": {
+            "items": false,
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "rotation": {
+            "type": "number"
+          },
+          "scale": {
+            "exclusiveMinimum": 0,
+            "type": "number"
+          },
+          "viewId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "viewId",
+          "position",
+          "scale"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "number",
+    "name",
+    "sourceRevision",
+    "paper",
+    "viewports",
+    "annotations",
+    "drawingStatus"
+  ],
+  "title": "Drawing sheet annotated model views",
+  "type": "object"
+}

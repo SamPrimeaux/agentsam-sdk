@@ -1,0 +1,246 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/modules/robotics.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "extensions": {
+      "additionalProperties": true,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "motionPlanRefs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "robots": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "baseFrameId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "controllerProfileRef": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "endEffectors": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "linkId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "toolEntityIds": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "toolFrameId": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "linkId",
+                "toolFrameId"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "joints": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "axis": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 3,
+                  "minItems": 3,
+                  "type": "array"
+                },
+                "childLinkId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "kind": {
+                  "enum": [
+                    "fixed",
+                    "revolute",
+                    "continuous",
+                    "prismatic",
+                    "spherical",
+                    "planar",
+                    "floating"
+                  ],
+                  "type": "string"
+                },
+                "limits": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "effort": {
+                      "minimum": 0,
+                      "type": "number"
+                    },
+                    "lower": {
+                      "type": "number"
+                    },
+                    "upper": {
+                      "type": "number"
+                    },
+                    "velocity": {
+                      "exclusiveMinimum": 0,
+                      "type": "number"
+                    }
+                  },
+                  "required": [],
+                  "type": "object"
+                },
+                "originFrameId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "parentLinkId": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "parentLinkId",
+                "childLinkId",
+                "originFrameId"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "links": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "centerOfMassFrameId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "collisionEntityIds": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "entityIds": {
+                  "items": {
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "id": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "inertiaTensor": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 9,
+                  "minItems": 9,
+                  "type": "array"
+                },
+                "mass": {
+                  "minimum": 0,
+                  "type": "number"
+                }
+              },
+              "required": [
+                "id",
+                "entityIds"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "name": {
+            "type": "string"
+          },
+          "rootLinkId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "safetyProfileRef": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "workspaceRefs": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "baseFrameId",
+          "rootLinkId",
+          "links",
+          "joints"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "cad.module.robotics.v1"
+    },
+    "simulationRefs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "version": {
+      "const": 1
+    }
+  },
+  "required": [
+    "schema",
+    "version",
+    "robots"
+  ],
+  "title": "Robotics digital-twin and kinematics module",
+  "type": "object"
+}

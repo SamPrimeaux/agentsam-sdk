@@ -1,0 +1,190 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/view.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "properties": {
+    "annotationRefs": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "camera": {
+      "additionalProperties": false,
+      "properties": {
+        "far": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "fov": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "near": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "orthographicHeight": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "position": {
+          "items": false,
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "projection": {
+          "enum": [
+            "perspective",
+            "orthographic"
+          ]
+        },
+        "target": {
+          "items": false,
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "up": {
+          "items": false,
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        }
+      },
+      "required": [
+        "position",
+        "target",
+        "up",
+        "projection",
+        "near",
+        "far"
+      ],
+      "type": "object"
+    },
+    "clippingPlanes": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "normal": {
+            "items": false,
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "offset": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "normal",
+          "offset"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "hiddenElementIds": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "plan",
+        "elevation",
+        "section",
+        "detail",
+        "isometric",
+        "perspective",
+        "orthographic",
+        "walkthrough"
+      ]
+    },
+    "scale": {
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "sourceRevision": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "visibleElementIds": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "id",
+    "sourceRevision",
+    "kind",
+    "camera"
+  ],
+  "title": "Plan drawing and 3D viewport contract",
+  "type": "object"
+}
