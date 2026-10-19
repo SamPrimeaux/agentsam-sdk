@@ -638,7 +638,7 @@ function App() {
         onDuplicateProject={(id) => void duplicateSavedProject(id)}
         appIconUrl={coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
       />
-      <input ref={homeFileRef} type="file" accept="video/*,image/*,audio/*" style={{display:"none"}} aria-label="Select a video, image or audio file" onChange={(event) => {
+      <input ref={homeFileRef} type="file" accept="video/*,image/*,audio/*" className="copro-hidden-source-input" aria-label="Select a video, image or audio file" onChange={(event) => {
         const file = event.currentTarget.files?.[0];
         if (file) importFile(file);
         event.currentTarget.value = "";
@@ -648,9 +648,9 @@ function App() {
   }
 
   return <>
-    {mediaPersistenceError && <div role="alert" className="copro-source-storage-warning" style={{position:"fixed",zIndex:30,bottom:78,left:12,right:12,maxWidth:720,margin:"0 auto",padding:"13px 16px",background:"#442a24",color:"#fff5e9",border:"1px solid #bd816d",borderRadius:12,boxShadow:"0 12px 36px #0006",fontSize:13}}>
+    {mediaPersistenceError && <div role="alert" className="copro-source-storage-warning">
       <strong>Source storage needs attention. </strong>{mediaPersistenceError}
-      <button type="button" onClick={() => setMediaPersistenceError(null)} aria-label="Dismiss storage warning" style={{marginLeft:12,color:"inherit",background:"transparent",border:"1px solid #cba08c",padding:"4px 8px",borderRadius:7,cursor:"pointer"}}>Dismiss</button>
+      <button type="button" onClick={() => setMediaPersistenceError(null)} aria-label="Dismiss storage warning" className="copro-storage-warning-dismiss">Dismiss</button>
     </div>}
     <CoProStudio
     key={projectSeed}

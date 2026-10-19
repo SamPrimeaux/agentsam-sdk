@@ -1,3 +1,4 @@
+import { IconAction } from "./icon-action.js";
 import React, { useMemo, useRef, useState } from "react";
 import {
   AudioLines, Captions, ChevronDown, ChevronRight, Clapperboard, Clock3,
@@ -120,9 +121,9 @@ export function CoProProjectsScreen({
         <section className="mm-home-quickstart" aria-label="Start creating">
           <button className="mm-create-banner" onClick={onCreate}><span><Plus size={23}/></span><strong>Create project</strong><small>Open the full timeline editor</small><ChevronRight size={21}/></button>
           <div className="mm-home-quick-grid">
-            <button onClick={onImport} className="mm-start-card"><span className="mm-start-icon"><Film size={28}/></span><span><strong>Video Studio</strong><small>Import video, photographs, audio or screen captures</small></span><ChevronRight size={20}/></button>
-            <button onClick={recording ? onStopRecording : onRecord} disabled={!recording && !onRecord} className="mm-start-card"><span className="mm-start-icon"><ScreenShare size={28}/></span><span><strong>{recording ? "Finish recording" : "Record screen"}</strong><small>{recording ? "Stop capture to add video" : "Capture walkthroughs and bug reports"}</small></span><ChevronRight size={20}/></button>
-            <button onClick={() => navigate("templates")} className="mm-start-card mm-start-template"><span className="mm-start-icon"><Clapperboard size={28}/></span><span><strong>Template Studio</strong><small>Start from an editable composition</small></span><ChevronRight size={20}/></button>
+            <IconAction aria-label="Open Video Studio to import media" onClick={onImport} className="mm-start-card"><span className="mm-start-icon"><Film size={28}/></span><span><strong>Video Studio</strong><small>Import video, photographs, audio or screen captures</small></span><ChevronRight size={20}/></IconAction>
+            <IconAction aria-label={recording ? "Stop screen recording" : "Record screen"} onClick={recording ? onStopRecording : onRecord} disabled={!recording && !onRecord} className="mm-start-card"><span className="mm-start-icon"><ScreenShare size={28}/></span><span><strong>{recording ? "Finish recording" : "Record screen"}</strong><small>{recording ? "Stop capture to add video" : "Capture walkthroughs and bug reports"}</small></span><ChevronRight size={20}/></IconAction>
+            <IconAction aria-label="Open Template Studio" onClick={() => navigate("templates")} className="mm-start-card mm-start-template"><span className="mm-start-icon"><Clapperboard size={28}/></span><span><strong>Template Studio</strong><small>Start from an editable composition</small></span><ChevronRight size={20}/></IconAction>
           </div>
         </section>
         <section className="mm-tools-strip" aria-label="Editing tools">
@@ -142,15 +143,15 @@ export function CoProProjectsScreen({
             <label className="mm-search"><Search size={17}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search projects" aria-label="Search projects"/></label>
             <div className="mm-filter-group" role="group" aria-label="Filter projects">{FILTERS.map(f => <button key={f} className={filter === f ? "is-active" : ""} onClick={() => setFilter(f)}>{f}</button>)}</div>
             <label className="mm-sort" title="Sort projects"><span>Sort</span><select value={sort} onChange={e => setSort(e.target.value as "recent" | "name")} aria-label="Project sort"><option value="recent">Recently edited</option><option value="name">Name</option></select><ChevronDown size={14}/></label>
-            <div className="mm-view-switch" role="group" aria-label="Project layout"><button aria-pressed={view === "grid"} onClick={() => setView("grid")} title="Grid view"><Grid2X2 size={17}/></button><button aria-pressed={view === "list"} onClick={() => setView("list")} title="List view"><LayoutList size={17}/></button></div>
+            <div className="mm-view-switch" role="group" aria-label="Project layout"><IconAction aria-label="Grid layout" aria-pressed={view === "grid"} onClick={() => setView("grid")} title="Grid view"><Grid2X2 size={17}/></IconAction><IconAction aria-label="List layout" aria-pressed={view === "list"} onClick={() => setView("list")} title="List view"><LayoutList size={17}/></IconAction></div>
           </div>
           {visible.length ? <div className={`mm-project-grid is-${view}`}>
             {visible.map(p => <article className="mm-project-tile" key={p.id}>
-              <button className="mm-project-open" onClick={() => onOpenProject(p.id)} aria-label={`Open ${p.title}`}>
+              <IconAction className="mm-project-open" onClick={() => onOpenProject(p.id)} aria-label={`Open ${p.title}`}>
                 <span className={`mm-project-cover tone-${p.thumbnailTone ?? "slate"}`}><FileVideo2 size={32}/><span>{p.kind}</span></span>
                 <span className="mm-project-details"><strong>{p.title}</strong><span>{shortDate(p.updatedAt)} · {duration(p.durationMs)} · {p.aspectRatio ?? "Project"}</span><small>{p.subtitle ?? "Saved project"}</small></span>
-              </button>
-              <button className="mm-project-more" aria-label={`Project actions for ${p.title}`} aria-expanded={openMenu === p.id} onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}><MoreHorizontal size={18}/></button>
+              </IconAction>
+              <IconAction className="mm-project-more" aria-label={`Project actions for ${p.title}`} aria-expanded={openMenu === p.id} onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}><MoreHorizontal size={18}/></IconAction>
               {openMenu === p.id && <div className="mm-project-menu" role="group" aria-label={`Actions for ${p.title}`}><button onClick={() => {setOpenMenu(null);onOpenProject(p.id);}}>Open</button><button onClick={() => rename(p)}>Rename</button><button disabled={!onDuplicateProject} onClick={() => {onDuplicateProject?.(p.id);setOpenMenu(null);}}>Duplicate</button><button disabled={!onDeleteProject} onClick={() => remove(p)}>Delete</button><button onClick={() => setOpenMenu(null)}>Cancel</button></div>}
             </article>)}
           </div> : <div className="mm-project-empty"><FolderOpen size={29}/><strong>{query || filter !== "All" ? "No projects match" : "Your projects will appear here"}</strong><p>{query || filter !== "All" ? "Try a different search or filter." : "Create a timeline or import a real recording to start."}</p><button onClick={onCreate}>Create project <ChevronRight size={17}/></button></div>}
