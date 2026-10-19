@@ -1,0 +1,141 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/validation/result.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "properties": {
+    "executedAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "inputHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "issues": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "message": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "remediation": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "blocker"
+            ]
+          },
+          "standardRef": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "targetIds": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "severity",
+          "targetIds",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "layer": {
+      "enum": [
+        "document",
+        "semantic",
+        "geometry",
+        "deliverable"
+      ]
+    },
+    "outputReceiptId": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "projectId": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "sourceRevision": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "passed-with-warnings",
+        "failed",
+        "blocked"
+      ]
+    },
+    "validator": {
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "projectId",
+    "sourceRevision",
+    "layer",
+    "validator",
+    "status",
+    "issues",
+    "inputHash",
+    "executedAt"
+  ],
+  "title": "Four-layer document semantic geometry deliverable validation",
+  "type": "object"
+}

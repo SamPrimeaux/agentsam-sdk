@@ -1,0 +1,189 @@
+{
+  "bucket": "inneranimalmedia-schemas",
+  "compatibility": {
+    "existingProjectV2Unchanged": true,
+    "newModulesOptIn": true,
+    "strictRootBindingRequiresMigration": true
+  },
+  "modules": [
+    {
+      "bytes": 2782,
+      "path": "core/artifact-receipt.schema.json",
+      "sha256": "46b9abdf3cd03a6c9da137956ae632a437a937b3021a9d34f1dbcf946282116a",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/artifact-receipt.schema.json"
+    },
+    {
+      "bytes": 7597,
+      "path": "core/coordinate-system.schema.json",
+      "sha256": "cde830c747ff48890c7774b4b4aa822710f9a24b176cc066999a13b0b4278a29",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/coordinate-system.schema.json"
+    },
+    {
+      "bytes": 2769,
+      "path": "core/geometry-constraint.schema.json",
+      "sha256": "2968f32174c3d3de93009e6bbf50edb4fa8dbce94354e1621c0fba328921a86b",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/geometry-constraint.schema.json"
+    },
+    {
+      "bytes": 1909,
+      "path": "core/geometry-entity.schema.json",
+      "sha256": "97eaca9dbe6acc59008ae1ab37b72e6dab6c462dca075136aba851943391c033",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/geometry-entity.schema.json"
+    },
+    {
+      "bytes": 2575,
+      "path": "core/geometry-feature.schema.json",
+      "sha256": "483b66e8258daf5509e86c740a0cda559e8dd723810a075cd5a411b2fb3fccc6",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/geometry-feature.schema.json"
+    },
+    {
+      "bytes": 1601,
+      "path": "core/geometry-relationship.schema.json",
+      "sha256": "60b761f1b7f7178f86dbc551809c2521dd0babdbd5908a78c712c5b35add1c7d",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/geometry-relationship.schema.json"
+    },
+    {
+      "bytes": 2515,
+      "path": "core/project-revision.schema.json",
+      "sha256": "ff8c9650e77f23347f3d8997651eeeb9794c109a52d14c356c7164a0fa6083df",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/project-revision.schema.json"
+    },
+    {
+      "bytes": 1907,
+      "path": "core/topology-reference.schema.json",
+      "sha256": "3885028e2dcfa55e166056a5da1ffd3d73f875ece62c5f8247bc3bc927ca0e2c",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/topology-reference.schema.json"
+    },
+    {
+      "bytes": 2746,
+      "path": "intent/design-decision.schema.json",
+      "sha256": "766b8ae5d3019b06a9f36882311f88aa9f4f1c986888641409c3d40ad516e136",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/intent/design-decision.schema.json"
+    },
+    {
+      "bytes": 2070,
+      "path": "intent/design-option.schema.json",
+      "sha256": "4631beb99ef45fbe53fb543c4099bbdfd64a632ccb7d48f0eaa1bbb7eff5fec0",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/intent/design-option.schema.json"
+    },
+    {
+      "bytes": 3487,
+      "path": "interchange/ifc-mapping.schema.json",
+      "sha256": "634c516b2bdb4f54b620466c7f14a119b3717278b69dd0c361ce725e82f08ebd",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/interchange/ifc-mapping.schema.json"
+    },
+    {
+      "bytes": 2730,
+      "path": "interchange/native-document.schema.json",
+      "sha256": "26efdc5012991f031db1e53817a418f5801ea6897f32c38d220444b07bbed208",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/interchange/native-document.schema.json"
+    },
+    {
+      "bytes": 2855,
+      "path": "interchange/reference-model.schema.json",
+      "sha256": "62eff2e3f50e20ac5b86267876fa08c67cdeea9360acf1a6dfcb30c374b6085a",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/interchange/reference-model.schema.json"
+    },
+    {
+      "bytes": 6851,
+      "path": "modules/architecture.v1.schema.json",
+      "sha256": "2465ef8cdfa4c62248d266fd9ae0f25e63f53a515b7e15065b39bd1ab63863e4",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/modules/architecture.v1.schema.json"
+    },
+    {
+      "bytes": 3933,
+      "path": "modules/landscape.v1.schema.json",
+      "sha256": "6e1a88f7bf76527695b9a0d811aa47cc72c5575a1fde9684d5fd9944962af516",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/modules/landscape.v1.schema.json"
+    },
+    {
+      "bytes": 7890,
+      "path": "modules/mechanical.v1.schema.json",
+      "sha256": "a5e516b7cb0d3c9790d8edb8ffce55370e03a1338eba3099f47e1ccd0c08908f",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/modules/mechanical.v1.schema.json"
+    },
+    {
+      "bytes": 2218,
+      "path": "modules/parametric.v1.schema.json",
+      "sha256": "8e6f87ae5130579625ed7f3f7dca3be92508f387a73fc5ac46e368d1150f5673",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/modules/parametric.v1.schema.json"
+    },
+    {
+      "bytes": 4349,
+      "path": "modules/product-design.v1.schema.json",
+      "sha256": "ad8137314ba356e406b39f11c3b2ac2893b4583cd8d802301acb8757c09b897e",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/modules/product-design.v1.schema.json"
+    },
+    {
+      "bytes": 6535,
+      "path": "modules/robotics.v1.schema.json",
+      "sha256": "8094422a1520afa83baddb67559c575e51b706b22d81d6ce640a11d0d73b8ec2",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/modules/robotics.v1.schema.json"
+    },
+    {
+      "bytes": 3196,
+      "path": "presentation/camera-path.schema.json",
+      "sha256": "25bc9cb8545a98533208ff4a574edd83593ceadd9e270e5d7c85cada6176918e",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/camera-path.schema.json"
+    },
+    {
+      "bytes": 3358,
+      "path": "presentation/drawing.schema.json",
+      "sha256": "48dad46ab678c3ac3ca0416b7b92c924546d669ee8268225b1f732ea1b5046ab",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/drawing.schema.json"
+    },
+    {
+      "bytes": 3460,
+      "path": "presentation/production.schema.json",
+      "sha256": "1ccfbe5ba346aacaa9e8fc9644cd12d7fdb277218650a7371e95f10d6ef85985",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/production.schema.json"
+    },
+    {
+      "bytes": 4693,
+      "path": "presentation/scene.schema.json",
+      "sha256": "b1e706c4ea63914941e0493ccf6d150e9347d95c4312f50e5681d74619d12dd8",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/scene.schema.json"
+    },
+    {
+      "bytes": 5641,
+      "path": "presentation/sheet.schema.json",
+      "sha256": "3261132bae0883926caba10e08a897d2617acfa9c627e05db3b3f4ee741f0c0e",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/sheet.schema.json"
+    },
+    {
+      "bytes": 4162,
+      "path": "presentation/view.schema.json",
+      "sha256": "ebae04de863a51fc93c22c2a4a7a59b75aa1792cf42a4f36577c2d968e9003a7",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/view.schema.json"
+    },
+    {
+      "bytes": 4473,
+      "path": "presentation/walkthrough.schema.json",
+      "sha256": "0ac7e0d978fd5e2d52b68924d948059368e914bcfa955fbfd2191f0c1440196f",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/walkthrough.schema.json"
+    },
+    {
+      "bytes": 4517,
+      "path": "validation/deliverable-manifest.schema.json",
+      "sha256": "e24a92160948bf495253f409c7dba78e80318709b563910fb0784eda22058d6f",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/validation/deliverable-manifest.schema.json"
+    },
+    {
+      "bytes": 3195,
+      "path": "validation/result.schema.json",
+      "sha256": "3260aef804795bd559131047b1756145c48a21291830b01ed65ccf754e6ef6c0",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/validation/result.schema.json"
+    }
+  ],
+  "objectPrefix": "apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/",
+  "packVersion": "2.6.13-modules.2",
+  "publicBaseUri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/",
+  "schema": "cad.schema-pack.v1",
+  "sourceAuthority": "agentsam-sdk/protocol/cad/v2",
+  "validationLayers": [
+    "document",
+    "semantic",
+    "native-geometry",
+    "deliverable"
+  ]
+}

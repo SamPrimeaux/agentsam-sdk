@@ -1,0 +1,199 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/validation/deliverable-manifest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "extensions": {
+      "additionalProperties": true,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "generatedAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "outputs": {
+      "items": {
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "completed"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "artifactUri": {
+                  "type": "string"
+                },
+                "outputId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "receiptId": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "sha256": {
+                  "pattern": "^[a-fA-F0-9]{64}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "outputId",
+                "artifactUri",
+                "sha256",
+                "receiptId"
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "artifactUri": {
+            "type": "string"
+          },
+          "byteSize": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "format": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "outputId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "professionalReviewRequired": {
+            "type": "boolean"
+          },
+          "receiptId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "sha256": {
+            "pattern": "^[a-fA-F0-9]{64}$",
+            "type": "string"
+          },
+          "sourceRevision": {
+            "oneOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "minimum": 0,
+                "type": "integer"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "planned",
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "superseded"
+            ],
+            "type": "string"
+          },
+          "validationResultIds": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "viewer": {
+            "enum": [
+              "model",
+              "bim",
+              "drawing",
+              "walkthrough",
+              "film",
+              "download",
+              "none"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "format",
+          "required",
+          "state",
+          "sourceRevision"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "profile": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "projectId": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "projectRevision": {
+      "oneOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "minimum": 0,
+          "type": "integer"
+        }
+      ]
+    },
+    "schema": {
+      "const": "cad.delivery-manifest.v1"
+    },
+    "validationIds": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "projectId",
+    "projectRevision",
+    "profile",
+    "outputs"
+  ],
+  "title": "Traceable deliverable and viewer handoff manifest",
+  "type": "object"
+}
