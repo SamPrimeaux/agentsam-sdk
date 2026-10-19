@@ -1,0 +1,124 @@
+{
+  "schema": "cad.schema-pack.v1",
+  "projectContract": "cad.project.v2",
+  "packVersion": "2.6.13-modules.1",
+  "status": "additive-opt-in",
+  "authoritativeSource": "agentsam-sdk/protocol/cad/v2",
+  "publicBaseUri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/",
+  "bucket": "inneranimalmedia-schemas",
+  "objectPrefix": "apps/cad-creator/schemas/v2/",
+  "modules": [
+    {
+      "path": "core/coordinate-system.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/core/coordinate-system.schema.json"
+    },
+    {
+      "path": "core/geometry-entity.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/core/geometry-entity.schema.json"
+    },
+    {
+      "path": "core/topology-reference.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/core/topology-reference.schema.json"
+    },
+    {
+      "path": "core/geometry-feature.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/core/geometry-feature.schema.json"
+    },
+    {
+      "path": "core/geometry-constraint.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/core/geometry-constraint.schema.json"
+    },
+    {
+      "path": "core/geometry-relationship.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/core/geometry-relationship.schema.json"
+    },
+    {
+      "path": "core/project-revision.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/core/project-revision.schema.json"
+    },
+    {
+      "path": "core/artifact-receipt.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/core/artifact-receipt.schema.json"
+    },
+    {
+      "path": "modules/parametric.v1.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/modules/parametric.v1.schema.json"
+    },
+    {
+      "path": "modules/architecture.v1.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/modules/architecture.v1.schema.json"
+    },
+    {
+      "path": "modules/mechanical.v1.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/modules/mechanical.v1.schema.json"
+    },
+    {
+      "path": "modules/landscape.v1.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/modules/landscape.v1.schema.json"
+    },
+    {
+      "path": "modules/product-design.v1.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/modules/product-design.v1.schema.json"
+    },
+    {
+      "path": "interchange/ifc-mapping.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/interchange/ifc-mapping.schema.json"
+    },
+    {
+      "path": "interchange/native-document.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/interchange/native-document.schema.json"
+    },
+    {
+      "path": "presentation/view.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/presentation/view.schema.json"
+    },
+    {
+      "path": "presentation/sheet.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/presentation/sheet.schema.json"
+    },
+    {
+      "path": "presentation/scene.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/presentation/scene.schema.json"
+    },
+    {
+      "path": "presentation/walkthrough.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/presentation/walkthrough.schema.json"
+    },
+    {
+      "path": "intent/design-decision.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/intent/design-decision.schema.json"
+    },
+    {
+      "path": "intent/design-option.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/intent/design-option.schema.json"
+    },
+    {
+      "path": "validation/result.schema.json",
+      "uri": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/validation/result.schema.json"
+    }
+  ],
+  "validationLayers": [
+    "document",
+    "semantic",
+    "native-geometry",
+    "deliverable"
+  ],
+  "compatibility": {
+    "existingProjectV2Unchanged": true,
+    "losslessMigrationRequiredBeforeStrictRootBinding": true,
+    "unknownExtensionModulesPreservedButNotAssumedVerified": true
+  },
+  "warnings": [
+    "Schemas alone do not validate referential integrity, IFC semantics, topology or engineering correctness.",
+    "New strict entity fields cannot be inserted into legacy geometry.entities until compatibility adapter covers closed additionalProperties constraints.",
+    "Professional permit/seal claims require licensed human review."
+  ],
+  "requirements": [
+    "stable entity and topology IDs",
+    "typed parametric features and constraints",
+    "BIM relationship integrity",
+    "coordinate conversion and tolerance policy",
+    "content-addressed artifact provenance",
+    "model revision consistency for views and walkthroughs"
+  ]
+}
