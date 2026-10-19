@@ -14,7 +14,22 @@ const repoMedia = fileURLToPath(new URL("../../packages/copro-media/src/index.js
  * package copies or an old dist emitted before the last editing pass.
  */
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: "portable-copro-source-paths",
+      apply: "build",
+      enforce: "post",
+      renderChunk(code) {
+        const root = fileURLToPath(
+          new URL("../../", import.meta.url)
+        ).replaceAll("\\", "/");
+        return code.includes(root)
+          ? { code: code.replaceAll(root, "sdk:///"), map: null }
+          : null;
+      },
+    },
+  ],
   resolve: {
     alias: [
       {find:/^@inneranimalmedia\/copro-ui\/styles\.css$/, replacement:repoStyles},
