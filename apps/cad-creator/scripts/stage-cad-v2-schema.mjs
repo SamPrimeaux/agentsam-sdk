@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
@@ -39,6 +40,10 @@ for (const item of manifest.modules) {
   if (!fs.existsSync(file)) throw new Error('Unpublished CAD schema module: ' + rel);
   const bytes = fs.readFileSync(file);
   const json = JSON.parse(bytes.toString('utf8'));
+  const actualSha = createHash('sha256').update(bytes).digest('hex');
+  if (actualSha !== item.sha256 || bytes.length !== item.byteSize) {
+    throw new Error('CAD schema changed since manifest approval: ' + rel);
+  }
   if (json.$schema !== 'https://json-schema.org/draft/2020-12/schema' || json.$id !== item.uri) {
     throw new Error('Invalid CAD schema module identity: ' + rel);
   }
