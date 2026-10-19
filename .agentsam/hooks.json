@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.hooks.config.v1",
+  "adapters": {
+    "delivery-closure": {
+      "type": "command",
+      "command": "node",
+      "args": ["../scripts/git/delivery-closure.mjs", "--hook"],
+      "cwd": ".",
+      "timeout_ms": 120000
+    }
+  },
+  "hooks": {
+    "session_start": [
+      { "id": "delivery-closure-start", "adapter": "delivery-closure", "failure_mode": "open" }
+    ],
+    "session_end": [
+      { "id": "delivery-closure-end", "adapter": "delivery-closure", "failure_mode": "open" }
+    ]
+  }
+}
