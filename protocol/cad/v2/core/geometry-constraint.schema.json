@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/v2/core/geometry-constraint.schema.json",
+  "title": "Dimensional and geometric solver constraint",
+  "description": "AgentSam CAD v2 opt-in strict modular contract; requires independent reference and native-geometry validation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "kind",
+    "targetRefs",
+    "solverState"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "kind": {
+      "enum": [
+        "coincident",
+        "distance",
+        "angle",
+        "parallel",
+        "perpendicular",
+        "tangent",
+        "equal",
+        "radius",
+        "diameter",
+        "horizontal",
+        "vertical",
+        "concentric",
+        "fixed",
+        "symmetry",
+        "gear",
+        "mate",
+        "limit"
+      ]
+    },
+    "targetRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "value": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "enum": [
+            "mm",
+            "cm",
+            "m",
+            "in",
+            "ft",
+            "deg",
+            "rad",
+            "kg",
+            "g",
+            "N",
+            "kN",
+            "Pa",
+            "MPa",
+            "s"
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ]
+    },
+    "driving": {
+      "type": "boolean"
+    },
+    "tolerance": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "sourceIntentId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+    },
+    "solverState": {
+      "enum": [
+        "satisfied",
+        "under-constrained",
+        "over-constrained",
+        "conflicting",
+        "unresolved",
+        "suppressed"
+      ]
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "distance",
+              "angle",
+              "radius",
+              "diameter",
+              "limit"
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "required": [
+          "value"
+        ]
+      }
+    }
+  ]
+}
