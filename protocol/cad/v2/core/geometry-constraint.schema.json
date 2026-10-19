@@ -1,0 +1,136 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/geometry-constraint.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "enum": [
+              "distance",
+              "angle",
+              "radius",
+              "diameter",
+              "limit"
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "value": {}
+        },
+        "required": [
+          "value"
+        ]
+      }
+    }
+  ],
+  "description": "AgentSam CAD v2 opt-in strict modular contract; requires independent reference and native-geometry validation.",
+  "properties": {
+    "driving": {
+      "type": "boolean"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "coincident",
+        "distance",
+        "angle",
+        "parallel",
+        "perpendicular",
+        "tangent",
+        "equal",
+        "radius",
+        "diameter",
+        "horizontal",
+        "vertical",
+        "concentric",
+        "fixed",
+        "symmetry",
+        "gear",
+        "mate",
+        "limit"
+      ]
+    },
+    "solverState": {
+      "enum": [
+        "satisfied",
+        "under-constrained",
+        "over-constrained",
+        "conflicting",
+        "unresolved",
+        "suppressed"
+      ]
+    },
+    "sourceIntentId": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "targetRefs": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "tolerance": {
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "value": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "enum": [
+            "mm",
+            "cm",
+            "m",
+            "in",
+            "ft",
+            "deg",
+            "rad",
+            "kg",
+            "g",
+            "N",
+            "kN",
+            "Pa",
+            "MPa",
+            "s"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "targetRefs",
+    "solverState"
+  ],
+  "title": "Dimensional and geometric solver constraint",
+  "type": "object"
+}

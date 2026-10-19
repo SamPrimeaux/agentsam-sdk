@@ -1,0 +1,80 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/topology-reference.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "AgentSam CAD v2 opt-in strict modular contract; requires independent reference and native-geometry validation.",
+  "properties": {
+    "entityId": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "fingerprint": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "vertex",
+        "edge",
+        "wire",
+        "face",
+        "shell",
+        "solid"
+      ]
+    },
+    "persistentName": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "regenerationPolicy": {
+      "enum": [
+        "preserve-if-matching",
+        "remap-by-feature",
+        "review-required"
+      ]
+    },
+    "remappedFrom": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "representationId": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "semanticRole": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "sourceFeatureId": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "tolerance": {
+      "exclusiveMinimum": 0,
+      "type": "number"
+    }
+  },
+  "required": [
+    "id",
+    "entityId",
+    "kind",
+    "persistentName",
+    "regenerationPolicy"
+  ],
+  "title": "Stable topology face edge and vertex reference",
+  "type": "object"
+}
