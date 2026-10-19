@@ -1,0 +1,166 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/production.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cameraPathId": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "frameRange": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "fpsDenominator": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "fpsNumerator": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "start": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "fpsNumerator",
+        "fpsDenominator"
+      ],
+      "type": "object"
+    },
+    "id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "outputs": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "colorSpace": {
+            "type": "string"
+          },
+          "format": {
+            "enum": [
+              "png",
+              "exr",
+              "mp4",
+              "webm",
+              "glb",
+              "usdz",
+              "pdf"
+            ],
+            "type": "string"
+          },
+          "height": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "outputId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "width": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "format",
+          "outputId"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "projectId": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "receiptIds": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "renderer": {
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "type": "string"
+        },
+        "engineSettings": {
+          "additionalProperties": true,
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "providerId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "providerId",
+        "engine"
+      ],
+      "type": "object"
+    },
+    "sceneId": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "sourceRevision": {
+      "oneOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "minimum": 0,
+          "type": "integer"
+        }
+      ]
+    },
+    "sourceSceneHash": {
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "projectId",
+    "sourceRevision",
+    "sceneId",
+    "renderer",
+    "outputs"
+  ],
+  "title": "Reproducible scene production and rendering request",
+  "type": "object"
+}
