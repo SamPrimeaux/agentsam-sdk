@@ -14,6 +14,7 @@ import {
   prepareCadDeployment,
   stageCadContext,
   cadRunArguments,
+  normalizeCadMounts,
 } from '../src/lib/cad-docker.js';
 import { buildDockerDeployPlan, generateDockerFileSet } from '../src/lib/dockerize.js';
 
@@ -48,8 +49,40 @@ test('CAD Docker generator is localhost-only, non-root, read-only and tool-selec
   assert.match(files.compose, /read_only: true/);
   assert.match(files.compose, /cap_drop: \[ALL\]/);
   assert.match(files.compose, /no-new-privileges:true/);
-  assert.match(files.compose, /\/work:rw,noexec,nosuid,size=512m,mode=1777/);
+  assert.match(files.compose, /"type":"volume","source":"agentsam-cad-data","target":"\/work"/);
+  assert.doesNotMatch(files.compose, /\/work:rw,noexec/);
   assert.deepEqual(files.tools, ['openscad']);
+});
+
+test('CAD durable volume and explicit authorized directory mounts are portable', (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'cad-user-project-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const opts = { appSlug: 'custom-cad', tools: 'openscad', volume: 'customer-cad-volume',
+    mounts: [`drawings=${directory}`] };
+  const mounts = normalizeCadMounts(opts.mounts);
+  assert.equal(mounts[0].target, '/mounts/drawings');
+  assert.equal(mounts[0].source, fs.realpathSync(directory));
+  const files = generateCadDocker(opts);
+  assert.match(files.compose, /customer-cad-volume/);
+  assert.match(files.compose, /\/mounts\/drawings/);
+  assert.match(files.compose, /read_only":false/);
+  const args = cadRunArguments({ ...opts, configurationDir: directory });
+  assert.ok(args.join(' ').includes('dst=/mounts/drawings'));
+  assert.ok(args.join(' ').includes('AGENTSAM_CAD_FILE_ROOTS='));
+  assert.match(files.compose, /AGENTSAM_CAD_FILE_ROOTS/);
+  assert.ok(args.join(' ').includes('type=volume,src=customer-cad-volume,dst=/work'));
+  assert.ok(!args.join(' ').includes('--tmpfs /work'));
+  assert.throws(() => normalizeCadMounts(['x=relative']), /absolute/);
+  assert.throws(() => normalizeCadMounts([`x=${directory}`, `x=${directory}`]), /duplicated/);
+});
+
+test('operator opt-in writable root supports Docker copy without weakening scoped-mount defaults', () => {
+  const regular = generateCadDocker({ tools: 'openscad' });
+  const mutable = generateCadDocker({ tools: 'openscad', writableRoot: true });
+  assert.match(regular.compose, /read_only: true/);
+  assert.match(mutable.compose, /read_only: false/);
+  assert.match(cadRunArguments({ configurationDir: '/tmp/cad-config', tools: 'openscad' }).join(' '), /--read-only/);
+  assert.doesNotMatch(cadRunArguments({ configurationDir: '/tmp/cad-config', tools: 'openscad', writableRoot: true }).join(' '), /--read-only/);
 });
 
 test('CAD all-tools image includes OpenSCAD, FreeCAD and Blender packages', () => {

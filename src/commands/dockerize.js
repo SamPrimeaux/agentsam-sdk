@@ -26,6 +26,8 @@ export function parseDockerizeArgs(argv) {
     stopName: '',
     repositories: [],
     tools: undefined,
+    mounts: [],
+    writableRoot: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
@@ -43,6 +45,8 @@ export function parseDockerizeArgs(argv) {
     else if (a === '--stop') opts.stopName = argv[++i] || '';
     else if (a === '--repository') opts.repositories.push(argv[++i] || '');
     else if (a === '--volume') opts.volume = argv[++i] || '';
+    else if (a === '--cad-mount') opts.mounts.push(argv[++i] || '');
+    else if (a === '--cad-writable-root') opts.writableRoot = true;
     else if (a === '--memory') opts.memory = argv[++i] || '';
     else if (a === '--cpus') opts.cpus = argv[++i] || '';
     else if (a === '--tools' || a === '--cad-tools') opts.tools = argv[++i] || undefined;
@@ -75,7 +79,9 @@ export function printDockerizeHelp() {
     --list            Show every agentsam-managed container (running or stopped), any project
     --stop <name>     Stop a running container by name
     --repository <alias=path> Read-only repository for knowledge_service (repeatable)
-    --volume <name>   Persistent knowledge data volume (default: <name>-data)
+    --volume <name>   Persistent data volume (CAD defaults to <name>-data)
+    --cad-mount <alias=/absolute/path>  Mount an operator-authorized project directory read/write (repeatable)
+    --cad-writable-root  Allow writes to container root filesystem (operator opt-in)
     --memory <size>   Memory cap (knowledge: 768m; CAD: 1g/2g/4g by selected tools)
     --cpus <number>   CPU cap (CAD defaults: 1 core OpenSCAD; 2 with FreeCAD/Blender)
     --tools <list>     CAD tools: openscad (default), freecad, blender, comma-separated, or all

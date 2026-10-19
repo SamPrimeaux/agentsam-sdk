@@ -17,6 +17,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from urllib.parse import urlsplit, unquote
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -527,6 +528,47 @@ def _execute_blender(payload: dict[str, Any]) -> dict[str, Any]:
         }
 
 
+def _file_roots() -> dict[str, Path]:
+    # Only mounts explicitly provided by the runtime host are addressable.
+    raw = json.loads(os.environ.get("AGENTSAM_CAD_FILE_ROOTS", '{"work":"/work"}'))
+    if not isinstance(raw, dict) or not raw:
+        raise ValueError("cad_file_roots_invalid")
+    roots = {}
+    for alias, directory in raw.items():
+        if not isinstance(alias, str) or not re.fullmatch(r"[a-z][a-z0-9_-]{0,39}", alias):
+            raise ValueError("cad_file_alias_invalid")
+        root = Path(directory)
+        if not root.is_absolute():
+            raise ValueError("cad_file_root_not_absolute")
+        roots[alias] = root.resolve()
+    return roots
+
+
+def _file_target(url_path: str) -> tuple[str, Path, Path]:
+    parts = url_path.split("/")
+    if parts[:3] != ["", "v1", "files"] or len(parts) < 4:
+        raise ValueError("cad_file_route_invalid")
+    alias = parts[3]
+    roots = _file_roots()
+    if alias not in roots:
+        raise ValueError("cad_file_mount_not_authorized")
+    root = roots[alias]
+    relative = unquote("/".join(parts[4:]))
+    if "\x00" in relative or "\\" in relative or relative.startswith("/"):
+        raise ValueError("cad_file_path_invalid")
+    target = (root / relative).resolve()
+    if not target.is_relative_to(root):
+        raise ValueError("cad_file_path_escape")
+    return alias, root, target
+
+
+def _file_metadata(target: Path) -> dict[str, Any]:
+    raw = target.read_bytes()
+    if len(raw) > MAX_ARTIFACT_BYTES:
+        raise ValueError("cad_file_too_large")
+    return {"bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "AgentSamCAD/1"
 
@@ -567,7 +609,118 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("JSON request must be an object")
         return value
 
+    def _send_file(self, status: int, data: bytes, mime: str, sha: str) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", mime)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("ETag", '"' + sha + '"')
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(data)
+
+    def _handle_file_get(self) -> None:
+        alias, root, target = _file_target(urlsplit(self.path).path)
+        if target.is_dir():
+            entries = sorted(target.iterdir(), key=lambda entry: entry.name)
+            self._json(HTTPStatus.OK, {"ok": True, "mount": alias,
+                "entries": [{"name": p.name, "type": "directory" if p.is_dir() else "file",
+                             "bytes": p.stat().st_size if p.is_file() else None} for p in entries if not p.is_symlink()]})
+            return
+        if not target.is_file():
+            self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "cad_file_not_found"})
+            return
+        data = target.read_bytes()
+        if len(data) > MAX_ARTIFACT_BYTES:
+            raise ValueError("cad_file_too_large")
+        self._send_file(HTTPStatus.OK, data, "application/octet-stream", hashlib.sha256(data).hexdigest())
+
+    def do_PUT(self) -> None:
+        if not self._require_auth():
+            return
+        try:
+            _, root, target = _file_target(urlsplit(self.path).path)
+            if target == root or self.path.endswith("/") or target.is_dir():
+                raise ValueError("cad_file_target_required")
+            length = int(self.headers.get("Content-Length", "0"))
+            if length < 1 or length > MAX_ARTIFACT_BYTES:
+                raise ValueError("cad_file_size_invalid")
+            data = self.rfile.read(length)
+            if len(data) != length:
+                raise ValueError("cad_file_incomplete")
+            sha = hashlib.sha256(data).hexdigest()
+            expected = self.headers.get("X-Content-Sha256")
+            if expected and expected.lower() != sha:
+                raise ValueError("cad_file_hash_mismatch")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".cad-write-", delete=False) as fp:
+                temporary = Path(fp.name)
+                try:
+                    fp.write(data)
+                except Exception:
+                    temporary.unlink(missing_ok=True)
+                    raise
+            try:
+                os.replace(temporary, target)
+            finally:
+                temporary.unlink(missing_ok=True)
+            self._json(HTTPStatus.OK, {"ok": True, "sha256": sha, "bytes": length,
+                                       "path": str(target.relative_to(root))})
+        except (ValueError, OSError) as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(exc)})
+
+    def do_DELETE(self) -> None:
+        if not self._require_auth():
+            return
+        try:
+            _, root, target = _file_target(urlsplit(self.path).path)
+            if target == root:
+                raise ValueError("cad_file_root_delete_forbidden")
+            if target.is_dir():
+                target.rmdir()  # non-empty directories cannot be recursively deleted
+            else:
+                target.unlink()
+            self._json(HTTPStatus.OK, {"ok": True, "deleted": str(target.relative_to(root))})
+        except FileNotFoundError:
+            self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "cad_file_not_found"})
+        except (ValueError, OSError) as exc:
+            self._json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(exc)})
+
+    def _handle_file_action(self, payload: dict[str, Any]) -> None:
+        route = urlsplit(self.path).path
+        _, root, _ = _file_target(route.rsplit("/", 1)[0])
+        kind = route.rsplit("/", 1)[1]
+        if kind == "mkdir":
+            relative = str(payload.get("path") or "")
+            target = (root / relative).resolve()
+            if not relative or not target.is_relative_to(root):
+                raise ValueError("cad_file_path_escape")
+            target.mkdir(parents=True, exist_ok=True)
+            self._json(HTTPStatus.OK, {"ok": True, "directory": str(target.relative_to(root))})
+        elif kind == "move":
+            source = (root / str(payload.get("source") or "")).resolve()
+            target = (root / str(payload.get("target") or "")).resolve()
+            if source == root or target == root or not source.is_relative_to(root) or not target.is_relative_to(root):
+                raise ValueError("cad_file_path_escape")
+            if not source.is_file():
+                raise ValueError("cad_file_source_not_found")
+            if target.exists():
+                raise ValueError("cad_file_destination_exists")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            source.rename(target)
+            self._json(HTTPStatus.OK, {"ok": True, "path": str(target.relative_to(root))})
+        else:
+            self._json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
+
     def do_GET(self) -> None:
+        if urlsplit(self.path).path.startswith("/v1/files/"):
+            if not self._require_auth():
+                return
+            try:
+                self._handle_file_get()
+            except ValueError as exc:
+                self._json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(exc)})
+            return
         if self.path == "/healthz":
             caps = _capabilities()
             self._json(HTTPStatus.OK, {"ok": True, **caps})
@@ -584,6 +737,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             payload = self._read_json()
+            if urlsplit(self.path).path.startswith("/v1/files/"):
+                self._handle_file_action(payload)
+                return
             if self.path == "/v1/openscad/compile":
                 self._json(HTTPStatus.OK, _compile_openscad(payload))
                 return
