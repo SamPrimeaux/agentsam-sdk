@@ -19,3 +19,15 @@ if (schema.$id !== expectedId || schema.properties?.schema?.const !== 'cad.proje
 fs.mkdirSync(path.dirname(destination), { recursive: true });
 fs.writeFileSync(destination, body, 'utf8');
 console.log('CAD v2 schema staged from SDK protocol:', destination);
+
+// Stage the release-pinned modular CAD contract set from the same SDK source.
+// This runs inside package:verify/prepack, so a schema cannot be omitted silently.
+const { spawnSync } = await import('node:child_process');
+const releaseTool = path.resolve(appRoot, '..', '..', 'scripts', 'cad', 'schema_pack_release.py');
+const stage = spawnSync(process.env.PYTHON || 'python3', [releaseTool, 'stage'], {
+  cwd: path.resolve(appRoot, '..', '..'),
+  stdio: 'inherit',
+});
+if (stage.error || stage.status !== 0) {
+  throw new Error('CAD modular schema stage failed: ' + (stage.error?.message || stage.status));
+}

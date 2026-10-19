@@ -1,0 +1,199 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/walkthrough.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "properties": {
+    "cameraPath": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "fieldOfView": {
+            "exclusiveMinimum": 0,
+            "type": "number"
+          },
+          "position": {
+            "items": false,
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "rotation": {
+            "items": false,
+            "maxItems": 4,
+            "minItems": 4,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "targetElementIds": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "timeSeconds": {
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "timeSeconds",
+          "position",
+          "rotation"
+        ],
+        "type": "object"
+      },
+      "minItems": 2,
+      "type": "array"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "interactive",
+        "camera-path",
+        "cinematic",
+        "immersive-vr"
+      ]
+    },
+    "navigation": {
+      "additionalProperties": false,
+      "properties": {
+        "collisionEnabled": {
+          "type": "boolean"
+        },
+        "comfortMode": {
+          "enum": [
+            "continuous",
+            "teleport",
+            "hybrid"
+          ]
+        },
+        "doorBehavior": {
+          "enum": [
+            "static",
+            "interactive",
+            "open-at-waypoint"
+          ]
+        },
+        "eyeHeight": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "walkSpeed": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        }
+      },
+      "required": [
+        "collisionEnabled",
+        "eyeHeight",
+        "walkSpeed"
+      ],
+      "type": "object"
+    },
+    "outputIds": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "render": {
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "MP4",
+            "WEBM",
+            "PNG_SEQUENCE",
+            "EXR_SEQUENCE",
+            "GLB",
+            "USD"
+          ]
+        },
+        "fps": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "height": {
+          "minimum": 16,
+          "type": "integer"
+        },
+        "width": {
+          "minimum": 16,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "fps",
+        "engine",
+        "format"
+      ],
+      "type": "object"
+    },
+    "sceneId": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "sourceHash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "sourceRevision": {
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "sceneId",
+    "sourceRevision",
+    "mode",
+    "cameraPath",
+    "navigation"
+  ],
+  "title": "Model-derived walk and cinematic camera path",
+  "type": "object"
+}

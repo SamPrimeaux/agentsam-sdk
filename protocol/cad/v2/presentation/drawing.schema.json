@@ -1,0 +1,162 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/drawing.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "annotations": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "entityRefs": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "geometryRef": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "linear-dimension",
+              "angular-dimension",
+              "radial-dimension",
+              "level-marker",
+              "leader",
+              "symbol",
+              "text",
+              "hatch",
+              "detail-reference",
+              "section-marker"
+            ],
+            "type": "string"
+          },
+          "layer": {
+            "type": "string"
+          },
+          "measurement": {
+            "type": "number"
+          },
+          "styleRef": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "discipline": {
+      "type": "string"
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "hatchStyleRefs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "lineStyleRefs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "modelValidationRef": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "number": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "projection": {
+      "enum": [
+        "orthographic",
+        "perspective",
+        "section",
+        "detail",
+        "diagram"
+      ],
+      "type": "string"
+    },
+    "revisionStatus": {
+      "enum": [
+        "draft",
+        "for-review",
+        "issued",
+        "superseded"
+      ],
+      "type": "string"
+    },
+    "scale": {
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "sheetRefs": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "sourceRevision": {
+      "oneOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "minimum": 0,
+          "type": "integer"
+        }
+      ]
+    },
+    "viewId": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "sourceRevision",
+    "viewId",
+    "projection"
+  ],
+  "title": "Revision-derived technical drawing definition",
+  "type": "object"
+}

@@ -31,6 +31,26 @@ if (schema.$id !== 'https://schemas.inneranimalmedia.com/apps/cad-creator/schema
   throw new Error('CAD v2 schema identity or contract mismatch');
 }
 
+
+// Modular release integrity is tied to SDK-reviewed canonical source and hashes.
+const nodeCrypto = await import('node:crypto');
+const canonicalDir = path.resolve(root, '..', '..', 'protocol', 'cad', 'v2');
+const modularManifest = JSON.parse(fs.readFileSync(path.join(canonicalDir, 'schema-pack.manifest.json'), 'utf8'));
+const packagedManifest = fs.readFileSync(path.join(root, 'schemas', 'v2', 'schema-pack.manifest.json'));
+if (!packagedManifest.equals(fs.readFileSync(path.join(canonicalDir, 'schema-pack.manifest.json')))) {
+  throw new Error('CAD modular schema release manifest not packaged byte-identically');
+}
+if (!Array.isArray(modularManifest.modules) || modularManifest.modules.length < 22) {
+  throw new Error('CAD modular schema release count changed without package verification revision');
+}
+for (const module of modularManifest.modules) {
+  const a = fs.readFileSync(path.join(canonicalDir, module.path));
+  const b = fs.readFileSync(path.join(root, 'schemas', 'v2', module.path));
+  if (!a.equals(b) || nodeCrypto.createHash('sha256').update(b).digest('hex') !== module.sha256) {
+    throw new Error('Packaged CAD module hash mismatch: ' + module.path);
+  }
+}
+
 const assetsDir = path.join(root, 'frontend', 'dist', 'assets');
 const assets = fs.readdirSync(assetsDir);
 if (!assets.some((name) => name.startsWith('RoboticsWorkspace-') && name.endsWith('.js'))) {

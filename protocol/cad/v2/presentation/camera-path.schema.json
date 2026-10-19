@@ -1,0 +1,143 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/presentation/camera-path.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "collisionMode": {
+      "enum": [
+        "disabled",
+        "detect",
+        "avoid"
+      ],
+      "type": "string"
+    },
+    "coordinateFrameId": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "interpolation": {
+      "enum": [
+        "linear",
+        "catmull-rom",
+        "bezier",
+        "step"
+      ],
+      "type": "string"
+    },
+    "keyframes": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "easing": {
+            "enum": [
+              "linear",
+              "ease-in",
+              "ease-out",
+              "ease-in-out",
+              "hold"
+            ],
+            "type": "string"
+          },
+          "fieldOfViewDegrees": {
+            "exclusiveMinimum": 0,
+            "maximum": 180,
+            "type": "number"
+          },
+          "focalLengthMm": {
+            "exclusiveMinimum": 0,
+            "type": "number"
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "placement": {
+            "additionalProperties": false,
+            "properties": {
+              "frameId": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "rotation": {
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 4,
+                "minItems": 4,
+                "type": "array"
+              },
+              "translation": {
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 3,
+                "minItems": 3,
+                "type": "array"
+              }
+            },
+            "required": [
+              "frameId",
+              "translation",
+              "rotation"
+            ],
+            "type": "object"
+          },
+          "targetEntityId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "timeSeconds": {
+            "minimum": 0,
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "timeSeconds",
+          "placement"
+        ],
+        "type": "object"
+      },
+      "minItems": 2,
+      "type": "array"
+    },
+    "loop": {
+      "type": "boolean"
+    },
+    "sceneId": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "sourceRevision": {
+      "oneOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "minimum": 0,
+          "type": "integer"
+        }
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "sourceRevision",
+    "coordinateFrameId",
+    "keyframes",
+    "interpolation"
+  ],
+  "title": "Revision-bound reusable camera animation path",
+  "type": "object"
+}

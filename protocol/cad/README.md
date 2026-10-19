@@ -46,3 +46,32 @@ No existing platform Worker name, routes, database or R2 configuration is change
 - Connect approved project revisions to coordinated geometry, drawings, IFC, GLB, Blender and MovieMode/CoPro production stages.
 - Reuse existing AgentSam workbench dashboard, Side Assistant, miniAgentSam, queue-control, GOAP, assets and project authorization. Do not build substitute shells or task registries.
 - Prove output hash/receipt linkage, incremental re-generation and a professionally reviewable package from the same project revision before publicly claiming completed capability.
+
+
+## Modular v2 schema contract pack
+
+Canonical, reviewed source: `protocol/cad/v2/` (28 JSON Schemas and a deterministic SHA-256 manifest).
+The existing `cad.project.v2.schema.json` envelope remains unchanged: opt-in
+modules are not silently inserted into strict existing project payloads.
+
+- `python3 scripts/cad/schema_pack_release.py verify` compiles all modules with
+  strict Ajv Draft 2020-12 and verifies hashes and transitive references.
+- `python3 scripts/cad/schema_pack_release.py stage` packages the exact same
+  files under `apps/cad-creator/schemas/v2/` for offline consumers.
+- CAD Creator's existing `prepack` / `package:verify` calls the staging step.
+- `python3 scripts/cad/schema_pack_release.py publish` only works from a
+  clean, committed `main` whose HEAD matches GitHub `main`. It publishes an
+  immutable, versioned schema URL, reads objects back, then advances the public
+  `apps/cad-creator/schemas/registry.v1.json` pointer last. The registry is
+  the release authority; drafts never get a published status object.
+
+Legacy `apps/cad-creator/schemas/v2/` URLs remain untouched for existing users.
+Modules newly added in this revision are robotics, reference-model, camera-path,
+drawing, production and deliverable-manifest. Coordinate-system already owns
+placement; dedicated project revision, receipts, features, and design intent
+are present in the existing pack. No duplicate schema is introduced for those.
+
+Do not change bytes under a published release prefix. To update contracts,
+bump `RELEASE` in `scripts/cad/schema_pack_release.py`, revise source `$id`s,
+regenerate the manifest, test and publish a new immutable prefix. Never reuse
+an npm package version for a changed publish artifact.

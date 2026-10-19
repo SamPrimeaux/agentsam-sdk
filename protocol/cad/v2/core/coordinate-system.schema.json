@@ -1,0 +1,364 @@
+{
+  "$defs": {
+    "placement": {
+      "additionalProperties": false,
+      "properties": {
+        "frameId": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "type": "string"
+        },
+        "rotation": {
+          "items": false,
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "scale": {
+          "items": false,
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        "translation": {
+          "items": false,
+          "maxItems": 3,
+          "minItems": 3,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        }
+      },
+      "required": [
+        "frameId",
+        "translation",
+        "rotation"
+      ],
+      "type": "object"
+    },
+    "quantity": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "enum": [
+            "mm",
+            "cm",
+            "m",
+            "in",
+            "ft",
+            "deg",
+            "rad",
+            "kg",
+            "g",
+            "N",
+            "kN",
+            "Pa",
+            "MPa",
+            "s"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/core/coordinate-system.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "AgentSam CAD v2 opt-in strict modular contract; requires independent reference and native-geometry validation.",
+  "properties": {
+    "angularUnit": {
+      "enum": [
+        "deg",
+        "rad"
+      ]
+    },
+    "displayPrecision": {
+      "additionalProperties": false,
+      "properties": {
+        "angularDigits": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "linearDigits": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "linearDigits",
+        "angularDigits"
+      ],
+      "type": "object"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "frames": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "project",
+              "site",
+              "building",
+              "storey",
+              "assembly",
+              "part",
+              "local"
+            ]
+          },
+          "parentId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "rotation": {
+            "items": false,
+            "maxItems": 4,
+            "minItems": 4,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "translation": {
+            "items": false,
+            "maxItems": 3,
+            "minItems": 3,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "translation",
+          "rotation"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "georeference": {
+      "additionalProperties": false,
+      "properties": {
+        "crs": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "mapTransform": {
+          "additionalProperties": false,
+          "properties": {
+            "rotation": {
+              "items": false,
+              "maxItems": 4,
+              "minItems": 4,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "scale": {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            "translation": {
+              "items": false,
+              "maxItems": 3,
+              "minItems": 3,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            }
+          },
+          "required": [
+            "translation",
+            "rotation",
+            "scale"
+          ],
+          "type": "object"
+        },
+        "verticalDatum": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "crs"
+      ],
+      "type": "object"
+    },
+    "handedness": {
+      "enum": [
+        "left",
+        "right"
+      ]
+    },
+    "linearUnit": {
+      "enum": [
+        "mm",
+        "cm",
+        "m",
+        "in",
+        "ft"
+      ]
+    },
+    "modelTolerance": {
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "origin": {
+      "items": false,
+      "maxItems": 3,
+      "minItems": 3,
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "type": "array"
+    },
+    "trueNorth": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "enum": [
+            "mm",
+            "cm",
+            "m",
+            "in",
+            "ft",
+            "deg",
+            "rad",
+            "kg",
+            "g",
+            "N",
+            "kN",
+            "Pa",
+            "MPa",
+            "s"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "type": "object"
+    },
+    "upAxis": {
+      "enum": [
+        "X",
+        "Y",
+        "Z"
+      ]
+    }
+  },
+  "required": [
+    "linearUnit",
+    "angularUnit",
+    "upAxis",
+    "handedness",
+    "origin",
+    "modelTolerance"
+  ],
+  "title": "Coordinate frames and engineering precision",
+  "type": "object"
+}

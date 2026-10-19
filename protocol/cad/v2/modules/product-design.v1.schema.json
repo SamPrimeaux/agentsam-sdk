@@ -1,0 +1,178 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/modules/product-design.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "properties": {
+    "bomArtifactRef": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "components": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "entityIds": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "materialId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "partNumber": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revisionId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "entityIds",
+          "partNumber"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "methods": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "componentIds": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "CNC",
+              "additive",
+              "casting",
+              "sheet-metal",
+              "injection-molding",
+              "printing",
+              "assembly",
+              "other"
+            ]
+          },
+          "profileRef": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "componentIds"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "quality": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "dimensional",
+              "surface",
+              "material",
+              "functional"
+            ]
+          },
+          "standardRef": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "targetId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "tolerance": {
+            "additionalProperties": false,
+            "properties": {
+              "unit": {
+                "enum": [
+                  "mm",
+                  "cm",
+                  "m",
+                  "in",
+                  "ft",
+                  "deg",
+                  "rad",
+                  "kg",
+                  "g",
+                  "N",
+                  "kN",
+                  "Pa",
+                  "MPa",
+                  "s"
+                ]
+              },
+              "value": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "value",
+              "unit"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "targetId",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "cad.module.product-design.v1"
+    },
+    "version": {
+      "const": 1
+    }
+  },
+  "required": [
+    "schema",
+    "version",
+    "components",
+    "methods",
+    "quality"
+  ],
+  "title": "Manufactured product and component contract",
+  "type": "object"
+}

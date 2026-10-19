@@ -1,0 +1,126 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/intent/design-decision.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "AgentSam CAD v2 opt-in strict modular contract; requires independent reference and native-geometry validation.",
+  "properties": {
+    "approvalReceiptId": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "approvedBy": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "locked": {
+      "type": "boolean"
+    },
+    "requirement": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "reviewRequired": {
+      "type": "boolean"
+    },
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "assetId": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "user-approved",
+            "survey",
+            "imported",
+            "inferred",
+            "agent-proposed",
+            "code-standard"
+          ]
+        },
+        "reference": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "sourceRevision": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "proposed",
+        "approved",
+        "rejected",
+        "superseded",
+        "needs-review"
+      ]
+    },
+    "targetIds": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "value": {
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "enum": [
+            "mm",
+            "cm",
+            "m",
+            "in",
+            "ft",
+            "deg",
+            "rad",
+            "kg",
+            "g",
+            "N",
+            "kN",
+            "Pa",
+            "MPa",
+            "s"
+          ]
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "targetIds",
+    "source",
+    "requirement",
+    "status",
+    "locked",
+    "reviewRequired"
+  ],
+  "title": "Protected source requirement and human review status",
+  "type": "object"
+}
