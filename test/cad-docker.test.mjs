@@ -38,7 +38,7 @@ test('CAD resource defaults scale only when heavier tools are selected', () => {
   assert.deepEqual(cadDefaultResources('all'), { memory: '4g', cpus: '2' });
 });
 
-test('CAD Docker generator is localhost-only, non-root, read-only and tool-selective', () => {
+test('CAD Docker generator is localhost-only, non-root, writable by default and tool-selective', () => {
   const files = generateCadDocker({ appSlug: 'agentsam-cad', port: 8793, tools: 'openscad' });
   assert.match(files.dockerfile, /FROM debian:bookworm-slim/);
   assert.match(files.dockerfile, /apt-get install[^\n]*openscad/);
@@ -46,7 +46,8 @@ test('CAD Docker generator is localhost-only, non-root, read-only and tool-selec
   assert.doesNotMatch(files.dockerfile, /apt-get install[^\n]*\bblender\b/);
   assert.match(files.dockerfile, /USER cad/);
   assert.match(files.compose, /127\.0\.0\.1:8793:8793/);
-  assert.match(files.compose, /read_only: true/);
+  assert.match(files.compose, /read_only: false/);
+  assert.doesNotMatch(files.compose, /noexec/);
   assert.match(files.compose, /cap_drop: \[ALL\]/);
   assert.match(files.compose, /no-new-privileges:true/);
   assert.match(files.compose, /"type":"volume","source":"agentsam-cad-data","target":"\/work"/);
@@ -76,13 +77,18 @@ test('CAD durable volume and explicit authorized directory mounts are portable',
   assert.throws(() => normalizeCadMounts([`x=${directory}`, `x=${directory}`]), /duplicated/);
 });
 
-test('operator opt-in writable root supports Docker copy without weakening scoped-mount defaults', () => {
+test('the root filesystem is writable by default; read-only is an explicit opt-in', () => {
   const regular = generateCadDocker({ tools: 'openscad' });
-  const mutable = generateCadDocker({ tools: 'openscad', writableRoot: true });
-  assert.match(regular.compose, /read_only: true/);
-  assert.match(mutable.compose, /read_only: false/);
-  assert.match(cadRunArguments({ configurationDir: '/tmp/cad-config', tools: 'openscad' }).join(' '), /--read-only/);
-  assert.doesNotMatch(cadRunArguments({ configurationDir: '/tmp/cad-config', tools: 'openscad', writableRoot: true }).join(' '), /--read-only/);
+  const hardened = generateCadDocker({ tools: 'openscad', readOnlyRoot: true });
+  assert.match(regular.compose, /read_only: false/);
+  assert.doesNotMatch(regular.compose, /tmpfs/);
+  assert.match(hardened.compose, /read_only: true/);
+  assert.match(hardened.compose, /tmpfs/);
+  assert.doesNotMatch(hardened.compose, /noexec/);
+  const defaults = cadRunArguments({ configurationDir: '/tmp/cad-config', tools: 'openscad' }).join(' ');
+  assert.doesNotMatch(defaults, /--read-only|--tmpfs/);
+  assert.doesNotMatch(defaults, /readonly/);
+  assert.match(cadRunArguments({ configurationDir: '/tmp/cad-config', tools: 'openscad', readOnlyRoot: true }).join(' '), /--read-only/);
 });
 
 test('CAD all-tools image includes OpenSCAD, FreeCAD and Blender packages', () => {
@@ -115,9 +121,9 @@ test('CAD deployment creates private token config and isolated build context', (
     assert.deepEqual(fs.readdirSync(context).sort(), ['server.py']);
 
     const args = cadRunArguments(prepared);
-    assert.ok(args.includes('--read-only'));
+    assert.ok(!args.includes('--read-only'));
     assert.ok(args.includes('--cap-drop=ALL'));
-    assert.ok(args.some(value => value.includes('dst=/config,readonly')));
+    assert.ok(args.some(value => value.endsWith('dst=/config')));
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
