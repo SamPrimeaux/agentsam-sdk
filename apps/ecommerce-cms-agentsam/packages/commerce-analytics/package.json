@@ -13,5 +13,6 @@
   "peerDependencies": {
     "react": ">=19"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "private": true
 }

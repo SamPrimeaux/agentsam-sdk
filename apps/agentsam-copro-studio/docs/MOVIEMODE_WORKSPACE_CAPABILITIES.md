@@ -34,7 +34,7 @@ Imported originals persist in the existing browser IndexedDB media authority; de
 
 ## Manual acceptance
 
-- Launch `http://127.0.0.1:5303/` using the existing MovieMode PM2 preview, then Create project (must open editor directly with four regions).
+- Launch the active MovieMode PM2 preview URL reported by its configured process, then Create project (must open editor directly with four regions). Do not assume a fixed development port.
 - At 1440/1600/1920 viewports inspect empty project, import H.264 MP4, select video, drag the two upper vertical dividers and bottom timeline divider, change track height, undock/redock three upper regions, change inspector scale, reopen project and verify clip and stored browser media.
 - At 1024/768/390 widths verify player, active pane, timeline and bottom dock are reachable without horizontal page overflow; validate right inspector can be opened using an existing clip or Export.
 - Production verification additionally requires source-audio treatment, rendered MP4 bytes, authenticated provider execution, user-facing onboarding and server-side authorization receipts.

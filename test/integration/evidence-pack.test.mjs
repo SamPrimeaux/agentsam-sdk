@@ -4,10 +4,10 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { createEvidenceOperations } from '../src/sam/packs/evidence/index.js';
-import { createLocalEvidenceStore } from '../src/sam/packs/evidence/store.js';
-import { makeRunId, captureFilename, CAPTURE_FILE_RE } from '../src/sam/packs/evidence/naming.js';
-import { createSamOS } from '../src/sam/os.js';
+import { createEvidenceOperations } from '../../src/sam/packs/evidence/index.js';
+import { createLocalEvidenceStore } from '../../src/sam/packs/evidence/store.js';
+import { makeRunId, captureFilename, CAPTURE_FILE_RE } from '../../src/sam/packs/evidence/naming.js';
+import { createSamOS } from '../../src/sam/os.js';
 
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==', 'base64');
 const inline = (ext = 'png', data = PNG) => ({ kind: 'inline', ext, data: data.toString('base64') });
@@ -189,7 +189,7 @@ test('the pack registers in an isolated SAM OS with the repo convention', async 
 });
 
 test('the pack carries no project-specific values', async () => {
-  const dir = new URL('../src/sam/packs/evidence/', import.meta.url);
+  const dir = new URL('../../src/sam/packs/evidence/', import.meta.url);
   for (const file of await readdir(dir)) {
     const source = await readFile(new URL(file, dir), 'utf8');
     assert.doesNotMatch(source, /proj_[a-z0-9]{6,}_[a-z0-9]{4,}/, `${file}: concrete project id`);

@@ -7,22 +7,22 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import test from 'node:test';
-import { createEvidenceOperations } from '../src/sam/packs/evidence/index.js';
-import { createLocalEvidenceStore } from '../src/sam/packs/evidence/store.js';
-import { EVIDENCE_VIEWPORTS, JOURNEY_VIEWPORTS, resolveViewport, viewportId } from '../src/sam/packs/evidence/viewports.js';
-import { assertSubject } from '../src/sam/packs/evidence/naming.js';
-import { auditNames, canonicalViewport, planIngest } from '../src/sam/packs/evidence/normalize.js';
-import { createFfprobeMedia } from '../src/sam/packs/evidence/media.js';
-import { createPlaywrightSource } from '../src/sam/packs/evidence/driver-playwright.js';
-import { createBlenderSource, createLocalBlenderExec } from '../src/sam/packs/evidence/driver-blender.js';
-import { createDeriver } from '../src/sam/packs/evidence/derive.js';
-import { createCoproExporter } from '../src/sam/packs/evidence/exporter-copro.js';
-import { runSamEvidence } from '../src/commands/sam-evidence.js';
+import { createEvidenceOperations } from '../../src/sam/packs/evidence/index.js';
+import { createLocalEvidenceStore } from '../../src/sam/packs/evidence/store.js';
+import { EVIDENCE_VIEWPORTS, JOURNEY_VIEWPORTS, resolveViewport, viewportId } from '../../src/sam/packs/evidence/viewports.js';
+import { assertSubject } from '../../src/sam/packs/evidence/naming.js';
+import { auditNames, canonicalViewport, planIngest } from '../../src/sam/packs/evidence/normalize.js';
+import { createFfprobeMedia } from '../../src/sam/packs/evidence/media.js';
+import { createPlaywrightSource } from '../../src/sam/packs/evidence/driver-playwright.js';
+import { createBlenderSource, createLocalBlenderExec } from '../../src/sam/packs/evidence/driver-blender.js';
+import { createDeriver } from '../../src/sam/packs/evidence/derive.js';
+import { createCoproExporter } from '../../src/sam/packs/evidence/exporter-copro.js';
+import { runSamEvidence } from '../../src/commands/sam-evidence.js';
 
 let sharp = null;
 try { sharp = (await import('sharp')).default; } catch { /* optional */ }
 let copro = null;
-try { copro = await import('../packages/copro-project/src/index.js'); } catch { /* optional */ }
+try { copro = await import('../../packages/copro-project/src/index.js'); } catch { /* optional */ }
 const have = (bin, args = ['-version']) => { try { execFileSync(bin, args, { stdio: 'ignore', timeout: 15000 }); return true; } catch { return false; } };
 const HAS_FFMPEG = have('ffmpeg') && have('ffprobe');
 const NOW = new Date('2026-03-04T05:06:07Z');
@@ -96,7 +96,7 @@ test('media adapter probes real files: h264 passes, mpeg4 is refused, durationle
     assert.equal(h264.video.codec, 'h264');
     assert.equal(h264.decoded, true);
     assert.ok(Math.abs(h264.durationMs - 1000) < 150);
-    const { isBrowserDecodable } = await import('../src/sam/packs/evidence/seal.js');
+    const { isBrowserDecodable } = await import('../../src/sam/packs/evidence/seal.js');
     assert.equal(isBrowserDecodable(h264), true);
     const mpeg4 = await media.probe({ path: make('b.mp4', 'mpeg4', ['-pix_fmt', 'yuv420p']) });
     assert.equal(isBrowserDecodable(mpeg4), false);
@@ -367,7 +367,7 @@ test('CLI: doctor reports what is wired; capture needs a project; input errors a
 });
 
 test('the v2 pack still carries no project-specific values', async () => {
-  const dir = new URL('../src/sam/packs/evidence/', import.meta.url);
+  const dir = new URL('../../src/sam/packs/evidence/', import.meta.url);
   for (const file of await readdir(dir)) {
     const source = await readFile(new URL(file, dir), 'utf8');
     assert.doesNotMatch(source, /proj_[a-z0-9]{6,}_[a-z0-9]{4,}/, `${file}: concrete project id`);
