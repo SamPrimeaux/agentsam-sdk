@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -137,4 +138,23 @@ test('stageCadContext stages the Node installer and OCCT sources only when their
   };
   assert.deepEqual(stage('all'), { installer: true, occt: true });
   assert.deepEqual(stage('openscad'), { installer: false, occt: false });
+});
+
+test('Node installer allows the symlinks Node ships (contained) and refuses hard links and escapes', () => {
+  const script = [
+    'import importlib.util, tarfile, sys',
+    'spec = importlib.util.spec_from_file_location("install_node", "services/cad/provision/install_node.py")',
+    'mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)',
+    'def sym(name, target, hard=False):',
+    '    m = tarfile.TarInfo(name); m.type = tarfile.LNKTYPE if hard else tarfile.SYMTYPE; m.linkname = target; return m',
+    'checks = [',
+    '  mod.link_is_safe(sym("bin/npm", "../lib/node_modules/npm/bin/npm-cli.js")) is True,',
+    '  mod.link_is_safe(sym("bin/npx", "../lib/node_modules/npm/bin/npx-cli.js")) is True,',
+    '  mod.link_is_safe(sym("bin/evil", "../../etc/passwd")) is False,',
+    '  mod.link_is_safe(sym("bin/abs", "/etc/passwd")) is False,',
+    '  mod.link_is_safe(sym("bin/hard", "../lib/x", hard=True)) is False,',
+    ']',
+    'sys.exit(0 if all(checks) else 1)',
+  ].join('\n');
+  execFileSync('python3', ['-c', script], { stdio: 'pipe' });
 });

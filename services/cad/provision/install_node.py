@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import platform
+import posixpath
 import sys
 import tarfile
 import tempfile
@@ -22,6 +23,15 @@ CHECKSUMS = {
     },
 }
 ARCH = {"aarch64": "arm64", "arm64": "arm64", "x86_64": "x64", "amd64": "x64"}
+
+
+def link_is_safe(member) -> bool:
+    """Node's official tarball ships bin/npm, bin/npx and bin/corepack as relative symlinks. Allow a symlink only
+    when its target resolves inside the install prefix; hard links, devices and absolute or escaping links stay refused."""
+    if not member.issym() or member.linkname.startswith("/"):
+        return False
+    resolved = posixpath.normpath(posixpath.join(posixpath.dirname(member.name), member.linkname))
+    return resolved != ".." and not resolved.startswith("../")
 
 
 def main(argv: list[str]) -> int:
@@ -55,8 +65,8 @@ def main(argv: list[str]) -> int:
                 if hasattr(tarfile, "data_filter"):
                     tar.extract(member, prefix, filter="data")
                 else:
-                    # Old Python lacks extraction filters; reject links and special files.
-                    if not (member.isfile() or member.isdir()):
+                    # Old Python lacks extraction filters: plain files, directories and contained symlinks only.
+                    if not (member.isfile() or member.isdir() or link_is_safe(member)):
                         raise ValueError(f"unsafe archive member type: {member.name}")
                     tar.extract(member, prefix)
     print(f"node {version} installed at {prefix}")
