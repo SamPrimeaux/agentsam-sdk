@@ -1,0 +1,145 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/interchange/ifc-mapping.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "properties": {
+    "classificationMappings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "elementId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "system": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "uri": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "elementId",
+          "system",
+          "code"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "elementMappings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "elementId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "ifcClass": {
+            "pattern": "^Ifc[A-Za-z0-9]+$",
+            "type": "string"
+          },
+          "ifcGlobalId": {
+            "maxLength": 32,
+            "minLength": 16,
+            "type": "string"
+          },
+          "propertySetRefs": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "representationId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "typeId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "elementId",
+          "ifcClass",
+          "ifcGlobalId"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "ifcVersion": {
+      "enum": [
+        "IFC2X3",
+        "IFC4",
+        "IFC4.3"
+      ]
+    },
+    "projectRevision": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "relationships": {
+      "items": {
+        "$ref": "../core/geometry-relationship.schema.json"
+      },
+      "type": "array"
+    },
+    "standards": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "IDS",
+              "bSDD",
+              "BCF"
+            ]
+          },
+          "uri": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "version": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "uri",
+          "version"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "ifcVersion",
+    "projectRevision",
+    "elementMappings"
+  ],
+  "title": "IFC building semantics and stable export IDs",
+  "type": "object"
+}

@@ -1,0 +1,141 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/interchange/reference-model.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attachmentPolicy": {
+      "enum": [
+        "read-only",
+        "federated",
+        "editable-copy"
+      ],
+      "type": "string"
+    },
+    "byteSize": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "crs": {
+      "type": "string"
+    },
+    "elementMappings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "entityId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "externalId": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "externalId",
+          "entityId"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extensions": {
+      "additionalProperties": true,
+      "properties": {},
+      "required": [],
+      "type": "object"
+    },
+    "format": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "licenseRef": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "loadedAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "placement": {
+      "additionalProperties": false,
+      "properties": {
+        "frameId": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "rotation": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
+        "translation": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "type": "array"
+        }
+      },
+      "required": [
+        "frameId",
+        "translation",
+        "rotation"
+      ],
+      "type": "object"
+    },
+    "referenceFrameId": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "type": "string"
+    },
+    "sourceProjectId": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "sourceRevision": {
+      "oneOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "minimum": 0,
+          "type": "integer"
+        }
+      ]
+    },
+    "sourceUri": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "unit": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "sourceUri",
+    "format",
+    "sha256",
+    "sourceRevision",
+    "referenceFrameId",
+    "attachmentPolicy"
+  ],
+  "title": "External reference model attachment and revision contract",
+  "type": "object"
+}

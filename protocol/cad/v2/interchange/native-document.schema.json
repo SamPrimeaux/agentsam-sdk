@@ -1,0 +1,130 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/interchange/native-document.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "properties": {
+    "byteSize": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "elementMap": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "elementId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "nativeId": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "topologyId": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "elementId",
+          "nativeId"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "format": {
+      "enum": [
+        "BREP",
+        "STEP",
+        "IGES",
+        "FCStd",
+        "BLEND",
+        "IFC",
+        "DXF",
+        "DWG",
+        "GLB",
+        "GLTF",
+        "OBJ",
+        "STL",
+        "3MF",
+        "SCAD",
+        "USD",
+        "other"
+      ]
+    },
+    "id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "immutable": {
+      "type": "boolean"
+    },
+    "licenseRef": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "provider": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "sourceProjectId": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+      "type": "string"
+    },
+    "sourceRevision": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "unit": {
+      "enum": [
+        "mm",
+        "cm",
+        "m",
+        "in",
+        "ft"
+      ]
+    },
+    "uri": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "uri",
+    "sha256",
+    "byteSize",
+    "format",
+    "provider",
+    "sourceProjectId",
+    "sourceRevision",
+    "unit"
+  ],
+  "title": "Native CAD source and BREP representation provenance",
+  "type": "object"
+}

@@ -1,0 +1,89 @@
+{
+  "$id": "https://schemas.inneranimalmedia.com/apps/cad-creator/schemas/releases/2.6.13-modules.2/v2/modules/parametric.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Portable CAD v2 versioned optional strict module; semantic and kernel validation are separate requirements.",
+  "properties": {
+    "constraints": {
+      "items": {
+        "$ref": "../core/geometry-constraint.schema.json"
+      },
+      "type": "array"
+    },
+    "extensions": {
+      "additionalProperties": {
+        "type": "object"
+      },
+      "type": "object"
+    },
+    "features": {
+      "items": {
+        "$ref": "../core/geometry-feature.schema.json"
+      },
+      "type": "array"
+    },
+    "nativeRepresentationRefs": {
+      "items": {
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "recompute": {
+      "additionalProperties": false,
+      "properties": {
+        "dirtyFeatureIds": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "lastReceiptId": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+          "type": "string"
+        },
+        "order": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$",
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "solver": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "dirtyFeatureIds",
+        "order"
+      ],
+      "type": "object"
+    },
+    "relationships": {
+      "items": {
+        "$ref": "../core/geometry-relationship.schema.json"
+      },
+      "type": "array"
+    },
+    "schema": {
+      "const": "cad.module.parametric.v1"
+    },
+    "version": {
+      "const": 1
+    }
+  },
+  "required": [
+    "schema",
+    "version",
+    "features",
+    "constraints",
+    "relationships"
+  ],
+  "title": "Parametric history and regeneration module",
+  "type": "object"
+}
