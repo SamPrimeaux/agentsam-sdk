@@ -65,6 +65,7 @@ fn main() {
             cloudflare_desktop_identity::start_cloudflare_oauth,
             cloudflare_desktop_identity::get_cloudflare_session,
             cloudflare_desktop_identity::logout_cloudflare,
+            cloudflare_desktop_identity::silent_session_restore,
             // CAD Engine Commands
             cad::generate_cad_mesh,
             cad::export_step_file,
