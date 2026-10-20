@@ -1,5 +1,6 @@
 // Native secure storage backed by the OS credential store.
-// Refactored to a single-envelope JSON vault to prevent multiple OS security prompts.
+// Single-envelope JSON vault. The Cloudflare D1 DB is the single source of truth for plugins/keys;
+// this local vault strictly holds local session identity and optional offline local overrides.
 
 #[cfg(not(target_os = "android"))]
 use keyring::Entry;
@@ -10,11 +11,6 @@ use tauri::State;
 
 const KEYCHAIN_APP_ID: &str = "local-studio";
 const UNIFIED_VAULT_ACCOUNT: &str = "unified_vault";
-
-// Legacy keys for migration
-const IDENTITY_SESSION_ACCOUNT: &str = "identity_session";
-const PROVIDER_PREFIX: &str = "provider:";
-const PROVIDER_SYNC_PREFIX: &str = "provider-sync:";
 
 #[derive(Debug, Serialize)]
 pub struct KeychainError {
@@ -37,30 +33,19 @@ struct IdentitySessionCache {
     value: Option<String>,
 }
 
-/// Consolidated single-item vault payload stored in the OS Keychain
+/// Single-envelope JSON vault payload stored in native OS Keychain
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct LocalVaultEnvelope {
     #[serde(default)]
     pub identity_session: Option<String>,
     #[serde(default)]
-    pub provider_keys: HashMap<String, String>,
-    #[serde(default)]
-    pub sync_markers: HashMap<String, ProviderSyncMarker>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProviderSyncMarker {
-    pub secret_id: String,
-    #[serde(default)]
-    pub last4: Option<String>,
+    pub local_overrides: HashMap<String, String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ProviderKeyStatus {
     pub exists: bool,
     pub last4: Option<String>,
-    pub synced_secret_id: Option<String>,
-    pub synced_last4: Option<String>,
 }
 
 fn state_lock_error() -> KeychainError {
@@ -69,19 +54,20 @@ fn state_lock_error() -> KeychainError {
     }
 }
 
-fn canonical_provider(provider: &str) -> Result<&'static str, KeychainError> {
-    match provider.trim().to_ascii_lowercase().as_str() {
-        "openai" => Ok("openai"),
-        "anthropic" => Ok("anthropic"),
-        "gemini" => Ok("gemini"),
-        "cursor" => Ok("cursor"),
-        "xai" => Ok("xai"),
-        "cloudflare" => Ok("cloudflare"),
-        "inneranimalmedia" => Ok("inneranimalmedia"),
-        _ => Err(KeychainError {
-            message: "provider_key_provider_invalid".into(),
-        }),
+/// Dynamically sanitizes any plugin or secret key slug without hardcoded enums
+fn sanitize_key_slug(key: &str) -> Result<String, KeychainError> {
+    let slug = key.trim().to_ascii_lowercase();
+    if slug.is_empty() || slug.len() > 128 {
+        return Err(KeychainError {
+            message: "invalid_key_slug_length".into(),
+        });
     }
+    if !slug.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == ':') {
+        return Err(KeychainError {
+            message: "invalid_key_slug_characters".into(),
+        });
+    }
+    Ok(slug)
 }
 
 fn secret_last4(value: &str) -> Option<String> {
@@ -107,7 +93,7 @@ fn android_secure_store_required<T>() -> Result<T, KeychainError> {
 }
 
 // ------------------------------------------------------------------
-// Core Single Envelope Vault Operations
+// Single Envelope Keychain Operations
 // ------------------------------------------------------------------
 
 fn load_vault() -> Result<LocalVaultEnvelope, KeychainError> {
@@ -125,12 +111,7 @@ fn load_vault() -> Result<LocalVaultEnvelope, KeychainError> {
                     message: "unified_vault_corrupt".into(),
                 })
             }
-            Err(keyring::Error::NoEntry) => {
-                // Attempt automatic migration from legacy multi-entry keychain items
-                let migrated = migrate_legacy_vault()?;
-                save_vault(&migrated)?;
-                Ok(migrated)
-            }
+            Err(keyring::Error::NoEntry) => Ok(LocalVaultEnvelope::default()),
             Err(err) => Err(KeychainError { message: err.to_string() }),
         }
     }
@@ -154,50 +135,8 @@ fn save_vault(vault: &LocalVaultEnvelope) -> Result<(), KeychainError> {
     }
 }
 
-/// Fallback migration for existing installations with individual Keychain entries
-fn migrate_legacy_vault() -> Result<LocalVaultEnvelope, KeychainError> {
-    #[cfg(target_os = "android")]
-    {
-        return android_secure_store_required();
-    }
-
-    #[cfg(not(target_os = "android"))]
-    {
-        let mut vault = LocalVaultEnvelope::default();
-
-        // 1. Migrate Identity Session
-        if let Ok(item) = entry(IDENTITY_SESSION_ACCOUNT) {
-            if let Ok(val) = item.get_password() {
-                vault.identity_session = Some(val);
-            }
-        }
-
-        // 2. Migrate Provider Keys
-        let providers = ["openai", "anthropic", "gemini", "cursor", "xai", "cloudflare", "inneranimalmedia"];
-        for provider in providers {
-            let key_account = format!("{PROVIDER_PREFIX}{provider}");
-            if let Ok(item) = entry(&key_account) {
-                if let Ok(val) = item.get_password() {
-                    vault.provider_keys.insert(provider.to_string(), val);
-                }
-            }
-
-            let sync_account = format!("{PROVIDER_SYNC_PREFIX}{provider}");
-            if let Ok(item) = entry(&sync_account) {
-                if let Ok(raw_marker) = item.get_password() {
-                    if let Ok(marker) = serde_json::from_str::<ProviderSyncMarker>(&raw_marker) {
-                        vault.sync_markers.insert(provider.to_string(), marker);
-                    }
-                }
-            }
-        }
-
-        Ok(vault)
-    }
-}
-
 // ------------------------------------------------------------------
-// Identity & Session Handlers
+// Identity Session Handlers
 // ------------------------------------------------------------------
 
 fn session_get_cached(state: &IdentitySessionState) -> Result<Option<String>, KeychainError> {
@@ -296,29 +235,25 @@ pub(crate) fn identity_session_delete_internal(
 }
 
 // ------------------------------------------------------------------
-// Provider Keys IPC Operations
+// Dynamic Local Override Secrets (Optional Local Key Storage)
 // ------------------------------------------------------------------
 
 #[tauri::command]
 pub fn provider_key_exists(provider: String) -> Result<bool, KeychainError> {
-    let canon = canonical_provider(&provider)?;
+    let slug = sanitize_key_slug(&provider)?;
     let vault = load_vault()?;
-    Ok(vault.provider_keys.contains_key(canon))
+    Ok(vault.local_overrides.contains_key(&slug))
 }
 
 #[tauri::command]
 pub fn provider_key_status(provider: String) -> Result<ProviderKeyStatus, KeychainError> {
-    let canon = canonical_provider(&provider)?;
+    let slug = sanitize_key_slug(&provider)?;
     let vault = load_vault()?;
-
-    let value = vault.provider_keys.get(canon);
-    let marker = vault.sync_markers.get(canon);
+    let value = vault.local_overrides.get(&slug);
 
     Ok(ProviderKeyStatus {
         exists: value.is_some(),
         last4: value.as_deref().and_then(secret_last4),
-        synced_secret_id: marker.as_ref().map(|m| m.secret_id.clone()),
-        synced_last4: marker.and_then(|m| m.last4.clone()),
     })
 }
 
@@ -327,11 +262,10 @@ pub fn provider_key_set(provider: String, value: String) -> Result<(), KeychainE
     if value.trim().is_empty() {
         return Err(KeychainError { message: "provider_key_value_required".into() });
     }
-    let canon = canonical_provider(&provider)?;
+    let slug = sanitize_key_slug(&provider)?;
     let mut vault = load_vault()?;
 
-    vault.provider_keys.insert(canon.to_string(), value);
-    vault.sync_markers.remove(canon); // Local edit invalidates sync marker
+    vault.local_overrides.insert(slug, value);
     save_vault(&vault)?;
 
     Ok(())
@@ -339,71 +273,37 @@ pub fn provider_key_set(provider: String, value: String) -> Result<(), KeychainE
 
 #[tauri::command]
 pub fn provider_key_delete(provider: String) -> Result<(), KeychainError> {
-    let canon = canonical_provider(&provider)?;
+    let slug = sanitize_key_slug(&provider)?;
     let mut vault = load_vault()?;
 
-    vault.provider_keys.remove(canon);
-    vault.sync_markers.remove(canon);
+    vault.local_overrides.remove(&slug);
     save_vault(&vault)?;
 
     Ok(())
 }
 
 pub(crate) fn provider_key_get_internal(provider: &str) -> Result<Option<String>, String> {
-    let canon = canonical_provider(provider).map_err(|e| e.message)?;
+    let slug = sanitize_key_slug(provider).map_err(|e| e.message)?;
     let vault = load_vault().map_err(|e| e.message)?;
-    Ok(vault.provider_keys.get(canon).cloned())
+    Ok(vault.local_overrides.get(&slug).cloned())
 }
 
+// Stubs kept for backward compatibility with existing command signatures
 pub(crate) fn provider_key_set_synced_internal(
     provider: &str,
     value: &str,
-    secret_id: &str,
-    last4: Option<&str>,
+    _secret_id: &str,
+    _last4: Option<&str>,
 ) -> Result<(), String> {
-    if value.trim().is_empty() {
-        return Err("provider_key_value_required".into());
-    }
-    let canon = canonical_provider(provider).map_err(|e| e.message)?;
-    let secret_id = secret_id.trim();
-    if secret_id.is_empty() || secret_id.len() > 256 {
-        return Err("provider_sync_secret_id_invalid".into());
-    }
-
-    let mut vault = load_vault().map_err(|e| e.message)?;
-    vault.provider_keys.insert(canon.to_string(), value.to_string());
-    vault.sync_markers.insert(
-        canon.to_string(),
-        ProviderSyncMarker {
-            secret_id: secret_id.to_string(),
-            last4: last4.map(str::to_string),
-        },
-    );
-
-    save_vault(&vault).map_err(|e| e.message)
+    provider_key_set(provider.to_string(), value.to_string()).map_err(|e| e.message)
 }
 
 pub(crate) fn provider_sync_marker_set_internal(
-    provider: &str,
-    secret_id: &str,
-    last4: Option<&str>,
+    _provider: &str,
+    _secret_id: &str,
+    _last4: Option<&str>,
 ) -> Result<(), String> {
-    let canon = canonical_provider(provider).map_err(|e| e.message)?;
-    let secret_id = secret_id.trim();
-    if secret_id.is_empty() || secret_id.len() > 256 {
-        return Err("provider_sync_secret_id_invalid".into());
-    }
-
-    let mut vault = load_vault().map_err(|e| e.message)?;
-    vault.sync_markers.insert(
-        canon.to_string(),
-        ProviderSyncMarker {
-            secret_id: secret_id.to_string(),
-            last4: last4.map(str::to_string),
-        },
-    );
-
-    save_vault(&vault).map_err(|e| e.message)
+    Ok(())
 }
 
 // ------------------------------------------------------------------
@@ -415,15 +315,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn provider_canonical_ids_validate() {
-        assert_eq!(canonical_provider("openai").unwrap(), "openai");
-        assert_eq!(canonical_provider("xai").unwrap(), "xai");
-        assert!(canonical_provider("grok").is_err());
-        assert!(canonical_provider("other").is_err());
+    fn validates_dynamic_key_slugs() {
+        assert_eq!(sanitize_key_slug("openai").unwrap(), "openai");
+        assert_eq!(sanitize_key_slug("plugin:github_mcp").unwrap(), "plugin:github_mcp");
+        assert_eq!(sanitize_key_slug("custom-agent-v1").unwrap(), "custom-agent-v1");
+        assert!(sanitize_key_slug("").is_err());
+        assert!(sanitize_key_slug("invalid space key").is_err());
     }
 
     #[test]
-    fn provider_status_last4_never_returns_full_secret() {
+    fn secret_last4_never_returns_full_secret() {
         assert_eq!(secret_last4("sk-example-1234").as_deref(), Some("1234"));
         assert_eq!(secret_last4("abc").as_deref(), Some("abc"));
         assert_eq!(secret_last4(""), None);
