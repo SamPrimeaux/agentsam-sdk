@@ -6,6 +6,7 @@ pub mod autorag;
 pub mod cad;
 
 // Authentication, Security & Identity
+pub mod cloudflare_desktop_identity;
 pub mod google_desktop_identity;
 pub mod keychain;
 pub mod local_identity;
