@@ -4,7 +4,11 @@
 mod commands;
 mod tray;
 
-use commands::{agentsamd, deep_link, google_desktop_identity, keychain, local_content, local_identity, local_node, local_provider, local_sqlite, local_lsp, native_capabilities, system, updater};
+use commands::{
+    agentsamd, cad, cloudflare_desktop_identity, deep_link, google_desktop_identity, keychain,
+    local_content, local_identity, local_lsp, local_node, local_provider, local_sqlite,
+    native_capabilities, system, updater,
+};
 
 fn main() {
     tauri::Builder::default()
@@ -57,6 +61,13 @@ fn main() {
             commands::autorag::autorag_workflow_bridge,
             commands::autorag::autorag_choose_repository,
             google_desktop_identity::google_desktop_identity_login,
+            // Cloudflare Desktop Identity Commands
+            cloudflare_desktop_identity::start_cloudflare_oauth,
+            cloudflare_desktop_identity::get_cloudflare_session,
+            cloudflare_desktop_identity::logout_cloudflare,
+            // CAD Engine Commands
+            cad::generate_cad_mesh,
+            cad::export_step_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running agentsam desktop shell");
