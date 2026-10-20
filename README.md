@@ -1,10 +1,36 @@
 # AgentSam SDK
+We're not trying to borrow credibility from companies we've worked with. We're trying to earn credibility through the unmistakable quality of what we've built ourselves. Depth communicates capability
 
-A deterministic-first application and agent toolkit: reusable repository, knowledge, integrity,
-security, identity, scaffolding, and delivery capabilities with optional AgentSam/LLM composition.
-The interactive CLI can run the same bounded capabilities through an explicitly selected model while
-keeping model choice, reasoning effort, processing tier, credentials, approvals, context, and cost inspectable.
+The layered interfaces look like physical objects. Their perspective, spacing, lighting, and separation explain a complex software ecosystem without relying on paragraphs of feature descriptions.
 
+The product's complexity becomes its visual identity One object, multiple visual languages
+
+The progression from technical linework through stylized clay-like geometry to photorealistic hardware is particularly relevant to AgentSam.
+
+That's effectively the visual equivalent of moving between schematic, CAD, BIM, rendered scene, and manufactured object. InnerAnimalMedia's positioning principle
+Minimal noise. Maximum impact.
+Build the experience so convincingly that its quality becomes the evidence.
+
+I'd translate that into four standards for our products:
+
+1. Show, don't boast. A customer sees AgentSam modify actual geometry, generate a real design, or operate an application. The capability is evident without a dozen AI-agent marketing claims.
+
+2. Make transitions feel native. Moving between a CAD schematic, an interactive 3D world, a workspace, and a cinematic presentation should feel like changing perspectives within one coherent environment—not opening unrelated software.
+
+3. Unify craftsmanship across surfaces. The website, downloaded desktop application, mobile experience, icons, typography, materials, animation, and documentation should all feel intentionally related. Different products can have different identities without looking like different companies.
+
+4. Let technical authenticity support visual ambition. A stunning render is valuable, but the experience becomes much more compelling when the underlying geometry, data, interactions, and saved revisions are genuinely functional.
+
+That last point is especially important for your DreamHouse example. Imagine somebody lands on an InnerAnimalMedia project presentation. They're watching a beautifully choreographed architectural scene. The camera glides toward the entrance, transitions through a translucent schematic, and reveals the finished interior.
+
+Then, instead of merely offering another video, the experience allows them to take control of the same world.
+
+They explore it. Select a wall. Inspect its BIM properties. Ask AgentSam to revise something. The environment responds.
+
+The film becomes the application, without making the user feel as though they've crossed into a completely different product. 
+
+That's the distinction between visual spectacle and a compelling product experience. The goal isn't to convince people that InnerAnimalMedia is a major company. It's to build something that makes them wonder how a company they haven't heard of yet created an experience this refined.                                                                                                                                                    
+ 
 **SAM** = **Systematic Autonomous Machinery** — the execution spine under AgentSam (not a person).
 The conventional client variable is `sam`:
 
