@@ -9,7 +9,7 @@ import { Chips, KV, Section, TextField } from "./shared.js";
  * embed and R2 master — never jammed into the image variant page.
  * Poster-first: no player is instantiated until explicitly requested.
  */
-export function VideoInspector(props: { asset: ContentAsset }) {
+export function VideoInspector(props: { asset: ContentAsset; readOnly?: boolean }) {
   const runtime = useContentRuntime();
   const { asset } = props;
   const ext = (asset.ext ?? {}) as VideoAssetExt;
@@ -79,8 +79,8 @@ export function VideoInspector(props: { asset: ContentAsset }) {
       </Section>
 
       <Section title="Metadata">
-        <TextField label="Title" value={asset.title ?? ""} onCommit={(v) => edit({ title: v })} />
-        <TextField label="Caption" value={asset.caption ?? ""} onCommit={(v) => edit({ caption: v })} />
+        <TextField label="Title" value={asset.title ?? ""} disabled={props.readOnly} onCommit={(v) => edit({ title: v })} />
+        <TextField label="Caption" value={asset.caption ?? ""} disabled={props.readOnly} onCommit={(v) => edit({ caption: v })} />
         <div style={{ paddingTop: 6 }}>
           <Chips items={asset.tags} />
         </div>

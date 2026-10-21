@@ -31,6 +31,7 @@ export function useContentRuntime(): ContentRuntime {
 export function useRuntimeCapabilities() {
   const runtime = useContentRuntime();
   const [caps, setCaps] = useState<ContentRuntimeCapabilities | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -39,15 +40,18 @@ export function useRuntimeCapabilities() {
 
   useEffect(() => {
     let alive = true;
+    setError(null);
     runtime.capabilities().then((c) => {
       if (alive) setCaps(c);
+    }).catch((err) => {
+      if (alive) setError(err instanceof Error ? err.message : String(err));
     });
     return () => {
       alive = false;
     };
   }, [runtime, tick]);
 
-  return caps;
+  return { capabilities: caps, error };
 }
 
 export function mergeLibraryPages(current: ListPage, next: ListPage): ListPage {
@@ -65,6 +69,7 @@ export function useLibrary(view: string, query?: Partial<ContentQuery>) {
   const [page, setPage] = useState<ListPage>({ assets: [], total: 0 });
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const queryKey = JSON.stringify(query ?? {});
 
@@ -75,6 +80,7 @@ export function useLibrary(view: string, query?: Partial<ContentQuery>) {
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setError(null);
     runtime
       .listView(view, query)
       .then((p) => {
@@ -83,7 +89,11 @@ export function useLibrary(view: string, query?: Partial<ContentQuery>) {
           setLoading(false);
         }
       })
-      .catch(() => alive && setLoading(false));
+      .catch((err) => {
+        if (!alive) return;
+        setError(err instanceof Error ? err.message : String(err));
+        setLoading(false);
+      });
     return () => {
       alive = false;
     };
@@ -96,6 +106,9 @@ export function useLibrary(view: string, query?: Partial<ContentQuery>) {
     try {
       const next = await runtime.listView(view, { ...(query ?? {}), cursor: page.cursor });
       setPage((current) => mergeLibraryPages(current, next));
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoadingMore(false);
     }
@@ -105,6 +118,7 @@ export function useLibrary(view: string, query?: Partial<ContentQuery>) {
     ...page,
     loading,
     loadingMore,
+    error,
     hasMore: Boolean(page.cursor),
     loadMore,
   };
