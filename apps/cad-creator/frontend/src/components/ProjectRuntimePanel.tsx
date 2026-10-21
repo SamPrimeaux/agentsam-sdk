@@ -56,14 +56,54 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
   }
   if(action==='restore'){const r=await call('design_project_restore',{project_id:project.id,revision:Number(restoreRevision),expected_revision:revision});adopt(r);setStatus('Restored as revision '+r.revision);}
  }catch(e:any){setStatus(e.message);}finally{setBusy(false);}}
- return <div className="flex flex-wrap items-center gap-2 px-3 py-2 text-xs bg-slate-900 text-white">
-  <input aria-label="Project ID" className="text-black px-1" value={loadId} onChange={e=>setLoadId(e.target.value)}/>
-  <button disabled={busy} onClick={()=>run('load')}>Open saved</button><button disabled={busy||readOnly} onClick={()=>run('save')}>Save revision</button>
-  <input aria-label="Revision to restore" type="number" min="1" className="text-black w-12" value={restoreRevision} onChange={e=>setRestoreRevision(e.target.value)}/>
-  <button disabled={busy||readOnly||revision===0} onClick={()=>run('restore')}>Restore</button><button disabled={busy||readOnly} onClick={()=>run('render')}>Build & render</button>
-  <span className="text-slate-300" title={occtDoctor?.reason||'Native OCCT kernel status'}>{occtDoctor===null?'Checking OCCT…':occtDoctor.ready?'OCCT '+occtDoctor.version:'OCCT unavailable'}</span>
-  {(['width','depth','height'] as const).map(key=><label key={key} className="flex items-center gap-1">{key[0].toUpperCase()}<input aria-label={'OCCT box '+key+' in inches'} type="number" min="0.001" step="any" className="text-black w-14 px-1" value={solidDimensions[key]} onChange={e=>setSolidDimensions(old=>({...old,[key]:e.target.value}))}/></label>)}
-  <span>in</span><button disabled={busy||readOnly||!occtDoctor?.ready} onClick={()=>run('solid')}>Build OCCT solid</button>
-  <span role="status">{busy?'Working…':status}</span>{artifact&&<a href={artifact} target="_blank" rel="noreferrer" download={artifactLabel.startsWith('Download')?'model.step':undefined}>{artifactLabel}</a>}
+ return <div className="relative z-40 flex min-h-9 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#111929] px-3 py-1.5 text-[11px] text-slate-200" data-cad-project-runtime>
+  <div className="flex min-w-0 items-center gap-2">
+    <span className="hidden font-semibold text-slate-400 sm:inline">Revision {revision || '—'}</span>
+    <button type="button" disabled={busy||readOnly} onClick={()=>run('save')}
+      className="shrink-0 rounded-md bg-white/10 px-2.5 py-1 font-medium text-slate-100 hover:bg-white/20 disabled:opacity-40">Save revision</button>
+    <span className="max-w-[min(34vw,370px)] truncate text-slate-400" role="status" title={status}>{busy?'Working…':status}</span>
+  </div>
+  <details className="group relative shrink-0">
+    <summary className="list-none cursor-pointer rounded-md border border-white/15 px-2.5 py-1 text-slate-300 hover:bg-white/10">
+      Project & native tools <span aria-hidden>⌄</span>
+    </summary>
+    <div className="absolute right-0 top-[calc(100%+7px)] z-[100] flex max-h-[min(70vh,640px)] w-[min(410px,calc(100vw-24px))] flex-col gap-3 overflow-y-auto rounded-xl border border-white/20 bg-[#182336] p-4 shadow-2xl" aria-label="Project storage and native tools">
+      <div>
+        <strong className="text-xs font-semibold">Project revisions</strong>
+        <p className="mt-1 text-[11px] leading-relaxed text-slate-400">Local CAD host operations. Cloud revisions require the authenticated project service.</p>
+      </div>
+      <label className="flex flex-col gap-1 text-slate-300">Project ID
+        <input aria-label="Project ID" className="min-h-9 rounded-md border border-white/20 bg-[#0f1727] px-2 text-slate-100" value={loadId} onChange={e=>setLoadId(e.target.value)} />
+      </label>
+      <button type="button" disabled={busy} onClick={()=>run('load')}
+        className="min-h-9 rounded-md border border-white/20 bg-white/5 px-3 text-left hover:bg-white/10">Open saved revision</button>
+      <div className="flex items-center gap-2">
+        <label className="flex min-w-0 flex-1 flex-col gap-1">Restore revision
+          <input aria-label="Revision to restore" type="number" min="1" value={restoreRevision}
+            className="min-h-9 rounded-md border border-white/20 bg-[#0f1727] px-2 text-slate-100" onChange={e=>setRestoreRevision(e.target.value)}/>
+        </label>
+        <button type="button" disabled={busy||readOnly||revision===0} onClick={()=>run('restore')}
+          className="self-end rounded-md bg-white/10 px-3 py-2 hover:bg-white/20 disabled:opacity-40">Restore</button>
+      </div>
+      <button type="button" disabled={busy||readOnly} onClick={()=>run('render')}
+        className="min-h-9 rounded-md border border-white/20 bg-white/5 px-3 text-left hover:bg-white/10">Build & render current project</button>
+      <div className="border-t border-white/15 pt-3">
+        <strong>Native OCCT solid tools</strong>
+        <p className="mt-1 text-[11px] text-slate-400" title={occtDoctor?.reason||'Native host status'}>
+          {occtDoctor===null?'Checking native host…':occtDoctor.ready?'OCCT '+occtDoctor.version:occtDoctor.reason||'OCCT unavailable'}
+        </p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {(['width','depth','height'] as const).map(key=><label key={key} className="flex min-w-0 flex-col gap-1 capitalize">{key}
+            <input aria-label={'OCCT box '+key+' in inches'} type="number" min="0.001" step="any"
+              className="min-h-9 min-w-0 rounded-md border border-white/20 bg-[#0f1727] px-2 text-slate-100" value={solidDimensions[key]}
+              onChange={e=>setSolidDimensions(old=>({...old,[key]:e.target.value}))}/></label>)}
+        </div>
+        <button type="button" disabled={busy||readOnly||!occtDoctor?.ready} onClick={()=>run('solid')}
+          className="mt-3 w-full rounded-md bg-white/10 px-3 py-2 text-left hover:bg-white/20 disabled:opacity-40">Build verified OCCT solid (inches)</button>
+      </div>
+      {artifact&&<a href={artifact} target="_blank" rel="noreferrer" download={artifactLabel.startsWith('Download')?'model.step':undefined}
+        className="rounded-md bg-sky-600/20 px-3 py-2 text-sky-200 underline">{artifactLabel}</a>}
+    </div>
+  </details>
  </div>;
 }

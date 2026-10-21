@@ -9,7 +9,7 @@ import {
   Moon,
   Redo2,
   Share2,
-  Sparkles,
+  MousePointer2,
   Sun,
   Undo2,
   Activity
@@ -71,12 +71,12 @@ export function CadCreatorShell({
       <div className="flex items-center gap-3">
         {presentation === 'standalone' && (
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-400 p-0.5 shadow-md flex items-center justify-center overflow-hidden">
-              <img src="https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d1864d11-4485-4a38-1849-168f567aa200/avatar" alt="AgentSam CAD Creator" className="h-full w-full rounded-lg object-cover" />
+            <div className="w-7 h-7 rounded-lg border border-white/10 flex items-center justify-center overflow-hidden">
+              <img src={import.meta.env.BASE_URL + 'samsketch-icon.png'} alt="SamSketch" className="h-full w-full rounded-lg object-cover" />
             </div>
             <div className="hidden sm:block">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold tracking-tight">AgentSam CAD</span>
+                <span className="text-xs font-bold tracking-tight">{activeWorkspace === "plan" ? "SamSketch" : "CAD Creator"}</span>
                 <span className="text-[9px] font-mono px-1 py-0.2 rounded font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                   CREATOR
                 </span>
@@ -93,7 +93,7 @@ export function CadCreatorShell({
             className={`w-1.5 h-1.5 rounded-full ${
               isSynced ? 'bg-emerald-400' : 'bg-amber-400'
             }`}
-            title={isSynced ? 'Synced' : 'Syncing...'}
+            title={isSynced ? 'Collaboration connected' : 'Offline local editing'}
           />
         </div>
       </div>
@@ -184,22 +184,18 @@ export function CadCreatorShell({
           </button>
         )}
 
-        {/* The host owns conversation. This controls workspace chrome, not an independent assistant. */}
-        <button
-          type="button"
-          onClick={onToggleSidebar}
-          data-annotation-control=""
-          aria-pressed={isSidebarOpen}
-          className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-            isSidebarOpen
-              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm shadow-indigo-500/20'
-              : 'text-slate-300 hover:text-white hover:bg-white/10 border border-inherit/40'
-          }`}
-          title="Toggle AgentSam Assistant"
-        >
-          <Sparkles className="size-3.5" />
-          <span className="hidden sm:inline">AgentSam</span>
-        </button>
+        {/* The packaged MiniAgentSam owns authoring. The host owns embedded annotation chrome. */}
+        {presentation === 'standalone' && (
+          <button type="button" onClick={onToggleSidebar} data-annotation-control=""
+            aria-label={isSidebarOpen ? 'Cancel miniAgentSam selection' : 'Select for miniAgentSam'}
+            aria-pressed={isSidebarOpen}
+            className={`p-1.5 rounded-lg border transition-colors ${
+              isSidebarOpen ? 'bg-white/10 text-white border-white/20' : 'text-slate-400 hover:text-white hover:bg-white/10 border-transparent'
+            }`}
+            title={isSidebarOpen ? 'Cancel selection' : 'Select for miniAgentSam'}>
+            <MousePointer2 className="size-4" />
+          </button>
+        )}
 
         {/* Export / Share */}
         <button

@@ -13,12 +13,18 @@ import {
   UserRole
 } from '@inneranimalmedia/agentsam-cad-shared';
 import { TEMPLATES } from '../lib/templates';
+import { createEmptyCadProject } from '../lib/create-empty-project';
+import {
+  CadEngineeringToolbar, CadProjectExplorer, CadPropertyInspector,
+  type CadElementSelection, type CadElementGroup
+} from '../components/EngineeringWorkbench';
 import { getPermissions } from '../lib/permissions';
 import { collaborationClient } from '../lib/socket';
 import { Canvas2D } from '../components/Canvas2D';
 import { Viewport3D } from '../components/Viewport3D';
+import {DreamHouseWorldViewport} from '../components/DreamHouseWorldViewport';
 import { BimStartersWorkspace } from '../components/BimStartersWorkspace';
-import { SketchCanvasTLDraw } from '../components/SketchCanvasTLDraw';
+import { NativeSketchCanvas } from '../components/NativeSketchCanvas';
 import { ParametricEditor } from '../components/ParametricEditor';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import { ExportPublishModal } from '../components/ExportPublishModal';
@@ -75,9 +81,29 @@ export function CadCreatorApp({
 }: CadCreatorAppProps) {
   // 1. Core Project State
   const [showBimStarters, setShowBimStarters] = useState(false);
-  const [project, setProject] = useState<ProjectState>(() => {
-    return TEMPLATES.modern_villa;
-  });
+  const [project, setProject] = useState<ProjectState>(createEmptyCadProject);
+  const [sourceStatus,setSourceStatus] = useState<'loading'|'loaded'|'unavailable'>('loading');
+  const openDreamHouse = useCallback(async () => {
+    const response=await fetch('https://cad.inneranimalmedia.com/api/cad/public-world/dreamhouse/v1.1/design.json');
+    if(!response.ok)throw Error('DreamHouse source unavailable: '+response.status);
+    const source=await response.json() as ProjectState;
+    if(source.id!=='dreamhouse-v1-wip'||!Array.isArray(source.walls)||!Array.isArray(source.rooms))throw Error('DreamHouse BIM document contract failed');
+    setProject(source);
+    setHistory([]);setRedoStack([]);setUiSelection(null);setVerifiedProjectRevision(null);
+    setActiveWorkspace('model');setPlanLayout('split');setModelModule(null);
+    setExplorerOpen(false);setInspectorOpen(false);
+    setSourceStatus('loaded');
+  },[]);
+  useEffect(()=>{
+    if(new URLSearchParams(window.location.search).get('new')==='1') {setSourceStatus('unavailable');return;}
+    let cancelled=false;
+    void openDreamHouse().catch(()=>{if(!cancelled)setSourceStatus('unavailable')});
+    const reopen=()=>{void openDreamHouse().catch(()=>setSourceStatus('unavailable'))};
+    const blank=()=>startBlankProject();
+    window.addEventListener('agentsam:cad-open-dreamhouse',reopen);
+    window.addEventListener('agentsam:cad-new-project',blank);
+    return()=>{cancelled=true;window.removeEventListener('agentsam:cad-open-dreamhouse',reopen);window.removeEventListener('agentsam:cad-new-project',blank)};
+  },[openDreamHouse]);
 
   // Undo / Redo history stacks
   const [history, setHistory] = useState<ProjectState[]>([]);
@@ -87,6 +113,18 @@ export function CadCreatorApp({
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(initialWorkspace === 'parametric' || initialWorkspace === 'render' ? 'model' : initialWorkspace);
   const [planLayout, setPlanLayout] = useState<'2d' | 'split' | 'sketch'>('split');
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
+  const [explorerOpen, setExplorerOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches);
+  const [inspectorOpen, setInspectorOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches);
+  const [advancedToolsOpen, setAdvancedToolsOpen] = useState(false);
+  const [uiSelection, setUiSelection] = useState<CadElementSelection>(null);
+  const [cadAccent, setCadAccent] = useState<string>(() => {
+    if (typeof window === 'undefined') return '#82a7fb';
+    const color = window.localStorage.getItem('agentsam.cad.interface.accent');
+    return color && /^#[0-9a-f]{6}$/i.test(color) ? color : '#82a7fb';
+  });
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.localStorage.setItem('agentsam.cad.interface.accent', cadAccent);
+  }, [cadAccent]);
   const [selectedFurnitureType, setSelectedFurnitureType] = useState<string | null>(null);
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
   const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
@@ -136,13 +174,10 @@ export function CadCreatorApp({
   });
 
   const [currentUser, setCurrentUser] = useState<MultiplayerUser>(() => {
-    const colors = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6'];
-    const names = ['Architect Alex', 'Designer Sam', 'Taylor Arch', 'Jordan BIM', 'Morgan Lead', 'Casey Eng'];
-    const idx = Math.floor(Math.random() * names.length);
     return {
-      id: `user_${Math.random().toString(36).substring(2, 7)}`,
-      name: names[idx],
-      color: colors[idx % colors.length],
+      id: 'local_' + (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)),
+      name: 'Local CAD Editor',
+      color: '#82a7fb',
       role: 'Owner',
       selectedIds: [],
       activeTool: 'select',
@@ -151,7 +186,7 @@ export function CadCreatorApp({
   });
 
   const [remoteUsers, setRemoteUsers] = useState<MultiplayerUser[]>([]);
-  const [isSynced, setIsSynced] = useState(true);
+  const [isSynced, setIsSynced] = useState(false);
 
   const permissions = getPermissions(currentUser.role);
   const isViewer = currentUser.role === 'Viewer';
@@ -195,7 +230,10 @@ export function CadCreatorApp({
 
   // Initialize WebSocket Collaboration
   useEffect(() => {
+    setIsSynced(false);
     collaborationClient.connect(roomId, currentUser);
+    const unsubConnected = collaborationClient.on('connected', () => setIsSynced(true));
+    const unsubDisconnected = collaborationClient.on('disconnected', () => setIsSynced(false));
 
     const unsubJoined = collaborationClient.on('user_joined', (user: MultiplayerUser) => {
       setRemoteUsers((prev) => [...prev.filter((u) => u.id !== user.id), user]);
@@ -237,6 +275,8 @@ export function CadCreatorApp({
     });
 
     return () => {
+      unsubConnected();
+      unsubDisconnected();
       unsubJoined();
       unsubLeft();
       unsubRoomUsers();
@@ -275,6 +315,25 @@ export function CadCreatorApp({
     collaborationClient.sendProjectUpdate(previous);
   };
 
+  const startBlankProject = () => {
+    if (isViewer) { showToast('Viewers cannot create projects'); return; }
+    const hasContents = project.walls.length || project.doors.length || project.windows.length ||
+      project.rooms.length || project.furniture.length || (project.parametricObjects?.length ?? 0);
+    if (hasContents && !window.confirm('Start a blank CAD project? Save the current project first if you want to keep it.')) return;
+    const blank = createEmptyCadProject();
+    setProject(blank);
+    setSourceStatus('unavailable');
+    setHistory([]);
+    setRedoStack([]);
+    setUiSelection(null);
+    setCadSelection(null);
+    setVerifiedProjectRevision(null);
+    setActiveWorkspace('plan');
+    setPlanLayout('2d');
+    setActiveTool('select');
+    collaborationClient.sendProjectUpdate(blank);
+  };
+
   const handleRedo = () => {
     if (isViewer || redoStack.length === 0) return;
     const next = redoStack[redoStack.length - 1];
@@ -288,7 +347,9 @@ export function CadCreatorApp({
     WORKSPACE_REGISTRY.find((w) => w.id === activeWorkspace) || WORKSPACE_REGISTRY[0];
 
   return (
-    <div className={`flex flex-col h-screen w-screen font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+    <div data-appearance={isDarkMode ? 'dark' : 'light'}
+      style={{'--cad-accent': cadAccent} as React.CSSProperties}
+      className={`cad-workspace-ui flex flex-col h-screen w-screen font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {/* 1. Global Shell Header (5 Workspaces, Project, Sync, Undo/Redo, AgentSam, Export) */}
       {chromeFolded ? (
         <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/10 bg-slate-900 px-3 text-[11px]">
@@ -316,7 +377,23 @@ export function CadCreatorApp({
         onToggleDiagnostics={() => setShowRoboticsDiagnostics(!showRoboticsDiagnostics)}
       />
 
-      {/* 2. Contextual Secondary Toolbar (Changes per workspace) */}
+      {(activeWorkspace === 'plan' || activeWorkspace === 'model') && (
+        <CadEngineeringToolbar
+          tool={activeTool} onTool={setActiveTool}
+          workspace={activeWorkspace} onWorkspace={handleSelectWorkspace}
+          planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
+          onNew={startBlankProject} onTemplates={() => setIsTemplateLibraryOpen(true)}
+          onExport={() => setIsExportPublishOpen(true)}
+          onToggleExplorer={() => { if (window.matchMedia('(max-width: 920px)').matches && !explorerOpen) setInspectorOpen(false); setExplorerOpen(v => !v); }}
+          onToggleInspector={() => { if (window.matchMedia('(max-width: 920px)').matches && !inspectorOpen) setExplorerOpen(false); setInspectorOpen(v => !v); }}
+          explorerOpen={explorerOpen} inspectorOpen={inspectorOpen}
+          onMore={() => setAdvancedToolsOpen(v => !v)} moreOpen={advancedToolsOpen}
+          accent={cadAccent} onAccentChange={setCadAccent}
+          isDark={isDarkMode} onToggleDark={() => setIsDarkMode(v => !v)}
+        />
+      )}
+      {/* Advanced contextual operations are preserved and revealed by More tools. */}
+      {(advancedToolsOpen || (activeWorkspace !== 'plan' && activeWorkspace !== 'model')) && (
       <div className={`h-10 px-3.5 border-b flex items-center justify-between text-xs z-20 shrink-0 backdrop-blur-md ${isDarkMode ? 'bg-slate-900/80 border-white/10 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'}`}>
         <button type="button" onClick={() => setChromeFolded(true)} aria-label="Fold workspace controls" title="Fold controls for more canvas" className="mr-2 rounded bg-slate-800 px-2 py-0.5 text-[11px] hover:bg-slate-700">Fold ×</button>
         {/* Workspace Context Controls */}
@@ -352,7 +429,7 @@ export function CadCreatorApp({
                 }`}
               >
                 <Sparkles className="size-3 text-amber-400" />
-                <span>Sketch-to-CAD</span>
+                <span>SamSketch</span>
               </button>
             </div>
 
@@ -495,14 +572,20 @@ export function CadCreatorApp({
           </div>
         </div>
       </div>
+      )}
 
       </>)}
       {/* 3. Main Stage (canvas-first, no assistant sidebar) */}
-      <main className="flex-1 flex overflow-hidden relative">
-        {/* AgentSam Sidebar (Toggleable) */}
-
+      <main className="flex-1 flex overflow-hidden relative min-h-0">
+        <div className="cad-workspace-body">
+          {(activeWorkspace === 'plan' || activeWorkspace === 'model') && explorerOpen && (
+            <CadProjectExplorer project={project} selection={uiSelection}
+              onSelect={setUiSelection} onClose={() => setExplorerOpen(false)} />
+          )}
         {/* PRIMARY VIEWPORT STAGE */}
-        <section className="flex-1 flex overflow-hidden relative bg-[#121212]">
+        <section className="cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]">
+          {/* Published DreamHouse visualization is sourced from the real V1.1 GLB.
+             Editable BIM provenance remains the source V1 project, not mock meshes. */}
           {/* WORKSPACE 1: PLAN */}
           {activeWorkspace === 'plan' && (
             <>
@@ -513,11 +596,22 @@ export function CadCreatorApp({
                     activeTool={activeTool}
                     onToolChange={setActiveTool}
                     onProjectChange={updateProject}
+                    showToolToolbar={false}
+                    externalSelection={uiSelection && uiSelection.group !== 'parametricObjects' ? {
+                      id:uiSelection.id,
+                      type: ({walls:'wall',doors:'door',windows:'window',rooms:'room',furniture:'furniture'} as const)[uiSelection.group]
+                    } : null}
                     selectedFurnitureType={selectedFurnitureType}
                     remoteUsers={remoteUsers}
                     unit={unit}
                     userRole={currentUser.role}
                     onSelectElement={(type, id) => {
+                      const groupMap: Record<string, CadElementGroup> = {
+                        wall:'walls', door:'doors', window:'windows',
+                        room:'rooms', furniture:'furniture', parametric:'parametricObjects'
+                      };
+                      const group = groupMap[type];
+                      if (group) { setUiSelection({group,id}); setInspectorOpen(true); if (window.matchMedia('(max-width: 920px)').matches) setExplorerOpen(false); }
                       try {
                         const revision = verifiedSelectionRevision(project.id, verifiedProjectRevision);
                         if (revision === null) {
@@ -535,19 +629,22 @@ export function CadCreatorApp({
 
               {(planLayout === 'split') && (
                 <div className="h-full relative w-1/2">
-                  <Viewport3D
-                    project={project}
-                    onTakeSnapshot={(dataUrl) => {
-                      setActiveSnapshotUrl(dataUrl);
-                      setIsImageGenModalOpen(true);
-                    }}
-                  />
+                  {project.id==='dreamhouse-v1-wip' && sourceStatus==='loaded'
+                    ? <DreamHouseWorldViewport onSelect={({designId})=>{
+                        const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
+                        for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
+                          setUiSelection({group,id:designId});setInspectorOpen(true);break;
+                        }}
+                      }}/>
+                    : <Viewport3D project={project} onTakeSnapshot={(dataUrl)=>{
+                        setActiveSnapshotUrl(dataUrl);setIsImageGenModalOpen(true);
+                      }}/>}
                 </div>
               )}
 
               {planLayout === 'sketch' && (
                 <div className="w-full h-full relative">
-                  <SketchCanvasTLDraw
+                  <NativeSketchCanvas
                     project={project}
                     onUpdateProject={(newProj) => updateProject(() => newProj)}
                     canEdit={!isViewer}
@@ -560,13 +657,17 @@ export function CadCreatorApp({
           {/* WORKSPACE 2: MODEL */}
           {activeWorkspace === 'model' && (
             <div className="w-full h-full relative">
-              {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} /> : <Viewport3D
-                project={project}
-                onTakeSnapshot={(dataUrl) => {
-                  setActiveSnapshotUrl(dataUrl);
-                  setIsImageGenModalOpen(true);
-                }}
-              />}
+              {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
+              : project.id==='dreamhouse-v1-wip' && sourceStatus==='loaded'
+                ? <DreamHouseWorldViewport onSelect={({designId})=>{
+                    const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
+                    for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
+                      setUiSelection({group,id:designId});setInspectorOpen(true);break;
+                    }}
+                  }}/>
+                : <Viewport3D project={project} onTakeSnapshot={(dataUrl)=>{
+                    setActiveSnapshotUrl(dataUrl);setIsImageGenModalOpen(true);
+                  }}/>}
               {modelModule === 'parametric' && (
                 <aside className="absolute right-0 top-0 bottom-0 z-20 w-full max-w-[440px] border-l border-white/10 bg-slate-950/95 shadow-2xl" aria-label="Parametric tools">
                   <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs">
@@ -676,6 +777,12 @@ export function CadCreatorApp({
             </div>
           )}
         </section>
+          {(activeWorkspace === 'plan' || activeWorkspace === 'model') && inspectorOpen && (
+            <CadPropertyInspector project={project} selection={uiSelection}
+              onSelect={setUiSelection} onChange={updateProject}
+              onClose={() => setInspectorOpen(false)} readOnly={isViewer} />
+          )}
+        </div>
       </main>
 
       {/* Reuse the SDK's real miniAgentSam selection/composer. The CAD host
