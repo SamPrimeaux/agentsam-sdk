@@ -1,12 +1,43 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { discoverFreeCad } from './discovery';
 import { probeDockerServiceHealth, executeFreeCadDocker } from './docker-executor';
 
 const execFileAsync = promisify(execFile);
+
+/** Resolve the adapter from an actual installed source or packaged runtime.
+ * Both the bundled Node server and TypeScript development server use this.
+ * A shell's current working directory is not an installation authority.
+ */
+export function resolveFreeCadAdapter(startDirectories: string[] = [
+  path.dirname(fileURLToPath(import.meta.url)),
+]): string | null {
+  for (const start of startDirectories) {
+    let dir = path.resolve(start);
+    for (let depth = 0; depth < 8; depth += 1) {
+      for (const relative of [
+        'cad/freecad/adapter.py',
+        'backend/runtime/cad/freecad/adapter.py',
+        'backend/dist/cad/freecad/adapter.py',
+        'runtime/cad/freecad/adapter.py',
+        'dist/cad/freecad/adapter.py',
+        'services/cad/freecad/adapter.py',
+      ]) {
+        const candidate = path.join(dir, relative);
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+  }
+  return null;
+}
+
 
 export interface FreeCadBuildOptions {
   operations: Array<{
@@ -62,14 +93,16 @@ export async function executeFreeCadBuild({
 }: FreeCadBuildOptions): Promise<FreeCadBuildResult> {
   const startTime = Date.now();
   const outFilename = filename || `model.${format}`;
-  const sdkRoot = path.resolve(process.cwd(), '../..');
-  const adapterPath = path.join(sdkRoot, 'services/cad/freecad/adapter.py');
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/.test(outFilename)) {
+    throw new Error('Invalid FreeCAD output filename: basename required');
+  }
+  const adapterPath = resolveFreeCadAdapter();
 
   // Find FreeCAD python environment
   let pythonBin: string | null = null;
   let libDir: string | null = null;
 
-  if (fs.existsSync(adapterPath)) {
+  if (adapterPath) {
     const { binary } = discoverFreeCad(process.env);
     if (binary && process.platform === 'darwin') {
       const appRoot = binary.includes('.app') ? binary.split('.app')[0] + '.app' : null;
@@ -99,7 +132,7 @@ export async function executeFreeCadBuild({
   }
 
   // If local FreeCAD python / adapter is missing, delegate to containerized Docker service
-  if (!pythonBin || !fs.existsSync(adapterPath)) {
+  if (!pythonBin || !adapterPath) {
     try {
       const dockerHealth = await probeDockerServiceHealth();
       if (dockerHealth.available && dockerHealth.tools?.freecad?.installed) {
