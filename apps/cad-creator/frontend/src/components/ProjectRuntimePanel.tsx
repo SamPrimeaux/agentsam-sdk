@@ -56,9 +56,9 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
   }
   if(action==='restore'){const r=await call('design_project_restore',{project_id:project.id,revision:Number(restoreRevision),expected_revision:revision});adopt(r);setStatus('Restored as revision '+r.revision);}
  }catch(e:any){setStatus(e.message);}finally{setBusy(false);}}
- return <div className="relative z-40 flex min-h-9 shrink-0 items-center justify-between gap-2 border-b border-white/10 bg-[#111929] px-3 py-1.5 text-[11px] text-slate-200" data-cad-project-runtime>
+ return <div className="absolute right-3 top-14 z-40 flex max-w-[calc(100%-24px)] items-center gap-2 rounded-xl border border-white/15 bg-slate-950/95 px-2.5 py-1.5 text-[11px] text-slate-200 shadow-xl" data-cad-project-runtime>
   <div className="flex min-w-0 items-center gap-2">
-    <span className="hidden font-semibold text-slate-400 sm:inline">Revision {revision || '—'}</span>
+    <span className="hidden font-semibold text-slate-400 sm:inline" title={project.name}>Revision {revision || '—'}</span>
     <button type="button" disabled={busy||readOnly} onClick={()=>run('save')}
       className="shrink-0 rounded-md bg-white/10 px-2.5 py-1 font-medium text-slate-100 hover:bg-white/20 disabled:opacity-40">Save revision</button>
     <span className="max-w-[min(34vw,370px)] truncate text-slate-400" role="status" title={status}>{busy?'Working…':status}</span>

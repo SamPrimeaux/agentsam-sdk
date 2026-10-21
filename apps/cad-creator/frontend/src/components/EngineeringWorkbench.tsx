@@ -3,7 +3,8 @@ import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
 import type {ProjectState, ActiveTool, WallMaterial, DesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
 import {Layers3, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen,
  Search, ChevronRight, ChevronDown, Box, Plus, ArrowUpRight, Grid2X2,
- MousePointer2, DoorOpen, Ruler, PencilRuler, Hand, Eraser, Square, SlidersHorizontal, Blocks} from 'lucide-react';
+ MousePointer2, DoorOpen, Ruler, PencilRuler, Hand, Eraser, Square, SlidersHorizontal, Blocks, Undo2, Redo2, Bot, Activity} from 'lucide-react';
+import {preloadRoboticsWorkspace} from '../workspaces/robotics/lazy';
 import './engineering-workbench.css';
 
 export type CadElementGroup = 'walls'|'doors'|'windows'|'rooms'|'furniture'|'parametricObjects';
@@ -132,11 +133,13 @@ const TOOLS:{id:ActiveTool;label:string;icon:React.ComponentType<{size?:number}>
  {id:'measure',label:'Measure',icon:Ruler},{id:'eraser',label:'Erase',icon:Eraser},
  {id:'pan',label:'Pan',icon:Hand}
 ];
-export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onMore,moreOpen,accent,onAccentChange,isDark,onToggleDark}:{
- tool:ActiveTool;onTool:(v:ActiveTool)=>void;workspace:string;onWorkspace:(v:'plan'|'model')=>void;
+export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onMore,moreOpen,accent,onAccentChange,isDark,onToggleDark,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics}:{
+ tool:ActiveTool;onTool:(v:ActiveTool)=>void;workspace:string;onWorkspace:(v:'plan'|'model'|'robotics')=>void;
  planLayout:'2d'|'split'|'sketch';onPlanLayout:(v:'2d'|'split'|'sketch')=>void;readOnly:boolean;
  onNew:()=>void;onTemplates:()=>void;onExport:()=>void;onToggleExplorer:()=>void;onToggleInspector:()=>void;
- explorerOpen:boolean;inspectorOpen:boolean;onMore:()=>void;moreOpen:boolean;accent:string;onAccentChange:(v:string)=>void;isDark:boolean;onToggleDark:()=>void
+ explorerOpen:boolean;inspectorOpen:boolean;onMore:()=>void;moreOpen:boolean;accent:string;onAccentChange:(v:string)=>void;isDark:boolean;onToggleDark:()=>void;
+ onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean;
+ onToggleDiagnostics:()=>void;showDiagnostics:boolean;
 }) {
  return <div className="cad-real-toolbar" role="toolbar" aria-label="CAD authoring tools">
   <div className="cad-tool-cluster"><button aria-label="Toggle project explorer" className={explorerOpen?'active':''} onClick={onToggleExplorer} title="Project explorer"><PanelLeftOpen size={17}/><span className="cad-focus-help">Project explorer</span></button>
@@ -144,10 +147,16 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
   <div className="cad-tool-cluster cad-tool-modes">
    <button className={workspace==='plan'?'active':''} onClick={()=>onWorkspace('plan')}>Draft</button>
    <button className={workspace==='model'?'active':''} onClick={()=>onWorkspace('model')}>3D Model</button>
+   <button className={workspace==='robotics'?'active':''} onMouseEnter={()=>void preloadRoboticsWorkspace()} onFocus={()=>void preloadRoboticsWorkspace()} onClick={()=>onWorkspace('robotics')}><Bot size={16}/>Robotics</button>
+   {workspace==='robotics'&&<button type="button" aria-pressed={showDiagnostics} onClick={onToggleDiagnostics} title="Toggle robotics diagnostics"><Activity size={16}/>Diagnostics</button>}
   </div>
   {workspace==='plan'&&<div className="cad-tool-cluster cad-direct-tools">{TOOLS.map(t=><button key={t.id} className={tool===t.id?'active':''}
     title={t.label} aria-pressed={tool===t.id} disabled={readOnly&&!['select','measure','pan'].includes(t.id)} onClick={()=>onTool(t.id)}>
     <t.icon size={16}/><span>{t.label}</span></button>)}</div>}
+  <div className="cad-tool-cluster">
+   <button type="button" title="Undo" aria-label="Undo CAD edit" disabled={!canUndo} onClick={onUndo}><Undo2 size={16}/><span className="cad-focus-help">Undo CAD edit</span></button>
+   <button type="button" title="Redo" aria-label="Redo CAD edit" disabled={!canRedo} onClick={onRedo}><Redo2 size={16}/><span className="cad-focus-help">Redo CAD edit</span></button>
+  </div>
   <div className="cad-tool-cluster cad-tool-actions">
    {workspace==='plan'&&<select aria-label="Viewport arrangement" value={planLayout} onChange={e=>onPlanLayout(e.target.value as typeof planLayout)}>
     <option value="split">Plan + 3D</option><option value="2d">2D only</option><option value="sketch">SamSketch</option></select>}

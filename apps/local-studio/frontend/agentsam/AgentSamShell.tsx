@@ -44,8 +44,7 @@ export function AgentSamShell() {
   const isConversation = pathname === '/agentsam' || pathname.startsWith('/chats');
   const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/');
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
-  // CAD is a Work surface. It reuses the platform's Chat/Work mode authority.
-  useEffect(() => { if (isCadRoute) setMode('work'); }, [isCadRoute]);
+  // CAD shares the Chat/Work mode switcher with AgentSam; never override the user's choice.
   const go = (to: string) => {
     if (isPackagedDesktop()) {
       const normalized = to.startsWith('/') ? to : '/' + to;
