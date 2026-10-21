@@ -1,4 +1,5 @@
 use crate::commands::keychain::{self, IdentitySessionState};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -34,7 +35,7 @@ fn generate_pkce_pair() -> (String, String) {
 
     let mut hasher = Sha256::new();
     hasher.update(verifier.as_bytes());
-    let challenge = base64::encode_config(hasher.finalize(), base64::URL_SAFE_NO_PAD);
+    let challenge = URL_SAFE_NO_PAD.encode(hasher.finalize());
 
     (verifier, challenge)
 }

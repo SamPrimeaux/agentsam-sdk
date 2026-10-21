@@ -24,7 +24,7 @@ pub struct IdentityPendingState {
 
 #[derive(Default)]
 pub struct IdentitySessionState {
-    pub cache: Mutex<IdentitySessionCache>,
+    cache: Mutex<IdentitySessionCache>,
 }
 
 #[derive(Default)]
@@ -253,7 +253,7 @@ pub fn provider_key_status(provider: String) -> Result<ProviderKeyStatus, Keycha
 
     Ok(ProviderKeyStatus {
         exists: value.is_some(),
-        last4: value.as_deref().and_then(secret_last4),
+        last4: value.map(|v| v.as_str()).and_then(secret_last4),
     })
 }
 
