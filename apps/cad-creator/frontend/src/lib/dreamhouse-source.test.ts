@@ -5,7 +5,7 @@ describe('authenticated DreamHouse source', () => {
   it('rejects unauthorized BIM access without returning a substitute project', async () => {
     const fetcher = vi.fn().mockResolvedValue({ok:false,status:401});
     await expect(loadDreamHouseProject(fetcher)).rejects.toThrow('authorized AgentSam CAD session');
-    expect(fetcher).toHaveBeenCalledWith(DREAMHOUSE_DESIGN_URL, {credentials:'include'});
+    expect(fetcher).toHaveBeenCalledWith(DREAMHOUSE_DESIGN_URL, {credentials:'omit'});
   });
   it('accepts verified actual project geometry when access is authorized', async () => {
     const source = {id:'dreamhouse-v1-wip',name:'DreamHouse',walls:[{id:'w1'}],rooms:[{id:'r1'}]};
