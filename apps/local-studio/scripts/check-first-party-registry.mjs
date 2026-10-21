@@ -4,7 +4,7 @@
  * SDK publication alone is not enough: Studio pins first-party packages independently.
  * Missing releases defer the downstream Cloudflare build; network failures fail closed.
  */
-import { readFileSync, appendFileSync } from 'node:fs';
+import { readFileSync, appendFileSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,8 +42,19 @@ export async function registryStatus(requirements, get = fetch) {
 }
 
 export function appManifestSources() {
-  return ['package.json', 'frontend/package.json', 'backend/package.json', 'shared/agentsam/package.json']
-    .map((path) => ({ path, manifest: read(path) }));
+  const root = read('package.json');
+  const paths = ['package.json'];
+  for (const workspace of root.workspaces || []) {
+    if (workspace.endsWith('/*')) {
+      const directory = workspace.slice(0, -2);
+      for (const item of readdirSync(resolve(appRoot, directory), { withFileTypes: true })) {
+        if (item.isDirectory()) paths.push(directory + '/' + item.name + '/package.json');
+      }
+    } else {
+      paths.push(workspace + '/package.json');
+    }
+  }
+  return paths.map((path) => ({ path, manifest: read(path) }));
 }
 
 export function staleLockTarballs(lock, version) {
