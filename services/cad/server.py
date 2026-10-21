@@ -17,11 +17,11 @@ import re
 import shutil
 import subprocess
 import tempfile
-from urllib.parse import urlsplit, unquote
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlsplit
 
 PORT = int(os.environ.get("PORT", "8793"))
 TOKEN_FILE = Path(os.environ.get("AGENTSAM_CAD_TOKEN_FILE", "/config/service.token"))
@@ -620,7 +620,7 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(data)
 
     def _handle_file_get(self) -> None:
-        alias, root, target = _file_target(urlsplit(self.path).path)
+        alias, _root, target = _file_target(urlsplit(self.path).path)
         if target.is_dir():
             entries = sorted(target.iterdir(), key=lambda entry: entry.name)
             self._json(HTTPStatus.OK, {"ok": True, "mount": alias,
