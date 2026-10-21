@@ -15,12 +15,13 @@ import { localStudioRuntimeVisuals } from '@/lib/runtime-visuals/local-studio-ru
 export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const { data, isMobile } = useNav();
   const state = useWorkStore();
+  const [workFocused, setWorkFocused] = useState(false);
   const [panelWidth, setPanelWidth] = useState(() => {
-    if (typeof window === 'undefined') return 480;
+    if (typeof window === 'undefined') return 780;
     try {
       const saved = Number(window.localStorage.getItem('agentsam.studio.agentPanelWidth'));
-      return Number.isFinite(saved) && saved >= 280 && saved <= 1120 ? saved : 480;
-    } catch { return 480; }
+      return Number.isFinite(saved) && saved >= 280 && saved <= 1120 ? saved : Math.max(480, Math.min(1060, Math.round(window.innerWidth * 0.54)));
+    } catch { return 780; }
   });
   useEffect(() => {
     try { window.localStorage.setItem('agentsam.studio.agentPanelWidth', String(panelWidth)); }
@@ -37,8 +38,8 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       {conversationId ? <Link to="/chats" aria-label="Back to Chats" title="Back to Chats" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="size-4"/></Link> : null}
       <AnnotationToggle /><SidePanelToggle />
     </>} />
-    <div className="agentsam-workspace">
-      <section className="agentsam-conversation" aria-label="Conversation" inert={isMobile && state.sideOpen}>
+    <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "")}>
+      <section className="agentsam-conversation" aria-label="Conversation" inert={(isMobile && state.sideOpen) || workFocused} style={workFocused ? { display:"none" } : undefined}>
         <AgentConversationSurface
           empty={empty}
           runtime={
@@ -56,7 +57,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           composerClassName="agentsam-conversation-dock"
         />
       </section>
-      {state.sideOpen ? <><SplitHandle label="Resize Side Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(280, Math.min(1120, width - delta, window.innerWidth - 360)))} onDoubleClick={() => setPanelWidth(480)} /><aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Side Panel"><SideStage /></aside></> : null}
+      {state.sideOpen ? <>{!workFocused && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(320, Math.min(1500, width - delta, window.innerWidth - 320)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused((value) => !value)} /></aside></> : null}
     </div>
   </div>;
 }

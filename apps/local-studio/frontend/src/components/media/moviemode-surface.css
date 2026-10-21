@@ -1,0 +1,35 @@
+/* MovieMode inherits the available workspace dimensions, not the screen dimensions.
+   Standalone MovieMode retains its existing full-window presentation. */
+.agentsam-moviemode {
+  width:100%; height:100%; min-width:0; min-height:0;
+  display:flex; flex-direction:column; overflow:hidden;
+  container-type:inline-size;
+  background:var(--copro-bg, #101718);
+}
+.agentsam-moviemode-loading { flex:1; display:grid; place-items:center; min-height:0; color:var(--nav-muted, #a9b8bd); font-size:13px; }
+.agentsam-moviemode .copro-projects {
+  width:100%; height:100%; max-height:100%; min-height:0;
+  overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain;
+}
+.agentsam-moviemode.is-work-pane .copro-family-rail { display:none; }
+.agentsam-moviemode.is-work-pane .copro-home-flow { width:100%; min-width:0; }
+.agentsam-moviemode .copro-studio {
+  height:100%; max-height:100%; min-height:0; min-width:0; flex:1;
+}
+.agentsam-moviemode .copro-projects-root,
+.agentsam-moviemode .copro-projects-screen,
+.agentsam-moviemode .copro-projects-layout {
+  min-height:0; min-width:0; max-width:100%;
+}
+.agentsam-moviemode.is-work-pane .copro-studio { min-height:0; }
+@container (max-width: 820px) {
+  .agentsam-moviemode .copro-projects-content { padding:16px 12px 28px; }
+  .agentsam-moviemode .copro-project-list { grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)); }
+  .agentsam-moviemode .copro-projects-titlebar { flex-wrap:wrap; }
+  .agentsam-moviemode .copro-project-search { flex:1 1 190px; }
+}
+@container (max-width: 520px) {
+  .agentsam-moviemode .copro-projects-content { padding:12px 10px 24px; }
+  .agentsam-moviemode .copro-project-list { grid-template-columns:minmax(0,1fr); }
+  .agentsam-moviemode .copro-projects-titlebar { align-items:stretch; }
+}

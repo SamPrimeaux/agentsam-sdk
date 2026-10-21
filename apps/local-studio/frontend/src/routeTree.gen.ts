@@ -40,6 +40,7 @@ import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifact
 import { Route as appsArtifactsTicketsRouteImport } from './routes/(apps)/artifacts/tickets'
 import { Route as appsChatsIndexRouteImport } from './routes/(apps)/chats/index'
 import { Route as appsChatsChatIdRouteImport } from './routes/(apps)/chats/$chatId'
+import { Route as appsMediaEditRouteImport } from './routes/(apps)/media.edit'
 import { Route as appsProjectsIndexRouteImport } from './routes/(apps)/projects/index'
 import { Route as appsProjectsProjectIdRouteImport } from './routes/(apps)/projects/$projectId'
 import { Route as appsSettingsIndexRouteImport } from './routes/(apps)/settings/index'
@@ -212,6 +213,11 @@ const appsChatsChatIdRoute = appsChatsChatIdRouteImport.update({
   path: '/chats/$chatId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsMediaEditRoute = appsMediaEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => appsMediaRoute,
+} as any)
 const appsProjectsIndexRoute = appsProjectsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -306,7 +312,7 @@ export interface FileRoutesByFullPath {
   '/database': typeof appsDatabaseRoute
   '/files': typeof appsFilesRoute
   '/mail': typeof appsMailRoute
-  '/media': typeof appsMediaRoute
+  '/media': typeof appsMediaRouteWithChildren
   '/projects': typeof appsProjectsRouteWithChildren
   '/settings': typeof appsSettingsRouteWithChildren
   '/ship': typeof appsShipRoute
@@ -321,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/chats/$chatId': typeof appsChatsChatIdRoute
+  '/media/edit': typeof appsMediaEditRoute
   '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
@@ -353,7 +360,7 @@ export interface FileRoutesByTo {
   '/database': typeof appsDatabaseRoute
   '/files': typeof appsFilesRoute
   '/mail': typeof appsMailRoute
-  '/media': typeof appsMediaRoute
+  '/media': typeof appsMediaRouteWithChildren
   '/ship': typeof appsShipRoute
   '/sites': typeof appsSitesRoute
   '/store': typeof appsStoreRoute
@@ -365,6 +372,7 @@ export interface FileRoutesByTo {
   '/api/github': typeof ApiGithubRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/chats/$chatId': typeof appsChatsChatIdRoute
+  '/media/edit': typeof appsMediaEditRoute
   '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
@@ -399,7 +407,7 @@ export interface FileRoutesById {
   '/(apps)/database': typeof appsDatabaseRoute
   '/(apps)/files': typeof appsFilesRoute
   '/(apps)/mail': typeof appsMailRoute
-  '/(apps)/media': typeof appsMediaRoute
+  '/(apps)/media': typeof appsMediaRouteWithChildren
   '/(apps)/projects': typeof appsProjectsRouteWithChildren
   '/(apps)/settings': typeof appsSettingsRouteWithChildren
   '/(apps)/ship': typeof appsShipRoute
@@ -414,6 +422,7 @@ export interface FileRoutesById {
   '/(apps)/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/(apps)/chats/$chatId': typeof appsChatsChatIdRoute
+  '/(apps)/media/edit': typeof appsMediaEditRoute
   '/(apps)/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
   '/(apps)/settings/integrations': typeof appsSettingsIntegrationsRoute
@@ -464,6 +473,7 @@ export interface FileRouteTypes {
     | '/apps/ecommerce-cms-agentsam'
     | '/artifacts/tickets'
     | '/chats/$chatId'
+    | '/media/edit'
     | '/projects/$projectId'
     | '/settings/$unit'
     | '/settings/integrations'
@@ -508,6 +518,7 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/apps/ecommerce-cms-agentsam'
     | '/chats/$chatId'
+    | '/media/edit'
     | '/projects/$projectId'
     | '/settings/$unit'
     | '/settings/integrations'
@@ -556,6 +567,7 @@ export interface FileRouteTypes {
     | '/(apps)/apps/ecommerce-cms-agentsam'
     | '/(apps)/artifacts/tickets'
     | '/(apps)/chats/$chatId'
+    | '/(apps)/media/edit'
     | '/(apps)/projects/$projectId'
     | '/(apps)/settings/$unit'
     | '/(apps)/settings/integrations'
@@ -590,7 +602,7 @@ export interface RootRouteChildren {
   appsDatabaseRoute: typeof appsDatabaseRoute
   appsFilesRoute: typeof appsFilesRoute
   appsMailRoute: typeof appsMailRoute
-  appsMediaRoute: typeof appsMediaRoute
+  appsMediaRoute: typeof appsMediaRouteWithChildren
   appsProjectsRoute: typeof appsProjectsRouteWithChildren
   appsSettingsRoute: typeof appsSettingsRouteWithChildren
   appsShipRoute: typeof appsShipRoute
@@ -830,6 +842,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsChatsChatIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/media/edit': {
+      id: '/(apps)/media/edit'
+      path: '/edit'
+      fullPath: '/media/edit'
+      preLoaderRoute: typeof appsMediaEditRouteImport
+      parentRoute: typeof appsMediaRoute
+    }
     '/(apps)/projects/': {
       id: '/(apps)/projects/'
       path: '/'
@@ -977,6 +996,18 @@ const appsArtifactsRouteWithChildren = appsArtifactsRoute._addFileChildren(
   appsArtifactsRouteChildren,
 )
 
+interface appsMediaRouteChildren {
+  appsMediaEditRoute: typeof appsMediaEditRoute
+}
+
+const appsMediaRouteChildren: appsMediaRouteChildren = {
+  appsMediaEditRoute: appsMediaEditRoute,
+}
+
+const appsMediaRouteWithChildren = appsMediaRoute._addFileChildren(
+  appsMediaRouteChildren,
+)
+
 interface appsProjectsRouteChildren {
   appsProjectsProjectIdRoute: typeof appsProjectsProjectIdRoute
   appsProjectsIndexRoute: typeof appsProjectsIndexRoute
@@ -1028,7 +1059,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsDatabaseRoute: appsDatabaseRoute,
   appsFilesRoute: appsFilesRoute,
   appsMailRoute: appsMailRoute,
-  appsMediaRoute: appsMediaRoute,
+  appsMediaRoute: appsMediaRouteWithChildren,
   appsProjectsRoute: appsProjectsRouteWithChildren,
   appsSettingsRoute: appsSettingsRouteWithChildren,
   appsShipRoute: appsShipRoute,

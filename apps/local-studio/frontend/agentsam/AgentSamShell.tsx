@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { BookOpen, Clock3, Database, Folder, Globe, Layers, Settings, Pin, Files, Copy, PanelRight, LogIn } from 'lucide-react';
+import { BookOpen, Film, Database, Folder, Globe, Layers, Settings, Pin, Files, Copy, PanelRight, LogIn } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -147,7 +147,7 @@ export function AgentSamShell() {
       { id: 'cad', label: 'CAD', icon: <Layers />, href: '/cad', active: pathname === '/cad' },
       { id: 'database', label: 'Database', icon: <Database />, href: '/database', active: pathname === '/database' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
-      { id: 'utilities', label: 'Utilities', icon: <Clock3 />, href: '/widgets', active: pathname === '/widgets' },
+      { id: 'media', label: 'Media', icon: <Film />, href: '/media', active: pathname === '/media' || pathname.startsWith('/media/') },
     ],
     onNavigate: go,
     onCreateConversation: () => { state.startTrail(); go('/agentsam'); },
