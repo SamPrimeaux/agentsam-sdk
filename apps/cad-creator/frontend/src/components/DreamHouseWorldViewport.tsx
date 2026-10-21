@@ -1,6 +1,7 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {Sky} from 'three/addons/objects/Sky.js';
 import {TerrainEditorPanel} from './TerrainEditorPanel';
 import {createTerrainDocument,addSculptStroke,type TerrainDocument,type SculptMode} from '../lib/world-terrain';
 import {createTerrainProjection,type TerrainProjection} from '../lib/world-terrain-three';
@@ -10,6 +11,7 @@ type Zone={roomId:string;label:string;candidateCameraBlenderXYZMetres?:number[];
 type Handoff={projectId:string;sceneRevision:string;scene:{nodeCount:number;architectureNodeCount:number;glbSha256:string};zones:Zone[]};
 type Selected={designId:string;category:string;nodeName:string;source:string};
 type CameraMode='orbit'|'walk';
+type ViewPreset='iso'|'plan'|'front'|'side';
 const POSKEY='agentsam.dreamhouse.camera.v1.1';
 const ORBIT_SPEED=0.007;
 
@@ -29,11 +31,14 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
  [error,setError]=useState(''),[progress,setProgress]=useState('Resolving DreamHouse V1.1…'),
  [handoff,setHandoff]=useState<Handoff|null>(null),[selection,setSelection]=useState<Selected|null>(null),
  [roofVisible,setRoofVisible]=useState(true),[hour,setHour]=useState<'day'|'evening'>('day');
+ const [wireframe,setWireframe]=useState(false),[viewPreset,setViewPreset]=useState<ViewPreset>('iso');
  const [terrain,setTerrain]=useState<TerrainDocument>(()=>createTerrainDocument());
  const [terrainOpen,setTerrainOpen]=useState(false);
  const [sculptMode,setSculptMode]=useState<SculptMode|null>(null);
  const [brushRadius,setBrushRadius]=useState(12),[brushStrength,setBrushStrength]=useState(3);
  const bounds=useRef(new THREE.Box3());
+ const modelBounds=useRef(new THREE.Box3());
+ const environmentRef=useRef<{sky:Sky;sun:THREE.DirectionalLight;fill:THREE.HemisphereLight}|null>(null);
  const displayRef=useRef({mode,roofVisible,hour});
  useEffect(()=>{displayRef.current={mode,roofVisible,hour}},[mode,roofVisible,hour]);
  useEffect(()=>{terrainDocRef.current=terrain},[terrain]);
@@ -48,12 +53,33 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   setMode('walk');
  };
  const reset=()=>{
-  if(bounds.current.isEmpty())return;
-  const center=target.current.clone(),size=bounds.current.getSize(new THREE.Vector3());
+  if(modelBounds.current.isEmpty())return;
+  const center=modelBounds.current.getCenter(new THREE.Vector3()),size=modelBounds.current.getSize(new THREE.Vector3());
   target.current.copy(center);
-  orbit.current={az:0.85,el:0.5,distance:Math.max(12,size.length()*0.48)};
+  orbit.current={az:0.85,el:0.5,distance:Math.max(12,size.length()*0.56)};
+  setViewPreset('iso');
   walk.current.position.set(center.x,Math.max(1.7,bounds.current.min.y+1.7),center.z);
   setMode('orbit');
+ };
+ const setView=(preset:ViewPreset)=>{
+  if(modelBounds.current.isEmpty())return;
+  const size=modelBounds.current.getSize(new THREE.Vector3());
+  target.current.copy(modelBounds.current.getCenter(new THREE.Vector3()));
+  const distance=Math.max(12,size.length()*(preset==='plan'?.8:.66));
+  orbit.current=preset==='plan'
+    ?{az:0,el:Math.PI/2-.025,distance}
+    :preset==='front'?{az:0,el:.075,distance}
+    :preset==='side'?{az:Math.PI/2,el:.075,distance}
+    :{az:.88,el:.49,distance};
+  setViewPreset(preset);setMode('orbit');
+ };
+ const exportSnapshot=()=>{
+  const webgl=renderer.current,scene=sceneRef.current,camera=cameraRef.current;
+  if(!webgl||!scene||!camera||!ready)return;
+  webgl.render(scene,camera);
+  const link=document.createElement('a');
+  link.download=`DreamHouse-V1.1-${viewPreset}${wireframe?'-wireframe':''}-${hour}.png`;
+  link.href=webgl.domElement.toDataURL('image/png');link.click();
  };
  const fitSite=()=>{
   target.current.copy(terrainOrigin.current);
@@ -66,13 +92,28 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   let gltfRoot:THREE.Object3D|null=null;
   const scene=new THREE.Scene();scene.background=new THREE.Color('#0a1420');sceneRef.current=scene;
   const camera=new THREE.PerspectiveCamera(56,1,.06,2400);cameraRef.current=camera;
-  const context=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false});
+  const context=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false,preserveDrawingBuffer:true});
   context.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
   context.outputColorSpace=THREE.SRGBColorSpace;context.toneMapping=THREE.ACESFilmicToneMapping;
-  context.toneMappingExposure=0.75;
+  context.toneMappingExposure=0.64;
+  context.shadowMap.enabled=true;
+  context.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.current=context;host.appendChild(context.domElement);
-  const sun=new THREE.DirectionalLight('#fff2e1',1.85);sun.position.set(18,50,40);scene.add(sun);
-  scene.add(new THREE.HemisphereLight('#d9e8ff','#405143',1.05));
+  const sun=new THREE.DirectionalLight('#fff0d7',1.05);sun.position.set(80,125,55);sun.castShadow=true;
+  const shadowSize=window.innerWidth<768?1024:2048;
+  sun.shadow.mapSize.set(shadowSize,shadowSize);sun.shadow.camera.left=-105;sun.shadow.camera.right=105;
+  sun.shadow.camera.top=105;sun.shadow.camera.bottom=-105;sun.shadow.camera.near=1;sun.shadow.camera.far=310;
+  sun.shadow.bias=-0.0002;sun.shadow.normalBias=0.025;scene.add(sun);
+  const fill=new THREE.HemisphereLight('#dceeff','#53644d',0.55);scene.add(fill);
+  const sky=new Sky();sky.scale.setScalar(1000);
+  sky.material.uniforms['turbidity'].value=3.5;
+  sky.material.uniforms['rayleigh'].value=2.1;
+  sky.material.uniforms['mieCoefficient'].value=0.005;
+  sky.material.uniforms['mieDirectionalG'].value=0.78;
+  sky.material.uniforms['sunPosition'].value.copy(sun.position);
+  scene.add(sky);
+  scene.fog=new THREE.Fog('#b5c5cb',260,1150);
+  environmentRef.current={sky,sun,fill};
   const resize=()=>{const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);camera.aspect=w/h;camera.updateProjectionMatrix();context.setSize(w,h)};
   const observer=new ResizeObserver(resize);observer.observe(host);resize();
   const ray=new THREE.Raycaster();const floorRay=new THREE.Raycaster();
@@ -159,14 +200,46 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
         }
       });
       const focusBox=architectureBox.isEmpty()?box:architectureBox;
+      modelBounds.current.copy(focusBox);
       const center=focusBox.getCenter(new THREE.Vector3()),size=focusBox.getSize(new THREE.Vector3());
+      const environment=environmentRef.current;
+      if(environment){
+        environment.sun.target.position.copy(center);
+        scene.add(environment.sun.target);
+      }
       target.current.copy(center);
       orbit.current={az:.88,el:.49,distance:Math.max(11,size.length()*.56)};
       walk.current.position.set(center.x,Math.max(1.65,box.min.y+1.65),center.z);
       const structure:THREE.Object3D[]=[];
+      const authoredMaterialPalette=new Map<THREE.Material,THREE.MeshBasicMaterial>();
+      const materialColor=(source:THREE.Material):THREE.MeshBasicMaterial=>{
+        const cached=authoredMaterialPalette.get(source);
+        if(cached)return cached;
+        const gltf=source as THREE.MeshStandardMaterial;
+        const material=new THREE.MeshBasicMaterial({
+          name:'CAD Color Fidelity · '+source.name,
+          color:gltf.color?.clone()||new THREE.Color('#a6a9a7'),
+          map:gltf.map||null,transparent:gltf.transparent,opacity:gltf.opacity,
+          side:gltf.side,alphaTest:gltf.alphaTest,toneMapped:false,
+        });
+        authoredMaterialPalette.set(source,material);
+        return material;
+      };
       gltfRoot.traverse(o=>{
         if(!(o instanceof THREE.Mesh))return;
-        o.castShadow=false;o.receiveShadow=false;
+        // Material names and base colors come from the actual BIM-derived GLB.
+        // Color fidelity fallback: the tested WebGL lit shader whites out even
+        // near-black slate materials; render those native swatches unlit until
+        // the physical-material pipeline is independently corrected.
+        o.material=Array.isArray(o.material)
+          ?o.material.map(materialColor):materialColor(o.material);
+        // Preserve imported BIM material appearance and restore depth cues.
+        // Transparent glazing does not cast opaque shadows on interior surfaces.
+        const mats=Array.isArray(o.material)?o.material:[o.material];
+        const isGlass=mats.some(m=>m.transparent&&m.opacity<0.98);
+        const shadowCategory=String(o.userData?.Category||o.parent?.userData?.Category||'').toLowerCase();
+        o.castShadow=!isGlass&&(['wall','roof','gable','door','column','slab'].includes(shadowCategory)||/cedar|boulder|pine|tree|rock/i.test(o.name));
+        o.receiveShadow=true;
         const category=String(o.userData?.Category||o.parent?.userData?.Category||'');
         if(['wall','slab','roof','site','door'].includes(category.toLowerCase()))structure.push(o);
       });
@@ -190,6 +263,8 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
    window.removeEventListener('keydown',onKey);window.removeEventListener('keyup',onKeyUp);
    terrainProjection.current?.dispose();terrainProjection.current=null;
    gltfRoot?.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose())}});
+   sky.geometry.dispose();sky.material.dispose();
+   environmentRef.current=null;
    if(context.domElement.parentElement===host)host.removeChild(context.domElement);
    context.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;
   };
@@ -201,6 +276,28 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
    if(/roof|gable/.test(node.name.toLowerCase())||cat==='roof')node.visible=roofVisible;
   });
  },[roofVisible,ready]);
+ useEffect(()=>{
+  const environment=environmentRef.current,scene=sceneRef.current;
+  if(!environment||!scene)return;
+  const evening=hour==='evening';
+  environment.sun.position.set(evening?-80:80,evening?20:125,evening?65:55);
+  environment.sun.intensity=evening?0.55:1.05;
+  environment.sun.color.set(evening?'#ffc18d':'#fff0d7');
+  environment.fill.intensity=evening?0.3:0.55;
+  environment.sky.material.uniforms['sunPosition'].value.copy(environment.sun.position);
+  scene.fog=new THREE.Fog(evening?'#596575':'#b5c5cb',260,1150);
+ },[hour]);
+ useEffect(()=>{
+  if(!assetRef.current)return;
+  const seen=new Set<THREE.Material>();
+  assetRef.current.traverse(o=>{
+   if(!(o instanceof THREE.Mesh))return;
+   const mats=Array.isArray(o.material)?o.material:[o.material];
+   for(const mat of mats){if(seen.has(mat))continue;seen.add(mat);
+    if('wireframe' in mat)(mat as THREE.MeshStandardMaterial).wireframe=wireframe;
+   }
+  });
+ },[wireframe,ready]);
  useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(hour==='day'?'#0b1928':'#21172a');},[hour]);
  // Editing always regenerates the complete terrain projection from the same
  // document, so exported JSON and visible relief cannot diverge.
@@ -274,6 +371,14 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
      <select aria-label="DreamHouse room destinations" className="pointer-events-auto max-w-[180px] rounded-lg border border-white/15 bg-[#111b2c]/95 px-2 py-2 text-xs text-slate-100" defaultValue="" onChange={e=>{const z=handoff?.zones.find(x=>x.roomId===e.target.value);if(z)visit(z)}}>
        <option value="">Explore rooms</option>{handoff?.zones.map(zone=><option key={zone.roomId} value={zone.roomId}>{zone.roomId} — {zone.label}</option>)}
      </select>
+   </div>
+   <div className="pointer-events-auto absolute bottom-3 left-3 z-20 flex max-w-[min(600px,75vw)] flex-wrap gap-1 rounded-lg border border-white/15 bg-[#111b2c]/90 p-1 text-xs shadow-lg backdrop-blur-md" aria-label="Architectural world views">
+     {(['iso','plan','front','side'] as const).map(preset=><button key={preset} type="button" onClick={()=>setView(preset)}
+       aria-pressed={viewPreset===preset} className={'rounded px-2 py-1.5 '+(viewPreset===preset?'bg-sky-600 text-white':'hover:bg-white/10')}>
+       {{iso:'Isometric',plan:'Top',front:'Front',side:'Side'}[preset]}
+     </button>)}
+     <button type="button" onClick={()=>setWireframe(v=>!v)} aria-pressed={wireframe} className={'rounded px-2 py-1.5 '+(wireframe?'bg-sky-600 text-white':'hover:bg-white/10')}>Wireframe</button>
+     <button type="button" disabled={!ready} onClick={exportSnapshot} className="rounded px-2 py-1.5 hover:bg-white/10 disabled:opacity-40">Capture PNG</button>
    </div>
    {mode==='walk'&&<div className="pointer-events-none absolute bottom-14 left-1/2 -translate-x-1/2 rounded-lg bg-[#111b2c]/85 px-3 py-2 text-center text-xs text-white/90">W A S D · drag to look · Shift to move faster</div>}
    {mode==='walk'&&<div className="absolute bottom-16 left-3 z-20 flex gap-1 sm:hidden">
