@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, RefreshCw } from "lucide-react";
+import { Check, ChevronDown, Cpu, RefreshCw } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -134,12 +134,12 @@ export function ModelSelect({ compact = false }: { compact?: boolean }) {
           type="button"
           className={cn(
             "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground",
-            compact && "px-1.5",
+            compact && "size-8 shrink-0 justify-center p-0",
           )}
-          aria-label="Select model"
+          aria-label={`Select model: ${triggerLabel}`}
+          title={`Model: ${triggerLabel}. Click to choose.`}
         >
-          <span className="max-w-40 truncate">{triggerLabel}</span>
-          <ChevronDown className="size-3 opacity-70" />
+          {compact ? <Cpu className="size-4" aria-hidden="true" /> : <><span className="max-w-40 truncate">{triggerLabel}</span><ChevronDown className="size-3 opacity-70" /></>}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-[420px] w-80 overflow-y-auto p-1.5">

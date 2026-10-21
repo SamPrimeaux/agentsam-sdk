@@ -103,3 +103,23 @@ test('generic --only flag stages one registered application without building oth
   assert.deepEqual(plans.map((plan) => plan.id), ['agentsam-copro-studio']);
   assert.equal(plans[0].base, '/moviemode/');
 });
+
+test('an unscoped included app invocation refuses a broad rebuild', () => {
+  const command = path.join(LOCAL_STUDIO, 'scripts', 'build-included-apps.mjs');
+  assert.throws(() => execFileSync(process.execPath, [command], {encoding:'utf8', stdio:['ignore','pipe','pipe']}), /Refusing to rebuild every installed app/);
+  const all = JSON.parse(execFileSync(process.execPath,[command,'--dry-run','--all'],{encoding:'utf8'}));
+  assert.deepEqual(all.map(p=>p.id),planIncludedApps().plans.map(p=>p.id));
+});
+test('default desktop/host build scripts never rebuild included apps implicitly',()=>{
+  const scripts=JSON.parse(fs.readFileSync(path.join(LOCAL_STUDIO,'package.json'),'utf8')).scripts;
+  assert.doesNotMatch(scripts.build,/node scripts\/build-included-apps\.mjs(?! --stage)/);
+  assert.doesNotMatch(scripts['build:desktop'],/node scripts\/build-included-apps\.mjs/);
+  assert.match(scripts['build:included:all'],/--all/);
+});
+
+test('a normal host build does not sync websites or test theme catalogs automatically',()=>{
+  const scripts=JSON.parse(fs.readFileSync(path.join(LOCAL_STUDIO,'package.json'),'utf8')).scripts;
+  assert.doesNotMatch(scripts.build,/sync-public-site|build-included-apps\.mjs(?! --stage)/);
+  assert.doesNotMatch(scripts['verify:desktop'],/smoke:themes|smoke:cms-site-fidelity|smoke:creator-suite/);
+  assert.match(scripts['verify:desktop:all'],/smoke:themes/);
+});
