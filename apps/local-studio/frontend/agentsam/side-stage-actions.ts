@@ -9,6 +9,7 @@ export const SIDE_STAGE_ACTIONS = [
   { id: 'files', tab: 'files', label: 'Files', icon: 'file-code', description: 'Open files' },
   { id: 'artifacts', tab: 'artifacts', label: 'Artifacts', icon: 'box', description: 'Open generated artifacts' },
   { id: 'cad', tab: 'app', label: 'CAD Creator', icon: 'layers', description: 'Open the CAD workspace' },
+  { id: 'media', tab: 'media', label: 'MovieMode', icon: 'film', description: 'Open the media editor beside your conversation' },
   { id: 'database', tab: 'database', label: 'Database', icon: 'database', description: 'Open the database editor' },
   { id: 'cli', tab: 'terminal', label: 'CLI', icon: 'square-terminal', description: 'Open the terminal' },
 ] as const;

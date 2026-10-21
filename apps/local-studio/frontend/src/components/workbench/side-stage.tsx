@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { AgentConversationSurface } from "@inneranimalmedia/agentsam-workbench/agent";
-import { Box, Database, FileCode, Globe, Layers, Plus, SquareTerminal, Target, Users, X } from "lucide-react";
+import { Box, Database, ExternalLink, FileCode, Film, Globe, Layers, Maximize2, Minimize2, Plus, SquareTerminal, Target, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import { BrowserStage } from "@/components/workbench/browser";
 import { FilesStage } from "@/components/workbench/files";
 import { ArtifactsStage } from "@/components/workbench/artifacts";
 import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
+import { MovieModeSurface } from "@/components/media/MovieModeSurface";
 import { DatabaseStage } from "@/components/workbench/database-stage";
 import { TerminalPane } from "@/components/workbench/terminal";
 import { cn } from "@/lib/utils";
@@ -29,13 +30,14 @@ function TabIcon({ kind }: { kind: string }) {
   if (kind === "browser") return <Globe className="size-3.5" />;
   if (kind === "artifacts") return <Box className="size-3.5" />;
   if (kind === "app") return <Layers className="size-3.5" />;
+  if (kind === "media") return <Film className="size-3.5" />;
   if (kind === "goal") return <Target className="size-3.5" />;
   if (kind === "database") return <Database className="size-3.5" />;
   if (kind === "terminal") return <SquareTerminal className="size-3.5" />;
   return <FileCode className="size-3.5" />;
 }
 
-export function SideStage() {
+export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?: boolean; onFocusToggle?: () => void }) {
   const tabs = useWorkStore((s) => s.sideTabs);
   const activeId = useWorkStore((s) => s.activeSideTabId);
   const setActiveSideTab = useWorkStore((s) => s.setActiveSideTab);
@@ -87,7 +89,7 @@ export function SideStage() {
               {SIDE_STAGE_ACTIONS.map((item) => {
                 const Icon = {
                   goal: Target, coworker: Users, browser: Globe, files: FileCode,
-                  artifacts: Box, cad: Layers, database: Database, cli: SquareTerminal,
+                  artifacts: Box, cad: Layers, media: Film, database: Database, cli: SquareTerminal,
                 }[item.id];
                 return (
                   <DropdownMenuItem key={item.id} onSelect={() => {
@@ -104,6 +106,22 @@ export function SideStage() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        {tab?.kind === "media" && <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          aria-label="Open Media workspace"
+          title="Open Media full screen"
+          onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", { detail: { to: "/media" } }))}
+        ><ExternalLink className="size-4" /></Button>}
+        {onFocusToggle && <Button
+          type="button"
+          size="icon-sm"
+          variant="ghost"
+          aria-label={workFocused ? "Restore split conversation and Work" : "Focus Work panel"}
+          title={workFocused ? "Restore split view" : "Focus Work"}
+          onClick={onFocusToggle}
+        >{workFocused ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}</Button>}
         <Button
           type="button"
           size="icon-sm"
@@ -122,6 +140,7 @@ export function SideStage() {
         {tab?.kind === "files" ? <FilesStage tab={tab} /> : null}
         {tab?.kind === "artifacts" ? <ArtifactsStage /> : null}
         {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
+        {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
         {tab?.kind === "terminal" ? <TerminalPane variant="side" /> : null}
         {tab?.kind === "goal" ? <GoalEditor trailId={tab.parentTrailId ?? undefined} /> : null}

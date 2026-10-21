@@ -113,11 +113,13 @@
 .agentsam-conversation [data-agent-conversation-empty="true"] .agentsam-conversation-dock { padding-top: 0; }
 .agentsam-conversation [data-agent-conversation-composer] > * { margin-inline: auto; width: 100%; max-width: 1120px; }
 .agentsam-conversation > [data-agent-thread] { font-size: 16px; line-height: 1.65; }
-.agentsam-side-panel { display: flex; flex-direction: column; min-height: 0; width: min(var(--agentsam-panel-width, 480px), calc(100% - 360px)); min-width: 280px; max-width: calc(100% - 360px); border-left: 1px solid var(--nav-border); overflow: hidden; }
+.agentsam-side-panel { display: flex; flex-direction: column; min-height: 0; width: min(var(--agentsam-panel-width, 780px), calc(100% - 320px)); min-width: 320px; max-width: calc(100% - 320px); border-left: 1px solid var(--nav-border); overflow: hidden; }
+.agentsam-workspace.is-work-focused .agentsam-side-panel { width:100%; max-width:100%; min-width:0; flex:1; }
 .agentsam-workspace > .studio-separator { flex-shrink: 0; background: transparent; cursor: col-resize; }
 @media (max-width: 1000px) { .agentsam-side-panel { max-width: calc(100% - 320px); } }
 @media (max-width: 767px) { .agentsam-welcome { padding: 16px 0; } .agentsam-welcome h1 { font-size: 24px; } .agentsam-side-panel { position: absolute; inset: 56px 0 0; z-index: 50; width: 100%; max-width: 100%; min-width: 0; resize: none; background: var(--nav-canvas); } .agentsam-start-context { max-width: 90%; } }
-@media (max-width: 767px) { .agentsam-side-panel { width: 100% !important; } .agentsam-workspace > .studio-separator { display: none; } }
+@media (max-width: 767px) { .agentsam-side-panel { width: 100% !important; } .agentsam-workspace.is-work-focused .agentsam-side-panel { width:100%; max-width:100%; min-width:0; flex:1; }
+.agentsam-workspace > .studio-separator { display: none; } }
 
 /* Agent run-mode profiles — semantic composer chrome shared by lead + co-worker. */
 .agentsam-shell [data-agent-composer] {

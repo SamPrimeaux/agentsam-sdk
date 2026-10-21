@@ -92,6 +92,9 @@
       ],
       "@inneranimalmedia/agentsam-cms-shared/*": [
         "../../client-cms-editor/shared/cms/src/*"
+      ],
+      "@inneranimalmedia/agentsam-local-shared": [
+        "../shared/agentsam/src/index.ts"
       ]
     },
     "allowImportingTsExtensions": true,

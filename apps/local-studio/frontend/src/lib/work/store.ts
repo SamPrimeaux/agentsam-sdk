@@ -73,6 +73,7 @@ const SIDE_TITLES: Record<SideKind, string> = {
   artifacts: "Artifacts",
   deploy: "Ship",
   app: "CAD Creator",
+  media: "MovieMode",
   goal: "Edit goal",
   database: "Database",
 };
