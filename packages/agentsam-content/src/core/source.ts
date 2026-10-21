@@ -27,6 +27,8 @@ export interface ProviderRef {
   /** Provider-native identifier (CF image UUID, Stream UID, R2 key, Drive file id...). */
   ref: string;
   role: ProviderRole;
+  /** Opaque configured storage-target id; distinguishes two accounts/buckets on one provider. */
+  targetId?: string;
   /** Optional bucket/account/space qualifier. */
   scope?: string;
   bytes?: number;
