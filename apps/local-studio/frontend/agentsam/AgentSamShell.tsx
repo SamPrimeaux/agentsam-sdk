@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { BookOpen, Film, Database, Folder, Globe, Layers, Settings, Pin, Files, Copy, PanelRight, LogIn } from 'lucide-react';
+import { BookOpen, Clock3, Film, Database, Folder, Globe, Layers, Settings, Pin, Files, Copy, PanelRight, LogIn } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -186,10 +186,11 @@ export function AgentSamShell() {
     destinations: [
       { id: 'library', label: 'Library', icon: <BookOpen />, href: '/artifacts', active: pathname === '/artifacts' },
       { id: 'sites', label: 'Sites', icon: <Globe />, href: '/cms', active: pathname === '/cms' },
-      { id: 'cad', label: 'CAD', icon: <img src="/brand/samsketch-icon.png" alt="" width={19} height={19} style={{borderRadius: 5}} />, href: '/cad', active: pathname === '/cad' },
+      { id: 'cad', label: 'CAD', icon: <img src="/brand/samsketch-icon.png" alt="" width={19} height={19} className="rounded-[5px]" />, href: '/cad', active: pathname === '/cad' },
       { id: 'database', label: 'Database', icon: <Database />, href: '/database', active: pathname === '/database' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
       { id: 'media', label: 'Media', icon: <Film />, href: '/media', active: pathname === '/media' || pathname.startsWith('/media/') },
+      { id: 'utilities', label: 'Utilities', icon: <Clock3 />, href: '/widgets', active: pathname === '/widgets' },
     ],
     onNavigate: go,
     onCreateConversation: () => { state.startTrail(); go('/agentsam'); },
