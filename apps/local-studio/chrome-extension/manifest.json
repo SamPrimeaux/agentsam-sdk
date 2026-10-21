@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "AgentSam Tab Handoff",
+  "version": "0.1.0",
+  "description": "Send the current Chrome page and selected text to an unsent Local Studio draft.",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_title": "Share this tab with AgentSam",
+    "default_popup": "popup.html"
+  }
+}
