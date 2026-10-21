@@ -93,7 +93,7 @@ export const FurniturePicker: React.FC<Props> = ({ isOpen, onClose, onSelectFurn
             </div>
             <div>
               <h2 className="text-sm font-bold text-white">Architectural Fixture & Furniture Library</h2>
-              <p className="text-[11px] text-gray-400">Select standard BIM elements to place in your 2D/3D floorplan</p>
+              <p className="text-[length:var(--text-sm)] text-gray-400">Select standard BIM elements to place in your 2D/3D floorplan</p>
             </div>
           </div>
           <button
@@ -153,10 +153,10 @@ export const FurniturePicker: React.FC<Props> = ({ isOpen, onClose, onSelectFurn
                   </span>
                   <span className="w-2.5 h-2.5 rounded-full border border-white/20" style={{ backgroundColor: item.color }} />
                 </div>
-                <p className="text-[10px] text-gray-400 mb-2 line-clamp-1">{item.description}</p>
+                <p className="text-[length:var(--text-xs)] text-gray-400 mb-2 line-clamp-1">{item.description}</p>
               </div>
 
-              <div className="flex items-center justify-between pt-1.5 border-t border-[#333] text-[10px] text-gray-400 font-mono">
+              <div className="flex items-center justify-between pt-1.5 border-t border-[#333] text-[length:var(--text-xs)] text-gray-400 font-mono">
                 <span>{item.w}" × {item.d}" × {item.h}"</span>
                 <span className="text-blue-400 font-semibold group-hover:translate-x-0.5 transition">Select +</span>
               </div>

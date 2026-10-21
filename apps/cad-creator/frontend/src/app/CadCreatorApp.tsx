@@ -127,6 +127,7 @@ export function CadCreatorApp({
   const [explorerOpen, setExplorerOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches);
   const [inspectorOpen, setInspectorOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches);
   const [advancedToolsOpen, setAdvancedToolsOpen] = useState(false);
+  const [studioView,setStudioView]=useState<'preview'|'edit'|'code'>('edit');
   const [uiSelection, setUiSelection] = useState<CadElementSelection>(null);
   const [cadAccent, setCadAccent] = useState<string>(() => {
     if (typeof window === 'undefined') return '#82a7fb';
@@ -360,18 +361,16 @@ export function CadCreatorApp({
   return (
     <div data-appearance={isDarkMode ? 'dark' : 'light'}
       style={{'--cad-accent': cadAccent} as React.CSSProperties}
-      className={`cad-workspace-ui relative flex flex-col h-screen w-screen font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+      className={`cad-workspace-ui relative flex flex-col h-full w-full min-w-0 min-h-0 font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {/* The host Nav.Topbar owns application chrome. CAD owns only its contextual tools. */}
       {chromeFolded ? (
-        <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/10 bg-slate-900 px-3 text-[11px]">
+        <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/10 bg-slate-900 px-3 text-[length:var(--text-sm)]">
           <span className="font-medium">{project.name || 'Untitled Project'} · {activeWorkspace}</span>
           <button type="button" onClick={() => setChromeFolded(false)} aria-label="Show workspace controls" className="rounded bg-slate-800 px-2 py-0.5 hover:bg-slate-700">Show controls</button>
         </div>
       ) : (<>
-      <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer} />
 
-      {(activeWorkspace === 'plan' || activeWorkspace === 'model' || activeWorkspace === 'robotics') && (
-        <CadEngineeringToolbar
+      {(<CadEngineeringToolbar
           tool={activeTool} onTool={setActiveTool}
           onUndo={handleUndo} onRedo={handleRedo}
           showDiagnostics={showRoboticsDiagnostics} onToggleDiagnostics={() => setShowRoboticsDiagnostics(v => !v)}
@@ -386,12 +385,17 @@ export function CadCreatorApp({
           onMore={() => setAdvancedToolsOpen(v => !v)} moreOpen={advancedToolsOpen}
           accent={cadAccent} onAccentChange={setCadAccent}
           isDark={isDarkMode} onToggleDark={() => setIsDarkMode(v => !v)}
+          studioView={studioView} onStudioView={v=>{setStudioView(v);if(v==='preview'){handleSelectWorkspace('model');setExplorerOpen(false);setInspectorOpen(false)}else if(v==='code'){handleSelectWorkspace('parametric');setExplorerOpen(false);setInspectorOpen(false)}else {handleSelectWorkspace('plan')}}}
+          projectSlot={<ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
+          runtimeSlot={<CadStatusStrip workspace={currentWorkspaceDescriptor} activeTool={activeTool} unit={unit}
+            selectionCount={currentUser.selectedIds.length} jobStatus={cadToolsReport ? `${cadToolsReport.available_tools}/${cadToolsReport.total_tools} Engines Online` : 'Engine Ready'}
+            isSynced={isSynced} isDarkMode={isDarkMode} capabilities={liveCapabilities}/>}
         />
       )}
       {/* Advanced contextual operations are preserved and revealed by More tools. */}
-      {(advancedToolsOpen || (activeWorkspace !== 'plan' && activeWorkspace !== 'model')) && (
+      {advancedToolsOpen && (
       <div className={`h-10 px-3.5 border-b flex items-center justify-between text-xs z-20 shrink-0 backdrop-blur-md ${isDarkMode ? 'bg-slate-900/80 border-white/10 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'}`}>
-        <button type="button" onClick={() => setChromeFolded(true)} aria-label="Fold workspace controls" title="Fold controls for more canvas" className="mr-2 rounded bg-slate-800 px-2 py-0.5 text-[11px] hover:bg-slate-700">Fold ×</button>
+        <button type="button" onClick={() => setChromeFolded(true)} aria-label="Fold workspace controls" title="Fold controls for more canvas" className="mr-2 rounded bg-slate-800 px-2 py-0.5 text-[length:var(--text-sm)] hover:bg-slate-700">Fold ×</button>
         {/* Workspace Context Controls */}
         {activeWorkspace === 'plan' && (
           <div className="flex items-center gap-3">
@@ -400,7 +404,7 @@ export function CadCreatorApp({
               <button
                 type="button"
                 onClick={() => setPlanLayout('2d')}
-                className={`px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-1 ${
+                className={`px-2 py-0.5 rounded text-[length:var(--text-sm)] font-semibold flex items-center gap-1 ${
                   planLayout === '2d' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -410,7 +414,7 @@ export function CadCreatorApp({
               <button
                 type="button"
                 onClick={() => setPlanLayout('split')}
-                className={`px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-1 ${
+                className={`px-2 py-0.5 rounded text-[length:var(--text-sm)] font-semibold flex items-center gap-1 ${
                   planLayout === 'split' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -420,7 +424,7 @@ export function CadCreatorApp({
               <button
                 type="button"
                 onClick={() => setPlanLayout('sketch')}
-                className={`px-2 py-0.5 rounded text-[11px] font-semibold flex items-center gap-1 ${
+                className={`px-2 py-0.5 rounded text-[length:var(--text-sm)] font-semibold flex items-center gap-1 ${
                   planLayout === 'sketch' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -430,7 +434,7 @@ export function CadCreatorApp({
             </div>
 
             {/* Grid Snap & Units */}
-            <div className="flex items-center gap-2 pl-2 border-l border-inherit/40 text-[11px] font-mono">
+            <div className="flex items-center gap-2 pl-2 border-l border-inherit/40 text-[length:var(--text-sm)] font-mono">
               <button
                 type="button"
                 onClick={() => updateProject((prev) => ({ ...prev, snapToGrid: !prev.snapToGrid }))}
@@ -444,7 +448,7 @@ export function CadCreatorApp({
               <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value as MeasurementUnit)}
-                className="bg-transparent text-[11px] text-slate-300 focus:outline-none cursor-pointer"
+                className="bg-transparent text-[length:var(--text-sm)] text-slate-300 focus:outline-none cursor-pointer"
               >
                 <option value="ft" className="bg-slate-900">ft - in</option>
                 <option value="in" className="bg-slate-900">inches</option>
@@ -464,7 +468,7 @@ export function CadCreatorApp({
               <button
                 type="button"
                 onClick={() => setIsFurniturePickerOpen(true)}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] flex items-center gap-1"
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)] flex items-center gap-1"
               >
                 <Armchair className="size-3 text-indigo-400" />
                 <span>Insert Asset</span>
@@ -472,20 +476,20 @@ export function CadCreatorApp({
               <button
                 type="button"
                 onClick={() => setShowBimStarters((previous) => !previous)}
-                className="rounded bg-amber-500/15 px-2 py-1 text-[11px] text-amber-300 hover:bg-amber-500/25"
+                className="rounded bg-amber-500/15 px-2 py-1 text-[length:var(--text-sm)] text-amber-300 hover:bg-amber-500/25"
               >BIM Starters</button>
               <button
                 type="button"
                 onClick={() => setModelModule((m) => m === 'parametric' ? null : 'parametric')}
                 aria-expanded={modelModule === 'parametric'}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px]"
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)]"
               >Parametric tools</button>
               <button type="button" onClick={() => setIsImageGenModalOpen(true)}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px]">Render</button>
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)]">Render</button>
               <button
                 type="button"
                 onClick={() => setIsTemplateLibraryOpen(true)}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] flex items-center gap-1"
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)] flex items-center gap-1"
               >
                 <LayoutGrid className="size-3 text-indigo-400" />
                 <span>Library</span>
@@ -500,7 +504,7 @@ export function CadCreatorApp({
               <Code2 className="size-3.5" />
               <span>OpenSCAD CSG / FreeCAD Solid Kernel</span>
             </span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <span className="text-[length:var(--text-xs)] font-mono px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
               Deterministic Compile
             </span>
           </div>
@@ -512,7 +516,7 @@ export function CadCreatorApp({
               <Activity className="size-3.5" />
               <span>Franka Panda 7-DOF · MuJoCo 500Hz Simulation</span>
             </span>
-            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="text-[length:var(--text-xs)] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               Kinematics Online
             </span>
           </div>
@@ -523,7 +527,7 @@ export function CadCreatorApp({
             <button
               type="button"
               onClick={() => setIsImageGenModalOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold flex items-center gap-1 shadow-sm"
+              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[length:var(--text-sm)] font-semibold flex items-center gap-1 shadow-sm"
             >
               <ImageIcon className="size-3" />
               <span>Render PBR Studio</span>
@@ -531,7 +535,7 @@ export function CadCreatorApp({
             <button
               type="button"
               onClick={() => setIsVeoModalOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold flex items-center gap-1 shadow-sm"
+              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[length:var(--text-sm)] font-semibold flex items-center gap-1 shadow-sm"
             >
               <Video className="size-3" />
               <span>Veo Video Studio</span>
@@ -546,7 +550,7 @@ export function CadCreatorApp({
               <button
                 type="button"
                 onClick={() => setIsFurniturePickerOpen(true)}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] flex items-center gap-1"
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)] flex items-center gap-1"
               >
                 <Armchair className="size-3 text-indigo-400" />
                 <span>Fixtures</span>
@@ -554,7 +558,7 @@ export function CadCreatorApp({
               <button
                 type="button"
                 onClick={() => setIsSketchModalOpen(true)}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[11px] flex items-center gap-1"
+                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)] flex items-center gap-1"
               >
                 <FileScan className="size-3 text-indigo-400" />
                 <span>Vision Sketch</span>
@@ -564,7 +568,7 @@ export function CadCreatorApp({
 
           <div className="flex items-center bg-black/20 border border-inherit/40 rounded px-1.5 py-0.5 space-x-1">
             <Shield className="size-3 text-slate-400" />
-            <span className="text-[10px] font-mono text-slate-300">{currentUser.role}</span>
+            <span className="text-[length:var(--text-xs)] font-mono text-slate-300">{currentUser.role}</span>
           </div>
         </div>
       </div>
@@ -817,19 +821,6 @@ export function CadCreatorApp({
         {assistantReply && <p role="status" className="mt-2 whitespace-pre-wrap">{assistantReply}</p>}
         {copilotDraft && <><textarea readOnly value={copilotDraft} aria-label="CAD request draft" rows={4} className="mt-2 w-full rounded bg-slate-800 p-2 text-white"/><button type="button" onClick={() => void navigator.clipboard.writeText(copilotDraft)}>Copy request</button></>}
       </aside>}
-      {/* 4. Unified CAD Bottom Status Contract */}
-      <CadStatusStrip
-        workspace={currentWorkspaceDescriptor}
-        activeTool={activeTool}
-        unit={unit}
-        selectionCount={currentUser.selectedIds.length}
-        jobStatus={cadToolsReport ? `${cadToolsReport.available_tools}/${cadToolsReport.total_tools} Engines Online` : 'Engine Ready'}
-        isSynced={isSynced}
-        isDarkMode={isDarkMode}
-        capabilities={liveCapabilities}
-      />
-
-      {/* 5. Modals */}
       <TemplateLibraryModal
         isOpen={isTemplateLibraryOpen}
         onClose={() => setIsTemplateLibraryOpen(false)}

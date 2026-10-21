@@ -155,7 +155,7 @@ function BimViewport({ id, version, focused, hidden, isolated, onPick }: {
 
   return <div className="relative h-full w-full" ref={mountRef}>
     {loadError && <div role="alert" className="absolute left-4 top-4 z-10 rounded bg-slate-900 p-3 text-sm text-rose-300">{loadError}</div>}
-    <div className="pointer-events-none absolute bottom-4 left-4 rounded bg-slate-950/80 px-3 py-2 text-[11px] text-slate-300">
+    <div className="pointer-events-none absolute bottom-4 left-4 rounded bg-slate-950/80 px-3 py-2 text-[length:var(--text-sm)] text-slate-300">
       Drag to orbit · Scroll to zoom · Click an element to inspect
     </div>
   </div>;
@@ -296,7 +296,7 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
             className={`block w-full truncate rounded px-2 py-1.5 text-left text-xs ${selected === o.name ? 'bg-amber-500/20 text-amber-200' : 'text-slate-300 hover:bg-white/10'}`}
             title={o.name + ' · ' + o.type}>
             <span className={o.inPreview ? '' : 'opacity-45'}>{o.label}</span>
-            <span className="ml-1 text-[10px] text-slate-500">{o.type.replace(/^.*::/, '')}</span>
+            <span className="ml-1 text-[length:var(--text-xs)] text-slate-500">{o.type.replace(/^.*::/, '')}</span>
           </button>)}
         </div>
       </aside>

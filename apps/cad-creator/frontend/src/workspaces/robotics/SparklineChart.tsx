@@ -168,11 +168,11 @@ export function SparklineChart({
     <div className={`relative flex flex-col gap-1 select-none ${className}`}>
       {/* Header with Title and Current Value Indicator */}
       {(label || showCurrentBadge) && (
-        <div className="flex items-center justify-between text-[10px] font-mono leading-none">
+        <div className="flex items-center justify-between text-[length:var(--text-xs)] font-mono leading-none">
           {label && <span className="text-slate-400 font-semibold tracking-wider uppercase">{label}</span>}
           {showCurrentBadge && (
             <div
-              className={`px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-tight transition-colors flex items-center gap-1 ${colors.badgeBg} ${colors.badgeText}`}
+              className={`px-1.5 py-0.5 rounded border text-[length:var(--text-xs)] font-bold tracking-tight transition-colors flex items-center gap-1 ${colors.badgeBg} ${colors.badgeText}`}
             >
               <span>
                 {(activePoint ? activePoint.value : currentValue).toFixed(
@@ -271,7 +271,7 @@ export function SparklineChart({
 
         {/* Min / Max Range Markers */}
         {showMinMax && (
-          <div className="absolute bottom-0.5 inset-x-1.5 flex justify-between text-[8px] font-mono text-slate-500 pointer-events-none opacity-60">
+          <div className="absolute bottom-0.5 inset-x-1.5 flex justify-between text-[length:var(--text-xs)] font-mono text-slate-500 pointer-events-none opacity-60">
             <span>
               {minVal.toFixed(0)}
               {unit}

@@ -165,11 +165,11 @@ export function DiagnosticOverlay({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-xs font-bold tracking-tight leading-tight">Simulation HUD</h3>
-              <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border font-bold ${badgeBg}`}>
+              <span className={`text-[length:var(--text-xs)] font-mono px-1.5 py-0.2 rounded border font-bold ${badgeBg}`}>
                 {status.toUpperCase()}
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 font-mono">500 Hz Physics · MuJoCo WASM</p>
+            <p className="text-[length:var(--text-xs)] text-slate-400 font-mono">500 Hz Physics · MuJoCo WASM</p>
           </div>
         </div>
 
@@ -198,7 +198,7 @@ export function DiagnosticOverlay({
             {/* FPS Counter */}
             <div className={`p-2.5 rounded-xl border flex flex-col justify-between ${cardBg}`}>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-medium text-slate-400">Frame Rate</span>
+                <span className="text-[length:var(--text-xs)] font-medium text-slate-400">Frame Rate</span>
                 <span
                   className={`w-2 h-2 rounded-full ${
                     fps >= 55 ? 'bg-emerald-400 animate-pulse' : fps >= 30 ? 'bg-amber-400' : 'bg-rose-400'
@@ -209,15 +209,15 @@ export function DiagnosticOverlay({
                 <span className={`text-lg font-mono font-bold leading-none ${fpsColorClass}`}>
                   {fps.toFixed(0)}
                 </span>
-                <span className="text-[9px] font-mono text-slate-400">FPS</span>
+                <span className="text-[length:var(--text-xs)] font-mono text-slate-400">FPS</span>
               </div>
-              <span className="text-[9px] font-mono text-slate-500 mt-1">Target: 60 FPS</span>
+              <span className="text-[length:var(--text-xs)] font-mono text-slate-500 mt-1">Target: 60 FPS</span>
             </div>
 
             {/* Collision Counter */}
             <div className={`p-2.5 rounded-xl border flex flex-col justify-between ${cardBg}`}>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-medium text-slate-400">Collisions</span>
+                <span className="text-[length:var(--text-xs)] font-medium text-slate-400">Collisions</span>
                 {collisionCount > 0 ? (
                   <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
                 ) : (
@@ -232,9 +232,9 @@ export function DiagnosticOverlay({
                 >
                   {collisionCount}
                 </span>
-                <span className="text-[9px] font-mono text-slate-400">pairs</span>
+                <span className="text-[length:var(--text-xs)] font-mono text-slate-400">pairs</span>
               </div>
-              <span className="text-[9px] font-mono text-slate-500 mt-1">
+              <span className="text-[length:var(--text-xs)] font-mono text-slate-500 mt-1">
                 {robotContacts > 0 ? `${robotContacts} robot` : 'Clean contact'}
               </span>
             </div>
@@ -242,16 +242,16 @@ export function DiagnosticOverlay({
             {/* Physics Rate */}
             <div className={`p-2.5 rounded-xl border flex flex-col justify-between ${cardBg}`}>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-medium text-slate-400">Physics Hz</span>
+                <span className="text-[length:var(--text-xs)] font-medium text-slate-400">Physics Hz</span>
                 <Zap className="w-2.5 h-2.5 text-amber-400" />
               </div>
               <div className="mt-1 flex items-baseline gap-1">
                 <span className="text-lg font-mono font-bold leading-none text-amber-400">
                   {stepRateHz}
                 </span>
-                <span className="text-[9px] font-mono text-slate-400">Hz</span>
+                <span className="text-[length:var(--text-xs)] font-mono text-slate-400">Hz</span>
               </div>
-              <span className="text-[9px] font-mono text-slate-500 mt-1">
+              <span className="text-[length:var(--text-xs)] font-mono text-slate-500 mt-1">
                 {(realTimeFactor * 100).toFixed(0)}% RTF
               </span>
             </div>
@@ -314,7 +314,7 @@ export function DiagnosticOverlay({
                 <div className="flex items-center gap-1 p-1 rounded-xl bg-black/20 border border-inherit">
                   <button
                     onClick={() => setSelectedSparklineMetric('fps')}
-                    className={`flex-1 py-1 text-[10px] font-semibold rounded-lg transition-all ${
+                    className={`flex-1 py-1 text-[length:var(--text-xs)] font-semibold rounded-lg transition-all ${
                       selectedSparklineMetric === 'fps'
                         ? 'bg-emerald-500/20 text-emerald-400 shadow-sm border border-emerald-500/30'
                         : 'text-slate-400 hover:text-slate-200'
@@ -324,7 +324,7 @@ export function DiagnosticOverlay({
                   </button>
                   <button
                     onClick={() => setSelectedSparklineMetric('collisions')}
-                    className={`flex-1 py-1 text-[10px] font-semibold rounded-lg transition-all ${
+                    className={`flex-1 py-1 text-[length:var(--text-xs)] font-semibold rounded-lg transition-all ${
                       selectedSparklineMetric === 'collisions'
                         ? 'bg-amber-500/20 text-amber-400 shadow-sm border border-amber-500/30'
                         : 'text-slate-400 hover:text-slate-200'
@@ -334,7 +334,7 @@ export function DiagnosticOverlay({
                   </button>
                   <button
                     onClick={() => setSelectedSparklineMetric('force')}
-                    className={`flex-1 py-1 text-[10px] font-semibold rounded-lg transition-all ${
+                    className={`flex-1 py-1 text-[length:var(--text-xs)] font-semibold rounded-lg transition-all ${
                       selectedSparklineMetric === 'force'
                         ? 'bg-indigo-500/20 text-indigo-400 shadow-sm border border-indigo-500/30'
                         : 'text-slate-400 hover:text-slate-200'
@@ -344,7 +344,7 @@ export function DiagnosticOverlay({
                   </button>
                   <button
                     onClick={() => setSelectedSparklineMetric('velocity')}
-                    className={`flex-1 py-1 text-[10px] font-semibold rounded-lg transition-all ${
+                    className={`flex-1 py-1 text-[length:var(--text-xs)] font-semibold rounded-lg transition-all ${
                       selectedSparklineMetric === 'velocity'
                         ? 'bg-sky-500/20 text-sky-400 shadow-sm border border-sky-500/30'
                         : 'text-slate-400 hover:text-slate-200'
@@ -406,25 +406,25 @@ export function DiagnosticOverlay({
 
                 {/* Aggregate Summary Stats */}
                 <div className={`p-3 rounded-xl border ${cardBg} space-y-2`}>
-                  <div className="flex justify-between items-center text-[11px] font-mono">
+                  <div className="flex justify-between items-center text-[length:var(--text-sm)] font-mono">
                     <span className="text-slate-400">Average Framerate:</span>
                     <span className="font-bold text-emerald-400">{metrics.avgFps} FPS</span>
                   </div>
-                  <div className="flex justify-between items-center text-[11px] font-mono">
+                  <div className="flex justify-between items-center text-[length:var(--text-sm)] font-mono">
                     <span className="text-slate-400">FPS Range (Min/Max):</span>
                     <span className="font-bold text-slate-200">
                       {metrics.minFps} - {metrics.maxFps} FPS
                     </span>
                   </div>
-                  <div className="flex justify-between items-center text-[11px] font-mono">
+                  <div className="flex justify-between items-center text-[length:var(--text-sm)] font-mono">
                     <span className="text-slate-400">Peak Clamping Force:</span>
                     <span className="font-bold text-indigo-400">{metrics.peakForce.toFixed(1)} N</span>
                   </div>
-                  <div className="flex justify-between items-center text-[11px] font-mono">
+                  <div className="flex justify-between items-center text-[length:var(--text-sm)] font-mono">
                     <span className="text-slate-400">Peak Joint Velocity:</span>
                     <span className="font-bold text-sky-400">{metrics.peakVelocity.toFixed(2)} rad/s</span>
                   </div>
-                  <div className="flex justify-between items-center text-[11px] font-mono">
+                  <div className="flex justify-between items-center text-[length:var(--text-sm)] font-mono">
                     <span className="text-slate-400">Contact State:</span>
                     <span className="font-bold text-amber-400">
                       {metrics.activeContacts > 0 ? `${metrics.activeContacts} Active Contacts` : 'Unconstrained Motion'}
@@ -439,17 +439,17 @@ export function DiagnosticOverlay({
               <div className="space-y-3">
                 {/* TCP Pose & Kinematic Vector */}
                 <div className={`p-3 rounded-xl border ${cardBg} space-y-1.5`}>
-                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                  <div className="text-[length:var(--text-xs)] font-semibold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                     <span>End-Effector Pose (TCP)</span>
-                    <span className="font-mono text-[9px] text-indigo-400">Franka Hand</span>
+                    <span className="font-mono text-[length:var(--text-xs)] text-indigo-400">Franka Hand</span>
                   </div>
                   {activeStats?.gizmoStats ? (
-                    <div className="font-mono text-[11px] space-y-0.5 text-slate-200">
+                    <div className="font-mono text-[length:var(--text-sm)] space-y-0.5 text-slate-200">
                       <div>{activeStats.gizmoStats.pos}</div>
                       <div className="text-slate-400">{activeStats.gizmoStats.rot}</div>
                     </div>
                   ) : (
-                    <div className="font-mono text-[11px] text-slate-400">
+                    <div className="font-mono text-[length:var(--text-sm)] text-slate-400">
                       X: {telemetry?.endEffectorPos?.x.toFixed(2) ?? '0.45'} Y:{' '}
                       {telemetry?.endEffectorPos?.y.toFixed(2) ?? '0.00'} Z:{' '}
                       {telemetry?.endEffectorPos?.z.toFixed(2) ?? '0.22'}
@@ -469,7 +469,7 @@ export function DiagnosticOverlay({
                       style={{ width: `${Math.min(100, (gripperForce / 20) * 100)}%` }}
                     />
                   </div>
-                  <div className="flex justify-between items-center text-[10px] text-slate-400">
+                  <div className="flex justify-between items-center text-[length:var(--text-xs)] text-slate-400">
                     <span>Controller: {(activeStats?.gripperCtrl ?? 0.04) > 0.02 ? 'Open (0.04m)' : 'Closed'}</span>
                     <span>Max: 20 N</span>
                   </div>
@@ -498,7 +498,7 @@ export function DiagnosticOverlay({
             {/* 3. 7-DOF Joint Dynamics Tab */}
             {activeTab === 'joints' && (
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium px-1">
+                <div className="flex items-center justify-between text-[length:var(--text-xs)] text-slate-400 font-medium px-1">
                   <span>Joint Actuator</span>
                   <span>Velocity (rad/s)</span>
                 </div>
@@ -509,7 +509,7 @@ export function DiagnosticOverlay({
 
                   return (
                     <div key={idx} className={`p-2 rounded-xl border ${cardBg} space-y-1 text-xs`}>
-                      <div className="flex justify-between items-center font-mono text-[11px]">
+                      <div className="flex justify-between items-center font-mono text-[length:var(--text-sm)]">
                         <span className="text-slate-300">panda_joint{idx + 1}</span>
                         <span className={absVel > 1.5 ? 'text-rose-400 font-bold' : 'text-slate-400'}>
                           {vel.toFixed(3)}
@@ -532,7 +532,7 @@ export function DiagnosticOverlay({
             {/* 4. CAD & AI Pipeline Tab */}
             {activeTab === 'tools' && (
               <div className="space-y-2.5">
-                <div className="text-[10px] text-slate-400 font-medium px-1">
+                <div className="text-[length:var(--text-xs)] text-slate-400 font-medium px-1">
                   Connected CAD & Modeling Engines:
                 </div>
                 {toolsList.map(tool => {
@@ -551,25 +551,25 @@ export function DiagnosticOverlay({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-slate-200">{tool.name}</span>
-                          <span className={`text-[9px] font-mono px-1 py-0.2 rounded border font-bold uppercase ${statusColors[tool.status as keyof typeof statusColors] || statusColors.ready}`}>
+                          <span className={`text-[length:var(--text-xs)] font-mono px-1 py-0.2 rounded border font-bold uppercase ${statusColors[tool.status as keyof typeof statusColors] || statusColors.ready}`}>
                             {tool.status}
                           </span>
                         </div>
                         {onOpenToolIntegration && (
                           <button
                             onClick={() => onOpenToolIntegration(tool.id as any)}
-                            className="text-[10px] font-semibold text-indigo-400 hover:text-indigo-300 underline"
+                            className="text-[length:var(--text-xs)] font-semibold text-indigo-400 hover:text-indigo-300 underline"
                           >
                             Launch Workspace
                           </button>
                         )}
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1 leading-snug">{tool.description}</p>
+                      <p className="text-[length:var(--text-xs)] text-slate-400 mt-1 leading-snug">{tool.description}</p>
                       <div className="flex gap-1 mt-2">
                         {tool.supportedFormats.map(fmt => (
                           <span
                             key={fmt}
-                            className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-black/20 text-slate-400 border border-white/5"
+                            className="text-[length:var(--text-xs)] font-mono px-1.5 py-0.5 rounded bg-black/20 text-slate-400 border border-white/5"
                           >
                             {fmt}
                           </span>

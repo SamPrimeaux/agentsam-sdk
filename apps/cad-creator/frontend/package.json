@@ -4,11 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "npm run typography:generate && vite",
+    "build": "npm run typography:generate && npm run typography:lint && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "typography:generate": "node --experimental-strip-types ../scripts/generate-typography.ts",
+    "typography:check": "node --experimental-strip-types ../scripts/generate-typography.ts --check",
+    "typography:lint": "node --experimental-strip-types ../scripts/verify-typography.ts && npm run typography:check"
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-cad-shared": "2.6.13",

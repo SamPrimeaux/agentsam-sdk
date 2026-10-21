@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import loadMujoco from 'mujoco-js';
 import * as THREE from 'three';
 import { MujocoSim } from '../runtime/MujocoSim';
 import { RobotDefinition, RobotInstance, SimulationTelemetryData } from '@inneranimalmedia/agentsam-cad-shared/robotics';
@@ -17,7 +16,9 @@ let cachedWasmModulePromise: Promise<MujocoModule> | null = null;
 
 export async function getMujocoWasmModule(): Promise<MujocoModule> {
   if (!cachedWasmModulePromise) {
-    cachedWasmModulePromise = loadMujoco({
+    // The 10 MB compiled MuJoCo JS runtime is never part of the initial CAD
+    // or Robotics UI bundle. Resolve it only once the simulation starts.
+    cachedWasmModulePromise = import('mujoco-js').then(({default:loadMujoco})=>loadMujoco({
       locateFile: (path: string) =>
         path.endsWith('.wasm')
           ? 'https://unpkg.com/mujoco-js@0.0.7/dist/mujoco_wasm.wasm'
@@ -25,7 +26,10 @@ export async function getMujocoWasmModule(): Promise<MujocoModule> {
       printErr: (text: string) => {
         console.error('MuJoCo WASM error:', text);
       }
-    }) as unknown as Promise<MujocoModule>;
+    }) as unknown as Promise<MujocoModule>).catch((error:unknown)=>{
+      cachedWasmModulePromise=null; // allow a deliberate retry after network failure
+      throw error;
+    });
   }
   return cachedWasmModulePromise;
 }

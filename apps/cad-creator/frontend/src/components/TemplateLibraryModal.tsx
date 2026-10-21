@@ -77,8 +77,8 @@ export const TemplateLibraryModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-3 md:p-6 select-none">
-      <div className="bg-[#252525] border border-[#333] rounded w-full max-w-5xl h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="cad-template-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-2 md:p-6 select-none">
+      <div className="cad-template-dialog bg-[#252525] border border-[#333] rounded-2xl w-full max-w-5xl h-[min(90dvh,52rem)] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="p-3.5 border-b border-[#333] flex items-center justify-between bg-[#252525] shrink-0">
           <div className="flex items-center space-x-2.5">
@@ -88,17 +88,18 @@ export const TemplateLibraryModal: React.FC<Props> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="text-sm font-bold text-white">AgentSam Studio Template Library</h2>
-                <span className="px-1.5 py-0.2 bg-blue-500/20 border border-blue-500/40 text-blue-300 rounded text-[10px] font-mono">
+                <span className="px-1.5 py-0.2 bg-blue-500/20 border border-blue-500/40 text-blue-300 rounded text-[length:var(--text-xs)] font-mono">
                   Parametric BIM & Spatial Sets
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[length:var(--text-sm)] text-gray-400">
                 Explore pre-built 2D/3D layouts for architecture, corporate workplaces, presentations, brand showrooms & social media
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
+            title="Close template library" aria-label="Close template library"
             className="p-1.5 text-gray-400 hover:text-white rounded hover:bg-[#333] transition"
           >
             <X className="w-4 h-4" />
@@ -151,7 +152,7 @@ export const TemplateLibraryModal: React.FC<Props> = ({
         {/* Main Body: Master-Detail Layout */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Grid: Template Cards List */}
-          <div className="w-full md:w-3/5 overflow-y-auto p-3.5 space-y-2.5 border-r border-[#333] bg-[#1E1E1E]">
+          <div className="w-full md:w-3/5 min-w-0 overflow-y-auto p-3 space-y-2 border-r border-[#333] bg-[#1E1E1E]" aria-label="Templates">
             {filteredTemplates.length === 0 ? (
               <div className="p-8 text-center text-gray-500 text-xs">
                 No templates matched "{searchQuery}". Try selecting another category or clear your search query.
@@ -160,10 +161,11 @@ export const TemplateLibraryModal: React.FC<Props> = ({
               filteredTemplates.map((tpl) => {
                 const isSelected = activeTemplate.id === tpl.id;
                 return (
-                  <div
+                  <button type="button"
                     key={tpl.id}
+                    aria-label={'Select template '+tpl.name} aria-pressed={isSelected}
                     onClick={() => setSelectedTemplateId(tpl.id)}
-                    className={`p-3 rounded border transition cursor-pointer flex flex-col justify-between ${
+                    className={`w-full text-left p-3 rounded-xl border transition cursor-pointer flex flex-col justify-between ${
                       isSelected
                         ? 'bg-[#252525] border-blue-500 shadow-md ring-1 ring-blue-500/30'
                         : 'bg-[#252525] border-[#333] hover:border-[#444] hover:bg-[#2a2a2a]'
@@ -171,19 +173,19 @@ export const TemplateLibraryModal: React.FC<Props> = ({
                   >
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#1E1E1E] text-blue-400 border border-[#333]">
+                        <span className="text-[length:var(--text-xs)] font-mono px-1.5 py-0.2 rounded bg-[#1E1E1E] text-blue-400 border border-[#333]">
                           {tpl.categoryLabel}
                         </span>
-                        <span className="text-[10px] text-gray-400 font-mono">{tpl.dimensions}</span>
+                        <span className="text-[length:var(--text-xs)] text-gray-400 font-mono">{tpl.dimensions}</span>
                       </div>
                       <h3 className="text-xs font-bold text-white mb-1 flex items-center justify-between">
                         <span>{tpl.name}</span>
                         {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
                       </h3>
-                      <p className="text-[11px] text-gray-400 line-clamp-2 mb-2">{tpl.description}</p>
+                      <p className="text-[length:var(--text-sm)] text-gray-400 line-clamp-2 mb-2">{tpl.description}</p>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-[#333] text-[10px] text-gray-400">
+                    <div className="flex items-center justify-between pt-2 border-t border-[#333] text-[length:var(--text-xs)] text-gray-400">
                       <div className="flex items-center space-x-2 font-mono">
                         <span>{tpl.project.walls.length} walls</span>
                         <span>•</span>
@@ -197,7 +199,7 @@ export const TemplateLibraryModal: React.FC<Props> = ({
                         ))}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })
             )}
@@ -210,12 +212,12 @@ export const TemplateLibraryModal: React.FC<Props> = ({
                 {/* Visual Header */}
                 <div>
                   <div className="flex items-center space-x-2 mb-1.5">
-                    <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-blue-600/20 text-blue-300 border border-blue-500/40 font-mono">
+                    <span className="text-[length:var(--text-xs)] uppercase font-bold px-1.5 py-0.2 rounded bg-blue-600/20 text-blue-300 border border-blue-500/40 font-mono">
                       {activeTemplate.categoryLabel}
                     </span>
-                    <span className="text-[10px] text-emerald-400 font-mono flex items-center space-x-1">
+                    <span className="text-[length:var(--text-xs)] text-emerald-400 font-mono flex items-center space-x-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                      <span>Cloud Synced Template</span>
+                      <span>Included template</span>
                     </span>
                   </div>
                   <h3 className="text-sm font-bold text-white mb-1">{activeTemplate.name}</h3>
@@ -224,7 +226,7 @@ export const TemplateLibraryModal: React.FC<Props> = ({
 
                 {/* Blueprint Mini Schematic Card */}
                 <div className="p-3 rounded bg-[#1E1E1E] border border-[#333] space-y-2">
-                  <div className="text-[10px] font-mono text-gray-400 uppercase tracking-wider flex items-center justify-between">
+                  <div className="text-[length:var(--text-xs)] font-mono text-gray-400 uppercase tracking-wider flex items-center justify-between">
                     <span>Spatial Schematic</span>
                     <span className="text-blue-400">2D & 3D BIM Ready</span>
                   </div>
@@ -291,33 +293,33 @@ export const TemplateLibraryModal: React.FC<Props> = ({
                 {/* Spatial Specs Breakdown */}
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="p-2 rounded bg-[#1E1E1E] border border-[#333]">
-                    <span className="text-[10px] text-gray-500 font-mono block">Footprint Area</span>
+                    <span className="text-[length:var(--text-xs)] text-gray-500 font-mono block">Footprint Area</span>
                     <span className="font-semibold text-white font-mono">{activeTemplate.dimensions}</span>
                   </div>
                   <div className="p-2 rounded bg-[#1E1E1E] border border-[#333]">
-                    <span className="text-[10px] text-gray-500 font-mono block">Ceiling Height</span>
+                    <span className="text-[length:var(--text-xs)] text-gray-500 font-mono block">Ceiling Height</span>
                     <span className="font-semibold text-white font-mono">{activeTemplate.project.ceilingHeight}" (9' 0")</span>
                   </div>
                   <div className="p-2 rounded bg-[#1E1E1E] border border-[#333]">
-                    <span className="text-[10px] text-gray-500 font-mono block">Walls / Partitions</span>
+                    <span className="text-[length:var(--text-xs)] text-gray-500 font-mono block">Walls / Partitions</span>
                     <span className="font-semibold text-white font-mono">{activeTemplate.project.walls.length} elements</span>
                   </div>
                   <div className="p-2 rounded bg-[#1E1E1E] border border-[#333]">
-                    <span className="text-[10px] text-gray-500 font-mono block">Fixtures & Decor</span>
+                    <span className="text-[length:var(--text-xs)] text-gray-500 font-mono block">Fixtures & Decor</span>
                     <span className="font-semibold text-white font-mono">{activeTemplate.project.furniture.length} items</span>
                   </div>
                 </div>
 
                 {/* Description & Tags */}
                 <div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed mb-2.5">
+                  <p className="text-[length:var(--text-sm)] text-gray-400 leading-relaxed mb-2.5">
                     {activeTemplate.description}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {activeTemplate.tags.map((tag, i) => (
                       <span
                         key={i}
-                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1E1E1E] text-blue-400 border border-[#333]"
+                        className="text-[length:var(--text-xs)] font-mono px-2 py-0.5 rounded bg-[#1E1E1E] text-blue-400 border border-[#333]"
                       >
                         {tag}
                       </span>
@@ -345,6 +347,13 @@ export const TemplateLibraryModal: React.FC<Props> = ({
               )}
             </div>
           </div>
+        </div>
+        <div className="md:hidden flex shrink-0 items-center justify-between gap-3 border-t border-[#333] bg-[#252525] p-3">
+          <div className="min-w-0"><strong className="block truncate text-sm text-white">{activeTemplate.name}</strong><span className="text-xs text-gray-400">{activeTemplate.dimensions}</span></div>
+          <button type="button" onClick={()=>handleApply(activeTemplate)} disabled={!permissions.canLoadTemplates}
+            className="min-h-11 shrink-0 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-40" aria-label={'Start editing '+activeTemplate.name}>
+            Use template
+          </button>
         </div>
       </div>
     </div>

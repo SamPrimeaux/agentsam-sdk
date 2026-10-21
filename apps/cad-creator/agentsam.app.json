@@ -155,5 +155,54 @@
     },
     "evidenceEndpoint": "/api/cad/evidence",
     "bucketName": "cad"
+  },
+  "theme": {
+    "typography": {
+      "families": {
+        "sans": "AgentSam Sans",
+        "display": "AgentSam Sans",
+        "mono": "AgentSam Mono"
+      },
+      "weights": {
+        "body": 400,
+        "heading": 600,
+        "strong": 700
+      },
+      "sizes": {
+        "xs": "10px",
+        "sm": "12px",
+        "base": "14px",
+        "lg": "16px",
+        "xl": "18px",
+        "h2": "22px",
+        "h1": "28px"
+      },
+      "leading": {
+        "tight": 1.2,
+        "normal": 1.45,
+        "relaxed": 1.65
+      },
+      "tracking": {
+        "tight": "-0.025em",
+        "normal": "0",
+        "wide": "0.04em"
+      },
+      "faces": [
+        {
+          "role": "sans",
+          "family": "AgentSam Sans",
+          "file": "inter-latin-wght-normal.woff2",
+          "weight": "100 900",
+          "subset": "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD"
+        },
+        {
+          "role": "mono",
+          "family": "AgentSam Mono",
+          "file": "jetbrains-mono-latin-wght-normal.woff2",
+          "weight": "100 800",
+          "subset": "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD"
+        }
+      ]
+    }
   }
 }

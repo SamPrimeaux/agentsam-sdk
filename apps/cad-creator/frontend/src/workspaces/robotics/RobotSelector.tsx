@@ -34,14 +34,14 @@ export function RobotSelector({
           </div>
           <div>
             <h1 className="text-sm font-bold tracking-tight leading-none">{robotName}</h1>
-            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{dof}-DOF Arm · Analytical IK</p>
+            <p className="text-[length:var(--text-xs)] text-slate-400 font-mono mt-0.5">{dof}-DOF Arm · Analytical IK</p>
           </div>
         </div>
       </div>
 
       {gizmoStats && (
         <div className={`glass-card px-4 py-2.5 rounded-xl flex flex-col gap-1 shadow-sm pointer-events-auto border ${isDarkMode ? 'bg-slate-900/60 border-white/5' : 'bg-white/70 border-slate-200/80'}`}>
-          <div className="font-mono text-[9px] space-y-0.5">
+          <div className="font-mono text-[length:var(--text-xs)] space-y-0.5">
             <p className="flex justify-between gap-3">
               <span className={labelStyle}>TCP POS:</span>
               <span className={`${valueStyle} font-semibold`}>{gizmoStats.pos}</span>

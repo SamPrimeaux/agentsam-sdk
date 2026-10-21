@@ -391,7 +391,7 @@ export function RoboticsWorkspace({
       )}
 
       {!isLoading && !loadError && (
-        <div role="status" aria-live="polite" className="absolute bottom-[98px] left-3 z-20 max-w-[min(420px,calc(100%-24px))] rounded-lg border border-white/10 bg-slate-950/90 px-3 py-2 text-[11px] text-slate-200 shadow-lg">
+        <div role="status" aria-live="polite" className="absolute bottom-[98px] left-3 z-20 max-w-[min(420px,calc(100%-24px))] rounded-lg border border-white/10 bg-slate-950/90 px-3 py-2 text-[length:var(--text-sm)] text-slate-200 shadow-lg">
           <span className="mr-2 font-semibold text-emerald-300">Reach test</span>{reachReceipt}
         </div>
       )}
@@ -400,7 +400,7 @@ export function RoboticsWorkspace({
           conversation lives in AgentSam Side Assistant; known objects resolve
           from structured MuJoCo/world state, never by default LLM vision. */}
       {!isLoading && !loadError && showSidebar && experience === 'sandbox' && (
-        <aside className="absolute right-3 top-16 z-20 w-60 rounded-xl border border-white/10 bg-slate-900/90 p-3 text-[11px] text-slate-200" aria-label="Simulation inspector">
+        <aside className="absolute right-3 top-16 z-20 w-60 rounded-xl border border-white/10 bg-slate-900/90 p-3 text-[length:var(--text-sm)] text-slate-200" aria-label="Simulation inspector">
           <div className="mb-1 flex items-center justify-between"><span className="font-semibold">Inspector</span><button onClick={() => setShowSidebar(false)} aria-label="Close inspector">×</button></div>
           <div>Frame rate: {simulationStats?.fps ?? '—'} FPS</div>
           <div>Collisions: {(simulationStats as any)?.collisions ?? '—'}</div>
@@ -454,16 +454,16 @@ export function RoboticsWorkspace({
 
               <div className="min-[660px]:w-[320px] p-6 flex flex-col gap-4 overflow-y-auto custom-scrollbar text-xs">
                 <div>
-                  <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">User Prompt</h4>
+                  <h4 className="text-[length:var(--text-xs)] font-bold text-slate-400 uppercase tracking-widest mb-1">User Prompt</h4>
                   <p className="font-semibold">{activeLog.prompt}</p>
                 </div>
                 <div>
-                  <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Full System Prompt</h4>
-                  <p className={`text-[10px] font-mono p-3 rounded-xl leading-relaxed border ${isDarkMode ? 'bg-slate-950 border-white/5 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>{activeLog.fullPrompt}</p>
+                  <h4 className="text-[length:var(--text-xs)] font-bold text-slate-400 uppercase tracking-widest mb-1">Full System Prompt</h4>
+                  <p className={`text-[length:var(--text-xs)] font-mono p-3 rounded-xl leading-relaxed border ${isDarkMode ? 'bg-slate-950 border-white/5 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>{activeLog.fullPrompt}</p>
                 </div>
                 <div>
-                  <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Results</h4>
-                  <pre className={`p-3 rounded-xl font-mono text-[10px] border overflow-y-auto max-h-48 ${isDarkMode ? 'bg-slate-950 border-white/5 text-indigo-400' : 'bg-slate-50 border-slate-200 text-indigo-600'}`}>
+                  <h4 className="text-[length:var(--text-xs)] font-bold text-slate-400 uppercase tracking-widest mb-1">Results</h4>
+                  <pre className={`p-3 rounded-xl font-mono text-[length:var(--text-xs)] border overflow-y-auto max-h-48 ${isDarkMode ? 'bg-slate-950 border-white/5 text-indigo-400' : 'bg-slate-50 border-slate-200 text-indigo-600'}`}>
                     {JSON.stringify(activeLog.result, null, 2)}
                   </pre>
                 </div>

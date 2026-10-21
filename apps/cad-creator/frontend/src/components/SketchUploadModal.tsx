@@ -85,7 +85,7 @@ export const SketchUploadModal: React.FC<Props> = ({ isOpen, onClose, onApplyPar
             </div>
             <div>
               <h2 className="text-sm font-bold text-white">Napkin Sketch & Drawing to BIM</h2>
-              <p className="text-[11px] text-gray-400">Upload hand-drawn floor plan sketches or blueprint images to generate 2D CAD & 3D BIM models</p>
+              <p className="text-[length:var(--text-sm)] text-gray-400">Upload hand-drawn floor plan sketches or blueprint images to generate 2D CAD & 3D BIM models</p>
             </div>
           </div>
           <button
@@ -115,7 +115,7 @@ export const SketchUploadModal: React.FC<Props> = ({ isOpen, onClose, onApplyPar
             >
               <Upload className="w-6 h-6 text-gray-400 mb-1.5" />
               <span className="text-xs font-semibold text-gray-200">Upload Napkin Sketch or Blueprint Photo</span>
-              <span className="text-[10px] text-gray-500 mt-0.5">Accepts PNG, JPG, WebP photo of drawing</span>
+              <span className="text-[length:var(--text-xs)] text-gray-500 mt-0.5">Accepts PNG, JPG, WebP photo of drawing</span>
             </div>
           )}
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
@@ -148,7 +148,7 @@ export const SketchUploadModal: React.FC<Props> = ({ isOpen, onClose, onApplyPar
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Extracted {parsedSummary.walls?.length || 0} Walls, {parsedSummary.doors?.length || 0} Doors, {parsedSummary.rooms?.length || 0} Rooms</span>
               </div>
-              <p className="text-[11px] text-gray-300">
+              <p className="text-[length:var(--text-sm)] text-gray-300">
                 AgentSam has mapped your hand sketch into precise geometric CAD lines and 3D extrusions.
               </p>
 

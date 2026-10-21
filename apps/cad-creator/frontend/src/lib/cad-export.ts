@@ -1,3 +1,4 @@
+import brandTokens from '../../../agentsam.app.json';
 import { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
 
 export function exportToSVG(project: ProjectState): string {
@@ -15,7 +16,9 @@ export function exportToSVG(project: ProjectState): string {
   const viewBoxW = maxX - minX + padding * 2;
   const viewBoxH = maxY - minY + padding * 2;
 
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxX} ${viewBoxY} ${viewBoxW} ${viewBoxH}" width="${viewBoxW * 2}" height="${viewBoxH * 2}" style="background-color: #ffffff; font-family: ui-sans-serif, system-ui, sans-serif;">\n`;
+  const text=brandTokens.theme.typography;
+  const textTokens=`--font-sans:"${text.families.sans}",sans-serif;--fw-heading:${text.weights.heading};--fw-body:${text.weights.body};--text-lg:${text.sizes.lg};--text-sm:${text.sizes.sm};--text-xs:${text.sizes.xs}`;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxX} ${viewBoxY} ${viewBoxW} ${viewBoxH}" width="${viewBoxW * 2}" height="${viewBoxH * 2}" style="background-color: #ffffff; font-family:var(--font-sans); ${textTokens};">\n`;
 
   // Grid background pattern
   svg += `  <defs>
@@ -31,8 +34,8 @@ export function exportToSVG(project: ProjectState): string {
 
   // Title block
   svg += `  <g id="title-block">
-    <text x="${viewBoxX + 20}" y="${viewBoxY + 30}" font-size="16" font-weight="bold" fill="#0f172a">${project.name}</text>
-    <text x="${viewBoxX + 20}" y="${viewBoxY + 48}" font-size="10" fill="#64748b">Scale: 1/4" = 1'-0" | AgentSam BIM CAD Export</text>
+    <text x="${viewBoxX + 20}" y="${viewBoxY + 30}" font-size="var(--text-lg)" font-weight="var(--fw-heading)" fill="#0f172a">${project.name}</text>
+    <text x="${viewBoxX + 20}" y="${viewBoxY + 48}" font-size="var(--text-xs)" fill="#64748b">Scale: 1/4" = 1'-0" | AgentSam BIM CAD Export</text>
   </g>\n`;
 
   // Render Rooms (Flooring polygons & Labels)
@@ -44,8 +47,8 @@ export function exportToSVG(project: ProjectState): string {
       // Center of polygon
       const cx = rm.points.reduce((acc, p) => acc + p[0], 0) / rm.points.length;
       const cy = rm.points.reduce((acc, p) => acc + p[1], 0) / rm.points.length;
-      svg += `    <text x="${cx}" y="${cy}" font-size="12" font-weight="600" text-anchor="middle" fill="#334155">${rm.name}</text>\n`;
-      svg += `    <text x="${cx}" y="${cy + 14}" font-size="9" text-anchor="middle" fill="#64748b">${Math.round(rm.areaSqFt)} sq ft</text>\n`;
+      svg += `    <text x="${cx}" y="${cy}" font-size="var(--text-sm)" font-weight="var(--fw-heading)" text-anchor="middle" fill="#334155">${rm.name}</text>\n`;
+      svg += `    <text x="${cx}" y="${cy + 14}" font-size="var(--text-xs)" text-anchor="middle" fill="#64748b">${Math.round(rm.areaSqFt)} sq ft</text>\n`;
     }
   }
   svg += `  </g>\n`;
@@ -109,7 +112,7 @@ export function exportToSVG(project: ProjectState): string {
     const rad = ((f.rotation || 0) * Math.PI) / 180;
     svg += `    <g transform="translate(${f.x}, ${f.y}) rotate(${f.rotation || 0})">
       <rect x="${-f.w / 2}" y="${-f.d / 2}" width="${f.w}" height="${f.d}" rx="4" fill="${f.color || '#e2e8f0'}" stroke="#475569" stroke-width="1.5"/>
-      <text x="0" y="3" font-size="8" text-anchor="middle" fill="#1e293b" font-weight="500">${f.name}</text>
+      <text x="0" y="3" font-size="var(--text-xs)" text-anchor="middle" fill="#1e293b" font-weight="var(--fw-body)">${f.name}</text>
     </g>\n`;
   }
   svg += `  </g>\n`;
@@ -120,7 +123,7 @@ export function exportToSVG(project: ProjectState): string {
     svg += `    <line x1="${ann.x1}" y1="${ann.y1}" x2="${ann.x2}" y2="${ann.y2}" stroke="#0284c7" stroke-width="1" marker-start="url(#arrow)" marker-end="url(#arrow)"/>\n`;
     const mx = (ann.x1 + ann.x2) / 2;
     const my = (ann.y1 + ann.y2) / 2 - 4;
-    svg += `    <text x="${mx}" y="${my}" font-size="10" font-weight="bold" fill="#0284c7" text-anchor="middle">${ann.label}</text>\n`;
+    svg += `    <text x="${mx}" y="${my}" font-size="var(--text-xs)" font-weight="bold" fill="#0284c7" text-anchor="middle">${ann.label}</text>\n`;
   }
   svg += `  </g>\n`;
 
