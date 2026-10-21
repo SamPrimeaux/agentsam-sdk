@@ -2,6 +2,7 @@
 // and the dashboard itself -- this file is window setup + command wiring.
 
 mod commands;
+mod menu;
 mod tray;
 
 use commands::{
@@ -21,10 +22,13 @@ fn main() {
         .manage(keychain::IdentityPendingState::default())
         .manage(keychain::IdentitySessionState::default())
         .setup(|app| {
+            let native_menu = menu::build_menu(app.handle())?;
+            app.set_menu(native_menu)?;
             tray::setup_tray(app)?;
             deep_link::register_scheme(app)?;
             Ok(())
         })
+        .on_menu_event(|app, event| menu::handle_menu_event(app, event.id().as_ref()))
         .invoke_handler(tauri::generate_handler![
             keychain::identity_session_exists,
             keychain::identity_pending_set,
