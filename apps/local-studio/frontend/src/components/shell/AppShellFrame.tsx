@@ -28,6 +28,7 @@ export function AppShellFrame() {
   const flushOfflineQueue = useWorkStore((s) => s.flushOfflineQueue);
   const hydrated = useWorkStore((s) => s.hydrated);
   const [shellMode, setShellMode] = useState<"dark" | "light">("dark");
+  const [cadHostMode, setCadHostMode] = useState<"chat" | "work">("work");
 
   useEffect(() => {
     void useWorkStore.persist.rehydrate();
@@ -130,7 +131,7 @@ export function AppShellFrame() {
 
   return (
     <TooltipProvider>
-      <Nav.Provider defaultOpen mobileBreakpoint={768} peekable resizable>
+      <Nav.Provider value={{mode:cadHostMode,onModeChange:setCadHostMode}} defaultOpen mobileBreakpoint={768} peekable resizable>
         <div className="flex h-dvh overflow-hidden bg-background text-foreground" data-agentsam-app-shell="local-studio">
           <NavRail />
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">

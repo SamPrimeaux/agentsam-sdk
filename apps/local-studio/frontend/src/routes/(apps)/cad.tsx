@@ -4,6 +4,8 @@ import { installCadHostBridge, postToCadGuest } from "@/lib/cad-host-bridge";
 import { runCadAssistantTurn } from "@/lib/cad/assistantTurn";
 import { approveCadProposal, isLocalCadExecutionHost } from "@/lib/cad/approval";
 import type { CadHostHandlers, CadSelectionContext } from "@/lib/cad-host-bridge";
+import { Nav, useNav } from "@inneranimalmedia/agentsam-nav";
+import { CadConversationPane } from "@/components/workbench/CadConversationPane";
 
 interface CadSearchParams { url?: string; workspace?: string }
 export const Route = createFileRoute("/(apps)/cad")({
@@ -15,6 +17,8 @@ export const Route = createFileRoute("/(apps)/cad")({
 });
 
 function CadStudioPage() {
+  const { data } = useNav();
+  const chatOpen = data.mode === "chat";
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [selection, setSelection] = useState<CadSelectionContext | null>(null);
   const [proposal, setProposal] = useState<Parameters<NonNullable<CadHostHandlers["onProposal"]>>[0] | null>(null);
@@ -50,6 +54,7 @@ function CadStudioPage() {
   };
   return (
     <div className="flex size-full flex-col overflow-hidden bg-background">
+      {!data.brand && <Nav.Topbar startup showNavigationTrigger={false} />}
       {(selection || proposal || approvalStatus) && (
         <div className="flex items-center gap-3 border-b border-border px-3 py-1.5 text-[11px]">
           {selection && <span>Selected: {selection.object?.label} · {selection.object?.id} · rev {selection.revision}</span>}
@@ -60,7 +65,11 @@ function CadStudioPage() {
           {approvalStatus && <span role="status">{approvalStatus}</span>}
         </div>
       )}
-      <iframe ref={iframeRef} title="CAD Creator" src="/cad-creator/index.html?presentation=embedded" className="min-h-0 flex-1 border-0" allow="fullscreen" />
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {chatOpen && <CadConversationPane selected={selection?.object.label} />}
+        <iframe ref={iframeRef} title="CAD Creator" src="/cad-creator/index.html?presentation=embedded"
+          className={"min-h-0 min-w-0 flex-1 border-0 "+(chatOpen ? "hidden md:block" : "block")} allow="fullscreen" />
+      </div>
     </div>
   );
 }

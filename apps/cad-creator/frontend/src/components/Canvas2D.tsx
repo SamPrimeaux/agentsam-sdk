@@ -43,6 +43,8 @@ interface Props {
   unit?: MeasurementUnit;
   onSelectElement?: (type: string, id: string) => void;
   userRole?: UserRole;
+  showToolToolbar?: boolean;
+  externalSelection?: {type: 'wall'|'door'|'window'|'room'|'furniture'; id:string}|null;
 }
 
 export const Canvas2D: React.FC<Props> = ({
@@ -55,10 +57,25 @@ export const Canvas2D: React.FC<Props> = ({
   unit = 'ft',
   onSelectElement,
   userRole = 'Editor',
+  showToolToolbar = true,
+  externalSelection,
 }) => {
   const isViewer = userRole === 'Viewer';
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [canvasSize,setCanvasSize] = useState({width:0,height:0});
+  useEffect(() => {
+    const container=containerRef.current;
+    if(!container||typeof ResizeObserver==='undefined')return;
+    const observer=new ResizeObserver(entries=>{
+      const rect=entries[0]?.contentRect;
+      if(!rect)return;
+      const width=Math.round(rect.width),height=Math.round(rect.height);
+      setCanvasSize(previous=>previous.width===width&&previous.height===height?previous:{width,height});
+    });
+    observer.observe(container);
+    return ()=>observer.disconnect();
+  }, []);
 
   // Pan and Zoom
   const [pan, setPan] = useState({ x: 120, y: 120 });
@@ -69,6 +86,12 @@ export const Canvas2D: React.FC<Props> = ({
   // Selection state
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<'wall' | 'door' | 'window' | 'furniture' | 'room' | null>(null);
+  useEffect(() => {
+    if (externalSelection) {
+      setSelectedId(externalSelection.id);
+      setSelectedType(externalSelection.type);
+    }
+  }, [externalSelection?.id, externalSelection?.type]);
 
   // Drawing in progress
   const [wallStart, setWallStart] = useState<{ x: number; y: number } | null>(null);
@@ -521,7 +544,7 @@ export const Canvas2D: React.FC<Props> = ({
         ctx.restore();
       }
     });
-  }, [project, pan, zoom, activeTool, wallStart, mouseWorld, roomPoints, measureStart, selectedId, remoteUsers, unit, formatLength, toScreen]);
+  }, [project, pan, zoom, activeTool, wallStart, mouseWorld, roomPoints, measureStart, selectedId, remoteUsers, unit, formatLength, toScreen, canvasSize]);
 
   // Handle Mouse Events
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -860,8 +883,8 @@ export const Canvas2D: React.FC<Props> = ({
 
   return (
     <div ref={containerRef} className="w-full h-full relative bg-[#121212] overflow-hidden flex flex-col select-none">
-      {/* 2D Canvas High Density Floating Toolbar */}
-      <div className="absolute top-2.5 left-2.5 z-10 flex items-center space-x-0.5 bg-[#252525] border border-[#333] p-1 rounded shadow-lg">
+      {/* Legacy dock is retained for other consumers; CAD Creator supplies the main direct-tool ribbon. */}
+      {showToolToolbar && <div className="absolute top-2.5 left-2.5 z-10 flex items-center space-x-0.5 bg-[#252525] border border-[#333] p-1 rounded shadow-lg">
         {isViewer && (
           <div className="px-2 py-1 bg-purple-950/60 border border-purple-800/60 rounded text-[10px] font-mono text-purple-300 flex items-center space-x-1 mr-1">
             <span>👁️ Viewer Mode</span>
@@ -970,7 +993,7 @@ export const Canvas2D: React.FC<Props> = ({
         >
           <Hand className="w-3.5 h-3.5" />
         </button>
-      </div>
+      </div>}
 
       {/* Selected Element Context Actions */}
       {selectedId && !isViewer && (

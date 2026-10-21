@@ -1,1 +1,20 @@
 @import "tailwindcss";
+
+@import "../../../../packages/agentsam-nav/dist/theme.css";
+
+/* CAD runs inside the real AgentSam shell; canvas remains mounted across modes. */
+.cad-platform-shell{display:flex;width:100vw;height:100dvh;max-height:100dvh;overflow:hidden;background:#0c0d0e;color:#ececec}
+.cad-platform-main{display:flex;flex:1;min-width:0;min-height:0;flex-direction:column;overflow:hidden}
+.cad-platform-content{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden}
+.cad-platform-canvas{min-width:0;min-height:0;flex:1;overflow:hidden;position:relative}
+.cad-platform-canvas .cad-workspace-ui{width:100%;height:100%}
+.cad-platform-chat{width:min(400px,42vw);min-width:265px;flex-shrink:0;border-right:1px solid #34363a;background:#171819;display:flex;align-items:center;justify-content:center;overflow:auto;padding:18px}
+.cad-platform-chat-center{display:flex;flex-direction:column;align-items:flex-start;gap:16px;max-width:310px;text-align:left}
+.cad-platform-chat h2{font-size:23px;font-weight:600;letter-spacing:-.035em}
+.cad-platform-chat p{font-size:13px;color:#a5a6ab;line-height:1.65}
+.cad-platform-chat-link{display:inline-flex;border:1px solid #727983;background:#262a2f;border-radius:10px;padding:11px 13px;font-size:12px;font-weight:600}
+.cad-platform-chat-caption{font-size:11px!important;opacity:.8}
+.cad-platform-open-account{font-size:11px;color:#cbd5e1;padding:6px 10px;border:1px solid #ffffff25;border-radius:9px}
+.cad-platform-shell .as-nav-topbar{flex:0 0 auto}
+.cad-platform-shell .as-nav-sidenav-reserve{min-height:0}
+@media(max-width:770px){.cad-platform-chat{width:100%;min-width:0}.cad-platform-canvas--chat{display:none}.cad-platform-open-account{font-size:0}.cad-platform-open-account span{font-size:15px}}

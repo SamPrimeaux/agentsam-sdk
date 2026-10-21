@@ -14,6 +14,8 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_shell::init())
+        .manage(cloudflare_desktop_identity::PkceState::default())
         .manage(agentsamd::AgentsamdState::default())
         .manage(local_lsp::LocalLspState::default())
         .manage(local_content::LocalContentState::default())
