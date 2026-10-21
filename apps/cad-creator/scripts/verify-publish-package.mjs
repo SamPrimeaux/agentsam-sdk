@@ -11,6 +11,8 @@ function must(relative) {
 for (const relative of [
   'frontend/dist/index.html',
   'backend/dist/server.mjs',
+  'backend/dist/cad/freecad/adapter.py',
+  'backend/runtime/cad/freecad/adapter.py',
   'bin/agentsam-cad-creator.mjs',
   'bin/freecad-bim-preview.py',
   'BIM_STARTERS.md',
