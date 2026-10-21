@@ -38,10 +38,10 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
           <h1>All sources</h1>
           <div className="agentsam-work-artifacts__spacer" />
           <button type="button" className="agentsam-work-toolbar-button" data-primary={!grid} onClick={() => setGrid(false)} aria-label="List view">
-            <List size={15} />
+            <List size={15} /><span>List</span>
           </button>
           <button type="button" className="agentsam-work-toolbar-button" data-primary={grid} onClick={() => setGrid(true)} aria-label="Grid view">
-            <Grid2X2 size={15} />
+            <Grid2X2 size={15} /><span>Grid</span>
           </button>
         </div>
 
