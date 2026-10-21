@@ -34,6 +34,13 @@
   .agentsam-moviemode .copro-projects-titlebar { align-items:stretch; }
 }
 
+/* MovieMode home fills its embedded panel instead of claiming a full viewport
+   height; its own content can scroll without enlarging or clipping Work. */
+.agentsam-moviemode .mm-home {
+  min-height:0; height:100%; min-width:0; max-width:100%;
+  overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain;
+}
+
 /* Work already provides primary navigation. Never squeeze MovieMode's second
    desktop sidebar into its resizable embedded panel. */
 .agentsam-moviemode.is-work-pane .mm-home-sidebar { display:none; }

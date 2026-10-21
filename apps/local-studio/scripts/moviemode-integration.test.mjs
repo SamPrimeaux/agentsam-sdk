@@ -49,6 +49,7 @@ test("Local Studio bundles MovieMode from the active SDK worktree, not a linked 
 test("Embedded MovieMode does not render desktop home columns at narrow panel widths", () => {
   const host = read("../frontend/src/components/media/moviemode-surface.css");
   const editor = read("../../../packages/copro-ui/src/studio.tsx");
+  assert.match(host, /\.agentsam-moviemode \.mm-home \{/);
   assert.match(host, /is-work-pane \.mm-home-sidebar \{ display:none/);
   assert.match(host, /@container \(max-width: 760px\)/);
   assert.match(host, /mm-home-quick-grid \{ grid-template-columns:minmax\(0,1fr\)/);
