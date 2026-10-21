@@ -143,7 +143,8 @@
     "skills/agentsam-cloudflare-workers/*",
     "skills/grok-*",
     "skills/grok-*/*",
-    "apps/ecommerce-cms-agentsam/apps/resend/agentsam.app.json"
+    "apps/ecommerce-cms-agentsam/apps/resend/agentsam.app.json",
+    "apps/cad-creator/src-tauri"
   ],
   "exclude": [
     "*package-lock.json",
