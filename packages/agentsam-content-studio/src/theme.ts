@@ -2,18 +2,18 @@ import type { CSSProperties } from "react";
 
 /** Inline-style design tokens so the package ships zero CSS dependencies. */
 export const tokens = {
-  bg: "#0e1015",
-  panel: "#161922",
-  panelAlt: "#1c202b",
-  border: "#2a2f3d",
-  text: "#e8eaf0",
-  textDim: "#8b91a3",
-  accent: "#5b8cff",
-  good: "#3ecf8e",
-  warn: "#f5b83d",
-  bad: "#f0565f",
+  bg: "var(--agentsam-work-canvas, var(--color-background, var(--background, #0e1015)))",
+  panel: "var(--agentsam-work-panel, var(--color-card, var(--card, #161922)))",
+  panelAlt: "var(--agentsam-work-panel-subtle, var(--color-muted, var(--muted, #1c202b)))",
+  border: "var(--agentsam-work-border, var(--color-border, var(--border, #2a2f3d)))",
+  text: "var(--agentsam-work-text, var(--color-foreground, var(--foreground, #e8eaf0)))",
+  textDim: "var(--agentsam-work-muted, var(--color-muted-foreground, var(--muted-foreground, #8b91a3)))",
+  accent: "var(--agentsam-work-accent, var(--color-accent, var(--accent, #5b8cff)))",
+  good: "var(--agentsam-work-success, var(--color-success, #3ecf8e))",
+  warn: "var(--agentsam-work-warning, var(--color-warning, #f5b83d))",
+  bad: "var(--agentsam-work-danger, var(--color-destructive, var(--destructive, #f0565f)))",
   radius: 10,
-  font: "system-ui, -apple-system, 'Segoe UI', sans-serif",
+  font: "var(--font-sans, 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif)",
 };
 
 export const styles = {

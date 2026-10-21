@@ -181,5 +181,9 @@ export function createLocalStudioContentRuntime(
     imageOptimizer,
     assistant: buildAssistant(projections),
     ...opts.config,
+    theme: {
+      "providerLabel.local": "Browser storage (IndexedDB)",
+      ...opts.config?.theme,
+    },
   });
 }
