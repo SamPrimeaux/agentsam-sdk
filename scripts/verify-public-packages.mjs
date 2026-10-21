@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { auditPackages, verifyPackage } from '../src/commands/package.js';
+import { auditPackages, buildPublishPlan, verifyPackage } from '../src/commands/package.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const offline = !process.argv.includes('--online');
@@ -16,9 +16,19 @@ if (structural.length) {
   process.exit(1);
 }
 
+// Package builds depend on sibling packages' generated declarations and files.
+// Alphabetical verification attempts consumers before their dependencies and
+// invents avoidable build failures. Reuse the canonical publish dependency DAG.
+const publishPlan = await buildPublishPlan({ root, offline });
+const packagesByName = new Map(audit.packages.map((pkg) => [pkg.name, pkg]));
+const ordered = publishPlan.publish_order.map(({ name }) => packagesByName.get(name));
+if (ordered.length !== audit.packages.length || ordered.some((pkg) => !pkg)) {
+  throw new Error('public_package_verification_order_incomplete');
+}
+
 const failures = [];
-console.log(`AgentSam public package verification · ${audit.packages.length} package(s) · ${offline ? 'offline' : 'registry-aware'}`);
-for (const pkg of audit.packages) {
+console.log(`AgentSam public package verification · ${ordered.length} package(s) · ${offline ? 'offline' : 'registry-aware'} · dependency order`);
+for (const pkg of ordered) {
   const result = await verifyPackage(pkg.name, { root, offline });
   if (result.ok) {
     const gates = result.gates.map((gate) => gate.gate).join(', ') || 'pack';

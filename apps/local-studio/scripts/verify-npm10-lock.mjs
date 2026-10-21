@@ -54,6 +54,21 @@ if (loading?.version !== version) {
   fail('Loading Scene lock metadata is not on release ' + version);
 }
 
+// A green source-link check must never conceal stale registry tarballs. In
+// particular, a 2.6.13 manifest with a cached 2.6.12 campaign tarball cannot
+// pass npm ci, even when the package is eventually published.
+const firstPartyTarballs = Object.entries(packages).filter(([key, entry]) =>
+  key.includes('node_modules/@inneranimalmedia/') && !entry?.link && typeof entry?.version === 'string'
+);
+for (const [key, entry] of firstPartyTarballs) {
+  if (entry.version !== version) {
+    fail('Local Studio release train lock drift: ' + key + '@' + entry.version + ' != ' + version);
+  }
+  if (!String(entry.resolved || '').includes('registry.npmjs.org/') || !entry.integrity) {
+    fail('Local Studio first-party tarball missing npm registry integrity: ' + key);
+  }
+}
+
 const sdkPackageSuffix = 'node_modules/@inneranimalmedia/agentsam-sdk';
 const sdkEntries = Object.entries(packages)
   .filter(([key]) => key === sdkPackageSuffix || key.endsWith('/' + sdkPackageSuffix));
