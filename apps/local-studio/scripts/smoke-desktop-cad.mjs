@@ -100,7 +100,7 @@ try {
   while (!mounted && Date.now() < deadline) {
     await sleep(400);
     const response = await command("Runtime.evaluate", {
-      expression: 'Boolean(document.getElementById("cad-creator-header")) && Boolean(document.querySelector("#root button"))',
+      expression: 'Boolean(document.querySelector(".cad-workspace-ui")) && Boolean(document.querySelector(".cad-real-toolbar")) && Boolean(document.querySelector(".cad-workspace-stage"))',
       returnByValue: true,
     });
     if (response.result?.exceptionDetails && exceptions.length < 8) {
@@ -115,7 +115,7 @@ try {
   if (!mounted) throw Error("cad_editor_did_not_mount:" + exceptions.join(", "));
   if (missingAssets.size) throw Error("cad_asset_requests_failed:" + [...missingAssets].join(", "));
   if (exceptions.length) throw Error("cad_runtime_exceptions:" + exceptions.join(", "));
-  console.log("[desktop-cad-smoke] PASS: CAD header, interactive controls, and bundled assets mounted");
+  console.log("[desktop-cad-smoke] PASS: CAD workspace, functional authoring toolbar, viewport stage, and bundled assets mounted");
   console.log("[desktop-cad-smoke] asset references verified: " + assetUrls.length);
 } finally {
   ws?.close();
