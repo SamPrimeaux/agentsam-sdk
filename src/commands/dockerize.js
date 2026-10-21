@@ -174,6 +174,8 @@ export async function runDockerize(argv) {
       memory: opts.memory,
       cpus: opts.cpus,
       tools: opts.tools,
+      mounts: opts.mounts,
+      readOnlyRoot: opts.readOnlyRoot,
       registerTag: opts.registerTag,
       onData: (chunk) => process.stdout.write(chunk),
       onAutoStop: () => console.log(`\n  ⏱  --timeout reached — auto-stopped ${appSlug}\n`),
