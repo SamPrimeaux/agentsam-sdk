@@ -33,3 +33,35 @@
   .agentsam-moviemode .copro-project-list { grid-template-columns:minmax(0,1fr); }
   .agentsam-moviemode .copro-projects-titlebar { align-items:stretch; }
 }
+
+/* Work already provides primary navigation. Never squeeze MovieMode's second
+   desktop sidebar into its resizable embedded panel. */
+.agentsam-moviemode.is-work-pane .mm-home-sidebar { display:none; }
+.agentsam-moviemode.is-work-pane .mm-home-main {
+  width:100%; min-width:0; max-width:none; flex:1;
+}
+.agentsam-moviemode.is-work-pane .mm-home-header,
+.agentsam-moviemode.is-work-pane .mm-home-header>div:first-child {
+  min-width:0;
+}
+.agentsam-moviemode.is-work-pane .mm-home-header strong {
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+@container (max-width: 760px) {
+  .agentsam-moviemode .mm-home { width:100%; min-width:0; }
+  .agentsam-moviemode .mm-home-sidebar { display:none; }
+  .agentsam-moviemode .mm-home-main { width:100%; max-width:none; min-width:0; padding:0 12px 20px; }
+  .agentsam-moviemode .mm-home-quick-grid { grid-template-columns:minmax(0,1fr); }
+  .agentsam-moviemode .mm-tools-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .agentsam-moviemode .mm-tools-grid button,
+  .agentsam-moviemode .mm-start-card { min-width:0; }
+  .agentsam-moviemode .mm-project-toolbar { min-width:0; flex-wrap:wrap; }
+}
+@container (max-width: 440px) {
+  .agentsam-moviemode .mm-home-header { gap:6px; }
+  .agentsam-moviemode .mm-home-header-actions button:first-child { display:none; }
+  .agentsam-moviemode .mm-home-quick-grid { gap:8px; }
+  .agentsam-moviemode .mm-start-card { min-height:72px; }
+  .agentsam-moviemode .mm-tools-grid { gap:6px; }
+  .agentsam-moviemode .mm-create-banner small { display:none; }
+}

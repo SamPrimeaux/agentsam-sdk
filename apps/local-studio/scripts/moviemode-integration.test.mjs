@@ -37,3 +37,21 @@ test("Full-height editors scroll within their Work container instead of viewport
   assert.match(css, /\.agentsam-moviemode \.copro-studio/);
   assert.match(css, /@container \(max-width: 820px\)/);
 });
+
+test("Local Studio bundles MovieMode from the active SDK worktree, not a linked checkout", () => {
+  const vite = read("../vite.config.ts");
+  assert.match(vite, /copro-ui\/src\/index\.ts/);
+  assert.match(vite, /copro-ui\/styles\/copro\.css/);
+  assert.match(vite, /replacement: coproUiSource/);
+  assert.match(vite, /replacement: coproUiStyles/);
+});
+
+test("Embedded MovieMode does not render desktop home columns at narrow panel widths", () => {
+  const host = read("../frontend/src/components/media/moviemode-surface.css");
+  const editor = read("../../../packages/copro-ui/src/studio.tsx");
+  assert.match(host, /is-work-pane \.mm-home-sidebar \{ display:none/);
+  assert.match(host, /@container \(max-width: 760px\)/);
+  assert.match(host, /mm-home-quick-grid \{ grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(editor, /data-handset=\{isHandset\}/);
+  assert.match(editor, /setHandsetPanel\("browser"\)/);
+});

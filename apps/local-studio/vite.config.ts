@@ -69,6 +69,10 @@ const cfImagesPackageRoot = resolvePath(
 const keyManagerPackageRoot = resolvePath(
   fileURLToPath(new URL("../../packages/agentsam-key-manager", import.meta.url)),
 );
+// Resolve CoPro from the same SDK worktree as Local Studio. The shared
+// node_modules may point at a different checkout in developer worktrees.
+const coproUiSource = fileURLToPath(new URL("../../packages/copro-ui/src/index.ts", import.meta.url));
+const coproUiStyles = fileURLToPath(new URL("../../packages/copro-ui/styles/copro.css", import.meta.url));
 const studioRoot = resolvePath(fileURLToPath(new URL(".", import.meta.url)));
 const frontendNodeModules = resolvePath(studioRoot, "frontend", "node_modules");
 const repoNodeModules = resolvePath(studioRoot, "..", "..", "node_modules");
@@ -274,6 +278,8 @@ export default defineConfig(({ command, isPreview }) => ({
     tsconfigPaths: true,
     preserveSymlinks: true,
     alias: [
+      { find: /^@inneranimalmedia\/copro-ui\/styles\.css$/, replacement: coproUiStyles },
+      { find: /^@inneranimalmedia\/copro-ui$/, replacement: coproUiSource },
       ...navRuntimeAliases,
       {
         find: "@agentsam/icon-registry",
