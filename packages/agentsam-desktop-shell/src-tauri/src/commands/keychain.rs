@@ -6,13 +6,22 @@
 use keyring::Entry;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use tauri::State;
 
 const KEYCHAIN_APP_ID: &str = "local-studio";
 const UNIFIED_VAULT_ACCOUNT: &str = "unified_vault";
+// Every startup consumer shares one result, including an OS denial. Without this,
+// each provider badge/status request can independently trigger macOS Keychain UI.
+// A denied lookup is not retried automatically: relaunch to explicitly retry.
+static VAULT_READ_CACHE: OnceLock<Mutex<Option<Result<LocalVaultEnvelope, String>>>> = OnceLock::new();
 
-#[derive(Debug, Serialize)]
+fn vault_read_cache() -> &'static Mutex<Option<Result<LocalVaultEnvelope, String>>> {
+    VAULT_READ_CACHE.get_or_init(|| Mutex::new(None))
+}
+
+
+#[derive(Debug, Serialize, Clone)]
 pub struct KeychainError {
     pub message: String,
 }
@@ -97,24 +106,27 @@ fn android_secure_store_required<T>() -> Result<T, KeychainError> {
 // ------------------------------------------------------------------
 
 fn load_vault() -> Result<LocalVaultEnvelope, KeychainError> {
+    // Serialize the OS read itself so concurrent startup queries cannot cause
+    // a password dialog per consumer. Do not log Keychain content or error UI.
+    let mut cache = vault_read_cache().lock().map_err(|_| state_lock_error())?;
+    if let Some(cached) = cache.as_ref() {
+        return cached.clone().map_err(|message| KeychainError { message });
+    }
     #[cfg(target_os = "android")]
-    {
-        return android_secure_store_required();
-    }
-
+    let result: Result<LocalVaultEnvelope, KeychainError> = android_secure_store_required();
     #[cfg(not(target_os = "android"))]
-    {
-        let entry_item = entry(UNIFIED_VAULT_ACCOUNT)?;
-        match entry_item.get_password() {
-            Ok(raw_json) => {
-                serde_json::from_str(&raw_json).map_err(|_| KeychainError {
-                    message: "unified_vault_corrupt".into(),
-                })
-            }
+    let result = (|| {
+        let item = entry(UNIFIED_VAULT_ACCOUNT)?;
+        match item.get_password() {
+            Ok(raw) => serde_json::from_str(&raw).map_err(|_| KeychainError {
+                message: "unified_vault_corrupt".into(),
+            }),
             Err(keyring::Error::NoEntry) => Ok(LocalVaultEnvelope::default()),
-            Err(err) => Err(KeychainError { message: err.to_string() }),
+            Err(error) => Err(KeychainError { message: error.to_string() }),
         }
-    }
+    })();
+    *cache = Some(result.clone().map_err(|error| error.message));
+    result
 }
 
 fn save_vault(vault: &LocalVaultEnvelope) -> Result<(), KeychainError> {
@@ -131,7 +143,9 @@ fn save_vault(vault: &LocalVaultEnvelope) -> Result<(), KeychainError> {
         })?;
         entry(UNIFIED_VAULT_ACCOUNT)?
             .set_password(&raw_json)
-            .map_err(|e| KeychainError { message: e.to_string() })
+            .map_err(|e| KeychainError { message: e.to_string() })?;
+        *vault_read_cache().lock().map_err(|_| state_lock_error())? = Some(Ok(vault.clone()));
+        Ok(())
     }
 }
 

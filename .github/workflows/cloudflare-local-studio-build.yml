@@ -1,29 +1,8 @@
 name: Local Studio Cloudflare Build
 
+# A complete multi-product distributable is an explicitly approved release,
+# not an automatic consequence of a CAD/composer/UI source change.
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/cloudflare-local-studio-build.yml'
-      - 'apps/local-studio/**'
-      - 'packages/agentsam-nav/**'
-      - 'packages/agentsam-workbench/**'
-      - 'packages/agentsam-contracts/**'
-      - 'packages/agentsam-loading-scene/**'
-      - 'packages/agentsam-settings/**'
-      - 'packages/agentsam-analytics/**'
-      - 'packages/analytics-ui/**'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/cloudflare-local-studio-build.yml'
-      - 'apps/local-studio/**'
-      - 'packages/agentsam-nav/**'
-      - 'packages/agentsam-workbench/**'
-      - 'packages/agentsam-contracts/**'
-      - 'packages/agentsam-loading-scene/**'
-      - 'packages/agentsam-settings/**'
-      - 'packages/agentsam-analytics/**'
-      - 'packages/analytics-ui/**'
   workflow_dispatch:
 
 permissions:
@@ -61,4 +40,4 @@ jobs:
 
       - name: Compile Local Studio and verify Worker assets
         if: steps.sdk_registry.outputs.ready == 'true'
-        run: npm run build && npm run cf:verify-output
+        run: npm run build:included:all && npm run build && npm run cf:verify-output

@@ -239,3 +239,21 @@
   min-height: 100%;
   background: transparent;
 }
+
+/* One flex-fit composer across split chat, desktop work and phone portrait. */
+.agentsam-composer-shell { container-type: inline-size; max-width: 100%; min-width: 0; }
+.agentsam-composer-surface { max-width: 100%; min-width: 0; }
+.agentsam-composer-surface textarea { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.agentsam-composer-actions { flex-wrap: nowrap; min-width: 0; overflow: visible; }
+.agentsam-composer-actions > [style] { min-width: 0; }
+.agentsam-composer-actions [data-agent-mode-trigger] { flex: 0 0 auto; }
+.agentsam-shell .agentsam-conversation-dock { min-width: 0; max-width: 100%; padding-inline: clamp(.4rem, 2cqi, 1.5rem); }
+.agentsam-shell .agentsam-welcome { min-width: 0; padding-inline: clamp(.4rem, 2cqi, 1.5rem); }
+.agentsam-shell .agentsam-welcome > div:has([data-agent-composer]) { min-width: 0; max-width: 100%; }
+.agentsam-shell .agentsam-conversation [data-agent-conversation-composer] > * { min-width: 0; max-width: 100%; }
+.agentsam-start-context { max-width: 100%; min-width: 0; overflow: hidden; }
+@container (max-width: 24rem) {
+ .agentsam-composer-actions { gap: .125rem; }
+ .agentsam-composer-surface { padding: .4rem; border-radius: .9rem; }
+ .agentsam-start-context { display: none; }
+}

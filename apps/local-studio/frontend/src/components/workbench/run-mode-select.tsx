@@ -47,13 +47,12 @@ export function RunModeSelect({
           type="button"
           data-agent-mode-trigger=""
           data-agent-mode={value}
-          className="inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-[var(--composer-mode-accent)] hover:bg-muted/70"
+          className={compact ? "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[var(--composer-mode-accent)] hover:bg-muted/70" : "inline-flex h-7 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-[var(--composer-mode-accent)] hover:bg-muted/70"}
           aria-label={"Run mode: " + active.label}
           title={active.description}
         >
           <ActiveIcon className="size-3.5" />
-          {!compact ? <span>{active.label}</span> : null}
-          <ChevronDown className="size-3 opacity-70" />
+          {!compact ? <><span>{active.label}</span><ChevronDown className="size-3 opacity-70" /></> : null}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64 p-1.5">

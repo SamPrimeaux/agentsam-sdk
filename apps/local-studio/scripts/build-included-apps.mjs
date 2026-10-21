@@ -23,10 +23,11 @@
  * No edit to this file.
  *
  * Usage (from apps/local-studio):
- *   node scripts/build-included-apps.mjs                 build + copy into frontend/public/<stage>
+ *   node scripts/build-included-apps.mjs                 refuse implicit all-product rebuild
  *   node scripts/build-included-apps.mjs --stage         copy frontend/public/<stage> into .output/public/<stage>
  *   node scripts/build-included-apps.mjs --dry-run       print the resolved plan, run nothing
- *   node scripts/build-included-apps.mjs --only <app-id> build/stage just one registered app
+ *   node scripts/build-included-apps.mjs --only <app-id> build only that product
+ *   node scripts/build-included-apps.mjs --all           explicit full product release
  *   node scripts/build-included-apps.mjs --manifest <path-to-desktop-manifest.json>
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
@@ -161,6 +162,7 @@ function main() {
       'dry-run': { type: 'boolean', default: false },
       manifest: { type: 'string' },
       only: { type: 'string' },
+      all: { type: 'boolean', default: false },
     },
     allowPositionals: false,
     strict: true,
@@ -182,6 +184,16 @@ function main() {
   }
   if (flags.only && !result.plans.some((plan) => plan.id === flags.only)) {
     console.error(`[included-apps] ERROR: included app "${flags.only}" is not registered`);
+    process.exit(1);
+  }
+  if (flags.only && flags.all) {
+    console.error('[included-apps] ERROR: --only and --all are mutually exclusive');
+    process.exit(1);
+  }
+  // Packaging existing staged assets never rebuilds them. Any *build* must
+  // identify an owner or explicitly opt into a full release.
+  if (!flags.stage && !flags['dry-run'] && !flags.only && !flags.all) {
+    console.error('[included-apps] Refusing to rebuild every installed app. Pass --only <app-id> or --all for an explicitly approved full release.');
     process.exit(1);
   }
   const selected = flags.only ? result.plans.filter((plan) => plan.id === flags.only) : result.plans;
