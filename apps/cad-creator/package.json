@@ -15,6 +15,7 @@
   "files": [
     ".env.example",
     "README.md",
+    "TERRAIN_SCENERY.md",
     "BIM_STARTERS.md",
     "agentsam.app.json",
     "bin/",

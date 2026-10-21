@@ -6,9 +6,9 @@ export const DREAMHOUSE_DESIGN_URL = 'https://cad.inneranimalmedia.com/api/cad/p
 export async function loadDreamHouseProject(fetcher: typeof fetch = fetch): Promise<ProjectState> {
   let response: Response;
   try {
-    // The CAD service is a separate origin. Carry the current account session
-    // if the host and its CORS policy support authenticated CAD access.
-    response = await fetcher(DREAMHOUSE_DESIGN_URL, {credentials:'include'});
+    // This is an explicitly published, read-only D1/R2 projection. Do not send
+    // account cookies across origins; private editing uses a separate API.
+    response = await fetcher(DREAMHOUSE_DESIGN_URL, {credentials:'omit'});
   } catch {
     throw new Error('Cannot reach the authenticated CAD service. Check your connection and sign in to AgentSam.');
   }

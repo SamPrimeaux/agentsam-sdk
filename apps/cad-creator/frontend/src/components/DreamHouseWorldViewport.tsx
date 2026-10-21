@@ -1,6 +1,9 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {TerrainEditorPanel} from './TerrainEditorPanel';
+import {createTerrainDocument,addSculptStroke,type TerrainDocument,type SculptMode} from '../lib/world-terrain';
+import {createTerrainProjection,type TerrainProjection} from '../lib/world-terrain-three';
 
 const ORIGIN='https://cad.inneranimalmedia.com/api/cad/public-world/dreamhouse/v1.1';
 type Zone={roomId:string;label:string;candidateCameraBlenderXYZMetres?:number[];anchorStatus?:string};
@@ -16,14 +19,25 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
  const assetRef=useRef<THREE.Object3D|null>(null),collidersRef=useRef<THREE.Object3D[]>([]);
  const target=useRef(new THREE.Vector3()),orbit=useRef({az:0.9,el:0.65,distance:65});
  const walk=useRef({yaw:0,pitch:0,position:new THREE.Vector3(),active:false});
- const pressed=useRef(new Set<string>()),pointer=useRef<{x:number;y:number;id:number}|null>(null);
+ const pressed=useRef(new Set<string>()),pointer=useRef<{x:number;y:number;id:number;distance:number}|null>(null);
+ const terrainProjection=useRef<TerrainProjection|null>(null);
+ const terrainOrigin=useRef(new THREE.Vector3());
+ const terrainDocRef=useRef<TerrainDocument>(createTerrainDocument());
+ const terrainBrushRef=useRef<{mode:SculptMode|null;radius:number;strength:number}>({mode:null,radius:12,strength:3});
+ const lastBrushAt=useRef(0);
  const [mode,setMode]=useState<CameraMode>('orbit'),[ready,setReady]=useState(false),
  [error,setError]=useState(''),[progress,setProgress]=useState('Resolving DreamHouse V1.1…'),
  [handoff,setHandoff]=useState<Handoff|null>(null),[selection,setSelection]=useState<Selected|null>(null),
  [roofVisible,setRoofVisible]=useState(true),[hour,setHour]=useState<'day'|'evening'>('day');
+ const [terrain,setTerrain]=useState<TerrainDocument>(()=>createTerrainDocument());
+ const [terrainOpen,setTerrainOpen]=useState(false);
+ const [sculptMode,setSculptMode]=useState<SculptMode|null>(null);
+ const [brushRadius,setBrushRadius]=useState(12),[brushStrength,setBrushStrength]=useState(3);
  const bounds=useRef(new THREE.Box3());
  const displayRef=useRef({mode,roofVisible,hour});
  useEffect(()=>{displayRef.current={mode,roofVisible,hour}},[mode,roofVisible,hour]);
+ useEffect(()=>{terrainDocRef.current=terrain},[terrain]);
+ useEffect(()=>{terrainBrushRef.current={mode:sculptMode,radius:brushRadius,strength:brushStrength}},[sculptMode,brushRadius,brushStrength]);
  const visit=(zone:Zone)=>{
   if(!zone.candidateCameraBlenderXYZMetres||!ready)return;
   const [x,y,z]=zone.candidateCameraBlenderXYZMetres;
@@ -39,6 +53,11 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   target.current.copy(center);
   orbit.current={az:0.85,el:0.5,distance:Math.max(12,size.length()*0.48)};
   walk.current.position.set(center.x,Math.max(1.7,bounds.current.min.y+1.7),center.z);
+  setMode('orbit');
+ };
+ const fitSite=()=>{
+  target.current.copy(terrainOrigin.current);
+  orbit.current={az:.88,el:.5,distance:Math.max(terrain.width,terrain.depth)*.82};
   setMode('orbit');
  };
  useEffect(()=>{
@@ -96,7 +115,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
         // Keep camera at standing eye height above real floor when a slab is below.
         floorRay.set(next.clone().add(new THREE.Vector3(0,.3,0)),new THREE.Vector3(0,-1,0));
         floorRay.far=3.5;
-        const ground=floorRay.intersectObjects(collidersRef.current,false)
+        const ground=floorRay.intersectObjects([...collidersRef.current,...(terrainProjection.current?[terrainProjection.current.surface]:[])],false)
           .find(hit=>hit.face?.normal && hit.face.normal.y>.4);
         if(ground)next.y=ground.point.y+1.65;
         view.position.copy(next);
@@ -112,12 +131,12 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   animation=requestAnimationFrame(animate);
   const fetchWorld=async()=>{
    try{
-    const manifestResponse=await fetch(ORIGIN+'/manifest.json', {credentials:'include'});
+    const manifestResponse=await fetch(ORIGIN+'/manifest.json', {credentials:'omit'});
     if(manifestResponse.status===401||manifestResponse.status===403)throw Error('DreamHouse scene requires an authorized AgentSam CAD session.');
     if(!manifestResponse.ok)throw Error('Scene manifest unavailable ('+manifestResponse.status+')');
     const manifest: Handoff=await manifestResponse.json();
     if(!alive)return;setHandoff(manifest);setProgress('Streaming verified V1.1 geometry…');
-    new GLTFLoader().setWithCredentials(true).load(ORIGIN+'/model.glb', gltf=>{
+    new GLTFLoader().setWithCredentials(false).load(ORIGIN+'/model.glb', gltf=>{
       if(!alive)return;
       gltfRoot=gltf.scene;
       const box=new THREE.Box3().setFromObject(gltfRoot);
@@ -130,8 +149,13 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
         const category=String(node.userData?.Category||'').toLowerCase();
         if(node instanceof THREE.Mesh&&['wall','window','door','roof','slab'].includes(category))
           architectureBox.expandByObject(node);
-        if(node instanceof THREE.Mesh&&node.name==='Ground'){
-          node.material=new THREE.MeshStandardMaterial({color:'#516751',roughness:1,metalness:0});
+        if(/^Ground(?:$|[_.])/i.test(node.name)){
+          // Original surveyed/staged site is preserved in the GLB. Replace only its
+          // visual projection with an editable terrain surface at its measured top.
+          const groundBox=new THREE.Box3().setFromObject(node);
+          const groundCenter=groundBox.getCenter(new THREE.Vector3());
+          terrainOrigin.current.set(groundCenter.x,groundBox.max.y-.02,groundCenter.z);
+          node.visible=false;
         }
       });
       const focusBox=architectureBox.isEmpty()?box:architectureBox;
@@ -148,6 +172,9 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
       });
       collidersRef.current=structure;
       assetRef.current=gltfRoot;scene.add(gltfRoot);loaded=true;
+      const terrainScene=createTerrainProjection(terrainDocRef.current);
+      terrainScene.root.position.copy(terrainOrigin.current);
+      scene.add(terrainScene.root);terrainProjection.current=terrainScene;
       setReady(true);setProgress('');
     }, progress=>{
       if(progress.total)setProgress('Loading scene '+Math.min(100,Math.floor(100*progress.loaded/progress.total))+'%');
@@ -161,6 +188,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   return()=>{
    alive=false;cancelAnimationFrame(animation);observer.disconnect();
    window.removeEventListener('keydown',onKey);window.removeEventListener('keyup',onKeyUp);
+   terrainProjection.current?.dispose();terrainProjection.current=null;
    gltfRoot?.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose())}});
    if(context.domElement.parentElement===host)host.removeChild(context.domElement);
    context.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;
@@ -174,6 +202,16 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   });
  },[roofVisible,ready]);
  useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(hour==='day'?'#0b1928':'#21172a');},[hour]);
+ // Editing always regenerates the complete terrain projection from the same
+ // document, so exported JSON and visible relief cannot diverge.
+ useEffect(()=>{
+  const scene=sceneRef.current;
+  if(!scene||!ready)return;
+  terrainProjection.current?.dispose();
+  const projected=createTerrainProjection(terrain);
+  projected.root.position.copy(terrainOrigin.current);
+  scene.add(projected.root);terrainProjection.current=projected;
+ },[terrain,ready]);
  const pick=useCallback((event:React.PointerEvent<HTMLDivElement>)=>{
   if(!ready||!assetRef.current||!cameraRef.current||!renderer.current)return;
   const rect=renderer.current.domElement.getBoundingClientRect(),nx=(event.clientX-rect.left)/rect.width*2-1,ny=-(event.clientY-rect.top)/rect.height*2+1;
@@ -186,13 +224,29 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   const selected={designId:String(o.userData.DesignId),category:String(o.userData.Category||'component'),nodeName:o.name,source:String(o.userData.Source||'FreeCAD / V1')};
   setSelection(selected);onSelect?.(selected);
  },[ready,onSelect]);
+ const sculptAt=useCallback((event:React.PointerEvent<HTMLDivElement>,force=false)=>{
+  const brush=terrainBrushRef.current,projection=terrainProjection.current,camera=cameraRef.current,webgl=renderer.current;
+  if(!brush.mode||!projection||!camera||!webgl)return;
+  const now=performance.now();
+  if(!force&&now-lastBrushAt.current<90)return;
+  const rect=webgl.domElement.getBoundingClientRect();
+  const nx=(event.clientX-rect.left)/rect.width*2-1,ny=-(event.clientY-rect.top)/rect.height*2+1;
+  const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(nx,ny),camera);
+  const intersection=ray.intersectObject(projection.surface,false)[0];
+  if(!intersection)return;
+  const local=intersection.point.clone().sub(terrainOrigin.current);
+  lastBrushAt.current=now;
+  setTerrain(current=>addSculptStroke(current,local.x,local.z,brush.radius,brush.strength,brush.mode!));
+ },[]);
  const start=useCallback((e:React.PointerEvent<HTMLDivElement>)=>{
   if(e.button!==0&&e.pointerType==='mouse')return;
-  pointer.current={x:e.clientX,y:e.clientY,id:e.pointerId};e.currentTarget.setPointerCapture(e.pointerId);
- },[]);
+  pointer.current={x:e.clientX,y:e.clientY,id:e.pointerId,distance:0};e.currentTarget.setPointerCapture(e.pointerId);
+  if(terrainBrushRef.current.mode)sculptAt(e,true);
+ },[sculptAt]);
  const drag=useCallback((e:React.PointerEvent<HTMLDivElement>)=>{
   const p=pointer.current;if(!p||p.id!==e.pointerId)return;
-  const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+  const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;p.distance+=Math.hypot(dx,dy);
+  if(terrainBrushRef.current.mode){sculptAt(e);return;}
   if(displayRef.current.mode==='orbit'){
    orbit.current.az-=dx*ORBIT_SPEED;
    orbit.current.el=Math.max(.045,Math.min(Math.PI/2-.015,orbit.current.el+dy*ORBIT_SPEED));
@@ -200,8 +254,8 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
    walk.current.yaw-=dx*.004;
    walk.current.pitch=Math.max(-1.4,Math.min(1.4,walk.current.pitch-dy*.004));
   }
- },[]);
- const stop=(e:React.PointerEvent<HTMLDivElement>)=>{const p=pointer.current;if(p?.id===e.pointerId){if(Math.abs(e.movementX||0)<4)pick(e);pointer.current=null}};
+ },[sculptAt]);
+ const stop=(e:React.PointerEvent<HTMLDivElement>)=>{const p=pointer.current;if(p?.id===e.pointerId){if(!terrainBrushRef.current.mode&&p.distance<5)pick(e);pointer.current=null}};
  return <section className="relative h-full min-h-0 min-w-0 flex-1 bg-[#081321] text-[#e4edf7]" data-cad-world="dreamhouse-v1.1" data-world-ready={ready?'true':'false'}>
    <div ref={mount} role="img" aria-label="DreamHouse V1.1 interactive BIM world"
      className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
@@ -215,6 +269,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
        <button type="button" onClick={()=>setRoofVisible(v=>!v)} aria-pressed={!roofVisible} className="rounded px-2 py-1.5 hover:bg-white/10">Roof {roofVisible?'on':'off'}</button>
        <button type="button" onClick={()=>setHour(v=>v==='day'?'evening':'day')} className="rounded px-2 py-1.5 hover:bg-white/10">{hour==='day'?'Daylight':'Evening'}</button>
        <button type="button" onClick={reset} className="rounded px-2 py-1.5 hover:bg-white/10">Reset view</button>
+       <button type="button" onClick={()=>{setTerrainOpen(v=>!v);setSelection(null)}} aria-pressed={terrainOpen} className={'rounded px-2 py-1.5 '+(terrainOpen?'bg-sky-600 text-white':'hover:bg-white/10')}>Terrain &amp; Scenery</button>
      </div>
      <select aria-label="DreamHouse room destinations" className="pointer-events-auto max-w-[180px] rounded-lg border border-white/15 bg-[#111b2c]/95 px-2 py-2 text-xs text-slate-100" defaultValue="" onChange={e=>{const z=handoff?.zones.find(x=>x.roomId===e.target.value);if(z)visit(z)}}>
        <option value="">Explore rooms</option>{handoff?.zones.map(zone=><option key={zone.roomId} value={zone.roomId}>{zone.roomId} — {zone.label}</option>)}
@@ -226,7 +281,10 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
        onPointerDown={e=>{e.preventDefault();pressed.current.add(key)}} onPointerUp={()=>pressed.current.delete(key)} onPointerCancel={()=>pressed.current.delete(key)}
        className="rounded-lg border border-white/20 bg-slate-800/90 px-3 py-2.5 text-xs font-bold">{['↑','←','↓','→'][i]}</button>)}
    </div>}
-   {selection&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">
+   {terrainOpen&&<TerrainEditorPanel document={terrain} onChange={setTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
+     brushRadius={brushRadius} onBrushRadius={setBrushRadius} brushStrength={brushStrength} onBrushStrength={setBrushStrength}
+     onFitSite={fitSite} onClose={()=>{setTerrainOpen(false);setSculptMode(null)}}/>}
+   {!terrainOpen&&selection&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">
      <div className="flex justify-between gap-2"><strong>FreeCAD BIM · {selection.category}</strong><button onClick={()=>setSelection(null)} aria-label="Close BIM inspector">×</button></div>
      <p className="mt-1 break-all font-mono text-sky-200">{selection.designId}</p>
      <p className="mt-1 text-slate-400">{selection.nodeName} · {selection.source}</p>
