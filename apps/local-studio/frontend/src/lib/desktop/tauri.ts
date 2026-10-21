@@ -202,6 +202,18 @@ export async function openExternalUrl(url: string): Promise<void> {
   await invoke("open_external_url", { url });
 }
 
+export type AgentBrowserLaunch = {
+  profile_path: string;
+  chrome_path: string;
+  target_url: string;
+};
+
+export async function openAgentBrowser(targetUrl?: string): Promise<AgentBrowserLaunch> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("agent_browser_requires_desktop");
+  return (await invoke("open_agent_browser", { targetUrl: targetUrl ?? null })) as AgentBrowserLaunch;
+}
+
 export async function getCurrentDeepLinks(): Promise<string[]> {
   const invoke = getTauriInvoke();
   if (!invoke) return [];
@@ -210,30 +222,49 @@ export async function getCurrentDeepLinks(): Promise<string[]> {
   return current.filter((value): value is string => typeof value === "string");
 }
 
-export async function listenDeepLinks(handler: (url: string) => void): Promise<() => void> {
-  if (!getTauriInvoke()) throw new Error("tauri_deep_link_unavailable");
+const deepLinkHandlers = new Set<(url: string) => void>();
+let deepLinkPumpTimer: ReturnType<typeof setTimeout> | null = null;
+let deepLinkPumpRunning = false;
 
-  let disposed = false;
-  let timer: ReturnType<typeof setTimeout> | null = null;
+function startDeepLinkPump(): void {
+  if (deepLinkPumpRunning) return;
+  deepLinkPumpRunning = true;
 
   const pump = async () => {
     try {
       const urls = await getCurrentDeepLinks();
-      if (!disposed) {
-        for (const url of urls) handler(url);
+      for (const url of urls) {
+        for (const handler of [...deepLinkHandlers]) {
+          try { handler(url); } catch { /* One consumer must not block other deep-link routes. */ }
+        }
       }
     } catch {
       // Keep the transport alive; a transient native invoke failure should not
-      // permanently disable OAuth callbacks for the app lifetime.
+      // permanently disable OAuth callbacks or other app deep links.
     } finally {
-      if (!disposed) timer = setTimeout(() => void pump(), 500);
+      if (deepLinkHandlers.size) deepLinkPumpTimer = setTimeout(pump, 500);
+      else {
+        deepLinkPumpRunning = false;
+        deepLinkPumpTimer = null;
+      }
     }
   };
 
   void pump();
+}
+
+/** Subscribe to the single native deep-link queue and fan each link out to app routes. */
+export async function listenDeepLinks(handler: (url: string) => void): Promise<() => void> {
+  if (!getTauriInvoke()) throw new Error("tauri_deep_link_unavailable");
+  deepLinkHandlers.add(handler);
+  startDeepLinkPump();
 
   return () => {
-    disposed = true;
-    if (timer) clearTimeout(timer);
+    deepLinkHandlers.delete(handler);
+    if (!deepLinkHandlers.size && deepLinkPumpTimer) {
+      clearTimeout(deepLinkPumpTimer);
+      deepLinkPumpTimer = null;
+      deepLinkPumpRunning = false;
+    }
   };
 }

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AgentSam Tab Handoff</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">AGENTSAM · CHROME</div>
+      <h1>Share this page</h1>
+      <p id="page-title" class="page-title">Reading current tab…</p>
+      <p id="page-host" class="page-host"></p>
+      <div id="selection" class="selection" hidden></div>
+      <p class="privacy">Shares the page URL, title, and selected text only. Local Studio adds it to your draft; it does not send the message.</p>
+      <button id="share" type="button" disabled>Open in Local Studio</button>
+      <p id="status" class="status" role="status"></p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

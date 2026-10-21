@@ -17,7 +17,8 @@ import { AnnotationHelper } from './AnnotationHelper';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
-import { isPackagedDesktop } from '@/lib/desktop/tauri';
+import { isPackagedDesktop, listenDeepLinks } from '@/lib/desktop/tauri';
+import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settings';
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
 
@@ -35,6 +36,9 @@ export function AgentSamShell() {
   const appearanceRef = useRef<ShellAppearancePreference | null>(null);
   const [sharing, setSharing] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
+  const hydratedRef = useRef(state.hydrated);
+  const pendingChromeShares = useRef<ChromeTabShare[]>([]);
+  hydratedRef.current = state.hydrated;
   const trail = state.trails.find((item) => item.id === state.activeTrailId);
   const project = state.projects.find((item) => item.id === trail?.projectId);
   const isConversation = pathname === '/agentsam' || pathname.startsWith('/chats');
@@ -51,6 +55,18 @@ export function AgentSamShell() {
     }
     void navigate({ to } as never);
   };
+  const flushChromeShares = () => {
+    if (!hydratedRef.current) return;
+    const store = useWorkStore.getState();
+    const shares = pendingChromeShares.current.splice(0);
+    if (!shares.length) return;
+    const trailId = store.activeTrailId || store.startTrail();
+    const context = shares.map(formatChromeTabShare).join('\n\n');
+    store.setDraft(trailId, [store.drafts[trailId]?.trimEnd(), context].filter(Boolean).join('\n\n'));
+    window.location.hash = '#/agentsam';
+    const first = shares[0];
+    toast(`Added ${shares.length > 1 ? `${shares.length} pages` : `“${first.title || new URL(first.url).hostname}”`} to the draft`);
+  };
 
   useEffect(() => {
     void useWorkStore.persist.rehydrate();
@@ -59,6 +75,29 @@ export function AgentSamShell() {
     if (useWorkStore.persist.hasHydrated()) useWorkStore.getState().setHydrated(true);
     return stop;
   }, []);
+
+  useEffect(() => {
+    if (!isPackagedDesktop()) return;
+    let active = true;
+    let dispose: (() => void) | undefined;
+    void listenDeepLinks((raw) => {
+      if (!active) return;
+      const share = parseChromeTabShare(raw);
+      if (!share) return;
+      pendingChromeShares.current.push(share);
+      flushChromeShares();
+    }).then((unlisten) => {
+      if (active) dispose = unlisten;
+      else unlisten();
+    }).catch(() => {
+      // Hosted/browser surfaces have no native deep-link transport.
+    });
+    return () => { active = false; dispose?.(); };
+  }, []);
+
+  useEffect(() => {
+    flushChromeShares();
+  }, [state.hydrated]);
 
   useEffect(() => {
     const applyPreference = (preference: ShellAppearancePreference | null) => {

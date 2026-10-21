@@ -1,5 +1,4 @@
 import {
-  getCurrentDeepLinks,
   getIdentityRuntimeConfig,
   getTauriInvoke,
   invokeIdentity,
@@ -280,7 +279,5 @@ export async function listenForNativeIdentityCallbacks(
   }
 
   const unlisten = await listenDeepLinks(handle);
-  const current = await getCurrentDeepLinks();
-  for (const payload of current) handle(payload);
   return unlisten;
 }

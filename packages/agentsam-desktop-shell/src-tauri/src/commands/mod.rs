@@ -1,6 +1,7 @@
 // Core Agent & Daemon Integration
 pub mod agentsamd;
 pub mod autorag;
+pub mod chrome_browser;
 
 // CAD Engine & Geometry Pipeline
 pub mod cad;
