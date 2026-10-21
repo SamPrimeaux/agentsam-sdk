@@ -20,12 +20,14 @@ interface UploadItem {
 
 export function MediaDropzone(props: MediaDropzoneProps) {
   const runtime = useContentRuntime();
+  const canUpload = runtime.can("content.upload");
   const [dragging, setDragging] = useState(false);
   const [items, setItems] = useState<UploadItem[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const ingest = useCallback(
     async (files: FileList | File[]) => {
+      if (!runtime.can("content.upload")) return;
       const list = Array.from(files);
       if (!list.length) return;
       const seeded: UploadItem[] = list.map((f, i) => ({
@@ -64,6 +66,8 @@ export function MediaDropzone(props: MediaDropzoneProps) {
     },
     [runtime, props.brandId, props.projectId, props.onAssetCreated],
   );
+
+  if (!canUpload) return null;
 
   return (
     <div

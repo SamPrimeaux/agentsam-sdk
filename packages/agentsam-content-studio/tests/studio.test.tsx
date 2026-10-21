@@ -73,8 +73,12 @@ describe("content studio UI", () => {
     expect(html).toContain("Generated");
     expect(html).toContain("Needs review");
     expect(html).toContain("AgentSam");
-    // SSR may not await capabilities(); strip mounts with placeholder labels.
-    expect(html).toContain("runtime-capabilities");
+    // SSR may not await capabilities(); filters still render from runtime metadata.
+    expect(html).toContain("acs-capabilities");
+    expect(html).toContain("Filter by type");
+    expect(html).toContain("All sources");
+    expect(html).toContain("Grid");
+    expect(html).toContain("List");
   });
 
   it("renders image inspector sections", () => {
@@ -114,5 +118,24 @@ describe("content studio UI", () => {
     expect(html).toContain("→ approved");
     expect(html).toContain("→ rejected");
     expect(html).not.toContain("→ live"); // review cannot jump straight to live
+  });
+
+  it("shows file actions only when the host supplies verified operations", () => {
+    const storage = {
+      targets: () => [{ id: "account-storage", label: "Connected storage", state: "connected", capabilities: ["read", "export"] }],
+      get: async () => { throw new Error("not needed for server render"); },
+      export: async () => { throw new Error("not invoked during server render"); },
+      delete: async () => { throw new Error("not invoked during server render"); },
+      restore: async () => { throw new Error("not invoked during server render"); },
+    };
+    const html = renderToStaticMarkup(
+      <ContentRuntimeProvider runtime={makeRuntime()}>
+        <AssetDetail asset={makeAsset()} fileStorage={storage} share={{ available: () => true, run: async () => {} }} />
+      </ContentRuntimeProvider>,
+    );
+    expect(html).toContain(">Download</button>");
+    expect(html).toContain(">Export</button>");
+    expect(html).toContain(">Share</button>");
+    expect(html).not.toContain(">Trash</button>");
   });
 });
