@@ -14,6 +14,7 @@ import {
 } from '@inneranimalmedia/agentsam-cad-shared';
 import { TEMPLATES } from '../lib/templates';
 import { createEmptyCadProject } from '../lib/create-empty-project';
+import { loadDreamHouseProject } from '../lib/dreamhouse-source';
 import {
   CadEngineeringToolbar, CadProjectExplorer, CadPropertyInspector,
   type CadElementSelection, type CadElementGroup
@@ -34,7 +35,6 @@ import { ImageGenModal } from '../components/ImageGenModal';
 import { SketchUploadModal } from '../components/SketchUploadModal';
 import { CloudProjectsModal } from '../components/CloudProjectsModal';
 import { TemplateLibraryModal } from '../components/TemplateLibraryModal';
-import { CadCreatorShell } from './CadCreatorShell';
 import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
 import { installCadPreviewGuestBridge, type CadOutbound } from '../lib/agentsam-preview-bridge';
@@ -83,27 +83,38 @@ export function CadCreatorApp({
   const [showBimStarters, setShowBimStarters] = useState(false);
   const [project, setProject] = useState<ProjectState>(createEmptyCadProject);
   const [sourceStatus,setSourceStatus] = useState<'loading'|'loaded'|'unavailable'>('loading');
+  const [sourceError,setSourceError] = useState('');
   const openDreamHouse = useCallback(async () => {
-    const response=await fetch('https://cad.inneranimalmedia.com/api/cad/public-world/dreamhouse/v1.1/design.json');
-    if(!response.ok)throw Error('DreamHouse source unavailable: '+response.status);
-    const source=await response.json() as ProjectState;
-    if(source.id!=='dreamhouse-v1-wip'||!Array.isArray(source.walls)||!Array.isArray(source.rooms))throw Error('DreamHouse BIM document contract failed');
-    setProject(source);
-    setHistory([]);setRedoStack([]);setUiSelection(null);setVerifiedProjectRevision(null);
-    setActiveWorkspace('model');setPlanLayout('split');setModelModule(null);
-    setExplorerOpen(false);setInspectorOpen(false);
-    setSourceStatus('loaded');
-  },[]);
-  useEffect(()=>{
-    if(new URLSearchParams(window.location.search).get('new')==='1') {setSourceStatus('unavailable');return;}
-    let cancelled=false;
-    void openDreamHouse().catch(()=>{if(!cancelled)setSourceStatus('unavailable')});
-    const reopen=()=>{void openDreamHouse().catch(()=>setSourceStatus('unavailable'))};
-    const blank=()=>startBlankProject();
-    window.addEventListener('agentsam:cad-open-dreamhouse',reopen);
-    window.addEventListener('agentsam:cad-new-project',blank);
-    return()=>{cancelled=true;window.removeEventListener('agentsam:cad-open-dreamhouse',reopen);window.removeEventListener('agentsam:cad-new-project',blank)};
-  },[openDreamHouse]);
+    setSourceStatus('loading');
+    setSourceError('');
+    // Unauthorized or unreachable world assets must never replace an editable model.
+    try {
+      const source = await loadDreamHouseProject();
+      setProject(source);
+      setHistory([]); setRedoStack([]); setUiSelection(null); setVerifiedProjectRevision(null);
+      setActiveWorkspace('model'); setPlanLayout('split'); setModelModule(null);
+      setExplorerOpen(false); setInspectorOpen(false);
+      setSourceStatus('loaded');
+    } catch (error) {
+      setSourceStatus('unavailable');
+      setSourceError(error instanceof Error ? error.message : 'DreamHouse source unavailable');
+    }
+  }, []);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('new') === '1') {
+      setSourceStatus('unavailable');
+      return;
+    }
+    void openDreamHouse();
+    const reopen = () => { void openDreamHouse(); };
+    const blank = () => startBlankProject();
+    window.addEventListener('agentsam:cad-open-dreamhouse', reopen);
+    window.addEventListener('agentsam:cad-new-project', blank);
+    return () => {
+      window.removeEventListener('agentsam:cad-open-dreamhouse', reopen);
+      window.removeEventListener('agentsam:cad-new-project', blank);
+    };
+  }, [openDreamHouse]);
 
   // Undo / Redo history stacks
   const [history, setHistory] = useState<ProjectState[]>([]);
@@ -349,8 +360,8 @@ export function CadCreatorApp({
   return (
     <div data-appearance={isDarkMode ? 'dark' : 'light'}
       style={{'--cad-accent': cadAccent} as React.CSSProperties}
-      className={`cad-workspace-ui flex flex-col h-screen w-screen font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
-      {/* 1. Global Shell Header (5 Workspaces, Project, Sync, Undo/Redo, AgentSam, Export) */}
+      className={`cad-workspace-ui relative flex flex-col h-screen w-screen font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+      {/* The host Nav.Topbar owns application chrome. CAD owns only its contextual tools. */}
       {chromeFolded ? (
         <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/10 bg-slate-900 px-3 text-[11px]">
           <span className="font-medium">{project.name || 'Untitled Project'} · {activeWorkspace}</span>
@@ -358,28 +369,13 @@ export function CadCreatorApp({
         </div>
       ) : (<>
       <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer} />
-      <CadCreatorShell
-        activeWorkspace={activeWorkspace}
-        onSelectWorkspace={handleSelectWorkspace}
-        projectName={project.name || 'Untitled Project'}
-        isSynced={isSynced}
-        canUndo={history.length > 0 && !isViewer}
-        canRedo={redoStack.length > 0 && !isViewer}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-        isSidebarOpen={annotating}
-        onToggleSidebar={() => setAnnotating((v) => !v)}
-        onExport={() => setIsExportPublishOpen(true)}
-        presentation={presentation}
-        showDiagnostics={showRoboticsDiagnostics}
-        onToggleDiagnostics={() => setShowRoboticsDiagnostics(!showRoboticsDiagnostics)}
-      />
 
-      {(activeWorkspace === 'plan' || activeWorkspace === 'model') && (
+      {(activeWorkspace === 'plan' || activeWorkspace === 'model' || activeWorkspace === 'robotics') && (
         <CadEngineeringToolbar
           tool={activeTool} onTool={setActiveTool}
+          onUndo={handleUndo} onRedo={handleRedo}
+          showDiagnostics={showRoboticsDiagnostics} onToggleDiagnostics={() => setShowRoboticsDiagnostics(v => !v)}
+          canUndo={history.length > 0 && !isViewer} canRedo={redoStack.length > 0 && !isViewer}
           workspace={activeWorkspace} onWorkspace={handleSelectWorkspace}
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
           onNew={startBlankProject} onTemplates={() => setIsTemplateLibraryOpen(true)}
@@ -584,6 +580,15 @@ export function CadCreatorApp({
           )}
         {/* PRIMARY VIEWPORT STAGE */}
         <section className="cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]">
+          {sourceStatus === 'unavailable' && sourceError && (
+            <div role="alert" className="absolute left-3 top-3 z-40 max-w-[min(430px,calc(100%-24px))] rounded-xl border border-amber-400/35 bg-slate-950/95 p-3 text-xs text-slate-100 shadow-xl">
+              <strong>DreamHouse V1.1 could not be opened</strong>
+              <p className="mt-1 text-slate-300">{sourceError}</p>
+              <p className="mt-1 text-slate-400">Your saved BIM has not been replaced. Sign in to the CAD project service or open a saved project using Project &amp; native tools.</p>
+              <button type="button" className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 hover:bg-white/10" onClick={() => void openDreamHouse()}>Retry DreamHouse</button>
+              <button type="button" className="ml-2 rounded-lg px-3 py-1.5 text-slate-300 hover:bg-white/10" onClick={() => setSourceError('')}>Dismiss</button>
+            </div>
+          )}
           {/* Published DreamHouse visualization is sourced from the real V1.1 GLB.
              Editable BIM provenance remains the source V1 project, not mock meshes. */}
           {/* WORKSPACE 1: PLAN */}

@@ -112,11 +112,12 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   animation=requestAnimationFrame(animate);
   const fetchWorld=async()=>{
    try{
-    const manifestResponse=await fetch(ORIGIN+'/manifest.json');
+    const manifestResponse=await fetch(ORIGIN+'/manifest.json', {credentials:'include'});
+    if(manifestResponse.status===401||manifestResponse.status===403)throw Error('DreamHouse scene requires an authorized AgentSam CAD session.');
     if(!manifestResponse.ok)throw Error('Scene manifest unavailable ('+manifestResponse.status+')');
     const manifest: Handoff=await manifestResponse.json();
     if(!alive)return;setHandoff(manifest);setProgress('Streaming verified V1.1 geometry…');
-    new GLTFLoader().load(ORIGIN+'/model.glb', gltf=>{
+    new GLTFLoader().setWithCredentials(true).load(ORIGIN+'/model.glb', gltf=>{
       if(!alive)return;
       gltfRoot=gltf.scene;
       const box=new THREE.Box3().setFromObject(gltfRoot);

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const appSource = fs.readFileSync(new URL('../../app/CadCreatorApp.tsx', import.meta.url), 'utf8');
-const shellSource = fs.readFileSync(new URL('../../app/CadCreatorShell.tsx', import.meta.url), 'utf8');
+const toolbarSource = fs.readFileSync(new URL('../../components/EngineeringWorkbench.tsx', import.meta.url), 'utf8');
 const loaderSource = fs.readFileSync(new URL('./lazy.tsx', import.meta.url), 'utf8');
 
 describe('robotics workspace loading boundary', () => {
@@ -17,8 +17,9 @@ describe('robotics workspace loading boundary', () => {
 
   it('loads the workspace through a dynamic import and preloads only on user intent', () => {
     expect(loaderSource).toContain("import('./RoboticsWorkspace')");
-    expect(shellSource).toContain('preloadRoboticsWorkspace()');
-    expect(shellSource).toContain('onMouseEnter');
-    expect(shellSource).toContain('onFocus');
+    expect(appSource).toContain('preloadRoboticsWorkspace()');
+    expect(toolbarSource).toContain('preloadRoboticsWorkspace()');
+    expect(toolbarSource).toContain('onMouseEnter');
+    expect(toolbarSource).toContain('onFocus');
   });
 });
