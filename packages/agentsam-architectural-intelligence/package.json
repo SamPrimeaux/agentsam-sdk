@@ -1,10 +1,23 @@
 {
   "name": "@inneranimalmedia/agentsam-architectural-intelligence",
-  "version": "0.1.0",
+  "version": "2.6.13",
   "type": "module",
   "description": "Scoped architectural material knowledge and deterministic MCP reference operations",
-  "bin": {"agentsam-arch-mcp": "./mcp/server.mjs"},
-  "exports": {"./mcp": "./mcp/server.mjs", "./materials": "./data/materials.json", "./sources": "./data/sources.json"},
-  "files": ["mcp","data","README.md"],
-  "scripts": {"test":"node --test test/*.test.mjs"}
+  "bin": {
+    "agentsam-arch-mcp": "./mcp/server.mjs"
+  },
+  "exports": {
+    "./mcp": "./mcp/server.mjs",
+    "./materials": "./data/materials.json",
+    "./sources": "./data/sources.json"
+  },
+  "files": [
+    "mcp",
+    "data",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "private": true
 }
