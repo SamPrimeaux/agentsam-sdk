@@ -847,3 +847,91 @@ body:has(.copro-studio) { margin:0; }
   cursor: var(--copro-media-cursor, auto);
   touch-action: none;
 }
+
+
+/* MovieMode compact workspace — container-driven, including narrow AgentSam Work panes.
+   The preview and timeline remain the primary editor; tools open as a focused sheet. */
+.copro-studio[data-handset="true"] .copro-topbar {
+  min-width:0; gap:6px; padding:5px 8px; min-height:50px;
+}
+.copro-studio[data-handset="true"] .copro-title-block { min-width:0; flex:1; overflow:hidden; }
+.copro-studio[data-handset="true"] .copro-title-block strong {
+  display:block; min-width:0; max-width:100%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px;
+}
+.copro-studio[data-handset="true"] .copro-title-block span,
+.copro-studio[data-handset="true"] .copro-history-button,
+.copro-studio[data-handset="true"] .copro-wide-layout-control,
+.copro-studio[data-handset="true"] .mm-workspace-preset { display:none!important; }
+.copro-studio[data-handset="true"] .copro-topbar-actions { gap:2px; flex:none; }
+.copro-studio[data-handset="true"] .copro-topbar-actions .copro-icon-button {
+  width:34px; min-width:34px; height:38px; min-height:38px;
+}
+.copro-studio[data-handset="true"] .copro-export-button {
+  min-height:38px; min-width:58px; padding:0 10px; font-size:12px;
+}
+.copro-studio .copro-editing-grid.is-compact {
+  position:relative;
+  grid-template-rows:minmax(115px,1fr) 40px 0 0 minmax(145px,33%) 66px;
+}
+.copro-studio .copro-editing-grid.is-compact:not(.has-browser):not(.has-inspector) {
+  grid-template-rows:minmax(115px,1fr) 40px 0 0 minmax(145px,33%) 66px;
+}
+.copro-studio .copro-editing-grid.is-compact>.copro-browser-slot,
+.copro-studio .copro-editing-grid.is-compact>.copro-inspector-slot {
+  position:absolute; z-index:12; left:0; right:0; bottom:66px;
+  width:100%; max-width:100%; height:min(54%,380px); min-height:0;
+  grid-area:auto; border:1px solid var(--copro-line); border-radius:14px 14px 0 0;
+  box-shadow:0 -12px 32px rgba(0,0,0,.48); overflow:hidden;
+}
+.copro-studio .copro-editing-grid.is-compact>.copro-browser-slot {
+  grid-template-rows:37px minmax(0,1fr);
+}
+.copro-studio .copro-editing-grid.is-compact .mm-browser>.mm-editor-categories,
+.copro-studio .copro-editing-grid.is-compact .mm-editor-categories { display:none!important; }
+.copro-studio .copro-editing-grid.is-compact .mm-browser>.mm-browser-top { grid-area:1/1/2/-1; }
+.copro-studio .copro-editing-grid.is-compact .mm-browser>.mm-media-subnav,
+.copro-studio .copro-editing-grid.is-compact .mm-browser>.copro-tool-panel,
+.copro-studio .copro-editing-grid.is-compact .mm-browser>.mm-browser-unavailable {
+  grid-row:2;
+}
+.copro-studio .copro-editing-grid.is-compact>.copro-timeline-divider { display:none; }
+.copro-studio .copro-editing-grid.is-compact>.copro-context-tools {
+  display:flex; overflow-x:auto; overscroll-behavior-x:contain;
+  padding-bottom:env(safe-area-inset-bottom,0px); scrollbar-width:none;
+}
+.copro-studio .copro-editing-grid.is-compact>.copro-context-tools::-webkit-scrollbar { display:none; }
+.copro-studio .copro-editing-grid.is-compact>.copro-context-tools button {
+  flex:0 0 67px; min-width:67px; min-height:48px; touch-action:manipulation;
+}
+.copro-studio .copro-editing-grid.is-compact>.copro-context-tools span { font-size:10px; }
+.copro-studio .copro-editing-grid.is-compact .copro-timeline-shell { height:100%; }
+.copro-studio .copro-editing-grid.is-compact .copro-preview-stage { min-height:0; }
+.copro-studio .copro-editing-grid.is-compact .copro-tool-panel-body { overflow-y:auto; }
+@container (max-width:760px) {
+  .agentsam-moviemode .mm-home { min-width:0; min-height:100%; }
+  .agentsam-moviemode .mm-home-sidebar { display:none; }
+  .agentsam-moviemode .mm-home-main { padding:0 12px 20px; width:100%; min-width:0; }
+  .agentsam-moviemode .mm-home-header { margin-bottom:13px; }
+  .agentsam-moviemode .mm-home-quick-grid { grid-template-columns:1fr; }
+  .agentsam-moviemode .mm-tools-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .agentsam-moviemode .mm-create-banner { min-height:88px; font-size:15px; }
+  .agentsam-moviemode .mm-create-banner small { display:none; }
+  .agentsam-moviemode .mm-start-card { min-height:74px; }
+  .agentsam-moviemode .mm-project-toolbar { align-items:stretch; }
+  .agentsam-moviemode .mm-search { max-width:none; min-width:0; }
+}
+@container (max-width:380px) {
+  .agentsam-moviemode .mm-home-main { padding:0 9px 16px; }
+  .agentsam-moviemode .mm-home-header-actions button:first-child { display:none; }
+  .agentsam-moviemode .mm-home-header strong { font-size:14px; }
+  .agentsam-moviemode .mm-heading h1 { font-size:23px; }
+  .agentsam-moviemode .mm-tools-grid { gap:6px; }
+  .agentsam-moviemode .mm-tools-grid button { min-height:65px; padding:7px 4px; }
+}
+@media (max-width:759px) {
+  .mm-home-sidebar { display:none; }
+  .mm-home-main { padding:0 12px 20px; min-width:0; }
+  .mm-home-quick-grid { grid-template-columns:1fr; }
+  .mm-tools-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}

@@ -120,6 +120,7 @@ export function CoProStudio({
   const [categoryTool, setCategoryTool] = useState<string>(initialTool ?? "media");
   const [browserSection, setBrowserSection] = useState<"import" | "media" | "subprojects" | "yours" | "generate" | "spaces" | "library">("import");
   const [panePreference, setPanePreference] = useState<"browser" | "inspector">("browser");
+  const [handsetPanel, setHandsetPanel] = useState<"browser" | "inspector" | null>(null);
   const { layout, setLayout, resetLayout } = useWorkspaceLayout();
   const workspaceRef = useRef<HTMLElement>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState(1440);
@@ -153,14 +154,15 @@ export function CoProStudio({
   const selectedTrack = selectedEntry?.track ?? null;
   const isNarrow = workspaceWidth < 1180;
   const isCompact = workspaceWidth < 760;
+  const isHandset = workspaceWidth < 560;
   const clipSpecificTools = ["trim", "speed", "volume", "effects", "transitions", "text", "captions", "transform", "filters", "adjustments"];
   const canonicalTool = (tool: string | null) => tool === "filters" ? "effects" : tool === "adjustments" ? "transform" : tool;
   const inspectorTool = activeTool === "export" ? "export" : selectedClip
     ? (activeTool && clipSpecificTools.includes(activeTool) ? canonicalTool(activeTool) : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" ? "text" : "transform")
     : "project";
   const inspectorAvailable = Boolean(inspectorTool);
-  const showInspector = inspectorAvailable && layout.inspectorOpen && (!isNarrow || panePreference === "inspector" || !layout.browserOpen);
-  const showBrowser = layout.browserOpen && (!isNarrow || !showInspector);
+  const showInspector = isHandset ? handsetPanel === "inspector" && inspectorAvailable : inspectorAvailable && layout.inspectorOpen && (!isNarrow || panePreference === "inspector" || !layout.browserOpen);
+  const showBrowser = isHandset ? handsetPanel === "browser" : layout.browserOpen && (!isNarrow || !showInspector);
   const browserFloating = !isNarrow && showBrowser && layout.browserFloating;
   const inspectorFloating = !isNarrow && showInspector && layout.inspectorFloating;
   const dockBrowser = showBrowser && !browserFloating;
@@ -316,6 +318,7 @@ export function CoProStudio({
     if (id === "templates") { onAction?.({type:"browse-templates"}); return; }
     if (!selectedClip) {
       setActiveTool(id);
+      if (isHandset) { setCategoryTool(id); setHandsetPanel("browser"); }
       return;
     }
     if (id === "split") {
@@ -333,6 +336,7 @@ export function CoProStudio({
     }
     setActiveTool(id);
     setPanePreference("inspector");
+    if (isHandset) setHandsetPanel("inspector");
     setLayout(current => ({ ...current, inspectorOpen: true }));
   }
 
@@ -362,13 +366,14 @@ export function CoProStudio({
   function selectCategory(id: string) {
     if (id === "templates") { onAction?.({type:"browse-templates"}); return; }
     setCategoryTool(id);
+    if (isHandset) setHandsetPanel("browser");
     setLayout(value => ({...value,browserOpen:true}));
     setPanePreference("browser");
     if (selectedClip && ["effects","transitions","filters","adjustments"].includes(id)) setActiveTool(id);
   }
 
   return (
-    <section className="copro-studio" data-inspector-open={Boolean(activeTool)}>
+    <section className="copro-studio" data-inspector-open={Boolean(activeTool)} data-handset={isHandset}>
       <header className="copro-topbar">
         <IconAction className="copro-icon-button" aria-label="Back to projects" onClick={() => onAction?.({ type: "back" })}><ArrowLeft size={22}/></IconAction>
         <div className="copro-title-block">
@@ -378,8 +383,8 @@ export function CoProStudio({
         <div className="copro-topbar-actions">
           <IconAction className="copro-icon-button copro-history-button" aria-label="Undo" disabled={!canUndo} onClick={() => onAction?.({ type: "undo" })}><Undo2 size={20}/></IconAction>
           <IconAction className="copro-icon-button copro-history-button" aria-label="Redo" disabled={!canRedo} onClick={() => onAction?.({ type: "redo" })}><Redo2 size={20}/></IconAction>
-          <IconAction className="copro-icon-button" type="button" title={layout.browserOpen ? "Collapse media browser" : "Show media browser"} aria-label={layout.browserOpen ? "Collapse media browser" : "Show media browser"} aria-pressed={layout.browserOpen} onClick={() => { setLayout(value => ({ ...value, browserOpen: !value.browserOpen })); setPanePreference("browser"); }}><PanelLeftClose size={18}/></IconAction>
-          <IconAction className="copro-icon-button" type="button" title={layout.inspectorOpen ? "Collapse inspector" : "Show inspector"} aria-label={layout.inspectorOpen ? "Collapse inspector" : "Show inspector"} aria-pressed={layout.inspectorOpen} onClick={() => { setLayout(value => ({ ...value, inspectorOpen: !value.inspectorOpen })); setPanePreference("inspector"); }}><PanelRightClose size={18}/></IconAction>
+          <IconAction className="copro-icon-button" type="button" title={layout.browserOpen ? "Collapse media browser" : "Show media browser"} aria-label={layout.browserOpen ? "Collapse media browser" : "Show media browser"} aria-pressed={isHandset ? handsetPanel === "browser" : layout.browserOpen} onClick={() => { if (isHandset) setHandsetPanel(value => value === "browser" ? null : "browser"); else setLayout(value => ({ ...value, browserOpen: !value.browserOpen })); setPanePreference("browser"); }}><PanelLeftClose size={18}/></IconAction>
+          <IconAction className="copro-icon-button" type="button" title={layout.inspectorOpen ? "Collapse inspector" : "Show inspector"} aria-label={layout.inspectorOpen ? "Collapse inspector" : "Show inspector"} aria-pressed={isHandset ? handsetPanel === "inspector" : layout.inspectorOpen} onClick={() => { if (isHandset) setHandsetPanel(value => value === "inspector" ? null : "inspector"); else setLayout(value => ({ ...value, inspectorOpen: !value.inspectorOpen })); setPanePreference("inspector"); }}><PanelRightClose size={18}/></IconAction>
           <IconAction className="copro-icon-button copro-wide-layout-control" type="button" title="Swap dock positions of browser and inspector" aria-label="Swap browser and inspector" onClick={() => setLayout(value => ({ ...value, reversed: !value.reversed }))}><PanelsTopLeft size={18}/></IconAction>
           <label className="mm-workspace-preset" title="Choose a saved-panel layout preset"><span>Layout</span><select aria-label="Workspace layout preset" defaultValue="custom" onChange={event=>{
             const choice=event.currentTarget.value;
@@ -388,7 +393,7 @@ export function CoProStudio({
             if (choice === "timeline") setLayout(old=>({...old,browserWidth:390,inspectorWidth:300,timelineHeight:Math.round(workspaceHeight*.55),browserOpen:true,inspectorOpen:true,browserFloating:false,inspectorFloating:false}));
           }}><option value="custom">Custom</option><option value="balanced">Balanced</option><option value="media">Media focus</option><option value="timeline">Timeline focus</option></select></label>
           <IconAction className="copro-icon-button copro-wide-layout-control" type="button" title="Restore default panel widths, docking and timeline height" aria-label="Reset workspace layout" onClick={() => { resetLayout(); setPanePreference("browser"); }}><RotateCcw size={18}/></IconAction>
-          <button className="copro-export-button" aria-expanded={activeTool === "export"} aria-controls="copro-tool-inspector" onClick={() => { setActiveTool("export"); setLayout(value => ({ ...value, inspectorOpen: true })); setPanePreference("inspector"); }}>Export</button>
+          <button className="copro-export-button" aria-expanded={activeTool === "export"} aria-controls="copro-tool-inspector" onClick={() => { setActiveTool("export"); if (isHandset) setHandsetPanel("inspector"); setLayout(value => ({ ...value, inspectorOpen: true })); setPanePreference("inspector"); }}>Export</button>
         </div>
       </header>
 
@@ -417,7 +422,7 @@ export function CoProStudio({
             {categoryTool === "media" && <nav className="mm-media-subnav" aria-label="Media collections">
               {([ ["import","Import"], ["media","Media"], ["subprojects","Subprojects"], ["yours","Yours"], ["generate","Generate"], ["spaces","Spaces"], ["library","Library"] ] as const).map(([id,label]) => <button type="button" key={id} className={browserSection===id?"is-active":""} aria-pressed={browserSection===id} onClick={()=>setBrowserSection(id)}>{label}</button>)}
             </nav>}
-            {categoryTool === "media" && ["subprojects","generate","spaces"].includes(browserSection) ? <div className="mm-browser-unavailable"><strong>{browserSection==="subprojects"?"Compound clips":browserSection==="generate"?"Media generation":"Connected spaces"}</strong><p>{browserSection==="generate"?"Generation requires an authorized provider. Open miniAgentSam to explore connected capabilities; no fake generations here.":browserSection==="spaces"?"Connect a permitted workspace to browse remote files; imported local files remain in Media and Yours.":"Build compositions by adding clips to tracks. Compound-clip browsing requires the linked subproject engine."}</p><button onClick={()=>setBrowserSection("media")}>Browse imported media</button></div> : <CoProToolPanel tool={categoryTool==="filters"?"effects":categoryTool==="adjustments"?"transform":categoryTool==="stickers"?"stickers":categoryTool} onClose={() => setLayout(value => ({ ...value, browserOpen: false }))}
+            {categoryTool === "media" && ["subprojects","generate","spaces"].includes(browserSection) ? <div className="mm-browser-unavailable"><strong>{browserSection==="subprojects"?"Compound clips":browserSection==="generate"?"Media generation":"Connected spaces"}</strong><p>{browserSection==="generate"?"Generation requires an authorized provider. Open miniAgentSam to explore connected capabilities; no fake generations here.":browserSection==="spaces"?"Connect a permitted workspace to browse remote files; imported local files remain in Media and Yours.":"Build compositions by adding clips to tracks. Compound-clip browsing requires the linked subproject engine."}</p><button onClick={()=>setBrowserSection("media")}>Browse imported media</button></div> : <CoProToolPanel tool={categoryTool==="filters"?"effects":categoryTool==="adjustments"?"transform":categoryTool==="stickers"?"stickers":categoryTool} onClose={() => { if (isHandset) setHandsetPanel(null); else setLayout(value => ({ ...value, browserOpen: false })); }}
               mediaItems={mediaItems} onMediaAdd={(id) => onMediaAdd?.(id,playheadUs)}
               onMediaPicked={(file) => onAction?.({type:"import-media",file,atUs:playheadUs})}
               onTextCommit={(text,kind) => onAction?.({type:"create-text",kind,text,atUs:playheadUs})}
@@ -541,7 +546,7 @@ export function CoProStudio({
               </nav>}
               <CoProToolPanel
                 tool={inspectorTool}
-                onClose={() => setLayout(value => ({ ...value, inspectorOpen: false }))}
+                onClose={() => { if (isHandset) setHandsetPanel(null); else setLayout(value => ({ ...value, inspectorOpen: false })); }}
                 selectedClipId={selectedClipId}
                 projectTitle={projectTitle}
                 projectTrackCount={project.tracks.length}
