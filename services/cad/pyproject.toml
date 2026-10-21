@@ -24,3 +24,5 @@ target-version = "py311"
 "blender/adapter.py" = ["TRY004", "BLE001", "FURB192"]  # FURB192: min() would change empty-selection error type
 "freecad/adapter.py" = ["TRY004", "BLE001", "I001"]  # I001: FreeCAD must import before Part (native load order)
 "server.py" = ["TRY004", "BLE001"]
+# Native FreeCAD requires FreeCAD before Part; standard import sorting cannot reorder it.
+"proof/*.py" = ["I001"]
