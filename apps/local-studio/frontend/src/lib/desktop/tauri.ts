@@ -202,6 +202,18 @@ export async function openExternalUrl(url: string): Promise<void> {
   await invoke("open_external_url", { url });
 }
 
+export type AgentBrowserLaunch = {
+  profile_path: string;
+  chrome_path: string;
+  target_url: string;
+};
+
+export async function openAgentBrowser(targetUrl?: string): Promise<AgentBrowserLaunch> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("agent_browser_requires_desktop");
+  return (await invoke("open_agent_browser", { targetUrl: targetUrl ?? null })) as AgentBrowserLaunch;
+}
+
 export async function getCurrentDeepLinks(): Promise<string[]> {
   const invoke = getTauriInvoke();
   if (!invoke) return [];

@@ -1,6 +1,6 @@
 # AgentSam Tab Handoff for Chrome
 
-This unpacked Manifest V3 extension is a small companion for the **Local Studio desktop app**. It is not a browser runtime and does not import or run other Chrome extensions inside Local Studio.
+This unpacked Manifest V3 extension is a companion for the **Local Studio desktop app's AgentSam Browser profile**. It is not a browser runtime and does not import or run other Chrome extensions inside Local Studio.
 
 ## What it shares
 
@@ -11,11 +11,11 @@ The extension requests only `activeTab` and `scripting`. It does not request per
 ## Install locally
 
 1. Build/install the Local Studio desktop app so its `agentsamstudio://` deep link is registered.
-2. Open `chrome://extensions` in Google Chrome and turn on **Developer mode**.
-3. Choose **Load unpacked** and select this `chrome-extension` directory.
+2. In Local Studio's Browser panel, choose **Extensions**. This opens the separate AgentSam Chrome profile at `chrome://extensions/`.
+3. Turn on **Developer mode**, choose **Load unpacked**, and select this `chrome-extension` directory.
 4. Pin **AgentSam Tab Handoff** to the toolbar. Open a normal web page, click the extension, review the shown fields, then choose **Open in Local Studio**.
 
-This is a developer-loaded extension. It has not been submitted to the Chrome Web Store. Other extensions installed in Chrome continue to run in Chrome; this companion does not make them available inside Local Studio.
+This is a developer-loaded extension. It has not been submitted to the Chrome Web Store. AgentSam Browser uses its own Chrome profile, separate from your everyday Chrome profile. Install any extensions you need into the AgentSam profile from the Chrome Web Store; extensions in your everyday profile are not automatically copied over.
 
 ## Current limits
 
