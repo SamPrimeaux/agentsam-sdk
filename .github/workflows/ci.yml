@@ -91,6 +91,13 @@ jobs:
 
       # Settings-specific rendered evidence complements the general UI contract
       # checks above and blocks shipping when browser interaction/AA checks fail.
+      # Root npm ci uses source workspaces. Studio's standalone install instead
+      # requires every pinned public package and a matching published lock.
+      - name: Verify complete published Studio prerequisites
+        run: |
+          node apps/local-studio/scripts/check-first-party-registry.mjs --require
+          node apps/local-studio/scripts/verify-npm10-lock.mjs
+
       - name: Install Studio browser-test dependencies
         run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
 

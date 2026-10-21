@@ -47,21 +47,12 @@ jobs:
           cache: npm
           cache-dependency-path: apps/local-studio/package-lock.json
 
-      # App-only npm ci cannot install an SDK version before npm publication.
-      # A candidate release defers this downstream job; never fake registry
-      # integrity or silently substitute 2.6.12 for the requested 2.6.13.
-      - name: Check published SDK prerequisite
+      # A published SDK is insufficient: Studio independently pins public
+      # packages (Campaign, IDE, Nav, etc). Respect npm integrity and never
+      # downgrade or invent lockfile records to make an unready build green.
+      - name: Check complete published Studio prerequisites
         id: sdk_registry
-        run: |
-          SDK_VERSION=$(node -p "require('./package.json').version")
-          if npm view "@inneranimalmedia/agentsam-sdk@${SDK_VERSION}" version --fetch-retries=1 >/dev/null 2>&1; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-            echo "SDK @inneranimalmedia/agentsam-sdk@${SDK_VERSION} is published." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "DEFERRED: Local Studio Cloudflare build requires published @inneranimalmedia/agentsam-sdk@${SDK_VERSION}; rerun after the stable npm release." >> "$GITHUB_STEP_SUMMARY"
-            echo "::notice::Cloudflare build deferred until the versioned SDK is actually published"
-          fi
+        run: node scripts/check-first-party-registry.mjs --github-output
 
       # Never build Local Studio against an unpublished SDK or fake lock digest.
       - name: Install app-only dependencies

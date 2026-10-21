@@ -31,6 +31,12 @@ describe('Local Studio npm 10 product lock', () => {
     });
     assert.equal(packages['../../packages/agentsam-loading-scene']?.version, pkg.version);
 
+    for (const [key, entry] of Object.entries(packages)) {
+      if (!key.includes('node_modules/@inneranimalmedia/') || entry.link || !entry.version) continue;
+      assert.equal(entry.version, pkg.version, key + ' must match the Studio release train');
+      assert.ok(entry.integrity, key + ' needs a verifiable npm integrity digest');
+    }
+
     const sdkPackageSuffix = 'node_modules/@inneranimalmedia/agentsam-sdk';
     const sdkEntries = Object.entries(packages)
       .filter(([key]) => key === sdkPackageSuffix || key.endsWith('/' + sdkPackageSuffix));
