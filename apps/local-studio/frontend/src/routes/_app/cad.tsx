@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
+import {useNav} from "@inneranimalmedia/agentsam-nav";
+import {CadConversationPane} from "@/components/workbench/CadConversationPane";
 
 interface CadSearchParams {
   url?: string;
@@ -26,15 +28,17 @@ function resolveCadInitialUrl(overrideUrl?: string): string {
 }
 
 function CadStudioPage() {
+  const {data} = useNav();
+  const chatOpen = data.mode === "chat";
   const search = Route.useSearch();
   const initialUrl = resolveCadInitialUrl(search.url);
 
   return (
-    <div className="size-full overflow-hidden bg-background">
-      <AppPreviewStage
-        appId="cad-creator"
-        initialUrl={initialUrl}
-      />
+    <div className="flex size-full min-h-0 overflow-hidden bg-background">
+      {chatOpen && <CadConversationPane />}
+      <div className={"min-w-0 flex-1 "+(chatOpen?"hidden md:block":"block")}>
+        <AppPreviewStage appId="cad-creator" initialUrl={initialUrl} />
+      </div>
     </div>
   );
 }

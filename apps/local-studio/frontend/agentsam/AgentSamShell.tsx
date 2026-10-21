@@ -38,7 +38,10 @@ export function AgentSamShell() {
   const trail = state.trails.find((item) => item.id === state.activeTrailId);
   const project = state.projects.find((item) => item.id === trail?.projectId);
   const isConversation = pathname === '/agentsam' || pathname.startsWith('/chats');
+  const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/');
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
+  // CAD is a Work surface. It reuses the platform's Chat/Work mode authority.
+  useEffect(() => { if (isCadRoute) setMode('work'); }, [isCadRoute]);
   const go = (to: string) => {
     if (isPackagedDesktop()) {
       const normalized = to.startsWith('/') ? to : '/' + to;
@@ -144,7 +147,7 @@ export function AgentSamShell() {
     destinations: [
       { id: 'library', label: 'Library', icon: <BookOpen />, href: '/artifacts', active: pathname === '/artifacts' },
       { id: 'sites', label: 'Sites', icon: <Globe />, href: '/cms', active: pathname === '/cms' },
-      { id: 'cad', label: 'CAD', icon: <Layers />, href: '/cad', active: pathname === '/cad' },
+      { id: 'cad', label: 'CAD', icon: <img src="/brand/samsketch-icon.png" alt="" width={19} height={19} style={{borderRadius: 5}} />, href: '/cad', active: pathname === '/cad' },
       { id: 'database', label: 'Database', icon: <Database />, href: '/database', active: pathname === '/database' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
       { id: 'utilities', label: 'Utilities', icon: <Clock3 />, href: '/widgets', active: pathname === '/widgets' },
@@ -177,7 +180,9 @@ export function AgentSamShell() {
   return <ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} defaultOpen={false} peekable>
     <Nav.Scope className="agentsam-shell" data-agentsam-app-shell="local-studio">
       {!isSettings ? <Nav.Sidenav /> : null}<div className="agentsam-main">
-        {!isConversation ? <Nav.Topbar><Nav.TopbarLogo toggle /><span>{pathname.startsWith('/cad') ? 'CAD Creator' : pathname.startsWith('/cms') ? 'Sites' : pathname.startsWith('/artifacts') ? 'Library' : pathname.split('/')[1].replace(/^./, (letter) => letter.toUpperCase())}</span><Nav.TopbarSpacer /><Nav.AccountSwitcher /></Nav.Topbar> : null}
+        {!isConversation ? isCadRoute
+          ? <Nav.Topbar startup showAccount />
+          : <Nav.Topbar><Nav.TopbarLogo toggle /><span>{pathname.startsWith('/cms') ? 'Sites' : pathname.startsWith('/artifacts') ? 'Library' : pathname.split('/')[1].replace(/^./, (letter) => letter.toUpperCase())}</span><Nav.TopbarSpacer /><Nav.AccountSwitcher /></Nav.Topbar> : null}
         <OfflineBanner /><main className="agentsam-route"><Outlet /></main>
       </div><CliDrawer /><CommandPalette />
       <Dialog open={sharing} onOpenChange={setSharing}><DialogContent><DialogTitle>Share conversation</DialogTitle><DialogDescription>Copy this conversation as text to share it. This does not create a public link.</DialogDescription><button type="button" className="as-nav-button" onClick={() => { if (!trail) return; void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => { toast('Conversation copied'); setSharing(false); }, () => toast('Could not copy conversation')); }}><Copy size={18} />Copy conversation</button></DialogContent></Dialog>

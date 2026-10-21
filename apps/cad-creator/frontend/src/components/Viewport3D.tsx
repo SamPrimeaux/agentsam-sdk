@@ -305,6 +305,8 @@ export const Viewport3D: React.FC<Props> = ({
       rendererRef.current.setSize(w, h);
     };
     window.addEventListener('resize', handleResize);
+    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(handleResize) : null;
+    if (resizeObserver) resizeObserver.observe(container);
 
     // Keyboard handlers
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -319,6 +321,7 @@ export const Viewport3D: React.FC<Props> = ({
     return () => {
       if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
       window.removeEventListener('resize', handleResize);
+      resizeObserver?.disconnect();
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       renderer.dispose();

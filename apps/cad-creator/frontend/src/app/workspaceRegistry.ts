@@ -31,8 +31,8 @@ export const WORKSPACE_REGISTRY: WorkspaceDescriptor[] = [
     name: '2D Floor Plan & Sketch',
     shortName: 'Plan',
     icon: LayoutGrid,
-    description: 'Architectural drafting, 2D floor plans, split layout, tldraw sketching, and room zoning.',
-    engine: 'Vector CAD / tldraw',
+    description: 'SamSketch native 2D drafting, precision floor plans, freehand intent, and verified sketch-to-CAD operations.',
+    engine: 'SamSketch / native CAD',
     badge: 'BIM / 2D',
     isPrimary: true
   },

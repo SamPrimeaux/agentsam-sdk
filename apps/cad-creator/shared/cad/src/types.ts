@@ -162,7 +162,10 @@ export interface ProjectLayer {
 }
 
 export interface SketchDocumentRef {
-  tldrawSnapshot?: any; // Serialized tldraw store snapshot
+  /** Native SamSketch strokes, in project inches, versionable with the CAD document. */
+  nativeStrokes?: Array<{id:string;kind:'ink'|'line'|'rect';points:[number,number][]}>;
+  /** Legacy archived source; retain for backwards-compatible import, never mutate it. */
+  tldrawSnapshot?: any;
   shapesCount?: number;
   lastEditedAt?: number;
 }
