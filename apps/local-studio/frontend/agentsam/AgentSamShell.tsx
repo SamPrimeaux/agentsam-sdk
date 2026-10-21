@@ -147,7 +147,7 @@ export function AgentSamShell() {
     destinations: [
       { id: 'library', label: 'Library', icon: <BookOpen />, href: '/artifacts', active: pathname === '/artifacts' },
       { id: 'sites', label: 'Sites', icon: <Globe />, href: '/cms', active: pathname === '/cms' },
-      { id: 'cad', label: 'CAD', icon: <img src="/brand/samsketch-icon.png" alt="" width={19} height={19} style={{borderRadius: 5}} />, href: '/cad', active: pathname === '/cad' },
+      { id: 'cad', label: 'CAD', icon: <img src="/brand/samsketch-icon.png" alt="" width={19} height={19} className="rounded-[5px]" />, href: '/cad', active: pathname === '/cad' },
       { id: 'database', label: 'Database', icon: <Database />, href: '/database', active: pathname === '/database' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
       { id: 'media', label: 'Media', icon: <Film />, href: '/media', active: pathname === '/media' || pathname.startsWith('/media/') },

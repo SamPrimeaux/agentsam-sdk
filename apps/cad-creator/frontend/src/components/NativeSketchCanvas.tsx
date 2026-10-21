@@ -151,8 +151,7 @@ export function NativeSketchCanvas({project,onUpdateProject,canEdit}:{
    </div>}
    <div className="min-h-0 flex-1 relative overflow-hidden">
      <svg ref={svgRef} viewBox={view.x+' '+view.y+' '+view.w+' '+view.h}
-       preserveAspectRatio="xMidYMid meet" className="h-full w-full touch-none"
-       style={{cursor:tool==='pan'?'grab':tool==='eraser'?'crosshair':'crosshair'}}
+       preserveAspectRatio="xMidYMid meet" className={'h-full w-full touch-none '+(tool==='pan'?'cursor-grab':'cursor-crosshair')}
        role="img" aria-label="SamSketch native freehand and dimensioned space drafting"
        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={()=>{gesture.current=null;setPreview([])}}
        onWheel={zoom} onContextMenu={e=>e.preventDefault()}>

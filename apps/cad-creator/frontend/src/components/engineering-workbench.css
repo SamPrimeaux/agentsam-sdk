@@ -67,3 +67,8 @@
 .cad-theme-popover input[type=color]{width:38px;height:30px;border:0;background:transparent}
 .cad-theme-popover button{border:1px solid var(--cad-line);border-radius:7px;font-size:11px;padding:9px}
 .cad-operation-error{font-size:11px;line-height:1.5;color:#fca5a5;background:#571b24b5;border:1px solid #ad495b;border-radius:8px;padding:10px 12px;margin:12px 0}
+
+/* Keyboard- and pointer-visible labels for icon-only CAD controls. */
+.cad-pane-head button,.cad-real-toolbar .cad-tool-cluster button{position:relative}
+.cad-focus-help{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:60;min-width:max-content;max-width:190px;padding:5px 8px;border-radius:6px;background:#101827;color:#f8fafc;font-size:11px;font-weight:600;box-shadow:0 5px 14px #0008;pointer-events:none}
+.cad-pane-head button:is(:hover,:focus-visible)>.cad-focus-help,.cad-real-toolbar button:is(:hover,:focus-visible)>.cad-focus-help{display:block}

@@ -26,7 +26,7 @@ export function CadProjectExplorer({project,selection,onSelect,onClose}:{
  const data=useMemo(()=>groups(project),[project]);
  return <aside className="cad-work-pane" aria-label="CAD project explorer">
   <header className="cad-pane-head"><span><Layers3 size={16}/> Project explorer</span>
-   <button aria-label="Hide project explorer" onClick={onClose}><PanelLeftClose size={17}/></button></header>
+   <button aria-label="Hide project explorer" title="Hide project explorer" onClick={onClose}><PanelLeftClose size={17}/><span className="cad-focus-help">Hide project explorer</span></button></header>
   <label className="cad-tree-search"><Search size={15}/><input aria-label="Filter project objects" value={filter}
    onChange={e=>setFilter(e.target.value)} placeholder="Filter objects…"/></label>
   <button className="cad-tree-project" onClick={()=>onSelect(null)}><Box size={15}/><span>{project.name}</span><small>v{project.version}</small></button>
@@ -87,7 +87,7 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
   <Numeric key={key} label={label} value={Number(record[key])} min={min} unit={unit} onCommit={n=>update(key,n)}/>:null;
  return <aside className="cad-work-pane cad-properties" aria-label="CAD inspector">
   <header className="cad-pane-head"><span><SlidersHorizontal size={16}/> Properties</span>
-   <button aria-label="Hide property inspector" onClick={onClose}><PanelRightClose size={17}/></button></header>
+   <button aria-label="Hide property inspector" title="Hide property inspector" onClick={onClose}><PanelRightClose size={17}/><span className="cad-focus-help">Hide property inspector</span></button></header>
   <div className="cad-pane-tabs"><button className={tab==='object'?'active':''} onClick={()=>setTab('object')}>Object</button>
    <button className={tab==='project'?'active':''} onClick={()=>setTab('project')}>Project</button></div>
   <div className="cad-property-scroll">{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}<fieldset disabled={readOnly}>
@@ -139,8 +139,8 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
  explorerOpen:boolean;inspectorOpen:boolean;onMore:()=>void;moreOpen:boolean;accent:string;onAccentChange:(v:string)=>void;isDark:boolean;onToggleDark:()=>void
 }) {
  return <div className="cad-real-toolbar" role="toolbar" aria-label="CAD authoring tools">
-  <div className="cad-tool-cluster"><button className={explorerOpen?'active':''} onClick={onToggleExplorer} title="Project explorer"><PanelLeftOpen size={17}/></button>
-   <button className={inspectorOpen?'active':''} onClick={onToggleInspector} title="Property inspector"><PanelRightOpen size={17}/></button></div>
+  <div className="cad-tool-cluster"><button aria-label="Toggle project explorer" className={explorerOpen?'active':''} onClick={onToggleExplorer} title="Project explorer"><PanelLeftOpen size={17}/><span className="cad-focus-help">Project explorer</span></button>
+   <button aria-label="Toggle property inspector" className={inspectorOpen?'active':''} onClick={onToggleInspector} title="Property inspector"><PanelRightOpen size={17}/><span className="cad-focus-help">Property inspector</span></button></div>
   <div className="cad-tool-cluster cad-tool-modes">
    <button className={workspace==='plan'?'active':''} onClick={()=>onWorkspace('plan')}>Draft</button>
    <button className={workspace==='model'?'active':''} onClick={()=>onWorkspace('model')}>3D Model</button>

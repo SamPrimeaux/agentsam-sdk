@@ -189,11 +189,12 @@ export function CadCreatorShell({
           <button type="button" onClick={onToggleSidebar} data-annotation-control=""
             aria-label={isSidebarOpen ? 'Cancel miniAgentSam selection' : 'Select for miniAgentSam'}
             aria-pressed={isSidebarOpen}
-            className={`p-1.5 rounded-lg border transition-colors ${
+            className={`group relative p-1.5 rounded-lg border transition-colors ${
               isSidebarOpen ? 'bg-white/10 text-white border-white/20' : 'text-slate-400 hover:text-white hover:bg-white/10 border-transparent'
             }`}
             title={isSidebarOpen ? 'Cancel selection' : 'Select for miniAgentSam'}>
             <MousePointer2 className="size-4" />
+            <span className="pointer-events-none absolute right-0 top-full z-50 mt-2 w-max max-w-48 rounded bg-slate-950 px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">{isSidebarOpen ? 'Cancel selection' : 'Select for miniAgentSam'}</span>
           </button>
         )}
 
