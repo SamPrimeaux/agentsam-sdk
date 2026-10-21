@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ContentAsset, ContentKind, ContentQuery } from "@inneranimalmedia/agentsam-content";
 import { useContentRuntime, useLibrary, useRuntimeCapabilities } from "./context.js";
-import { fmtBytes, fmtDuration, stateColor } from "./theme.js";
+import { fmtBytes, fmtDuration } from "./theme.js";
 import { MediaDropzone } from "./MediaDropzone.js";
 
 export interface ContentLibraryProps {
@@ -130,7 +130,7 @@ function AssetCard(props: { asset: ContentAsset; selected: boolean; onSelect: ()
         </span>
         <span className="acs-card__copy">
           <strong title={label}>{label}</strong>
-          <span className="acs-card__meta"><i style={{ color: stateColor(asset.state) }}>● {asset.state}</i><i>{asset.providerRefs.map((ref) => providerLabel(runtime.theme, ref.provider)).join(", ") || "No location"}</i><i>{fmtBytes(asset.bytes)}</i></span>
+          <span className="acs-card__meta"><i className="acs-card__state" data-state={asset.state}>● {asset.state}</i><i>{asset.providerRefs.map((ref) => providerLabel(runtime.theme, ref.provider)).join(", ") || "No location"}</i><i>{fmtBytes(asset.bytes)}</i></span>
           {liveCount > 0 && <span className="acs-card__usage">In use · {liveCount} live {liveCount === 1 ? "surface" : "surfaces"}</span>}
         </span>
       </button>

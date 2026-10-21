@@ -40,7 +40,7 @@ export function NumberField(props: {
   onChange: (v: number) => void;
 }) {
   return (
-    <label style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "3px 0" }}>
+      <label className="acs-number-field">
       <span style={{ color: tokens.textDim, fontSize: 12 }}>{props.label}</span>
       <input
         type="number"
@@ -48,14 +48,7 @@ export function NumberField(props: {
         disabled={props.disabled}
         step={props.step ?? 0.1}
         onChange={(e) => props.onChange(Number(e.target.value))}
-        style={{
-          width: 90,
-          padding: "4px 6px",
-          borderRadius: 6,
-          border: `1px solid ${tokens.border}`,
-          background: tokens.panelAlt,
-          color: tokens.text,
-        }}
+        className="acs-field-input acs-field-input--number"
       />
     </label>
   );
@@ -69,7 +62,7 @@ export function TextField(props: {
   onCommit: (v: string) => void;
 }) {
   return (
-    <label style={{ display: "block", padding: "4px 0" }}>
+    <label className="acs-text-field">
       <div style={{ color: tokens.textDim, fontSize: 12, marginBottom: 3 }}>{props.label}</div>
       <input
         defaultValue={props.value}
@@ -78,15 +71,7 @@ export function TextField(props: {
         onBlur={(e) => {
           if (e.target.value !== props.value) props.onCommit(e.target.value);
         }}
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-          padding: "6px 8px",
-          borderRadius: 6,
-          border: `1px solid ${tokens.border}`,
-          background: tokens.panelAlt,
-          color: tokens.text,
-        }}
+        className="acs-field-input"
       />
     </label>
   );

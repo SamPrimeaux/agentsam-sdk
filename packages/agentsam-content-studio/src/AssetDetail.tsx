@@ -112,7 +112,7 @@ export function AssetDetail(props: AssetDetailProps) {
   };
 
   return (
-    <div className="acs-detail" role="region" aria-label="Content details" style={{ display: "flex", flexDirection: "column", minHeight: 0, height: "100%" }}>
+    <div className="acs-detail" role="region" aria-label="Content details">
       <div style={{ padding: "12px 16px", borderBottom: `1px solid ${tokens.border}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <b style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -180,7 +180,7 @@ export function AssetDetail(props: AssetDetailProps) {
         </div>
       </div>
 
-      <div className="acs-detail__scroll" style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+      <div className="acs-detail__scroll">
         {tab === "inspect" && <AssetPreview asset={asset} renderModelViewport={props.renderModelViewport} />}
         {tab === "inspect" && asset.kind === "image" && <ImageInspector asset={asset} readOnly={!canEdit} />}
         {tab === "inspect" && asset.kind === "video" && <VideoInspector asset={asset} readOnly={!canEdit} />}
