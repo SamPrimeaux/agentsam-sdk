@@ -2,6 +2,9 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {Sky} from 'three/addons/objects/Sky.js';
+import {TerrainEditorPanel} from './TerrainEditorPanel';
+import {createTerrainDocument,addSculptStroke,type TerrainDocument,type SculptMode} from '../lib/world-terrain';
+import {createTerrainProjection,type TerrainProjection} from '../lib/world-terrain-three';
 
 const ORIGIN='https://cad.inneranimalmedia.com/api/cad/public-world/dreamhouse/v1.1';
 type Zone={roomId:string;label:string;candidateCameraBlenderXYZMetres?:number[];anchorStatus?:string};
@@ -19,16 +22,27 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
  const target=useRef(new THREE.Vector3()),orbit=useRef({az:0.9,el:0.65,distance:65});
  const walk=useRef({yaw:0,pitch:0,position:new THREE.Vector3(),active:false});
  const pressed=useRef(new Set<string>()),pointer=useRef<{x:number;y:number;id:number;distance:number}|null>(null);
+ const terrainProjection=useRef<TerrainProjection|null>(null);
+ const terrainOrigin=useRef(new THREE.Vector3());
+ const terrainDocRef=useRef<TerrainDocument>(createTerrainDocument());
+ const terrainBrushRef=useRef<{mode:SculptMode|null;radius:number;strength:number}>({mode:null,radius:12,strength:3});
+ const lastBrushAt=useRef(0);
  const [mode,setMode]=useState<CameraMode>('orbit'),[ready,setReady]=useState(false),
  [error,setError]=useState(''),[progress,setProgress]=useState('Resolving DreamHouse V1.1…'),
  [handoff,setHandoff]=useState<Handoff|null>(null),[selection,setSelection]=useState<Selected|null>(null),
- [roofVisible,setRoofVisible]=useState(true),[hour,setHour]=useState<'day'|'evening'>('day'),
- [wireframe,setWireframe]=useState(false),[viewPreset,setViewPreset]=useState<ViewPreset>('iso');
+ [roofVisible,setRoofVisible]=useState(true),[hour,setHour]=useState<'day'|'evening'>('day');
+ const [wireframe,setWireframe]=useState(false),[viewPreset,setViewPreset]=useState<ViewPreset>('iso');
+ const [terrain,setTerrain]=useState<TerrainDocument>(()=>createTerrainDocument());
+ const [terrainOpen,setTerrainOpen]=useState(false);
+ const [sculptMode,setSculptMode]=useState<SculptMode|null>(null);
+ const [brushRadius,setBrushRadius]=useState(12),[brushStrength,setBrushStrength]=useState(3);
  const bounds=useRef(new THREE.Box3());
  const modelBounds=useRef(new THREE.Box3());
- const environmentRef=useRef<{sky:Sky;sun:THREE.DirectionalLight;fill:THREE.HemisphereLight;terrain:THREE.Mesh;hills:THREE.Mesh}|null>(null);
+ const environmentRef=useRef<{sky:Sky;sun:THREE.DirectionalLight;fill:THREE.HemisphereLight}|null>(null);
  const displayRef=useRef({mode,roofVisible,hour});
  useEffect(()=>{displayRef.current={mode,roofVisible,hour}},[mode,roofVisible,hour]);
+ useEffect(()=>{terrainDocRef.current=terrain},[terrain]);
+ useEffect(()=>{terrainBrushRef.current={mode:sculptMode,radius:brushRadius,strength:brushStrength}},[sculptMode,brushRadius,brushStrength]);
  const visit=(zone:Zone)=>{
   if(!zone.candidateCameraBlenderXYZMetres||!ready)return;
   const [x,y,z]=zone.candidateCameraBlenderXYZMetres;
@@ -67,6 +81,11 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   link.download=`DreamHouse-V1.1-${viewPreset}${wireframe?'-wireframe':''}-${hour}.png`;
   link.href=webgl.domElement.toDataURL('image/png');link.click();
  };
+ const fitSite=()=>{
+  target.current.copy(terrainOrigin.current);
+  orbit.current={az:.88,el:.5,distance:Math.max(terrain.width,terrain.depth)*.82};
+  setMode('orbit');
+ };
  useEffect(()=>{
   const host=mount.current;if(!host)return;
   let alive=true;
@@ -76,16 +95,16 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   const context=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false,preserveDrawingBuffer:true});
   context.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
   context.outputColorSpace=THREE.SRGBColorSpace;context.toneMapping=THREE.ACESFilmicToneMapping;
-  context.toneMappingExposure=0.92;
+  context.toneMappingExposure=0.64;
   context.shadowMap.enabled=true;
   context.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.current=context;host.appendChild(context.domElement);
-  const sun=new THREE.DirectionalLight('#fff0d7',2.2);sun.position.set(80,125,55);sun.castShadow=true;
+  const sun=new THREE.DirectionalLight('#fff0d7',1.05);sun.position.set(80,125,55);sun.castShadow=true;
   const shadowSize=window.innerWidth<768?1024:2048;
   sun.shadow.mapSize.set(shadowSize,shadowSize);sun.shadow.camera.left=-105;sun.shadow.camera.right=105;
   sun.shadow.camera.top=105;sun.shadow.camera.bottom=-105;sun.shadow.camera.near=1;sun.shadow.camera.far=310;
   sun.shadow.bias=-0.0002;sun.shadow.normalBias=0.025;scene.add(sun);
-  const fill=new THREE.HemisphereLight('#dceeff','#53644d',1.25);scene.add(fill);
+  const fill=new THREE.HemisphereLight('#dceeff','#53644d',0.55);scene.add(fill);
   const sky=new Sky();sky.scale.setScalar(1000);
   sky.material.uniforms['turbidity'].value=3.5;
   sky.material.uniforms['rayleigh'].value=2.1;
@@ -94,26 +113,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   sky.material.uniforms['sunPosition'].value.copy(sun.position);
   scene.add(sky);
   scene.fog=new THREE.Fog('#b5c5cb',260,1150);
-  const terrain=new THREE.Mesh(new THREE.PlaneGeometry(1500,1500),new THREE.MeshStandardMaterial({color:'#506348',roughness:1}));
-  terrain.rotation.x=-Math.PI/2;terrain.receiveShadow=true;
-  // Distant visual backdrop only. The GLB, not this scenery, is authoritative BIM.
-  const rings=[{radius:105,rise:0},{radius:245,rise:11},{radius:475,rise:25},{radius:790,rise:3}];
-  const vertices:number[]=[],triangles:number[]=[],steps=64;
-  for(let ring=0;ring<rings.length;ring++){
-   for(let i=0;i<steps;i++){
-    const angle=2*Math.PI*i/steps;
-    const undulation=Math.sin(angle*3+.7)*8+Math.sin(angle*7+1.4)*3;
-    const lift=ring===0?0:ring===3?undulation*.12:undulation;
-    vertices.push(Math.cos(angle)*rings[ring].radius,rings[ring].rise+lift,Math.sin(angle)*rings[ring].radius);
-    if(ring<rings.length-1){const a=ring*steps+i,b=ring*steps+(i+1)%steps,c=(ring+1)*steps+i,e=(ring+1)*steps+(i+1)%steps;
-     triangles.push(a,c,b,b,c,e);
-    }
-   }
-  }
-  const hillGeometry=new THREE.BufferGeometry();hillGeometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
-  hillGeometry.setIndex(triangles);hillGeometry.computeVertexNormals();
-  const hills=new THREE.Mesh(hillGeometry,new THREE.MeshStandardMaterial({color:'#667960',roughness:1,side:THREE.DoubleSide}));
-  environmentRef.current={sky,sun,fill,terrain,hills};
+  environmentRef.current={sky,sun,fill};
   const resize=()=>{const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);camera.aspect=w/h;camera.updateProjectionMatrix();context.setSize(w,h)};
   const observer=new ResizeObserver(resize);observer.observe(host);resize();
   const ray=new THREE.Raycaster();const floorRay=new THREE.Raycaster();
@@ -156,7 +156,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
         // Keep camera at standing eye height above real floor when a slab is below.
         floorRay.set(next.clone().add(new THREE.Vector3(0,.3,0)),new THREE.Vector3(0,-1,0));
         floorRay.far=3.5;
-        const ground=floorRay.intersectObjects(collidersRef.current,false)
+        const ground=floorRay.intersectObjects([...collidersRef.current,...(terrainProjection.current?[terrainProjection.current.surface]:[])],false)
           .find(hit=>hit.face?.normal && hit.face.normal.y>.4);
         if(ground)next.y=ground.point.y+1.65;
         view.position.copy(next);
@@ -172,12 +172,12 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   animation=requestAnimationFrame(animate);
   const fetchWorld=async()=>{
    try{
-    const manifestResponse=await fetch(ORIGIN+'/manifest.json', {credentials:'include'});
+    const manifestResponse=await fetch(ORIGIN+'/manifest.json', {credentials:'omit'});
     if(manifestResponse.status===401||manifestResponse.status===403)throw Error('DreamHouse scene requires an authorized AgentSam CAD session.');
     if(!manifestResponse.ok)throw Error('Scene manifest unavailable ('+manifestResponse.status+')');
     const manifest: Handoff=await manifestResponse.json();
     if(!alive)return;setHandoff(manifest);setProgress('Streaming verified V1.1 geometry…');
-    new GLTFLoader().setWithCredentials(true).load(ORIGIN+'/model.glb', gltf=>{
+    new GLTFLoader().setWithCredentials(false).load(ORIGIN+'/model.glb', gltf=>{
       if(!alive)return;
       gltfRoot=gltf.scene;
       const box=new THREE.Box3().setFromObject(gltfRoot);
@@ -190,8 +190,13 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
         const category=String(node.userData?.Category||'').toLowerCase();
         if(node instanceof THREE.Mesh&&['wall','window','door','roof','slab'].includes(category))
           architectureBox.expandByObject(node);
-        if(node instanceof THREE.Mesh&&node.name==='Ground'){
-          node.material=new THREE.MeshStandardMaterial({color:'#516751',roughness:1,metalness:0});
+        if(/^Ground(?:$|[_.])/i.test(node.name)){
+          // Original surveyed/staged site is preserved in the GLB. Replace only its
+          // visual projection with an editable terrain surface at its measured top.
+          const groundBox=new THREE.Box3().setFromObject(node);
+          const groundCenter=groundBox.getCenter(new THREE.Vector3());
+          terrainOrigin.current.set(groundCenter.x,groundBox.max.y-.02,groundCenter.z);
+          node.visible=false;
         }
       });
       const focusBox=architectureBox.isEmpty()?box:architectureBox;
@@ -199,10 +204,6 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
       const center=focusBox.getCenter(new THREE.Vector3()),size=focusBox.getSize(new THREE.Vector3());
       const environment=environmentRef.current;
       if(environment){
-        environment.terrain.position.set(center.x,box.min.y-.2,center.z);
-        scene.add(environment.terrain);
-        environment.hills.position.set(center.x,box.min.y-.24,center.z);
-        scene.add(environment.hills);
         environment.sun.target.position.copy(center);
         scene.add(environment.sun.target);
       }
@@ -210,8 +211,28 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
       orbit.current={az:.88,el:.49,distance:Math.max(11,size.length()*.56)};
       walk.current.position.set(center.x,Math.max(1.65,box.min.y+1.65),center.z);
       const structure:THREE.Object3D[]=[];
+      const authoredMaterialPalette=new Map<THREE.Material,THREE.MeshBasicMaterial>();
+      const materialColor=(source:THREE.Material):THREE.MeshBasicMaterial=>{
+        const cached=authoredMaterialPalette.get(source);
+        if(cached)return cached;
+        const gltf=source as THREE.MeshStandardMaterial;
+        const material=new THREE.MeshBasicMaterial({
+          name:'CAD Color Fidelity · '+source.name,
+          color:gltf.color?.clone()||new THREE.Color('#a6a9a7'),
+          map:gltf.map||null,transparent:gltf.transparent,opacity:gltf.opacity,
+          side:gltf.side,alphaTest:gltf.alphaTest,toneMapped:false,
+        });
+        authoredMaterialPalette.set(source,material);
+        return material;
+      };
       gltfRoot.traverse(o=>{
         if(!(o instanceof THREE.Mesh))return;
+        // Material names and base colors come from the actual BIM-derived GLB.
+        // Color fidelity fallback: the tested WebGL lit shader whites out even
+        // near-black slate materials; render those native swatches unlit until
+        // the physical-material pipeline is independently corrected.
+        o.material=Array.isArray(o.material)
+          ?o.material.map(materialColor):materialColor(o.material);
         // Preserve imported BIM material appearance and restore depth cues.
         // Transparent glazing does not cast opaque shadows on interior surfaces.
         const mats=Array.isArray(o.material)?o.material:[o.material];
@@ -224,6 +245,9 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
       });
       collidersRef.current=structure;
       assetRef.current=gltfRoot;scene.add(gltfRoot);loaded=true;
+      const terrainScene=createTerrainProjection(terrainDocRef.current);
+      terrainScene.root.position.copy(terrainOrigin.current);
+      scene.add(terrainScene.root);terrainProjection.current=terrainScene;
       setReady(true);setProgress('');
     }, progress=>{
       if(progress.total)setProgress('Loading scene '+Math.min(100,Math.floor(100*progress.loaded/progress.total))+'%');
@@ -237,9 +261,9 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   return()=>{
    alive=false;cancelAnimationFrame(animation);observer.disconnect();
    window.removeEventListener('keydown',onKey);window.removeEventListener('keyup',onKeyUp);
+   terrainProjection.current?.dispose();terrainProjection.current=null;
    gltfRoot?.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose())}});
-   terrain.geometry.dispose();(terrain.material as THREE.Material).dispose();
-   hills.geometry.dispose();(hills.material as THREE.Material).dispose();sky.geometry.dispose();sky.material.dispose();
+   sky.geometry.dispose();sky.material.dispose();
    environmentRef.current=null;
    if(context.domElement.parentElement===host)host.removeChild(context.domElement);
    context.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;
@@ -257,9 +281,9 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   if(!environment||!scene)return;
   const evening=hour==='evening';
   environment.sun.position.set(evening?-80:80,evening?20:125,evening?65:55);
-  environment.sun.intensity=evening?1.15:2.2;
+  environment.sun.intensity=evening?0.55:1.05;
   environment.sun.color.set(evening?'#ffc18d':'#fff0d7');
-  environment.fill.intensity=evening?0.65:1.25;
+  environment.fill.intensity=evening?0.3:0.55;
   environment.sky.material.uniforms['sunPosition'].value.copy(environment.sun.position);
   scene.fog=new THREE.Fog(evening?'#596575':'#b5c5cb',260,1150);
  },[hour]);
@@ -274,6 +298,17 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
    }
   });
  },[wireframe,ready]);
+ useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(hour==='day'?'#0b1928':'#21172a');},[hour]);
+ // Editing always regenerates the complete terrain projection from the same
+ // document, so exported JSON and visible relief cannot diverge.
+ useEffect(()=>{
+  const scene=sceneRef.current;
+  if(!scene||!ready)return;
+  terrainProjection.current?.dispose();
+  const projected=createTerrainProjection(terrain);
+  projected.root.position.copy(terrainOrigin.current);
+  scene.add(projected.root);terrainProjection.current=projected;
+ },[terrain,ready]);
  const pick=useCallback((event:React.PointerEvent<HTMLDivElement>)=>{
   if(!ready||!assetRef.current||!cameraRef.current||!renderer.current)return;
   const rect=renderer.current.domElement.getBoundingClientRect(),nx=(event.clientX-rect.left)/rect.width*2-1,ny=-(event.clientY-rect.top)/rect.height*2+1;
@@ -286,13 +321,29 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   const selected={designId:String(o.userData.DesignId),category:String(o.userData.Category||'component'),nodeName:o.name,source:String(o.userData.Source||'FreeCAD / V1')};
   setSelection(selected);onSelect?.(selected);
  },[ready,onSelect]);
+ const sculptAt=useCallback((event:React.PointerEvent<HTMLDivElement>,force=false)=>{
+  const brush=terrainBrushRef.current,projection=terrainProjection.current,camera=cameraRef.current,webgl=renderer.current;
+  if(!brush.mode||!projection||!camera||!webgl)return;
+  const now=performance.now();
+  if(!force&&now-lastBrushAt.current<90)return;
+  const rect=webgl.domElement.getBoundingClientRect();
+  const nx=(event.clientX-rect.left)/rect.width*2-1,ny=-(event.clientY-rect.top)/rect.height*2+1;
+  const ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(nx,ny),camera);
+  const intersection=ray.intersectObject(projection.surface,false)[0];
+  if(!intersection)return;
+  const local=intersection.point.clone().sub(terrainOrigin.current);
+  lastBrushAt.current=now;
+  setTerrain(current=>addSculptStroke(current,local.x,local.z,brush.radius,brush.strength,brush.mode!));
+ },[]);
  const start=useCallback((e:React.PointerEvent<HTMLDivElement>)=>{
   if(e.button!==0&&e.pointerType==='mouse')return;
   pointer.current={x:e.clientX,y:e.clientY,id:e.pointerId,distance:0};e.currentTarget.setPointerCapture(e.pointerId);
- },[]);
+  if(terrainBrushRef.current.mode)sculptAt(e,true);
+ },[sculptAt]);
  const drag=useCallback((e:React.PointerEvent<HTMLDivElement>)=>{
   const p=pointer.current;if(!p||p.id!==e.pointerId)return;
   const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;p.distance+=Math.hypot(dx,dy);
+  if(terrainBrushRef.current.mode){sculptAt(e);return;}
   if(displayRef.current.mode==='orbit'){
    orbit.current.az-=dx*ORBIT_SPEED;
    orbit.current.el=Math.max(.045,Math.min(Math.PI/2-.015,orbit.current.el+dy*ORBIT_SPEED));
@@ -300,8 +351,8 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
    walk.current.yaw-=dx*.004;
    walk.current.pitch=Math.max(-1.4,Math.min(1.4,walk.current.pitch-dy*.004));
   }
- },[]);
- const stop=(e:React.PointerEvent<HTMLDivElement>)=>{const p=pointer.current;if(p?.id===e.pointerId){if(p.distance<5)pick(e);pointer.current=null}};
+ },[sculptAt]);
+ const stop=(e:React.PointerEvent<HTMLDivElement>)=>{const p=pointer.current;if(p?.id===e.pointerId){if(!terrainBrushRef.current.mode&&p.distance<5)pick(e);pointer.current=null}};
  return <section className="relative h-full min-h-0 min-w-0 flex-1 bg-[#081321] text-[#e4edf7]" data-cad-world="dreamhouse-v1.1" data-world-ready={ready?'true':'false'}>
    <div ref={mount} role="img" aria-label="DreamHouse V1.1 interactive BIM world"
      className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
@@ -315,6 +366,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
        <button type="button" onClick={()=>setRoofVisible(v=>!v)} aria-pressed={!roofVisible} className="rounded px-2 py-1.5 hover:bg-white/10">Roof {roofVisible?'on':'off'}</button>
        <button type="button" onClick={()=>setHour(v=>v==='day'?'evening':'day')} className="rounded px-2 py-1.5 hover:bg-white/10">{hour==='day'?'Daylight':'Evening'}</button>
        <button type="button" onClick={reset} className="rounded px-2 py-1.5 hover:bg-white/10">Reset view</button>
+       <button type="button" onClick={()=>{setTerrainOpen(v=>!v);setSelection(null)}} aria-pressed={terrainOpen} className={'rounded px-2 py-1.5 '+(terrainOpen?'bg-sky-600 text-white':'hover:bg-white/10')}>Terrain &amp; Scenery</button>
      </div>
      <select aria-label="DreamHouse room destinations" className="pointer-events-auto max-w-[180px] rounded-lg border border-white/15 bg-[#111b2c]/95 px-2 py-2 text-xs text-slate-100" defaultValue="" onChange={e=>{const z=handoff?.zones.find(x=>x.roomId===e.target.value);if(z)visit(z)}}>
        <option value="">Explore rooms</option>{handoff?.zones.map(zone=><option key={zone.roomId} value={zone.roomId}>{zone.roomId} — {zone.label}</option>)}
@@ -334,7 +386,10 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
        onPointerDown={e=>{e.preventDefault();pressed.current.add(key)}} onPointerUp={()=>pressed.current.delete(key)} onPointerCancel={()=>pressed.current.delete(key)}
        className="rounded-lg border border-white/20 bg-slate-800/90 px-3 py-2.5 text-xs font-bold">{['↑','←','↓','→'][i]}</button>)}
    </div>}
-   {selection&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">
+   {terrainOpen&&<TerrainEditorPanel document={terrain} onChange={setTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
+     brushRadius={brushRadius} onBrushRadius={setBrushRadius} brushStrength={brushStrength} onBrushStrength={setBrushStrength}
+     onFitSite={fitSite} onClose={()=>{setTerrainOpen(false);setSculptMode(null)}}/>}
+   {!terrainOpen&&selection&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">
      <div className="flex justify-between gap-2"><strong>FreeCAD BIM · {selection.category}</strong><button onClick={()=>setSelection(null)} aria-label="Close BIM inspector">×</button></div>
      <p className="mt-1 break-all font-mono text-sky-200">{selection.designId}</p>
      <p className="mt-1 text-slate-400">{selection.nodeName} · {selection.source}</p>
