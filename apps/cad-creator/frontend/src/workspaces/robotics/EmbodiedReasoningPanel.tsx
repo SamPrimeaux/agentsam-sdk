@@ -131,7 +131,7 @@ export function EmbodiedReasoningPanel({
                 >
                   {t === '2D bounding boxes' && <BoxSelect className="w-3.5 h-3.5" />}
                   {t === 'Points' && <MousePointer2 className="w-3.5 h-3.5" />}
-                  <span className="text-[9px] font-bold uppercase tracking-tight">
+                  <span className="text-[length:var(--text-xs)] font-bold uppercase tracking-tight">
                     {t === '2D bounding boxes' ? 'Boxes' : 'Points'}
                   </span>
                 </button>
@@ -176,7 +176,7 @@ export function EmbodiedReasoningPanel({
               <div className="flex-1 flex flex-col gap-1 p-1">
                 <div className="flex justify-between items-end">
                   <div
-                    className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider ${
+                    className={`flex items-center gap-1 text-[length:var(--text-xs)] font-bold uppercase tracking-wider ${
                       isDarkMode ? 'text-slate-400' : 'text-slate-500'
                     }`}
                   >
@@ -184,7 +184,7 @@ export function EmbodiedReasoningPanel({
                     <span>Temp</span>
                   </div>
                   <span
-                    className={`text-[9px] font-mono font-bold ${
+                    className={`text-[length:var(--text-xs)] font-mono font-bold ${
                       isDarkMode ? 'text-slate-300' : 'text-slate-600'
                     }`}
                   >
@@ -215,7 +215,7 @@ export function EmbodiedReasoningPanel({
                 />
                 <label
                   htmlFor="thinking-toggle-panel"
-                  className={`text-[9px] font-bold uppercase tracking-wider cursor-pointer select-none ${
+                  className={`text-[length:var(--text-xs)] font-bold uppercase tracking-wider cursor-pointer select-none ${
                     isDarkMode ? 'text-slate-300' : 'text-slate-500'
                   }`}
                 >
@@ -286,7 +286,7 @@ export function EmbodiedReasoningPanel({
         <section className="space-y-2 pt-1">
           <div className="flex items-center gap-2 px-1">
             <History className="w-3.5 h-3.5 text-slate-400" />
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            <h3 className="text-[length:var(--text-xs)] font-bold text-slate-400 uppercase tracking-wider">
               API Call History
             </h3>
           </div>
@@ -324,11 +324,11 @@ export function EmbodiedReasoningPanel({
                     </div>
                     <div className="flex-1 min-w-0 py-0.5">
                       <div className="flex justify-between items-center mb-0.5">
-                        <span className="text-[9px] font-bold text-slate-400">
+                        <span className="text-[length:var(--text-xs)] font-bold text-slate-400">
                           {log.timestamp.toLocaleTimeString()}
                         </span>
                         <span
-                          className={`text-[8px] font-bold px-1 py-0.2 rounded uppercase tracking-tight ${
+                          className={`text-[length:var(--text-xs)] font-bold px-1 py-0.2 rounded uppercase tracking-tight ${
                             isDarkMode
                               ? 'bg-white/5 text-slate-400'
                               : 'bg-slate-100 text-slate-500'
@@ -338,21 +338,21 @@ export function EmbodiedReasoningPanel({
                         </span>
                       </div>
                       <p
-                        className={`text-[11px] font-semibold truncate ${
+                        className={`text-[length:var(--text-sm)] font-semibold truncate ${
                           isDarkMode ? 'text-slate-200' : 'text-slate-700'
                         }`}
                       >
                         {log.prompt}
                       </p>
                       {log.result === null ? (
-                        <div className="flex items-center gap-1.5 text-indigo-400 mt-1 text-[9px] font-bold">
+                        <div className="flex items-center gap-1.5 text-indigo-400 mt-1 text-[length:var(--text-xs)] font-bold">
                           <Loader2 className="w-3 h-3 animate-spin" />
                           <span>Detecting...</span>
                         </div>
                       ) : errorMessage ? (
                         <div className="flex items-center justify-between mt-1 gap-1.5">
                           <div className="flex items-center gap-1 min-w-0">
-                            <span className="text-[9px] font-bold text-red-500 truncate">Failed</span>
+                            <span className="text-[length:var(--text-xs)] font-bold text-red-500 truncate">Failed</span>
                             <div className="group/info relative shrink-0" title={errorMessage}>
                               <Info className="w-3 h-3 text-red-400/80 hover:text-red-500 cursor-help" />
                             </div>
@@ -362,7 +362,7 @@ export function EmbodiedReasoningPanel({
                               e.stopPropagation();
                               onSend(log.prompt, log.type as DetectType, temperature, enableThinking, modelId);
                             }}
-                            className={`shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold transition-all ${
+                            className={`shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[length:var(--text-xs)] font-bold transition-all ${
                               isDarkMode
                                 ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
                                 : 'bg-red-50 text-red-600 hover:bg-red-100'
@@ -373,7 +373,7 @@ export function EmbodiedReasoningPanel({
                           </button>
                         </div>
                       ) : (
-                        <div className="text-[9px] text-slate-400 font-mono mt-1 truncate">
+                        <div className="text-[length:var(--text-xs)] text-slate-400 font-mono mt-1 truncate">
                           {Array.isArray(itemResult) ? itemResult.length : 0} items detected
                         </div>
                       )}

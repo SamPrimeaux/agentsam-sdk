@@ -18,7 +18,7 @@ type Props = {
 function Numeric({label,value,onChange,min,max,step=1}:{
   label:string;value:number;onChange:(n:number)=>void;min?:number;max?:number;step?:number
 }) {
-  return <label className="flex min-w-0 flex-col gap-1 text-[11px] text-slate-300">
+  return <label className="flex min-w-0 flex-col gap-1 text-[length:var(--text-sm)] text-slate-300">
     <span>{label}</span>
     <input type="number" value={value} step={step} min={min} max={max}
       onChange={e=>{const n=e.currentTarget.valueAsNumber;
@@ -75,7 +75,7 @@ export function TerrainEditorPanel({document,onChange,sculptMode,onSculptMode,
     aria-label="Site terrain editor">
     <header className="flex items-center justify-between border-b border-white/15 px-3 py-2">
       <div><h3 className="font-semibold text-sm">Site &amp; Terrain</h3>
-      <p className="text-[10px] text-slate-400">Metric landforms · editable scene geometry</p></div>
+      <p className="text-[length:var(--text-xs)] text-slate-400">Metric landforms · editable scene geometry</p></div>
       <button type="button" onClick={onClose} aria-label="Close terrain tools" className="rounded p-2 hover:bg-white/10">×</button>
     </header>
     <div className="space-y-3 overflow-auto px-3 py-3 text-xs">
@@ -88,7 +88,7 @@ export function TerrainEditorPanel({document,onChange,sculptMode,onSculptMode,
           <Numeric label="Protected pad (m)" value={document.protectedRadius} min={0} max={500} onChange={protectedRadius=>update({protectedRadius})}/>
           <Numeric label="Terrain detail" value={document.resolution} min={16} max={256} onChange={resolution=>update({resolution:Math.round(resolution)})}/>
         </div>
-        <p className="text-[10px] text-slate-400">All distances are metres. The BIM building and its internal geometry are never rescaled by these controls.</p>
+        <p className="text-[length:var(--text-xs)] text-slate-400">All distances are metres. The BIM building and its internal geometry are never rescaled by these controls.</p>
       </section>
       <section className="space-y-2 border-t border-white/15 pt-3">
         <div className="flex items-center justify-between gap-2"><strong>Landforms</strong><span className="text-slate-400">{document.landforms.length} objects</span></div>
@@ -122,7 +122,7 @@ export function TerrainEditorPanel({document,onChange,sculptMode,onSculptMode,
           <Numeric label="Brush radius (m)" value={brushRadius} min={1} max={100} onChange={onBrushRadius}/>
           <Numeric label="Brush strength (m)" value={brushStrength} min={.01} max={50} step={.25} onChange={onBrushStrength}/>
         </div>
-        <p className="text-[10px] text-slate-400">Click and drag over the landscape to sculpt. Disable sculpt to inspect or orbit. Undo the latest brush using the button below.</p>
+        <p className="text-[length:var(--text-xs)] text-slate-400">Click and drag over the landscape to sculpt. Disable sculpt to inspect or orbit. Undo the latest brush using the button below.</p>
         <button type="button" disabled={!document.strokes.length} onClick={()=>update({strokes:document.strokes.slice(0,-1)})}
           className="rounded border border-white/20 px-2 py-1.5 disabled:opacity-40">Undo sculpt ({document.strokes.length})</button>
       </section>
@@ -141,7 +141,7 @@ export function TerrainEditorPanel({document,onChange,sculptMode,onSculptMode,
           <Numeric label="Rock scale" value={document.rockScale} min={.1} max={12} step={.25} onChange={rockScale=>update({rockScale})}/>
           <Numeric label="Scatter seed" value={document.seed} min={0} max={4294967295} onChange={seed=>update({seed:Math.round(seed)})}/>
         </div>
-        <p className="text-[10px] text-slate-400">Procedural proxy vegetation; not claimed as survey or aerial imagery.</p>
+        <p className="text-[length:var(--text-xs)] text-slate-400">Procedural proxy vegetation; not claimed as survey or aerial imagery.</p>
       </section>
       <section className="space-y-2 border-t border-white/15 pt-3">
         <strong>Terrain document</strong>
@@ -156,8 +156,8 @@ export function TerrainEditorPanel({document,onChange,sculptMode,onSculptMode,
           onChange={e=>{const file=e.currentTarget.files?.[0];if(file)void importElevation(file);e.currentTarget.value='';}}/>
         <input ref={importRef} type="file" accept=".json,application/json" className="hidden"
           onChange={e=>{const file=e.currentTarget.files?.[0];if(file)void importFile(file);e.currentTarget.value='';}}/>
-        <p className="text-[10px] text-slate-400">Export creates a real editable project artifact. Cloud revision save is not connected to terrain documents yet.</p>
-        {message&&<p role="status" className="text-[11px] text-sky-200">{message}</p>}
+        <p className="text-[length:var(--text-xs)] text-slate-400">Export creates a real editable project artifact. Cloud revision save is not connected to terrain documents yet.</p>
+        {message&&<p role="status" className="text-[length:var(--text-sm)] text-sky-200">{message}</p>}
       </section>
     </div>
   </aside>;

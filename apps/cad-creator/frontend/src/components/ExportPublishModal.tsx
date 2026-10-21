@@ -210,7 +210,7 @@ export const ExportPublishModal: React.FC<ExportPublishModalProps> = ({
                           <span className="text-base">{meta.icon}</span>
                           <div>
                             <span className="text-xs font-bold text-white block">{meta.label}</span>
-                            <span className="text-[10px] text-slate-500 font-mono">{meta.ext}</span>
+                            <span className="text-[length:var(--text-xs)] text-slate-500 font-mono">{meta.ext}</span>
                           </div>
                         </div>
                         <button
@@ -225,7 +225,7 @@ export const ExportPublishModal: React.FC<ExportPublishModalProps> = ({
                           <Download className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-2 line-clamp-2">{meta.desc}</p>
+                      <p className="text-[length:var(--text-sm)] text-slate-400 mt-2 line-clamp-2">{meta.desc}</p>
                     </div>
                   );
                 })}
@@ -293,7 +293,7 @@ export const ExportPublishModal: React.FC<ExportPublishModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between">
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[length:var(--text-sm)] text-slate-500">
             {project.walls.length} walls • {project.rooms.length} rooms • {(project.parametricObjects || []).length} parametric assemblies
           </span>
 
@@ -315,7 +315,7 @@ export const ExportPublishModal: React.FC<ExportPublishModalProps> = ({
                 <span>{isProcessing ? 'Generating...' : `Export ${selectedFormat.toUpperCase()}`}</span>
               </button>
             ) : (
-              <span role="status" className="text-[11px] text-amber-300">Remote publishing requires connected host execution</span>
+              <span role="status" className="text-[length:var(--text-sm)] text-amber-300">Remote publishing requires connected host execution</span>
             )}
           </div>
         </div>

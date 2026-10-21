@@ -173,7 +173,7 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
 
         {/* Add Template dropdown buttons */}
         <div className="p-3 border-b border-slate-800 space-y-1.5">
-          <span className="text-[11px] font-semibold text-slate-400 block mb-1">
+          <span className="text-[length:var(--text-sm)] font-semibold text-slate-400 block mb-1">
             Generate From Template:
           </span>
           <div className="grid grid-cols-1 gap-1.5">
@@ -212,7 +212,7 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
               >
                 <div className="truncate pr-2">
                   <p className="font-semibold truncate">{obj.name}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">
+                  <p className="text-[length:var(--text-xs)] text-slate-500 mt-0.5">
                     X: {Math.round(obj.transform.x)}" | Y: {Math.round(obj.transform.y)}"
                   </p>
                 </div>
@@ -301,7 +301,7 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
         </div>
 
         {/* Validation Status Indicator */}
-        <div className="px-4 py-1.5 bg-slate-900 border-b border-slate-800/80 flex items-center justify-between text-[11px]">
+        <div className="px-4 py-1.5 bg-slate-900 border-b border-slate-800/80 flex items-center justify-between text-[length:var(--text-sm)]">
           <div className="flex items-center space-x-2">
             {validationResult.valid ? (
               <div className="flex items-center space-x-1 text-emerald-400 font-medium">
@@ -315,7 +315,7 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
               </div>
             )}
           </div>
-          <span className="text-slate-500 font-mono text-[10px]">
+          <span className="text-slate-500 font-mono text-[length:var(--text-xs)]">
             Engine: Safe Client/Server CSG Kernel
           </span>
         </div>
@@ -385,7 +385,7 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                   </h4>
                   <div className="grid grid-cols-3 gap-3 text-xs">
                     <div>
-                      <label className="text-slate-400 text-[10px] block">Position X</label>
+                      <label className="text-slate-400 text-[length:var(--text-xs)] block">Position X</label>
                       <input
                         type="number"
                         value={selectedObj.transform.x}
@@ -407,7 +407,7 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                     </div>
 
                     <div>
-                      <label className="text-slate-400 text-[10px] block">Position Y</label>
+                      <label className="text-slate-400 text-[length:var(--text-xs)] block">Position Y</label>
                       <input
                         type="number"
                         value={selectedObj.transform.y}
@@ -429,7 +429,7 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
                     </div>
 
                     <div>
-                      <label className="text-slate-400 text-[10px] block">Elevation Z</label>
+                      <label className="text-slate-400 text-[length:var(--text-xs)] block">Elevation Z</label>
                       <input
                         type="number"
                         value={selectedObj.transform.z || 0}

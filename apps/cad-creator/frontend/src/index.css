@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./generated/typography.css";
 
 @import "../../../../packages/agentsam-nav/dist/theme.css";
 
@@ -10,11 +11,18 @@
 .cad-platform-canvas .cad-workspace-ui{width:100%;height:100%}
 .cad-platform-chat{width:min(400px,42vw);min-width:265px;flex-shrink:0;border-right:1px solid #34363a;background:#171819;display:flex;align-items:center;justify-content:center;overflow:auto;padding:18px}
 .cad-platform-chat-center{display:flex;flex-direction:column;align-items:flex-start;gap:16px;max-width:310px;text-align:left}
-.cad-platform-chat h2{font-size:23px;font-weight:600;letter-spacing:-.035em}
-.cad-platform-chat p{font-size:13px;color:#a5a6ab;line-height:1.65}
-.cad-platform-chat-link{display:inline-flex;border:1px solid #727983;background:#262a2f;border-radius:10px;padding:11px 13px;font-size:12px;font-weight:600}
-.cad-platform-chat-caption{font-size:11px!important;opacity:.8}
-.cad-platform-open-account{font-size:11px;color:#cbd5e1;padding:6px 10px;border:1px solid #ffffff25;border-radius:9px}
+.cad-platform-chat h2{font-size:var(--text-h2);font-weight:var(--fw-heading);letter-spacing:-.035em}
+.cad-platform-chat p{font-size:var(--text-base);color:#a5a6ab;line-height:1.65}
+.cad-platform-chat-link{display:inline-flex;border:1px solid #727983;background:#262a2f;border-radius:10px;padding:11px 13px;font-size:var(--text-sm);font-weight:var(--fw-heading)}
+.cad-platform-chat-caption{font-size:var(--text-sm)!important;opacity:.8}
+.cad-platform-open-account{font-size:var(--text-sm);color:#cbd5e1;padding:6px 10px;border:1px solid #ffffff25;border-radius:9px}
 .cad-platform-shell .as-nav-topbar{flex:0 0 auto}
 .cad-platform-shell .as-nav-sidenav-reserve{min-height:0}
-@media(max-width:770px){.cad-platform-chat{width:100%;min-width:0}.cad-platform-canvas--chat{display:none}.cad-platform-open-account{font-size:0}.cad-platform-open-account span{font-size:15px}}
+@media(max-width:770px){.cad-platform-chat{width:100%;min-width:0}.cad-platform-canvas--chat{display:none}.cad-platform-open-account{display:none}.cad-platform-open-account span{font-size:var(--text-lg)}}
+
+/* The CAD canvas does not switch away to a second Chat mode. Real agent composer remains mounted in CAD. */
+.cad-platform-shell .as-nav-topbar-center{display:none}
+.cad-platform-shell .as-nav-topbar{min-height:2.85rem;height:2.85rem;padding-inline:clamp(.4rem,1.4vw,1rem)}
+.cad-platform-shell .cad-platform-content{min-width:0;min-height:0}
+.cad-platform-shell .cad-platform-canvas{height:100%;width:100%}
+.cad-platform-open-account{font-size:var(--text-sm)}

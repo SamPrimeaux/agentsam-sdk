@@ -886,7 +886,7 @@ export const Canvas2D: React.FC<Props> = ({
       {/* Legacy dock is retained for other consumers; CAD Creator supplies the main direct-tool ribbon. */}
       {showToolToolbar && <div className="absolute top-2.5 left-2.5 z-10 flex items-center space-x-0.5 bg-[#252525] border border-[#333] p-1 rounded shadow-lg">
         {isViewer && (
-          <div className="px-2 py-1 bg-purple-950/60 border border-purple-800/60 rounded text-[10px] font-mono text-purple-300 flex items-center space-x-1 mr-1">
+          <div className="px-2 py-1 bg-purple-950/60 border border-purple-800/60 rounded text-[length:var(--text-xs)] font-mono text-purple-300 flex items-center space-x-1 mr-1">
             <span>👁️ Viewer Mode</span>
           </div>
         )}
@@ -911,7 +911,7 @@ export const Canvas2D: React.FC<Props> = ({
               }`}
             >
               <Square className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-medium hidden sm:inline">Wall</span>
+              <span className="text-[length:var(--text-sm)] font-medium hidden sm:inline">Wall</span>
             </button>
 
             <button
@@ -922,7 +922,7 @@ export const Canvas2D: React.FC<Props> = ({
               }`}
             >
               <DoorClosed className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-medium hidden sm:inline">Door</span>
+              <span className="text-[length:var(--text-sm)] font-medium hidden sm:inline">Door</span>
             </button>
 
             <button
@@ -933,7 +933,7 @@ export const Canvas2D: React.FC<Props> = ({
               }`}
             >
               <AppWindow className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-medium hidden sm:inline">Window</span>
+              <span className="text-[length:var(--text-sm)] font-medium hidden sm:inline">Window</span>
             </button>
 
             <button
@@ -944,7 +944,7 @@ export const Canvas2D: React.FC<Props> = ({
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-medium hidden sm:inline">Room</span>
+              <span className="text-[length:var(--text-sm)] font-medium hidden sm:inline">Room</span>
             </button>
 
             <button
@@ -955,7 +955,7 @@ export const Canvas2D: React.FC<Props> = ({
               }`}
             >
               <Armchair className="w-3.5 h-3.5" />
-              <span className="text-[11px] font-medium hidden sm:inline">Fixture</span>
+              <span className="text-[length:var(--text-sm)] font-medium hidden sm:inline">Fixture</span>
             </button>
           </>
         )}
@@ -1031,17 +1031,17 @@ export const Canvas2D: React.FC<Props> = ({
       <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center space-x-2 pointer-events-none">
         <div className="bg-[#252525] border border-[#333] px-3 py-1.5 rounded shadow-lg flex items-center space-x-3 text-xs">
           <div>
-            <span className="text-gray-500 block text-[9px] uppercase font-bold tracking-wider">Total Area</span>
+            <span className="text-gray-500 block text-[length:var(--text-xs)] uppercase font-bold tracking-wider">Total Area</span>
             <span className="font-bold text-white text-xs">{stats.areaSqFt} sq ft</span>
           </div>
           <div className="w-[1px] h-5 bg-[#444]"></div>
           <div>
-            <span className="text-gray-500 block text-[9px] uppercase font-bold tracking-wider">Perimeter</span>
+            <span className="text-gray-500 block text-[length:var(--text-xs)] uppercase font-bold tracking-wider">Perimeter</span>
             <span className="font-semibold text-gray-300 text-xs">{stats.perimeterFt} ft</span>
           </div>
           <div className="w-[1px] h-5 bg-[#444]"></div>
           <div>
-            <span className="text-gray-500 block text-[9px] uppercase font-bold tracking-wider">Est. Budget</span>
+            <span className="text-gray-500 block text-[length:var(--text-xs)] uppercase font-bold tracking-wider">Est. Budget</span>
             <span className="font-semibold text-emerald-400 text-xs">${stats.estCost.toLocaleString()}</span>
           </div>
         </div>
@@ -1055,7 +1055,7 @@ export const Canvas2D: React.FC<Props> = ({
         >
           <ZoomIn className="w-3.5 h-3.5" />
         </button>
-        <span className="text-[10px] text-gray-400 font-mono px-1">{Math.round(zoom * 100)}%</span>
+        <span className="text-[length:var(--text-xs)] text-gray-400 font-mono px-1">{Math.round(zoom * 100)}%</span>
         <button
           onClick={() => setZoom((z) => Math.max(0.2, z - 0.2))}
           className="p-1 text-gray-400 hover:text-white rounded hover:bg-[#333] transition"
@@ -1067,7 +1067,7 @@ export const Canvas2D: React.FC<Props> = ({
             setPan({ x: 120, y: 120 });
             setZoom(1.4);
           }}
-          className="px-1.5 py-0.5 text-[10px] text-gray-400 hover:text-white rounded hover:bg-[#333] transition font-mono"
+          className="px-1.5 py-0.5 text-[length:var(--text-xs)] text-gray-400 hover:text-white rounded hover:bg-[#333] transition font-mono"
         >
           Reset
         </button>

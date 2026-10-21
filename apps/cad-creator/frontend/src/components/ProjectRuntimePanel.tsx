@@ -56,7 +56,7 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
   }
   if(action==='restore'){const r=await call('design_project_restore',{project_id:project.id,revision:Number(restoreRevision),expected_revision:revision});adopt(r);setStatus('Restored as revision '+r.revision);}
  }catch(e:any){setStatus(e.message);}finally{setBusy(false);}}
- return <div className="absolute right-3 top-14 z-40 flex max-w-[calc(100%-24px)] items-center gap-2 rounded-xl border border-white/15 bg-slate-950/95 px-2.5 py-1.5 text-[11px] text-slate-200 shadow-xl" data-cad-project-runtime>
+ return <div className="cad-project-runtime-shell flex min-w-0 items-center gap-2 text-slate-200" data-cad-project-runtime>
   <div className="flex min-w-0 items-center gap-2">
     <span className="hidden font-semibold text-slate-400 sm:inline" title={project.name}>Revision {revision || '—'}</span>
     <button type="button" disabled={busy||readOnly} onClick={()=>run('save')}
@@ -70,7 +70,7 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
     <div className="absolute right-0 top-[calc(100%+7px)] z-[100] flex max-h-[min(70vh,640px)] w-[min(410px,calc(100vw-24px))] flex-col gap-3 overflow-y-auto rounded-xl border border-white/20 bg-[#182336] p-4 shadow-2xl" aria-label="Project storage and native tools">
       <div>
         <strong className="text-xs font-semibold">Project revisions</strong>
-        <p className="mt-1 text-[11px] leading-relaxed text-slate-400">Local CAD host operations. Cloud revisions require the authenticated project service.</p>
+        <p className="mt-1 text-[length:var(--text-sm)] leading-relaxed text-slate-400">Local CAD host operations. Cloud revisions require the authenticated project service.</p>
       </div>
       <label className="flex flex-col gap-1 text-slate-300">Project ID
         <input aria-label="Project ID" className="min-h-9 rounded-md border border-white/20 bg-[#0f1727] px-2 text-slate-100" value={loadId} onChange={e=>setLoadId(e.target.value)} />
@@ -89,7 +89,7 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
         className="min-h-9 rounded-md border border-white/20 bg-white/5 px-3 text-left hover:bg-white/10">Build & render current project</button>
       <div className="border-t border-white/15 pt-3">
         <strong>Native OCCT solid tools</strong>
-        <p className="mt-1 text-[11px] text-slate-400" title={occtDoctor?.reason||'Native host status'}>
+        <p className="mt-1 text-[length:var(--text-sm)] text-slate-400" title={occtDoctor?.reason||'Native host status'}>
           {occtDoctor===null?'Checking native host…':occtDoctor.ready?'OCCT '+occtDoctor.version:occtDoctor.reason||'OCCT unavailable'}
         </p>
         <div className="mt-2 grid grid-cols-3 gap-2">

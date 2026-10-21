@@ -135,33 +135,33 @@ export function RobotChessMatch({ provider, onLeave }: Props) {
       <div className="pointer-events-auto absolute left-3 top-3 z-30 w-[min(290px,calc(100%-24px))] rounded-2xl border border-white/15 bg-[#121720]/95 px-3 py-3 text-slate-100 shadow-xl" data-testid="robot-chess-hud">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[9px] uppercase tracking-[.16em] text-amber-300">AgentSam / Robotics</p>
+            <p className="text-[length:var(--text-xs)] uppercase tracking-[.16em] text-amber-300">AgentSam / Robotics</p>
             <h2 className="text-sm font-semibold tracking-wide">Chess vs Franka</h2>
           </div>
-          <button type="button" className="rounded-lg border border-white/15 px-2 py-1 text-[10px] hover:bg-white/10 focus-visible:outline focus-visible:outline-2" onClick={onLeave}>Sandbox</button>
+          <button type="button" className="rounded-lg border border-white/15 px-2 py-1 text-[length:var(--text-xs)] hover:bg-white/10 focus-visible:outline focus-visible:outline-2" onClick={onLeave}>Sandbox</button>
         </div>
         <div className="mt-3 flex items-center justify-between gap-2 border-y border-white/10 py-2">
-          <div className="min-w-0"><p className="text-[10px] text-slate-400">You · White</p><p className="text-xl font-semibold tabular-nums">{points.player} <span className="text-[9px] text-slate-400">pts</span></p></div>
-          <span className="text-[10px] text-slate-500">vs</span>
-          <div className="min-w-0 text-right"><p className="text-[10px] text-slate-400">Franka · Black</p><p className="text-xl font-semibold tabular-nums">{points.robot} <span className="text-[9px] text-slate-400">pts</span></p></div>
+          <div className="min-w-0"><p className="text-[length:var(--text-xs)] text-slate-400">You · White</p><p className="text-xl font-semibold tabular-nums">{points.player} <span className="text-[length:var(--text-xs)] text-slate-400">pts</span></p></div>
+          <span className="text-[length:var(--text-xs)] text-slate-500">vs</span>
+          <div className="min-w-0 text-right"><p className="text-[length:var(--text-xs)] text-slate-400">Franka · Black</p><p className="text-xl font-semibold tabular-nums">{points.robot} <span className="text-[length:var(--text-xs)] text-slate-400">pts</span></p></div>
         </div>
-        <p aria-live="polite" className="mt-2 text-[11px] text-slate-200">{sceneError ? 'Chess viewport unavailable: ' + sceneError : phase}</p>
-        <p data-testid="baroque-load-status" role="status" className={`mt-1 text-[10px] ${assetError ? 'text-amber-300' : 'text-slate-400'}`}>
+        <p aria-live="polite" className="mt-2 text-[length:var(--text-sm)] text-slate-200">{sceneError ? 'Chess viewport unavailable: ' + sceneError : phase}</p>
+        <p data-testid="baroque-load-status" role="status" className={`mt-1 text-[length:var(--text-xs)] ${assetError ? 'text-amber-300' : 'text-slate-400'}`}>
           {assetProgress}
         </p>
         {assetError && <button type="button" onClick={() => setAssetRetry(value => value+1)}
-          className="mt-1 rounded-md border border-amber-500/30 px-2 py-1 text-[10px] text-amber-200 focus-visible:outline focus-visible:outline-2">
+          className="mt-1 rounded-md border border-amber-500/30 px-2 py-1 text-[length:var(--text-xs)] text-amber-200 focus-visible:outline focus-visible:outline-2">
           Retry original GLBs
         </button>}
-        {lastRobot && <p className="mt-1 text-[10px] text-amber-300">Last: Franka {lastRobot.san}</p>}
+        {lastRobot && <p className="mt-1 text-[length:var(--text-xs)] text-amber-300">Last: Franka {lastRobot.san}</p>}
         <div className="mt-3 flex items-center gap-2">
-          <button type="button" onClick={reset} disabled={busy} className="rounded-lg bg-white/10 px-3 py-1.5 text-[11px] font-medium hover:bg-white/20 disabled:opacity-40">New game</button>
-          <span className="text-[10px] text-slate-400">{history.length} half-moves</span>
-          {game.current.isCheck() && <span className="ml-auto text-[10px] text-amber-300">Check</span>}
+          <button type="button" onClick={reset} disabled={busy} className="rounded-lg bg-white/10 px-3 py-1.5 text-[length:var(--text-sm)] font-medium hover:bg-white/20 disabled:opacity-40">New game</button>
+          <span className="text-[length:var(--text-xs)] text-slate-400">{history.length} half-moves</span>
+          {game.current.isCheck() && <span className="ml-auto text-[length:var(--text-xs)] text-amber-300">Check</span>}
         </div>
-        <p className="mt-2 text-[9px] leading-relaxed text-slate-400">Capture points: pawn 1 · knight/bishop 3 · rook 5 · queen 9. Chess rules are enforced. Robot action is Mode A visual/IK, not a verified physical grasp.</p>
+        <p className="mt-2 text-[length:var(--text-xs)] leading-relaxed text-slate-400">Capture points: pawn 1 · knight/bishop 3 · rook 5 · queen 9. Chess rules are enforced. Robot action is Mode A visual/IK, not a verified physical grasp.</p>
       </div>
-      <div className="pointer-events-none absolute bottom-3 left-3 z-20 rounded-xl border border-white/10 bg-[#121720]/90 px-3 py-2 text-[10px] text-slate-200">
+      <div className="pointer-events-none absolute bottom-3 left-3 z-20 rounded-xl border border-white/10 bg-[#121720]/90 px-3 py-2 text-[length:var(--text-xs)] text-slate-200">
         <span className="text-emerald-300">●</span> {busy ? 'Simulation running' : 'Interactive 3D board'} · Drag to orbit · Scroll to zoom
       </div>
     </>

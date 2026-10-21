@@ -51,13 +51,13 @@ export function CadStatusStrip({
     <>
       <footer
         id="cad-creator-status-strip"
-        className={`h-7 px-3 border-t text-[11px] font-mono flex items-center justify-between select-none z-30 shrink-0 backdrop-blur-md ${bg}`}
+        className={`h-7 px-3 border-t text-[length:var(--text-sm)] font-mono flex items-center justify-between select-none z-30 shrink-0 backdrop-blur-md ${bg}`}
       >
         {/* Left: Active Workspace + Contextual Engineering State */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 font-semibold text-slate-200">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="uppercase text-[10px] tracking-wider text-indigo-400 font-bold">
+            <span className="uppercase text-[length:var(--text-xs)] tracking-wider text-indigo-400 font-bold">
               {workspace.shortName}
             </span>
           </div>
@@ -108,19 +108,19 @@ export function CadStatusStrip({
                 key={cap.id}
                 type="button"
                 onClick={() => setSelectedCapability(cap)}
-                className={`px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1 transition-colors hover:bg-white/10 ${colorClass}`}
+                className={`px-1.5 py-0.5 rounded text-[length:var(--text-xs)] flex items-center gap-1 transition-colors hover:bg-white/10 ${colorClass}`}
                 title={`Click for ${cap.name} runtime provenance`}
               >
                 <span>{cap.status === 'not_connected' ? '○' : '●'}</span>
                 <span className="font-semibold">{cap.name}</span>
-                {cap.version && <span className="text-[9px] text-slate-400 opacity-80">{cap.version}</span>}
+                {cap.version && <span className="text-[length:var(--text-xs)] text-slate-400 opacity-80">{cap.version}</span>}
               </button>
             );
           })}
 
           <span className="text-slate-600">|</span>
 
-          <div className="flex items-center gap-1 text-[10px] text-slate-400">
+          <div className="flex items-center gap-1 text-[length:var(--text-xs)] text-slate-400">
             <span
               className={`w-1.5 h-1.5 rounded-full ${
                 isSynced ? 'bg-emerald-400' : 'bg-amber-400'
@@ -183,13 +183,13 @@ export function CadStatusStrip({
               {selectedCapability.binary && (
                 <div className="flex justify-between py-1 border-b border-inherit/40">
                   <span className="text-slate-400">Binary Path</span>
-                  <span className="font-bold text-[11px] truncate max-w-[240px] text-slate-300" title={selectedCapability.binary}>
+                  <span className="font-bold text-[length:var(--text-sm)] truncate max-w-[240px] text-slate-300" title={selectedCapability.binary}>
                     {selectedCapability.binary}
                   </span>
                 </div>
               )}
               {selectedCapability.description && (
-                <p className="text-[11px] text-slate-400 pt-2 leading-relaxed font-sans">
+                <p className="text-[length:var(--text-sm)] text-slate-400 pt-2 leading-relaxed font-sans">
                   {selectedCapability.description}
                 </p>
               )}

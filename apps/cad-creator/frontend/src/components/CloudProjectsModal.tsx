@@ -132,14 +132,14 @@ export const CloudProjectsModal: React.FC<Props> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="text-sm font-bold text-white">Cloud Sync & Permissions Center</h2>
-                <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono flex items-center space-x-1 ${
+                <span className={`px-1.5 py-0.2 rounded text-[length:var(--text-xs)] font-mono flex items-center space-x-1 ${
                   isSynced ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${isSynced ? 'bg-green-500' : 'bg-amber-400'}`} />
                   <span>{isSynced ? 'Cloud Synced' : 'Syncing'}</span>
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400">Manage real-time collaboration roles, load design templates, and export CAD</p>
+              <p className="text-[length:var(--text-sm)] text-gray-400">Manage real-time collaboration roles, load design templates, and export CAD</p>
             </div>
           </div>
           <button
@@ -244,7 +244,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                     <span>Active Session Members & Roles ({remoteUsers.length + 1})</span>
                   </h3>
                   {isOwner && (
-                    <span className="text-[10px] text-amber-400 font-mono bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">
+                    <span className="text-[length:var(--text-xs)] text-amber-400 font-mono bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded">
                       👑 You are Room Owner (Role Administration Enabled)
                     </span>
                   )}
@@ -258,11 +258,11 @@ export const CloudProjectsModal: React.FC<Props> = ({
                       <div>
                         <div className="flex items-center space-x-2">
                           <span className="text-xs font-bold text-white">{currentUser.name}</span>
-                          <span className="text-[10px] text-blue-400 font-mono bg-blue-500/10 border border-blue-500/30 px-1.5 py-0.2 rounded">
+                          <span className="text-[length:var(--text-xs)] text-blue-400 font-mono bg-blue-500/10 border border-blue-500/30 px-1.5 py-0.2 rounded">
                             (You)
                           </span>
                         </div>
-                        <p className="text-[11px] text-gray-400 mt-0.5">
+                        <p className="text-[length:var(--text-sm)] text-gray-400 mt-0.5">
                           {ROLE_DESCRIPTIONS[currentUser.role]?.description || 'Collaborator'}
                         </p>
                       </div>
@@ -271,7 +271,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                     <div className="flex items-center space-x-2 self-end sm:self-auto">
                       {/* Role Badge or Switcher */}
                       <div className="flex items-center space-x-1.5">
-                        <span className="text-[10px] text-gray-400 font-mono">Role:</span>
+                        <span className="text-[length:var(--text-xs)] text-gray-400 font-mono">Role:</span>
                         {onChangeSelfRole ? (
                           <select
                             value={currentUser.role}
@@ -283,7 +283,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                             <option value="Viewer">👁️ Viewer</option>
                           </select>
                         ) : (
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-mono border font-medium ${ROLE_DESCRIPTIONS[currentUser.role]?.badgeColor}`}>
+                          <span className={`px-2 py-0.5 rounded text-[length:var(--text-sm)] font-mono border font-medium ${ROLE_DESCRIPTIONS[currentUser.role]?.badgeColor}`}>
                             {currentUser.role === 'Owner' && '👑 '}
                             {currentUser.role === 'Editor' && '✏️ '}
                             {currentUser.role === 'Viewer' && '👁️ '}
@@ -302,16 +302,16 @@ export const CloudProjectsModal: React.FC<Props> = ({
                         <div>
                           <div className="flex items-center space-x-2">
                             <span className="text-xs font-semibold text-white">{u.name}</span>
-                            <span className="text-[10px] text-gray-400 font-mono">Online</span>
+                            <span className="text-[length:var(--text-xs)] text-gray-400 font-mono">Online</span>
                           </div>
-                          <p className="text-[11px] text-gray-400 mt-0.5">
+                          <p className="text-[length:var(--text-sm)] text-gray-400 mt-0.5">
                             {ROLE_DESCRIPTIONS[u.role || 'Editor']?.description}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center space-x-2 self-end sm:self-auto">
-                        <span className="text-[10px] text-gray-400 font-mono">Role:</span>
+                        <span className="text-[length:var(--text-xs)] text-gray-400 font-mono">Role:</span>
                         {isOwner ? (
                           <select
                             value={u.role || 'Editor'}
@@ -323,7 +323,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                             <option value="Viewer">👁️ Viewer</option>
                           </select>
                         ) : (
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-mono border font-medium ${ROLE_DESCRIPTIONS[u.role || 'Editor']?.badgeColor}`}>
+                          <span className={`px-2 py-0.5 rounded text-[length:var(--text-sm)] font-mono border font-medium ${ROLE_DESCRIPTIONS[u.role || 'Editor']?.badgeColor}`}>
                             {u.role === 'Owner' && '👑 '}
                             {u.role === 'Editor' && '✏️ '}
                             {u.role === 'Viewer' && '👁️ '}
@@ -338,7 +338,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
 
               {/* Roles Capabilities Matrix / Legend */}
               <div className="p-3 rounded bg-[#252525] border border-[#333] space-y-2">
-                <h4 className="text-[11px] font-bold text-gray-300 uppercase tracking-wider font-mono">
+                <h4 className="text-[length:var(--text-sm)] font-bold text-gray-300 uppercase tracking-wider font-mono">
                   Role Capabilities Matrix
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
@@ -348,7 +348,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                       <Crown className="w-3.5 h-3.5" />
                       <span>Owner</span>
                     </div>
-                    <ul className="text-[11px] text-gray-300 space-y-1 list-disc pl-3.5 leading-tight">
+                    <ul className="text-[length:var(--text-sm)] text-gray-300 space-y-1 list-disc pl-3.5 leading-tight">
                       <li>Full CAD & 3D BIM editing</li>
                       <li>AI Copilot floor plan synthesis</li>
                       <li>Manage all user roles & permissions</li>
@@ -363,7 +363,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                       <Edit3 className="w-3.5 h-3.5" />
                       <span>Editor</span>
                     </div>
-                    <ul className="text-[11px] text-gray-300 space-y-1 list-disc pl-3.5 leading-tight">
+                    <ul className="text-[length:var(--text-sm)] text-gray-300 space-y-1 list-disc pl-3.5 leading-tight">
                       <li>Draw & edit walls, doors, windows, fixtures</li>
                       <li>Prompt AgentSam AI Copilot</li>
                       <li>Upload & parse sketches to CAD</li>
@@ -378,7 +378,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                       <Eye className="w-3.5 h-3.5" />
                       <span>Viewer (Read-Only)</span>
                     </div>
-                    <ul className="text-[11px] text-gray-300 space-y-1 list-disc pl-3.5 leading-tight">
+                    <ul className="text-[length:var(--text-sm)] text-gray-300 space-y-1 list-disc pl-3.5 leading-tight">
                       <li>Pan & zoom 2D floor plans</li>
                       <li>Orbit & first-person walk 3D BIM</li>
                       <li>Inspect measurements & properties</li>
@@ -442,17 +442,17 @@ export const CloudProjectsModal: React.FC<Props> = ({
                   >
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#1E1E1E] text-blue-400 border border-[#333]">
+                        <span className="text-[length:var(--text-xs)] font-mono px-1.5 py-0.2 rounded bg-[#1E1E1E] text-blue-400 border border-[#333]">
                           {tpl.categoryLabel}
                         </span>
-                        <span className="text-[10px] text-gray-400 font-mono">{tpl.dimensions}</span>
+                        <span className="text-[length:var(--text-xs)] text-gray-400 font-mono">{tpl.dimensions}</span>
                       </div>
                       <h3 className="text-xs font-bold text-white mb-1">{tpl.name}</h3>
-                      <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">{tpl.description}</p>
+                      <p className="text-[length:var(--text-sm)] text-gray-400 mb-3 leading-relaxed">{tpl.description}</p>
                     </div>
 
                     <div className="space-y-2 pt-2 border-t border-[#333]">
-                      <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
+                      <div className="flex items-center justify-between text-[length:var(--text-xs)] text-gray-400 font-mono">
                         <span>{tpl.project.walls.length} Walls • {tpl.project.rooms.length} Rooms • {tpl.project.furniture.length} Fixtures</span>
                       </div>
                       {!permissions.canLoadTemplates ? (
@@ -492,7 +492,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                     <span>Save Revision</span>
                   </button>
                 ) : (
-                  <span className="text-[11px] text-purple-400 font-mono">Viewer (Read-Only)</span>
+                  <span className="text-[length:var(--text-sm)] text-purple-400 font-mono">Viewer (Read-Only)</span>
                 )}
               </div>
 
@@ -506,7 +506,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                     <div key={p.id} className="p-2.5 rounded bg-[#252525] border border-[#333] flex items-center justify-between">
                       <div>
                         <h4 className="text-xs font-semibold text-white">{p.name}</h4>
-                        <span className="text-[10px] text-gray-400 font-mono">{p.date}</span>
+                        <span className="text-[length:var(--text-xs)] text-gray-400 font-mono">{p.date}</span>
                       </div>
                       {permissions.canSaveRevisions ? (
                         <button
@@ -519,7 +519,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                           Restore
                         </button>
                       ) : (
-                        <span className="text-[10px] text-gray-500 font-mono">Restricted</span>
+                        <span className="text-[length:var(--text-xs)] text-gray-500 font-mono">Restricted</span>
                       )}
                     </div>
                   ))
@@ -536,7 +536,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                   <FileCode className="w-3.5 h-3.5 text-blue-400" />
                   <span>3D Wavefront OBJ (.obj)</span>
                 </h4>
-                <p className="text-[11px] text-gray-400">Compatible with Blender, Rhino, AutoCAD, Revit, 3ds Max</p>
+                <p className="text-[length:var(--text-sm)] text-gray-400">Compatible with Blender, Rhino, AutoCAD, Revit, 3ds Max</p>
                 <button
                   onClick={() => downloadFile(exportToOBJ(project), `${project.name || 'Plan'}.obj`, 'text/plain')}
                   className="w-full py-1.5 bg-[#1E1E1E] hover:bg-[#333] border border-[#333] text-white rounded text-xs font-medium transition mt-1"
@@ -550,7 +550,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                   <FileCode className="w-3.5 h-3.5 text-blue-400" />
                   <span>AutoCAD DXF (.dxf)</span>
                 </h4>
-                <p className="text-[11px] text-gray-400">Standard 2D architectural drawing exchange format</p>
+                <p className="text-[length:var(--text-sm)] text-gray-400">Standard 2D architectural drawing exchange format</p>
                 <button
                   onClick={() => downloadFile(exportToDXF(project), `${project.name || 'Plan'}.dxf`, 'application/dxf')}
                   className="w-full py-1.5 bg-[#1E1E1E] hover:bg-[#333] border border-[#333] text-white rounded text-xs font-medium transition mt-1"
@@ -564,7 +564,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                   <FileCode className="w-3.5 h-3.5 text-blue-400" />
                   <span>Vector Architectural SVG (.svg)</span>
                 </h4>
-                <p className="text-[11px] text-gray-400">High-resolution vector blueprints with door arcs & tags</p>
+                <p className="text-[length:var(--text-sm)] text-gray-400">High-resolution vector blueprints with door arcs & tags</p>
                 <button
                   onClick={() => downloadFile(exportToSVG(project), `${project.name || 'Plan'}.svg`, 'image/svg+xml')}
                   className="w-full py-1.5 bg-[#1E1E1E] hover:bg-[#333] border border-[#333] text-white rounded text-xs font-medium transition mt-1"
@@ -578,7 +578,7 @@ export const CloudProjectsModal: React.FC<Props> = ({
                   <FileCode className="w-3.5 h-3.5 text-blue-400" />
                   <span>AgentSam Studio JSON (.json)</span>
                 </h4>
-                <p className="text-[11px] text-gray-400">Complete parametric BIM project state and materials</p>
+                <p className="text-[length:var(--text-sm)] text-gray-400">Complete parametric BIM project state and materials</p>
                 <button
                   onClick={() => downloadFile(JSON.stringify(project, null, 2), `${project.name || 'Plan'}.json`, 'application/json')}
                   className="w-full py-1.5 bg-[#1E1E1E] hover:bg-[#333] border border-[#333] text-white rounded text-xs font-medium transition mt-1"

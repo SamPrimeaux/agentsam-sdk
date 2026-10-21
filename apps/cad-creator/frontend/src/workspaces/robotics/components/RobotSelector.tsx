@@ -27,7 +27,7 @@ export function RobotSelector({ gizmoStats, isDarkMode }: RobotSelectorProps) {
 
       {gizmoStats && (
         <div className={`glass-card px-3 py-2 rounded-lg flex flex-col gap-2 shadow-sm ${isDarkMode ? 'bg-slate-800/60 border-white/5' : 'bg-white/40 border-white/50'}`}>
-          <div className="font-mono text-[9px] space-y-0.5">
+          <div className="font-mono text-[length:var(--text-xs)] space-y-0.5">
             <p className="flex justify-between gap-4"><span className={labelStyle}>POSITION:</span> <span className={`${valueStyle} font-semibold`}>{gizmoStats.pos}</span></p>
             <p className="flex justify-between gap-4"><span className={labelStyle}>ROTATION:</span> <span className={`${valueStyle} font-semibold`}>{gizmoStats.rot}</span></p>
           </div>

@@ -47,7 +47,7 @@ export function Toolbar({
         aria-label={isPaused ? "Resume simulation" : "Pause simulation"}
       >
         {isPaused ? <Play className={`w-4 h-4 ${iconFill}`} /> : <Pause className={`w-4 h-4 ${iconFill}`} />}
-        <span className="text-[10px]">{isPaused ? "Resume" : "Pause"}</span>
+        <span className="text-[length:var(--text-xs)]">{isPaused ? "Resume" : "Pause"}</span>
       </button>
 
       {/* Reset Button */}
@@ -58,7 +58,7 @@ export function Toolbar({
         aria-label="Reset simulation"
       >
         <RotateCcw className="w-4 h-4" />
-        <span className="text-[10px]">Reset</span>
+        <span className="text-[length:var(--text-xs)]">Reset</span>
       </button>
 
       <button type="button" onClick={onReachTest} disabled={isReachRunning}
@@ -76,7 +76,7 @@ export function Toolbar({
         aria-label={isDarkMode ? "Use light mode" : "Use dark mode"}
       >
         {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-        <span className="text-[10px]">{isDarkMode ? "Light" : "Dark"}</span>
+        <span className="text-[length:var(--text-xs)]">{isDarkMode ? "Light" : "Dark"}</span>
       </button>
 
       {/* Sidebar Toggle */}
@@ -87,7 +87,7 @@ export function Toolbar({
         aria-label={showSidebar ? "Close simulation inspector" : "Open simulation inspector"}
       >
         <PanelRight className="w-4 h-4" />
-        <span className="text-[10px]">Inspector</span>
+        <span className="text-[length:var(--text-xs)]">Inspector</span>
       </button>
     </div>
   );

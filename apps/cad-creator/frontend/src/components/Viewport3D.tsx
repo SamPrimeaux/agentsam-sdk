@@ -734,7 +734,7 @@ export const Viewport3D: React.FC<Props> = ({
               <button
                 key={t}
                 onClick={() => setTimeOfDay(t)}
-                className={`px-2 py-0.5 text-[11px] rounded capitalize transition ${
+                className={`px-2 py-0.5 text-[length:var(--text-sm)] rounded capitalize transition ${
                   timeOfDay === t
                     ? 'bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30'
                     : 'text-gray-400 hover:text-white'
@@ -800,7 +800,7 @@ export const Viewport3D: React.FC<Props> = ({
 
           {fpHelp && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#252525] border border-[#333] px-3.5 py-1.5 rounded text-xs text-gray-300 flex items-center space-x-3 pointer-events-auto shadow-xl">
-              <span>Use <kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[10px]">W</kbd><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[10px]">A</kbd><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[10px]">S</kbd><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[10px]">D</kbd> or Arrows to walk</span>
+              <span>Use <kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[length:var(--text-xs)]">W</kbd><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[length:var(--text-xs)]">A</kbd><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[length:var(--text-xs)]">S</kbd><kbd className="px-1.5 py-0.5 bg-[#1E1E1E] border border-[#333] rounded font-mono text-white text-[length:var(--text-xs)]">D</kbd> or Arrows to walk</span>
               <span className="text-gray-600">|</span>
               <span>Click & Drag to Look</span>
               <button onClick={() => setFpHelp(false)} className="text-gray-400 hover:text-white text-xs ml-2">✕</button>
@@ -811,7 +811,7 @@ export const Viewport3D: React.FC<Props> = ({
 
       {/* Bottom Status Bar */}
       <div className="absolute bottom-2.5 right-2.5 z-10 pointer-events-none flex items-center space-x-2">
-        <div className="bg-[#252525] border border-[#333] px-2.5 py-1 rounded text-[11px] text-gray-400 flex items-center space-x-2 shadow font-mono">
+        <div className="bg-[#252525] border border-[#333] px-2.5 py-1 rounded text-[length:var(--text-sm)] text-gray-400 flex items-center space-x-2 shadow font-mono">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
           <span>{project.walls.length} Walls</span>
           <span>•</span>

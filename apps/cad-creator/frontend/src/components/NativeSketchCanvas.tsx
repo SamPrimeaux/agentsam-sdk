@@ -167,11 +167,11 @@ export function NativeSketchCanvas({project,onUpdateProject,canEdit}:{
          stroke="#45cb91" strokeWidth={1} strokeDasharray="8 5" opacity="0.75"/>)}
        {preview.length>1&&renderShape({id:'preview',kind:tool==='pan'?'line':tool as NativeSketchKind,points:preview},'#fbbf24','preview')}
      </svg>
-     <div className="pointer-events-none absolute bottom-3 left-3 rounded bg-[#111b2b]/90 px-3 py-2 text-[11px] text-slate-300">
+     <div className="pointer-events-none absolute bottom-3 left-3 rounded bg-[#111b2b]/90 px-3 py-2 text-[length:var(--text-sm)] text-slate-300">
        World units: inches · grid {format(project.gridSize||12)} · wheel to zoom · Pan tool to move
      </div>
    </div>
-   <footer className="flex min-h-9 flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/10 bg-[#151c29] px-3 py-2 text-[11px]">
+   <footer className="flex min-h-9 flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/10 bg-[#151c29] px-3 py-2 text-[length:var(--text-sm)]">
      <span>{strokes.length} sketch strokes</span><span>{proposal.preview.walls.length} pending walls</span>
      <span>{proposal.preview.rooms.length} pending spaces</span>
      {proposal.skipped>0&&<span>{proposal.skipped} duplicate or short segments skipped</span>}

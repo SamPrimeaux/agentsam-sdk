@@ -156,11 +156,11 @@ export const VeoStudioModal: React.FC<Props> = ({ isOpen, onClose, initialImageU
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="text-sm font-bold text-white">Veo Architectural Video Animator</h2>
-                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="px-1.5 py-0.2 rounded text-[length:var(--text-xs)] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   veo-3.1-fast-generate-preview
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400">Animate floor plan renders or uploaded architectural photos into cinematic flythrough videos</p>
+              <p className="text-[length:var(--text-sm)] text-gray-400">Animate floor plan renders or uploaded architectural photos into cinematic flythrough videos</p>
             </div>
           </div>
           <button
@@ -176,7 +176,7 @@ export const VeoStudioModal: React.FC<Props> = ({ isOpen, onClose, initialImageU
           {/* Left: Input Image & Configuration */}
           <div className="space-y-3">
             <div>
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
+              <label className="text-[length:var(--text-sm)] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
                 Input Image / Render Snapshot
               </label>
 
@@ -205,7 +205,7 @@ export const VeoStudioModal: React.FC<Props> = ({ isOpen, onClose, initialImageU
                 >
                   <Upload className="w-6 h-6 text-gray-400 mb-1.5" />
                   <span className="text-xs font-medium text-gray-200">Upload Photo or Blueprint</span>
-                  <span className="text-[10px] text-gray-500 mt-0.5">PNG, JPG, WebP supported</span>
+                  <span className="text-[length:var(--text-xs)] text-gray-500 mt-0.5">PNG, JPG, WebP supported</span>
                 </div>
               )}
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
@@ -213,7 +213,7 @@ export const VeoStudioModal: React.FC<Props> = ({ isOpen, onClose, initialImageU
 
             {/* Prompt */}
             <div>
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+              <label className="text-[length:var(--text-sm)] font-bold text-gray-400 uppercase tracking-wider block mb-1">
                 Camera Motion & Video Prompt
               </label>
               <textarea
@@ -227,13 +227,13 @@ export const VeoStudioModal: React.FC<Props> = ({ isOpen, onClose, initialImageU
 
             {/* Presets */}
             <div>
-              <span className="text-[10px] text-gray-400 block mb-1 font-mono">Quick Camera Trajectories:</span>
+              <span className="text-[length:var(--text-xs)] text-gray-400 block mb-1 font-mono">Quick Camera Trajectories:</span>
               <div className="flex flex-wrap gap-1">
                 {presets.map((p) => (
                   <button
                     key={p.label}
                     onClick={() => setPrompt(p.prompt)}
-                    className="px-2 py-0.5 bg-[#252525] hover:bg-[#333] border border-[#333] hover:border-emerald-500/40 text-gray-300 hover:text-white rounded text-[11px] transition"
+                    className="px-2 py-0.5 bg-[#252525] hover:bg-[#333] border border-[#333] hover:border-emerald-500/40 text-gray-300 hover:text-white rounded text-[length:var(--text-sm)] transition"
                   >
                     {p.label}
                   </button>
@@ -244,7 +244,7 @@ export const VeoStudioModal: React.FC<Props> = ({ isOpen, onClose, initialImageU
             {/* Aspect Ratio & Resolution */}
             <div className="grid grid-cols-2 gap-2 pt-1">
               <div>
-                <label className="text-[10px] text-gray-400 block mb-1 font-mono">Aspect Ratio</label>
+                <label className="text-[length:var(--text-xs)] text-gray-400 block mb-1 font-mono">Aspect Ratio</label>
                 <div className="grid grid-cols-2 gap-1 bg-[#252525] p-0.5 rounded border border-[#333]">
                   <button
                     onClick={() => setAspectRatio('16:9')}
@@ -266,7 +266,7 @@ export const VeoStudioModal: React.FC<Props> = ({ isOpen, onClose, initialImageU
               </div>
 
               <div>
-                <label className="text-[10px] text-gray-400 block mb-1 font-mono">Resolution</label>
+                <label className="text-[length:var(--text-xs)] text-gray-400 block mb-1 font-mono">Resolution</label>
                 <div className="grid grid-cols-2 gap-1 bg-[#252525] p-0.5 rounded border border-[#333]">
                   <button
                     onClick={() => setResolution('720p')}
@@ -292,7 +292,7 @@ export const VeoStudioModal: React.FC<Props> = ({ isOpen, onClose, initialImageU
           {/* Right: Output Player & Generation Progress */}
           <div className="flex flex-col justify-between space-y-3">
             <div className="flex-1 flex flex-col">
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
+              <label className="text-[length:var(--text-sm)] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
                 Synthesized Video Output
               </label>
 
@@ -315,7 +315,7 @@ export const VeoStudioModal: React.FC<Props> = ({ isOpen, onClose, initialImageU
                     </div>
                     <div>
                       <h4 className="text-xs font-semibold text-white">Veo Generative Engine</h4>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{statusMessage}</p>
+                      <p className="text-[length:var(--text-sm)] text-gray-400 mt-0.5">{statusMessage}</p>
                     </div>
 
                     <div className="w-full bg-[#1E1E1E] rounded-full h-1.5 overflow-hidden">

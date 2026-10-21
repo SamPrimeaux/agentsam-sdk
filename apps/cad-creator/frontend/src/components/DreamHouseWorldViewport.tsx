@@ -22,6 +22,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
  const target=useRef(new THREE.Vector3()),orbit=useRef({az:0.9,el:0.65,distance:65});
  const walk=useRef({yaw:0,pitch:0,position:new THREE.Vector3(),active:false});
  const pressed=useRef(new Set<string>()),pointer=useRef<{x:number;y:number;id:number;distance:number}|null>(null);
+ const touchPointers=useRef(new Map<number,{x:number;y:number}>()),pinchDistance=useRef<number|null>(null);
  const terrainProjection=useRef<TerrainProjection|null>(null);
  const terrainOrigin=useRef(new THREE.Vector3());
  const terrainDocRef=useRef<TerrainDocument>(createTerrainDocument());
@@ -208,7 +209,8 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
         scene.add(environment.sun.target);
       }
       target.current.copy(center);
-      orbit.current={az:.88,el:.49,distance:Math.max(11,size.length()*.56)};
+      const ratio=host.clientWidth/Math.max(1,host.clientHeight);
+      orbit.current={az:.88,el:.49,distance:Math.max(11,size.length()*(ratio<.7?1.7:ratio<1.25?1.15:.85))};
       walk.current.position.set(center.x,Math.max(1.65,box.min.y+1.65),center.z);
       const structure:THREE.Object3D[]=[];
       const authoredMaterialPalette=new Map<THREE.Material,THREE.MeshBasicMaterial>();
@@ -337,10 +339,23 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
  },[]);
  const start=useCallback((e:React.PointerEvent<HTMLDivElement>)=>{
   if(e.button!==0&&e.pointerType==='mouse')return;
-  pointer.current={x:e.clientX,y:e.clientY,id:e.pointerId,distance:0};e.currentTarget.setPointerCapture(e.pointerId);
+  if(e.pointerType==='touch'){
+   touchPointers.current.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   if(touchPointers.current.size===2){const points=[...touchPointers.current.values()];pinchDistance.current=Math.hypot(points[0].x-points[1].x,points[0].y-points[1].y);pointer.current=null;}
+  }
+  if(!pointer.current&&touchPointers.current.size<=1)pointer.current={x:e.clientX,y:e.clientY,id:e.pointerId,distance:0};
+  e.currentTarget.setPointerCapture(e.pointerId);
   if(terrainBrushRef.current.mode)sculptAt(e,true);
  },[sculptAt]);
  const drag=useCallback((e:React.PointerEvent<HTMLDivElement>)=>{
+  if(touchPointers.current.has(e.pointerId)){
+   touchPointers.current.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   if(touchPointers.current.size===2){
+    const points=[...touchPointers.current.values()],distance=Math.hypot(points[0].x-points[1].x,points[0].y-points[1].y);
+    if(pinchDistance.current&&distance>0&&displayRef.current.mode==='orbit')orbit.current.distance=Math.max(3,Math.min(350,orbit.current.distance*pinchDistance.current/distance));
+    pinchDistance.current=distance;return;
+   }
+  }
   const p=pointer.current;if(!p||p.id!==e.pointerId)return;
   const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;p.distance+=Math.hypot(dx,dy);
   if(terrainBrushRef.current.mode){sculptAt(e);return;}
@@ -352,34 +367,43 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
    walk.current.pitch=Math.max(-1.4,Math.min(1.4,walk.current.pitch-dy*.004));
   }
  },[sculptAt]);
- const stop=(e:React.PointerEvent<HTMLDivElement>)=>{const p=pointer.current;if(p?.id===e.pointerId){if(!terrainBrushRef.current.mode&&p.distance<5)pick(e);pointer.current=null}};
+ const stop=(e:React.PointerEvent<HTMLDivElement>)=>{
+  const wasPinching=pinchDistance.current!==null;
+  touchPointers.current.delete(e.pointerId);
+  if(touchPointers.current.size<2)pinchDistance.current=null;
+  const p=pointer.current;if(p?.id===e.pointerId){if(!wasPinching&&!terrainBrushRef.current.mode&&p.distance<5)pick(e);pointer.current=null}
+ };
  return <section className="relative h-full min-h-0 min-w-0 flex-1 bg-[#081321] text-[#e4edf7]" data-cad-world="dreamhouse-v1.1" data-world-ready={ready?'true':'false'}>
    <div ref={mount} role="img" aria-label="DreamHouse V1.1 interactive BIM world"
      className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
      onPointerDown={start} onPointerMove={drag} onPointerUp={stop}
      onWheel={e=>{if(displayRef.current.mode==='orbit')orbit.current.distance=Math.max(3,Math.min(250,orbit.current.distance*(e.deltaY>0?1.11:.90)))}}/>
-   <div className="pointer-events-none absolute inset-x-3 top-3 z-10 flex flex-wrap items-start justify-between gap-2">
-     <div className="pointer-events-auto flex flex-wrap items-center gap-1 rounded-lg border border-white/15 bg-[#111b2c]/90 p-1 text-xs shadow-xl backdrop-blur-md">
-       <span className="px-2 font-semibold">DreamHouse V1.1</span>
-       <button type="button" onClick={()=>setMode('orbit')} aria-pressed={mode==='orbit'} className={'rounded px-2 py-1.5 '+(mode==='orbit'?'bg-sky-600 text-white':'hover:bg-white/10')}>Orbit</button>
-       <button type="button" onClick={()=>{walk.current.active=false;setMode('walk')}} aria-pressed={mode==='walk'} className={'rounded px-2 py-1.5 '+(mode==='walk'?'bg-sky-600 text-white':'hover:bg-white/10')}>Walk</button>
-       <button type="button" onClick={()=>setRoofVisible(v=>!v)} aria-pressed={!roofVisible} className="rounded px-2 py-1.5 hover:bg-white/10">Roof {roofVisible?'on':'off'}</button>
-       <button type="button" onClick={()=>setHour(v=>v==='day'?'evening':'day')} className="rounded px-2 py-1.5 hover:bg-white/10">{hour==='day'?'Daylight':'Evening'}</button>
-       <button type="button" onClick={reset} className="rounded px-2 py-1.5 hover:bg-white/10">Reset view</button>
-       <button type="button" onClick={()=>{setTerrainOpen(v=>!v);setSelection(null)}} aria-pressed={terrainOpen} className={'rounded px-2 py-1.5 '+(terrainOpen?'bg-sky-600 text-white':'hover:bg-white/10')}>Terrain &amp; Scenery</button>
+   <details className="cad-world-menu" aria-label="World view settings">
+     <summary title="View and environment controls" aria-label="View and environment controls">Views &amp; Scene</summary>
+     <div className="cad-world-menu-content">
+       <strong>Camera</strong>
+       <div className="cad-world-menu-row">
+        <button type="button" title="Orbit camera" onClick={()=>setMode('orbit')} aria-pressed={mode==='orbit'}>Orbit</button>
+        <button type="button" title="Walk through the BIM" onClick={()=>{walk.current.active=false;setMode('walk')}} aria-pressed={mode==='walk'}>Walk</button>
+        <button type="button" title="Frame model" onClick={reset}>Frame model</button>
+       </div>
+       <div className="cad-world-menu-row" aria-label="Architectural world views">
+         {(['iso','plan','front','side'] as const).map(preset=><button key={preset} type="button" title={'View '+preset} onClick={()=>setView(preset)}
+          aria-pressed={viewPreset===preset}>{{iso:'Isometric',plan:'Top',front:'Front',side:'Side'}[preset]}</button>)}
+       </div>
+       <strong>Environment</strong>
+       <div className="cad-world-menu-row">
+        <button type="button" title="Toggle roof" aria-pressed={!roofVisible} onClick={()=>setRoofVisible(v=>!v)}>Roof {roofVisible?'on':'off'}</button>
+        <button type="button" title="Change daylight" onClick={()=>setHour(v=>v==='day'?'evening':'day')}>{hour==='day'?'Daylight':'Evening'}</button>
+        <button type="button" title="Toggle wireframe" aria-pressed={wireframe} onClick={()=>setWireframe(v=>!v)}>Wireframe</button>
+       </div>
+       <label className="cad-world-room">Room <select aria-label="DreamHouse room destinations" defaultValue="" onChange={e=>{const z=handoff?.zones.find(x=>x.roomId===e.target.value);if(z)visit(z)}}>
+          <option value="">Choose room</option>{handoff?.zones.map(zone=><option key={zone.roomId} value={zone.roomId}>{zone.label}</option>)}
+       </select></label>
+       <button className="cad-world-action" type="button" title="Edit the real site terrain" aria-pressed={terrainOpen} onClick={()=>{setTerrainOpen(v=>!v);setSelection(null);window.dispatchEvent(new Event('cad:terrain-inspect'))}}>Terrain &amp; Scenery</button>
+       <button className="cad-world-action" type="button" title="Save current view as PNG" disabled={!ready} onClick={exportSnapshot}>Capture PNG</button>
      </div>
-     <select aria-label="DreamHouse room destinations" className="pointer-events-auto max-w-[180px] rounded-lg border border-white/15 bg-[#111b2c]/95 px-2 py-2 text-xs text-slate-100" defaultValue="" onChange={e=>{const z=handoff?.zones.find(x=>x.roomId===e.target.value);if(z)visit(z)}}>
-       <option value="">Explore rooms</option>{handoff?.zones.map(zone=><option key={zone.roomId} value={zone.roomId}>{zone.roomId} — {zone.label}</option>)}
-     </select>
-   </div>
-   <div className="pointer-events-auto absolute bottom-3 left-3 z-20 flex max-w-[min(600px,75vw)] flex-wrap gap-1 rounded-lg border border-white/15 bg-[#111b2c]/90 p-1 text-xs shadow-lg backdrop-blur-md" aria-label="Architectural world views">
-     {(['iso','plan','front','side'] as const).map(preset=><button key={preset} type="button" onClick={()=>setView(preset)}
-       aria-pressed={viewPreset===preset} className={'rounded px-2 py-1.5 '+(viewPreset===preset?'bg-sky-600 text-white':'hover:bg-white/10')}>
-       {{iso:'Isometric',plan:'Top',front:'Front',side:'Side'}[preset]}
-     </button>)}
-     <button type="button" onClick={()=>setWireframe(v=>!v)} aria-pressed={wireframe} className={'rounded px-2 py-1.5 '+(wireframe?'bg-sky-600 text-white':'hover:bg-white/10')}>Wireframe</button>
-     <button type="button" disabled={!ready} onClick={exportSnapshot} className="rounded px-2 py-1.5 hover:bg-white/10 disabled:opacity-40">Capture PNG</button>
-   </div>
+   </details>
    {mode==='walk'&&<div className="pointer-events-none absolute bottom-14 left-1/2 -translate-x-1/2 rounded-lg bg-[#111b2c]/85 px-3 py-2 text-center text-xs text-white/90">W A S D · drag to look · Shift to move faster</div>}
    {mode==='walk'&&<div className="absolute bottom-16 left-3 z-20 flex gap-1 sm:hidden">
      {(['KeyW','KeyA','KeyS','KeyD'] as const).map((key,i)=><button key={key} type="button" aria-label={'Move '+['forward','left','back','right'][i]}
@@ -395,8 +419,6 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
      <p className="mt-1 text-slate-400">{selection.nodeName} · {selection.source}</p>
    </aside>}
    {(progress||error)&&<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/20 bg-[#101a2b]/95 px-5 py-4 text-center text-sm" role="status">{error||progress}</div>}
-   {ready&&<div className="pointer-events-none absolute bottom-2 right-3 rounded bg-[#111b2c]/85 px-3 py-1.5 text-[10px] tracking-wide text-slate-300">
-     Published world · {handoff?.scene.architectureNodeCount} BIM nodes · {handoff?.zones.length} rooms · {handoff?.sceneRevision}
-   </div>}
+
  </section>;
 }

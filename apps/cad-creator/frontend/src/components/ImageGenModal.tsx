@@ -95,11 +95,11 @@ export const ImageGenModal: React.FC<Props> = ({ isOpen, onClose, initialImageUr
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="text-sm font-bold text-white">Gemini Architectural Image Studio</h2>
-                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                <span className="px-1.5 py-0.2 rounded text-[length:var(--text-xs)] font-mono bg-blue-500/20 text-blue-300 border border-blue-500/30">
                   gemini-3.1-flash-image-preview
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400">Generate photorealistic renderings or edit architectural concept images with natural language</p>
+              <p className="text-[length:var(--text-sm)] text-gray-400">Generate photorealistic renderings or edit architectural concept images with natural language</p>
             </div>
           </div>
           <button
@@ -116,13 +116,13 @@ export const ImageGenModal: React.FC<Props> = ({ isOpen, onClose, initialImageUr
           <div className="space-y-3">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                <label className="text-[length:var(--text-sm)] font-bold text-gray-400 uppercase tracking-wider">
                   Source Image (Optional for Image Editing)
                 </label>
                 {sourceImage && (
                   <button
                     onClick={() => setSourceImage(null)}
-                    className="text-[10px] text-rose-400 hover:underline"
+                    className="text-[length:var(--text-xs)] text-rose-400 hover:underline"
                   >
                     Clear (Switch to Text-to-Image)
                   </button>
@@ -132,7 +132,7 @@ export const ImageGenModal: React.FC<Props> = ({ isOpen, onClose, initialImageUr
               {sourceImage ? (
                 <div className="relative rounded overflow-hidden border border-blue-500/40 bg-[#252525]">
                   <img src={sourceImage} alt="Base render" className="w-full h-36 object-cover" />
-                  <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 bg-black/80 rounded text-[10px] text-white">
+                  <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 bg-black/80 rounded text-[length:var(--text-xs)] text-white">
                     Editing Active Render
                   </div>
                 </div>
@@ -143,7 +143,7 @@ export const ImageGenModal: React.FC<Props> = ({ isOpen, onClose, initialImageUr
                 >
                   <Upload className="w-5 h-5 text-gray-400 mb-1" />
                   <span className="text-xs font-medium text-gray-300">Drop render or photo to edit</span>
-                  <span className="text-[10px] text-gray-500">Leave blank for fresh text-to-image</span>
+                  <span className="text-[length:var(--text-xs)] text-gray-500">Leave blank for fresh text-to-image</span>
                 </div>
               )}
               <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
@@ -151,7 +151,7 @@ export const ImageGenModal: React.FC<Props> = ({ isOpen, onClose, initialImageUr
 
             {/* Prompt */}
             <div>
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+              <label className="text-[length:var(--text-sm)] font-bold text-gray-400 uppercase tracking-wider block mb-1">
                 {sourceImage ? 'Editing Instructions' : 'Architectural Concept Prompt'}
               </label>
               <textarea
@@ -165,13 +165,13 @@ export const ImageGenModal: React.FC<Props> = ({ isOpen, onClose, initialImageUr
 
             {/* Style Presets */}
             <div>
-              <span className="text-[10px] text-gray-400 block mb-1 font-mono">Architectural Presets:</span>
+              <span className="text-[length:var(--text-xs)] text-gray-400 block mb-1 font-mono">Architectural Presets:</span>
               <div className="flex flex-wrap gap-1">
                 {stylePresets.map((p) => (
                   <button
                     key={p.label}
                     onClick={() => setPrompt(p.prompt)}
-                    className="px-2 py-0.5 bg-[#252525] hover:bg-[#333] border border-[#333] hover:border-blue-500/40 text-gray-300 hover:text-white rounded text-[11px] transition"
+                    className="px-2 py-0.5 bg-[#252525] hover:bg-[#333] border border-[#333] hover:border-blue-500/40 text-gray-300 hover:text-white rounded text-[length:var(--text-sm)] transition"
                   >
                     {p.label}
                   </button>
@@ -181,7 +181,7 @@ export const ImageGenModal: React.FC<Props> = ({ isOpen, onClose, initialImageUr
 
             {/* Aspect Ratio */}
             <div>
-              <label className="text-[10px] text-gray-400 block mb-1 font-mono">Aspect Ratio</label>
+              <label className="text-[length:var(--text-xs)] text-gray-400 block mb-1 font-mono">Aspect Ratio</label>
               <div className="flex space-x-1 bg-[#252525] p-0.5 rounded border border-[#333]">
                 {(['16:9', '4:3', '1:1', '3:4', '9:16'] as const).map((ar) => (
                   <button
@@ -211,7 +211,7 @@ export const ImageGenModal: React.FC<Props> = ({ isOpen, onClose, initialImageUr
           {/* Right: Render Preview & Gallery */}
           <div className="flex flex-col justify-between space-y-3">
             <div>
-              <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
+              <label className="text-[length:var(--text-sm)] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
                 High-Resolution Render Output
               </label>
 
@@ -223,7 +223,7 @@ export const ImageGenModal: React.FC<Props> = ({ isOpen, onClose, initialImageUr
                     <div className="w-8 h-8 mx-auto rounded bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400 animate-pulse">
                       <Sparkles className="w-4 h-4" />
                     </div>
-                    <p className="text-[11px] text-gray-400">Gemini is rendering photorealistic lighting and materials...</p>
+                    <p className="text-[length:var(--text-sm)] text-gray-400">Gemini is rendering photorealistic lighting and materials...</p>
                   </div>
                 ) : error ? (
                   <div className="text-center p-3 space-y-1.5 text-rose-400">
@@ -268,7 +268,7 @@ export const ImageGenModal: React.FC<Props> = ({ isOpen, onClose, initialImageUr
             {/* History Thumbnails */}
             {generatedImages.length > 0 && (
               <div>
-                <span className="text-[10px] text-gray-400 block mb-1 font-mono">Session Render History:</span>
+                <span className="text-[length:var(--text-xs)] text-gray-400 block mb-1 font-mono">Session Render History:</span>
                 <div className="flex space-x-1.5 overflow-x-auto pb-0.5">
                   {generatedImages.map((img, i) => (
                     <img

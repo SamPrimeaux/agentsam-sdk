@@ -4,11 +4,11 @@
   --nav-popover: #292929; --nav-text: #ececec; --nav-muted: #aaa;
   --nav-border: #ffffff1a; --nav-hover: #ffffff0d; --nav-selected: #ffffff12;
   --nav-danger: #ff8b8b; --nav-accent: #8b5cf6;
-  --nav-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --nav-label-size: 14px; --nav-meta-size: 12px; --nav-row-height: 36px;
+  --nav-font: var(--font-sans, system-ui);
+  --nav-label-size:var(--text-base,14px); --nav-meta-size:var(--text-sm,12px); --nav-row-height: 36px;
   --nav-radius: 8px; --nav-menu-radius: 14px; --nav-width: 264px; --nav-rail-width: 56px;
   --nav-shadow: 0 16px 40px #0006;
-  color: var(--nav-text); font: 400 var(--nav-label-size)/1.45 var(--nav-font); color-scheme: dark;
+  color: var(--nav-text); font:var(--fw-body,400) var(--text-base,14px)/var(--leading-normal,1.45) var(--font-sans,system-ui); color-scheme: dark;
   box-sizing: border-box;
 }
 .as-nav-scope[data-nav-theme="light"] { --nav-canvas: #fafafa; --nav-sidebar: #f1f1f1; --nav-surface: #fff; --nav-popover: #fff; --nav-text: #202020; --nav-muted: #636363; --nav-border: #0000001f; --nav-hover: #00000008; --nav-selected: #0000000d; --nav-danger: #b42323; --nav-shadow: 0 16px 40px #0002; color-scheme: light; }
@@ -56,7 +56,7 @@
 .as-nav-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .as-nav-account--expanded .as-nav-button { width: 100%; justify-content: flex-start; }
 .as-nav-account-copy { display: flex; flex: 1; min-width: 0; text-align: left; flex-direction: column; }
-.as-nav-account-copy strong { font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.as-nav-account-copy strong { font-weight:var(--fw-heading); overflow: hidden; text-overflow: ellipsis; }
 .as-nav-account-copy small { color: var(--nav-muted); font-size: var(--nav-meta-size); }
 .as-nav-sidenav-reserve { width: var(--nav-rail-width); flex-shrink: 0; position: relative; height: 100%; z-index: 45; }
 .as-nav-sidenav-reserve[data-open="true"] { width: var(--nav-width); }
@@ -69,7 +69,7 @@
 .as-nav-destination { display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: var(--nav-row-height); width: 100%; text-align: left; background: transparent; border: 0; border-radius: var(--nav-radius); }
 .as-nav-destination:hover, .as-nav-destination[data-active] { background: var(--nav-selected); }
 .as-nav-history { overflow-y: auto; flex: 1; min-height: 0; padding: 0 8px 16px; scrollbar-width: thin; scrollbar-color: var(--nav-border) transparent; }
-.as-nav-history h2 { font-size: var(--nav-meta-size); color: var(--nav-muted); font-weight: 500; margin: 20px 12px 8px; }
+.as-nav-history h2 { font-size: var(--nav-meta-size); color: var(--nav-muted); font-weight:var(--fw-heading); margin: 20px 12px 8px; }
 .as-nav-search { display: flex; align-items: center; gap: 8px; padding: 8px 10px; color: var(--nav-muted); }
 .as-nav-search input { width: 100%; min-width: 0; background: transparent; border: 0; font-size: var(--nav-meta-size); }
 .as-nav-conversation { position: relative; display: flex; align-items: center; border-radius: var(--nav-radius); }
@@ -102,7 +102,7 @@
 .as-nav-empty { color: var(--nav-muted); padding: 12px; font-size: var(--nav-meta-size); }
 .as-nav-dialog-overlay { position: fixed; inset: 0; z-index: 80; background: #0008; }
 .as-nav-dialog { position: fixed; z-index: 81; top: 50%; left: 50%; transform: translate(-50%,-50%); width: min(400px, calc(100vw - 32px)); background: var(--nav-popover); border: 1px solid var(--nav-border); border-radius: var(--nav-menu-radius); padding: 24px; box-shadow: var(--nav-shadow); }
-.as-nav-dialog h2 { font-size: 18px; margin: 0 0 8px; }
+.as-nav-dialog h2 { font-size:var(--text-xl); margin: 0 0 8px; }
 .as-nav-dialog p { color: var(--nav-muted); margin-bottom: 20px; }
 .as-nav-dialog input { background: var(--nav-surface); border: 1px solid var(--nav-border); padding: 10px 12px; border-radius: var(--nav-radius); width: 100%; }
 .as-nav-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
