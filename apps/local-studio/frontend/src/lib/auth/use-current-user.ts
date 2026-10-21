@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { authClient, authEnabled } from "./client";
 import { getTauriInvoke, invokeIdentity, isPackagedDesktop } from "@/lib/desktop/tauri";
 
@@ -49,55 +49,46 @@ function normalizeDesktopUser(user: DesktopIdentityMessage["user"]): AppUser | n
   };
 }
 
-function useDesktopCurrentUserState(): CurrentUserState {
-  const [state, setState] = useState<CurrentUserState>({
-    user: null,
-    isPending: true,
+// Shared desktop restore: a component-level hook previously invoked /auth/me
+// once per consumer and could trigger dozens of Keychain reads before the
+// first application window painted. One restore per webview, never per hook.
+const desktopListeners = new Set<() => void>();
+let desktopRestorationStarted = false;
+let desktopSnapshot: CurrentUserState = { user: DEV_USER, isPending: false };
+
+function publishDesktopUser(user: AppUser | null) {
+  desktopSnapshot = { user: user ?? DEV_USER, isPending: false };
+  for (const listener of desktopListeners) listener();
+}
+
+function startDesktopIdentityRestore() {
+  if (desktopRestorationStarted || typeof window === 'undefined') return;
+  desktopRestorationStarted = true;
+  window.addEventListener('message', (event: MessageEvent) => {
+    if (event.source !== window) return;
+    const message = event.data as DesktopIdentityMessage | undefined;
+    if (message?.type !== 'agentsam:desktop-identity') return;
+    publishDesktopUser(message.authenticated ? normalizeDesktopUser(message.user) : null);
   });
+  // Render the native Studio shell before requesting secured session state.
+  // The request can trigger a macOS approval dialog on an ad-hoc signed build.
+  window.setTimeout(() => {
+    void invokeIdentity({ op: 'status' }).then((raw) => {
+      const status = raw as DesktopIdentityMessage;
+      publishDesktopUser(status.authenticated ? normalizeDesktopUser(status.user) : null);
+    }).catch(() => publishDesktopUser(null));
+  }, 750);
+}
 
-  useEffect(() => {
-    const invoke = getTauriInvoke();
-    if (!invoke) {
-      setState({ user: DEV_USER, isPending: false });
-      return;
-    }
+function subscribeDesktopIdentity(listener: () => void): () => void {
+  desktopListeners.add(listener);
+  startDesktopIdentityRestore();
+  return () => { desktopListeners.delete(listener); };
+}
 
-    let active = true;
-
-    async function restore() {
-      try {
-        const status = (await invokeIdentity({ op: "status" })) as DesktopIdentityMessage;
-        const user = normalizeDesktopUser(status.user);
-        if (active) {
-          setState({
-            user: status.authenticated && user ? user : DEV_USER,
-            isPending: false,
-          });
-        }
-      } catch {
-        if (active) setState({ user: DEV_USER, isPending: false });
-      }
-    }
-
-    function onMessage(event: MessageEvent) {
-      const message = event.data as DesktopIdentityMessage | undefined;
-      if (message?.type !== "agentsam:desktop-identity") return;
-      const user = normalizeDesktopUser(message.user);
-      setState({
-        user: message.authenticated && user ? user : DEV_USER,
-        isPending: false,
-      });
-    }
-
-    void restore();
-    window.addEventListener("message", onMessage);
-    return () => {
-      active = false;
-      window.removeEventListener("message", onMessage);
-    };
-  }, []);
-
-  return state;
+function desktopCurrentUser(): CurrentUserState { return desktopSnapshot; }
+function useDesktopCurrentUserState(): CurrentUserState {
+  return useSyncExternalStore(subscribeDesktopIdentity, desktopCurrentUser, desktopCurrentUser);
 }
 
 
