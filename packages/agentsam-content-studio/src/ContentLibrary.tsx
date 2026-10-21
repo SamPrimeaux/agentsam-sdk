@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import type { ContentAsset } from "@inneranimalmedia/agentsam-content";
+import type { ContentAsset, ContentKind, ContentQuery } from "@inneranimalmedia/agentsam-content";
 import { useContentRuntime, useLibrary, useRuntimeCapabilities } from "./context.js";
-import { fmtBytes, fmtDuration, stateColor, styles, tokens } from "./theme.js";
+import { fmtBytes, fmtDuration, stateColor } from "./theme.js";
 import { MediaDropzone } from "./MediaDropzone.js";
 
 export interface ContentLibraryProps {
@@ -14,194 +14,131 @@ export interface ContentLibraryProps {
   onAssetCreated?: (asset: ContentAsset, file: File) => void | Promise<void>;
 }
 
+const KINDS: Array<{ id: ContentKind | "all"; label: string }> = [
+  { id: "all", label: "All types" },
+  { id: "image", label: "Images" },
+  { id: "video", label: "Videos" },
+  { id: "model", label: "3D" },
+  { id: "document", label: "Documents" },
+  { id: "audio", label: "Audio" },
+  { id: "font", label: "Fonts" },
+];
+
 const KIND_ICON: Record<string, string> = {
-  image: "🖼",
-  video: "🎬",
-  model: "🧊",
-  audio: "🎧",
-  document: "📄",
-  font: "🔤",
+  image: "Image",
+  video: "Video",
+  model: "3D",
+  audio: "Audio",
+  document: "Document",
+  font: "Font",
 };
 
-/**
- * Library grid. The grid path is manifest → viewport thumbnails →
- * preview derivative → original only on demand: cards render poster/
- * thumbnail URLs only, never source media and never live players.
- *
- * Provider / intelligence chrome comes from runtime.capabilities() —
- * never hardcoded R2|Images|Drive|Vectorize tabs.
- */
+/** Account-scoped library. The host runtime remains the source of both assets and capabilities. */
 export function ContentLibrary(props: ContentLibraryProps) {
   const runtime = useContentRuntime();
-  const caps = useRuntimeCapabilities();
+  const { capabilities: caps, error: capabilitiesError } = useRuntimeCapabilities();
   const [view, setView] = useState(props.initialView ?? "all");
   const [search, setSearch] = useState("");
-  const query = useMemo(
-    () => ({ search: search || undefined, limit: props.pageSize ?? 100 }),
-    [search, props.pageSize],
-  );
-  const { assets, total, loading, loadingMore, hasMore, loadMore } = useLibrary(view, query);
-
-  const providerLabels = caps?.providers.map((p) => p.id).join(" · ") || "providers…";
-  const localLabel =
-    caps?.local.availability === "available"
-      ? "local ready"
-      : caps?.local.availability === "attachable"
-        ? "local attachable"
-        : "local unavailable";
-  const knowledgeLabel = caps?.knowledge.backends?.length
-    ? caps.knowledge.backends.join(", ")
-    : caps?.knowledge.search
-      ? "knowledge on"
-      : "knowledge off";
+  const [kind, setKind] = useState<ContentKind | "all">("all");
+  const [provider, setProvider] = useState("all");
+  const [layout, setLayout] = useState<"grid" | "list">("grid");
+  const query = useMemo(() => {
+    const next: Partial<ContentQuery> = { limit: props.pageSize ?? 48 };
+    if (search.trim()) next.search = search.trim();
+    if (kind !== "all") next.kind = kind;
+    if (provider !== "all") next.provider = provider;
+    return next;
+  }, [search, kind, provider, props.pageSize]);
+  const { assets, total, loading, loadingMore, hasMore, loadMore, error } = useLibrary(view, query);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minWidth: 0, minHeight: 0 }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "12px 16px", borderBottom: `1px solid ${tokens.border}`, flexWrap: "wrap" }}>
-        {runtime.collections.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setView(c.id)}
-            style={{
-              ...styles.button,
-              background: view === c.id ? tokens.accent : styles.button.background,
-              color: view === c.id ? "#fff" : tokens.text,
-              borderColor: view === c.id ? tokens.accent : tokens.border,
-            }}
-          >
-            {c.label}
-          </button>
-        ))}
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search assets…"
-          style={{
-            marginLeft: "auto",
-            padding: "6px 10px",
-            borderRadius: 8,
-            border: `1px solid ${tokens.border}`,
-            background: tokens.panelAlt,
-            color: tokens.text,
-            minWidth: 180,
-          }}
-        />
-        <span style={{ color: tokens.textDim, fontSize: 12 }}>
-          {loading
-            ? "Loading…"
-            : hasMore
-              ? assets.length + " loaded"
-              : total + " asset" + (total === 1 ? "" : "s")}
-        </span>
-      </div>
-
-      <div
-        data-testid="runtime-capabilities"
-        style={{
-          display: "flex",
-          gap: 12,
-          flexWrap: "wrap",
-          padding: "6px 16px",
-          borderBottom: `1px solid ${tokens.border}`,
-          color: tokens.textDim,
-          fontSize: 11,
-        }}
-      >
-        <span>providers: {providerLabels}</span>
-        <span>{localLabel}</span>
-        <span>{knowledgeLabel}</span>
-        {caps?.brand.resolver ? <span>brand resolver on</span> : <span>brand resolver off</span>}
-      </div>
-
-      <MediaDropzone
-        onAssetCreated={props.onAssetCreated}
-        projectId={props.projectId}
-        brandId={props.brandId}
-      />
-
-      <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
-          {assets.map((asset) => (
-            <AssetCard
-              key={asset.id}
-              asset={asset}
-              selected={props.selectedId === asset.id}
-              onSelect={() => props.onSelect?.(asset)}
-            />
+    <section className="acs-library" aria-label="Content library">
+      <header className="acs-library__toolbar">
+        <div className="acs-collection-tabs" role="group" aria-label="Collections">
+          {runtime.collections.map((collection) => (
+            <button key={collection.id} type="button" aria-pressed={view === collection.id} onClick={() => setView(collection.id)}>
+              {collection.label}
+            </button>
           ))}
         </div>
-        {!loading && assets.length === 0 && (
-          <div style={{ color: tokens.textDim, textAlign: "center", padding: 48 }}>
-            No assets in this view.
-          </div>
-        )}
-        {hasMore && (
-          <div style={{ display: "flex", justifyContent: "center", padding: "18px 0 6px" }}>
-            <button
-              type="button"
-              onClick={() => void loadMore()}
-              disabled={loadingMore}
-              style={{ ...styles.button, minWidth: 132 }}
-            >
-              {loadingMore ? "Loading…" : "Load more"}
-            </button>
-          </div>
-        )}
+        <label className="acs-search">
+          <span className="acs-sr-only">Search content</span>
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search files" type="search" />
+        </label>
+        <label className="acs-filter">
+          <span className="acs-sr-only">Filter by type</span>
+          <select value={kind} onChange={(e) => setKind(e.target.value as ContentKind | "all")}>
+            {KINDS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+          </select>
+        </label>
+        <label className="acs-filter">
+          <span className="acs-sr-only">Filter by source</span>
+          <select value={provider} onChange={(e) => setProvider(e.target.value)}>
+            <option value="all">All sources</option>
+            {(caps?.providers ?? []).map((item) => <option key={item.id} value={item.id}>{providerLabel(runtime.theme, item.id)}</option>)}
+          </select>
+        </label>
+        <div className="acs-layout-toggle" role="group" aria-label="Layout">
+          <button type="button" aria-pressed={layout === "grid"} onClick={() => setLayout("grid")}>Grid</button>
+          <button type="button" aria-pressed={layout === "list"} onClick={() => setLayout("list")}>List</button>
+        </div>
+        <span className="acs-count" aria-live="polite">{loading ? "Loading" : `${total} ${total === 1 ? "item" : "items"}`}</span>
+      </header>
+
+      <div className="acs-capabilities" aria-label="Available providers">
+        {(caps?.providers ?? []).map((item) => <span key={item.id}>{providerLabel(runtime.theme, item.id)}</span>)}
+        {caps?.local.availability && <span>Local file access · {caps.local.availability}</span>}
+        {!caps && !capabilitiesError && <span>Discovering available sources…</span>}
+        {capabilitiesError && <span role="alert">Provider capabilities unavailable: {capabilitiesError}</span>}
       </div>
-    </div>
+
+      <MediaDropzone onAssetCreated={props.onAssetCreated} projectId={props.projectId} brandId={props.brandId} />
+
+      <div className="acs-library__body">
+        {loading && assets.length === 0 && <div className="acs-state" role="status">Loading your content…</div>}
+        {!loading && error && <div className="acs-state acs-state--error" role="alert">Could not load content. {error}</div>}
+        {!loading && !error && assets.length === 0 && (
+          <div className="acs-state">
+            <strong>{search || kind !== "all" || provider !== "all" ? "No matching content" : "Your library is empty"}</strong>
+            <span>{search || kind !== "all" || provider !== "all" ? "Try changing or clearing a filter." : "Content from connected and local sources will appear here."}</span>
+          </div>
+        )}
+        {error && assets.length > 0 && <div className="acs-inline-error" role="alert">Some content could not be refreshed: {error}</div>}
+        <div className={`acs-assets acs-assets--${layout}`}>
+          {assets.map((asset) => (
+            <AssetCard key={asset.id} asset={asset} selected={props.selectedId === asset.id} onSelect={() => props.onSelect?.(asset)} />
+          ))}
+        </div>
+        {hasMore && <div className="acs-load-more"><button type="button" onClick={() => void loadMore()} disabled={loadingMore}>{loadingMore ? "Loading…" : "Load more"}</button></div>}
+      </div>
+    </section>
   );
 }
 
 function AssetCard(props: { asset: ContentAsset; selected: boolean; onSelect: () => void }) {
   const runtime = useContentRuntime();
   const { asset } = props;
-  // Poster/thumbnail only — never the master, never a player.
-  const thumb = runtime.posterUrl(asset, 360);
+  const thumb = runtime.posterUrl(asset, 480);
   const liveCount = asset.usage.filter((u) => u.live && !u.detachedAt).length;
-
+  const label = asset.semanticAlias ?? asset.title ?? asset.filename ?? asset.id;
   return (
-    <div
-      onClick={props.onSelect}
-      style={{
-        ...styles.panel,
-        overflow: "hidden",
-        cursor: "pointer",
-        outline: props.selected ? `2px solid ${tokens.accent}` : "none",
-      }}
-    >
-      <div style={{ aspectRatio: "4 / 3", background: tokens.panelAlt, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-        {thumb ? (
-          <img
-            src={thumb}
-            alt={asset.alt ?? asset.title ?? asset.filename ?? asset.id}
-            loading="lazy"
-            decoding="async"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        ) : (
-          <span style={{ fontSize: 36 }}>{KIND_ICON[asset.kind] ?? "📦"}</span>
-        )}
-        {asset.kind === "video" && (
-          <span style={{ position: "absolute", right: 6, bottom: 6, background: "#000a", padding: "1px 6px", borderRadius: 6, fontSize: 11 }}>
-            {fmtDuration(asset.durationMs)}
-          </span>
-        )}
-      </div>
-      <div style={{ padding: 10 }}>
-        <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", fontWeight: 600, fontSize: 13 }}>
-          {asset.semanticAlias ?? asset.title ?? asset.filename ?? asset.id}
-        </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6, fontSize: 11, color: tokens.textDim }}>
-          <span style={{ color: stateColor(asset.state) }}>● {asset.state}</span>
-          <span>{asset.origin}</span>
-          <span style={{ marginLeft: "auto" }}>{fmtBytes(asset.bytes)}</span>
-        </div>
-        {liveCount > 0 && (
-          <div style={{ fontSize: 11, color: tokens.good, marginTop: 4 }}>
-            in use · {liveCount} live surface{liveCount === 1 ? "" : "s"}
-          </div>
-        )}
-      </div>
-    </div>
+    <article className={`acs-card${props.selected ? " is-selected" : ""}`}>
+      <button type="button" className="acs-card__open" onClick={props.onSelect} aria-label={`Open ${label}`}>
+        <span className="acs-card__thumb">
+          {thumb ? <img src={thumb} alt="" loading="lazy" decoding="async" /> : <span>{KIND_ICON[asset.kind] ?? asset.kind}</span>}
+          {asset.kind === "video" && asset.durationMs !== undefined && <small>{fmtDuration(asset.durationMs)}</small>}
+        </span>
+        <span className="acs-card__copy">
+          <strong title={label}>{label}</strong>
+          <span className="acs-card__meta"><i style={{ color: stateColor(asset.state) }}>● {asset.state}</i><i>{asset.providerRefs.map((ref) => providerLabel(runtime.theme, ref.provider)).join(", ") || "No location"}</i><i>{fmtBytes(asset.bytes)}</i></span>
+          {liveCount > 0 && <span className="acs-card__usage">In use · {liveCount} live {liveCount === 1 ? "surface" : "surfaces"}</span>}
+        </span>
+      </button>
+      <button type="button" className="acs-card__action" onClick={props.onSelect} aria-label={`Open details for ${label}`} title="Open details">Open</button>
+    </article>
   );
+}
+
+function providerLabel(theme: Record<string, string>, providerId: string): string {
+  return theme[`providerLabel.${providerId}`] ?? providerId;
 }

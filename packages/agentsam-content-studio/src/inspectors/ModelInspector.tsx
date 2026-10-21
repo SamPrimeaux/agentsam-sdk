@@ -26,6 +26,7 @@ const DEFAULT_PLACEMENT = {
 export function ModelInspector(props: {
   asset: ContentAsset;
   renderViewport?: (vp: ModelViewportProps) => ReactNode;
+  readOnly?: boolean;
 }) {
   const runtime = useContentRuntime();
   const { asset } = props;
@@ -66,20 +67,20 @@ export function ModelInspector(props: {
       </Section>
 
       <Section title="Camera">
-        <NumberField label="theta" value={camera.theta} onChange={(v) => setCamera({ theta: v })} />
-        <NumberField label="phi" value={camera.phi} onChange={(v) => setCamera({ phi: v })} />
-        <NumberField label="radius" value={camera.radius} onChange={(v) => setCamera({ radius: v })} />
-        <NumberField label="FOV" value={camera.fov} step={1} onChange={(v) => setCamera({ fov: v })} />
+        <NumberField label="theta" value={camera.theta} disabled={props.readOnly} onChange={(v) => setCamera({ theta: v })} />
+        <NumberField label="phi" value={camera.phi} disabled={props.readOnly} onChange={(v) => setCamera({ phi: v })} />
+        <NumberField label="radius" value={camera.radius} disabled={props.readOnly} onChange={(v) => setCamera({ radius: v })} />
+        <NumberField label="FOV" value={camera.fov} step={1} disabled={props.readOnly} onChange={(v) => setCamera({ fov: v })} />
       </Section>
 
       <Section title="Placement">
-        <NumberField label="x" value={placement.position[0]} onChange={(v) => setPos(0, v)} />
-        <NumberField label="y" value={placement.position[1]} onChange={(v) => setPos(1, v)} />
-        <NumberField label="z" value={placement.position[2]} onChange={(v) => setPos(2, v)} />
-        <NumberField label="rot x" value={placement.rotation[0]} onChange={(v) => setRot(0, v)} />
-        <NumberField label="rot y" value={placement.rotation[1]} onChange={(v) => setRot(1, v)} />
-        <NumberField label="rot z" value={placement.rotation[2]} onChange={(v) => setRot(2, v)} />
-        <NumberField label="scale" value={placement.scale} onChange={(v) => setPlacement({ scale: v })} />
+        <NumberField label="x" value={placement.position[0]} disabled={props.readOnly} onChange={(v) => setPos(0, v)} />
+        <NumberField label="y" value={placement.position[1]} disabled={props.readOnly} onChange={(v) => setPos(1, v)} />
+        <NumberField label="z" value={placement.position[2]} disabled={props.readOnly} onChange={(v) => setPos(2, v)} />
+        <NumberField label="rot x" value={placement.rotation[0]} disabled={props.readOnly} onChange={(v) => setRot(0, v)} />
+        <NumberField label="rot y" value={placement.rotation[1]} disabled={props.readOnly} onChange={(v) => setRot(1, v)} />
+        <NumberField label="rot z" value={placement.rotation[2]} disabled={props.readOnly} onChange={(v) => setRot(2, v)} />
+        <NumberField label="scale" value={placement.scale} disabled={props.readOnly} onChange={(v) => setPlacement({ scale: v })} />
       </Section>
 
       <Section title="Model">

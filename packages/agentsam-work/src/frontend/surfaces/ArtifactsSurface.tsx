@@ -1,4 +1,4 @@
-import { FileArchive, FileCode2, FileImage, FileText, Grid2X2, List, MoreVertical } from "lucide-react";
+import { FileArchive, FileCode2, FileImage, FileText, Grid2X2, List } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { WorkArtifact } from "../../contracts/index";
 import { WorkSearch } from "../WorkShell";
@@ -13,13 +13,21 @@ function iconFor(kind: WorkArtifact["kind"]) {
 export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
   const [query, setQuery] = useState("");
   const [grid, setGrid] = useState(true);
+  const [source, setSource] = useState<WorkArtifact["source"] | "all">("all");
+  const [kind, setKind] = useState<WorkArtifact["kind"] | "all">("all");
+  const sources = [...new Set(artifacts.map((artifact) => artifact.source))].sort();
+  const kinds = [...new Set(artifacts.map((artifact) => artifact.kind))].sort();
   const visible = useMemo(
-    () => artifacts.filter((artifact) => artifact.name.toLowerCase().includes(query.toLowerCase())),
-    [artifacts, query],
+    () => artifacts.filter((artifact) =>
+      artifact.name.toLowerCase().includes(query.toLowerCase()) &&
+      (source === "all" || artifact.source === source) &&
+      (kind === "all" || artifact.kind === kind),
+    ),
+    [artifacts, query, source, kind],
   );
 
   return (
-    <div style={{ padding: "14px 16px 72px", minWidth: 680 }}>
+    <div style={{ padding: "14px 16px 72px", minWidth: 0 }}>
       <div style={{ maxWidth: 760, margin: "0 auto 14px" }}>
         <WorkSearch value={query} onChange={setQuery} placeholder="Search files across sources" />
       </div>
@@ -37,9 +45,15 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
         </div>
 
         <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
-          <button type="button" className="agentsam-work-toolbar-button">{visible.length} items</button>
-          <button type="button" className="agentsam-work-toolbar-button">Source: All</button>
-          <button type="button" className="agentsam-work-toolbar-button">Type: All</button>
+          <span className="agentsam-work-toolbar-button" aria-live="polite">{visible.length} {visible.length === 1 ? "item" : "items"}</span>
+          <label className="agentsam-work-toolbar-button">Source: <select aria-label="Filter by source" value={source} onChange={(event) => setSource(event.target.value as WorkArtifact["source"] | "all")}>
+            <option value="all">All</option>
+            {sources.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select></label>
+          <label className="agentsam-work-toolbar-button">Type: <select aria-label="Filter by type" value={kind} onChange={(event) => setKind(event.target.value as WorkArtifact["kind"] | "all")}>
+            <option value="all">All</option>
+            {kinds.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select></label>
         </div>
 
         <section className="agentsam-work-card" style={{ marginTop: 16, padding: 14, borderLeft: "3px solid var(--agentsam-work-accent)" }}>
@@ -52,20 +66,20 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
             </div>
             <div style={{ flex: 1 }} />
             <span style={{ color: "var(--agentsam-work-muted)", fontSize: 10 }}>{visible.length} items</span>
-            <button type="button" className="agentsam-work-toolbar-button">Open lane</button>
+            <span style={{ color: "var(--agentsam-work-muted)", fontSize: 10 }}>All account files</span>
           </div>
 
           <div
             style={{
               marginTop: 14,
               display: grid ? "grid" : "block",
-              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
               gap: 12,
             }}
           >
             {!visible.length ? (
               <div className="agentsam-work-empty" style={{ gridColumn: "1 / -1", padding: "28px 12px" }}>
-                <strong style={{ display: "block", fontSize: 14 }}>No artifacts yet</strong>
+                <strong style={{ display: "block", fontSize: 14 }}>{artifacts.length > 0 && (query || source !== "all" || kind !== "all") ? "No matching artifacts" : "No artifacts yet"}</strong>
                 <p style={{ margin: "8px 0 0", color: "var(--agentsam-work-muted)", fontSize: 12, lineHeight: 1.55 }}>
                   Account-owned files from R2 and connected sources will appear here. This view is not backed by sample fixture content.
                 </p>
@@ -88,7 +102,6 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
                     <span style={{ minWidth: 0, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 11 }}>
                       {artifact.name}
                     </span>
-                    <MoreVertical size={15} color="var(--agentsam-work-muted)" />
                   </div>
 
                   {grid ? (
@@ -99,40 +112,14 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
                           display: "grid",
                           placeItems: "center",
                           borderRadius: 8,
-                          background:
-                            artifact.kind === "image"
-                              ? "linear-gradient(135deg, var(--agentsam-work-panel-subtle), color-mix(in srgb, var(--agentsam-work-accent) 45%, var(--agentsam-work-panel)) 55%, var(--agentsam-work-accent-soft))"
-                              : "var(--agentsam-work-panel)",
+                          background: "var(--agentsam-work-panel)",
+                          overflow: "hidden",
                           border: "1px solid color-mix(in srgb, var(--agentsam-work-border) 70%, transparent)",
                         }}
                       >
-                        {artifact.kind !== "image" ? (
-                          <div style={{ width: "78%", display: "grid", gap: 8 }}>
-                            {[78, 64, 84, 58, 90, 74].map((width, index) => (
-                              <span
-                                key={index}
-                                style={{
-                                  display: "block",
-                                  height: index < 4 ? 8 : 7,
-                                  width: width + "%",
-                                  borderRadius: 99,
-                                  background:
-                                    index === 0
-                                      ? "var(--agentsam-work-danger)"
-                                      : index === 1
-                                        ? "var(--agentsam-work-success)"
-                                        : index === 2
-                                          ? "var(--agentsam-work-accent)"
-                                          : index === 3
-                                            ? "var(--agentsam-work-warning)"
-                                            : "var(--agentsam-work-muted)",
-                                }}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          <FileImage size={42} color="white" />
-                        )}
+                        {artifact.kind === "image" && artifact.preview ? (
+                          <img src={artifact.preview} alt={artifact.name} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        ) : <div style={{ display: "grid", justifyItems: "center", gap: 8, color: "var(--agentsam-work-muted)", fontSize: 11 }}><Icon size={32} aria-hidden="true" /><span>{artifact.preview ? "Preview unavailable" : "No preview"}</span></div>}
                       </div>
                     </div>
                   ) : null}

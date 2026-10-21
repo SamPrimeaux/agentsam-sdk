@@ -7,7 +7,7 @@ import { Chips, KV, Section, TextField } from "./shared.js";
 /**
  * SOURCE / DELIVERY / SEMANTICS / SEO / VARIANTS sections for images.
  */
-export function ImageInspector(props: { asset: ContentAsset }) {
+export function ImageInspector(props: { asset: ContentAsset; readOnly?: boolean }) {
   const runtime = useContentRuntime();
   const { asset } = props;
   const machine = asset.intelligence?.machine;
@@ -46,8 +46,8 @@ export function ImageInspector(props: { asset: ContentAsset }) {
       </Section>
 
       <Section title="Semantics">
-        <TextField label="Title" value={asset.title ?? ""} onCommit={(v) => edit({ title: v })} />
-        <TextField label="Role" value={asset.role ?? ""} placeholder="hero / logo / product…" onCommit={(v) => edit({ role: v })} />
+        <TextField label="Title" value={asset.title ?? ""} disabled={props.readOnly} onCommit={(v) => edit({ title: v })} />
+        <TextField label="Role" value={asset.role ?? ""} disabled={props.readOnly} placeholder="hero / logo / product…" onCommit={(v) => edit({ role: v })} />
         <KV label="Subject (AI)" value={semantic?.subject} />
         <KV label="Brand" value={asset.brandId} />
         <KV label="Project" value={asset.projectId} />
@@ -62,10 +62,11 @@ export function ImageInspector(props: { asset: ContentAsset }) {
           label="Semantic alias"
           value={asset.semanticAlias ?? ""}
           placeholder={asset.filename ?? ""}
+          disabled={props.readOnly}
           onCommit={(v) => edit({ semanticAlias: v, deliveryAlias: v })}
         />
-        <TextField label="Alt" value={asset.alt ?? ""} onCommit={(v) => edit({ alt: v })} />
-        <TextField label="Caption" value={asset.caption ?? ""} onCommit={(v) => edit({ caption: v })} />
+        <TextField label="Alt" value={asset.alt ?? ""} disabled={props.readOnly} onCommit={(v) => edit({ alt: v })} />
+        <TextField label="Caption" value={asset.caption ?? ""} disabled={props.readOnly} onCommit={(v) => edit({ caption: v })} />
         {seo.checks.map((c) => (
           <div key={c.id} style={{ fontSize: 12, color: c.ok ? tokens.good : tokens.warn, padding: "2px 0" }}>
             {c.ok ? "✓" : "•"} {c.detail}

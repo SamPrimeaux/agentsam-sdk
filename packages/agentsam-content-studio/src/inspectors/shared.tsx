@@ -36,6 +36,7 @@ export function NumberField(props: {
   label: string;
   value: number;
   step?: number;
+  disabled?: boolean;
   onChange: (v: number) => void;
 }) {
   return (
@@ -44,6 +45,7 @@ export function NumberField(props: {
       <input
         type="number"
         value={props.value}
+        disabled={props.disabled}
         step={props.step ?? 0.1}
         onChange={(e) => props.onChange(Number(e.target.value))}
         style={{
@@ -63,6 +65,7 @@ export function TextField(props: {
   label: string;
   value: string;
   placeholder?: string;
+  disabled?: boolean;
   onCommit: (v: string) => void;
 }) {
   return (
@@ -71,6 +74,7 @@ export function TextField(props: {
       <input
         defaultValue={props.value}
         placeholder={props.placeholder}
+        disabled={props.disabled}
         onBlur={(e) => {
           if (e.target.value !== props.value) props.onCommit(e.target.value);
         }}
