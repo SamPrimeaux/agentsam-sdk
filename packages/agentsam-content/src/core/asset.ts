@@ -13,6 +13,7 @@ import type { ContentUsage } from "./usage.js";
 import type { ContentProvenance } from "./provenance.js";
 import type { ActorRef } from "./actor.js";
 import type { ContentIntelligence } from "./intelligence.js";
+import type { FilePermissions, FileTrash } from "../storage/file-contract.js";
 
 export type ContentKind =
   | "image"
@@ -38,6 +39,13 @@ export interface ContentAsset {
   source: ContentSource;
   /** One asset, many provider representations (master, derivative, backup...). */
   providerRefs: ProviderRef[];
+
+  /** Optional file-level access projection; policy enforcement stays in the host. */
+  filePermissions?: FilePermissions;
+  /** Monotonic optimistic-concurrency counter; absent means legacy revision 0. */
+  fileRevision?: number;
+  /** Reversible metadata trash, never an implicit deletion of physical bytes. */
+  fileTrash?: FileTrash;
 
   title?: string;
   /** Original filename as uploaded/imported — never destructively renamed. */

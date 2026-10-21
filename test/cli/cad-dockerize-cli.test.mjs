@@ -6,7 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const cli = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'cli.js');
+const cli = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'src', 'cli.js');
 
 // Drives the real command line (not the generator) so a flag that is parsed but never forwarded fails here.
 function generate(extraArgs) {
