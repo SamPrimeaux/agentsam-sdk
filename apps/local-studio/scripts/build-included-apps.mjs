@@ -30,11 +30,12 @@
  *   node scripts/build-included-apps.mjs --all           explicit full product release
  *   node scripts/build-included-apps.mjs --manifest <path-to-desktop-manifest.json>
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
+import { gzipSync } from 'node:zlib';
 import { listAppManifests } from '../../../packages/agentsam-desktop-shell/scripts/app-discovery.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -109,6 +110,9 @@ export function planIncludedApps({
         : null,
       command: argv(b.command, `app "${id}" embed.build.command`).map((a) => a.replaceAll('{base}', base)),
       output: within(cwd, b.output, `app "${id}" embed.build.output`),
+      index: b.index ? within(within(cwd, b.output, `app "${id}" embed.build.output`), b.index, `app "${id}" embed.build.index`) : null,
+      scopeAssetUrls: b.scope_asset_urls === true,
+      gzipOversizedWasm: b.gzip_oversized_wasm === true,
       publicDir: path.join(localStudio, 'frontend/public', embed.stage),
       stagedDir: path.join(localStudio, '.output/public', embed.stage),
     });
@@ -144,6 +148,15 @@ function build(plan) {
   rmSync(plan.publicDir, { recursive: true, force: true });
   mkdirSync(plan.publicDir, { recursive: true });
   cpSync(plan.output, plan.publicDir, { recursive: true });
+  if (plan.index) {
+    if (!existsSync(plan.index)) throw new Error(`app "${plan.id}" declared missing built index ${plan.index}`);
+    let html = readFileSync(plan.index, 'utf8');
+    if (plan.scopeAssetUrls) {
+      // Scope static resources for an embedded SPA without rewriting its API endpoints.
+      html = html.replace(/(\b(?:href|src)=["'])\/(?!\/)/g, `$1${plan.base}`);
+    }
+    writeFileSync(path.join(plan.publicDir, 'index.html'), html);
+  }
 }
 
 function stage(plan) {
@@ -152,6 +165,23 @@ function stage(plan) {
   }
   mkdirSync(path.dirname(plan.stagedDir), { recursive: true });
   cpSync(plan.publicDir, plan.stagedDir, { recursive: true });
+  if (plan.gzipOversizedWasm) {
+    const assetDir = path.join(plan.stagedDir, 'assets');
+    if (!existsSync(assetDir)) throw new Error(`${plan.id} requested WASM compression without an assets folder`);
+    let compressedCount = 0;
+    for (const entry of readdirSync(assetDir, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith('.wasm')) continue;
+      const asset = path.join(assetDir, entry.name);
+      if (statSync(asset).size <= 25 * 1024 * 1024) continue;
+      const packed = gzipSync(readFileSync(asset), { level: 9 });
+      if (packed.length > 25 * 1024 * 1024) throw new Error(`${plan.id} compressed WASM exceeds Cloudflare asset limit: ${entry.name}`);
+      writeFileSync(`${asset}.gz`, packed);
+      rmSync(asset);
+      compressedCount += 1;
+      console.log(`[included-apps] ${plan.id}: compressed ${entry.name} for Worker asset delivery`);
+    }
+    if (compressedCount === 0) console.log(`[included-apps] ${plan.id}: no oversized WASM assets to compress`);
+  }
 }
 
 function main() {

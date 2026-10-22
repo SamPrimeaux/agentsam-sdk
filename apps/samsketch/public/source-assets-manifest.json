@@ -1,0 +1,435 @@
+{
+  "schema": "samsketch.source-assets.v1",
+  "sourceRepository": "SamPrimeaux/agentsam-3d-studio",
+  "sourceRoot": "out/",
+  "compression": "gzip -9, lossless, deterministic mtime=0",
+  "sourceParts": 47,
+  "previews": 64,
+  "sourceBytes": 156314216,
+  "deliveryBytes": 19842280,
+  "parts": [
+    {
+      "id": "arch",
+      "sourcePath": "stl/arch.stl",
+      "deliveryPath": "stl/arch.stl.gz",
+      "sourceBytes": 2075238,
+      "deliveryBytes": 236766,
+      "sourceSha256": "7339bf7572b1fe6a7e7d3bf99f5503314a12ec46eb5faa8a4950cf16baa03359",
+      "deliverySha256": "ff30771407ee5c225fd6e7b6f76cd10f782c65add7b9d8ceb70b8044dd1aea0e"
+    },
+    {
+      "id": "block",
+      "sourcePath": "stl/block.stl",
+      "deliveryPath": "stl/block.stl.gz",
+      "sourceBytes": 7835328,
+      "deliveryBytes": 905901,
+      "sourceSha256": "c87cd5c7c1f427bb01a1de4d339782119452490543b16f88a6fe8bd6206c3f37",
+      "deliverySha256": "878d435354c2b84a106ec5d5a72fc89edf125469bb667cc7ebbca08ab595d54e"
+    },
+    {
+      "id": "bowl",
+      "sourcePath": "stl/bowl.stl",
+      "deliveryPath": "stl/bowl.stl.gz",
+      "sourceBytes": 5445360,
+      "deliveryBytes": 826575,
+      "sourceSha256": "6588a9493f629b9e9b972bd62618ac88a3947196570249f332335da2f79417e3",
+      "deliverySha256": "9a6807897383601edd19e63bd5df5312c77f1d625657207747fcdb3ad7021b3b"
+    },
+    {
+      "id": "cards-luminous-agent-text",
+      "sourcePath": "stl/cards-luminous-agent-text.stl",
+      "deliveryPath": "stl/cards-luminous-agent-text.stl.gz",
+      "sourceBytes": 2285333,
+      "deliveryBytes": 298264,
+      "sourceSha256": "03d789dcc7eaa767c85b5f7bd29a5e70e9f75fcf2c141b22be890e32931d7967",
+      "deliverySha256": "da161ee04f5750266ca5b993090b86d90c5673d504a062bbf17c9ab13a4ed327"
+    },
+    {
+      "id": "cards-luminous-agent",
+      "sourcePath": "stl/cards-luminous-agent.stl",
+      "deliveryPath": "stl/cards-luminous-agent.stl.gz",
+      "sourceBytes": 73818,
+      "deliveryBytes": 4679,
+      "sourceSha256": "963855048096323f8da12e654e4f6422164602124d5a271ef8190298455513f2",
+      "deliverySha256": "d4831f1275bbc2df91d23a837db214c0f2edc4e25bc35bc473eea212f08ea0a2"
+    },
+    {
+      "id": "cards-luminous-api-text",
+      "sourcePath": "stl/cards-luminous-api-text.stl",
+      "deliveryPath": "stl/cards-luminous-api-text.stl.gz",
+      "sourceBytes": 3241395,
+      "deliveryBytes": 419541,
+      "sourceSha256": "4f0435e7b82782db998097a00ff65009ad2aa501266b2bd93e7445357b27c732",
+      "deliverySha256": "15100eede872bbf89defeea73e30f9c67da23317439e0d4fd0fb8c635e7ac462"
+    },
+    {
+      "id": "cards-luminous-api",
+      "sourcePath": "stl/cards-luminous-api.stl",
+      "deliveryPath": "stl/cards-luminous-api.stl.gz",
+      "sourceBytes": 72881,
+      "deliveryBytes": 4654,
+      "sourceSha256": "544cb9418c87f8e932e8cf343ef7c771302ef7cf9b8343b1c6fb83b8ed4cc498",
+      "deliverySha256": "a3fca5a4a78ed5ea0f248f0e131d54c70f51189a611485b85f92a970fae26dcc"
+    },
+    {
+      "id": "cards-luminous-chip",
+      "sourcePath": "stl/cards-luminous-chip.stl",
+      "deliveryPath": "stl/cards-luminous-chip.stl.gz",
+      "sourceBytes": 108267,
+      "deliveryBytes": 6518,
+      "sourceSha256": "b35695762e3f0365870bd700c7c5649967aa59d0834ee5388fff7c1d1ad2108d",
+      "deliverySha256": "25528f64eb889ffd85a951225dc11dc7252d5fd8550f40f4e7e8c579e8895212"
+    },
+    {
+      "id": "cards-luminous-memory",
+      "sourcePath": "stl/cards-luminous-memory.stl",
+      "deliveryPath": "stl/cards-luminous-memory.stl.gz",
+      "sourceBytes": 148536,
+      "deliveryBytes": 8985,
+      "sourceSha256": "e0d81dc5aa763913408ecc722b1c1fc3a2f1242a8248fe6f574a2044a8d23816",
+      "deliverySha256": "35082b0894a444e207c22de52c072afe7b0ff6771eafcfeb8da71173c4ca42d5"
+    },
+    {
+      "id": "cards-luminous-tools",
+      "sourcePath": "stl/cards-luminous-tools.stl",
+      "deliveryPath": "stl/cards-luminous-tools.stl.gz",
+      "sourceBytes": 159375,
+      "deliveryBytes": 14968,
+      "sourceSha256": "afbaa6f9666ae5a98a4b6e726f4f03a2151551d9f9490ea7d6e325bbc1a762f2",
+      "deliverySha256": "18fb64b12e8852e840828ee1d7ee218b479e02e3518bee5b337ef4229c3a4bf7"
+    },
+    {
+      "id": "cards-original-agent-text",
+      "sourcePath": "stl/cards-original-agent-text.stl",
+      "deliveryPath": "stl/cards-original-agent-text.stl.gz",
+      "sourceBytes": 2285333,
+      "deliveryBytes": 298264,
+      "sourceSha256": "03d789dcc7eaa767c85b5f7bd29a5e70e9f75fcf2c141b22be890e32931d7967",
+      "deliverySha256": "da161ee04f5750266ca5b993090b86d90c5673d504a062bbf17c9ab13a4ed327"
+    },
+    {
+      "id": "cards-original-agent",
+      "sourcePath": "stl/cards-original-agent.stl",
+      "deliveryPath": "stl/cards-original-agent.stl.gz",
+      "sourceBytes": 73818,
+      "deliveryBytes": 4679,
+      "sourceSha256": "963855048096323f8da12e654e4f6422164602124d5a271ef8190298455513f2",
+      "deliverySha256": "d4831f1275bbc2df91d23a837db214c0f2edc4e25bc35bc473eea212f08ea0a2"
+    },
+    {
+      "id": "cards-original-api-text",
+      "sourcePath": "stl/cards-original-api-text.stl",
+      "deliveryPath": "stl/cards-original-api-text.stl.gz",
+      "sourceBytes": 3241395,
+      "deliveryBytes": 419541,
+      "sourceSha256": "4f0435e7b82782db998097a00ff65009ad2aa501266b2bd93e7445357b27c732",
+      "deliverySha256": "15100eede872bbf89defeea73e30f9c67da23317439e0d4fd0fb8c635e7ac462"
+    },
+    {
+      "id": "cards-original-api",
+      "sourcePath": "stl/cards-original-api.stl",
+      "deliveryPath": "stl/cards-original-api.stl.gz",
+      "sourceBytes": 72881,
+      "deliveryBytes": 4654,
+      "sourceSha256": "544cb9418c87f8e932e8cf343ef7c771302ef7cf9b8343b1c6fb83b8ed4cc498",
+      "deliverySha256": "a3fca5a4a78ed5ea0f248f0e131d54c70f51189a611485b85f92a970fae26dcc"
+    },
+    {
+      "id": "cards-original-chip",
+      "sourcePath": "stl/cards-original-chip.stl",
+      "deliveryPath": "stl/cards-original-chip.stl.gz",
+      "sourceBytes": 108267,
+      "deliveryBytes": 6518,
+      "sourceSha256": "b35695762e3f0365870bd700c7c5649967aa59d0834ee5388fff7c1d1ad2108d",
+      "deliverySha256": "25528f64eb889ffd85a951225dc11dc7252d5fd8550f40f4e7e8c579e8895212"
+    },
+    {
+      "id": "cards-original-memory",
+      "sourcePath": "stl/cards-original-memory.stl",
+      "deliveryPath": "stl/cards-original-memory.stl.gz",
+      "sourceBytes": 148536,
+      "deliveryBytes": 8985,
+      "sourceSha256": "e0d81dc5aa763913408ecc722b1c1fc3a2f1242a8248fe6f574a2044a8d23816",
+      "deliverySha256": "35082b0894a444e207c22de52c072afe7b0ff6771eafcfeb8da71173c4ca42d5"
+    },
+    {
+      "id": "cards-original-tools",
+      "sourcePath": "stl/cards-original-tools.stl",
+      "deliveryPath": "stl/cards-original-tools.stl.gz",
+      "sourceBytes": 159375,
+      "deliveryBytes": 14968,
+      "sourceSha256": "afbaa6f9666ae5a98a4b6e726f4f03a2151551d9f9490ea7d6e325bbc1a762f2",
+      "deliverySha256": "18fb64b12e8852e840828ee1d7ee218b479e02e3518bee5b337ef4229c3a4bf7"
+    },
+    {
+      "id": "cluster-duo-midnight",
+      "sourcePath": "stl/cluster-duo-midnight.stl",
+      "deliveryPath": "stl/cluster-duo-midnight.stl.gz",
+      "sourceBytes": 7989834,
+      "deliveryBytes": 931786,
+      "sourceSha256": "86c7ece703278e44b9fe3fac0c2bfc129a09a37067ef905b72d739368e6ea9cf",
+      "deliverySha256": "9877368cda3a6e105e361f1eb3445eef477a53b86a5636f66b19e8bbab5116c9"
+    },
+    {
+      "id": "cluster-duo-original",
+      "sourcePath": "stl/cluster-duo-original.stl",
+      "deliveryPath": "stl/cluster-duo-original.stl.gz",
+      "sourceBytes": 7989834,
+      "deliveryBytes": 931786,
+      "sourceSha256": "86c7ece703278e44b9fe3fac0c2bfc129a09a37067ef905b72d739368e6ea9cf",
+      "deliverySha256": "9877368cda3a6e105e361f1eb3445eef477a53b86a5636f66b19e8bbab5116c9"
+    },
+    {
+      "id": "cluster-duo",
+      "sourcePath": "stl/cluster-duo.stl",
+      "deliveryPath": "stl/cluster-duo.stl.gz",
+      "sourceBytes": 7989834,
+      "deliveryBytes": 931786,
+      "sourceSha256": "86c7ece703278e44b9fe3fac0c2bfc129a09a37067ef905b72d739368e6ea9cf",
+      "deliverySha256": "9877368cda3a6e105e361f1eb3445eef477a53b86a5636f66b19e8bbab5116c9"
+    },
+    {
+      "id": "cluster",
+      "sourcePath": "stl/cluster.stl",
+      "deliveryPath": "stl/cluster.stl.gz",
+      "sourceBytes": 9517541,
+      "deliveryBytes": 1090028,
+      "sourceSha256": "14c0d5d7bda691f2ab1220f771d4f387b082fe274f6cb8e3b2f4f7c3f4efd0b3",
+      "deliverySha256": "d229b51053831a43bd976cad27acc5c3e1c4fdc1b1a4bef64040ce57b4e91417"
+    },
+    {
+      "id": "domes",
+      "sourcePath": "stl/domes.stl",
+      "deliveryPath": "stl/domes.stl.gz",
+      "sourceBytes": 4459603,
+      "deliveryBytes": 517927,
+      "sourceSha256": "e9e2d086a421042a05959d6764f0a74b34e0f8792a083c8a65bf2b1e3529efd8",
+      "deliverySha256": "a36f02be0809d4966681e46f4cf2eb844cac1b59d050245483d3c8ac3bb76d9e"
+    },
+    {
+      "id": "knot",
+      "sourcePath": "stl/knot.stl",
+      "deliveryPath": "stl/knot.stl.gz",
+      "sourceBytes": 11162161,
+      "deliveryBytes": 1736185,
+      "sourceSha256": "f8f2a18ab267a19d75b9926555d10795b8d0b4f904af3e14da339c668e48eec0",
+      "deliverySha256": "742fc22f10c2cf82b80a37497d9f5ec35d13101f2dab916d243578e1e4562cf0"
+    },
+    {
+      "id": "layers-agent",
+      "sourcePath": "stl/layers-agent.stl",
+      "deliveryPath": "stl/layers-agent.stl.gz",
+      "sourceBytes": 105676,
+      "deliveryBytes": 6092,
+      "sourceSha256": "99e920ecc1696c537bc4cab9ffc75eddffaa90eef213bd03ed0d8b08fa1521f3",
+      "deliverySha256": "2c096cdaaf1f7f0a7e2fe25e16079478a188c90eff5a82147f93941be8dd035d"
+    },
+    {
+      "id": "layers-memory",
+      "sourcePath": "stl/layers-memory.stl",
+      "deliveryPath": "stl/layers-memory.stl.gz",
+      "sourceBytes": 44711,
+      "deliveryBytes": 2277,
+      "sourceSha256": "62a3538d55cf703049a29680344090d676cd151a66f7cf9cf25fcad3b5d73bcf",
+      "deliverySha256": "04da4a569e133ebe66da8b325fb8a93e4021bc0e16f65fe98e6bb51ec9e73c71"
+    },
+    {
+      "id": "layers-midnight-agent",
+      "sourcePath": "stl/layers-midnight-agent.stl",
+      "deliveryPath": "stl/layers-midnight-agent.stl.gz",
+      "sourceBytes": 105676,
+      "deliveryBytes": 6092,
+      "sourceSha256": "99e920ecc1696c537bc4cab9ffc75eddffaa90eef213bd03ed0d8b08fa1521f3",
+      "deliverySha256": "2c096cdaaf1f7f0a7e2fe25e16079478a188c90eff5a82147f93941be8dd035d"
+    },
+    {
+      "id": "layers-midnight-memory",
+      "sourcePath": "stl/layers-midnight-memory.stl",
+      "deliveryPath": "stl/layers-midnight-memory.stl.gz",
+      "sourceBytes": 44711,
+      "deliveryBytes": 2277,
+      "sourceSha256": "62a3538d55cf703049a29680344090d676cd151a66f7cf9cf25fcad3b5d73bcf",
+      "deliverySha256": "04da4a569e133ebe66da8b325fb8a93e4021bc0e16f65fe98e6bb51ec9e73c71"
+    },
+    {
+      "id": "layers-midnight-tools",
+      "sourcePath": "stl/layers-midnight-tools.stl",
+      "deliveryPath": "stl/layers-midnight-tools.stl.gz",
+      "sourceBytes": 50417,
+      "deliveryBytes": 3529,
+      "sourceSha256": "cc83ac6a8d35b8924eb03ad558677c8dc09d71fc5085c2e62802752c9ad4a8fb",
+      "deliverySha256": "7c427a8b55d067cdd26d705716394ea0c9b0134f6f0d1a0ca8240871096b8b99"
+    },
+    {
+      "id": "layers-midnight-workspace",
+      "sourcePath": "stl/layers-midnight-workspace.stl",
+      "deliveryPath": "stl/layers-midnight-workspace.stl.gz",
+      "sourceBytes": 44083,
+      "deliveryBytes": 2264,
+      "sourceSha256": "d34b1c7bd706f47ec52a940bd8699ff7dab049ed9abcb076a054cc2327aa413c",
+      "deliverySha256": "479280f45ecb1d3b18fffc18a29e79ff881e1ba5ac7edbd9abe9b3a6c58cb5a7"
+    },
+    {
+      "id": "layers-tools",
+      "sourcePath": "stl/layers-tools.stl",
+      "deliveryPath": "stl/layers-tools.stl.gz",
+      "sourceBytes": 50417,
+      "deliveryBytes": 3529,
+      "sourceSha256": "cc83ac6a8d35b8924eb03ad558677c8dc09d71fc5085c2e62802752c9ad4a8fb",
+      "deliverySha256": "7c427a8b55d067cdd26d705716394ea0c9b0134f6f0d1a0ca8240871096b8b99"
+    },
+    {
+      "id": "layers-workspace",
+      "sourcePath": "stl/layers-workspace.stl",
+      "deliveryPath": "stl/layers-workspace.stl.gz",
+      "sourceBytes": 44083,
+      "deliveryBytes": 2264,
+      "sourceSha256": "d34b1c7bd706f47ec52a940bd8699ff7dab049ed9abcb076a054cc2327aa413c",
+      "deliverySha256": "479280f45ecb1d3b18fffc18a29e79ff881e1ba5ac7edbd9abe9b3a6c58cb5a7"
+    },
+    {
+      "id": "links",
+      "sourcePath": "stl/links.stl",
+      "deliveryPath": "stl/links.stl.gz",
+      "sourceBytes": 7418970,
+      "deliveryBytes": 1121108,
+      "sourceSha256": "45729d208a588869de66a9e3f2cf2275be5d120928522099185511fb9382dabc",
+      "deliverySha256": "fcd45ffc0e87fbafe38ba98b35a2e9e8b21f7efdca2270498206b3b6035dbc71"
+    },
+    {
+      "id": "orbit-luminous",
+      "sourcePath": "stl/orbit-luminous.stl",
+      "deliveryPath": "stl/orbit-luminous.stl.gz",
+      "sourceBytes": 8190497,
+      "deliveryBytes": 539902,
+      "sourceSha256": "8963952ba72284cceb6d80585b290267c4fb68c87b4bf4bf419d0655b178cf1a",
+      "deliverySha256": "a8fc0200cf87b4a5e10f197ddbcda5f3047187d30bf6b4bbc156a384451b1da2"
+    },
+    {
+      "id": "orbit-midnight",
+      "sourcePath": "stl/orbit-midnight.stl",
+      "deliveryPath": "stl/orbit-midnight.stl.gz",
+      "sourceBytes": 8190497,
+      "deliveryBytes": 539902,
+      "sourceSha256": "8963952ba72284cceb6d80585b290267c4fb68c87b4bf4bf419d0655b178cf1a",
+      "deliverySha256": "a8fc0200cf87b4a5e10f197ddbcda5f3047187d30bf6b4bbc156a384451b1da2"
+    },
+    {
+      "id": "orbit",
+      "sourcePath": "stl/orbit.stl",
+      "deliveryPath": "stl/orbit.stl.gz",
+      "sourceBytes": 8190497,
+      "deliveryBytes": 539902,
+      "sourceSha256": "8963952ba72284cceb6d80585b290267c4fb68c87b4bf4bf419d0655b178cf1a",
+      "deliverySha256": "a8fc0200cf87b4a5e10f197ddbcda5f3047187d30bf6b4bbc156a384451b1da2"
+    },
+    {
+      "id": "pills-editorial",
+      "sourcePath": "stl/pills-editorial.stl",
+      "deliveryPath": "stl/pills-editorial.stl.gz",
+      "sourceBytes": 5099285,
+      "deliveryBytes": 535605,
+      "sourceSha256": "ee084ddafcf1be05791055182f068fe02565025bb492a408e5b4df9fb70a8bb3",
+      "deliverySha256": "bc6f4dd0d02eb8c84328cfbbbd5641fb20e074762c4a38dcb3559853aef3e46b"
+    },
+    {
+      "id": "pills",
+      "sourcePath": "stl/pills.stl",
+      "deliveryPath": "stl/pills.stl.gz",
+      "sourceBytes": 5099285,
+      "deliveryBytes": 535608,
+      "sourceSha256": "e97df109dcc5001f27d0cecc713d2cbbdce99c484383a01a11548cb5e3339816",
+      "deliverySha256": "59584d5502642e22ffd457bfb1a1b4f8a34ee539eac34bc6b34cb4dc146262a8"
+    },
+    {
+      "id": "ribbon",
+      "sourcePath": "stl/ribbon.stl",
+      "deliveryPath": "stl/ribbon.stl.gz",
+      "sourceBytes": 18022583,
+      "deliveryBytes": 3270507,
+      "sourceSha256": "f88abbda70828a19c588c6ecba26ec3bfb1dc4b2e0a9142a9cd8f432aefb37d7",
+      "deliverySha256": "3f7b4466e5d0077eed884271eefbfd43be5a5b69f86834f2677b5f4693fba9cc"
+    },
+    {
+      "id": "ringball",
+      "sourcePath": "stl/ringball.stl",
+      "deliveryPath": "stl/ringball.stl.gz",
+      "sourceBytes": 6654451,
+      "deliveryBytes": 881867,
+      "sourceSha256": "235776cf231ef4f16bdb82b138265b8a90de09357997ca35eb3125a60d4289be",
+      "deliverySha256": "c799726db462e7291c10f3bf0d6da041697453f3046d5884ceec89d0b918c343"
+    },
+    {
+      "id": "stack",
+      "sourcePath": "stl/stack.stl",
+      "deliveryPath": "stl/stack.stl.gz",
+      "sourceBytes": 5329213,
+      "deliveryBytes": 800156,
+      "sourceSha256": "9945e3c1d4c64d3aa1063b83c3006a6c07e6a1b8ccaf1433f1c78320db6a73bf",
+      "deliverySha256": "983ce0ac10118c88b1000f9abf494f146957bc443daa9a0a0b07f55b425d1183"
+    },
+    {
+      "id": "tiles-connect",
+      "sourcePath": "stl/tiles-connect.stl",
+      "deliveryPath": "stl/tiles-connect.stl.gz",
+      "sourceBytes": 56289,
+      "deliveryBytes": 4915,
+      "sourceSha256": "6fb058e82d68e671720537d1000a3b8a9a4b7a02851bfd71cfa8eea0bec67aed",
+      "deliverySha256": "2023bea6a67556d2cfd27d548521aa81253545893f477f6df3e14f10fad731c6"
+    },
+    {
+      "id": "tiles-install",
+      "sourcePath": "stl/tiles-install.stl",
+      "deliveryPath": "stl/tiles-install.stl.gz",
+      "sourceBytes": 56332,
+      "deliveryBytes": 5067,
+      "sourceSha256": "e1a400fe7f79b64900845c4b1ed9084c35248a9b4f2d7674651dc70f90bc9cc1",
+      "deliverySha256": "1bc48607f7145797fe182871bc149d4e84365e155103be6c051f1e297d8e43bc"
+    },
+    {
+      "id": "tiles-luminous-brand",
+      "sourcePath": "stl/tiles-luminous-brand.stl",
+      "deliveryPath": "stl/tiles-luminous-brand.stl.gz",
+      "sourceBytes": 56332,
+      "deliveryBytes": 5067,
+      "sourceSha256": "e1a400fe7f79b64900845c4b1ed9084c35248a9b4f2d7674651dc70f90bc9cc1",
+      "deliverySha256": "1bc48607f7145797fe182871bc149d4e84365e155103be6c051f1e297d8e43bc"
+    },
+    {
+      "id": "tiles-luminous-build",
+      "sourcePath": "stl/tiles-luminous-build.stl",
+      "deliveryPath": "stl/tiles-luminous-build.stl.gz",
+      "sourceBytes": 56289,
+      "deliveryBytes": 4915,
+      "sourceSha256": "6fb058e82d68e671720537d1000a3b8a9a4b7a02851bfd71cfa8eea0bec67aed",
+      "deliverySha256": "2023bea6a67556d2cfd27d548521aa81253545893f477f6df3e14f10fad731c6"
+    },
+    {
+      "id": "tiles-luminous-support",
+      "sourcePath": "stl/tiles-luminous-support.stl",
+      "deliveryPath": "stl/tiles-luminous-support.stl.gz",
+      "sourceBytes": 56912,
+      "deliveryBytes": 5151,
+      "sourceSha256": "c1c0c1e6c61920d9d1134264ec432d7444444a360c16df8783e23e91e5776bbf",
+      "deliverySha256": "2df1a3fcc54a5eb97670e349c95187a7acc4c14025ac3528c7bb65438a679734"
+    },
+    {
+      "id": "tiles-ship",
+      "sourcePath": "stl/tiles-ship.stl",
+      "deliveryPath": "stl/tiles-ship.stl.gz",
+      "sourceBytes": 56912,
+      "deliveryBytes": 5151,
+      "sourceSha256": "c1c0c1e6c61920d9d1134264ec432d7444444a360c16df8783e23e91e5776bbf",
+      "deliverySha256": "2df1a3fcc54a5eb97670e349c95187a7acc4c14025ac3528c7bb65438a679734"
+    },
+    {
+      "id": "twist",
+      "sourcePath": "stl/twist.stl",
+      "deliveryPath": "stl/twist.stl.gz",
+      "sourceBytes": 6646155,
+      "deliveryBytes": 1395175,
+      "sourceSha256": "6af32aa5252674ba2344a33bbe3050912dc1e329312e5bd8c2999102dfe6968e",
+      "deliverySha256": "3f890823e755f3def89d245952c08607dd6ede999fcff8256a1273ec57100d54"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@inneranimalmedia/samsketch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Source-backed SamSketch model and scene curation application.",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4340",
+    "build": "node scripts/verify-assets.mjs && tsc --noEmit && vite build",
+    "check": "node scripts/verify-assets.mjs && tsc --noEmit",
+    "test": "node scripts/verify-assets.mjs && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "opencascade.js": "^2.0.0-beta.b5ff984",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.180.0",
+    "playwright-core": "^1.56.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.10"
+  }
+}

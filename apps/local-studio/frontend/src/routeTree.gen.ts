@@ -25,6 +25,7 @@ import { Route as appsFilesRouteImport } from './routes/(apps)/files'
 import { Route as appsMailRouteImport } from './routes/(apps)/mail'
 import { Route as appsMediaRouteImport } from './routes/(apps)/media'
 import { Route as appsProjectsRouteImport } from './routes/(apps)/projects'
+import { Route as appsSamsketchRouteImport } from './routes/(apps)/samsketch'
 import { Route as appsSettingsRouteImport } from './routes/(apps)/settings'
 import { Route as appsShipRouteImport } from './routes/(apps)/ship'
 import { Route as appsSitesRouteImport } from './routes/(apps)/sites'
@@ -135,6 +136,11 @@ const appsMediaRoute = appsMediaRouteImport.update({
 const appsProjectsRoute = appsProjectsRouteImport.update({
   id: '/(apps)/projects',
   path: '/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsSamsketchRoute = appsSamsketchRouteImport.update({
+  id: '/(apps)/samsketch',
+  path: '/samsketch',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsSettingsRoute = appsSettingsRouteImport.update({
@@ -314,6 +320,7 @@ export interface FileRoutesByFullPath {
   '/mail': typeof appsMailRoute
   '/media': typeof appsMediaRouteWithChildren
   '/projects': typeof appsProjectsRouteWithChildren
+  '/samsketch': typeof appsSamsketchRoute
   '/settings': typeof appsSettingsRouteWithChildren
   '/ship': typeof appsShipRoute
   '/sites': typeof appsSitesRoute
@@ -361,6 +368,7 @@ export interface FileRoutesByTo {
   '/files': typeof appsFilesRoute
   '/mail': typeof appsMailRoute
   '/media': typeof appsMediaRouteWithChildren
+  '/samsketch': typeof appsSamsketchRoute
   '/ship': typeof appsShipRoute
   '/sites': typeof appsSitesRoute
   '/store': typeof appsStoreRoute
@@ -409,6 +417,7 @@ export interface FileRoutesById {
   '/(apps)/mail': typeof appsMailRoute
   '/(apps)/media': typeof appsMediaRouteWithChildren
   '/(apps)/projects': typeof appsProjectsRouteWithChildren
+  '/(apps)/samsketch': typeof appsSamsketchRoute
   '/(apps)/settings': typeof appsSettingsRouteWithChildren
   '/(apps)/ship': typeof appsShipRoute
   '/(apps)/sites': typeof appsSitesRoute
@@ -460,6 +469,7 @@ export interface FileRouteTypes {
     | '/mail'
     | '/media'
     | '/projects'
+    | '/samsketch'
     | '/settings'
     | '/ship'
     | '/sites'
@@ -507,6 +517,7 @@ export interface FileRouteTypes {
     | '/files'
     | '/mail'
     | '/media'
+    | '/samsketch'
     | '/ship'
     | '/sites'
     | '/store'
@@ -554,6 +565,7 @@ export interface FileRouteTypes {
     | '/(apps)/mail'
     | '/(apps)/media'
     | '/(apps)/projects'
+    | '/(apps)/samsketch'
     | '/(apps)/settings'
     | '/(apps)/ship'
     | '/(apps)/sites'
@@ -604,6 +616,7 @@ export interface RootRouteChildren {
   appsMailRoute: typeof appsMailRoute
   appsMediaRoute: typeof appsMediaRouteWithChildren
   appsProjectsRoute: typeof appsProjectsRouteWithChildren
+  appsSamsketchRoute: typeof appsSamsketchRoute
   appsSettingsRoute: typeof appsSettingsRouteWithChildren
   appsShipRoute: typeof appsShipRoute
   appsSitesRoute: typeof appsSitesRoute
@@ -735,6 +748,13 @@ declare module '@tanstack/react-router' {
       path: '/projects'
       fullPath: '/projects'
       preLoaderRoute: typeof appsProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/samsketch': {
+      id: '/(apps)/samsketch'
+      path: '/samsketch'
+      fullPath: '/samsketch'
+      preLoaderRoute: typeof appsSamsketchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/settings': {
@@ -1061,6 +1081,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsMailRoute: appsMailRoute,
   appsMediaRoute: appsMediaRouteWithChildren,
   appsProjectsRoute: appsProjectsRouteWithChildren,
+  appsSamsketchRoute: appsSamsketchRoute,
   appsSettingsRoute: appsSettingsRouteWithChildren,
   appsShipRoute: appsShipRoute,
   appsSitesRoute: appsSitesRoute,

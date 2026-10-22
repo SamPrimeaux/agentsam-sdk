@@ -19,6 +19,12 @@ await rm(dest, { recursive: true, force: true });
 await mkdir(dest, { recursive: true });
 await copy(source("frontend/static"), path.join(dest, "admin"));
 await copy(source("frontend/dist"), path.join(dest, "admin/_spa"));
+// The admin SPA shell imports these original app-owned runtime controllers.
+// They are not in frontend/static and must be shipped explicitly rather than
+// allowing an included-app build to report success with broken URLs.
+for (const name of ["shell.js", "inspector.js"]) {
+  await copy(source(`frontend/${name}`), path.join(dest, "admin/js", name));
+}
 // Media Library uses browser ES imports. These must ship with the release,
 // not be resolved from FuelNFreetime's surrounding monorepo at runtime.
 await copy(source("packages/media-kit/src"), path.join(dest, "admin/media-kit"));
@@ -61,6 +67,7 @@ for (const critical of [
   "admin/js/media-library.js", "admin/media-kit/index.js",
   "admin/workbench/media-asset-workbench.js",
   "admin/_spa/index.html", "admin/theme-editor.html",
+  "admin/js/shell.js", "admin/js/inspector.js",
   "admin/js/revise-atlas.js", "admin/js/portable-sections.js",
 ]) {
   if (!fs.existsSync(path.join(dest, critical))) {

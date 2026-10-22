@@ -1,5 +1,5 @@
 // Brand asset path for the side-assistant trigger (served from the app's /admin/brand folder).
-const AGENT_TRIGGER_ICON = "/admin/brand/mini-agentsam-trigger.svg";
+const AGENT_TRIGGER_ICON = "/admin/brand/agentsam-gorilla/v1/ui/mini-composer-idle.svg";
 const LOGO_URL =
   "https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail";
 
@@ -18,6 +18,9 @@ const ICONS = {
   pos: '<rect x="6" y="3" width="12" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M10 18h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   agentic: '<rect x="5" y="8" width="14" height="11" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 4v4M9 13h.01M15 13h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   email: '<path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  plusCircle: '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  moon: '<path d="M20.1 14.2A8.2 8.2 0 0 1 9.8 3.9 8.3 8.3 0 1 0 20.1 14.2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  sun: '<circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56m11.02 11.02 1.56 1.56M2 12h2.2m15.6 0H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   settings: '<circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.02.02a2 2 0 1 1-2.83 2.83l-.02-.02a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.03a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.87.34l-.02.02a2 2 0 1 1-2.83-2.83l.02-.02A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.03A1.7 1.7 0 0 0 4.6 8.4a1.7 1.7 0 0 0-.34-1.87l-.02-.02a2 2 0 1 1 2.83-2.83l.02.02A1.7 1.7 0 0 0 8.96 4.04 1.7 1.7 0 0 0 10 2.48V2a2 2 0 1 1 4 0v.03a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.02-.02a2 2 0 1 1 2.83 2.83l-.02.02a1.7 1.7 0 0 0-.34 1.87A1.7 1.7 0 0 0 20.96 10H21a2 2 0 1 1 0 4h-.03A1.7 1.7 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>',
   arrowLeftToLine: '<path d="M3 19V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m13 6-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   textAlignStart: '<path d="M21 5H3M15 12H3M17 19H3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
@@ -151,7 +154,7 @@ function decodeExitPath(value) {
 }
 function normalizeAdminPath(value) {
   const decoded = decodeExitPath(value).split(String.fromCharCode(92)).join("/");
-  if (!decoded || /[ -\s]/.test(decoded)) return "";
+  if (!decoded || /[\u0000-\s]/.test(decoded)) return "";
   if (/^[a-z][a-z0-9+.-]*:/i.test(decoded)) return "";
   if (decoded.includes("://") || decoded.startsWith("//")) return "";
   const path = decoded.split("?")[0].split("#")[0];
@@ -388,6 +391,149 @@ function icon(name, size = 18, className = "console-icon") {
   return `<svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" aria-hidden="true">${ICONS[name] || ""}</svg>`;
 }
 
+const CONSOLE_APPEARANCE_KEY = "agentsam-console-appearance";
+
+function readConsoleAppearance() {
+  try {
+    const saved = localStorage.getItem(CONSOLE_APPEARANCE_KEY);
+    return saved === "dark" || saved === "light" ? saved : "light";
+  } catch (error) {
+    return "light";
+  }
+}
+
+function applyConsoleAppearance(value) {
+  const appearance = value === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = appearance;
+  document.documentElement.style.colorScheme = appearance;
+  document.body.dataset.theme = appearance;
+  document.body.style.colorScheme = appearance;
+  document.querySelectorAll("[data-console-theme-toggle]").forEach((button) => {
+    const next = appearance === "dark" ? "light" : "dark";
+    button.innerHTML = icon(appearance === "dark" ? "sun" : "moon", 18);
+    button.setAttribute("aria-label", `Switch to ${next} mode`);
+    button.setAttribute("title", `Switch to ${next} mode`);
+    button.setAttribute("aria-pressed", String(appearance === "dark"));
+  });
+  return appearance;
+}
+
+let consoleSearchMatches = [];
+let consoleSearchActiveIndex = 0;
+
+function getConsoleSearchItems() {
+  const nav = buildUserNav(window.__shellUser || null);
+  const sections = [
+    { key: "main", label: "Workspace" },
+    { key: "channels", label: "Sales channels" },
+    { key: "apps", label: "Apps" },
+  ];
+  const items = [];
+  const seen = new Set();
+  const add = (label, href, group) => {
+    if (!label || !href) return;
+    const key = label + "\\u0000" + href;
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push({ label, href, group });
+  };
+  for (const section of sections) {
+    for (const item of nav[section.key] || []) {
+      if (item.href) add(item.label, item.href, section.label);
+      else if (item.id === "products") add(item.label, "/admin/products", section.label);
+      for (const child of item.children || []) add(child.label, child.href, item.label || section.label);
+    }
+  }
+  return items;
+}
+
+function renderConsoleSearchResults() {
+  const input = document.getElementById("console-search-input");
+  const results = document.getElementById("console-search-results");
+  if (!input || !results) return;
+  const query = input.value.trim().toLocaleLowerCase();
+  consoleSearchMatches = getConsoleSearchItems().filter((item) =>
+    !query || (item.label + " " + item.group + " " + item.href).toLocaleLowerCase().includes(query)
+  );
+  consoleSearchActiveIndex = consoleSearchMatches.length
+    ? Math.max(0, Math.min(consoleSearchActiveIndex, consoleSearchMatches.length - 1))
+    : 0;
+  results.replaceChildren();
+  if (!consoleSearchMatches.length) {
+    input.removeAttribute("aria-activedescendant");
+    const empty = document.createElement("p");
+    empty.className = "console-search-empty";
+    empty.setAttribute("role", "status");
+    empty.textContent = "No matches. Try another search.";
+    results.appendChild(empty);
+    return;
+  }
+  consoleSearchMatches.forEach((item, index) => {
+    const result = document.createElement("a");
+    result.className = "console-search-result";
+    result.id = "console-search-result-" + index;
+    result.href = item.href;
+    result.dataset.consoleSearchResult = "true";
+    result.dataset.searchIndex = String(index);
+    result.setAttribute("role", "option");
+    result.setAttribute("aria-selected", String(index === consoleSearchActiveIndex));
+    result.setAttribute("aria-label", item.label + ", " + item.group);
+    const copy = document.createElement("span");
+    copy.className = "console-search-result-copy";
+    const label = document.createElement("strong");
+    label.textContent = item.label;
+    const group = document.createElement("small");
+    group.textContent = item.group;
+    copy.append(label, group);
+    const enter = document.createElement("kbd");
+    enter.textContent = "↵";
+    enter.setAttribute("aria-hidden", "true");
+    result.append(copy, enter);
+    results.appendChild(result);
+  });
+  input.setAttribute("aria-activedescendant", "console-search-result-" + consoleSearchActiveIndex);
+}
+
+function openConsoleSearch() {
+  const backdrop = document.getElementById("console-search-backdrop");
+  const input = document.getElementById("console-search-input");
+  const trigger = document.getElementById("console-search-trigger");
+  if (!backdrop || !input) return;
+  backdrop.hidden = false;
+  trigger?.setAttribute("aria-expanded", "true");
+  input.value = "";
+  input.setAttribute("aria-expanded", "true");
+  consoleSearchActiveIndex = 0;
+  renderConsoleSearchResults();
+  input.focus();
+}
+
+function closeConsoleSearch(restoreFocus = true) {
+  const backdrop = document.getElementById("console-search-backdrop");
+  const trigger = document.getElementById("console-search-trigger");
+  if (!backdrop || backdrop.hidden) return;
+  backdrop.hidden = true;
+  trigger?.setAttribute("aria-expanded", "false");
+  document.getElementById("console-search-input")?.setAttribute("aria-expanded", "false");
+  if (restoreFocus) trigger?.focus();
+}
+
+function renderConsoleSearchDialog() {
+  return `
+    <div class="console-search-backdrop" id="console-search-backdrop" hidden>
+      <section class="console-search-dialog" id="console-search-dialog" role="dialog" aria-modal="true" aria-labelledby="console-search-title">
+        <h2 id="console-search-title" class="console-search-sr-only">Search pages and tools</h2>
+        <div class="console-search-input-wrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.7"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <input id="console-search-input" type="search" role="combobox" aria-autocomplete="list" aria-expanded="false" placeholder="Search pages, products, and tools" autocomplete="off" aria-label="Search pages, products, and tools" aria-controls="console-search-results">
+          <kbd>Esc</kbd>
+        </div>
+        <div class="console-search-results" id="console-search-results" role="listbox" aria-label="Search results"></div>
+        <div class="console-search-hint"><span>Navigate with ↑ ↓</span><span><kbd>↵</kbd> Open <kbd>Esc</kbd> Close</span></div>
+      </section>
+    </div>`;
+}
+
 function renderNavItem(item, activeHref) {
   if (item.children) {
     const open = groupOpen(item.id, activeHref, item.children, item.href);
@@ -452,7 +598,7 @@ function renderSideNav(activeHref, userNav, options = {}) {
       <div class="console-nav-group">${main}</div>
       <div class="console-nav-label">Sales channels</div>
       <div class="console-nav-group">${channels}</div>
-      <div class="console-nav-label">Apps</div>
+      <div class="console-nav-label console-nav-label--apps"><span>Apps</span>${icon("plusCircle", 14, "console-nav-apps-add")}</div>
       <div class="console-nav-group">${apps}</div>
     </div>
     <div class="console-sidenav-profile${drawer ? " console-sidenav-profile--drawer" : ""}" data-profile-popup-root>
@@ -614,6 +760,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
   const shellMode = resolveShellMode(options);
   ensureConsoleAssets();
   ensureConsoleLayout();
+  applyConsoleAppearance(readConsoleAppearance());
 
   document.body.dataset.shellMode = shellMode.id;
   document.body.classList.toggle("shell-mode-theme-editor", shellMode.id === "theme-editor");
@@ -642,17 +789,15 @@ function renderShell(activeHref, mainHtml, options = {}) {
       <header class="console-topbar">
         <div class="console-topbar-spacer" aria-hidden="true"></div>
         <div class="console-search-wrap">
-          <div class="console-search" role="search">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#9b9b9b" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="#9b9b9b" stroke-width="1.8" stroke-linecap="round"/></svg>
-            <span>Search</span>
-            <kbd>⌘K</kbd>
-          </div>
+          <button type="button" class="console-search console-search--icon" id="console-search-trigger" aria-label="Search pages and tools" title="Search pages and tools" aria-haspopup="dialog" aria-expanded="false" aria-controls="console-search-dialog">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
         </div>
         <div class="console-topbar-actions">
           <button type="button" class="console-icon-btn" id="agentsam-toggle" aria-label="Agent Sam" aria-expanded="false" title="Agent Sam">
             <img src="${AGENT_TRIGGER_ICON}" alt="" width="22" height="22" aria-hidden="true" style="display:block;border-radius:50%;object-fit:cover">
           </button>
-          <button type="button" class="console-icon-btn" aria-label="Notifications">
+          <button type="button" class="console-icon-btn" aria-label="Notifications" title="Notifications">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.5"/></svg>
 
           </button>
@@ -673,6 +818,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
         </div>
       </div>
     </div>
+    ${shellMode.hideAdminNav ? "" : renderConsoleSearchDialog()}
   `;
 
   if (fullBleed) document.body.classList.add("console-body-bleed", "admin-body-bleed");
@@ -744,6 +890,22 @@ function bindConsoleGlobalHandlers() {
   window.__consoleGlobalHandlers = true;
 
   document.addEventListener("click", (e) => {
+    const searchTrigger = e.target.closest("#console-search-trigger");
+    if (searchTrigger) {
+      e.preventDefault();
+      openConsoleSearch();
+      return;
+    }
+    const searchResult = e.target.closest("[data-console-search-result]");
+    if (searchResult) {
+      closeConsoleSearch(false);
+      return;
+    }
+    const searchBackdrop = e.target.closest("#console-search-backdrop");
+    if (searchBackdrop && e.target === searchBackdrop) {
+      closeConsoleSearch();
+      return;
+    }
     const logout = e.target.closest(".admin-logout-btn");
     if (logout) {
       e.preventDefault();
@@ -786,6 +948,57 @@ function bindConsoleGlobalHandlers() {
       toggleBtn.setAttribute("aria-expanded", String(next));
       toggleBtn.classList.toggle("is-open", next);
     });
+  });
+
+  document.addEventListener("input", (event) => {
+    if (event.target?.id !== "console-search-input") return;
+    consoleSearchActiveIndex = 0;
+    renderConsoleSearchResults();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (document.getElementById("console-search-backdrop") && (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      openConsoleSearch();
+      return;
+    }
+    const backdrop = document.getElementById("console-search-backdrop");
+    if (!backdrop || backdrop.hidden) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeConsoleSearch();
+      return;
+    }
+    if (event.target?.id === "console-search-input" && consoleSearchMatches.length) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        consoleSearchActiveIndex = (consoleSearchActiveIndex + 1) % consoleSearchMatches.length;
+        renderConsoleSearchResults();
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        consoleSearchActiveIndex = (consoleSearchActiveIndex - 1 + consoleSearchMatches.length) % consoleSearchMatches.length;
+        renderConsoleSearchResults();
+      } else if (event.key === "Enter") {
+        const result = document.querySelector(`.console-search-result[data-search-index="${consoleSearchActiveIndex}"]`);
+        if (result) {
+          event.preventDefault();
+          result.click();
+        }
+      }
+    }
+    if (event.key === "Tab") {
+      const dialog = document.getElementById("console-search-dialog");
+      const focusable = [...(dialog?.querySelectorAll("input, a[href]") || [])];
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    }
   });
 }
 

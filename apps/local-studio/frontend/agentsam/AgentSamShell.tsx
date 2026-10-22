@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { BookOpen, Film, Database, Folder, Globe, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn } from 'lucide-react';
+import { BookOpen, Film, Database, Folder, Globe, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn , PenTool, Box} from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -17,7 +17,7 @@ import { AnnotationHelper } from './AnnotationHelper';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
-import { isPackagedDesktop, listenDeepLinks } from '@/lib/desktop/tauri';
+import { isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settings';
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
@@ -43,8 +43,10 @@ export function AgentSamShell() {
   const project = state.projects.find((item) => item.id === trail?.projectId);
   const isConversation = pathname === '/agentsam' || pathname.startsWith('/chats');
   const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/');
+  const isSamSketchRoute = pathname === '/samsketch' || pathname.startsWith('/samsketch/');
+  const isWorkspaceRoute = isCadRoute || isSamSketchRoute;
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
-  // CAD shares the Chat/Work mode switcher with AgentSam; never override the user's choice.
+  // CAD and SamSketch share the host Chat/Work switcher; never override the user's choice.
   const go = (to: string) => {
     if (isPackagedDesktop()) {
       const normalized = to.startsWith('/') ? to : '/' + to;
@@ -93,6 +95,29 @@ export function AgentSamShell() {
     });
     return () => { active = false; dispose?.(); };
   }, []);
+
+  useEffect(() => {
+    if (!isPackagedDesktop()) return;
+    let active = true;
+    let dispose: (() => void) | undefined;
+    void listenTauriEvent("agentsam:pet:activate", () => {
+      if (!active) return;
+      const nextHash = "#/agentsam";
+      if (window.location.hash !== nextHash) window.location.hash = nextHash;
+      else void navigate({ to: "/agentsam" });
+    }).then((unlisten) => {
+      if (!unlisten) return;
+      if (active) dispose = unlisten;
+      else unlisten();
+    }).catch(() => {});
+    return () => { active = false; dispose?.(); };
+  }, [navigate]);
+
+  const petState = state.activeTrailId && state.streamingIds.includes(state.activeTrailId) ? "working" : "idle";
+  useEffect(() => {
+    if (!isPackagedDesktop()) return;
+    void emitTauriEvent("agentsam:pet:state", { state: petState }).catch(() => {});
+  }, [petState]);
 
   useEffect(() => {
     flushChromeShares();
@@ -185,7 +210,8 @@ export function AgentSamShell() {
     destinations: [
       { id: 'library', label: 'Library', icon: <BookOpen />, href: '/artifacts', active: pathname === '/artifacts' },
       { id: 'sites', label: 'Sites', icon: <Globe />, href: '/cms', active: pathname === '/cms' },
-      { id: 'cad', label: 'CAD', icon: <Layers3 aria-hidden="true" />, href: '/cad', active: pathname === '/cad' },
+      { id: 'cad', label: 'CAD Creator', icon: <Box aria-hidden="true" />, href: '/cad', active: pathname === '/cad' },
+      { id: 'samsketch', label: 'SamSketch', icon: <PenTool aria-hidden="true" />, href: '/samsketch', active: isSamSketchRoute },
       { id: 'database', label: 'Database', icon: <Database />, href: '/database', active: pathname === '/database' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
       { id: 'media', label: 'Media', icon: <Film />, href: '/media', active: pathname === '/media' || pathname.startsWith('/media/') },
@@ -218,7 +244,7 @@ export function AgentSamShell() {
   return <ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} defaultOpen={false} peekable>
     <Nav.Scope className="agentsam-shell" data-agentsam-app-shell="local-studio">
       {!isSettings ? <Nav.Sidenav /> : null}<div className="agentsam-main">
-        {!isConversation ? isCadRoute
+        {!isConversation ? isWorkspaceRoute
           ? <Nav.Topbar startup showAccount />
           : <Nav.Topbar><Nav.TopbarLogo toggle /><span>{pathname.startsWith('/cms') ? 'Sites' : pathname.startsWith('/artifacts') ? 'Library' : pathname.split('/')[1].replace(/^./, (letter) => letter.toUpperCase())}</span><Nav.TopbarSpacer /><Nav.AccountSwitcher /></Nav.Topbar> : null}
         <OfflineBanner /><main className="agentsam-route"><Outlet /></main>

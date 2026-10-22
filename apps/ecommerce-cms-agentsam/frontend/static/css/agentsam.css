@@ -524,3 +524,173 @@ body.agentsam-focus-mode .agentsam-drawer{animation:asm-focus-enter .26s cubic-b
 .agentsam-message-attachments { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .agentsam-compose.is-attachment-drop-target,
 .commerce-home-composer.is-attachment-drop-target { outline: 2px dashed var(--te-accent, currentColor); outline-offset: -3px; background: var(--te-surface, #f7f2ff); }
+
+/* Shared action feedback: soft hover, deliberate press, visible keyboard focus. */
+.agentsam-close,
+.agentsam-head [data-assistant-action],
+.agentsam-compose .agentsam-plus,
+.agentsam-compose .agentsam-send,
+.asm-menu-row,
+.agentsam-action-card {
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .12s ease;
+}
+.agentsam-close:active,
+.agentsam-head [data-assistant-action]:active,
+.agentsam-compose .agentsam-plus:active,
+.agentsam-compose .agentsam-send:active:not(:disabled),
+.asm-menu-row:active:not(:disabled),
+.agentsam-action-card:active { transform: scale(.97); }
+.agentsam-close:focus-visible,
+.agentsam-head [data-assistant-action]:focus-visible,
+.agentsam-compose .agentsam-plus:focus-visible,
+.asm-menu-row:focus-visible,
+.agentsam-action-card:focus-visible {
+  outline: 2px solid #9c83c4;
+  outline-offset: 2px;
+}
+.agentsam-send.is-loading { position: relative; cursor: progress; }
+.agentsam-send.is-loading .agentsam-send-arrow { opacity: 0; }
+.agentsam-send.is-loading::after {
+  content: "";
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255,255,255,.42);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: agentsam-send-spin .72s linear infinite;
+}
+@keyframes agentsam-send-spin { to { transform: rotate(360deg); } }
+
+/* Dark AgentSam is a soft graphite panel with separated surfaces and readable messages. */
+:root[data-theme="dark"] .agentsam-dock { background: #222127; border-left-color: #393541; }
+:root[data-theme="dark"] .agentsam-drawer,
+:root[data-theme="dark"] body.agentsam-open.agentsam-focus-mode .agentsam-dock,
+:root[data-theme="dark"] body.agentsam-open.agentsam-focus-mode .agentsam-drawer {
+  background: #25232b;
+  color: #f1edf5;
+}
+:root[data-theme="dark"] body.agentsam-open:not(.agentsam-focus-mode) .agentsam-dock .agentsam-drawer {
+  background: #25232b;
+  border-color: #413b49;
+  box-shadow: 0 5px 28px rgba(0,0,0,.28);
+}
+:root[data-theme="dark"] .agentsam-head {
+  background: #292730;
+  border-bottom-color: #403b48;
+}
+:root[data-theme="dark"] .agentsam-brand strong { color: #f2edf7; }
+:root[data-theme="dark"] .agentsam-brand span { color: #b8b0c1; }
+:root[data-theme="dark"] .agentsam-close,
+:root[data-theme="dark"] .agentsam-head [data-assistant-action] {
+  background: #302d37;
+  border-color: #4a4354;
+  color: #ded6e8;
+}
+:root[data-theme="dark"] .agentsam-close:hover,
+:root[data-theme="dark"] .agentsam-head [data-assistant-action]:hover {
+  background: #3a3444;
+  border-color: #76658e;
+  color: #fff;
+}
+:root[data-theme="dark"] .agentsam-messages { color: #eee9f3; scrollbar-color: #51495e transparent; }
+:root[data-theme="dark"] .agentsam-msg--assistant {
+  background: #302d37;
+  border-color: #47414f;
+  color: #f0ebf5;
+}
+:root[data-theme="dark"] .agentsam-msg--user {
+  background: #cbb7e8;
+  color: #241b2d;
+}
+:root[data-theme="dark"] .agentsam-msg--typing { color: #c6bbd3; }
+:root[data-theme="dark"] .agentsam-compose {
+  background: #25232b;
+  border-top-color: #403b48;
+}
+:root[data-theme="dark"] .agentsam-compose textarea {
+  background: #302d37;
+  border-color: #4b4454;
+  color: #f2edf7;
+  caret-color: #d2b7f2;
+}
+:root[data-theme="dark"] .agentsam-compose textarea::placeholder { color: #a79eaf; }
+:root[data-theme="dark"] .agentsam-compose textarea:focus {
+  border-color: #b59bd9;
+  box-shadow: 0 0 0 3px rgba(181,155,217,.13);
+}
+:root[data-theme="dark"] .agentsam-compose .agentsam-plus {
+  background: #34303c;
+  color: #e3d9ef;
+}
+:root[data-theme="dark"] .agentsam-compose .agentsam-plus:hover { background: #40394b; }
+:root[data-theme="dark"] .agentsam-compose .agentsam-send {
+  background: #b99bdf;
+  color: #241b2d;
+}
+:root[data-theme="dark"] .agentsam-compose .agentsam-send:hover:not(:disabled) { background: #cbb7e8; }
+:root[data-theme="dark"] .agentsam-compose .agentsam-send:focus-visible { outline-color: #cbb7e8; }
+:root[data-theme="dark"] .agentsam-send.is-loading::after {
+  border-color: rgba(36,27,45,.28);
+  border-top-color: #241b2d;
+}
+:root[data-theme="dark"] body.agentsam-focus-mode .agentsam-compose {
+  background: #25232b;
+  border-color: #48414f;
+  box-shadow: 0 9px 30px rgba(0,0,0,.22);
+}
+:root[data-theme="dark"] body.agentsam-focus-mode .agentsam-msg--user {
+  background: #cbb7e8;
+  color: #241b2d;
+}
+:root[data-theme="dark"] .asm-capability-popover {
+  background: rgba(39,36,45,.985);
+  border-color: #494252;
+  color: #f0ebf5;
+  box-shadow: 0 14px 34px rgba(0,0,0,.38);
+}
+:root[data-theme="dark"] .asm-menu-row:hover:not(:disabled),
+:root[data-theme="dark"] .asm-menu-row:focus-visible { background: #37313f; }
+:root[data-theme="dark"] .asm-menu-row__icon { color: #d0bce9; }
+:root[data-theme="dark"] .asm-menu-row__content>small,
+:root[data-theme="dark"] .asm-menu-row__arrow { color: #b2a7c0; }
+:root[data-theme="dark"] .asm-menu-back,
+:root[data-theme="dark"] .asm-menu-divider { border-color: #494252; background-color: #494252; }
+:root[data-theme="dark"] .asm-capability-notice { background: #37303f; color: #e0d4ed; }
+:root[data-theme="dark"] .asm-attachment-chip {
+  background: #332e3b;
+  border-color: #51475e;
+  color: #e5dceb;
+}
+:root[data-theme="dark"] .asm-attachment-chip button { color: #d7cbe3; }
+:root[data-theme="dark"] .asm-attachment-chip button:hover { background: #494052; }
+:root[data-theme="dark"] .asm-menu-search {
+  background: #302d37;
+  border-color: #51495d;
+  color: #f2edf7;
+}
+:root[data-theme="dark"] .asm-menu-search::placeholder { color: #a79eaf; }
+:root[data-theme="dark"] .agentsam-action-card {
+  background: #302d37;
+  border-color: #494252;
+  color: #f1edf5;
+}
+:root[data-theme="dark"] .agentsam-action-card:hover,
+:root[data-theme="dark"] .agentsam-action-card:focus-visible { border-color: #b99bdf; }
+:root[data-theme="dark"] .agentsam-msg-content pre {
+  background: #211f26;
+  border-color: #48414f;
+  color: #e4dceb;
+}
+:root[data-theme="dark"] .agentsam-msg-content :not(pre)>code { background: #403749; color: #f1e8ff; }
+:root[data-theme="dark"] .asm-attachment-notice { color: #ffb1a5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .agentsam-send.is-loading::after { animation: none; }
+  .agentsam-close,
+  .agentsam-head [data-assistant-action],
+  .agentsam-compose .agentsam-plus,
+  .agentsam-compose .agentsam-send,
+  .asm-menu-row,
+  .agentsam-action-card { transition: none !important; }
+}

@@ -1,0 +1,228 @@
+/* SamSketch Studio v1 review pass — preserve the existing editor and geometry. */
+.sam-shell-root.studio-shell{display:flex;width:100%;height:100dvh;min-height:0;overflow:hidden;background:#f7f8fb;color:#1c2940}
+.sam-shell-root.studio-shell>.sam-shell-sidenav-host{display:contents}
+.sam-shell-root.studio-shell>.sam-shell-main{display:flex;flex:1 1 auto;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.studio-shell .app{--library-width:290px;--inspector-width:310px;--timeline-height:112px;position:relative;display:grid;grid-template-columns:minmax(200px,var(--library-width)) minmax(0,1fr) minmax(250px,var(--inspector-width));grid-template-rows:60px minmax(0,1fr) var(--timeline-height);width:100%;height:100%;min-height:0;overflow:hidden;background:#f7f8fb}
+.studio-shell .top{position:relative;grid-column:1/-1;grid-row:1;display:flex;align-items:stretch;min-width:0;height:60px;min-height:60px;padding:0;background:#fff;border-bottom:1px solid #e2e7ef;z-index:60}
+.studio-shell .sam-shell-topbar-host{height:60px;min-width:0;flex:1 1 auto}
+.studio-shell .sam-shell-topbar-host .as-nav-topbar{height:60px;min-height:60px;padding:0 230px 0 12px;border:0;background:#fff;box-shadow:none;color:#1c263a}
+.studio-shell .sam-shell-topbar-host .as-nav-topbar-leading{gap:9px}
+.studio-shell .sam-shell-topbar-host .as-nav-topbar-leading:after{content:"InnerAnimalMedia  /  Sculpt Studio";display:block;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:2px;color:#33415b;font-size:12px;font-weight:750;letter-spacing:-.025em}
+.studio-shell .sam-shell-topbar-host .as-nav-topbar-actions{display:none!important}
+.studio-shell .sam-shell-topbar-host .as-nav-brand-mark img{width:28px;height:28px;object-fit:contain}
+.studio-shell .sam-shell-topbar-host .as-nav-mode-switch{padding:3px;gap:3px;border:1px solid #e0e6ef;border-radius:10px;background:#f1f4f9}
+.studio-shell .sam-shell-topbar-host .as-nav-mode-switch button{min-width:56px;min-height:32px;border-radius:7px;font-size:10px;font-weight:750}
+.studio-shell .sam-shell-topbar-host .as-nav-mode-switch button[aria-pressed=true]{background:#fff;box-shadow:0 1px 4px #17253c15}
+.studio-shell .sam-shell-topbar-actions{position:absolute;right:8px;top:0;height:60px;display:flex;align-items:center;gap:2px;z-index:4}
+.studio-shell .sam-shell-action{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:36px;width:36px;min-height:38px;height:38px;padding:0;border:0;border-radius:8px;background:transparent;color:#68778f;cursor:pointer}
+.studio-shell .sam-shell-action svg{width:16px;height:16px;flex:none}
+.studio-shell .sam-shell-action:hover{background:#f0f4fb;color:#2b4a7f}
+.studio-shell .sam-shell-action:active{background:#e6edfa;transform:translateY(1px)}
+.studio-shell .sam-shell-action:focus-visible{outline:2px solid #5578df;outline-offset:1px}
+.studio-shell .sam-shell-action.is-active,.studio-shell .sam-shell-action[aria-pressed=true]{background:#e9efff;color:#355ec0}
+.studio-shell .sam-shell-action.agent-action{border:1px solid #e0e6ef;background:#fff}
+.studio-shell .sam-shell-action.agent-action:hover{border-color:#b8c9f0;background:#f5f7ff}
+.studio-shell .sam-shell-action.agent-action img{width:25px;height:25px;object-fit:contain}
+.studio-shell .sam-shell-action.search-action{width:120px;min-width:110px;justify-content:flex-start;padding:0 9px;border:1px solid #e1e7f0;background:#f7f9fc}
+.studio-shell .sam-shell-action.search-action .action-label{font-size:10px;color:#77859a;font-weight:550}
+.studio-shell .sam-shell-action.search-action kbd{margin-left:auto;padding:2px 4px;border:1px solid #e0e5ee;border-radius:4px;color:#8490a2;font-size:8px}
+.studio-shell .sam-shell-content{flex:1 1 auto;min-width:0;min-height:0;overflow:hidden}
+.studio-shell .left,.studio-shell .right{position:relative;grid-row:2/4;min-width:0;min-height:0;overflow:auto;background:#fff;scrollbar-width:thin;scrollbar-color:#d8e0ed transparent}
+.studio-shell .left{grid-column:1;grid-row:2/4;border-right:1px solid #e1e6ef}
+.studio-shell .right{grid-column:3;grid-row:2/4;border-left:1px solid #e1e6ef;display:flex;flex-direction:column}
+.studio-shell .canvas-wrap{grid-column:2;grid-row:2;min-width:0;min-height:0;overflow:hidden;background:radial-gradient(ellipse at 52% 28%,#fbfcff 0%,#edf2fc 67%,#dfe8f6 100%)}
+.studio-shell .canvas-wrap>canvas{position:absolute;inset:0;width:100%;height:100%;outline:none}
+.studio-shell .canvas-header{top:20px;left:22px;max-width:min(360px,calc(100% - 320px));z-index:2}
+.studio-shell .canvas-header h1{font-size:clamp(22px,2.2vw,32px)!important;line-height:1.1;letter-spacing:-.05em}
+.studio-shell .canvas-header p{max-width:310px;font-size:11px}
+.studio-shell .canvas-tools{left:50%!important;right:auto!important;top:14px;transform:translateX(-50%)!important;z-index:5;gap:3px;padding:5px;border:1px solid #e0e7f1;border-radius:11px;background:#ffffffdf;box-shadow:0 6px 24px #1d315216;backdrop-filter:blur(16px)}
+.studio-shell .canvas-tools .icon-control{width:33px;min-width:33px;height:33px;min-height:33px;padding:0;display:grid;place-items:center;border-radius:7px}
+.studio-shell .canvas-tools .icon-control:hover{background:#eef3fd}
+.studio-shell .canvas-tools .icon-control.active,.studio-shell .canvas-tools .icon-control[aria-pressed=true]{background:#e6edff;color:#315ab8}
+.studio-shell .toolbar-separator{height:20px;width:1px;background:#e1e7f0;align-self:center;margin:0 3px}
+.studio-shell .canvas-status{left:14px;bottom:12px;z-index:2;max-width:calc(100% - 30px);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:9px;padding:7px 10px;background:#ffffffd9;border-color:#e1e7f0;border-radius:8px}
+.studio-shell .compass{right:13px;bottom:12px;z-index:2;padding:8px 10px;font-size:9px;background:#ffffffd9;border-color:#e1e7f0}
+.studio-shell .timeline{position:relative;grid-column:2;grid-row:3;display:flex;flex-direction:column;min-width:0;min-height:84px;max-height:45dvh;padding:0;background:#fff;border-top:1px solid #dfe5ef;overflow:visible;z-index:4}
+.studio-shell .timeline-top{height:34px;min-height:34px;margin:0;padding:0 12px;border-bottom:1px solid #edf0f5}
+.studio-shell .timeline-top .tag{font-size:9px;letter-spacing:.11em}
+.studio-shell .timeline-top .btn-group{gap:5px}
+.studio-shell .timeline-top .pill{padding:5px 8px;font-size:10px}
+.studio-shell .timeline-strip{flex:1;min-height:0;overflow:auto;gap:0}
+.studio-shell .chapter{min-height:0;height:100%;border:0;border-right:1px solid #edf0f5;border-radius:0;padding:9px 11px;background:#fff}
+.studio-shell .chapter:hover{background:#f8faff}
+.studio-shell .chapter.active{background:#edf2ff;color:#3057b0;border-color:#dbe5ff}
+.studio-shell .chapter b{font-size:11px;line-height:1.3}
+.studio-shell .chapter small{font-size:9px}
+.studio-shell .studio-panel-resize{position:absolute;top:0;bottom:0;width:8px;z-index:20;cursor:col-resize;touch-action:none}
+.studio-shell .studio-panel-resize:after{content:"";position:absolute;top:0;bottom:0;width:2px;background:transparent;transition:background .15s}
+.studio-shell .studio-panel-resize:hover:after,.studio-shell .studio-panel-resize:focus-visible:after,.studio-shell .studio-panel-resize.is-dragging:after{background:#6888e6}
+.studio-shell .studio-panel-resize.library-resize{right:-4px}
+.studio-shell .studio-panel-resize.library-resize:after{right:3px}
+.studio-shell .studio-panel-resize.inspector-resize{left:-4px}
+.studio-shell .studio-panel-resize.inspector-resize:after{left:3px}
+.studio-shell .studio-timeline-resize{position:absolute;top:-4px;left:0;right:0;height:8px;z-index:25;cursor:row-resize;touch-action:none}
+.studio-shell .studio-timeline-resize:after{content:"";position:absolute;left:calc(50% - 22px);top:3px;width:44px;height:2px;border-radius:99px;background:#c9d2e0}
+.studio-shell .studio-timeline-resize:hover:after,.studio-shell .studio-timeline-resize:focus-visible:after,.studio-shell .studio-timeline-resize.is-dragging:after{background:#6888e6}
+.studio-shell .timeline[data-collapsed=true]{height:38px!important;min-height:38px!important}
+.studio-shell .timeline[data-collapsed=true] .timeline-strip,.studio-shell .timeline[data-collapsed=true] .studio-timeline-resize{display:none}
+.studio-shell .dock-tabs{position:sticky;top:0;z-index:5;flex:none}
+.studio-shell #inspector{flex:1;min-height:0;overflow:auto}
+.studio-shell #assistant{flex:1;min-height:0;overflow:hidden}
+.studio-shell .sam-assistant-layer,.studio-shell .sam-settings-layer{font-family:inherit}
+@media(max-width:1180px){
+ .studio-shell .app{--library-width:248px;--inspector-width:278px}
+ .studio-shell .sam-shell-topbar-host .as-nav-topbar{padding-right:205px}
+ .studio-shell .sam-shell-topbar-host .as-nav-topbar-leading:after{max-width:190px}
+ .studio-shell .sam-shell-action.search-action{width:100px;min-width:90px}
+ .studio-shell .sam-shell-action.search-action .action-label,.studio-shell .sam-shell-action.search-action kbd{display:none}
+ .studio-shell .sam-shell-action.search-action{width:36px;min-width:36px;justify-content:center;padding:0}
+}
+@media(max-width:850px){
+ .studio-shell .app{grid-template-columns:minmax(0,1fr);grid-template-rows:56px minmax(0,1fr) 100px}
+ .studio-shell .top{height:56px;min-height:56px}
+ .studio-shell .sam-shell-topbar-host{height:56px}
+ .studio-shell .sam-shell-topbar-host .as-nav-topbar{height:56px;min-height:56px;padding-right:180px;padding-left:6px}
+ .studio-shell .sam-shell-topbar-host .as-nav-topbar-leading:after{content:"SamSketch";max-width:85px;font-size:11px}
+ .studio-shell .sam-shell-topbar-actions{right:4px;height:56px;gap:0}
+ .studio-shell .sam-shell-action{width:34px;min-width:34px}
+ .studio-shell .sam-shell-action.search-action{width:34px;min-width:34px}
+ .studio-shell .sam-shell-action:nth-child(2),.studio-shell .sam-shell-action:nth-child(3){display:none}
+ .studio-shell .left{position:fixed;left:0;top:56px;bottom:0;width:var(--library-width,290px);max-width:88vw;z-index:80;transform:translateX(-105%);box-shadow:14px 0 38px #1e2d481a;transition:transform .2s}
+ .studio-shell .left.open{transform:translateX(0)}
+ .studio-shell .right{position:fixed;right:0;left:auto;top:56px;bottom:0;width:var(--inspector-width,310px);max-width:92vw;z-index:81;transform:translateX(105%);box-shadow:-14px 0 38px #1e2d481a;transition:transform .2s}
+ .studio-shell .right.open{transform:translateX(0)}
+ .studio-shell .canvas-wrap{grid-column:1;grid-row:2}
+ .studio-shell .timeline{grid-column:1;grid-row:3}
+ .studio-shell .canvas-header{top:65px;left:13px;max-width:calc(100% - 26px)}
+ .studio-shell .canvas-header h1{font-size:clamp(20px,5vw,28px)!important}
+ .studio-shell .canvas-header p{display:none}
+ .studio-shell .canvas-tools{top:10px}
+ .studio-shell .timeline{padding:0}
+ .studio-shell .chapter{padding:7px 6px}
+ .studio-shell .chapter b{font-size:9px}
+ .studio-shell .chapter small{display:none}
+ .studio-shell .studio-panel-resize{display:none}
+}
+@media(max-width:560px){
+ .studio-shell .app{grid-template-rows:54px minmax(0,1fr) 88px}
+ .studio-shell .top{height:54px;min-height:54px}
+ .studio-shell .sam-shell-topbar-host,.studio-shell .sam-shell-topbar-host .as-nav-topbar{height:54px;min-height:54px}
+ .studio-shell .sam-shell-topbar-host .as-nav-topbar{padding-right:148px}
+ .studio-shell .sam-shell-topbar-host .as-nav-topbar-leading:after{content:"SamSketch";max-width:60px}
+ .studio-shell .sam-shell-topbar-actions{height:54px}
+ .studio-shell .sam-shell-action{width:31px;min-width:31px;height:35px}
+ .studio-shell .sam-shell-action:nth-child(4),.studio-shell .sam-shell-action:nth-child(5),.studio-shell .sam-shell-action:nth-child(6),.studio-shell .sam-shell-action:nth-child(7){display:none}
+ .studio-shell .sam-shell-action.search-action{width:31px;min-width:31px}
+ .studio-shell .canvas-tools{max-width:calc(100% - 14px);overflow-x:auto;left:50%!important;right:auto!important}
+ .studio-shell .canvas-tools .icon-control{width:29px;min-width:29px;height:30px}
+ .studio-shell .compass{display:none}
+ .studio-shell .canvas-status{left:7px;bottom:7px;font-size:8px;max-width:calc(100% - 14px)}
+ .studio-shell .timeline-top{padding:0 7px}
+ .studio-shell .timeline-top .tag{font-size:8px}
+ .studio-shell .timeline-top .pill{font-size:9px;padding:4px 6px}
+}
+@media(prefers-reduced-motion:reduce){
+ .studio-shell .sam-shell-action,.studio-shell .studio-panel-resize:after,.studio-shell .studio-timeline-resize:after{transition:none!important}
+}
+
+/* Shell hosts must not consume flex tracks; panel visibility is explicit and reversible. */
+.sam-shell-root.studio-shell>#assistant-root,.sam-shell-root.studio-shell>#settings-root{display:contents}
+@media(min-width:851px){
+ .studio-shell .app[data-library-hidden=true]{grid-template-columns:0 minmax(0,1fr) minmax(250px,var(--inspector-width))}
+ .studio-shell .app[data-library-hidden=true]>.left{display:none}
+ .studio-shell .app[data-inspector-hidden=true]{grid-template-columns:minmax(200px,var(--library-width)) minmax(0,1fr) 0}
+ .studio-shell .app[data-inspector-hidden=true]>.right{display:none}
+ .studio-shell .app[data-library-hidden=true][data-inspector-hidden=true]{grid-template-columns:0 minmax(0,1fr) 0}
+ .studio-shell .app[data-library-hidden=true] .library-resize,.studio-shell .app[data-inspector-hidden=true] .inspector-resize{display:none}
+ .studio-shell .app[data-timeline-collapsed=true]{grid-template-rows:60px minmax(0,1fr) 38px}
+}
+@media(max-width:850px){
+ .studio-shell .app[data-timeline-collapsed=true]{grid-template-rows:56px minmax(0,1fr) 38px}
+}
+@media(max-width:560px){
+ .studio-shell .app[data-timeline-collapsed=true]{grid-template-rows:54px minmax(0,1fr) 38px}
+}
+.studio-shell .timeline[data-collapsed=true] #timeline-collapse svg{transform:rotate(180deg)}
+
+/* Match the approved SamSketch charcoal top bar while retaining the native studio workspace. */
+.studio-shell .top{background:#111214;border-bottom:1px solid #282a2e;color:#f4f5f7}
+.studio-shell .sam-shell-topbar-host{height:60px;min-width:0;flex:1}
+.studio-shell .sam-shell-topbar-host .as-nav-topbar{height:60px;min-height:60px;background:#111214;color:#f4f5f7;border:0;padding:0 12px;box-shadow:none}
+.studio-shell .sam-shell-topbar-host .as-nav-topbar-center{display:none!important}
+.studio-shell .sam-shell-topbar-host .as-nav-topbar-leading{gap:10px}
+.studio-shell .sam-shell-topbar-host .as-nav-topbar-leading:after{content:"InnerAnimalMedia  /  Sculpt Studio";display:block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:3px;color:#eceef2;font-size:11px;font-weight:650;letter-spacing:-.015em}
+.studio-shell .sam-shell-topbar-host .as-nav-brand{background:transparent;border:0;box-shadow:none;padding:0;min-width:28px;min-height:36px}
+.studio-shell .sam-shell-topbar-host .as-nav-brand-mark{display:grid;place-items:center;width:28px;height:28px;border-radius:0;color:#f5f6f8}
+.studio-shell .sam-shell-topbar-host .as-nav-brand-mark img{display:none!important}
+.studio-shell .sam-shell-topbar-host .as-nav-brand-mark:after{content:"/A";font-size:18px;line-height:1;font-weight:850;letter-spacing:-.11em;color:#f5f6f8}
+.studio-shell .sam-shell-topbar-actions{position:absolute;left:0;right:0;top:0;height:60px;width:auto;display:flex;align-items:center;justify-content:flex-end;gap:2px;padding:0 8px;z-index:4;pointer-events:none}
+.studio-shell .sam-shell-topbar-actions>*{pointer-events:auto}
+.studio-shell .sam-shell-topbar-actions .search-action{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:min(250px,23vw);min-width:150px;height:38px;min-height:38px;justify-content:flex-start;padding:0 9px;border:1px solid #30343a;border-radius:9px;background:#1a1c20;color:#d8dce4}
+.studio-shell .sam-shell-topbar-actions .search-action svg{color:#969eaa}
+.studio-shell .sam-shell-topbar-actions .search-action .action-label{font-size:10px;color:#9ca4b1}
+.studio-shell .sam-shell-topbar-actions .search-action kbd{font-size:8px;color:#9da5b1;border:1px solid #3a3e45;border-radius:5px;padding:2px 4px;margin-left:auto}
+.studio-shell .sam-shell-study-status{display:inline-flex;align-items:center;gap:6px;min-height:32px;margin:0 3px 0 auto;color:#a3a8b2;font-size:9px;white-space:nowrap}
+.studio-shell .sam-shell-study-status i{display:block;width:5px;height:5px;border-radius:50%;background:#76bba3}
+.studio-shell .sam-shell-topbar-actions .sam-shell-action{color:#a9b0bc}
+.studio-shell .sam-shell-topbar-actions .sam-shell-action:hover{background:#262a30;color:#fff}
+.studio-shell .sam-shell-topbar-actions .sam-shell-action:active{background:#353a43;transform:translateY(1px)}
+.studio-shell .sam-shell-topbar-actions .sam-shell-action[aria-pressed=true]{background:#273654;color:#c7d7ff}
+.studio-shell .sam-shell-topbar-actions .agent-action{border-color:#343840;background:#1b1d21}
+.studio-shell .sam-shell-topbar-actions .agent-action:hover{border-color:#697da9;background:#242b3a}
+@media(max-width:1180px){.studio-shell .sam-shell-study-status{display:none}.studio-shell .sam-shell-topbar-actions .search-action{width:36px;min-width:36px;justify-content:center;padding:0}.studio-shell .sam-shell-topbar-actions .search-action .action-label,.studio-shell .sam-shell-topbar-actions .search-action kbd{display:none}}
+@media(max-width:850px){.studio-shell .sam-shell-topbar-host,.studio-shell .sam-shell-topbar-host .as-nav-topbar{height:56px;min-height:56px}.studio-shell .sam-shell-topbar-host .as-nav-topbar-leading:after{content:"SamSketch";max-width:85px;font-size:10px}.studio-shell .sam-shell-topbar-actions{height:56px}.studio-shell .sam-shell-topbar-actions .sam-shell-action:nth-child(2),.studio-shell .sam-shell-topbar-actions .sam-shell-action:nth-child(3){display:none}}
+@media(max-width:560px){.studio-shell .sam-shell-topbar-actions{padding:0 4px;gap:0}.studio-shell .sam-shell-topbar-actions .search-action{top:10px;width:31px;min-width:31px;left:auto;right:158px;transform:none}.studio-shell .sam-shell-topbar-actions .sam-shell-action{width:31px;min-width:31px}.studio-shell .sam-shell-topbar-actions .sam-shell-action:nth-child(4),.studio-shell .sam-shell-topbar-actions .sam-shell-action:nth-child(5),.studio-shell .sam-shell-topbar-actions .sam-shell-action:nth-child(6),.studio-shell .sam-shell-topbar-actions .sam-shell-action:nth-child(7){display:none}}
+
+.studio-shell .studio-project-chip{display:block;width:100%;margin-top:12px;padding:10px 11px;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #e0e6ef;border-radius:9px;background:#f7f9fc;color:#566a87;font-size:10px;font-weight:700;transition:background .15s,border-color .15s,color .15s}
+.studio-shell .studio-project-chip:hover{background:#edf2fc;border-color:#c6d4ef;color:#294a82}
+.studio-shell .studio-project-chip:focus-visible{outline:2px solid #5578df;outline-offset:2px}
+
+/* Resize grips sit above the panel splitters, outside the scrollable content clips. */
+.studio-shell .app>.studio-panel-resize.library-resize{position:absolute;left:var(--library-width);right:auto;top:60px;bottom:var(--timeline-height);width:8px;transform:translateX(-4px);z-index:1000;cursor:col-resize;touch-action:none;pointer-events:auto}
+.studio-shell .app>.studio-panel-resize.library-resize:after{left:3px;right:auto}
+.studio-shell .app>.studio-panel-resize.inspector-resize{position:absolute;left:calc(100% - var(--inspector-width));right:auto;top:60px;bottom:0;width:8px;transform:translateX(-4px);z-index:1000;cursor:col-resize;touch-action:none;pointer-events:auto}
+.studio-shell .app>.studio-panel-resize.inspector-resize:after{left:3px;right:auto}
+.studio-shell .app[data-timeline-collapsed=true]>.studio-panel-resize.library-resize{bottom:38px}
+@media(max-width:850px){.studio-shell .app>.studio-panel-resize{display:none}}
+
+html[data-samsketch-theme="dark"] .studio-shell .app{background:#141a24;color:#e6ecf7}
+html[data-samsketch-theme="dark"] .studio-shell .left,html[data-samsketch-theme="dark"] .studio-shell .right,html[data-samsketch-theme="dark"] .studio-shell .timeline{background:#1a2230;color:#e2e9f6;border-color:#303b4e}
+html[data-samsketch-theme="dark"] .studio-shell .left,html[data-samsketch-theme="dark"] .studio-shell .right{scrollbar-color:#46536b transparent}
+html[data-samsketch-theme="dark"] .studio-shell .section,html[data-samsketch-theme="dark"] .studio-shell .library-intro,html[data-samsketch-theme="dark"] .studio-shell .library-tabs,html[data-samsketch-theme="dark"] .studio-shell .dock-tabs{background:#1a2230;border-color:#303b4e;color:#e2e9f6}
+html[data-samsketch-theme="dark"] .studio-shell .section-title,html[data-samsketch-theme="dark"] .studio-shell .library-intro strong,html[data-samsketch-theme="dark"] .studio-shell .tag,html[data-samsketch-theme="dark"] .studio-shell .field label{color:#b6c4da}
+html[data-samsketch-theme="dark"] .studio-shell .hint,html[data-samsketch-theme="dark"] .studio-shell .small,html[data-samsketch-theme="dark"] .studio-shell .help,html[data-samsketch-theme="dark"] .studio-shell .library-footnote{color:#93a2ba}
+html[data-samsketch-theme="dark"] .studio-shell .library-tabs button,html[data-samsketch-theme="dark"] .studio-shell .dock-tabs button{background:#202a3a;border-color:#35425a;color:#aebdd4}
+html[data-samsketch-theme="dark"] .studio-shell .library-tabs button[aria-selected=true],html[data-samsketch-theme="dark"] .studio-shell .dock-tabs button.active{background:#2a3a5b;color:#e0eaff;border-color:#40577f}
+html[data-samsketch-theme="dark"] .studio-shell .template-card,html[data-samsketch-theme="dark"] .studio-shell .layer,html[data-samsketch-theme="dark"] .studio-shell .preset,html[data-samsketch-theme="dark"] .studio-shell .field input,html[data-samsketch-theme="dark"] .studio-shell .field select,html[data-samsketch-theme="dark"] .studio-shell .search-shell,html[data-samsketch-theme="dark"] .studio-shell .studio-project-chip{background:#20293a;border-color:#38465d;color:#e0e8f5}
+html[data-samsketch-theme="dark"] .studio-shell .field input,html[data-samsketch-theme="dark"] .studio-shell .field select,html[data-samsketch-theme="dark"] .studio-shell .search-shell input{color:#e0e8f5}
+html[data-samsketch-theme="dark"] .studio-shell .canvas-wrap{background:radial-gradient(ellipse at 52% 28%,#27354a 0%,#1a2230 67%,#131923 100%)}
+html[data-samsketch-theme="dark"] .studio-shell .chapter{background:#1a2230;border-color:#303b4e;color:#aebbd0}
+html[data-samsketch-theme="dark"] .studio-shell .chapter.active{background:#263656;color:#e0eaff}
+html[data-samsketch-theme="dark"] .sam-assistant-drawer,html[data-samsketch-theme="dark"] .sam-settings-drawer{background:#1b2230;color:#e6ecf7;border-color:#344056}
+html[data-samsketch-theme="dark"] .sam-assistant-header,html[data-samsketch-theme="dark"] .sam-settings-header{background:#1b2230;border-color:#344056}
+html[data-samsketch-theme="dark"] .sam-assistant-brand strong,html[data-samsketch-theme="dark"] .sam-settings-header strong{color:#e5ecf7}
+html[data-samsketch-theme="dark"] .sam-assistant-context,html[data-samsketch-theme="dark"] .sam-settings-tabs{background:#171e2a;border-color:#303b4e}
+html[data-samsketch-theme="dark"] .sam-agent-panel [data-agent-conversation-composer],html[data-samsketch-theme="dark"] .sam-agent-panel [data-agent-composer]{background:#1b2230;border-color:#354159}
+html[data-samsketch-theme="dark"] .sam-agent-panel [data-agent-composer] textarea{color:#e5ecf7}
+html[data-samsketch-theme="dark"] .settings-field,html[data-samsketch-theme="dark"] .settings-action{background:#20293a;border-color:#38465d;color:#d5e0f2}
+html[data-samsketch-theme="dark"] .settings-field-label{color:#c1cee2}
+html[data-samsketch-theme="dark"] .settings-field select{background:#171e2a;border-color:#38465d;color:#e1e9f6}
+html[data-samsketch-theme="dark"] .sam-settings-tabs button{color:#aab8ce}
+html[data-samsketch-theme="dark"] .sam-settings-tabs button.is-active{background:#2a3a5b;border-color:#40577f;color:#e1eaff}
+@media(min-width:851px){html[data-samsketch-theme="dark"] .studio-shell .top{background:#111214}}
+@media(min-width:851px){html[data-samsketch-theme="dark"] .studio-shell .app[data-timeline-hidden=true]{grid-template-rows:60px minmax(0,1fr) 0px}}
+@media(max-width:850px){html[data-samsketch-theme="dark"] .studio-shell .app[data-timeline-hidden=true]{grid-template-rows:56px minmax(0,1fr) 0px}}
+@media(max-width:560px){html[data-samsketch-theme="dark"] .studio-shell .app[data-timeline-hidden=true]{grid-template-rows:54px minmax(0,1fr) 0px}}
+.studio-shell .app[data-timeline-hidden=true] .timeline{display:none!important}
+
+.studio-shell .app[data-timeline-hidden=true]{grid-template-rows:60px minmax(0,1fr) 0px}
+.studio-shell .app[data-timeline-hidden=true] .timeline{display:none!important}
+@media(max-width:850px){.studio-shell .app[data-timeline-hidden=true]{grid-template-rows:56px minmax(0,1fr) 0px}}
+@media(max-width:560px){.studio-shell .app[data-timeline-hidden=true]{grid-template-rows:54px minmax(0,1fr) 0px}}
+
+/* Preserve the exact approved IA vector mark; only its surface color changes. */
+.studio-shell .sam-shell-topbar-host .as-nav-brand-mark img{display:block!important;filter:brightness(0) invert(1);object-fit:contain}
+.studio-shell .sam-shell-topbar-host .as-nav-brand-mark:after{content:none!important}
+
+/* The SVG is the sole mark; suppress legacy pseudo-monograms in both states. */
+.studio-shell .sam-shell-topbar-host .as-nav-brand-mark::before,.studio-shell .sam-shell-topbar-host .as-nav-brand-mark::after{content:none!important;display:none!important}

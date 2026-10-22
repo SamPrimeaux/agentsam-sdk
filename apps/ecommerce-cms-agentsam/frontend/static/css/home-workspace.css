@@ -1,5 +1,5 @@
 /* FNF Home / Shopify-reference inspired workspace. Uses existing shell and CMS authority. */
-.fnf-home{--home-line:#e5e5e8;--home-ink:#232326;--home-muted:#73717b;min-height:100%;background:#fbfbfc;color:var(--home-ink);padding:0 24px 80px}
+.fnf-home{--home-line:#e5e5e8;--home-ink:#232326;--home-muted:#73717b;--home-card:#fff;--home-field:#fff;--home-soft:#f6f5f8;--home-ink-soft:#625f68;--home-focus:#8260ae;min-height:100%;background:#fbfbfc;color:var(--home-ink);padding:0 24px 80px}
 .console-main:has(.fnf-home){background:#fbfbfc}
 .fnf-home-stage{max-width:760px;min-height:min(810px,calc(100dvh - 96px));margin:0 auto;display:flex;align-items:center;flex-direction:column;justify-content:center;gap:0;padding:45px 0 70px;box-sizing:border-box}
 .fnf-site-preview{position:relative;width:min(350px,76vw);height:197px;display:block;border-radius:14px;text-decoration:none;color:inherit;filter:drop-shadow(0 9px 11px rgba(27,25,35,.12));transition:transform .22s ease,filter .22s ease;flex:none;outline-offset:6px}
@@ -240,6 +240,238 @@
  .fnf-home-discover__card--experience{grid-template-columns:minmax(0,1fr) 50%}
  .fnf-home-discover__glass{height:100%;order:0}
 }
+
+/* Interaction polish: consistent focus, press, and pending states. */
+.fnf-home a,
+.fnf-home button { -webkit-tap-highlight-color: transparent; }
+.fnf-home a:focus-visible,
+.fnf-home button:focus-visible,
+.fnf-home .commerce-home-composer textarea:focus-visible {
+  outline: 2px solid var(--home-focus);
+  outline-offset: 3px;
+}
+.fnf-home button:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+.fnf-home button:disabled { opacity: .52; cursor: not-allowed; box-shadow: none; }
+.fnf-home .fnf-home-templates__nav button,
+.fnf-home .fnf-home-template__create,
+.fnf-home .commerce-home-composer button,
+.fnf-home .fnf-home-suggestions button {
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .12s ease;
+}
+.fnf-home .fnf-home-templates__nav button:hover:not(:disabled) {
+  background: #f2eff6;
+  border-color: #c6bbd7;
+}
+.fnf-home .fnf-home-templates__nav button:focus-visible,
+.fnf-home .fnf-home-template__create:focus-visible { outline-color: var(--home-focus); }
+.fnf-home .fnf-home-template__create:active:not(:disabled) { transform: translateY(1px) scale(.97); }
+.fnf-home .commerce-home-composer__send.is-loading { cursor: progress; }
+.fnf-home .commerce-home-composer__send.is-loading .home-send-spinner { display: block; }
+.fnf-home .commerce-home-composer__send .home-send-spinner { display: none; }
+.home-send-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--home-spinner-track, rgba(255,255,255,.38));
+  border-top-color: var(--home-spinner-head, #fff);
+  border-radius: 50%;
+  animation: home-send-spin .72s linear infinite;
+}
+@keyframes home-send-spin { to { transform: rotate(360deg); } }
+.commerce-home-composer[aria-busy="true"] { cursor: progress; }
+.commerce-home-composer__text-action[aria-busy="true"] { cursor: progress; }
+
+/* Deliberate dark palette: charcoal layers, soft lilac focus, and muted clay accents. */
+:root[data-theme="dark"] .fnf-home {
+  --home-line: #403b48;
+  --home-ink: #f1edf5;
+  --home-muted: #b5adbf;
+  --home-card: #28262f;
+  --home-field: #24222a;
+  --home-soft: #302d38;
+  --home-ink-soft: #d0c8d8;
+  --home-focus: #c6a8ef;
+  background: #1b1b20;
+  color: var(--home-ink);
+}
+:root[data-theme="dark"] .console-main:has(.fnf-home) { background: #1b1b20; }
+:root[data-theme="dark"] .fnf-home .fnf-site-preview__label,
+:root[data-theme="dark"] .fnf-home .fnf-site-preview__browser,
+:root[data-theme="dark"] .fnf-home .fnf-site-preview__hover {
+  background: #292730;
+  border-color: #494452;
+  color: #e7e0ee;
+}
+:root[data-theme="dark"] .fnf-home .fnf-site-preview__viewport { background: #292730; border-color: #494452; }
+:root[data-theme="dark"] .fnf-home .fnf-site-preview__hover { box-shadow: 0 8px 24px rgba(0,0,0,.32); }
+:root[data-theme="dark"] .fnf-home .commerce-home-composer {
+  background: #25232b;
+  border-color: #45404d;
+  box-shadow: 0 8px 26px rgba(0,0,0,.14), inset 0 1px 0 rgba(255,255,255,.025);
+}
+:root[data-theme="dark"] .fnf-home .commerce-home-composer:focus-within {
+  border-color: #8f76b0;
+  box-shadow: 0 0 0 3px rgba(177,143,221,.12), 0 10px 30px rgba(0,0,0,.2);
+}
+:root[data-theme="dark"] .fnf-home .commerce-home-composer__label { color: #b7afc1; }
+:root[data-theme="dark"] .fnf-home .commerce-home-composer textarea { color: #f1edf5; }
+:root[data-theme="dark"] .fnf-home .commerce-home-composer textarea::placeholder { color: #a29aaa; }
+:root[data-theme="dark"] .fnf-home .commerce-home-composer__brand { color: #c8bdd6; }
+:root[data-theme="dark"] .fnf-home .commerce-home-composer button { color: #d1c9d9; }
+:root[data-theme="dark"] .fnf-home .commerce-home-composer button:not(.commerce-home-composer__send):hover { background: #37323e; }
+:root[data-theme="dark"] .fnf-home .commerce-home-composer__send {
+  background: #cbb7e8 !important;
+  color: #241b2d !important;
+  --home-spinner-track: rgba(36,27,45,.24);
+  --home-spinner-head: #241b2d;
+}
+:root[data-theme="dark"] .fnf-home .commerce-home-composer__feedback { color: #f0a69d; }
+:root[data-theme="dark"] .fnf-home .fnf-home-suggestions button { color: #c4bdcc; }
+:root[data-theme="dark"] .fnf-home .fnf-home-suggestions button::before { color: #9f93b2; }
+:root[data-theme="dark"] .fnf-home .fnf-home-suggestions button:hover,
+:root[data-theme="dark"] .fnf-home .fnf-home-suggestions button:focus-visible { background: #302d38; color: #f4eff9; }
+:root[data-theme="dark"] .fnf-home .fnf-home-operations { border-top-color: var(--home-line); }
+:root[data-theme="dark"] .fnf-home .fnf-home-operations__links a,
+:root[data-theme="dark"] .fnf-home .fnf-home-template,
+:root[data-theme="dark"] .fnf-home .fnf-home-discover__card,
+:root[data-theme="dark"] .fnf-home .fnf-home-shortcuts__grid a {
+  background: var(--home-card);
+  border-color: var(--home-line);
+  color: var(--home-ink);
+  box-shadow: 0 2px 7px rgba(0,0,0,.12);
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-shortcuts__grid a:nth-child(1) {
+  background: linear-gradient(125deg, #302a38, #29252f);
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-shortcuts__grid a:nth-child(2) {
+  background: linear-gradient(125deg, #292d38, #252a33);
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-shortcuts__grid a:nth-child(3) {
+  background: linear-gradient(125deg, #28332f, #252c2a);
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-shortcuts__grid a:hover,
+:root[data-theme="dark"] .fnf-home .fnf-home-operations__links a:hover {
+  border-color: #77668d;
+  box-shadow: 0 8px 22px rgba(0,0,0,.2);
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-shortcuts__grid a>span:last-child { color: #b6a6cb; }
+:root[data-theme="dark"] .fnf-home .fnf-home-templates__nav button {
+  background: #2b2931;
+  border-color: var(--home-line);
+  color: #e5ddec;
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-templates__nav button:hover:not(:disabled) {
+  background: #393342;
+  border-color: #77668d;
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-template__preview {
+  background: linear-gradient(140deg, #332d40, #29353b);
+  border-bottom-color: #45404d;
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-template__preview[data-preview-kind="flow"],
+:root[data-theme="dark"] .fnf-home .fnf-home-template__preview[data-preview-kind="file"] {
+  background: linear-gradient(140deg, #293b35, #29332f);
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-template__preview[data-preview-kind="slides"],
+:root[data-theme="dark"] .fnf-home .fnf-home-template__preview[data-preview-kind="spark"] {
+  background: linear-gradient(140deg, #3a302f, #302b40);
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-template__preview svg { stroke: #c8b6ed; }
+:root[data-theme="dark"] .fnf-home .fnf-home-template__category { color: #b7a9c7; }
+:root[data-theme="dark"] .fnf-home .fnf-home-template__description { color: #b9b1c2; }
+:root[data-theme="dark"] .fnf-home .fnf-home-template__create {
+  background: #34303b;
+  border-color: #50475d;
+  color: #f0e8f8;
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-template__create:hover:not(:disabled) {
+  background: #40364d;
+  border-color: #8e78ad;
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-templates__groups button { color: #b7afc1; }
+:root[data-theme="dark"] .fnf-home .fnf-home-templates__groups button:hover { color: #f2edf7; background: #302d38; }
+:root[data-theme="dark"] .fnf-home .fnf-home-templates__groups button.is-active { color: #f2edf7; border-left-color: #bba0e8; background: #322d3b; }
+:root[data-theme="dark"] .fnf-home .fnf-home-templates__groups button:focus-visible { outline-color: #c6a8ef; }
+:root[data-theme="dark"] .fnf-home .fnf-home-templates__feedback { color: #b9b1c2; }
+:root[data-theme="dark"] .fnf-home .fnf-home-discover__heading>a { color: #d2c6e0; }
+:root[data-theme="dark"] .fnf-home .fnf-home-discover__card--featured,
+:root[data-theme="dark"] .fnf-home .fnf-home-create-hero {
+  background: linear-gradient(125deg, #2c332e, #282b31);
+  border-color: #42463f;
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-create-hero__kicker { color: #c4ceb8; }
+:root[data-theme="dark"] .fnf-home .fnf-home-create-hero__copy h3 em { color: #bdcba4; }
+:root[data-theme="dark"] .fnf-home .fnf-home-create-hero__copy p { color: #c0c3b7; }
+:root[data-theme="dark"] .fnf-home .fnf-home-create-hero__action { background: #cbb7e8; color: #241b2d; }
+:root[data-theme="dark"] .fnf-home .fnf-home-create-hero__stamp { color: #c1cba9; }
+:root[data-theme="dark"] .fnf-home .fnf-home-create-hero__empty { color: #bacaa0; }
+:root[data-theme="dark"] .fnf-home .fnf-home-discover__card--experience {
+  background: linear-gradient(120deg, #283541, #29313e);
+  border-color: #3d4858;
+}
+:root[data-theme="dark"] .fnf-home .fnf-home-discover__card--experience .fnf-home-discover__copy p { color: #c4d3e7; }
+:root[data-theme="dark"] .fnf-home .fnf-home-discover__card--experience .fnf-home-discover__overline { color: #c4c9f0; }
+:root[data-theme="dark"] .fnf-home .fnf-home-discover__copy p { color: #c0bac8; }
+:root[data-theme="dark"] .fnf-home .fnf-home-discover__card:hover { border-color: #746486; box-shadow: 0 9px 25px rgba(0,0,0,.24); }
+:root[data-theme="dark"] .fnf-home .fnf-home-discover__card:focus-visible { outline-color: #c6a8ef; }
+:root[data-theme="dark"] .fnf-home .fnf-home-discover__card--featured .fnf-home-discover__copy p { color: #c5c7c0; }
+:root[data-theme="dark"] .fnf-home .fnf-home-operations__links a span:nth-child(2) { color: #b5adbf; }
+
+@media (prefers-reduced-motion: reduce) {
+  .home-send-spinner { animation: none; }
+  .fnf-home button { transition: none !important; }
+}
+
+
+/* Home copy contrast pass — keep the light clay surfaces, darken supporting
+   text enough to read comfortably without turning every label into a headline. */
+:root:not([data-theme="dark"]) .fnf-home {
+  --home-muted: #625e69;
+  --home-ink-soft: #55515d;
+}
+:root:not([data-theme="dark"]) .fnf-home .commerce-home-composer__label {
+  color: #625d69;
+}
+:root:not([data-theme="dark"]) .fnf-home .commerce-home-composer textarea::placeholder {
+  color: #716b78;
+  opacity: 1;
+}
+:root:not([data-theme="dark"]) .fnf-home .commerce-home-composer__brand {
+  color: #5e526b;
+}
+:root:not([data-theme="dark"]) .fnf-home .commerce-home-composer button {
+  color: #57525f;
+}
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-suggestions button {
+  color: #56525e;
+}
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-suggestions button::before {
+  color: #6e6877;
+}
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-template__category,
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-discover__overline {
+  color: #645a71;
+}
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-template__description,
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-templates__feedback,
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-shortcuts__grid a > span:last-child,
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-operations__links a span:nth-child(2),
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-discover__copy p {
+  color: #625d69;
+}
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-discover__heading > a,
+:root:not([data-theme="dark"]) .fnf-home .fnf-home-operations__heading a {
+  color: #514b5a;
+}
+:root:not([data-theme="dark"]) .fnf-home button:focus-visible,
+:root:not([data-theme="dark"]) .fnf-home a:focus-visible,
+:root:not([data-theme="dark"]) .fnf-home textarea:focus-visible {
+  outline-color: #6c4a91;
+}
+:root:not([data-theme="dark"]) .fnf-home button:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
 
 /* Sculpt Studio is a first-class creative workspace; keep the shortcut grid calm and responsive. */
 .fnf-home-shortcuts__grid{grid-template-columns:repeat(4,minmax(0,1fr))}

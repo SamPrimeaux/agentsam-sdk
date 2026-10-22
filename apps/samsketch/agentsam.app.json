@@ -1,0 +1,105 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "samsketch",
+  "name": "SamSketch",
+  "kind": "app",
+  "package": "@inneranimalmedia/samsketch",
+  "version": "0.1.0",
+  "entrypoints": {
+    "frontend": "./"
+  },
+  "capabilities": [
+    "modeling",
+    "scene-authoring",
+    "source-model-inventory",
+    "asset-export",
+    "iconography"
+  ],
+  "provides": [
+    "workspace.panel",
+    "preview",
+    "scene.authoring"
+  ],
+  "surfaces": [
+    "models",
+    "objects",
+    "shapes",
+    "icons",
+    "inspector",
+    "timeline"
+  ],
+  "auth": {
+    "required": false,
+    "entry": {
+      "authenticated": "app.authenticated",
+      "login": "identity.login",
+      "failure": "identity.recovery"
+    }
+  },
+  "routes": {
+    "app.authenticated": {
+      "path": "/samsketch",
+      "auth": "optional",
+      "spa": true
+    },
+    "app.home": {
+      "path": "/samsketch"
+    },
+    "entry": "/samsketch",
+    "mounts": [
+      {
+        "path": "/samsketch",
+        "auth": "optional",
+        "spa": true,
+        "shell": "dist/index.html"
+      }
+    ]
+  },
+  "preview": {
+    "kind": "web",
+    "entry": "/",
+    "dashboard_route": "/samsketch"
+  },
+  "runtime": {
+    "local_preview": "ready",
+    "source_scaffold": "ready",
+    "cloudflare": "scaffold",
+    "type": "spa",
+    "assetRoot": "dist",
+    "shell": "index.html"
+  },
+  "install": {
+    "command": "npm install @inneranimalmedia/samsketch",
+    "selector": "samsketch",
+    "paths": [
+      "/install/samsketch"
+    ]
+  },
+  "embed": {
+    "stage": "samsketch",
+    "build": {
+      "cwd": ".",
+      "install": {
+        "lockfile": "package-lock.json",
+        "check": [
+          "node_modules/vite/package.json",
+          "node_modules/three/package.json",
+          "node_modules/opencascade.js/package.json"
+        ],
+        "command": [
+          "npm",
+          "ci"
+        ]
+      },
+      "command": [
+        "npm",
+        "run",
+        "build",
+        "--",
+        "--base={base}"
+      ],
+      "output": "dist",
+      "gzip_oversized_wasm": true
+    }
+  }
+}

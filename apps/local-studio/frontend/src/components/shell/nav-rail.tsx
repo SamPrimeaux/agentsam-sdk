@@ -1,6 +1,7 @@
 import { useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
+  Blocks,
   Box,
   CalendarDays,
   Database,
@@ -8,14 +9,16 @@ import {
   FolderGit2,
   Globe,
   Images,
-  Layers,
   LayoutTemplate,
   Megaphone,
   MessageSquare,
   Palette,
+  PawPrint,
   Settings,
   SquareTerminal,
 } from "lucide-react";
+import { toast } from "sonner";
+import { isPackagedDesktop, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { Nav } from "@inneranimalmedia/agentsam-nav";
 import { StudioMark } from "@/components/mark";
 import { useWorkStore } from "@/lib/work/store";
@@ -30,7 +33,6 @@ const ITEMS = [
   { to: "/sites", label: "Sites", icon: Globe, match: (p: string) => p.startsWith("/sites") },
   { to: "/media", label: "Media", icon: Images, match: (p: string) => p.startsWith("/media") || p.startsWith("/content") },
   { to: "/campaigns", label: "Campaigns", icon: Megaphone, match: (p: string) => p.startsWith("/campaigns") },
-  { to: "/cad", label: "CAD", icon: SamSketchIcon, match: (p: string) => p.startsWith("/cad") },
   { to: "/database", label: "Database", icon: Database, match: (p: string) => p.startsWith("/database") },
   { to: "/collaborate", label: "Work", icon: CalendarDays, match: (p: string) => p.startsWith("/collaborate") || p.startsWith("/mail") },
   { to: "/projects", label: "Projects", icon: FolderGit2, match: (p: string) => p.startsWith("/projects") },
@@ -85,6 +87,23 @@ export function NavRail() {
           </Nav.Menu>
         </Nav.Group>
         <Nav.Group>
+          <Nav.GroupLabel>Apps</Nav.GroupLabel>
+          <Nav.Menu>
+            <Nav.MenuItem>
+              <Nav.Collapsible defaultOpen={pathname.startsWith("/cad") || pathname.startsWith("/samsketch") || pathname.startsWith("/apps/")}>
+                <Nav.CollapsibleTrigger render={<Nav.MenuButton icon={Blocks} active={pathname.startsWith("/cad") || pathname.startsWith("/samsketch") || pathname.startsWith("/apps/")}>Installed apps <Nav.MenuChevron /></Nav.MenuButton>} />
+                <Nav.CollapsibleContent>
+                  <Nav.MenuSub>
+                    <li><Nav.MenuSubButton href="/samsketch" active={pathname.startsWith("/samsketch")}><span className="inline-flex items-center gap-2"><SamSketchIcon className="size-4" />SamSketch</span></Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/cad" active={pathname.startsWith("/cad")}><span className="inline-flex items-center gap-2"><Box className="size-4" />CAD Creator</span></Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/apps/ecommerce-cms-agentsam" active={pathname.startsWith("/apps/ecommerce-cms-agentsam")}>Commerce CMS</Nav.MenuSubButton></li>
+                  </Nav.MenuSub>
+                </Nav.CollapsibleContent>
+              </Nav.Collapsible>
+            </Nav.MenuItem>
+          </Nav.Menu>
+        </Nav.Group>
+        <Nav.Group>
           <Nav.GroupLabel>Workspace</Nav.GroupLabel>
           <Nav.Menu>
             <Nav.MenuItem>
@@ -113,7 +132,15 @@ export function NavRail() {
           </Nav.Menu>
         </Nav.Group>
       </Nav.Content>
-      <Nav.Footer><Nav.Trigger /></Nav.Footer>
+      <Nav.Footer>
+        {isPackagedDesktop() ? (
+          <button type="button" className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Toggle AgentSam desktop pet" title="Show or hide the AgentSam desktop pet"
+            onClick={() => { void toggleAgentSamPet().then((visible) => toast.success(visible ? "AgentSam pet is on your desktop" : "AgentSam pet hidden")).catch(() => toast.error("AgentSam desktop pet could not be opened.")); }}>
+            <PawPrint className="size-4 shrink-0" /><span>Desktop pet</span>
+          </button>
+        ) : null}
+        <Nav.Trigger />
+      </Nav.Footer>
     </Nav>
   );
 }
