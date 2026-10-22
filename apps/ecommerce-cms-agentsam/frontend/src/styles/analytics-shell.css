@@ -89,3 +89,56 @@
 .admin-main.console-main--bleed {
   overflow-y: auto;
 }
+
+/* In dark appearance the analytics shell joins the graphite console instead of
+   leaving a light canvas behind its already-dark glass cards. */
+:root[data-theme="dark"] .embed--light-shell {
+  --shell-bg: #1b1b20;
+  background: var(--shell-bg);
+  color: var(--fg);
+}
+:root[data-theme="dark"] .embed--light-shell .embed-bar,
+:root[data-theme="dark"] .embed--light-shell .page {
+  background: var(--shell-bg);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .embed--light-shell .page-title { color: var(--fg); }
+:root[data-theme="dark"] .embed--light-shell .page-sub { color: var(--fg-2); }
+:root[data-theme="dark"] .embed--light-shell .seg {
+  background: var(--bg-1);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .embed--light-shell .seg button { color: var(--fg-2); }
+:root[data-theme="dark"] .embed--light-shell .seg button.active {
+  background: var(--bg-3);
+  color: var(--fg);
+}
+:root[data-theme="dark"] .embed--light-shell .btn:not(.primary) {
+  background: var(--bg-1);
+  border-color: var(--line);
+  color: var(--fg-1);
+}
+:root[data-theme="dark"] .embed--light-shell .btn:not(.primary):hover {
+  background: var(--bg-2);
+  border-color: #665777;
+  color: var(--fg);
+}
+:root[data-theme="dark"] .embed--light-shell ::-webkit-scrollbar-thumb { border-color: var(--shell-bg); }
+
+:root[data-theme="dark"] .embed--light-shell .btn:focus-visible,
+:root[data-theme="dark"] .embed--light-shell .seg button:focus-visible,
+:root[data-theme="dark"] .embed--light-shell .kpi:focus-visible,
+:root[data-theme="dark"] .embed--light-shell .icon-btn:focus-visible,
+:root[data-theme="dark"] .embed--light-shell .cmd-item:focus-visible {
+  outline: 2px solid #c6a8ef;
+  outline-offset: 2px;
+}
+:root[data-theme="dark"] .embed--light-shell .btn:active:not(:disabled),
+:root[data-theme="dark"] .embed--light-shell .seg button:active:not(:disabled),
+:root[data-theme="dark"] .embed--light-shell .icon-btn:active {
+  transform: translateY(1px) scale(.985);
+}
+:root[data-theme="dark"] .embed--light-shell button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}

@@ -321,7 +321,9 @@ function setBusy(busy) {
   const hasDraft = Boolean(input?.value.trim() || window.AgentSamDraft?.attachments?.length);
   if (send) {
     send.disabled = busy || !hasDraft;
+    send.classList.toggle("is-loading", busy);
     send.setAttribute("aria-busy", String(busy));
+    send.setAttribute("aria-label", busy ? "AgentSam is responding" : "Send");
   }
   if (input) {
     input.disabled = busy;
@@ -516,6 +518,7 @@ function bindAgentsamStaticHandlers() {
     try {
       await sendAgentsamMessage(val, { propagateError: true });
       if (input?.value === val) input.value = "";
+      setBusy(false);
     } catch {
       // Preserve draft and attachments for retry; the chat already displays the error.
     }

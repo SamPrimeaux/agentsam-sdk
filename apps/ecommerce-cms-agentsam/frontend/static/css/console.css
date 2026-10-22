@@ -1,10 +1,13 @@
 /* Fuel & Free Time — Admin Console shell (Design Studio port) */
 
 :root {
+  color-scheme: light;
   --c-bg: #f1f1f1;
   --c-surface: #ffffff;
   --c-surface-2: #fafafa;
   --c-topbar: #141414;
+  --c-topbar-hover: #262626;
+  --c-search-bg: #262626;
   --c-ink: #1a1a1a;
   --c-ink-2: #4a4a4a;
   --c-muted: #6b6b6b;
@@ -14,6 +17,9 @@
   --c-hover: #f0eeee;
   --c-active: #ffffff;
   --c-accent: #1a1a1a;
+  --c-accent-ink: #ffffff;
+  --c-accent-hover: #000000;
+  --c-focus: #8061b4;
   --c-good: #0f5c3e;
   --c-good-bg: #d1f7e0;
   --c-bad: #d72c0d;
@@ -23,6 +29,33 @@
   --c-topbar-h: 56px;
   --c-nav-w: 240px;
   --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-bg: #1b1b20;
+  --c-surface: #26252c;
+  --c-surface-2: #222127;
+  --c-topbar: #111113;
+  --c-topbar-hover: #2c2a31;
+  --c-search-bg: #25242a;
+  --c-ink: #f2eff5;
+  --c-ink-2: #d2ced8;
+  --c-muted: #b2acba;
+  --c-soft: #96909e;
+  --c-line: #403c47;
+  --c-line-2: #35323d;
+  --c-hover: #302d36;
+  --c-active: #302d36;
+  --c-accent: #cbb7e8;
+  --c-accent-ink: #241b2d;
+  --c-accent-hover: #b9a2d8;
+  --c-focus: #c4a8f0;
+  --c-good: #a5e0bf;
+  --c-good-bg: #233d31;
+  --c-bad: #ff9c8c;
+  --c-warn-bg: #3b3021;
+  --c-warn: #f2c47c;
 }
 
 body.console-theme {
@@ -93,16 +126,28 @@ body.console-theme {
 }
 
 .console-search {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
   height: 34px;
-  background: #262626;
+  color: #cfcfcf;
+  font: inherit;
+  text-align: left;
+  background: var(--c-search-bg);
+  border: 1px solid transparent;
   border-radius: var(--c-radius);
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 12px;
   pointer-events: auto;
-  cursor: text;
+  cursor: pointer;
+  transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
 }
+
+.console-search:hover { border-color: rgba(255,255,255,.12); }
+.console-search:active { box-shadow: inset 0 1px 2px rgba(0,0,0,.18); }
+.console-search:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; }
 
 .console-search span {
   color: #9b9b9b;
@@ -138,11 +183,13 @@ body.console-theme {
   place-items: center;
   cursor: pointer;
   position: relative;
+  transition: background-color .16s ease, color .16s ease, transform .16s ease, box-shadow .16s ease;
 }
 
-.console-icon-btn:hover {
-  background: #262626;
-}
+.console-icon-btn:hover { background: var(--c-topbar-hover); }
+.console-icon-btn:active { transform: scale(.94); }
+.console-icon-btn:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; }
+.console-theme-toggle[aria-pressed="true"] { color: #e8d3ff; background: rgba(203,183,232,.12); }
 
 .console-badge-dot {
   position: absolute;
@@ -348,6 +395,11 @@ body.agentsam-open .agentsam-dock {
   background: var(--c-hover);
 }
 
+.console-profile-card:active { transform: scale(.99); }
+.console-profile-card:focus-visible,
+.console-menu-item:focus-visible,
+.console-nav-collapse:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; }
+
 .console-profile-card.is-active {
   background: var(--c-active);
 }
@@ -438,6 +490,9 @@ body.agentsam-open .agentsam-dock {
   flex-shrink: 0;
 }
 
+.console-nav-label--apps { justify-content: space-between; }
+.console-nav-label .console-nav-apps-add { width: 14px; height: 14px; margin-left: auto; opacity: 0.72; }
+
 .console-nav-item {
   display: flex;
   align-items: center;
@@ -457,9 +512,17 @@ body.agentsam-open .agentsam-dock {
   font-family: inherit;
 }
 
+.console-nav-item {
+  transition: background-color .15s ease, color .15s ease, transform .12s ease, box-shadow .15s ease;
+}
+
 .console-nav-item:hover {
   background: var(--c-hover);
 }
+
+.console-nav-item:active,
+.console-nav-child:active,
+.console-nav-toggle:active { transform: scale(.99); }
 
 .console-nav-item.is-active {
   background: var(--c-active);
@@ -542,9 +605,12 @@ body.agentsam-open .agentsam-dock {
 }
 
 .console-nav-toggle:focus-visible,
-.console-nav-item:focus-visible {
-  outline: 2px solid var(--c-active);
-  outline-offset: -2px;
+.console-nav-item:focus-visible,
+.console-nav-child:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+  position: relative;
+  z-index: 1;
 }
 
 .console-nav-children {
@@ -571,9 +637,10 @@ body.agentsam-open .agentsam-dock {
   border-radius: var(--c-radius);
   cursor: pointer;
   font-size: 13px;
-  color: #5a5a5a;
+  color: var(--c-ink-2);
   text-decoration: none;
   position: relative;
+  transition: background-color .15s ease, color .15s ease, transform .12s ease;
 }
 
 .console-nav-child:hover {
@@ -724,11 +791,11 @@ body.console-shell-loading .agentsam-backdrop {
 
 .console-main .btn.primary {
   background: var(--c-accent);
-  color: #fff;
+  color: var(--c-accent-ink);
 }
 
 .console-main .btn.primary:hover {
-  background: #000;
+  background: var(--c-accent-hover);
 }
 
 .console-main .btn.ghost {
@@ -875,6 +942,26 @@ body.console-theme .admin-form-row input {
 body.console-theme .admin-login-logo span.brand-tag {
   color: var(--c-ink-2);
 }
+
+/* Dark appearance: keep shared shell surfaces layered, never pure black on pure white. */
+:root[data-theme="dark"] .console-store-menu,
+:root[data-theme="dark"] .console-profile-menu {
+  background: rgba(38, 36, 44, .97);
+  border-color: var(--c-line);
+  color: var(--c-ink);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .38);
+}
+:root[data-theme="dark"] .console-store-menu-head { border-bottom-color: var(--c-line); }
+:root[data-theme="dark"] .console-menu-item:hover { background: var(--c-hover); }
+:root[data-theme="dark"] .console-menu-divider { background: var(--c-line); }
+:root[data-theme="dark"] .console-nav-collapse { background: #2a2830; border-color: var(--c-line); color: var(--c-ink-2); }
+:root[data-theme="dark"] .console-nav-collapse:hover { background: #34313c; border-color: #6e657b; color: var(--c-ink); }
+:root[data-theme="dark"] .console-main .admin-table tr:hover td { background: #2d2b33; }
+:root[data-theme="dark"] .console-main .btn.ghost { border-color: var(--c-line); color: var(--c-ink); background: var(--c-surface); }
+:root[data-theme="dark"] .console-main .btn.ghost:hover { background: #302d36; border-color: #71677d; }
+:root[data-theme="dark"] .console-main .admin-form-row input:focus,
+:root[data-theme="dark"] .console-main .admin-form-row select:focus,
+:root[data-theme="dark"] .console-main .admin-form-row textarea:focus { border-color: #bca1e4; }
 
 /* Media / content */
 .console-main .drop-zone {
@@ -1937,3 +2024,250 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/* The persistent rail has its own translucent surface tokens; theme those too. */
+:root[data-theme="dark"] body.console-theme {
+  --c-nav-rail-bg: rgba(35, 33, 41, .94);
+  --c-nav-rail-border: rgba(225, 215, 238, .12);
+  --c-nav-rail-shadow: 12px 0 34px rgba(0, 0, 0, .24);
+}
+:root[data-theme="dark"] .console-nav-ghost-toggle {
+  color: #d4cadf;
+  background: rgba(43, 40, 51, .94);
+  border-color: #4b4454;
+  box-shadow: 0 8px 22px rgba(0,0,0,.22);
+}
+:root[data-theme="dark"] .console-nav-ghost-toggle:hover {
+  color: #f3eaff;
+  background: #383241;
+  border-color: #78668f;
+}
+:root[data-theme="dark"] .console-nav-split.is-active .console-nav-toggle:hover { background: #3a3543; }
+:root[data-theme="dark"] .console-sidenav-profile .admin-logout-btn:hover {
+  color: var(--c-ink);
+  border-color: #77668d;
+  background: #383241;
+}
+
+/* Search palette: real, keyboard-accessible navigation from the existing top bar. */
+.console-search-backdrop[hidden] { display: none !important; }
+.console-search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: clamp(72px, 13vh, 150px) 16px 24px;
+  background: rgba(15, 15, 20, .38);
+  backdrop-filter: blur(7px) saturate(1.08);
+  -webkit-backdrop-filter: blur(7px) saturate(1.08);
+}
+.console-search-dialog {
+  width: min(580px, 100%);
+  max-height: min(650px, 78dvh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--c-line);
+  border-radius: 17px;
+  background: var(--c-surface);
+  color: var(--c-ink);
+  box-shadow: 0 28px 90px rgba(15, 12, 22, .26), 0 2px 10px rgba(15, 12, 22, .08);
+}
+.console-search-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0,0,0,0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+.console-search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 56px;
+  padding: 11px 15px;
+  border-bottom: 1px solid var(--c-line);
+  color: var(--c-muted);
+}
+.console-search-input-wrap input {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--c-ink);
+  font: 14px/1.4 var(--font);
+}
+.console-search-input-wrap input::placeholder { color: var(--c-soft); }
+.console-search-input-wrap input::-webkit-search-cancel-button { cursor: pointer; }
+.console-search-input-wrap kbd,
+.console-search-hint kbd,
+.console-search-result kbd {
+  flex: none;
+  border: 1px solid var(--c-line);
+  border-radius: 6px;
+  background: var(--c-hover);
+  color: var(--c-muted);
+  padding: 2px 6px;
+  font: 11px/1.5 var(--font);
+}
+.console-search-results {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+}
+.console-search-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 49px;
+  padding: 8px 11px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--c-ink);
+  text-decoration: none;
+  transition: background-color .14s ease, border-color .14s ease, transform .12s ease;
+}
+.console-search-result:hover,
+.console-search-result[aria-selected="true"] {
+  background: var(--c-hover);
+  border-color: var(--c-line);
+}
+.console-search-result:active { transform: scale(.99); }
+.console-search-result:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 1px; }
+.console-search-result-copy { display: grid; min-width: 0; gap: 2px; }
+.console-search-result-copy strong { font-size: 13px; font-weight: 600; }
+.console-search-result-copy small { color: var(--c-muted); font-size: 11px; }
+.console-search-empty { margin: 0; padding: 28px 12px; color: var(--c-muted); text-align: center; font-size: 13px; }
+.console-search-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--c-line);
+  background: var(--c-surface-2);
+  color: var(--c-muted);
+  font-size: 11px;
+}
+.console-search-hint > span:last-child { display: flex; align-items: center; gap: 5px; }
+:root[data-theme="dark"] .console-search-backdrop { background: rgba(0,0,0,.58); }
+:root[data-theme="dark"] .console-search-dialog {
+  box-shadow: 0 30px 90px rgba(0,0,0,.48), 0 2px 10px rgba(0,0,0,.24);
+}
+@media (max-width: 640px) {
+  .console-search-backdrop { padding: 72px 10px 14px; }
+  .console-search-dialog { max-height: calc(100dvh - 92px); border-radius: 14px; }
+  .console-search-hint { align-items: flex-start; flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .console-search-result { transition: none; }
+}
+
+
+/* Icon-only global search. The dialog remains fully searchable and keyboard-accessible. */
+.console-search-wrap {
+  width: auto;
+  max-width: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.console-search--icon {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  border-radius: 10px;
+  background: transparent;
+  border-color: transparent;
+  color: #d5d0dc;
+}
+.console-search--icon span,
+.console-search--icon kbd { display: none; }
+.console-search--icon:hover {
+  color: #fff;
+  background: var(--c-topbar-hover);
+  border-color: transparent;
+}
+.console-search--icon:active { transform: scale(.94); }
+.console-search--icon:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; }
+
+.console-topbar-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+.console-topbar--agentsam .console-search-wrap {
+  position: static;
+  left: auto;
+  transform: none;
+  width: auto;
+  max-width: none;
+  padding: 0;
+  pointer-events: auto;
+}
+.console-topbar--agentsam .console-topbar-center .agentsam-page-view-switch {
+  position: static;
+  top: auto;
+  left: auto;
+  width: 232px;
+  max-width: min(232px, 40vw);
+  margin: 0;
+  transform: none;
+  z-index: auto;
+}
+@media (max-width: 900px) {
+  .console-search-wrap { display: flex; }
+  .console-topbar:not(.console-topbar--agentsam) .console-search-wrap {
+    position: absolute;
+    left: auto;
+    right: 8px;
+    transform: none;
+    width: auto;
+    max-width: none;
+    padding: 0;
+  }
+}
+@media (max-width: 560px) {
+  .console-topbar--agentsam .console-topbar-center .agentsam-page-view-switch {
+    width: 148px;
+    max-width: 148px;
+  }
+  .console-topbar--agentsam .console-topbar-actions {
+    gap: 2px;
+  }
+  .console-topbar--agentsam .console-topbar-actions > .console-icon-btn[aria-label="Notifications"] {
+    display: none;
+  }
+}
+
+
+/* Global Side Assistant stays a same-route slide-over and inherits dark workspace surfaces. */
+:root[data-theme="dark"] .agentsam-drawer,
+:root[data-theme="dark"] .agentsam-drawer .agentsam-drawer-panel,
+:root[data-theme="dark"] .agentsam-drawer .agentsam-drawer-body,
+:root[data-theme="dark"] .agentsam-drawer .agentsam-drawer-content { color:#eeeaf3 !important; background:#17161b !important; border-color:#35313c !important; }
+:root[data-theme="dark"] .agentsam-drawer :is(h1,h2,h3,h4,p,label,span,strong,small) { color:inherit; }
+:root[data-theme="dark"] .agentsam-drawer :is(input,textarea,select) { color:#f1edf6 !important; background:#232127 !important; border-color:#49434f !important; }
+:root[data-theme="dark"] .agentsam-drawer :is(input,textarea)::placeholder { color:#aaa2b4 !important; opacity:1; }
+:root[data-theme="dark"] .agentsam-drawer :is(button,[role="button"]):hover { background-color:#302d37; }

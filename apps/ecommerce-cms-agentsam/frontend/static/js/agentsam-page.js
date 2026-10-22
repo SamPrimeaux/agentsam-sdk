@@ -35,6 +35,9 @@ let mcpServers = [];
 let activeConnections = new Set();
 /** @type {object} */
 let connectUrls = {};
+let recentConversations = [];
+let activeMiniPanel = null;
+const PET_ASSET_ROOT = "/admin/brand/agentsam-gorilla/v1/ui";
 
 function $(id) {
   return document.getElementById(id);
@@ -68,7 +71,19 @@ function refreshComposerPlaceholder() {
     input.placeholder = "Describe the image you want…";
     return;
   }
-  input.placeholder = interactionMode === "work" ? "Describe a task to work through" : "Ask anything";
+  input.placeholder = interactionMode === "work" ? "Describe the outcome you want to achieve…" : "Ask anything…";
+}
+
+function setPetState(state) {
+  const allowed = new Set(["idle", "thinking", "working", "listen", "happy"]);
+  const next = allowed.has(state) ? state : "idle";
+  const src = PET_ASSET_ROOT + "/mini-composer-" + next + ".svg";
+  document.querySelectorAll("[data-agent-pet]").forEach((image) => {
+    image.dataset.state = next;
+    image.src = src;
+  });
+  const globalTrigger = document.querySelector("#agentsam-toggle img");
+  if (globalTrigger) globalTrigger.src = src;
 }
 
 function setInteractionMode(mode) {
@@ -83,6 +98,10 @@ function setInteractionMode(mode) {
   });
   const heroTitle = $("agentsam-hero")?.querySelector("h1");
   if (heroTitle) heroTitle.textContent = next === "work" ? "What should we work on?" : "Where should we begin?";
+  const workHeading = $("agentsam-work-heading");
+  const workActions = $("agentsam-work-actions");
+  if (workHeading) workHeading.hidden = next !== "work";
+  if (workActions) workActions.hidden = next !== "work";
   refreshComposerPlaceholder();
   closeToolMenu();
 }
@@ -553,6 +572,7 @@ async function sendMessage(text, actionContext = null) {
 
   const displayAttachments = pendingAttachments.slice();
   appendBubble("user", message, { attachments: displayAttachments });
+  setPetState("thinking");
   setBusy(true);
 
   const runningTools = [];
@@ -609,8 +629,11 @@ async function sendMessage(text, actionContext = null) {
     renderComposeModes();
     refreshComposerPlaceholder();
     hydrateRecentActivity();
+    setPetState("happy");
+    window.setTimeout(() => setPetState("idle"), 2400);
   } catch (err) {
     typing?.remove();
+    setPetState("idle");
     appendBubble("assistant", err.message || "Something went wrong.");
   } finally {
     setBusy(false);
@@ -778,6 +801,121 @@ function applyPlusMenuConfig(config) {
   }
 }
 
+function closeMiniPanel() {
+  const panel = $("agentsam-mini-panel");
+  if (panel) panel.hidden = true;
+  activeMiniPanel = null;
+  document.querySelectorAll("[data-mini-nav-panel]").forEach((button) => button.setAttribute("aria-expanded", "false"));
+}
+function renderMiniConversationItems(query = "") {
+  const list = $("agentsam-mini-conversation-list");
+  if (!list) return;
+  list.innerHTML = "";
+  const term = query.trim().toLocaleLowerCase();
+  const matches = recentConversations.filter((conversation) => {
+    const title = String(conversation.title || "Untitled").toLocaleLowerCase();
+    return !term || title.includes(term);
+  });
+  if (!matches.length) {
+    const empty = document.createElement("div");
+    empty.className = "agentsam-mini-panel-empty";
+    empty.textContent = term ? "No conversations match that search." : "Your recent conversations will appear here.";
+    list.appendChild(empty);
+    return;
+  }
+  matches.slice(0, 40).forEach((conversation) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "agentsam-mini-panel-item";
+    const title = document.createElement("strong");
+    title.textContent = conversation.title || "Untitled conversation";
+    const time = document.createElement("small");
+    time.textContent = formatRelativeTime(conversation.last_active_unix);
+    item.append(title, time);
+    item.addEventListener("click", () => { closeMiniPanel(); loadConversation(conversation.id); });
+    list.appendChild(item);
+  });
+}
+function startNewConversation() {
+  conversationId = null;
+  clearThreadUi();
+  closeMiniPanel();
+  const input = $("agentsam-page-input");
+  if (input) input.focus();
+  history.replaceState(null, "", "/admin/agentsam");
+}
+function renderWorkspaceLinks(content) {
+  const groups = [
+    { title: "Store", items: [["Home", "/admin/home"], ["Products", "/admin/products"], ["Orders", "/admin/orders"], ["Customers", "/admin/customers"]] },
+    { title: "Build & understand", items: [["Content & media", "/admin/content"], ["Analytics", "/admin/analytics/overview"], ["Online store", "/admin/store"]] },
+    { title: "Site setup", items: [["Pages", "/admin/pages"], ["Theme editor", "/admin/theme-editor"], ["Preferences", "/admin/preferences"]] },
+  ];
+  groups.forEach((group) => {
+    const section = document.createElement("section");
+    section.className = "agentsam-mini-panel-section";
+    const heading = document.createElement("h3");
+    heading.textContent = group.title;
+    section.appendChild(heading);
+    group.items.forEach(([label, href]) => {
+      const link = document.createElement("a");
+      link.className = "agentsam-mini-panel-link";
+      link.href = href;
+      link.textContent = label;
+      link.addEventListener("click", closeMiniPanel);
+      section.appendChild(link);
+    });
+    content.appendChild(section);
+  });
+}
+async function openMiniPanel(kind) {
+  const panel = $("agentsam-mini-panel");
+  const title = $("agentsam-mini-panel-title");
+  const content = $("agentsam-mini-panel-content");
+  if (!panel || !title || !content) return;
+  if (activeMiniPanel === kind && !panel.hidden) { closeMiniPanel(); return; }
+  activeMiniPanel = kind;
+  panel.hidden = false;
+  document.querySelectorAll("[data-mini-nav-panel]").forEach((button) => button.setAttribute("aria-expanded", String(button.dataset.miniNavPanel === kind)));
+  content.innerHTML = "";
+  if (kind === "conversations") {
+    title.textContent = "Conversations";
+    const newButton = document.createElement("button");
+    newButton.type = "button";
+    newButton.className = "agentsam-mini-panel-new";
+    newButton.textContent = "+  New conversation";
+    newButton.addEventListener("click", startNewConversation);
+    const search = document.createElement("input");
+    search.type = "search";
+    search.id = "agentsam-mini-conversation-search";
+    search.className = "agentsam-mini-panel-search";
+    search.placeholder = "Search recent conversations";
+    search.setAttribute("aria-label", "Search recent conversations");
+    const list = document.createElement("div");
+    list.className = "agentsam-mini-panel-list";
+    list.id = "agentsam-mini-conversation-list";
+    content.append(newButton, search, list);
+    renderMiniConversationItems();
+    search.addEventListener("input", () => renderMiniConversationItems(search.value));
+    try {
+      const res = await fetch("/api/admin/agentsam/conversations", { credentials: "include" });
+      const data = await res.json();
+      if (res.ok && data.ok && Array.isArray(data.conversations)) recentConversations = data.conversations;
+      if (activeMiniPanel === "conversations") renderMiniConversationItems(search.value);
+    } catch {
+      if (activeMiniPanel === "conversations") {
+        list.innerHTML = "";
+        const empty = document.createElement("div");
+        empty.className = "agentsam-mini-panel-empty";
+        empty.textContent = "Conversation history is temporarily unavailable.";
+        list.appendChild(empty);
+      }
+    }
+    search.focus({ preventScroll: true });
+    return;
+  }
+  title.textContent = "Workspace";
+  renderWorkspaceLinks(content);
+}
 async function hydrateRecentActivity() {
   const foot = document.querySelector(".console-sidenav-foot");
   if (!foot) return;
@@ -787,6 +925,8 @@ async function hydrateRecentActivity() {
     const res = await fetch("/api/admin/agentsam/conversations", { credentials: "include" });
     const data = await res.json();
     if (data.ok) conversations = data.conversations || [];
+    recentConversations = conversations;
+    if (activeMiniPanel === "conversations") renderMiniConversationItems($("agentsam-mini-conversation-search")?.value || "");
   } catch {
     return;
   }
@@ -831,6 +971,7 @@ async function hydrateRecentActivity() {
 
 async function loadConversation(id) {
   if (!id) return;
+  closeMiniPanel();
   conversationId = id;
   clearThreadUi();
   showThread();
@@ -865,6 +1006,22 @@ function bindUi() {
 
   document.querySelectorAll("[data-agent-view-option]").forEach((button) => {
     button.addEventListener("click", () => setInteractionMode(button.dataset.agentViewOption));
+  });
+  document.querySelectorAll("[data-mini-nav-action]").forEach((button) => {
+    button.addEventListener("click", () => { if (button.dataset.miniNavAction === "new") startNewConversation(); });
+  });
+  document.querySelectorAll("[data-mini-nav-panel]").forEach((button) => {
+    button.addEventListener("click", () => openMiniPanel(button.dataset.miniNavPanel));
+  });
+  $("agentsam-mini-panel-close")?.addEventListener("click", closeMiniPanel);
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeMiniPanel(); });
+  document.querySelectorAll("[data-work-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.dataset.workAction;
+      if (action === "files") openFilePicker();
+      else if (action === "connections") toggleToolMenu();
+      else if (action === "workspace") openMiniPanel("workspace");
+    });
   });
 
   form?.addEventListener("submit", (e) => {

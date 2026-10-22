@@ -1,6 +1,7 @@
 import { useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
+  Blocks,
   Box,
   CalendarDays,
   Database,
@@ -8,7 +9,6 @@ import {
   FolderGit2,
   Globe,
   Images,
-  Layers,
   LayoutTemplate,
   Megaphone,
   MessageSquare,
@@ -30,7 +30,6 @@ const ITEMS = [
   { to: "/sites", label: "Sites", icon: Globe, match: (p: string) => p.startsWith("/sites") },
   { to: "/media", label: "Media", icon: Images, match: (p: string) => p.startsWith("/media") || p.startsWith("/content") },
   { to: "/campaigns", label: "Campaigns", icon: Megaphone, match: (p: string) => p.startsWith("/campaigns") },
-  { to: "/cad", label: "CAD", icon: SamSketchIcon, match: (p: string) => p.startsWith("/cad") },
   { to: "/database", label: "Database", icon: Database, match: (p: string) => p.startsWith("/database") },
   { to: "/collaborate", label: "Work", icon: CalendarDays, match: (p: string) => p.startsWith("/collaborate") || p.startsWith("/mail") },
   { to: "/projects", label: "Projects", icon: FolderGit2, match: (p: string) => p.startsWith("/projects") },
@@ -81,6 +80,23 @@ export function NavRail() {
               >
                 CLI
               </Nav.MenuButton>
+            </Nav.MenuItem>
+          </Nav.Menu>
+        </Nav.Group>
+        <Nav.Group>
+          <Nav.GroupLabel>Apps</Nav.GroupLabel>
+          <Nav.Menu>
+            <Nav.MenuItem>
+              <Nav.Collapsible defaultOpen={pathname.startsWith("/cad") || pathname.startsWith("/samsketch") || pathname.startsWith("/apps/")}>
+                <Nav.CollapsibleTrigger render={<Nav.MenuButton icon={Blocks} active={pathname.startsWith("/cad") || pathname.startsWith("/samsketch") || pathname.startsWith("/apps/")}>Installed apps <Nav.MenuChevron /></Nav.MenuButton>} />
+                <Nav.CollapsibleContent>
+                  <Nav.MenuSub>
+                    <li><Nav.MenuSubButton href="/samsketch" active={pathname.startsWith("/samsketch")}><span className="inline-flex items-center gap-2"><SamSketchIcon className="size-4" />SamSketch</span></Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/cad" active={pathname.startsWith("/cad")}><span className="inline-flex items-center gap-2"><Box className="size-4" />CAD Creator</span></Nav.MenuSubButton></li>
+                    <li><Nav.MenuSubButton href="/apps/ecommerce-cms-agentsam" active={pathname.startsWith("/apps/ecommerce-cms-agentsam")}>Commerce CMS</Nav.MenuSubButton></li>
+                  </Nav.MenuSub>
+                </Nav.CollapsibleContent>
+              </Nav.Collapsible>
             </Nav.MenuItem>
           </Nav.Menu>
         </Nav.Group>

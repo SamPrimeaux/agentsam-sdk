@@ -271,7 +271,9 @@
         "run",
         "build"
       ],
-      "output": "dist/assets"
+      "output": "dist/assets",
+      "index": "admin/_spa/index.html",
+      "scope_asset_urls": true
     }
   }
 }

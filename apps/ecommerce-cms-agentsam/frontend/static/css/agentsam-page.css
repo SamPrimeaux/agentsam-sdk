@@ -1251,3 +1251,191 @@ body.agentsam-page-body .console-main--bleed {
     max-height: min(52dvh, 420px);
   }
 }
+
+
+/* AgentSam is an intentionally dark workspace; keep the shared shell in the
+   same visual system instead of pairing a black canvas with a white nav rail. */
+body.agentsam-page-body {
+  --c-nav-rail-bg: rgba(31, 30, 36, .97);
+  --c-nav-rail-border: rgba(220, 210, 235, .12);
+  --c-nav-rail-shadow: 12px 0 34px rgba(0, 0, 0, .25);
+  --c-ink: #eeeaf3;
+  --c-muted: #c1b9cb;
+  --c-soft: #a79fb0;
+  --c-hover: #302d37;
+  --c-active: #383240;
+  --c-line: #403a48;
+}
+body.agentsam-page-body .console-topbar {
+  background: #141416;
+  border-bottom: 1px solid #2a292f;
+}
+body.agentsam-page-body .console-sidenav.admin-sidebar {
+  background: var(--c-nav-rail-bg);
+  border-right-color: var(--c-nav-rail-border);
+  box-shadow: var(--c-nav-rail-shadow);
+  color: #eeeaf3;
+}
+body.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-label {
+  color: #a79fb0;
+}
+body.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-item,
+body.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-link,
+body.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-toggle {
+  color: #d0c9d8;
+}
+body.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-item:hover,
+body.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-link:hover,
+body.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-toggle:hover {
+  background: #302d37;
+  color: #fff;
+}
+body.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-item.is-active,
+body.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-link.is-active,
+body.agentsam-page-body .console-sidenav.admin-sidebar [aria-current="page"] {
+  background: #383240;
+  color: #fff;
+  border-color: #4b4255;
+}
+body.agentsam-page-body .console-sidenav-profile,
+body.agentsam-page-body .console-profile-card {
+  background: #29272f;
+  border-color: #403a48;
+  color: #eeeaf3;
+}
+body.agentsam-page-body .console-profile-meta strong { color: #eeeaf3; }
+body.agentsam-page-body .console-profile-meta span { color: #b9b1c2; }
+
+.console-topbar--agentsam .agentsam-page-view-switch {
+  border-color: #3b3742;
+  background: #222126;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+}
+.console-topbar--agentsam .agentsam-page-view-switch button { color: #b9b2c4; }
+.console-topbar--agentsam .agentsam-page-view-switch button:hover { color: #fff; }
+.console-topbar--agentsam .agentsam-page-view-switch button.is-active {
+  color: #f6f1fb;
+  background: #39343f;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.console-topbar--agentsam .agentsam-page-view-switch button:focus-visible {
+  outline: 2px solid #c7a6f5;
+  outline-offset: 2px;
+}
+
+/* The composer names its current coworker instead of presenting an unlabeled
+   icon or a fake model-selection control. */
+.agentsam-page-bottom-left { gap: 10px; }
+.agentsam-page-coworker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 3px 8px 3px 5px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 999px;
+  background: rgba(255,255,255,.035);
+  color: #d4cddd;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  user-select: none;
+}
+.agentsam-page-coworker img {
+  display: block;
+  width: 19px;
+  height: 19px;
+  flex: none;
+  object-fit: cover;
+  border-radius: 50%;
+}
+.agentsam-page-coworker span { color: inherit; }
+.agentsam-page-coworker:hover { border-color: rgba(199,166,245,.25); }
+
+@media (max-width: 560px) {
+  .agentsam-page-coworker { gap: 5px; padding-right: 6px; }
+  .agentsam-page-coworker span { font-size: 10px; }
+  .agentsam-page-bottom-left { gap: 6px; }
+}
+
+
+/* The shared console theme layer is loaded by the shell as well; this more
+   specific route override keeps its translucent rail from reverting to white. */
+body.console-theme.agentsam-page-body .console-sidenav.admin-sidebar {
+  background: #1f1e24 !important;
+  border-right-color: rgba(220, 210, 235, .12) !important;
+  color: #eeeaf3 !important;
+}
+body.console-theme.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-item,
+body.console-theme.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-link,
+body.console-theme.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-toggle {
+  color: #d0c9d8 !important;
+}
+body.console-theme.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-item:hover,
+body.console-theme.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-link:hover,
+body.console-theme.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-toggle:hover {
+  background: #302d37 !important;
+  color: #fff !important;
+}
+body.console-theme.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-item.is-active,
+body.console-theme.agentsam-page-body .console-sidenav.admin-sidebar .console-nav-link.is-active,
+body.console-theme.agentsam-page-body .console-sidenav.admin-sidebar [aria-current="page"] {
+  background: #383240 !important;
+  color: #fff !important;
+}
+
+
+/* Center the empty-state title and composer as one group; keep active threads scrollable. */
+.agentsam-page { position:relative; flex-direction:row; }
+.agentsam-page-main { display:flex; flex:1; flex-direction:column; justify-content:center; min-width:0; min-height:0; overflow:hidden; }
+.agentsam-page-main > .agentsam-page-stage { flex:0 1 auto; min-height:0; overflow:visible; padding:18px 20px 14px; }
+.agentsam-page-main > .agentsam-page-dock { position:relative; flex:none; bottom:auto; padding:0 16px max(20px,env(safe-area-inset-bottom)); background:transparent; }
+.agentsam-page.has-thread .agentsam-page-main { justify-content:flex-start; }
+.agentsam-page.has-thread .agentsam-page-main > .agentsam-page-stage { flex:1 1 auto; overflow-y:auto; padding:24px 20px; }
+.agentsam-page.has-thread .agentsam-page-main > .agentsam-page-dock { position:sticky; bottom:0; background:linear-gradient(180deg,transparent,var(--as-bg) 28%); }
+.agentsam-page-main [hidden], .agentsam-mini-panel[hidden], .agentsam-page-work-heading[hidden], .agentsam-page-work-actions[hidden] { display:none !important; }
+.agentsam-mini-rail { display:flex; flex:0 0 48px; flex-direction:column; align-items:center; gap:6px; padding:10px 5px; border-right:1px solid #2b2930; background:#101012; z-index:4; }
+.agentsam-mini-rail button { display:grid; width:36px; height:36px; place-items:center; border:1px solid transparent; border-radius:10px; color:#bcb5c6; background:transparent; cursor:pointer; transition:background .14s ease,color .14s ease; }
+.agentsam-mini-rail button svg,.agentsam-page-work-actions button svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.agentsam-mini-rail button:hover,.agentsam-mini-rail button[aria-expanded="true"] { color:#fff; background:#302d37; border-color:#494150; }
+.agentsam-mini-rail button:focus-visible,.agentsam-mini-panel button:focus-visible,.agentsam-mini-panel a:focus-visible,.agentsam-page-work-actions button:focus-visible { outline:2px solid #c7a6f5; outline-offset:2px; }
+.agentsam-mini-panel { position:absolute; z-index:12; top:0; bottom:0; left:48px; display:flex; width:min(310px,calc(100vw - 70px)); flex-direction:column; overflow:hidden; color:#eeeaf3; background:#1c1b20; border-right:1px solid #3a3541; box-shadow:16px 0 42px rgba(0,0,0,.32); }
+.agentsam-mini-panel-head { display:flex; flex:none; align-items:center; justify-content:space-between; gap:12px; padding:17px 14px 13px; border-bottom:1px solid #34303a; }
+.agentsam-mini-panel-head h2 { margin:0; font-size:14px; font-weight:650; }
+.agentsam-mini-panel-head button { display:grid; width:30px; height:30px; place-items:center; border:1px solid transparent; border-radius:8px; color:#bdb5c8; background:transparent; font-size:20px; cursor:pointer; }
+.agentsam-mini-panel-content { display:flex; min-height:0; flex:1; flex-direction:column; gap:10px; overflow-y:auto; padding:12px; }
+.agentsam-mini-panel-new { min-height:38px; display:flex; align-items:center; justify-content:center; gap:8px; border:1px solid #51455f; border-radius:10px; color:#f4edf9; background:#332b3c; font-size:12px; font-weight:600; cursor:pointer; }
+.agentsam-mini-panel-search { width:100%; min-height:38px; border:1px solid #3b3742; border-radius:9px; padding:0 10px; color:#f2eef7; background:#131216; outline:none; font-size:12px; }
+.agentsam-mini-panel-search::placeholder { color:#a79eaf; }
+.agentsam-mini-panel-list,.agentsam-mini-panel-section { display:flex; flex-direction:column; gap:4px; }
+.agentsam-mini-panel-item { display:flex; width:100%; flex-direction:column; align-items:flex-start; gap:5px; padding:10px; border:1px solid transparent; border-radius:9px; color:#e8e2ef; background:transparent; text-align:left; cursor:pointer; }
+.agentsam-mini-panel-item:hover,.agentsam-mini-panel-link:hover { background:#2b2831; border-color:#3e3747; color:#fff; }
+.agentsam-mini-panel-item strong { width:100%; overflow:hidden; font-size:12px; font-weight:550; text-overflow:ellipsis; white-space:nowrap; }
+.agentsam-mini-panel-item small { color:#a9a0b2; font-size:10px; }
+.agentsam-mini-panel-empty { padding:14px 9px; color:#b4acbd; font-size:12px; line-height:1.5; }
+.agentsam-mini-panel-section h3 { margin:8px 4px 4px; color:#a9a0b2; font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; }
+.agentsam-mini-panel-link { display:flex; align-items:center; min-height:38px; padding:0 10px; border-radius:9px; color:#e6e0ec; text-decoration:none; font-size:12px; }
+.agentsam-page-work-heading { display:flex; align-items:center; gap:9px; padding:13px 14px 0; }
+.agentsam-page-work-heading img { display:block; width:22px; height:22px; object-fit:contain; flex:none; }
+.agentsam-page-work-heading div { display:flex; min-width:0; flex-direction:column; gap:3px; }
+.agentsam-page-work-heading strong { color:#f1edf6; font-size:12px; font-weight:600; }
+.agentsam-page-work-heading span { color:#b9b0c2; font-size:11px; line-height:1.4; }
+.agentsam-page[data-agent-view="work"] .agentsam-page-composer { border-radius:16px 16px 0 0; box-shadow:0 8px 30px rgba(0,0,0,.22); }
+.agentsam-page[data-agent-view="work"] .agentsam-page-composer-main > textarea { min-height:58px; padding-top:12px; }
+.agentsam-page-work-actions { display:flex; max-width:768px; min-height:44px; align-items:center; justify-content:space-between; gap:10px; margin:0 auto; padding:7px 10px; border:1px solid var(--as-border); border-top:0; border-radius:0 0 16px 16px; background:#252429; }
+.agentsam-page-work-actions-group { display:flex; align-items:center; gap:4px; min-width:0; }
+.agentsam-page-work-actions button { display:inline-flex; min-height:30px; align-items:center; justify-content:center; gap:6px; padding:0 8px; border:1px solid transparent; border-radius:8px; color:#c8c1d0; background:transparent; font-size:11px; white-space:nowrap; cursor:pointer; }
+.agentsam-page-work-actions button:hover { color:#fff; background:#37333e; border-color:#48404f; }
+.agentsam-page-work-actions button svg { width:14px; height:14px; }
+.agentsam-page-work-context { color:#a69eaf; font-size:10px; text-align:right; }
+@media (max-width:640px) {
+ .agentsam-mini-rail { flex-basis:42px; padding:8px 3px; }
+ .agentsam-mini-rail button { width:34px; height:34px; }
+ .agentsam-mini-panel { left:42px; width:min(292px,calc(100vw - 50px)); }
+ .agentsam-page-main > .agentsam-page-stage { padding:16px 12px 10px; }
+ .agentsam-page-main > .agentsam-page-dock { padding-left:10px; padding-right:10px; }
+ .agentsam-page-work-actions { align-items:flex-start; flex-direction:column; gap:5px; }
+ .agentsam-page-work-actions-group { width:100%; flex-wrap:wrap; }
+ .agentsam-page-work-context { display:none; }
+}

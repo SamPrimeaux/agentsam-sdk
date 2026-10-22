@@ -149,6 +149,11 @@
         "path": "/settings/themes",
         "auth": "optional",
         "spa": true
+      },
+      {
+        "path": "/samsketch",
+        "auth": "optional",
+        "spa": true
       }
     ]
   },

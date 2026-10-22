@@ -76,10 +76,21 @@
     }
     ensureMenuMounted();
     function pending(value) {
-      send.disabled = value;
+      const hasDraft = Boolean(input.value.trim() || window.AgentSamDraft?.attachments?.length);
+      send.disabled = value || !hasDraft;
+      send.classList.toggle("is-loading", value);
+      send.setAttribute("aria-busy", String(value));
+      send.setAttribute("aria-label", value ? "Sending to AgentSam" : "Send to AgentSam");
+      send.innerHTML = value
+        ? '<span class="home-send-spinner" aria-hidden="true"></span>'
+        : "↑";
+      form.setAttribute("aria-busy", String(value));
       input.setAttribute("aria-busy", String(value));
     }
     let active = false;
+    input.addEventListener("input", () => { if (!active) pending(false); });
+    document.addEventListener("agentsam:attachments-updated", () => { if (!active) pending(false); });
+    pending(false);
     async function waitForAgent() {
       if (typeof window.sendAgentsamMessage === "function") return;
       await new Promise((resolve) => {
@@ -137,11 +148,25 @@
         launch(input.value);
       }
     });
+    let openingChat = false;
     open?.addEventListener("click", async () => {
+      if (openingChat) return;
+      openingChat = true;
+      const originalLabel = open.textContent;
+      open.disabled = true;
+      open.setAttribute("aria-busy", "true");
+      open.textContent = "Opening…";
       try {
         await waitForAgent();
         window.openAgentsamDrawer?.();
-      } catch (error) { report(error.message); }
+      } catch (error) {
+        report(error.message);
+      } finally {
+        openingChat = false;
+        open.disabled = false;
+        open.setAttribute("aria-busy", "false");
+        open.textContent = originalLabel;
+      }
     });
     document.querySelectorAll("[data-home-suggestion]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -184,8 +209,8 @@
    const caption=document.createElement("p");caption.className="fnf-home-template__description";caption.textContent=description;
    const action=document.createElement("button");action.type="button";action.className="fnf-home-template__create";
    action.textContent="Create";action.setAttribute("aria-label","Create "+name);
-   if(supported){action.onclick=()=>location.assign("/admin/products/create?template="+encodeURIComponent(slug));}
-   else {action.onclick=()=>{feedback.textContent=name+" cannot be created yet. The required editable workspace is not installed.";};action.setAttribute("aria-describedby","home-templates-feedback");}
+   if(supported){action.onclick=()=>{if(action.disabled)return;action.disabled=true;action.classList.add("is-loading");action.setAttribute("aria-busy","true");action.textContent="Opening…";location.assign("/admin/products/create?template="+encodeURIComponent(slug));};}
+   else {action.onclick=()=>{feedback.textContent=name+" cannot be created yet. The required editable workspace is not installed.";action.classList.add("is-unavailable");};action.setAttribute("aria-describedby","home-templates-feedback");}
    card.append(preview,category,title,caption,action);rail.append(card);
  }
  const controls=[...document.querySelectorAll("[data-template-group]")];

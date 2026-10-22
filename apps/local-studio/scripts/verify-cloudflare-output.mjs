@@ -58,9 +58,11 @@ if (includedPlans.length === 0) console.log("No included apps declared (host Loc
 for (const plan of includedPlans) {
   const html = path.join(assetsDir, plan.stage, "index.html");
   assert.ok(fs.existsSync(html), `${plan.id} frontend index must be staged into Worker assets (/${plan.stage}/)`);
-  const assetRef = new RegExp(`(?:src|href)="(/${plan.stage}/assets/[^"]+)"`, "g");
+  const assetRef = /(?:src|href)="(\/[^"]+)"/g;
   for (const match of fs.readFileSync(html, "utf8").matchAll(assetRef)) {
-    assert.ok(fs.existsSync(path.join(assetsDir, match[1])), `${plan.id} asset missing: ${match[1]}`);
+    const localUrl = match[1];
+    assert.ok(localUrl.startsWith(plan.base), `${plan.id} entry has unscoped asset URL: ${localUrl}`);
+    assert.ok(fs.existsSync(path.join(assetsDir, localUrl)), `${plan.id} asset missing: ${localUrl}`);
   }
 }
 

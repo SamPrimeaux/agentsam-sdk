@@ -1,5 +1,6 @@
 import nitroWorker from "../../.output/server/index.mjs";
 import { serveCadChessAsset } from "./cad-chess-assets.js";
+import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
 import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cfoa/src/routes.js";
 import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cfoa/src/index.js";
@@ -662,6 +663,8 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+    const includedWasm = await serveIncludedWasmAsset(request, env);
+    if (includedWasm) return includedWasm;
     const chessAsset = await serveCadChessAsset(request);
     if (chessAsset) return chessAsset;
     const isVault = url.pathname.startsWith("/api/vault/");

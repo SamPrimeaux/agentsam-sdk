@@ -1,0 +1,89 @@
+/* Source-backed model inventory, SVG iconography and camera gizmo. */
+.studio-shell .library-tabs{grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:7px 10px 9px}
+.studio-shell .library-tabs button{min-width:0;padding:9px 2px;font-size:10px;white-space:nowrap}
+.studio-shell .library-intro{align-items:center;padding:13px 13px 9px}
+.studio-shell .library-intro>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.studio-shell .library-intro strong{font-size:12px;color:#263650}
+.studio-shell .library-intro span{font-size:9px;color:#8c99ad}
+.studio-shell .library-build-button{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:none;min-height:31px;padding:0 8px;border:1px solid #d8e2f4;border-radius:8px;background:#f7f9ff;color:#385ba8;font-size:10px;font-weight:750;white-space:nowrap;cursor:pointer}
+.studio-shell .library-build-button:hover{background:#eaf0ff;border-color:#b8c9f2}
+.studio-shell .build-starter{margin:0 13px 12px;padding:10px;border:1px solid #e6ebf4;border-radius:10px;background:linear-gradient(145deg,#fbfcff,#f5f7fc)}
+.studio-shell .build-starter>strong{display:block;margin-bottom:8px;color:#526480;font-size:10px;font-weight:750}
+.studio-shell .skill-chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.studio-shell .skill-chips button{min-width:0;min-height:28px;padding:4px 2px;border:1px solid #e2e8f3;border-radius:7px;background:#fff;color:#61728e;font-size:9px;font-weight:650;cursor:pointer}
+.studio-shell .skill-chips button:hover,.studio-shell .skill-chips button:focus-visible{background:#eaf0ff;border-color:#b8caf1;color:#2c51a5}
+.studio-shell .model-filters{display:grid;grid-template-columns:.7fr 1.2fr 1.1fr;gap:4px;padding:0 13px 9px}
+.studio-shell .model-filters button{min-width:0;min-height:28px;padding:4px 3px;border:1px solid #e4e9f2;border-radius:7px;background:#fff;color:#7a879b;font-size:9px;font-weight:700;white-space:nowrap;cursor:pointer}
+.studio-shell .model-filters button.active{background:#eaf0ff;border-color:#d3e0ff;color:#3158b2}
+.studio-shell .inventory-summary{padding:0 14px 9px;color:#8794a8;font-size:9px;line-height:1.45}
+.studio-shell .model-inventory-card .template-picture{position:relative;aspect-ratio:1.05}
+.studio-shell .model-inventory-card .template-details{padding:8px 9px 10px;min-height:56px}
+.studio-shell .model-inventory-card .template-details strong{font-size:10px}
+.studio-shell .model-inventory-card .template-details small{font-size:8px;line-height:1.4;white-space:normal}
+.studio-shell .model-sku{position:absolute;left:6px;top:6px;padding:3px 5px;border:1px solid #e0e7f1;border-radius:5px;background:#ffffffed;color:#667a9a;font-size:8px;font-weight:800;letter-spacing:.04em;box-shadow:0 1px 3px #1c2a4708}
+.studio-shell .model-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;height:100%;color:#8294b5;background:linear-gradient(145deg,#f8faff,#eaf0fa)}
+.studio-shell .model-placeholder small{font-size:8px;color:#8b99ad}
+.studio-shell .model-inventory-card .template-add{opacity:1;transform:none}
+.studio-shell .model-inventory-card:hover .template-add,.studio-shell .model-inventory-card:focus-visible .template-add{background:#eaf0ff;border-color:#cbd9fa;color:#3158b2}
+.studio-shell .library-footnote{margin:0;padding:12px 14px 5px;border-top:1px solid #edf0f5;font-size:9px}
+.studio-shell #icons-section .library-intro{padding-top:13px}
+.studio-shell .icon-library-selection{display:flex;align-items:center;gap:9px;margin:0 13px 12px;padding:9px;border:1px solid #e4eaf4;border-radius:10px;background:#f8faff;color:#7b8ba4;font-size:9px;line-height:1.4}
+.studio-shell .icon-library-selection>span:last-child{display:flex;flex-direction:column;gap:3px;min-width:0}
+.studio-shell .icon-library-selection strong{color:#334867;font-size:10px}
+.studio-shell .icon-library-selection small{color:#8996a9;font-size:8px;line-height:1.45}
+.studio-shell .icon-selection-preview{display:grid;place-items:center;flex:none;width:40px;height:40px;border:1px solid #dce5f3;border-radius:9px;background:#fff;color:#4569bd}
+.studio-shell .icon-library{padding:0 13px 20px}
+.studio-shell .icon-family{margin:0 0 15px}
+.studio-shell .icon-family>header{display:flex;align-items:center;justify-content:space-between;margin:0 0 7px;color:#63738e;font-size:9px}
+.studio-shell .icon-family>header span{color:#9ba6b6;font-size:8px}
+.studio-shell .icon-family-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.studio-shell .icon-library-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:68px;padding:7px 3px;border:1px solid #e5eaf3;border-radius:9px;background:#fff;color:#6b7da0;cursor:pointer}
+.studio-shell .icon-library-card>span{display:grid;place-items:center;width:28px;height:28px;color:#5575bb}
+.studio-shell .icon-library-card strong{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6d7b92;font-size:8px;font-weight:650}
+.studio-shell .icon-library-card:hover,.studio-shell .icon-library-card.is-selected{border-color:#b9caf0;background:#f1f5ff;color:#2f58b5}
+.studio-shell .icon-library-card.is-selected strong{color:#2f58b5}
+.studio-shell .view-gizmo{position:absolute;right:13px;bottom:13px;z-index:8;display:grid;grid-template-columns:58px auto;grid-template-rows:auto auto;align-items:center;gap:5px 9px;min-width:205px;padding:8px 9px;border:1px solid #dce4f0;border-radius:13px;background:#ffffffeb;box-shadow:0 8px 26px #21395a18;backdrop-filter:blur(15px)}
+.studio-shell .view-gizmo-orientation{grid-column:1;grid-row:1/3;display:grid;place-items:center;width:58px;height:58px}
+.studio-shell .view-gizmo-orientation svg{width:56px;height:52px}
+.studio-shell .view-gizmo-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+.studio-shell .view-gizmo-presets button,.studio-shell .view-gizmo-zoom button{min-width:0;min-height:26px;padding:3px 5px;border:1px solid #e2e8f2;border-radius:6px;background:#fff;color:#71819a;font-size:8px;font-weight:750;cursor:pointer}
+.studio-shell .view-gizmo-presets button.is-active{background:#eaf0ff;border-color:#cddcff;color:#3159b7}
+.studio-shell .view-gizmo-presets button:hover,.studio-shell .view-gizmo-zoom button:hover{border-color:#c4d2ef;background:#f1f5ff;color:#3159b7}
+.studio-shell .view-gizmo-zoom{display:flex;gap:3px}
+.studio-shell .view-gizmo-zoom button{flex:1}
+.studio-shell .view-gizmo-zoom button:first-child,.studio-shell .view-gizmo-zoom button:nth-child(2){font-size:14px;line-height:1}
+@media(max-width:850px){
+ .studio-shell .library-tabs{padding-inline:7px}
+ .studio-shell .view-gizmo{right:8px;bottom:8px;min-width:0;grid-template-columns:44px auto;gap:4px 6px;padding:6px}
+ .studio-shell .view-gizmo-orientation{width:44px;height:44px}
+ .studio-shell .view-gizmo-orientation svg{width:43px;height:42px}
+ .studio-shell .view-gizmo-presets button,.studio-shell .view-gizmo-zoom button{min-height:25px;padding:3px 4px;font-size:8px}
+}
+@media(max-width:560px){
+ .studio-shell .library-tabs button{font-size:9px}
+ .studio-shell .build-starter{padding:8px;margin-bottom:9px}
+ .studio-shell .skill-chips{gap:4px}
+ .studio-shell .view-gizmo{grid-template-columns:1fr;grid-template-rows:auto auto;min-width:0;gap:4px;width:126px}
+ .studio-shell .view-gizmo-orientation{display:none}
+ .studio-shell .view-gizmo-presets{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .studio-shell .view-gizmo-zoom{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+ .studio-shell .view-gizmo-zoom button{font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){.studio-shell .skill-chips button,.studio-shell .icon-library-card{transition:none!important}}
+
+/* Improve title legibility in the narrow, resizable model-library cards. */
+.studio-shell .model-inventory-card .template-details strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;white-space:normal;overflow:hidden;line-height:1.25}
+
+/* Keep library and properties access discoverable on narrow screens. */
+@media(max-width:850px){
+ .studio-shell .sam-shell-topbar-actions{display:flex!important;visibility:visible!important;opacity:1!important;align-items:center;gap:4px}
+ .studio-shell .sam-shell-topbar-actions #layers-toggle,
+ .studio-shell .sam-shell-topbar-actions #inspector-toggle{display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;flex:none!important;width:30px!important;height:30px!important}
+}
+
+/* On mobile, expose the two panel launchers even when the desktop toolbar compacts. */
+@media(max-width:850px){
+ .studio-shell .sam-shell-topbar-actions{display:flex!important;visibility:visible!important;opacity:1!important;align-items:center;gap:4px}
+ .studio-shell .sam-shell-topbar-actions button#layers-toggle,
+ .studio-shell .sam-shell-topbar-actions button#inspector-toggle{display:inline-flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;flex:none!important;width:30px!important;height:30px!important}
+}
