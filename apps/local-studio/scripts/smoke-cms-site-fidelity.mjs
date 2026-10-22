@@ -1,6 +1,7 @@
 /**
- * Browser acceptance for real site/theme authority. Mocks IAM-authenticated
- * registry responses, never actual user content or credentials.
+ * Browser acceptance for the canonical website-management entry point.
+ * /cms is an alias to Ecommerce CMS AgentSam's existing /admin/store route;
+ * it must not render the retired CMS editor or select a content-only project.
  */
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -31,15 +32,16 @@ try {
       (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : undefined),
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  // Exercise the common browser transport in a built SPA. The desktop
-  // distribution injects an unconditional desktop marker for Tauri; this
-  // browser harness has no Tauri bridge and supplies mocked IAM responses.
   await page.addInitScript(() => Object.defineProperty(window, '__AGENTSAM_DESKTOP__', {
     configurable: false, get: () => false, set: () => {},
   }));
 
   const scriptErrors = [];
   page.on('pageerror', (error) => scriptErrors.push(String(error)));
+
+  // The first registered site is content-only on purpose. The /cms alias must
+  // discard that old CMS selection and let the canonical app resolve an actual
+  // editable Ecommerce Worker without hardcoding a customer into the route.
   await page.route('**/api/cms/sites', (route) => route.fulfill({
     status: 200, contentType: 'application/json',
     body: JSON.stringify({ ok: true, sites: [
@@ -49,73 +51,32 @@ try {
         domain: 'fuelnfreetime.com', source: 'worker', can_edit: true, can_publish: false },
     ] }),
   }));
-  const overview = {
-    ok: true, store: { visibility: 'public', url: 'https://fuelnfreetime.com/' },
-    active_theme: {
-      id: 'heuristic', name: 'Heuristic', verified: true,
-      edit_href: '/admin/theme-editor?slug=shop',
-      appearance: { theme_id: 'heuristic-commerce', tokens: {
-        color: { canvas: '#090909', surface: '#141414', surfaceRaised: '#1b1b1b',
-          ink: '#f7f5f0', muted: '#aaa8a2', accent: '#ff4d00' },
-      } },
-    }, performance: {}, draft_themes: [],
-  };
-  await page.route('**/api/cms/remote/**', (route) => {
-    const url = new URL(route.request().url());
-    const tail = url.pathname.split('/api/cms/remote/')[1];
-    if (tail === 'store/online') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(overview) });
-    if (tail === 'pages') return route.fulfill({ status: 200, contentType: 'application/json',
-      body: JSON.stringify({ ok: true, pages: [{ slug: 'shop', title: 'Shop', live_route: '/shop', status: 'draft' }] }) });
-    if (tail === 'pages/shop') return route.fulfill({ status: 200, contentType: 'application/json',
-      body: JSON.stringify({ ok: true, page: { slug: 'shop', title: 'Shop', live_route: '/shop',
-        status: 'draft', sections: [{ key: 'hero', content: { headline: 'FNF headline' }, version: 1, status: 'draft' }] } }) });
-    if (tail === 'registry') return route.fulfill({ status: 200, contentType: 'application/json',
-      body: JSON.stringify({ ok: true, fieldTypes: {}, pages: { shop: { sections: {} } } }) });
-    return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'test_route_not_available' }) });
-  });
   await page.route('https://fuelnfreetime.com/**', (route) => route.fulfill({
     status: 200, contentType: 'text/html',
-    body: '<!doctype html><html><body><main>Verified Fuel & Free Time storefront page</main></body></html>',
+    body: '<!doctype html><html><head><title>Store route smoke</title></head><body><main data-ecommerce-store-route>Canonical Ecommerce Online Store route</main></body></html>',
   }));
 
   await page.goto(base + '/index.html#/cms', { waitUntil: 'domcontentloaded', timeout: 20000 });
-  await page.locator('[data-studio-product="commerce-online-store"]').waitFor({ timeout: 18000 });
-  assert.equal(await page.locator('#cms-site-select').inputValue(), 'fuelnfreetime',
-    'Real installed Worker is preferred over a legacy project on /cms');
-  const store = page.frameLocator('iframe[title*="Online Store"]');
-  await store.locator('#active-theme-name').getByText('Heuristic').waitFor({ timeout: 14000 });
-  const palette = await store.locator('.online-store-title').evaluate((el) => ({
-    title: getComputedStyle(el).color,
-    canvas: getComputedStyle(el.ownerDocument.body).backgroundColor,
-  }));
-  assert.equal(palette.title, 'rgb(247, 245, 240)', 'Active-theme ink remains readable on dark canvas');
-  assert.equal(palette.canvas, 'rgb(9, 9, 9)', 'Active Heuristic canvas replaces hardcoded white');
-  assert.equal(await store.locator('html').evaluate((root) => root.dataset.cmsThemeId), 'heuristic-commerce',
-    'Store consumes installed active-theme manifest');
-  assert.equal(new URL(await store.locator('#theme-preview-desktop').getAttribute('src')).origin,
-    'https://fuelnfreetime.com');
-  assert.equal(await store.locator('.online-store-theme-actions #edit-theme-btn').count(), 1);
-  await store.locator('#edit-theme-btn').click();
-  await page.waitForURL(/view=editor/, { timeout: 12000 });
-  const editor = page.frameLocator('iframe[title="Theme Editor"]');
-  await editor.locator('#theme-preview').waitFor({ timeout: 12000 });
-  await page.waitForFunction(() =>
-    [...document.querySelectorAll('iframe')].some(frame =>
-      frame.contentDocument?.querySelector('#te-preview-label')?.textContent?.includes('Published storefront')
-    ), { timeout: 12000 });
+  await page.waitForURL(/apps\/ecommerce-cms-agentsam/, { timeout: 18000 });
+  const host = page.locator('[data-agentsam-installed-app="ecommerce-cms-agentsam"]');
+  await host.waitFor({ timeout: 18000 });
 
-  assert.match(await editor.locator('#te-preview-label').innerText(), /Published storefront/);
-  assert.equal(await editor.locator('#theme-preview').getAttribute('src'), 'https://fuelnfreetime.com/shop');
-  assert.match(await editor.locator('.te-preview-mode').innerText(), /edits are saved as drafts/);
-  await page.goto(base + '/index.html#/cms');
-  await page.locator('#cms-site-select').waitFor();
-  await page.locator('#cms-site-select').selectOption('agentsam-sdk');
-  await page.locator('[data-cms-site-installation="unlinked"]').waitFor();
-  assert.equal(await page.locator('[data-studio-product="commerce-online-store"]').count(), 0,
-    'Content-only project never impersonates a storefront');
-  assert.match(await page.locator('[data-cms-site-installation="unlinked"]').innerText(), /no verified storefront renderer/i);
+  const iframe = page.locator('iframe[title="Ecommerce CMS — complete admin application"]');
+  await iframe.waitFor({ timeout: 12000 });
+  assert.equal(await iframe.getAttribute('src'), 'https://fuelnfreetime.com/admin/store',
+    '/cms must open the canonical Ecommerce /admin/store experience');
+
+  const storeFrame = page.frame({ url: /fuelnfreetime\.com\/admin\/store/ });
+  assert.ok(storeFrame, 'the canonical Ecommerce store iframe must be mounted');
+  await storeFrame.locator('[data-ecommerce-store-route]').waitFor({ timeout: 12000 });
+  assert.match(await storeFrame.locator('main').innerText(), /Canonical Ecommerce Online Store route/);
+
+  assert.equal(await page.locator('#cms-site-select').count(), 0,
+    'the old Local Studio CMS site/editor surface must not render');
+  assert.equal(await page.locator('[data-cms-site-installation="unlinked"]').count(), 0,
+    'the content-only CMS fallback must not render');
   assert.deepEqual(scriptErrors, []);
-  console.log('CMS site/theme fidelity PASS: installed Worker default, Heuristic manifest, verified storefront, unlinked project guarded');
+  console.log('CMS route smoke PASS: /cms delegates to Ecommerce CMS AgentSam /admin/store');
 } finally {
   await browser?.close();
   await new Promise((done) => server.close(done));
