@@ -31,8 +31,21 @@ export async function runSam(argv = [], options = {}) {
   const args = argv.filter(arg => arg !== '--json');
   const sub = args[0] || 'status';
   const write = options.write || ((value) => process.stdout.write(value));
-  ensureOS();
-  const sam = new AgentSamClient();
+  // A host may pass an isolated SAM OS containing explicitly installed packs.
+  // Never infer a tenant's tools from another instance or grant authorization here.
+  const installedOs = options.os ?? null;
+  if (installedOs && (
+    typeof installedOs.get !== 'function' ||
+    typeof installedOs.list !== 'function' ||
+    typeof installedOs.status !== 'function'
+  )) {
+    throw new AgentSamDiagnosticError({
+      source: 'agentsam-sdk', kind: 'usage_error',
+      code: 'sam_host_os_invalid', message: 'An installed SAM OS must expose get, list and status.',
+    });
+  }
+  if (!installedOs) ensureOS();
+  const sam = new AgentSamClient(installedOs ? { os: installedOs } : {});
   // Use the same authenticated host loader as the real CLI model runtime.
   // This command never grants execution permission.
   const shellState = options.state || {
@@ -44,7 +57,9 @@ export async function runSam(argv = [], options = {}) {
   });
   const hostDescriptors = host?.toolDescriptors() || [];
   const bound = new Set(hostDescriptors.map(item=>item.name));
-  const status = getOSStatus();
+  const status = installedOs
+    ? { ...installedOs.status(), pack_status: [] }
+    : getOSStatus();
   const proposed = OPERATION_CATALOG.filter(item => !item.aliasFor);
   const unbound = proposed.filter(item => !status.available.includes(item.name) && !bound.has(item.name));
 
@@ -52,7 +67,7 @@ export async function runSam(argv = [], options = {}) {
   if (sub === 'status' || sub === 'doctor') {
     result = {
       ...status, ok: true,
-      bound_count: status.available.length + hostDescriptors.length,
+      bound_count: new Set([...status.available, ...hostDescriptors.map(item => item.name)]).size,
       host_model_operations: hostDescriptors.map(item=>item.name),
       generated_candidates: proposed.length,
       generated_unbound: unbound.length,
@@ -61,7 +76,7 @@ export async function runSam(argv = [], options = {}) {
     };
     if (sub === 'doctor') result.generated_unbound_names = unbound.map(item => item.name);
   } else if (sub === 'list') {
-    const coreCards = listSamOperations().map(toSamOperationCard);
+    const coreCards = (installedOs ? installedOs.list() : listSamOperations()).map(toSamOperationCard);
     const hostCards = hostDescriptors
       .filter(item => !coreCards.some(card => card.id === item.name))
       .map(item => ({

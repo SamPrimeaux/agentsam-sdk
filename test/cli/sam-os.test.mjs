@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runSam } from '../../src/commands/sam.js';
 import { CORE_OPERATIONS } from '../../src/sam/packs/core.js';
-import { ensureOS, getOSStatus, registerOSPack } from '../../src/sam/os.js';
+import { ensureOS, getOSStatus, registerOSPack, createSamOS } from '../../src/sam/os.js';
 import { defineSamOperation } from '../../src/sam/define.js';
 import { registerSamOperation, getSamOperation } from '../../src/sam/registry.js';
 
@@ -61,4 +61,45 @@ test('SAM OS list includes authenticated host tools and matches status count', a
   assert.ok(listed.operations.some(item=>item.id==='repository.inspect'));
   const described = await run(['describe','media.image.background.remove']);
   assert.equal(described.handler_bound,true);
+});
+
+test('SAM CLI exposes only explicitly installed host authoring operations', async () => {
+  const noopCompiler = {
+    compileHtmlAuthoring: () => ({ schema: 'fixture', bindings: [], diagnostics: [] }),
+    compileScopedStyles: () => ({ css: '' }),
+    compileSourcePatch: ({ source, patches }) => ({ source, patches }),
+  };
+  const installed = createSamOS({
+    core: false,
+    authoring: {
+      compiler: noopCompiler,
+      repository: {
+        getSource: async () => ({ source: '<h1>fixture</h1>', revision: 1, contentHash: 'fixture' }),
+        saveDraftStyles: async () => ({ ok: true, revisionId: 'draft' }),
+        saveSourceDraft: async () => ({ ok: true, revisionId: 'draft', artifactId: 'artifact' }),
+      },
+      resolveTrustedContext: async () => ({ accountId: 'explicit-host', actorId: 'editor' }),
+      authorize: async () => false,
+    },
+  });
+  const options = { os: installed, identityLoader: async () => null, write: () => {} };
+  const listed = await runSam(['list'], options);
+  assert.deepEqual(listed.operations.map(op => op.id), [
+    'sam.authoring.inspect',
+    'sam.authoring.previewStyles',
+    'sam.authoring.proposeSourcePatch',
+    'sam.authoring.saveDraftStyles',
+    'sam.authoring.saveSourceDraft',
+  ]);
+  const status = await runSam(['status'], options);
+  assert.equal(status.bound_count, listed.count);
+  assert.equal(status.pack_status.length, 0);
+  const described = await runSam(['describe', 'sam.authoring.inspect'], options);
+  assert.equal(described.ok, true);
+  const discovered = await runSam(['discover', 'authoring'], options);
+  assert.ok(discovered.operations.some(op => op.id === 'sam.authoring.inspect'));
+
+  // A normal CLI invocation must not inherit another host's installed pack.
+  const defaultList = await runSam(['list'], { identityLoader: async () => null, write: () => {} });
+  assert.equal(defaultList.operations.some(op => op.id === 'sam.authoring.inspect'), false);
 });
