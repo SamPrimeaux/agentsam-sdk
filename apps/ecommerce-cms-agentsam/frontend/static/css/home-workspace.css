@@ -240,3 +240,11 @@
  .fnf-home-discover__card--experience{grid-template-columns:minmax(0,1fr) 50%}
  .fnf-home-discover__glass{height:100%;order:0}
 }
+
+/* Sculpt Studio is a first-class creative workspace; keep the shortcut grid calm and responsive. */
+.fnf-home-shortcuts__grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+[data-studio-preview-link]{background:linear-gradient(125deg,#252a38,#30394a);border-color:#414a5e;color:#f0f3fa}
+[data-studio-preview-link] span{color:#b6c1d5}
+[data-studio-preview-link]:hover{border-color:#7f95c7;background:linear-gradient(125deg,#2b3345,#36445c)}
+@media(max-width:900px){.fnf-home-shortcuts__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.fnf-home-shortcuts__grid{grid-template-columns:minmax(0,1fr)}}
