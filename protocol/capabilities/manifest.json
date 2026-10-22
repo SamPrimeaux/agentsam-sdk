@@ -579,6 +579,41 @@
     "sam.evidence.seal": {"id":"sam.evidence.seal","kind":"capability","version":1,"domain":"evidence","runtime":"node","package":"@inneranimalmedia/agentsam-sdk","description":"Verify coverage and codecs, derive web copies and covers, compute facts, write the screenplay and review page, then the manifest last.","deterministic":true,"model_required":false,"side_effects":"local_write","input_schema":{"type":"object","required":["runId"],"additionalProperties":false,"properties":{"runId":{"type":"string","pattern":"^[a-z0-9][a-z0-9-]{0,62}--\\d{8}--[a-f0-9]{7}$"},"project":{"type":"string"},"approve":{"oneOf":[{"const":"all"},{"type":"array","items":{"type":"string"}}]},"cover":{"type":"object","properties":{"stateId":{"type":"string"},"viewport":{"type":"string","pattern":"^(mobile|tablet|desktop)-\\d{3,4}x\\d{3,4}$"}}},"results":{"type":"object","additionalProperties":{"type":"object","required":["passed"],"properties":{"passed":{"type":"boolean"},"detail":{"type":"string"}}}}}},"status":"experimental"},
     "sam.evidence.deliver": {"id":"sam.evidence.deliver","kind":"capability","version":1,"domain":"evidence","runtime":"node","package":"@inneranimalmedia/agentsam-sdk","description":"Serve a sealed run read-only on loopback (port 0 unless requested) and return the manifest and review-page URLs.","deterministic":true,"model_required":false,"side_effects":"local_write","input_schema":{"type":"object","required":["runId"],"additionalProperties":false,"properties":{"runId":{"type":"string","pattern":"^[a-z0-9][a-z0-9-]{0,62}--\\d{8}--[a-f0-9]{7}$"},"project":{"type":"string"},"port":{"type":"integer","minimum":0,"maximum":65535},"ttlSeconds":{"type":"integer","minimum":30,"maximum":3600},"viewerUrl":{"type":"string"}}},"status":"experimental"},
     "sam.evidence.compare": {"id":"sam.evidence.compare","kind":"capability","version":1,"domain":"evidence","runtime":"node","package":"@inneranimalmedia/agentsam-sdk","description":"Pair the same state across two sealed runs of one project and crop what changed (then | now); written under the newer run.","deterministic":true,"model_required":false,"side_effects":"local_write","input_schema":{"type":"object","required":["a","b"],"additionalProperties":false,"properties":{"a":{"type":"string","pattern":"^[a-z0-9][a-z0-9-]{0,62}--\\d{8}--[a-f0-9]{7}$"},"b":{"type":"string","pattern":"^[a-z0-9][a-z0-9-]{0,62}--\\d{8}--[a-f0-9]{7}$"},"project":{"type":"string"}}},"status":"experimental"},
-    "sam.evidence.ingest": {"id":"sam.evidence.ingest","kind":"capability","version":1,"domain":"evidence","runtime":"node","package":"@inneranimalmedia/agentsam-sdk","description":"Plan (default) or apply importing an existing folder of captures into the canonical layout. Originals are never moved or renamed.","deterministic":true,"model_required":false,"side_effects":"local_write","input_schema":{"type":"object","required":["subject","source"],"additionalProperties":false,"properties":{"subject":{"type":"string","pattern":"^[a-z0-9][a-z0-9-]{0,62}$"},"project":{"type":"string"},"flowName":{"type":"string","pattern":"^[A-Z][A-Za-z0-9]{0,47}$"},"apply":{"type":"boolean"},"source":{"type":"object","required":["path"],"properties":{"path":{"type":"string"}}}}},"status":"experimental"}
+    "sam.evidence.ingest": {"id":"sam.evidence.ingest","kind":"capability","version":1,"domain":"evidence","runtime":"node","package":"@inneranimalmedia/agentsam-sdk","description":"Plan (default) or apply importing an existing folder of captures into the canonical layout. Originals are never moved or renamed.","deterministic":true,"model_required":false,"side_effects":"local_write","input_schema":{"type":"object","required":["subject","source"],"additionalProperties":false,"properties":{"subject":{"type":"string","pattern":"^[a-z0-9][a-z0-9-]{0,62}$"},"project":{"type":"string"},"flowName":{"type":"string","pattern":"^[A-Z][A-Za-z0-9]{0,47}$"},"apply":{"type":"boolean"},"source":{"type":"object","required":["path"],"properties":{"path":{"type":"string"}}}}},"status":"experimental"},
+    "primetech.procedure.run": {
+      "id": "primetech.procedure.run",
+      "kind": "capability",
+      "version": 1,
+      "domain": "workflow",
+      "runtime": "node",
+      "package": "@inneranimalmedia/primetech-procedures",
+      "description": "Run one exact, versioned PrimeTech procedure through an existing authorized SAM operation; validates inputs and output and records run evidence. Does not accept arbitrary shell commands or caller-selected project roots.",
+      "deterministic": false,
+      "model_required": false,
+      "side_effects": "none",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$"
+          },
+          "input": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "input"
+        ],
+        "additionalProperties": false
+      },
+      "status": "experimental"
+    }
   }
 }

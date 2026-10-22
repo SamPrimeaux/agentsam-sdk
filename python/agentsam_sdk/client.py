@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 import json
+import inspect
 import os
 from pathlib import Path
 import shutil
@@ -18,10 +19,14 @@ import time
 from urllib import request as urllib_request, error as urllib_error
 from typing import Any, Mapping
 
+from .runtime.native import NativeRuntime, NATIVE_OPERATION_SPECS, NativeOperationError
+from .procedures import ProcedureClient, ProcedureClientError
+
 class SamClientError(RuntimeError):
-    def __init__(self, code: str):
+    def __init__(self, code: str, message: str | None = None):
         self.code = code
-        super().__init__(code)
+        self.message = message or code
+        super().__init__(self.message)
 
 @dataclass(frozen=True)
 class Choose:
@@ -162,19 +167,145 @@ class AsyncRunHandle:
 
 class AgentSamClient:
     """Synchronous local machine client; no implicit remote credentials."""
-    def __init__(self, *, cwd: str | Path = ".", node: str | None = None, bridge: str | None = None, control_plane_url: str | None = None, control_plane_token: str | None = None):
-        self.cwd = str(Path(cwd).resolve())
-        self.node = _binary(node)
-        self.bridge = str(_bridge_path(bridge, self.cwd))
+    def __init__(
+        self, *, cwd: str | Path = ".", node: str | None = None,
+        bridge: str | None = None, control_plane_url: str | None = None,
+        control_plane_token: str | None = None,
+        workspace_root: str | Path | None = None,
+        receipt_dir: str | Path | None = None,
+        authorize_operation=None, d1_adapter=None,
+        procedure_invoker=None,
+        env: Mapping[str, str] | None = None,
+    ):
+        self.cwd = str(Path(cwd).expanduser().resolve())
+        # Node is resolved lazily. Native operations remain usable in a clean
+        # pip-only install; only bridge-only operations require Node.
+        self._node_explicit = node
+        self._bridge_explicit = bridge
+        self.native_runtime = NativeRuntime(
+            workspace_root=workspace_root or self.cwd,
+            receipt_dir=receipt_dir,
+            authorize_operation=authorize_operation,
+            d1_adapter=d1_adapter,
+            env=env,
+        )
+        self.procedure_invoker = procedure_invoker
+        self.procedures = ProcedureClient(procedure_invoker)
         self.control_plane = _ControlPlane(control_plane_url,control_plane_token or "") if control_plane_url else None
+
+    def _resolved_node(self) -> str:
+        try:
+            node = _binary(self._node_explicit)
+            if not Path(node).is_file() and shutil.which(node) is None:
+                raise SamClientError("sam_node_not_available")
+            return node
+        except SamClientError as exc:
+            raise SamClientError(
+                "sam_node_required",
+                "Node.js is required for this operation because no native Python handler is installed.",
+            ) from exc
+
+    def _resolved_bridge(self) -> str:
+        try:
+            return str(_bridge_path(self._bridge_explicit, self.cwd))
+        except SamClientError as exc:
+            raise SamClientError(
+                "sam_bridge_not_installed",
+                "The JavaScript SAM bridge is not installed for this operation.",
+            ) from exc
+
     def _request(self, method: str, **kwargs) -> Any:
-        result = subprocess.run([self.node,self.bridge], input=json.dumps({"method":method,**kwargs}),
-            text=True, capture_output=True, cwd=self.cwd, timeout=120, check=False)
+        node = self._resolved_node()
+        bridge = self._resolved_bridge()
+        try:
+            result = subprocess.run(
+                [node, bridge], input=json.dumps({"method":method,**kwargs}),
+                text=True, capture_output=True, cwd=self.cwd, timeout=120, check=False,
+            )
+        except FileNotFoundError as exc:
+            raise SamClientError("sam_node_required", "Node.js is required for this operation.") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise SamClientError("sam_bridge_timeout", "The JavaScript SAM bridge timed out.") from exc
+        if not result.stdout.strip():
+            detail = (result.stderr or "").strip()[:300]
+            raise SamClientError("sam_bridge_invalid_response", detail or "The JavaScript SAM bridge returned no JSON.")
         return _decode(result.stdout.encode())
-    def discover(self, **query): return self._request("discover",query=query)
-    def describe(self, operation_id: str): return self._request("describe",id=operation_id)
-    def status(self, operation_id: str): return self._request("status",id=operation_id)
-    def invoke(self, operation_id: str, input: dict | None = None):
+
+    @staticmethod
+    def _native_descriptor(operation_id: str) -> dict:
+        spec = NATIVE_OPERATION_SPECS[operation_id]
+        return {
+            "id": operation_id, "name": operation_id, "version": 1,
+            "description": spec["description"], "domain": spec["module"],
+            "kind": "capability", "status": "stable",
+            "side_effects": spec["side_effects"], "deterministic": spec["deterministic"],
+            "input_schema": spec["input_schema"], "runtime": "python",
+            "native": True,
+        }
+
+    def _native_status(self, operation_id: str) -> dict:
+        spec = NATIVE_OPERATION_SPECS[operation_id]
+        is_d1 = operation_id in ("agentsam_d1_write", "agentsam_d1_delete")
+        bound = not is_d1 or callable(getattr(self.native_runtime.d1_adapter, "execute_write", None))
+        write = bool(spec["side_effects"])
+        return {
+            "schema": "sam.capability.readiness.v1", "id": operation_id,
+            "declared": True, "registered": True, "bound": bound,
+            "authorized": None, "available": bound, "verified": False, "ready": bound and not write,
+            "readiness": "unavailable" if not bound else ("needs_approval" if write else "available"),
+            "reason": "sam_d1_write_adapter_not_configured" if not bound else ("request_authorization_required" if write else None),
+            "native": True,
+        }
+
+    def discover(self, **query):
+        try:
+            bridged = self._request("discover", query=query)
+            rows = list(bridged.get("operations", [])) if isinstance(bridged, dict) else []
+        except SamClientError as exc:
+            if exc.code not in ("sam_node_required", "sam_bridge_not_installed"):
+                raise
+            rows = []
+        existing = {row.get("id") for row in rows if isinstance(row, dict)}
+        native_rows = [
+            self._native_descriptor(operation_id)
+            for operation_id in NATIVE_OPERATION_SPECS
+            if operation_id not in existing
+        ]
+        search = query.get("query")
+        if isinstance(search, str) and search.strip():
+            needle = search.casefold()
+            native_rows = [row for row in native_rows if needle in (row["id"] + " " + row["description"]).casefold()]
+        rows.extend(native_rows)
+        limit = query.get("limit", 20)
+        limit = max(0, min(1000, limit if isinstance(limit, int) and not isinstance(limit, bool) else 20))
+        return {"ok": True, "count": min(limit, len(rows)), "operations": rows[:limit]}
+
+    def describe(self, operation_id: str):
+        if operation_id in NATIVE_OPERATION_SPECS:
+            return self._native_descriptor(operation_id)
+        return self._request("describe",id=operation_id)
+
+    def status(self, operation_id: str):
+        if operation_id in NATIVE_OPERATION_SPECS:
+            return self._native_status(operation_id)
+        return self._request("status",id=operation_id)
+
+    def invoke(self, operation_id: str, input: dict | None = None, *, write: bool = False):
+        if operation_id == "primetech.procedure.run":
+            if not callable(self.procedure_invoker):
+                raise SamClientError("sam_procedure_host_not_configured")
+            result = self.procedure_invoker(input or {})
+            if inspect.isawaitable(result):
+                close = getattr(result, "close", None)
+                if callable(close):
+                    close()
+                raise SamClientError("sam_async_procedure_invoker_requires_async_client")
+            return result
+        if operation_id in NATIVE_OPERATION_SPECS:
+            try:
+                return self.native_runtime.invoke(operation_id, input or {}, write=write)
+            except NativeOperationError as exc:
+                raise SamClientError(exc.code, str(exc)) from exc
         return self._request("invoke",id=operation_id,input=input or {})
     def decide(self, *, state: dict, questions: Mapping[str, Any] | list, **kwargs):
         return self._request("decide",input={"state":state,"questions":_normalize_questions(questions),**kwargs})
@@ -195,19 +326,68 @@ class AgentSamClient:
 class AsyncAgentSamClient(AgentSamClient):
     """Async subprocess transport to the same authorized local SAM entrypoint."""
     async def _request_async(self, method: str, **kwargs):
-        proc = await asyncio.create_subprocess_exec(self.node,self.bridge,stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,cwd=self.cwd)
+        node = self._resolved_node()
+        bridge = self._resolved_bridge()
         try:
-            out,_ = await asyncio.wait_for(proc.communicate(json.dumps({"method":method,**kwargs}).encode()),120)
+            proc = await asyncio.create_subprocess_exec(
+                node, bridge, stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=self.cwd,
+            )
+        except FileNotFoundError as exc:
+            raise SamClientError("sam_node_required", "Node.js is required for this operation.") from exc
+        try:
+            out, err = await asyncio.wait_for(
+                proc.communicate(json.dumps({"method":method,**kwargs}).encode()), 120,
+            )
         except asyncio.TimeoutError as exc:
             proc.kill()
             await proc.wait()
-            raise SamClientError("sam_bridge_timeout") from exc
+            raise SamClientError("sam_bridge_timeout", "The JavaScript SAM bridge timed out.") from exc
+        if not out.strip():
+            detail = err.decode("utf-8", errors="replace").strip()[:300]
+            raise SamClientError("sam_bridge_invalid_response", detail or "The JavaScript SAM bridge returned no JSON.")
         return _decode(out)
-    async def discover(self, **query):return await self._request_async("discover",query=query)
-    async def describe(self, operation_id: str):return await self._request_async("describe",id=operation_id)
-    async def status(self, operation_id: str):return await self._request_async("status",id=operation_id)
-    async def invoke(self, operation_id: str, input: dict | None = None):
+
+    async def discover(self, **query):
+        try:
+            bridged = await self._request_async("discover", query=query)
+            rows = list(bridged.get("operations", [])) if isinstance(bridged, dict) else []
+        except SamClientError as exc:
+            if exc.code not in ("sam_node_required", "sam_bridge_not_installed"):
+                raise
+            rows = []
+        existing = {row.get("id") for row in rows if isinstance(row, dict)}
+        rows.extend(self._native_descriptor(operation_id) for operation_id in NATIVE_OPERATION_SPECS if operation_id not in existing)
+        search = query.get("query")
+        if isinstance(search, str) and search.strip():
+            needle = search.casefold()
+            rows = [row for row in rows if needle in (str(row.get("id", "")) + " " + str(row.get("description", ""))).casefold()]
+        limit = query.get("limit", 20)
+        limit = max(0, min(1000, limit if isinstance(limit, int) and not isinstance(limit, bool) else 20))
+        return {"ok": True, "count": min(limit, len(rows)), "operations": rows[:limit]}
+
+    async def describe(self, operation_id: str):
+        if operation_id in NATIVE_OPERATION_SPECS:
+            return self._native_descriptor(operation_id)
+        return await self._request_async("describe",id=operation_id)
+
+    async def status(self, operation_id: str):
+        if operation_id in NATIVE_OPERATION_SPECS:
+            return self._native_status(operation_id)
+        return await self._request_async("status",id=operation_id)
+
+    async def invoke(self, operation_id: str, input: dict | None = None, *, write: bool = False):
+        if operation_id == "primetech.procedure.run":
+            if not callable(self.procedure_invoker):
+                raise SamClientError("sam_procedure_host_not_configured")
+            if inspect.iscoroutinefunction(self.procedure_invoker):
+                return await self.procedure_invoker(input or {})
+            result = await asyncio.to_thread(self.procedure_invoker, input or {})
+            if inspect.isawaitable(result):
+                return await result
+            return result
+        if operation_id in NATIVE_OPERATION_SPECS:
+            return await asyncio.to_thread(self.native_runtime.invoke, operation_id, input or {}, write=write)
         return await self._request_async("invoke",id=operation_id,input=input or {})
     async def decide(self, *, state: dict, questions: Mapping[str, Any] | list, **kwargs):
         return await self._request_async("decide",input={"state":state,"questions":_normalize_questions(questions),**kwargs})

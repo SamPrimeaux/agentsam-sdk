@@ -1,0 +1,63 @@
+{
+  "schema": "agentsam.package.v1",
+  "id": "primetech-procedures",
+  "name": "@inneranimalmedia/primetech-procedures",
+  "version": "0.1.0",
+  "catalog_status": "classified",
+  "class": "package",
+  "status": "experimental-private-workspace",
+  "languages": [
+    "javascript",
+    "python",
+    "bash"
+  ],
+  "execution_domains": [
+    "workflow-orchestration",
+    "local-runtime",
+    "engineering"
+  ],
+  "purpose": "Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset inventory, run receipts, output hashes, and performance evidence without creating a second runtime or database registry.",
+  "install": [
+    {
+      "type": "workspace",
+      "package": "@inneranimalmedia/primetech-procedures",
+      "command": "npm install --workspace @inneranimalmedia/primetech-procedures"
+    }
+  ],
+  "use_when": [
+    "Turning a successful multi-step engineering or repository task into a versioned, repeatable procedure",
+    "Composing existing SAM operations with pinned Bash, Python, and native-tool steps",
+    "Capturing procedure, entrypoint, input, output and artifact hashes with verification receipts"
+  ],
+  "avoid_when": [
+    "Creating a replacement SAM kernel, terminal daemon, scheduler, or global registry",
+    "Running untrusted or caller-supplied shell commands",
+    "Executing physical machinery without a separately approved safety-governed system"
+  ],
+  "commands": [],
+  "topics": [
+    "primetech",
+    "procedures",
+    "workflows",
+    "receipts",
+    "python",
+    "bash",
+    "cad",
+    "bim"
+  ],
+  "registry": {
+    "kind": "npm-workspace",
+    "name": "@inneranimalmedia/primetech-procedures",
+    "public_claim": false
+  },
+  "evidence": {
+    "directory": "packages/primetech-procedures",
+    "readme": "packages/primetech-procedures/README.md",
+    "tests": [
+      "packages/primetech-procedures/test/procedure.test.mjs",
+      "packages/primetech-procedures/test/test_inventory.py"
+    ],
+    "runtime_proof": "sam-superbash-integration-fixture",
+    "host_integration": "sdk-cli-bound"
+  }
+}

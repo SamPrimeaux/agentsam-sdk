@@ -1,0 +1,65 @@
+{
+  "schema": "inneranimalmedia.primetech.procedure.v1",
+  "id": "repo.asset.inventory",
+  "version": "0.1.0",
+  "summary": "Inspect a project for native CAD, BIM, and visualization assets without modifying project files.",
+  "effect": "read",
+  "capabilities": ["sam.superbash"],
+  "runtime": {
+    "kind": "python",
+    "entrypoint": "run.py",
+    "min_python": "3.10",
+    "dependencies": [],
+    "interpreter_candidates": ["python3.12", "python3.11", "python3.10", "python3"]
+  },
+  "input_schema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["schema", "ok", "total", "counts", "assets", "truncated", "engine"],
+    "properties": {
+      "schema": {"const": "inneranimalmedia.primetech.asset-inventory.v1"},
+      "ok": {"type": "boolean"},
+      "total": {"type": "integer"},
+      "counts": {"type": "object"},
+      "assets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["path", "kind", "bytes", "sha256", "hash_status"],
+          "properties": {
+            "path": {"type": "string"},
+            "kind": {"type": "string"},
+            "bytes": {"type": "integer"},
+            "sha256": {"type": ["string", "null"]},
+            "hash_status": {"enum": ["hashed", "size_limit", "budget_limit", "read_error"]}
+          },
+          "additionalProperties": false
+        }
+      },
+      "truncated": {"type": "boolean"},
+      "engine": {
+        "type": "object",
+        "required": ["name", "version"],
+        "properties": {
+          "name": {"const": "python"},
+          "version": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "additionalProperties": false
+  },
+  "verification": {
+    "kind": "output_schema",
+    "expected": "inneranimalmedia.primetech.asset-inventory.v1"
+  },
+  "flags": {
+    "network": false,
+    "physical_hardware": false,
+    "requires_operator_review": false
+  }
+}

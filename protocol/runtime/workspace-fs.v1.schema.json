@@ -18,6 +18,7 @@
           "list",
           "read",
           "stat",
+          "patch",
           "write",
           "create",
           "rename",
