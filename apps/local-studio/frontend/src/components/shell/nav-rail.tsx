@@ -13,9 +13,12 @@ import {
   Megaphone,
   MessageSquare,
   Palette,
+  PawPrint,
   Settings,
   SquareTerminal,
 } from "lucide-react";
+import { toast } from "sonner";
+import { isPackagedDesktop, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { Nav } from "@inneranimalmedia/agentsam-nav";
 import { StudioMark } from "@/components/mark";
 import { useWorkStore } from "@/lib/work/store";
@@ -129,7 +132,15 @@ export function NavRail() {
           </Nav.Menu>
         </Nav.Group>
       </Nav.Content>
-      <Nav.Footer><Nav.Trigger /></Nav.Footer>
+      <Nav.Footer>
+        {isPackagedDesktop() ? (
+          <button type="button" className="flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Toggle AgentSam desktop pet" title="Show or hide the AgentSam desktop pet"
+            onClick={() => { void toggleAgentSamPet().then((visible) => toast.success(visible ? "AgentSam pet is on your desktop" : "AgentSam pet hidden")).catch(() => toast.error("AgentSam desktop pet could not be opened.")); }}>
+            <PawPrint className="size-4 shrink-0" /><span>Desktop pet</span>
+          </button>
+        ) : null}
+        <Nav.Trigger />
+      </Nav.Footer>
     </Nav>
   );
 }

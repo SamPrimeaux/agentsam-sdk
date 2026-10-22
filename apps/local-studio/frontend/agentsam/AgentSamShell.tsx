@@ -17,7 +17,7 @@ import { AnnotationHelper } from './AnnotationHelper';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
-import { isPackagedDesktop, listenDeepLinks } from '@/lib/desktop/tauri';
+import { isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settings';
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
@@ -95,6 +95,29 @@ export function AgentSamShell() {
     });
     return () => { active = false; dispose?.(); };
   }, []);
+
+  useEffect(() => {
+    if (!isPackagedDesktop()) return;
+    let active = true;
+    let dispose: (() => void) | undefined;
+    void listenTauriEvent("agentsam:pet:activate", () => {
+      if (!active) return;
+      const nextHash = "#/agentsam";
+      if (window.location.hash !== nextHash) window.location.hash = nextHash;
+      else void navigate({ to: "/agentsam" });
+    }).then((unlisten) => {
+      if (!unlisten) return;
+      if (active) dispose = unlisten;
+      else unlisten();
+    }).catch(() => {});
+    return () => { active = false; dispose?.(); };
+  }, [navigate]);
+
+  const petState = state.activeTrailId && state.streamingIds.includes(state.activeTrailId) ? "working" : "idle";
+  useEffect(() => {
+    if (!isPackagedDesktop()) return;
+    void emitTauriEvent("agentsam:pet:state", { state: petState }).catch(() => {});
+  }, [petState]);
 
   useEffect(() => {
     flushChromeShares();
