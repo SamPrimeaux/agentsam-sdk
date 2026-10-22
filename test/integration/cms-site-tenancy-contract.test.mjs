@@ -88,7 +88,7 @@ test('CMS D1 queries all enforce project-scoped tenancy without cross-tenant lea
   }
 });
 
-test('Local Studio consumes the portable ecommerce CMS product boundary', () => {
+test('Local Studio /cms delegates to the canonical Ecommerce Online Store', () => {
   const route = read('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'cms.tsx');
   const ecommercePkg = JSON.parse(read('apps', 'ecommerce-cms-agentsam', 'package.json'));
   const appManifest = JSON.parse(read('apps', 'ecommerce-cms-agentsam', 'agentsam.app.json'));
@@ -96,36 +96,33 @@ test('Local Studio consumes the portable ecommerce CMS product boundary', () => 
   assert.equal(ecommercePkg.name, '@inneranimalmedia/ecommerce-cms-agentsam');
   assert.equal(ecommercePkg.version, appManifest.version, 'APP owns its independent package version');
   assert.equal(ecommercePkg.name, appManifest.package, 'APP package identity matches its manifest');
-  assert.ok(ecommercePkg.exports?.['./cms'], 'ecommerce CMS product must export ./cms');
-  assert.match(route, /from ['"]@inneranimalmedia\/ecommerce-cms-agentsam\/cms['"]/);
-  assert.doesNotMatch(route, /from ['"]@inneranimalmedia\/agentsam-cms-(?:frontend|backend|shared)/);
+  assert.ok(ecommercePkg.exports?.['./cms'], 'the canonical product may expose reusable CMS capabilities');
+
+  assert.match(route, /createFileRoute\(['"]\/\(apps\)\/cms['"]\)/);
+  assert.match(route, /<Navigate/);
+  assert.match(route, /to="\/apps\/ecommerce-cms-agentsam"/);
+  assert.match(route, /page:\s*['"]\/admin\/store['"]/);
+  assert.match(route, /replace/);
+  assert.doesNotMatch(route, /client-cms-editor|CmsHomePage|CmsOnlineStoreFrame|ThemeProjectEditor|ThemeEditorFrame|ContentStudioPage|studioCmsFetch/);
 });
 
-test('Local Studio mounts authorized merchant CMS with real site discovery, never a hardcoded default', () => {
+test('Local Studio /cms is a route alias, not a second CMS editor', () => {
   const liveRoute = at('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'cms.tsx');
-  assert.ok(fs.existsSync(liveRoute), 'live CMS route must be routes/(apps)/cms.tsx');
+  assert.ok(fs.existsSync(liveRoute), 'live CMS entry must remain a routable alias');
   const routeContent = read('apps', 'local-studio', 'frontend', 'src', 'routes', '(apps)', 'cms.tsx');
 
-  // Superseded donor must stay inert — do not revive obsolete _app/cms.tsx contracts.
+  // Superseded donor remains inert; do not revive the obsolete route implementation.
   const donor = read('apps', 'local-studio', 'frontend', 'src', 'routes', '_app', 'cms.tsx');
   assert.match(donor, /SUPERSEDED/);
   assert.doesNotMatch(donor, /from ["']@inneranimalmedia\/agentsam-cms-frontend["']/);
   assert.doesNotMatch(donor, /createFileRoute\(/);
   assert.match(donor, /export\s*\{\s*\}\s*;/);
 
-  // Authentic sites come from the access-controlled Worker registry.
-  // A sample customer must not be silently substituted as the user's store.
-  assert.match(routeContent, /createHttpCmsAdapter/);
-  assert.match(routeContent, /useAuthorizedCmsSites/);
-  assert.match(routeContent, /studioCmsFetch\('\/api\/cms\/sites'\)/);
-  assert.match(routeContent, /CmsOnlineStoreFrame/);
-  assert.match(routeContent, /!isEditorView && ownedSite/);
-  assert.match(routeContent, /!localThemeProjectId && requestedSlug && !ownedSite/);
-  assert.match(routeContent, /ownedSite && !ownedSite.can_edit/);
-  assert.doesNotMatch(routeContent, /slug:\s*"agentsam-sdk"/);
-  assert.doesNotMatch(routeContent, /default\s*:\s*["']inneranimalmedia["']/);
+  assert.match(routeContent, /to="\/apps\/ecommerce-cms-agentsam"/);
+  assert.match(routeContent, /page:\s*['"]\/admin\/store['"]/);
+  assert.doesNotMatch(routeContent, /useAuthorizedCmsSites|createHttpCmsAdapter|createRemoteThemeEditorAdapter|CmsOnlineStoreFrame|ThemeProjectEditor|ThemeEditorFrame|ContentStudioPage/);
+  assert.doesNotMatch(routeContent, /slug:\s*["']agentsam-sdk["']/);
 
-  // NavRail must include CMS entry
   const navRail = read('apps', 'local-studio', 'frontend', 'src', 'components', 'shell', 'nav-rail.tsx');
   assert.match(navRail, /to:\s*"\/cms"/);
   assert.match(navRail, /label:\s*"CMS"/);
