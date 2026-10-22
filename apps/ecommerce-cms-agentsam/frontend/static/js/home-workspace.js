@@ -219,3 +219,10 @@
   }
  }catch(e){/* The source Product Studio also has a catalog-empty scene. */}
 })();
+  const studioPreviewLink = document.querySelector("[data-studio-preview-link]");
+  if (studioPreviewLink && ["127.0.0.1", "localhost"].includes(location.hostname) && location.port === "4184") {
+    studioPreviewLink.href = "http://127.0.0.1:4340/studio";
+    studioPreviewLink.target = "_blank";
+    studioPreviewLink.rel = "noopener noreferrer";
+    studioPreviewLink.setAttribute("aria-label", "Open Sculpt Studio preview in a new tab");
+  }
