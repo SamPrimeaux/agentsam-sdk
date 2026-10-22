@@ -41,6 +41,9 @@ jobs:
       - name: Verify app-scoped Cloudflare SDK dependency links
         run: node --test apps/local-studio/scripts/ensure-aliased-deps.test.mjs
 
+      - name: Verify isolated SAM OS and host-installed authoring discovery
+        run: node --test test/cli/sam-os.test.mjs test/integration/universal-authoring-os.test.mjs
+
       - name: UI authoring contract tests
         run: node --test scripts/ui-quality/*.test.mjs
 
