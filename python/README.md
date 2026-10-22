@@ -76,3 +76,14 @@ PYTHONPATH=. python -m agentsam_sdk.tui --scene dashboard --check
 ```
 
 `agentsam_sdk.tui` is presentation-only. It does not define tools, execution policy, or public CLI vocabulary.
+
+
+## Native runtime and PrimeTech procedures
+
+The Python client now dispatches shared workspace file operations and bounded argv process execution natively. These operations do not require Node or the JavaScript bridge. Writes require the explicit write flag and a trusted host approval callback; the workspace root and receipt directory come from host configuration, never tool input.
+
+The native process runner uses an executable plus an argument vector, an allowlisted environment, a workspace-scoped working directory, process-group termination, output and timeout bounds, redaction, and a receipt for successful and refused calls. It is not a security sandbox; untrusted code must use a separately authorized isolated runtime.
+
+D1 writes are intentionally different: they go through the existing D1Adapter only. That adapter uses the installed Wrangler/Node toolchain and requires an explicitly configured database UUID matching the requested target. The Python filesystem and process capabilities remain usable without Node; D1 mutation is unavailable when its existing adapter is not bound.
+
+AgentSamClient.procedures.run(id, version, input) and its async arun counterpart delegate to an explicitly injected trusted host procedure operation. They do not launch shell commands or create another procedure registry. The host-owned PrimeTech handler validates the pinned manifest, invokes the existing sam.superbash operation, and writes output artifacts and receipts to the configured receipt directory.

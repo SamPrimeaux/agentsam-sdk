@@ -21,11 +21,14 @@ class PublicClientContractTests(unittest.TestCase):
         self.assertEqual(result['answers']['intent']['value'],'inspect')
     def test_dangerous_operations_fail_closed(self):
         discovered=self.sam.discover()
-        self.assertFalse(any(x['id']=='terminal.exec' for x in discovered['operations']))
-        self.assertEqual(self.sam.status('terminal.exec')['readiness'],'unavailable')
-        for op in ('terminal.exec','agentsam_d1_write','cms.page.publish'):
-            with self.assertRaises(SamClientError):
-                self.sam.invoke(op, {})
+        self.assertTrue(any(x['id']=='terminal.exec' for x in discovered['operations']))
+        self.assertEqual(self.sam.status('terminal.exec')['readiness'],'needs_approval')
+        for op in ('terminal.exec','agentsam_d1_write'):
+            result = self.sam.invoke(op, {})
+            self.assertFalse(result['ok'])
+            self.assertIn(result['error']['code'], ('sam_write_flag_required', 'sam_d1_write_adapter_not_configured'))
+        with self.assertRaises(SamClientError):
+            self.sam.invoke('cms.page.publish', {})
         with self.assertRaises(SamClientError):
             self.sam.invoke('repository.inspect', {'root':'/tmp'})
         with self.assertRaises(SamClientError):

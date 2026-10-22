@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inneranimalmedia.com/protocol/runtime/primetech-procedure.v1.schema.json",
+  "title": "PrimeTech Procedure v1",
+  "description": "A pinned, versioned workflow manifest. Procedures delegate execution to an existing authorized SAM operation; manifests never define arbitrary shell commands.",
+  "type": "object",
+  "required": [
+    "schema",
+    "id",
+    "version",
+    "summary",
+    "effect",
+    "capabilities",
+    "runtime",
+    "input_schema",
+    "output_schema",
+    "verification",
+    "flags"
+  ],
+  "properties": {
+    "schema": {
+      "const": "inneranimalmedia.primetech.procedure.v1"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$",
+      "minLength": 3,
+      "maxLength": 120
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 280
+    },
+    "effect": {
+      "enum": ["read", "local_write", "project_write", "export", "external_action"]
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_.-]+$"
+      },
+      "uniqueItems": true,
+      "maxItems": 32
+    },
+    "runtime": {
+      "type": "object",
+      "required": ["kind", "entrypoint", "min_python", "dependencies"],
+      "properties": {
+        "kind": {
+          "enum": ["python", "bash", "sam_operation", "native_tool"]
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9_./-]+$"
+        },
+        "min_python": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+$"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "maxItems": 32
+        },
+        "interpreter_candidates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^python3(?:\\.\\d+)?$"
+          },
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "input_schema": {
+      "type": "object"
+    },
+    "output_schema": {
+      "type": "object"
+    },
+    "verification": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["output_schema", "fixture_suite", "native_validation"]
+        },
+        "expected": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "fixture_id": {
+          "type": "string",
+          "maxLength": 160
+        }
+      },
+      "additionalProperties": false
+    },
+    "flags": {
+      "type": "object",
+      "required": ["network", "physical_hardware", "requires_operator_review"],
+      "properties": {
+        "network": {"type": "boolean"},
+        "physical_hardware": {"type": "boolean"},
+        "requires_operator_review": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

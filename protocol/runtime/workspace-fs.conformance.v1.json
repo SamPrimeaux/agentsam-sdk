@@ -1,0 +1,96 @@
+{
+  "schema": "agentsam.workspace-fs.conformance.v1",
+  "contract": "protocol/runtime/workspace-fs.v1.schema.json",
+  "notes": [
+    "Fixtures use a temporary workspace only; no network or user files are accessed.",
+    "Hash tokens are SHA-256 of the UTF-8 bytes of the named fixture file.",
+    "Both Node and Python implementations must return the same result fields and stable error codes."
+  ],
+  "setup": {
+    "files": {
+      "notes.txt": "alpha\n",
+      "remove.txt": "remove me\n",
+      "duplicate.txt": "alpha alpha\n"
+    },
+    "symlinks": {
+      "escape": "outside_root"
+    }
+  },
+  "cases": [
+    {
+      "id": "read-text",
+      "operation": "read",
+      "input": {"path": "notes.txt"},
+      "expected": {"path": "notes.txt", "content": "alpha\n", "bytes": 6, "verified": true}
+    },
+    {
+      "id": "list-root",
+      "operation": "list",
+      "input": {"path": ".", "depth": 2, "max_entries": 20},
+      "expected": {"schema": "sam.workspace.list.v1", "root": ".", "truncated": false, "limit": 20, "depth": 2},
+      "expected_paths": ["duplicate.txt", "notes.txt", "remove.txt"]
+    },
+    {
+      "id": "stat-file",
+      "operation": "stat",
+      "input": {"path": "notes.txt"},
+      "expected": {"path": "notes.txt", "type": "file", "bytes": 6}
+    },
+    {
+      "id": "write-create",
+      "operation": "write",
+      "input": {"path": "created.txt", "content": "created\n"},
+      "expected": {"path": "created.txt", "bytes": 8, "written": true}
+    },
+    {
+      "id": "patch-exact",
+      "operation": "patch",
+      "input": {"path": "notes.txt", "expected_sha256": "@sha256:notes.txt", "old_text": "alpha", "new_text": "beta"},
+      "expected": {"path": "notes.txt", "bytes": 5, "written": true, "patched": true}
+    },
+    {
+      "id": "remove-file",
+      "operation": "remove",
+      "input": {"path": "remove.txt", "expected_sha256": "@sha256:remove.txt"},
+      "expected": {"path": "remove.txt", "bytes": 10, "removed": true}
+    }
+  ],
+  "failures": [
+    {
+      "id": "path-traversal",
+      "operation": "read",
+      "input": {"path": "../outside.txt"},
+      "expected_error": "workspace_path_outside_root"
+    },
+    {
+      "id": "protected-path",
+      "operation": "read",
+      "input": {"path": ".env"},
+      "expected_error": "workspace_protected_path"
+    },
+    {
+      "id": "symlink-escape",
+      "operation": "read",
+      "input": {"path": "escape/secret.txt"},
+      "expected_error": "workspace_symlink_escape"
+    },
+    {
+      "id": "stale-write",
+      "operation": "write",
+      "input": {"path": "notes.txt", "content": "changed\n", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+      "expected_error": "workspace_write_conflict_expected_sha256_required"
+    },
+    {
+      "id": "ambiguous-patch",
+      "operation": "patch",
+      "input": {"path": "duplicate.txt", "expected_sha256": "@sha256:duplicate.txt", "old_text": "alpha", "new_text": "beta"},
+      "expected_error": "workspace_patch_old_text_ambiguous"
+    },
+    {
+      "id": "stale-remove",
+      "operation": "remove",
+      "input": {"path": "remove.txt", "expected_sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+      "expected_error": "workspace_write_conflict_expected_sha256_required"
+    }
+  ]
+}

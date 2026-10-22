@@ -28,6 +28,7 @@ import { buildContextEconomicsReport, renderContextEconomics } from './context-e
 import { createProviderAdapter } from '../providers/index.js';
 import { createCapabilityAdapter, runResponsesAgent } from '../agent/index.js';
 import { createMcpD1Bridge } from '../capabilities/mcp-d1-bridge.js';
+import { createPrimeTechProcedureHandler } from '../../packages/primetech-procedures/src/index.js';
 import { createShellSamAdapter, resolveShellSamIdentity } from '../sam/shell-host.js';
 import { preparedTurnOne, saveTurnOneLocally } from '../registry/turn-one.js';
 import { resolveProviderCredential } from '../lib/provider-credentials.js';
@@ -696,6 +697,21 @@ async function runInteractiveModelTurn(prompt, state) {
     state, trustedIdentity: trustedSamIdentity,
     authorize: request => approveToolExecution(request, state),
   });
+  const procedureProjectRoot = path.resolve(state.cwd);
+  const procedureHandler = samAdapter?.canInvoke?.('sam.superbash') ? createPrimeTechProcedureHandler({
+    projectRoot: procedureProjectRoot,
+    receiptDir: path.join(procedureProjectRoot, '.agentsam', 'receipts'),
+    invokeSamOperation: async (operation, input) => {
+      if (!samAdapter.canInvoke(operation)) return { ok: false, error: { code: 'sam_tool_unavailable' } };
+      return samAdapter.invoke(operation, input);
+    },
+    isCapabilityAvailable: operation => samAdapter.canInvoke(operation) === true,
+    authorizeProcedure: async request => (await approveToolExecution({
+      capability_id: 'primetech.procedure.run',
+      input: { id: request.id, version: request.version, input_sha256: request.input_sha256 },
+      descriptor: { side_effects: request.effect === 'read' ? 'none' : 'project-write' },
+    }, state)) === true,
+  }) : null;
   const capabilityAdapter = createCapabilityAdapter({
     projectRoot: state.cwd,
     samAdapter,
@@ -705,6 +721,7 @@ async function runInteractiveModelTurn(prompt, state) {
       input,
       descriptor: { side_effects: capability.side_effects },
     }, state),
+    handlers: procedureHandler ? { 'primetech.procedure.run': procedureHandler } : {},
   });
 
   // Reasoning/tier changes do not change the provider conversation's owner.

@@ -9,12 +9,12 @@
 | Source authority | Count | Meaning |
 | --- | ---: | --- |
 | `src/cli/command-catalog.js` | 76 | Registered top-level CLI command entries |
-| `protocol/capabilities/manifest.json` | 81 | Capability and agent-primitive declarations |
+| `protocol/capabilities/manifest.json` | 82 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 6 | APP manifests discoverable from this checkout |
-| `packages/catalog/generated/packages.json` | 62 | Package inventory rows (not npm publication proof) |
+| `packages/catalog/generated/packages.json` | 63 | Package inventory rows (not npm publication proof) |
 
-Manifest status: 56 stable, 25 experimental, 14 explicitly non-deterministic. Host binding and approval remain separate.
+Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Host binding and approval remain separate.
 
 ## CLI command authority
 
@@ -146,6 +146,7 @@ Manifest status: 56 stable, 25 experimental, 14 explicitly non-deterministic. Ho
 | `plan.step.evidence` | planning | capability | stable | yes | `local-state` | — |
 | `plan.step.status` | planning | capability | stable | yes | `local-state` | — |
 | `planning.goap` | planning | capability | stable | yes | `none` | — |
+| `primetech.procedure.run` | workflow | capability | experimental | no | `none` | — |
 | `project.create` | repository | capability | stable | yes | `filesystem-write` | — |
 | `project.delete` | repository | capability | stable | yes | `filesystem-write` | — |
 | `project.discover` | repository | capability | stable | yes | `none` | — |
@@ -263,6 +264,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `copro-timeline` | `@inneranimalmedia/copro-timeline` | needs-review | Headless CoPro timeline projection, ordering, duration, and viewport math. |
 | `copro-ui` | `@inneranimalmedia/copro-ui` | needs-review | Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, … |
 | `fnf-theme` | `@inneranimalmedia/fnf-theme` | needs-review | Brand-specific FNF theme renderer consuming portable ThemePreview registry |
+| `primetech-procedures` | `@inneranimalmedia/primetech-procedures` | classified | Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset in… |
 | `theme-contract` | `@inneranimalmedia/theme-contract` | needs-review | Portable provider-neutral theme preview registry and composition contracts |
 | `theme-cypress` | `@inneranimalmedia/theme-cypress` | needs-review | A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven stor… |
 | `theme-ember` | `@inneranimalmedia/theme-ember` | needs-review | An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch momen… |
