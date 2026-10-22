@@ -28,7 +28,9 @@ from typing import Optional
 
 
 class D1AdapterError(RuntimeError):
-    pass
+    def __init__(self, message: str):
+        self.code = message.split(":", 1)[0].strip().replace(" ", "_")
+        super().__init__(message)
 
 
 @dataclass
@@ -38,6 +40,7 @@ class D1Adapter:
     repo_root: Optional[Path] = None
     remote: bool = True
     timeout_s: int = 120
+    database_id: Optional[str] = None
 
     @classmethod
     def from_env(
@@ -45,6 +48,7 @@ class D1Adapter:
         db_name: Optional[str] = None,
         wrangler_config: Optional[str] = None,
         repo_root: Optional[str] = None,
+        database_id: Optional[str] = None,
     ) -> "D1Adapter":
         name = db_name or os.environ.get("AGENTSAM_D1_DB_NAME")
         if not name:
@@ -54,7 +58,7 @@ class D1Adapter:
             )
         cfg = wrangler_config or os.environ.get("AGENTSAM_WRANGLER_CONFIG", "wrangler.toml")
         root = Path(repo_root or os.environ.get("AGENTSAM_REPO_ROOT") or Path.cwd())
-        return cls(db_name=name, wrangler_config=cfg, repo_root=root)
+        return cls(db_name=name, wrangler_config=cfg, repo_root=root, database_id=database_id)
 
     def _run_wrangler(self, args: list[str]) -> subprocess.CompletedProcess:
         cmd = ["npx", "wrangler", *args]
@@ -117,6 +121,71 @@ class D1Adapter:
     def foreign_keys(self, table: str) -> list[dict]:
         safe = table.replace('"', "")
         return self.query(f'PRAGMA foreign_key_list("{safe}")')
+
+
+
+    def execute_write(self, sql: str, *, database_id: str) -> dict:
+        """Execute one explicitly approved DML statement through Wrangler.
+
+        The database name/configuration and database UUID are supplied by the
+        trusted installation. Caller input cannot select a different target.
+        Wrangler's existing --command interface does not bind parameters, so
+        parameterized statements are rejected by the native operation layer.
+        """
+        if not self.database_id:
+            raise D1AdapterError(
+                "d1_database_identity_not_configured: supply the configured database_id explicitly"
+            )
+        if not database_id or database_id != self.database_id:
+            raise D1AdapterError("d1_database_identity_mismatch")
+        if not isinstance(sql, str) or not sql.strip() or len(sql.encode("utf-8")) > 64 * 1024:
+            raise D1AdapterError("d1_write_sql_invalid")
+        import re
+        if not re.match(r"^\s*(INSERT|UPDATE|DELETE|REPLACE)\b", sql, re.IGNORECASE):
+            raise D1AdapterError("d1_write_statement_not_allowed")
+        quote = None
+        index = 0
+        while index < len(sql):
+            char = sql[index]
+            if quote:
+                if char == quote:
+                    if index + 1 < len(sql) and sql[index + 1] == quote:
+                        index += 2
+                        continue
+                    quote = None
+            elif char in ("'", '"', "`"):
+                quote = char
+            elif char == ";" and sql[index + 1:].strip():
+                raise D1AdapterError("d1_write_multiple_statements_not_allowed")
+            elif sql[index:index + 2] in ("--", "/*"):
+                raise D1AdapterError("d1_write_sql_comments_not_allowed")
+            index += 1
+        args = ["d1", "execute", self.db_name]
+        if self.remote:
+            args.append("--remote")
+        args += ["-c", self.wrangler_config, "--json", "--command", sql.strip().rstrip(";").strip()]
+        proc = self._run_wrangler(args)
+        raw = (proc.stdout or "").strip()
+        if proc.returncode != 0:
+            # Do not include SQL or credential-bearing CLI diagnostics in errors.
+            raise D1AdapterError("d1_write_failed")
+        if not raw:
+            raise D1AdapterError("d1_write_empty_response")
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise D1AdapterError("d1_write_invalid_response") from exc
+        if isinstance(payload, dict) and payload.get("error"):
+            raise D1AdapterError("d1_write_failed")
+        if isinstance(payload, list) and any(item.get("error") for item in payload if isinstance(item, dict)):
+            raise D1AdapterError("d1_write_failed")
+        return {
+            "schema": "agentsam.d1.write.v1",
+            "ok": True,
+            "database_id": database_id,
+            "database_name": self.db_name,
+            "result": payload,
+        }
 
     def row_count(self, table: str) -> int:
         safe = table.replace('"', "")

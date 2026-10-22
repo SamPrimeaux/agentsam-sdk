@@ -24,7 +24,9 @@ function scope(root,filename,{create=false}={}){
 }
 export function workspaceRead(input={},projectRoot){
  const target=scope(projectRoot,input.path);
- const stat=fs.statSync(target.filename);
+ let stat;
+ try { stat=fs.statSync(target.filename); }
+ catch(error) { if(error?.code==='ENOENT')throw new Error('workspace_path_not_found'); throw error; }
  if(!stat.isFile())throw new Error('workspace_not_regular_file');
  if(stat.size>MAX_BYTES)throw new Error('workspace_read_limit_exceeded');
  const content=fs.readFileSync(target.filename,'utf8');
@@ -33,7 +35,7 @@ export function workspaceRead(input={},projectRoot){
 }
 export function workspaceWrite(input={},projectRoot){
  const target=scope(projectRoot,input.path,{create:true});
- if(typeof input.content!=='string'||Buffer.byteLength(input.content)>MAX_BYTES)throw new Error('workspace_write_content_invalid');
+ if(typeof input.content!=='string'||Buffer.byteLength(input.content)>MAX_BYTES||input.content.includes('\0'))throw new Error('workspace_write_content_invalid');
  const exists=fs.existsSync(target.filename);
  const previous=exists?fs.readFileSync(target.filename):null;
  if(previous){
@@ -122,4 +124,58 @@ export function workspaceSearch(input={},projectRoot){
  return {schema:'sam.workspace.search.v1',query:input.query,matches,
   inspected_entries:result.entries.length,truncated:result.truncated||matches.length>=limit,
   scope:result.root};
+}
+
+
+/** File/directory metadata under the same workspace scope contract. */
+export function workspaceStat(input={},projectRoot){
+ const requested=input.path;
+ if(typeof requested!=='string'||!requested)throw new Error('workspace_relative_path_required');
+ if(requested==='.' ){
+  const {dir}=boundedRoot(projectRoot,'.');
+  return {path:'.',type:'directory',bytes:null,sha256:null};
+ }
+ const target=scope(projectRoot,requested);
+ let stat;
+ try { stat=fs.statSync(target.filename); }
+ catch(error) { if(error?.code==='ENOENT')throw new Error('workspace_path_not_found'); throw error; }
+ if(stat.isDirectory())return {path:target.relative,type:'directory',bytes:null,sha256:null};
+ if(!stat.isFile())throw new Error('workspace_not_regular_file');
+ let digest=null;
+ if(stat.size<=MAX_BYTES){
+  try { digest=hash(fs.readFileSync(target.filename)); }
+  catch(error) { if(error?.code==='ENOENT')throw new Error('workspace_path_not_found'); throw error; }
+ }
+ return {path:target.relative,type:'file',bytes:stat.size,sha256:digest};
+}
+
+/** Apply one exact unique text replacement after a source-hash check. */
+export function workspacePatch(input={},projectRoot){
+ if(typeof input.old_text!=='string'||!input.old_text)throw new Error('workspace_patch_old_text_required');
+ if(typeof input.new_text!=='string')throw new Error('workspace_patch_new_text_invalid');
+ const current=workspaceRead({path:input.path},projectRoot);
+ if(typeof input.expected_sha256!=='string'||input.expected_sha256!==current.sha256)
+  throw new Error('workspace_write_conflict_expected_sha256_required');
+ const occurrences=current.content.split(input.old_text).length-1;
+ if(occurrences===0)throw new Error('workspace_patch_old_text_not_found');
+ if(occurrences!==1)throw new Error('workspace_patch_old_text_ambiguous');
+ const content=current.content.replace(input.old_text,input.new_text);
+ const result=workspaceWrite({path:input.path,content,expected_sha256:input.expected_sha256},projectRoot);
+ return {...result,patched:true};
+}
+
+/** Delete one regular file only; never recursively remove directories. */
+export function workspaceRemove(input={},projectRoot){
+ const target=scope(projectRoot,input.path);
+ if(!fs.existsSync(target.filename))throw new Error('workspace_remove_file_not_found');
+ const stat=fs.statSync(target.filename);
+ if(!stat.isFile())throw new Error('workspace_not_regular_file');
+ const previous=fs.readFileSync(target.filename);
+ if(previous.length>MAX_BYTES)throw new Error('workspace_write_existing_file_too_large');
+ if(typeof input.expected_sha256!=='string'||input.expected_sha256!==hash(previous))
+  throw new Error('workspace_write_conflict_expected_sha256_required');
+ if(hash(fs.readFileSync(target.filename))!==input.expected_sha256)
+  throw new Error('workspace_write_conflict_expected_sha256_required');
+ fs.unlinkSync(target.filename);
+ return {path:target.relative,sha256:input.expected_sha256,bytes:previous.length,removed:true};
 }

@@ -36,6 +36,17 @@ runtime:
     package_root: python
     source_root: python/agentsam_sdk
     test_root: python/tests
+    receipt_dir: .agentsam/receipts
+    native_operations:
+      - workspace.read
+      - workspace.list
+      - workspace.stat
+      - workspace.write
+      - workspace.patch
+      - workspace.remove
+      - terminal.exec
+      - agentsam_d1_write
+      - agentsam_d1_delete
     optional_dependencies:
       tui:
         - "rich>=13.7.0"
@@ -245,6 +256,10 @@ packages:
     - id: "fnf-theme"
       name: "@inneranimalmedia/fnf-theme"
       path: "packages/fnf-theme"
+      readiness: unverified
+    - id: "primetech-procedures"
+      name: "@inneranimalmedia/primetech-procedures"
+      path: "packages/primetech-procedures"
       readiness: unverified
     - id: "theme-contract"
       name: "@inneranimalmedia/theme-contract"

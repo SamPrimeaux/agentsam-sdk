@@ -3,21 +3,75 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { workspaceRead,workspaceWrite } from '../../src/capabilities/workspace-files.js';
+import crypto from 'node:crypto';
+import {
+  workspaceRead, workspaceWrite, workspaceList, workspaceStat, workspacePatch, workspaceRemove,
+} from '../../src/capabilities/workspace-files.js';
 
-test('workspace IO stays scoped and requires optimistic concurrency for updates',()=>{
- const root=fs.mkdtempSync(path.join(os.tmpdir(),'agentsam-scoped-'));
- try{
-  fs.mkdirSync(path.join(root,'pages'));
-  const a=workspaceWrite({path:'pages/index.html',content:'<h1>Hello</h1>'},root);
-  const read=workspaceRead({path:'pages/index.html'},root);
-  assert.equal(read.content,'<h1>Hello</h1>');
-  assert.equal(read.sha256,a.sha256);
-  assert.throws(()=>workspaceWrite({path:'pages/index.html',content:'other'},root),/expected_sha256/);
-  assert.equal(workspaceWrite({path:'pages/index.html',content:'other',expected_sha256:a.sha256},root).written,true);
-  assert.throws(()=>workspaceRead({path:'../outside'},root),/outside_root/);
-  assert.throws(()=>workspaceRead({path:'.env'},root),/protected_path/);
-  fs.symlinkSync(os.tmpdir(),path.join(root,'escape'));
-  assert.throws(()=>workspaceWrite({path:'escape/unsafe.txt',content:'unsafe'},root),/symlink_escape/);
- }finally{fs.rmSync(root,{recursive:true,force:true});}
+const fixturePath = new URL('../../protocol/runtime/workspace-fs.conformance.v1.json', import.meta.url);
+const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+const sha = value => crypto.createHash('sha256').update(value).digest('hex');
+
+function setup() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-workspace-contract-'));
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-workspace-outside-'));
+  for (const [name, content] of Object.entries(fixture.setup.files)) {
+    fs.writeFileSync(path.join(root, name), content);
+  }
+  fs.writeFileSync(path.join(outside, 'secret.txt'), 'outside');
+  fs.symlinkSync(outside, path.join(root, 'escape'));
+  return { root, outside };
+}
+
+function inputFor(row, root) {
+  const input = structuredClone(row.input);
+  for (const [key, value] of Object.entries(input)) {
+    if (typeof value === 'string' && value.startsWith('@sha256:')) {
+      const file = path.join(root, value.slice('@sha256:'.length));
+      input[key] = sha(fs.readFileSync(file));
+    }
+  }
+  return input;
+}
+
+function call(operation, input, root) {
+  if (operation === 'read') return workspaceRead(input, root);
+  if (operation === 'list') return workspaceList(input, root);
+  if (operation === 'stat') return workspaceStat(input, root);
+  if (operation === 'write') return workspaceWrite(input, root);
+  if (operation === 'patch') return workspacePatch(input, root);
+  if (operation === 'remove') return workspaceRemove(input, root);
+  throw new Error('unknown fixture operation: ' + operation);
+}
+
+test('workspace file operations conform to the shared v1 fixtures', () => {
+  for (const row of fixture.cases) {
+    const { root, outside } = setup();
+    try {
+      const result = call(row.operation, inputFor(row, root), root);
+      for (const [key, value] of Object.entries(row.expected)) assert.equal(result[key], value, row.id + ':' + key);
+      if (row.expected_paths) assert.deepEqual(result.entries.map(entry => entry.path), row.expected_paths, row.id);
+      if (row.operation === 'read') assert.match(result.sha256, /^[a-f0-9]{64}$/);
+      if (row.operation === 'stat') assert.match(result.sha256, /^[a-f0-9]{64}$/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  }
+});
+
+test('workspace file failures use stable codes from the shared v1 fixtures', () => {
+  for (const row of fixture.failures) {
+    const { root, outside } = setup();
+    try {
+      assert.throws(
+        () => call(row.operation, inputFor(row, root), root),
+        error => error?.message === row.expected_error,
+        row.id,
+      );
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(outside, { recursive: true, force: true });
+    }
+  }
 });

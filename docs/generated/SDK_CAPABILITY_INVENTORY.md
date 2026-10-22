@@ -5,8 +5,8 @@
 
 - CLI commands: **76** (aliases not counted)
 - In-shell slash commands: **38**
-- Package catalog registrations: **62**
-- Physical packages with manifests: **59**
+- Package catalog registrations: **63**
+- Physical packages with manifests: **61**
 - Apps with manifests: **8**
 
 ## CLI commands
@@ -276,6 +276,7 @@ Authority: `packages/catalog/generated/packages.json`. `catalog_status` and `sta
 | `@inneranimalmedia/copro-timeline` | Headless CoPro timeline projection, ordering, duration, and viewport math. | needs-review | unknown |
 | `@inneranimalmedia/copro-ui` | Mobile-first creator UI for CoPro with preview, timeline, direct manipulation, edit tools, media tray, transport, and responsive desktop composition. | needs-review | unknown |
 | `@inneranimalmedia/fnf-theme` | Brand-specific FNF theme renderer consuming portable ThemePreview registry | needs-review | unknown |
+| `@inneranimalmedia/primetech-procedures` | Versioned PrimeTech workflow manifests, schema validation, authorized SAM operation orchestration, native asset inventory, run receipts, output hashes, and performance evidence without creating a second runtime or database registry. | classified | experimental-private-workspace |
 | `@inneranimalmedia/theme-contract` | Portable provider-neutral theme preview registry and composition contracts | needs-review | unknown |
 | `@inneranimalmedia/theme-cypress` | A welcoming community prebuild for organizations that need events, groups, giving, visits, and mission-driven storytelling without looking like a generic nonprofit template. | needs-review | unknown |
 | `@inneranimalmedia/theme-ember` | An editorial commerce prebuild that mixes product discovery, brand story, collections, community, and launch moments without collapsing into another tiled product grid. | needs-review | unknown |
@@ -301,13 +302,13 @@ Authority: `apps/*/package.json`. Apps may be examples or developer tools; deplo
 | `apps/agentsam-go-worker` | `@inneranimalmedia/agentsam-go-worker` | Deployable AgentSam Go runtime service artifact for Cloudflare Worker + Container self-hosting and official InnerAnimalMedia releases. Independent project; not affiliated with Cloudflare, Inc.. |
 | `apps/cad-creator` | `@inneranimalmedia/agentsam-cad-creator` | Prepackaged AgentSam CAD, spatial design, and robotics application kit. |
 | `apps/client-cms-editor` | `@inneranimalmedia/client-cms-editor` | Reusable full-stack website + CMS kit with multi-page public sites, a protected authoring dashboard, local SQLite, starter/theme import, and pluggable auth, storage, and deployment adapters. |
-| `apps/ecommerce-cms-agentsam` | `@inneranimalmedia/ecommerce-cms-agentsam` | Not documented in package.json |
+| `apps/ecommerce-cms-agentsam` | `@inneranimalmedia/ecommerce-cms-agentsam` | Installable AgentSam ecommerce and website CMS application with product and inventory management, theme editing, media, analytics, and provider integrations. |
 | `apps/local-studio` | `@inneranimalmedia/agentsam-local-studio` | Portable AgentSam Local Studio desktop and hosted workbench for local-first projects, terminals, providers, and packaged apps. |
 | `apps/project-control` | `@inneranimalmedia/agentsam-work-app` | Not documented in package.json |
 
 ## Reconciliation and proof gaps
 
-- Physical package manifests missing catalog registrations: none.
+- Physical package manifests missing catalog registrations: `agentsam-architectural-intelligence`.
 - Catalog entries without an npm package.json (may use another distribution): `packages/connectors/cfoa`, `apps/local-studio/shared/agentsam`, `packages/agentsam-rapid-rust`.
 - Package entries needing classification: **61**.
 - Next gate: attach per-command and per-package install, authorization, runtime execution, and customer-consumer receipts before claiming `READY`.

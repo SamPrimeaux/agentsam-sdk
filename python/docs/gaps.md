@@ -53,14 +53,23 @@ dashboard/Worker `client_fs`/ExecOS path-propose lane; inventing new D1
 tables for audit output (output stays json+markdown under `--output-dir`,
 R2 later if wanted).
 
+## Native runtime and PrimeTech procedures (2026-10)
+
+- [x] Native Python operations now cover workspace read/list/stat/write/patch/remove and bounded argv process execution without requiring Node or the JavaScript bridge for those operations.
+- [x] The Node SAM kernel remains the canonical host. The Python runtime follows the shared workspace and terminal conformance fixtures under protocol/runtime; it is a second implementation, not a replacement kernel.
+- [x] D1 mutation remains exclusively behind the existing D1Adapter and requires an explicit database UUID. The adapter uses Wrangler/Node; D1 mutation is unavailable if that existing adapter is not bound.
+- [x] The Python ProcedureClient delegates to an injected trusted host operation. It does not spawn a shell or create a parallel procedure registry.
+- [x] PrimeTech's experimental repo.asset.inventory@0.1.0 procedure was executed through the existing sam.superbash operation against a native CAD/BIM workspace. It discovered and hashed 27 assets without truncation; the smoke-run artifact and receipt were written to a temporary evidence directory, not into the source project.
+- [ ] No live D1 mutation has been run. No public PrimeTech package release is claimed. The procedure package remains a private workspace package pending portability and release review.
+
 ## Contract compliance
 
 - [x] `runtime/contract.py`: `ToolInput`/`ToolResult` + receipt, every tool call writes one.
-- [x] Read-only default; `ToolInput.write` exists but nothing in this pass sets it True — no silent production writes.
+- [x] Native runtime is read-only by default. Workspace writes/patch/removal and terminal execution require explicit write intent plus trusted host approval; refusals and successful calls produce ToolResult receipts.
 - [x] D1 access only via `data/d1_adapter.py` (wraps `wrangler d1 execute`); no other module shells out to wrangler or hits the CF API directly.
 - [x] No hardcoded `au_*`/`ws_*`/`tenant_*`/database-id values anywhere — `D1Adapter.from_env` raises rather than guessing.
-- [x] Output: json + markdown from `d1_bloat`, `agentsam_walk`, and `repository.inventory`. No other formats claimed.
-- [x] Tests use fixtures/pure functions only — `python3 -m unittest discover -s tests` needs no live D1 or network.
+- [x] D1 audit tools and repository inventory retain their JSON/Markdown outputs. Native runtime and PrimeTech procedures additionally emit structured JSON results, artifact hashes, and receipts.
+- [x] Runtime conformance and D1 adapter tests use temporary fixtures/fakes and need no live D1 or network. No live D1 write has been exercised.
 - [x] Receipts use `written_at_unixepoch` (unixepoch integer per AGENTS.md); tool-level timestamps otherwise use `time.time()` floats for duration math, not stored as durable rows.
 - [x] `scripts/run-d1-bloat-audit.sh` untouched and still works (legacy path preserved) — see shim note above.
 - [x] Host tooling documented: `docs/tooling.md` (jq + wrangler + env); `scripts/check-host-tooling.sh`.

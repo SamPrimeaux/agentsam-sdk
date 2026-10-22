@@ -1,0 +1,88 @@
+{
+  "schema": "agentsam.terminal-exec.conformance.v1",
+  "notes": [
+    "The same bounded argv fixtures are exercised by the Node process adapter and the native Python implementation.",
+    "The @workspace token is replaced by a temporary trusted project root by each test harness.",
+    "Tests use a temporary fixture directory and never execute a model-supplied shell string."
+  ],
+  "success": {
+    "input": {
+      "cwd": "@workspace",
+      "relative_cwd": ".",
+      "command": "python3",
+      "args": ["-c", "print('primetech-runtime-ok')"],
+      "timeout_ms": 5000,
+      "max_output_bytes": 4096
+    },
+    "expected": {
+      "ok": true,
+      "exit_code": 0,
+      "signal": null,
+      "stdout": "primetech-runtime-ok\n",
+      "stderr": ""
+    },
+    "required_fields": ["ok", "command", "args", "project_root", "cwd", "exit_code", "signal", "stdout", "stderr"]
+  },
+  "failures": [
+    {
+      "id": "shell-string",
+      "input": {
+        "cwd": "@workspace",
+        "relative_cwd": ".",
+        "command": "python3 -c",
+        "args": [],
+        "timeout_ms": 5000,
+        "max_output_bytes": 4096
+      },
+      "expected_error": "terminal_command_must_be_pathless_executable"
+    },
+    {
+      "id": "cwd-traversal",
+      "input": {
+        "cwd": "@workspace",
+        "relative_cwd": "../outside",
+        "command": "python3",
+        "args": ["-c", "print('no')"],
+        "timeout_ms": 5000,
+        "max_output_bytes": 4096
+      },
+      "expected_error": "terminal_relative_cwd_outside_project"
+    },
+    {
+      "id": "cwd-symlink-escape",
+      "input": {
+        "cwd": "@workspace",
+        "relative_cwd": "external-link",
+        "command": "python3",
+        "args": ["-c", "print('no')"],
+        "timeout_ms": 5000,
+        "max_output_bytes": 4096
+      },
+      "expected_error": "terminal_relative_cwd_outside_project"
+    },
+    {
+      "id": "timeout",
+      "input": {
+        "cwd": "@workspace",
+        "relative_cwd": ".",
+        "command": "python3",
+        "args": ["-c", "import time; time.sleep(2)"],
+        "timeout_ms": 100,
+        "max_output_bytes": 4096
+      },
+      "expected_error": "process_timeout"
+    },
+    {
+      "id": "output-limit",
+      "input": {
+        "cwd": "@workspace",
+        "relative_cwd": ".",
+        "command": "python3",
+        "args": ["-c", "print('x' * 10000)"],
+        "timeout_ms": 5000,
+        "max_output_bytes": 1024
+      },
+      "expected_error": "process_output_limit"
+    }
+  ]
+}

@@ -276,6 +276,7 @@
     "packages/agentsam-architectural-intelligence"
   ],
   "workspaces": [
+    "packages/primetech-procedures",
     "packages/agentsam-analytics",
     "packages/analytics-ui",
     "packages/agentsam-assets-core",
@@ -351,7 +352,7 @@
     "brand:apply": "python3 scripts/brand-compliance/brand_compliance.py apply",
     "test:content": "npm run build -w @inneranimalmedia/agentsam-assets-core && npm run test -w @inneranimalmedia/agentsam-assets-core && npm run build -w @inneranimalmedia/agentsam-scoring && npm run test -w @inneranimalmedia/agentsam-scoring && npm run build -w @inneranimalmedia/agentsam-cloudflare-images && npm run test -w @inneranimalmedia/agentsam-cloudflare-images && npm run build -w @inneranimalmedia/agentsam-content && npm run test -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio && npm run test -w @inneranimalmedia/agentsam-content-studio",
     "build:content": "npm run build -w @inneranimalmedia/agentsam-assets-core && npm run build -w @inneranimalmedia/agentsam-scoring && npm run build -w @inneranimalmedia/agentsam-cloudflare-images && npm run build -w @inneranimalmedia/agentsam-content && npm run build -w @inneranimalmedia/agentsam-content-studio",
-    "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock",
+    "test:standard": "node test/smoke.mjs && npm run test:unit && npm run test:cli && npm run test:integration:mock && npm run test:terminal:mock && npm run test:primetech-procedures",
     "test:unit": "node --test test/*.test.mjs",
     "test:cli": "node --test test/cli/*.test.mjs",
     "test:integration:mock": "npm run ensure:cms-dist && node --test test/integration/*.test.mjs",
@@ -367,7 +368,7 @@
     "verify:ide-package": "node scripts/verify-ide-package.mjs",
     "verify:ide-browser-lsp": "node scripts/verify-ide-browser-lsp.mjs",
     "verify:knowledge-package": "node scripts/verify-knowledge-package.mjs && npm run test:autorag",
-    "test:python": "node scripts/verify-python.mjs",
+    "test:python": "bash scripts/test-python-suites.sh",
     "verify:release": "npm run verify && npm run verify:packages:public && npm run verify:knowledge-package && npm run test:python && npm run security:release",
     "pack:check": "node scripts/verify-pack.mjs",
     "verify": "npm run brand:check && npm run release:train:check && npm run errors:check && npm run proto:check && npm test && npm run test:workspaces && npm run cad:registry:check && npm run app:validate && npm run verify:boundaries && npm run verify:package && npm run verify:bootstrap && npm run pack:check",
@@ -426,7 +427,8 @@
     "catalog:inventory:check": "node scripts/generate-capability-inventory.mjs --check",
     "verify:cad-python": "uvx --from ty==0.0.88 ty check --project services/cad services/cad && uvx --from ruff==0.17.1 ruff check services/cad && uvx --from ruff==0.17.1 ruff check --select E4,E7,E9,F,I,UP services/cad",
     "sam:machine:build": "node scripts/sam-machine/build.mjs --out /tmp/sam-machine-build",
-    "sam:machine:verify": "bash scripts/sam-machine/verify.sh"
+    "sam:machine:verify": "bash scripts/sam-machine/verify.sh",
+    "test:primetech-procedures": "npm --prefix packages/primetech-procedures test"
   },
   "engines": {
     "node": ">=22 <25",

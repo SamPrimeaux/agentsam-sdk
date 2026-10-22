@@ -1,4 +1,5 @@
 import path from 'node:path';
+import fs from 'node:fs';
 import os from 'node:os';
 import { runProcess } from '../security/process.js';
 import { redactDiagnosticValue } from '../errors/index.js';
@@ -28,17 +29,28 @@ function boundedInteger(value, fallback, max) {
   return Math.min(number, max);
 }
 function projectDirectory(root, relativeCwd = '') {
-  const projectRoot = path.resolve(root || process.cwd());
-  const directory = path.resolve(projectRoot, clean(relativeCwd) || '.');
-  if (directory !== projectRoot && !directory.startsWith(`${projectRoot}${path.sep}`)) {
+  const projectRoot = fs.realpathSync(path.resolve(root || process.cwd()));
+  const requested = clean(relativeCwd) || '.';
+  if (path.isAbsolute(requested)) throw new Error('terminal_relative_cwd_invalid');
+  const lexical = path.resolve(projectRoot, requested);
+  if (lexical !== projectRoot && !lexical.startsWith(projectRoot + path.sep)) {
     throw new Error('terminal_relative_cwd_outside_project');
   }
+  const directory = fs.realpathSync(lexical);
+  if (directory !== projectRoot && !directory.startsWith(projectRoot + path.sep)) {
+    throw new Error('terminal_relative_cwd_outside_project');
+  }
+  if (!fs.statSync(directory).isDirectory()) throw new Error('terminal_cwd_not_directory');
   return { projectRoot, directory };
 }
 
 function subprocessEnvironment(env = process.env) {
+  const allowed = new Set([
+    'PATH','HOME','TMPDIR','TEMP','TMP','LANG','LC_ALL','LC_CTYPE','TZ',
+    'TERM','NO_COLOR','USER','LOGNAME','SYSTEMROOT','COMSPEC',
+  ]);
   const blocked = /(?:^|_)(?:TOKEN|SECRET|PASSWORD|PASSCODE|API_KEY|PRIVATE_KEY|AUTHORIZATION|COOKIE|CREDENTIAL)(?:_|$)/i;
-  return Object.fromEntries(Object.entries(env || {}).filter(([key]) => !blocked.test(key)));
+  return Object.fromEntries(Object.entries(env || {}).filter(([key]) => allowed.has(key) && !blocked.test(key)));
 }
 
 /**

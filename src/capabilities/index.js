@@ -13,3 +13,5 @@ export {
   projectRepositorySnapshot,
   repositoryFileMatches,
 } from './repository-snapshot-view.js';
+
+export { workspaceRead, workspaceWrite, workspaceList, workspaceSearch, workspaceStat, workspacePatch, workspaceRemove } from './workspace-files.js';

@@ -30,7 +30,7 @@ test('terminal.exec runs a real argv process inside the runtime-owned project', 
     },
   });
   assert.equal(result.ok, true);
-  assert.equal(result.cwd, path.join(cwd, 'src'));
+  assert.equal(result.cwd, fs.realpathSync(path.join(cwd, 'src')));
   assert.equal(seen[0].options.env.OPENAI_API_KEY, undefined);
   assert.equal(seen[0].options.env.PATH, process.env.PATH);
 });
@@ -83,4 +83,28 @@ test('terminal.exec is model-callable and approvals are command-specific', () =>
   assert.equal(descriptor.risk, 'write');
   assert.equal(toolApprovalKey('terminal.exec', { command: 'git' }), 'terminal.exec:git');
   assert.equal(toolApprovalKey('terminal.exec', { command: 'npm' }), 'terminal.exec:npm');
+});
+
+
+test('terminal.exec matches the shared Node/Python conformance fixtures', async t => {
+  const fixture = JSON.parse(fs.readFileSync(new URL('../../protocol/runtime/terminal-exec.conformance.v1.json', import.meta.url), 'utf8'));
+  const cwd = root(t);
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-terminal-outside-'));
+  t.after(() => fs.rmSync(outside, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(outside, 'outside.txt'), 'outside');
+  fs.symlinkSync(outside, path.join(cwd, 'external-link'));
+  const materialize = row => ({
+    ...row,
+    cwd,
+  });
+  const success = await terminalExec(materialize(fixture.success.input), { env: { PATH: process.env.PATH, HOME: os.homedir() } });
+  for (const field of fixture.success.required_fields) assert.ok(Object.hasOwn(success, field), field);
+  for (const [field, value] of Object.entries(fixture.success.expected)) assert.equal(success[field], value, field);
+  for (const row of fixture.failures) {
+    await assert.rejects(
+      terminalExec(materialize(row.input), { env: { PATH: process.env.PATH, HOME: os.homedir() } }),
+      error => error?.code === row.expected_error || error?.message === row.expected_error,
+      row.id,
+    );
+  }
 });
