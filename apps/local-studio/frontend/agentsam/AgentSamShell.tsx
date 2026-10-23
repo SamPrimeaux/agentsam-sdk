@@ -254,7 +254,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     ],
   };
   return <ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} defaultOpen={false} peekable>
-    <Nav.Scope className="agentsam-shell" data-agentsam-app-shell="local-studio">
+    <Nav.Scope className="agentsam-shell" data-agentsam-app-shell="local-studio" data-embedded={embedded ? "true" : undefined}>
       {!isSettings ? <Nav.Sidenav /> : null}<div className="agentsam-main">
         {!isConversation ? isWorkspaceRoute
           ? <Nav.Topbar startup showAccount />
