@@ -1,93 +1,109 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, Box, Database, Film, Folder, Globe, MessageSquare, Search, Ticket } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, ArrowUpRight, BookOpen, Box, ChevronRight, FilePlus2, Film, Folder, Globe, Layers3, MessageSquare, Search, Ticket } from "lucide-react";
 import { useWorkStore } from "@/lib/work/store";
+import "./platform-home.css";
 
-export const Route = createFileRoute("/")({
-  component: LocalStudioHome,
-});
+export const Route = createFileRoute("/")({ component: LocalStudioHome });
 
-type AppRoute = "/cad" | "/projects" | "/agentsam" | "/chats" | "/apps/ecommerce-cms-agentsam" | "/cms" | "/browse" | "/tickets" | "/artifacts" | "/media" | "/database";
+type Destination = "/cad" | "/samsketch" | "/projects" | "/agentsam" | "/sites" | "/cms" | "/browse" | "/tickets" | "/artifacts" | "/media";
 
-const apps: Array<{
-  id: string;
-  label: string;
-  description: string;
-  to: AppRoute;
-  icon: typeof Box;
-}> = [
-  { id: "cad", label: "CAD Creator", description: "Draft with SamSketch, model with SamSculpt, and evolve the DreamHouse BIM in one workspace.", to: "/cad", icon: Box },
-  { id: "projects", label: "Projects", description: "Organize active work, project files, and deliverables.", to: "/projects", icon: Folder },
-  { id: "agentsam", label: "AgentSam", description: "Plan, research, and carry out work with your assistant.", to: "/agentsam", icon: MessageSquare },
-  { id: "commerce", label: "Commerce CMS", description: "Manage storefronts, products, themes, content, and publishing.", to: "/apps/ecommerce-cms-agentsam", icon: Globe },
-  { id: "sites", label: "Sites", description: "Work with site content and connected web properties.", to: "/cms", icon: Globe },
-  { id: "browser", label: "Browser", description: "Research the web and bring useful source material into your work.", to: "/browse", icon: Search },
-  { id: "tickets", label: "Tickets", description: "Review tasks, blockers, and delivery status.", to: "/tickets", icon: Ticket },
-  { id: "library", label: "Library", description: "Find saved artifacts, files, and reusable references.", to: "/artifacts", icon: BookOpen },
-  { id: "media", label: "Media", description: "Curate visual assets and creative resources.", to: "/media", icon: Film },
-  { id: "database", label: "Database", description: "Inspect connected data and development resources.", to: "/database", icon: Database },
+const quick = [
+  { to: "/sites" as Destination, label: "Sites & themes", summary: "Edit pages, sections, and published sites.", icon: Globe },
+  { to: "/projects" as Destination, label: "Projects", summary: "Pick up existing projects and work.", icon: Folder },
+  { to: "/artifacts" as Destination, label: "Library", summary: "Open saved outputs and references.", icon: BookOpen },
+  { to: "/cad" as Destination, label: "CAD Creator", summary: "Open the drafting and modeling workspace.", icon: Box },
+];
+
+const installed = [
+  { to: "/agentsam" as Destination, name: "AgentSam", label: "Conversations & Work", icon: MessageSquare },
+  { to: "/cad" as Destination, name: "CAD Creator", label: "Modeling & BIM", icon: Box },
+  { to: "/samsketch" as Destination, name: "SamSketch", label: "Creative studio", icon: Layers3 },
+  { to: "/media" as Destination, name: "Media", label: "Asset library", icon: Film },
+  { to: "/browse" as Destination, name: "Browser", label: "Research", icon: Search },
+  { to: "/sites" as Destination, name: "Sites", label: "Website CMS", icon: Globe },
 ];
 
 export function LocalStudioHome() {
+  const navigate = useNavigate();
   const state = useWorkStore();
-  const activeTrail = state.trails.find((trail) => trail.id === state.activeTrailId);
+  const active = state.trails.find((thread) => thread.id === state.activeTrailId);
+  const recentProjects = state.hydrated ? state.projects.slice(0, 3) : [];
 
-  return (
-    <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-5 py-7 sm:px-8 lg:px-10 lg:py-10">
-      <header className="max-w-3xl space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Local Studio</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Your workspace, connected.</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-          One desktop shell for your projects, packaged tools, and AgentSam workflows. Open a capability without leaving the workspace.
-        </p>
-      </header>
+  const newConversation = () => {
+    state.startTrail();
+    void navigate({ to: "/agentsam" });
+  };
+  const newProject = () => {
+    state.createProject();
+    void navigate({ to: "/projects" });
+  };
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="Workspace activity">
-        <Link to="/projects" className="group flex min-h-28 items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-muted/60">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-muted-foreground">Projects</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{state.hydrated ? state.projects.length : "—"}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Saved project spaces</p>
-          </div>
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground"><Folder className="size-5" /></span>
-        </Link>
-        <Link to="/chats" className="group flex min-h-28 items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-muted/60">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-muted-foreground">Conversations</p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground">{state.hydrated ? state.trails.length : "—"}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Your ongoing work with AgentSam</p>
-          </div>
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground"><MessageSquare className="size-5" /></span>
-        </Link>
-        <Link to="/agentsam" className="group flex min-h-28 items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-muted/60">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-muted-foreground">AgentSam</p>
-            <p className="mt-2 text-lg font-semibold text-foreground">{activeTrail?.title || "Start something"}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{activeTrail ? "Continue in AgentSam" : "Turn an idea into a plan and a result"}</p>
-          </div>
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground"><MessageSquare className="size-5" /></span>
-        </Link>
-      </section>
-
-      <section className="space-y-4" aria-labelledby="apps-heading">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 id="apps-heading" className="text-lg font-semibold text-foreground">Apps and tools</h2>
-            <p className="mt-1 text-sm text-muted-foreground">A single entry point for your installed capabilities.</p>
+  return <main className="platform-home" data-studio-product="platform-home">
+    <div className="platform-home-inner">
+      <section className="platform-home-welcome" aria-labelledby="platform-home-title">
+        <div className="platform-home-eyebrow"><span className="platform-home-live" /> AgentSam Studio <span className="platform-home-separator">/</span> Workspace</div>
+        <h1 id="platform-home-title">What should we build next?</h1>
+        <p>Everything you are creating, connected in one place. Start with AgentSam or open an installed workspace.</p>
+        <div className="platform-home-composer">
+          <button type="button" className="platform-home-composer-entry" onClick={newConversation} aria-label="Start a new AgentSam conversation">
+            <span>Work with AgentSam</span><span className="platform-home-composer-prompt">Ask, plan, build, or refine anything…</span>
+          </button>
+          <div className="platform-home-composer-actions">
+            <span className="platform-home-signature">AgentSam</span>
+            <span className="platform-home-composer-links">
+              <Link to="/projects">Projects <ChevronRight size={14}/></Link>
+              <button type="button" onClick={newConversation} className="platform-home-go" aria-label="Open AgentSam"><ArrowUpRight size={18}/></button>
+            </span>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {apps.map((app) => {
-            const Icon = app.icon;
-            return (
-              <Link key={app.id} to={app.to} className="group flex min-h-40 flex-col rounded-2xl border border-border bg-card p-5 transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <span className="mb-4 flex size-11 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground transition-colors group-hover:text-foreground"><Icon className="size-5" /></span>
-                <span className="text-sm font-semibold text-foreground">{app.label}</span>
-                <span className="mt-2 text-sm leading-5 text-muted-foreground">{app.description}</span>
-              </Link>
-            );
-          })}
+        {active && <Link className="platform-home-continue" to="/agentsam">Continue: {active.title} <ArrowRight size={14}/></Link>}
+      </section>
+
+      <section className="platform-home-section" aria-labelledby="platform-quick-heading">
+        <div className="platform-home-section-head"><h2 id="platform-quick-heading">Quick access</h2><span>Continue where you left off</span></div>
+        <div className="platform-home-quick-grid">
+          {quick.map(({ to, label, summary, icon: Icon }) => <Link to={to} className="platform-home-quick-card" key={to}>
+            <span className="platform-home-card-line"><Icon size={17}/><ArrowUpRight size={15}/></span>
+            <strong>{label}</strong><span>{summary}</span>
+          </Link>)}
         </div>
       </section>
-    </main>
-  );
+
+      <section className="platform-home-section" aria-labelledby="platform-start-heading">
+        <div className="platform-home-section-head"><div><h2 id="platform-start-heading">Start something</h2><p>Real actions in your connected workspace.</p></div></div>
+        <div className="platform-home-start-grid">
+          <button type="button" className="platform-home-start-card" onClick={newConversation}>
+            <MessageSquare size={24}/><span>New conversation</span><small>Begin with AgentSam</small><ArrowUpRight className="platform-home-start-arrow" size={16}/>
+          </button>
+          <button type="button" className="platform-home-start-card" onClick={newProject}>
+            <Folder size={24}/><span>New project</span><small>Organize the next build</small><ArrowUpRight className="platform-home-start-arrow" size={16}/>
+          </button>
+          <Link to="/sites" className="platform-home-start-card">
+            <FilePlus2 size={24}/><span>Website workspace</span><small>Open the CMS editor</small><ArrowUpRight className="platform-home-start-arrow" size={16}/>
+          </Link>
+          <Link to="/tickets" className="platform-home-start-card">
+            <Ticket size={24}/><span>Review tickets</span><small>Track delivery</small><ArrowUpRight className="platform-home-start-arrow" size={16}/>
+          </Link>
+        </div>
+      </section>
+
+      <section className="platform-home-section" aria-labelledby="platform-apps-heading">
+        <div className="platform-home-section-head"><div><h2 id="platform-apps-heading">Installed workspaces</h2><p>Applications open inside the shared Studio shell.</p></div></div>
+        <div className="platform-home-installed">
+          {installed.map(({ to, name, label, icon: Icon }) => <Link key={to} to={to} className="platform-home-installed-item"><Icon size={18}/><span><strong>{name}</strong><small>{label}</small></span><ArrowUpRight size={15}/></Link>)}
+        </div>
+      </section>
+
+      <section className="platform-home-section platform-home-recent" aria-labelledby="platform-recent-heading">
+        <div className="platform-home-section-head"><div><h2 id="platform-recent-heading">Your activity</h2><p>Based on saved Local Studio work.</p></div><Link to="/projects">All projects <ArrowRight size={14}/></Link></div>
+        <div className="platform-home-activity">
+          <div className="platform-home-activity-count"><strong>{state.hydrated ? state.projects.length : "—"}</strong><span>Projects</span></div>
+          <div className="platform-home-activity-count"><strong>{state.hydrated ? state.trails.length : "—"}</strong><span>Conversations</span></div>
+          <div className="platform-home-activity-list">
+            {recentProjects.length ? recentProjects.map((project) => <Link key={project.id} to="/projects"><Folder size={15}/>{project.name}<ArrowUpRight size={14}/></Link>) : <span>No recent projects saved here yet.</span>}
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>;
 }
