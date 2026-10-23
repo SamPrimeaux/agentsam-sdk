@@ -292,7 +292,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           <button type="button" className="platform-console-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={17} /><span>Search pages and tools</span><kbd>⌘K</kbd></button>
           <Nav.TopbarSpacer />
           <button type="button" className="as-nav-button" title="Ask AgentSam" aria-label="Ask AgentSam" onClick={() => { state.openSideTab('chat'); state.setSideOpen(true); }}><img alt="" className="platform-console-agent-icon" src="/brand/agentsam-gorilla/v1/ui/mini-composer-idle.svg" onError={(e) => { e.currentTarget.style.display = 'none'; }} /><span className="sr-only">Open AgentSam assistant</span></button>
-          <button type="button" className="as-nav-button" title="Notifications" aria-label="Notifications" onClick={() => go('/tickets')}><Bell size={17} /></button>
+          <button type="button" className="as-nav-button" title="Notifications" aria-label="Notifications" onClick={() => go('/tickets')}><Bell size={17} /><span className="sr-only">View notifications in Tickets</span></button>
           <Nav.AccountSwitcher />
         </Nav.Topbar> : null}
         <OfflineBanner />
