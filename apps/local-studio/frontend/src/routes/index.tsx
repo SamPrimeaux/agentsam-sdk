@@ -27,7 +27,7 @@ const apps: Array<{
   { id: "database", label: "Database", description: "Inspect connected data and development resources.", to: "/database", icon: Database },
 ];
 
-function LocalStudioHome() {
+export function LocalStudioHome() {
   const state = useWorkStore();
   const activeTrail = state.trails.find((trail) => trail.id === state.activeTrailId);
 
