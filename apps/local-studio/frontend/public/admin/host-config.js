@@ -5,37 +5,52 @@
 (function () {
   if (typeof NAV === "undefined" || typeof renderSideNav !== "function") return;
 
+  // Platform destinations remain top-level. Installed commerce capabilities
+  // reuse the original Console hierarchy rather than becoming a flat site list.
   const main = [
     { href: "/admin/home", label: "Home", icon: "home" },
+    { id: "products", label: "Products", icon: "products", href: "/admin/products", children: [
+      { href: "/admin/products/create", label: "Create product" },
+      { href: "/admin/products/help/artwork", label: "Artwork help" },
+      { href: "/admin/products", label: "All products" },
+      { href: "/admin/products", label: "Collections" },
+      { href: "/admin/inventory", label: "Inventory" },
+      { href: "/admin/orders", label: "Orders" },
+      { href: "/admin/discounts", label: "Discounts" }
+    ] },
+    { href: "/admin/growth", label: "Growth", icon: "growth" },
+    { href: "/admin/content", label: "Content", icon: "content" },
+    { id: "analytics", label: "Analytics", icon: "analytics", href: "/admin/analytics/overview", children: [
+      { href: "/admin/analytics/overview", label: "Overview" },
+      { href: "/admin/analytics/finance", label: "Finance" },
+      { href: "/admin/analytics/health", label: "Health" }
+    ] },
     { href: "/projects", label: "Projects", icon: "content" },
     { href: "/artifacts", label: "Library", icon: "content" },
     { href: "/tickets", label: "Tickets", icon: "orders" }
   ];
-  const channels = [{
-    id: "online-store", href: "/sites", label: "Sites / Online Store", icon: "store",
-    children: [
-      // Product-owned destinations remain scoped to the Ecommerce workspace.
+  const channels = [
+    { id: "online-store", href: "/sites", label: "Sites / Online Store", icon: "store", children: [
       { href: "/admin/pages", label: "Pages" },
       { href: "/admin/theme-editor?slug=home", label: "Theme Editor" },
-      { href: "/admin/products", label: "Products" },
-      { href: "/admin/products/create", label: "Product Studio" },
-      { href: "/admin/inventory", label: "Inventory" },
-      { href: "/admin/orders", label: "Orders" },
-      { href: "/admin/subscribers", label: "Subscribers" },
-      { href: "/admin/growth", label: "Growth" },
-      { href: "/admin/discounts", label: "Discounts" },
-      { href: "/admin/content", label: "Content & Media" },
-      { href: "/admin/analytics/overview", label: "Analytics" },
-      { href: "/admin/email", label: "Email" },
       { href: "/admin/preferences", label: "Preferences" }
-    ]
-  }];
+    ] },
+    // /admin/subscribers is a newsletter list, NOT the commerce customer CRM.
+    // Keep its honest name until an actual customer directory route is installed.
+    { id: "audience", label: "Audience", icon: "customers", children: [
+      { href: "/admin/subscribers", label: "Subscribers" }
+    ] }
+  ];
   const apps = [
     { href: "/agentsam", label: "AgentSam", icon: "agentic" },
     { href: "/cad", label: "CAD Creator", icon: "products" },
     { href: "/samsketch", label: "SamSketch", icon: "products" },
     { href: "/media", label: "Media", icon: "content" },
     { href: "/browse", label: "Browser", icon: "content" },
+    { id: "email", href: "/admin/email", label: "Email", icon: "email", children: [
+      { href: "/admin/email", label: "Inbox" },
+      { href: "/admin/email?folder=sent", label: "Sent" }
+    ] },
     { href: "/settings/general", label: "Settings", icon: "settings" }
   ];
   NAV.main.splice(0, NAV.main.length, ...main);
