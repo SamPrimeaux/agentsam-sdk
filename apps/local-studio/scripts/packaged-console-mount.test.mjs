@@ -37,7 +37,8 @@ test('immutable product sources and packaged shell are the authority', () => {
   assert.match(cloudflare, /"run_worker_first": \["\/admin\/\*", "\/sites", "\/samsketch"\]/);
 
   const app = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
-  assert.match(app, /<PackagedConsoleFrame><AgentSamShell embedded/);
+  assert.match(app, /return isApp \? <AgentSamShell \/> : <Outlet \/>/);
+  assert.doesNotMatch(app, /<PackagedConsoleFrame>/);
   for (const file of [
     'frontend/public/admin/host-config.js',
     '.output/public/admin/js/shell.js',
@@ -45,13 +46,33 @@ test('immutable product sources and packaged shell are the authority', () => {
   ]) assert.ok(existsSync(new URL('../' + file, import.meta.url)), file);
 });
 
-test('the packaged Console owns exactly one visible navigation surface', () => {
-  const frame = readFileSync(new URL('../frontend/agentsam/PackagedConsoleFrame.tsx', import.meta.url), 'utf8');
-  assert.match(frame, /render\(pathname,.*fullBleed: true/);
-  assert.equal(frame.includes(String.raw`\n      render(`), false);
-  assert.doesNotMatch(frame, /includeMobileDrawer: true/);
+test('Local Studio owns exactly one navigation surface without nested Ecommerce shell', () => {
+  const root = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
   const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
-  assert.match(shell, /!isSettings && !embedded \? <Nav\.Sidenav/);
+  assert.doesNotMatch(root, /PackagedConsoleFrame/);
+  assert.match(root, /<AgentSamShell \/>/);
+  assert.equal((shell.match(/<Nav\.Sidenav \/>/g) || []).length, 1);
+  assert.doesNotMatch(shell, /includeMobileDrawer|renderShell\(/);
+  assert.doesNotMatch(shell, /href: '\/cli'/);
+  assert.match(shell, /defaultOpen peekable/);
+  assert.match(shell, /label: 'AgentSam'/);
+  assert.match(shell, /<SideStage workFocused=\{globalAssistantFocused\}/);
+  assert.match(shell, /!isConversation && state.sideOpen/);
+  assert.match(shell, /<Nav\.Topbar className="platform-console-topbar">/);
+
+  const css = readFileSync(new URL('../frontend/agentsam/platform-console.css', import.meta.url), 'utf8');
+  assert.match(css, /--nav-width: 246px/);
+});
+
+test('platform home is a real SaaS route separate from Ecommerce home.html', () => {
+  const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
+  const route = readFileSync(new URL('../frontend/src/routes/(apps)/admin/home.tsx', import.meta.url), 'utf8');
+  const home = readFileSync(new URL('../frontend/src/routes/index.tsx', import.meta.url), 'utf8');
+  assert.match(worker, /url\.pathname !== "\/admin\/home"/);
+  assert.match(route, /component: LocalStudioHome/);
+  assert.match(home, /export function LocalStudioHome/);
+  assert.match(home, /Your activity/);
+  assert.doesNotMatch(home, /Your store is taking shape|Fuel & Free Time/);
 });
 
 test('AgentSam app and approved Ecommerce groups keep their actual route ownership', () => {

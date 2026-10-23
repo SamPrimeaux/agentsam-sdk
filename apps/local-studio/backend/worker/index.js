@@ -694,7 +694,7 @@ export default {
     // Only static presentation assets are served here; no tenant APIs or
     // customer Worker are delegated or impersonated.
     if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname === "/sites" || url.pathname.startsWith("/admin/"))) {
+        (url.pathname === "/sites" || (url.pathname.startsWith("/admin/") && url.pathname !== "/admin/home"))) {
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
       const mounted = await servePackagedConsole(request, env.ASSETS);
       if (mounted) return mounted;
