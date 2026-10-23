@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
 import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, PawPrint, Box, Search, Bell, ShoppingBag, Tag, BarChart3, Megaphone, Users, Mail } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
+import { SideStage } from '@/components/workbench/side-stage';
+import { SplitHandle } from '@/components/shell/split-handle';
 import { CliDrawer } from '@/components/shell/cli-drawer';
 import { OfflineBanner } from '@/components/shell/offline-banner';
 import { useWorkStore } from '@/lib/work/store';
@@ -37,6 +39,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const appearanceRef = useRef<ShellAppearancePreference | null>(null);
   const [sharing, setSharing] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
+  const [globalAssistantFocused, setGlobalAssistantFocused] = useState(false);
+  const [globalAssistantWidth, setGlobalAssistantWidth] = useState(390);
   const hydratedRef = useRef(state.hydrated);
   const pendingChromeShares = useRef<ChromeTabShare[]>([]);
   hydratedRef.current = state.hydrated;
@@ -291,7 +295,17 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           <button type="button" className="as-nav-button" title="Notifications" aria-label="Notifications" onClick={() => go('/tickets')}><Bell size={17} /></button>
           <Nav.AccountSwitcher />
         </Nav.Topbar> : null}
-        <OfflineBanner /><main className="agentsam-route"><Outlet /></main>
+        <OfflineBanner />
+        <div className="platform-console-stage" data-assistant-focused={!isConversation && globalAssistantFocused && state.sideOpen ? "true" : "false"}>
+          <main className="agentsam-route"><Outlet /></main>
+          {!isConversation && state.sideOpen ? <>
+            {!globalAssistantFocused && <SplitHandle label="Resize AgentSam panel" onDrag={(delta) => setGlobalAssistantWidth((width) => Math.max(320, Math.min(720, width - delta)))} onDoubleClick={() => setGlobalAssistantWidth(390)} />}
+            <aside className="platform-console-assistant" aria-label="AgentSam Side Assistant"
+              style={{ "--platform-assistant-width": globalAssistantWidth + "px" } as CSSProperties}>
+              <SideStage workFocused={globalAssistantFocused} onFocusToggle={() => setGlobalAssistantFocused((focused) => !focused)} />
+            </aside>
+          </> : null}
+        </div>
       </div><CliDrawer /><CommandPalette />
       <Dialog open={sharing} onOpenChange={setSharing}><DialogContent><DialogTitle>Share conversation</DialogTitle><DialogDescription>Copy this conversation as text to share it. This does not create a public link.</DialogDescription><button type="button" className="as-nav-button" onClick={() => { if (!trail) return; void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => { toast('Conversation copied'); setSharing(false); }, () => toast('Could not copy conversation')); }}><Copy size={18} />Copy conversation</button></DialogContent></Dialog>
       <DesktopIdentityPortal open={identityOpen} onOpenChange={setIdentityOpen} />
