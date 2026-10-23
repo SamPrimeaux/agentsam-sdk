@@ -25,7 +25,7 @@ import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePrefer
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
-export function AgentSamShell() {
+export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {}) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const state = useWorkStore();
