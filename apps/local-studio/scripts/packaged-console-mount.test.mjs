@@ -32,6 +32,9 @@ test('Worker serves packaged assets, not a customer Worker or a reconstructed sh
 test('immutable product sources and packaged shell are the authority', () => {
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /servePackagedConsole/);
+  const cloudflare = readFileSync(new URL('../backend/wrangler.jsonc', import.meta.url), 'utf8');
+  assert.match(cloudflare, /"run_worker_first": \["\/admin\/\*", "\/sites", "\/samsketch"\]/);
+
   const app = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
   assert.match(app, /<PackagedConsoleFrame><AgentSamShell embedded/);
   for (const file of [
