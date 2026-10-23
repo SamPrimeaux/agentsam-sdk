@@ -26,7 +26,7 @@ test('Worker serves packaged assets, not a customer Worker or a reconstructed sh
   } };
   const res = await servePackagedConsole(new Request('https://agentsam.inneranimalmedia.com/admin/home'), env);
   assert.equal(res.status, 200);
-  assert.equal(seen[0], '/ecommerce-cms-agentsam/admin/home.html');
+  assert.equal(seen[0], '/ecommerce-cms-agentsam/admin/home');
   assert.match(await res.text(), /host-config\.js/);
 });
 test('immutable product sources and packaged shell are the authority', () => {
