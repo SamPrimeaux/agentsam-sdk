@@ -68,13 +68,6 @@
     "assetRoot": "dist",
     "shell": "index.html"
   },
-  "install": {
-    "command": "npm install @inneranimalmedia/samsketch",
-    "selector": "samsketch",
-    "paths": [
-      "/install/samsketch"
-    ]
-  },
   "embed": {
     "stage": "samsketch",
     "build": {

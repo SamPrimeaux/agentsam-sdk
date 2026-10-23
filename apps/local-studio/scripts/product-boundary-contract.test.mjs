@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
@@ -49,4 +50,19 @@ test('desktop included apps are an explicit build-time option, not runtime insta
   assert.match(desktopSchema, /included_apps/);
   assert.match(desktopSchema, /Optional sibling APP ids/);
   assert.match(desktopSchema, /Empty\/omitted = host-only/);
+});
+
+
+test('app packaging audit distinguishes source-only apps from distributable root-owned surfaces', () => {
+  const repoRoot = resolve(root, '../..');
+  const result = spawnSync(process.execPath, ['scripts/verify-app-packaging.mjs', '--pack'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.errors, []);
+  assert.match(report.warnings.join('\n'), /samsketch: npm packaging skipped for private source\/preview-only app/);
+  assert.match(report.warnings.join('\n'), /ecommerce-cms-agentsam: backend\/ is packaged by the root APP package/);
 });

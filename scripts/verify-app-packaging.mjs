@@ -23,42 +23,69 @@ const exists = (file) => fs.existsSync(file);
 
 function checkApp(app) {
   const pkgFile = path.join(app.dir, 'package.json');
-  if (!exists(pkgFile)) { errors.push(`${app.id}: missing package.json`); return; }
+  if (!exists(pkgFile)) { errors.push(app.id + ': missing package.json'); return; }
   const pkg = readJson(pkgFile);
-  if (pkg.name !== app.manifest.package) errors.push(`${app.id}: package.json name must match agentsam.app.json package (${app.manifest.package || '(missing)'})`);
-  if (pkg.private === true) warnings.push(`${app.id}: package.json is private; this app is source/preview-only until publish intent is explicit`);
-  if (!Array.isArray(pkg.files) || !pkg.files.length) errors.push(`${app.id}: root package.json must declare a files allowlist`);
+  if (pkg.name !== app.manifest.package) errors.push(app.id + ': package.json name must match agentsam.app.json package (' + (app.manifest.package || '(missing)') + ')');
+  if (pkg.private === true) warnings.push(app.id + ': package.json is private; this app is source/preview-only until publish intent is explicit');
+
+  // Private apps without an advertised install command are source/preview targets,
+  // not npm distributions. Validate identity, but don't demand publish-only files
+  // or run npm pack until the owner explicitly makes the APP distributable.
+  const sourceOnly = pkg.private === true && !app.manifest?.install?.command;
+  if (sourceOnly) {
+    if (pkg.bin) for (const target of Object.values(typeof pkg.bin === 'string' ? { default: pkg.bin } : pkg.bin)) {
+      if (!exists(path.join(app.dir, target))) errors.push(app.id + ': bin target missing: ' + target);
+    }
+    warnings.push(app.id + ': npm packaging skipped for private source/preview-only app; no install command is advertised');
+    return;
+  }
+
+  if (!Array.isArray(pkg.files) || !pkg.files.length) errors.push(app.id + ': root package.json must declare a files allowlist');
   const isAppWorkspace = app.dir.startsWith(path.join(root, 'apps') + path.sep);
-  if (isAppWorkspace && !exists(path.join(app.dir, 'package-lock.json'))) errors.push(`${app.id}: app-owned package-lock.json is required`);
+  if (isAppWorkspace && !exists(path.join(app.dir, 'package-lock.json'))) errors.push(app.id + ': app-owned package-lock.json is required');
+  const rootFiles = Array.isArray(pkg.files) ? pkg.files : [];
+
   for (const surface of ['frontend', 'backend']) {
     const dir = path.join(app.dir, surface);
     const surfacePkg = path.join(dir, 'package.json');
-    if (!exists(dir)) { warnings.push(`${app.id}: ${surface}/ is not declared`); continue; }
+    if (!exists(dir)) { warnings.push(app.id + ': ' + surface + '/ is not declared'); continue; }
     if (!exists(surfacePkg)) {
-      if (isAppWorkspace) errors.push(`${app.id}: ${surface}/package.json is required`);
-      else warnings.push(`${app.id}: ${surface}/package.json is not present; package-owned apps may expose compiled ${surface} entrypoints instead`);
-    }
-    else {
+      const rootOwnsSurface = rootFiles.some((entry) =>
+        entry === surface || entry === surface + '/' || entry.startsWith(surface + '/'));
+      if (isAppWorkspace && !rootOwnsSurface) {
+        errors.push(app.id + ': ' + surface + '/package.json is required unless the root APP package explicitly owns ' + surface + '/');
+      } else if (rootOwnsSurface) {
+        warnings.push(app.id + ': ' + surface + '/ is packaged by the root APP package; it has no independent package.json');
+      } else {
+        warnings.push(app.id + ': ' + surface + '/package.json is not present; package-owned apps may expose compiled ' + surface + ' entrypoints instead');
+      }
+    } else {
       const child = readJson(surfacePkg);
-      if (!child.scripts || (!child.scripts.build && !child.scripts.typecheck)) warnings.push(`${app.id}: ${surface} has no build/typecheck script`);
-      if (child.private === false) warnings.push(`${app.id}: ${surface} is independently publishable; confirm this is intentional`);
+      if (!child.scripts || (!child.scripts.build && !child.scripts.typecheck)) warnings.push(app.id + ': ' + surface + ' has no build/typecheck script');
+      if (child.private === false) warnings.push(app.id + ': ' + surface + ' is independently publishable; confirm this is intentional');
     }
   }
   if (exists(path.join(app.dir, 'backend'))) {
-    if (!exists(path.join(app.dir, 'backend/wrangler.jsonc')) && !exists(path.join(app.dir, 'backend/wrangler.toml'))) warnings.push(`${app.id}: backend has no Wrangler config; mark non-Cloudflare explicitly if intentional`);
+    const hasWorkerConfig = [
+      path.join(app.dir, 'backend/wrangler.jsonc'),
+      path.join(app.dir, 'backend/wrangler.toml'),
+      path.join(app.dir, 'wrangler.jsonc'),
+      path.join(app.dir, 'wrangler.toml'),
+    ].some(exists);
+    if (!hasWorkerConfig) warnings.push(app.id + ': backend has no app-owned Wrangler config; mark non-Cloudflare explicitly if intentional');
   }
-  if (pkg.bin) for (const target of Object.values(typeof pkg.bin === 'string' ? { default: pkg.bin } : pkg.bin)) if (!exists(path.join(app.dir, target))) errors.push(`${app.id}: bin target missing: ${target}`);
+  if (pkg.bin) for (const target of Object.values(typeof pkg.bin === 'string' ? { default: pkg.bin } : pkg.bin)) if (!exists(path.join(app.dir, target))) errors.push(app.id + ': bin target missing: ' + target);
   const files = pkg.files || [];
-  for (const forbidden of ['reference', 'attachments', 'node_modules']) if (files.some((entry) => entry === forbidden || entry.startsWith(`${forbidden}/`))) errors.push(`${app.id}: package files allowlist must not include ${forbidden}`);
+  for (const forbidden of ['reference', 'attachments', 'node_modules']) if (files.some((entry) => entry === forbidden || entry.startsWith(forbidden + '/'))) errors.push(app.id + ': package files allowlist must not include ' + forbidden);
   if (pack) {
     const result = spawnSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: app.dir, encoding: 'utf8' });
-    if (result.status !== 0) { errors.push(`${app.id}: npm pack dry-run failed: ${String(result.stderr || result.stdout).trim()}`); return; }
-    let payload; try { payload = JSON.parse(result.stdout)[0]; } catch { errors.push(`${app.id}: npm pack returned invalid JSON`); return; }
-    if (payload.name !== pkg.name) errors.push(`${app.id}: npm pack name mismatch`);
+    if (result.status !== 0) { errors.push(app.id + ': npm pack dry-run failed: ' + String(result.stderr || result.stdout).trim()); return; }
+    let payload; try { payload = JSON.parse(result.stdout)[0]; } catch { errors.push(app.id + ': npm pack returned invalid JSON'); return; }
+    if (payload.name !== pkg.name) errors.push(app.id + ': npm pack name mismatch');
     for (const file of payload.files || []) {
-      if (/^(reference|attachments|node_modules)(\/|$)/.test(file.path)) errors.push(`${app.id}: forbidden packed path: ${file.path}`);
+      if (/^(reference|attachments|node_modules)(\/|$)/.test(file.path)) errors.push(app.id + ': forbidden packed path: ' + file.path);
     }
-    if (!payload.files?.some((file) => file.path === 'package.json')) errors.push(`${app.id}: package.json missing from npm pack`);
+    if (!payload.files?.some((file) => file.path === 'package.json')) errors.push(app.id + ': package.json missing from npm pack');
   }
 }
 for (const app of apps) checkApp(app);
