@@ -1,5 +1,6 @@
 import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
 import { AgentSamShell } from "../../agentsam/AgentSamShell";
+import { PackagedConsoleFrame } from "../../agentsam/PackagedConsoleFrame";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
@@ -74,5 +75,5 @@ function RootDocument() {
 function ApplicationOutlet() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isApp = pathname === "/" || /^\/(agentsam|chats|cms|store|content|cad|samsketch|database|projects|artifacts|mail|tickets|collaborate|files|browse|cli|ship|widgets|settings)(\/|$)/.test(pathname);
-  return isApp ? <AgentSamShell /> : <Outlet />;
+  return isApp ? <PackagedConsoleFrame><AgentSamShell embedded /></PackagedConsoleFrame> : <Outlet />;
 }
