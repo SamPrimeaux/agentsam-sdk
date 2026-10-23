@@ -47,8 +47,8 @@ test('immutable product sources and packaged shell are the authority', () => {
 
 test('the packaged Console owns exactly one visible navigation surface', () => {
   const frame = readFileSync(new URL('../frontend/agentsam/PackagedConsoleFrame.tsx', import.meta.url), 'utf8');
-  assert.match(frame, /render\\(pathname,.*fullBleed: true/);
-  assert.equal(frame.includes(String.raw`\\n      render(`), false);
+  assert.match(frame, /render\(pathname,.*fullBleed: true/);
+  assert.equal(frame.includes(String.raw`\n      render(`), false);
   assert.doesNotMatch(frame, /includeMobileDrawer: true/);
   const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
   assert.match(shell, /!isSettings && !embedded \? <Nav\.Sidenav/);
