@@ -14,20 +14,26 @@ for (const [name, surfaces] of [['sidenav only', [Nav.Sidenav]], ['topbar only',
     if (surfaces.includes(Nav.Topbar)) assert.match(html, /Conversation One/);
   });
 }
-test('Apps groups real navigation destinations in the shared sidenav', () => {
+test('sidebar groups expand inline, not as portal menus or floating cards', () => {
   const destinations = [
     { id: 'home', label: 'Home', href: '/' },
-    { id: 'apps', label: 'Apps', children: [
-      { id: 'cad', label: 'CAD Creator', href: '/cad' },
+    { id: 'apps', label: 'Apps', active: true, children: [
+      { id: 'cad', label: 'CAD Creator', href: '/cad', active: true },
       { id: 'sites', label: 'Sites', href: '/cms' },
+    ] },
+    { id: 'products', label: 'Products', children: [
+      { id: 'all-products', label: 'All products', href: '/admin/products' },
     ] },
   ];
   const html = renderToString(React.createElement(Nav.Provider,
     { value: { ...value, destinations }, defaultOpen: true }, React.createElement(Nav.Sidenav)));
-  assert.match(html, /aria-label="Apps"/);
-  assert.match(html, /aria-haspopup="menu"/);
-  assert.match(html, /aria-label="Home"/);
-  assert.doesNotMatch(html, /aria-label="CAD Creator"/, 'nested destinations should not be duplicated as primary rail buttons');
+  assert.match(html, /aria-expanded="true" aria-controls="as-nav-submenu-apps"/);
+  assert.match(html, /role="group" aria-label="Apps pages"/);
+  assert.match(html, /aria-current="page"/);
+  assert.match(html, /CAD Creator/);
+  assert.match(html, /aria-expanded="false" aria-controls="as-nav-submenu-products"/);
+  assert.doesNotMatch(html, /as-nav-popover/, 'navigation should not use flyout card popovers');
+  assert.doesNotMatch(html, /All products/, 'other groups remain collapsed');
 });
 
 test('consumer context and brand tokens stay isolated between providers', () => {
