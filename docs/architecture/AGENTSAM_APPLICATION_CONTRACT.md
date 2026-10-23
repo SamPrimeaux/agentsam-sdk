@@ -192,3 +192,40 @@ app        Studio  APP / host
 ```
 
 Goal is **not** one identifier everywhere. Goal is **one canonical identifier per namespace**, with explicit relationships between namespaces.
+
+## Product-family and navigation boundaries
+
+These boundaries are binding for Local Studio, the public CAD experience, and future desktop app distribution.
+
+### Product identities
+
+- **Local Studio is the host shell.** It owns identity/session presentation, global navigation, app discovery, installed-app state, projects, search, settings, and the shared AgentSam assistant surface. It does not absorb every product's specialist UI.
+- **CAD Creator and SamSketch are separate APPs.** Their canonical identities remain `cad-creator` and `samsketch`, each with its own `agentsam.app.json`, route, release, and user experience. CAD Creator remains the engineering-oriented CAD workspace. SamSketch remains the visual, Spline-inspired scene-authoring experience. They may share host services, project references, selection/context contracts, and AgentSam assistance; they must not redirect into one another or be presented as one interchangeable editor.
+- **DreamHouse is an owner project, not an APP.** It belongs in the project registry and is opened from the CAD Creator project workflow. It must not acquire a product manifest, installed-app entry, or standalone top-level route. Owner-project loading must fail visibly if the local project authority is unavailable; it must not silently substitute a public example.
+- **A product family is a catalog grouping, not a route merge.** CAD Creator and SamSketch may be discoverable together under a CAD & 3D family, while remaining separately launchable/installable APPs.
+- **Do not create a separate APP identity for a capability just because it has a tool, tab, or workspace name.** A capability becomes an installable APP only when it has an owned manifest, package/release, runtime contract, and installation behavior.
+
+### Navigation responsibilities
+
+- Global shell navigation exposes host-level destinations and the separately installed apps.
+- Each app owns its specialist toolbar, layouts, panels, tools, and contextual menus. Shared design-system components may be reused; product interaction models must not be homogenized.
+- The **Apps +** affordance opens the app catalog/discovery flow. The installed-app list is derived from host installation state, not a hard-coded list pretending every catalog product is installed.
+- Dropdowns organize contextual layouts and actions. They should progressively reveal tools when relevant rather than add every command as a permanent global navigation item.
+- Projects are data entities, not installed apps. Project records point to the owning product/runtime and its authoritative files/revisions; the project name does not become a new route or product identity.
+
+### Catalog, install, and native-runtime boundaries
+
+- `agentsam_products` is the official product/catalog authority. `agentsam.app.json` defines a portable APP's identity and distribution contract. `agentsam_plugins` is for installable integrations/providers, not a duplicate APP catalog.
+- The existing desktop manifest's `included_apps` is an explicit **build-time bootstrap bundle**. It is not proof of runtime installation and must not be treated as the long-term app marketplace.
+- Runtime app installation requires a real flow: discover a verified release; check host/OS compatibility and permissions; download and verify the versioned artifact; record the installation; mount/launch its declared routes; and expose uninstall/update/rollback state. Until that flow exists, UI must not claim that an app was installed merely because its manifest contains an npm command.
+- A web-first APP must not require a Rust rebuild just to be installed or updated. Rust commands, native sidecars, filesystem access, and other privileged host capabilities are opt-in host capabilities with explicit contracts and permissions. Only a product that genuinely requires a new native capability should trigger host-runtime work.
+- The base desktop host and its included bootstrap apps are released independently from later app artifacts wherever their runtime contracts permit it. A product release must declare whether it is a web bundle, a native capability, or both.
+
+### Required integration and release gates
+
+1. Validate the APP manifests and official product identities; reject duplicate IDs and missing release/runtime metadata.
+2. Run the changed app's tests and typecheck, the Local Studio shell/route contract tests, and relevant native/provider tests.
+3. Build the actual app bundles. Launch the Local Studio preview and verify that CAD Creator and SamSketch open independently, their assistant/context bridges work, and the Apps navigation does not claim unavailable installation functionality.
+4. Verify the DreamHouse owner-project path through the local project authority and project registry. Verify that public CAD preview remains isolated from owner-only project data and does not redirect users to the AgentSam dashboard to perform the advertised work.
+5. Commit and push the finished integration; merge to `main` only after the gates pass. Publish/deploy the relevant web artifact and/or desktop package from the merged source, then verify the actual destination URL/build.
+6. After verification, prune completed remote branches and worktrees. Do not leave a completed implementation living only in an agent branch, local tree, chat, or screenshot.

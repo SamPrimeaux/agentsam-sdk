@@ -15,6 +15,8 @@ import {
 import { TEMPLATES } from '../lib/templates';
 import { createEmptyCadProject } from '../lib/create-empty-project';
 import { loadDreamHouseProject } from '../lib/dreamhouse-source';
+import { loadOwnerDreamHouseProject } from '../lib/owner-project-source';
+import { cloneProjectForPublicUser, createPublicExampleProject, isTrustedLocalCadHost, type CadAccessMode } from '../lib/project-access';
 import {
   CadEngineeringToolbar, CadProjectExplorer, CadPropertyInspector,
   type CadElementSelection, type CadElementGroup
@@ -70,42 +72,64 @@ import {
 
 export interface CadCreatorAppProps {
   presentation?: 'standalone' | 'embedded';
+  accessMode?: CadAccessMode;
   initialWorkspace?: WorkspaceId;
   onNavigateHost?: (path: string) => void;
 }
 
 export function CadCreatorApp({
   presentation = 'standalone',
+  accessMode = 'public-demo',
   initialWorkspace = 'plan',
   onNavigateHost
 }: CadCreatorAppProps) {
-  // 1. Core Project State
+  const canCollaborate = accessMode === 'owner'
+    && typeof window !== 'undefined'
+    && isTrustedLocalCadHost(window.location.hostname);
+  const startNewProject = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('new') === '1';
+
+  // 1. Core Project State. Public users get an independent starter, never the owner's project ID.
   const [showBimStarters, setShowBimStarters] = useState(false);
-  const [project, setProject] = useState<ProjectState>(createEmptyCadProject);
-  const [sourceStatus,setSourceStatus] = useState<'loading'|'loaded'|'unavailable'>('loading');
+  const [project, setProject] = useState<ProjectState>(() => accessMode === 'public-demo' && !startNewProject
+    ? createPublicExampleProject()
+    : createEmptyCadProject());
+  const [sourceStatus,setSourceStatus] = useState<'loading'|'loaded'|'unavailable'>(() => accessMode === 'public-demo' || startNewProject ? 'loaded' : 'loading');
   const [sourceError,setSourceError] = useState('');
   const openDreamHouse = useCallback(async () => {
     setSourceStatus('loading');
     setSourceError('');
-    // Unauthorized or unreachable world assets must never replace an editable model.
+    // Owner mode uses the local project authority; public mode only reads a published example.
+    // A failed request never replaces the current canvas or falls back across the boundary.
     try {
-      const source = await loadDreamHouseProject();
-      setProject(source);
+      const source = accessMode === 'owner'
+        ? await loadOwnerDreamHouseProject()
+        : await loadDreamHouseProject();
+      const nextProject = accessMode === 'owner'
+        ? source
+        : cloneProjectForPublicUser(source, 'DreamHouse · Personal Example');
+      setProject(nextProject);
       setHistory([]); setRedoStack([]); setUiSelection(null); setVerifiedProjectRevision(null);
-      setActiveWorkspace('model'); setPlanLayout('split'); setModelModule(null);
+      const requestedWorkspace = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('workspace');
+      setActiveWorkspace(requestedWorkspace === 'samsketch' ? 'plan' : 'model'); setPlanLayout('split'); setModelModule(null);
       setExplorerOpen(false); setInspectorOpen(false);
       setSourceStatus('loaded');
     } catch (error) {
       setSourceStatus('unavailable');
-      setSourceError(error instanceof Error ? error.message : 'DreamHouse source unavailable');
+      setSourceError(error instanceof Error ? error.message : 'DreamHouse project source unavailable');
     }
-  }, []);
+  }, [accessMode]);
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('new') === '1') {
-      setSourceStatus('unavailable');
-      return;
+    if (startNewProject) {
+      setSourceStatus('loaded');
+      setSourceError('');
+    } else if (accessMode === 'public-demo') {
+      setProject(createPublicExampleProject());
+      setSourceStatus('loaded');
+      setSourceError('');
+    } else {
+      void openDreamHouse();
     }
-    void openDreamHouse();
     const reopen = () => { void openDreamHouse(); };
     const blank = () => startBlankProject();
     window.addEventListener('agentsam:cad-open-dreamhouse', reopen);
@@ -114,7 +138,7 @@ export function CadCreatorApp({
       window.removeEventListener('agentsam:cad-open-dreamhouse', reopen);
       window.removeEventListener('agentsam:cad-new-project', blank);
     };
-  }, [openDreamHouse]);
+  }, [accessMode, openDreamHouse, startNewProject]);
 
   // Undo / Redo history stacks
   const [history, setHistory] = useState<ProjectState[]>([]);
@@ -190,7 +214,7 @@ export function CadCreatorApp({
       id: 'local_' + (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)),
       name: 'Local CAD Editor',
       color: '#82a7fb',
-      role: 'Owner',
+      role: canCollaborate ? 'Owner' : 'Editor',
       selectedIds: [],
       activeTool: 'select',
       lastActive: Date.now()
@@ -243,6 +267,10 @@ export function CadCreatorApp({
   // Initialize WebSocket Collaboration
   useEffect(() => {
     setIsSynced(false);
+    if (!canCollaborate) {
+      setRemoteUsers([]);
+      return;
+    }
     collaborationClient.connect(roomId, currentUser);
     const unsubConnected = collaborationClient.on('connected', () => setIsSynced(true));
     const unsubDisconnected = collaborationClient.on('disconnected', () => setIsSynced(false));
@@ -298,7 +326,7 @@ export function CadCreatorApp({
       unsubCursor();
       collaborationClient.disconnect();
     };
-  }, [roomId, currentUser.id]);
+  }, [canCollaborate, roomId, currentUser.id]);
 
   // Project state updater with History & Socket broadcasting
   const updateProject = useCallback((updater: (prev: ProjectState) => ProjectState) => {
@@ -312,10 +340,10 @@ export function CadCreatorApp({
       const next = updater(prev);
       setHistory((h) => [...h.slice(-20), prev]);
       setRedoStack([]);
-      collaborationClient.sendProjectUpdate(next);
+      if (canCollaborate) collaborationClient.sendProjectUpdate(next);
       return next;
     });
-  }, [isViewer]);
+  }, [isViewer, canCollaborate]);
 
   // Undo / Redo
   const handleUndo = () => {
@@ -324,7 +352,7 @@ export function CadCreatorApp({
     setRedoStack((r) => [...r, project]);
     setHistory((h) => h.slice(0, h.length - 1));
     setProject(previous);
-    collaborationClient.sendProjectUpdate(previous);
+    if (canCollaborate) collaborationClient.sendProjectUpdate(previous);
   };
 
   const startBlankProject = () => {
@@ -334,7 +362,8 @@ export function CadCreatorApp({
     if (hasContents && !window.confirm('Start a blank CAD project? Save the current project first if you want to keep it.')) return;
     const blank = createEmptyCadProject();
     setProject(blank);
-    setSourceStatus('unavailable');
+    setSourceStatus('loaded');
+    setSourceError('');
     setHistory([]);
     setRedoStack([]);
     setUiSelection(null);
@@ -343,7 +372,7 @@ export function CadCreatorApp({
     setActiveWorkspace('plan');
     setPlanLayout('2d');
     setActiveTool('select');
-    collaborationClient.sendProjectUpdate(blank);
+    if (canCollaborate) collaborationClient.sendProjectUpdate(blank);
   };
 
   const handleRedo = () => {
@@ -352,7 +381,7 @@ export function CadCreatorApp({
     setRedoStack((r) => r.slice(0, r.length - 1));
     setHistory((h) => [...h, project]);
     setProject(next);
-    collaborationClient.sendProjectUpdate(next);
+    if (canCollaborate) collaborationClient.sendProjectUpdate(next);
   };
 
   const currentWorkspaceDescriptor =
@@ -586,10 +615,10 @@ export function CadCreatorApp({
         <section className="cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]">
           {sourceStatus === 'unavailable' && sourceError && (
             <div role="alert" className="absolute left-3 top-3 z-40 max-w-[min(430px,calc(100%-24px))] rounded-xl border border-amber-400/35 bg-slate-950/95 p-3 text-xs text-slate-100 shadow-xl">
-              <strong>DreamHouse V1.1 could not be opened</strong>
+              <strong>{accessMode === 'owner' ? 'Owner DreamHouse project unavailable' : 'Public DreamHouse example unavailable'}</strong>
               <p className="mt-1 text-slate-300">{sourceError}</p>
-              <p className="mt-1 text-slate-400">Your saved BIM has not been replaced. Sign in to the CAD project service or open a saved project using Project &amp; native tools.</p>
-              <button type="button" className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 hover:bg-white/10" onClick={() => void openDreamHouse()}>Retry DreamHouse</button>
+              <p className="mt-1 text-slate-400">{accessMode === 'owner' ? 'No public example was substituted. The local project service must return the saved owner BIM; no source files were modified.' : 'Your current example canvas has not been replaced. You can keep editing it or choose another starter.'}</p>
+              <button type="button" className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 hover:bg-white/10" onClick={() => void openDreamHouse()}>{accessMode === 'owner' ? 'Retry owner project' : 'Retry public example'}</button>
               <button type="button" className="ml-2 rounded-lg px-3 py-1.5 text-slate-300 hover:bg-white/10" onClick={() => setSourceError('')}>Dismiss</button>
             </div>
           )}
@@ -638,7 +667,7 @@ export function CadCreatorApp({
 
               {(planLayout === 'split') && (
                 <div className="h-full relative w-1/2">
-                  {project.id==='dreamhouse-v1-wip' && sourceStatus==='loaded'
+                  {accessMode === 'public-demo' && project.id==='dreamhouse-v1-wip' && sourceStatus==='loaded'
                     ? <DreamHouseWorldViewport onSelect={({designId})=>{
                         const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                         for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
@@ -667,7 +696,7 @@ export function CadCreatorApp({
           {activeWorkspace === 'model' && (
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
-              : project.id==='dreamhouse-v1-wip' && sourceStatus==='loaded'
+              : accessMode === 'public-demo' && project.id==='dreamhouse-v1-wip' && sourceStatus==='loaded'
                 ? <DreamHouseWorldViewport onSelect={({designId})=>{
                     const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                     for(const [group,records] of groups){if(records.some(item=>item.id===designId)){

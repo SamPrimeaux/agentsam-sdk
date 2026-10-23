@@ -11,11 +11,9 @@ const ICONS = {
   growth: '<circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><path d="m9 13 2 2 4-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
   discounts: '<path d="M4 9V6a2 2 0 0 1 2-2h3l11 11a2 2 0 0 1 0 3l-4 4a2 2 0 0 1-3 0L2 11" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/>',
   content: '<path d="M7 4h7l4 4v12H7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13 4v5h5M10 13h5M10 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
-  markets: '<circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><path d="M4 12h16M12 4c2.5 2 2.5 14 0 16M12 4c-2.5 2-2.5 14 0 16" stroke="currentColor" stroke-width="1.4"/>',
   finance: '<path d="M4 9 12 4l8 5M5 9v9h14V9M9 18v-5M12 18v-5M15 18v-5M3 20h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
   analytics: '<path d="M5 20V10M12 20V4M19 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   store: '<path d="M4 9 5 5h14l1 4M4 9h16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM5.5 13V20h13v-7" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
-  pos: '<rect x="6" y="3" width="12" height="18" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M10 18h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   agentic: '<rect x="5" y="8" width="14" height="11" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M12 4v4M9 13h.01M15 13h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
   email: '<path d="M4 6h16v12H4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m4 7 8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
   plusCircle: '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
@@ -49,7 +47,6 @@ const NAV = {
     { href: "/admin/growth", label: "Growth", icon: "growth" },
     { href: "/admin/discounts", label: "Discounts", icon: "discounts" },
     { href: "/admin/content", label: "Content", icon: "content" },
-    { href: "/admin/scaffold?view=markets", label: "Markets", icon: "markets" },
     {
       id: "analytics",
       label: "Analytics",
@@ -73,10 +70,9 @@ const NAV = {
         { href: "/admin/preferences", label: "Preferences" },
       ],
     },
-    { href: "/admin/scaffold?view=pos", label: "Point of Sale", icon: "pos" },
-    { href: "/admin/agentsam", label: "AgentSam", icon: "agentic" },
   ],
   apps: [
+    { href: "/admin/agentsam", label: "AgentSam", icon: "agentic" },
     {
       id: "email",
       label: "Email",
@@ -117,7 +113,6 @@ const ADMIN_EXIT_ROUTES = [
   "/admin/growth",
   "/admin/subscribers",
   "/admin/email",
-  "/admin/scaffold",
 ];
 const EDITOR_RETURN_KEY = "agentsam.editorReturn";
 
@@ -598,7 +593,16 @@ function renderSideNav(activeHref, userNav, options = {}) {
       <div class="console-nav-group">${main}</div>
       <div class="console-nav-label">Sales channels</div>
       <div class="console-nav-group">${channels}</div>
-      <div class="console-nav-label console-nav-label--apps"><span>Apps</span>${icon("plusCircle", 14, "console-nav-apps-add")}</div>
+      <div class="console-nav-label console-nav-label--apps"><span>Apps</span><button type="button" class="console-nav-apps-add" data-apps-add-toggle aria-label="Add apps" aria-expanded="false" title="Add apps">${icon("plusCircle", 16)}</button></div>
+      <div class="console-nav-apps-menu" data-apps-add-menu hidden>
+        <strong>Open an application</strong>
+        <nav aria-label="Available applications">
+          <a href="/admin/agentsam">AgentSam</a>
+          <a href="/admin/email">Email</a>
+        </nav>
+        <p>These available workspaces open in this dashboard. Additional app installation requires the authenticated catalog and is not simulated in this preview.</p>
+        <button type="button" data-apps-add-close>Close</button>
+      </div>
       <div class="console-nav-group">${apps}</div>
     </div>
     <div class="console-sidenav-profile${drawer ? " console-sidenav-profile--drawer" : ""}" data-profile-popup-root>
@@ -633,8 +637,9 @@ function buildUserNav(user) {
   const slug = user?.primary_mailbox;
   const boxes = user?.mailboxes || [];
 
+  const emailIndex = nav.apps.findIndex((entry) => entry.id === "email");
   if (boxes.length <= 1 && slug) {
-    nav.apps = [{ href: `/admin/email?mailbox=${slug}`, label: "Email", icon: "email" }];
+    nav.apps[emailIndex] = { href: `/admin/email?mailbox=${encodeURIComponent(slug)}`, label: "Email", icon: "email" };
   } else if (boxes.length > 1) {
     const primary = slug || boxes[0]?.slug;
     const children = [];
@@ -648,15 +653,13 @@ function buildUserNav(user) {
       href: `/admin/email?mailbox=${primary}&folder=sent`,
       label: "Sent",
     });
-    nav.apps = [
-      {
-        id: "email",
-        label: "Email",
-        icon: "email",
-        href: `/admin/email?mailbox=${primary}`,
-        children,
-      },
-    ];
+    nav.apps[emailIndex] = {
+      id: "email",
+      label: "Email",
+      icon: "email",
+      href: `/admin/email?mailbox=${encodeURIComponent(primary)}`,
+      children,
+    };
   }
   return nav;
 }
@@ -890,6 +893,20 @@ function bindConsoleGlobalHandlers() {
   window.__consoleGlobalHandlers = true;
 
   document.addEventListener("click", (e) => {
+    const appsToggle = e.target.closest("[data-apps-add-toggle]");
+    const appsClose = e.target.closest("[data-apps-add-close]");
+    if (appsToggle || appsClose) {
+      e.preventDefault();
+      const currentMenu = appsToggle?.closest(".console-sidenav-scroll")?.querySelector("[data-apps-add-menu]");
+      const nextOpen = Boolean(appsToggle) && Boolean(currentMenu?.hidden);
+      document.querySelectorAll("[data-apps-add-menu]").forEach((menu) => { menu.hidden = !nextOpen; });
+      document.querySelectorAll("[data-apps-add-toggle]").forEach((button) => { button.setAttribute("aria-expanded", String(nextOpen)); });
+      return;
+    }
+    if (!e.target.closest("[data-apps-add-menu]")) {
+      document.querySelectorAll("[data-apps-add-menu]").forEach((menu) => { menu.hidden = true; });
+      document.querySelectorAll("[data-apps-add-toggle]").forEach((button) => { button.setAttribute("aria-expanded", "false"); });
+    }
     const searchTrigger = e.target.closest("#console-search-trigger");
     if (searchTrigger) {
       e.preventDefault();

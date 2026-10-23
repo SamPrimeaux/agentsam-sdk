@@ -24,3 +24,6 @@ pub mod system;
 // Shell Utilities & Desktop Hooks
 pub mod deep_link;
 pub mod updater;
+
+// Optional native AgentSam sprite companion.
+pub mod agent_sam_pet;

@@ -6,7 +6,7 @@ mod menu;
 mod tray;
 
 use commands::{
-    agentsamd, cad, chrome_browser, cloudflare_desktop_identity, deep_link,
+    agent_sam_pet, agentsamd, cad, chrome_browser, cloudflare_desktop_identity, deep_link,
     google_desktop_identity, keychain, local_content, local_identity, local_lsp, local_node,
     local_provider, local_sqlite, native_capabilities, system, updater,
 };
@@ -63,6 +63,7 @@ fn main() {
             local_content::local_content_bridge,
             native_capabilities::native_capabilities,
             system::open_external_url,
+            system::focus_main_window,
             chrome_browser::open_agent_browser,
             system::desktop_workspace_context,
             commands::autorag::autorag_workflow_bridge,
@@ -76,6 +77,8 @@ fn main() {
             // CAD Engine Commands
             cad::generate_cad_mesh,
             cad::export_step_file,
+            agent_sam_pet::toggle_agent_sam_pet,
+            agent_sam_pet::close_agent_sam_pet,
         ])
         .run(tauri::generate_context!())
         .expect("error while running agentsam desktop shell");

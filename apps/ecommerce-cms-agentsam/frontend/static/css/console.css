@@ -491,7 +491,23 @@ body.agentsam-open .agentsam-dock {
 }
 
 .console-nav-label--apps { justify-content: space-between; }
-.console-nav-label .console-nav-apps-add { width: 14px; height: 14px; margin-left: auto; opacity: 0.72; }
+/* App catalog affordance remains inside the existing sidebar, never another shell. */
+.console-nav-label .console-nav-apps-add {
+  margin-left: auto; width: 26px; height: 26px; padding: 3px;
+  display: grid; place-items: center; border: 0; border-radius: 7px;
+  color: inherit; background: transparent; cursor: pointer;
+}
+.console-nav-apps-add:hover, .console-nav-apps-add[aria-expanded="true"] { background: var(--c-hover); color: var(--c-ink); }
+.console-nav-apps-add:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; }
+.console-nav-apps-menu[hidden] { display: none !important; }
+.console-nav-apps-menu { margin: 3px 8px 8px; padding: 12px; border: 1px solid var(--c-border, rgba(130,130,150,.3)); border-radius: 10px; background: var(--c-hover); color: var(--c-ink); }
+.console-nav-apps-menu strong { font-size: 13px; }
+.console-nav-apps-menu nav { display:flex; flex-direction:column; gap:2px; margin-top:8px; }
+.console-nav-apps-menu nav a { padding:8px; border-radius:7px; color:var(--c-ink); text-decoration:none; font-size:12px; }
+.console-nav-apps-menu nav a:hover { background:var(--c-active); }
+.console-nav-apps-menu nav a:focus-visible { outline:2px solid var(--c-focus); outline-offset:2px; }
+.console-nav-apps-menu p { font-size: 12px; line-height: 1.5; color: var(--c-ink-2); margin: 7px 0 12px; }
+.console-nav-apps-menu button { font: inherit; border: 1px solid var(--c-border, rgba(130,130,150,.3)); background: transparent; color: inherit; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
 
 .console-nav-item {
   display: flex;

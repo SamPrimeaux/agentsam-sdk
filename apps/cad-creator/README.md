@@ -598,7 +598,7 @@ Project writes are revision-guarded. Builds and downstream artifacts are tied ba
 
 ### Verified native OCCT integration (2026-10-18)
 
-The current SDK already contains a real C++ OpenCascade engine at `services/cad/occt/`. The local host build was tested with OpenCascade **7.9.3** and installed as `~/.agentsam/bin/agentsam-occt`. Its existing `createOcctNativeProvider` implements actual kernel doctor, STEP export/reopen, volume inspection, and SHA-256 artifact verification.
+The canonical C++ OpenCascade engine lives in `packages/agentsam-occt/native/`; `services/cad/occt/` remains a compatibility CMake entrypoint. The local host build was tested with OpenCascade **7.9.3** and installed as `~/.agentsam/bin/agentsam-occt`. The package-owned `createOcctNativeProvider` implements actual kernel doctor, STEP export/reopen, volume inspection, and SHA-256 artifact verification.
 
 CAD Creator now consumes this engine **through the same `cad.project.v1` nine-tool vocabulary**. A saved editable `parametricObjects` entry with `generator: "occt"`, `generatorTemplate: "box"`, and `source: "occt:box"` can be built by `design_model_build` with `engine: "occt"` and its `parametric_object_id`. `design_model_inspect` and `design_model_export` with `format: "step"` then verify the exact revision and deliver its STEP artifact. The existing Blender scene build/render remains the default. This proves a **native precision solid**, not yet a complete IFC/BIM architectural compiler.
 

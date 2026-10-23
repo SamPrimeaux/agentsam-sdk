@@ -1,10 +1,5 @@
-# `_app` vs `(apps)` route ownership
+# Superseded route donors
 
-Generated `src/routeTree.gen.ts` mounts **live** Studio surfaces from `routes/(apps)/*`.
+`routes/_app/*` and `routes/_app.tsx` are historical donors, not runtime routes. The canonical application routes live under `routes/(apps)/*`, and the route generator explicitly excludes this entire legacy tree.
 
-| Path | Status |
-| --- | --- |
-| `routes/(apps)/*` | **Live** public routes (`/cms`, `/artifacts`, `/projects`, …) |
-| `routes/_app/*` | **Superseded donors** — keep for reference; do not add new product code |
-
-When retiring a `_app` file, leave a short superseded stub (`export {}`) rather than deleting blindly until desktop/docs references are audited.
+Do not add new product code here. Port any remaining required behavior into the canonical `(apps)` route or shared component before retiring a donor. The downloaded desktop shell is `AgentSamShell`; `AppShellFrame` is not an active route shell.

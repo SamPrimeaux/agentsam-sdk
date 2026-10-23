@@ -10,8 +10,8 @@ For a fresh checkout, install the repository workspace dependencies and the inde
 
 ## Deletion candidates after live UI approval
 
-- `frontend/src/routes/_app.tsx` and `frontend/src/routes/_app/`: excluded legacy route tree; replaced by `(apps)` adapters. Remove together after approval.
-- `frontend/src/components/shell/AppShellFrame.tsx`, its old navigation rail, and legacy TrailWorkspace layout: retire after confirming no callers outside the old routes. Keep shared CLI, resize, and offline components used by the new shell.
+- `frontend/src/routes/_app.tsx` and `frontend/src/routes/_app/`: superseded donor tree, explicitly excluded by `scripts/generate-routes.mjs`; do not ship or add routes here.
+- `frontend/src/components/shell/AppShellFrame.tsx` and its old navigation rail are legacy shell donors only. The downloaded and hosted product shell is `frontend/agentsam/AgentSamShell.tsx`; keep shared CLI, resize, and offline components that it imports.
 - Donor `agentsam.html`, `agentsam-page.js`, `agentsam-page.css`: archive or remove after confirming no external asset consumers. Keep any still-used icons/assets.
 - Old bone-paper shell styles and duplicate navigation CSS: remove by selector/caller audit after CMS/editor views are verified; do not delete generic controls wholesale.
 - Old CAD route and external-domain fallback: retire with `_app`; the active route now loads the built CAD application.

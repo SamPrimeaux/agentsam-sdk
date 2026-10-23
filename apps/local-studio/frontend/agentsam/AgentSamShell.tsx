@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { BookOpen, Film, Database, Folder, Globe, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn , PenTool, Box} from "lucide-react";
+import { BookOpen, CircleHelp, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, PawPrint, Box } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -17,7 +17,7 @@ import { AnnotationHelper } from './AnnotationHelper';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
-import { isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent } from "@/lib/desktop/tauri";
+import { isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settings';
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
@@ -208,13 +208,21 @@ export function AgentSamShell() {
     conversations: state.trails.map((item) => ({ id: item.id, title: item.title, projectId: item.projectId, pinned: item.pinned })),
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: user.profileImageUrl ?? undefined } : undefined,
     destinations: [
+      { id: 'home', label: 'Home', icon: <Home />, href: '/', active: pathname === '/' },
       { id: 'library', label: 'Library', icon: <BookOpen />, href: '/artifacts', active: pathname === '/artifacts' },
       { id: 'sites', label: 'Sites', icon: <Globe />, href: '/cms', active: pathname === '/cms' },
       { id: 'cad', label: 'CAD Creator', icon: <Box aria-hidden="true" />, href: '/cad', active: pathname === '/cad' },
-      { id: 'samsketch', label: 'SamSketch', icon: <PenTool aria-hidden="true" />, href: '/samsketch', active: isSamSketchRoute },
       { id: 'database', label: 'Database', icon: <Database />, href: '/database', active: pathname === '/database' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
       { id: 'media', label: 'Media', icon: <Film />, href: '/media', active: pathname === '/media' || pathname.startsWith('/media/') },
+      ...(isPackagedDesktop() ? [{
+        id: 'desktop-pet', label: 'Desktop pet', icon: <PawPrint aria-hidden="true" />,
+        onSelect: () => {
+          void toggleAgentSamPet()
+            .then((visible) => toast.success(visible ? 'AgentSam pet is on your desktop' : 'AgentSam pet hidden'))
+            .catch(() => toast.error('AgentSam desktop pet could not be opened.'));
+        },
+      }] : []),
     ],
     onNavigate: go,
     onCreateConversation: () => { state.startTrail(); go('/agentsam'); },
@@ -246,7 +254,7 @@ export function AgentSamShell() {
       {!isSettings ? <Nav.Sidenav /> : null}<div className="agentsam-main">
         {!isConversation ? isWorkspaceRoute
           ? <Nav.Topbar startup showAccount />
-          : <Nav.Topbar><Nav.TopbarLogo toggle /><span>{pathname.startsWith('/cms') ? 'Sites' : pathname.startsWith('/artifacts') ? 'Library' : pathname.split('/')[1].replace(/^./, (letter) => letter.toUpperCase())}</span><Nav.TopbarSpacer /><Nav.AccountSwitcher /></Nav.Topbar> : null}
+          : <Nav.Topbar><Nav.TopbarLogo toggle /><span>{pathname.startsWith('/cms') ? 'Sites' : pathname.startsWith('/artifacts') ? 'Library' : pathname.split('/')[1].replace(/^./, (letter) => letter.toUpperCase())}</span><Nav.TopbarSpacer /><button type="button" className="as-nav-button" title="Help & documentation" aria-label="Help & documentation" onClick={() => go('/docs')}><CircleHelp size={18} /></button><Nav.AccountSwitcher /></Nav.Topbar> : null}
         <OfflineBanner /><main className="agentsam-route"><Outlet /></main>
       </div><CliDrawer /><CommandPalette />
       <Dialog open={sharing} onOpenChange={setSharing}><DialogContent><DialogTitle>Share conversation</DialogTitle><DialogDescription>Copy this conversation as text to share it. This does not create a public link.</DialogDescription><button type="button" className="as-nav-button" onClick={() => { if (!trail) return; void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => { toast('Conversation copied'); setSharing(false); }, () => toast('Could not copy conversation')); }}><Copy size={18} />Copy conversation</button></DialogContent></Dialog>
