@@ -38,7 +38,7 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
       if (cancelled) return;
       const render = (window as WindowWithConsole).renderShell;
       if (typeof render !== 'function') throw new Error('Packaged console renderer missing');
-      render(pathname, '<div id="agentsam-host-workspace"></div>', { fullBleed: true, includeMobileDrawer: true });
+      // The persistent Console sidebar already handles responsive navigation.\n      // Adding its separate mobile drawer here renders a second sidebar on desktop.\n      render(pathname, '<div id="agentsam-host-workspace"></div>', { fullBleed: true });
       if (cancelled) return;
       const outlet = document.getElementById('agentsam-host-workspace');
       if (!outlet) throw new Error('Packaged console workspace mount missing');

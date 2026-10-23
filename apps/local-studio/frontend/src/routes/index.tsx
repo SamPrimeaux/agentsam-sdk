@@ -17,7 +17,7 @@ const apps: Array<{
 }> = [
   { id: "cad", label: "CAD Creator", description: "Draft with SamSketch, model with SamSculpt, and evolve the DreamHouse BIM in one workspace.", to: "/cad", icon: Box },
   { id: "projects", label: "Projects", description: "Organize active work, project files, and deliverables.", to: "/projects", icon: Folder },
-  { id: "agentsam", label: "AgentSam Work", description: "Plan, research, and carry out work with your assistant.", to: "/agentsam", icon: MessageSquare },
+  { id: "agentsam", label: "AgentSam", description: "Plan, research, and carry out work with your assistant.", to: "/agentsam", icon: MessageSquare },
   { id: "commerce", label: "Commerce CMS", description: "Manage storefronts, products, themes, content, and publishing.", to: "/apps/ecommerce-cms-agentsam", icon: Globe },
   { id: "sites", label: "Sites", description: "Work with site content and connected web properties.", to: "/cms", icon: Globe },
   { id: "browser", label: "Browser", description: "Research the web and bring useful source material into your work.", to: "/browse", icon: Search },
@@ -62,7 +62,7 @@ function LocalStudioHome() {
           <div className="min-w-0">
             <p className="text-sm font-medium text-muted-foreground">AgentSam</p>
             <p className="mt-2 text-lg font-semibold text-foreground">{activeTrail?.title || "Start something"}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{activeTrail ? "Continue in AgentSam Work" : "Turn an idea into a plan and a result"}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{activeTrail ? "Continue in AgentSam" : "Turn an idea into a plan and a result"}</p>
           </div>
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground"><MessageSquare className="size-5" /></span>
         </Link>
