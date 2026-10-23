@@ -3,7 +3,7 @@ import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ChevronDown, Files, Folder, MessageSquare, MoreHorizontal, PanelLeft, PanelTop, Pin, Pencil, Plus, Search, Share, Trash2, User } from 'lucide-react';
 import { useNav } from './NavProvider.js';
-import type { NavAccount, NavAction, NavConversation, NavProject } from './contracts.js';
+import type { NavAccount, NavAction, NavConversation, NavDestination, NavProject } from './contracts.js';
 import { cx } from './utils.js';
 
 export function useNavStyle(): CSSProperties {
@@ -196,7 +196,13 @@ function ProjectRow({ item, conversations }: { item: NavProject; conversations: 
 }
 
 function SidenavContents() {
-  const { data, close, isMobile } = useNav();
+  const { data, close, isMobile, menu, setMenu, theme } = useNav();
+  const style = useNavStyle();
+  const selectDestination = (item: NavDestination) => {
+    if (item.onSelect) item.onSelect();
+    else if (item.href) data.onNavigate?.(item.href);
+    if (isMobile) close();
+  };
   const [query, setQuery] = useState('');
   const normalized = query.trim().toLowerCase();
   const conversations = (data.conversations ?? []).filter((item) => !normalized || item.title.toLowerCase().includes(normalized));
@@ -209,7 +215,19 @@ function SidenavContents() {
     <div className="as-nav-sidenav-main">
       <div className="as-nav-destinations">
         {data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null}
-        {(data.destinations ?? []).map((item) => <button type="button" key={item.id} className="as-nav-destination" title={item.label} aria-label={item.label} data-active={item.active || undefined} onClick={() => { if (item.onSelect) item.onSelect(); else if (item.href) data.onNavigate?.(item.href); if (isMobile) close(); }}>{item.icon}<span>{item.label}</span></button>)}
+        {(data.destinations ?? []).map((item) => item.children?.length
+          ? <Menu.Root key={item.id} open={menu === `destination-${item.id}`} onOpenChange={(next) => setMenu(next ? `destination-${item.id}` : null)} modal={false}>
+              <Menu.Trigger asChild><button type="button" className="as-nav-destination" title={item.label} aria-label={item.label} data-active={item.active || item.children.some((child) => child.active) || undefined} aria-haspopup="menu">
+                {item.icon}<span>{item.label}</span><ChevronDown aria-hidden="true" className="as-nav-destination-chevron" />
+              </button></Menu.Trigger>
+              <Menu.Portal><Menu.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover" align="start" sideOffset={8} collisionPadding={12}>
+                <Menu.Label className="as-nav-menu-heading">{item.label}</Menu.Label>
+                {item.children.map((child) => <Menu.Item key={child.id} className="as-nav-menu-row" data-active={child.active || undefined} disabled={!child.href && !child.onSelect} onSelect={() => selectDestination(child)}>
+                  {child.icon ? <span className="as-nav-icon">{child.icon}</span> : null}<span>{child.label}</span>
+                </Menu.Item>)}
+              </Menu.Content></Menu.Portal>
+            </Menu.Root>
+          : <button type="button" key={item.id} className="as-nav-destination" title={item.label} aria-label={item.label} data-active={item.active || undefined} onClick={() => selectDestination(item)}>{item.icon}<span>{item.label}</span></button>)}
       </div>
       <div className="as-nav-expanded-only as-nav-history">
         <label className="as-nav-search"><Search /><input aria-label="Search conversations" placeholder="Search conversations" value={query} onChange={(event) => setQuery(event.target.value)} /></label>

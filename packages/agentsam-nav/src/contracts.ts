@@ -8,7 +8,7 @@ export interface NavProject { id: string; name: string; pinned?: boolean }
 export interface NavConversation { id: string; title: string; projectId?: string; pinned?: boolean }
 export interface NavAccount { id: string; name: string; plan?: string; avatar?: string }
 export interface NavAction { id: string; label: string; icon?: ReactNode; disabled?: boolean; destructive?: boolean; separatorBefore?: boolean; children?: NavAction[]; onSelect?: () => void }
-export interface NavDestination { id: string; label: string; icon?: ReactNode; href?: string; onSelect?: () => void; active?: boolean }
+export interface NavDestination { id: string; label: string; icon?: ReactNode; href?: string; onSelect?: () => void; active?: boolean; children?: NavDestination[] }
 
 /** Consumer-owned context. This package never fetches or persists application data. */
 export interface NavValue {

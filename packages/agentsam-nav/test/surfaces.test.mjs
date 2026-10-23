@@ -14,6 +14,22 @@ for (const [name, surfaces] of [['sidenav only', [Nav.Sidenav]], ['topbar only',
     if (surfaces.includes(Nav.Topbar)) assert.match(html, /Conversation One/);
   });
 }
+test('Apps groups real navigation destinations in the shared sidenav', () => {
+  const destinations = [
+    { id: 'home', label: 'Home', href: '/' },
+    { id: 'apps', label: 'Apps', children: [
+      { id: 'cad', label: 'CAD Creator', href: '/cad' },
+      { id: 'sites', label: 'Sites', href: '/cms' },
+    ] },
+  ];
+  const html = renderToString(React.createElement(Nav.Provider,
+    { value: { ...value, destinations }, defaultOpen: true }, React.createElement(Nav.Sidenav)));
+  assert.match(html, /aria-label="Apps"/);
+  assert.match(html, /aria-haspopup="menu"/);
+  assert.match(html, /aria-label="Home"/);
+  assert.doesNotMatch(html, /aria-label="CAD Creator"/, 'nested destinations should not be duplicated as primary rail buttons');
+});
+
 test('consumer context and brand tokens stay isolated between providers', () => {
   const html = renderToString(React.createElement(React.Fragment, null,
     React.createElement(Nav.Provider, { value, tokens: { sidebar: '#223344' } }, React.createElement(Nav.Sidenav)),

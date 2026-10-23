@@ -210,11 +210,15 @@ export function AgentSamShell() {
     destinations: [
       { id: 'home', label: 'Home', icon: <Home />, href: '/', active: pathname === '/' },
       { id: 'library', label: 'Library', icon: <BookOpen />, href: '/artifacts', active: pathname === '/artifacts' },
-      { id: 'sites', label: 'Sites', icon: <Globe />, href: '/cms', active: pathname === '/cms' },
-      { id: 'cad', label: 'CAD Creator', icon: <Box aria-hidden="true" />, href: '/cad', active: pathname === '/cad' },
-      { id: 'database', label: 'Database', icon: <Database />, href: '/database', active: pathname === '/database' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
-      { id: 'media', label: 'Media', icon: <Film />, href: '/media', active: pathname === '/media' || pathname.startsWith('/media/') },
+      { id: 'apps', label: 'Apps', icon: <Layers3 aria-hidden="true" />, children: [
+        { id: 'cad', label: 'CAD Creator', icon: <Box aria-hidden="true" />, href: '/cad', active: pathname === '/cad' || pathname.startsWith('/cad/') },
+        { id: 'samsketch', label: 'SamSketch workspace', icon: <Layers3 aria-hidden="true" />, href: '/samsketch', active: pathname === '/samsketch' || pathname.startsWith('/samsketch/') },
+        { id: 'sites', label: 'Sites', icon: <Globe />, href: '/cms', active: pathname === '/cms' || pathname.startsWith('/cms/') },
+        { id: 'commerce', label: 'Ecommerce CMS', icon: <Box />, href: '/apps/ecommerce-cms-agentsam', active: pathname.startsWith('/apps/ecommerce-cms-agentsam') },
+        { id: 'database', label: 'Database', icon: <Database />, href: '/database', active: pathname === '/database' || pathname.startsWith('/database/') },
+        { id: 'media', label: 'Media', icon: <Film />, href: '/media', active: pathname === '/media' || pathname.startsWith('/media/') },
+      ] },
       ...(isPackagedDesktop() ? [{
         id: 'desktop-pet', label: 'Desktop pet', icon: <PawPrint aria-hidden="true" />,
         onSelect: () => {

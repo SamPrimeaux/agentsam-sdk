@@ -68,6 +68,8 @@
 .as-nav-destinations { padding: 4px 8px 12px; flex-shrink: 0; }
 .as-nav-destination { display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: var(--nav-row-height); width: 100%; text-align: left; background: transparent; border: 0; border-radius: var(--nav-radius); }
 .as-nav-destination:hover, .as-nav-destination[data-active] { background: var(--nav-selected); }
+.as-nav-destination-chevron { width: 15px; height: 15px; margin-left: auto; opacity: .7; }
+.as-nav-menu-row[data-active] { background: var(--nav-selected); }
 .as-nav-history { overflow-y: auto; flex: 1; min-height: 0; padding: 0 8px 16px; scrollbar-width: thin; scrollbar-color: var(--nav-border) transparent; }
 .as-nav-history h2 { font-size: var(--nav-meta-size); color: var(--nav-muted); font-weight:var(--fw-heading); margin: 20px 12px 8px; }
 .as-nav-search { display: flex; align-items: center; gap: 8px; padding: 8px 10px; color: var(--nav-muted); }
@@ -98,6 +100,7 @@
 .as-nav-sidenav:not([data-expanded="true"]) .as-nav-account .as-nav-button > svg { display: none; }
 .as-nav-sidenav:not([data-expanded="true"]) .as-nav-destination { justify-content:center; padding-inline:0; }
 .as-nav-sidenav:not([data-expanded="true"]) .as-nav-destination span { display:none; }
+.as-nav-sidenav:not([data-expanded="true"]) .as-nav-destination-chevron { display:none; }
 .as-nav-sidenav:not([data-expanded="true"]) .as-nav-sidenav-foot .as-nav-button { width:100%; padding-inline:0; }
 .as-nav-empty { color: var(--nav-muted); padding: 12px; font-size: var(--nav-meta-size); }
 .as-nav-dialog-overlay { position: fixed; inset: 0; z-index: 80; background: #0008; }
