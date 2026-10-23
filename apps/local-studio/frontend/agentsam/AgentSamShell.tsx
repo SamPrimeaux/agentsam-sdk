@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { BookOpen, CircleHelp, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, PawPrint, Box } from "lucide-react";
+import { MessageSquare as MessageSquareIcon, BookOpen, CircleHelp, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, PawPrint, Box, Search, Bell, ShoppingBag, Tag, BarChart3, Megaphone, Users, Mail } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -13,6 +13,7 @@ import { registerOfflineShell } from '@/lib/offline/register-sw';
 import { brand } from './brand';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import './shell.css';
+import './platform-console.css';
 import { AnnotationHelper } from './AnnotationHelper';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
@@ -46,8 +47,14 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const isSamSketchRoute = pathname === '/samsketch' || pathname.startsWith('/samsketch/');
   const isWorkspaceRoute = isCadRoute || isSamSketchRoute;
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
-  // CAD and SamSketch share the host Chat/Work switcher; never override the user's choice.
+  // The platform owns its shell; product-owned /admin pages navigate into
+  // the installed Ecommerce application without recreating product routers.
   const go = (to: string) => {
+    if (to.startsWith('/admin/') && to !== '/admin/home') {
+      if (isPackagedDesktop()) window.location.hash = '#/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(to);
+      else window.location.assign(to);
+      return;
+    }
     if (isPackagedDesktop()) {
       const normalized = to.startsWith('/') ? to : '/' + to;
       const nextHash = '#' + normalized;
@@ -208,24 +215,45 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     conversations: state.trails.map((item) => ({ id: item.id, title: item.title, projectId: item.projectId, pinned: item.pinned })),
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: user.profileImageUrl ?? undefined } : undefined,
     destinations: [
-      { id: 'home', label: 'Home', icon: <Home />, href: '/', active: pathname === '/' },
-      { id: 'library', label: 'Library', icon: <BookOpen />, href: '/artifacts', active: pathname === '/artifacts' },
+      { id: 'home', label: 'Home', icon: <Home />, href: '/admin/home', active: pathname === '/' || pathname === '/admin/home' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
-      { id: 'apps', label: 'Apps', icon: <Layers3 aria-hidden="true" />, children: [
-        { id: 'cad', label: 'CAD Creator', icon: <Box aria-hidden="true" />, href: '/cad', active: pathname === '/cad' || pathname.startsWith('/cad/') },
-        { id: 'samsketch', label: 'SamSketch workspace', icon: <Layers3 aria-hidden="true" />, href: '/samsketch', active: pathname === '/samsketch' || pathname.startsWith('/samsketch/') },
-        { id: 'sites', label: 'Sites', icon: <Globe />, href: '/cms', active: pathname === '/cms' || pathname.startsWith('/cms/') },
-        { id: 'commerce', label: 'Ecommerce CMS', icon: <Box />, href: '/apps/ecommerce-cms-agentsam', active: pathname.startsWith('/apps/ecommerce-cms-agentsam') },
-        { id: 'database', label: 'Database', icon: <Database />, href: '/database', active: pathname === '/database' || pathname.startsWith('/database/') },
-        { id: 'media', label: 'Media', icon: <Film />, href: '/media', active: pathname === '/media' || pathname.startsWith('/media/') },
+      { id: 'library', label: 'Library', icon: <BookOpen />, href: '/artifacts', active: pathname === '/artifacts' },
+      { id: 'tickets', label: 'Tickets', icon: <Files />, href: '/tickets', active: pathname === '/tickets' },
+      { id: 'sites', label: 'Sites / Online Store', icon: <Globe />, href: '/sites', active: pathname === '/sites', children: [
+        { id: 'sites-open', label: 'Sites workspace', href: '/sites', icon: <Globe /> },
+        { id: 'pages', label: 'Pages', href: '/admin/pages', icon: <Files /> },
+        { id: 'theme-editor', label: 'Theme Editor', href: '/admin/theme-editor?slug=home', icon: <Layers3 /> },
+        { id: 'site-preferences', label: 'Site preferences', href: '/admin/preferences', icon: <Settings /> },
       ] },
+      { id: 'products', label: 'Products', icon: <ShoppingBag />, children: [
+        { id: 'all-products', label: 'All products', href: '/admin/products', icon: <Box /> },
+        { id: 'create-product', label: 'Create product', href: '/admin/products/create', icon: <ShoppingBag /> },
+        { id: 'inventory', label: 'Inventory', href: '/admin/inventory', icon: <Database /> },
+        { id: 'orders', label: 'Orders', href: '/admin/orders', icon: <ShoppingBag /> },
+        { id: 'discounts', label: 'Discounts', href: '/admin/discounts', icon: <Tag /> },
+      ] },
+      { id: 'growth', label: 'Growth', icon: <Megaphone />, href: '/admin/growth' },
+      { id: 'content', label: 'Content', icon: <Files />, href: '/admin/content' },
+      { id: 'analytics', label: 'Analytics', icon: <BarChart3 />, children: [
+        { id: 'analytics-overview', label: 'Overview', href: '/admin/analytics/overview' },
+        { id: 'analytics-finance', label: 'Finance', href: '/admin/analytics/finance' },
+        { id: 'analytics-health', label: 'Health', href: '/admin/analytics/health' },
+      ] },
+      { id: 'audience', label: 'Audience', icon: <Users />, children: [
+        { id: 'subscribers', label: 'Subscribers', href: '/admin/subscribers' },
+      ] },
+      { id: 'apps', label: 'Apps', icon: <Layers3 aria-hidden="true" />, children: [
+        { id: 'agentsam', label: 'AgentSam', icon: <MessageSquareIcon />, href: '/agentsam', active: pathname === '/agentsam' || pathname.startsWith('/chats') },
+        { id: 'cad', label: 'CAD Creator', icon: <Box />, href: '/cad', active: isCadRoute },
+        { id: 'samsketch', label: 'SamSketch', icon: <Layers3 />, href: '/samsketch', active: isSamSketchRoute },
+        { id: 'media', label: 'Media', icon: <Film />, href: '/media' },
+        { id: 'browser', label: 'Browser', icon: <Globe />, href: '/browse' },
+        { id: 'email', label: 'Email', icon: <Mail />, href: '/admin/email' },
+      ] },
+      { id: 'settings', label: 'Settings', icon: <Settings />, href: '/settings/general', active: isSettings },
       ...(isPackagedDesktop() ? [{
         id: 'desktop-pet', label: 'Desktop pet', icon: <PawPrint aria-hidden="true" />,
-        onSelect: () => {
-          void toggleAgentSamPet()
-            .then((visible) => toast.success(visible ? 'AgentSam pet is on your desktop' : 'AgentSam pet hidden'))
-            .catch(() => toast.error('AgentSam desktop pet could not be opened.'));
-        },
+        onSelect: () => { void toggleAgentSamPet().then((visible) => toast.success(visible ? 'AgentSam pet is on your desktop' : 'AgentSam pet hidden')).catch(() => toast.error('Desktop pet could not be opened')); },
       }] : []),
     ],
     onNavigate: go,
@@ -253,12 +281,17 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'site', label: 'Create or edit a site', icon: <Globe />, onSelect: () => go('/cms') },
     ],
   };
-  return <ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} defaultOpen={false} peekable>
-    <Nav.Scope className="agentsam-shell" data-agentsam-app-shell="local-studio" data-embedded={embedded ? "true" : undefined}>
-      {!isSettings && !embedded ? <Nav.Sidenav /> : null}<div className="agentsam-main">
-        {!embedded && !isConversation ? isWorkspaceRoute
-          ? <Nav.Topbar startup showAccount />
-          : <Nav.Topbar><Nav.TopbarLogo toggle /><span>{pathname.startsWith('/cms') ? 'Sites' : pathname.startsWith('/artifacts') ? 'Library' : pathname.split('/')[1].replace(/^./, (letter) => letter.toUpperCase())}</span><Nav.TopbarSpacer /><button type="button" className="as-nav-button" title="Help & documentation" aria-label="Help & documentation" onClick={() => go('/docs')}><CircleHelp size={18} /></button><Nav.AccountSwitcher /></Nav.Topbar> : null}
+  return <ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} defaultOpen peekable>
+    <Nav.Scope className="agentsam-shell platform-console" data-agentsam-app-shell="local-studio" data-platform-console="true" data-conversation={isConversation ? "true" : "false"} data-embedded={embedded ? "true" : undefined}>
+      {!embedded ? <Nav.Sidenav /> : null}<div className="agentsam-main">
+        {!embedded && !isConversation ? <Nav.Topbar className="platform-console-topbar">
+          <Nav.TopbarLogo toggle />
+          <button type="button" className="platform-console-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={17} /><span>Search pages and tools</span><kbd>⌘K</kbd></button>
+          <Nav.TopbarSpacer />
+          <button type="button" className="as-nav-button" title="Ask AgentSam" aria-label="Ask AgentSam" onClick={() => { state.openSideTab('chat'); state.setSideOpen(true); }}><img alt="" className="platform-console-agent-icon" src="/brand/agentsam-gorilla/v1/ui/mini-composer-idle.svg" onError={(e) => { e.currentTarget.style.display = 'none'; }} /></button>
+          <button type="button" className="as-nav-button" title="Notifications" aria-label="Notifications" onClick={() => go('/tickets')}><Bell size={17} /></button>
+          <Nav.AccountSwitcher />
+        </Nav.Topbar> : null}
         <OfflineBanner /><main className="agentsam-route"><Outlet /></main>
       </div><CliDrawer /><CommandPalette />
       <Dialog open={sharing} onOpenChange={setSharing}><DialogContent><DialogTitle>Share conversation</DialogTitle><DialogDescription>Copy this conversation as text to share it. This does not create a public link.</DialogDescription><button type="button" className="as-nav-button" onClick={() => { if (!trail) return; void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => { toast('Conversation copied'); setSharing(false); }, () => toast('Could not copy conversation')); }}><Copy size={18} />Copy conversation</button></DialogContent></Dialog>
