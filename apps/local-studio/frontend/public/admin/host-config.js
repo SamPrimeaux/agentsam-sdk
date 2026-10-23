@@ -53,6 +53,16 @@
     ] },
     { href: "/settings/general", label: "Settings", icon: "settings" }
   ];
+  // Growth is an installed product view. Its platform appearance is an
+  // additive token override, not an edit to the customer's themed CSS.
+  if (window.location.pathname === "/admin/growth" &&
+      !document.querySelector('link[data-agentsam-growth-host]')) {
+    const stylesheet = document.createElement("link");
+    stylesheet.rel = "stylesheet";
+    stylesheet.href = "/console-growth-host.css";
+    stylesheet.dataset.agentsamGrowthHost = "true";
+    document.head.appendChild(stylesheet);
+  }
   NAV.main.splice(0, NAV.main.length, ...main);
   NAV.channels.splice(0, NAV.channels.length, ...channels);
   NAV.apps.splice(0, NAV.apps.length, ...apps);
