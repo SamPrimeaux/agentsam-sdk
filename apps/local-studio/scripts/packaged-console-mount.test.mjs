@@ -48,12 +48,13 @@ test('immutable product sources and packaged shell are the authority', () => {
 test('the packaged Console owns exactly one visible navigation surface', () => {
   const frame = readFileSync(new URL('../frontend/agentsam/PackagedConsoleFrame.tsx', import.meta.url), 'utf8');
   assert.match(frame, /render\(pathname,.*fullBleed: true/);
+  assert.equal(frame.includes(String.raw`\n      render(`), false);
   assert.doesNotMatch(frame, /includeMobileDrawer: true/);
   const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
   assert.match(shell, /!isSettings && !embedded \? <Nav\.Sidenav/);
 });
 
-test('AgentSam is an installed app, and Ecommerce destinations stay in Sites', () => {
+test('AgentSam app and approved Ecommerce groups keep their actual route ownership', () => {
   const source = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
   const context = {
     NAV: { main: [], channels: [], apps: [] },
@@ -63,18 +64,46 @@ test('AgentSam is an installed app, and Ecommerce destinations stay in Sites', (
     window: { __AGENTSAM_DESKTOP__: false },
   };
   runInNewContext(source, context);
+  assert.equal(context.NAV.main[0].href, '/admin/home');
   assert.equal(context.NAV.main.some((item) => item.href === '/agentsam'), false);
   assert.equal(context.NAV.apps.filter((item) => item.href === '/agentsam').length, 1);
   assert.equal(context.NAV.apps.find((item) => item.href === '/agentsam').label, 'AgentSam');
   assert.equal(context.NAV.apps.some((item) => item.href === '/cli'), false);
-  const routes = new Set(context.NAV.channels.flatMap((section) =>
-    (section.children || []).map((item) => item.href.split('?')[0])));
-  for (const path of ['/admin/pages', '/admin/theme-editor', '/admin/products',
-    '/admin/products/create', '/admin/inventory', '/admin/orders', '/admin/content',
-    '/admin/growth', '/admin/analytics/overview', '/admin/preferences']) {
-    assert.ok(routes.has(path), path);
-    assert.ok(resolveConsoleFile(path), 'Packaged route missing: ' + path);
+  const products = context.NAV.main.find((item) => item.id === 'products');
+  const productPaths = new Set(products.children.map((item) => item.href));
+  for (const path of ['/admin/products/create', '/admin/products/help/artwork',
+    '/admin/products', '/admin/inventory', '/admin/orders', '/admin/discounts']) {
+    assert.ok(productPaths.has(path), path);
   }
+  const analytics = context.NAV.main.find((item) => item.id === 'analytics');
+  assert.deepEqual(Array.from(analytics.children, (entry) => entry.href), [
+    '/admin/analytics/overview', '/admin/analytics/finance', '/admin/analytics/health'
+  ]);
+  const channelPaths = context.NAV.channels.flatMap((section) =>
+    (section.children || []).map((item) => item.href.split('?')[0]));
+  for (const path of ['/admin/pages', '/admin/theme-editor', '/admin/preferences', '/admin/subscribers']) {
+    assert.ok(channelPaths.includes(path), path);
+  }
+  assert.equal(context.NAV.channels.find((section) => section.id === 'audience').children[0].label, 'Subscribers');
+  assert.equal(context.NAV.apps.some((entry) => entry.id === 'email'), true);
+  const installedPaths = [
+    ...context.NAV.main.flatMap((item) => [item.href, ...(item.children || []).map((entry) => entry.href)]),
+    ...channelPaths,
+    ...context.NAV.apps.flatMap((item) => (item.children || []).map((entry) => entry.href)),
+  ].filter(Boolean);
+  for (const path of installedPaths.filter((item) => item.startsWith('/admin/'))) {
+    assert.ok(resolveConsoleFile(path.split('?')[0]), 'Packaged route missing: ' + path);
+  }
+});
+
+test('Growth appearance is a host-only, theme-token override', () => {
+  const css = readFileSync(new URL('../frontend/public/console-growth-host.css', import.meta.url), 'utf8');
+  const config = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
+  assert.match(css, /--c-accent/);
+  assert.match(css, /--c-focus/);
+  assert.doesNotMatch(css, /#ff6a00|#e96000/i);
+  assert.match(config, /location\?\.pathname === "\/admin\/growth"/);
+  assert.match(config, /\/console-growth-host\.css/);
 });
 
 test('legacy /cli opens an existing AgentSam side-panel terminal', () => {

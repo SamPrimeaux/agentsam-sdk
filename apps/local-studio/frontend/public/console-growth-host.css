@@ -1,0 +1,42 @@
+/* AgentSam platform Growth presentation layer.
+ * The Ecommerce CMS source theme stays unchanged, including Fuel & Free Time.
+ * These tokens reuse the host Console appearance in both light and dark modes.
+ */
+body.console-theme .fnf-growth-app {
+  --orange: var(--c-accent, #1a1a1a);
+  --agentsam-growth-soft-accent: color-mix(in srgb, var(--c-focus, #8061b4) 17%, transparent);
+}
+body.console-theme .fnf-growth-app .fnf-btn.orange {
+  background: var(--c-accent, #1a1a1a);
+  border-color: var(--c-accent, #1a1a1a);
+  color: var(--c-accent-ink, #ffffff);
+}
+body.console-theme .fnf-growth-app .fnf-btn.orange:hover {
+  background: var(--c-accent-hover, #000000);
+  border-color: var(--c-accent-hover, #000000);
+}
+body.console-theme .fnf-growth-app .fnf-hero {
+  background:
+    radial-gradient(circle at 84% 8%, var(--agentsam-growth-soft-accent), transparent 30%),
+    radial-gradient(circle at 80% 90%, rgba(32, 169, 223, 0.08), transparent 32%),
+    linear-gradient(180deg, #fff, #fbfbfb);
+}
+body.console-theme .fnf-growth-app .fnf-create-hero {
+  background:
+    radial-gradient(circle at 96% 0%, var(--agentsam-growth-soft-accent), transparent 30%),
+    #fff;
+}
+body.console-theme .fnf-growth-app .fnf-preview-banner {
+  background:
+    radial-gradient(circle at 75% 20%, color-mix(in srgb, var(--c-focus, #8061b4) 32%, transparent), transparent 30%),
+    linear-gradient(135deg, #222, #090909);
+}
+body.console-theme .fnf-growth-app .fnf-tag {
+  background: color-mix(in srgb, var(--c-focus, #8061b4) 13%, white);
+  border-color: color-mix(in srgb, var(--c-focus, #8061b4) 25%, white);
+  color: #493469;
+}
+body.console-theme .fnf-growth-app :is(input, select, textarea, button):focus-visible {
+  outline: 2px solid var(--c-focus, #8061b4);
+  outline-offset: 2px;
+}

@@ -41,6 +41,9 @@ jobs:
       - name: Verify app-scoped Cloudflare SDK dependency links
         run: node --test apps/local-studio/scripts/ensure-aliased-deps.test.mjs
 
+      - name: Verify packaged Console navigation before dependency gate
+        run: node --test --test-name-pattern='the packaged Console|AgentSam app|Growth appearance|legacy /cli|desktop Console' apps/local-studio/scripts/packaged-console-mount.test.mjs
+
       - name: Verify isolated SAM OS and host-installed authoring discovery
         run: node --test test/cli/sam-os.test.mjs test/integration/universal-authoring-os.test.mjs
 
