@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { MessageSquare as MessageSquareIcon, BookOpen, CircleHelp, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, PawPrint, Box, Search, Bell, ShoppingBag, Tag, BarChart3, Megaphone, Users, Mail } from "lucide-react";
+import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, PawPrint, Box, Search, Bell, ShoppingBag, Tag, BarChart3, Megaphone, Users, Mail } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -45,7 +45,6 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const isConversation = pathname === '/agentsam' || pathname.startsWith('/chats');
   const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/');
   const isSamSketchRoute = pathname === '/samsketch' || pathname.startsWith('/samsketch/');
-  const isWorkspaceRoute = isCadRoute || isSamSketchRoute;
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
   // The platform owns its shell; product-owned /admin pages navigate into
   // the installed Ecommerce application without recreating product routers.
@@ -257,7 +256,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       }] : []),
     ],
     onNavigate: go,
-    onCreateConversation: () => { state.startTrail(); go('/agentsam'); },
+    onCreateConversation: isConversation ? () => { state.startTrail(); go('/agentsam'); } : undefined,
     onSelectConversation: (id) => { state.setActiveTrail(id); go('/agentsam'); },
     onSelectProject: (id) => { state.setActiveProject(id); go('/projects'); },
     onPinConversation: state.pinTrail, onRenameConversation: state.renameTrail,
