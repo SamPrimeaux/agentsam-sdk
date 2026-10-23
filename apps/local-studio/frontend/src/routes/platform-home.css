@@ -69,4 +69,9 @@
   .platform-home-activity-count { flex: 1 1 calc(50% - 8px); }
   .platform-home-activity-list { flex-basis: 100%; min-height: 90px; }
 }
+@container (max-width: 420px) {
+  .platform-home-quick-grid, .platform-home-start-grid, .platform-home-installed { grid-template-columns: minmax(0, 1fr); }
+  .platform-home-quick-card { min-height: 120px; }
+  .platform-home-start-card { min-height: 132px; }
+}
 @media (prefers-reduced-motion: reduce) { .platform-home-quick-card, .platform-home-start-card, .platform-home-installed-item { transition: none; } }
