@@ -56,6 +56,10 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.doesNotMatch(shell, /href: '\/cli'/);
   assert.match(shell, /defaultOpen peekable/);
   assert.match(shell, /label: 'AgentSam'/);
+  assert.match(shell, /<SideStage workFocused=\{globalAssistantFocused\}/);
+  assert.match(shell, /!isConversation && state.sideOpen/);
+  assert.match(shell, /<Nav\.Topbar className="platform-console-topbar">/);
+
   const css = readFileSync(new URL('../frontend/agentsam/platform-console.css', import.meta.url), 'utf8');
   assert.match(css, /--nav-width: 246px/);
 });
