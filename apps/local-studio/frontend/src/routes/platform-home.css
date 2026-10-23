@@ -1,0 +1,72 @@
+/* AgentSam SaaS home — layout local to Studio, reusable shell tokens from agentsam-nav. */
+.platform-home { width: 100%; height: 100%; overflow-y: auto; color: var(--nav-text); background: var(--nav-canvas); container-type: inline-size; }
+.platform-home-inner { width: min(100%, 1180px); margin: 0 auto; padding: clamp(22px, 4.2vw, 56px); display: grid; gap: 34px; }
+.platform-home a { text-decoration: none; }
+.platform-home-welcome { display: flex; flex-direction: column; align-items: center; padding: 24px 12px 10px; text-align: center; }
+.platform-home-eyebrow { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--nav-muted); font-weight: 550; }
+.platform-home-separator { opacity: .45; }
+.platform-home-live { width: 7px; height: 7px; background: #64b59a; border-radius: 50%; }
+.platform-home-welcome h1 { font-weight: 650; font-size: clamp(25px, 3.8vw, 34px); letter-spacing: -.045em; margin: 17px 0 8px; line-height: 1.1; }
+.platform-home-welcome > p { font-size: 14px; color: var(--nav-muted); line-height: 1.6; max-width: 470px; margin: 0 0 24px; }
+.platform-home-composer { display: grid; width: min(100%, 570px); gap: 9px; padding: 14px 14px 12px; text-align: left; background: var(--nav-surface); border: 1px solid color-mix(in srgb, var(--nav-border) 82%, var(--nav-accent)); border-radius: 17px; box-shadow: 0 12px 28px #00000016; }
+.platform-home-composer:focus-within, .platform-home-composer:hover { border-color: color-mix(in srgb, var(--nav-accent) 55%, var(--nav-border)); }
+.platform-home-composer-entry { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; width: 100%; gap: 12px; border: 0; background: transparent; min-height: 58px; padding: 0; color: var(--nav-text); text-align: left; cursor: pointer; }
+.platform-home-composer-entry > span:first-child { font-size: 13px; font-weight: 600; }
+.platform-home-composer-prompt { color: var(--nav-muted); font-size: 13px; }
+.platform-home-composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.platform-home-signature { font-size: 12px; font-weight: 700; color: var(--nav-muted); }
+.platform-home-composer-links { display: flex; align-items: center; gap: 14px; }
+.platform-home-composer-links > a { display: flex; gap: 4px; align-items: center; color: var(--nav-muted); font-size: 12px; }
+.platform-home-go { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; border: 0; color: white; background: var(--nav-accent); cursor: pointer; }
+.platform-home-continue { display: inline-flex; align-items: center; gap: 7px; margin-top: 13px; font-size: 12px; color: var(--nav-muted); max-width: min(100%, 500px); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.platform-home-section { min-width: 0; }
+.platform-home-section-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin-bottom: 15px; }
+.platform-home-section-head h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.015em; }
+.platform-home-section-head p, .platform-home-section-head > span { color: var(--nav-muted); font-size: 12px; margin: 5px 0 0; }
+.platform-home-section-head a { display: inline-flex; align-items: center; gap: 5px; color: var(--nav-muted); font-size: 12px; }
+.platform-home-quick-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.platform-home-quick-card { display: flex; flex-direction: column; min-width: 0; min-height: 133px; padding: 15px; background: var(--nav-surface); border: 1px solid var(--nav-border); border-radius: 12px; color: var(--nav-text); transition: border-color .18s ease, transform .18s ease; }
+.platform-home-quick-card:nth-child(1) { background: color-mix(in srgb, var(--nav-accent) 9%, var(--nav-surface)); }
+.platform-home-quick-card:nth-child(2) { background: color-mix(in srgb, #7690b5 9%, var(--nav-surface)); }
+.platform-home-quick-card:nth-child(3) { background: color-mix(in srgb, #6fb19b 9%, var(--nav-surface)); }
+.platform-home-quick-card:hover, .platform-home-start-card:hover, .platform-home-installed-item:hover { border-color: color-mix(in srgb, var(--nav-accent) 44%, var(--nav-border)); transform: translateY(-1px); }
+.platform-home-card-line { display: flex; justify-content: space-between; align-items: center; color: var(--nav-muted); margin-bottom: auto; }
+.platform-home-quick-card strong { font-size: 13px; margin: 12px 0 4px; }
+.platform-home-quick-card > span:last-child { font-size: 12px; line-height: 1.4; color: var(--nav-muted); }
+.platform-home-start-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.platform-home-start-card { position: relative; display: flex; flex-direction: column; gap: 9px; align-items: flex-start; text-align: left; min-width: 0; min-height: 172px; padding: 20px; border: 1px solid var(--nav-border); border-radius: 12px; background: var(--nav-surface); color: var(--nav-text); cursor: pointer; transition: border-color .18s ease, transform .18s ease; }
+.platform-home-start-card > svg:first-child { color: color-mix(in srgb, var(--nav-accent) 65%, var(--nav-text)); margin-bottom: auto; }
+.platform-home-start-card span { font-weight: 650; font-size: 13px; }
+.platform-home-start-card small { color: var(--nav-muted); font-size: 12px; }
+.platform-home-start-arrow { position: absolute; top: 16px; right: 16px; color: var(--nav-muted); }
+.platform-home-installed { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.platform-home-installed-item { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 13px; border: 1px solid var(--nav-border); background: var(--nav-surface); border-radius: 12px; color: var(--nav-text); transition: border-color .18s ease, transform .18s ease; }
+.platform-home-installed-item > svg:first-child { color: var(--nav-muted); flex: none; }
+.platform-home-installed-item > span { flex: 1; display: grid; min-width: 0; }
+.platform-home-installed-item strong { font-size: 12px; }
+.platform-home-installed-item small { color: var(--nav-muted); font-size: 11px; margin-top: 2px; }
+.platform-home-installed-item > svg:last-child { color: var(--nav-muted); }
+.platform-home-activity { display: flex; align-items: stretch; gap: 12px; }
+.platform-home-activity-count { display: flex; flex: 0 0 110px; flex-direction: column; align-items: flex-start; gap: 6px; padding: 16px; border: 1px solid var(--nav-border); border-radius: 12px; background: var(--nav-surface); }
+.platform-home-activity-count strong { font-size: 22px; font-weight: 650; }
+.platform-home-activity-count span { font-size: 12px; color: var(--nav-muted); }
+.platform-home-activity-list { display: flex; flex-direction: column; flex: 1; min-width: 0; padding: 9px 15px; border: 1px solid var(--nav-border); border-radius: 12px; background: var(--nav-surface); }
+.platform-home-activity-list > a { display: flex; align-items: center; gap: 8px; padding: 8px 0; color: var(--nav-text); font-size: 12px; }
+.platform-home-activity-list > a svg:last-child { margin-left: auto; }
+.platform-home-activity-list > span { margin: auto 0; color: var(--nav-muted); font-size: 12px; }
+.platform-home :is(a,button):focus-visible { outline: 2px solid var(--nav-accent); outline-offset: 3px; }
+@container (max-width: 850px) {
+  .platform-home-quick-grid, .platform-home-start-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .platform-home-installed { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@container (max-width: 520px) {
+  .platform-home-inner { padding: 18px 14px 42px; gap: 30px; }
+  .platform-home-welcome { padding-top: 32px; }
+  .platform-home-quick-grid, .platform-home-start-grid, .platform-home-installed { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 9px; }
+  .platform-home-quick-card { min-height: 150px; padding: 12px; }
+  .platform-home-start-card { min-height: 150px; padding: 14px; }
+  .platform-home-activity { flex-wrap: wrap; }
+  .platform-home-activity-count { flex: 1 1 calc(50% - 8px); }
+  .platform-home-activity-list { flex-basis: 100%; min-height: 90px; }
+}
+@media (prefers-reduced-motion: reduce) { .platform-home-quick-card, .platform-home-start-card, .platform-home-installed-item { transition: none; } }
