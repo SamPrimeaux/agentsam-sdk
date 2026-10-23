@@ -25,7 +25,7 @@ import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePrefer
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
-export function AgentSamShell() {
+export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {}) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const state = useWorkStore();
@@ -254,9 +254,9 @@ export function AgentSamShell() {
     ],
   };
   return <ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} defaultOpen={false} peekable>
-    <Nav.Scope className="agentsam-shell" data-agentsam-app-shell="local-studio">
-      {!isSettings ? <Nav.Sidenav /> : null}<div className="agentsam-main">
-        {!isConversation ? isWorkspaceRoute
+    <Nav.Scope className="agentsam-shell" data-agentsam-app-shell="local-studio" data-embedded={embedded ? "true" : undefined}>
+      {!isSettings && !embedded ? <Nav.Sidenav /> : null}<div className="agentsam-main">
+        {!embedded && !isConversation ? isWorkspaceRoute
           ? <Nav.Topbar startup showAccount />
           : <Nav.Topbar><Nav.TopbarLogo toggle /><span>{pathname.startsWith('/cms') ? 'Sites' : pathname.startsWith('/artifacts') ? 'Library' : pathname.split('/')[1].replace(/^./, (letter) => letter.toUpperCase())}</span><Nav.TopbarSpacer /><button type="button" className="as-nav-button" title="Help & documentation" aria-label="Help & documentation" onClick={() => go('/docs')}><CircleHelp size={18} /></button><Nav.AccountSwitcher /></Nav.Topbar> : null}
         <OfflineBanner /><main className="agentsam-route"><Outlet /></main>

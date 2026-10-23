@@ -61,6 +61,7 @@ import localStudioApp from "../../agentsam.app.json";
 import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
 import clientCmsApp from "../../../client-cms-editor/agentsam.app.json";
 import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
+import { servePackagedConsole } from "./packaged-console.js";
 
 const APP = localStudioApp;
 const ROUTE_PROJECTION = projectionFromAppManifest(APP);
@@ -688,6 +689,16 @@ export default {
     const isAnalyticsSmoke = url.pathname === "/api/analytics/smoke";
     const isAnalyticsApi = url.pathname.startsWith("/api/analytics/");
     const isTerminalConnect = url.pathname === "/api/agent/terminal/connect";
+
+    // Existing Ecommerce product UI mounted into Local Studio.
+    // Only static presentation assets are served here; no tenant APIs or
+    // customer Worker are delegated or impersonated.
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        (url.pathname === "/sites" || url.pathname.startsWith("/admin/"))) {
+      if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
+      const mounted = await servePackagedConsole(request, env.ASSETS);
+      if (mounted) return mounted;
+    }
 
     // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
     if (request.method === "GET" && isPublicSitePath(url.pathname)) {
