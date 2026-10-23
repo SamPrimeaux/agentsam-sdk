@@ -84,3 +84,35 @@ test('legacy /cli opens an existing AgentSam side-panel terminal', () => {
   assert.match(source, /"\/agentsam"/);
   assert.doesNotMatch(source, /TerminalPane variant="page"/);
 });
+
+test('desktop Console links resolve to real platform or installed Ecommerce app routes', () => {
+  const source = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
+  let click;
+  const context = {
+    NAV: { main: [], channels: [], apps: [] },
+    renderSideNav: () => '<nav></nav>',
+    localStorage: { getItem: () => 'dark' },
+    CONSOLE_APPEARANCE_KEY: 'appearance',
+    window: { __AGENTSAM_DESKTOP__: true, location: { hash: '' } },
+    document: { addEventListener: (_name, handler) => { click = handler; } },
+    encodeURIComponent,
+  };
+  runInNewContext(source, context);
+  assert.equal(typeof click, 'function');
+  const visit = (path) => {
+    let prevented = false;
+    click({
+      target: { closest: () => ({ getAttribute: () => path }) },
+      defaultPrevented: false,
+      preventDefault: () => { prevented = true; },
+      metaKey: false, ctrlKey: false, altKey: false, shiftKey: false,
+    });
+    assert.equal(prevented, true);
+    return context.window.location.hash;
+  };
+  assert.equal(visit('/admin/home'), '#/');
+  assert.equal(visit('/admin/agentsam'), '#/agentsam');
+  assert.equal(visit('/cad'), '#/cad');
+  assert.equal(visit('/admin/products'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts');
+  assert.equal(visit('/admin/theme-editor?slug=home'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Ftheme-editor%3Fslug%3Dhome');
+});
