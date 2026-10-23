@@ -59,7 +59,14 @@
       const path = link.getAttribute("href");
       if (!path || !path.startsWith("/") || path.startsWith("//")) return;
       event.preventDefault();
-      window.location.hash = "#" + path;
+      // Desktop uses a hash-routed Local Studio SPA. Product admin pages are
+      // installed-app destinations, not independent platform React routes.
+      const destination = path === "/admin/home" ? "/"
+        : path === "/admin/agentsam" ? "/agentsam"
+        : path.startsWith("/admin/")
+          ? "/apps/ecommerce-cms-agentsam?page=" + encodeURIComponent(path)
+          : path;
+      window.location.hash = "#" + destination;
     }, true);
   }
 })();
