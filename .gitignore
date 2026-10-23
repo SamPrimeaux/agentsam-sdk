@@ -79,3 +79,7 @@ apps/agentsam-go-worker/runtime/.agentsam-build-source
 .agentsam/evidence/
 # Generated CAD Creator offline schema bundle (canonical source: protocol/cad/v2/)
 /apps/cad-creator/schemas/
+
+# Generated host assets are assembled from the Ecommerce package; only host-config.js is source.
+/apps/local-studio/frontend/public/admin/*
+!/apps/local-studio/frontend/public/admin/host-config.js
