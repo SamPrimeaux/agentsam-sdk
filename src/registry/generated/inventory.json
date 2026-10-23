@@ -8,7 +8,7 @@
   "counts": {
     "commands": 76,
     "capabilities": 82,
-    "packages": 63
+    "packages": 65
   },
   "commands": [
     {
@@ -1503,6 +1503,66 @@
   ],
   "packages": [
     {
+      "avoid_when": [
+        "Generating precision solids or Boolean geometry; use agentsam-occt",
+        "Replacing specialized BIM, robotics, or scene-authoring behavior with a generic asset viewer"
+      ],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "consumers": [
+          "apps/samsketch/src/main.ts"
+        ],
+        "directory": "packages/agentsam-3d-viewer",
+        "tests": [
+          "packages/agentsam-3d-viewer/test/format.test.mjs",
+          "packages/agentsam-3d-viewer/test/viewport.test.mjs"
+        ]
+      },
+      "execution_domains": [
+        "browser",
+        "desktop"
+      ],
+      "id": "agentsam-3d-viewer",
+      "install": [
+        {
+          "command": "npm install --workspace @inneranimalmedia/agentsam-3d-viewer",
+          "package": "@inneranimalmedia/agentsam-3d-viewer",
+          "type": "npm-workspace"
+        }
+      ],
+      "languages": [
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-3d-viewer",
+      "purpose": "Shared framework-agnostic Three.js viewer for GLB, GLTF, and STL assets across public pages and AgentSam workspaces.",
+      "registry": {
+        "kind": "npm-workspace",
+        "name": "@inneranimalmedia/agentsam-3d-viewer",
+        "public_claim": false
+      },
+      "schema": "agentsam.package.v1",
+      "status": "in-development",
+      "topics": [
+        "3d",
+        "threejs",
+        "glb",
+        "gltf",
+        "stl",
+        "viewer",
+        "visualization"
+      ],
+      "use_when": [
+        "Showing an existing GLB, GLTF, or STL in a public marketing page or application panel",
+        "Creating a reusable Three.js viewport while keeping CAD-specific selection and scene logic in the host"
+      ],
+      "version": "0.1.0",
+      "review_required": [],
+      "readiness": "unverified"
+    },
+    {
       "avoid_when": [],
       "catalog_status": "needs-review",
       "class": "package",
@@ -2682,6 +2742,68 @@
         "Reusable responsive navigation primitives for AgentSam dashboard-family applications."
       ],
       "version": "2.6.12",
+      "readiness": "unverified"
+    },
+    {
+      "avoid_when": [
+        "Displaying an existing GLB/GLTF/STL without geometry edits; use agentsam-3d-viewer",
+        "Creating a parallel native engine, provider implementation, or operation registry"
+      ],
+      "catalog_status": "needs-review",
+      "class": "package",
+      "commands": [],
+      "evidence": {
+        "compatibility_build_entry": "services/cad/occt/CMakeLists.txt",
+        "directory": "packages/agentsam-occt",
+        "native_source": "packages/agentsam-occt/native/main.cpp",
+        "tests": [
+          "packages/agentsam-occt/test/contracts.test.mjs",
+          "packages/agentsam-occt/test/browser-provider.test.mjs"
+        ]
+      },
+      "execution_domains": [
+        "browser",
+        "desktop",
+        "local"
+      ],
+      "id": "agentsam-occt",
+      "install": [
+        {
+          "command": "npm install --workspace @inneranimalmedia/agentsam-occt",
+          "package": "@inneranimalmedia/agentsam-occt",
+          "type": "npm-workspace"
+        }
+      ],
+      "languages": [
+        "cpp",
+        "javascript",
+        "typescript"
+      ],
+      "name": "@inneranimalmedia/agentsam-occt",
+      "purpose": "One OpenCascade engine contract with shared browser-WASM and native C++ adapters for AgentSam CAD surfaces.",
+      "registry": {
+        "kind": "npm-workspace",
+        "name": "@inneranimalmedia/agentsam-occt",
+        "public_claim": false
+      },
+      "schema": "agentsam.package.v1",
+      "status": "in-development",
+      "topics": [
+        "cad",
+        "geometry",
+        "opencascade",
+        "occt",
+        "wasm",
+        "native-cpp",
+        "boolean-operations",
+        "step"
+      ],
+      "use_when": [
+        "Adding OCCT-backed geometry to a browser, desktop, or local CAD application",
+        "Reusing the canonical native OCCT provider and browser Boolean adapter"
+      ],
+      "version": "0.1.0",
+      "review_required": [],
       "readiness": "unverified"
     },
     {

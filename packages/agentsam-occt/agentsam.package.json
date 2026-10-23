@@ -6,6 +6,16 @@
   "class": "package",
   "status": "in-development",
   "catalog_status": "needs-review",
+  "languages": [
+    "cpp",
+    "javascript",
+    "typescript"
+  ],
+  "execution_domains": [
+    "browser",
+    "desktop",
+    "local"
+  ],
   "purpose": "One OpenCascade engine contract with shared browser-WASM and native C++ adapters for AgentSam CAD surfaces.",
   "install": [
     {
@@ -26,6 +36,17 @@
   "avoid_when": [
     "Displaying an existing GLB/GLTF/STL without geometry edits; use agentsam-3d-viewer",
     "Creating a parallel native engine, provider implementation, or operation registry"
+  ],
+  "commands": [],
+  "topics": [
+    "cad",
+    "geometry",
+    "opencascade",
+    "occt",
+    "wasm",
+    "native-cpp",
+    "boolean-operations",
+    "step"
   ],
   "evidence": {
     "directory": "packages/agentsam-occt",

@@ -6,6 +6,14 @@
   "class": "package",
   "status": "in-development",
   "catalog_status": "needs-review",
+  "languages": [
+    "javascript",
+    "typescript"
+  ],
+  "execution_domains": [
+    "browser",
+    "desktop"
+  ],
   "purpose": "Shared framework-agnostic Three.js viewer for GLB, GLTF, and STL assets across public pages and AgentSam workspaces.",
   "install": [
     {
@@ -26,6 +34,16 @@
   "avoid_when": [
     "Generating precision solids or Boolean geometry; use agentsam-occt",
     "Replacing specialized BIM, robotics, or scene-authoring behavior with a generic asset viewer"
+  ],
+  "commands": [],
+  "topics": [
+    "3d",
+    "threejs",
+    "glb",
+    "gltf",
+    "stl",
+    "viewer",
+    "visualization"
   ],
   "evidence": {
     "directory": "packages/agentsam-3d-viewer",

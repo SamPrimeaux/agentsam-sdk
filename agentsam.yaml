@@ -57,6 +57,10 @@ runtime:
 packages:
   # BEGIN AGENTSAM GENERATED INVENTORY
   inventory:
+    - id: "agentsam-3d-viewer"
+      name: "@inneranimalmedia/agentsam-3d-viewer"
+      path: "packages/agentsam-3d-viewer"
+      readiness: unverified
     - id: "agentsam-abs"
       name: "@inneranimalmedia/agentsam-abs"
       path: "packages/agentsam-abs"
@@ -160,6 +164,10 @@ packages:
     - id: "agentsam-nav"
       name: "@inneranimalmedia/agentsam-nav"
       path: "packages/agentsam-nav"
+      readiness: unverified
+    - id: "agentsam-occt"
+      name: "@inneranimalmedia/agentsam-occt"
+      path: "packages/agentsam-occt"
       readiness: unverified
     - id: "agentsam-queue-control"
       name: "@inneranimalmedia/agentsam-queue-control"

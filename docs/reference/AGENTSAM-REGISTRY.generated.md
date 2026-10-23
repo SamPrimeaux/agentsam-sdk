@@ -11,8 +11,8 @@
 | `src/cli/command-catalog.js` | 76 | Registered top-level CLI command entries |
 | `protocol/capabilities/manifest.json` | 82 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
-| `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 6 | APP manifests discoverable from this checkout |
-| `packages/catalog/generated/packages.json` | 63 | Package inventory rows (not npm publication proof) |
+| `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 7 | APP manifests discoverable from this checkout |
+| `packages/catalog/generated/packages.json` | 65 | Package inventory rows (not npm publication proof) |
 
 Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Host binding and approval remain separate.
 
@@ -207,6 +207,7 @@ Run `agentsam setup --list` for the current recipe catalog. `agentsam setup runt
 | `database-editor` | AgentSam Database Editor | `@inneranimalmedia/agentsam-database-editor` | `bin/agentsam-database-editor.mjs` |
 | `ecommerce-cms-agentsam` | AgentSam Ecommerce + CMS | `@inneranimalmedia/ecommerce-cms-agentsam` | `bin/ecommerce.mjs` |
 | `local-studio` | AgentSam Local Studio | `@inneranimalmedia/agentsam-local-studio` | `bin/agentsam-studio.mjs` |
+| `samsketch` | SamSketch | `@inneranimalmedia/samsketch` | — |
 
 An APP definition is not a user-scoped installation. `agentsam app install <id>` currently prints distribution instructions; it does not persist an installed APP record or activate its runtime.
 
@@ -214,6 +215,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 
 | Package ID | npm name | Catalog status | Purpose |
 | --- | --- | --- | --- |
+| `agentsam-3d-viewer` | `@inneranimalmedia/agentsam-3d-viewer` | needs-review | Shared framework-agnostic Three.js viewer for GLB, GLTF, and STL assets across public pages and AgentSam workspace… |
 | `agentsam-abs` | `@inneranimalmedia/agentsam-abs` | needs-review | AgentSam Auto Browser Shell: dual-mode Explore/Build browser surface with provider-agnostic generative navigation,… |
 | `agentsam-analytics` | `@inneranimalmedia/agentsam-analytics` | needs-review | Portable AgentSam analytics read models and operational analytics surfaces. |
 | `agentsam-assets-core` | `@inneranimalmedia/agentsam-assets-core` | needs-review | Shared Asset Core: canonical ast_* identity, machine facts, provenance, and provider representations. Peer BrandPa… |
@@ -240,6 +242,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `agentsam-local-shared` | `@inneranimalmedia/agentsam-local-shared` | needs-review | Private shared Local Studio chat, vault, inventory and workspace contracts. |
 | `agentsam-merch` | `@inneranimalmedia/agentsam-merch` | needs-review | Provider-neutral manufacturing profiles, preflight, derivative planning, and collection-lab primitives for AgentSa… |
 | `agentsam-nav` | `@inneranimalmedia/agentsam-nav` | needs-review | Reusable responsive navigation primitives for AgentSam dashboard-family applications. |
+| `agentsam-occt` | `@inneranimalmedia/agentsam-occt` | needs-review | One OpenCascade engine contract with shared browser-WASM and native C++ adapters for AgentSam CAD surfaces. |
 | `agentsam-queue-control` | `@inneranimalmedia/agentsam-queue-control` | needs-review | Portable AgentSam queue, job-routing, retry, scheduling, and execution-control primitives with provider adapters. |
 | `agentsam-rapid-rust` | `agentsam-rapid-rust` | needs-review | AgentSam native scaffolder and lifecycle CLI for Cloudflare Rust/Wasm Workers |
 | `agentsam-repository` | `@inneranimalmedia/agentsam-repository` | needs-review | Portable AgentSam repository identity, Merkle, semantic file metadata, persistence, and repository graph runtime c… |
