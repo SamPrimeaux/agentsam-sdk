@@ -69,6 +69,19 @@
 .as-nav-destination { display: flex; align-items: center; gap: 12px; padding: 8px 12px; min-height: var(--nav-row-height); width: 100%; text-align: left; background: transparent; border: 0; border-radius: var(--nav-radius); }
 .as-nav-destination:hover, .as-nav-destination[data-active] { background: var(--nav-selected); }
 .as-nav-destination-chevron { width: 15px; height: 15px; margin-left: auto; opacity: .7; }
+/* Inline accordion submenus belong to the sidenav, never floating cards. */
+.as-nav-destination-group { min-width: 0; }
+.as-nav-destination-group > .as-nav-destination[aria-expanded="true"] .as-nav-destination-chevron { transform: rotate(180deg); }
+.as-nav-destination-chevron { transition: transform 160ms ease; }
+.as-nav-submenu { display: flex; flex-direction: column; margin: 2px 6px 6px 19px; padding: 2px 0 2px 10px; border-left: 1px solid var(--nav-border); gap: 1px; }
+.as-nav-submenu-link { display: flex; align-items: center; gap: 9px; min-height: 31px; width: 100%; padding: 5px 8px; color: var(--nav-muted); background: transparent; border: 0; border-radius: 6px; font-size: 12px; text-align: left; cursor: pointer; }
+.as-nav-submenu-link:hover, .as-nav-submenu-link:focus-visible, .as-nav-submenu-link[data-active] { color: var(--nav-text); background: var(--nav-selected); }
+.as-nav-submenu-icon { flex: 0 0 14px; display: flex; align-items: center; justify-content: center; }
+.as-nav-submenu-icon svg { width: 13px; height: 13px; }
+.as-nav-submenu-link:disabled { opacity: .45; cursor: not-allowed; }
+.as-nav-sidenav:not([data-expanded="true"]) .as-nav-submenu { display: none; }
+@media (prefers-reduced-motion: reduce) { .as-nav-destination-chevron { transition: none; } }
+
 .as-nav-menu-row[data-active] { background: var(--nav-selected); }
 .as-nav-history { overflow-y: auto; flex: 1; min-height: 0; padding: 0 8px 16px; scrollbar-width: thin; scrollbar-color: var(--nav-border) transparent; }
 .as-nav-history h2 { font-size: var(--nav-meta-size); color: var(--nav-muted); font-weight:var(--fw-heading); margin: 20px 12px 8px; }

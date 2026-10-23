@@ -1,4 +1,4 @@
-import { Fragment, useId, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ChevronDown, Files, Folder, MessageSquare, MoreHorizontal, PanelLeft, PanelTop, Pin, Pencil, Plus, Search, Share, Trash2, User } from 'lucide-react';
@@ -196,8 +196,13 @@ function ProjectRow({ item, conversations }: { item: NavProject; conversations: 
 }
 
 function SidenavContents() {
-  const { data, close, isMobile, menu, setMenu, theme } = useNav();
-  const style = useNavStyle();
+  const { data, close, isMobile, open, setOpen } = useNav();
+  const activeGroupId = (data.destinations ?? []).find((item) =>
+    item.children?.some((child) => child.active) || (item.children?.length && item.active))?.id ?? null;
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(activeGroupId);
+  useEffect(() => {
+    if (activeGroupId) setExpandedGroup(activeGroupId);
+  }, [activeGroupId]);
   const selectDestination = (item: NavDestination) => {
     if (item.onSelect) item.onSelect();
     else if (item.href) data.onNavigate?.(item.href);
@@ -216,17 +221,30 @@ function SidenavContents() {
       <div className="as-nav-destinations">
         {data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null}
         {(data.destinations ?? []).map((item) => item.children?.length
-          ? <Menu.Root key={item.id} open={menu === `destination-${item.id}`} onOpenChange={(next) => setMenu(next ? `destination-${item.id}` : null)} modal={false}>
-              <Menu.Trigger asChild><button type="button" className="as-nav-destination" title={item.label} aria-label={item.label} data-active={item.active || item.children.some((child) => child.active) || undefined} aria-haspopup="menu">
+          ? <div className="as-nav-destination-group" key={item.id}>
+              <button type="button" className="as-nav-destination" title={item.label}
+                data-active={item.active || item.children.some((child) => child.active) || undefined}
+                aria-expanded={expandedGroup === item.id}
+                aria-controls={'as-nav-submenu-' + item.id}
+                onClick={() => {
+                  if (!open && !isMobile) setOpen(true);
+                  setExpandedGroup((current) => current === item.id ? null : item.id);
+                }}>
                 {item.icon}<span>{item.label}</span><ChevronDown aria-hidden="true" className="as-nav-destination-chevron" />
-              </button></Menu.Trigger>
-              <Menu.Portal><Menu.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover" align="start" sideOffset={8} collisionPadding={12}>
-                <Menu.Label className="as-nav-menu-heading">{item.label}</Menu.Label>
-                {item.children.map((child) => <Menu.Item key={child.id} className="as-nav-menu-row" data-active={child.active || undefined} disabled={!child.href && !child.onSelect} onSelect={() => selectDestination(child)}>
-                  {child.icon ? <span className="as-nav-icon">{child.icon}</span> : null}<span>{child.label}</span>
-                </Menu.Item>)}
-              </Menu.Content></Menu.Portal>
-            </Menu.Root>
+              </button>
+              {expandedGroup === item.id
+                ? <div className="as-nav-submenu" role="group" aria-label={item.label + ' pages'} id={'as-nav-submenu-' + item.id}>
+                    {item.children.map((child) => <button type="button" key={child.id}
+                      className="as-nav-submenu-link" title={child.label}
+                      data-active={child.active || undefined}
+                      aria-current={child.active ? 'page' : undefined}
+                      disabled={!child.href && !child.onSelect} onClick={() => selectDestination(child)}>
+                      {child.icon ? <span className="as-nav-submenu-icon">{child.icon}</span> : null}
+                      <span>{child.label}</span>
+                    </button>)}
+                  </div>
+                : null}
+            </div>
           : <button type="button" key={item.id} className="as-nav-destination" title={item.label} aria-label={item.label} data-active={item.active || undefined} onClick={() => selectDestination(item)}>{item.icon}<span>{item.label}</span></button>)}
       </div>
       <div className="as-nav-expanded-only as-nav-history">
