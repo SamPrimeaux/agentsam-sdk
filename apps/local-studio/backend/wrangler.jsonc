@@ -28,7 +28,7 @@
   "assets": {
     "binding": "ASSETS",
     "directory": "../.output/public",
-    "run_worker_first": ["/admin/*", "/sites"]
+    "run_worker_first": ["/admin/*", "/sites", "/samsketch"]
   },
   "vars": {
     "IAM_OAUTH_ISSUER": "https://inneranimalmedia.com",
