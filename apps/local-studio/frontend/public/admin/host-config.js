@@ -7,7 +7,6 @@
 
   const main = [
     { href: "/admin/home", label: "Home", icon: "home" },
-    { href: "/agentsam", label: "AgentSam Work", icon: "agentic" },
     { href: "/projects", label: "Projects", icon: "content" },
     { href: "/artifacts", label: "Library", icon: "content" },
     { href: "/tickets", label: "Tickets", icon: "orders" }
@@ -15,17 +14,28 @@
   const channels = [{
     id: "online-store", href: "/sites", label: "Sites / Online Store", icon: "store",
     children: [
+      // Product-owned destinations remain scoped to the Ecommerce workspace.
       { href: "/admin/pages", label: "Pages" },
       { href: "/admin/theme-editor?slug=home", label: "Theme Editor" },
+      { href: "/admin/products", label: "Products" },
+      { href: "/admin/products/create", label: "Product Studio" },
+      { href: "/admin/inventory", label: "Inventory" },
+      { href: "/admin/orders", label: "Orders" },
+      { href: "/admin/subscribers", label: "Subscribers" },
+      { href: "/admin/growth", label: "Growth" },
+      { href: "/admin/discounts", label: "Discounts" },
+      { href: "/admin/content", label: "Content & Media" },
+      { href: "/admin/analytics/overview", label: "Analytics" },
+      { href: "/admin/email", label: "Email" },
       { href: "/admin/preferences", label: "Preferences" }
     ]
   }];
   const apps = [
+    { href: "/agentsam", label: "AgentSam", icon: "agentic" },
     { href: "/cad", label: "CAD Creator", icon: "products" },
     { href: "/samsketch", label: "SamSketch", icon: "products" },
     { href: "/media", label: "Media", icon: "content" },
     { href: "/browse", label: "Browser", icon: "content" },
-    { href: "/cli", label: "Terminal", icon: "agentic" },
     { href: "/settings/general", label: "Settings", icon: "settings" }
   ];
   NAV.main.splice(0, NAV.main.length, ...main);
