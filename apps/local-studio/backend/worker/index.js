@@ -61,6 +61,7 @@ import localStudioApp from "../../agentsam.app.json";
 import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
 import clientCmsApp from "../../../client-cms-editor/agentsam.app.json";
 import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
+import { servePackagedConsole } from "./packaged-console.js";
 
 const APP = localStudioApp;
 const ROUTE_PROJECTION = projectionFromAppManifest(APP);
