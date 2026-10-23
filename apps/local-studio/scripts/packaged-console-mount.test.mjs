@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { runInNewContext } from 'node:vm';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolveConsoleFile, servePackagedConsole } from '../backend/worker/packaged-console.js';
 
@@ -42,4 +43,44 @@ test('immutable product sources and packaged shell are the authority', () => {
     '.output/public/admin/js/shell.js',
     '.output/public/ecommerce-cms-agentsam/admin/home.html'
   ]) assert.ok(existsSync(new URL('../' + file, import.meta.url)), file);
+});
+
+test('the packaged Console owns exactly one visible navigation surface', () => {
+  const frame = readFileSync(new URL('../frontend/agentsam/PackagedConsoleFrame.tsx', import.meta.url), 'utf8');
+  assert.match(frame, /render\(pathname,.*fullBleed: true/);
+  assert.doesNotMatch(frame, /includeMobileDrawer: true/);
+  const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
+  assert.match(shell, /!isSettings && !embedded \? <Nav\.Sidenav/);
+});
+
+test('AgentSam is an installed app, and Ecommerce destinations stay in Sites', () => {
+  const source = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
+  const context = {
+    NAV: { main: [], channels: [], apps: [] },
+    renderSideNav: () => '<nav></nav>',
+    localStorage: { getItem: () => 'dark', setItem: () => {} },
+    CONSOLE_APPEARANCE_KEY: 'console-appearance',
+    window: { __AGENTSAM_DESKTOP__: false },
+  };
+  runInNewContext(source, context);
+  assert.equal(context.NAV.main.some((item) => item.href === '/agentsam'), false);
+  assert.equal(context.NAV.apps.filter((item) => item.href === '/agentsam').length, 1);
+  assert.equal(context.NAV.apps.find((item) => item.href === '/agentsam').label, 'AgentSam');
+  assert.equal(context.NAV.apps.some((item) => item.href === '/cli'), false);
+  const routes = new Set(context.NAV.channels.flatMap((section) =>
+    (section.children || []).map((item) => item.href.split('?')[0])));
+  for (const path of ['/admin/pages', '/admin/theme-editor', '/admin/products',
+    '/admin/products/create', '/admin/inventory', '/admin/orders', '/admin/content',
+    '/admin/growth', '/admin/analytics/overview', '/admin/preferences']) {
+    assert.ok(routes.has(path), path);
+    assert.ok(resolveConsoleFile(path), 'Packaged route missing: ' + path);
+  }
+});
+
+test('legacy /cli opens an existing AgentSam side-panel terminal', () => {
+  const source = readFileSync(new URL('../frontend/src/routes/(apps)/cli.tsx', import.meta.url), 'utf8');
+  assert.match(source, /openSideTab\("terminal"/);
+  assert.match(source, /setSideOpen\(true\)/);
+  assert.match(source, /"\/agentsam"/);
+  assert.doesNotMatch(source, /TerminalPane variant="page"/);
 });
