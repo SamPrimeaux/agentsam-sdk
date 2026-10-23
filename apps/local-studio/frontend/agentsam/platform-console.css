@@ -1,0 +1,70 @@
+/* Local Studio's SaaS Console composition. Navigation behavior and primitives
+   come from @inneranimalmedia/agentsam-nav, not Ecommerce shell.js. */
+.platform-console {
+  --nav-width: 246px;
+  --nav-rail-width: 58px;
+  --nav-canvas: #1b1b20;
+  --nav-sidebar: #24222a;
+  --nav-surface: #292730;
+  --nav-popover: #292730;
+  --nav-text: #eeeaf2;
+  --nav-muted: #aaa3b1;
+  --nav-border: #ffffff16;
+  --nav-hover: #ffffff0b;
+  --nav-selected: #ffffff13;
+  background: var(--nav-canvas);
+}
+.platform-console[data-nav-theme="light"] {
+  --nav-canvas: #f5f4f7;
+  --nav-sidebar: #f0eef3;
+  --nav-surface: #fff;
+  --nav-popover: #fff;
+  --nav-text: #26232b;
+  --nav-muted: #6f6a76;
+  --nav-border: #28202d1f;
+  --nav-selected: #2a22300e;
+}
+.platform-console > .as-nav-sidenav-reserve { --nav-width: 246px; --nav-rail-width: 58px; }
+.platform-console .as-nav-sidenav {
+  background: var(--nav-sidebar); border-right: 1px solid var(--nav-border);
+}
+.platform-console .as-nav-sidenav-head { min-height: 50px; }
+.platform-console .as-nav-destinations { padding: 8px 8px 14px; }
+.platform-console .as-nav-destination {
+  min-height: 36px; padding: 7px 10px; gap: 11px; border-radius: 8px;
+  font-size: 13px; color: var(--nav-muted); line-height: 1.3;
+}
+.platform-console .as-nav-destination[data-active],
+.platform-console .as-nav-destination:hover { background: var(--nav-selected); color: var(--nav-text); }
+.platform-console .as-nav-destination svg { width: 16px; height: 16px; }
+.platform-console .as-nav-sidenav-foot { border-top: 1px solid var(--nav-border); }
+.platform-console .agentsam-main { background: var(--nav-canvas); }
+.platform-console .platform-console-topbar {
+  min-height: 50px; height: 50px; background: #111114;
+  border-bottom: 1px solid #ffffff12; color: #f1edf3;
+}
+.platform-console .platform-console-search {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 9px; width: min(390px, 42%);
+  height: 34px; padding: 0 11px; border: 1px solid transparent; border-radius: 9px;
+  background: transparent; color: #a8a4ae; font-size: 12px;
+}
+.platform-console .platform-console-search:hover,
+.platform-console .platform-console-search:focus-visible { border-color: #ffffff22; background: #25232a; }
+.platform-console .platform-console-search kbd { margin-left: auto; opacity: .5; font-size: 11px; }
+.platform-console .platform-console-agent-icon { width: 21px; height: 21px; border-radius: 50%; object-fit: contain; }
+.platform-console .agentsam-route { min-width: 0; background: var(--nav-canvas); }
+.platform-console[data-conversation="false"] .as-nav-history { display: none; }
+.platform-console[data-conversation="false"] .as-nav-sidenav-main { overflow-y: auto; }
+.platform-console[data-conversation="false"] .as-nav-destinations { flex: 1; }
+.platform-console [data-nav-theme="light"].as-nav-scope { color: var(--nav-text); }
+@media (max-width: 900px) {
+  .platform-console .platform-console-search { width: 42px; left: auto; right: 118px; transform: none; justify-content: center; }
+  .platform-console .platform-console-search span, .platform-console .platform-console-search kbd { display: none; }
+}
+@media (max-width: 767px) {
+  .platform-console .platform-console-topbar { padding-inline: 10px; }
+  .platform-console .platform-console-search { right: 106px; }
+}
+/* Drawers are owned solely by @inneranimalmedia/agentsam-nav on mobile.
+   There is no nested Ecommerce mobile drawer or second route shell. */
