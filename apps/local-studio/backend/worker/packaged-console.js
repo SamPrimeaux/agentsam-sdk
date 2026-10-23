@@ -21,7 +21,11 @@ export async function servePackagedConsole(request, assets) {
   const file = resolveConsoleFile(new URL(request.url).pathname);
   if (!file) return null;
   const uri = new URL(request.url);
-  uri.pathname = prefix + file;
+  // Cloudflare's default HTML handling redirects explicit .html asset
+  // URLs to clean URLs. Fetch the canonical clean path directly so the
+  // browser remains on /admin/* or /sites, not the package asset prefix.
+  uri.pathname = prefix + (file === "_spa/index.html"
+    ? "_spa/" : file.endsWith(".html") ? file.slice(0, -5) : file);
   uri.search = "";
   const result = await assets.fetch(new Request(uri, request));
   if (!result.ok || !file.endsWith(".html")) return result;
