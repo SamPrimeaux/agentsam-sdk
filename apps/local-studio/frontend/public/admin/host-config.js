@@ -55,7 +55,7 @@
   ];
   // Growth is an installed product view. Its platform appearance is an
   // additive token override, not an edit to the customer's themed CSS.
-  if (window.location.pathname === "/admin/growth" &&
+  if (window.location?.pathname === "/admin/growth" &&
       !document.querySelector('link[data-agentsam-growth-host]')) {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
