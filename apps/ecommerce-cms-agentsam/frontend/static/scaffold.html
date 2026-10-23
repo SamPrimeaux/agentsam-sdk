@@ -13,7 +13,10 @@
 const params = new URLSearchParams(location.search);
 const view = params.get("view") || "feature";
 
-if (view === "agentic") {
+if (view === "markets" || view === "pos") {
+  // Retired navigation placeholders; they are not installed applications.
+  location.replace("/admin/home");
+} else if (view === "agentic") {
   location.replace("/admin/agentsam");
 } else if (view === "growth") {
   location.replace("/admin/growth");
@@ -21,8 +24,6 @@ if (view === "agentic") {
   location.replace("/admin/discounts");
 } else {
 const titles = {
-  markets: "Markets",
-  pos: "Point of Sale",
 };
 const title = titles[view] || "Feature";
 renderShell(`/admin/scaffold?view=${encodeURIComponent(view)}`, `

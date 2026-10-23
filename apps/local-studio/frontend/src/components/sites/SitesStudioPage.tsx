@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowUpRight, FilePlus2, Globe2, Images, LayoutTemplate, Megaphone, Pencil, Plus } from 'lucide-react';
+import { ArrowUpRight, CircleHelp, FilePlus2, Globe2, Images, LayoutTemplate, Megaphone, Pencil, Plus } from 'lucide-react';
 import { themeProjectStore, THEME_PROJECTS_CHANGED } from '@/lib/themes/projects';
 import { createThemeDraft } from '@/lib/themes/inventory';
 import { studioCmsFetch } from '@/lib/cms/transport';
@@ -56,21 +56,23 @@ export function SitesWorkspace() {
     <div className="mx-auto max-w-7xl space-y-8 p-6 lg:p-9">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div><div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">CMS / Websites</div><h1 className="mt-2 text-3xl font-semibold tracking-tight">Sites</h1><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Build and edit complete multipage theme projects using the packaged Site Editor. Local drafts are saved on this installation, not published to the internet.</p></div>
-        <button className={control} onClick={() => go('/themes')}><LayoutTemplate size={16}/> Explore themes <ArrowUpRight size={14}/></button>
+        <div className="flex items-center gap-2">
+          <button type="button" className="inline-flex size-10 items-center justify-center rounded-xl border border-border bg-card hover:bg-muted" onClick={() => go('/help/cms')} title="CMS documentation" aria-label="CMS documentation"><CircleHelp size={18}/></button>
+          <button className={control} onClick={() => go('/themes')}><LayoutTemplate size={16}/> Explore themes <ArrowUpRight size={14}/></button>
+        </div>
       </header>
       <section className="flex flex-wrap gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
         <input className="min-w-[220px] flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-foreground" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void createSite(); }} placeholder="New website or theme project name" aria-label="New site name"/>
         <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-foreground px-5 py-2.5 text-sm font-semibold text-background disabled:opacity-40" onClick={() => void createSite()} disabled={busy}><Plus size={17}/> Create site draft</button>
       </section>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Saved website drafts</h2><span className="text-xs text-muted-foreground">{projects.length} local projects</span></div>
       <section className="space-y-3 border-b border-border pb-8">
-        <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Your connected websites</h2><span className="text-xs text-muted-foreground">{hostedLoading ? 'Verifying access…' : hostedSites.length + ' sites'}</span></div>
+        <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Connected sites and content projects</h2><span className="text-xs text-muted-foreground">{hostedLoading ? 'Verifying access…' : hostedSites.length + (hostedSites.length === 1 ? ' site record' : ' site records')}</span></div>
         {hostedError && <p role="alert" className="text-sm text-destructive">Unable to load hosted sites: {hostedError}</p>}
-        {!hostedLoading && !hostedError && !hostedSites.length && <p className="text-sm text-muted-foreground">No hosted sites are assigned to this account.</p>}
+        {!hostedLoading && !hostedError && !hostedSites.length && <p className="text-sm text-muted-foreground">No connected sites or content projects are assigned to this account.</p>}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {hostedSites.map((site) => <article key={site.id} className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center justify-between"><span className="rounded-md bg-muted p-2"><Globe2 size={18}/></span><span className="text-[11px] text-muted-foreground">{site.source === 'worker' ? 'Worker CMS' : 'Hosted CMS'}</span></div>
+            <div className="flex items-center justify-between"><span className="rounded-md bg-muted p-2"><Globe2 size={18}/></span><span className="text-[11px] text-muted-foreground">{site.source === 'worker' ? 'Connected Worker site' : 'Content-only project'}</span></div>
             <h3 className="mt-4 truncate text-lg font-semibold">{site.name}</h3>
             <p className="mt-1 truncate text-xs text-muted-foreground">{site.domain || site.slug}</p>
             <div className="mt-auto flex items-center justify-between pt-5"><span className="text-xs capitalize text-muted-foreground">{site.role} · {site.can_edit ? 'Editor access' : 'View only'}</span>
@@ -88,7 +90,8 @@ export function SitesWorkspace() {
           </article>)}
         </div>
       </section>
-      {!projects.length && <div className="rounded-2xl border border-dashed border-border p-12 text-center"><Globe2 size={28} className="mx-auto text-muted-foreground"/><h3 className="mt-3 font-medium">No saved sites on this installation yet</h3><p className="mt-2 text-sm text-muted-foreground">Create a site above or use a packaged theme as a starting point.</p><button className={control + ' mt-4'} onClick={() => go('/themes')}><FilePlus2 size={15}/> Start from a theme</button></div>}
+      <div className="flex items-center justify-between"><h2 className="text-sm font-semibold">Saved website drafts</h2><span className="text-xs text-muted-foreground">{projects.length} local draft{projects.length === 1 ? '' : 's'}</span></div>
+      {!projects.length && <div className="rounded-2xl border border-dashed border-border p-8 text-center sm:p-10"><Globe2 size={28} className="mx-auto text-muted-foreground"/><h3 className="mt-3 font-medium">No local theme drafts yet</h3><p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">{hostedSites.length ? 'Your connected websites are listed above. Create a separate local draft when you want to experiment without changing a live site.' : 'Create a site draft or start from a packaged theme. Drafts stay on this installation until you deliberately connect and publish them.'}</p><button className={control + ' mt-4'} onClick={() => go('/themes')}><FilePlus2 size={15}/> Start from a theme</button></div>}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {projects.map((project) => <article key={project.id} className="flex flex-col rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between gap-2"><span className="rounded-md bg-muted p-2"><Globe2 size={18}/></span><span className="text-[11px] text-muted-foreground">Local draft</span></div>

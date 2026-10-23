@@ -1,0 +1,37 @@
+{
+  "name": "@inneranimalmedia/agentsam-occt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Canonical AgentSam OpenCascade engine contract with browser-WASM and native OCCT adapters.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./native": {
+      "types": "./dist/native-provider.d.mts",
+      "import": "./dist/native-provider.mjs"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "test": "node --experimental-strip-types --test test/*.test.mjs"
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "native/",
+    "README.md",
+    "agentsam.package.json"
+  ],
+  "engines": {
+    "node": ">=22 <27"
+  }
+}

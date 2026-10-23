@@ -73,7 +73,7 @@ export function cadDefaultResources(tools) {
 function runtimeDigest() {
   const digest = createHash('sha256');
   digest.update(CAD_SERVER_FILE).update('\0').update(fs.readFileSync(path.join(sdkRoot, CAD_SERVER_FILE))).update('\0');
-  for (const extra of ['services/cad/provision/install_node.py', 'services/cad/occt/main.cpp', 'services/cad/occt/CMakeLists.txt']) {
+  for (const extra of ['services/cad/provision/install_node.py', 'packages/agentsam-occt/native/main.cpp', 'packages/agentsam-occt/native/CMakeLists.txt']) {
     const file = path.join(sdkRoot, extra);
     if (fs.existsSync(file)) digest.update(extra).update('\0').update(fs.readFileSync(file)).update('\0');
   }
@@ -221,7 +221,7 @@ export function stageCadContext(versionDir, opts = {}) {
   }
   if (tools.includes('occt')) {
     fs.mkdirSync(path.join(context, 'occt'), { recursive: true });
-    for (const file of ['main.cpp', 'CMakeLists.txt']) fs.copyFileSync(path.join(sdkRoot, 'services/cad/occt', file), path.join(context, 'occt', file));
+    for (const file of ['main.cpp', 'CMakeLists.txt']) fs.copyFileSync(path.join(sdkRoot, 'packages/agentsam-occt/native', file), path.join(context, 'occt', file));
   }
   if (tools.includes('blender')) {
     const blenderAdapter = path.join(sdkRoot, 'services/cad/blender/adapter.py');

@@ -13,7 +13,9 @@
   "dependencies": {
     "fflate": "^0.8.2",
     "opencascade.js": "^2.0.0-beta.b5ff984",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "@inneranimalmedia/agentsam-occt": "file:../../packages/agentsam-occt",
+    "@inneranimalmedia/agentsam-3d-viewer": "file:../../packages/agentsam-3d-viewer"
   },
   "devDependencies": {
     "@types/three": "^0.180.0",

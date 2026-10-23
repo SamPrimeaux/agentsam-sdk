@@ -1,0 +1,40 @@
+{
+  "schema": "agentsam.package.v1",
+  "id": "agentsam-3d-viewer",
+  "name": "@inneranimalmedia/agentsam-3d-viewer",
+  "version": "0.1.0",
+  "class": "package",
+  "status": "in-development",
+  "catalog_status": "needs-review",
+  "purpose": "Shared framework-agnostic Three.js viewer for GLB, GLTF, and STL assets across public pages and AgentSam workspaces.",
+  "install": [
+    {
+      "type": "npm-workspace",
+      "package": "@inneranimalmedia/agentsam-3d-viewer",
+      "command": "npm install --workspace @inneranimalmedia/agentsam-3d-viewer"
+    }
+  ],
+  "registry": {
+    "kind": "npm-workspace",
+    "name": "@inneranimalmedia/agentsam-3d-viewer",
+    "public_claim": false
+  },
+  "use_when": [
+    "Showing an existing GLB, GLTF, or STL in a public marketing page or application panel",
+    "Creating a reusable Three.js viewport while keeping CAD-specific selection and scene logic in the host"
+  ],
+  "avoid_when": [
+    "Generating precision solids or Boolean geometry; use agentsam-occt",
+    "Replacing specialized BIM, robotics, or scene-authoring behavior with a generic asset viewer"
+  ],
+  "evidence": {
+    "directory": "packages/agentsam-3d-viewer",
+    "tests": [
+      "packages/agentsam-3d-viewer/test/format.test.mjs",
+      "packages/agentsam-3d-viewer/test/viewport.test.mjs"
+    ],
+    "consumers": [
+      "apps/samsketch/src/main.ts"
+    ]
+  }
+}

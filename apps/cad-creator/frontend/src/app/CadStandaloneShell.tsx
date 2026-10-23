@@ -10,10 +10,10 @@ import {CadCreatorApp} from './CadCreatorApp';
  */
 export function CadStandaloneShell() {
   const [mode,setMode] = useState<NavMode>('work');
-  const [activeProject,setActiveProject] = useState('DreamHouse V1.1');
+  const [activeProject,setActiveProject] = useState('Example Home');
   const go = (to:string) => {
     if (to === '/cad') {setMode('work');return;}
-    if (to === '/cad/world') {window.dispatchEvent(new Event('agentsam:cad-open-dreamhouse'));setActiveProject('DreamHouse V1.1');setMode('work');return;}
+    if (to === '/cad/world') {window.dispatchEvent(new Event('agentsam:cad-open-dreamhouse'));setActiveProject('DreamHouse · Public Example');setMode('work');return;}
     if (to === '/cad/new') {
       // The CAD app handles model creation; enter its existing New workflow.
       window.dispatchEvent(new Event('agentsam:cad-new-project'));
@@ -28,10 +28,10 @@ export function CadStandaloneShell() {
   const data:NavValue = {
     mode,onModeChange:setMode,
     brand:{name:'AgentSam',home:'/cad',logo:'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d1864d11-4485-4a38-1849-168f567aa200/avatar'},
-    project:{id:'dreamhouse-v1-wip',name:activeProject},
+    project:{id:'public-demo',name:activeProject},
     destinations:[
       {id:'cad',label:'CAD Creator',href:'/cad',icon:<img src="/studio/samsketch-icon.png" alt="" width={20} height={20} className="rounded-md"/>,active:true},
-      {id:'dreamhouse',label:'DreamHouse V1.1',href:'/cad/world',icon:<LayoutGrid/>},
+      {id:'dreamhouse',label:'DreamHouse · Public Example',href:'/cad/world',icon:<LayoutGrid/>},
       {id:'new',label:'New CAD project',href:'/cad/new',icon:<Plus/>},
       {id:'projects',label:'Projects',href:'/projects',icon:<FolderOpen/>},
       {id:'library',label:'Library',href:'/artifacts',icon:<BookOpen/>},
@@ -59,7 +59,7 @@ export function CadStandaloneShell() {
             </div>
           </section>}
           <div className={'cad-platform-canvas '+(mode==='chat'?'cad-platform-canvas--chat':'')}>
-            <CadCreatorApp presentation="embedded"/>
+            <CadCreatorApp presentation="embedded" accessMode="public-demo"/>
           </div>
         </div>
       </div>

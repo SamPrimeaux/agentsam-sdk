@@ -67,7 +67,7 @@ function CadStudioPage() {
       )}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {chatOpen && <CadConversationPane selected={selection?.object.label} />}
-        <iframe ref={iframeRef} title="CAD Creator" src="/cad-creator/index.html?presentation=embedded"
+        <iframe ref={iframeRef} title="CAD Creator" src="/cad-creator/index.html?presentation=embedded&access=owner"
           className={"min-h-0 min-w-0 flex-1 border-0 "+(chatOpen ? "hidden md:block" : "block")} allow="fullscreen" />
       </div>
     </div>

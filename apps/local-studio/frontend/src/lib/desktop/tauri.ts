@@ -13,6 +13,33 @@ export function getTauriInvoke(): TauriInvoke | null {
   return window.__TAURI__?.core?.invoke || null;
 }
 
+type TauriEvent<T = unknown> = { event: string; id: number; payload: T };
+type TauriEventBridge = {
+  event?: {
+    emit?: (event: string, payload?: unknown) => Promise<void>;
+    listen?: <T = unknown>(event: string, handler: (event: TauriEvent<T>) => void) => Promise<() => void>;
+  };
+  window?: { getCurrentWindow?: () => { label?: string } };
+};
+function getTauriEventBridge(): TauriEventBridge | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (window as unknown as { __TAURI__?: TauriEventBridge }).__TAURI__;
+}
+export function emitTauriEvent(event: string, payload?: unknown): Promise<void> {
+  const emit = getTauriEventBridge()?.event?.emit;
+  return emit ? emit(event, payload) : Promise.resolve();
+}
+export function listenTauriEvent<T = unknown>(event: string, handler: (event: TauriEvent<T>) => void): Promise<(() => void) | null> {
+  const listen = getTauriEventBridge()?.event?.listen;
+  return listen ? listen(event, handler) : Promise.resolve(null);
+}
+
+export function getTauriWindowLabel(): string | null {
+  if (typeof window === "undefined") return null;
+  try { return getTauriEventBridge()?.window?.getCurrentWindow?.().label ?? null; }
+  catch { return null; }
+}
+
 export function isPackagedDesktop(): boolean {
   return Boolean(
     typeof window !== "undefined" &&
@@ -267,4 +294,12 @@ export async function listenDeepLinks(handler: (url: string) => void): Promise<(
       deepLinkPumpRunning = false;
     }
   };
+}
+
+
+/** Toggle the optional native AgentSam sprite window in packaged Local Studio. */
+export async function toggleAgentSamPet(): Promise<boolean> {
+  const invoke = getTauriInvoke();
+  if (!invoke) throw new Error("desktop_pet_requires_desktop");
+  return Boolean(await invoke("toggle_agent_sam_pet", {}));
 }

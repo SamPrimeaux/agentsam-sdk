@@ -1,3 +1,4 @@
+use tauri::{AppHandle, Manager};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -89,5 +90,16 @@ pub fn open_external_url(url: String) -> Result<(), String> {
     if !status.success() {
         return Err("external_url_open_failed".into());
     }
+    Ok(())
+}
+
+/// Bring the existing Local Studio shell forward for native companion actions.
+#[tauri::command]
+pub fn focus_main_window(app: AppHandle) -> Result<(), String> {
+    let window = app
+        .get_webview_window("main")
+        .ok_or_else(|| "main_window_missing".to_string())?;
+    window.show().map_err(|error| error.to_string())?;
+    window.set_focus().map_err(|error| error.to_string())?;
     Ok(())
 }

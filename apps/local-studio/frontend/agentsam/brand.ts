@@ -7,7 +7,7 @@ import type { NavBrand } from '@inneranimalmedia/agentsam-nav';
  */
 export const brand: NavBrand = {
   name: 'AgentSam',
-  home: '/agentsam',
+  home: '/',
   logo: '/brand/agentsam-mark-on-dark.svg',
   lightLogo: '/brand/agentsam-mark-on-light.svg',
 };

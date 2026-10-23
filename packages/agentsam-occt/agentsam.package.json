@@ -1,0 +1,39 @@
+{
+  "schema": "agentsam.package.v1",
+  "id": "agentsam-occt",
+  "name": "@inneranimalmedia/agentsam-occt",
+  "version": "0.1.0",
+  "class": "package",
+  "status": "in-development",
+  "catalog_status": "needs-review",
+  "purpose": "One OpenCascade engine contract with shared browser-WASM and native C++ adapters for AgentSam CAD surfaces.",
+  "install": [
+    {
+      "type": "npm-workspace",
+      "package": "@inneranimalmedia/agentsam-occt",
+      "command": "npm install --workspace @inneranimalmedia/agentsam-occt"
+    }
+  ],
+  "registry": {
+    "kind": "npm-workspace",
+    "name": "@inneranimalmedia/agentsam-occt",
+    "public_claim": false
+  },
+  "use_when": [
+    "Adding OCCT-backed geometry to a browser, desktop, or local CAD application",
+    "Reusing the canonical native OCCT provider and browser Boolean adapter"
+  ],
+  "avoid_when": [
+    "Displaying an existing GLB/GLTF/STL without geometry edits; use agentsam-3d-viewer",
+    "Creating a parallel native engine, provider implementation, or operation registry"
+  ],
+  "evidence": {
+    "directory": "packages/agentsam-occt",
+    "native_source": "packages/agentsam-occt/native/main.cpp",
+    "compatibility_build_entry": "services/cad/occt/CMakeLists.txt",
+    "tests": [
+      "packages/agentsam-occt/test/contracts.test.mjs",
+      "packages/agentsam-occt/test/browser-provider.test.mjs"
+    ]
+  }
+}

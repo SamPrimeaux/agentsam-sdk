@@ -21,6 +21,7 @@ import { Route as appsCmsRouteImport } from './routes/(apps)/cms'
 import { Route as appsCollaborateRouteImport } from './routes/(apps)/collaborate'
 import { Route as appsContentRouteImport } from './routes/(apps)/content'
 import { Route as appsDatabaseRouteImport } from './routes/(apps)/database'
+import { Route as appsDocsRouteImport } from './routes/(apps)/docs'
 import { Route as appsFilesRouteImport } from './routes/(apps)/files'
 import { Route as appsMailRouteImport } from './routes/(apps)/mail'
 import { Route as appsMediaRouteImport } from './routes/(apps)/media'
@@ -41,6 +42,7 @@ import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifact
 import { Route as appsArtifactsTicketsRouteImport } from './routes/(apps)/artifacts/tickets'
 import { Route as appsChatsIndexRouteImport } from './routes/(apps)/chats/index'
 import { Route as appsChatsChatIdRouteImport } from './routes/(apps)/chats/$chatId'
+import { Route as appsHelpCmsRouteImport } from './routes/(apps)/help/cms'
 import { Route as appsMediaEditRouteImport } from './routes/(apps)/media.edit'
 import { Route as appsProjectsIndexRouteImport } from './routes/(apps)/projects/index'
 import { Route as appsProjectsProjectIdRouteImport } from './routes/(apps)/projects/$projectId'
@@ -116,6 +118,11 @@ const appsContentRoute = appsContentRouteImport.update({
 const appsDatabaseRoute = appsDatabaseRouteImport.update({
   id: '/(apps)/database',
   path: '/database',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsDocsRoute = appsDocsRouteImport.update({
+  id: '/(apps)/docs',
+  path: '/docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsFilesRoute = appsFilesRouteImport.update({
@@ -219,6 +226,11 @@ const appsChatsChatIdRoute = appsChatsChatIdRouteImport.update({
   path: '/chats/$chatId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsHelpCmsRoute = appsHelpCmsRouteImport.update({
+  id: '/(apps)/help/cms',
+  path: '/help/cms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsMediaEditRoute = appsMediaEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -316,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/collaborate': typeof appsCollaborateRoute
   '/content': typeof appsContentRoute
   '/database': typeof appsDatabaseRoute
+  '/docs': typeof appsDocsRoute
   '/files': typeof appsFilesRoute
   '/mail': typeof appsMailRoute
   '/media': typeof appsMediaRouteWithChildren
@@ -334,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/chats/$chatId': typeof appsChatsChatIdRoute
+  '/help/cms': typeof appsHelpCmsRoute
   '/media/edit': typeof appsMediaEditRoute
   '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
@@ -365,6 +379,7 @@ export interface FileRoutesByTo {
   '/collaborate': typeof appsCollaborateRoute
   '/content': typeof appsContentRoute
   '/database': typeof appsDatabaseRoute
+  '/docs': typeof appsDocsRoute
   '/files': typeof appsFilesRoute
   '/mail': typeof appsMailRoute
   '/media': typeof appsMediaRouteWithChildren
@@ -380,6 +395,7 @@ export interface FileRoutesByTo {
   '/api/github': typeof ApiGithubRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/chats/$chatId': typeof appsChatsChatIdRoute
+  '/help/cms': typeof appsHelpCmsRoute
   '/media/edit': typeof appsMediaEditRoute
   '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
@@ -413,6 +429,7 @@ export interface FileRoutesById {
   '/(apps)/collaborate': typeof appsCollaborateRoute
   '/(apps)/content': typeof appsContentRoute
   '/(apps)/database': typeof appsDatabaseRoute
+  '/(apps)/docs': typeof appsDocsRoute
   '/(apps)/files': typeof appsFilesRoute
   '/(apps)/mail': typeof appsMailRoute
   '/(apps)/media': typeof appsMediaRouteWithChildren
@@ -431,6 +448,7 @@ export interface FileRoutesById {
   '/(apps)/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/(apps)/chats/$chatId': typeof appsChatsChatIdRoute
+  '/(apps)/help/cms': typeof appsHelpCmsRoute
   '/(apps)/media/edit': typeof appsMediaEditRoute
   '/(apps)/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
@@ -465,6 +483,7 @@ export interface FileRouteTypes {
     | '/collaborate'
     | '/content'
     | '/database'
+    | '/docs'
     | '/files'
     | '/mail'
     | '/media'
@@ -483,6 +502,7 @@ export interface FileRouteTypes {
     | '/apps/ecommerce-cms-agentsam'
     | '/artifacts/tickets'
     | '/chats/$chatId'
+    | '/help/cms'
     | '/media/edit'
     | '/projects/$projectId'
     | '/settings/$unit'
@@ -514,6 +534,7 @@ export interface FileRouteTypes {
     | '/collaborate'
     | '/content'
     | '/database'
+    | '/docs'
     | '/files'
     | '/mail'
     | '/media'
@@ -529,6 +550,7 @@ export interface FileRouteTypes {
     | '/api/github'
     | '/apps/ecommerce-cms-agentsam'
     | '/chats/$chatId'
+    | '/help/cms'
     | '/media/edit'
     | '/projects/$projectId'
     | '/settings/$unit'
@@ -561,6 +583,7 @@ export interface FileRouteTypes {
     | '/(apps)/collaborate'
     | '/(apps)/content'
     | '/(apps)/database'
+    | '/(apps)/docs'
     | '/(apps)/files'
     | '/(apps)/mail'
     | '/(apps)/media'
@@ -579,6 +602,7 @@ export interface FileRouteTypes {
     | '/(apps)/apps/ecommerce-cms-agentsam'
     | '/(apps)/artifacts/tickets'
     | '/(apps)/chats/$chatId'
+    | '/(apps)/help/cms'
     | '/(apps)/media/edit'
     | '/(apps)/projects/$projectId'
     | '/(apps)/settings/$unit'
@@ -612,6 +636,7 @@ export interface RootRouteChildren {
   appsCollaborateRoute: typeof appsCollaborateRoute
   appsContentRoute: typeof appsContentRoute
   appsDatabaseRoute: typeof appsDatabaseRoute
+  appsDocsRoute: typeof appsDocsRoute
   appsFilesRoute: typeof appsFilesRoute
   appsMailRoute: typeof appsMailRoute
   appsMediaRoute: typeof appsMediaRouteWithChildren
@@ -629,6 +654,7 @@ export interface RootRouteChildren {
   ApiGithubRoute: typeof ApiGithubRoute
   appsAppsEcommerceCmsAgentsamRoute: typeof appsAppsEcommerceCmsAgentsamRoute
   appsChatsChatIdRoute: typeof appsChatsChatIdRoute
+  appsHelpCmsRoute: typeof appsHelpCmsRoute
   ApiContentOptimizeRoute: typeof ApiContentOptimizeRoute
   ApiLlmInventoryRoute: typeof ApiLlmInventoryRoute
   appsChatsIndexRoute: typeof appsChatsIndexRoute
@@ -720,6 +746,13 @@ declare module '@tanstack/react-router' {
       path: '/database'
       fullPath: '/database'
       preLoaderRoute: typeof appsDatabaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/docs': {
+      id: '/(apps)/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof appsDocsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/files': {
@@ -860,6 +893,13 @@ declare module '@tanstack/react-router' {
       path: '/chats/$chatId'
       fullPath: '/chats/$chatId'
       preLoaderRoute: typeof appsChatsChatIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/help/cms': {
+      id: '/(apps)/help/cms'
+      path: '/help/cms'
+      fullPath: '/help/cms'
+      preLoaderRoute: typeof appsHelpCmsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/media/edit': {
@@ -1077,6 +1117,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsCollaborateRoute: appsCollaborateRoute,
   appsContentRoute: appsContentRoute,
   appsDatabaseRoute: appsDatabaseRoute,
+  appsDocsRoute: appsDocsRoute,
   appsFilesRoute: appsFilesRoute,
   appsMailRoute: appsMailRoute,
   appsMediaRoute: appsMediaRouteWithChildren,
@@ -1094,6 +1135,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGithubRoute: ApiGithubRoute,
   appsAppsEcommerceCmsAgentsamRoute: appsAppsEcommerceCmsAgentsamRoute,
   appsChatsChatIdRoute: appsChatsChatIdRoute,
+  appsHelpCmsRoute: appsHelpCmsRoute,
   ApiContentOptimizeRoute: ApiContentOptimizeRoute,
   ApiLlmInventoryRoute: ApiLlmInventoryRoute,
   appsChatsIndexRoute: appsChatsIndexRoute,

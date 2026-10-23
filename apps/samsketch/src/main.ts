@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { createThreeViewport } from "@inneranimalmedia/agentsam-3d-viewer";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { createBooleanGLB, type CadParameters } from "./cad";
@@ -167,19 +168,25 @@ document.getElementById("settings-toggle")?.addEventListener("click",()=>{
  settingsApi.toggle("scene");
 });
 const viewport=document.querySelector<HTMLElement>(".canvas-wrap")!;
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.55;
-viewport.insertBefore(renderer.domElement,viewport.firstChild);
-const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(37,1,.1,100);
+const sharedViewport=createThreeViewport(viewport,{THREE,OrbitControls},{
+ ariaLabel:"SamSketch interactive 3D scene",
+ background:"transparent",
+ wrapper:false,
+ insertCanvasFirst:true,
+ minHeight:"0px",
+ fov:37,near:.1,far:100,
+ maxPixelRatio:2,
+ autoRender:false,
+ lights:false,
+ preserveDrawingBuffer:true,
+ shadowMap:{enabled:true,type:THREE.PCFSoftShadowMap},
+ toneMapping:THREE.ACESFilmicToneMapping,
+ toneMappingExposure:1.55,
+ enableDamping:true,dampingFactor:.07,minDistance:4,maxDistance:35,
+});
+const {renderer,scene,camera,controls}=sharedViewport;
 camera.position.set(11,6.2,13.5);
-const controls=new OrbitControls(camera,renderer.domElement);
-controls.target.set(0,0,0);controls.enableDamping=true;controls.dampingFactor=.07;controls.minDistance=4;controls.maxDistance=35;
+controls.target.set(0,0,0);
 const light=new THREE.DirectionalLight("#ffffff",3.5);light.position.set(-4,10,9);light.castShadow=true;light.shadow.mapSize.set(2048,2048);light.shadow.camera.left=-12;light.shadow.camera.right=12;light.shadow.camera.top=12;light.shadow.camera.bottom=-12;scene.add(light);
 const fillLight=new THREE.DirectionalLight("#b1c9ff",1.4);fillLight.position.set(6,4,-5);scene.add(fillLight);
 const ambientLight=new THREE.AmbientLight("#e8f1ff",2.1);scene.add(ambientLight);
@@ -290,10 +297,6 @@ function refreshSelection(){
  const item=sel();const root=item&&roots.get(item.id);
  if(root && root.visible && selectionOutlineEnabled){selectedHelper=new THREE.BoxHelper(root,0x6185ed);scene.add(selectedHelper);}
 }
-const resize=new ResizeObserver(()=>{
- const width=viewport.clientWidth,height=viewport.clientHeight;
- if(width&&height){renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();}
-});resize.observe(viewport);
 let pressed:Vec3|null=null;
 renderer.domElement.addEventListener("pointerdown",e=>{pressed=[e.clientX,e.clientY,0]});
 renderer.domElement.addEventListener("pointerup",e=>{

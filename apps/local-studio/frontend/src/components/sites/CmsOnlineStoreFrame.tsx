@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight, CircleHelp, FileText, LayoutTemplate, PanelsTopLeft, ShieldCheck, Store } from 'lucide-react';
 // The original merchant Store is packaged with ecommerce-cms-agentsam.
 // @ts-ignore Public portable JS package entry.
 import { mountOnlineStore } from '@inneranimalmedia/ecommerce-cms-agentsam/store/mount';
@@ -45,10 +46,14 @@ export function CmsOnlineStoreFrame({
   site,
   adapter,
   onEdit,
+  onOpenThemes,
+  onOpenHelp,
 }: {
   site: MerchantSite;
   adapter: EditorAdapter | null;
   onEdit: (pageSlug: string) => void;
+  onOpenThemes: () => void;
+  onOpenHelp: () => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [error, setError] = useState('');
@@ -124,27 +129,98 @@ export function CmsOnlineStoreFrame({
     };
   }, [site.slug, site.source, storefrontUrl, adapter, onEdit]);
 
-  // Some historical projects have content records but no deployed renderer.
-  // A project record must never impersonate an active website/theme.
+  // Content-only records stay editable, but must not impersonate a live storefront.
+  // Use the Online Store workspace as the presentation reference while making
+  // the actual setup steps and publication boundary explicit.
   if (site.source !== 'worker') {
-    return <section data-cms-site-installation="unlinked" className="mx-auto flex h-full max-w-3xl flex-col justify-center gap-4 px-6 py-12 text-foreground">
-      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Content project · Theme not installed</p>
-      <h1 className="text-2xl font-semibold">{site.name}</h1>
-      <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-        This project contains CMS content, but has no verified storefront renderer, installed theme, or publication binding.
-        Its project domain cannot be used as a website preview. You can edit the structured content, but those changes
-        do not represent the published website until its theme and templates are installed.
-      </p>
-      <div><button type="button" className="rounded-lg border border-border bg-muted px-4 py-2 text-sm font-medium hover:bg-accent"
-        onClick={async () => {
-          try {
-            const pages = await adapter?.listPages();
-            if (pages?.length) onEdit(pages.find(p => p.slug === 'home')?.slug || pages[0].slug);
-            else setError('No editable content pages are registered for this project.');
-          } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
-        }}>Edit structured content</button></div>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    </section>;
+    const openContentEditor = async () => {
+      try {
+        const pages = await adapter?.listPages();
+        if (pages?.length) onEdit(pages.find(page => page.slug === 'home')?.slug || pages[0].slug);
+        else setError('No editable content pages are registered for this project.');
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : String(cause));
+      }
+    };
+
+    return (
+      <section data-cms-site-installation="unlinked" className="h-full min-h-0 overflow-auto bg-background text-foreground">
+        <div className="mx-auto flex min-h-full max-w-6xl flex-col justify-center gap-7 px-5 py-8 lg:px-9">
+          <header className="flex flex-wrap items-start justify-between gap-5">
+            <div className="max-w-3xl">
+              <p className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                <Store size={15} /> Online Store / Setup
+              </p>
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Your store is taking shape.</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+                {site.name} has editable content, but it is not connected to a verified storefront renderer and installed theme yet.
+                The setup view keeps that distinction clear instead of presenting an unverified draft as a live website.
+              </p>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-800 dark:text-amber-200">
+              <span className="size-2 rounded-full bg-amber-500" /> Storefront not configured
+            </span>
+          </header>
+
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.85fr)]">
+            <section className="overflow-hidden rounded-2xl border border-border bg-card" aria-labelledby="cms-store-setup-title">
+              <div className="flex items-start gap-3 border-b border-border px-5 py-4 sm:px-6">
+                <span className="rounded-xl border border-border bg-background p-2.5"><PanelsTopLeft size={19} /></span>
+                <div className="min-w-0 flex-1">
+                  <h2 id="cms-store-setup-title" className="font-semibold">Bring the storefront online</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Three clear steps from editable content to a verifiable store.</p>
+                </div>
+                <span className="hidden rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground sm:inline-flex">Setup</span>
+              </div>
+              <ol className="grid gap-3 p-4 sm:grid-cols-3 sm:p-5">
+                <li className="flex min-w-0 flex-col rounded-xl border border-border bg-background p-4">
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-muted text-xs font-semibold">01</span>
+                  <LayoutTemplate className="mt-4 text-muted-foreground" size={19} />
+                  <h3 className="mt-3 text-sm font-semibold">Choose a theme</h3>
+                  <p className="mt-1 flex-1 text-xs leading-5 text-muted-foreground">Start from a packaged design for this site's storefront.</p>
+                  <button type="button" onClick={onOpenThemes} className="mt-4 inline-flex items-center gap-1.5 self-start text-sm font-medium hover:underline">
+                    Explore themes <ArrowRight size={14} />
+                  </button>
+                </li>
+                <li className="flex min-w-0 flex-col rounded-xl border border-border bg-background p-4">
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-muted text-xs font-semibold">02</span>
+                  <FileText className="mt-4 text-muted-foreground" size={19} />
+                  <h3 className="mt-3 text-sm font-semibold">Shape your content</h3>
+                  <p className="mt-1 flex-1 text-xs leading-5 text-muted-foreground">Edit the existing pages and their structured content without publishing.</p>
+                  <button type="button" onClick={() => void openContentEditor()} className="mt-4 inline-flex items-center gap-1.5 self-start text-sm font-medium hover:underline">
+                    Edit content <ArrowRight size={14} />
+                  </button>
+                </li>
+                <li className="flex min-w-0 flex-col rounded-xl border border-border bg-background p-4">
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-muted text-xs font-semibold">03</span>
+                  <ShieldCheck className="mt-4 text-muted-foreground" size={19} />
+                  <h3 className="mt-3 text-sm font-semibold">Preview and publish</h3>
+                  <p className="mt-1 flex-1 text-xs leading-5 text-muted-foreground">Available when a renderer, theme, and publication binding are verified.</p>
+                  <span className="mt-4 inline-flex items-center gap-1.5 self-start rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground">Waiting for connection</span>
+                </li>
+              </ol>
+            </section>
+
+            <aside className="flex flex-col rounded-2xl border border-border bg-card p-5 sm:p-6" aria-labelledby="cms-online-store-reference-title">
+              <span className="flex size-10 items-center justify-center rounded-xl border border-border bg-background"><Store size={20} /></span>
+              <h2 id="cms-online-store-reference-title" className="mt-4 text-lg font-semibold">Online Store workspace</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                This is the reference experience for connected sites: actual desktop and mobile storefront previews, active-theme status, draft themes, and publishing readiness.
+              </p>
+              <ul className="mt-5 space-y-3 border-t border-border pt-5 text-sm">
+                <li className="flex items-center gap-2.5"><PanelsTopLeft size={16} className="text-muted-foreground" /> Desktop and mobile preview</li>
+                <li className="flex items-center gap-2.5"><LayoutTemplate size={16} className="text-muted-foreground" /> Active theme and saved drafts</li>
+                <li className="flex items-center gap-2.5"><ShieldCheck size={16} className="text-muted-foreground" /> Verified publish state</li>
+              </ul>
+              <button type="button" onClick={onOpenHelp} className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-medium hover:bg-muted">
+                <CircleHelp size={16} /> Website setup guide <ArrowRight size={14} />
+              </button>
+            </aside>
+          </div>
+          {error && <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
+        </div>
+      </section>
+    );
   }
 
   const overlayStyle = {

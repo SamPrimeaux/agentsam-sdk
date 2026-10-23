@@ -7,7 +7,7 @@ Date: 2026-10-18 · Product: `cad-creator` · Canonical project contract: `cad.p
 | Gate | Evidence | State |
 | --- | --- | --- |
 | Native dependency | Homebrew OpenCascade 7.9.3 development library + CMake/Clang on macOS | Verified locally |
-| C++ engine | `services/cad/occt/main.cpp`, `CMakeLists.txt`, native binary at `~/.agentsam/bin/agentsam-occt` | Compiled; `--doctor` passed |
+| C++ engine | `packages/agentsam-occt/native/main.cpp` + `native/CMakeLists.txt`; compatibility build entry `services/cad/occt/CMakeLists.txt`; native binary at `~/.agentsam/bin/agentsam-occt` | Compiled; `--doctor` passed |
 | SDK provider | `src/lib/cad/occt-native-provider.mjs` with bounded subprocess doctor, authorized artifact root, STEP reopen, SHA-256 | Verified locally |
 | Canonical project | `design_model_build`, `design_model_inspect`, `design_model_export` on saved `cad.project.v1` revision | Verified locally |
 | CAD Creator API | Local `/api/cad/project/tools/:name`, `native/doctor` and scoped artifact route | Real HTTP proof passed |

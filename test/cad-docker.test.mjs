@@ -174,12 +174,17 @@ test('stageCadContext stages the Node installer and OCCT sources only when their
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cad-stage-'));
     try {
       const context = stageCadContext(dir, { tools });
-      return { installer: fs.existsSync(path.join(context, 'provision', 'install_node.py')),
-        occt: fs.existsSync(path.join(context, 'occt', 'main.cpp')) && fs.existsSync(path.join(context, 'occt', 'CMakeLists.txt')) };
+      const main = path.join(context, 'occt', 'main.cpp');
+      const cmake = path.join(context, 'occt', 'CMakeLists.txt');
+      const hasOcct = fs.existsSync(main) && fs.existsSync(cmake);
+      const canonicalMain = new URL('../packages/agentsam-occt/native/main.cpp', import.meta.url);
+      const canonicalCmake = new URL('../packages/agentsam-occt/native/CMakeLists.txt', import.meta.url);
+      const occtCanonical = hasOcct && fs.readFileSync(main, 'utf8') === fs.readFileSync(canonicalMain, 'utf8') && fs.readFileSync(cmake, 'utf8') === fs.readFileSync(canonicalCmake, 'utf8');
+      return { installer: fs.existsSync(path.join(context, 'provision', 'install_node.py')), occt: hasOcct, occtCanonical };
     } finally { fs.rmSync(dir, { recursive: true, force: true }); }
   };
-  assert.deepEqual(stage('all'), { installer: true, occt: true });
-  assert.deepEqual(stage('openscad'), { installer: false, occt: false });
+  assert.deepEqual(stage('all'), { installer: true, occt: true, occtCanonical: true });
+  assert.deepEqual(stage('openscad'), { installer: false, occt: false, occtCanonical: false });
 });
 
 test('Node installer allows the symlinks Node ships (contained) and refuses hard links and escapes', () => {

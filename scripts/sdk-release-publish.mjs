@@ -59,9 +59,9 @@ function visit(name){
 }
 for(const name of allowed.keys())visit(name);
 if(!order.some(x=>x.name===sdk.name))throw Error('sdk_release_node_missing');
-if(!sdk.exports?.['./cad-project-v2']||!sdk.files?.includes('services/cad/occt'))
- throw Error('cad_v2_or_occt_missing_from_distribution');
-for(const name of ['src/lib/cad/project-v2.js','services/cad/occt/main.cpp','protocol/cad/cad.project.v2.schema.json'])
+if(!sdk.exports?.['./cad-project-v2']||!sdk.files?.includes('services/cad/occt')||!sdk.files?.includes('packages/agentsam-occt')||!sdk.files?.includes('packages/agentsam-3d-viewer'))
+ throw Error('cad_v2_occt_viewer_missing_from_distribution');
+for(const name of ['src/lib/cad/project-v2.js','packages/agentsam-occt/package.json','packages/agentsam-occt/native/main.cpp','packages/agentsam-occt/native/CMakeLists.txt','packages/agentsam-occt/src/browser.ts','packages/agentsam-3d-viewer/package.json','packages/agentsam-3d-viewer/src/index.js','protocol/cad/cad.project.v2.schema.json'])
  if(!fs.existsSync(path.join(root,name)))throw Error('release_file_missing:'+name);
 console.log('AGENTSAM_STABLE_RELEASE '+version+' '+order.length+' packages');
 for(const [i,x]of order.entries())console.log(String(i+1).padStart(2,'0')+' '+x.name+'@'+version+' '+path.relative(root,x.cwd));

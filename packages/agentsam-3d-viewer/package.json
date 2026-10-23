@@ -1,0 +1,29 @@
+{
+  "name": "@inneranimalmedia/agentsam-3d-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Framework-agnostic Three.js viewport and model viewer for AgentSam apps and public sites.",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./format": {
+      "types": "./src/format.d.ts",
+      "import": "./src/format.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "agentsam.package.json"
+  ],
+  "engines": {
+    "node": ">=22 <27"
+  }
+}

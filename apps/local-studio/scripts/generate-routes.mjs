@@ -10,7 +10,7 @@ const config = getConfig({
   target: 'react',
   routesDirectory: './frontend/src/routes',
   generatedRouteTree: './frontend/src/routeTree.gen.ts',
-  routeFileIgnorePattern: '^_app(?:\\.tsx)?$',
+  routeFileIgnorePattern: '^_app(?:\\.tsx)?(?:/|$)',
 }, root);
 await new Generator({ config, root }).run();
 

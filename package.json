@@ -173,6 +173,8 @@
     "packages/agentsam-ide/src/lsp/host.d.mts",
     "packages/agentsam-hooks",
     "packages/agentsam-errors",
+    "packages/agentsam-3d-viewer",
+    "packages/agentsam-occt",
     "packages/catalog",
     "packages/agentsam-repository",
     "packages/agentsam-knowledge",
@@ -336,7 +338,9 @@
     "packages/copro-templates",
     "packages/copro-proof",
     "packages/copro-ui",
-    "packages/copro-storage"
+    "packages/copro-storage",
+    "packages/agentsam-occt",
+    "packages/agentsam-3d-viewer"
   ],
   "scripts": {
     "verify:ui-quality": "node --test scripts/ui-quality/*.test.mjs && node scripts/ui-quality/contrast.mjs",
