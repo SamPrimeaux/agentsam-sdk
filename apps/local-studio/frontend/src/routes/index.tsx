@@ -52,7 +52,7 @@ export function LocalStudioHome() {
             <span className="platform-home-signature">AgentSam</span>
             <span className="platform-home-composer-links">
               <Link to="/projects">Projects <ChevronRight size={14}/></Link>
-              <button type="button" onClick={newConversation} className="platform-home-go" aria-label="Open AgentSam"><ArrowUpRight size={18}/></button>
+              <button type="button" onClick={newConversation} className="platform-home-go" aria-label="Open AgentSam"><ArrowUpRight size={18}/><span className="sr-only">Open AgentSam</span></button>
             </span>
           </div>
         </div>
