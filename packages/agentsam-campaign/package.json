@@ -11,11 +11,14 @@
   "exports": {
     ".": "./src/index.js",
     "./project": "./src/project.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./storage": "./src/storage.js",
+    "./http": "./src/http.js"
   },
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    "sql"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
