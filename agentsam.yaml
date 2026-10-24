@@ -565,14 +565,14 @@ security_contract:
 release:
   root_sdk:
     target_version: "2.6.13"
-    state: candidate
+    state: published
     registry: npm
-    current_latest: "2.6.12"
+    current_latest: "2.6.13"
     current_alpha: "2.0.0-alpha.identity.12"
     candidate_base_head: 2d7c8214809bf9a947f6151e9745d98695892f46
-    published_at_utc: "2026-10-02T05:00:55.232Z"
-    published_git_head: f6b9ffa44f48b07fc6f172210e26c5dc23646778
-    dist_integrity: "sha512-7UIZeM2i79nky3vCKkA1nh2t5SpuojqaVV3S/6w7NxcLQc7FFii9lF0uK/4iqNhK2C26DrylR9KkUqAhfHuQCA=="
+    published_at_utc: "2026-10-19T08:21:26.043Z"
+    published_git_head: 4fdb762ede5c1d646e7162dd2f3ac7dbce168cae
+    dist_integrity: "sha512-/GOvgMHMOESG6m+bZp65T+X4q+8UidUhqjDgHO8f5ilV25p01sKO7P/vyCWyheUdLiJQyST9ZqYT24IpsUAgSQ=="
     git_tag: v2.6.8
     verification_command: npm run verify:release
     publish_mode: manual

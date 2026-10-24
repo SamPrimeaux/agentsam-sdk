@@ -1,3 +1,3 @@
-// Compatibility entrypoint for existing SDK imports. The canonical provider lives in
-// packages/agentsam-occt so applications share one implementation.
-export { createOcctNativeProvider, OCCT_NATIVE_OPERATIONS } from '@inneranimalmedia/agentsam-occt/native';
+// Compatibility entrypoint for existing SDK imports. The canonical provider is
+// bundled as SDK source because agentsam-occt is intentionally private.
+export { createOcctNativeProvider, OCCT_NATIVE_OPERATIONS } from '../../../packages/agentsam-occt/src/native-provider.mjs';

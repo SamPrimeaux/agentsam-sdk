@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
-import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, PawPrint, Box, Search, Bell, ShoppingBag, Tag, BarChart3, Megaphone, Users, Mail } from "lucide-react";
+import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, PawPrint, Box, Search, Bell, ShoppingBag, Tag, BarChart3, Megaphone, Users, Mail, CircleHelp } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import './shell.css';
 import './platform-console.css';
 import { AnnotationHelper } from './AnnotationHelper';
+import { IconAction } from '@/components/ui/icon-action';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
@@ -27,6 +28,7 @@ import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
 
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
+const AGENTSAM_PET_AVATAR = '/brand/agentsam-gorilla/v1/pet/animated/ledge-idle.gif';
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
 export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {}) {
@@ -54,7 +56,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   // The platform owns its shell; product-owned /admin pages navigate into
   // the installed Ecommerce application without recreating product routers.
   const go = (to: string) => {
-    if (to.startsWith('/admin/') && to !== '/admin/home') {
+    if (to.startsWith('/admin/')) {
       if (isPackagedDesktop()) window.location.hash = '#/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(to);
       else window.location.assign(to);
       return;
@@ -231,7 +233,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     conversation: trail ? { id: trail.id, title: trail.title } : undefined,
     projects: state.projects.map((item) => ({ id: item.id, name: item.name })),
     conversations: state.trails.map((item) => ({ id: item.id, title: item.title, projectId: item.projectId, pinned: item.pinned })),
-    account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: user.profileImageUrl ?? undefined } : undefined,
+    account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: user.profileImageUrl || AGENTSAM_PET_AVATAR } : undefined,
     destinations: [
       { id: 'home', label: 'Home', icon: <Home />, href: '/admin/home', active: pathname === '/' || pathname === '/admin/home' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
@@ -307,6 +309,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           <button type="button" className="platform-console-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={17} /><span>Search pages and tools</span><kbd>⌘K</kbd></button>
           <Nav.TopbarSpacer />
           <AgentSamPetTrigger state={petState} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
+          <IconAction className="as-nav-button" label="Help & documentation" hint="Open AgentSam documentation" onClick={() => go('/docs')}><CircleHelp size={18} /></IconAction>
           <button type="button" className="as-nav-button" title="Notifications" aria-label="Notifications" onClick={() => go('/tickets')}><Bell size={17} /><span className="sr-only">View notifications in Tickets</span></button>
           <Nav.AccountSwitcher />
         </Nav.Topbar> : null}
@@ -321,6 +324,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
             </aside>
           </> : null}
         </div>
+
       </div><CliDrawer /><CommandPalette />
       <Dialog open={sharing} onOpenChange={setSharing}><DialogContent><DialogTitle>Share conversation</DialogTitle><DialogDescription>Copy this conversation as text to share it. This does not create a public link.</DialogDescription><button type="button" className="as-nav-button" onClick={() => { if (!trail) return; void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => { toast('Conversation copied'); setSharing(false); }, () => toast('Could not copy conversation')); }}><Copy size={18} />Copy conversation</button></DialogContent></Dialog>
       <DesktopIdentityPortal open={identityOpen} onOpenChange={setIdentityOpen} />

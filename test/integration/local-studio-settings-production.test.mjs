@@ -25,9 +25,10 @@ test('production Settings never mounts fixture data', () => {
   assert.doesNotMatch(settingsFrontend, /demo-app|Demo Org/);
 });
 
-test('Settings route suppresses the outer application sidenav', () => {
+test('Settings route stays in the shared platform shell and activates Settings navigation', () => {
   assert.match(shell, /const isSettings = pathname === ['"]\/settings['"] \|\| pathname\.startsWith\(['"]\/settings\/['"]\)/);
-  assert.match(shell, /!isSettings \? <Nav\.Sidenav \/> : null/);
+  assert.match(shell, /id: ['"]settings['"],[^\n]+href: ['"]\/settings\/general['"],[^\n]+active: isSettings/);
+  assert.match(shell, /!embedded \? <Nav\.Sidenav \/> : null/);
 });
 
 test('Keys page has a visible explicit AgentSam key trigger', () => {

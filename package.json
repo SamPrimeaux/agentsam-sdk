@@ -175,6 +175,7 @@
     "packages/agentsam-errors",
     "packages/agentsam-3d-viewer",
     "packages/agentsam-occt",
+    "packages/primetech-procedures",
     "packages/catalog",
     "packages/agentsam-repository",
     "packages/agentsam-knowledge",
@@ -451,7 +452,7 @@
     "pg": "8.16.3",
     "picocolors": "^1.1.1",
     "typescript": "5.9.3",
-    "undici": "^7.30.0",
+    "undici": "7.30.1",
     "ws": "^8.18.0"
   },
   "publishConfig": {
@@ -497,15 +498,16 @@
     "@electric-sql/pglite-pgvector": "0.0.9",
     "esbuild": "0.28.1",
     "grpc-tools": "^1.13.1",
-    "wrangler": "4.151.1"
+    "wrangler": "4.152.0"
   },
   "overrides": {
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.3",
     "esbuild": "0.28.1",
-    "dompurify": "3.4.16",
+    "dompurify": "3.4.17",
     "sharp": "0.35.5",
-    "shell-quote": "1.12.0"
+    "shell-quote": "1.12.0",
+    "undici": "7.30.1"
   },
   "packageManager": "npm@10.9.2"
 }

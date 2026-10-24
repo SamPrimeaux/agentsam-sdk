@@ -53,8 +53,8 @@ test('immutable product sources and packaged shell are the authority', () => {
   assert.match(cloudflare, /"run_worker_first": \["\/admin\/\*", "\/sites", "\/samsketch"\]/);
 
   const app = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
-  assert.match(app, /return isApp \? <AgentSamShell \/> : <Outlet \/>/);
-  assert.doesNotMatch(app, /<PackagedConsoleFrame>/);
+  assert.match(app, /return isApp \? <PackagedConsoleFrame><AgentSamShell embedded \/><\/PackagedConsoleFrame> : <Outlet \/>/);
+  assert.match(app, /title="AgentSam Commerce home"/);
   for (const file of [
     'frontend/public/admin/host-config.js',
     '.output/public/admin/js/shell.js',
@@ -65,8 +65,8 @@ test('immutable product sources and packaged shell are the authority', () => {
 test('Local Studio owns exactly one navigation surface without nested Ecommerce shell', () => {
   const root = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
   const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
-  assert.doesNotMatch(root, /PackagedConsoleFrame/);
-  assert.match(root, /<AgentSamShell \/>/);
+  assert.match(root, /PackagedConsoleFrame/);
+  assert.match(root, /<AgentSamShell embedded \/>/);
   assert.equal((shell.match(/<Nav\.Sidenav \/>/g) || []).length, 1);
   assert.doesNotMatch(shell, /includeMobileDrawer|renderShell\(/);
   assert.doesNotMatch(shell, /href: '\/cli'/);
@@ -80,15 +80,12 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.match(css, /--nav-width: 246px/);
 });
 
-test('platform home is a real SaaS route separate from Ecommerce home.html', () => {
+test('admin home resolves to the packaged Ecommerce home on Local Studio', () => {
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
-  const route = readFileSync(new URL('../frontend/src/routes/(apps)/admin/home.tsx', import.meta.url), 'utf8');
-  const home = readFileSync(new URL('../frontend/src/routes/index.tsx', import.meta.url), 'utf8');
-  assert.match(worker, /url\.pathname !== "\/admin\/home"/);
-  assert.match(route, /component: LocalStudioHome/);
-  assert.match(home, /export function LocalStudioHome/);
-  assert.match(home, /Your activity/);
-  assert.doesNotMatch(home, /Your store is taking shape|Fuel & Free Time/);
+  const root = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
+  assert.match(root, /src="\/ecommerce-cms-agentsam\/admin\/home\.html"/);
+  assert.match(worker, /handleEcommerceAdminApi/);
+  assert.match(worker, /handleCompletefulWebhook/);
 });
 
 test('AgentSam app and approved Ecommerce groups keep their actual route ownership', () => {
@@ -176,7 +173,7 @@ test('desktop Console links resolve to real platform or installed Ecommerce app 
     assert.equal(prevented, true);
     return context.window.location.hash;
   };
-  assert.equal(visit('/admin/home'), '#/');
+  assert.equal(visit('/admin/home'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fhome');
   assert.equal(visit('/admin/agentsam'), '#/agentsam');
   assert.equal(visit('/cad'), '#/cad');
   assert.equal(visit('/admin/products'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts');

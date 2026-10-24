@@ -698,7 +698,7 @@ async function listSubscribers(request, env) {
 
 // ----- Router -----
 
-export async function handleAdminApi(request, env, url, executionCtx = null) {
+export async function handleAdminApi(request, env, url, executionCtx = null, trustedSessionUser = null) {
   const path = url.pathname;
   const method = request.method;
 
@@ -708,7 +708,10 @@ export async function handleAdminApi(request, env, url, executionCtx = null) {
   }
 
   // Everything below requires a valid session
-  const user = await getSessionUser(request, env);
+  // Local Studio supplies a user only after resolving its own signed-in
+  // identity in the host Worker. Standalone ecommerce installations keep
+  // resolving their existing ecommerce session cookie here.
+  const user = trustedSessionUser || await getSessionUser(request, env);
   if (!user) return json({ error: "Unauthorized" }, { status: 401 });
 
   if (path === "/api/admin/logout" && method === "POST") return logout(request, env);

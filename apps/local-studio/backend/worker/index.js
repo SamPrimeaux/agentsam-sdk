@@ -62,6 +62,8 @@ import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
 import clientCmsApp from "../../../client-cms-editor/agentsam.app.json";
 import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
 import { servePackagedConsole } from "./packaged-console.js";
+import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
+import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
 
 const APP = localStudioApp;
 const ROUTE_PROJECTION = projectionFromAppManifest(APP);
@@ -104,6 +106,15 @@ function isIdentityPath(pathname) {
 
 function isProtectedAppPath(pathname) {
   return mountRequiresAuth(pathname, APP);
+}
+
+function isLocalStudioCommerceApi(pathname) {
+  return pathname === "/api/admin/overview"
+    || pathname === "/api/admin/me"
+    || pathname === "/api/admin/products"
+    || /^\/api\/admin\/(?:products\/\d+(?:\/variants|\/images(?:\/\d+(?:\/primary)?)?)?|variants\/\d+(?:\/inventory)?|inventory|collections)$/.test(pathname)
+    || pathname.startsWith("/api/admin/product-studio/")
+    || pathname.startsWith("/api/admin/completeful/");
 }
 
 /** Install paths derived from app manifests (not a hardcoded mini-registry). */
@@ -690,14 +701,30 @@ export default {
     const isAnalyticsApi = url.pathname.startsWith("/api/analytics/");
     const isTerminalConnect = url.pathname === "/api/agent/terminal/connect";
 
-    // Existing Ecommerce product UI mounted into Local Studio.
-    // Only static presentation assets are served here; no tenant APIs or
-    // customer Worker are delegated or impersonated.
+    // Existing Ecommerce console UI is served by the Local Studio Worker.
+    // The packaged UI and its APIs remain on this origin and use Local Studio D1.
     if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname === "/sites" || (url.pathname.startsWith("/admin/") && url.pathname !== "/admin/home"))) {
+        (url.pathname === "/sites" || url.pathname.startsWith("/admin/"))) {
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
       const mounted = await servePackagedConsole(request, env.ASSETS);
       if (mounted) return mounted;
+    }
+
+    // Completeful callbacks are public by design; the handler verifies the
+    // provider signature before recording events in this Local Studio D1.
+    if (url.pathname === "/api/webhooks/completeful") {
+      if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
+      return handleCompletefulWebhook(request, env);
+    }
+
+    // Resolve Local Studio identity for the packaged commerce API. Never proxy
+    // to the separately installed ecommerce Worker or trust client identities.
+    if (url.pathname.startsWith("/api/admin/") && isLocalStudioCommerceApi(url.pathname)) {
+      if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
+      const userId = await resolveSessionUserId(request, env);
+      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
+      const studioUser = { id: userId, account_id: userId, role: "owner" };
+      return handleEcommerceAdminApi(request, env, url, context, studioUser);
     }
 
     // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
