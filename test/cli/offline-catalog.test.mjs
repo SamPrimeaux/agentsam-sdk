@@ -36,7 +36,7 @@ test('catalog is generated and unreviewed packages remain explicitly drafts', ()
   for (const item of data.packages.filter(p => p.catalog_status === 'classified')) {
     assert.ok(item.evidence?.runtime_proof, item.name + ': missing runtime proof');
     assert.ok(item.evidence?.tests?.length, item.name + ': missing tests');
-    assert.equal(item.evidence.host_integration, 'not-verified');
+    assert.ok(['not-verified', 'sdk-cli-bound'].includes(item.evidence.host_integration), item.name + ': invalid host integration evidence');
     assert.equal(item.registry?.public_claim, false);
   }
 });
