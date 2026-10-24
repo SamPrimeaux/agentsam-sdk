@@ -11,15 +11,19 @@
   "exports": {
     ".": "./src/index.js",
     "./project": "./src/project.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./storage": "./src/storage.js",
+    "./http": "./src/http.js"
   },
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    "sql"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "pack:dry": "npm pack --dry-run"
+    "pack:dry": "npm run pack:check && npm pack --dry-run",
+    "pack:check": "node scripts/check-public-pack.mjs"
   },
   "repository": {
     "type": "git",
