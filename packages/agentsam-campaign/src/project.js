@@ -63,13 +63,18 @@ export function makeCampaignPlanningBrief(project) {
   });
 }
 
-export function toFNFcampaignPayload(project) {
+/** Map a planning project to the installation-neutral Campaign draft contract. */
+export function toCampaignDraftPayload(project) {
   const valid = validateCampaignProject(project);
   return {
-    name: valid.name, goal: valid.objective, audience: valid.audience,
-    brief: valid.brief, channels: valid.channels, approval_mode: 'draft_only',
-    primary_source: valid.sourceSiteId || null, start_date: valid.startDate || null,
-    end_date: valid.endDate || null,
-    metadata: { sourceBrandId: valid.sourceBrandId, material: valid.material },
+    name: valid.name, kind: 'marketing',
+    objective: valid.objective, audience: valid.audience, brief: valid.brief,
+    approval_mode: 'manual',
+    starts_at: valid.startDate || null, ends_at: valid.endDate || null,
+    attributes: {
+      brand_ref: valid.sourceBrandId || null,
+      site_ref: valid.sourceSiteId || null,
+      material: valid.material, proposed_channels: valid.channels,
+    },
   };
 }

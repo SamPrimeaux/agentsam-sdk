@@ -17,7 +17,7 @@ import {
 } from '../src/index.js';
 
 const context = {
-  brandContract: { id: 'brand:fnf', kind: 'brand' },
+  brandContract: { id: 'brand:example', kind: 'brand' },
   products: [
     { id: 'tee-1', name: 'Tee', margin: 0.62 },
     { id: 'hoodie-1', name: 'Hoodie', margin: 0.48 },

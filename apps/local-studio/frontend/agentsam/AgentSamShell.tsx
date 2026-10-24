@@ -23,6 +23,7 @@ import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionPro
 import { isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settings';
+import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
 
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
@@ -107,22 +108,36 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     return () => { active = false; dispose?.(); };
   }, []);
 
+  // Shared assistant entrypoint: the native PET, shell icon, and contextual tools
+  // activate the existing composer without navigating away from the active work.
   useEffect(() => {
-    if (!isPackagedDesktop()) return;
+    const activate = () => {
+      if (pathname === '/agentsam' || pathname.startsWith('/chats')) {
+        window.requestAnimationFrame(() =>
+          document.querySelector<HTMLTextAreaElement>('.agentsam-conversation-dock textarea')?.focus());
+        return;
+      }
+      const work = useWorkStore.getState();
+      work.openSideTab('chat');
+      work.setSideOpen(true);
+    };
+    window.addEventListener('agentsam:assistant:activate', activate);
     let active = true;
     let dispose: (() => void) | undefined;
-    void listenTauriEvent("agentsam:pet:activate", () => {
-      if (!active) return;
-      const nextHash = "#/agentsam";
-      if (window.location.hash !== nextHash) window.location.hash = nextHash;
-      else void navigate({ to: "/agentsam" });
-    }).then((unlisten) => {
-      if (!unlisten) return;
-      if (active) dispose = unlisten;
-      else unlisten();
-    }).catch(() => {});
-    return () => { active = false; dispose?.(); };
-  }, [navigate]);
+    if (isPackagedDesktop()) {
+      void listenTauriEvent("agentsam:pet:activate", () => {
+        if (active) activate();
+      }).then((unlisten) => {
+        if (active) dispose = unlisten || undefined;
+        else unlisten?.();
+      }).catch(() => {});
+    }
+    return () => {
+      active = false;
+      dispose?.();
+      window.removeEventListener('agentsam:assistant:activate', activate);
+    };
+  }, [pathname]);
 
   const petState = state.activeTrailId && state.streamingIds.includes(state.activeTrailId) ? "working" : "idle";
   useEffect(() => {
@@ -289,10 +304,10 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     <Nav.Scope className="agentsam-shell platform-console" data-agentsam-app-shell="local-studio" data-platform-console="true" data-conversation={isConversation ? "true" : "false"} data-embedded={embedded ? "true" : undefined}>
       {!embedded ? <Nav.Sidenav /> : null}<div className="agentsam-main">
         {!embedded && !isConversation ? <Nav.Topbar className="platform-console-topbar">
-          <Nav.TopbarLogo toggle />
+          <Nav.Trigger aria-label="Toggle sidebar" />
           <button type="button" className="platform-console-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={17} /><span>Search pages and tools</span><kbd>⌘K</kbd></button>
           <Nav.TopbarSpacer />
-          <button type="button" className="as-nav-button" title="Ask AgentSam" aria-label="Ask AgentSam" onClick={() => { state.openSideTab('chat'); state.setSideOpen(true); }}><img alt="" className="platform-console-agent-icon" src="/brand/agentsam-gorilla/v1/ui/mini-composer-idle.svg" onError={(e) => { e.currentTarget.style.display = 'none'; }} /><span className="sr-only">Open AgentSam assistant</span></button>
+          <AgentSamPetTrigger state={petState} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
           <button type="button" className="as-nav-button" title="Notifications" aria-label="Notifications" onClick={() => go('/tickets')}><Bell size={17} /><span className="sr-only">View notifications in Tickets</span></button>
           <Nav.AccountSwitcher />
         </Nav.Topbar> : null}

@@ -42,8 +42,9 @@ export function AgentSamPetWindow() {
       <span data-tauri-drag-region title="Drag to move AgentSam">AgentSam</span>
       <button type="button" onClick={() => void closePet()} aria-label="Hide desktop pet" title="Hide pet">×</button>
     </div>
-    <button type="button" className="agentsam-desktop-pet-sprite" onClick={() => void openAgentSam()} aria-label="Open AgentSam chat" title="Open AgentSam chat">
+    <button type="button" className="agentsam-desktop-pet-sprite" onClick={() => void openAgentSam()} aria-label="Open AgentSam assistant in current workspace" title="Ask AgentSam in current workspace">
       <img src={PET_ASSETS[state]} alt={state === "working" ? "AgentSam is working" : "AgentSam is idle"} draggable={false} />
+      <span className="agentsam-desktop-pet-helper">Ask AgentSam</span>
     </button>
   </main>;
 }

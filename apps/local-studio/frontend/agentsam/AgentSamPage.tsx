@@ -7,6 +7,7 @@ import { MessageList } from '@/components/workbench/thread';
 import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
 import { SidePanelToggle } from './AgentSamShell';
+import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { SplitHandle } from '@/components/shell/split-handle';
 import { AnnotationToggle } from './AnnotationHelper';
 import { AgentConversationSurface, AgentRuntimeField } from '@inneranimalmedia/agentsam-workbench/agent';
@@ -37,6 +38,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     <Nav.Topbar startup={empty} rightSlot={<>
       {conversationId ? <Link to="/chats" aria-label="Back to Chats" title="Back to Chats" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="size-4"/></Link> : null}
       <button type="button" className="as-nav-button" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={18}/><span className="sr-only">Search Studio</span></button>
+      <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
       <AnnotationToggle /><SidePanelToggle />
     </>} />
     <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "")}>

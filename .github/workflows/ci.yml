@@ -38,6 +38,9 @@ jobs:
           set -o pipefail
           npm ci 2>&1 | tee "$RUNNER_TEMP/npm-ci.log"
 
+      - name: Verify Campaign D1 schema, backfills and scoped API
+        run: npm --prefix packages/agentsam-campaign test
+
       - name: Verify app-scoped Cloudflare SDK dependency links
         run: node --test apps/local-studio/scripts/ensure-aliased-deps.test.mjs
 

@@ -8,6 +8,7 @@ describe('CAD project access boundaries', () => {
     expect(resolveCadAccessMode('owner', 'localhost')).toBe('owner');
     expect(resolveCadAccessMode('owner', '[::1]')).toBe('owner');
     expect(resolveCadAccessMode('owner', 'cad.inneranimalmedia.com')).toBe('public-demo');
+    expect(resolveCadAccessMode('project', 'agentsam.inneranimalmedia.com')).toBe('hosted-project');
     expect(resolveCadAccessMode(null, 'localhost')).toBe('public-demo');
     expect(isTrustedLocalCadHost('cad.inneranimalmedia.com')).toBe(false);
   });

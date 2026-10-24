@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CAMPAIGN_PROJECT_SCHEMA, createCampaignProject, validateCampaignProject, makeCampaignPlanningBrief, toFNFcampaignPayload } from '../src/project.js';
+import { CAMPAIGN_PROJECT_SCHEMA, createCampaignProject, validateCampaignProject, makeCampaignPlanningBrief, toCampaignDraftPayload } from '../src/project.js';
 
 const seed = () => createCampaignProject({ id: 'c_1', accountId: 'account_1', name: 'Launch week', now: '2026-10-06T00:00:00.000Z' });
 
@@ -20,9 +20,11 @@ test('brief uses real campaign intelligence; no fabricated evidence', () => {
   assert.equal(brief.status, 'draft');
   assert.throws(() => makeCampaignPlanningBrief(seed()), /campaign_objective_required/);
 });
-test('FNF payload preserves approved contract without publishing', () => {
-  const payload = toFNFcampaignPayload({ ...seed(), sourceSiteId: 'fnf' });
-  assert.equal(payload.approval_mode, 'draft_only');
-  assert.equal(payload.primary_source, 'fnf');
-  assert.equal(payload.name, 'Launch week');
+test('generic campaign draft is provider neutral and remains unpublished', () => {
+  const draft = toCampaignDraftPayload({ ...seed(), sourceSiteId: 'example_site' });
+  assert.equal(draft.approval_mode, 'manual');
+  assert.equal(draft.attributes.site_ref, 'example_site');
+  assert.deepEqual(draft.attributes.proposed_channels, ['email', 'social']);
+  assert.equal(draft.kind, 'marketing');
+  assert.equal(draft.name, 'Launch week');
 });

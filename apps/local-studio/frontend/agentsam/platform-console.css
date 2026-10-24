@@ -82,3 +82,39 @@
   .platform-console-stage > .studio-separator { display: none; }
 }
 @media (max-width: 600px) { .platform-console-assistant { width: 100%; } }
+
+/* Shared AgentSam PET affordance; intentionally does not replace the inspector composer. */
+.platform-console .agentsam-pet-trigger {
+  position: relative;
+  display: inline-grid;
+  min-width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 4px;
+  border-radius: 999px;
+  background: transparent;
+}
+.platform-console .agentsam-pet-trigger:hover,
+.platform-console .agentsam-pet-trigger:focus-visible { background: var(--nav-selected); }
+.platform-console .agentsam-pet-trigger picture,
+.platform-console .agentsam-pet-trigger img {
+  display: block;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.platform-console .agentsam-pet-status {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nav-accent, #8b5cf6);
+  box-shadow: 0 0 0 2px var(--nav-canvas);
+  opacity: .55;
+}
+.platform-console .agentsam-pet-trigger[data-agent-state="working"] .agentsam-pet-status { opacity: 1; }
+
+.platform-console .agentsam-pet-helper { position: absolute; z-index: 80; top: calc(100% + 6px); right: 0; width: max-content; padding: .35rem .55rem; border: 1px solid var(--nav-border); border-radius: .5rem; color: var(--nav-text); background: var(--nav-canvas); box-shadow: 0 6px 18px #0004; font-size: .72rem; opacity: 0; pointer-events: none; transform: translateY(-2px); transition: opacity 120ms ease, transform 120ms ease; }
+.platform-console .agentsam-pet-trigger:hover .agentsam-pet-helper, .platform-console .agentsam-pet-trigger:focus-visible .agentsam-pet-helper { opacity: 1; transform: translateY(0); }

@@ -3,6 +3,7 @@ import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
 import { ChevronDown, Files, Folder, MessageSquare, MoreHorizontal, PanelLeft, PanelTop, Pin, Pencil, Plus, Search, Share, Trash2, User } from 'lucide-react';
 import { useNav } from './NavProvider.js';
+import { NavTrigger } from './NavTrigger.js';
 import type { NavAccount, NavAction, NavConversation, NavDestination, NavProject } from './contracts.js';
 import { cx } from './utils.js';
 
@@ -43,10 +44,11 @@ export function NavOverflowMenu({ label = 'More options', actions = [], children
 }
 
 export function NavTopbarLogo({ variant = 'mark', onClick, toggle = false }: { variant?: 'mark' | 'expanded'; onClick?: () => void; toggle?: boolean }) {
-  const { data, toggle: toggleNav } = useNav();
+  const { data } = useNav();
   const [logoFailed, setLogoFailed] = useState(false);
   const label = toggle ? 'Toggle sidebar' : (data.brand?.name ?? 'Home');
-  return <button type="button" className={cx('as-nav-button as-nav-brand', toggle && 'as-nav-brand--toggle')} aria-label={label} title={label} onClick={onClick ?? (toggle ? toggleNav : () => data.brand?.home && data.onNavigate?.(data.brand.home))}>
+  if (toggle) return <NavTrigger aria-label={label} onClick={onClick} />;
+  return <button type="button" className="as-nav-button as-nav-brand" aria-label={label} title={label} onClick={onClick ?? (() => data.brand?.home && data.onNavigate?.(data.brand.home))}>
     <span className="as-nav-brand-mark">{data.brand?.logo && !logoFailed ? <><img className="as-nav-logo-dark" src={data.brand.logo} alt="" onError={() => setLogoFailed(true)} /><img className="as-nav-logo-light" data-fallback={!data.brand.lightLogo || undefined} src={data.brand.lightLogo ?? data.brand.logo} alt="" onError={() => setLogoFailed(true)} /></> : <PanelLeft />}</span>
     {variant === 'expanded' ? <span>{data.brand?.name}</span> : null}
   </button>;
@@ -129,7 +131,7 @@ export function NavTopbar({
 }) {
   return <NavScope className={cx('as-nav-topbar', startup && 'as-nav-topbar--startup', className)}>
     {children ?? <>
-      <div className="as-nav-topbar-leading">{showNavigationTrigger ? <NavTopbarLogo toggle /> : null}{!startup ? contextSlot ?? <NavProjectContext /> : null}</div>
+      <div className="as-nav-topbar-leading">{showNavigationTrigger ? <NavTrigger aria-label="Toggle sidebar" /> : null}{!startup ? contextSlot ?? <NavProjectContext /> : null}</div>
       {startup ? <div className="as-nav-topbar-center">{modeSlot ?? <NavModeSwitcher />}</div> : modeSlot}
       <NavTopbarSpacer />
       <div className="as-nav-topbar-actions">{!startup ? <><NavShareButton /><NavConversationActions /><NavPinnedSummary /></> : null}{rightSlot}{showAccount ? <NavAccountSwitcher /> : null}</div>

@@ -10,7 +10,7 @@ pub fn toggle_agent_sam_pet(app: AppHandle) -> Result<bool, String> {
         window.show().map_err(|error| error.to_string())?;
         return Ok(true);
     }
-    let window = WebviewWindowBuilder::new(&app, "agent-sam-pet", WebviewUrl::App("index.html".into()))
+    let window = WebviewWindowBuilder::new(&app, "agent-sam-pet", WebviewUrl::App("index.html?window=agent-sam-pet".into()))
         .title("AgentSam Pet")
         .inner_size(220.0, 190.0)
         .min_inner_size(150.0, 130.0)
