@@ -41,7 +41,7 @@ export function seedFiles(projectName: string, projectId: string = uid()): Artif
   // Seed artifacts are tied to their project, not random at module evaluation.
   // This makes the browser and Cloudflare SSR bootstrap identical.
   const seedFile = (path: string, content: string, extra?: Partial<Artifact>): Artifact =>
-    seedFile(path, content, { ...extra, id: `${projectId}:${path}` });
+    file(path, content, { ...extra, id: `${projectId}:${path}` });
   return [
     seedFile(
       "README.md",
