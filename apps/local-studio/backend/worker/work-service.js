@@ -4,6 +4,7 @@
  */
 
 import { resolveWebsiteAssets } from './bindings.js';
+import { handleWorkCadRequest, isWorkCadRequest } from './work-cad-models.js';
 import { readProjectInsights } from './work-project-insights.js';
 import { handleWorkData, isWorkDataRequest, listEvents, listProjects, listTickets, ticketAnalytics } from './work-data.js';
 import { beginGmailOAuth, disconnectGmail, listGmailConnections, loadGmailMessages, mutateGmailMessage, sendGmailMessage } from './gmail-service.js';
@@ -220,6 +221,7 @@ async function loadArtifacts(env, origin) {
 export function isWorkRequest(pathname) {
   return (
     pathname === '/api/work/snapshot' ||
+    isWorkCadRequest(pathname) ||
     /^\/api\/work\/projects\/[^/]+\/insights$/.test(pathname) ||
     pathname === '/api/work/gmail/oauth/start' ||
     pathname === '/api/work/gmail/status' ||
@@ -236,6 +238,7 @@ export async function handleWorkRequest(request, env, accountId) {
   const method = request.method.toUpperCase();
 
   try {
+    if (isWorkCadRequest(url.pathname)) return handleWorkCadRequest(request, env, accountId);
     const dataResponse = await handleWorkData(request, env.DB, accountId, url);
     if (dataResponse) return dataResponse;
     const insightsRoute = /^\/api\/work\/projects\/([^/]+)\/insights$/.exec(url.pathname);

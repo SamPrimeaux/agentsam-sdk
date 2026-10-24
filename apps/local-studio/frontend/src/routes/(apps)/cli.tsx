@@ -26,7 +26,7 @@ function TerminalShortcut() {
       else void navigate({ to: "/agentsam", replace: true });
     };
     if (useWorkStore.persist.hasHydrated()) openTerminal();
-    else void useWorkStore.persist.rehydrate().then(openTerminal);
+    else void Promise.resolve(useWorkStore.persist.rehydrate()).then(openTerminal);
     return () => { active = false; };
   }, [navigate]);
   return null;

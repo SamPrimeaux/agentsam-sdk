@@ -12,7 +12,9 @@ export function App() {
   const params = new URLSearchParams(window.location.search);
   const embedded = params.get('presentation') === 'embedded';
   const accessMode = resolveCadAccessMode(params.get('access'), window.location.hostname);
-  return embedded ? <CadCreatorApp presentation="embedded" accessMode={accessMode}/> : <CadStandaloneShell/>;
+  return embedded || accessMode === 'hosted-project'
+    ? <CadCreatorApp presentation={embedded ? 'embedded' : 'standalone'} accessMode={accessMode}/>
+    : <CadStandaloneShell/>;
 }
 
 export default App;

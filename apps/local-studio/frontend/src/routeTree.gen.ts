@@ -37,6 +37,7 @@ import { Route as appsWidgetsRouteImport } from './routes/(apps)/widgets'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
+import { Route as appsAdminHomeRouteImport } from './routes/(apps)/admin/home'
 import { Route as appsAppsEcommerceCmsAgentsamRouteImport } from './routes/(apps)/apps/ecommerce-cms-agentsam'
 import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifacts/index'
 import { Route as appsArtifactsTicketsRouteImport } from './routes/(apps)/artifacts/tickets'
@@ -200,6 +201,11 @@ const ApiGithubRoute = ApiGithubRouteImport.update({
   path: '/api/github',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminHomeRoute = appsAdminHomeRouteImport.update({
+  id: '/(apps)/admin/home',
+  path: '/admin/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsAppsEcommerceCmsAgentsamRoute =
   appsAppsEcommerceCmsAgentsamRouteImport.update({
     id: '/(apps)/apps/ecommerce-cms-agentsam',
@@ -344,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/admin/home': typeof appsAdminHomeRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/chats/$chatId': typeof appsChatsChatIdRoute
@@ -393,6 +400,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/admin/home': typeof appsAdminHomeRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/chats/$chatId': typeof appsChatsChatIdRoute
   '/help/cms': typeof appsHelpCmsRoute
@@ -445,6 +453,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/(apps)/admin/home': typeof appsAdminHomeRoute
   '/(apps)/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/(apps)/chats/$chatId': typeof appsChatsChatIdRoute
@@ -499,6 +508,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/admin/home'
     | '/apps/ecommerce-cms-agentsam'
     | '/artifacts/tickets'
     | '/chats/$chatId'
@@ -548,6 +558,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/admin/home'
     | '/apps/ecommerce-cms-agentsam'
     | '/chats/$chatId'
     | '/help/cms'
@@ -599,6 +610,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/(apps)/admin/home'
     | '/(apps)/apps/ecommerce-cms-agentsam'
     | '/(apps)/artifacts/tickets'
     | '/(apps)/chats/$chatId'
@@ -652,6 +664,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
+  appsAdminHomeRoute: typeof appsAdminHomeRoute
   appsAppsEcommerceCmsAgentsamRoute: typeof appsAppsEcommerceCmsAgentsamRoute
   appsChatsChatIdRoute: typeof appsChatsChatIdRoute
   appsHelpCmsRoute: typeof appsHelpCmsRoute
@@ -858,6 +871,13 @@ declare module '@tanstack/react-router' {
       path: '/api/github'
       fullPath: '/api/github'
       preLoaderRoute: typeof ApiGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/admin/home': {
+      id: '/(apps)/admin/home'
+      path: '/admin/home'
+      fullPath: '/admin/home'
+      preLoaderRoute: typeof appsAdminHomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/apps/ecommerce-cms-agentsam': {
@@ -1133,6 +1153,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
+  appsAdminHomeRoute: appsAdminHomeRoute,
   appsAppsEcommerceCmsAgentsamRoute: appsAppsEcommerceCmsAgentsamRoute,
   appsChatsChatIdRoute: appsChatsChatIdRoute,
   appsHelpCmsRoute: appsHelpCmsRoute,
