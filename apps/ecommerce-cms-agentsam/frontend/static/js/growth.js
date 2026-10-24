@@ -57,7 +57,7 @@ function campaignTag(campaign) {
   const goal = (campaign.goal || "").toLowerCase();
   if (goal.includes("subscriber")) return "Audience";
   if (goal.includes("stock") || campaign.priority === "urgent") return "Inventory";
-  return "Product drop";
+  return "Campaign";
 }
 
 async function growthFetch(path, opts = {}) {
@@ -66,10 +66,7 @@ async function growthFetch(path, opts = {}) {
     headers: { "content-type": "application/json", ...(opts.headers || {}) },
     ...opts,
   });
-  if (res.status === 401) {
-    window.location.href = "/admin/login";
-    throw new Error("Unauthorized");
-  }
+  if (res.status === 401) throw new Error("Sign in to manage campaigns.");
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;
@@ -84,27 +81,28 @@ function setGrowthMetric(app, key, value) {
 function paintMetrics(app, metrics) {
   if (!metrics) return;
 
-  const total = metrics.total_sessions ?? 0;
-  const direct = metrics.direct_sessions ?? 0;
-  const organic = metrics.organic_sessions ?? 0;
-  const revenue = fmtCents(metrics.attributed_revenue_cents);
-  const conversions = metrics.attributed_conversions ?? 0;
-  const readiness = metrics.readiness_score ?? 68;
+  const total = metrics.total_sessions;
+  const direct = metrics.direct_sessions;
+  const organic = metrics.organic_sessions;
+  const revenue = metrics.attributed_revenue_cents == null ? "—" : fmtCents(metrics.attributed_revenue_cents);
+  const conversions = metrics.attributed_conversions;
+  const readiness = metrics.readiness_score;
+  const display = (value) => value == null ? "—" : String(value);
 
   setGrowthMetric(app, "attributed-revenue", revenue);
-  setGrowthMetric(app, "conversions", `${conversions} conversion${conversions === 1 ? "" : "s"}`);
-  setGrowthMetric(app, "total-sessions", String(total));
-  setGrowthMetric(app, "direct-sessions", String(direct));
-  setGrowthMetric(app, "organic-sessions", String(organic));
-  setGrowthMetric(app, "kpi-sessions", String(total));
-  setGrowthMetric(app, "kpi-top-channel", direct >= organic ? "Direct" : "Organic");
-  setGrowthMetric(app, "kpi-direct-sessions", String(direct));
-  setGrowthMetric(app, "kpi-organic", String(organic));
+  setGrowthMetric(app, "conversions", conversions == null ? "Unavailable" : `${conversions} conversion${conversions === 1 ? "" : "s"}`);
+  setGrowthMetric(app, "total-sessions", display(total));
+  setGrowthMetric(app, "direct-sessions", display(direct));
+  setGrowthMetric(app, "organic-sessions", display(organic));
+  setGrowthMetric(app, "kpi-sessions", display(total));
+  setGrowthMetric(app, "kpi-top-channel", direct == null || organic == null ? "—" : direct >= organic ? "Direct" : "Organic");
+  setGrowthMetric(app, "kpi-direct-sessions", display(direct));
+  setGrowthMetric(app, "kpi-organic", display(organic));
   setGrowthMetric(app, "kpi-revenue", revenue);
-  setGrowthMetric(app, "readiness-score", `${readiness}%`);
+  setGrowthMetric(app, "readiness-score", readiness == null ? "Not assessed" : `${readiness}%`);
 
   const bar = app.querySelector(".fnf-traffic-bar");
-  if (bar && total > 0) {
+  if (bar && total > 0 && direct != null && organic != null) {
     const spans = bar.querySelectorAll("span");
     if (spans[0]) spans[0].style.flex = String(direct);
     if (spans[1]) spans[1].style.flex = String(organic);
@@ -114,7 +112,7 @@ function paintMetrics(app, metrics) {
   if (directCard) {
     const sessionEl = directCard.querySelector(".fnf-source-top div:last-child");
     const valueEl = directCard.querySelector(".fnf-source-value");
-    if (sessionEl) sessionEl.textContent = `${direct} sessions`;
+    if (sessionEl) sessionEl.textContent = `${display(direct)} sessions`;
     if (valueEl) valueEl.textContent = revenue;
   }
 
@@ -122,7 +120,7 @@ function paintMetrics(app, metrics) {
   if (googleCard) {
     const sessionEl = googleCard.querySelector(".fnf-source-top div:last-child");
     const valueEl = googleCard.querySelector(".fnf-source-value");
-    if (sessionEl) sessionEl.textContent = `${organic} sessions`;
+    if (sessionEl) sessionEl.textContent = `${display(organic)} sessions`;
     if (valueEl) valueEl.textContent = revenue;
   }
 }
@@ -251,10 +249,10 @@ function renderPackPreview(app, campaign) {
   const body = app.querySelector("#fnfPreviewEmailBody");
   const status = app.querySelector("#fnfPackStatus");
 
-  if (banner) banner.textContent = pack.homepage_banner || "Time is the horsepower.";
-  if (subject) subject.textContent = pack.email_subject || "Built for the ones who move first.";
-  if (preview) preview.textContent = pack.email_preview || "A clean drop campaign for the next Fuel & Free Time push.";
-  if (body) body.textContent = pack.email_body_text || "The drop is live. Shop the latest from Fuel & Free Time.";
+  if (banner) banner.textContent = pack.homepage_banner || "Homepage copy appears after generating a draft.";
+  if (subject) subject.textContent = pack.email_subject || "No email draft yet";
+  if (preview) preview.textContent = pack.email_preview || "Generate a campaign pack to preview the email.";
+  if (body) body.textContent = pack.email_body_text || "The email body will appear here for review.";
 
   if (status) {
     if (campaign?.status === "generating") {
@@ -361,11 +359,11 @@ function openCreateView(app) {
   growthState.activeCampaignId = null;
   fillCreateForm(app, {
     name: "",
-    goal: "Drive product sales",
-    audience: "All visitors",
+    goal: "",
+    audience: "",
     priority: "normal",
     brief: "",
-    channels: ["homepage_banner", "email", "product_pages"],
+    channels: [],
     approval_mode: "draft_only",
     primary_source: "website_email",
     pack: {},
@@ -387,13 +385,27 @@ async function openCampaign(app, id) {
 }
 
 async function refreshOverview(app) {
+  const status = app.querySelector("[data-growth-api-status]");
   try {
     const data = await growthFetch("/api/admin/growth/overview");
+    if (!data?.ok || !data.metrics || !Array.isArray(data.recent)) {
+      throw new Error("The campaign service returned an incomplete response.");
+    }
     growthState.overview = data;
+    if (status) status.hidden = true;
+    app.querySelectorAll("[data-save-draft], [data-generate], [data-publish], [data-publish-test]").forEach((el) => { el.disabled = false; });
     paintMetrics(app, data.metrics);
-    renderCampaignGrid(app, data.recent || []);
+    renderCampaignGrid(app, data.recent);
   } catch (err) {
     console.error("[growth/overview]", err);
+    growthState.overview = null;
+    if (status) {
+      status.hidden = false;
+      status.textContent = `Campaign data unavailable: ${err.message}. Select an authorized installation with a configured Growth service.`;
+    }
+    app.querySelectorAll("[data-save-draft], [data-generate], [data-publish], [data-publish-test]").forEach((el) => { el.disabled = true; });
+    const grid = app.querySelector("#growthCampaignGrid");
+    if (grid) grid.textContent = "Campaign records are not available for this installation.";
   }
 }
 
@@ -548,6 +560,7 @@ async function initGrowthPage() {
     if (!res.ok) throw new Error(`Growth partial HTTP ${res.status}`);
     mount.innerHTML = await res.text();
     const app = document.getElementById("fnfGrowthApp");
+    if (!app) throw new Error("Growth markup was not included in the packaged assets");
     bindGrowthApp(app);
     await refreshOverview(app);
     syncAgentsamContext(null);
