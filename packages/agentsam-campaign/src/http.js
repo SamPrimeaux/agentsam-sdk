@@ -67,12 +67,12 @@ export async function handleCampaignApi(request, options = {}) {
   if (url.pathname !== ROOT && !url.pathname.startsWith(ROOT + '/')) return null;
   const route = operation(url.pathname, request.method.toUpperCase());
   if (!route) return failure('campaign_route_not_found', 404);
-  if (route.action === 'not_implemented') return failure('campaign_execution_adapter_not_configured', 501);
   if (typeof options.authorize !== 'function') return failure('campaign_authorizer_not_configured', 503);
   let actor;
   try { actor = await options.authorize(request, { capability:route.capability }); }
   catch { return failure('campaign_authorization_failed', 403); }
   if (!actor?.db?.prepare || !actor?.authorizedScopeId || !actor?.actorId) return failure('campaign_not_authorized', 403);
+  if (route.action === 'not_implemented') return failure('campaign_execution_adapter_not_configured', 501);
   try {
     const store = createCampaignStore(actor.db, actor);
     const id = route.id;
@@ -84,7 +84,7 @@ export async function handleCampaignApi(request, options = {}) {
         })});
       case 'get': {
         const campaign = await store.get(id);
-        return campaign ? respond({ok:true,campaign},{}) : failure('campaign_not_found',404);
+        return campaign ? respond({ok:true,campaign},200,{ etag:'"' + campaign.revision + '"' }) : failure('campaign_not_found',404);
       }
       case 'create': {
         const campaign = await store.create(await parseBody(request));
