@@ -8,6 +8,7 @@ import { readSectionContent } from "../cms/r2-store.js";
 import { PAGE_REGISTRY } from "../cms/registry.js";
 import { buildUtmLinks, getAttributionMetrics } from "../lib/attribution.js";
 import { sendResendEmail } from "../lib/resend.js";
+import { getCompany, getCompanyDomain } from "../lib/company.js";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -126,8 +127,9 @@ async function getOverview(env) {
       : Number(sessionRow?.n) > 0
         ? Number(sessionRow.n)
         : 0;
-  const directSessions = attr?.direct_sessions ?? (sessionCount > 0 ? Math.round(sessionCount * 0.82) : 0);
-  const organicSessions = attr?.organic_sessions ?? Math.max(0, sessionCount - directSessions);
+  // A campaign visit count is not evidence of a particular traffic channel.
+  const directSessions = attr?.direct_sessions ?? null;
+  const organicSessions = attr?.organic_sessions ?? null;
 
   return json({
     ok: true,
@@ -141,7 +143,7 @@ async function getOverview(env) {
       social_sessions: attr?.social_sessions ?? 0,
       orders: orders?.n ?? 0,
       subscribers: subscribers?.n ?? 0,
-      readiness_score: sessionCount > 0 ? 78 : 68,
+      readiness_score: null,
       channel_breakdown: attr?.channel_breakdown ?? [],
     },
     campaigns: {
@@ -277,6 +279,12 @@ async function generateCampaignPack(env, user, id) {
     .first();
   if (!row) return json({ error: "Campaign not found" }, { status: 404 });
 
+  const domain = await getCompanyDomain(env);
+  if (!domain) return json({ error: "company_domain_not_configured" }, { status: 503 });
+  if (!env.AGENTSAM_WAI?.run) return json({ error: "campaign_generation_not_configured" }, { status: 503 });
+  const origin = `https://${domain}`;
+  const company = await getCompany(env);
+
   await env.DB.prepare(
     `UPDATE growth_campaigns SET status = 'generating', updated_by = ?, updated_at = datetime('now') WHERE id = ?`
   )
@@ -285,30 +293,19 @@ async function generateCampaignPack(env, user, id) {
 
   const channels = parseJson(row.channels_json, []);
   const prompt = [
-    "You are AgentSam creating a marketing campaign pack for this store.",
+    "You are AgentSam creating a campaign pack for the configured installation.",
+    `Business: ${company?.name || "Business name not configured"}`,
     "Return ONLY valid JSON with keys: homepage_banner, email_subject, email_preview, email_body_text, utm_campaign, utm_notes, social_captions (array).",
     `Campaign: ${row.name}`,
-    `Goal: ${row.goal || "Drive product sales"}`,
-    `Audience: ${row.audience || "All visitors"}`,
+    `Goal: ${row.goal || ""}`,
+    `Audience: ${row.audience || ""}`,
     `Brief: ${row.brief || ""}`,
     `Channels: ${channels.join(", ") || "homepage, email"}`,
-    "Tone: premium, rugged, horsepower-driven, not gimmicky.",
+    "Tone: Respect the supplied brief and business identity. Never invent products, prices, events or claims.",
   ].join("\n");
 
-  let pack = {
-    homepage_banner: "Time is the horsepower.",
-    email_subject: "Built for the ones who move first.",
-    email_preview: "A clean drop campaign for the next store push.",
-    email_body_text: "The drop is live. Shop the latest.",
-    utm_campaign: row.slug,
-    utm_notes: "Add utm_source per channel when publishing.",
-    social_captions: ["Built different. Move first.", "The drop is live."],
-    generated_at: new Date().toISOString(),
-    generator: "stub",
-  };
-
-  if (env.AGENTSAM_WAI?.run) {
-    try {
+  let pack;
+  try {
       const resp = await env.AGENTSAM_WAI.run("@cf/meta/llama-3.1-8b-instruct", {
         messages: [
           { role: "system", content: "You output strict JSON only, no markdown fences." },
@@ -318,36 +315,35 @@ async function generateCampaignPack(env, user, id) {
       });
       const raw = resp?.response || resp?.result?.response || "";
       const parsed = parseJson(raw, null) || parseJson(String(raw).replace(/^```json\s*|\s*```$/g, ""), null);
-      if (parsed && typeof parsed === "object") {
-        pack = { ...pack, ...parsed, generated_at: new Date().toISOString(), generator: "workers_ai" };
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) ||
+          !["homepage_banner", "email_subject", "email_body_text", "social_captions"].some((key) =>
+            typeof parsed[key] === "string" && parsed[key].trim() ||
+            Array.isArray(parsed[key]) && parsed[key].length)) {
+        throw new Error("invalid_campaign_generation");
       }
-    } catch (err) {
-      console.error("[growth/generate]", err?.message || err);
-      pack.generator = "stub_fallback";
-      pack.error = err?.message || "AI generation failed";
-    }
+      pack = { ...parsed, utm_campaign: row.slug, generated_at: new Date().toISOString(), generator: "workers_ai" };
+  } catch (err) {
+    console.error("[growth/generate]", err?.message || err);
+    await env.DB.prepare(
+      "UPDATE growth_campaigns SET status = ?, updated_at = datetime('now') WHERE account_id = ? AND id = ?"
+    ).bind(row.status, requireApplicationAccountId(), id).run();
+    return json({ error: "campaign_generation_failed" }, { status: 502 });
   }
 
   await env.DB.prepare(
     `UPDATE growth_campaigns
-     SET pack_json = ?, status = 'review', readiness_score = COALESCE(readiness_score, 72),
+     SET pack_json = ?, status = 'review',
          updated_by = ?, updated_at = datetime('now')
      WHERE id = ?`
   )
     .bind(JSON.stringify(pack), user.id, id)
     .run();
 
-  const { getCompanyDomain } = await import("../lib/company.js");
-  const domain = await getCompanyDomain(env);
-  if (!domain) {
-    return json({ error: "company_domain_not_configured" }, { status: 503 });
-  }
-  const origin = `https://${domain}`;
   const utmLinks = buildUtmLinks(origin, id, row.slug);
   pack = {
     ...pack,
     utm_links: utmLinks,
-    cta_label: pack.cta_label || "Shop the drop",
+    cta_label: pack.cta_label || "Learn more",
   };
 
   await env.DB.prepare(`UPDATE growth_campaigns SET pack_json = ? WHERE id = ?`)
@@ -368,7 +364,7 @@ async function loadMailSettings(env) {
   return cached || {};
 }
 
-async function saveCampaignEmailDraft(env, campaign, pack, user) {
+async function saveCampaignEmailDraft(env, campaign, pack, user, origin) {
   const messageId = `mail_draft_${campaign.id}_${Date.now()}`;
   const shopLink = pack.utm_links?.email || `${origin}/shop?utm_campaign=${campaign.slug}`;
   const html = `<p>${(pack.email_body_text || "").replace(/\n/g, "<br>")}</p><p><a href="${shopLink}">Shop now</a></p>`;
@@ -403,7 +399,7 @@ async function saveCampaignEmailDraft(env, campaign, pack, user) {
   return messageId;
 }
 
-async function sendCampaignEmail(env, campaign, pack, { mode, testEmail, user }) {
+async function sendCampaignEmail(env, campaign, pack, { mode, testEmail, user, origin }) {
   const settings = await loadMailSettings(env);
   const shopLink = pack.utm_links?.email || `${origin}/go?c=${campaign.id}&ch=email&to=/shop&utm_campaign=${campaign.slug}`;
   const html = `<p>${(pack.email_body_text || "").replace(/\n/g, "<br>")}</p><p><a href="${shopLink}">Shop the drop</a></p>`;
@@ -527,13 +523,14 @@ async function publishCampaign(request, env, user, id) {
   const emailMode = body?.email_mode || "draft";
   if (channels.includes("email")) {
     if (emailMode === "draft") {
-      const draftId = await saveCampaignEmailDraft(env, row, pack, user);
+      const draftId = await saveCampaignEmailDraft(env, row, pack, user, origin);
       publishResult.email = { mode: "draft", mail_message_id: draftId };
     } else {
       const emailResult = await sendCampaignEmail(env, row, pack, {
         mode: emailMode,
         testEmail: body?.test_email,
         user,
+        origin,
       });
       publishResult.email = emailResult;
       if (emailResult.error && emailMode !== "test") {
