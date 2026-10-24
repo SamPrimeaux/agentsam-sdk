@@ -4,6 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { canonicalCampaignScope, createCampaignStore } from '../src/storage.js';
+import { handleCampaignApi } from '../src/http.js';
 
 const sql = (name) => readFileSync(new URL('../sql/' + name, import.meta.url), 'utf8');
 const database = () => {
@@ -134,4 +135,48 @@ test('portable repository enforces authorized scope and optimistic revision on C
   await assert.rejects(() => a.archive(created.id,3), /revision_conflict/);
   assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
   db.close();
+});
+
+
+test('portable HTTP route fails closed and enforces capability + revision', async () => {
+  const sqlite = database();
+  sqlite.exec("INSERT INTO campaign_scopes(id,owner_kind,owner_ref) VALUES ('account:a','account','a')");
+  const db = adapter(sqlite);
+  const base = 'https://studio.example/api/campaigns/v1/campaigns';
+  const unauthorized = await handleCampaignApi(new Request(base), {});
+  assert.equal(unauthorized.status,503);
+  const capabilities = [];
+  const authorize = async (_request,{capability}) => {
+    capabilities.push(capability);
+    return { db, authorizedScopeId:'account:a', actorId:'user_a' };
+  };
+  const created = await handleCampaignApi(new Request(base, {
+    method:'POST', headers:{'content-type':'application/json'},
+    body:JSON.stringify({name:'Sample',slug:'sample',kind:'marketing'}),
+  }), {authorize});
+  assert.equal(created.status,201);
+  const payload = await created.json();
+  assert.equal(payload.ok,true);
+  assert.equal(payload.campaign.status,'draft');
+  const path = base + '/' + payload.campaign.id;
+  const got = await handleCampaignApi(new Request(path),{authorize});
+  assert.equal(got.status,200);
+  assert.equal(got.headers.get('etag'),'"1"');
+  const blocked = await handleCampaignApi(new Request(path, {
+    method:'PATCH',headers:{'content-type':'application/json'},
+    body:JSON.stringify({status:'active'}),
+  }),{authorize});
+  assert.equal(blocked.status,409);
+  const patched = await handleCampaignApi(new Request(path, {
+    method:'PATCH', headers:{'content-type':'application/json','if-match':'"1"'},
+    body:JSON.stringify({brief:'Verified brief'}),
+  }),{authorize});
+  assert.equal(patched.status,200);
+  assert.equal((await patched.json()).campaign.revision,2);
+  const pub = await handleCampaignApi(new Request(path+'/publications',{method:'POST'}),{authorize});
+  assert.equal(pub.status,501);
+  assert.deepEqual(capabilities,[
+    'campaign.create','campaign.read','campaign.update','campaign.update','campaign.publications.write'
+  ]);
+  sqlite.close();
 });
