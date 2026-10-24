@@ -109,7 +109,10 @@ export async function handleCompletefulWebhook(request, env) {
   const topic = event?.type || "unknown";
   const registry = await lookupWebhook(env, topic);
   const envSuffix = topicToEnvSuffix(topic);
-  const secret = env[`COMPLETEFUL_WEBHOOK_SECRET_${envSuffix}`];
+  // Prefer an existing per-topic secret during migration; otherwise one
+  // Worker secret can sign every Completeful topic for this installation.
+  const topicSecretName = `COMPLETEFUL_WEBHOOK_SECRET_${envSuffix}`;
+  const secret = env[topicSecretName] || env.COMPLETEFUL_WEBHOOK_SECRET;
   const providerEventId = event?.id || null;
   const providerCreatedAtUnix = toUnix(event?.created || event?.created_at);
   const objectId = providerObjectId(event);
@@ -146,7 +149,9 @@ export async function handleCompletefulWebhook(request, env) {
       metadata: {
         phase: "verify",
         ip_address: ipAddress,
-        expected_secret_ref: registry.secret_ref || `COMPLETEFUL_WEBHOOK_SECRET_${envSuffix}`,
+        expected_secret_ref: registry.secret_ref || (
+          env[topicSecretName] ? topicSecretName : "COMPLETEFUL_WEBHOOK_SECRET"
+        ),
       },
       status: "failed",
       signatureValid: false,

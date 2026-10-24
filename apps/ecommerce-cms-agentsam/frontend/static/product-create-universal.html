@@ -48,5 +48,5 @@ function render(){
 }
 
 document.getElementById('catalog-search').oninput=render;document.getElementById('reload').onclick=()=>location.reload();
-fetch('/admin/registry/products-snapshot.json').then(r=>r.json()).then(d=>{products=d.items||[];render()}).catch(()=>render());
+adminFetch('/api/admin/products').then(d=>{products=(d.products||[]).map(p=>({...p,name:p.title,kind:p.collection||'apparel'}));render()}).catch(e=>{render();document.querySelector('#catalog-grid').innerHTML='<div style="grid-column:1/-1;background:#fff3ef;border:1px solid #f0c7b8;border-radius:12px;padding:18px;color:#7a3a2b">We couldn’t load your saved products. '+esc(e.message||'Request failed')+'</div>'});
 </script></body></html>

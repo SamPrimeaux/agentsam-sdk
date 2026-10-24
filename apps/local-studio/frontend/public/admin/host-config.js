@@ -70,7 +70,7 @@
   renderSideNav = function (active, userNav, options) {
     return originalSideNav(active, userNav, options)
       .replaceAll("Fuel &amp; Free Time", "AgentSam")
-      .replaceAll("https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail", "/admin/brand/agentsam-mark.svg");
+      .replaceAll("https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail", "/brand/agentsam-gorilla/v1/pet/animated/ledge-idle.gif");
   };
   try {
     if (!localStorage.getItem(CONSOLE_APPEARANCE_KEY))
@@ -84,10 +84,9 @@
       const path = link.getAttribute("href");
       if (!path || !path.startsWith("/") || path.startsWith("//")) return;
       event.preventDefault();
-      // Desktop uses a hash-routed Local Studio SPA. Product admin pages are
-      // installed-app destinations, not independent platform React routes.
-      const destination = path === "/admin/home" ? "/"
-        : path === "/admin/agentsam" ? "/agentsam"
+      // Desktop keeps the ecommerce console inside Local Studio's own route
+      // host; never send these paths to a separately installed site Worker.
+      const destination = path === "/admin/agentsam" ? "/agentsam"
         : path.startsWith("/admin/")
           ? "/apps/ecommerce-cms-agentsam?page=" + encodeURIComponent(path)
           : path;

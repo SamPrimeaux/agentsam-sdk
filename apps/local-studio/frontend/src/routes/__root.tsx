@@ -73,7 +73,14 @@ function RootDocument() {
 
 function ApplicationOutlet() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const isApp = pathname === "/" || pathname === "/admin/home" || /^\/(agentsam|chats|cms|sites|store|content|cad|samsketch|database|projects|artifacts|mail|tickets|collaborate|files|browse|cli|ship|widgets|settings)(\/|$)/.test(pathname);
+  if (pathname === "/admin/home") {
+    return <iframe
+      title="AgentSam Commerce home"
+      src="/ecommerce-cms-agentsam/admin/home.html"
+      className="fixed inset-0 z-10 h-full w-full border-0 bg-background"
+    />;
+  }
+  const isApp = pathname === "/" || /^\/(agentsam|chats|cms|sites|store|content|cad|samsketch|database|projects|artifacts|mail|tickets|collaborate|files|browse|cli|ship|widgets|settings)(\/|$)/.test(pathname);
   // The platform React workspace owns its shell. Ecommerce retains only its product-owned /admin routes.
   return isApp ? <AgentSamShell /> : <Outlet />;
 }

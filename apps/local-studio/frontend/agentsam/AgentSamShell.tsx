@@ -26,6 +26,7 @@ import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settin
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
 
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
+const AGENTSAM_PET_AVATAR = '/brand/agentsam-gorilla/v1/pet/animated/ledge-idle.gif';
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
 export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {}) {
@@ -53,7 +54,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   // The platform owns its shell; product-owned /admin pages navigate into
   // the installed Ecommerce application without recreating product routers.
   const go = (to: string) => {
-    if (to.startsWith('/admin/') && to !== '/admin/home') {
+    if (to.startsWith('/admin/')) {
       if (isPackagedDesktop()) window.location.hash = '#/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(to);
       else window.location.assign(to);
       return;
@@ -216,7 +217,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     conversation: trail ? { id: trail.id, title: trail.title } : undefined,
     projects: state.projects.map((item) => ({ id: item.id, name: item.name })),
     conversations: state.trails.map((item) => ({ id: item.id, title: item.title, projectId: item.projectId, pinned: item.pinned })),
-    account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: user.profileImageUrl ?? undefined } : undefined,
+    account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: user.profileImageUrl || AGENTSAM_PET_AVATAR } : undefined,
     destinations: [
       { id: 'home', label: 'Home', icon: <Home />, href: '/admin/home', active: pathname === '/' || pathname === '/admin/home' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
