@@ -30,5 +30,6 @@ export function AgentSamPetTrigger({ state, onActivate }: { state: AgentSamPetSt
         onError={() => setFallback(true)} />
     </picture>
     <span className="agentsam-pet-status" aria-hidden="true" />
+    <span className="agentsam-pet-helper" aria-hidden="true">Ask AgentSam</span>
   </button>;
 }

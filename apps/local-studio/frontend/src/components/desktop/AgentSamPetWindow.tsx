@@ -44,6 +44,7 @@ export function AgentSamPetWindow() {
     </div>
     <button type="button" className="agentsam-desktop-pet-sprite" onClick={() => void openAgentSam()} aria-label="Open AgentSam assistant in current workspace" title="Ask AgentSam in current workspace">
       <img src={PET_ASSETS[state]} alt={state === "working" ? "AgentSam is working" : "AgentSam is idle"} draggable={false} />
+      <span className="agentsam-desktop-pet-helper">Ask AgentSam</span>
     </button>
   </main>;
 }
