@@ -1,93 +1,41 @@
-# AgentSam Campaign data contract v1
+# Campaign data contract v1
 
-Owner: **@inneranimalmedia/agentsam-campaign**. Database engine: SQLite / Cloudflare D1.
-This is one canonical, additive campaign schema used by the platform, Ecommerce CMS
-AgentSam, Fuel & Free Time, Companions, and other installations. It does not replace
-each application's specialized business tables or the public-site CMS.
+This is the **public, installation-neutral** SQLite / Cloudflare D1 schema
+for `@inneranimalmedia/agentsam-campaign`. It contains no installation-specific
+table mappings, data extracts, client migrations, production snapshots, or seed
+records. Data management belongs to each authorized installation, not this
+SDK's source tree or npm distribution.
 
-## Contents
+## Published schema files
 
-1. `sql/0001_campaign_core.sql`: 11 installation-local canonical tables.
-2. `sql/backfill/fuelnfreetime.sql`: existing `growth_campaigns` and generated packs.
-3. `sql/backfill/companions.sql`: fundraiser campaigns, updates, CMS asset references,
-   plus standalone email campaigns.
-4. `sql/backfill/platform.sql`: no invented campaign seed data; site ownership and
-   authorization must be resolved before creating scopes.
-5. `sql/verify.sql`: portable integrity checks after any migration.
+- `0001_campaign_core.sql` — additive, reusable tables for campaign scopes,
+  campaigns, channels, materials, external asset references, approvals,
+  publication receipts, evidence-backed metrics, source links, and activity.
+- `verify.sql` — generic integrity checks. Its output applies only to the
+  database against which it is intentionally executed.
 
-## Canonical ownership
+## Portable API and code
 
-- `campaign_scopes`: local authoritative scope keys, resolved by server auth.
-- `campaigns`: common campaign identity, kind, lifecycle and brief.
-- `campaign_channels`: selected destinations and channel state.
-- `campaign_materials`: briefs, generated packs, emails, campaign updates, revisions.
-- `campaign_asset_refs`: external CMS/R2 media references, never duplicate blobs.
-- `campaign_approvals`: explicit reviewed revision decisions.
-- `campaign_publications`: channel execution jobs with idempotency + verified receipts.
-- `campaign_metric_facts`: observed/snapshot/estimated metrics with provenance.
-- `campaign_source_links`: stable relationship to original tables and IDs.
-- `campaign_activity`: auditable CRUD/action history.
-- `campaign_schema_versions`: local schema version history.
+- `../src/storage.js`: scope-authorized CRUD with revision-checked updates
+  and archive, plus read models for materials, metrics and publications.
+- `../src/http.js`: a uniform `/api/campaigns/v1` read/CRUD surface.
+- `../src/project.js`: planning projects and generic draft conversion.
 
-**Scope IDs are database-local, not global login assertions.** The API MUST derive
-scope from the authenticated actor + authorized site installation, never from
-an untrusted account or tenant field. The same logical customer across different
-physical databases resolves through the installation registry, not SQL joins.
+The runtime must supply an authenticated, authorized installation context:
+database binding, scope, actor and capability grant. The SDK must never
+accept a client-supplied database ID or scope as authorization.
 
-## API contract (version 1)
+Data-management processes separately handle installation-specific import,
+mapping, reconciliation, backfill and rollback. Those artifacts, including
+metadata that identifies a particular client, must **not** be checked into
+the reusable SDK or included in published npm packages, archives or demos.
 
-The common API is intended to expose:
+Approval/publish operations require capability checks, channel-specific
+adapters, signed execution evidence, idempotency and post-write receipts.
+The schema alone does not constitute a deployed publishing integration.
 
-```text
-GET    /api/campaigns/v1/scopes
-GET    /api/campaigns/v1/campaigns
-POST   /api/campaigns/v1/campaigns
-GET    /api/campaigns/v1/campaigns/:id
-PATCH  /api/campaigns/v1/campaigns/:id    (If-Match/revision required)
-DELETE /api/campaigns/v1/campaigns/:id    (archive by default)
-GET    /api/campaigns/v1/campaigns/:id/materials
-POST   /api/campaigns/v1/campaigns/:id/materials
-POST   /api/campaigns/v1/campaigns/:id/approvals
-POST   /api/campaigns/v1/campaigns/:id/publications (idempotency key required)
-GET    /api/campaigns/v1/campaigns/:id/publications
-GET    /api/campaigns/v1/campaigns/:id/metrics
-```
+## Distribution guard
 
-**Implemented in `src/http.js`:** list/create/read/update/archive and read-only materials, publications and metric facts, backed by `src/storage.js`. **Not yet implemented:** approval mutations, content write endpoints, and publishing (they require destination-specific adapters and execution receipts). The HTTP handler is reusable but is **not mounted into each customer's Worker yet**.
-Adapter reads normalize `id/name/kind/status/brief/channels/materials/metrics`;
-writes require per-action capabilities and always use `scope_id` in SQL filters.
-Publishing requires an approved matching revision, real deployment capability,
-a recorded receipt and post-write verification. Sending a test email does not publish.
-No guessed readiness, donation totals, email metrics, or social reach.
-
-## Deployment and backfill (not automatic)
-
-1. Backup each specific database and inventory its `sqlite_master` schema.
-2. Apply `0001_campaign_core.sql` to one staging clone of each database first.
-3. Apply **only** the matching backfill, in staging, then `verify.sql`.
-4. Inspect mapping/count discrepancies, check source statuses, assets and approvals.
-5. Verify the installed app's authorized API, all routes, write gates and renderer.
-6. Repeat with backup/rollback point in production only after signoff. Backfill
-   scripts use `INSERT OR IGNORE` to be safe on re-runs, but they are
-   **one-time seeds**; ongoing sync must use typed source adapters/events.
-7. Never rename/drop `growth_campaigns`, `fundraising_campaigns`,
-   `campaign_updates`, `cms_assets`, `donations`, or existing email tables
-   until runtime parity, reversibility and real customer publication are proven.
-
-Do not apply the Companions backfill to FNF, or vice versa. The platform backfill
-does not create "default" sites or fake campaigns. D1 `DB` bindings must target
-the authorized installation; no arbitrary DB UUID supplied by the browser.
-
-## Migration semantics
-
-- Canonical IDs are deterministic (e.g. `growth:<id>`, `fundraising:<id>`,
-  `email:<id>`) and source mapping is retained.
-- A fundraiser's goal/raised amounts are **snapshots** in `attributes_json`.
-  Donor ledgers remain authoritative.
-- Old `campaign_updates.status='published'` indicates native content status,
-  **not verified website publication**; no invented publication receipt is created.
-- FNF metrics are labelled `legacy_snapshot`, not authoritative new observations.
-- Source email campaigns are not attached to fundraisers without an actual foreign key.
-- Avoid backfilling personally identifying recipient/donor records into campaign tables.
-- `campaign_schema_versions` identifies schema installation, not a successful
-  application deployment. Verify actual API and rendered destination separately.
+Before publishing, run `npm test` and `npm run pack:check` in the package.
+The package check enforces an allowlist of generic SQL files and rejects
+installation-specific source mappings or customer-branded payload helpers.
