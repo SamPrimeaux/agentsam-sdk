@@ -4,6 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolveConsoleFile, servePackagedConsole } from '../backend/worker/packaged-console.js';
 import { canonicalStudioPath, isStudioAdminPath } from '../shared/studio-admin-routes.mjs';
+import { handleStudioAccountAvatar } from '../backend/worker/studio-user-preferences.js';
 
 test('platform routes resolve to the real Ecommerce application bundle', () => {
   for (const [path, file] of [
@@ -201,4 +202,39 @@ test('desktop Console links resolve to real platform or installed Ecommerce app 
   assert.equal(visit('/cad'), '#/cad');
   assert.equal(visit('/admin/products'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts');
   assert.equal(visit('/admin/theme-editor?slug=home'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Ftheme-editor%3Fslug%3Dhome');
+});
+
+
+test('AgentSam app persists authenticated avatar preference without new tables', async () => {
+  let json = '{"settings_general":{"openLastProject":true}}';
+  const env = {
+    DB: {
+      prepare(sql) {
+        return {
+          bind(...args) {
+            return {
+              async first() { return { ui_preferences_json: json }; },
+              async run() { json = args[1]; return { success: true }; }
+            };
+          }
+        };
+      }
+    }
+  };
+  const url = 'https://agentsam.inneranimalmedia.com/api/settings/account-avatar';
+  const guest = await handleStudioAccountAvatar(new Request(url), env, null);
+  assert.equal(guest.status, 401);
+  const put = await handleStudioAccountAvatar(new Request(url, {
+    method: 'PUT', headers: { 'content-type': 'application/json', origin: 'https://agentsam.inneranimalmedia.com' },
+    body: JSON.stringify({ avatar_url: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg' })
+  }), env, 'signed-in-user');
+  assert.equal(put.status, 200);
+  const get = await handleStudioAccountAvatar(new Request(url), env, 'signed-in-user');
+  assert.equal((await get.json()).avatar_url, '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg');
+  assert.equal(JSON.parse(json).settings_general.openLastProject, true, 'other preferences survive');
+  const reject = await handleStudioAccountAvatar(new Request(url, {
+    method: 'PUT', headers: { 'content-type':'application/json' },
+    body: '{"avatar_url":"javascript:alert(1)"}'
+  }), env, 'signed-in-user');
+  assert.equal(reject.status, 400);
 });
