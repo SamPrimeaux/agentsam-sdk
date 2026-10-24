@@ -7,12 +7,23 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-test('release train check enforces one first-party workspace version and exact internal pins', () => {
+test('release train check enforces public package versions and exact public internal pins', () => {
   const output = execFileSync(process.execPath, ['scripts/release-train.mjs', 'check'], {
     cwd: root,
     encoding: 'utf8',
   });
-  assert.match(output, /PASS all first-party package intents, versions, and dependency pins aligned/);
+  assert.match(output, /PASS all public release packages and dependency pins aligned/);
+});
+
+test('private source workspaces keep independent versions and local dependency links', () => {
+  const viewer = JSON.parse(readFileSync(path.join(root, 'packages/agentsam-3d-viewer/package.json'), 'utf8'));
+  const occt = JSON.parse(readFileSync(path.join(root, 'packages/agentsam-occt/package.json'), 'utf8'));
+  const samsketch = JSON.parse(readFileSync(path.join(root, 'apps/samsketch/package.json'), 'utf8'));
+  assert.equal(viewer.private, true);
+  assert.equal(occt.private, true);
+  assert.equal(samsketch.private, true);
+  assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-occt'], 'file:../../packages/agentsam-occt');
+  assert.equal(samsketch.dependencies['@inneranimalmedia/agentsam-3d-viewer'], 'file:../../packages/agentsam-3d-viewer');
 });
 
 
@@ -25,5 +36,5 @@ test('independent ecommerce product publication follows the coordinated SDK rele
   const check = execFileSync(process.execPath, ['scripts/release-train.mjs', 'check'], {
     cwd: root, encoding: 'utf8',
   });
-  assert.match(check, /PASS all first-party package intents, versions, and dependency pins aligned/);
+  assert.match(check, /PASS all public release packages and dependency pins aligned/);
 });

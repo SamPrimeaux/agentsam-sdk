@@ -104,6 +104,9 @@ function check() {
     if (!isPrivate && !isPublic) {
       failures.push((manifest.name || '<unnamed>') + ': package intent is ambiguous; set private=true or publishConfig.access=public (' + relative(file) + ')');
     }
+    // Private source workspaces (including CAD kernels) are bundled by their
+    // public host packages and deliberately keep their own local versions.
+    if (isPrivate) continue;
     if (manifest.version !== targetVersion) {
       failures.push(`${manifest.name}: version ${manifest.version || '<missing>'} != ${targetVersion} (${relative(file)})`);
     }
@@ -148,7 +151,7 @@ function check() {
     process.exitCode = 1;
     return;
   }
-  console.log('  PASS all first-party package intents, versions, and dependency pins aligned');
+  console.log('  PASS all public release packages and dependency pins aligned');
 }
 
 function align() {

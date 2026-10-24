@@ -34,7 +34,9 @@ if(all.size!==entries.length)throw Error('duplicate_first_party_package');
 all.set(sdk.name,{name:sdk.name,manifest:sdk,cwd:root,rel:'package.json'});
 const allowed=new Map([...all].filter(([name,x])=>name===sdk.name||(x.manifest.private!==true&&x.manifest.publishConfig?.access==='public')));
 if(all.size<65||allowed.size<50)throw Error('incomplete_package_inventory');
-for(const x of all.values()){
+// Private source-only workspaces are included in the SDK bundle where needed,
+// but they are not published release-train packages and may keep local versions.
+for(const x of allowed.values()){
  if(x.manifest.version!==version)throw Error('release_train_drift:'+x.name);
  for(const sec of ['dependencies','devDependencies','peerDependencies','optionalDependencies'])
   for(const [name,spec]of Object.entries(x.manifest[sec]||{}))
