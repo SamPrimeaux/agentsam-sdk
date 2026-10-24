@@ -22,7 +22,8 @@
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "pack:dry": "npm pack --dry-run"
+    "pack:dry": "npm run pack:check && npm pack --dry-run",
+    "pack:check": "node scripts/check-public-pack.mjs"
   },
   "repository": {
     "type": "git",
