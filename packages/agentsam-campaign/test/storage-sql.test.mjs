@@ -42,7 +42,7 @@ test('canonical D1 schema applies twice with no destructive reset', () => {
 
 test('Fuel & Free Time seed imports campaigns, channels and packs exactly once', () => {
   const db = database();
-  db.exec(\`
+  db.exec(`
     CREATE TABLE growth_campaigns(
       id TEXT PRIMARY KEY, account_id TEXT, created_by TEXT, updated_by TEXT,
       name TEXT, slug TEXT, goal TEXT, audience TEXT, priority TEXT, brief TEXT,
@@ -53,7 +53,7 @@ test('Fuel & Free Time seed imports campaigns, channels and packs exactly once',
       'gc_a','acct_a','user_a','user_a','Launch','launch','Awareness','Subscribers','normal',
       'Brief','["email","homepage_banner"]','review','draft_only','website_email',
       NULL,NULL,'{"email_subject":"Hello"}','{}',12,0,'2026-10-01','2026-10-02');
-  \`);
+  `);
   db.exec(sql('backfill/fuelnfreetime.sql'));
   db.exec(sql('backfill/fuelnfreetime.sql'));
   assert.equal(count(db, 'campaigns'), 1);
@@ -70,7 +70,7 @@ test('Fuel & Free Time seed imports campaigns, channels and packs exactly once',
 
 test('Companions maps fundraisers, updates, asset refs and emails without fake publication', () => {
   const db = database();
-  db.exec(\`
+  db.exec(`
     CREATE TABLE fundraising_campaigns (
       id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, slug TEXT, campaign_type TEXT,
       status TEXT, description TEXT, short_description TEXT, starts_at TEXT, ends_at TEXT,
@@ -96,7 +96,7 @@ test('Companions maps fundraisers, updates, asset refs and emails without fake p
     INSERT INTO email_campaigns VALUES (
       'email1','tenant_a','Email Launch','Subject','<p>Hello</p>','Hello',
       'manual','draft',NULL,NULL,'user_a','2026-10-01','2026-10-01');
-  \`);
+  `);
   db.exec(sql('backfill/companions.sql'));
   db.exec(sql('backfill/companions.sql'));
   assert.equal(count(db, 'campaigns'), 2);
@@ -111,10 +111,10 @@ test('Companions maps fundraisers, updates, asset refs and emails without fake p
 
 test('portable repository enforces authorized scope and optimistic revision on CRUD', async () => {
   const db = database();
-  db.exec(\`
+  db.exec(`
     INSERT INTO campaign_scopes(id,owner_kind,owner_ref) VALUES
       ('account:a','account','a'),('account:b','account','b');
-  \`);
+  `);
   assert.equal(canonicalCampaignScope('account','a'),'account:a');
   assert.throws(() => canonicalCampaignScope('bad','anything'), /invalid_campaign_scope/);
   const a = createCampaignStore(adapter(db), { authorizedScopeId:'account:a', actorId:'user_a' });
