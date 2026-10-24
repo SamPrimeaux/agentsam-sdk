@@ -33,8 +33,7 @@ const WELCOME_MESSAGE: ChatMessage = {
 };
 
 function starterProject(): Project {
-  const project = newProject("Studio", "InnerAnimalMedia workspace");
-  return { ...project, id: PROJECT_ID };
+  return newProject("Studio", "InnerAnimalMedia workspace", PROJECT_ID);
 }
 
 const STARTER_TRAIL: Trail = {
