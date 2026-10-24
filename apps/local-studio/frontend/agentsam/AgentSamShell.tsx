@@ -50,7 +50,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   hydratedRef.current = state.hydrated;
   const trail = state.trails.find((item) => item.id === state.activeTrailId);
   const project = state.projects.find((item) => item.id === trail?.projectId);
-  const isConversation = pathname === '/agentsam' || pathname.startsWith('/chats');
+  const isConversation = pathname === '/admin/agentsam' || pathname.startsWith('/chats');
   const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/');
   const isSamSketchRoute = pathname === '/samsketch' || pathname.startsWith('/samsketch/');
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
@@ -78,7 +78,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     const trailId = store.activeTrailId || store.startTrail();
     const context = shares.map(formatChromeTabShare).join('\n\n');
     store.setDraft(trailId, [store.drafts[trailId]?.trimEnd(), context].filter(Boolean).join('\n\n'));
-    window.location.hash = '#/agentsam';
+    window.location.hash = '#/admin/agentsam';
     const first = shares[0];
     toast(`Added ${shares.length > 1 ? `${shares.length} pages` : `“${first.title || new URL(first.url).hostname}”`} to the draft`);
   };
@@ -114,7 +114,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   // activate the existing composer without navigating away from the active work.
   useEffect(() => {
     const activate = () => {
-      if (pathname === '/agentsam' || pathname.startsWith('/chats')) {
+      if (pathname === '/admin/agentsam' || pathname.startsWith('/chats')) {
         window.requestAnimationFrame(() =>
           document.querySelector<HTMLTextAreaElement>('.agentsam-conversation-dock textarea')?.focus());
         return;
@@ -206,7 +206,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey)) return;
       if (event.key === '`') { event.preventDefault(); useWorkStore.getState().toggleTerminal(); }
-      if (event.key.toLowerCase() === 'n' && !event.shiftKey) { event.preventDefault(); useWorkStore.getState().startTrail(); void navigate({ to: '/agentsam' }); }
+      if (event.key.toLowerCase() === 'n' && !event.shiftKey) { event.preventDefault(); useWorkStore.getState().startTrail(); void navigate({ to: '/admin/agentsam' }); }
     };
     const online = () => { void useWorkStore.getState().flushOfflineQueue(); };
     window.addEventListener('agentsam:navigate', onNavigate);
@@ -264,7 +264,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         { id: 'subscribers', label: 'Subscribers', href: '/admin/subscribers' },
       ] },
       { id: 'apps', label: 'Apps', icon: <Layers3 aria-hidden="true" />, children: [
-        { id: 'agentsam', label: 'AgentSam', icon: <MessageSquareIcon />, href: '/agentsam', active: pathname === '/agentsam' || pathname.startsWith('/chats') },
+        { id: 'agentsam', label: 'AgentSam', icon: <MessageSquareIcon />, href: '/admin/agentsam', active: pathname === '/admin/agentsam' || pathname.startsWith('/chats') },
         { id: 'cad', label: 'CAD Creator', icon: <Box />, href: '/cad', active: isCadRoute },
         { id: 'samsketch', label: 'SamSketch', icon: <Layers3 />, href: '/samsketch', active: isSamSketchRoute },
         { id: 'media', label: 'Media', icon: <Film />, href: '/media' },
@@ -278,8 +278,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       }] : []),
     ],
     onNavigate: go,
-    onCreateConversation: isConversation ? () => { state.startTrail(); go('/agentsam'); } : undefined,
-    onSelectConversation: (id) => { state.setActiveTrail(id); go('/agentsam'); },
+    onCreateConversation: isConversation ? () => { state.startTrail(); go('/admin/agentsam'); } : undefined,
+    onSelectConversation: (id) => { state.setActiveTrail(id); go('/admin/agentsam'); },
     onSelectProject: (id) => { state.setActiveProject(id); go('/projects'); },
     onPinConversation: state.pinTrail, onRenameConversation: state.renameTrail,
     onShare: trail ? () => setSharing(true) : undefined,

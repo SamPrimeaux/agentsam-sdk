@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { Bot, Box, Database, FileCode, Globe, Layers, Plus, Plug, ShieldCheck, Sparkles, SquareTerminal, Upload, Users, Wrench, X } from 'lucide-react';
+import { Bot, Box, Database, FileCode, Globe, Layers, Plug, ShieldCheck, Sparkles, SquareTerminal, Upload, Users, Wrench, X } from 'lucide-react';
 import { COMPOSER_GROUPS, filterComposerCatalog, projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
 import { loadComposerCatalog } from './plugins';
 import { sideStageComposerWidgets } from './side-stage-actions';
@@ -74,7 +74,7 @@ export function PluginPicker({ value, onChange, children }: {
           : entry.action.tab==='chat' ? undefined : {ephemeral:false});
       replaceMention(entry,false);
     } else if(entry.action.type==='setup'||!entry.ready){
-      useWorkStore.getState().setSettingsOpen(true);
+      window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/settings/integrations' } }));
       replaceMention(entry,false);
     } else {
       const start=match?cursor-match[1].length-1:value.length;
@@ -119,8 +119,8 @@ export function PluginPicker({ value, onChange, children }: {
 
   return <div className="agentsam-plugin-host" ref={root}>
     {children({
-      trigger:<button type="button" className="as-nav-button" aria-label="Add capability" aria-expanded={open} aria-controls={id}
-        onClick={()=>{setOpen(!open);setActive(0);setRevision(n=>n+1);}}><Plus size={16}/></button>,
+      trigger:<button type="button" className="as-nav-button" aria-label="Plugins and capabilities" aria-expanded={open} aria-controls={id}
+        onClick={()=>{setOpen(!open);setActive(0);setRevision(n=>n+1);}}><Plug size={15}/><span className="agentsam-plugin-trigger-label">Plugins</span></button>,
       onKeyDown,
       onSelect:(position)=>{
         setCursor(position);

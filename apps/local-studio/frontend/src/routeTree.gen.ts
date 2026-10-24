@@ -37,6 +37,7 @@ import { Route as appsWidgetsRouteImport } from './routes/(apps)/widgets'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
+import { Route as appsAdminAgentsamRouteImport } from './routes/(apps)/admin/agentsam'
 import { Route as appsAdminProjectsRouteImport } from './routes/(apps)/admin/projects'
 import { Route as appsAppsEcommerceCmsAgentsamRouteImport } from './routes/(apps)/apps/ecommerce-cms-agentsam'
 import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifacts/index'
@@ -203,6 +204,11 @@ const ApiGithubRoute = ApiGithubRouteImport.update({
   path: '/api/github',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminAgentsamRoute = appsAdminAgentsamRouteImport.update({
+  id: '/(apps)/admin/agentsam',
+  path: '/admin/agentsam',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsAdminProjectsRoute = appsAdminProjectsRouteImport.update({
   id: '/(apps)/admin/projects',
   path: '/admin/projects',
@@ -363,6 +369,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/admin/agentsam': typeof appsAdminAgentsamRoute
   '/admin/projects': typeof appsAdminProjectsRouteWithChildren
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
@@ -415,6 +422,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/admin/agentsam': typeof appsAdminAgentsamRoute
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/chats/$chatId': typeof appsChatsChatIdRoute
   '/help/cms': typeof appsHelpCmsRoute
@@ -469,6 +477,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/(apps)/admin/agentsam': typeof appsAdminAgentsamRoute
   '/(apps)/admin/projects': typeof appsAdminProjectsRouteWithChildren
   '/(apps)/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
@@ -526,6 +535,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/admin/agentsam'
     | '/admin/projects'
     | '/apps/ecommerce-cms-agentsam'
     | '/artifacts/tickets'
@@ -578,6 +588,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/admin/agentsam'
     | '/apps/ecommerce-cms-agentsam'
     | '/chats/$chatId'
     | '/help/cms'
@@ -631,6 +642,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/(apps)/admin/agentsam'
     | '/(apps)/admin/projects'
     | '/(apps)/apps/ecommerce-cms-agentsam'
     | '/(apps)/artifacts/tickets'
@@ -687,6 +699,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
+  appsAdminAgentsamRoute: typeof appsAdminAgentsamRoute
   appsAdminProjectsRoute: typeof appsAdminProjectsRouteWithChildren
   appsAppsEcommerceCmsAgentsamRoute: typeof appsAppsEcommerceCmsAgentsamRoute
   appsChatsChatIdRoute: typeof appsChatsChatIdRoute
@@ -894,6 +907,13 @@ declare module '@tanstack/react-router' {
       path: '/api/github'
       fullPath: '/api/github'
       preLoaderRoute: typeof ApiGithubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/admin/agentsam': {
+      id: '/(apps)/admin/agentsam'
+      path: '/admin/agentsam'
+      fullPath: '/admin/agentsam'
+      preLoaderRoute: typeof appsAdminAgentsamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/admin/projects': {
@@ -1203,6 +1223,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
+  appsAdminAgentsamRoute: appsAdminAgentsamRoute,
   appsAdminProjectsRoute: appsAdminProjectsRouteWithChildren,
   appsAppsEcommerceCmsAgentsamRoute: appsAppsEcommerceCmsAgentsamRoute,
   appsChatsChatIdRoute: appsChatsChatIdRoute,

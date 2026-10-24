@@ -34,8 +34,8 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   // The donor's welcome placeholder is not a conversation. Keep persisted user messages intact.
   const empty = trail.messages.length === 0 || (trail.messages.length === 1 && trail.messages[0].id === 'welcome-msg');
   const streaming = state.streamingIds.includes(trail.id);
-  return <div className="agentsam-page-layout">
-    <Nav.Topbar startup={empty} rightSlot={<>
+  return <div className="agentsam-page-layout" data-composer-mode={data.mode}>
+    <Nav.Topbar startup={empty} showNavigationTrigger={false} modeSlot={<Nav.ModeSwitcher />} rightSlot={<>
       {conversationId ? <Link to="/chats" aria-label="Back to Chats" title="Back to Chats" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="size-4"/></Link> : null}
       <button type="button" className="as-nav-button" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={18}/><span className="sr-only">Search Studio</span></button>
       <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />

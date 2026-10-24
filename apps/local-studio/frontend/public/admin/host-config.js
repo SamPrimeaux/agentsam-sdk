@@ -25,7 +25,7 @@
       { href: "/admin/analytics/finance", label: "Finance" },
       { href: "/admin/analytics/health", label: "Health" }
     ] },
-    { href: "/projects", label: "Projects", icon: "content" },
+    { href: "/admin/projects", label: "Projects", icon: "content" },
     { href: "/artifacts", label: "Library", icon: "content" },
     { href: "/tickets", label: "Tickets", icon: "orders" }
   ];
@@ -42,7 +42,7 @@
     ] }
   ];
   const apps = [
-    { href: "/agentsam", label: "AgentSam", icon: "agentic" },
+    { href: "/admin/agentsam", label: "AgentSam", icon: "agentic" },
     { href: "/cad", label: "CAD Creator", icon: "products" },
     { href: "/samsketch", label: "SamSketch", icon: "products" },
     { href: "/media", label: "Media", icon: "content" },
@@ -86,7 +86,7 @@
       event.preventDefault();
       // Desktop keeps the ecommerce console inside Local Studio's own route
       // host; never send these paths to a separately installed site Worker.
-      const destination = path === "/admin/agentsam" ? "/agentsam"
+      const destination = /^\/admin\/(?:agentsam|projects)(?:\/|$)/.test(path) ? path
         : path.startsWith("/admin/")
           ? "/apps/ecommerce-cms-agentsam?page=" + encodeURIComponent(path)
           : path;

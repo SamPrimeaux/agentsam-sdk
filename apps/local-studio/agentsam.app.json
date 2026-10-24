@@ -52,12 +52,12 @@
   },
   "routes": {
     "app.authenticated": {
-      "path": "/agentsam",
-      "auth": "optional",
+      "path": "/admin/agentsam",
+      "auth": "required",
       "spa": true
     },
     "app.home": {
-      "path": "/agentsam"
+      "path": "/admin/agentsam"
     },
     "identity.login": {
       "path": "/auth/login"
@@ -77,8 +77,14 @@
     "identity.oauth.callback": {
       "path": "/api/oauth/:provider/callback"
     },
-    "entry": "/agentsam",
+    "entry": "/admin/agentsam",
     "mounts": [
+      {
+        "path": "/admin/agentsam",
+        "auth": "required",
+        "spa": true,
+        "shell": "dist/index.html"
+      },
       {
         "path": "/agentsam",
         "auth": "optional",

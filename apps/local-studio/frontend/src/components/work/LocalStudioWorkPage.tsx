@@ -191,7 +191,8 @@ function createDesktopWorkHost(): WorkHost {
   };
 }
 
-function sharedLiveWorkHost(): WorkHost {
+/** Shared live projects/tickets authority for Work and the AgentSam composer. */
+export function sharedLiveWorkHost(): WorkHost {
   if (isPackagedDesktop()) {
     sharedDesktopWorkHost ||= createDesktopWorkHost();
     return sharedDesktopWorkHost;

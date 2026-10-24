@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { canonicalStudioPath, isStudioAdminPath, STUDIO_ADMIN_MOUNTS } from '../shared/studio-admin-routes.mjs';
 import { resolveConsoleFile } from '../backend/worker/packaged-console.js';
+import { mountRequiresAuth } from '../../../packages/identity/src/server/mount-policy.js';
 
 const source = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
 test('canonical Projects owns one host-neutral Work UI; old flat paths redirect without leaks', () => {
-  assert.deepEqual(STUDIO_ADMIN_MOUNTS.map((mount) => mount.canonical), ['/admin/projects']);
+  assert.deepEqual(STUDIO_ADMIN_MOUNTS.map((mount) => mount.canonical), ['/admin/projects', '/admin/agentsam']);
   assert.equal(canonicalStudioPath('/projects'), '/admin/projects');
   assert.equal(canonicalStudioPath('/projects/proj_123'), '/admin/projects/proj_123');
   assert.equal(canonicalStudioPath('/projects-other'), null);
@@ -16,10 +17,23 @@ test('canonical Projects owns one host-neutral Work UI; old flat paths redirect 
   assert.ok(isStudioAdminPath('/admin/projects'));
   assert.ok(isStudioAdminPath('/admin/projects/proj_123'));
   assert.equal(isStudioAdminPath('/admin/projects-other'), false);
-  assert.equal(isStudioAdminPath('/admin/agentsam'), false);
+  assert.ok(isStudioAdminPath('/admin/agentsam'));
+  assert.equal(canonicalStudioPath('/agentsam'), '/admin/agentsam');
+});
+test('AgentSam canonical route belongs to Studio and requires authentication', () => {
+  const manifest = JSON.parse(source('agentsam.app.json'));
+  assert.equal(manifest.routes.entry, '/admin/agentsam');
+  assert.equal(mountRequiresAuth('/admin/agentsam', manifest), true);
+  assert.equal(mountRequiresAuth('/admin/agentsam/new', manifest), true);
+  assert.equal(canonicalStudioPath('/agentsam'), '/admin/agentsam');
+  assert.equal(canonicalStudioPath('/agentsam/apps/cad'), null, 'legacy CAD child route must survive');
+  assert.equal(resolveConsoleFile('/admin/agentsam'), null);
+  assert.match(source('frontend/src/routes/(apps)/agentsam.tsx'), /pathname === "\/agentsam"/);
+  assert.match(source('frontend/src/routes/(apps)/admin/agentsam.tsx'), /component: AgentSamPage/);
 });
 test('the Ecommerce mount does not capture Studio Projects; existing product pages keep their owner', () => {
   assert.equal(resolveConsoleFile('/admin/projects'), null);
+  assert.equal(resolveConsoleFile('/admin/agentsam'), null);
   assert.equal(resolveConsoleFile('/admin/projects/proj_123'), null);
   assert.equal(resolveConsoleFile('/admin/home'), 'home.html');
   assert.equal(resolveConsoleFile('/admin/pages'), 'pages.html');

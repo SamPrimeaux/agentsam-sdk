@@ -3,11 +3,14 @@
  * No customer Worker or customer account resources are involved.
  */
 import { adminRouteForPath } from "../../../ecommerce-cms-agentsam/backend/lib/route-manifest.js";
+import { isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
 
 const prefix = "/ecommerce-cms-agentsam/admin/";
 const filePattern = /^\/admin\/(?:css|js|partials|brand|assets|dock|profile-popup|media-kit|workbench|theme-previews|_spa|analytics)\/[\w./-]+$/;
 
 export function resolveConsoleFile(pathname) {
+  // Studio-owned authenticated app paths must reach Nitro, not legacy Ecommerce HTML.
+  if (isStudioAdminPath(pathname)) return null;
   if (pathname === "/sites") return "store.html";
   if (pathname === "/admin/host-config.js") return null;
   const match = adminRouteForPath(pathname);

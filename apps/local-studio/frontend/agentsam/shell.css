@@ -257,3 +257,104 @@
  .agentsam-composer-surface { padding: .4rem; border-radius: .9rem; }
  .agentsam-start-context { display: none; }
 }
+
+/* Empty conversations are a single centered hero/composer composition.
+   Once messages exist, AgentConversationSurface returns to its normal
+   scrollable-thread / bottom-docked-composer contract. */
+.agentsam-page-layout .agentsam-conversation [data-agent-conversation-empty="true"] {
+  justify-content: center;
+}
+.agentsam-page-layout .agentsam-conversation [data-agent-conversation-empty="true"] > [data-agent-conversation-body] {
+  flex: 0 0 auto !important;
+  overflow: visible !important;
+}
+.agentsam-page-layout .agentsam-conversation [data-agent-conversation-empty="true"] [data-agent-conversation-empty-state] {
+  flex: 0 0 auto !important;
+}
+.agentsam-page-layout .agentsam-conversation [data-agent-conversation-empty="true"] .agentsam-conversation-dock {
+  padding-bottom: 0;
+}
+.agentsam-page-layout .agentsam-conversation [data-agent-conversation-empty="true"] .agentsam-welcome-heading h1 {
+  margin-bottom: 16px;
+}
+.agentsam-page-layout[data-composer-mode="chat"] .agentsam-composer-shell {
+  max-width: 720px !important;
+}
+.agentsam-page-layout[data-composer-mode="work"] .agentsam-composer-shell {
+  max-width: 940px !important;
+}
+.agentsam-page-layout[data-composer-mode="chat"] .agentsam-composer-surface {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 8px 4px 16px;
+}
+.agentsam-page-layout[data-composer-mode="chat"] .agentsam-composer-surface textarea {
+  flex: 1 1 auto;
+  width: 0;
+  min-height: 34px;
+  max-height: 84px;
+  padding-block: 6px;
+}
+.agentsam-page-layout[data-composer-mode="chat"] .agentsam-composer-actions {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 0;
+}
+.agentsam-plugin-trigger-label { font-size: 12px; }
+.agentsam-plugin-host .as-nav-button[aria-label="Plugins and capabilities"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 10px;
+  padding-inline: 8px;
+  white-space: nowrap;
+}
+.agentsam-project-picker { position: relative; }
+.agentsam-project-trigger {
+  display: inline-flex; gap: 7px; align-items: center; max-width: 230px;
+  font-size: 12px; color: var(--nav-muted); padding: 6px 9px;
+  border-radius: 10px; text-align: left;
+}
+.agentsam-project-trigger:hover,
+.agentsam-project-trigger[aria-expanded="true"] { background: var(--nav-selected); color: var(--nav-text); }
+.agentsam-project-trigger span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.agentsam-project-menu {
+  position: absolute; z-index: 95; bottom: calc(100% + 6px); left: 0;
+  width: min(310px, calc(100vw - 32px)); max-height: min(380px, 55dvh);
+  display: flex; flex-direction: column; gap: 7px; padding: 10px;
+  color: var(--nav-text); border-radius: 16px; background: var(--nav-popover);
+  border: 1px solid var(--nav-border); box-shadow: 0 16px 42px #0005;
+}
+.agentsam-project-heading { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px; font-size: 13px; }
+.agentsam-project-heading button { display: grid; place-items: center; padding: 5px; border-radius: 8px; }
+.agentsam-project-search { display: flex; align-items: center; gap: 7px; padding: 8px; border: 1px solid var(--nav-border); border-radius: 10px; }
+.agentsam-project-search input,
+.agentsam-project-new input { min-width: 0; flex: 1; color: var(--nav-text); background: transparent; outline: none; font-size: 13px; }
+.agentsam-project-options { min-height: 0; overflow-y: auto; }
+.agentsam-project-options p { padding: 12px; color: var(--nav-muted); font-size: 12px; }
+.agentsam-project-option,
+.agentsam-project-new-trigger { display: flex; align-items: center; gap: 8px; min-height: 35px; width: 100%; padding: 7px 9px; text-align: left; border-radius: 9px; font-size: 13px; }
+.agentsam-project-option span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agentsam-project-option:hover,
+.agentsam-project-new-trigger:hover { background: var(--nav-selected); }
+.agentsam-project-new { display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--nav-border); padding-top: 8px; }
+.agentsam-project-new input { border: 1px solid var(--nav-border); border-radius: 8px; padding: 8px; }
+.agentsam-project-new button { border-radius: 8px; padding: 8px; color: var(--nav-text); background: var(--nav-selected); font-size: 12px; }
+.agentsam-project-new button:disabled { opacity: .5; }
+@media (max-width: 650px) {
+  .agentsam-page-layout[data-composer-mode="chat"] .agentsam-composer-surface { border-radius: 18px; }
+  .agentsam-page-layout .agentsam-conversation [data-agent-conversation-empty="true"] .agentsam-welcome-heading h1 { font-size: 22px; }
+  .agentsam-plugin-trigger-label { display: none; }
+}
+
+/* Keep the Chat/Work switch accessible even after the first message. */
+.agentsam-page-layout .as-nav-topbar { position: relative; }
+.agentsam-page-layout .as-nav-topbar > .as-nav-mode-switch {
+  position: absolute; left: 50%; transform: translateX(-50%);
+}
+@media (max-width: 650px) {
+  .agentsam-page-layout .as-nav-topbar > .as-nav-mode-switch { left: 43%; }
+}

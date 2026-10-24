@@ -30,6 +30,26 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: state => state.location.pathname });
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [error, setError] = useState('');
+  // The packaged nav renders only once. Keep the active link in sync with
+  // client-side route transitions without repainting the sidebar or losing the portal.
+  useEffect(() => {
+    if (!target) return;
+    const activePath = pathname.startsWith('/chats') ? '/admin/agentsam' : pathname;
+    document.querySelectorAll<HTMLAnchorElement>('#console-app .console-sidenav a.console-nav-item, #console-app .console-sidenav a.console-nav-child')
+      .forEach((link) => {
+        const url = new URL(link.href, window.location.href);
+        const active = url.pathname === activePath;
+        link.classList.toggle('is-active', active);
+        if (active) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+      });
+  }, [pathname, target]);
+  // The Ecommerce shell owns the navigation. The conversation page supplies its
+  // own centered mode switch; do not stack a second global topbar above it.
+  useEffect(() => {
+    document.body.classList.toggle('agentsam-conversation-route', (pathname === '/admin/agentsam' || pathname.startsWith('/chats')));
+    return () => document.body.classList.remove('agentsam-conversation-route');
+  }, [pathname]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -38,7 +58,7 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
       if (cancelled) return;
       const render = (window as WindowWithConsole).renderShell;
       if (typeof render !== 'function') throw new Error('Packaged console renderer missing');
-      render(pathname, '<div id="agentsam-host-workspace"></div>', { fullBleed: true, includeMobileDrawer: true });
+      render(pathname, '<div id="agentsam-host-workspace"></div>', { fullBleed: true, includeMobileDrawer: false });
       if (cancelled) return;
       const outlet = document.getElementById('agentsam-host-workspace');
       if (!outlet) throw new Error('Packaged console workspace mount missing');

@@ -9,7 +9,7 @@ import { RunModeSelect } from "@/components/workbench/run-mode-select";
 import { cn, formatElapsed } from "@/lib/utils";
 import { defaultRunModeForTarget, useWorkStore } from "@/lib/work/store";
 import { PluginPicker } from '../../../agentsam/PluginPicker';
-import { Nav } from '@inneranimalmedia/agentsam-nav';
+import { ProjectPicker } from '../../../agentsam/ProjectPicker';
 import { toast } from "sonner";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { stageChatImage, type ChatImageReference } from "@/lib/content/chat-images";
@@ -266,7 +266,7 @@ export function Composer({
           },
         }}
       />}</PluginPicker>
-      {targetKind === 'trail' && <div className="agentsam-start-context" title="Current project"><Nav.ProjectContext /></div>}
+      {targetKind === 'trail' && <div className="agentsam-start-context"><ProjectPicker trailId={targetId} /></div>}
     </div>
   );
 }
