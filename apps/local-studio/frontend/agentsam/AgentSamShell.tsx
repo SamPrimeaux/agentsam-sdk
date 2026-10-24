@@ -65,6 +65,18 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const isConversation = pathname === '/agentsam' || pathname === '/admin/agentsam' || pathname.startsWith('/chats');
   const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/') || pathname === '/admin/cad' || pathname.startsWith('/admin/cad/');
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
+  const isMovieModeRoute = pathname === '/media' || pathname.startsWith('/media/') ||
+    pathname === '/admin/moviemode' || pathname.startsWith('/admin/moviemode/');
+  // When a SideStage preview becomes the dedicated editor, close only its
+  // duplicate pane. Keep tabs and terminal/browser sessions for later reopening.
+  useEffect(() => {
+    if (!isCadRoute && !isMovieModeRoute) return;
+    const workspace = useWorkStore.getState();
+    const active = workspace.sideTabs.find(tab => tab.id === workspace.activeSideTabId);
+    if ((isCadRoute && active?.kind === 'app') || (isMovieModeRoute && active?.kind === 'media')) {
+      workspace.setSideOpen(false);
+    }
+  }, [pathname, isCadRoute, isMovieModeRoute]);
   // The platform owns its shell; product-owned /admin pages navigate into
   // the installed Ecommerce application without recreating product routers.
   const go = (to: string) => {
