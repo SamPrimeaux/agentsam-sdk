@@ -58,7 +58,7 @@ if (loading?.version !== version) {
 // particular, a 2.6.13 manifest with a cached 2.6.12 campaign tarball cannot
 // pass npm ci, even when the package is eventually published.
 const firstPartyTarballs = Object.entries(packages).filter(([key, entry]) =>
-  key.includes('node_modules/@inneranimalmedia/') && !entry?.link && typeof entry?.version === 'string'
+  /^node_modules\/@inneranimalmedia\/[^/]+$/.test(key) && !entry?.link && typeof entry?.version === 'string'
 );
 for (const [key, entry] of firstPartyTarballs) {
   if (entry.version !== version) {

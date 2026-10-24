@@ -1,5 +1,6 @@
 import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
 import { AgentSamShell } from "../../agentsam/AgentSamShell";
+import { PackagedConsoleFrame } from "../../agentsam/PackagedConsoleFrame";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
@@ -81,6 +82,5 @@ function ApplicationOutlet() {
     />;
   }
   const isApp = pathname === "/" || /^\/(agentsam|chats|cms|sites|store|content|cad|samsketch|database|projects|artifacts|mail|tickets|collaborate|files|browse|cli|ship|widgets|settings)(\/|$)/.test(pathname);
-  // The platform React workspace owns its shell. Ecommerce retains only its product-owned /admin routes.
-  return isApp ? <AgentSamShell /> : <Outlet />;
+  return isApp ? <PackagedConsoleFrame><AgentSamShell embedded /></PackagedConsoleFrame> : <Outlet />;
 }

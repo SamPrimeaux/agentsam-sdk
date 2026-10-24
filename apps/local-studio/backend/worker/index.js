@@ -701,8 +701,8 @@ export default {
     const isAnalyticsApi = url.pathname.startsWith("/api/analytics/");
     const isTerminalConnect = url.pathname === "/api/agent/terminal/connect";
 
-    // Existing Ecommerce console UI mounted into Local Studio. Keep its
-    // intentional dashboard Home route owned by the Local Studio shell.
+    // Existing Ecommerce console UI is served by the Local Studio Worker.
+    // The packaged UI and its APIs remain on this origin and use Local Studio D1.
     if ((request.method === "GET" || request.method === "HEAD") &&
         (url.pathname === "/sites" || url.pathname.startsWith("/admin/"))) {
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
@@ -717,10 +717,8 @@ export default {
       return handleCompletefulWebhook(request, env);
     }
 
-    // The packaged ecommerce UI and its database APIs are served by this
-    // Local Studio Worker. Resolve the Local Studio identity here; never
-    // proxy to the separately installed ecommerce Worker or accept a client
-    // supplied account/user identity.
+    // Resolve Local Studio identity for the packaged commerce API. Never proxy
+    // to the separately installed ecommerce Worker or trust client identities.
     if (url.pathname.startsWith("/api/admin/") && isLocalStudioCommerceApi(url.pathname)) {
       if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
       const userId = await resolveSessionUserId(request, env);
