@@ -388,6 +388,7 @@ export function LocalStudioWorkPage({
 
       <AutoRagWorkflowDialog open={ragOpen} root={ragRoot} host={localStudioAutoRagHost} onClose={() => setRagOpen(false)} />
       <WorkProduct
+        presentation="embedded"
         host={host}
         surface={surface}
         projectId={projectId}

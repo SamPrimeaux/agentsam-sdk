@@ -49,7 +49,7 @@ import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } 
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
 import { handleStudioSkills } from "./studio-skills.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
-import { handleStudioUserPreferences } from "./studio-user-preferences.js";
+import { handleStudioUserPreferences, handleStudioAccountAvatar } from "./studio-user-preferences.js";
 import { readPluginWorkspace } from "./plugin-workspace.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
@@ -685,6 +685,7 @@ export default {
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
     const isStudioPreferences=url.pathname==="/api/settings/preferences";
+    const isStudioAccountAvatar=url.pathname==="/api/settings/account-avatar";
     const isStudioAgentSettings=url.pathname==="/api/settings/agents"
       || url.pathname.startsWith("/api/settings/agents/");
     const isStudioSkills = url.pathname === "/api/settings/skills"
@@ -719,7 +720,7 @@ export default {
     // Existing Ecommerce console UI is served by the Local Studio Worker.
     // The packaged UI and its APIs remain on this origin and use Local Studio D1.
     if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname === "/sites" || url.pathname.startsWith("/admin/"))) {
+        (url.pathname === "/sites" || (url.pathname.startsWith("/admin/") && !isStudioAdminPath(url.pathname)))) {
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
       const mounted = await servePackagedConsole(request, env.ASSETS);
       if (mounted) return mounted;
@@ -852,6 +853,13 @@ export default {
       }catch(error){
         const code=String(error?.message||"plugin_workspace_unavailable");
         return json({ok:false,error:code.slice(0,120)},code.includes("not_connected")?409:400);
+      }
+    }
+    if(isStudioAccountAvatar) {
+      try{return await handleStudioAccountAvatar(request,env,await sessionUser());}
+      catch(error){
+        console.warn("studio_account_avatar_error",String(error?.message||error).slice(0,120));
+        return json({ok:false,error:"account_avatar_unavailable"},503);
       }
     }
     if(isStudioPreferences) {

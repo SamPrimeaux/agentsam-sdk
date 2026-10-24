@@ -38,6 +38,8 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
 import { Route as appsAdminAgentsamRouteImport } from './routes/(apps)/admin/agentsam'
+import { Route as appsAdminCadRouteImport } from './routes/(apps)/admin/cad'
+import { Route as appsAdminMoviemodeRouteImport } from './routes/(apps)/admin/moviemode'
 import { Route as appsAdminProjectsRouteImport } from './routes/(apps)/admin/projects'
 import { Route as appsAppsEcommerceCmsAgentsamRouteImport } from './routes/(apps)/apps/ecommerce-cms-agentsam'
 import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifacts/index'
@@ -56,6 +58,7 @@ import { Route as appsSettingsRuntimeRouteImport } from './routes/(apps)/setting
 import { Route as appsSettingsThemesRouteImport } from './routes/(apps)/settings/themes'
 import { Route as ApiContentOptimizeRouteImport } from './routes/api/content.optimize'
 import { Route as ApiLlmInventoryRouteImport } from './routes/api/llm.inventory'
+import { Route as appsAdminMoviemodeEditRouteImport } from './routes/(apps)/admin/moviemode.edit'
 import { Route as appsAdminProjectsIndexRouteImport } from './routes/(apps)/admin/projects/index'
 import { Route as appsAdminProjectsProjectIdRouteImport } from './routes/(apps)/admin/projects/$projectId'
 import { Route as appsAgentsamAppsCadRouteImport } from './routes/(apps)/agentsam.apps.cad'
@@ -209,6 +212,16 @@ const appsAdminAgentsamRoute = appsAdminAgentsamRouteImport.update({
   path: '/admin/agentsam',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminCadRoute = appsAdminCadRouteImport.update({
+  id: '/(apps)/admin/cad',
+  path: '/admin/cad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsAdminMoviemodeRoute = appsAdminMoviemodeRouteImport.update({
+  id: '/(apps)/admin/moviemode',
+  path: '/admin/moviemode',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsAdminProjectsRoute = appsAdminProjectsRouteImport.update({
   id: '/(apps)/admin/projects',
   path: '/admin/projects',
@@ -301,6 +314,11 @@ const ApiLlmInventoryRoute = ApiLlmInventoryRouteImport.update({
   path: '/api/llm/inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminMoviemodeEditRoute = appsAdminMoviemodeEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => appsAdminMoviemodeRoute,
+} as any)
 const appsAdminProjectsIndexRoute = appsAdminProjectsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -370,6 +388,8 @@ export interface FileRoutesByFullPath {
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
   '/admin/agentsam': typeof appsAdminAgentsamRoute
+  '/admin/cad': typeof appsAdminCadRoute
+  '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
   '/admin/projects': typeof appsAdminProjectsRouteWithChildren
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
@@ -388,6 +408,7 @@ export interface FileRoutesByFullPath {
   '/chats/': typeof appsChatsIndexRoute
   '/projects/': typeof appsProjectsIndexRoute
   '/settings/': typeof appsSettingsIndexRoute
+  '/admin/moviemode/edit': typeof appsAdminMoviemodeEditRoute
   '/admin/projects/$projectId': typeof appsAdminProjectsProjectIdRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
@@ -423,6 +444,8 @@ export interface FileRoutesByTo {
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
   '/admin/agentsam': typeof appsAdminAgentsamRoute
+  '/admin/cad': typeof appsAdminCadRoute
+  '/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/chats/$chatId': typeof appsChatsChatIdRoute
   '/help/cms': typeof appsHelpCmsRoute
@@ -439,6 +462,7 @@ export interface FileRoutesByTo {
   '/chats': typeof appsChatsIndexRoute
   '/projects': typeof appsProjectsIndexRoute
   '/settings': typeof appsSettingsIndexRoute
+  '/admin/moviemode/edit': typeof appsAdminMoviemodeEditRoute
   '/admin/projects/$projectId': typeof appsAdminProjectsProjectIdRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
@@ -478,6 +502,8 @@ export interface FileRoutesById {
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
   '/(apps)/admin/agentsam': typeof appsAdminAgentsamRoute
+  '/(apps)/admin/cad': typeof appsAdminCadRoute
+  '/(apps)/admin/moviemode': typeof appsAdminMoviemodeRouteWithChildren
   '/(apps)/admin/projects': typeof appsAdminProjectsRouteWithChildren
   '/(apps)/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
@@ -496,6 +522,7 @@ export interface FileRoutesById {
   '/(apps)/chats/': typeof appsChatsIndexRoute
   '/(apps)/projects/': typeof appsProjectsIndexRoute
   '/(apps)/settings/': typeof appsSettingsIndexRoute
+  '/(apps)/admin/moviemode/edit': typeof appsAdminMoviemodeEditRoute
   '/(apps)/admin/projects/$projectId': typeof appsAdminProjectsProjectIdRoute
   '/(apps)/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/(apps)/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
@@ -536,6 +563,8 @@ export interface FileRouteTypes {
     | '/api/cloudflare'
     | '/api/github'
     | '/admin/agentsam'
+    | '/admin/cad'
+    | '/admin/moviemode'
     | '/admin/projects'
     | '/apps/ecommerce-cms-agentsam'
     | '/artifacts/tickets'
@@ -554,6 +583,7 @@ export interface FileRouteTypes {
     | '/chats/'
     | '/projects/'
     | '/settings/'
+    | '/admin/moviemode/edit'
     | '/admin/projects/$projectId'
     | '/agentsam/apps/cad'
     | '/artifacts/tickets/$ticketId'
@@ -589,6 +619,8 @@ export interface FileRouteTypes {
     | '/api/cloudflare'
     | '/api/github'
     | '/admin/agentsam'
+    | '/admin/cad'
+    | '/admin/moviemode'
     | '/apps/ecommerce-cms-agentsam'
     | '/chats/$chatId'
     | '/help/cms'
@@ -605,6 +637,7 @@ export interface FileRouteTypes {
     | '/chats'
     | '/projects'
     | '/settings'
+    | '/admin/moviemode/edit'
     | '/admin/projects/$projectId'
     | '/agentsam/apps/cad'
     | '/artifacts/tickets/$ticketId'
@@ -643,6 +676,8 @@ export interface FileRouteTypes {
     | '/api/cloudflare'
     | '/api/github'
     | '/(apps)/admin/agentsam'
+    | '/(apps)/admin/cad'
+    | '/(apps)/admin/moviemode'
     | '/(apps)/admin/projects'
     | '/(apps)/apps/ecommerce-cms-agentsam'
     | '/(apps)/artifacts/tickets'
@@ -661,6 +696,7 @@ export interface FileRouteTypes {
     | '/(apps)/chats/'
     | '/(apps)/projects/'
     | '/(apps)/settings/'
+    | '/(apps)/admin/moviemode/edit'
     | '/(apps)/admin/projects/$projectId'
     | '/(apps)/agentsam/apps/cad'
     | '/(apps)/artifacts/tickets/$ticketId'
@@ -700,6 +736,8 @@ export interface RootRouteChildren {
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
   appsAdminAgentsamRoute: typeof appsAdminAgentsamRoute
+  appsAdminCadRoute: typeof appsAdminCadRoute
+  appsAdminMoviemodeRoute: typeof appsAdminMoviemodeRouteWithChildren
   appsAdminProjectsRoute: typeof appsAdminProjectsRouteWithChildren
   appsAppsEcommerceCmsAgentsamRoute: typeof appsAppsEcommerceCmsAgentsamRoute
   appsChatsChatIdRoute: typeof appsChatsChatIdRoute
@@ -916,6 +954,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsAdminAgentsamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/admin/cad': {
+      id: '/(apps)/admin/cad'
+      path: '/admin/cad'
+      fullPath: '/admin/cad'
+      preLoaderRoute: typeof appsAdminCadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/admin/moviemode': {
+      id: '/(apps)/admin/moviemode'
+      path: '/admin/moviemode'
+      fullPath: '/admin/moviemode'
+      preLoaderRoute: typeof appsAdminMoviemodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/admin/projects': {
       id: '/(apps)/admin/projects'
       path: '/admin/projects'
@@ -1041,6 +1093,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/llm/inventory'
       preLoaderRoute: typeof ApiLlmInventoryRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/admin/moviemode/edit': {
+      id: '/(apps)/admin/moviemode/edit'
+      path: '/edit'
+      fullPath: '/admin/moviemode/edit'
+      preLoaderRoute: typeof appsAdminMoviemodeEditRouteImport
+      parentRoute: typeof appsAdminMoviemodeRoute
     }
     '/(apps)/admin/projects/': {
       id: '/(apps)/admin/projects/'
@@ -1181,6 +1240,17 @@ const appsSettingsRouteWithChildren = appsSettingsRoute._addFileChildren(
   appsSettingsRouteChildren,
 )
 
+interface appsAdminMoviemodeRouteChildren {
+  appsAdminMoviemodeEditRoute: typeof appsAdminMoviemodeEditRoute
+}
+
+const appsAdminMoviemodeRouteChildren: appsAdminMoviemodeRouteChildren = {
+  appsAdminMoviemodeEditRoute: appsAdminMoviemodeEditRoute,
+}
+
+const appsAdminMoviemodeRouteWithChildren =
+  appsAdminMoviemodeRoute._addFileChildren(appsAdminMoviemodeRouteChildren)
+
 interface appsAdminProjectsRouteChildren {
   appsAdminProjectsProjectIdRoute: typeof appsAdminProjectsProjectIdRoute
   appsAdminProjectsIndexRoute: typeof appsAdminProjectsIndexRoute
@@ -1224,6 +1294,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
   appsAdminAgentsamRoute: appsAdminAgentsamRoute,
+  appsAdminCadRoute: appsAdminCadRoute,
+  appsAdminMoviemodeRoute: appsAdminMoviemodeRouteWithChildren,
   appsAdminProjectsRoute: appsAdminProjectsRouteWithChildren,
   appsAppsEcommerceCmsAgentsamRoute: appsAppsEcommerceCmsAgentsamRoute,
   appsChatsChatIdRoute: appsChatsChatIdRoute,

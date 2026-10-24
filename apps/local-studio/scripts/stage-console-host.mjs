@@ -25,7 +25,34 @@ if (process.argv.includes('--stage') || process.argv.includes('--desktop')) {
   console.log('[console-host] root /admin assets staged to ' + destination);
   process.exit(0);
 }
+// The ecommerce dashboard is a separately installable frontend with its own
+// lockfile. Root SDK npm ci does not provision this nested dependency tree.
+// Only install when missing; never silently change or regenerate the lockfile.
+const commerceFrontend = path.join(app, 'frontend');
+const frontendModules = path.join(commerceFrontend, 'node_modules');
+if (!existsSync(path.join(frontendModules, 'react-router-dom/package.json')) ||
+    !existsSync(path.join(frontendModules, '@inneranimalmedia/commerce-analytics/package.json'))) {
+  if (!existsSync(path.join(commerceFrontend, 'package-lock.json'))) {
+    throw new Error('Ecommerce dashboard package-lock.json is required for portable console staging');
+  }
+  execFileSync('npm', ['ci', '--prefix', 'frontend', '--ignore-scripts', '--no-audit', '--no-fund'], {
+    cwd: app, stdio: 'inherit',
+  });
+}
 execFileSync('npm', ['run', 'build:frontend'], { cwd: app, stdio: 'inherit' });
+// The installable Ecommerce application also has its own lockfile. Its CMS
+// theme/section packages are not root-SDK dependencies and must be installed
+// for an isolated Studio build before assembling the original product assets.
+const appModules = path.join(app, 'node_modules');
+if (!existsSync(path.join(appModules, '@inneranimalmedia/section-library/package.json')) ||
+    !existsSync(path.join(appModules, '@inneranimalmedia/revise-theme/package.json'))) {
+  if (!existsSync(path.join(app, 'package-lock.json'))) {
+    throw new Error('Ecommerce application package-lock.json is required for portable asset staging');
+  }
+  execFileSync('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], {
+    cwd: app, stdio: 'inherit',
+  });
+}
 execFileSync(process.execPath, [path.join(app, 'bin/build-assets.mjs')], { cwd: app, stdio: 'inherit' });
 for (const name of ['admin/home.html', 'admin/store.html', 'admin/js/shell.js', 'admin/css/console.css', 'admin/theme-editor.html']) {
   if (!existsSync(path.join(source, name))) throw new Error('Missing packaged console asset: ' + name);

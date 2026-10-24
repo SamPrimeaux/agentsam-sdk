@@ -13,7 +13,7 @@ const PET_STILL: Record<AgentSamPetState, string> = {
 
 /** One reusable PET affordance in the shared shell: activate the current agent,
  * never create a second chat instance or redirect away from the active document. */
-export function AgentSamPetTrigger({ state, onActivate }: { state: AgentSamPetState; onActivate: () => void }) {
+export function AgentSamPetTrigger({ state, onActivate, avatarUrl }: { state: AgentSamPetState; onActivate: () => void; avatarUrl?: string | null }) {
   const [fallback, setFallback] = useState(false);
   return <button
     type="button"
@@ -26,7 +26,7 @@ export function AgentSamPetTrigger({ state, onActivate }: { state: AgentSamPetSt
   >
     <picture>
       <source media="(prefers-reduced-motion: reduce)" srcSet={PET_STILL[state]} />
-      <img src={fallback ? PET_STILL[state] : PET_IMAGES[state]} alt="" draggable={false}
+      <img src={fallback ? PET_STILL[state] : (avatarUrl || PET_IMAGES[state])} alt="" draggable={false}
         onError={() => setFallback(true)} />
     </picture>
     <span className="agentsam-pet-status" aria-hidden="true" />
