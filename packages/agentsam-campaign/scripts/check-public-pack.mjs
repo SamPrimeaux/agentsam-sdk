@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const cwd = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const permitted = new Set([
-  'README.md', 'package.json',
+  'README.md', 'LICENSE', 'package.json',
   'src/index.js', 'src/project.js', 'src/storage.js', 'src/http.js',
   'sql/README.md', 'sql/0001_campaign_core.sql', 'sql/verify.sql',
 ]);
