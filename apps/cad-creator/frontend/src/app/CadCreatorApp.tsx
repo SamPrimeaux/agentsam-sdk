@@ -148,11 +148,18 @@ export function CadCreatorApp({
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(initialWorkspace === 'parametric' || initialWorkspace === 'render' ? 'model' : initialWorkspace);
   const [planLayout, setPlanLayout] = useState<'2d' | 'split' | 'sketch'>('split');
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
-  const [explorerOpen, setExplorerOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches);
-  const [inspectorOpen, setInspectorOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches);
+  const [explorerOpen, setExplorerOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
+  const [inspectorOpen, setInspectorOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
   const [advancedToolsOpen, setAdvancedToolsOpen] = useState(false);
   const [studioView,setStudioView]=useState<'preview'|'edit'|'code'>('edit');
   const [uiSelection, setUiSelection] = useState<CadElementSelection>(null);
+  // Embedded CAD starts with the model as the stage. Show one contextual drawer
+  // only when the user selects an element or requests a panel.
+  useEffect(() => {
+    if (presentation !== 'embedded' || !uiSelection) return;
+    setInspectorOpen(true);
+    setExplorerOpen(false);
+  }, [presentation, uiSelection]);
   const [cadAccent, setCadAccent] = useState<string>(() => {
     if (typeof window === 'undefined') return '#82a7fb';
     const color = window.localStorage.getItem('agentsam.cad.interface.accent');
@@ -408,8 +415,8 @@ export function CadCreatorApp({
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
           onNew={startBlankProject} onTemplates={() => setIsTemplateLibraryOpen(true)}
           onExport={() => setIsExportPublishOpen(true)}
-          onToggleExplorer={() => { if (window.matchMedia('(max-width: 920px)').matches && !explorerOpen) setInspectorOpen(false); setExplorerOpen(v => !v); }}
-          onToggleInspector={() => { if (window.matchMedia('(max-width: 920px)').matches && !inspectorOpen) setExplorerOpen(false); setInspectorOpen(v => !v); }}
+          onToggleExplorer={() => { if ((presentation === 'embedded' || window.matchMedia('(max-width: 920px)').matches) && !explorerOpen) setInspectorOpen(false); setExplorerOpen(v => !v); }}
+          onToggleInspector={() => { if ((presentation === 'embedded' || window.matchMedia('(max-width: 920px)').matches) && !inspectorOpen) setExplorerOpen(false); setInspectorOpen(v => !v); }}
           explorerOpen={explorerOpen} inspectorOpen={inspectorOpen}
           onMore={() => setAdvancedToolsOpen(v => !v)} moreOpen={advancedToolsOpen}
           accent={cadAccent} onAccentChange={setCadAccent}
@@ -649,7 +656,7 @@ export function CadCreatorApp({
                         room:'rooms', furniture:'furniture', parametric:'parametricObjects'
                       };
                       const group = groupMap[type];
-                      if (group) { setUiSelection({group,id}); setInspectorOpen(true); if (window.matchMedia('(max-width: 920px)').matches) setExplorerOpen(false); }
+                      if (group) { setUiSelection({group,id}); setInspectorOpen(true); if (presentation === 'embedded' || window.matchMedia('(max-width: 920px)').matches) setExplorerOpen(false); }
                       try {
                         const revision = verifiedSelectionRevision(project.id, verifiedProjectRevision);
                         if (revision === null) {
