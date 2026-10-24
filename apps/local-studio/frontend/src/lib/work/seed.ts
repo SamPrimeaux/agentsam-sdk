@@ -4,7 +4,7 @@ import type { Artifact, DeployTarget, Project } from "@inneranimalmedia/agentsam
 
 function file(path: string, content: string, extra?: Partial<Artifact>): Artifact {
   return {
-    id: uid(),
+    id: extra?.id || uid(),
     path,
     language: languageFromPath(path),
     content,
@@ -36,10 +36,14 @@ export function slugify(name: string) {
   );
 }
 
-export function seedFiles(projectName: string): Artifact[] {
+export function seedFiles(projectName: string, projectId: string = uid()): Artifact[] {
   const slug = slugify(projectName);
+  // Seed artifacts are tied to their project, not random at module evaluation.
+  // This makes the browser and Cloudflare SSR bootstrap identical.
+  const seedFile = (path: string, content: string, extra?: Partial<Artifact>): Artifact =>
+    file(path, content, { ...extra, id: `${projectId}:${path}` });
   return [
-    file(
+    seedFile(
       "README.md",
       `# ${projectName}
 
@@ -65,7 +69,7 @@ wrangler pages deploy
 Tokens live in Ship — they never leave this browser except toward GitHub or Cloudflare.
 `,
     ),
-    file(
+    seedFile(
       "index.html",
       `<!doctype html>
 <html lang="en">
@@ -87,7 +91,7 @@ Tokens live in Ship — they never leave this browser except toward GitHub or Cl
 </html>
 `,
     ),
-    file(
+    seedFile(
       "styles.css",
       `:root {
   color-scheme: dark;
@@ -123,20 +127,20 @@ h1 {
 .meta { margin: 28px 0 0; color: var(--clay); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 `,
     ),
-    file(
+    seedFile(
       "src/app.js",
       `document.documentElement.dataset.ready = "sam";
 console.info("${projectName} ready");
 `,
     ),
-    file(
+    seedFile(
       "wrangler.toml",
       `name = "${slug}"
 compatibility_date = "2026-09-01"
 pages_build_output_dir = "."
 `,
     ),
-    file(
+    seedFile(
       ".github/workflows/deploy.yml",
       `name: Cloudflare Pages
 on:
@@ -159,10 +163,10 @@ jobs:
   ];
 }
 
-export function newProject(name = "Studio", description = "Default workspace"): Project {
+export function newProject(name = "Studio", description = "Default workspace", projectId: string = uid()): Project {
   const now = Date.now();
   return {
-    id: uid(),
+    id: projectId,
     name,
     description: description.includes("Scratch") ? description : `${description} · Scratch`,
     createdAt: now,
@@ -172,7 +176,7 @@ export function newProject(name = "Studio", description = "Default workspace"): 
     runtimeBaseUrl: null,
     workspaceId: null,
     runtimeCapability: null,
-    files: seedFiles(name),
+    files: seedFiles(name, projectId),
     dirs: ["src", ".github", ".github/workflows"],
     git: emptyGit(),
     deploy: {
