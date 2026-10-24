@@ -5,6 +5,7 @@
 .product-shortcut .shortcut-arrow{stroke:currentColor;stroke-width:1.45;stroke-linecap:round;stroke-linejoin:round;margin-left:1px;opacity:.7;transition:transform .15s ease}
 .product-shortcut:hover{color:#20211f}.product-shortcut:hover .shortcut-arrow{transform:translateX(2px);opacity:1}
 .product-shortcut:focus-visible{outline:2px solid #738969;outline-offset:4px;border-radius:3px}
+.catalog-load-error{grid-column:1/-1;background:#fff3ef;border:1px solid #f0c7b8;border-radius:12px;padding:18px;color:#7a3a2b}
 @media(prefers-reduced-motion:reduce){.product-shortcut,.product-shortcut .shortcut-arrow{transition:none}}
 </style></head><body><script src="/admin/js/shell.js"></script><script>
 renderShell('/admin/products/create', `
@@ -48,5 +49,5 @@ function render(){
 }
 
 document.getElementById('catalog-search').oninput=render;document.getElementById('reload').onclick=()=>location.reload();
-adminFetch('/api/admin/products').then(d=>{products=(d.products||[]).map(p=>({...p,name:p.title,kind:p.collection||'apparel'}));render()}).catch(e=>{render();document.querySelector('#catalog-grid').innerHTML='<div style="grid-column:1/-1;background:#fff3ef;border:1px solid #f0c7b8;border-radius:12px;padding:18px;color:#7a3a2b">We couldn’t load your saved products. '+esc(e.message||'Request failed')+'</div>'});
+adminFetch('/api/admin/products').then(d=>{products=(d.products||[]).map(p=>({...p,name:p.title,kind:p.collection||'apparel'}));render()}).catch(e=>{render();document.querySelector('#catalog-grid').innerHTML='<div class="catalog-load-error">We couldn’t load your saved products. '+esc(e.message||'Request failed')+'</div>'});
 </script></body></html>

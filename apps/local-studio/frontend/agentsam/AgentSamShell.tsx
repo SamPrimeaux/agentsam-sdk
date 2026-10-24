@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import './shell.css';
 import './platform-console.css';
 import { AnnotationHelper } from './AnnotationHelper';
+import { IconAction } from '@/components/ui/icon-action';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
@@ -308,7 +309,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           <button type="button" className="platform-console-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={17} /><span>Search pages and tools</span><kbd>⌘K</kbd></button>
           <Nav.TopbarSpacer />
           <AgentSamPetTrigger state={petState} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
-          <button type="button" className="as-nav-button" title="Help & documentation" aria-label="Help & documentation" onClick={() => go('/docs')}><CircleHelp size={18} /></button>
+          <IconAction className="as-nav-button" label="Help & documentation" hint="Open AgentSam documentation" onClick={() => go('/docs')}><CircleHelp size={18} /></IconAction>
           <button type="button" className="as-nav-button" title="Notifications" aria-label="Notifications" onClick={() => go('/tickets')}><Bell size={17} /><span className="sr-only">View notifications in Tickets</span></button>
           <Nav.AccountSwitcher />
         </Nav.Topbar> : null}
