@@ -1,0 +1,86 @@
+#!/usr/bin/env node
+/**
+ * Exercise the compiled Cloudflare Worker through real HTTP before deploying.
+ * This catches runtime route errors that TypeScript, Vite and Wrangler dry-run
+ * cannot catch, including unresolved symbols in backend/worker/index.js.
+ *
+ * Uses isolated local Wrangler bindings: no production D1/R2 writes or remote
+ * secret access. The Hyperdrive URL is deliberately a non-connected local stub.
+ */
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
+import { resolve } from 'node:path';
+
+const root = resolve(import.meta.dirname, '..');
+const workerBin = resolve(root, 'node_modules/.bin/wrangler');
+const port = await new Promise((ok, fail) => {
+  const server = createServer();
+  server.once('error', fail);
+  server.listen(0, '127.0.0.1', () => {
+    const address = server.address();
+    const selectedPort = typeof address === 'object' && address ? address.port : null;
+    server.close(() => selectedPort ? ok(selectedPort) : fail(new Error('no_ephemeral_port')));
+  });
+});
+const base = `http://127.0.0.1:${port}`;
+let logs = '';
+const child = spawn(workerBin, [
+  'dev', '-c', 'backend/wrangler.jsonc', '--local', '--ip', '127.0.0.1',
+  '--port', String(port), '--inspector-port', '0',
+], {
+  cwd: root,
+  detached: process.platform !== 'win32',
+  stdio: ['ignore', 'pipe', 'pipe'],
+  env: {
+    ...process.env,
+    CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE:
+      process.env.CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE ||
+      'postgres://localhost:localhost@127.0.0.1:5432/studio_smoke_unconnected',
+  },
+});
+for (const stream of [child.stdout, child.stderr]) {
+  stream.on('data', (chunk) => { logs = (logs + String(chunk)).slice(-14000); });
+}
+function shutdown() {
+  try {
+    if (process.platform !== 'win32') process.kill(-child.pid, 'SIGTERM');
+    else child.kill('SIGTERM');
+  } catch { /* already stopped */ }
+}
+const pause = (ms) => new Promise((ok) => setTimeout(ok, ms));
+const request = async (pathname) => fetch(base + pathname, {
+  redirect: 'manual',
+  signal: AbortSignal.timeout(5000),
+});
+try {
+  let ready = false;
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) throw new Error('local_worker_exited_early');
+    try {
+      const response = await request('/health');
+      if (response.status === 200) { ready = true; break; }
+    } catch { /* starting */ }
+    await pause(500);
+  }
+  if (!ready) throw new Error('local_worker_not_ready');
+  for (const [pathname, allowed] of [
+    ['/admin/cad', [200]],
+    ['/admin/agentsam', [200, 302]],
+    ['/admin/products', [200]],
+  ]) {
+    const response = await request(pathname);
+    const payload = await response.text();
+    if (!allowed.includes(response.status) ||
+        (response.status === 200 && !payload.toLowerCase().includes('<!doctype html'))) {
+      throw new Error(`${pathname} returned ${response.status}: ${payload.slice(0, 350)}`);
+    }
+    console.log(`PASS ${pathname}: ${response.status}`);
+  }
+} catch (error) {
+  console.error('WORKER ROUTE SMOKE FAILED:', error.message);
+  console.error(logs.slice(-5500));
+  process.exitCode = 1;
+} finally {
+  shutdown();
+}

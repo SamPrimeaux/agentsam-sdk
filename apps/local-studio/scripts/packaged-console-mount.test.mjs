@@ -150,6 +150,7 @@ test('Studio-owned admin URLs reuse existing apps and preserve flat compatibilit
   assert.equal(isStudioAdminPath('/admin/theme-editor'), false);
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /!isStudioAdminPath\(url\.pathname\)/);
+  assert.match(worker, /import \{ canonicalStudioPath, isStudioAdminPath \} from [^;]+studio-admin-routes\.mjs/);
 });
 
 test('Growth appearance is a host-only, theme-token override', () => {

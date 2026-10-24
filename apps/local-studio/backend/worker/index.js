@@ -41,7 +41,7 @@ import {
 import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
-import { canonicalStudioPath } from "../../shared/studio-admin-routes.mjs";
+import { canonicalStudioPath, isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
 import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
