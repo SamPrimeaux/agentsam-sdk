@@ -719,7 +719,7 @@ export default {
     // Existing Ecommerce console UI is served by the Local Studio Worker.
     // The packaged UI and its APIs remain on this origin and use Local Studio D1.
     if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname === "/sites" || url.pathname.startsWith("/admin/"))) {
+        (url.pathname === "/sites" || (url.pathname.startsWith("/admin/") && !isStudioAdminPath(url.pathname)))) {
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
       const mounted = await servePackagedConsole(request, env.ASSETS);
       if (mounted) return mounted;

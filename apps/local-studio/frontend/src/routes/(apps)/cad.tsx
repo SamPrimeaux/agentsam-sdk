@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { installCadHostBridge, postToCadGuest } from "@/lib/cad-host-bridge";
 import { runCadAssistantTurn } from "@/lib/cad/assistantTurn";
@@ -19,9 +19,9 @@ export const Route = createFileRoute("/(apps)/cad")({
   component: CadStudioPage,
 });
 
-function CadStudioPage() {
+export function CadStudioPage() {
   const { data } = useNav();
-  const search = Route.useSearch();
+  const search = useSearch({ strict: false }) as CadSearchParams;
   const chatOpen = data.mode === "chat";
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [selection, setSelection] = useState<CadSelectionContext | null>(null);

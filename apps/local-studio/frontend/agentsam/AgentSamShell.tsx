@@ -50,9 +50,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   hydratedRef.current = state.hydrated;
   const trail = state.trails.find((item) => item.id === state.activeTrailId);
   const project = state.projects.find((item) => item.id === trail?.projectId);
-  const isConversation = pathname === '/agentsam' || pathname.startsWith('/chats');
-  const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/');
-  const isSamSketchRoute = pathname === '/samsketch' || pathname.startsWith('/samsketch/');
+  const isConversation = pathname === '/agentsam' || pathname === '/admin/agentsam' || pathname.startsWith('/chats');
+  const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/') || pathname === '/admin/cad' || pathname.startsWith('/admin/cad/');
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
   // The platform owns its shell; product-owned /admin pages navigate into
   // the installed Ecommerce application without recreating product routers.
@@ -206,7 +205,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey)) return;
       if (event.key === '`') { event.preventDefault(); useWorkStore.getState().toggleTerminal(); }
-      if (event.key.toLowerCase() === 'n' && !event.shiftKey) { event.preventDefault(); useWorkStore.getState().startTrail(); void navigate({ to: '/agentsam' }); }
+      if (event.key.toLowerCase() === 'n' && !event.shiftKey) { event.preventDefault(); useWorkStore.getState().startTrail(); void navigate({ to: '/admin/agentsam' as never }); }
     };
     const online = () => { void useWorkStore.getState().flushOfflineQueue(); };
     window.addEventListener('agentsam:navigate', onNavigate);
@@ -264,11 +263,9 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         { id: 'subscribers', label: 'Subscribers', href: '/admin/subscribers' },
       ] },
       { id: 'apps', label: 'Apps', icon: <Layers3 aria-hidden="true" />, children: [
-        { id: 'agentsam', label: 'AgentSam', icon: <MessageSquareIcon />, href: '/agentsam', active: pathname === '/agentsam' || pathname.startsWith('/chats') },
-        { id: 'cad', label: 'CAD Creator', icon: <Box />, href: '/cad', active: isCadRoute },
-        { id: 'samsketch', label: 'SamSketch', icon: <Layers3 />, href: '/samsketch', active: isSamSketchRoute },
-        { id: 'media', label: 'Media', icon: <Film />, href: '/media' },
-        { id: 'browser', label: 'Browser', icon: <Globe />, href: '/browse' },
+        { id: 'agentsam', label: 'AgentSam', icon: <MessageSquareIcon />, href: '/admin/agentsam', active: isConversation },
+        { id: 'cad', label: 'CAD Creator', icon: <Box />, href: '/admin/cad', active: isCadRoute },
+        { id: 'moviemode', label: 'MovieMode', icon: <Film />, href: '/admin/moviemode', active: pathname === '/admin/moviemode' || pathname.startsWith('/admin/moviemode/') || pathname === '/media' || pathname.startsWith('/media/') },
         { id: 'email', label: 'Email', icon: <Mail />, href: '/admin/email' },
       ] },
       { id: 'settings', label: 'Settings', icon: <Settings />, href: '/settings/general', active: isSettings },
@@ -280,7 +277,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     onNavigate: go,
     onCreateConversation: isConversation ? () => { state.startTrail(); go('/agentsam'); } : undefined,
     onSelectConversation: (id) => { state.setActiveTrail(id); go('/agentsam'); },
-    onSelectProject: (id) => { state.setActiveProject(id); go('/projects'); },
+    onSelectProject: (id) => { state.setActiveProject(id); go('/admin/projects'); },
     onPinConversation: state.pinTrail, onRenameConversation: state.renameTrail,
     onShare: trail ? () => setSharing(true) : undefined,
     accountActions: [
@@ -288,7 +285,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'settings', label: 'Account', icon: <Settings />, onSelect: () => go('/settings/general') },
     ],
     projectActions: [
-      { id: 'home', label: 'Project home', icon: <Folder />, onSelect: () => go('/projects') },
+      { id: 'home', label: 'Project home', icon: <Folder />, onSelect: () => go('/admin/projects') },
       { id: 'files', label: 'Project files', icon: <Files />, onSelect: () => state.openSideTab('files') },
     ],
     conversationActions: trail ? [
