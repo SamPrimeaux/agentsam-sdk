@@ -36,6 +36,18 @@
   box-sizing: border-box;
 }
 
+.fnf-growth-app [data-growth-api-status][hidden] {
+  display: none;
+}
+
+.fnf-growth-app [data-growth-api-status] {
+  max-width: 1380px;
+  margin: 0 auto 20px;
+  padding: 16px 20px;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
 .fnf-growth-app button,
 .fnf-growth-app input,
 .fnf-growth-app textarea,
