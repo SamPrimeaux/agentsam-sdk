@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Search } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
@@ -8,6 +9,7 @@ import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
 import { SidePanelToggle } from './AgentSamShell';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
+import { NotificationsMenu } from './NotificationsMenu';
 import { SplitHandle } from '@/components/shell/split-handle';
 import { AnnotationToggle } from './AnnotationHelper';
 import { AgentConversationSurface, AgentRuntimeField } from '@inneranimalmedia/agentsam-workbench/agent';
@@ -16,6 +18,8 @@ import { localStudioRuntimeVisuals } from '@/lib/runtime-visuals/local-studio-ru
 export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const { data, isMobile } = useNav();
   const state = useWorkStore();
+  const [hostModeSlot, setHostModeSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setHostModeSlot(document.getElementById('agentsam-console-mode-slot')); }, []);
   const [workFocused, setWorkFocused] = useState(false);
   const [panelWidth, setPanelWidth] = useState(() => {
     if (typeof window === 'undefined') return 780;
@@ -35,13 +39,15 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const empty = trail.messages.length === 0 || (trail.messages.length === 1 && trail.messages[0].id === 'welcome-msg');
   const streaming = state.streamingIds.includes(trail.id);
   return <div className="agentsam-page-layout" data-composer-mode={data.mode}>
-    <Nav.Topbar startup={empty} showNavigationTrigger={false} modeSlot={<Nav.ModeSwitcher />} rightSlot={<>
+    {hostModeSlot ? createPortal(<Nav.Scope className="agentsam-mode-host"><Nav.ModeSwitcher /></Nav.Scope>, hostModeSlot) : <Nav.Topbar startup={empty} showNavigationTrigger={false} modeSlot={<Nav.ModeSwitcher />} rightSlot={<>
       {conversationId ? <Link to="/chats" aria-label="Back to Chats" title="Back to Chats" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="size-4"/></Link> : null}
       <button type="button" className="as-nav-button" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={18}/><span className="sr-only">Search Studio</span></button>
       <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} avatarUrl={data.account?.avatar} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
+      <NotificationsMenu />
       <AnnotationToggle /><SidePanelToggle />
-    </>} />
+    </>} />}
     <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "")}>
+      {hostModeSlot ? <div className="agentsam-context-tools" aria-label="Conversation tools"><AnnotationToggle /><SidePanelToggle /></div> : null}
       <section className="agentsam-conversation" aria-label="Conversation" inert={(isMobile && state.sideOpen) || workFocused} style={workFocused ? { display:"none" } : undefined}>
         <AgentConversationSurface
           empty={empty}

@@ -2290,3 +2290,23 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 :root[data-theme="dark"] .agentsam-drawer :is(input,textarea,select) { color:#f1edf6 !important; background:#232127 !important; border-color:#49434f !important; }
 :root[data-theme="dark"] .agentsam-drawer :is(input,textarea)::placeholder { color:#aaa2b4 !important; opacity:1; }
 :root[data-theme="dark"] .agentsam-drawer :is(button,[role="button"]):hover { background-color:#302d37; }
+
+/* One platform top bar. Chat/Work slots into the host header, not a child header. */
+/* Search is a right-aligned global action; the center is reserved for Chat/Work. */
+.console-topbar-actions .console-search-wrap {
+  position: static; left: auto; right: auto; transform: none;
+  flex: none; display: flex; width: auto; max-width: none; padding: 0; pointer-events: auto;
+}
+#agentsam-console-mode-slot:empty { display: none; }
+#agentsam-console-mode-slot .agentsam-mode-host { display: flex; align-items: center; }
+.console-topbar-actions { position: relative; }
+.console-notifications-menu {
+  position: absolute; z-index: 90; right: 0; top: calc(100% + 12px);
+  width: min(320px, calc(100vw - 28px)); padding: 16px;
+  border: 1px solid var(--c-line); border-radius: 13px;
+  background: var(--c-surface); color: var(--c-ink);
+  box-shadow: 0 18px 50px #0005;
+}
+.console-notifications-menu[hidden] { display: none; }
+.console-notifications-menu strong { font-size: 13px; }
+.console-notifications-menu p { margin: 10px 0 0; line-height: 1.5; color: var(--c-muted); }

@@ -238,3 +238,23 @@ test('AgentSam app persists authenticated avatar preference without new tables',
   }), env, 'signed-in-user');
   assert.equal(reject.status, 400);
 });
+
+
+test('hosted AgentSam uses the Ecommerce topbar, preserving one pet and Chat/Work switch', () => {
+  const read = (relative) => readFileSync(new URL(relative, import.meta.url), 'utf8');
+  const ecommerce = read('../../ecommerce-cms-agentsam/frontend/shell.js');
+  const headerCSS = read('../frontend/agentsam/packaged-console-frame.css');
+  const workspace = read('../frontend/agentsam/AgentSamPage.tsx');
+  const host = read('../frontend/agentsam/PackagedConsoleFrame.tsx');
+  const pet = read('../frontend/agentsam/AgentSamPetTrigger.tsx');
+  assert.match(ecommerce, /id="agentsam-console-mode-slot"/);
+  assert.match(ecommerce, /id="console-search-trigger"/);
+  assert.match(ecommerce, /id="console-notifications-trigger"/);
+  assert.match(ecommerce, /id="console-notifications-menu"/);
+  assert.match(workspace, /createPortal\(<Nav\.Scope className="agentsam-mode-host"><Nav\.ModeSwitcher/);
+  assert.match(host, /event\.stopImmediatePropagation\(\)/);
+  assert.match(host, /agentsam:assistant:activate/);
+  assert.doesNotMatch(headerCSS, /body\.agentsam-conversation-route \.console-topbar \{ display: none/);
+  assert.match(headerCSS, /\.agentsam-page-layout > \.as-nav-topbar \{ display: none/);
+  assert.doesNotMatch(pet, />Ask AgentSam<\/span>/);
+});

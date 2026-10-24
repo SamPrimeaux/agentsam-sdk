@@ -46,6 +46,7 @@
 
 /* AgentSam uses the same persistent Ecommerce rail, but owns its conversation header.
    The packaged shell's global toolbar must not create a second header. */
-body.agentsam-conversation-route .console-topbar { display: none; }
+/* The packaged header stays visible; child conversation chrome is not global chrome. */
+#agentsam-host-workspace .agentsam-page-layout > .as-nav-topbar { display: none; }
 body.agentsam-conversation-route .console-workspace,
 body.agentsam-conversation-route .console-main { min-height: 0; height: 100%; }

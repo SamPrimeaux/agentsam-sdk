@@ -52,6 +52,7 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
   }, [pathname]);
   useEffect(() => {
     let cancelled = false;
+    let petCleanup: (() => void) | undefined;
     (async () => {
       await loadScript('/admin/js/shell.js');
       await loadScript('/admin/host-config.js');
@@ -62,9 +63,19 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
       if (cancelled) return;
       const outlet = document.getElementById('agentsam-host-workspace');
       if (!outlet) throw new Error('Packaged console workspace mount missing');
+      // Local Studio owns the current-page assistant. Intercept the packaged
+      // pet trigger before the legacy Ecommerce assistant opens a second chat.
+      const pet = document.getElementById('agentsam-toggle');
+      const activatePet = (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.dispatchEvent(new Event('agentsam:assistant:activate'));
+      };
+      pet?.addEventListener('click', activatePet, true);
+      petCleanup = () => pet?.removeEventListener('click', activatePet, true);
       setTarget(outlet);
     })().catch(cause => { if (!cancelled) setError(String(cause)); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; petCleanup?.(); };
   // Shell is persistent; routing updates the React Outlet without discarding the workbench.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

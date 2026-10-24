@@ -791,19 +791,24 @@ function renderShell(activeHref, mainHtml, options = {}) {
   const adminChrome = shellMode.hideAdminNav ? "" : `
       <header class="console-topbar">
         <div class="console-topbar-spacer" aria-hidden="true"></div>
-        <div class="console-search-wrap">
-          <button type="button" class="console-search console-search--icon" id="console-search-trigger" aria-label="Search pages and tools" title="Search pages and tools" aria-haspopup="dialog" aria-expanded="false" aria-controls="console-search-dialog">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          </button>
-        </div>
+        <div class="console-topbar-center" id="agentsam-console-mode-slot"></div>
         <div class="console-topbar-actions">
+          <div class="console-search-wrap">
+            <button type="button" class="console-search console-search--icon" id="console-search-trigger" aria-label="Search pages and tools" title="Search pages and tools" aria-haspopup="dialog" aria-expanded="false" aria-controls="console-search-dialog">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.2-3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+          </div>
           <button type="button" class="console-icon-btn" id="agentsam-toggle" aria-label="Agent Sam" aria-expanded="false" title="Agent Sam">
             <img src="${AGENT_TRIGGER_ICON}" alt="" width="22" height="22" aria-hidden="true" style="display:block;border-radius:50%;object-fit:cover">
           </button>
-          <button type="button" class="console-icon-btn" aria-label="Notifications" title="Notifications">
+          <button type="button" class="console-icon-btn" id="console-notifications-trigger" aria-label="Notifications" title="Notifications" aria-expanded="false" aria-haspopup="dialog" aria-controls="console-notifications-menu">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.5"/></svg>
 
           </button>
+          <section id="console-notifications-menu" class="console-notifications-menu" role="dialog" aria-label="Notifications" hidden>
+            <strong>Notifications</strong>
+            <p>No notification feed is connected to this installation yet.</p>
+          </section>
         </div>
       </header>
 `;
@@ -907,6 +912,20 @@ function bindConsoleGlobalHandlers() {
       document.querySelectorAll("[data-apps-add-menu]").forEach((menu) => { menu.hidden = true; });
       document.querySelectorAll("[data-apps-add-toggle]").forEach((button) => { button.setAttribute("aria-expanded", "false"); });
     }
+    const notificationsTrigger = e.target.closest("#console-notifications-trigger");
+    const notificationsMenu = document.getElementById("console-notifications-menu");
+    const notificationsButton = document.getElementById("console-notifications-trigger");
+    if (notificationsTrigger && notificationsMenu) {
+      e.preventDefault();
+      const opening = notificationsMenu.hidden;
+      notificationsMenu.hidden = !opening;
+      notificationsButton?.setAttribute("aria-expanded", String(opening));
+      return;
+    }
+    if (notificationsMenu && !notificationsMenu.hidden && !e.target.closest("#console-notifications-menu")) {
+      notificationsMenu.hidden = true;
+      notificationsButton?.setAttribute("aria-expanded", "false");
+    }
     const searchTrigger = e.target.closest("#console-search-trigger");
     if (searchTrigger) {
       e.preventDefault();
@@ -974,6 +993,16 @@ function bindConsoleGlobalHandlers() {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      const notificationsMenu = document.getElementById("console-notifications-menu");
+      if (notificationsMenu && !notificationsMenu.hidden) {
+        notificationsMenu.hidden = true;
+        document.getElementById("console-notifications-trigger")?.setAttribute("aria-expanded", "false");
+        document.getElementById("console-notifications-trigger")?.focus();
+        event.preventDefault();
+        return;
+      }
+    }
     if (document.getElementById("console-search-backdrop") && (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "k") {
       event.preventDefault();
       openConsoleSearch();

@@ -26,6 +26,7 @@ import { isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, t
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settings';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
+import { NotificationsMenu } from './NotificationsMenu';
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
 
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
@@ -332,9 +333,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           <button type="button" className="platform-console-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={17} /><span>Search pages and tools</span><kbd>⌘K</kbd></button>
           <Nav.TopbarSpacer />
           <AgentSamPetTrigger state={petState} avatarUrl={accountAvatarUrl || user?.profileImageUrl} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
-          <IconAction className="as-nav-button" label="Help & documentation" hint="Open AgentSam documentation" onClick={() => go('/docs')}><CircleHelp size={18} /></IconAction>
-          <button type="button" className="as-nav-button" title="Notifications" aria-label="Notifications" onClick={() => go('/tickets')}><Bell size={17} /><span className="sr-only">View notifications in Tickets</span></button>
-          <Nav.AccountSwitcher />
+          <NotificationsMenu />
         </Nav.Topbar> : null}
         <OfflineBanner />
         <div className="platform-console-stage" data-assistant-focused={!isConversation && globalAssistantFocused && state.sideOpen ? "true" : "false"}>

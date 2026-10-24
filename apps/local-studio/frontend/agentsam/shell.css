@@ -358,3 +358,14 @@
 @media (max-width: 650px) {
   .agentsam-page-layout .as-nav-topbar > .as-nav-mode-switch { left: 43%; }
 }
+
+/* Context controls belong to the conversation viewport, not a second global topbar. */
+.agentsam-page-layout .agentsam-workspace { position: relative; }
+.agentsam-context-tools {
+  position: absolute; z-index: 8; top: 8px; right: 12px;
+  display: flex; align-items: center; gap: 4px;
+  border-radius: 10px; background: var(--nav-surface, #1b1b20);
+}
+@media (max-width: 650px) {
+  .agentsam-context-tools { top: 4px; right: 4px; }
+}
