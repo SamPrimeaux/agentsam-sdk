@@ -5,7 +5,7 @@
 import { adminRouteForPath } from "../../../ecommerce-cms-agentsam/backend/lib/route-manifest.js";
 
 const prefix = "/ecommerce-cms-agentsam/admin/";
-const filePattern = /^\/admin\/(?:css|js|brand|assets|dock|profile-popup|media-kit|workbench|theme-previews|_spa|analytics)\/[\w./-]+$/;
+const filePattern = /^\/admin\/(?:css|js|partials|brand|assets|dock|profile-popup|media-kit|workbench|theme-previews|_spa|analytics)\/[\w./-]+$/;
 
 export function resolveConsoleFile(pathname) {
   if (pathname === "/sites") return "store.html";
