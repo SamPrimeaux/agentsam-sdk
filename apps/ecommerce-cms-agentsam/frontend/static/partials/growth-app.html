@@ -1,11 +1,12 @@
 <section id="fnfGrowthApp" class="fnf-growth-app" data-view="overview">
+  <div class="fnf-card fnf-notice" data-growth-api-status role="alert" hidden></div>
   <main class="fnf-growth-page" data-page="overview">
     <header class="fnf-head fnf-row">
       <div>
         <div class="fnf-eyebrow">Growth</div>
         <h1 class="fnf-title">Run your marketing without leaving admin.</h1>
         <p class="fnf-lede">
-          Track sessions, attribution, campaign ideas, product pushes, and AgentSam autopilot experiments from one clean command surface.
+          Manage campaigns, review approved content, and follow verified attribution signals from one workspace.
         </p>
       </div>
 
@@ -28,14 +29,14 @@
 
     <section class="fnf-card fnf-hero">
       <div>
-        <div class="fnf-pill">Early access</div>
-        <h2>Campaign Autopilot for Fuel &amp; Free Time</h2>
+        <div class="fnf-pill">Campaign workspace</div>
+        <h2>Plan, review, and publish campaigns</h2>
         <p>
-          Promote new drops, low-stock products, seasonal content, and subscriber offers across email, site banners, and social prompts while keeping final approval in your hands.
+          Organize campaign briefs, generate channel drafts, review the content, and approve publishing through the connected installation.
         </p>
         <div class="fnf-actions" style="justify-content:flex-start;">
-          <button class="fnf-btn primary" type="button" data-go="create">Join waitlist</button>
-          <button class="fnf-btn" type="button" data-go="details">Configure autopilot</button>
+          <button class="fnf-btn primary" type="button" data-go="create">Create campaign</button>
+          <button class="fnf-btn" type="button" data-go="details">View attribution</button>
         </div>
       </div>
 
@@ -47,14 +48,14 @@
         </div>
 
         <div class="fnf-sales-float">
-          <small>Sales by channel</small>
-          <strong>1,045</strong>
+          <small>Campaign management</small>
+          <strong>Draft → Review</strong>
           <svg viewBox="0 0 180 44" width="100%" height="44" fill="none">
             <path d="M5 32 C21 23 35 28 48 18 S74 11 88 22 S112 32 129 17 S154 10 174 16" stroke="#21d978" stroke-width="4" stroke-linecap="round"/>
           </svg>
         </div>
 
-        <div class="fnf-float-badge">Product drop ready to promote</div>
+        <div class="fnf-float-badge">Approval required before publishing</div>
       </div>
     </section>
 
@@ -76,9 +77,9 @@
         <div>
           <div class="fnf-metric-head">
             <span>Sales attributed to marketing</span>
-            <span class="fnf-metric-sub" data-growth="conversions">0 conversions</span>
+            <span class="fnf-metric-sub" data-growth="conversions">Unavailable</span>
           </div>
-          <div class="fnf-metric-value" data-growth="attributed-revenue">$0.00</div>
+          <div class="fnf-metric-value" data-growth="attributed-revenue">—</div>
         </div>
         <div class="fnf-line"></div>
       </article>
@@ -88,11 +89,11 @@
           <div>
             <div class="fnf-metric-head">Sessions by traffic type</div>
             <div class="fnf-legend">
-              <span><i class="fnf-dot"></i> Direct <span data-growth="direct-sessions">26</span></span>
-              <span><i class="fnf-dot purple"></i> Organic <span data-growth="organic-sessions">6</span></span>
+              <span><i class="fnf-dot"></i> Direct <span data-growth="direct-sessions">—</span></span>
+              <span><i class="fnf-dot purple"></i> Organic <span data-growth="organic-sessions">—</span></span>
             </div>
           </div>
-          <div class="fnf-metric-sub"><span data-growth="total-sessions">32</span> sessions</div>
+          <div class="fnf-metric-sub"><span data-growth="total-sessions">—</span> sessions</div>
         </div>
         <div class="fnf-traffic-bar">
           <span></span>
@@ -105,10 +106,10 @@
       <article class="fnf-card fnf-source">
         <div class="fnf-source-top">
           <div class="fnf-source-name"><span class="fnf-source-icon">D</span> Direct</div>
-          <div>26 sessions</div>
+          <div>— sessions</div>
         </div>
         <div>
-          <div class="fnf-source-value">$0.00</div>
+          <div class="fnf-source-value">—</div>
           <div class="fnf-source-caption">No attributed sales yet</div>
         </div>
       </article>
@@ -116,10 +117,10 @@
       <article class="fnf-card fnf-source">
         <div class="fnf-source-top">
           <div class="fnf-source-name"><span class="fnf-source-icon">G</span> Google Search</div>
-          <div>6 sessions</div>
+          <div>— sessions</div>
         </div>
         <div>
-          <div class="fnf-source-value">$0.00</div>
+          <div class="fnf-source-value">—</div>
           <div class="fnf-source-caption">Organic discovery is active</div>
         </div>
       </article>
@@ -157,17 +158,17 @@
     <section class="fnf-card fnf-detail-hero">
       <div class="fnf-detail-summary">
         <div class="fnf-pill">Setup review</div>
-        <h2>Your store has traffic signals, but campaign attribution is not fully wired yet.</h2>
+        <h2>Review the selected installation’s campaign readiness.</h2>
         <p>
-          Direct and organic traffic are showing up, but there are no marketing-attributed sales or conversion events connected to campaigns. The next move is to connect campaign URLs, email links, product pushes, and approval-based AgentSam drafts.
+          Readiness and attribution appear when the selected installation supplies verified traffic, campaigns, and publishing capabilities.
         </p>
       </div>
 
       <aside class="fnf-score-card">
         <div>
           <small>Growth readiness</small>
-          <strong data-growth="readiness-score">68%</strong>
-          <p>Strong enough to draft campaigns. Not yet complete enough for full autopilot publishing.</p>
+          <strong data-growth="readiness-score">Not assessed</strong>
+          <p>Publishing requires configured destinations, authorized access, and approval.</p>
         </div>
         <button class="fnf-btn orange" type="button" data-go="create">Build campaign draft</button>
       </aside>
@@ -176,26 +177,26 @@
     <section class="fnf-grid-4" style="margin-top:16px;">
       <article class="fnf-card fnf-kpi">
         <small>Total sessions</small>
-        <strong data-growth="kpi-sessions">32</strong>
-        <p>Traffic exists, but volume is still early.</p>
+        <strong data-growth="kpi-sessions">—</strong>
+        <p>Verified attribution sessions when connected.</p>
       </article>
 
       <article class="fnf-card fnf-kpi">
         <small>Top channel</small>
-        <strong data-growth="kpi-top-channel">Direct</strong>
-        <p><span data-growth="kpi-direct-sessions">26</span> sessions arrived without a campaign source.</p>
+        <strong data-growth="kpi-top-channel">—</strong>
+        <p><span data-growth="kpi-direct-sessions">—</span> sessions arrived without a campaign source.</p>
       </article>
 
       <article class="fnf-card fnf-kpi">
         <small>Organic search</small>
-        <strong data-growth="kpi-organic">6</strong>
-        <p>Google discovery is active and should be protected.</p>
+        <strong data-growth="kpi-organic">—</strong>
+        <p>Organic sessions reported by the attribution service.</p>
       </article>
 
       <article class="fnf-card fnf-kpi">
         <small>Attributed revenue</small>
-        <strong data-growth="kpi-revenue">$0.00</strong>
-        <p>Needs UTM, email, and campaign tracking.</p>
+        <strong data-growth="kpi-revenue">—</strong>
+        <p>Shown only when revenue attribution is connected.</p>
       </article>
     </section>
 
@@ -215,35 +216,8 @@
             <th>Next action</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td><strong>Direct</strong></td>
-            <td>26</td>
-            <td>$0.00</td>
-            <td><span class="fnf-status warn">Needs source tags</span></td>
-            <td>Add campaign URLs and route homepage CTAs through trackable links.</td>
-          </tr>
-          <tr>
-            <td><strong>Google Search</strong></td>
-            <td>6</td>
-            <td>$0.00</td>
-            <td><span class="fnf-status">Active</span></td>
-            <td>Preserve product SEO and create collection landing copy.</td>
-          </tr>
-          <tr>
-            <td><strong>Email</strong></td>
-            <td>Pending</td>
-            <td>Pending</td>
-            <td><span class="fnf-status neutral">Not connected</span></td>
-            <td>Connect campaign links to Resend tracking.</td>
-          </tr>
-          <tr>
-            <td><strong>Social</strong></td>
-            <td>Pending</td>
-            <td>Pending</td>
-            <td><span class="fnf-status neutral">Not connected</span></td>
-            <td>Create approved caption packs and short product drop links.</td>
-          </tr>
+        <tbody id="growthChannelBreakdown">
+          <tr><td colspan="5">Channel data is available after attribution is connected.</td></tr>
         </tbody>
       </table>
     </section>
@@ -292,7 +266,7 @@
     <section class="fnf-card fnf-create-hero">
       <h2>Campaign draft workspace</h2>
       <p>
-        This view should feel like a real working surface: brief on the left, live package preview on the right, approval controls at the bottom.
+        Write the brief on the left, review campaign outputs on the right, and approve before publishing.
       </p>
     </section>
 
@@ -309,7 +283,11 @@
             <div class="fnf-field">
               <label for="fnfCampaignGoal">Goal</label>
               <select id="fnfCampaignGoal">
+                <option value="">Choose a goal</option>
                 <option>Drive product sales</option>
+                <option>Fundraising</option>
+                <option>Event participation</option>
+                <option>Awareness</option>
                 <option>Grow subscribers</option>
                 <option>Promote a collection</option>
                 <option>Recover abandoned carts</option>
@@ -338,7 +316,7 @@
 
             <div class="fnf-field full">
               <label for="fnfBrief">Campaign brief</label>
-              <textarea id="fnfBrief">Create a clean product drop campaign for Fuel &amp; Free Time. Keep the tone premium, direct, horsepower-driven, and not gimmicky. Focus on the newest products, the brand attitude, and a simple path to purchase.</textarea>
+              <textarea id="fnfBrief" placeholder="Describe your message, audience, verified facts, and goals."></textarea>
             </div>
           </div>
         </div>
@@ -449,7 +427,7 @@
         <section class="fnf-card fnf-preview-card">
           <h3>Homepage preview</h3>
           <p>Generated campaign copy will appear as a draft banner or hero module before publishing.</p>
-          <div class="fnf-preview-banner" id="fnfPreviewBanner">Time is the horsepower.</div>
+          <div class="fnf-preview-banner" id="fnfPreviewBanner">Homepage copy appears after generating a draft.</div>
         </section>
 
         <section class="fnf-card fnf-preview-card">
@@ -461,8 +439,8 @@
         <section class="fnf-card fnf-preview-card">
           <h3>Email preview</h3>
           <p><strong>Subject:</strong> <span id="fnfPreviewSubject">Built for the ones who move first.</span></p>
-          <p style="margin-top:8px;"><strong>Preview:</strong> <span id="fnfPreviewEmailPreview">A clean drop campaign for the next Fuel &amp; Free Time push.</span></p>
-          <p style="margin-top:8px;" id="fnfPreviewEmailBody">The drop is live. Shop the latest from Fuel &amp; Free Time.</p>
+          <p style="margin-top:8px;"><strong>Preview:</strong> <span id="fnfPreviewEmailPreview">Generate a campaign pack to preview the email.</span></p>
+          <p style="margin-top:8px;" id="fnfPreviewEmailBody">The email body will appear here for review.</p>
         </section>
         <p class="fnf-pack-status" id="fnfPackStatus" hidden></p>
       </aside>
