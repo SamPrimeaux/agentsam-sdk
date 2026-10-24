@@ -36,7 +36,7 @@ export function slugify(name: string) {
   );
 }
 
-export function seedFiles(projectName: string, projectId = uid()): Artifact[] {
+export function seedFiles(projectName: string, projectId: string = uid()): Artifact[] {
   const slug = slugify(projectName);
   // Seed artifacts are tied to their project, not random at module evaluation.
   // This makes the browser and Cloudflare SSR bootstrap identical.
