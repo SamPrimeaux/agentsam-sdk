@@ -33,8 +33,9 @@ INSERT OR IGNORE INTO campaign_channels (id, scope_id, campaign_id, channel_key)
 SELECT 'growth:' || g.id || ':channel:' || j.value,
        'account:' || g.account_id, 'growth:' || g.id, j.value
 FROM growth_campaigns g,
-  json_each(CASE WHEN json_valid(g.channels_json) AND json_type(g.channels_json)='array'
-                 THEN g.channels_json ELSE '[]' END) j
+  json_each(CASE WHEN json_valid(g.channels_json)
+                 THEN CASE WHEN json_type(g.channels_json)='array' THEN g.channels_json ELSE '[]' END
+                 ELSE '[]' END) j
 WHERE j.type='text' AND trim(j.value) != '';
 
 -- Original generated packs remain inspectable; provenance is in source links.
