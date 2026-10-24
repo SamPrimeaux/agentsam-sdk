@@ -4,7 +4,7 @@ import type { Artifact, DeployTarget, Project } from "@inneranimalmedia/agentsam
 
 function file(path: string, content: string, extra?: Partial<Artifact>): Artifact {
   return {
-    id: uid(),
+    id: extra?.id || uid(),
     path,
     language: languageFromPath(path),
     content,
