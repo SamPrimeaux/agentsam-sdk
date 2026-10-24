@@ -163,7 +163,7 @@ jobs:
   ];
 }
 
-export function newProject(name = "Studio", description = "Default workspace", projectId = uid()): Project {
+export function newProject(name = "Studio", description = "Default workspace", projectId: string = uid()): Project {
   const now = Date.now();
   return {
     id: projectId,
