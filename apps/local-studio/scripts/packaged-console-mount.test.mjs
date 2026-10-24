@@ -259,3 +259,16 @@ test('hosted AgentSam uses the Ecommerce topbar, preserving one pet and Chat/Wor
   assert.match(headerCSS, /\.agentsam-page-layout > \.as-nav-topbar \{ display: none/);
   assert.doesNotMatch(pet, />Ask AgentSam<\/span>/);
 });
+
+
+test('CAD inherits the full hosted canvas height without another global sidebar', () => {
+  const css = readFileSync(new URL('../frontend/agentsam/packaged-console-frame.css', import.meta.url), 'utf8');
+  const frame = readFileSync(new URL('../frontend/src/routes/(apps)/cad.tsx', import.meta.url), 'utf8');
+  const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
+  assert.match(css, /\.agentsam-route:has\(\[data-cad-studio-host\]\) \{\s*display: flex/);
+  assert.match(css, /\[data-cad-studio-host\] \{[\s\S]*?flex: 1 1 0%;/);
+  assert.match(css, /\[data-cad-studio-host\] iframe \{[\s\S]*?height: 100%;/);
+  assert.match(frame, /data-cad-studio-host/);
+  assert.match(frame, /presentation=embedded|cadEmbeddedUrl/);
+  assert.match(shell, /!embedded \? <Nav\.Sidenav \/>/);
+});
