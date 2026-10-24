@@ -13,6 +13,7 @@ test('platform routes resolve to the real Ecommerce application bundle', () => {
     ['/admin/theme-editor', 'theme-editor.html'],
     ['/admin/css/console.css', 'css/console.css'],
     ['/admin/js/shell.js', 'js/shell.js'],
+    ['/admin/partials/growth-app.html', 'partials/growth-app.html'],
     ['/admin/analytics/overview', '_spa/index.html'],
   ]) assert.equal(resolveConsoleFile(path), file, path);
   for (const path of ['/api/admin/me', '/admin/../../secret', '/admin/unknown']) {
