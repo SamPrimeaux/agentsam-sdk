@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, Flag, GitBranch, MessageSquarePlus, Link2, MoreHorizontal, ListTodo } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CalendarDays, CheckCircle2, Flag, GitBranch, MessageSquarePlus, Link2, MoreHorizontal, ListTodo, Box } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { WorkCalendarEvent, WorkCapabilities, WorkNavigate, WorkProject, WorkTicket, WorkHost, WorkProjectInsights, WorkArtifact } from "../../contracts/index";
 import type { WorkActions } from "../actions";
@@ -38,11 +38,12 @@ export function ProjectDetailSurface({
   onNavigate: WorkNavigate;
   onOpenTicket?: (ticket: WorkTicket) => void;
   onCreateTicket?: () => void;
-  chatHost?: Pick<WorkHost, "listProjectChats" | "listAssignableChats" | "assignProjectChat" | "createProjectChat" | "projectInsights">;
+  chatHost?: Pick<WorkHost, "listProjectChats" | "listAssignableChats" | "assignProjectChat" | "createProjectChat" | "projectInsights" | "projectApps">;
   /** Host-supplied control for codebase / knowledge indexing. */
   knowledgeAction?: ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("overview");
+  const projectApps = chatHost?.projectApps?.(project) ?? [];
   const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [creatingChat, setCreatingChat] = useState(false);
@@ -192,6 +193,9 @@ export function ProjectDetailSurface({
               <button type="button" className="aw-project-home__tool" onClick={() => setTab("timeline")}>
                 <CalendarDays size={20}/><strong>Timeline</strong><small>{timeline.undated} tickets without planned dates</small>
               </button>
+              {projectApps.map((app) => <button key={app.id} type="button" className="aw-project-home__tool" onClick={() => onNavigate(app.href)}>
+                <Box size={20}/><strong>{app.label}</strong><small>{app.description}</small>
+              </button>)}
             </div>
           </section>
         </div>

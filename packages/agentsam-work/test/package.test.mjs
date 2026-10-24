@@ -135,3 +135,15 @@ test('Work project conversations are assigned Local Studio chats, not IAM record
   assert.match(contracts, /assignProjectChat/);
   assert.match(contracts, /createProjectChat/);
 });
+
+test('Work delegates installed project apps to the host instead of defining a second project registry', () => {
+  const contracts = readFileSync(new URL('../src/contracts/index.ts', import.meta.url), 'utf8');
+  const detail = readFileSync(new URL('../src/frontend/surfaces/ProjectDetailSurface.tsx', import.meta.url), 'utf8');
+  const localStudio = readFileSync(new URL('../../../apps/local-studio/frontend/src/components/work/LocalStudioWorkPage.tsx', import.meta.url), 'utf8');
+  assert.match(contracts, /projectApps\?\(project: WorkProject\)/);
+  assert.match(detail, /chatHost\?\.projectApps\?\.\(project\)/);
+  assert.match(detail, /onNavigate\(app.href\)/);
+  assert.match(localStudio, /projectApps: studioProjectApps/);
+  assert.match(localStudio, /\/admin\/cad\?project=/);
+  assert.doesNotMatch(detail, /\/admin\/cad/);
+});

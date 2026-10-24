@@ -9,7 +9,7 @@ import { AutoRagWorkflowDialog } from "@inneranimalmedia/agentsam-workbench/know
 import "@inneranimalmedia/agentsam-workbench/knowledge/autorag-workflow.css";
 import { localStudioAutoRagHost } from "@/lib/knowledge/autorag-host";
 import { getDesktopWorkspaceContext } from "@/lib/desktop/tauri";
-import type { WorkHost, WorkSurfaceId } from "@inneranimalmedia/agentsam-work/contracts";
+import type { WorkHost, WorkSurfaceId, WorkProject, WorkProjectApp } from "@inneranimalmedia/agentsam-work/contracts";
 import "@inneranimalmedia/agentsam-work/theme.css";
 
 /**
@@ -18,6 +18,18 @@ import "@inneranimalmedia/agentsam-work/theme.css";
  * never the production default, and fixtures are lazy-loaded so they stay
  * out of the cold production authority path when unused.
  */
+
+/** Host-owned project app registration: project IDs always come from the Work registry. */
+function studioProjectApps(project: WorkProject): WorkProjectApp[] {
+  const tags = new Set((project.tags ?? []).map((tag) => tag.toLowerCase()));
+  if (!["cad", "bim", "samsketch"].some((tag) => tags.has(tag))) return [];
+  return [{
+    id: "cad-studio",
+    label: "Open CAD Studio",
+    description: "Open this project's registered drawings and 3D revisions",
+    href: "/admin/cad?project=" + encodeURIComponent(project.id),
+  }];
+}
 
 let sharedHttpWorkHost: WorkHost | null = null;
 let sharedDesktopWorkHost: WorkHost | null = null;
@@ -139,6 +151,7 @@ function createDesktopWorkHost(): WorkHost {
     },
     ...createWorkCrud(request),
     ...localStudioProjectChats,
+    projectApps: studioProjectApps,
     async sendMail(input, connectionId) {
       await json(await request("/api/mail/send", "POST", {
         ...input,
@@ -202,6 +215,7 @@ export function sharedLiveWorkHost(): WorkHost {
     const host: WorkHost = {
       ...base,
       ...localStudioProjectChats,
+      projectApps: studioProjectApps,
       async snapshot(request = {}) {
         const selected = request.mailConnectionId || readStoredMailConnectionId();
         const snapshot = await base.snapshot({

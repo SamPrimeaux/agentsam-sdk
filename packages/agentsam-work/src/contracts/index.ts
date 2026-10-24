@@ -171,6 +171,9 @@ export type WorkProject = {
   updatedAt?: string | null;
 };
 
+/** Installed application entrypoints for an existing Work project. Host-owned, not a second project registry. */
+export type WorkProjectApp = { id: string; label: string; description: string; href: string };
+
 export type WorkProjectInput = Partial<
   Pick<
     WorkProject,
@@ -324,6 +327,8 @@ export interface WorkHost {
   snapshot(request?: WorkSnapshotRequest): Promise<WorkSnapshot>;
   /** Optional verified D1 insights, account-scoped by the server. */
   projectInsights?(projectId: string): Promise<WorkProjectInsights>;
+  /** Resolve project-aware installed applications without redefining project identity. */
+  projectApps?(project: WorkProject): WorkProjectApp[];
   listProjectChats?(projectId: string): Promise<WorkProjectChat[]>;
   listAssignableChats?(): Promise<(WorkProjectChat & { workProjectId?: string })[]>;
   assignProjectChat?(chatId: string, projectId: string | null): Promise<void>;
