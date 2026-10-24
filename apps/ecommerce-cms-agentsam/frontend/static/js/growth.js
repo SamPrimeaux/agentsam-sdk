@@ -125,6 +125,32 @@ function paintMetrics(app, metrics) {
   }
 }
 
+function paintChannelBreakdown(app, channels) {
+  const body = app.querySelector("#growthChannelBreakdown");
+  if (!body) return;
+  body.replaceChildren();
+  if (!Array.isArray(channels) || !channels.length) {
+    const row = body.insertRow();
+    const cell = row.insertCell();
+    cell.colSpan = 5;
+    cell.textContent = "No attributed channels have been recorded.";
+    return;
+  }
+  for (const channel of channels) {
+    const row = body.insertRow();
+    const source = row.insertCell();
+    const sessions = row.insertCell();
+    const revenue = row.insertCell();
+    const status = row.insertCell();
+    const next = row.insertCell();
+    source.textContent = channel.source || "Unknown";
+    sessions.textContent = Number.isFinite(Number(channel.sessions)) ? String(Number(channel.sessions)) : "—";
+    revenue.textContent = channel.revenue_cents == null ? "Not reported" : fmtCents(channel.revenue_cents);
+    status.textContent = "Recorded";
+    next.textContent = "Review campaign attribution and linked content.";
+  }
+}
+
 function renderCampaignGrid(app, campaigns) {
   const grid = app.querySelector("#growthCampaignGrid");
   if (!grid) return;
@@ -217,7 +243,7 @@ function fillCreateForm(app, campaign) {
   };
 
   setVal("fnfCampaignName", campaign.name);
-  setVal("fnfCampaignGoal", campaign.goal || "Drive product sales");
+  setVal("fnfCampaignGoal", campaign.goal || "");
   setVal("fnfAudience", campaign.audience || "All visitors");
   setVal("fnfBrief", campaign.brief || "");
   setVal("fnfStart", campaign.start_date || "");
@@ -395,6 +421,7 @@ async function refreshOverview(app) {
     if (status) status.hidden = true;
     app.querySelectorAll("[data-save-draft], [data-generate], [data-publish], [data-publish-test]").forEach((el) => { el.disabled = false; });
     paintMetrics(app, data.metrics);
+    paintChannelBreakdown(app, data.metrics.channel_breakdown);
     renderCampaignGrid(app, data.recent);
   } catch (err) {
     console.error("[growth/overview]", err);
