@@ -30,10 +30,10 @@ assert.ok(
   "mail, tickets, and collaborate must remain inside the AgentSam application shell",
 );
 const localStudioWorkSource = fs.readFileSync(localStudioWorkPage, "utf8");
-assert.doesNotMatch(
+assert.match(
   localStudioWorkSource,
   /presentation\s*=\s*["']embedded["']/,
-  "Local Studio must retain the standalone Work product shell; embedded mode is for hosts that already own full workspace chrome",
+  "Local Studio console owns the navigation chrome; Work must mount embedded rather than duplicate the outer sidebar",
 );
 assert.ok(fs.existsSync(siteHome) && fs.statSync(siteHome).size > 20000, ".output/public/site/home/index.html is required (>20KB)");
 assert.ok(fs.existsSync(siteHomepage) && fs.statSync(siteHomepage).size > 20000, ".output/public/site/homepage.html is required (>20KB)");
