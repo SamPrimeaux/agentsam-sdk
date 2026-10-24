@@ -82,3 +82,36 @@
   .platform-console-stage > .studio-separator { display: none; }
 }
 @media (max-width: 600px) { .platform-console-assistant { width: 100%; } }
+
+/* Shared AgentSam PET affordance; intentionally does not replace the inspector composer. */
+.platform-console .agentsam-pet-trigger {
+  position: relative;
+  display: inline-grid;
+  min-width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 4px;
+  border-radius: 999px;
+  background: transparent;
+}
+.platform-console .agentsam-pet-trigger:hover,
+.platform-console .agentsam-pet-trigger:focus-visible { background: var(--nav-selected); }
+.platform-console .agentsam-pet-trigger picture,
+.platform-console .agentsam-pet-trigger img {
+  display: block;
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.platform-console .agentsam-pet-status {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nav-accent, #8b5cf6);
+  box-shadow: 0 0 0 2px var(--nav-canvas);
+  opacity: .55;
+}
+.platform-console .agentsam-pet-trigger[data-agent-state="working"] .agentsam-pet-status { opacity: 1; }

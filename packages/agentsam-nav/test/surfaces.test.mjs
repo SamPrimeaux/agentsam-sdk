@@ -44,6 +44,16 @@ test('consumer context and brand tokens stay isolated between providers', () => 
   assert.match(html, /Other workspace/);
 });
 
+test('all topbars use the same hamburger and controlled navigation state', () => {
+  const html = renderToString(React.createElement(Nav.Provider,
+    { value, defaultOpen: false },
+    React.createElement(Nav.Topbar),
+    React.createElement(Nav.TopbarLogo, { toggle: true })));
+  const triggers = html.match(/class="agentsam-nav__trigger"/g) || [];
+  assert.equal(triggers.length, 2, 'default and compatibility surfaces use one trigger implementation');
+  assert.match(html, /aria-expanded="false"/);
+  assert.doesNotMatch(html, /as-nav-brand--toggle/);
+});
 test('brand image surfaces retain an icon fallback when a consumer image fails', async () => {
   const source = await import('node:fs/promises').then(({ readFile }) =>
     readFile(new URL('../src/Surfaces.tsx', import.meta.url), 'utf8'),
