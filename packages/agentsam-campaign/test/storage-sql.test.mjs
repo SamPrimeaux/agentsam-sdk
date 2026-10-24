@@ -40,71 +40,22 @@ test('canonical D1 schema applies twice with no destructive reset', () => {
   db.close();
 });
 
-test('Fuel & Free Time seed imports campaigns, channels and packs exactly once', () => {
+test('generic canonical tables support channels, materials and external references', () => {
   const db = database();
-  db.exec(`
-    CREATE TABLE growth_campaigns(
-      id TEXT PRIMARY KEY, account_id TEXT, created_by TEXT, updated_by TEXT,
-      name TEXT, slug TEXT, goal TEXT, audience TEXT, priority TEXT, brief TEXT,
-      channels_json TEXT, status TEXT, approval_mode TEXT, primary_source TEXT,
-      start_date TEXT, end_date TEXT, pack_json TEXT, metadata_json TEXT,
-      session_count INTEGER, attributed_revenue_cents INTEGER, created_at TEXT, updated_at TEXT);
-    INSERT INTO growth_campaigns VALUES(
-      'gc_a','acct_a','user_a','user_a','Launch','launch','Awareness','Subscribers','normal',
-      'Brief','["email","homepage_banner"]','review','draft_only','website_email',
-      NULL,NULL,'{"email_subject":"Hello"}','{}',12,0,'2026-10-01','2026-10-02');
-  `);
-  db.exec(sql('backfill/fuelnfreetime.sql'));
-  db.exec(sql('backfill/fuelnfreetime.sql'));
-  assert.equal(count(db, 'campaigns'), 1);
-  assert.equal(count(db, 'campaign_scopes'), 1);
-  assert.equal(count(db, 'campaign_channels'), 2);
-  assert.equal(count(db, 'campaign_materials'), 1);
-  assert.equal(count(db, 'campaign_metric_facts'), 1);
-  assert.equal(count(db, 'campaign_source_links'), 1);
-  assert.equal(count(db, 'campaign_publications'), 0);
-  assert.equal(db.prepare('SELECT count(*) n FROM growth_campaigns').get().n, 1);
-  assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
-  db.close();
-});
-
-test('Companions maps fundraisers, updates, asset refs and emails without fake publication', () => {
-  const db = database();
-  db.exec(`
-    CREATE TABLE fundraising_campaigns (
-      id TEXT PRIMARY KEY, tenant_id TEXT, title TEXT, slug TEXT, campaign_type TEXT,
-      status TEXT, description TEXT, short_description TEXT, starts_at TEXT, ends_at TEXT,
-      goal_amount_cents INTEGER, raised_amount_cents INTEGER, donor_count INTEGER,
-      is_public INTEGER, config_json TEXT, created_at TEXT, updated_at TEXT);
-    CREATE TABLE campaign_updates (
-      id TEXT PRIMARY KEY, tenant_id TEXT, campaign_id TEXT, title TEXT, body TEXT,
-      update_type TEXT, milestone_amount_cents INTEGER, is_public INTEGER,
-      published_at TEXT, status TEXT, created_at TEXT, updated_at TEXT);
-    CREATE TABLE cms_assets(id TEXT PRIMARY KEY,tenant_id TEXT,campaign_id TEXT,update_id TEXT,usage_type TEXT);
-    CREATE TABLE email_campaigns(
-      id TEXT PRIMARY KEY,tenant_id TEXT,name TEXT,subject TEXT,body_html TEXT,
-      body_text TEXT,audience_type TEXT,status TEXT,scheduled_at TEXT,sent_at TEXT,
-      created_by TEXT,created_at TEXT,updated_at TEXT);
-    INSERT INTO fundraising_campaigns VALUES(
-      'fund1','tenant_a','Freedom','freedom','fundraiser','active','Description','Short',
-      NULL,NULL,10000,2500,2,1,'{}','2026-10-01','2026-10-02');
-    INSERT INTO campaign_updates VALUES(
-      'up1','tenant_a','fund1','Update','Body','general',NULL,1,'2026-10-03',
-      'published','2026-10-02','2026-10-03');
-    INSERT INTO cms_assets VALUES ('file1','tenant_a','fund1',NULL,'cover');
-    INSERT INTO cms_assets VALUES ('file2','tenant_a',NULL,'up1','update');
-    INSERT INTO email_campaigns VALUES (
-      'email1','tenant_a','Email Launch','Subject','<p>Hello</p>','Hello',
-      'manual','draft',NULL,NULL,'user_a','2026-10-01','2026-10-01');
-  `);
-  db.exec(sql('backfill/companions.sql'));
-  db.exec(sql('backfill/companions.sql'));
-  assert.equal(count(db, 'campaigns'), 2);
-  assert.equal(count(db, 'campaign_materials'), 2);
-  assert.equal(count(db, 'campaign_asset_refs'), 2);
-  assert.equal(count(db, 'campaign_source_links'), 2);
-  assert.equal(count(db, 'campaign_publications'), 0);
-  assert.equal(db.prepare("SELECT status FROM campaigns WHERE id='fundraising:fund1'").get().status,'active');
+  db.exec([
+    "INSERT INTO campaign_scopes(id,owner_kind,owner_ref) VALUES ('account:example','account','example');",
+    "INSERT INTO campaigns(id,scope_id,name,slug,kind,status) VALUES ('c_1','account:example','Example campaign','example','event','draft');",
+    "INSERT INTO campaign_channels(id,scope_id,campaign_id,channel_key) VALUES ('ch_1','account:example','c_1','email');",
+    "INSERT INTO campaign_materials(id,scope_id,campaign_id,material_type,title,content_json) VALUES ('m_1','account:example','c_1','landing_page','Draft','{\"headline\":\"Example\"}');",
+    "INSERT INTO campaign_asset_refs(id,scope_id,campaign_id,provider,external_asset_id) VALUES ('asset_1','account:example','c_1','asset_service','media_1');",
+    "INSERT INTO campaign_source_links(id,scope_id,campaign_id,source_system,source_table,source_id) VALUES ('source_1','account:example','c_1','external','reference','ref_1');",
+  ].join('\n'));
+  assert.equal(count(db,'campaigns'),1);
+  assert.equal(count(db,'campaign_channels'),1);
+  assert.equal(count(db,'campaign_materials'),1);
+  assert.equal(count(db,'campaign_asset_refs'),1);
+  assert.equal(count(db,'campaign_source_links'),1);
+  assert.equal(count(db,'campaign_publications'),0);
   assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
   db.close();
 });
