@@ -53,7 +53,7 @@ function CadStudioPage() {
     }
   };
   return (
-    <div className="flex size-full flex-col overflow-hidden bg-background">
+    <div data-cad-studio-host className="flex size-full min-h-0 min-w-0 flex-col overflow-hidden bg-background">
       {!data.brand && <Nav.Topbar startup showNavigationTrigger={false} />}
       {(selection || proposal || approvalStatus) && (
         <div className="flex items-center gap-3 border-b border-border px-3 py-1.5 text-[11px]">

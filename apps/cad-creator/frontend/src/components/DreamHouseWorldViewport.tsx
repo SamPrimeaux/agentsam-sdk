@@ -377,7 +377,14 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
    <div ref={mount} role="img" aria-label="DreamHouse V1.1 interactive BIM world"
      className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
      onPointerDown={start} onPointerMove={drag} onPointerUp={stop}
-     onWheel={e=>{if(displayRef.current.mode==='orbit')orbit.current.distance=Math.max(3,Math.min(250,orbit.current.distance*(e.deltaY>0?1.11:.90)))}}/>
+     onWheel={e=>{
+       if(displayRef.current.mode!=='orbit')return;
+       const extent=modelBounds.current.getSize(new THREE.Vector3()).length();
+       const minDistance=Math.max(6,extent*.45);
+       const maxDistance=Math.max(250,minDistance*8);
+       const step=Math.max(-240,Math.min(240,e.deltaY));
+       orbit.current.distance=Math.max(minDistance,Math.min(maxDistance,orbit.current.distance*Math.exp(step*.0015)));
+     }}/>
    <details className="cad-world-menu" aria-label="World view settings">
      <summary title="View and environment controls" aria-label="View and environment controls">Views &amp; Scene</summary>
      <div className="cad-world-menu-content">

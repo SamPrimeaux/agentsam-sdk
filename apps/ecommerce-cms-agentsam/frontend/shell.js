@@ -615,9 +615,9 @@ function renderSideNav(activeHref, userNav, options = {}) {
           </span>
           ${icon("chev", 15, "console-profile-chevron")}
         </button>
-        ${drawer ? `<button type="button" class="console-nav-collapse" data-console-nav-toggle aria-label="Close sidebar" title="Close sidebar">
+        <button type="button" class="console-nav-collapse" data-console-nav-toggle aria-label="Collapse sidebar" title="Collapse sidebar" aria-expanded="true">
           ${icon("arrowLeftToLine", 19, "console-nav-collapse-icon")}
-        </button>` : ""}
+        </button>
       </div>
       <div class="console-profile-menu" data-profile-menu role="menu" aria-label="Account settings" aria-hidden="true">
         <div class="console-profile-menu-head">
