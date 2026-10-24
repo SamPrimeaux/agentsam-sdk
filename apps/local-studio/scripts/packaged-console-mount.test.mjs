@@ -50,10 +50,10 @@ test('immutable product sources and packaged shell are the authority', () => {
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /servePackagedConsole/);
   const cloudflare = readFileSync(new URL('../backend/wrangler.jsonc', import.meta.url), 'utf8');
-  assert.match(cloudflare, /"run_worker_first": \["\/admin\/\*", "\/sites", "\/samsketch"\]/);
+  assert.match(cloudflare, /"run_worker_first": \["\/admin\/\*", "\/sites", "\/samsketch", "\/projects", "\/projects\/\*"\]/);
 
   const app = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
-  assert.match(app, /return isApp \? <PackagedConsoleFrame><AgentSamShell embedded \/><\/PackagedConsoleFrame> : <Outlet \/>/);
+  assert.match(app, /return \(isApp \|\| isStudioAdminPath\(pathname\)\) \? <PackagedConsoleFrame><AgentSamShell embedded \/><\/PackagedConsoleFrame> : <Outlet \/>/);
   assert.match(app, /title="AgentSam Commerce home"/);
   for (const file of [
     'frontend/public/admin/host-config.js',

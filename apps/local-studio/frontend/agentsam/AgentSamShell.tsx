@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue } from '@inneranimalmedia/agentsam-nav';
 import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, PawPrint, Box, Search, Bell, ShoppingBag, Tag, BarChart3, Megaphone, Users, Mail, CircleHelp } from "lucide-react";
@@ -56,7 +57,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   // The platform owns its shell; product-owned /admin pages navigate into
   // the installed Ecommerce application without recreating product routers.
   const go = (to: string) => {
-    if (to.startsWith('/admin/')) {
+    if (to.startsWith('/admin/') && !isStudioAdminPath(to.split('?')[0])) {
       if (isPackagedDesktop()) window.location.hash = '#/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(to);
       else window.location.assign(to);
       return;
@@ -236,7 +237,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: user.profileImageUrl || AGENTSAM_PET_AVATAR } : undefined,
     destinations: [
       { id: 'home', label: 'Home', icon: <Home />, href: '/admin/home', active: pathname === '/' || pathname === '/admin/home' },
-      { id: 'projects', label: 'Projects', icon: <Folder />, href: '/projects', active: pathname === '/projects' },
+      { id: 'projects', label: 'Projects', icon: <Folder />, href: '/admin/projects', active: pathname === '/admin/projects' || pathname.startsWith('/admin/projects/') || pathname === '/projects' || pathname.startsWith('/projects/') },
       { id: 'library', label: 'Library', icon: <BookOpen />, href: '/artifacts', active: pathname === '/artifacts' },
       { id: 'tickets', label: 'Tickets', icon: <Files />, href: '/tickets', active: pathname === '/tickets' },
       { id: 'sites', label: 'Sites / Online Store', icon: <Globe />, href: '/sites', active: pathname === '/sites', children: [

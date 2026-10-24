@@ -37,6 +37,7 @@ import { Route as appsWidgetsRouteImport } from './routes/(apps)/widgets'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiCloudflareRouteImport } from './routes/api/cloudflare'
 import { Route as ApiGithubRouteImport } from './routes/api/github'
+import { Route as appsAdminProjectsRouteImport } from './routes/(apps)/admin/projects'
 import { Route as appsAppsEcommerceCmsAgentsamRouteImport } from './routes/(apps)/apps/ecommerce-cms-agentsam'
 import { Route as appsArtifactsIndexRouteImport } from './routes/(apps)/artifacts/index'
 import { Route as appsArtifactsTicketsRouteImport } from './routes/(apps)/artifacts/tickets'
@@ -54,6 +55,8 @@ import { Route as appsSettingsRuntimeRouteImport } from './routes/(apps)/setting
 import { Route as appsSettingsThemesRouteImport } from './routes/(apps)/settings/themes'
 import { Route as ApiContentOptimizeRouteImport } from './routes/api/content.optimize'
 import { Route as ApiLlmInventoryRouteImport } from './routes/api/llm.inventory'
+import { Route as appsAdminProjectsIndexRouteImport } from './routes/(apps)/admin/projects/index'
+import { Route as appsAdminProjectsProjectIdRouteImport } from './routes/(apps)/admin/projects/$projectId'
 import { Route as appsAgentsamAppsCadRouteImport } from './routes/(apps)/agentsam.apps.cad'
 import { Route as appsArtifactsTicketsIndexRouteImport } from './routes/(apps)/artifacts/tickets/index'
 import { Route as appsArtifactsTicketsTicketIdRouteImport } from './routes/(apps)/artifacts/tickets/$ticketId'
@@ -200,6 +203,11 @@ const ApiGithubRoute = ApiGithubRouteImport.update({
   path: '/api/github',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminProjectsRoute = appsAdminProjectsRouteImport.update({
+  id: '/(apps)/admin/projects',
+  path: '/admin/projects',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const appsAppsEcommerceCmsAgentsamRoute =
   appsAppsEcommerceCmsAgentsamRouteImport.update({
     id: '/(apps)/apps/ecommerce-cms-agentsam',
@@ -287,6 +295,17 @@ const ApiLlmInventoryRoute = ApiLlmInventoryRouteImport.update({
   path: '/api/llm/inventory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const appsAdminProjectsIndexRoute = appsAdminProjectsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => appsAdminProjectsRoute,
+} as any)
+const appsAdminProjectsProjectIdRoute =
+  appsAdminProjectsProjectIdRouteImport.update({
+    id: '/$projectId',
+    path: '/$projectId',
+    getParentRoute: () => appsAdminProjectsRoute,
+  } as any)
 const appsAgentsamAppsCadRoute = appsAgentsamAppsCadRouteImport.update({
   id: '/apps/cad',
   path: '/apps/cad',
@@ -344,6 +363,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/admin/projects': typeof appsAdminProjectsRouteWithChildren
   '/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/chats/$chatId': typeof appsChatsChatIdRoute
@@ -361,10 +381,12 @@ export interface FileRoutesByFullPath {
   '/chats/': typeof appsChatsIndexRoute
   '/projects/': typeof appsProjectsIndexRoute
   '/settings/': typeof appsSettingsIndexRoute
+  '/admin/projects/$projectId': typeof appsAdminProjectsProjectIdRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
+  '/admin/projects/': typeof appsAdminProjectsIndexRoute
   '/artifacts/tickets/': typeof appsArtifactsTicketsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -409,10 +431,12 @@ export interface FileRoutesByTo {
   '/chats': typeof appsChatsIndexRoute
   '/projects': typeof appsProjectsIndexRoute
   '/settings': typeof appsSettingsIndexRoute
+  '/admin/projects/$projectId': typeof appsAdminProjectsProjectIdRoute
   '/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
+  '/admin/projects': typeof appsAdminProjectsIndexRoute
   '/artifacts/tickets': typeof appsArtifactsTicketsIndexRoute
 }
 export interface FileRoutesById {
@@ -445,6 +469,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/cloudflare': typeof ApiCloudflareRoute
   '/api/github': typeof ApiGithubRoute
+  '/(apps)/admin/projects': typeof appsAdminProjectsRouteWithChildren
   '/(apps)/apps/ecommerce-cms-agentsam': typeof appsAppsEcommerceCmsAgentsamRoute
   '/(apps)/artifacts/tickets': typeof appsArtifactsTicketsRouteWithChildren
   '/(apps)/chats/$chatId': typeof appsChatsChatIdRoute
@@ -462,10 +487,12 @@ export interface FileRoutesById {
   '/(apps)/chats/': typeof appsChatsIndexRoute
   '/(apps)/projects/': typeof appsProjectsIndexRoute
   '/(apps)/settings/': typeof appsSettingsIndexRoute
+  '/(apps)/admin/projects/$projectId': typeof appsAdminProjectsProjectIdRoute
   '/(apps)/agentsam/apps/cad': typeof appsAgentsamAppsCadRoute
   '/(apps)/artifacts/tickets/$ticketId': typeof appsArtifactsTicketsTicketIdRoute
   '/api/content/local/bridge': typeof ApiContentLocalBridgeRoute
   '/api/database/local/bridge': typeof ApiDatabaseLocalBridgeRoute
+  '/(apps)/admin/projects/': typeof appsAdminProjectsIndexRoute
   '/(apps)/artifacts/tickets/': typeof appsArtifactsTicketsIndexRoute
 }
 export interface FileRouteTypes {
@@ -499,6 +526,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/admin/projects'
     | '/apps/ecommerce-cms-agentsam'
     | '/artifacts/tickets'
     | '/chats/$chatId'
@@ -516,10 +544,12 @@ export interface FileRouteTypes {
     | '/chats/'
     | '/projects/'
     | '/settings/'
+    | '/admin/projects/$projectId'
     | '/agentsam/apps/cad'
     | '/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
     | '/api/database/local/bridge'
+    | '/admin/projects/'
     | '/artifacts/tickets/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -564,10 +594,12 @@ export interface FileRouteTypes {
     | '/chats'
     | '/projects'
     | '/settings'
+    | '/admin/projects/$projectId'
     | '/agentsam/apps/cad'
     | '/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
     | '/api/database/local/bridge'
+    | '/admin/projects'
     | '/artifacts/tickets'
   id:
     | '__root__'
@@ -599,6 +631,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/cloudflare'
     | '/api/github'
+    | '/(apps)/admin/projects'
     | '/(apps)/apps/ecommerce-cms-agentsam'
     | '/(apps)/artifacts/tickets'
     | '/(apps)/chats/$chatId'
@@ -616,10 +649,12 @@ export interface FileRouteTypes {
     | '/(apps)/chats/'
     | '/(apps)/projects/'
     | '/(apps)/settings/'
+    | '/(apps)/admin/projects/$projectId'
     | '/(apps)/agentsam/apps/cad'
     | '/(apps)/artifacts/tickets/$ticketId'
     | '/api/content/local/bridge'
     | '/api/database/local/bridge'
+    | '/(apps)/admin/projects/'
     | '/(apps)/artifacts/tickets/'
   fileRoutesById: FileRoutesById
 }
@@ -652,6 +687,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiCloudflareRoute: typeof ApiCloudflareRoute
   ApiGithubRoute: typeof ApiGithubRoute
+  appsAdminProjectsRoute: typeof appsAdminProjectsRouteWithChildren
   appsAppsEcommerceCmsAgentsamRoute: typeof appsAppsEcommerceCmsAgentsamRoute
   appsChatsChatIdRoute: typeof appsChatsChatIdRoute
   appsHelpCmsRoute: typeof appsHelpCmsRoute
@@ -860,6 +896,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGithubRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/(apps)/admin/projects': {
+      id: '/(apps)/admin/projects'
+      path: '/admin/projects'
+      fullPath: '/admin/projects'
+      preLoaderRoute: typeof appsAdminProjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(apps)/apps/ecommerce-cms-agentsam': {
       id: '/(apps)/apps/ecommerce-cms-agentsam'
       path: '/apps/ecommerce-cms-agentsam'
@@ -978,6 +1021,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/llm/inventory'
       preLoaderRoute: typeof ApiLlmInventoryRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/admin/projects/': {
+      id: '/(apps)/admin/projects/'
+      path: '/'
+      fullPath: '/admin/projects/'
+      preLoaderRoute: typeof appsAdminProjectsIndexRouteImport
+      parentRoute: typeof appsAdminProjectsRoute
+    }
+    '/(apps)/admin/projects/$projectId': {
+      id: '/(apps)/admin/projects/$projectId'
+      path: '/$projectId'
+      fullPath: '/admin/projects/$projectId'
+      preLoaderRoute: typeof appsAdminProjectsProjectIdRouteImport
+      parentRoute: typeof appsAdminProjectsRoute
     }
     '/(apps)/agentsam/apps/cad': {
       id: '/(apps)/agentsam/apps/cad'
@@ -1104,6 +1161,19 @@ const appsSettingsRouteWithChildren = appsSettingsRoute._addFileChildren(
   appsSettingsRouteChildren,
 )
 
+interface appsAdminProjectsRouteChildren {
+  appsAdminProjectsProjectIdRoute: typeof appsAdminProjectsProjectIdRoute
+  appsAdminProjectsIndexRoute: typeof appsAdminProjectsIndexRoute
+}
+
+const appsAdminProjectsRouteChildren: appsAdminProjectsRouteChildren = {
+  appsAdminProjectsProjectIdRoute: appsAdminProjectsProjectIdRoute,
+  appsAdminProjectsIndexRoute: appsAdminProjectsIndexRoute,
+}
+
+const appsAdminProjectsRouteWithChildren =
+  appsAdminProjectsRoute._addFileChildren(appsAdminProjectsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   appsAgentsamRoute: appsAgentsamRouteWithChildren,
@@ -1133,6 +1203,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiCloudflareRoute: ApiCloudflareRoute,
   ApiGithubRoute: ApiGithubRoute,
+  appsAdminProjectsRoute: appsAdminProjectsRouteWithChildren,
   appsAppsEcommerceCmsAgentsamRoute: appsAppsEcommerceCmsAgentsamRoute,
   appsChatsChatIdRoute: appsChatsChatIdRoute,
   appsHelpCmsRoute: appsHelpCmsRoute,

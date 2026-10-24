@@ -4,6 +4,7 @@ import { PackagedConsoleFrame } from "../../agentsam/PackagedConsoleFrame";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
+import { isStudioAdminPath } from "../../../shared/studio-admin-routes.mjs";
 
 const APP_NAME = "AgentSam";
 
@@ -82,5 +83,5 @@ function ApplicationOutlet() {
     />;
   }
   const isApp = pathname === "/" || /^\/(agentsam|chats|cms|sites|store|content|cad|samsketch|database|projects|artifacts|mail|tickets|collaborate|files|browse|cli|ship|widgets|settings)(\/|$)/.test(pathname);
-  return isApp ? <PackagedConsoleFrame><AgentSamShell embedded /></PackagedConsoleFrame> : <Outlet />;
+  return (isApp || isStudioAdminPath(pathname)) ? <PackagedConsoleFrame><AgentSamShell embedded /></PackagedConsoleFrame> : <Outlet />;
 }

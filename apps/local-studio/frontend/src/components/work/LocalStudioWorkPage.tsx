@@ -1,3 +1,4 @@
+import { canonicalStudioPath } from "../../../../shared/studio-admin-routes.mjs";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { createHttpWorkHost, createWorkCrud } from "@inneranimalmedia/agentsam-work/client";
@@ -400,8 +401,9 @@ export function LocalStudioWorkPage({
         onNavigate={(href) => {
           const url = new URL(href, window.location.origin);
           const search = Object.fromEntries(url.searchParams.entries());
+          const ownedPath = !isPackagedDesktop() && canonicalStudioPath(url.pathname);
           void navigate({
-            to: url.pathname as never,
+            to: (ownedPath || url.pathname) as never,
             search: search as never,
           });
         }}

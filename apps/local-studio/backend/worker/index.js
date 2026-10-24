@@ -41,6 +41,7 @@ import {
 import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
+import { canonicalStudioPath } from "../../shared/studio-admin-routes.mjs";
 import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
@@ -700,6 +701,20 @@ export default {
     const isAnalyticsSmoke = url.pathname === "/api/analytics/smoke";
     const isAnalyticsApi = url.pathname.startsWith("/api/analytics/");
     const isTerminalConnect = url.pathname === "/api/agent/terminal/connect";
+
+    // Flat Local Studio URLs remain compatible document-entry redirects only.
+    // Keep query strings and project IDs; do not redirect API or Ecommerce paths.
+    if (request.method === "GET" || request.method === "HEAD") {
+      const canonical = canonicalStudioPath(url.pathname);
+      if (canonical) {
+        const target = new URL(url);
+        target.pathname = canonical;
+        return new Response(null, {
+          status: 301,
+          headers: { location: target.toString(), 'cache-control': 'private, max-age=300' },
+        });
+      }
+    }
 
     // Existing Ecommerce console UI is served by the Local Studio Worker.
     // The packaged UI and its APIs remain on this origin and use Local Studio D1.
