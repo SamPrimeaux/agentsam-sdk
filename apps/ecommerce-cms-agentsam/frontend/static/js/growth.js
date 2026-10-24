@@ -267,6 +267,8 @@ function fillCreateForm(app, campaign) {
     input.checked = selected.has(input.value);
   });
 
+  const archive = app.querySelector("[data-archive]");
+  if (archive) archive.hidden = !growthState.activeCampaignId || campaign.status === "archived";
   renderPackPreview(app, campaign);
   syncAgentsamContext(campaign);
 }
@@ -400,6 +402,8 @@ function openCreateView(app) {
     status: "draft",
   });
   setView(app, "create");
+  const archive = app.querySelector("[data-archive]");
+  if (archive) archive.hidden = true;
 }
 
 async function openCampaign(app, id) {
@@ -411,6 +415,23 @@ async function openCampaign(app, id) {
   } catch (err) {
     console.error("[growth/campaign]", err);
     alert(err.message || "Could not load campaign");
+  }
+}
+
+async function archiveCurrentCampaign(app) {
+  const id = growthState.activeCampaignId;
+  if (!id || !confirm("Archive this campaign? Its records and attribution will be retained.")) return;
+  const button = app.querySelector("[data-archive]");
+  if (button) button.disabled = true;
+  try {
+    await growthFetch(`/api/admin/growth/campaigns/${id}`, { method: "DELETE" });
+    setView(app, "overview");
+    await refreshOverview(app);
+  } catch (err) {
+    console.error("[growth/archive]", err);
+    alert(err.message || "Could not archive campaign");
+  } finally {
+    if (button) button.disabled = false;
   }
 }
 
@@ -556,6 +577,10 @@ function bindGrowthApp(app) {
         if (target === "overview") refreshOverview(app);
       }
     });
+  });
+
+  app.querySelectorAll("[data-archive]").forEach((button) => {
+    button.addEventListener("click", () => archiveCurrentCampaign(app));
   });
 
   app.querySelectorAll("[data-dismiss]").forEach((button) => {
