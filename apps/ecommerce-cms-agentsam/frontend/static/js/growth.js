@@ -470,15 +470,15 @@ async function publishCampaign(app, { emailMode = "draft" } = {}) {
     await refreshOverview(app);
 
     const pub = data.publish || {};
-    let message = "Campaign published.";
+    let message = pub.test_only ? "Test email sent. Campaign is still in review." : "Campaign published.";
     if (pub.homepage?.ok) message += " Homepage hero is live.";
-    if (pub.email?.mode === "draft") message += " Email saved as draft in mail.";
-    if (pub.email?.sent) message += ` Email sent to ${pub.email.sent} recipient(s).`;
+    if (pub.email?.mode === "draft") message += " Email saved as a draft.";
+    if (pub.email?.sent && !pub.test_only) message += ` Email sent to ${pub.email.sent} recipient(s).`;
     if (pub.email?.error) message += ` Email note: ${pub.email.error}`;
 
     alert(message);
     window.openAgentsamDrawer?.();
-    window.sendAgentsamMessage?.(
+    if (!pub.test_only) window.sendAgentsamMessage?.(
       `Campaign "${data.campaign.name}" was published. Summarize what went live and what to monitor in attribution.`
     );
   } catch (err) {
