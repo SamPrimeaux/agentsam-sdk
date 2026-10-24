@@ -3,6 +3,17 @@
 
 @import "../../../../packages/agentsam-nav/dist/theme.css";
 
+/* Embedded CAD mounts CadCreatorApp directly under #root instead of the
+   standalone viewport shell. Give percentage-height editor children a
+   definite containing block so the entire iframe is an editing canvas. */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+}
+#root { overflow: hidden; }
+
 /* CAD runs inside the real AgentSam shell; canvas remains mounted across modes. */
 .cad-platform-shell{display:flex;width:100vw;height:100dvh;max-height:100dvh;overflow:hidden;background:#0c0d0e;color:#ececec}
 .cad-platform-main{display:flex;flex:1;min-width:0;min-height:0;flex-direction:column;overflow:hidden}
