@@ -1027,19 +1027,20 @@ function syncPersistentNavState() {
     const label = collapsed ? "Show sidebar" : (window.matchMedia?.("(max-width: 900px)")?.matches ? "Close sidebar" : "Collapse sidebar");
     button.setAttribute("aria-label", label);
     button.setAttribute("title", label);
-    button.innerHTML = icon(collapsed ? "textAlignStart" : "x", 21, "console-nav-ghost-icon");
+    button.setAttribute("aria-expanded", String(!collapsed));
+    button.innerHTML = icon(collapsed ? "textAlignStart" : "arrowLeftToLine", 21, "console-nav-ghost-icon");
   });
 }
 
 function setPersistentNav(open) {
   document.body.classList.toggle("console-nav-collapsed", !open);
-  try { localStorage.setItem("fnf-console-nav", open ? "open" : "collapsed"); } catch {}
+  try { localStorage.setItem("agentsam.console.nav", open ? "open" : "collapsed"); } catch {}
   syncPersistentNavState();
 }
 
 function initPersistentNav() {
   let open = true;
-  try { open = localStorage.getItem("fnf-console-nav") !== "collapsed"; } catch {}
+  try { open = (localStorage.getItem("agentsam.console.nav") ?? localStorage.getItem("fnf-console-nav")) !== "collapsed"; } catch {}
   setPersistentNav(open);
 }
 

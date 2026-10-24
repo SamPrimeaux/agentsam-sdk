@@ -58,6 +58,10 @@
     {
       "binding": "WEBSITE_ASSETS",
       "bucket_name": "agentsam-os-blueprint-content"
+    },
+    {
+      "binding": "CAD_PROJECT_ASSETS",
+      "bucket_name": "cad"
     }
   ],
   "pipelines": [

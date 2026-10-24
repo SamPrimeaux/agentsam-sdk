@@ -1610,10 +1610,10 @@ body.console-theme.console-nav-collapsed { --c-nav-w: 0px; }
 .console-nav-ghost-toggle--persistent {
   position: fixed;
   top: 0;
-  left: 0;
+  left: var(--c-nav-w, 0px);
   z-index: 170;
   display: inline-flex;
-  width: 52px;
+  width: 46px;
   height: var(--c-topbar-h, 56px);
   border: 0;
   border-right: 1px solid rgba(255,255,255,.1);
@@ -1623,7 +1623,10 @@ body.console-theme.console-nav-collapsed { --c-nav-w: 0px; }
   box-shadow: none;
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  transition: left .28s cubic-bezier(.2,.8,.2,1), background .2s ease;
 }
+/* One persistent topbar toggle; profile navigation does not duplicate it. */
+.console-sidenav-profile-row .console-nav-collapse { display: none; }
 .console-nav-ghost-toggle--persistent:hover { color: #fff; background: rgba(40,40,42,.9); }
 
 body.console-nav-collapsed .console-nav-ghost-toggle--persistent { display: inline-flex; }

@@ -25,7 +25,8 @@ import { getPermissions } from '../lib/permissions';
 import { collaborationClient } from '../lib/socket';
 import { Canvas2D } from '../components/Canvas2D';
 import { Viewport3D } from '../components/Viewport3D';
-import {DreamHouseWorldViewport} from '../components/DreamHouseWorldViewport';
+import {CadWorldViewport} from '../components/DreamHouseWorldViewport';
+import { listHostedProjects, loadHostedProject, type CadHostedSelection } from '../lib/hosted-project-source';
 import { BimStartersWorkspace } from '../components/BimStartersWorkspace';
 import { NativeSketchCanvas } from '../components/NativeSketchCanvas';
 import { ParametricEditor } from '../components/ParametricEditor';
@@ -94,8 +95,31 @@ export function CadCreatorApp({
   const [project, setProject] = useState<ProjectState>(() => accessMode === 'public-demo' && !startNewProject
     ? createPublicExampleProject()
     : createEmptyCadProject());
-  const [sourceStatus,setSourceStatus] = useState<'loading'|'loaded'|'unavailable'>(() => accessMode === 'public-demo' || startNewProject ? 'loaded' : 'loading');
+  const [sourceStatus,setSourceStatus] = useState<'loading'|'loaded'|'unavailable'>(() => accessMode !== 'owner' || startNewProject ? 'loaded' : 'loading');
   const [sourceError,setSourceError] = useState('');
+  const [hostedProjects,setHostedProjects] = useState<Array<{id:string;name:string}>>([]);
+  const [hostedProjectId,setHostedProjectId] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('project') || '');
+  const [hostedRevision,setHostedRevision] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('revision') || '');
+  const [hostedSelection,setHostedSelection] = useState<CadHostedSelection|null>(null);
+  useEffect(() => {
+    if (accessMode !== 'hosted-project') return;
+    let active=true;
+    void listHostedProjects().then(rows => {if(active)setHostedProjects(rows);}).catch(error => {if(active)setSourceError(String(error));});
+    return () => {active=false;};
+  },[accessMode]);
+  useEffect(() => {
+    if (accessMode !== 'hosted-project' || !hostedProjectId) return;
+    let active=true;
+    setSourceStatus('loading');setSourceError('');setHostedSelection(null);
+    void loadHostedProject(hostedProjectId,hostedRevision||undefined).then(selection=>{
+      if(!active)return;
+      setProject(selection.project);setHostedSelection(selection);
+      setHistory([]);setRedoStack([]);setUiSelection(null);setVerifiedProjectRevision(null);
+      setActiveWorkspace('model');setPlanLayout('split');setModelModule(null);
+      setExplorerOpen(false);setInspectorOpen(false);setSourceStatus('loaded');
+    }).catch(error=>{if(active){setSourceStatus('unavailable');setSourceError(error instanceof Error?error.message:String(error));}});
+    return () => {active=false;};
+  },[accessMode,hostedProjectId,hostedRevision]);
   const openDreamHouse = useCallback(async () => {
     setSourceStatus('loading');
     setSourceError('');
@@ -123,6 +147,9 @@ export function CadCreatorApp({
     if (startNewProject) {
       setSourceStatus('loaded');
       setSourceError('');
+    } else if (accessMode === 'hosted-project') {
+      // The authenticated registry owns loading; never substitute a starter.
+      if (!hostedProjectId) setSourceStatus('loaded');
     } else if (accessMode === 'public-demo') {
       setProject(createPublicExampleProject());
       setSourceStatus('loaded');
@@ -221,7 +248,7 @@ export function CadCreatorApp({
       id: 'local_' + (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now().toString(36)),
       name: 'Local CAD Editor',
       color: '#82a7fb',
-      role: canCollaborate ? 'Owner' : 'Editor',
+      role: accessMode === 'hosted-project' ? 'Viewer' : canCollaborate ? 'Owner' : 'Editor',
       selectedIds: [],
       activeTool: 'select',
       lastActive: Date.now()
@@ -398,6 +425,24 @@ export function CadCreatorApp({
     <div data-appearance={isDarkMode ? 'dark' : 'light'}
       style={{'--cad-accent': cadAccent} as React.CSSProperties}
       className={`cad-workspace-ui relative flex flex-col h-full w-full min-w-0 min-h-0 font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+      {accessMode === 'hosted-project' && (
+        <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-white/10 bg-slate-900/95 px-3 py-1.5 text-xs" aria-label="Registered CAD project and revision">
+          <label htmlFor="cad-hosted-project" className="text-slate-400">Project</label>
+          <select id="cad-hosted-project" aria-label="Open registered CAD project" value={hostedProjectId}
+            onChange={event=>{setHostedProjectId(event.target.value);setHostedRevision('');setHostedSelection(null);setProject(createEmptyCadProject());}}
+            className="min-w-0 max-w-[260px] rounded-md border border-white/15 bg-slate-800 px-2 py-1.5 text-slate-100">
+            <option value="">Select a saved project</option>
+            {hostedProjects.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
+            {hostedProjectId&&!hostedProjects.some(item=>item.id===hostedProjectId)&&<option value={hostedProjectId}>{hostedProjectId}</option>}
+          </select>
+          {hostedSelection&&<><label htmlFor="cad-hosted-revision" className="text-slate-400">Revision</label>
+          <select id="cad-hosted-revision" aria-label="Select registered BIM revision" value={hostedSelection.revision.revision}
+            onChange={event=>setHostedRevision(event.target.value)} className="max-w-[210px] rounded-md border border-white/15 bg-slate-800 px-2 py-1.5 text-slate-100">
+            {hostedSelection.registry.revisions.filter(row=>row.models.length&&row.documents.length).map(row=><option key={row.revision} value={row.revision}>{row.revision} · {row.status}</option>)}
+          </select></>}
+          <span className="ml-auto text-xs text-slate-400">{hostedSelection ? `${hostedSelection.revision.status} · registered source and geometry · viewing only` : 'Registered projects · no template fallback'}</span>
+        </div>
+      )}
       {/* The host Nav.Topbar owns application chrome. CAD owns only its contextual tools. */}
       {chromeFolded ? (
         <div className="flex h-8 shrink-0 items-center justify-between border-b border-white/10 bg-slate-900 px-3 text-[length:var(--text-sm)]">
@@ -422,7 +467,7 @@ export function CadCreatorApp({
           accent={cadAccent} onAccentChange={setCadAccent}
           isDark={isDarkMode} onToggleDark={() => setIsDarkMode(v => !v)}
           studioView={studioView} onStudioView={v=>{setStudioView(v);if(v==='preview'){handleSelectWorkspace('model');setExplorerOpen(false);setInspectorOpen(false)}else if(v==='code'){handleSelectWorkspace('parametric');setExplorerOpen(false);setInspectorOpen(false)}else {handleSelectWorkspace('plan')}}}
-          projectSlot={<ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
+          projectSlot={accessMode === 'hosted-project' ? <span className="text-xs text-slate-400">Registered BIM · Read-only until native revision host is connected</span> : <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
           runtimeSlot={<CadStatusStrip workspace={currentWorkspaceDescriptor} activeTool={activeTool} unit={unit}
             selectionCount={currentUser.selectedIds.length} jobStatus={cadToolsReport ? `${cadToolsReport.available_tools}/${cadToolsReport.total_tools} Engines Online` : 'Engine Ready'}
             isSynced={isSynced} isDarkMode={isDarkMode} capabilities={liveCapabilities}/>}
@@ -622,15 +667,15 @@ export function CadCreatorApp({
         <section className="cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]">
           {sourceStatus === 'unavailable' && sourceError && (
             <div role="alert" className="absolute left-3 top-3 z-40 max-w-[min(430px,calc(100%-24px))] rounded-xl border border-amber-400/35 bg-slate-950/95 p-3 text-xs text-slate-100 shadow-xl">
-              <strong>{accessMode === 'owner' ? 'Owner DreamHouse project unavailable' : 'Public DreamHouse example unavailable'}</strong>
+              <strong>{accessMode === 'hosted-project' ? 'Registered CAD project unavailable' : accessMode === 'owner' ? 'Owner project unavailable' : 'Public example unavailable'}</strong>
               <p className="mt-1 text-slate-300">{sourceError}</p>
-              <p className="mt-1 text-slate-400">{accessMode === 'owner' ? 'No public example was substituted. The local project service must return the saved owner BIM; no source files were modified.' : 'Your current example canvas has not been replaced. You can keep editing it or choose another starter.'}</p>
-              <button type="button" className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 hover:bg-white/10" onClick={() => void openDreamHouse()}>{accessMode === 'owner' ? 'Retry owner project' : 'Retry public example'}</button>
+              <p className="mt-1 text-slate-400">{accessMode === 'hosted-project' ? 'The registered source was not replaced with a template or an older GLB.' : accessMode === 'owner' ? 'No public example was substituted. The local project service must return the saved owner BIM; no source files were modified.' : 'Your current example canvas has not been replaced. You can keep editing it or choose another starter.'}</p>
+              {accessMode !== 'hosted-project' && <button type="button" className="mt-2 rounded-lg border border-white/20 px-3 py-1.5 hover:bg-white/10" onClick={() => void openDreamHouse()}>{accessMode === 'owner' ? 'Retry owner project' : 'Retry public example'}</button>}
               <button type="button" className="ml-2 rounded-lg px-3 py-1.5 text-slate-300 hover:bg-white/10" onClick={() => setSourceError('')}>Dismiss</button>
             </div>
           )}
-          {/* Published DreamHouse visualization is sourced from the real V1.1 GLB.
-             Editable BIM provenance remains the source V1 project, not mock meshes. */}
+          {/* A registered project BIM is resolved through its D1/R2 revision records.
+              The visual GLB is never the authoritative editable source. */}
           {/* WORKSPACE 1: PLAN */}
           {activeWorkspace === 'plan' && (
             <>
@@ -674,13 +719,15 @@ export function CadCreatorApp({
 
               {(planLayout === 'split') && (
                 <div className="h-full relative w-1/2">
-                  {accessMode === 'public-demo' && project.id==='dreamhouse-v1-wip' && sourceStatus==='loaded'
-                    ? <DreamHouseWorldViewport onSelect={({designId})=>{
+                  {hostedSelection && sourceStatus==='loaded'
+                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSelect={({designId})=>{
                         const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                         for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                           setUiSelection({group,id:designId});setInspectorOpen(true);break;
                         }}
                       }}/>
+                    : accessMode === 'hosted-project'
+                      ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
                     : <Viewport3D project={project} onTakeSnapshot={(dataUrl)=>{
                         setActiveSnapshotUrl(dataUrl);setIsImageGenModalOpen(true);
                       }}/>}
@@ -703,13 +750,15 @@ export function CadCreatorApp({
           {activeWorkspace === 'model' && (
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
-              : accessMode === 'public-demo' && project.id==='dreamhouse-v1-wip' && sourceStatus==='loaded'
-                ? <DreamHouseWorldViewport onSelect={({designId})=>{
+              : hostedSelection && sourceStatus==='loaded'
+                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSelect={({designId})=>{
                     const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                     for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                       setUiSelection({group,id:designId});setInspectorOpen(true);break;
                     }}
                   }}/>
+                : accessMode === 'hosted-project'
+                  ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
                 : <Viewport3D project={project} onTakeSnapshot={(dataUrl)=>{
                     setActiveSnapshotUrl(dataUrl);setIsImageGenModalOpen(true);
                   }}/>}

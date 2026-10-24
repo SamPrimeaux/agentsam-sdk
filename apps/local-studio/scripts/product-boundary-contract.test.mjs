@@ -34,7 +34,7 @@ test('SamSketch owns its route and mounts its own scene-authoring bundle', () =>
 
 test('CAD Creator owns its CAD route and never embeds SamSketch as a substitute workspace', () => {
   assert.match(cadRoute, /createFileRoute\("\/\(apps\)\/cad"\)/);
-  assert.match(cadRoute, /src="\/cad-creator\/index\.html\?presentation=embedded&access=owner"/);
+  assert.match(cadRoute, /src=\{cadEmbeddedUrl\(\{ projectId: search\.project, revision: search\.revision \}\)\}/);
   assert.doesNotMatch(cadRoute, /SamSketch|samsketch|DreamHouse BIM|CAD_WORKSPACES/);
 });
 
