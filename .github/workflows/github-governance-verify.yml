@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: '.nvmrc'
       - name: Validate canonical labels and distribution dependency graph
         run: node --test test/governance/road-to-real-distribution.test.mjs
       - name: Validate all governance modules

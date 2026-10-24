@@ -22,7 +22,7 @@ jobs:
       - name: Use Cloudflare Node/npm versions
         uses: actions/setup-node@v4
         with:
-          node-version: '22.23.3'
+          node-version-file: 'apps/local-studio/.nvmrc'
           cache: npm
           cache-dependency-path: apps/local-studio/package-lock.json
 
