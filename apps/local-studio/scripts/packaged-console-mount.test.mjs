@@ -31,6 +31,21 @@ test('Worker serves packaged assets, not a customer Worker or a reconstructed sh
   assert.equal(seen[0], '/ecommerce-cms-agentsam/admin/home');
   assert.match(await res.text(), /host-config\.js/);
 });
+test('Growth partial serves from installed Ecommerce assets, not customer storage', async () => {
+  const seen = [];
+  const assets = { fetch(request) {
+    seen.push(new URL(request.url).pathname);
+    return Promise.resolve(new Response('<section id="fnfGrowthApp">Live Growth workspace</section>', {
+      headers: { 'content-type': 'text/html' },
+    }));
+  } };
+  const response = await servePackagedConsole(new Request(
+    'https://agentsam.inneranimalmedia.com/admin/partials/growth-app.html'), assets);
+  assert.equal(response.status, 200);
+  assert.deepEqual(seen, ['/ecommerce-cms-agentsam/admin/partials/growth-app']);
+  assert.match(await response.text(), /id="fnfGrowthApp"/);
+});
+
 test('immutable product sources and packaged shell are the authority', () => {
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /servePackagedConsole/);
