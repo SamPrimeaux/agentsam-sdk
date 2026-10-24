@@ -176,7 +176,7 @@ export function newProject(name = "Studio", description = "Default workspace", p
     runtimeBaseUrl: null,
     workspaceId: null,
     runtimeCapability: null,
-    files: seedFiles(name),
+    files: seedFiles(name, projectId),
     dirs: ["src", ".github", ".github/workflows"],
     git: emptyGit(),
     deploy: {
