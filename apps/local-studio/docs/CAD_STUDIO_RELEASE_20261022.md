@@ -2,7 +2,7 @@
 
 ## Source and scope
 
-Continue in the **existing** checkout `/Users/samprimeaux/agent-worktrees/local-studio-home-v1-20261022`, branch `feat/local-studio-home-v1-20261022`. No additional worktree was created.
+Continue on the existing CAD Studio integration branch. Avoid creating a duplicate checkout.
 
 Code commit: `a8c494e640115e3d500c2d5997fdb813f473d487`.
 

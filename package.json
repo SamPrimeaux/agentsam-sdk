@@ -175,6 +175,7 @@
     "packages/agentsam-errors",
     "packages/agentsam-3d-viewer",
     "packages/agentsam-occt",
+    "packages/primetech-procedures",
     "packages/catalog",
     "packages/agentsam-repository",
     "packages/agentsam-knowledge",
