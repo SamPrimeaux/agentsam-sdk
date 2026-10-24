@@ -6,7 +6,6 @@ import {TerrainEditorPanel} from './TerrainEditorPanel';
 import {createTerrainDocument,addSculptStroke,type TerrainDocument,type SculptMode} from '../lib/world-terrain';
 import {createTerrainProjection,type TerrainProjection} from '../lib/world-terrain-three';
 
-const ORIGIN='https://cad.inneranimalmedia.com/api/cad/public-world/dreamhouse/v1.1';
 type Zone={roomId:string;label:string;candidateCameraBlenderXYZMetres?:number[];anchorStatus?:string};
 type Handoff={projectId:string;sceneRevision:string;scene:{nodeCount:number;architectureNodeCount:number;glbSha256:string};zones:Zone[]};
 type Selected={designId:string;category:string;nodeName:string;source:string};
@@ -15,7 +14,15 @@ type ViewPreset='iso'|'plan'|'front'|'side';
 const POSKEY='agentsam.dreamhouse.camera.v1.1';
 const ORBIT_SPEED=0.007;
 
-export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>void}) {
+export interface CadWorldViewportProps {
+ modelUrl:string;
+ manifestUrl?:string;
+ sceneLabel:string;
+ revision:string;
+ readOnly?:boolean;
+ onSelect?:(s:Selected)=>void;
+}
+export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,onSelect}:CadWorldViewportProps) {
  const mount=useRef<HTMLDivElement>(null),renderer=useRef<THREE.WebGLRenderer|null>(null),
  sceneRef=useRef<THREE.Scene|null>(null),cameraRef=useRef<THREE.PerspectiveCamera|null>(null);
  const assetRef=useRef<THREE.Object3D|null>(null),collidersRef=useRef<THREE.Object3D[]>([]);
@@ -29,7 +36,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
  const terrainBrushRef=useRef<{mode:SculptMode|null;radius:number;strength:number}>({mode:null,radius:12,strength:3});
  const lastBrushAt=useRef(0);
  const [mode,setMode]=useState<CameraMode>('orbit'),[ready,setReady]=useState(false),
- [error,setError]=useState(''),[progress,setProgress]=useState('Resolving DreamHouse V1.1…'),
+ [error,setError]=useState(''),[progress,setProgress]=useState('Resolving project geometry…'),
  [handoff,setHandoff]=useState<Handoff|null>(null),[selection,setSelection]=useState<Selected|null>(null),
  [roofVisible,setRoofVisible]=useState(true),[hour,setHour]=useState<'day'|'evening'>('day');
  const [wireframe,setWireframe]=useState(false),[viewPreset,setViewPreset]=useState<ViewPreset>('iso');
@@ -79,7 +86,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   if(!webgl||!scene||!camera||!ready)return;
   webgl.render(scene,camera);
   const link=document.createElement('a');
-  link.download=`DreamHouse-V1.1-${viewPreset}${wireframe?'-wireframe':''}-${hour}.png`;
+  link.download=`${sceneLabel.replace(/[^a-z0-9_-]+/gi,'-')}-${revision}-${viewPreset}${wireframe?'-wireframe':''}-${hour}.png`;
   link.href=webgl.domElement.toDataURL('image/png');link.click();
  };
  const fitSite=()=>{
@@ -173,16 +180,19 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   animation=requestAnimationFrame(animate);
   const fetchWorld=async()=>{
    try{
-    const manifestResponse=await fetch(ORIGIN+'/manifest.json', {credentials:'omit'});
-    if(manifestResponse.status===401||manifestResponse.status===403)throw Error('DreamHouse scene requires an authorized AgentSam CAD session.');
-    if(!manifestResponse.ok)throw Error('Scene manifest unavailable ('+manifestResponse.status+')');
-    const manifest: Handoff=await manifestResponse.json();
-    if(!alive)return;setHandoff(manifest);setProgress('Streaming verified V1.1 geometry…');
-    new GLTFLoader().setWithCredentials(false).load(ORIGIN+'/model.glb', gltf=>{
+    if(manifestUrl){
+     const manifestResponse=await fetch(manifestUrl,{credentials:'same-origin'});
+     if(manifestResponse.ok){
+      const manifest: Handoff=await manifestResponse.json();
+      if(alive&&Array.isArray(manifest.zones))setHandoff(manifest);
+     }
+    }
+    if(!alive)return;setProgress('Streaming registered model geometry…');
+    new GLTFLoader().setWithCredentials(modelUrl.startsWith('/')).load(modelUrl, gltf=>{
       if(!alive)return;
       gltfRoot=gltf.scene;
       const box=new THREE.Box3().setFromObject(gltfRoot);
-      if(box.isEmpty())throw Error('DreamHouse GLB contains no geometry');
+      if(box.isEmpty())throw Error('Model GLB contains no geometry');
       bounds.current.copy(box);
       // Frame the real architecture, not the full parcel's Ground mesh;
       // the previous fit made the house a tiny speck on a bright field.
@@ -253,7 +263,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
       setReady(true);setProgress('');
     }, progress=>{
       if(progress.total)setProgress('Loading scene '+Math.min(100,Math.floor(100*progress.loaded/progress.total))+'%');
-    },e=>{if(alive){setError('DreamHouse model unavailable: '+String(e));setProgress('')}});
+    },e=>{if(alive){setError('Model unavailable: '+String(e));setProgress('')}});
    }catch(e){if(alive){setError(String(e));setProgress('')}}
   };
   void fetchWorld();
@@ -270,7 +280,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
    if(context.domElement.parentElement===host)host.removeChild(context.domElement);
    context.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;
   };
- },[]);
+ },[modelUrl,manifestUrl]);
  useEffect(()=>{
   if(!assetRef.current)return;
   assetRef.current.traverse(node=>{
@@ -320,7 +330,7 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   let o:THREE.Object3D|null=hit;
   while(o&&!o.userData?.DesignId)o=o.parent;
   if(!o)return;
-  const selected={designId:String(o.userData.DesignId),category:String(o.userData.Category||'component'),nodeName:o.name,source:String(o.userData.Source||'FreeCAD / V1')};
+  const selected={designId:String(o.userData.DesignId),category:String(o.userData.Category||'component'),nodeName:o.name,source:String(o.userData.Source||revision)};
   setSelection(selected);onSelect?.(selected);
  },[ready,onSelect]);
  const sculptAt=useCallback((event:React.PointerEvent<HTMLDivElement>,force=false)=>{
@@ -373,11 +383,18 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
   if(touchPointers.current.size<2)pinchDistance.current=null;
   const p=pointer.current;if(p?.id===e.pointerId){if(!wasPinching&&!terrainBrushRef.current.mode&&p.distance<5)pick(e);pointer.current=null}
  };
- return <section className="relative h-full min-h-0 min-w-0 flex-1 bg-[#081321] text-[#e4edf7]" data-cad-world="dreamhouse-v1.1" data-world-ready={ready?'true':'false'}>
-   <div ref={mount} role="img" aria-label="DreamHouse V1.1 interactive BIM world"
+ return <section className="relative h-full min-h-0 min-w-0 flex-1 bg-[#081321] text-[#e4edf7]" data-cad-world="project-revision" data-world-ready={ready?'true':'false'}>
+   <div ref={mount} role="img" aria-label={`${sceneLabel} ${revision} BIM world`}
      className="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
      onPointerDown={start} onPointerMove={drag} onPointerUp={stop}
-     onWheel={e=>{if(displayRef.current.mode==='orbit')orbit.current.distance=Math.max(3,Math.min(250,orbit.current.distance*(e.deltaY>0?1.11:.90)))}}/>
+     onWheel={e=>{
+       if(displayRef.current.mode!=='orbit')return;
+       const extent=modelBounds.current.getSize(new THREE.Vector3()).length();
+       const minDistance=Math.max(6,extent*.45);
+       const maxDistance=Math.max(250,minDistance*8);
+       const step=Math.max(-240,Math.min(240,e.deltaY));
+       orbit.current.distance=Math.max(minDistance,Math.min(maxDistance,orbit.current.distance*Math.exp(step*.0015)));
+     }}/>
    <details className="cad-world-menu" aria-label="World view settings">
      <summary title="View and environment controls" aria-label="View and environment controls">Views &amp; Scene</summary>
      <div className="cad-world-menu-content">
@@ -397,10 +414,10 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
         <button type="button" title="Change daylight" onClick={()=>setHour(v=>v==='day'?'evening':'day')}>{hour==='day'?'Daylight':'Evening'}</button>
         <button type="button" title="Toggle wireframe" aria-pressed={wireframe} onClick={()=>setWireframe(v=>!v)}>Wireframe</button>
        </div>
-       <label className="cad-world-room">Room <select aria-label="DreamHouse room destinations" defaultValue="" onChange={e=>{const z=handoff?.zones.find(x=>x.roomId===e.target.value);if(z)visit(z)}}>
+       <label className="cad-world-room">Room <select aria-label="BIM room destinations" defaultValue="" onChange={e=>{const z=handoff?.zones.find(x=>x.roomId===e.target.value);if(z)visit(z)}}>
           <option value="">Choose room</option>{handoff?.zones.map(zone=><option key={zone.roomId} value={zone.roomId}>{zone.label}</option>)}
        </select></label>
-       <button className="cad-world-action" type="button" title="Edit the real site terrain" aria-pressed={terrainOpen} onClick={()=>{setTerrainOpen(v=>!v);setSelection(null);window.dispatchEvent(new Event('cad:terrain-inspect'))}}>Terrain &amp; Scenery</button>
+       {!readOnly&&<button className="cad-world-action" type="button" title="Edit the real site terrain" aria-pressed={terrainOpen} onClick={()=>{setTerrainOpen(v=>!v);setSelection(null);window.dispatchEvent(new Event('cad:terrain-inspect'))}}>Terrain &amp; Scenery</button>}
        <button className="cad-world-action" type="button" title="Save current view as PNG" disabled={!ready} onClick={exportSnapshot}>Capture PNG</button>
      </div>
    </details>
@@ -410,11 +427,11 @@ export function DreamHouseWorldViewport({onSelect}: {onSelect?:(s:Selected)=>voi
        onPointerDown={e=>{e.preventDefault();pressed.current.add(key)}} onPointerUp={()=>pressed.current.delete(key)} onPointerCancel={()=>pressed.current.delete(key)}
        className="rounded-lg border border-white/20 bg-slate-800/90 px-3 py-2.5 text-xs font-bold">{['↑','←','↓','→'][i]}</button>)}
    </div>}
-   {terrainOpen&&<TerrainEditorPanel document={terrain} onChange={setTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
+   {!readOnly&&terrainOpen&&<TerrainEditorPanel document={terrain} onChange={setTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
      brushRadius={brushRadius} onBrushRadius={setBrushRadius} brushStrength={brushStrength} onBrushStrength={setBrushStrength}
      onFitSite={fitSite} onClose={()=>{setTerrainOpen(false);setSculptMode(null)}}/>}
    {!terrainOpen&&selection&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">
-     <div className="flex justify-between gap-2"><strong>FreeCAD BIM · {selection.category}</strong><button onClick={()=>setSelection(null)} aria-label="Close BIM inspector">×</button></div>
+     <div className="flex justify-between gap-2"><strong>BIM · {selection.category}</strong><button onClick={()=>setSelection(null)} aria-label="Close BIM inspector">×</button></div>
      <p className="mt-1 break-all font-mono text-sky-200">{selection.designId}</p>
      <p className="mt-1 text-slate-400">{selection.nodeName} · {selection.source}</p>
    </aside>}

@@ -1,7 +1,7 @@
 import type { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
 import { TEMPLATES } from './templates';
 
-export type CadAccessMode = 'owner' | 'public-demo';
+export type CadAccessMode = 'owner' | 'public-demo' | 'hosted-project';
 
 export function isTrustedLocalCadHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
@@ -10,7 +10,10 @@ export function isTrustedLocalCadHost(hostname: string): boolean {
 
 /** Owner access is enabled only by an explicit local-shell request on loopback. */
 export function resolveCadAccessMode(requested: string | null, hostname: string): CadAccessMode {
-  return requested === 'owner' && isTrustedLocalCadHost(hostname) ? 'owner' : 'public-demo';
+  if (requested === 'owner' && isTrustedLocalCadHost(hostname)) return 'owner';
+  // Hosted project access is scoped by the authenticated Work API, not this query parameter.
+  if (requested === 'project') return 'hosted-project';
+  return 'public-demo';
 }
 
 function newPublicProjectId(): string {

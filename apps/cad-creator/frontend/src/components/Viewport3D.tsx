@@ -659,10 +659,25 @@ export const Viewport3D: React.FC<Props> = ({
     isDraggingRef.current = false;
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    if (cameraMode === 'orbit') {
-      orbitAngleRef.current.radius = Math.max(3, Math.min(60, orbitAngleRef.current.radius + e.deltaY * 0.02));
+  // Recompute only when editable walls change, never for every trackpad wheel event.
+  const minOrbitRadius = React.useMemo(() => {
+    if (!project.walls.length) return 5;
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const wall of project.walls) {
+      minX = Math.min(minX, wall.x1, wall.x2);
+      maxX = Math.max(maxX, wall.x1, wall.x2);
+      minZ = Math.min(minZ, wall.y1, wall.y2);
+      maxZ = Math.max(maxZ, wall.y1, wall.y2);
     }
+    return Math.max(5, Math.hypot((maxX - minX) * SCALE, (maxZ - minZ) * SCALE) * 0.45);
+  }, [project.walls]);
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (cameraMode !== 'orbit') return;
+    // Keep camera outside the footprint during trackpad scrolling in narrow stages.
+    const maxRadius = Math.max(60, minOrbitRadius * 8);
+    const step = Math.max(-240, Math.min(240, e.deltaY));
+    orbitAngleRef.current.radius = Math.max(minOrbitRadius, Math.min(maxRadius, orbitAngleRef.current.radius * Math.exp(step * 0.0015)));
   };
 
   // High-Resolution Snapshot trigger

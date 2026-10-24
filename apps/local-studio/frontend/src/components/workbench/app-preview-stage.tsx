@@ -11,6 +11,7 @@ import {
   AGENTSAM_PREVIEW_BRIDGE_VERSION
 } from "@/lib/preview-host-bridge";
 import { installCadHostBridge } from "@/lib/cad-host-bridge";
+import { canonicalCadPreviewUrl } from "@/lib/cad/cad-embed-url";
 import { runCadAssistantTurn } from "@/lib/cad/assistantTurn";
 import { approveCadProposal, isLocalCadExecutionHost } from "@/lib/cad/approval";
 import type { CadHostHandlers, CadSelectionContext } from "@/lib/cad-host-bridge";
@@ -22,7 +23,7 @@ interface AppPreviewStageProps {
 }
 
 function defaultCadUrl() {
-  return "/cad-creator/index.html?presentation=embedded";
+  return canonicalCadPreviewUrl();
 }
 
 export function AppPreviewStage({
@@ -32,7 +33,7 @@ export function AppPreviewStage({
 }: AppPreviewStageProps) {
   const resolvedInitialUrl = initialUrl || defaultCadUrl();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [url, setUrl] = useState(tab?.url || resolvedInitialUrl);
+  const [url, setUrl] = useState(canonicalCadPreviewUrl(tab?.url || resolvedInitialUrl));
   const [reloadKey, setReloadKey] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
