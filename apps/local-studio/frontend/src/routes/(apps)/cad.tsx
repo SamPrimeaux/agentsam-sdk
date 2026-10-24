@@ -69,10 +69,12 @@ export function CadStudioPage() {
           {approvalStatus && <span role="status">{approvalStatus}</span>}
         </div>
       )}
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div data-cad-editor-stage className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         {chatOpen && <CadConversationPane selected={selection?.object.label} />}
-        <iframe ref={iframeRef} title="CAD Creator" src={cadEmbeddedUrl({ projectId: search.project, revision: search.revision })}
-          className={"min-h-0 min-w-0 flex-1 border-0 "+(chatOpen ? "hidden md:block" : "block")} allow="fullscreen" />
+        <div data-cad-iframe-region className={"relative min-h-0 min-w-0 flex-1 overflow-hidden "+(chatOpen ? "hidden md:block" : "block")}>
+          <iframe ref={iframeRef} title="CAD Creator" src={cadEmbeddedUrl({ projectId: search.project, revision: search.revision })}
+            className="absolute inset-0 block h-full w-full border-0" allow="fullscreen" />
+        </div>
       </div>
     </div>
   );

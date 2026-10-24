@@ -265,10 +265,13 @@ test('CAD inherits the full hosted canvas height without another global sidebar'
   const css = readFileSync(new URL('../frontend/agentsam/packaged-console-frame.css', import.meta.url), 'utf8');
   const frame = readFileSync(new URL('../frontend/src/routes/(apps)/cad.tsx', import.meta.url), 'utf8');
   const shell = readFileSync(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
-  assert.match(css, /\.agentsam-route:has\(\[data-cad-studio-host\]\) \{\s*display: flex/);
-  assert.match(css, /\[data-cad-studio-host\] \{[\s\S]*?flex: 1 1 0%;/);
-  assert.match(css, /\[data-cad-studio-host\] iframe \{[\s\S]*?height: 100%;/);
+  assert.match(css, /\.agentsam-route:has\(\[data-cad-studio-host\]\) \{\s*position: relative/);
+  assert.match(css, /\[data-cad-studio-host\] \{\s*position: absolute;\s*inset: 0/);
+  assert.match(css, /\[data-cad-iframe-region\] iframe \{\s*position: absolute;\s*inset: 0/);
   assert.match(frame, /data-cad-studio-host/);
+  assert.match(frame, /data-cad-editor-stage/);
+  assert.match(frame, /data-cad-iframe-region/);
+  assert.match(frame, /className="absolute inset-0 block h-full w-full border-0"/);
   assert.match(frame, /presentation=embedded|cadEmbeddedUrl/);
   assert.match(shell, /!embedded \? <Nav\.Sidenav \/>/);
 });
