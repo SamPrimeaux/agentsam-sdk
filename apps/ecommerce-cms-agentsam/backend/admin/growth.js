@@ -391,11 +391,9 @@ async function saveCampaignEmailDraft(env, campaign, pack, user, origin) {
         shop_link: shopLink,
       })
     )
-    .run()
-    .catch((err) => {
-      console.error("[growth/email-draft]", err?.message || err);
-    });
+    .run();
 
+  // Report a draft ID only when the database actually acknowledged the insert.
   return messageId;
 }
 
