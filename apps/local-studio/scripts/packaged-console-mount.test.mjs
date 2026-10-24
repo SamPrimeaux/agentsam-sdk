@@ -130,7 +130,7 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
     ...context.NAV.apps.flatMap((item) => (item.children || []).map((entry) => entry.href)),
   ].filter(Boolean);
   for (const path of installedPaths.filter((item) => item.startsWith('/admin/'))) {
-    assert.ok(resolveConsoleFile(path.split('?')[0]), 'Packaged route missing: ' + path);
+    assert.ok(isStudioAdminPath(path.split('?')[0]) || resolveConsoleFile(path.split('?')[0]), 'Unowned admin route: ' + path);
   }
 });
 
