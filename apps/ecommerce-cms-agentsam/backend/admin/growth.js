@@ -499,6 +499,29 @@ async function publishCampaign(request, env, user, id) {
     pack.utm_links = buildUtmLinks(origin, id, row.slug);
   }
 
+  // A test email is never a publication: do not touch CMS, change status,
+  // or mark this campaign as active when the user clicks "Send test email".
+  const emailMode = body?.email_mode || "draft";
+  if (emailMode === "test") {
+    if (!channels.includes("email")) {
+      return json({ error: "Email is not enabled for this campaign" }, { status: 400 });
+    }
+    const result = await sendCampaignEmail(env, row, pack, {
+      mode: "test",
+      testEmail: body?.test_email,
+      user,
+      origin,
+    });
+    if (result.error || result.sent !== 1) {
+      return json({ error: result.error || "test_email_failed", publish: { test_only: true, email: result } }, { status: 400 });
+    }
+    return json({
+      ok: true,
+      campaign: mapCampaign(row),
+      publish: { test_only: true, homepage: null, email: result },
+    });
+  }
+
   const publishResult = {
     homepage: null,
     email: null,
@@ -520,7 +543,6 @@ async function publishCampaign(request, env, user, id) {
     publishResult.homepage = { ok: true, published_at: published.published_at };
   }
 
-  const emailMode = body?.email_mode || "draft";
   if (channels.includes("email")) {
     if (emailMode === "draft") {
       const draftId = await saveCampaignEmailDraft(env, row, pack, user, origin);
