@@ -10,9 +10,6 @@ import {
   RotateCcw, 
   Compass, 
   Layers, 
-  Sparkles, 
-  Video, 
-  Download, 
   Footprints, 
   HelpCircle,
   Minimize2
@@ -21,9 +18,6 @@ import {
 interface Props {
   project: ProjectState;
   onSnapshotTaken?: (dataUrl: string) => void;
-  onTakeSnapshot?: (dataUrl: string) => void;
-  onOpenVeoModal?: (snapshotUrl?: string) => void;
-  onOpenImageGenModal?: (snapshotUrl?: string) => void;
 }
 
 const SCALE = 0.0254; // 1 inch = 0.0254 meters
@@ -31,9 +25,6 @@ const SCALE = 0.0254; // 1 inch = 0.0254 meters
 export const Viewport3D: React.FC<Props> = ({
   project,
   onSnapshotTaken,
-  onTakeSnapshot,
-  onOpenVeoModal,
-  onOpenImageGenModal,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -685,7 +676,6 @@ export const Viewport3D: React.FC<Props> = ({
     if (!rendererRef.current) return;
     const dataUrl = rendererRef.current.domElement.toDataURL('image/png');
     if (onSnapshotTaken) onSnapshotTaken(dataUrl);
-    if (onTakeSnapshot) onTakeSnapshot(dataUrl);
     return dataUrl;
   };
 
@@ -771,29 +761,22 @@ export const Viewport3D: React.FC<Props> = ({
             Roof {showRoof ? 'ON' : 'OFF'}
           </button>
 
-          {/* Snapshot to AI Actions */}
           <button
+            type="button"
             onClick={() => {
               const url = takeSnapshot();
-              if (onOpenImageGenModal && url) onOpenImageGenModal(url);
+              if (!url) return;
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'agentsam-cad-snapshot.png';
+              link.click();
             }}
-            title="Render with Gemini Image Studio"
-            className="p-1.5 rounded bg-[#1E1E1E] hover:bg-[#333] text-blue-300 border border-blue-500/40 transition flex items-center space-x-1 text-xs font-medium"
+            title="Save a PNG snapshot of the current model"
+            aria-label="Save PNG snapshot"
+            className="p-1.5 rounded bg-[#1E1E1E] hover:bg-[#333] text-slate-200 border border-[#333] transition flex items-center space-x-1 text-xs font-medium"
           >
-            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-            <span className="hidden sm:inline">Render</span>
-          </button>
-
-          <button
-            onClick={() => {
-              const url = takeSnapshot();
-              if (onOpenVeoModal && url) onOpenVeoModal(url);
-            }}
-            title="Animate to Video with Veo"
-            className="p-1.5 rounded bg-[#1E1E1E] hover:bg-[#333] text-emerald-300 border border-emerald-500/40 transition flex items-center space-x-1 text-xs font-medium"
-          >
-            <Video className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">Veo</span>
+            <Camera className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Snapshot</span>
           </button>
         </div>
       </div>

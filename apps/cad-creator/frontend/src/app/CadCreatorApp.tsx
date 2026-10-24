@@ -33,8 +33,6 @@ import { ParametricEditor } from '../components/ParametricEditor';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import { ExportPublishModal } from '../components/ExportPublishModal';
 import { FurniturePicker } from '../components/FurniturePicker';
-import { VeoStudioModal } from '../components/VeoStudioModal';
-import { ImageGenModal } from '../components/ImageGenModal';
 import { SketchUploadModal } from '../components/SketchUploadModal';
 import { CloudProjectsModal } from '../components/CloudProjectsModal';
 import { TemplateLibraryModal } from '../components/TemplateLibraryModal';
@@ -56,14 +54,11 @@ import {
   Layers,
   Columns,
   Sparkles,
-  Video,
-  Image as ImageIcon,
   FileScan,
   Armchair,
   Magnet,
   Shield,
   LayoutGrid,
-  Sun,
   Camera,
   Play,
   RotateCcw,
@@ -227,13 +222,10 @@ export function CadCreatorApp({
 
   // 3. Modals State
   const [isFurniturePickerOpen, setIsFurniturePickerOpen] = useState(false);
-  const [isVeoModalOpen, setIsVeoModalOpen] = useState(false);
-  const [isImageGenModalOpen, setIsImageGenModalOpen] = useState(false);
   const [isSketchModalOpen, setIsSketchModalOpen] = useState(false);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isTemplateLibraryOpen, setIsTemplateLibraryOpen] = useState(false);
   const [isExportPublishOpen, setIsExportPublishOpen] = useState(false);
-  const [activeSnapshotUrl, setActiveSnapshotUrl] = useState<string | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // 4. Real-time Multiplayer Collaboration & Roles
@@ -289,9 +281,6 @@ export function CadCreatorApp({
     if (wsId === 'parametric') {
       setModelModule('parametric');
       setActiveWorkspace('model');
-    } else if (wsId === 'render') {
-      setActiveWorkspace('model');
-      setIsImageGenModalOpen(true);
     } else {
       setModelModule(null);
       setActiveWorkspace(wsId);
@@ -565,8 +554,6 @@ export function CadCreatorApp({
                 aria-expanded={modelModule === 'parametric'}
                 className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)]"
               >Parametric tools</button>
-              <button type="button" onClick={() => setIsImageGenModalOpen(true)}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)]">Render</button>
               <button
                 type="button"
                 onClick={() => setIsTemplateLibraryOpen(true)}
@@ -600,27 +587,6 @@ export function CadCreatorApp({
             <span className="text-[length:var(--text-xs)] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               Kinematics Online
             </span>
-          </div>
-        )}
-
-        {activeWorkspace === 'render' && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsImageGenModalOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[length:var(--text-sm)] font-semibold flex items-center gap-1 shadow-sm"
-            >
-              <ImageIcon className="size-3" />
-              <span>Render PBR Studio</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsVeoModalOpen(true)}
-              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[length:var(--text-sm)] font-semibold flex items-center gap-1 shadow-sm"
-            >
-              <Video className="size-3" />
-              <span>Veo Video Studio</span>
-            </button>
           </div>
         )}
 
@@ -728,9 +694,7 @@ export function CadCreatorApp({
                       }}/>
                     : accessMode === 'hosted-project'
                       ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
-                    : <Viewport3D project={project} onTakeSnapshot={(dataUrl)=>{
-                        setActiveSnapshotUrl(dataUrl);setIsImageGenModalOpen(true);
-                      }}/>}
+                    : <Viewport3D project={project}/>}
                 </div>
               )}
 
@@ -759,9 +723,7 @@ export function CadCreatorApp({
                   }}/>
                 : accessMode === 'hosted-project'
                   ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
-                : <Viewport3D project={project} onTakeSnapshot={(dataUrl)=>{
-                    setActiveSnapshotUrl(dataUrl);setIsImageGenModalOpen(true);
-                  }}/>}
+                : <Viewport3D project={project}/>}
               {modelModule === 'parametric' && (
                 <aside className="absolute right-0 top-0 bottom-0 z-20 w-full max-w-[440px] border-l border-white/10 bg-slate-950/95 shadow-2xl" aria-label="Parametric tools">
                   <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs">
@@ -840,34 +802,10 @@ export function CadCreatorApp({
             </div>
           )}
 
-          {/* WORKSPACE 5: RENDER */}
+          {/* Rendering now shows the current project instead of opening disconnected prototype dialogs. */}
           {activeWorkspace === 'render' && (
-            <div className="w-full h-full relative flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950">
-              <div className="text-center p-8 max-w-lg space-y-4">
-                <Sun className="size-12 mx-auto text-indigo-400 animate-pulse" />
-                <h2 className="text-lg font-bold tracking-tight text-white">Blender PBR & Generative Studio</h2>
-                <p className="text-xs text-slate-400 leading-relaxed font-mono">
-                  Photorealistic raytracing, Meshy AI 3D asset synthesis, and Veo cinematic walkthrough video generation.
-                </p>
-                <div className="flex justify-center gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsImageGenModalOpen(true)}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 flex items-center gap-1.5"
-                  >
-                    <ImageIcon className="size-4" />
-                    <span>Generate PBR Render</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsVeoModalOpen(true)}
-                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-600/30 flex items-center gap-1.5"
-                  >
-                    <Video className="size-4" />
-                    <span>Create Veo Walkthrough</span>
-                  </button>
-                </div>
-              </div>
+            <div className="w-full h-full">
+              <Viewport3D project={project}/>
             </div>
           )}
         </section>
@@ -955,23 +893,6 @@ export function CadCreatorApp({
         onClose={() => setIsExportPublishOpen(false)}
         project={project}
         canExport={permissions.canExport}
-      />
-
-      <VeoStudioModal
-        isOpen={isVeoModalOpen}
-        onClose={() => setIsVeoModalOpen(false)}
-        initialImageUrl={activeSnapshotUrl}
-      />
-
-      <ImageGenModal
-        isOpen={isImageGenModalOpen}
-        onClose={() => setIsImageGenModalOpen(false)}
-        initialImageUrl={activeSnapshotUrl}
-        onSendToVeo={(imageUrl) => {
-          setActiveSnapshotUrl(imageUrl);
-          setIsImageGenModalOpen(false);
-          setIsVeoModalOpen(true);
-        }}
       />
 
       <SketchUploadModal
