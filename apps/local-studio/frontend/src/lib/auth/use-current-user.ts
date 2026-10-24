@@ -35,6 +35,8 @@ type DesktopIdentityMessage = {
     email?: string;
     display_name?: string | null;
     displayName?: string | null;
+    avatar_url?: string | null;
+    image?: string | null;
   } | null;
 };
 
@@ -44,7 +46,7 @@ function normalizeDesktopUser(user: DesktopIdentityMessage["user"]): AppUser | n
     id: user.id,
     displayName: user.displayName ?? user.display_name ?? null,
     primaryEmail: user.email ?? null,
-    profileImageUrl: null,
+    profileImageUrl: user.image ?? user.avatar_url ?? null,
     isDevFallback: false,
   };
 }

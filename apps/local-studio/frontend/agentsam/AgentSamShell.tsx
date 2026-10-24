@@ -29,7 +29,6 @@ import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
 
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
-const AGENTSAM_PET_AVATAR = '/brand/agentsam-gorilla/v1/pet/animated/ledge-idle.gif';
 
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
 export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {}) {
@@ -43,16 +42,41 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const appearanceRef = useRef<ShellAppearancePreference | null>(null);
   const [sharing, setSharing] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
+  const [accountAvatarUrl, setAccountAvatarUrl] = useState<string | null>(null);
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+  const [avatarDraft, setAvatarDraft] = useState('');
+  const [avatarSaving, setAvatarSaving] = useState(false);
   const [globalAssistantFocused, setGlobalAssistantFocused] = useState(false);
   const [globalAssistantWidth, setGlobalAssistantWidth] = useState(390);
   const hydratedRef = useRef(state.hydrated);
   const pendingChromeShares = useRef<ChromeTabShare[]>([]);
   hydratedRef.current = state.hydrated;
+  useEffect(() => {
+    if (!user?.id || isPackagedDesktop()) return;
+    const controller = new AbortController();
+    void fetch('/api/settings/account-avatar', { credentials: 'same-origin', signal: controller.signal })
+      .then(async (res) => res.ok ? res.json() as Promise<{avatar_url?: string | null}> : null)
+      .then(data => { if (!controller.signal.aborted) setAccountAvatarUrl(data?.avatar_url || null); })
+      .catch(() => { /* Auth image remains a usable fallback when preferences cannot be read. */ });
+    return () => controller.abort();
+  }, [user?.id]);
   const trail = state.trails.find((item) => item.id === state.activeTrailId);
   const project = state.projects.find((item) => item.id === trail?.projectId);
   const isConversation = pathname === '/agentsam' || pathname === '/admin/agentsam' || pathname.startsWith('/chats');
   const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/') || pathname === '/admin/cad' || pathname.startsWith('/admin/cad/');
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
+  const isMovieModeRoute = pathname === '/media' || pathname.startsWith('/media/') ||
+    pathname === '/admin/moviemode' || pathname.startsWith('/admin/moviemode/');
+  // When a SideStage preview becomes the dedicated editor, close only its
+  // duplicate pane. Keep tabs and terminal/browser sessions for later reopening.
+  useEffect(() => {
+    if (!isCadRoute && !isMovieModeRoute) return;
+    const workspace = useWorkStore.getState();
+    const active = workspace.sideTabs.find(tab => tab.id === workspace.activeSideTabId);
+    if ((isCadRoute && active?.kind === 'app') || (isMovieModeRoute && active?.kind === 'media')) {
+      workspace.setSideOpen(false);
+    }
+  }, [pathname, isCadRoute, isMovieModeRoute]);
   // The platform owns its shell; product-owned /admin pages navigate into
   // the installed Ecommerce application without recreating product routers.
   const go = (to: string) => {
@@ -233,7 +257,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     conversation: trail ? { id: trail.id, title: trail.title } : undefined,
     projects: state.projects.map((item) => ({ id: item.id, name: item.name })),
     conversations: state.trails.map((item) => ({ id: item.id, title: item.title, projectId: item.projectId, pinned: item.pinned })),
-    account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: user.profileImageUrl || AGENTSAM_PET_AVATAR } : undefined,
+    account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
     destinations: [
       { id: 'home', label: 'Home', icon: <Home />, href: '/admin/home', active: pathname === '/' || pathname === '/admin/home' },
       { id: 'projects', label: 'Projects', icon: <Folder />, href: '/admin/projects', active: pathname === '/admin/projects' || pathname.startsWith('/admin/projects/') || pathname === '/projects' || pathname.startsWith('/projects/') },
@@ -282,7 +306,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     onShare: trail ? () => setSharing(true) : undefined,
     accountActions: [
       ...(isPackagedDesktop() ? [{ id: 'sign-in', label: 'Sign in to AgentSam', icon: <LogIn />, onSelect: () => setIdentityOpen(true) }] : []),
-      { id: 'settings', label: 'Account', icon: <Settings />, onSelect: () => go('/settings/general') },
+      { id: 'profile-image', label: 'Profile image', icon: <PawPrint />, onSelect: () => { setAvatarDraft(accountAvatarUrl || user?.profileImageUrl || ''); setAvatarDialogOpen(true); } },
+      { id: 'settings', label: 'Account settings', icon: <Settings />, onSelect: () => go('/settings/general') },
     ],
     projectActions: [
       { id: 'home', label: 'Project home', icon: <Folder />, onSelect: () => go('/admin/projects') },
@@ -306,7 +331,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
           <Nav.Trigger aria-label="Toggle sidebar" />
           <button type="button" className="platform-console-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={17} /><span>Search pages and tools</span><kbd>⌘K</kbd></button>
           <Nav.TopbarSpacer />
-          <AgentSamPetTrigger state={petState} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
+          <AgentSamPetTrigger state={petState} avatarUrl={accountAvatarUrl || user?.profileImageUrl} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
           <IconAction className="as-nav-button" label="Help & documentation" hint="Open AgentSam documentation" onClick={() => go('/docs')}><CircleHelp size={18} /></IconAction>
           <button type="button" className="as-nav-button" title="Notifications" aria-label="Notifications" onClick={() => go('/tickets')}><Bell size={17} /><span className="sr-only">View notifications in Tickets</span></button>
           <Nav.AccountSwitcher />
@@ -325,6 +350,27 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
 
       </div><CliDrawer /><CommandPalette />
       <Dialog open={sharing} onOpenChange={setSharing}><DialogContent><DialogTitle>Share conversation</DialogTitle><DialogDescription>Copy this conversation as text to share it. This does not create a public link.</DialogDescription><button type="button" className="as-nav-button" onClick={() => { if (!trail) return; void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => { toast('Conversation copied'); setSharing(false); }, () => toast('Could not copy conversation')); }}><Copy size={18} />Copy conversation</button></DialogContent></Dialog>
+      <Dialog open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}><DialogContent>
+        <DialogTitle>Profile image</DialogTitle>
+        <DialogDescription>Select an image from your authorized Brand/Media assets, then paste its image URL here. Saved against your signed-in user, not as an installation default.</DialogDescription>
+        <label className="flex flex-col gap-1 text-sm">Image URL
+          <input type="text" value={avatarDraft} onChange={event => setAvatarDraft(event.target.value)}
+            className="rounded border border-border bg-background px-3 py-2" placeholder="/brand/... or https://..." />
+        </label>
+        <button type="button" className="as-nav-button" disabled={avatarSaving} onClick={() => {
+          setAvatarSaving(true);
+          void fetch('/api/settings/account-avatar', {
+            method: 'PUT', credentials: 'same-origin',
+            headers: { 'content-type': 'application/json' }, body: JSON.stringify({ avatar_url: avatarDraft.trim() || null }),
+          }).then(async response => {
+            if (!response.ok) throw Error('Could not save profile image');
+            const data = await response.json() as { avatar_url: string | null };
+            setAccountAvatarUrl(data.avatar_url);
+            setAvatarDialogOpen(false);
+            toast.success('Profile image saved');
+          }).catch(() => toast.error('Profile image could not be saved')).finally(() => setAvatarSaving(false));
+        }}>{avatarSaving ? 'Saving…' : 'Save profile image'}</button>
+      </DialogContent></Dialog>
       <DesktopIdentityPortal open={identityOpen} onOpenChange={setIdentityOpen} />
       <DesktopStartupOverlay />
       <AnnotationHelper />

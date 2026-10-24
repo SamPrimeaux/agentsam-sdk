@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolveConsoleFile, servePackagedConsole } from '../backend/worker/packaged-console.js';
+import { canonicalStudioPath, isStudioAdminPath } from '../shared/studio-admin-routes.mjs';
+import { handleStudioAccountAvatar } from '../backend/worker/studio-user-preferences.js';
 
 test('platform routes resolve to the real Ecommerce application bundle', () => {
   for (const [path, file] of [
@@ -100,8 +102,11 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
   runInNewContext(source, context);
   assert.equal(context.NAV.main[0].href, '/admin/home');
   assert.equal(context.NAV.main.some((item) => item.href === '/agentsam'), false);
-  assert.equal(context.NAV.apps.filter((item) => item.href === '/agentsam').length, 1);
-  assert.equal(context.NAV.apps.find((item) => item.href === '/agentsam').label, 'AgentSam');
+  assert.equal(context.NAV.apps.filter((item) => item.href === '/admin/agentsam').length, 1);
+  assert.equal(context.NAV.apps.find((item) => item.href === '/admin/agentsam').label, 'AgentSam');
+  assert.equal(context.NAV.apps.some((item) => item.href === '/browse' || item.href === '/media' || item.href === '/samsketch'), false);
+  assert.equal(context.NAV.apps.some((item) => item.href === '/admin/moviemode'), true);
+  assert.equal(context.NAV.apps.some((item) => item.href === '/admin/cad'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/cli'), false);
   const products = context.NAV.main.find((item) => item.id === 'products');
   const productPaths = new Set(products.children.map((item) => item.href));
@@ -126,8 +131,25 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
     ...context.NAV.apps.flatMap((item) => (item.children || []).map((entry) => entry.href)),
   ].filter(Boolean);
   for (const path of installedPaths.filter((item) => item.startsWith('/admin/'))) {
-    assert.ok(resolveConsoleFile(path.split('?')[0]), 'Packaged route missing: ' + path);
+    assert.ok(isStudioAdminPath(path.split('?')[0]) || resolveConsoleFile(path.split('?')[0]), 'Unowned admin route: ' + path);
   }
+});
+
+test('Studio-owned admin URLs reuse existing apps and preserve flat compatibility routes', () => {
+  for (const [oldPath, currentPath] of [
+    ['/agentsam', '/admin/agentsam'],
+    ['/cad', '/admin/cad'],
+    ['/samsketch', '/admin/cad'],
+    ['/media', '/admin/moviemode'],
+    ['/media/edit', '/admin/moviemode/edit'],
+  ]) assert.equal(canonicalStudioPath(oldPath), currentPath);
+  for (const path of ['/admin/agentsam', '/admin/cad', '/admin/moviemode', '/admin/projects']) {
+    assert.ok(isStudioAdminPath(path), path);
+  }
+  assert.equal(isStudioAdminPath('/admin/products'), false);
+  assert.equal(isStudioAdminPath('/admin/theme-editor'), false);
+  const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
+  assert.match(worker, /!isStudioAdminPath\(url\.pathname\)/);
 });
 
 test('Growth appearance is a host-only, theme-token override', () => {
@@ -174,8 +196,45 @@ test('desktop Console links resolve to real platform or installed Ecommerce app 
     return context.window.location.hash;
   };
   assert.equal(visit('/admin/home'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fhome');
-  assert.equal(visit('/admin/agentsam'), '#/agentsam');
+  assert.equal(visit('/admin/agentsam'), '#/admin/agentsam');
+  assert.equal(visit('/admin/cad'), '#/admin/cad');
+  assert.equal(visit('/admin/moviemode'), '#/admin/moviemode');
   assert.equal(visit('/cad'), '#/cad');
   assert.equal(visit('/admin/products'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts');
   assert.equal(visit('/admin/theme-editor?slug=home'), '#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Ftheme-editor%3Fslug%3Dhome');
+});
+
+
+test('AgentSam app persists authenticated avatar preference without new tables', async () => {
+  let json = '{"settings_general":{"openLastProject":true}}';
+  const env = {
+    DB: {
+      prepare(sql) {
+        return {
+          bind(...args) {
+            return {
+              async first() { return { ui_preferences_json: json }; },
+              async run() { json = args[1]; return { success: true }; }
+            };
+          }
+        };
+      }
+    }
+  };
+  const url = 'https://agentsam.inneranimalmedia.com/api/settings/account-avatar';
+  const guest = await handleStudioAccountAvatar(new Request(url), env, null);
+  assert.equal(guest.status, 401);
+  const put = await handleStudioAccountAvatar(new Request(url, {
+    method: 'PUT', headers: { 'content-type': 'application/json', origin: 'https://agentsam.inneranimalmedia.com' },
+    body: JSON.stringify({ avatar_url: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg' })
+  }), env, 'signed-in-user');
+  assert.equal(put.status, 200);
+  const get = await handleStudioAccountAvatar(new Request(url), env, 'signed-in-user');
+  assert.equal((await get.json()).avatar_url, '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg');
+  assert.equal(JSON.parse(json).settings_general.openLastProject, true, 'other preferences survive');
+  const reject = await handleStudioAccountAvatar(new Request(url, {
+    method: 'PUT', headers: { 'content-type':'application/json' },
+    body: '{"avatar_url":"javascript:alert(1)"}'
+  }), env, 'signed-in-user');
+  assert.equal(reject.status, 400);
 });
