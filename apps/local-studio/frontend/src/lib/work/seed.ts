@@ -163,10 +163,10 @@ jobs:
   ];
 }
 
-export function newProject(name = "Studio", description = "Default workspace"): Project {
+export function newProject(name = "Studio", description = "Default workspace", projectId = uid()): Project {
   const now = Date.now();
   return {
-    id: uid(),
+    id: projectId,
     name,
     description: description.includes("Scratch") ? description : `${description} · Scratch`,
     createdAt: now,
