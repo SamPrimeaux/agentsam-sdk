@@ -12,7 +12,8 @@
     ".": "./src/index.js",
     "./project": "./src/project.js",
     "./package.json": "./package.json",
-    "./storage": "./src/storage.js"
+    "./storage": "./src/storage.js",
+    "./http": "./src/http.js"
   },
   "files": [
     "src",
