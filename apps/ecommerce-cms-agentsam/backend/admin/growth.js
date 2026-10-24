@@ -106,7 +106,7 @@ async function getOverview(env) {
       .first()
       .catch(() => ({ n: 0 })),
     env.DB.prepare(
-      `SELECT * FROM growth_campaigns WHERE account_id = ? ORDER BY updated_at DESC LIMIT 6`
+      `SELECT * FROM growth_campaigns WHERE account_id = ? AND status != 'archived' ORDER BY updated_at DESC LIMIT 6`
     )
       .bind(requireApplicationAccountId())
       .all()
@@ -239,22 +239,12 @@ async function updateCampaign(request, env, user, id) {
   setField("audience", body.audience);
   setField("priority", body.priority);
   setField("brief", body.brief);
-  setField("status", body.status);
   setField("approval_mode", body.approval_mode);
   setField("primary_source", body.primary_source);
   setField("start_date", body.start_date);
   setField("end_date", body.end_date);
   if (body.channels !== undefined) {
     setField("channels_json", JSON.stringify(body.channels || []));
-  }
-  if (body.pack !== undefined) {
-    setField("pack_json", JSON.stringify(body.pack || {}));
-  }
-  if (body.metadata !== undefined) {
-    setField("metadata_json", JSON.stringify(body.metadata || {}));
-  }
-  if (body.readiness_score !== undefined) {
-    setField("readiness_score", body.readiness_score);
   }
 
   if (!fields.length) return getCampaign(env, id);
@@ -269,6 +259,22 @@ async function updateCampaign(request, env, user, id) {
     .run();
 
   return getCampaign(env, id);
+}
+
+// Archive rather than erase campaign receipts, attribution and published revisions.
+async function archiveCampaign(env, user, id) {
+  const result = await env.DB.prepare(
+    `UPDATE growth_campaigns SET status = 'archived',
+      updated_by = ?, updated_at = datetime('now')
+      WHERE account_id = ? AND id = ? AND status != 'archived'`
+  ).bind(user.id, requireApplicationAccountId(), id).run();
+  if (Number(result.meta?.changes || 0) !== 1) {
+    return json({ error: "Campaign not found or already archived" }, { status: 404 });
+  }
+  const row = await env.DB.prepare(
+    "SELECT * FROM growth_campaigns WHERE account_id = ? AND id = ? LIMIT 1"
+  ).bind(requireApplicationAccountId(), id).first();
+  return json({ ok: true, archived: true, campaign: mapCampaign(row) });
 }
 
 async function generateCampaignPack(env, user, id) {
@@ -615,6 +621,13 @@ export async function handleGrowthApi(request, env, url, user) {
       return await updateCampaign(request, env, user, m[1]);
     } catch (err) {
       return json({ error: err?.message || "Update failed" }, { status: 500 });
+    }
+  }
+  if (m && method === "DELETE") {
+    try {
+      return await archiveCampaign(env, user, m[1]);
+    } catch (err) {
+      return json({ error: err?.message || "Archive failed" }, { status: 500 });
     }
   }
 
