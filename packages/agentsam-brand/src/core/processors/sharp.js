@@ -4,11 +4,13 @@ import { createRequire } from 'node:module';
 import { inspectBrandAsset } from '../inspect.js';
 import { BrandAssetError } from '../errors.js';
 
-const require = createRequire(import.meta.url);
-
 function tryLoadSharp() {
   try {
-    return require('sharp');
+    // Sharp is an optional Node-native image processor. Cloudflare Workers
+    // bundle this package with an HTTPS import.meta.url; createRequire only
+    // accepts file URLs or absolute paths and must not run at module import.
+    if (!import.meta.url.startsWith('file:')) return null;
+    return createRequire(import.meta.url)('sharp');
   } catch {
     return null;
   }
