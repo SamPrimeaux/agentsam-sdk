@@ -7,7 +7,9 @@ import { resolveConsoleFile } from '../backend/worker/packaged-console.js';
 const source = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 
 test('canonical Projects owns one host-neutral Work UI; old flat paths redirect without leaks', () => {
-  assert.deepEqual(STUDIO_ADMIN_MOUNTS.map((mount) => mount.canonical), ['/admin/projects']);
+  assert.deepEqual(STUDIO_ADMIN_MOUNTS.map((mount) => mount.canonical), [
+    '/admin/projects', '/admin/agentsam', '/admin/cad', '/admin/cad', '/admin/moviemode'
+  ]);
   assert.equal(canonicalStudioPath('/projects'), '/admin/projects');
   assert.equal(canonicalStudioPath('/projects/proj_123'), '/admin/projects/proj_123');
   assert.equal(canonicalStudioPath('/projects-other'), null);
@@ -16,7 +18,10 @@ test('canonical Projects owns one host-neutral Work UI; old flat paths redirect 
   assert.ok(isStudioAdminPath('/admin/projects'));
   assert.ok(isStudioAdminPath('/admin/projects/proj_123'));
   assert.equal(isStudioAdminPath('/admin/projects-other'), false);
-  assert.equal(isStudioAdminPath('/admin/agentsam'), false);
+  assert.equal(isStudioAdminPath('/admin/agentsam'), true);
+  assert.equal(isStudioAdminPath('/admin/cad'), true);
+  assert.equal(isStudioAdminPath('/admin/moviemode'), true);
+  assert.equal(isStudioAdminPath('/admin/products'), false);
 });
 test('the Ecommerce mount does not capture Studio Projects; existing product pages keep their owner', () => {
   assert.equal(resolveConsoleFile('/admin/projects'), null);
