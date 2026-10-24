@@ -95,7 +95,7 @@ function paintMetrics(app, metrics) {
   setGrowthMetric(app, "direct-sessions", display(direct));
   setGrowthMetric(app, "organic-sessions", display(organic));
   setGrowthMetric(app, "kpi-sessions", display(total));
-  setGrowthMetric(app, "kpi-top-channel", direct == null || organic == null ? "—" : direct >= organic ? "Direct" : "Organic");
+  setGrowthMetric(app, "kpi-top-channel", metrics.channel_breakdown?.[0]?.source || "—");
   setGrowthMetric(app, "kpi-direct-sessions", display(direct));
   setGrowthMetric(app, "kpi-organic", display(organic));
   setGrowthMetric(app, "kpi-revenue", revenue);
@@ -108,21 +108,25 @@ function paintMetrics(app, metrics) {
     if (spans[1]) spans[1].style.flex = String(organic);
   }
 
-  const directCard = app.querySelector('[data-page="overview"] .fnf-source:nth-of-type(1)');
-  if (directCard) {
-    const sessionEl = directCard.querySelector(".fnf-source-top div:last-child");
-    const valueEl = directCard.querySelector(".fnf-source-value");
-    if (sessionEl) sessionEl.textContent = `${display(direct)} sessions`;
-    if (valueEl) valueEl.textContent = revenue;
-  }
+  const channels = Array.isArray(metrics.channel_breakdown) ? metrics.channel_breakdown : [];
+  const cards = app.querySelectorAll('[data-page="overview"] .fnf-source');
+  cards.forEach((card, index) => {
+    const source = channels[index];
+    card.hidden = !source;
+    if (!source) return;
+    const label = card.querySelector("[data-source-name]");
+    const icon = card.querySelector(".fnf-source-icon");
+    const sessionEl = card.querySelector(".fnf-source-top div:last-child");
+    const valueEl = card.querySelector(".fnf-source-value");
+    const captionEl = card.querySelector(".fnf-source-caption");
+    const count = Number.isFinite(Number(source.sessions)) ? String(Number(source.sessions)) : "—";
+    if (label) label.textContent = source.source || "Unknown";
+    if (icon) icon.textContent = (source.source || "?").charAt(0).toUpperCase();
+    if (sessionEl) sessionEl.textContent = `${count} sessions`;
+    if (valueEl) valueEl.textContent = count;
+    if (captionEl) captionEl.textContent = "Recorded sessions";
+  });
 
-  const googleCard = app.querySelector('[data-page="overview"] .fnf-source:nth-of-type(2)');
-  if (googleCard) {
-    const sessionEl = googleCard.querySelector(".fnf-source-top div:last-child");
-    const valueEl = googleCard.querySelector(".fnf-source-value");
-    if (sessionEl) sessionEl.textContent = `${display(organic)} sessions`;
-    if (valueEl) valueEl.textContent = revenue;
-  }
 }
 
 function paintChannelBreakdown(app, channels) {
