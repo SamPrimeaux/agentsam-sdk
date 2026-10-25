@@ -746,17 +746,6 @@ export function CadCreatorApp({
                 : accessMode === 'hosted-project' && !templateCopyName
                   ? hostedEmptyPane
                 : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>}
-              {modelModule === 'parametric' && (
-                <aside className="absolute right-0 top-0 bottom-0 z-20 w-full max-w-[440px] border-l border-white/10 bg-slate-950/95 shadow-2xl" aria-label="Parametric tools">
-                  <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs">
-                    <span className="font-semibold">Parametric tools · current model</span>
-                    <button type="button" className="rounded px-2 py-1 hover:bg-white/10" onClick={() => setModelModule(null)} aria-label="Close parametric tools">Close</button>
-                  </div>
-                  <div className="h-[calc(100%-38px)] overflow-auto">
-                    <ParametricEditor project={project} onUpdateProject={(next) => updateProject(() => next)} canEdit={!isViewer} />
-                  </div>
-                </aside>
-              )}
             </div>
           )}
 
