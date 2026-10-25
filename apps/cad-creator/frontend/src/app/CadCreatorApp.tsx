@@ -34,7 +34,9 @@ import { ExportPublishModal } from '../components/ExportPublishModal';
 import { FurniturePicker } from '../components/FurniturePicker';
 import { SketchUploadModal } from '../components/SketchUploadModal';
 import { CloudProjectsModal } from '../components/CloudProjectsModal';
-import { TemplateLibraryModal } from '../components/TemplateLibraryModal';
+import { TemplateDrawer } from '../components/TemplateDrawer';
+import { SamSketchRail } from '../components/SamSketchRail';
+import { SamSketchOptionsBar } from '../components/SamSketchOptionsBar';
 import { TemplateStarterGrid } from '../components/TemplateStarterGrid';
 import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
@@ -58,7 +60,6 @@ import {
   Armchair,
   Magnet,
   Shield,
-  LayoutGrid,
   Camera,
   Play,
   RotateCcw,
@@ -425,7 +426,7 @@ export function CadCreatorApp({
   // present (loading or failed) the original status text stays: a failed load is never replaced by a starter.
   const hostedEmptyPane = (sourceStatus === 'loading' || hostedProjectId)
     ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
-    : <TemplateStarterGrid onSelect={startFromTemplate} onBrowseAll={() => setIsTemplateLibraryOpen(true)} />;
+    : <TemplateStarterGrid onSelect={startFromTemplate} onBrowseAll={() => {setExplorerOpen(true);setIsTemplateLibraryOpen(true)}} />;
 
   const currentWorkspaceDescriptor =
     WORKSPACE_REGISTRY.find((w) => w.id === activeWorkspace) || WORKSPACE_REGISTRY[0];
@@ -467,7 +468,7 @@ export function CadCreatorApp({
           canUndo={history.length > 0 && !isViewer} canRedo={redoStack.length > 0 && !isViewer}
           workspace={activeWorkspace} onWorkspace={handleSelectWorkspace}
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
-          onNew={startBlankProject} onTemplates={() => setIsTemplateLibraryOpen(true)}
+          onNew={startBlankProject} onTemplates={() => {setExplorerOpen(true);setIsTemplateLibraryOpen(true)}} onFixtures={() => setIsFurniturePickerOpen(true)}
           onExport={() => setIsExportPublishOpen(true)}
           onToggleExplorer={() => { if ((presentation === 'embedded' || window.matchMedia('(max-width: 920px)').matches) && !explorerOpen) setInspectorOpen(false); setExplorerOpen(v => !v); }}
           onToggleInspector={() => { if ((presentation === 'embedded' || window.matchMedia('(max-width: 920px)').matches) && !inspectorOpen) setExplorerOpen(false); setInspectorOpen(v => !v); }}
@@ -568,14 +569,6 @@ export function CadCreatorApp({
                 onClick={() => setShowBimStarters((previous) => !previous)}
                 className="rounded bg-amber-500/15 px-2 py-1 text-[length:var(--text-sm)] text-amber-300 hover:bg-amber-500/25"
               >BIM Starters</button>
-              <button
-                type="button"
-                onClick={() => setIsTemplateLibraryOpen(true)}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)] flex items-center gap-1"
-              >
-                <LayoutGrid className="size-3 text-indigo-400" />
-                <span>Library</span>
-              </button>
             </div>
           </div>
         )}
@@ -628,11 +621,27 @@ export function CadCreatorApp({
       <main className="flex-1 flex overflow-hidden relative min-h-0">
         <div className="cad-workspace-body">
           {(activeWorkspace === 'plan' || activeWorkspace === 'model') && explorerOpen && (
-            <CadProjectExplorer project={project} selection={uiSelection}
-              onSelect={setUiSelection} onClose={() => setExplorerOpen(false)} />
+            <div className="cad-left-dock">
+              <div className="cad-dock-tabs" role="tablist" aria-label="Left panel">
+                <button type="button" role="tab" aria-selected={!isTemplateLibraryOpen} onClick={() => setIsTemplateLibraryOpen(false)}>Objects</button>
+                <button type="button" role="tab" aria-selected={isTemplateLibraryOpen} onClick={() => setIsTemplateLibraryOpen(true)}>Templates</button>
+              </div>
+              {isTemplateLibraryOpen
+                ? <TemplateDrawer onClose={() => setIsTemplateLibraryOpen(false)}
+                    canLoad={getPermissions(accessMode === 'hosted-project' && !hostedSelection ? 'Editor' : currentUser.role).canLoadTemplates}
+                    onApply={tmpl => {
+                      if (accessMode === 'hosted-project' && !hostedSelection) { startFromTemplate(tmpl, tmpl.name); return; }
+                      if (isViewer) return;
+                      updateProject(() => ({ ...tmpl, id: `proj_${Date.now()}`, updatedAt: Date.now(), version: 1 }));
+                      showToast(`Loaded "${tmpl.name}" template`);
+                    }} />
+                : <CadProjectExplorer project={project} selection={uiSelection}
+                    onSelect={setUiSelection} onClose={() => setExplorerOpen(false)} />}
+            </div>
           )}
         {/* PRIMARY VIEWPORT STAGE */}
         <section className="cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]">
+          {studioView === 'edit' && (activeWorkspace === 'plan' || activeWorkspace === 'model') && <div className="cad-optbar-wrap"><SamSketchOptionsBar activeTool={activeTool} /></div>}
           {sourceStatus === 'unavailable' && sourceError && (
             <div role="alert" className="absolute left-3 top-3 z-40 max-w-[min(430px,calc(100%-24px))] rounded-xl border border-amber-400/35 bg-slate-950/95 p-3 text-xs text-slate-100 shadow-xl">
               <strong>{accessMode === 'hosted-project' ? 'Registered CAD project unavailable' : accessMode === 'owner' ? 'Owner project unavailable' : 'Public example unavailable'}</strong>
@@ -682,13 +691,14 @@ export function CadCreatorApp({
                       } catch { /* selection without real id supplies no context */ }
                     }}
                   />
+                  <SamSketchRail tool={activeTool} onTool={setActiveTool} readOnly={isViewer} onPlace={() => setIsFurniturePickerOpen(true)} />
                 </div>
               )}
 
               {(planLayout === 'split') && (
                 <div className="h-full relative w-1/2">
                   {hostedSelection && sourceStatus==='loaded'
-                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSelect={({designId})=>{
+                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly siteEditable onSelect={({designId})=>{
                         const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                         for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                           setUiSelection({group,id:designId});setInspectorOpen(true);break;
@@ -717,7 +727,7 @@ export function CadCreatorApp({
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
               : hostedSelection && sourceStatus==='loaded'
-                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSelect={({designId})=>{
+                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly siteEditable onSelect={({designId})=>{
                     const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                     for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                       setUiSelection({group,id:designId});setInspectorOpen(true);break;
@@ -824,22 +834,6 @@ export function CadCreatorApp({
         {assistantReply && <p role="status" className="mt-2 whitespace-pre-wrap">{assistantReply}</p>}
         {copilotDraft && <><textarea readOnly value={copilotDraft} aria-label="CAD request draft" rows={4} className="mt-2 w-full rounded bg-slate-800 p-2 text-white"/><button type="button" onClick={() => void navigator.clipboard.writeText(copilotDraft)}>Copy request</button></>}
       </aside>}
-      <TemplateLibraryModal
-        isOpen={isTemplateLibraryOpen}
-        onClose={() => setIsTemplateLibraryOpen(false)}
-        onSelectTemplate={(tmpl) => {
-          if (accessMode === 'hosted-project' && !hostedSelection) { startFromTemplate(tmpl, tmpl.name); return; }
-          if (isViewer) return;
-          updateProject(() => ({
-            ...tmpl,
-            id: `proj_${Date.now()}`,
-            updatedAt: Date.now(),
-            version: 1
-          }));
-          showToast(`Loaded "${tmpl.name}" template`);
-        }}
-        userRole={accessMode === 'hosted-project' && !hostedSelection ? 'Editor' : currentUser.role}
-      />
 
       <FurniturePicker
         isOpen={isFurniturePickerOpen}

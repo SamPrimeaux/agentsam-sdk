@@ -1,19 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { ViewCube } from './ViewCube';
+import { publishWorldView, registerWorldView, type WorldViewCommands } from '../lib/world-view-store';
 import * as THREE from 'three';
 import { DoorElement, FurnitureElement, ProjectState, WallElement, WindowElement, ParametricObject } from '@inneranimalmedia/agentsam-cad-shared';
-import { 
-  Camera, 
-  Sun, 
-  Moon, 
-  Eye, 
-  Maximize2, 
-  RotateCcw, 
-  Compass, 
-  Layers, 
-  Footprints, 
-  HelpCircle,
-  Minimize2
-} from 'lucide-react';
 
 interface Props {
   project: ProjectState;
@@ -690,109 +679,30 @@ export const Viewport3D: React.FC<Props> = ({
     return dataUrl;
   };
 
+  // Camera and view controls live in the right-hand Scene tab; this view only publishes state and executes commands.
+  const viewApi = useRef<Partial<WorldViewCommands>>({});
+  viewApi.current = {
+    setCamera: id => setCameraMode(id as typeof cameraMode),
+    toggleRoof: () => setShowRoof(v => !v),
+    capture: () => {
+      const url = takeSnapshot();
+      if (!url) return;
+      const link = document.createElement('a');
+      link.href = url; link.download = 'agentsam-cad-snapshot.png'; link.click();
+    },
+  };
+  useEffect(() => {
+    const unregister = registerWorldView(() => viewApi.current);
+    publishWorldView({ kind: 'model', ready: true, cameras: [
+      { id: 'orbit', label: 'Orbit' }, { id: 'firstperson', label: 'Walkthrough' },
+      { id: 'topdown', label: 'Top' }, { id: 'isometric', label: 'Isometric' },
+    ]});
+    return unregister;
+  }, []);
+  useEffect(() => { publishWorldView({ cameraId: cameraMode, roofVisible: showRoof }); }, [cameraMode, showRoof]);
+
   return (
     <div className="w-full h-full relative bg-[#121212] flex flex-col select-none overflow-hidden group">
-      {/* 3D Viewport Header Bar */}
-      <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center space-x-1 bg-[#252525] border border-[#333] p-1 rounded shadow-lg pointer-events-auto">
-          <button
-            onClick={() => setCameraMode('orbit')}
-            className={`px-2.5 py-1 text-xs font-medium rounded flex items-center space-x-1.5 transition ${
-              cameraMode === 'orbit'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-gray-400 hover:text-white hover:bg-[#333]'
-            }`}
-          >
-            <Compass className="w-3.5 h-3.5" />
-            <span>Orbit 3D</span>
-          </button>
-          <button
-            onClick={() => {
-              setCameraMode('firstperson');
-              if (cameraRef.current) fpPosRef.current.set(targetRef.current.x, 1.65, targetRef.current.z);
-            }}
-            className={`px-2.5 py-1 text-xs font-medium rounded flex items-center space-x-1.5 transition ${
-              cameraMode === 'firstperson'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-gray-400 hover:text-white hover:bg-[#333]'
-            }`}
-          >
-            <Footprints className="w-3.5 h-3.5" />
-            <span>Walkthrough</span>
-          </button>
-          <button
-            onClick={() => setCameraMode('topdown')}
-            className={`px-2.5 py-1 text-xs font-medium rounded flex items-center space-x-1.5 transition ${
-              cameraMode === 'topdown'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-gray-400 hover:text-white hover:bg-[#333]'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Top 3D</span>
-          </button>
-          <button
-            onClick={() => setCameraMode('isometric')}
-            className={`px-2.5 py-1 text-xs font-medium rounded flex items-center space-x-1.5 transition ${
-              cameraMode === 'isometric'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-gray-400 hover:text-white hover:bg-[#333]'
-            }`}
-          >
-            <span>Isometric</span>
-          </button>
-        </div>
-
-        {/* Time of Day & Lighting Control */}
-        <div className="flex items-center space-x-1.5 bg-[#252525] border border-[#333] p-1 rounded shadow-lg pointer-events-auto">
-          <div className="flex bg-[#1E1E1E] p-0.5 rounded border border-[#333]">
-            {(['morning', 'noon', 'sunset', 'night'] as const).map((t) => (
-              <button
-                key={t}
-                type="button" aria-pressed={timeOfDay===t} disabled={!onLightingChange}
-                onClick={() => onLightingChange?.({timeOfDay:t})}
-                className={`px-2 py-0.5 text-[length:var(--text-sm)] rounded capitalize transition ${
-                  timeOfDay === t
-                    ? 'bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={() => setShowRoof((prev) => !prev)}
-            className={`px-2 py-1 text-xs rounded border transition ${
-              showRoof
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 font-medium'
-                : 'bg-[#1E1E1E] text-gray-400 border-[#333] hover:text-white'
-            }`}
-          >
-            Roof {showRoof ? 'ON' : 'OFF'}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              const url = takeSnapshot();
-              if (!url) return;
-              const link = document.createElement('a');
-              link.href = url;
-              link.download = 'agentsam-cad-snapshot.png';
-              link.click();
-            }}
-            title="Save a PNG snapshot of the current model"
-            aria-label="Save PNG snapshot"
-            className="p-1.5 rounded bg-[#1E1E1E] hover:bg-[#333] text-slate-200 border border-[#333] transition flex items-center space-x-1 text-xs font-medium"
-          >
-            <Camera className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Snapshot</span>
-          </button>
-        </div>
-      </div>
-
       {/* Main 3D Canvas Mounting Container */}
       <div
         ref={mountRef}
@@ -818,6 +728,8 @@ export const Viewport3D: React.FC<Props> = ({
           )}
         </div>
       )}
+
+      <div className="absolute bottom-12 right-2.5 z-10"><ViewCube/></div>
 
       {/* Bottom Status Bar */}
       <div className="absolute bottom-2.5 right-2.5 z-10 pointer-events-none flex items-center space-x-2">
