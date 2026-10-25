@@ -95,6 +95,7 @@ export function CadCreatorApp({
   const [hostedProjectId,setHostedProjectId] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('project') || '');
   const [hostedRevision,setHostedRevision] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('revision') || '');
   const [hostedSelection,setHostedSelection] = useState<CadHostedSelection|null>(null);
+  const [sceneInventory,setSceneInventory] = useState<Array<{category:string;count:number}>>([]);
   useEffect(() => {
     if (accessMode !== 'hosted-project') return;
     let active=true;
@@ -104,7 +105,7 @@ export function CadCreatorApp({
   useEffect(() => {
     if (accessMode !== 'hosted-project' || !hostedProjectId) return;
     let active=true;
-    setSourceStatus('loading');setSourceError('');setHostedSelection(null);
+    setSourceStatus('loading');setSourceError('');setHostedSelection(null);setSceneInventory([]);
     void loadHostedProject(hostedProjectId,hostedRevision||undefined).then(selection=>{
       if(!active)return;
       setProject(selection.project || { ...createEmptyCadProject(), id: hostedProjectId, name: selection.registry.project.name });setHostedSelection(selection);
@@ -629,6 +630,7 @@ export function CadCreatorApp({
         <div className="cad-workspace-body">
           {(activeWorkspace === 'plan' || activeWorkspace === 'model') && explorerOpen && (
             <CadProjectExplorer project={project} selection={uiSelection}
+              sceneInventory={hostedSelection?.revision.revision==='current'&&!hostedSelection.project ? sceneInventory : undefined}
               onSelect={setUiSelection} onClose={() => setExplorerOpen(false)} />
           )}
         {/* PRIMARY VIEWPORT STAGE */}
@@ -688,7 +690,7 @@ export function CadCreatorApp({
               {(planLayout === 'split') && (
                 <div className="h-full relative w-1/2">
                   {hostedSelection && sourceStatus==='loaded'
-                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSelect={({designId})=>{
+                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSceneInventory={setSceneInventory} onSelect={({designId})=>{
                         const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                         for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                           setUiSelection({group,id:designId});setInspectorOpen(true);break;
@@ -717,7 +719,7 @@ export function CadCreatorApp({
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
               : hostedSelection && sourceStatus==='loaded'
-                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSelect={({designId})=>{
+                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSceneInventory={setSceneInventory} onSelect={({designId})=>{
                     const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                     for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                       setUiSelection({group,id:designId});setInspectorOpen(true);break;

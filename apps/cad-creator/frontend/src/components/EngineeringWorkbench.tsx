@@ -21,8 +21,9 @@ const groups = (p:ProjectState):Array<{id:CadElementGroup;title:string;entries:{
  {id:'parametricObjects',title:'Parametric',entries:(p.parametricObjects||[]).map(x=>({id:x.id,label:x.name}))},
 ];
 
-export function CadProjectExplorer({project,selection,onSelect,onClose}:{
- project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onClose:()=>void
+export function CadProjectExplorer({project,selection,onSelect,onClose,sceneInventory}:{
+ project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onClose:()=>void;
+ sceneInventory?:Array<{category:string;count:number}>;
 }) {
  const [filter,setFilter]=useState('');
  const [closed,setClosed]=useState<Record<string,boolean>>({});
@@ -32,9 +33,15 @@ export function CadProjectExplorer({project,selection,onSelect,onClose}:{
    <button aria-label="Hide project explorer" title="Hide project explorer" onClick={onClose}><PanelLeftClose size={17}/><span className="cad-focus-help">Hide project explorer</span></button></header>
   <label className="cad-tree-search"><Search size={15}/><input aria-label="Filter project objects" value={filter}
    onChange={e=>setFilter(e.target.value)} placeholder="Filter objects…"/></label>
-  <button className="cad-tree-project" onClick={()=>onSelect(null)}><Box size={15}/><span>{project.name}</span><small>v{project.version}</small></button>
+  <button className="cad-tree-project" onClick={()=>onSelect(null)}><Box size={15}/><span>{project.name}</span><small>{sceneInventory ? '3D scene' : `v${project.version}`}</small></button>
   <div className="cad-tree-contents">
-  {data.map(g=>{
+  {sceneInventory ? <>
+    <p className="cad-pane-note">Imported GLB geometry · categories from actual scene metadata, not an editable BIM document.</p>
+    {sceneInventory.filter(item=>item.category.toLowerCase().includes(filter.toLowerCase())).map(item=><div className="cad-tree-heading" key={item.category}>
+      <Layers3 size={14}/><span>{item.category.replace(/[-_]/g,' ')}</span><small>{item.count}</small>
+    </div>)}
+    {sceneInventory.length===0&&<p className="cad-pane-note">Reading scene geometry…</p>}
+  </> : data.map(g=>{
    const entries=g.entries.filter(e=>(e.id+' '+e.label).toLowerCase().includes(filter.toLowerCase()));
    if(filter&&!entries.length)return null;
    const isClosed=!filter&&closed[g.id];
@@ -48,7 +55,7 @@ export function CadProjectExplorer({project,selection,onSelect,onClose}:{
    </section>;
   })}
   </div>
-  <footer className="cad-pane-note">Select an element to edit its real document properties.</footer>
+  <footer className="cad-pane-note">{sceneInventory ? 'Scene inspection only. Editing requires the reconciled FreeCAD/IFC document.' : 'Select an element to edit its real document properties.'}</footer>
  </aside>;
 }
 
