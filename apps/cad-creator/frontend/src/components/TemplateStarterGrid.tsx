@@ -21,7 +21,7 @@ interface Props {
 }
 
 /** Full template library inside the existing CAD stage, not a dialog. */
-export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onBrowseAll }) => (
+export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onExit }) => (
   <div className="size-full overflow-y-auto bg-slate-950 p-4 text-left" aria-label="Start from a template">
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div className="min-w-0">
