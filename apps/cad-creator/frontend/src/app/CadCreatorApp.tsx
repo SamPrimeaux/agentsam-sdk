@@ -690,7 +690,7 @@ export function CadCreatorApp({
               {(planLayout === 'split') && (
                 <div className="h-full relative w-1/2">
                   {hostedSelection && sourceStatus==='loaded'
-                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSelect={({designId})=>{
+                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSceneInventory={setSceneInventory} onSelect={({designId})=>{
                         const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                         for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                           setUiSelection({group,id:designId});setInspectorOpen(true);break;
@@ -719,7 +719,7 @@ export function CadCreatorApp({
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
               : hostedSelection && sourceStatus==='loaded'
-                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSelect={({designId})=>{
+                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly onSceneInventory={setSceneInventory} onSelect={({designId})=>{
                     const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                     for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                       setUiSelection({group,id:designId});setInspectorOpen(true);break;
