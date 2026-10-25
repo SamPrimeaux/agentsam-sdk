@@ -1,9 +1,13 @@
+import {WorldViewSection} from './WorldViewSection';
+import {KIT, chooseKitTool, isKitActive, viewerSafe, type Group, type MenuId} from './sketch-kit-catalog';
+import {useKit} from '../lib/sketch-kit-store';
 import React, {useMemo, useState} from 'react';
 import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
 import type {ProjectState, ActiveTool, WallMaterial, DesignOperation, ParametricParameterDef} from '@inneranimalmedia/agentsam-cad-shared';
 import {Layers3, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen,
- Search, ChevronRight, ChevronDown, Box, Plus, ArrowUpRight, Grid2X2,
- MousePointer2, DoorOpen, Ruler, PencilRuler, Hand, Eraser, Square, SlidersHorizontal, Blocks, Undo2, Redo2, Bot, Activity} from 'lucide-react';
+ Search, ChevronRight, ChevronDown, Box, Plus,  Grid2X2,
+ MousePointer2, DoorOpen, Ruler, PencilRuler, Hand, Eraser, Square, SlidersHorizontal, Blocks, Undo2, Redo2, Bot, Activity,
+ BrickWall, AppWindow, RectangleHorizontal, PenTool, LayoutPanelLeft, History, Download, Sofa} from 'lucide-react';
 import './engineering-workbench.css';
 
 export type CadElementGroup = 'walls'|'doors'|'windows'|'rooms'|'furniture'|'parametricObjects';
@@ -125,7 +129,7 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
   <div className="cad-pane-tabs" role="tablist" aria-label="Inspector">
    {(['object','project','scene'] as const).map(view=><button key={view} role="tab" aria-selected={tab===view}
     className={tab===view?'active':''} onClick={()=>setTab(view)}>{view[0].toUpperCase()+view.slice(1)}</button>)}</div>
-  <div className="cad-property-scroll">{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}<fieldset disabled={readOnly}>
+  <div className="cad-property-scroll">{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}{tab==='scene'&&<WorldViewSection/>}<fieldset disabled={readOnly}>
   {tab==='scene'?
   <><h4>Environment & lighting</h4>
    <label className="cad-property"><span>Time of day</span><select aria-label="Scene time of day" value={project.lighting.timeOfDay} onChange={e=>patchLighting({timeOfDay:e.target.value as ProjectState['lighting']['timeOfDay']})}>
@@ -205,22 +209,22 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
 /** One typed tool contract for shortcuts, compact toolbar and advanced disclosure. */
 export const CAD_STUDIO_TOOLS:{id:ActiveTool;label:string;shortcut:string;tier:1|2;icon:React.ComponentType<{size?:number}>}[]=[
  {id:'select',label:'Select',shortcut:'V',tier:1,icon:MousePointer2},
- {id:'wall',label:'Wall',shortcut:'W',tier:1,icon:Layers3},
- {id:'room',label:'Space',shortcut:'S',tier:1,icon:Square},
+ {id:'wall',label:'Wall',shortcut:'W',tier:1,icon:BrickWall},
+ {id:'room',label:'Space',shortcut:'S',tier:1,icon:RectangleHorizontal},
  {id:'door',label:'Door',shortcut:'D',tier:2,icon:DoorOpen},
- {id:'window',label:'Window',shortcut:'N',tier:2,icon:Grid2X2},
+ {id:'window',label:'Window',shortcut:'N',tier:2,icon:AppWindow},
  {id:'measure',label:'Measure',shortcut:'M',tier:1,icon:Ruler},
  {id:'eraser',label:'Erase',shortcut:'E',tier:2,icon:Eraser},
  {id:'pan',label:'Pan',shortcut:'H',tier:2,icon:Hand}
 ];
-export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onMore,moreOpen,accent,onAccentChange,isDark,onToggleDark,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,runtimeSlot,projectSlot}:{
+export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onMore,moreOpen,accent,onAccentChange,isDark,onToggleDark,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,runtimeSlot,projectSlot,onFixtures}:{
  tool:ActiveTool;onTool:(v:ActiveTool)=>void;workspace:string;onWorkspace:(v:'plan'|'model'|'robotics')=>void;
  planLayout:'2d'|'split'|'sketch';onPlanLayout:(v:'2d'|'split'|'sketch')=>void;readOnly:boolean;
  onNew:()=>void;onTemplates:()=>void;onExport:()=>void;onToggleExplorer:()=>void;onToggleInspector:()=>void;
  explorerOpen:boolean;inspectorOpen:boolean;onMore:()=>void;moreOpen:boolean;accent:string;onAccentChange:(v:string)=>void;isDark:boolean;onToggleDark:()=>void;
  onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean;
  onToggleDiagnostics:()=>void;showDiagnostics:boolean;
- studioView:'preview'|'edit'|'code';onStudioView:(v:'preview'|'edit'|'code')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;
+ studioView:'preview'|'edit'|'code';onStudioView:(v:'preview'|'edit'|'code')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onFixtures?:()=>void;
 }) {
  const toolbarRef=React.useRef<HTMLDivElement>(null);
  React.useEffect(()=>{
@@ -241,6 +245,21 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
  const button=(label:string,icon:React.ReactNode,handler:()=>void,active=false,disabled=false)=><button
   type="button" aria-label={label} title={label} aria-pressed={active} className={active?'active':''}
   disabled={disabled} onClick={handler}>{icon}</button>;
+
+ const menu=(label:string,icon:React.ReactNode,items:React.ReactNode,active=false)=><details className="cad-toolbar-menu cad-tool-menu">
+  <summary aria-label={label} title={label} className={active?'active':''}>{icon}<ChevronDown size={11} className="cad-menu-caret"/></summary>
+  <div className="cad-toolbar-popover" role="group" aria-label={label}>{items}</div></details>;
+ const item=(icon:React.ReactNode,label:string,run:()=>void,opts:{active?:boolean;disabled?:boolean;kbd?:string}={})=><button type="button" key={label}
+  aria-pressed={opts.active} disabled={opts.disabled} onClick={e=>{run();e.currentTarget.closest('details')?.removeAttribute('open')}}>{icon}{label}{opts.kbd&&<kbd>{opts.kbd}</kbd>}</button>;
+ const direct=(id:ActiveTool)=>{const t=CAD_STUDIO_TOOLS.find(x=>x.id===id)!;
+  return <button key={id} type="button" title={`${t.label} (${t.shortcut})`} aria-label={`${t.label} (${t.shortcut})`} aria-pressed={tool===id}
+   className={tool===id?'active':''} disabled={readOnly&&!['select','measure','pan'].includes(id)} onClick={()=>onTool(id)}><t.icon size={17}/></button>};
+ const draft=workspace==='plan'&&studioView==='edit';
+
+ const kit=useKit();
+ const kitItems=(menuId:MenuId,groups:Group[])=>KIT.filter(k=>k.menus.includes(menuId)&&groups.includes(k.group)).map(k=>
+  item(<k.icon size={16}/>,k.label,()=>chooseKitTool(k,onTool,onFixtures),
+   {active:isKitActive(k,tool,kit.tool),disabled:(readOnly&&!viewerSafe(k))||(k.place&&!onFixtures),kbd:k.key}));
  React.useEffect(()=>{
   const keys=(event:KeyboardEvent)=>{
    if(event.metaKey||event.ctrlKey||event.altKey||workspace!=='plan'||studioView!=='edit')return;
@@ -261,56 +280,68 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
    {button('Objects / project explorer',<PanelLeftOpen size={17}/>,onToggleExplorer,explorerOpen)}
    {button('Properties / contextual inspector',<PanelRightOpen size={17}/>,onToggleInspector,inspectorOpen)}
   </div>
-  <div className="cad-tool-cluster cad-direct-tools" aria-label="Drawing tools">
-    {workspace==='plan'&&studioView==='edit'&&CAD_STUDIO_TOOLS.filter(t=>t.tier===1).map(t=><button key={t.id} type="button"
-      title={`${t.label} (${t.shortcut})`} aria-label={`${t.label} (${t.shortcut})`} aria-pressed={tool===t.id} className={tool===t.id?'active':''}
-      disabled={readOnly&&!['select','measure','pan'].includes(t.id)} onClick={()=>onTool(t.id)}><t.icon size={17}/></button>)}
-   {studioView==='edit'&&workspace==='plan'&&<details className="cad-toolbar-menu">
-     <summary aria-label="More drawing tools" title="More drawing tools"><Plus size={18}/></summary>
-     <div className="cad-toolbar-popover" role="group" aria-label="Additional drawing tools">
-       {CAD_STUDIO_TOOLS.filter(t=>t.tier===2).map(t=><button key={t.id} type="button"
-         title={`${t.label} (${t.shortcut})`} disabled={readOnly&&!['select','measure','pan'].includes(t.id)}
-         onClick={e=>{onTool(t.id);e.currentTarget.closest('details')?.removeAttribute('open')}}><t.icon size={16}/>{t.label}<kbd>{t.shortcut}</kbd></button>)}
-     </div>
-   </details>}
+  <div className="cad-tool-cluster cad-direct-tools" aria-label="Pointer tools">
+   {draft&&(['select','pan','measure'] as ActiveTool[]).map(direct)}
   </div>
+  {studioView==='edit'&&<div className="cad-tool-cluster cad-create-tools" aria-label="Create objects">
+   {menu('Create · templates, parts, stock, project',<Plus size={18}/>,<>
+     <h6 className="cad-menu-head">Templates</h6>
+     {item(<Blocks size={16}/>,'Browse templates',onTemplates,{disabled:readOnly})}
+     <h6 className="cad-menu-head">Parts</h6>
+     {kitItems('create',['Draw'])}
+     <h6 className="cad-menu-head">Reusable stock</h6>
+     {kitItems('create',['Place'])}
+     <h6 className="cad-menu-head">Project</h6>
+     {item(<Plus size={16}/>,'Blank project',onNew,{disabled:readOnly})}
+     {item(<PencilRuler size={16}/>,'Parametric part · Code',()=>onStudioView('code'))}
+   </>)}
+   {draft&&menu('2D objects · draw and annotate',<Square size={18}/>,<>
+     <h6 className="cad-menu-head">Draw</h6>{kitItems('2d',['Draw'])}
+     <h6 className="cad-menu-head">Annotate</h6>{kitItems('2d',['Annotate'])}
+   </>,KIT.some(k=>k.menus.includes('2d')&&isKitActive(k,tool,kit.tool)))}
+   {menu('3D objects · solids and booleans',<Box size={18}/>,<>
+     <h6 className="cad-menu-head">Solids</h6>{kitItems('3d',['Solids'])}
+     <h6 className="cad-menu-head">Workspace</h6>
+     {item(<Box size={16}/>,'3D model workspace',()=>onWorkspace('model'),{active:workspace==='model'})}
+   </>,workspace==='model'||KIT.some(k=>k.menus.includes('3d')&&isKitActive(k,tool,kit.tool)))}
+   {draft&&menu('Paths · pen, spline, freehand',<PenTool size={18}/>,<>
+     <h6 className="cad-menu-head">Paths</h6>{kitItems('path',['Paths','Draw'])}
+     <h6 className="cad-menu-head">Freehand</h6>
+     {item(<PenTool size={16}/>,'Freehand → CAD',()=>onPlanLayout(planLayout==='sketch'?'split':'sketch'),{active:planLayout==='sketch',disabled:readOnly})}
+   </>,planLayout==='sketch'||KIT.some(k=>k.menus.includes('path')&&isKitActive(k,tool,kit.tool)))}
+  </div>}
   <div className="cad-tool-cluster cad-edit-history">
    {button('Undo (⌘Z)',<Undo2 size={16}/>,onUndo,false,!canUndo)}
    {button('Redo (⇧⌘Z)',<Redo2 size={16}/>,onRedo,false,!canRedo)}
   </div>
   <div className="cad-tool-cluster cad-tool-actions">
    <details className="cad-toolbar-menu cad-workspace-picker">
-    <summary aria-label="Workspace" title="Workspace · Draft, 3D or Robotics"><Box size={17}/><span>{workspace==='plan'?'Draft':workspace==='model'?'3D':'Robotics'}</span><ChevronDown size={14}/></summary>
+    <summary aria-label="Workspace" title="Workspace · Draft, 3D or Robotics">{workspace==='plan'?<PencilRuler size={17}/>:workspace==='model'?<Box size={17}/>:<Bot size={17}/>}<span>{workspace==='plan'?'Draft':workspace==='model'?'3D':'Robotics'}</span><ChevronDown size={14}/></summary>
     <div className="cad-toolbar-popover" role="group" aria-label="Workspace choices">
      {(['plan','model','robotics'] as const).map(w=><button key={w} type="button" aria-pressed={workspace===w} onClick={e=>{onWorkspace(w);e.currentTarget.closest('details')?.removeAttribute('open')}}>
        {w==='plan'?<PencilRuler size={16}/>:w==='model'?<Box size={16}/>:<Bot size={16}/>}{w==='plan'?'Draft':w==='model'?'3D model':'Robotics'}</button>)}
     </div>
    </details>
    {workspace==='plan'&&studioView==='edit'&&<details className="cad-toolbar-menu">
-     <summary aria-label="Viewport arrangement" title="Viewport arrangement"><Grid2X2 size={18}/></summary>
+     <summary aria-label="Viewport arrangement" title="Viewport arrangement"><LayoutPanelLeft size={18}/></summary>
      <div className="cad-toolbar-popover" role="group" aria-label="Viewport arrangement">
-      {(['split','2d','sketch'] as const).map(v=><button key={v} type="button" aria-pressed={planLayout===v} onClick={e=>{onPlanLayout(v);e.currentTarget.closest('details')?.removeAttribute('open')}}>{v==='split'?'2D + 3D':v==='2d'?'2D plan':'Sketch to CAD'}</button>)}
+      {(['split','2d','sketch'] as const).map(v=><button key={v} type="button" aria-pressed={planLayout===v} onClick={e=>{onPlanLayout(v);e.currentTarget.closest('details')?.removeAttribute('open')}}>{v==='split'?'SamSketch + 3D':v==='2d'?'SamSketch 2D':'Freehand → CAD'}</button>)}
      </div>
    </details>}
-   {button('Templates',<Blocks size={18}/>,onTemplates)}
-   {button('New project',<Plus size={18}/>,onNew)}
    <details className="cad-toolbar-menu cad-advanced-menu">
      <summary title="Advanced tools and appearance" aria-label="Advanced tools and appearance"><SlidersHorizontal size={18}/></summary>
      <div className="cad-toolbar-popover" role="group" aria-label="Advanced studio settings">
-      <button type="button" onClick={onTemplates}><Blocks size={16}/>Templates</button>
-      <button type="button" onClick={onNew}><Plus size={16}/>New project</button>
-      <button type="button" onClick={onExport}><ArrowUpRight size={16}/>Export project</button>
       <button type="button" onClick={onMore} aria-pressed={moreOpen}>Advanced CAD tools</button>
       {workspace==='robotics'&&<button type="button" onClick={onToggleDiagnostics} aria-pressed={showDiagnostics}>Robotics diagnostics</button>}
       <label>Accent <input aria-label="Interface accent" type="color" value={accent} onChange={e=>onAccentChange(e.target.value)}/></label>
       <button type="button" onClick={onToggleDark}>{isDark?'Light interface':'Dark interface'}</button>
      </div>
    </details>
-   <details className="cad-toolbar-menu cad-project-menu"><summary aria-label="Project revisions" title="Project revisions and native tools"><Layers3 size={18}/></summary>
+   <details className="cad-toolbar-menu cad-project-menu"><summary aria-label="Project revisions" title="Project revisions and native tools"><History size={18}/></summary>
     <div className="cad-runtime-slot">{projectSlot}</div></details>
    <details className="cad-toolbar-menu cad-runtime-menu"><summary aria-label="Connected engines" title="Connected engines"><Activity size={18}/></summary>
     <div className="cad-runtime-slot">{runtimeSlot}</div></details>
-   {button('Export project',<ArrowUpRight size={18}/>,onExport)}
+   {button('Export project',<Download size={18}/>,onExport)}
   </div>
  </div>;
 }

@@ -4,7 +4,7 @@
  * This read path never promotes a draft revision or invokes a native engine.
  */
 
-const BASE = /^\/api\/work\/projects\/([^/]+)\/cad(?:\/assets\/([^/]+))?$/;
+const BASE = /^\/api\/work\/projects\/([^/]+)\/cad(?:\/assets\/([^/]+)|\/(documents))?$/;
 const MIME = Object.freeze({ '.glb': 'model/gltf-binary', '.json': 'application/json; charset=utf-8', '.ifc': 'application/octet-stream', '.png': 'image/png', '.blend': 'application/octet-stream' });
 const response = (body, status = 200) => Response.json(body, { status, headers: { 'cache-control': 'private, no-store' } });
 
@@ -24,8 +24,14 @@ export function groupCadArtifacts(rows) {
     const name = String(row.name || row.r2_key.split('/').pop());
     const lower = name.toLowerCase();
     const asset = { id: row.id, name, validationStatus: row.validation_status || 'untested', status: row.artifact_status || 'draft', contentHash: row.content_hash || null };
+    let meta = null;
+    try { meta = row.metadata_json ? JSON.parse(row.metadata_json) : null; } catch { meta = null; }
     if (lower.endsWith('.glb')) group.models.push(asset);
-    else if (lower.endsWith('.json') && /(?:\.cad-creator\.project|\.design|project|design)\.json$/.test(lower)) group.documents.push(asset);
+    else if (lower.endsWith('.json') && /(?:\.cad-creator\.project|\.design|project|design)\.json$/.test(lower)) {
+      group.documents.push(asset);
+      if (meta && typeof meta.parentRevision === 'string' && /^[a-zA-Z0-9._-]{1,64}$/.test(meta.parentRevision)) group.parentRevision = meta.parentRevision;
+      if (meta && typeof meta.label === 'string') group.label = meta.label.slice(0, 120);
+    }
     else if (/\.(?:ifc|fcstd|step)$/i.test(lower)) group.native.push(asset);
     if (row.artifact_status === 'published') group.status = 'published';
     group.updatedAt = Math.max(group.updatedAt, Number(row.updated_at) || 0);
@@ -41,11 +47,12 @@ export function groupCadArtifacts(rows) {
 export async function handleWorkCadRequest(request, env, owner) {
   const match = BASE.exec(new URL(request.url).pathname);
   if (!match) return response({ ok: false, error: 'not_found' }, 404);
-  if (request.method !== 'GET') return response({ ok: false, error: 'method_not_allowed' }, 405);
+  const isWrite = request.method === 'PUT' && Boolean(match[3]);
+  if (!isWrite && (request.method !== 'GET' || match[3])) return response({ ok: false, error: 'method_not_allowed' }, 405);
   if (!env.DB?.prepare) return response({ ok: false, error: 'project_registry_unavailable' }, 503);
   const [, projectId, assetId] = match;
   if (projectId.length > 128 || (assetId && assetId.length > 128)) return response({ ok: false, error: 'invalid_project_reference' }, 400);
-  const project = await env.DB.prepare('SELECT id, name FROM projects WHERE id = ? AND owner_user_id = ?')
+  const project = await env.DB.prepare('SELECT id, name, tenant_id FROM projects WHERE id = ? AND owner_user_id = ?')
     .bind(projectId, owner).first();
   if (!project) return response({ ok: false, error: 'project_not_found' }, 404);
   const stores = await env.DB.prepare("SELECT storage_name, metadata_json FROM project_storage WHERE project_id = ? AND storage_type = 'r2' AND status = 'active'")
@@ -65,6 +72,10 @@ export async function handleWorkCadRequest(request, env, owner) {
   });
   if (!records.length) return response({ ok: false, error: 'cad_storage_not_registered' }, 404);
   const { prefix, bindingName, currentPrefix, current, bucket } = records[0];
+  if (isWrite) {
+    const known = await loadRevisions(env, owner, { prefix, currentPrefix, current, bucket });
+    return saveDesignDocument(request, env, { owner, project, prefix, bindingName, bucket, revisions: known });
+  }
   if (assetId) {
     const row = await env.DB.prepare("SELECT id, name, r2_key, content_hash, validation_status FROM agentsam_artifacts WHERE id = ? AND artifact_status IN ('draft','published')")
       .bind(assetId).first();
@@ -83,7 +94,13 @@ export async function handleWorkCadRequest(request, env, owner) {
       'x-cad-artifact-id': row.id,
     } });
   }
-  const rows = await env.DB.prepare("SELECT id, name, r2_key, artifact_status, validation_status, content_hash, updated_at FROM agentsam_artifacts WHERE substr(r2_key,1,length(?)) = ? AND artifact_status IN ('draft','published') ORDER BY updated_at DESC LIMIT 400")
+  const revisions = await loadRevisions(env, owner, { prefix, currentPrefix, current, bucket });
+  return response({ ok: true, project: { id: project.id, name: project.name },
+    access: { canWrite: typeof env[bindingName]?.put === 'function' }, revisions });
+}
+
+async function loadRevisions(env, owner, { prefix, currentPrefix, current, bucket }) {
+  const rows = await env.DB.prepare("SELECT id, name, r2_key, artifact_status, validation_status, content_hash, updated_at, metadata_json FROM agentsam_artifacts WHERE substr(r2_key,1,length(?)) = ? AND artifact_status IN ('draft','published') ORDER BY updated_at DESC LIMIT 400")
     .bind(prefix, prefix).all();
   const revisions = groupCadArtifacts(rows.results || []);
   // One living model: the active viewer is resolved from verified, owner-owned
@@ -116,5 +133,70 @@ export async function handleWorkCadRequest(request, env, owner) {
       });
     }
   }
-  return response({ ok: true, project: { id: project.id, name: project.name }, revisions });
+  // A saved edit carries its own design document and inherits the model of the revision it was edited from.
+  const byId = new Map(revisions.map((r) => [r.revision, r]));
+  const modelsOf = (r, depth = 0) => {
+    if (r.models.length) return r.models;
+    const parent = r.parentRevision && byId.get(r.parentRevision);
+    return parent && depth < 25 ? modelsOf(parent, depth + 1) : [];
+  };
+  for (const r of revisions) {
+    if (r.documents.length && !r.models.length) {
+      const inherited = modelsOf(r);
+      if (inherited.length) r.models = inherited.map((model) => ({ ...model, stale: true }));
+    }
+  }
+  return revisions;
+}
+
+const REVISION_ID = /^[a-zA-Z0-9._-]{1,64}$/;
+const MAX_DESIGN_BYTES = 8 * 1024 * 1024;
+const sha256Hex = async (buffer) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', buffer))]
+  .map((byte) => byte.toString(16).padStart(2, '0')).join('');
+
+/**
+ * Save an edited design document as a NEW immutable revision. The base revision is never
+ * modified. The owner check and the R2 binding come from the same registry the readers use.
+ */
+async function saveDesignDocument(request, env, { owner, project, prefix, bindingName, bucket, revisions }) {
+  const assetStore = env[bindingName];
+  if (!assetStore || typeof assetStore.get !== 'function' || typeof assetStore.put !== 'function')
+    return response({ ok: false, error: 'cad_asset_store_unavailable' }, 503);
+  if (!project.tenant_id) return response({ ok: false, error: 'project_tenant_missing' }, 409);
+  const base = new URL(request.url).searchParams.get('base') || '';
+  if (!REVISION_ID.test(base) || !revisions.some((r) => r.revision === base))
+    return response({ ok: false, error: 'cad_base_revision_unknown' }, 400);
+  const raw = await request.arrayBuffer();
+  if (!raw.byteLength || raw.byteLength > MAX_DESIGN_BYTES) return response({ ok: false, error: 'cad_document_size_invalid' }, 413);
+  let doc;
+  try { doc = JSON.parse(new TextDecoder().decode(raw)); } catch { return response({ ok: false, error: 'cad_document_not_json' }, 400); }
+  if (!doc || typeof doc !== 'object' || typeof doc.id !== 'string' || !Array.isArray(doc.walls) || !Array.isArray(doc.rooms))
+    return response({ ok: false, error: 'cad_document_shape_invalid' }, 400);
+  const revision = 'd' + Date.now().toString(36) + crypto.randomUUID().slice(0, 4);
+  const key = `${prefix}${revision}/source/project.design.json`;
+  const sha256 = await sha256Hex(raw);
+  const now = Date.now();
+  await assetStore.put(key, raw, {
+    httpMetadata: { contentType: 'application/json' },
+    customMetadata: { sha256, schema: 'agentsam.cad.design.v1', parentRevision: base },
+  });
+  const readBack = await assetStore.get(key);
+  const verified = readBack ? (await sha256Hex(await readBack.arrayBuffer())) === sha256 : false;
+  const assetId = 'art_' + crypto.randomUUID().replace(/-/g, '').slice(0, 24);
+  const label = `Edit · ${new Date(now).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+  try {
+    await env.DB.prepare(
+      "INSERT INTO agentsam_artifacts (id, user_id, tenant_id, name, artifact_type, r2_key, source, file_size_bytes, content_hash, r2_bucket, scope, visibility, project_key, artifact_status, validation_status, mime_type, metadata_json) VALUES (?, ?, ?, 'project.design.json', 'cad-design', ?, 'cad.design.save', ?, ?, ?, 'user', 'private', ?, 'draft', ?, 'application/json', ?)",
+    ).bind(assetId, owner, project.tenant_id, key, raw.byteLength, sha256, bucket, prefix.split('/')[1],
+      verified ? 'asset-verified' : 'untested', JSON.stringify({ parentRevision: base, label, projectId: project.id })).run();
+  } catch {
+    if (typeof assetStore.delete === 'function') await assetStore.delete(key).catch(() => {});
+    return response({ ok: false, error: 'cad_registry_write_failed' }, 500);
+  }
+  return response({ ok: true, receipt: {
+    revisionId: revision, projectId: project.id, revisionNumber: revisions.filter((r) => r.parentRevision).length + 1,
+    timestamp: now, message: label, wallsCount: doc.walls.length, roomsCount: doc.rooms.length,
+    parametricCount: Array.isArray(doc.parametric) ? doc.parametric.length : 0,
+    assetId, sha256, bytes: raw.byteLength, verified,
+  } }, 201);
 }

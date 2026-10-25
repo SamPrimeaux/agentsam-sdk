@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {Sky} from 'three/addons/objects/Sky.js';
 import {TerrainEditorPanel} from './TerrainEditorPanel';
-import {createTerrainDocument,addSculptStroke,type TerrainDocument,type SculptMode} from '../lib/world-terrain';
+import {createTerrainDocument,addSculptStroke,validateTerrainDocument,type TerrainDocument,type SculptMode} from '../lib/world-terrain';
+import {ViewCube} from './ViewCube';
+import {publishWorldView,registerWorldView,type WorldViewCommands} from '../lib/world-view-store';
 import {createTerrainProjection,type TerrainProjection} from '../lib/world-terrain-three';
 
 type Zone={roomId:string;label:string;candidateCameraBlenderXYZMetres?:number[];anchorStatus?:string};
@@ -21,11 +23,12 @@ export interface CadWorldViewportProps {
  sceneLabel:string;
  revision:string;
  readOnly?:boolean;
+ /** Site terrain and scenery editing; defaults to !readOnly. Stored on this device per project revision. */
+ siteEditable?:boolean;
  onSelect?:(s:Selected)=>void;
  onSceneInventory?:(groups:CadSceneInventoryGroup[])=>void;
 }
-export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,onSelect,onSceneInventory}:CadWorldViewportProps) {
- const menuRef=useRef<HTMLDetailsElement|null>(null);
+export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,siteEditable=!readOnly,onSelect,onSceneInventory}:CadWorldViewportProps) {
  const mount=useRef<HTMLDivElement>(null),renderer=useRef<THREE.WebGLRenderer|null>(null),
  sceneRef=useRef<THREE.Scene|null>(null),cameraRef=useRef<THREE.PerspectiveCamera|null>(null);
  const assetRef=useRef<THREE.Object3D|null>(null),collidersRef=useRef<THREE.Object3D[]>([]);
@@ -55,12 +58,6 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
  const [exposure,setExposure]=useState(.72),[sunStrength,setSunStrength]=useState(1),[fillStrength,setFillStrength]=useState(.55);
  const [skyVisible,setSkyVisible]=useState(true);
  const displayRef=useRef({mode,roofVisible,hour});
- useEffect(()=>{
-  const close=(event:PointerEvent)=>{if(menuRef.current?.open && !menuRef.current.contains(event.target as Node))menuRef.current.open=false;};
-  const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'&&menuRef.current)menuRef.current.open=false;};
-  document.addEventListener('pointerdown',close);document.addEventListener('keydown',escape);
-  return ()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',escape);};
- },[]);
  useEffect(()=>{displayRef.current={mode,roofVisible,hour}},[mode,roofVisible,hour]);
  useEffect(()=>{terrainDocRef.current=terrain},[terrain]);
  useEffect(()=>{terrainBrushRef.current={mode:sculptMode,radius:brushRadius,strength:brushStrength}},[sculptMode,brushRadius,brushStrength]);
@@ -107,6 +104,27 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   orbit.current={az:.88,el:.5,distance:Math.max(terrain.width,terrain.depth)*.82};
   setMode('orbit');
  };
+ const worldApi=useRef<Partial<WorldViewCommands>|null>(null);
+ worldApi.current={
+  setMode:next=>{if(next==='walk')walk.current.active=false;setMode(next)},
+  setView,frame:reset,
+  toggleRoof:()=>setRoofVisible(v=>!v),
+  toggleDaylight:()=>setHour(v=>v==='day'?'evening':'day'),
+  toggleWireframe:()=>setWireframe(v=>!v),
+  visitRoom:id=>{const z=handoff?.zones.find(x=>x.roomId===id);if(z)visit(z)},
+  capture:exportSnapshot,
+  toggleSite:()=>{setTerrainOpen(v=>!v);setSelection(null);window.dispatchEvent(new Event('cad:terrain-inspect'))},
+  setShading,setExposure,setSun:setSunStrength,setAmbient:setFillStrength,setSky:setSkyVisible,
+  resetLight:()=>{setShading('lit');setExposure(.72);setSunStrength(1);setFillStrength(.55);setSkyVisible(true);setHour('day');},
+ };
+ useEffect(()=>registerWorldView(()=>worldApi.current as Partial<WorldViewCommands>),[]);
+ useEffect(()=>{publishWorldView({kind:'world',ready,mode,viewPreset,roofVisible,daylight:hour==='day',wireframe,shading,exposure,sun:sunStrength,ambient:fillStrength,sky:skyVisible,
+  rooms:(handoff?.zones??[]).map(z=>({id:z.roomId,label:z.label})),siteOpen:terrainOpen,canEditSite:siteEditable,label:sceneLabel,revision})},
+  [ready,mode,viewPreset,roofVisible,hour,wireframe,handoff,terrainOpen,siteEditable,sceneLabel,revision,shading,exposure,sunStrength,fillStrength,skyVisible]);
+ // Site edits persist on this device per project revision until a revision host is connected.
+ const terrainKey=`cad.terrain.v1:${sceneLabel}:${revision}`;
+ useEffect(()=>{try{const raw=localStorage.getItem(terrainKey);if(raw)setTerrain(validateTerrainDocument(JSON.parse(raw)))}catch{/* storage unavailable or invalid */}},[terrainKey]);
+ useEffect(()=>{try{localStorage.setItem(terrainKey,JSON.stringify(terrain))}catch{/* storage unavailable */}},[terrain,terrainKey]);
  useEffect(()=>{
   const host=mount.current;if(!host)return;
   let alive=true;
@@ -413,54 +431,13 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
        const step=Math.max(-240,Math.min(240,e.deltaY));
        orbit.current.distance=Math.max(minDistance,Math.min(maxDistance,orbit.current.distance*Math.exp(step*.0015)));
      }}/>
-   <details ref={menuRef} className="cad-world-menu" aria-label="World view settings">
-     <summary title="View and environment controls" aria-label="View and environment controls">Views &amp; Scene</summary>
-     <div className="cad-world-menu-content">
-       <strong>Camera</strong>
-       <div className="cad-world-menu-row">
-        <button type="button" title="Orbit camera" onClick={()=>setMode('orbit')} aria-pressed={mode==='orbit'}>Orbit</button>
-        <button type="button" title="Walk through the BIM" onClick={()=>{walk.current.active=false;setMode('walk')}} aria-pressed={mode==='walk'}>Walk</button>
-        <button type="button" title="Frame model" onClick={reset}>Frame model</button>
-       </div>
-       <div className="cad-world-menu-row" aria-label="Architectural world views">
-         {(['iso','plan','front','side'] as const).map(preset=><button key={preset} type="button" title={'View '+preset} onClick={()=>setView(preset)}
-          aria-pressed={viewPreset===preset}>{{iso:'Isometric',plan:'Top',front:'Front',side:'Side'}[preset]}</button>)}
-       </div>
-       <strong>Environment</strong>
-       <div className="cad-world-menu-row" aria-label="Scene display modes">
-        <button type="button" title="Physically shaded imported materials" aria-pressed={shading==='lit'} onClick={()=>setShading('lit')}>Materials</button>
-        <button type="button" title="Unlit authored color swatches" aria-pressed={shading==='color'} onClick={()=>setShading('color')}>Source colors</button>
-        <button type="button" title="Toggle sky" aria-pressed={skyVisible} onClick={()=>setSkyVisible(v=>!v)}>{skyVisible?'Sky':'Studio'}</button>
-       </div>
-       <label className="cad-world-setting">Exposure <input type="range" min="0.25" max="1.4" step=".05"
-          value={exposure} onChange={e=>setExposure(Number(e.target.value))} aria-label="Scene exposure"/>
-         <output>{exposure.toFixed(2)}</output></label>
-       <label className="cad-world-setting">Sun <input type="range" min="0" max="2" step=".1"
-          value={sunStrength} onChange={e=>setSunStrength(Number(e.target.value))} aria-label="Sun strength"/>
-         <output>{sunStrength.toFixed(1)}</output></label>
-       <label className="cad-world-setting">Ambient <input type="range" min="0" max="2" step=".1"
-          value={fillStrength} onChange={e=>setFillStrength(Number(e.target.value))} aria-label="Ambient light"/>
-         <output>{fillStrength.toFixed(1)}</output></label>
-       <div className="cad-world-menu-row">
-        <button type="button" title="Toggle roof" aria-pressed={!roofVisible} onClick={()=>setRoofVisible(v=>!v)}>Roof {roofVisible?'on':'off'}</button>
-        <button type="button" title="Change daylight" onClick={()=>setHour(v=>v==='day'?'evening':'day')}>{hour==='day'?'Daylight':'Evening'}</button>
-        <button type="button" title="Toggle wireframe" aria-pressed={wireframe} onClick={()=>setWireframe(v=>!v)}>Wireframe</button>
-        <button type="button" title="Restore default scene lighting" onClick={()=>{setShading('lit');setExposure(.72);setSunStrength(1);setFillStrength(.55);setSkyVisible(true);setHour('day');}}>Reset light</button>
-       </div>
-       <label className="cad-world-room">Room <select aria-label="BIM room destinations" defaultValue="" onChange={e=>{const z=handoff?.zones.find(x=>x.roomId===e.target.value);if(z)visit(z)}}>
-          <option value="">Choose room</option>{handoff?.zones.map(zone=><option key={zone.roomId} value={zone.roomId}>{zone.label}</option>)}
-       </select></label>
-       {!readOnly&&<button className="cad-world-action" type="button" title="Edit the real site terrain" aria-pressed={terrainOpen} onClick={()=>{setTerrainOpen(v=>!v);setSelection(null);window.dispatchEvent(new Event('cad:terrain-inspect'))}}>Terrain &amp; Scenery</button>}
-       <button className="cad-world-action" type="button" title="Save current view as PNG" disabled={!ready} onClick={exportSnapshot}>Capture PNG</button>
-     </div>
-   </details>
    {mode==='walk'&&<div className="pointer-events-none absolute bottom-14 left-1/2 -translate-x-1/2 rounded-lg bg-[#111b2c]/85 px-3 py-2 text-center text-xs text-white/90">W A S D · drag to look · Shift to move faster</div>}
    {mode==='walk'&&<div className="absolute bottom-16 left-3 z-20 flex gap-1 sm:hidden">
      {(['KeyW','KeyA','KeyS','KeyD'] as const).map((key,i)=><button key={key} type="button" aria-label={'Move '+['forward','left','back','right'][i]}
        onPointerDown={e=>{e.preventDefault();pressed.current.add(key)}} onPointerUp={()=>pressed.current.delete(key)} onPointerCancel={()=>pressed.current.delete(key)}
        className="rounded-lg border border-white/20 bg-slate-800/90 px-3 py-2.5 text-xs font-bold">{['↑','←','↓','→'][i]}</button>)}
    </div>}
-   {!readOnly&&terrainOpen&&<TerrainEditorPanel document={terrain} onChange={setTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
+   {siteEditable&&terrainOpen&&<TerrainEditorPanel document={terrain} onChange={setTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
      brushRadius={brushRadius} onBrushRadius={setBrushRadius} brushStrength={brushStrength} onBrushStrength={setBrushStrength}
      onFitSite={fitSite} onClose={()=>{setTerrainOpen(false);setSculptMode(null)}}/>}
    {!terrainOpen&&selection&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">
@@ -468,6 +445,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
      <p className="mt-1 break-all font-mono text-sky-200">{selection.designId}</p>
      <p className="mt-1 text-slate-400">{selection.nodeName} · {selection.source}</p>
    </aside>}
+   <div className="absolute bottom-12 right-3 z-20"><ViewCube/></div>
    {(progress||error)&&<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-white/20 bg-[#101a2b]/95 px-5 py-4 text-center text-sm" role="status">{error||progress}</div>}
 
  </section>;
