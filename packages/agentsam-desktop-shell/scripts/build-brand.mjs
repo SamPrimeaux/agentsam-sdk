@@ -407,7 +407,7 @@ const config = {
   bundle: {
     active: true,
     icon: BUNDLE_ICONS,
-    ...(targetFamily === 'desktop' ? { macOS: { signingIdentity: process.env.APPLE_SIGNING_IDENTITY || '-' } } : {}),
+    ...(targetFamily === 'desktop' ? { macOS: { signingIdentity: process.env.APPLE_SIGNING_IDENTITY || '-', entitlements: 'entitlements.plist' } } : {}),
     ...(agentsamdSidecar ? { externalBin: ['binaries/agentsamd', 'binaries/node'] } : {}),
     ...(desktopSpa
       ? {

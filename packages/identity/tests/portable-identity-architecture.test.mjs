@@ -46,7 +46,7 @@ describe('route projection + fail-closed post-auth', () => {
     assert.equal(routeRegistry.resolve('local-studio', IDENTITY_ROUTE_IDS.LOGIN), '/auth/login');
     assert.equal(
       routeRegistry.resolve('local-studio', IDENTITY_ROUTE_IDS.APP_AUTHENTICATED),
-      '/agentsam',
+      '/admin/agentsam',
     );
   });
 
@@ -64,7 +64,7 @@ describe('route projection + fail-closed post-auth', () => {
   it('falls back to authenticated entry — never /', () => {
     assert.equal(
       resolvePostAuthDestination({ transaction: {}, app, routeRegistry }),
-      '/agentsam',
+      '/admin/agentsam',
     );
   });
 
@@ -82,7 +82,7 @@ describe('route projection + fail-closed post-auth', () => {
         app,
         routeRegistry,
       }),
-      '/agentsam',
+      '/admin/agentsam',
     );
   });
 });
