@@ -17,7 +17,8 @@
       "types": "./dist/browser.d.ts",
       "import": "./dist/browser.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./session": "./src/native-session.mjs"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

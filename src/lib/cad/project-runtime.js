@@ -46,6 +46,22 @@ export function createProjectRuntime({store,artifactRoot,native={blenderBuild,bl
    if(digest!==prior.artifact?.sha256)throw new Error('occt_step_digest_mismatch');
    return prior;
   };
+  if((name==='design_model_build'||name==='design_model_export')&&args.engine==='occt'&&args.element_id){
+   const history=row.project.nativeHistory;
+   if(history?.version!==1||!Array.isArray(history.operations)||!Number.isInteger(history.cursor))throw new Error('occt_project_feature_history_required');
+   const format=name==='design_model_export'?(args.format||'step'):'step';
+   const final=path.join(dir,'native-'+crypto.createHash('sha256').update(args.element_id).digest('hex').slice(0,16)+'.'+format);
+   if(fs.existsSync(final+'.json')){
+    const prior=JSON.parse(fs.readFileSync(final+'.json','utf8'));
+    if(prior.content_hash!==row.content_hash||prior.element_id!==args.element_id)throw new Error('artifact_revision_conflict');
+    if(!fs.existsSync(final)||crypto.createHash('sha256').update(fs.readFileSync(final)).digest('hex')!==prior.artifact.sha256)throw new Error('occt_artifact_digest_mismatch');
+    return {...prior,operation:name};
+   }
+   const created=await occt.execute('design_model_build',{kind:'features',units:'mm',operations:history.operations,cursor:history.cursor,elementId:args.element_id,format},{artifactRoot:dir,projectId:row.project.id});
+   const out={...created,operation:name,project_id:row.project.id,revision:row.revision,content_hash:row.content_hash,source:'cad.project.v1'};
+   fs.renameSync(out.artifact.path,final);out.artifact.path=final;
+   fs.writeFileSync(final+'.json',JSON.stringify(out,null,2));return out;
+  }
   if(name==='design_model_build'&&args.engine==='occt'){
    const object=(row.project.parametricObjects||[]).find(o=>o.id===args.parametric_object_id);
    if(!object||object.generator!=='occt'||object.generatorTemplate!=='box'||object.source!=='occt:box')
@@ -76,7 +92,7 @@ export function createProjectRuntime({store,artifactRoot,native={blenderBuild,bl
    return {...inspected,project_id:row.project.id,revision:row.revision,
      content_hash:row.content_hash,parametric_object_id:prior.parametric_object_id};
   }
-  if(args.engine!==undefined)throw new Error('unsupported_design_engine');
+  if(args.engine!==undefined&&args.engine!=='blender')throw new Error('unsupported_design_engine');
   let result;
   if(name==='design_model_build'){
    if(fs.existsSync(receipt)){const prior=JSON.parse(fs.readFileSync(receipt,'utf8'));if(prior.content_hash!==row.content_hash)throw new Error('artifact_revision_conflict');}

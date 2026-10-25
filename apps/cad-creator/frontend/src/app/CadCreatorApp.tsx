@@ -1,3 +1,4 @@
+import {recordNativePlanChange} from '../lib/native-engine';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -12,6 +13,8 @@ import {
   FurnitureCategory,
   UserRole
 } from '@inneranimalmedia/agentsam-cad-shared';
+import type {CadSceneElement} from '@inneranimalmedia/agentsam-cad-shared';
+import {reconcileSceneElements,sceneReviewContext} from '../lib/scene-document';
 import { TEMPLATES } from '../lib/templates';
 import { createEmptyCadProject } from '../lib/create-empty-project';
 import { loadDreamHouseProject } from '../lib/dreamhouse-source';
@@ -362,9 +365,12 @@ export function CadCreatorApp({
     if (!hostedWritable || !hostedSelection || hostedSaving) return;
     setHostedSaving(true);
     try {
-      const receipt = await saveHostedProject(hostedProjectId, project, hostedSelection.revision.revision);
+      const expectedHash=hostedSelection.revision.documents[0]?.contentHash||hostedSelection.revision.models[0]?.contentHash||undefined;
+      const receipt = await saveHostedProject(hostedProjectId, project, hostedSelection.revision.revision,fetch,expectedHash);
       showToast(`Saved revision ${receipt.revisionNumber}${receipt.verified ? '' : ' (read-back not verified)'}`);
-      setHostedRevision(receipt.revisionId);
+      const saved=await loadHostedProject(hostedProjectId,'current');
+      setHostedSelection(saved);setProject(saved.project!);setHistory([]);setRedoStack([]);
+      const url=new URL(window.location.href);url.searchParams.set('project',hostedProjectId);url.searchParams.delete('revision');window.history.replaceState(null,'',url);
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Save failed. Nothing was changed.');
     } finally { setHostedSaving(false); }
@@ -378,13 +384,61 @@ export function CadCreatorApp({
 
     setVerifiedProjectRevision(null);
     setProject((prev) => {
-      const next = updater(prev);
+      const next = recordNativePlanChange(prev, updater(prev));
       setHistory((h) => [...h.slice(-20), prev]);
       setRedoStack([]);
       if (canCollaborate) collaborationClient.sendProjectUpdate(next);
       return next;
     });
   }, [isViewer, canCollaborate]);
+
+  const registerSceneElements=useCallback((elements:CadSceneElement[])=>{
+    setProject(previous=>previous.sceneSource?reconcileSceneElements(previous,previous.sceneSource,elements):previous);
+  },[]);
+  const updateSceneSettings=useCallback((updates:Partial<NonNullable<ProjectState['sceneSettings']>>)=>{
+    updateProject(previous=>({...previous,sceneSettings:{...previous.sceneSettings,...updates}}));
+  },[updateProject]);
+  const selectSceneElement=useCallback(({designId}:{designId:string})=>{
+    const group=project.sceneElements?.some(element=>element.id===designId)?'sceneElements':
+      (['walls','doors','windows','rooms','furniture','parametricObjects'] as const).find(key=>project[key]?.some(element=>element.id===designId));
+    if(group){setUiSelection({group,id:designId});setInspectorOpen(true);}
+  },[project]);
+  // All entry points publish one selection, including tree clicks, imported meshes and draft objects.
+  useEffect(()=>{
+    const record=uiSelection?project[uiSelection.group]?.find(element=>element.id===uiSelection.id):null;
+    const runtimeRevision=verifiedSelectionRevision(project.id,verifiedProjectRevision);
+    const selection=uiSelection&&record?buildSelectionContext({workspace:activeWorkspace,projectId:hostedProjectId||project.id,
+      revision:runtimeRevision??0,revisionRef:hostedSelection?.revision.revision,
+      objectId:uiSelection.id,objectType:uiSelection.group==='sceneElements'?'scene-element':uiSelection.group,
+      label:'name' in record?String(record.name):'label' in record?String(record.label||record.id):record.id,
+      units:uiSelection.group==='sceneElements'?'m':'in'}):null;
+    setCadSelection(selection);bridgeRef.current?.post({type:'cad.selection',selection});
+  },[uiSelection,project,activeWorkspace,verifiedProjectRevision,hostedProjectId,hostedSelection]);
+  const reviewSelectedElement=()=>{
+    const element=uiSelection&&project[uiSelection.group]?.find(row=>row.id===uiSelection.id);
+    if(!element)return;
+    updateProject(previous=>({...previous,sketchDocument:{...previous.sketchDocument,review:{
+      note:'note' in element?String(element.note||''):'',targetId:element.id,
+      targetLabel:'name' in element?String(element.name):element.id,revisionRef:hostedSelection?.revision.revision}}}));
+    setActiveWorkspace('plan');setPlanLayout('sketch');
+  };
+  const submitCadRequest=async(prompt:string,interfaceSelection:unknown=null)=>{
+    const review=sceneReviewContext(project,uiSelection?.id);
+    const strokes=review.strokes;review.strokes=[];
+    const context={workspace:activeWorkspace,project_id:hostedProjectId||project.id,project_name:project.name,
+      revision:verifiedProjectRevision?.revision??null,revision_ref:hostedSelection?.revision.revision||null,
+      unsaved:hostedDirty,interface_selection:interfaceSelection,review,
+      sketch_stroke_count:strokes.length,sketch_stroke_ids:strokes.slice(0,32).map(stroke=>stroke.id)};
+    for(const stroke of strokes){
+      const next={...stroke,points:stroke.points.filter((_,i)=>i%Math.max(1,Math.ceil(stroke.points.length/40))===0)};
+      if(JSON.stringify({...context,review:{...review,strokes:[...review.strokes,next]}}).length>5500)break;
+      review.strokes.push(next);
+    }
+    const message=prompt.trim().slice(0,1500)+'\n\nCAD project context (descriptive only; not edit authority): '+JSON.stringify(context);
+    if(presentation!=='embedded'||!bridgeRef.current){setCopilotDraft(message);setAssistantReply('Request prepared with the selected element and sketch. Open this project in Local Studio to send it.');return;}
+    setCopilotDraft('');setAssistantReply('Request sent with the current project, element and sketch context.');
+    bridgeRef.current.post({type:'assistant.request',request_id:crypto.randomUUID(),prompt:message,selection:cadSelection});
+  };
 
   // Undo / Redo
   const handleUndo = () => {
@@ -689,7 +743,7 @@ export function CadCreatorApp({
                     onToolChange={setActiveTool}
                     onProjectChange={updateProject}
                     showToolToolbar={false}
-                    externalSelection={uiSelection && uiSelection.group !== 'parametricObjects' ? {
+                    externalSelection={uiSelection && uiSelection.group !== 'parametricObjects' && uiSelection.group !== 'sceneElements' ? {
                       id:uiSelection.id,
                       type: ({walls:'wall',doors:'door',windows:'window',rooms:'room',furniture:'furniture'} as const)[uiSelection.group]
                     } : null}
@@ -722,13 +776,11 @@ export function CadCreatorApp({
 
               {(planLayout === 'split') && (
                 <div className="h-full relative w-1/2">
-                  {hostedSelection && sourceStatus==='loaded' && !hostedWritable
-                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly siteEditable onSceneInventory={setSceneInventory} onSelect={({designId})=>{
-                        const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
-                        for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
-                          setUiSelection({group,id:designId});setInspectorOpen(true);break;
-                        }}
-                      }}/>
+                  {hostedSelection && sourceStatus==='loaded'
+                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
+                        readOnly={isViewer} siteEditable={!isViewer} onSceneInventory={setSceneInventory} onSceneElements={registerSceneElements}
+                        sceneElements={project.sceneElements} selectedElementId={uiSelection?.group==='sceneElements'?uiSelection.id:undefined}
+                        layoutProject={project} onSceneSettings={updateSceneSettings} onSelect={selectSceneElement}/>
                     : accessMode === 'hosted-project' && !templateCopyName && !hostedWritable
                       ? hostedEmptyPane
                     : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>}
@@ -741,6 +793,8 @@ export function CadCreatorApp({
                     project={project}
                     onUpdateProject={(newProj) => updateProject(() => newProj)}
                     canEdit={!isViewer}
+                    selectedElementId={uiSelection?.id}
+                    onRequestAgent={()=>void submitCadRequest(project.sketchDocument?.review?.note||'Review the marked-up element and sketch. Propose the changes needed in this existing project.')}
                   />
                 </div>
               )}
@@ -752,12 +806,10 @@ export function CadCreatorApp({
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
               : hostedSelection && sourceStatus==='loaded'
-                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly siteEditable onSceneInventory={setSceneInventory} onSelect={({designId})=>{
-                    const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
-                    for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
-                      setUiSelection({group,id:designId});setInspectorOpen(true);break;
-                    }}
-                  }}/>
+                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
+                    readOnly={isViewer} siteEditable={!isViewer} onSceneInventory={setSceneInventory} onSceneElements={registerSceneElements}
+                    sceneElements={project.sceneElements} selectedElementId={uiSelection?.group==='sceneElements'?uiSelection.id:undefined}
+                    layoutProject={project} onSceneSettings={updateSceneSettings} onSelect={selectSceneElement}/>
                 : accessMode === 'hosted-project' && !templateCopyName
                   ? hostedEmptyPane
                 : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>}
@@ -827,7 +879,7 @@ export function CadCreatorApp({
           {(activeWorkspace === 'plan' || activeWorkspace === 'model' || activeWorkspace === 'render') && inspectorOpen && (
             <CadPropertyInspector project={project} selection={uiSelection}
               onSelect={setUiSelection} onChange={updateProject}
-              onClose={() => setInspectorOpen(false)} readOnly={isViewer} />
+              onClose={() => setInspectorOpen(false)} readOnly={isViewer} onReview={reviewSelectedElement}/>
           )}
         </div>
       </main>
@@ -835,24 +887,7 @@ export function CadCreatorApp({
       {/* Reuse the SDK's real miniAgentSam selection/composer. The CAD host
           owns conversation transport and every geometry-changing operation. */}
       <MiniAgentSam selecting={annotating} onSelectingChange={setAnnotating}
-        onSubmit={async (prompt, selection) => {
-          const context = {
-            workspace: activeWorkspace, project_id: project.id,
-            project_name: project.name, revision: verifiedProjectRevision?.revision ?? null,
-            interface_selection: selection,
-          };
-          const message = prompt.trim() + '\n\nCAD workspace context (descriptive only; not edit authority): ' + JSON.stringify(context);
-          if (presentation !== 'embedded' || !bridgeRef.current) {
-            setCopilotDraft(message);
-            setAssistantReply('Open this CAD project in Local Studio to submit the draft through the authorized AgentSam conversation.');
-            return;
-          }
-          setCopilotDraft('');
-          setAssistantReply('Request sent to the AgentSam host.');
-          bridgeRef.current.post({type:'assistant.request',
-            request_id:crypto.randomUUID(),prompt:message,
-            selection:cadSelection && verifiedProjectRevision?.projectId===project.id ? cadSelection : null});
-        }}
+        onSubmit={submitCadRequest}
       />
       {(copilotDraft || assistantReply) && <aside data-annotation-control="" aria-label="CAD copilot status" className="fixed bottom-14 right-4 z-[100] w-[min(26rem,calc(100vw-2rem))] rounded-xl border border-white/20 bg-slate-950 px-3 py-2 text-xs text-white shadow-2xl">
         <div className="flex items-center justify-between gap-2"><strong>AgentSam CAD copilot</strong><button type="button" aria-label="Dismiss copilot status" onClick={() => {setCopilotDraft('');setAssistantReply('');}}>Close</button></div>

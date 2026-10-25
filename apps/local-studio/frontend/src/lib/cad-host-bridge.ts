@@ -1,3 +1,4 @@
+import {getTauriInvoke} from "./desktop/tauri";
 /**
  * Host side of CAD Creator preview bridge (Local Studio owns conversation + write authority).
  * Validates origin/source/channel/version. Guest messages are requests only:
@@ -5,9 +6,9 @@
  */
 export const CAD_BRIDGE_CHANNEL = "agentsam-preview-bridge" as const;
 export const CAD_WORKSPACES = ["plan", "model", "parametric", "robotics", "render"] as const;
-export interface CadSelectionContext { source: "cad-creator"; workspace: string; project_id: string; revision: number; object: { id: string; type: string; label: string; units: "in" } }
+export interface CadSelectionContext { source: "cad-creator"; workspace: string; project_id: string; revision: number; revision_ref?:string; object: { id: string; type: string; label: string; units: "in"|"m" } }
 export interface CadHostHandlers {
-  onSelection?: (s: CadSelectionContext) => void;
+  onSelection?: (s: CadSelectionContext|null) => void;
   onAssistantRequest?: (r: { request_id: string; prompt: string; selection: CadSelectionContext | null }) => void | Promise<void>;
   onProposal?: (p: { summary: string; tool: "design_apply_operation"; args: Record<string, unknown> }) => void;
   onReady?: (workspaces: string[]) => void;
@@ -19,7 +20,7 @@ export function validateCadGuestMessage(event: MessageEvent, iframe: HTMLIFrameE
   const d = event.data;
   if (!isObj(d) || d.channel !== CAD_BRIDGE_CHANNEL || d.version !== 1 || typeof d.type !== "string") return null;
   if (d.type === "cad.selection") {
-    const s = d.selection; if (!isObj(s) || s.source !== "cad-creator" || !isObj(s.object) || typeof s.object.id !== "string" || !s.object.id) return null;
+    const s = d.selection; if (s !== null && (!isObj(s) || s.source !== "cad-creator" || !isObj(s.object) || typeof s.object.id !== "string" || !s.object.id)) return null;
   }
   if (d.type === "assistant.request" && (typeof d.request_id !== "string" || typeof d.prompt !== "string")) return null;
   if (d.type === "cad.proposal" && (!isObj(d.proposal) || d.proposal.tool !== "design_apply_operation" || !isObj(d.proposal.args))) return null;
@@ -28,7 +29,14 @@ export function validateCadGuestMessage(event: MessageEvent, iframe: HTMLIFrameE
 export function installCadHostBridge(iframe: () => HTMLIFrameElement | null, handlers: CadHostHandlers): () => void {
   const onMessage = (event: MessageEvent) => {
     const d = validateCadGuestMessage(event, iframe()); if (!d) return;
-    if (d.type === "ready") handlers.onReady?.(Array.isArray(d.workspaces) ? d.workspaces : []);
+    if (d.type === "cad.engine.request") {
+      const reply=(payload:Record<string,unknown>)=>postToCadGuest(iframe(),{type:"cad.engine.response",request_id:d.request_id,...payload});
+      const invoke=getTauriInvoke();
+      if(typeof d.request_id!=="string"||typeof d.project_id!=="string"||!isObj(d.request)||JSON.stringify(d.request).length>8*1024*1024)return;
+      if(!invoke){reply({error:"native_cad_requires_desktop_host"});return;}
+      void invoke("cad_engine_request",{projectId:d.project_id,request:d.request}).then(result=>reply({result}),error=>reply({error:String(error)}));
+    }
+    else if (d.type === "ready") handlers.onReady?.(Array.isArray(d.workspaces) ? d.workspaces : []);
     else if (d.type === "cad.selection") handlers.onSelection?.(d.selection);
     else if (d.type === "assistant.request") void handlers.onAssistantRequest?.({ request_id: d.request_id, prompt: d.prompt, selection: d.selection ?? null });
     else if (d.type === "cad.proposal") handlers.onProposal?.(d.proposal);

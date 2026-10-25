@@ -163,11 +163,40 @@ export interface ProjectLayer {
 
 export interface SketchDocumentRef {
   /** Native SamSketch strokes, in project inches, versionable with the CAD document. */
-  nativeStrokes?: Array<{id:string;kind:'ink'|'line'|'rect';points:[number,number][]}>;
+  nativeStrokes?: Array<{id:string;kind:'ink'|'line'|'rect';points:[number,number][];purpose?:'layout'|'markup';targetId?:string}>;
+  nativeConstraints?: Array<{strokeId:string;axis?:'horizontal'|'vertical';lengthInches?:number}>;
+  review?: { note:string; targetId?:string; targetLabel?:string; revisionRef?:string };
   /** Legacy archived source; retain for backwards-compatible import, never mutate it. */
   tldrawSnapshot?: any;
   shapesCount?: number;
   lastEditedAt?: number;
+}
+
+/** Registered scene bindings and reversible presentation edits in the same project document.
+ * These never assert that an imported mesh has acquired a parametric BIM feature history.
+ */
+export interface CadSceneElement {
+  id:string;
+  name:string;
+  category:string;
+  source:string;
+  bounds:{min:[number,number,number];max:[number,number,number]};
+  offset:[number,number,number]; // glTF world metres, Y up
+  rotation:number; // degrees about the vertical world axis, around the element centre
+  visible:boolean;
+  color?:string;
+  note?:string;
+}
+export interface CadSceneSource {
+  assetId:string;
+  contentHash:string;
+  revision:string;
+  units:'m';
+  axes:'gltf-y-up';
+}
+export interface CadSceneSettings {
+  shading?:'lit'|'color';exposure?:number;sun?:number;ambient?:number;sky?:boolean;
+  daylight?:boolean;roofVisible?:boolean;terrain?:unknown;
 }
 
 export interface DesignProject {
@@ -186,6 +215,10 @@ export interface DesignProject {
   annotations: DimensionAnnotation[];
   parametricObjects?: ParametricObject[];
   sketchDocument?: SketchDocumentRef;
+  sceneSource?: CadSceneSource;
+  sceneElements?: CadSceneElement[];
+  sceneSettings?: CadSceneSettings;
+  nativeHistory?: {version:1;operations:Record<string,unknown>[];cursor:number};
   lighting: LightingConfig;
   roofType: 'none' | 'flat' | 'gable';
   ceilingHeight: number; // e.g. 108 inches

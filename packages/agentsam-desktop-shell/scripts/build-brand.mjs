@@ -407,6 +407,7 @@ const config = {
   bundle: {
     active: true,
     icon: BUNDLE_ICONS,
+    ...(targetFamily === 'desktop' ? { macOS: { signingIdentity: process.env.APPLE_SIGNING_IDENTITY || '-' } } : {}),
     ...(agentsamdSidecar ? { externalBin: ['binaries/agentsamd', 'binaries/node'] } : {}),
     ...(desktopSpa
       ? {
@@ -415,6 +416,7 @@ const config = {
             [appManifestRel]: 'runtime/identity/app.json',
             ...(targetFamily === 'desktop'
               ? {
+                  'generated/runtime/cad/': 'runtime/cad/',
                   '../../agentsam-database-editor/scripts/local-sqlite-bridge.mjs':
                     'runtime/database/scripts/local-sqlite-bridge.mjs',
                   '../../agentsam-database-editor/src/adapters/sqlite.js':

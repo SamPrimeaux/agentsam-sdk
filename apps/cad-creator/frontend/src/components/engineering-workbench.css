@@ -304,3 +304,7 @@
 .cad-gizmo button{display:inline-flex;align-items:center;justify-content:center;padding:3px 7px;border:1px solid var(--cad-line,#303b4b);border-radius:7px;background:none;color:inherit;font-size:var(--text-xs);cursor:pointer}
 .cad-gizmo button[aria-pressed=true]{background:color-mix(in srgb,var(--cad-accent,#82a7fb) 24%,transparent);border-color:var(--cad-accent,#82a7fb)}
 .cad-gizmo input{width:42px;padding:2px 4px;border:1px solid var(--cad-line,#303b4b);border-radius:6px;background:rgba(255,255,255,.04);color:inherit;font-size:var(--text-xs)}
+.cad-properties textarea,.cad-sketch-review textarea{width:100%;min-height:64px;resize:vertical;border:1px solid var(--cad-line);border-radius:var(--cad-radius,8px);background:var(--cad-bg);color:var(--cad-text);padding:8px;font:inherit}
+.cad-sketch-review{display:flex;align-items:center;gap:12px;padding:8px 12px;border-bottom:1px solid var(--cad-line);background:var(--cad-panel);font-size:var(--text-sm)}
+.cad-sketch-review label{flex:1;min-width:0;display:grid;gap:4px}.cad-sketch-review label>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--cad-muted)}
+@media(max-width:600px){.cad-sketch-review{align-items:stretch;flex-direction:column}.cad-sketch-review button{min-height:44px}}

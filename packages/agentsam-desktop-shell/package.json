@@ -12,11 +12,12 @@
     "typecheck": "echo \"agentsam-desktop-shell: no TS surface yet\" && exit 0",
     "test": "node --test scripts/icon-idempotence.test.mjs worker/src/index.test.mjs",
     "test:icons": "node --test scripts/icon-idempotence.test.mjs",
-    "prepare:sidecars": "node scripts/prepare-sidecars.mjs",
+    "prepare:sidecars": "node scripts/prepare-sidecars.mjs && npm run prepare:cad",
     "build:desktop-assets": "npm --prefix ../../apps/local-studio run build:desktop && node scripts/sync-local-studio-dist.mjs && npm --prefix ../../apps/local-studio run smoke:desktop-cad",
     "bundle": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && tauri build --bundles app,dmg --ci",
     "bundle:app": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && tauri build --bundles app --ci",
-    "bundle:shell-only": "node scripts/build-brand.mjs local-studio && tauri build --bundles app,dmg --ci"
+    "bundle:shell-only": "npm run prepare:cad && node scripts/build-brand.mjs local-studio && tauri build --bundles app,dmg --ci",
+    "prepare:cad": "node scripts/prepare-cad-runtime.mjs"
   },
   "dependencies": {
     "sharp": "^0.35.5"

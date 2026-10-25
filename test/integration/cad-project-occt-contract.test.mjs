@@ -79,3 +79,31 @@ test('real CAD Creator project creates and reopens an OCCT STEP solid', {skip:pr
  assert.ok(Math.abs(inspection.volume_mm3-out.volume_mm3)<0.01);
  assert.equal((await runtime.execute('design_model_export',{...input,format:'step'})).artifact.sha256,out.artifact.sha256);
 });
+
+test('real saved feature history is reachable through agent build/export tools without changing project revision', {skip:process.env.AGENTSAM_TEST_OCCT_NATIVE!=='1'&&'Opt-in real kernel check'}, async t=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'cad-native-features-'));
+ t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+ const runtime=localProjectRuntime(root);
+ const p=fixture('cad-native-features');
+ p.walls=[{id:'native-wall',x1:0,y1:0,x2:5000/25.4,y2:0,thickness:200/25.4,height3D:3000/25.4,material:'concrete'}];
+ p.doors=[{id:'native-door',wallId:'native-wall',distanceAlongWall:.29,width:900/25.4,height:2100/25.4,swing:'left',openAngle:0}];
+ p.windows=[];p.furniture=[];
+ p.nativeHistory={version:1,cursor:1,operations:[{type:'$syncPlan',operations:[
+  {id:'native-wall',type:'wall',start:[0,0],end:[5000,0],thickness:200,height:3000},
+  {id:'native-door',type:'opening',host:'native-wall',offset:1000,width:900,height:2100}
+ ]}]};
+ const saved=await runtime.execute('design_project_save',{project:p,expected_revision:0});
+ const input={project_id:p.id,revision:saved.revision,engine:'occt',element_id:'native-wall'};
+ const built=await runtime.execute('design_model_build',input);
+ assert.equal(built.verified,true);assert.ok(Math.abs(built.volume_mm3-2622000000)<.001);
+ for(const format of ['step','brep','gltf','ifc']){
+  const result=await runtime.execute('design_model_export',{...input,format});
+  assert.equal(result.content_hash,saved.content_hash);
+  const bytes=fs.readFileSync(result.artifact.path);
+  assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'),result.artifact.sha256);
+  assert.equal((await runtime.execute('design_model_export',{...input,format})).artifact.sha256,result.artifact.sha256);
+ }
+ assert.equal((await runtime.execute('design_project_get',{project_id:p.id})).revision,saved.revision);
+ fs.appendFileSync(built.artifact.path,'tampered');
+ await assert.rejects(runtime.execute('design_model_build',input),/occt_artifact_digest_mismatch/);
+});

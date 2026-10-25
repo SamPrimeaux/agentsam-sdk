@@ -5,6 +5,11 @@ const project = { id: 'p', walls: [], rooms: [] } as never;
 const receipt = { revisionId: 'd1', projectId: 'p1', revisionNumber: 1, timestamp: 1, message: 'm', wallsCount: 0, roomsCount: 0, parametricCount: 0, assetId: 'a', sha256: 's', bytes: 1, verified: true };
 
 describe('saveHostedProject', () => {
+  it('sends the expected current hash to prevent overwriting a newer save',async()=>{
+    const fetcher=vi.fn(async()=>Response.json({ok:true,receipt},{status:201}));
+    await saveHostedProject('p1',project,'current',fetcher as never,'expected-hash');
+    expect((fetcher.mock.calls[0] as unknown as [string,RequestInit])[1].headers).toMatchObject({'if-match':'expected-hash'});
+  });
   it('PUTs the document against its base revision and returns the receipt', async () => {
     const fetcher = vi.fn(async () => Response.json({ ok: true, receipt }, { status: 201 }));
     expect(await saveHostedProject('p1', project, 'v1.2', fetcher as never)).toEqual(receipt);
