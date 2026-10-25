@@ -51,6 +51,7 @@ export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onBrowseAll }) 
           aria-label={`Start editing ${tpl.name}`}
           className="group flex flex-col overflow-hidden rounded-xl border border-white/10 bg-slate-900 text-left transition hover:border-blue-500/60 hover:bg-slate-900/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
         >
+          <span className="sr-only">Start editing {tpl.name}</span>
           <div className="h-28 w-full border-b border-white/10 bg-[#161616]">
             <TemplateSchematic project={tpl.project} />
           </div>
