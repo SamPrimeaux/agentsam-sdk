@@ -20,7 +20,7 @@ interface Props {
   onExit?: () => void;
 }
 
-/** Shown in place of an empty panel when no project is open. */
+/** Full template library inside the existing CAD stage, not a dialog. */
 export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onBrowseAll }) => (
   <div className="size-full overflow-y-auto bg-slate-950 p-4 text-left" aria-label="Start from a template">
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
