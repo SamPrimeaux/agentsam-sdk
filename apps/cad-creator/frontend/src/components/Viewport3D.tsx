@@ -18,6 +18,7 @@ import {
 interface Props {
   project: ProjectState;
   onSnapshotTaken?: (dataUrl: string) => void;
+  onLightingChange?: (updates: Partial<ProjectState['lighting']>) => void;
 }
 
 const SCALE = 0.0254; // 1 inch = 0.0254 meters
@@ -25,6 +26,7 @@ const SCALE = 0.0254; // 1 inch = 0.0254 meters
 export const Viewport3D: React.FC<Props> = ({
   project,
   onSnapshotTaken,
+  onLightingChange,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -38,8 +40,9 @@ export const Viewport3D: React.FC<Props> = ({
   const [cameraMode, setCameraMode] = useState<'orbit' | 'firstperson' | 'topdown' | 'isometric'>('orbit');
   const [showRoof, setShowRoof] = useState(false);
   const [showDimensions3D, setShowDimensions3D] = useState(true);
-  const [timeOfDay, setTimeOfDay] = useState<'morning' | 'noon' | 'sunset' | 'night'>(project.lighting.timeOfDay || 'noon');
-  const [sunIntensity, setSunIntensity] = useState(project.lighting.intensity || 1.1);
+  // The canonical project, not viewport-local state, owns persisted scene lighting.
+  const timeOfDay = project.lighting.timeOfDay || 'noon';
+  const sunIntensity = project.lighting.intensity ?? 1.1;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fpHelp, setFpHelp] = useState(true);
 
@@ -357,11 +360,19 @@ export const Viewport3D: React.FC<Props> = ({
         break;
     }
 
+    const altitude = THREE.MathUtils.degToRad(project.lighting.sunAltitude);
+    const azimuth = THREE.MathUtils.degToRad(project.lighting.sunAzimuth);
+    if (Number.isFinite(altitude) && Number.isFinite(azimuth)) {
+      dirPos.set(30*Math.cos(altitude)*Math.sin(azimuth), 30*Math.sin(altitude), 30*Math.cos(altitude)*Math.cos(azimuth));
+    }
     sceneRef.current.background = new THREE.Color(skyColor);
+    hemiLightRef.current.color.set(project.lighting.ambientColor || '#ffffff');
     dirLightRef.current.color.set(dirColor);
     dirLightRef.current.position.copy(dirPos);
+    dirLightRef.current.castShadow = project.lighting.shadows;
+    if (rendererRef.current) rendererRef.current.shadowMap.enabled = project.lighting.shadows;
     dirLightRef.current.intensity = intensity;
-  }, [timeOfDay, sunIntensity]);
+  }, [timeOfDay, sunIntensity, project.lighting.sunAltitude, project.lighting.sunAzimuth, project.lighting.shadows, project.lighting.ambientColor]);
 
   // Build / Reconstruct 3D BIM Elements in Scene
   useEffect(() => {
@@ -738,7 +749,8 @@ export const Viewport3D: React.FC<Props> = ({
             {(['morning', 'noon', 'sunset', 'night'] as const).map((t) => (
               <button
                 key={t}
-                onClick={() => setTimeOfDay(t)}
+                type="button" aria-pressed={timeOfDay===t} disabled={!onLightingChange}
+                onClick={() => onLightingChange?.({timeOfDay:t})}
                 className={`px-2 py-0.5 text-[length:var(--text-sm)] rounded capitalize transition ${
                   timeOfDay === t
                     ? 'bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30'

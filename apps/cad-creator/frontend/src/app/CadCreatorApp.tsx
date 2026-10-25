@@ -694,7 +694,7 @@ export function CadCreatorApp({
                       }}/>
                     : accessMode === 'hosted-project'
                       ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
-                    : <Viewport3D project={project}/>}
+                    : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>}
                 </div>
               )}
 
@@ -723,7 +723,7 @@ export function CadCreatorApp({
                   }}/>
                 : accessMode === 'hosted-project'
                   ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
-                : <Viewport3D project={project}/>}
+                : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>}
               {modelModule === 'parametric' && (
                 <aside className="absolute right-0 top-0 bottom-0 z-20 w-full max-w-[440px] border-l border-white/10 bg-slate-950/95 shadow-2xl" aria-label="Parametric tools">
                   <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs">
@@ -805,11 +805,11 @@ export function CadCreatorApp({
           {/* Rendering now shows the current project instead of opening disconnected prototype dialogs. */}
           {activeWorkspace === 'render' && (
             <div className="w-full h-full">
-              <Viewport3D project={project}/>
+              <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>
             </div>
           )}
         </section>
-          {(activeWorkspace === 'plan' || activeWorkspace === 'model') && inspectorOpen && (
+          {(activeWorkspace === 'plan' || activeWorkspace === 'model' || activeWorkspace === 'render') && inspectorOpen && (
             <CadPropertyInspector project={project} selection={uiSelection}
               onSelect={setUiSelection} onChange={updateProject}
               onClose={() => setInspectorOpen(false)} readOnly={isViewer} />
