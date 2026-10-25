@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   ProjectState,
   ActiveTool,
@@ -26,7 +26,7 @@ import { collaborationClient } from '../lib/socket';
 import { Canvas2D } from '../components/Canvas2D';
 import { Viewport3D } from '../components/Viewport3D';
 import {CadWorldViewport} from '../components/DreamHouseWorldViewport';
-import { listHostedProjects, loadHostedProject, type CadHostedSelection } from '../lib/hosted-project-source';
+import { listHostedProjects, loadHostedProject, saveHostedProject, type CadHostedSelection } from '../lib/hosted-project-source';
 import { BimStartersWorkspace } from '../components/BimStartersWorkspace';
 import { NativeSketchCanvas } from '../components/NativeSketchCanvas';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
@@ -349,6 +349,27 @@ export function CadCreatorApp({
   }, [canCollaborate, roomId, currentUser.id]);
 
   // Project state updater with History & Socket broadcasting
+  // Hosted projects are writable only for the owner (decided by the server) and only when a native design document is loaded.
+  const hostedWritable = accessMode === 'hosted-project' && !!hostedSelection?.project && hostedSelection.registry.access?.canWrite === true;
+  useEffect(() => {
+    if (accessMode !== 'hosted-project') return;
+    setCurrentUser(user => { const role = hostedWritable ? 'Editor' : 'Viewer'; return user.role === role ? user : { ...user, role }; });
+  }, [accessMode, hostedWritable]);
+  const hostedSavedJson = useMemo(() => hostedSelection?.project ? JSON.stringify(hostedSelection.project) : '', [hostedSelection]);
+  const hostedDirty = useMemo(() => hostedWritable && JSON.stringify(project) !== hostedSavedJson, [hostedWritable, project, hostedSavedJson]);
+  const [hostedSaving, setHostedSaving] = useState(false);
+  const saveHostedRevision = useCallback(async () => {
+    if (!hostedWritable || !hostedSelection || hostedSaving) return;
+    setHostedSaving(true);
+    try {
+      const receipt = await saveHostedProject(hostedProjectId, project, hostedSelection.revision.revision);
+      showToast(`Saved revision ${receipt.revisionNumber}${receipt.verified ? '' : ' (read-back not verified)'}`);
+      setHostedRevision(receipt.revisionId);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Save failed. Nothing was changed.');
+    } finally { setHostedSaving(false); }
+  }, [hostedWritable, hostedSelection, hostedSaving, hostedProjectId, project]);
+
   const updateProject = useCallback((updater: (prev: ProjectState) => ProjectState) => {
     if (isViewer) {
       showToast('Action restricted: Viewers cannot modify project geometry');
@@ -478,7 +499,9 @@ export function CadCreatorApp({
           accent={cadAccent} onAccentChange={setCadAccent}
           isDark={isDarkMode} onToggleDark={() => setIsDarkMode(v => !v)}
           studioView={studioView} onStudioView={v=>{setStudioView(v);if(v==='preview'){handleSelectWorkspace('model');setExplorerOpen(false);setInspectorOpen(false)}else if(v==='code'){handleSelectWorkspace('model')}else {handleSelectWorkspace('plan')}}}
-          projectSlot={accessMode === 'hosted-project' ? <span className="text-xs text-slate-400">{templateCopyName ? 'Unsaved template copy · use Export to keep it' : 'Registered BIM · Read-only until native revision host is connected'}</span> : <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
+          projectSlot={accessMode === 'hosted-project' ? (hostedWritable
+            ? <div className="flex items-center gap-2 text-xs text-slate-300"><span>{hostedDirty ? 'Unsaved changes' : 'All changes saved'} · {hostedSelection?.revision.label || hostedSelection?.revision.revision}</span><button type="button" disabled={!hostedDirty || hostedSaving} onClick={() => void saveHostedRevision()}>{hostedSaving ? 'Saving…' : 'Save revision'}</button></div>
+            : <span className="text-xs text-slate-400">{templateCopyName ? 'Unsaved template copy · use Export to keep it' : 'Registered BIM · this revision has no editable design document'}</span>) : <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
           runtimeSlot={<CadStatusStrip workspace={currentWorkspaceDescriptor} activeTool={activeTool} unit={unit}
             selectionCount={currentUser.selectedIds.length} jobStatus={cadToolsReport ? `${cadToolsReport.available_tools}/${cadToolsReport.total_tools} Engines Online` : 'Engine Ready'}
             isSynced={isSynced} isDarkMode={isDarkMode} capabilities={liveCapabilities}/>}
@@ -699,14 +722,14 @@ export function CadCreatorApp({
 
               {(planLayout === 'split') && (
                 <div className="h-full relative w-1/2">
-                  {hostedSelection && sourceStatus==='loaded'
+                  {hostedSelection && sourceStatus==='loaded' && !hostedWritable
                     ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly siteEditable onSceneInventory={setSceneInventory} onSelect={({designId})=>{
                         const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                         for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                           setUiSelection({group,id:designId});setInspectorOpen(true);break;
                         }}
                       }}/>
-                    : accessMode === 'hosted-project' && !templateCopyName
+                    : accessMode === 'hosted-project' && !templateCopyName && !hostedWritable
                       ? hostedEmptyPane
                     : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>}
                 </div>

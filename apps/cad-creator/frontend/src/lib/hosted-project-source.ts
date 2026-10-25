@@ -1,8 +1,8 @@
 import type { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
 
-export interface CadAsset { id: string; name: string; status: string; validationStatus: string; contentHash: string | null }
-export interface CadRevision { revision: string; status: string; updatedAt: number; label?: string; bimRevision?: string | null; sceneRevision?: string | null; models: CadAsset[]; documents: CadAsset[]; native: CadAsset[] }
-export interface CadRegistry { project: { id: string; name: string }; revisions: CadRevision[] }
+export interface CadAsset { id: string; name: string; status: string; validationStatus: string; contentHash: string | null; stale?: boolean }
+export interface CadRevision { revision: string; status: string; updatedAt: number; label?: string; parentRevision?: string; bimRevision?: string | null; sceneRevision?: string | null; models: CadAsset[]; documents: CadAsset[]; native: CadAsset[] }
+export interface CadRegistry { project: { id: string; name: string }; access?: { canWrite: boolean }; revisions: CadRevision[] }
 export interface CadHostedSelection { project: ProjectState | null; registry: CadRegistry; revision: CadRevision; modelUrl: string }
 
 export const cadRegistryUrl = (id: string) => `/api/work/projects/${encodeURIComponent(id)}/cad`;
@@ -40,4 +40,22 @@ export async function loadHostedProject(projectId: string, requestedRevision?: s
   if (!source || typeof source.id !== 'string' || !Array.isArray(source.walls) || !Array.isArray(source.rooms))
     throw new Error('Saved CAD source is not an editable design document. The current canvas was retained.');
   return { project: source, registry, revision, modelUrl: cadAssetUrl(projectId, model.id) };
+}
+
+export interface HostedSaveReceipt {
+  revisionId: string; projectId: string; revisionNumber: number; timestamp: number; message: string;
+  wallsCount: number; roomsCount: number; parametricCount: number;
+  assetId: string; sha256: string; bytes: number; verified: boolean;
+}
+export const cadDocumentsUrl = (id: string, base: string) => `${cadRegistryUrl(id)}/documents?base=${encodeURIComponent(base)}`;
+
+/** Saves an edit as a new revision of the project; the base revision is never modified. */
+export async function saveHostedProject(projectId: string, project: ProjectState, baseRevision: string, fetcher: typeof fetch = fetch): Promise<HostedSaveReceipt> {
+  const res = await fetcher(cadDocumentsUrl(projectId, baseRevision), {
+    method: 'PUT', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(project),
+  });
+  const data = await res.json().catch(() => null) as { ok?: boolean; error?: string; receipt?: HostedSaveReceipt } | null;
+  if (!res.ok || !data?.ok || !data.receipt)
+    throw new Error(res.status === 401 ? 'Sign in to save this CAD project.' : `Save failed${data?.error ? ` (${data.error})` : ` (HTTP ${res.status})`}. Nothing was changed.`);
+  return data.receipt;
 }
