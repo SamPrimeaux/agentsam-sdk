@@ -750,17 +750,6 @@ export function CadCreatorApp({
           )}
 
           {/* Legacy panel routes remain registered for existing links; primary navigation has three destinations. */}
-          {/* WORKSPACE 3: PARAMETRIC */}
-          {activeWorkspace === 'parametric' && (
-            <div className="w-full h-full relative">
-              <ParametricEditor
-                project={project}
-                onUpdateProject={(newProj) => updateProject(() => newProj)}
-                canEdit={!isViewer}
-              />
-            </div>
-          )}
-
           {/* WORKSPACE 4: ROBOTICS */}
           {activeWorkspace === 'robotics' && (
             <div className="w-full h-full relative">
