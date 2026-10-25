@@ -447,7 +447,7 @@ export function CadCreatorApp({
           {hostedSelection&&<><label htmlFor="cad-hosted-revision" className="text-slate-400">Revision</label>
           <select id="cad-hosted-revision" aria-label="Select registered BIM revision" value={hostedSelection.revision.revision}
             onChange={event=>setHostedRevision(event.target.value)} className="max-w-[210px] rounded-md border border-white/15 bg-slate-800 px-2 py-1.5 text-slate-100">
-            {hostedSelection.registry.revisions.filter(row=>row.models.length&&row.documents.length).map(row=><option key={row.revision} value={row.revision}>{row.revision} · {row.status}</option>)}
+            {hostedSelection.registry.revisions.filter(row=>row.models.length&&(row.documents.length||row.revision==='current')).map(row=><option key={row.revision} value={row.revision}>{row.label || row.revision} · {row.status}</option>)}
           </select></>}
           <span className="ml-auto text-xs text-slate-400">{hostedSelection ? `${hostedSelection.revision.status} · registered source and geometry · viewing only` : templateCopyName ? `Unsaved copy of "${templateCopyName}" · not a registered project` : 'Registered projects · no template fallback'}</span>
         </div>
