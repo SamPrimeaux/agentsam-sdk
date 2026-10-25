@@ -1833,7 +1833,14 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       sourceMediaAssetId = null, editOperations = null, folder = activeFolder } = options;
     const form = new FormData();
     for (const f of fileList) form.append("files", f);
-    form.append("prefix", sourceMediaAssetId ? "derivatives/media-edit/" : "intake/");
+    const preserveArtwork = sourceMediaAssetId == null &&
+      document.getElementById("media-upload-intent")?.value === "master";
+    if (preserveArtwork) {
+      form.append("derivative_role", "original/master");
+      form.append("transform_policy", "preserve");
+    }
+    form.append("prefix", preserveArtwork ? "studio/originals/" :
+      sourceMediaAssetId ? "derivatives/media-edit/" : "intake/");
     if (folder) form.append("folder", folder);
     if (sourceMediaAssetId != null) {
       form.append("source_media_asset_id", String(sourceMediaAssetId));

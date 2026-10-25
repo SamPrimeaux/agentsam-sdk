@@ -49,14 +49,24 @@ export async function planCompletefulMockupMatrix(env, input = {}) {
   const draft = await env.DB.prepare("SELECT * FROM product_studio_drafts WHERE id = ?")
     .bind(draftId).first();
   if (!draft) throw new Error("mockup_draft_not_found");
-  const sourceId = Number(draft.prepared_media_asset_id);
-  if (!Number.isSafeInteger(sourceId) || sourceId < 1) {
-    throw new Error("prepare_artwork_before_mockup");
-  }
-  const art = await env.DB.prepare("SELECT * FROM media_assets WHERE id = ?").bind(sourceId).first();
-  if (!art || !art.r2_key) throw new Error("prepared_artwork_not_found");
   const selectedVariants = parse(draft.selected_variant_ids_json, []);
   const selectedLocations = parse(draft.print_locations_json, []);
+  const sides = parse(draft.placement_json, {}).sides || {};
+  const hasSides = Object.keys(sides).length > 0;
+  const sources = {};
+  for (const locationId of selectedLocations) {
+    const sourceId = Number(hasSides ? sides[locationId]?.prepared_media_asset_id
+      : draft.prepared_media_asset_id);
+    if (!Number.isSafeInteger(sourceId) || sourceId < 1) {
+      throw new Error("prepare_artwork_before_mockup_for_" + locationId);
+    }
+    const art = await env.DB.prepare("SELECT * FROM media_assets WHERE id = ?").bind(sourceId).first();
+    if (!art || !art.r2_key || (art.content_type && String(art.content_type).toLowerCase() !== "image/png")) {
+      throw new Error("prepared_artwork_not_found_for_" + locationId);
+    }
+    sources[locationId] = art;
+  }
+  const art = sources[selectedLocations[0]];
   const productId = draft.completeful_catalog_product_id;
   if (!selectedVariants.length || !selectedLocations.length || !productId) {
     throw new Error("mockup_selection_incomplete");
@@ -103,7 +113,7 @@ export async function planCompletefulMockupMatrix(env, input = {}) {
       });
     }
   }
-  return { ok: true, draft_id: draft.id, product_id: productId, source: art, matrix, skipped };
+  return { ok: true, draft_id: draft.id, product_id: productId, source: art, sources, matrix, skipped };
 }
 
 function artUrl(env, source) {
@@ -151,7 +161,10 @@ export async function persistCompletefulMockup(env, receipt, renderUrl, renderId
     lifecycle: "ready", media_role: "mockup",
     provider: "completeful", render_id: renderId, mockup_id: receipt.mockup_id,
     variant_color: receipt.variant_color, print_location_id: receipt.print_location_id,
-    source_media_asset_id: source.prepared_media_asset_id, draft_id: receipt.draft_id,
+    source_media_asset_id:
+      parse(source.placement_json, {}).sides?.[receipt.print_location_id]?.prepared_media_asset_id ||
+      source.prepared_media_asset_id,
+    draft_id: receipt.draft_id,
     source: "completeful_provider_render",
   };
   await env.WEBSITE_ASSETS.put(key, bytes, { httpMetadata: { contentType: mime } });
@@ -174,8 +187,9 @@ export async function renderCompletefulMockupMatrix(env, input = {}) {
   if (plan.matrix.length > 12) throw new Error("too_many_mockups_select_fewer_colors");
   assertCompletefulMutationAllowed(env);
   const output = [];
-  const preparedUrl = artUrl(env, plan.source);
   for (const target of plan.matrix) {
+    const selectedArt = plan.sources[target.print_location_id];
+    const preparedUrl = artUrl(env, selectedArt);
     const operation_key = operationKey(target);
     const existing = await env.DB.prepare("SELECT * FROM completeful_operations WHERE operation_key = ?")
       .bind(operation_key).first();

@@ -53,6 +53,12 @@ renderShell("/admin/content", `
         </select>
           </div>
         </div>
+        <label class="media-upload-intent-label" for="media-upload-intent">Upload as
+          <select id="media-upload-intent" class="media-lib-filter" aria-label="Choose whether files are photos or editable artwork masters">
+            <option value="photo">Photo / web media</option>
+            <option value="master">Artwork master (no resizing)</option>
+          </select>
+        </label>
         <input type="file" id="media-file-input" multiple accept="image/*,video/*,.glb,.usdz">
         <button type="button" class="btn small" id="media-upload-btn">Upload</button>
         <button type="button" class="btn primary small" id="media-gallery-new"><span class="media-label-desktop">+ Create gallery</span><span class="media-label-mobile">+ Gallery</span></button>
