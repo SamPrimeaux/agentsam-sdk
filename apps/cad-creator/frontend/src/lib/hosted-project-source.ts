@@ -27,7 +27,7 @@ export async function listHostedProjects(fetcher: typeof fetch = fetch): Promise
 export async function loadHostedProject(projectId: string, requestedRevision?: string, fetcher: typeof fetch = fetch): Promise<CadHostedSelection> {
   const registry = await readJson<CadRegistry>(cadRegistryUrl(projectId), fetcher);
   if (!registry.project || !Array.isArray(registry.revisions)) throw new Error('Project revision registry is invalid.');
-  const compatible = registry.revisions.filter((r) => r.models.length && r.documents.length);
+  const compatible = registry.revisions.filter((r) => r.models.length && (r.documents.length || r.revision === 'current'));
   const revision = requestedRevision ? compatible.find((r) => r.revision === requestedRevision) : compatible[0];
   if (!revision) throw new Error(requestedRevision ? 'This revision does not have both a registered 3D model and editable design document.' : 'No coordinated BIM model and design document are registered for this project. Existing sources were not replaced.');
   const document = revision.documents.find((a) => a.validationStatus === 'asset-verified') || revision.documents[0];
