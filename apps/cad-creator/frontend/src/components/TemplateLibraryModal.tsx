@@ -18,6 +18,8 @@ import {
 import { ProjectState, UserRole } from '@inneranimalmedia/agentsam-cad-shared';
 import { TEMPLATE_METADATA_LIST, TemplateMetadata } from '../lib/templates';
 import { getPermissions } from '../lib/permissions';
+import { TemplateSchematic } from './TemplateSchematic';
+import { cloneTemplateProject } from './TemplateStarterGrid';
 
 interface Props {
   isOpen: boolean;
