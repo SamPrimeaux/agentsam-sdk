@@ -288,6 +288,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
    gltfRoot?.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose())}});
    sky.geometry.dispose();sky.material.dispose();
    environmentRef.current=null;
+   materialSets.current.clear();
    if(context.domElement.parentElement===host)host.removeChild(context.domElement);
    context.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;
   };
