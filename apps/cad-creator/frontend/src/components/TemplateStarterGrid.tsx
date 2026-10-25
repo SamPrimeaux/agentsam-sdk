@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Layers } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import type { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
 import { TEMPLATE_METADATA_LIST, type TemplateMetadata } from '../lib/templates';
 import { TemplateSchematic } from './TemplateSchematic';
@@ -17,11 +17,11 @@ export function cloneTemplateProject(tpl: TemplateMetadata): ProjectState {
 interface Props {
   /** Receives an independent copy; the template itself is never mutated. */
   onSelect: (project: ProjectState, name: string) => void;
-  onBrowseAll?: () => void;
+  onExit?: () => void;
 }
 
-/** Shown in place of an empty panel when no project is open. */
-export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onBrowseAll }) => (
+/** Full template library inside the existing CAD stage, not a dialog. */
+export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onExit }) => (
   <div className="size-full overflow-y-auto bg-slate-950 p-4 text-left" aria-label="Start from a template">
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <div className="min-w-0">
@@ -30,14 +30,14 @@ export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onBrowseAll }) 
           Opens an unsaved copy. Pick a saved project from the menu above to inspect a registered model instead.
         </p>
       </div>
-      {onBrowseAll && (
+      {onExit && (
         <button
           type="button"
-          onClick={onBrowseAll}
+          onClick={onExit}
           className="flex min-h-9 items-center gap-1.5 rounded-lg border border-white/15 px-3 text-xs text-slate-200 hover:bg-white/10"
         >
-          <Layers className="h-3.5 w-3.5" />
-          <span>Browse full library</span>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>Back to workspace</span>
         </button>
       )}
     </div>
