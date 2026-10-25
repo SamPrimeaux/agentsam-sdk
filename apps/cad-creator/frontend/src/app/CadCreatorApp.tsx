@@ -446,7 +446,7 @@ export function CadCreatorApp({
         <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-white/10 bg-slate-900/95 px-3 py-1.5 text-xs" aria-label="Registered CAD project and revision">
           <label htmlFor="cad-hosted-project" className="text-slate-400">Project</label>
           <select id="cad-hosted-project" aria-label="Open registered CAD project" value={hostedProjectId}
-            onChange={event=>{setHostedProjectId(event.target.value);setHostedRevision('');setHostedSelection(null);setProject(createEmptyCadProject());}}
+            onChange={event=>{setTemplateCopyName(null);setCurrentUser(prev=>prev.role==='Editor'?{...prev,role:'Viewer'}:prev);setHostedProjectId(event.target.value);setHostedRevision('');setHostedSelection(null);setProject(createEmptyCadProject());}}
             className="min-w-0 max-w-[260px] rounded-md border border-white/15 bg-slate-800 px-2 py-1.5 text-slate-100">
             <option value="">Select a saved project</option>
             {hostedProjects.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
