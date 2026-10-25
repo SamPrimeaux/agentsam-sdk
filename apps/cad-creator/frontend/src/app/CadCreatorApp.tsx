@@ -109,7 +109,7 @@ export function CadCreatorApp({
       if(!active)return;
       setProject(selection.project);setHostedSelection(selection);
       setHistory([]);setRedoStack([]);setUiSelection(null);setVerifiedProjectRevision(null);
-      setActiveWorkspace('model');setPlanLayout('split');setModelModule(null);
+      setActiveWorkspace('model');setPlanLayout('split');
       setExplorerOpen(false);setInspectorOpen(false);setSourceStatus('loaded');
     }).catch(error=>{if(active){setSourceStatus('unavailable');setSourceError(error instanceof Error?error.message:String(error));}});
     return () => {active=false;};
