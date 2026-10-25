@@ -754,7 +754,7 @@ export function CadCreatorApp({
                       showDiagnostics={showRoboticsDiagnostics}
                       setShowDiagnostics={setShowRoboticsDiagnostics}
                       onOpenToolIntegration={(toolId) => {
-                        if (toolId === 'openscad') handleSelectWorkspace('parametric');
+                        if (toolId === 'openscad') handleSelectWorkspace('model');
                         else if (toolId === 'blender' || toolId === 'meshy') handleSelectWorkspace('render');
                         else handleSelectWorkspace('model');
                       }}
