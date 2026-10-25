@@ -55,6 +55,12 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
  const [exposure,setExposure]=useState(.72),[sunStrength,setSunStrength]=useState(1),[fillStrength,setFillStrength]=useState(.55);
  const [skyVisible,setSkyVisible]=useState(true);
  const displayRef=useRef({mode,roofVisible,hour});
+ useEffect(()=>{
+  const close=(event:PointerEvent)=>{if(menuRef.current?.open && !menuRef.current.contains(event.target as Node))menuRef.current.open=false;};
+  const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'&&menuRef.current)menuRef.current.open=false;};
+  document.addEventListener('pointerdown',close);document.addEventListener('keydown',escape);
+  return ()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',escape);};
+ },[]);
  useEffect(()=>{displayRef.current={mode,roofVisible,hour}},[mode,roofVisible,hour]);
  useEffect(()=>{terrainDocRef.current=terrain},[terrain]);
  useEffect(()=>{terrainBrushRef.current={mode:sculptMode,radius:brushRadius,strength:brushStrength}},[sculptMode,brushRadius,brushStrength]);
