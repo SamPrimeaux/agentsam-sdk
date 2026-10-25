@@ -876,6 +876,7 @@ export function CadCreatorApp({
         isOpen={isTemplateLibraryOpen}
         onClose={() => setIsTemplateLibraryOpen(false)}
         onSelectTemplate={(tmpl) => {
+          if (accessMode === 'hosted-project' && !hostedSelection) { startFromTemplate(tmpl, tmpl.name); return; }
           if (isViewer) return;
           updateProject(() => ({
             ...tmpl,
