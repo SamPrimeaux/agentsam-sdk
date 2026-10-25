@@ -1,7 +1,7 @@
 import type { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
 
 export interface CadAsset { id: string; name: string; status: string; validationStatus: string; contentHash: string | null }
-export interface CadRevision { revision: string; status: string; updatedAt: number; models: CadAsset[]; documents: CadAsset[]; native: CadAsset[] }
+export interface CadRevision { revision: string; status: string; updatedAt: number; label?: string; bimRevision?: string | null; sceneRevision?: string | null; models: CadAsset[]; documents: CadAsset[]; native: CadAsset[] }
 export interface CadRegistry { project: { id: string; name: string }; revisions: CadRevision[] }
 export interface CadHostedSelection { project: ProjectState; registry: CadRegistry; revision: CadRevision; modelUrl: string }
 
