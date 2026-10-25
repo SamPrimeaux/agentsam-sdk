@@ -4,8 +4,8 @@ import { readFile } from 'node:fs/promises';
 const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 
 assert.equal(pkg.private, false);
-assert.equal(pkg.dependencies['@inneranimalmedia/client-cms-editor'], pkg.version);
-assert.equal(pkg.dependencies['@inneranimalmedia/cms-runtime'], pkg.version);
+assert.equal(pkg.dependencies['@inneranimalmedia/client-cms-editor'], undefined,
+  'Canonical Ecommerce Theme Studio must not depend on the retired standalone CMS editor');
 
 for (const forbidden of [
   '@inneranimalmedia/agentsam-cms-backend',
