@@ -62,8 +62,7 @@ import {
   Camera,
   Play,
   RotateCcw,
-  Activity,
-  Code2
+  Activity
 } from 'lucide-react';
 
 export interface CadCreatorAppProps {
