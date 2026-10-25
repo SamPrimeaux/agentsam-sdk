@@ -24,7 +24,7 @@ export interface CadWorldViewportProps {
  onSelect?:(s:Selected)=>void;
  onSceneInventory?:(groups:CadSceneInventoryGroup[])=>void;
 }
-export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,onSelect}:CadWorldViewportProps) {
+export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,onSelect,onSceneInventory}:CadWorldViewportProps) {
  const mount=useRef<HTMLDivElement>(null),renderer=useRef<THREE.WebGLRenderer|null>(null),
  sceneRef=useRef<THREE.Scene|null>(null),cameraRef=useRef<THREE.PerspectiveCamera|null>(null);
  const assetRef=useRef<THREE.Object3D|null>(null),collidersRef=useRef<THREE.Object3D[]>([]);
