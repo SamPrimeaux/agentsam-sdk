@@ -105,7 +105,7 @@ export function CadCreatorApp({
   useEffect(() => {
     if (accessMode !== 'hosted-project' || !hostedProjectId) return;
     let active=true;
-    setSourceStatus('loading');setSourceError('');setHostedSelection(null);
+    setSourceStatus('loading');setSourceError('');setHostedSelection(null);setSceneInventory([]);
     void loadHostedProject(hostedProjectId,hostedRevision||undefined).then(selection=>{
       if(!active)return;
       setProject(selection.project || { ...createEmptyCadProject(), id: hostedProjectId, name: selection.registry.project.name });setHostedSelection(selection);
