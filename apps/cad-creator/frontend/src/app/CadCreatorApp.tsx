@@ -588,18 +588,6 @@ export function CadCreatorApp({
           </div>
         )}
 
-        {activeWorkspace === 'parametric' && (
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-xs text-indigo-400 flex items-center gap-1.5">
-              <Code2 className="size-3.5" />
-              <span>OpenSCAD CSG / FreeCAD Solid Kernel</span>
-            </span>
-            <span className="text-[length:var(--text-xs)] font-mono px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-              Deterministic Compile
-            </span>
-          </div>
-        )}
-
         {activeWorkspace === 'robotics' && (
           <div className="flex items-center gap-3">
             <span className="font-semibold text-xs text-indigo-400 flex items-center gap-1.5">
