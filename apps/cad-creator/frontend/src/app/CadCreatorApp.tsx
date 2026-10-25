@@ -476,7 +476,7 @@ export function CadCreatorApp({
           onMore={() => setAdvancedToolsOpen(v => !v)} moreOpen={advancedToolsOpen}
           accent={cadAccent} onAccentChange={setCadAccent}
           isDark={isDarkMode} onToggleDark={() => setIsDarkMode(v => !v)}
-          studioView={studioView} onStudioView={v=>{setStudioView(v);if(v==='preview'){handleSelectWorkspace('model');setExplorerOpen(false);setInspectorOpen(false)}else if(v==='code'){handleSelectWorkspace('parametric');setExplorerOpen(false);setInspectorOpen(false)}else {handleSelectWorkspace('plan')}}}
+          studioView={studioView} onStudioView={v=>{setStudioView(v);if(v==='preview'){handleSelectWorkspace('model');setExplorerOpen(false);setInspectorOpen(false)}else if(v==='code'){handleSelectWorkspace('model')}else {handleSelectWorkspace('plan')}}}
           projectSlot={accessMode === 'hosted-project' ? <span className="text-xs text-slate-400">{templateCopyName ? 'Unsaved template copy · use Export to keep it' : 'Registered BIM · Read-only until native revision host is connected'}</span> : <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
           runtimeSlot={<CadStatusStrip workspace={currentWorkspaceDescriptor} activeTool={activeTool} unit={unit}
             selectionCount={currentUser.selectedIds.length} jobStatus={cadToolsReport ? `${cadToolsReport.available_tools}/${cadToolsReport.total_tools} Engines Online` : 'Engine Ready'}
