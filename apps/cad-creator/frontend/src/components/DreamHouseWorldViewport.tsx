@@ -109,7 +109,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   const context=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false,preserveDrawingBuffer:true});
   context.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
   context.outputColorSpace=THREE.SRGBColorSpace;context.toneMapping=THREE.ACESFilmicToneMapping;
-  context.toneMappingExposure=0.64;
+  context.toneMappingExposure=.72;
   context.shadowMap.enabled=true;
   context.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.current=context;host.appendChild(context.domElement);
