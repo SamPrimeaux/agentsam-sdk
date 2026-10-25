@@ -413,7 +413,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
        const step=Math.max(-240,Math.min(240,e.deltaY));
        orbit.current.distance=Math.max(minDistance,Math.min(maxDistance,orbit.current.distance*Math.exp(step*.0015)));
      }}/>
-   <details className="cad-world-menu" aria-label="World view settings">
+   <details ref={menuRef} className="cad-world-menu" aria-label="World view settings">
      <summary title="View and environment controls" aria-label="View and environment controls">Views &amp; Scene</summary>
      <div className="cad-world-menu-content">
        <strong>Camera</strong>
