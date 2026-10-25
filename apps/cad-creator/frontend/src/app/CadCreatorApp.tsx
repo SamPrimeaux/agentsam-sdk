@@ -429,6 +429,12 @@ export function CadCreatorApp({
     if (canCollaborate) collaborationClient.sendProjectUpdate(next);
   };
 
+  // Shown in place of a model while hosted mode has no registered project open. With a project id
+  // present (loading or failed) the original status text stays: a failed load is never replaced by a starter.
+  const hostedEmptyPane = (sourceStatus === 'loading' || hostedProjectId)
+    ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
+    : <TemplateStarterGrid onSelect={startFromTemplate} onBrowseAll={() => setIsTemplateLibraryOpen(true)} />;
+
   const currentWorkspaceDescriptor =
     WORKSPACE_REGISTRY.find((w) => w.id === activeWorkspace) || WORKSPACE_REGISTRY[0];
 
