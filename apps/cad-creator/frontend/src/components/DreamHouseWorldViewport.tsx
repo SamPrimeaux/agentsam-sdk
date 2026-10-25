@@ -229,6 +229,8 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
       orbit.current={az:.88,el:.49,distance:Math.max(11,size.length()*(ratio<.7?1.7:ratio<1.25?1.15:.85))};
       walk.current.position.set(center.x,Math.max(1.65,box.min.y+1.65),center.z);
       const structure:THREE.Object3D[]=[];
+      const categories=new Map<string,number>();
+      materialSets.current.clear();
       const authoredMaterialPalette=new Map<THREE.Material,THREE.MeshBasicMaterial>();
       const materialColor=(source:THREE.Material):THREE.MeshBasicMaterial=>{
         const cached=authoredMaterialPalette.get(source);
