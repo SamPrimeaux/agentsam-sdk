@@ -68,7 +68,7 @@ export async function handleWorkCadRequest(request, env, owner) {
   if (assetId) {
     const row = await env.DB.prepare("SELECT id, name, r2_key, content_hash, validation_status FROM agentsam_artifacts WHERE id = ? AND artifact_status IN ('draft','published')")
       .bind(assetId).first();
-    if (!row || !String(row.r2_key).startsWith(prefix) || row.validation_status === 'failed')
+    if (!row || !(String(row.r2_key).startsWith(prefix) || (currentPrefix && String(row.r2_key).startsWith(currentPrefix))) || row.validation_status === 'failed')
       return response({ ok: false, error: 'cad_asset_not_registered' }, 404);
     const assetStore = env[bindingName];
     if (!assetStore || typeof assetStore.get !== 'function' || typeof assetStore.put !== 'function')
