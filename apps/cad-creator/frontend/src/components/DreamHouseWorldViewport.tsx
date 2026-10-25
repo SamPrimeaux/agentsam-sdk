@@ -305,12 +305,13 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   if(!environment||!scene)return;
   const evening=hour==='evening';
   environment.sun.position.set(evening?-80:80,evening?20:125,evening?65:55);
-  environment.sun.intensity=evening?0.55:1.05;
+  environment.sun.intensity=(evening?0.55:1.05)*sunStrength;
   environment.sun.color.set(evening?'#ffc18d':'#fff0d7');
-  environment.fill.intensity=evening?0.3:0.55;
+  environment.fill.intensity=(evening?0.5:1)*fillStrength;
+  environment.sky.visible=skyVisible;
   environment.sky.material.uniforms['sunPosition'].value.copy(environment.sun.position);
-  scene.fog=new THREE.Fog(evening?'#596575':'#b5c5cb',260,1150);
- },[hour]);
+  scene.fog=skyVisible?new THREE.Fog(evening?'#596575':'#b5c5cb',260,1150):null;
+ },[hour,sunStrength,fillStrength,skyVisible]);
  useEffect(()=>{
   if(!assetRef.current)return;
   const seen=new Set<THREE.Material>();
