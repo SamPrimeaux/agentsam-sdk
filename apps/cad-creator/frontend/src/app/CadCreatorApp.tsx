@@ -720,8 +720,8 @@ export function CadCreatorApp({
                           setUiSelection({group,id:designId});setInspectorOpen(true);break;
                         }}
                       }}/>
-                    : accessMode === 'hosted-project'
-                      ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
+                    : accessMode === 'hosted-project' && !templateCopyName
+                      ? hostedEmptyPane
                     : <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>}
                 </div>
               )}
