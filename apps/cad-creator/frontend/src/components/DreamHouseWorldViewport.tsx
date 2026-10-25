@@ -313,17 +313,15 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   scene.fog=skyVisible?new THREE.Fog(evening?'#596575':'#b5c5cb',260,1150):null;
  },[hour,sunStrength,fillStrength,skyVisible]);
  useEffect(()=>{
-  if(!assetRef.current)return;
-  const seen=new Set<THREE.Material>();
-  assetRef.current.traverse(o=>{
-   if(!(o instanceof THREE.Mesh))return;
-   const mats=Array.isArray(o.material)?o.material:[o.material];
-   for(const mat of mats){if(seen.has(mat))continue;seen.add(mat);
-    if('wireframe' in mat)(mat as THREE.MeshStandardMaterial).wireframe=wireframe;
-   }
-  });
- },[wireframe,ready]);
- useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(hour==='day'?'#0b1928':'#21172a');},[hour]);
+  // Switching rendering modes never modifies saved geometry or Blender materials.
+  for(const [mesh,variants] of materialSets.current){
+   mesh.material=variants[shading];
+   const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+   for(const mat of mats)if('wireframe' in mat)(mat as THREE.MeshStandardMaterial).wireframe=wireframe;
+  }
+ },[shading,wireframe,ready]);
+ useEffect(()=>{if(renderer.current)renderer.current.toneMappingExposure=exposure;},[exposure]);
+ useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(skyVisible?(hour==='day'?'#0b1928':'#21172a'):'#26313b');},[hour,skyVisible]);
  // Editing always regenerates the complete terrain projection from the same
  // document, so exported JSON and visible relief cannot diverge.
  useEffect(()=>{
