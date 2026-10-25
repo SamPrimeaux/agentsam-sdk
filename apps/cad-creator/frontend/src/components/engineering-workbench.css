@@ -168,6 +168,10 @@
 .cad-world-room{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
 .cad-world-room select{max-width:70%;min-width:0;padding:.4rem;border:1px solid #ffffff33;border-radius:.55rem;background:#243145;color:#e5eaf3}
 .cad-world-menu .cad-world-action{width:100%;text-align:start}
+.cad-world-setting{display:grid;grid-template-columns:4.5rem minmax(5rem,1fr) 2.7rem;align-items:center;gap:.65rem;min-height:2.1rem;color:#d3dce9;font-size:var(--text-sm)}
+.cad-world-setting input[type=range]{width:100%;min-width:0;accent-color:#80b6ff;cursor:pointer}
+.cad-world-setting output{text-align:right;font-variant-numeric:tabular-nums;color:#9fc3e8;font-family:var(--font-mono,monospace)}
+.cad-world-menu-content{width:19rem;max-width:min(80vw,22rem)}
 
 /* Portrait: compact toolbar stays a single line when there are no drawing tools. */
 @media(max-width:660px){
