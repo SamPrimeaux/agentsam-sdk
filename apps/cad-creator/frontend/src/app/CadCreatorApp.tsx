@@ -195,7 +195,6 @@ export function CadCreatorApp({
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
   const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
   const [verifiedProjectRevision, setVerifiedProjectRevision] = useState<{projectId:string;revision:number}|null>(null);
-  const [modelModule, setModelModule] = useState<'parametric'|null>(initialWorkspace === 'parametric' ? 'parametric' : null);
   const onVerifiedRevision = useCallback((revision:number|null, projectId:string) => {
     setVerifiedProjectRevision(revision === null ? null : {projectId,revision});
   }, []);
