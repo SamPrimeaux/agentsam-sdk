@@ -62,7 +62,7 @@ const capabilities: SettingsCapabilities = {
   ],
 };
 
-const SETTINGS_CATALOG_CHANGED_EVENT = "agentsam:settings-catalog-changed";
+import { SETTINGS_CATALOG_CHANGED_EVENT, buildConnectionReturnUrl } from "@/lib/desktop/connection-deep-link";
 
 function applyCatalogOverlay(snapshot: SettingsSnapshot): SettingsSnapshot {
   // The old catalog overlay is no longer treated as runtime authority.
@@ -494,8 +494,10 @@ export const localStudioSettingsHost: SettingsHost = {
     }
     if (!plugin.setupUrl) throw new Error("plugin_setup_unavailable");
     if (plugin.setupUrl.startsWith("/api/connections/") && plugin.providerKey === "cloudflare") {
+      const pluginsView = "/settings/customize?view=plugins";
       await startLocalStudioProviderConnection("cloudflare", {
-        returnTo: "/settings/customize?view=plugins",
+        // The packaged app returns through its deep link; the web build returns to the web page.
+        returnTo: isPackagedDesktop() ? buildConnectionReturnUrl("cloudflare", pluginsView) : pluginsView,
       });
       return;
     }

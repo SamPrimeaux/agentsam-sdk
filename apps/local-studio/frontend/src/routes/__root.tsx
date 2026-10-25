@@ -3,6 +3,7 @@ import { AgentSamShell } from "../../agentsam/AgentSamShell";
 import { PackagedConsoleFrame } from "../../agentsam/PackagedConsoleFrame";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { ConnectionDeepLinkBridge } from "@/components/desktop/ConnectionDeepLinkBridge";
 import appCss from "../styles.css?url";
 import { isStudioAdminPath } from "../../../shared/studio-admin-routes.mjs";
 
@@ -47,6 +48,7 @@ function RootDocument() {
   const content = (
     <>
       <PreviewHostBridge />
+      <ConnectionDeepLinkBridge />
       <AuthProvider>
         <ApplicationOutlet />
       </AuthProvider>
