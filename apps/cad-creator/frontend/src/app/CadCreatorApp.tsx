@@ -95,6 +95,7 @@ export function CadCreatorApp({
   const [hostedProjectId,setHostedProjectId] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('project') || '');
   const [hostedRevision,setHostedRevision] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('revision') || '');
   const [hostedSelection,setHostedSelection] = useState<CadHostedSelection|null>(null);
+  const [sceneInventory,setSceneInventory] = useState<Array<{category:string;count:number}>>([]);
   useEffect(() => {
     if (accessMode !== 'hosted-project') return;
     let active=true;
