@@ -18,6 +18,8 @@ import {
 import { ProjectState, UserRole } from '@inneranimalmedia/agentsam-cad-shared';
 import { TEMPLATE_METADATA_LIST, TemplateMetadata } from '../lib/templates';
 import { getPermissions } from '../lib/permissions';
+import { TemplateSchematic } from './TemplateSchematic';
+import { cloneTemplateProject } from './TemplateStarterGrid';
 
 interface Props {
   isOpen: boolean;
@@ -72,14 +74,7 @@ export const TemplateLibraryModal: React.FC<Props> = ({
 
   const handleApply = (tpl: TemplateMetadata) => {
     if (!permissions.canLoadTemplates) return;
-    // Clone template state with fresh ID and current timestamp
-    const cloned: ProjectState = {
-      ...structuredClone(tpl.project),
-      id: `proj_${Date.now()}`,
-      updatedAt: Date.now(),
-      version: 1,
-    };
-    onSelectTemplate(cloned);
+    onSelectTemplate(cloneTemplateProject(tpl));
     onClose();
   };
 
@@ -240,60 +235,7 @@ export const TemplateLibraryModal: React.FC<Props> = ({
 
                   {/* SVG Blueprint Mini Diagram */}
                   <div className="h-32 w-full bg-[#161616] border border-[#2e2e2e] rounded flex items-center justify-center relative overflow-hidden">
-                    <svg className="w-full h-full p-2" viewBox="-20 -20 440 340">
-                      {/* Grid Pattern */}
-                      <defs>
-                        <pattern id="tpl_grid" width="24" height="24" patternUnits="userSpaceOnUse">
-                          <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#252525" strokeWidth="1" />
-                        </pattern>
-                      </defs>
-                      <rect x="-20" y="-20" width="440" height="340" fill="url(#tpl_grid)" />
-
-                      {/* Rooms */}
-                      {activeTemplate.project.rooms.map((r, i) => {
-                        const pathD = r.points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p[0]} ${p[1]}`).join(' ') + ' Z';
-                        return (
-                          <path
-                            key={i}
-                            d={pathD}
-                            fill={r.color || '#3b82f6'}
-                            fillOpacity="0.25"
-                            stroke="#3b82f6"
-                            strokeWidth="1"
-                            strokeDasharray="2,2"
-                          />
-                        );
-                      })}
-
-                      {/* Walls */}
-                      {activeTemplate.project.walls.map((w, i) => (
-                        <line
-                          key={i}
-                          x1={w.x1}
-                          y1={w.y1}
-                          x2={w.x2}
-                          y2={w.y2}
-                          stroke={w.exterior ? '#ffffff' : '#94a3b8'}
-                          strokeWidth={w.thickness || 6}
-                          strokeLinecap="round"
-                        />
-                      ))}
-
-                      {/* Furniture */}
-                      {activeTemplate.project.furniture.map((f, i) => (
-                        <rect
-                          key={i}
-                          x={f.x - f.w / 2}
-                          y={f.y - f.d / 2}
-                          width={f.w}
-                          height={f.d}
-                          fill={f.color || '#475569'}
-                          stroke="#cbd5e1"
-                          strokeWidth="1"
-                          rx="2"
-                        />
-                      ))}
-                    </svg>
+                    <TemplateSchematic project={activeTemplate.project} />
                   </div>
                 </div>
 
