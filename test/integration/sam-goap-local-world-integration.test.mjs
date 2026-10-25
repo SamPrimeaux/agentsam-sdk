@@ -21,7 +21,7 @@ test('real local GOAP world projects evidence-gated Plan selection and reports m
     assert.equal(spawnSync('git',['init','-q'],{cwd:root}).status,0);
     // Repository snapshot requires a resolvable HEAD. This fixture is still
     // completely unconfigured: there is no .agentsam/config.json.
-    assert.equal(spawnSync('git',['-c','user.name=AgentSam Test','-c','user.email=test@example.com',
+    assert.equal(spawnSync('git',['-c','commit.gpgsign=false','-c','user.name=AgentSam Test','-c','user.email=test@example.com',
       'commit','--allow-empty','-q','-m','fixture'],{cwd:root}).status,0);
     const plan=run(root,['plan','new','Canonical CMS activation','--json']);
     const inspect=run(root,['plan','add','Inspect existing CMS theme records','--plan',plan.id,

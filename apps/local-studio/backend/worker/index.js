@@ -115,7 +115,11 @@ function isLocalStudioCommerceApi(pathname) {
     || pathname === "/api/admin/products"
     || /^\/api\/admin\/(?:products\/\d+(?:\/variants|\/images(?:\/\d+(?:\/primary)?)?)?|variants\/\d+(?:\/inventory)?|inventory|collections)$/.test(pathname)
     || pathname.startsWith("/api/admin/product-studio/")
-    || pathname.startsWith("/api/admin/completeful/");
+    || pathname.startsWith("/api/admin/completeful/")
+    || pathname.startsWith("/api/admin/cms/")
+    || pathname.startsWith("/api/admin/agentsam/")
+    || pathname.startsWith("/api/admin/theme-editor/")
+    || pathname.startsWith("/api/admin/store/");
 }
 
 /** Install paths derived from app manifests (not a hardcoded mini-registry). */

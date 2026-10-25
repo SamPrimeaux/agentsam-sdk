@@ -18,6 +18,15 @@ const copy = async (from, to) => {
 await rm(dest, { recursive: true, force: true });
 await mkdir(dest, { recursive: true });
 await copy(source("frontend/static"), path.join(dest, "admin"));
+// Product-owned mobile dock, sidebar profile menu and manifest-backed config.
+await copy(source("frontend/dock"), path.join(dest, "admin/dock"));
+await copy(source("frontend/profile-popup"), path.join(dest, "admin/profile-popup"));
+const manifest = JSON.parse(await readFile(source("agentsam.app.json"), "utf8"));
+if (!Array.isArray(manifest.dock?.tabs) || !manifest.dock.tabs.length) {
+  throw new Error("Ecommerce manifest has no dock tabs");
+}
+await writeFile(path.join(dest, "admin/dock/dock.config.json"),
+  JSON.stringify(manifest.dock, null, 2) + "\n");
 await copy(source("frontend/dist"), path.join(dest, "admin/_spa"));
 // The admin SPA shell imports these original app-owned runtime controllers.
 // They are not in frontend/static and must be shipped explicitly rather than
@@ -29,6 +38,18 @@ for (const name of ["shell.js", "inspector.js"]) {
 // not be resolved from FuelNFreetime's surrounding monorepo at runtime.
 await copy(source("packages/media-kit/src"), path.join(dest, "admin/media-kit"));
 await copy(source("packages/agentsam-workbench/src"), path.join(dest, "admin/workbench"));
+// Bundle the canonical TypeScript CMS definition engine for the browser
+// instead of requiring an obsolete second JS authoring implementation.
+const authoring = await bundle({
+  entryPoints: [source("cms/authoring/engine.ts")],
+  bundle: true, platform: "browser", format: "iife",
+  globalName: "AgentSamCmsAuthoring", target: "es2022",
+  write: false, minify: false,
+});
+await writeFile(path.join(dest, "admin/js/cms-authoring-engine.js"),
+  authoring.outputFiles[0].contents);
+await copy(source("packages/theme-contract/runtime/theme-preview-registry.js"),
+  path.join(dest, "admin/js/theme-preview-registry.js"));
 for (const extension of ["js", "css"]) {
   const runtime = source("packages/theme-contract/runtime/portable-sections." + extension);
   await copy(runtime, path.join(dest, "js/portable-sections." + extension));
@@ -69,6 +90,9 @@ for (const critical of [
   "admin/_spa/index.html", "admin/theme-editor.html",
   "admin/js/shell.js", "admin/js/inspector.js",
   "admin/js/revise-atlas.js", "admin/js/portable-sections.js",
+  "admin/js/cms-authoring-engine.js", "admin/js/theme-preview-registry.js",
+  "admin/dock/index.js", "admin/dock/dock.css", "admin/dock/dock.config.json",
+  "admin/profile-popup/index.js",
 ]) {
   if (!fs.existsSync(path.join(dest, critical))) {
     throw new Error("Incomplete Ecommerce release: missing " + critical);
