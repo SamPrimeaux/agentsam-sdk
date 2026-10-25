@@ -8,7 +8,7 @@ const rows = [
  { id: 'doc-12', name: 'Sample.design.json', r2_key: prefix+'v1.2/source/Sample.design.json', artifact_status: 'draft', validation_status: 'asset-verified', updated_at: 199 },
  { id: 'glb-11', name: 'Sample-V1.1.glb', r2_key: prefix+'v1.1/geometry/Sample-V1.1.glb', artifact_status: 'published', validation_status: 'asset-verified', updated_at: 100 },
 ];
-function env({ owner = 'acct_1', resultRows = rows, assetRow = rows[0] } = {}) {
+function env({ owner = 'acct_1', resultRows = rows, assetRow = rows[0], current = null, currentRows = [] } = {}) {
  const got = [];
  const db = { prepare(sql) { return { bind(...args) {
    got.push({ sql, args });
@@ -19,8 +19,8 @@ function env({ owner = 'acct_1', resultRows = rows, assetRow = rows[0] } = {}) {
        return null;
      },
      async all() {
-       if (sql.includes('FROM project_storage')) return { results: [{ storage_name: 'cad', metadata_json: JSON.stringify({ keyPrefix: prefix, binding: 'WEBSITE_ASSETS' }) }] };
-       if (sql.includes('FROM agentsam_artifacts')) return { results: resultRows };
+       if (sql.includes('FROM project_storage')) return { results: [{ storage_name: 'cad', metadata_json: JSON.stringify({ keyPrefix: prefix, binding: 'CAD_PROJECT_ASSETS', currentPrefix: current ? 'projects/sample/current/' : undefined, current }) }] };
+       if (sql.includes('FROM agentsam_artifacts')) return { results: sql.includes('user_id = ?') ? currentRows : resultRows };
        return { results: [] };
      },
    };
@@ -56,6 +56,33 @@ test('authorized registry returns only registered project prefix and revision st
  assert.equal(json.revisions[0].models[0].id,'glb-12');
  assert.deepEqual(fake.got.at(-1).args,[prefix,prefix]);
 });
+test('one current DreamHouse model is preferred without inventing a matching draft', async () => {
+ const model = { id:'current-glb', name:'DreamHouse.glb', r2_key:'projects/sample/current/DreamHouse.glb',
+   artifact_status:'draft', validation_status:'asset-verified', content_hash:'verified-hash', updated_at:300 };
+ const fake = env({ current:{ modelAssetId:'current-glb', label:'Current · V1.5 scene / V1.4 BIM',
+   bimRevision:'V1.4', sceneRevision:'V1.5' }, currentRows:[model], assetRow:model });
+ const index = await handleWorkCadRequest(new Request('https://host/api/work/projects/p1/cad'), fake, 'acct_1');
+ assert.equal(index.status, 200);
+ const registry = await index.json();
+ assert.equal(registry.revisions[0].revision, 'current');
+ assert.equal(registry.revisions[0].models[0].id, 'current-glb');
+ assert.equal(registry.revisions[0].documents.length, 0);
+ assert.equal(registry.revisions[0].sceneRevision, 'V1.5');
+ assert.equal(registry.revisions[1].revision, 'v1.2');
+ const asset = await handleWorkCadRequest(new Request('https://host/api/work/projects/p1/cad/assets/current-glb'), fake, 'acct_1');
+ assert.equal(asset.status, 200);
+});
+
+test('a current pointer outside the canonical project prefix is ignored', async () => {
+ const fake = env({ current:{ modelAssetId:'rogue-glb' }, currentRows:[{
+   id:'rogue-glb', name:'rogue.glb', r2_key:'projects/other/current/rogue.glb',
+   validation_status:'asset-verified', content_hash:'hash', artifact_status:'draft',
+ }] });
+ const result = await handleWorkCadRequest(new Request('https://host/api/work/projects/p1/cad'), fake, 'acct_1');
+ assert.equal(result.status, 200);
+ assert.equal((await result.json()).revisions[0].revision, 'v1.2');
+});
+
 test('registered file cannot escape the selected project storage prefix', async () => {
  const fake = env({ assetRow: { ...rows[0], r2_key:'projects/other/revisions/v1.2/geometry.glb' } });
  const res = await handleWorkCadRequest(new Request('https://host/api/work/projects/p1/cad/assets/glb-12'), fake, 'acct_1');

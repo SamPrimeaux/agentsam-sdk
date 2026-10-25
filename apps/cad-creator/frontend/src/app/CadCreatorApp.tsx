@@ -107,7 +107,7 @@ export function CadCreatorApp({
     setSourceStatus('loading');setSourceError('');setHostedSelection(null);
     void loadHostedProject(hostedProjectId,hostedRevision||undefined).then(selection=>{
       if(!active)return;
-      setProject(selection.project);setHostedSelection(selection);
+      setProject(selection.project || { ...createEmptyCadProject(), id: hostedProjectId, name: selection.registry.project.name });setHostedSelection(selection);
       setHistory([]);setRedoStack([]);setUiSelection(null);setVerifiedProjectRevision(null);
       setActiveWorkspace('model');setPlanLayout('split');
       setExplorerOpen(false);setInspectorOpen(false);setSourceStatus('loaded');
@@ -425,7 +425,7 @@ export function CadCreatorApp({
   // present (loading or failed) the original status text stays: a failed load is never replaced by a starter.
   const hostedEmptyPane = (sourceStatus === 'loading' || hostedProjectId)
     ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
-    : <TemplateStarterGrid onSelect={startFromTemplate} onBrowseAll={() => setIsTemplateLibraryOpen(true)} />;
+    : <TemplateStarterGrid onSelect={startFromTemplate} />;
 
   const currentWorkspaceDescriptor =
     WORKSPACE_REGISTRY.find((w) => w.id === activeWorkspace) || WORKSPACE_REGISTRY[0];
@@ -447,9 +447,9 @@ export function CadCreatorApp({
           {hostedSelection&&<><label htmlFor="cad-hosted-revision" className="text-slate-400">Revision</label>
           <select id="cad-hosted-revision" aria-label="Select registered BIM revision" value={hostedSelection.revision.revision}
             onChange={event=>setHostedRevision(event.target.value)} className="max-w-[210px] rounded-md border border-white/15 bg-slate-800 px-2 py-1.5 text-slate-100">
-            {hostedSelection.registry.revisions.filter(row=>row.models.length&&row.documents.length).map(row=><option key={row.revision} value={row.revision}>{row.revision} · {row.status}</option>)}
+            {hostedSelection.registry.revisions.filter(row=>row.models.length&&(row.documents.length||row.revision==='current')).map(row=><option key={row.revision} value={row.revision}>{row.label || row.revision} · {row.status}</option>)}
           </select></>}
-          <span className="ml-auto text-xs text-slate-400">{hostedSelection ? `${hostedSelection.revision.status} · registered source and geometry · viewing only` : templateCopyName ? `Unsaved copy of "${templateCopyName}" · not a registered project` : 'Registered projects · no template fallback'}</span>
+          <span className="ml-auto text-xs text-slate-400">{hostedSelection ? (hostedSelection.revision.revision==='current' ? `${hostedSelection.revision.sceneRevision || 'Latest'} scene · ${hostedSelection.revision.bimRevision || 'BIM'} source · 3D visual review` : `${hostedSelection.revision.status} · registered source and geometry · viewing only`) : templateCopyName ? `Unsaved copy of "${templateCopyName}" · not a registered project` : 'Registered projects · no template fallback'}</span>
         </div>
       )}
       {/* The host Nav.Topbar owns application chrome. CAD owns only its contextual tools. */}

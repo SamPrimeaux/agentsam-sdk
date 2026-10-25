@@ -5,7 +5,7 @@
  */
 
 const BASE = /^\/api\/work\/projects\/([^/]+)\/cad(?:\/assets\/([^/]+))?$/;
-const MIME = Object.freeze({ '.glb': 'model/gltf-binary', '.json': 'application/json; charset=utf-8', '.ifc': 'application/octet-stream' });
+const MIME = Object.freeze({ '.glb': 'model/gltf-binary', '.json': 'application/json; charset=utf-8', '.ifc': 'application/octet-stream', '.png': 'image/png', '.blend': 'application/octet-stream' });
 const response = (body, status = 200) => Response.json(body, { status, headers: { 'cache-control': 'private, no-store' } });
 
 export function isWorkCadRequest(pathname) { return BASE.test(pathname); }
@@ -55,19 +55,20 @@ export async function handleWorkCadRequest(request, env, owner) {
       const meta = JSON.parse(store.metadata_json || '{}');
       const prefix = meta.keyPrefix;
       if (typeof prefix !== 'string' || !/^projects\/[a-zA-Z0-9_/-]+\/revisions\/$/.test(prefix)) return [];
-      // Operator-owned CAD storage is a dedicated R2 binding, not the website bucket.
-      // Other installations resolve their own declared bindings from project_storage.
-      const bindingName = store.storage_name === 'cad' ? 'CAD_PROJECT_ASSETS' : meta.binding;
+      // The installation declares its actual Worker binding; never infer access from the bucket name.
+      const bindingName = meta.binding || (store.storage_name === 'cad' ? 'CAD_PROJECT_ASSETS' : null);
+      const currentPrefix = meta.currentPrefix;
+      if (currentPrefix && (typeof currentPrefix !== 'string' || currentPrefix !== prefix.replace(/revisions\/$/, 'current/'))) return [];
       return typeof bindingName === 'string' && /^[A-Z][A-Z0-9_]+$/.test(bindingName)
-        ? [{ prefix, bindingName }] : [];
+        ? [{ prefix, bindingName, currentPrefix, current: meta.current || null, bucket: store.storage_name }] : [];
     } catch { return []; }
   });
   if (!records.length) return response({ ok: false, error: 'cad_storage_not_registered' }, 404);
-  const { prefix, bindingName } = records[0];
+  const { prefix, bindingName, currentPrefix, current, bucket } = records[0];
   if (assetId) {
     const row = await env.DB.prepare("SELECT id, name, r2_key, content_hash, validation_status FROM agentsam_artifacts WHERE id = ? AND artifact_status IN ('draft','published')")
       .bind(assetId).first();
-    if (!row || !String(row.r2_key).startsWith(prefix) || row.validation_status === 'failed')
+    if (!row || !(String(row.r2_key).startsWith(prefix) || (currentPrefix && String(row.r2_key).startsWith(currentPrefix))) || row.validation_status === 'failed')
       return response({ ok: false, error: 'cad_asset_not_registered' }, 404);
     const assetStore = env[bindingName];
     if (!assetStore || typeof assetStore.get !== 'function' || typeof assetStore.put !== 'function')
@@ -84,5 +85,36 @@ export async function handleWorkCadRequest(request, env, owner) {
   }
   const rows = await env.DB.prepare("SELECT id, name, r2_key, artifact_status, validation_status, content_hash, updated_at FROM agentsam_artifacts WHERE substr(r2_key,1,length(?)) = ? AND artifact_status IN ('draft','published') ORDER BY updated_at DESC LIMIT 400")
     .bind(prefix, prefix).all();
-  return response({ ok: true, project: { id: project.id, name: project.name }, revisions: groupCadArtifacts(rows.results || []) });
+  const revisions = groupCadArtifacts(rows.results || []);
+  // One living model: the active viewer is resolved from verified, owner-owned
+  // artifacts. Historical revisions remain available but never become projects.
+  if (current && currentPrefix && current.modelAssetId) {
+    const ids = [current.modelAssetId, current.nativeBimAssetId, current.ifcAssetId]
+      .filter(value => typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value));
+    const slug = currentPrefix.split('/')[1];
+    const result = await env.DB.prepare(
+      `SELECT id, name, r2_key, artifact_status, validation_status, content_hash, updated_at
+       FROM agentsam_artifacts WHERE id IN (${ids.map(() => '?').join(',')})
+       AND user_id = ? AND r2_bucket = ? AND project_key = ? AND artifact_status IN ('draft','published')`
+    ).bind(...ids, owner, bucket, slug).all();
+    const verified = (id) => (result.results || []).find(row =>
+      row.id === id && row.r2_key.startsWith(currentPrefix)
+      && row.validation_status === 'asset-verified' && !!row.content_hash);
+    const model = verified(current.modelAssetId);
+    if (model) {
+      const entry = (row) => ({
+        id: row.id, name: row.name, status: row.artifact_status,
+        validationStatus: row.validation_status, contentHash: row.content_hash,
+      });
+      const native = [verified(current.nativeBimAssetId), verified(current.ifcAssetId)]
+        .filter(Boolean).map(entry);
+      revisions.unshift({
+        revision: 'current', label: current.label || 'Current model',
+        status: 'draft', updatedAt: Number(model.updated_at) || 0,
+        bimRevision: current.bimRevision || null, sceneRevision: current.sceneRevision || null,
+        models: [entry(model)], documents: [], native,
+      });
+    }
+  }
+  return response({ ok: true, project: { id: project.id, name: project.name }, revisions });
 }
