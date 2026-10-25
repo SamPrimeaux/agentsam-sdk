@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Layers } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import type { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
 import { TEMPLATE_METADATA_LIST, type TemplateMetadata } from '../lib/templates';
 import { TemplateSchematic } from './TemplateSchematic';
