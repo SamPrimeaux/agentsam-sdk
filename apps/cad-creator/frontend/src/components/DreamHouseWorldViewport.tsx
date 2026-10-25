@@ -49,6 +49,10 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
  const bounds=useRef(new THREE.Box3());
  const modelBounds=useRef(new THREE.Box3());
  const environmentRef=useRef<{sky:Sky;sun:THREE.DirectionalLight;fill:THREE.HemisphereLight}|null>(null);
+ const materialSets=useRef(new Map<THREE.Mesh,{lit:THREE.Material|THREE.Material[];color:THREE.Material|THREE.Material[]}>());
+ const [shading,setShading]=useState<'lit'|'color'>('lit');
+ const [exposure,setExposure]=useState(.72),[sunStrength,setSunStrength]=useState(1),[fillStrength,setFillStrength]=useState(.55);
+ const [skyVisible,setSkyVisible]=useState(true);
  const displayRef=useRef({mode,roofVisible,hour});
  useEffect(()=>{displayRef.current={mode,roofVisible,hour}},[mode,roofVisible,hour]);
  useEffect(()=>{terrainDocRef.current=terrain},[terrain]);
