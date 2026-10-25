@@ -44,6 +44,10 @@ jobs:
       - name: Verify CAD included-app clean install
         run: npm ci --prefix apps/cad-creator --ignore-scripts --no-audit --no-fund
 
+      # npm ci alone does not check Vite asset imports: compile the real CAD UI.
+      - name: Verify CAD clean frontend build
+        run: npm run build -w @inneranimalmedia/agentsam-cad-frontend --prefix apps/cad-creator -- --base=/cad-creator/
+
       - name: Verify Campaign D1 schema, backfills and scoped API
         run: npm --prefix packages/agentsam-campaign test
 
@@ -178,3 +182,29 @@ jobs:
           path: ${{ runner.temp }}/dependency-health.json
           if-no-files-found: ignore
           retention-days: 14
+
+  # Exercise the same release sequence operators use before deploying a Worker.
+  # Verify-only SDK checks cannot detect missing included-app bundles or host assets.
+  release-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+      - name: Install root dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build all registered included apps
+        run: node apps/local-studio/scripts/build-included-apps.mjs --all
+      - name: Install Local Studio build dependencies
+        run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
+      - name: Assemble hosted Local Studio Worker and assets
+        run: npm run build --prefix apps/local-studio
+      - name: Verify hosted Worker output
+        run: npm run cf:verify-output --prefix apps/local-studio
+      - name: Smoke-test hosted Worker routes
+        run: npm run cf:smoke:worker --prefix apps/local-studio

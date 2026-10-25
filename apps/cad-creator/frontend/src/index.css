@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "./generated/typography.css";
 
-@import "../../../../packages/agentsam-nav/dist/theme.css";
+/* The generated dist/theme.css is not present in clean source checkouts. */
+@import "../../../../packages/agentsam-nav/src/shell.css";
 
 /* Embedded CAD mounts CadCreatorApp directly under #root instead of the
    standalone viewport shell. Give percentage-height editor children a
