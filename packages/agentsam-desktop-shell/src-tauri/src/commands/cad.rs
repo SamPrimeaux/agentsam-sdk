@@ -1,6 +1,6 @@
-//! Native CAD Tauri commands. Preview geometry is produced in Rust.
+//! Native CAD Tauri commands. Meshes are tessellated from OCCT BRep solids.
 //! STEP requires a packaged OCCT executable; never fake a successful export.
-use cad_kernel::{evaluate_primitive, CadPrimitive, MeshData};
+use cad_kernel::{CadPrimitive, MeshData};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::Serialize;
 use serde_json::Value;
@@ -19,8 +19,8 @@ pub struct StepExport {
 }
 
 #[tauri::command]
-pub fn generate_cad_mesh(primitive: CadPrimitive) -> Result<MeshData, String> {
-    evaluate_primitive(&primitive)
+pub fn generate_cad_mesh(app: AppHandle, state: tauri::State<'_, super::cad_engine::CadEngineState>, primitive: CadPrimitive) -> Result<MeshData, String> {
+    super::cad_engine::primitive_mesh(&app, &state, primitive)
 }
 
 fn mm(value: f64, units: &str) -> Result<f64, String> {
@@ -56,7 +56,7 @@ fn run(bin: &PathBuf, args: &[&str], operation: Option<&str>) -> Result<Value, S
     parse_receipt(&output.stdout, operation)
 }
 
-fn resolve_occt(app: &AppHandle) -> Result<PathBuf, String> {
+pub(super) fn resolve_occt(app: &AppHandle) -> Result<PathBuf, String> {
     let mut candidates = Vec::new();
     if cfg!(debug_assertions) {
         if let Ok(value) = std::env::var("AGENTSAM_OCCT_BIN") {

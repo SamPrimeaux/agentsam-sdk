@@ -7,12 +7,13 @@ export const CAD_WORKSPACES = ['plan', 'model', 'parametric', 'robotics', 'rende
 
 export interface CadSelectionContext {
   source: 'cad-creator'; workspace: string; project_id: string; revision: number;
-  object: { id: string; type: string; label: string; units: 'in' };
+  revision_ref?:string;
+  object: { id: string; type: string; label: string; units: 'in'|'m' };
 }
 /** Host owns conversation + write authority. Guest may only *request*; never privileged writes. */
 export type CadOutbound =
   | { type: 'ready'; appId: 'cad-creator'; workspaces: string[]; activeWorkspace: string }
-  | { type: 'cad.selection'; selection: CadSelectionContext }
+  | { type: 'cad.selection'; selection: CadSelectionContext|null }
   | { type: 'assistant.request'; request_id: string; prompt: string; selection: CadSelectionContext | null }
   | { type: 'cad.proposal'; proposal: { summary: string; tool: 'design_apply_operation'; args: Record<string, unknown> } };
 

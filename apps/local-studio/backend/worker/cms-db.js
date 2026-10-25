@@ -75,7 +75,7 @@ export function createCmsDbClient(db, rawProjectSlug) {
     async getAllBlocksForSite() {
       const res = await db
         .prepare(
-          `SELECT b.* FROM cms_section_components b
+          `SELECT b.*, b.block_type AS component_type, b.content_json AS component_data, CASE WHEN b.status = 'active' THEN 1 ELSE 0 END AS is_visible FROM cms_section_blocks b
            JOIN cms_page_sections s ON b.section_id = s.id
            JOIN cms_pages p ON s.page_id = p.id
            WHERE p.project_slug = ?
@@ -90,7 +90,7 @@ export function createCmsDbClient(db, rawProjectSlug) {
       if (!sectionId) return [];
       const res = await db
         .prepare(
-          `SELECT b.* FROM cms_section_components b
+          `SELECT b.*, b.block_type AS component_type, b.content_json AS component_data, CASE WHEN b.status = 'active' THEN 1 ELSE 0 END AS is_visible FROM cms_section_blocks b
            JOIN cms_page_sections s ON b.section_id = s.id
            JOIN cms_pages p ON s.page_id = p.id
            WHERE b.section_id = ? AND p.project_slug = ?
@@ -487,7 +487,12 @@ export function createCmsDbClient(db, rawProjectSlug) {
 
     async getTemplates() {
       const res = await db
-        .prepare('SELECT * FROM cms_component_templates WHERE is_system = 1 OR iam_project_slug = ? ORDER BY sort_order ASC LIMIT 50')
+        .prepare(`SELECT * FROM cms_component_templates
+           WHERE is_system = 1 OR sku IN (
+             SELECT s.template_sku FROM cms_page_sections s
+             JOIN cms_pages p ON p.id = s.page_id
+             WHERE p.project_slug = ? AND s.template_sku IS NOT NULL
+           ) ORDER BY sort_order ASC LIMIT 50`)
         .bind(projectSlug)
         .all();
       return res.results || [];

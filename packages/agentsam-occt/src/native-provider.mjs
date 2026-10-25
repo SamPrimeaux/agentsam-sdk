@@ -1,3 +1,4 @@
+import { createOcctSession } from './native-session.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -104,6 +105,29 @@ export function createOcctNativeProvider({
     const health = await doctor();
     if (!health.ready) throw new Error(health.reason || 'occt_engine_not_ready');
     if (operation === 'design_model_inspect') return inspect(input.artifact, ctx);
+    if (input.kind === 'features') {
+      if (input.units !== 'mm') throw new Error('occt_feature_units_mm_required');
+      if (!Array.isArray(input.operations) || !input.operations.length || input.operations.length > 10000
+          || typeof input.elementId !== 'string' || typeof ctx.projectId !== 'string') throw new Error('occt_feature_document_required');
+      if (!health.capabilities.includes('engine.session.v1')) throw new Error('occt_session_capability_unavailable');
+      const format = input.format || 'step';
+      if (!['step','brep','gltf','ifc'].includes(format)) throw new Error('occt_export_format_invalid');
+      const root = artifactRoot(ctx), target = path.join(root, `${crypto.randomUUID()}.${format}`);
+      const session = createOcctSession({binary,timeoutMs});
+      try {
+        await session.request({action:'open',projectId:ctx.projectId,operations:input.operations,cursor:input.cursor ?? input.operations.length});
+        const model = await session.request({action:'state'});
+        const feature = model.features.find(f => f.id === input.elementId);
+        if (!feature || !(feature.volume_mm3 > 0)) throw new Error('occt_solid_element_required');
+        const exported = await session.request({action:'export',id:input.elementId,format,path:target});
+        if (Math.abs(exported.volume_mm3-feature.volume_mm3)>Math.max(1e-4,feature.volume_mm3*1e-7)) throw new Error('occt_export_volume_mismatch');
+        const bytes=fs.readFileSync(target);if(!bytes.length)throw new Error('occt_export_empty');
+        return {engine:'occt',operation,verified:true,native_version:health.version,shape:'feature',element_id:input.elementId,
+          volume_mm3:feature.volume_mm3,feature_cursor:model.cursor,operation_count:model.operationCount,
+          artifact:{path:target,format,size_bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')}};
+      } catch (error) { try {fs.unlinkSync(target);} catch {} throw error; }
+      finally {session.close();}
+    }
     if (input.kind !== 'box') throw new Error('occt_shape_unsupported');
     const { width, depth, height, units } = input;
     const dimensions = [width, depth, height].map(v => toMillimeters(v, units));

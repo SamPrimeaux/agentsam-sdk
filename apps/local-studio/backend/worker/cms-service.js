@@ -9,6 +9,7 @@ import { createCmsDbClient } from './cms-db.js';
 import { listAuthorizedCmsSites, requireCmsSiteAccess, cmsActorRequired, configuredCmsWorkers } from './cms-authority.js';
 import { handleRemoteCmsRequest } from './cms-remote.js';
 import { fetchSitePartial, putSitePartial, injectSitePartials } from './site-partials.js';
+import { handleCmsSourceRequest } from './cms-source.js';
 
 function json(body, status = 200, headers = {}) {
   return new Response(JSON.stringify(body), {
@@ -128,6 +129,10 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
     return json({ ok: false, error: 'cms_site_uses_shared_d1_adapter' }, 400);
   }
   const dbClient = createCmsDbClient(env.DB, siteSlug);
+
+  if (url.pathname.startsWith('/api/cms/source/')) {
+    return handleCmsSourceRequest({ request, url, body, env, siteSlug, dbClient, ownedSite });
+  }
 
   try {
     // ── BOOTSTRAP ──
