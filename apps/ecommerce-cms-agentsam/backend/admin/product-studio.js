@@ -346,6 +346,42 @@ async function saveDraft(request, env) {
     removeFlatBackground: Boolean(body.placement?.removeFlatBackground ?? draft?.placement?.removeFlatBackground ?? false),
     notes: String(body.notes ?? draft?.placement?.notes ?? "").slice(0, 10000),
   };
+  // Store independent front/back (and future print-location) artwork inside
+  // the existing draft JSON contract. The active legacy columns remain
+  // authoritative for single-location provider operations.
+  const rawSides = body.placement?.sides ?? draft?.placement?.sides ?? {};
+  if (!rawSides || typeof rawSides !== "object" || Array.isArray(rawSides) ||
+      Object.keys(rawSides).length > 10) {
+    return json({ ok: false, error: "Invalid print-location artwork map" }, { status: 400 });
+  }
+  const allowedLocations = await env.DB.prepare(
+    "SELECT print_location_id FROM completeful_catalog_print_locations WHERE completeful_product_id = ?"
+  ).bind(selection.resolvedProductId).all();
+  const locationSet = new Set((allowedLocations.results || []).map((row) => row.print_location_id));
+  const sides = {};
+  for (const [sideId, value] of Object.entries(rawSides)) {
+    if (!locationSet.has(sideId) || !value || typeof value !== "object" || Array.isArray(value)) {
+      return json({ ok: false, error: "Unknown or invalid print location in artwork map" }, { status: 400 });
+    }
+    const mediaId = (name) => value[name] ? Number(value[name]) : null;
+    const original = mediaId("original_media_asset_id");
+    const prepared = mediaId("prepared_media_asset_id");
+    const preview = mediaId("preview_media_asset_id");
+    for (const item of [original, prepared, preview]) {
+      if (item !== null && (!Number.isSafeInteger(item) || item <= 0 || !(await mediaById(env, item)))) {
+        return json({ ok: false, error: "Print location references missing artwork" }, { status: 400 });
+      }
+    }
+    sides[sideId] = {
+      original_media_asset_id: original, prepared_media_asset_id: prepared, preview_media_asset_id: preview,
+      x: Number(value.x ?? 50), y: Number(value.y ?? 50), scale: Number(value.scale ?? 80),
+      rotation: Number(value.rotation ?? 0), flipX: Boolean(value.flipX), flipY: Boolean(value.flipY),
+      trimTransparent: Boolean(value.trimTransparent),
+      removeFlatBackground: Boolean(value.removeFlatBackground),
+      showArtwork: value.showArtwork !== false,
+    };
+  }
+  placement.sides = sides;
   const state = preparedMediaId ? "prepared" : "draft";
   const designSignature = (value) =>
     JSON.stringify({
@@ -361,6 +397,7 @@ async function saveDraft(request, env) {
       flipY: Boolean(value.placement?.flipY ?? false),
       trimTransparent: Boolean(value.placement?.trimTransparent ?? false),
       removeFlatBackground: Boolean(value.placement?.removeFlatBackground ?? false),
+      sides: value.placement?.sides || {},
     });
   const designChanged =
     !draft ||
@@ -451,7 +488,19 @@ async function getDraft(request, env, url, id = null) {
   return json({ ok: true, draft });
 }
 
+function requiresMultiSideProviderMapping(draft) {
+  return Object.values(draft.placement?.sides || {})
+    .filter((side) => side?.original_media_asset_id && side.showArtwork !== false).length > 1;
+}
+
 async function createDesign(env, draft) {
+  // The provider product path currently associates one design and one
+  // print location. Never silently publish a two-sided design as one side.
+  if (requiresMultiSideProviderMapping(draft)) {
+    throw Object.assign(new Error(
+      "Front and back artwork are saved independently. Supplier publishing is held until both print locations can be mapped to separate production designs."
+    ), { status: 409, code: "multi_side_provider_mapping_required" });
+  }
   // Provider designs must use the reviewed manufacturing derivative, never
   // silently fall back to the original artwork or a browser placement preview.
   if (!draft.prepared_media_asset_id) {
@@ -787,6 +836,11 @@ async function createLocalMappings(env, draft, selection, providerProductId, des
 async function createProductFromDraft(request, env, id) {
   let draft = await loadDraft(env, id);
   if (!draft) return json({ ok: false, error: "Draft not found" }, { status: 404 });
+  if (requiresMultiSideProviderMapping(draft)) {
+    return json({ ok: false, code: "multi_side_provider_mapping_required",
+      error: "Both sides are saved, but separate front/back manufacturing designs must be linked before supplier creation." },
+      { status: 409 });
+  }
   // A saved provider association must be reused, never duplicated. If a
   // previous response succeeded upstream but a local mapping write failed,
   // repair the mapping idempotently instead of submitting another product.
@@ -967,6 +1021,11 @@ async function createProductFromDraft(request, env, id) {
 async function publishDraft(request, env, id) {
   const draft = await loadDraft(env, id);
   if (!draft) return json({ ok: false, error: "Draft not found" }, { status: 404 });
+  if (requiresMultiSideProviderMapping(draft)) {
+    return json({ ok: false, code: "multi_side_provider_mapping_required",
+      error: "Both sides are saved, but supplier production mappings for front and back are not yet verified." },
+      { status: 409 });
+  }
   if (draft.state !== "created") {
     return json({ ok: false, error: "Create and map the product before publishing" }, { status: 409 });
   }
