@@ -198,6 +198,10 @@ jobs:
           cache: npm
       - name: Install root dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify Ecommerce nested npm 11 clean install
+        run: npm run install:studio --prefix apps/ecommerce-cms-agentsam
+      - name: Verify Ecommerce installer tests
+        run: node --test apps/ecommerce-cms-agentsam/tests/install-studio-deps.test.mjs
       - name: Build all registered included apps
         run: node apps/local-studio/scripts/build-included-apps.mjs --all
       - name: Install Local Studio build dependencies
