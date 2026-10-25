@@ -96,6 +96,7 @@ export function CadCreatorApp({
   const [hostedProjectId,setHostedProjectId] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('project') || '');
   const [hostedRevision,setHostedRevision] = useState(() => typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('revision') || '');
   const [hostedSelection,setHostedSelection] = useState<CadHostedSelection|null>(null);
+  const [sceneInventory,setSceneInventory] = useState<Array<{category:string;count:number}>>([]);
   useEffect(() => {
     if (accessMode !== 'hosted-project') return;
     let active=true;
@@ -105,10 +106,10 @@ export function CadCreatorApp({
   useEffect(() => {
     if (accessMode !== 'hosted-project' || !hostedProjectId) return;
     let active=true;
-    setSourceStatus('loading');setSourceError('');setHostedSelection(null);
+    setSourceStatus('loading');setSourceError('');setHostedSelection(null);setSceneInventory([]);
     void loadHostedProject(hostedProjectId,hostedRevision||undefined).then(selection=>{
       if(!active)return;
-      setProject(selection.project);setHostedSelection(selection);
+      setProject(selection.project || { ...createEmptyCadProject(), id: hostedProjectId, name: selection.registry.project.name });setHostedSelection(selection);
       setHistory([]);setRedoStack([]);setUiSelection(null);setVerifiedProjectRevision(null);
       setActiveWorkspace('model');setPlanLayout('split');
       setExplorerOpen(false);setInspectorOpen(false);setSourceStatus('loaded');
@@ -426,7 +427,7 @@ export function CadCreatorApp({
   // present (loading or failed) the original status text stays: a failed load is never replaced by a starter.
   const hostedEmptyPane = (sourceStatus === 'loading' || hostedProjectId)
     ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
-    : <TemplateStarterGrid onSelect={startFromTemplate} onBrowseAll={() => {setExplorerOpen(true);setIsTemplateLibraryOpen(true)}} />;
+    : <TemplateStarterGrid onSelect={startFromTemplate} />;
 
   const currentWorkspaceDescriptor =
     WORKSPACE_REGISTRY.find((w) => w.id === activeWorkspace) || WORKSPACE_REGISTRY[0];
@@ -448,9 +449,9 @@ export function CadCreatorApp({
           {hostedSelection&&<><label htmlFor="cad-hosted-revision" className="text-slate-400">Revision</label>
           <select id="cad-hosted-revision" aria-label="Select registered BIM revision" value={hostedSelection.revision.revision}
             onChange={event=>setHostedRevision(event.target.value)} className="max-w-[210px] rounded-md border border-white/15 bg-slate-800 px-2 py-1.5 text-slate-100">
-            {hostedSelection.registry.revisions.filter(row=>row.models.length&&row.documents.length).map(row=><option key={row.revision} value={row.revision}>{row.revision} · {row.status}</option>)}
+            {hostedSelection.registry.revisions.filter(row=>row.models.length&&(row.documents.length||row.revision==='current')).map(row=><option key={row.revision} value={row.revision}>{row.label || row.revision} · {row.status}</option>)}
           </select></>}
-          <span className="ml-auto text-xs text-slate-400">{hostedSelection ? `${hostedSelection.revision.status} · registered source and geometry · viewing only` : templateCopyName ? `Unsaved copy of "${templateCopyName}" · not a registered project` : 'Registered projects · no template fallback'}</span>
+          <span className="ml-auto text-xs text-slate-400">{hostedSelection ? (hostedSelection.revision.revision==='current' ? `${hostedSelection.revision.sceneRevision || 'Latest'} scene · ${hostedSelection.revision.bimRevision || 'BIM'} source · 3D visual review` : `${hostedSelection.revision.status} · registered source and geometry · viewing only`) : templateCopyName ? `Unsaved copy of "${templateCopyName}" · not a registered project` : 'Registered projects · no template fallback'}</span>
         </div>
       )}
       {/* The host Nav.Topbar owns application chrome. CAD owns only its contextual tools. */}
@@ -636,6 +637,7 @@ export function CadCreatorApp({
                       showToast(`Loaded "${tmpl.name}" template`);
                     }} />
                 : <CadProjectExplorer project={project} selection={uiSelection}
+                    sceneInventory={hostedSelection?.revision.revision==='current'&&!hostedSelection.project ? sceneInventory : undefined}
                     onSelect={setUiSelection} onClose={() => setExplorerOpen(false)} />}
             </div>
           )}
@@ -698,7 +700,7 @@ export function CadCreatorApp({
               {(planLayout === 'split') && (
                 <div className="h-full relative w-1/2">
                   {hostedSelection && sourceStatus==='loaded'
-                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly siteEditable onSelect={({designId})=>{
+                    ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly siteEditable onSceneInventory={setSceneInventory} onSelect={({designId})=>{
                         const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                         for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                           setUiSelection({group,id:designId});setInspectorOpen(true);break;
@@ -727,7 +729,7 @@ export function CadCreatorApp({
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
               : hostedSelection && sourceStatus==='loaded'
-                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly siteEditable onSelect={({designId})=>{
+                ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.revision} readOnly siteEditable onSceneInventory={setSceneInventory} onSelect={({designId})=>{
                     const groups=([['walls',project.walls],['doors',project.doors],['windows',project.windows],['rooms',project.rooms]] as const);
                     for(const [group,records] of groups){if(records.some(item=>item.id===designId)){
                       setUiSelection({group,id:designId});setInspectorOpen(true);break;

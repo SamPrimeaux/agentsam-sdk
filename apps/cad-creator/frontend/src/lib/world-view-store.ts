@@ -20,6 +20,11 @@ export interface WorldViewState {
   canEditSite: boolean;
   label: string;
   revision: string;
+  shading: 'lit' | 'color';
+  exposure: number;
+  sun: number;
+  ambient: number;
+  sky: boolean;
 }
 
 export interface WorldViewCommands {
@@ -33,11 +38,18 @@ export interface WorldViewCommands {
   visitRoom(roomId: string): void;
   capture(): void;
   toggleSite(): void;
+  setShading(shading: 'lit' | 'color'): void;
+  setExposure(value: number): void;
+  setSun(value: number): void;
+  setAmbient(value: number): void;
+  setSky(on: boolean): void;
+  resetLight(): void;
 }
 
 const initial: WorldViewState = {
   active: false, kind: 'world', cameraId: 'orbit', cameras: [], ready: false, mode: 'orbit', viewPreset: 'iso', roofVisible: true, daylight: true,
   wireframe: false, rooms: [], siteOpen: false, canEditSite: false, label: '', revision: '',
+  shading: 'lit', exposure: 0.72, sun: 1, ambient: 0.55, sky: true,
 };
 
 let state = initial;
@@ -74,6 +86,12 @@ export const worldView: WorldViewCommands = {
   visitRoom: id => call('visitRoom', id),
   capture: () => call('capture'),
   toggleSite: () => call('toggleSite'),
+  setShading: s => call('setShading', s),
+  setExposure: v => call('setExposure', v),
+  setSun: v => call('setSun', v),
+  setAmbient: v => call('setAmbient', v),
+  setSky: on => call('setSky', on),
+  resetLight: () => call('resetLight'),
 };
 
 const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };

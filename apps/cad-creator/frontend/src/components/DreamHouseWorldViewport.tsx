@@ -13,6 +13,7 @@ type Handoff={projectId:string;sceneRevision:string;scene:{nodeCount:number;arch
 type Selected={designId:string;category:string;nodeName:string;source:string};
 type CameraMode='orbit'|'walk';
 type ViewPreset='iso'|'plan'|'front'|'side';
+export type CadSceneInventoryGroup = {category:string; count:number};
 const POSKEY='agentsam.dreamhouse.camera.v1.1';
 const ORBIT_SPEED=0.007;
 
@@ -25,8 +26,9 @@ export interface CadWorldViewportProps {
  /** Site terrain and scenery editing; defaults to !readOnly. Stored on this device per project revision. */
  siteEditable?:boolean;
  onSelect?:(s:Selected)=>void;
+ onSceneInventory?:(groups:CadSceneInventoryGroup[])=>void;
 }
-export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,siteEditable=!readOnly,onSelect}:CadWorldViewportProps) {
+export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,siteEditable=!readOnly,onSelect,onSceneInventory}:CadWorldViewportProps) {
  const mount=useRef<HTMLDivElement>(null),renderer=useRef<THREE.WebGLRenderer|null>(null),
  sceneRef=useRef<THREE.Scene|null>(null),cameraRef=useRef<THREE.PerspectiveCamera|null>(null);
  const assetRef=useRef<THREE.Object3D|null>(null),collidersRef=useRef<THREE.Object3D[]>([]);
@@ -51,6 +53,10 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
  const bounds=useRef(new THREE.Box3());
  const modelBounds=useRef(new THREE.Box3());
  const environmentRef=useRef<{sky:Sky;sun:THREE.DirectionalLight;fill:THREE.HemisphereLight}|null>(null);
+ const materialSets=useRef(new Map<THREE.Mesh,{lit:THREE.Material|THREE.Material[];color:THREE.Material|THREE.Material[]}>());
+ const [shading,setShading]=useState<'lit'|'color'>('lit');
+ const [exposure,setExposure]=useState(.72),[sunStrength,setSunStrength]=useState(1),[fillStrength,setFillStrength]=useState(.55);
+ const [skyVisible,setSkyVisible]=useState(true);
  const displayRef=useRef({mode,roofVisible,hour});
  useEffect(()=>{displayRef.current={mode,roofVisible,hour}},[mode,roofVisible,hour]);
  useEffect(()=>{terrainDocRef.current=terrain},[terrain]);
@@ -108,11 +114,13 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   visitRoom:id=>{const z=handoff?.zones.find(x=>x.roomId===id);if(z)visit(z)},
   capture:exportSnapshot,
   toggleSite:()=>{setTerrainOpen(v=>!v);setSelection(null);window.dispatchEvent(new Event('cad:terrain-inspect'))},
+  setShading,setExposure,setSun:setSunStrength,setAmbient:setFillStrength,setSky:setSkyVisible,
+  resetLight:()=>{setShading('lit');setExposure(.72);setSunStrength(1);setFillStrength(.55);setSkyVisible(true);setHour('day');},
  };
  useEffect(()=>registerWorldView(()=>worldApi.current as Partial<WorldViewCommands>),[]);
- useEffect(()=>{publishWorldView({kind:'world',ready,mode,viewPreset,roofVisible,daylight:hour==='day',wireframe,
+ useEffect(()=>{publishWorldView({kind:'world',ready,mode,viewPreset,roofVisible,daylight:hour==='day',wireframe,shading,exposure,sun:sunStrength,ambient:fillStrength,sky:skyVisible,
   rooms:(handoff?.zones??[]).map(z=>({id:z.roomId,label:z.label})),siteOpen:terrainOpen,canEditSite:siteEditable,label:sceneLabel,revision})},
-  [ready,mode,viewPreset,roofVisible,hour,wireframe,handoff,terrainOpen,siteEditable,sceneLabel,revision]);
+  [ready,mode,viewPreset,roofVisible,hour,wireframe,handoff,terrainOpen,siteEditable,sceneLabel,revision,shading,exposure,sunStrength,fillStrength,skyVisible]);
  // Site edits persist on this device per project revision until a revision host is connected.
  const terrainKey=`cad.terrain.v1:${sceneLabel}:${revision}`;
  useEffect(()=>{try{const raw=localStorage.getItem(terrainKey);if(raw)setTerrain(validateTerrainDocument(JSON.parse(raw)))}catch{/* storage unavailable or invalid */}},[terrainKey]);
@@ -126,7 +134,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   const context=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false,preserveDrawingBuffer:true});
   context.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
   context.outputColorSpace=THREE.SRGBColorSpace;context.toneMapping=THREE.ACESFilmicToneMapping;
-  context.toneMappingExposure=0.64;
+  context.toneMappingExposure=.72;
   context.shadowMap.enabled=true;
   context.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.current=context;host.appendChild(context.domElement);
@@ -246,6 +254,8 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
       orbit.current={az:.88,el:.49,distance:Math.max(11,size.length()*(ratio<.7?1.7:ratio<1.25?1.15:.85))};
       walk.current.position.set(center.x,Math.max(1.65,box.min.y+1.65),center.z);
       const structure:THREE.Object3D[]=[];
+      const categories=new Map<string,number>();
+      materialSets.current.clear();
       const authoredMaterialPalette=new Map<THREE.Material,THREE.MeshBasicMaterial>();
       const materialColor=(source:THREE.Material):THREE.MeshBasicMaterial=>{
         const cached=authoredMaterialPalette.get(source);
@@ -262,22 +272,25 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
       };
       gltfRoot.traverse(o=>{
         if(!(o instanceof THREE.Mesh))return;
-        // Material names and base colors come from the actual BIM-derived GLB.
-        // Color fidelity fallback: the tested WebGL lit shader whites out even
-        // near-black slate materials; render those native swatches unlit until
-        // the physical-material pipeline is independently corrected.
-        o.material=Array.isArray(o.material)
-          ?o.material.map(materialColor):materialColor(o.material);
-        // Preserve imported BIM material appearance and restore depth cues.
+        // Retain the imported physical materials: replacing every PBR shader
+        // with MeshBasicMaterial discards all directional lighting and shadows.
+        // Keep the historical unlit swatches available as an explicit fallback.
+        const lit=o.material;
+        const color=Array.isArray(lit)?lit.map(materialColor):materialColor(lit);
+        materialSets.current.set(o,{lit,color});
+        o.material=lit;
+        // Preserve authored transparent glazing and structural shadow rules.
         // Transparent glazing does not cast opaque shadows on interior surfaces.
         const mats=Array.isArray(o.material)?o.material:[o.material];
         const isGlass=mats.some(m=>m.transparent&&m.opacity<0.98);
         const shadowCategory=String(o.userData?.Category||o.parent?.userData?.Category||'').toLowerCase();
         o.castShadow=!isGlass&&(['wall','roof','gable','door','column','slab'].includes(shadowCategory)||/cedar|boulder|pine|tree|rock/i.test(o.name));
         o.receiveShadow=true;
-        const category=String(o.userData?.Category||o.parent?.userData?.Category||'');
-        if(['wall','slab','roof','site','door'].includes(category.toLowerCase()))structure.push(o);
+        const category=String(o.userData?.Category||o.parent?.userData?.Category||'').trim().toLowerCase();
+        if(category)categories.set(category,(categories.get(category)||0)+1);
+        if(['wall','slab','roof','site','door'].includes(category))structure.push(o);
       });
+      onSceneInventory?.([...categories].map(([category,count])=>({category,count})).sort((a,b)=>b.count-a.count));
       collidersRef.current=structure;
       assetRef.current=gltfRoot;scene.add(gltfRoot);loaded=true;
       const terrainScene=createTerrainProjection(terrainDocRef.current);
@@ -300,6 +313,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
    gltfRoot?.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose())}});
    sky.geometry.dispose();sky.material.dispose();
    environmentRef.current=null;
+   materialSets.current.clear();
    if(context.domElement.parentElement===host)host.removeChild(context.domElement);
    context.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;
   };
@@ -316,24 +330,23 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   if(!environment||!scene)return;
   const evening=hour==='evening';
   environment.sun.position.set(evening?-80:80,evening?20:125,evening?65:55);
-  environment.sun.intensity=evening?0.55:1.05;
+  environment.sun.intensity=(evening?0.55:1.05)*sunStrength;
   environment.sun.color.set(evening?'#ffc18d':'#fff0d7');
-  environment.fill.intensity=evening?0.3:0.55;
+  environment.fill.intensity=(evening?0.5:1)*fillStrength;
+  environment.sky.visible=skyVisible;
   environment.sky.material.uniforms['sunPosition'].value.copy(environment.sun.position);
-  scene.fog=new THREE.Fog(evening?'#596575':'#b5c5cb',260,1150);
- },[hour]);
+  scene.fog=skyVisible?new THREE.Fog(evening?'#596575':'#b5c5cb',260,1150):null;
+ },[hour,sunStrength,fillStrength,skyVisible]);
  useEffect(()=>{
-  if(!assetRef.current)return;
-  const seen=new Set<THREE.Material>();
-  assetRef.current.traverse(o=>{
-   if(!(o instanceof THREE.Mesh))return;
-   const mats=Array.isArray(o.material)?o.material:[o.material];
-   for(const mat of mats){if(seen.has(mat))continue;seen.add(mat);
-    if('wireframe' in mat)(mat as THREE.MeshStandardMaterial).wireframe=wireframe;
-   }
-  });
- },[wireframe,ready]);
- useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(hour==='day'?'#0b1928':'#21172a');},[hour]);
+  // Switching rendering modes never modifies saved geometry or Blender materials.
+  for(const [mesh,variants] of materialSets.current){
+   mesh.material=variants[shading];
+   const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+   for(const mat of mats)if('wireframe' in mat)(mat as THREE.MeshStandardMaterial).wireframe=wireframe;
+  }
+ },[shading,wireframe,ready]);
+ useEffect(()=>{if(renderer.current)renderer.current.toneMappingExposure=exposure;},[exposure]);
+ useEffect(()=>{const scene=sceneRef.current;if(scene)scene.background=new THREE.Color(skyVisible?(hour==='day'?'#0b1928':'#21172a'):'#26313b');},[hour,skyVisible]);
  // Editing always regenerates the complete terrain projection from the same
  // document, so exported JSON and visible relief cannot diverge.
  useEffect(()=>{

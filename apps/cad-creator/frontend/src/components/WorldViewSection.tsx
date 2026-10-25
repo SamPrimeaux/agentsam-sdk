@@ -38,6 +38,16 @@ export function WorldViewSection() {
       <Toggle pressed={w.daylight} onClick={worldView.toggleDaylight}>{w.daylight ? 'Daylight' : 'Evening'}</Toggle>
       <Toggle pressed={w.wireframe} onClick={worldView.toggleWireframe}>Wireframe</Toggle>
     </div>
+    <h4>Lighting</h4>
+    <div className="cad-world-chip-row">
+      <Toggle pressed={w.shading === 'lit'} onClick={() => worldView.setShading('lit')}>Materials</Toggle>
+      <Toggle pressed={w.shading === 'color'} onClick={() => worldView.setShading('color')}>Source colors</Toggle>
+      <Toggle pressed={w.sky} onClick={() => worldView.setSky(!w.sky)}>Sky</Toggle>
+    </div>
+    {([['Exposure', w.exposure, 0.2, 2, 0.02, worldView.setExposure], ['Sun', w.sun, 0, 2, 0.1, worldView.setSun], ['Ambient', w.ambient, 0, 2, 0.1, worldView.setAmbient]] as const).map(([label, value, min, max, step, set]) =>
+      <label key={label} className="cad-property"><span>{label}</span>
+        <input type="range" min={min} max={max} step={step} value={value} disabled={!w.ready} aria-label={label} onChange={e => set(Number(e.target.value))} /></label>)}
+    <div className="cad-world-chip-row"><Toggle onClick={worldView.resetLight}>Reset light</Toggle></div>
     {w.rooms.length > 0 && <label className="cad-property"><span>Room</span>
       <select aria-label="Visit room" value="" disabled={!w.ready} onChange={e => { if (e.target.value) worldView.visitRoom(e.target.value); }}>
         <option value="">Walk to room…</option>{w.rooms.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
