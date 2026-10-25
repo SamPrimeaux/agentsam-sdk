@@ -8,7 +8,7 @@ const rows = [
  { id: 'doc-12', name: 'Sample.design.json', r2_key: prefix+'v1.2/source/Sample.design.json', artifact_status: 'draft', validation_status: 'asset-verified', updated_at: 199 },
  { id: 'glb-11', name: 'Sample-V1.1.glb', r2_key: prefix+'v1.1/geometry/Sample-V1.1.glb', artifact_status: 'published', validation_status: 'asset-verified', updated_at: 100 },
 ];
-function env({ owner = 'acct_1', resultRows = rows, assetRow = rows[0] } = {}) {
+function env({ owner = 'acct_1', resultRows = rows, assetRow = rows[0], current = null, currentRows = [] } = {}) {
  const got = [];
  const db = { prepare(sql) { return { bind(...args) {
    got.push({ sql, args });
