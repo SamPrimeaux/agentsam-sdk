@@ -261,9 +261,8 @@
           "frontend/node_modules/vite/package.json"
         ],
         "command": [
-          "npm",
-          "run",
-          "install:studio"
+          "node",
+          "scripts/install-studio-deps.mjs"
         ]
       },
       "command": [

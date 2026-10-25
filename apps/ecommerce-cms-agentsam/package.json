@@ -24,7 +24,7 @@
     "test:tools": "npm run typecheck:tools && node --test tests/typed-tool-registry.test.mjs tests/core-tools-readonly.test.mjs tests/d1-crud.test.mjs && node backend/tools/doctor.mjs",
     "test:release": "node --test tests/release-artifact.test.mjs tests/analytics-hosts.test.mjs tests/side-assistant-portability.test.mjs",
     "prepack": "npm run build && npm run test:release",
-    "install:studio": "npm ci --ignore-scripts --no-audit --no-fund && npm ci --prefix frontend --ignore-scripts --no-audit --no-fund",
+    "install:studio": "node scripts/install-studio-deps.mjs",
     "release:verify": "npm run build && npm run test:package && npm run test:release"
   },
   "dependencies": {
