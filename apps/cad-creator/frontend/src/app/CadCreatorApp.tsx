@@ -886,7 +886,7 @@ export function CadCreatorApp({
           }));
           showToast(`Loaded "${tmpl.name}" template`);
         }}
-        userRole={currentUser.role}
+        userRole={accessMode === 'hosted-project' && !hostedSelection ? 'Editor' : currentUser.role}
       />
 
       <FurniturePicker
