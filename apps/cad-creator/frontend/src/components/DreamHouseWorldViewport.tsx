@@ -247,13 +247,14 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
       };
       gltfRoot.traverse(o=>{
         if(!(o instanceof THREE.Mesh))return;
-        // Material names and base colors come from the actual BIM-derived GLB.
-        // Color fidelity fallback: the tested WebGL lit shader whites out even
-        // near-black slate materials; render those native swatches unlit until
-        // the physical-material pipeline is independently corrected.
-        o.material=Array.isArray(o.material)
-          ?o.material.map(materialColor):materialColor(o.material);
-        // Preserve imported BIM material appearance and restore depth cues.
+        // Retain the imported physical materials: replacing every PBR shader
+        // with MeshBasicMaterial discards all directional lighting and shadows.
+        // Keep the historical unlit swatches available as an explicit fallback.
+        const lit=o.material;
+        const color=Array.isArray(lit)?lit.map(materialColor):materialColor(lit);
+        materialSets.current.set(o,{lit,color});
+        o.material=lit;
+        // Preserve authored transparent glazing and structural shadow rules.
         // Transparent glazing does not cast opaque shadows on interior surfaces.
         const mats=Array.isArray(o.material)?o.material:[o.material];
         const isGlass=mats.some(m=>m.transparent&&m.opacity<0.98);
