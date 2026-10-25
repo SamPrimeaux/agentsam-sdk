@@ -21,8 +21,9 @@ const groups = (p:ProjectState):Array<{id:CadElementGroup;title:string;entries:{
  {id:'parametricObjects',title:'Parametric',entries:(p.parametricObjects||[]).map(x=>({id:x.id,label:x.name}))},
 ];
 
-export function CadProjectExplorer({project,selection,onSelect,onClose}:{
- project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onClose:()=>void
+export function CadProjectExplorer({project,selection,onSelect,onClose,sceneInventory}:{
+ project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onClose:()=>void;
+ sceneInventory?:Array<{category:string;count:number}>;
 }) {
  const [filter,setFilter]=useState('');
  const [closed,setClosed]=useState<Record<string,boolean>>({});
