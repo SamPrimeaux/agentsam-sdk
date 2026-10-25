@@ -107,7 +107,7 @@ export function CadCreatorApp({
     setSourceStatus('loading');setSourceError('');setHostedSelection(null);
     void loadHostedProject(hostedProjectId,hostedRevision||undefined).then(selection=>{
       if(!active)return;
-      setProject(selection.project);setHostedSelection(selection);
+      setProject(selection.project || { ...createEmptyCadProject(), id: hostedProjectId, name: selection.registry.project.name });setHostedSelection(selection);
       setHistory([]);setRedoStack([]);setUiSelection(null);setVerifiedProjectRevision(null);
       setActiveWorkspace('model');setPlanLayout('split');
       setExplorerOpen(false);setInspectorOpen(false);setSourceStatus('loaded');
