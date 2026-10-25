@@ -103,6 +103,22 @@ function removeConnectedFlatBackground(
   return removed;
 }
 
+type StoredSidePlacement = {
+  original_media_asset_id: number | null;
+  prepared_media_asset_id: number | null;
+  preview_media_asset_id: number | null;
+  x: number; y: number; scale: number; rotation: number;
+  flipX: boolean; flipY: boolean; trimTransparent: boolean; removeFlatBackground: boolean;
+  showArtwork: boolean;
+};
+type EditorSidePlacement = {
+  asset: MediaAsset | null; preparedAsset: MediaAsset | null; previewAsset: MediaAsset | null;
+  preparedFor: string | null;
+  x: number; y: number; scale: number; rotation: number;
+  flipX: boolean; flipY: boolean; trimTransparent: boolean; removeFlatBackground: boolean;
+  showArtwork: boolean;
+};
+
 type StudioDraft = {
   id: string;
   completeful_catalog_product_id: string;
@@ -113,6 +129,7 @@ type StudioDraft = {
   placement?: {
     x?: number; y?: number; scale?: number; rotation?: number; flipX?: boolean; flipY?: boolean;
     trimTransparent?: boolean; removeFlatBackground?: boolean; notes?: string;
+    sides?: Record<string, StoredSidePlacement>;
   };
   original_media_asset_id?: number | null;
   prepared_media_asset_id?: number | null;
@@ -189,6 +206,7 @@ export default function StudioWorkspace({
   const [preparedAsset, setPreparedAsset] = useState<MediaAsset | null>(null);
   const [preparedFor, setPreparedFor] = useState<string | null>(null);
   const [previewAsset, setPreviewAsset] = useState<MediaAsset | null>(null);
+  const [sidePlacements, setSidePlacements] = useState<Record<string, EditorSidePlacement>>({});
   const [draft, setDraft] = useState<StudioDraft | null>(null);
   const [restoringDraft, setRestoringDraft] = useState(Boolean(resumeDraftId));
   const [title, setTitle] = useState(detail.product.default_title || detail.product.name);
@@ -398,13 +416,37 @@ export default function StudioWorkspace({
   const artboardAspectRatio = location?.artboard_width && location?.artboard_height
     ? Number(location.artboard_width) / Number(location.artboard_height)
     : 4 / 5;
+  // Switching a print location must never carry the previous side's artwork.
+  // Keep each side's artwork and transforms independently in the same draft.
+  function snapshotActiveSide(): EditorSidePlacement {
+    return { asset, preparedAsset, previewAsset, preparedFor, x, y, scale, rotation,
+      flipX, flipY, trimTransparent, removeFlatBackground, showArtwork };
+  }
+  function restoreSide(next?: EditorSidePlacement) {
+    setAsset(next?.asset || null);
+    setPreparedAsset(next?.preparedAsset || null);
+    setPreviewAsset(next?.previewAsset || null);
+    setPreparedFor(next?.preparedFor || null);
+    setX(next?.x ?? 50);
+    setY(next?.y ?? 50);
+    setScale(next?.scale ?? 80);
+    setRotation(next?.rotation ?? 0);
+    setFlipX(next?.flipX ?? false);
+    setFlipY(next?.flipY ?? false);
+    setTrimTransparent(next?.trimTransparent ?? false);
+    setRemoveFlatBackground(next?.removeFlatBackground ?? false);
+    setShowArtwork(next?.showArtwork ?? true);
+    setDimensions(null);
+    setCroppedPreview(null);
+    setCropError("");
+    setArtworkSelected(false);
+    setProviderRenderUrl(null);
+  }
   function choosePrintLocation(nextLocationId: string) {
     if (nextLocationId === locationId) return;
+    setSidePlacements((current) => ({ ...current, [locationId]: snapshotActiveSide() }));
+    restoreSide(sidePlacements[nextLocationId]);
     setLocationId(nextLocationId);
-    setPreparedAsset(null);
-    setPreviewAsset(null);
-    setProviderRenderUrl(null);
-    setArtworkSelected(false);
   }
   const catalogId = catalogProductId(detail.product);
   useEffect(() => {
@@ -568,6 +610,45 @@ export default function StudioWorkspace({
           if (assets[0]) setAsset(assets[0]);
           if (assets[1]) setPreparedAsset(assets[1]);
           if (assets[2]) setPreviewAsset(assets[2]);
+        }
+        if (saved.placement?.sides) {
+          const sideEntries = Object.entries(saved.placement.sides);
+          const sideAssetIds = [...new Set(sideEntries.flatMap(([, side]) =>
+            [side.original_media_asset_id, side.prepared_media_asset_id, side.preview_media_asset_id]
+              .filter((id): id is number => Number.isSafeInteger(id) && Number(id) > 0)))];
+          const retrieved = await Promise.all(sideAssetIds.map(async (id) => {
+            try {
+              const result = await adminFetch<{ asset: MediaAsset }>(`/api/admin/media/${id}`, { signal: controller.signal });
+              return [id, result.asset] as const;
+            } catch { return [id, null] as const; }
+          }));
+          if (controller.signal.aborted) return;
+          const byId = new Map(retrieved);
+          const restored: Record<string, EditorSidePlacement> = {};
+          for (const [id, side] of sideEntries) {
+            const sideAsset = side.original_media_asset_id ? byId.get(side.original_media_asset_id) || null : null;
+            const sidePrepared = side.prepared_media_asset_id ? byId.get(side.prepared_media_asset_id) || null : null;
+            restored[id] = {
+              asset: sideAsset, preparedAsset: sidePrepared,
+              previewAsset: side.preview_media_asset_id ? byId.get(side.preview_media_asset_id) || null : null,
+              preparedFor: sidePrepared ? placementKey(sideAsset?.id, saved.selected_variant_ids?.[0] || "",
+                id, side.x, side.y, side.scale, side.rotation, side.flipX, side.flipY,
+                side.trimTransparent, side.removeFlatBackground) : null,
+              x: side.x, y: side.y, scale: side.scale, rotation: side.rotation,
+              flipX: side.flipX, flipY: side.flipY, trimTransparent: side.trimTransparent,
+              removeFlatBackground: side.removeFlatBackground, showArtwork: side.showArtwork,
+            };
+          }
+          setSidePlacements(restored);
+          const active = restored[saved.print_location_ids?.[0] || ""];
+          if (active) {
+            setAsset(active.asset); setPreparedAsset(active.preparedAsset); setPreviewAsset(active.previewAsset);
+            setPreparedFor(active.preparedFor);
+            setX(active.x); setY(active.y); setScale(active.scale); setRotation(active.rotation);
+            setFlipX(active.flipX); setFlipY(active.flipY);
+            setTrimTransparent(active.trimTransparent); setRemoveFlatBackground(active.removeFlatBackground);
+            setShowArtwork(active.showArtwork);
+          }
         }
         // Restoring an existing draft is normal; no standing success notice.
       })
@@ -935,6 +1016,19 @@ export default function StudioWorkspace({
     setBusy("save");
     setError("");
     try {
+      const allSides = { ...sidePlacements, [locationId]: snapshotActiveSide() };
+      const persistedSides: Record<string, StoredSidePlacement> = {};
+      for (const [id, side] of Object.entries(allSides)) {
+        persistedSides[id] = {
+          original_media_asset_id: side.asset?.id || null,
+          prepared_media_asset_id: side.preparedAsset?.id || null,
+          preview_media_asset_id: side.previewAsset?.id || null,
+          x: side.x, y: side.y, scale: side.scale, rotation: side.rotation,
+          flipX: side.flipX, flipY: side.flipY,
+          trimTransparent: side.trimTransparent, removeFlatBackground: side.removeFlatBackground,
+          showArtwork: side.showArtwork,
+        };
+      }
       const result = await adminFetch<{ draft: StudioDraft }>("/api/admin/product-studio/drafts", {
         method: "POST",
         body: JSON.stringify({
@@ -943,16 +1037,32 @@ export default function StudioWorkspace({
           force_new: !draft && !resumeDraftId,
           catalog_product_id: catalogId,
           selected_variant_ids: selectedVariantIds,
-          print_location_ids: [locationId],
+          print_location_ids: Object.entries(allSides)
+            .filter(([, side]) => side.asset && side.showArtwork)
+            .map(([id]) => id),
           original_media_asset_id: asset?.id || null,
           prepared_media_asset_id: nextPrepared?.id || null,
           preview_media_asset_id: nextPreview?.id || null,
-          placement: { x, y, scale: placementScale, rotation, flipX, flipY, trimTransparent, removeFlatBackground },
+          placement: { x, y, scale: placementScale, rotation, flipX, flipY, trimTransparent, removeFlatBackground,
+            sides: { ...persistedSides, [locationId]: { ...persistedSides[locationId], scale: placementScale,
+              prepared_media_asset_id: nextPrepared?.id || null, preview_media_asset_id: nextPreview?.id || null } } },
           notes,
           title: title.trim() || detail.product.name,
         }),
       });
       setDraft(result.draft);
+      setSidePlacements({
+        ...allSides,
+        [locationId]: {
+          ...allSides[locationId],
+          preparedAsset: nextPrepared,
+          previewAsset: nextPreview,
+          preparedFor: nextPrepared
+            ? placementKey(asset?.id, variantId, locationId, x, y, placementScale,
+                rotation, flipX, flipY, trimTransparent, removeFlatBackground)
+            : null,
+        },
+      });
       setProviderRenderUrl(preparedFor === currentPlacementKey || Boolean(nextPrepared)
         ? result.draft.completeful_render_url || null : null);
       setNotice("");
@@ -977,6 +1087,15 @@ export default function StudioWorkspace({
     const needsPreparation = !preparedAsset || preparedFor !== currentPlacementKey;
     const saved = needsPreparation ? await prepareArtwork() : await saveDraft();
     if (!saved) return;
+    const stagedSides = saved.placement?.sides || {};
+    const unfinished = Object.entries(stagedSides).filter(([, side]) =>
+      side.original_media_asset_id && side.showArtwork &&
+      !side.prepared_media_asset_id);
+    if (unfinished.length) {
+      const side = detail.print_locations.find((candidate) => candidate.print_location_id === unfinished[0][0]);
+      setError(`Prepare ${side?.name || "the other side"} artwork for print before continuing. Your design is saved.`);
+      return;
+    }
     const productId = Number(saved.product_id);
     if (!Number.isSafeInteger(productId) || productId <= 0) {
       setError("The design was saved, but no storefront draft product was returned. Reopen the design before continuing.");
@@ -1078,9 +1197,8 @@ export default function StudioWorkspace({
     setBusy("prepare");
     setError("");
     try {
-      // The SDK manufacturing contract supplies the physical print PPI. For
-      // small deficits, preserve the original pixels and reduce placement
-      // width instead of upscaling or blocking the merchant.
+      // Print DPI describes available detail, not image enhancement.
+      // Changing the physical print size must be an explicit merchant action.
       const blockingIssues = manufacturingPreflight?.issues.filter((issue) =>
         issue.status === "needs_variant" || issue.status === "unsupported") || [];
       const fittedScale = suggestPrintScale({
@@ -1088,13 +1206,17 @@ export default function StudioWorkspace({
         effectivePpi: manufacturingPreflight?.effectivePpi,
         targetPpi: manufacturingPreflight?.target.ppi,
       });
-      const canAutoFit = blockingIssues.length > 0 && fittedScale !== null &&
-        blockingIssues.every((issue) => issue.code === "insufficient_resolution");
-      if (manufacturingPreflight && ["unsupported", "needs_variant"].includes(manufacturingPreflight.status) && !canAutoFit) {
-        throw new Error(blockingIssues[0]?.message || manufacturingPreflight.issues[0]?.message ||
-          "Use a higher-resolution original or a smaller print placement.");
+      if (manufacturingPreflight && ["unsupported", "needs_variant"].includes(manufacturingPreflight.status)) {
+        throw new Error(fittedScale !== null && blockingIssues.every((issue) => issue.code === "insufficient_resolution")
+          ? "This artwork is below the supplier's resolution target. Tap the DPI control to make the physical print smaller, or choose a genuinely sharper source."
+          : blockingIssues[0]?.message || manufacturingPreflight.issues[0]?.message ||
+              "Use a higher-resolution source or a smaller print placement.");
       }
-      const finalScale = canAutoFit && fittedScale !== null ? fittedScale : scale;
+      const finalScale = scale;
+      // Preparing unchanged artwork twice must not produce another numbered asset.
+      if (preparedAsset && preparedFor === currentPlacementKey) {
+        return await saveDraft(preparedAsset, previewAsset, finalScale);
+      }
       const blob = await buildPreparedArtworkBlob(finalScale);
       const filename = `prepared-${catalogId.slice(0, 8)}-${locationId.slice(0, 8)}-${crypto.randomUUID().slice(0, 12)}.png`;
       const uploaded = await uploadMediaFile(
@@ -1110,10 +1232,6 @@ export default function StudioWorkspace({
       if (preview) setPreviewAsset(preview);
       const saved = await saveDraft(uploaded, preview || null, finalScale);
       if (!saved) throw new Error("Prepared artwork was uploaded, but the design draft could not be saved");
-      if (canAutoFit) {
-        setScale(finalScale);
-        setNotice("Artwork placement was adjusted automatically for print quality. The original image was preserved.");
-      }
       return saved;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Artwork preparation failed");
@@ -1265,16 +1383,6 @@ export default function StudioWorkspace({
           </button>
           {error && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{error}</p>}
           {cropError && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{cropError}</p>}
-          {!error && !cropError && autoFitAvailable && (
-            <p className="ps-step-feedback" role="status">
-              We’ll automatically adjust this artwork to print clearly when you continue. The original file stays unchanged.
-            </p>
-          )}
-          {!error && !cropError && !autoFitAvailable && resolutionBlockers.some((issue) => issue.code === "insufficient_resolution") && (
-            <p className="ps-step-feedback ps-step-feedback--error" role="status">
-              This image needs a larger original or a smaller design placement for a clear print.
-            </p>
-          )}
           {!error && notice && <p className="ps-step-feedback" role="status">{notice}</p>}
         </div>
         <div className="ps-header-artwork-tools">
@@ -1297,10 +1405,17 @@ export default function StudioWorkspace({
                 <button type="button" title="Flip horizontally" aria-label="Flip artwork horizontally"
                   aria-pressed={flipX} onClick={() => setFlipX((value) => !value)}><StudioIcon name="flip" size={17} /></button>
                 <span className="ps-artwork-toolbar__divider" aria-hidden="true" />
-                <output className={"ps-dpi-badge" + (lowResolution ? " is-low" : "")}
-                  aria-label={quality.aria} title={quality.detail}>
-                  {quality.badge}
-                </output>
+                <button type="button" className={"ps-dpi-badge" + (lowResolution ? " is-low" : "")}
+                  aria-label={autoFitAvailable && resolutionFit != null
+                    ? `${quality.aria}. Reduce print placement from ${scale}% to ${resolutionFit}%`
+                    : quality.aria}
+                  title={autoFitAvailable && resolutionFit != null
+                    ? `${quality.detail}. Tap to reduce physical print size to ${resolutionFit}%. This does not sharpen the original pixels.`
+                    : quality.detail}
+                  disabled={!autoFitAvailable || resolutionFit === null}
+                  onClick={() => { if (resolutionFit !== null) { setScale(resolutionFit); setError(""); } }}>
+                  {quality.badge}{autoFitAvailable ? " · Fit" : ""}
+                </button>
               </div>
             )}
         </div>
@@ -1793,8 +1908,8 @@ export default function StudioWorkspace({
                     )}
                   </div>
                   <button type="button" className="ps-button ps-wide"
-                    disabled={!asset || Boolean(busy)} onClick={() => void prepareArtwork()}>
-                    {busy === "prepare" ? "Preparing…" : preparedIsCurrent ? "Rebuild production artwork" : "Prepare for print"}
+                    disabled={!asset || preparedIsCurrent || Boolean(busy)} onClick={() => void prepareArtwork()}>
+                    {busy === "prepare" ? "Preparing…" : preparedIsCurrent ? "Print file ready" : "Prepare for print"}
                   </button>
                   <button type="button" className="ps-button ps-wide"
                     disabled={!preparedIsCurrent || Boolean(busy)}
@@ -1887,8 +2002,8 @@ export default function StudioWorkspace({
                     />
                   ) : (
                     <div className="ps-unverified-garment" role="status">
-                      <strong>No verified {location?.name || "side"} mockup</strong>
-                      <span>This supplier catalog has no matching {variant?.variant_title || "variant"} garment photo. Place artwork using the print-area guide; this is not a product mockup.</span>
+                      <strong>{location?.name || "Print"} artwork placement</strong>
+                      <span>Position your design inside the supplier print area. A garment photo will appear when an exact-side render is available.</span>
                     </div>
                   )}
                   <div className={"ps-design-print-area" + (guides ? " is-gridded" : "")} style={{ ...placementFrameStyle, aspectRatio: ratio }}
@@ -1974,7 +2089,7 @@ export default function StudioWorkspace({
                   <div className="ps-mini-image">
                     {currentRenderUrl || designImage
                       ? <ProductImage key={`${variantId}:${locationId}`} sources={currentRenderUrl ? [currentRenderUrl] : designImageSources} alt={`${location?.name || "Selected"} garment variant: ${variant?.variant_title || variant?.name || detail.product.name}`} />
-                      : <div className="ps-mini-unverified">No verified {location?.name || "side"} mockup</div>}
+                      : <div className="ps-mini-unverified">{location?.name || "Selected"} print placement · garment image pending</div>}
                     {!currentRenderUrl && asset && showArtwork && (
                       <div className="ps-mini-placement" style={placementFrameStyle}>
                         <img src={artworkPreviewUrl} alt="" style={{ width: `${scale}%`, left: `${x}%`, top: `${y}%`, transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${flipX ? -1 : 1}, ${flipY ? -1 : 1})` }} />
