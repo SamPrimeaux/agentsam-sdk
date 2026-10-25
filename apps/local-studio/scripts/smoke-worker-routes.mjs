@@ -64,6 +64,18 @@ try {
     await pause(500);
   }
   if (!ready) throw new Error('local_worker_not_ready');
+  for (const legacyLogin of ['/admin/login', '/admin/login.html', '/ecommerce-cms-agentsam/admin/login']) {
+    const response = await request(legacyLogin + '?next=%2Fadmin%2Fcad');
+    if (response.status !== 302 || !response.headers.get('location')?.includes('/auth/login?next=%2Fadmin%2Fcad')) {
+      throw new Error(`${legacyLogin} must redirect to platform identity; got ${response.status}`);
+    }
+    console.log(`PASS ${legacyLogin}: 302 → /auth/login`);
+  }
+  const icon = await request('/shared/app-icon.png');
+  if (icon.status !== 302 || !icon.headers.get('location')?.includes('/brand/agentsam-local-studio-icon.png')) {
+    throw new Error('AgentSam auth icon must resolve to the canonical hosted brand asset');
+  }
+  console.log('PASS /shared/app-icon.png: 302 → AgentSam brand');
   for (const [pathname, allowed] of [
     ['/admin/cad', [200]],
     ['/admin/agentsam', [200, 302]],
