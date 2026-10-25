@@ -773,7 +773,7 @@
 
   function renderPageOptions(query) {
     const needle = String(query || '').trim().toLowerCase();
-    const source = pages.length ? pages : fallbackPages;
+    const source = host ? pages : (pages.length ? pages : fallbackPages);
     const filtered = source.filter(function(page) {
       const title = page.title || humanize(page.slug);
       return !needle || title.toLowerCase().includes(needle) || page.slug.toLowerCase().includes(needle);
@@ -1295,7 +1295,7 @@
   function merchantPageLinks(query = '') {
     const needle = String(query).trim().toLowerCase();
     const found = new Map();
-    for (const page of (pages.length ? pages : fallbackPages)) {
+    for (const page of (host ? pages : (pages.length ? pages : fallbackPages))) {
       const href = page.live_route || page.route || pageRoute(page.slug);
       if (!href || !/^\/(?!\/)/.test(href)) continue;
       const label = String(page.title || humanize(page.slug));
@@ -1657,6 +1657,7 @@
     byId('te-section-status').className = 'te-badge' + (section.status === 'published' ? ' is-published' : '');
 
     const panel = byId('te-inspector-body');
+    panel.classList.toggle('te-source-document', Boolean(host && window.__agentsamCmsSourceHost));
     panel.innerHTML = (liveUnimported
       ? '<div class="te-source-review"><strong>Live page preview</strong><p>This storefront layout has not been opened as an editable CMS draft. Nothing has been modified. Select <b>Start editing page</b> above the preview to create a private draft first.</p></div>'
       : '') + (blockMeta
@@ -2228,6 +2229,7 @@
   }
 
   function pushLocalPreview() {
+    if (host) { void refreshPreview(); return; }
     const iframe = byId('theme-preview');
     if (!iframe?.contentWindow || !pageData) return;
 

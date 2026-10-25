@@ -1,0 +1,6 @@
+#te-inspector-body.te-source-document .te-inspector-group { padding: 10px 12px; }
+#te-inspector-body.te-source-document textarea[data-field-input="html"] {
+  width:100%; min-height:min(65vh,820px); box-sizing:border-box;
+  font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  tab-size:2; resize:vertical; white-space:pre; overflow:auto;
+}
