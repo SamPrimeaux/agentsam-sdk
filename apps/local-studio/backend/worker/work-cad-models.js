@@ -5,7 +5,7 @@
  */
 
 const BASE = /^\/api\/work\/projects\/([^/]+)\/cad(?:\/assets\/([^/]+))?$/;
-const MIME = Object.freeze({ '.glb': 'model/gltf-binary', '.json': 'application/json; charset=utf-8', '.ifc': 'application/octet-stream' });
+const MIME = Object.freeze({ '.glb': 'model/gltf-binary', '.json': 'application/json; charset=utf-8', '.ifc': 'application/octet-stream', '.png': 'image/png', '.blend': 'application/octet-stream' });
 const response = (body, status = 200) => Response.json(body, { status, headers: { 'cache-control': 'private, no-store' } });
 
 export function isWorkCadRequest(pathname) { return BASE.test(pathname); }
