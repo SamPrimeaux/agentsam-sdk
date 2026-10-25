@@ -129,7 +129,7 @@ export function CadCreatorApp({
       setProject(nextProject);
       setHistory([]); setRedoStack([]); setUiSelection(null); setVerifiedProjectRevision(null);
       const requestedWorkspace = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('workspace');
-      setActiveWorkspace(requestedWorkspace === 'samsketch' ? 'plan' : 'model'); setPlanLayout('split'); setModelModule(null);
+      setActiveWorkspace(requestedWorkspace === 'samsketch' ? 'plan' : 'model'); setPlanLayout('split');
       setExplorerOpen(false); setInspectorOpen(false);
       setSourceStatus('loaded');
     } catch (error) {
