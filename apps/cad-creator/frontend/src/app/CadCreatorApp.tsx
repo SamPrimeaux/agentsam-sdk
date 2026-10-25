@@ -29,7 +29,6 @@ import {CadWorldViewport} from '../components/DreamHouseWorldViewport';
 import { listHostedProjects, loadHostedProject, type CadHostedSelection } from '../lib/hosted-project-source';
 import { BimStartersWorkspace } from '../components/BimStartersWorkspace';
 import { NativeSketchCanvas } from '../components/NativeSketchCanvas';
-import { ParametricEditor } from '../components/ParametricEditor';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import { ExportPublishModal } from '../components/ExportPublishModal';
 import { FurniturePicker } from '../components/FurniturePicker';
