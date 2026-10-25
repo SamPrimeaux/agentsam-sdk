@@ -22,6 +22,7 @@ export interface CadWorldViewportProps {
  revision:string;
  readOnly?:boolean;
  onSelect?:(s:Selected)=>void;
+ onSceneInventory?:(groups:CadSceneInventoryGroup[])=>void;
 }
 export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,onSelect}:CadWorldViewportProps) {
  const mount=useRef<HTMLDivElement>(null),renderer=useRef<THREE.WebGLRenderer|null>(null),
