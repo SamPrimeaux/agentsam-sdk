@@ -33,9 +33,15 @@ export function CadProjectExplorer({project,selection,onSelect,onClose,sceneInve
    <button aria-label="Hide project explorer" title="Hide project explorer" onClick={onClose}><PanelLeftClose size={17}/><span className="cad-focus-help">Hide project explorer</span></button></header>
   <label className="cad-tree-search"><Search size={15}/><input aria-label="Filter project objects" value={filter}
    onChange={e=>setFilter(e.target.value)} placeholder="Filter objects…"/></label>
-  <button className="cad-tree-project" onClick={()=>onSelect(null)}><Box size={15}/><span>{project.name}</span><small>v{project.version}</small></button>
+  <button className="cad-tree-project" onClick={()=>onSelect(null)}><Box size={15}/><span>{project.name}</span><small>{sceneInventory ? '3D scene' : `v${project.version}`}</small></button>
   <div className="cad-tree-contents">
-  {data.map(g=>{
+  {sceneInventory ? <>
+    <p className="cad-pane-note">Imported GLB geometry · categories from actual scene metadata, not an editable BIM document.</p>
+    {sceneInventory.filter(item=>item.category.toLowerCase().includes(filter.toLowerCase())).map(item=><div className="cad-tree-heading" key={item.category}>
+      <Layers3 size={14}/><span>{item.category.replace(/[-_]/g,' ')}</span><small>{item.count}</small>
+    </div>)}
+    {sceneInventory.length===0&&<p className="cad-pane-note">Reading scene geometry…</p>}
+  </> : data.map(g=>{
    const entries=g.entries.filter(e=>(e.id+' '+e.label).toLowerCase().includes(filter.toLowerCase()));
    if(filter&&!entries.length)return null;
    const isClosed=!filter&&closed[g.id];
