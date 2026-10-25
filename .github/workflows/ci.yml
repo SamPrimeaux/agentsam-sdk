@@ -44,6 +44,10 @@ jobs:
       - name: Verify CAD included-app clean install
         run: npm ci --prefix apps/cad-creator --ignore-scripts --no-audit --no-fund
 
+      # npm ci alone does not check Vite asset imports: compile the real CAD UI.
+      - name: Verify CAD clean frontend build
+        run: npm run build -w @inneranimalmedia/agentsam-cad-frontend --prefix apps/cad-creator -- --base=/cad-creator/
+
       - name: Verify Campaign D1 schema, backfills and scoped API
         run: npm --prefix packages/agentsam-campaign test
 
