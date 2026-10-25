@@ -19,7 +19,7 @@ function env({ owner = 'acct_1', resultRows = rows, assetRow = rows[0], current 
        return null;
      },
      async all() {
-       if (sql.includes('FROM project_storage')) return { results: [{ storage_name: 'cad', metadata_json: JSON.stringify({ keyPrefix: prefix, binding: 'CAD_PROJECT_ASSETS' }) }] };
+       if (sql.includes('FROM project_storage')) return { results: [{ storage_name: 'cad', metadata_json: JSON.stringify({ keyPrefix: prefix, binding: 'CAD_PROJECT_ASSETS', currentPrefix: current ? 'projects/sample/current/' : undefined, current }) }] };
        if (sql.includes('FROM agentsam_artifacts')) return { results: resultRows };
        return { results: [] };
      },
