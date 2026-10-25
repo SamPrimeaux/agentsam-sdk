@@ -11,6 +11,7 @@ type Handoff={projectId:string;sceneRevision:string;scene:{nodeCount:number;arch
 type Selected={designId:string;category:string;nodeName:string;source:string};
 type CameraMode='orbit'|'walk';
 type ViewPreset='iso'|'plan'|'front'|'side';
+export type CadSceneInventoryGroup = {category:string; count:number};
 const POSKEY='agentsam.dreamhouse.camera.v1.1';
 const ORBIT_SPEED=0.007;
 
