@@ -55,11 +55,12 @@ export async function handleWorkCadRequest(request, env, owner) {
       const meta = JSON.parse(store.metadata_json || '{}');
       const prefix = meta.keyPrefix;
       if (typeof prefix !== 'string' || !/^projects\/[a-zA-Z0-9_/-]+\/revisions\/$/.test(prefix)) return [];
-      // Operator-owned CAD storage is a dedicated R2 binding, not the website bucket.
-      // Other installations resolve their own declared bindings from project_storage.
-      const bindingName = store.storage_name === 'cad' ? 'CAD_PROJECT_ASSETS' : meta.binding;
+      // The installation declares its actual Worker binding; never infer access from the bucket name.
+      const bindingName = meta.binding || (store.storage_name === 'cad' ? 'CAD_PROJECT_ASSETS' : null);
+      const currentPrefix = meta.currentPrefix;
+      if (currentPrefix && (typeof currentPrefix !== 'string' || currentPrefix !== prefix.replace(/revisions\/$/, 'current/'))) return [];
       return typeof bindingName === 'string' && /^[A-Z][A-Z0-9_]+$/.test(bindingName)
-        ? [{ prefix, bindingName }] : [];
+        ? [{ prefix, bindingName, currentPrefix, current: meta.current || null, bucket: store.storage_name }] : [];
     } catch { return []; }
   });
   if (!records.length) return response({ ok: false, error: 'cad_storage_not_registered' }, 404);
