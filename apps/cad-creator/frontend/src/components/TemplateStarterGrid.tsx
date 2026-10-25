@@ -17,7 +17,7 @@ export function cloneTemplateProject(tpl: TemplateMetadata): ProjectState {
 interface Props {
   /** Receives an independent copy; the template itself is never mutated. */
   onSelect: (project: ProjectState, name: string) => void;
-  onBrowseAll?: () => void;
+  onExit?: () => void;
 }
 
 /** Shown in place of an empty panel when no project is open. */
