@@ -60,7 +60,7 @@ export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onBrowseAll }) 
               <span className="shrink-0 font-mono text-[length:var(--text-xs)] text-slate-400">{tpl.dimensions}</span>
             </div>
             <h3 className="text-xs font-semibold text-white">{tpl.name}</h3>
-            <p className="line-clamp-2 text-[11px] text-slate-400">{tpl.description}</p>
+            <p className="line-clamp-2 text-[length:var(--text-sm)] text-slate-400">{tpl.description}</p>
             <div className="mt-auto flex items-center justify-between pt-2 font-mono text-[length:var(--text-xs)] text-slate-500">
               <span>
                 {tpl.project.walls.length} walls · {tpl.project.rooms.length} zones · {tpl.project.furniture.length} fixtures
