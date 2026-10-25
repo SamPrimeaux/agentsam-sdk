@@ -6,6 +6,9 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    // CAD/robotics embeds modern WASM and authored destructuring. Avoid Vite's
+    // legacy ES2020 downlevel transform of complex generated robotics chunks.
+    build: { target: 'es2022' },
     resolve: {
       dedupe: ['react', 'react-dom'],
       alias: {
