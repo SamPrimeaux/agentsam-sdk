@@ -676,6 +676,26 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+    // Legacy Ecommerce Console login belongs to customer installations, not
+    // the hosted AgentSam identity boundary. Never serve its Fuel & Free Time
+    // form or submit credentials to the unrelated /api/admin/login endpoint.
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        (/^\/admin\/login(?:\.html)?\/?$/.test(url.pathname) ||
+         /^\/ecommerce-cms-agentsam\/admin\/login(?:\.html)?\/?$/.test(url.pathname))) {
+      const canonicalLogin = new URL(url);
+      canonicalLogin.pathname = LOGIN_PATH;
+      return new Response(null, { status: 302, headers: {
+        location: canonicalLogin.toString(), "cache-control": "no-store",
+      } });
+    }
+    // This shared legacy icon URL is embedded in the reusable identity portal;
+    // the hosted app's verified brand icon is served from its own asset root.
+    if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/shared/app-icon.png") {
+      return new Response(null, { status: 302, headers: {
+        location: new URL("/brand/agentsam-local-studio-icon.png", url).toString(),
+        "cache-control": "no-store",
+      } });
+    }
     const includedWasm = await serveIncludedWasmAsset(request, env);
     if (includedWasm) return includedWasm;
     const chessAsset = await serveCadChessAsset(request);

@@ -77,6 +77,28 @@ try {
     }
     console.log(`PASS ${pathname}: ${response.status}`);
   }
+  // The platform must never serve the embedded customer's legacy login
+  // or send AgentSam credentials to /api/admin/login.
+  for (const legacyLogin of [
+    '/admin/login',
+    '/admin/login.html',
+    '/ecommerce-cms-agentsam/admin/login',
+  ]) {
+    const result = await request(legacyLogin);
+    const target = result.headers.get('location');
+    if (result.status !== 302 || new URL(target, base).pathname !== '/auth/login') {
+      throw new Error(`legacy login ${legacyLogin} did not resolve to /auth/login: ${result.status} ${target}`);
+    }
+    console.log(`PASS ${legacyLogin}: redirected to canonical identity login`);
+  }
+  const icon = await request('/shared/app-icon.png');
+  const iconRedirect = icon.status === 302 &&
+    new URL(icon.headers.get('location'), base).pathname === '/brand/agentsam-local-studio-icon.png';
+  const iconAsset = icon.status === 200 && (icon.headers.get('content-type') || '').includes('image/png');
+  if (!iconRedirect && !iconAsset) {
+    throw new Error(`AgentSam login icon is unavailable: ${icon.status} ${icon.headers.get('content-type')}`);
+  }
+  console.log('PASS AgentSam login icon: valid hosted brand asset');
 } catch (error) {
   console.error('WORKER ROUTE SMOKE FAILED:', error.message);
   console.error(logs.slice(-5500));
