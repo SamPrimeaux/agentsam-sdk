@@ -47,14 +47,20 @@ if (existsSync(markSource)) {
 }
 
 // Same composed master the downloadable .app uses (Finder / dock). Branding SSOT for auth logo.
-const appIconSource = path.resolve(
+const composedAppIcon = path.resolve(
   appRoot,
   "../../packages/agentsam-desktop-shell/src-tauri/icons/composed/macos-1024.png",
 );
-if (existsSync(appIconSource)) {
-  cpSync(appIconSource, path.join(outPublic, "shared/app-icon.png"));
-  console.log(`[copy-auth-portal] app icon (composed macos) -> ${path.relative(appRoot, outPublic)}/shared/app-icon.png`);
+const trackedGorillaIcon = path.resolve(
+  appRoot,
+  "../../assets/brand/agentsam-gorilla/v1/app-icons/agentsam-gorilla-app-256.png",
+);
+const appIconSource = existsSync(composedAppIcon) ? composedAppIcon : trackedGorillaIcon;
+if (!existsSync(appIconSource)) {
+  throw new Error("AgentSam login icon missing: expected composed or tracked gorilla icon");
 }
+cpSync(appIconSource, path.join(outPublic, "shared/app-icon.png"));
+console.log(`[copy-auth-portal] app icon -> ${path.relative(appRoot, outPublic)}/shared/app-icon.png`);
 
 // Copy full public site tree into Worker assets (home/help/learn/global)
 const siteSourceDir = path.join(appRoot, "frontend/public/site");
