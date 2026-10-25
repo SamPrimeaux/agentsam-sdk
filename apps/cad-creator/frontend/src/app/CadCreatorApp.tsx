@@ -630,6 +630,7 @@ export function CadCreatorApp({
         <div className="cad-workspace-body">
           {(activeWorkspace === 'plan' || activeWorkspace === 'model') && explorerOpen && (
             <CadProjectExplorer project={project} selection={uiSelection}
+              sceneInventory={hostedSelection?.revision.revision==='current'&&!hostedSelection.project ? sceneInventory : undefined}
               onSelect={setUiSelection} onClose={() => setExplorerOpen(false)} />
           )}
         {/* PRIMARY VIEWPORT STAGE */}
