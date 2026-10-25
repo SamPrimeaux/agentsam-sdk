@@ -261,9 +261,11 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
         const shadowCategory=String(o.userData?.Category||o.parent?.userData?.Category||'').toLowerCase();
         o.castShadow=!isGlass&&(['wall','roof','gable','door','column','slab'].includes(shadowCategory)||/cedar|boulder|pine|tree|rock/i.test(o.name));
         o.receiveShadow=true;
-        const category=String(o.userData?.Category||o.parent?.userData?.Category||'');
-        if(['wall','slab','roof','site','door'].includes(category.toLowerCase()))structure.push(o);
+        const category=String(o.userData?.Category||o.parent?.userData?.Category||'').trim().toLowerCase();
+        if(category)categories.set(category,(categories.get(category)||0)+1);
+        if(['wall','slab','roof','site','door'].includes(category))structure.push(o);
       });
+      onSceneInventory?.([...categories].map(([category,count])=>({category,count})).sort((a,b)=>b.count-a.count));
       collidersRef.current=structure;
       assetRef.current=gltfRoot;scene.add(gltfRoot);loaded=true;
       const terrainScene=createTerrainProjection(terrainDocRef.current);
