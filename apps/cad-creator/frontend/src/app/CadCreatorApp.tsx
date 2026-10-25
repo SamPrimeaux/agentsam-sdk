@@ -281,13 +281,8 @@ export function CadCreatorApp({
     if (wsId === 'robotics') {
       preloadRoboticsWorkspace();
     }
-    if (wsId === 'parametric') {
-      setModelModule('parametric');
-      setActiveWorkspace('model');
-    } else {
-      setModelModule(null);
-      setActiveWorkspace(wsId);
-    }
+    // Legacy 'parametric' prototype surface removed; real OCCT parametric objects live in the model workspace.
+    setActiveWorkspace(wsId === 'parametric' ? 'model' : wsId);
   };
 
   // Initialize WebSocket Collaboration
