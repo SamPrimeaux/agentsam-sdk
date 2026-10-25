@@ -52,7 +52,10 @@ test('immutable product sources and packaged shell are the authority', () => {
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /servePackagedConsole/);
   const cloudflare = readFileSync(new URL('../backend/wrangler.jsonc', import.meta.url), 'utf8');
-  assert.match(cloudflare, /"run_worker_first": \["\/admin\/\*", "\/sites", "\/samsketch", "\/projects", "\/projects\/\*"\]/);
+  const runWorkerFirst = JSON.parse(cloudflare).assets.run_worker_first;
+  for (const route of ['/admin/*', '/sites', '/samsketch', '/projects', '/projects/*']) {
+    assert.ok(runWorkerFirst.includes(route), 'Worker must own route: ' + route);
+  }
 
   const app = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
   assert.match(app, /return \(isApp \|\| isStudioAdminPath\(pathname\)\) \? <PackagedConsoleFrame><AgentSamShell embedded \/><\/PackagedConsoleFrame> : <Outlet \/>/);
