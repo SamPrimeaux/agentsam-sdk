@@ -52,7 +52,11 @@ test('immutable product sources and packaged shell are the authority', () => {
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /servePackagedConsole/);
   const cloudflare = readFileSync(new URL('../backend/wrangler.jsonc', import.meta.url), 'utf8');
-  const runWorkerFirst = JSON.parse(cloudflare).assets.run_worker_first;
+  // wrangler.jsonc allows comments/trailing commas; parse the route array,
+  // not the entire JSONC document with JSON.parse.
+  const workerFirstMatch = cloudflare.match(/"run_worker_first":\s*(\[[^\]]+\])/);
+  assert.ok(workerFirstMatch, 'run_worker_first missing');
+  const runWorkerFirst = JSON.parse(workerFirstMatch[1]);
   for (const route of ['/admin/*', '/sites', '/samsketch', '/projects', '/projects/*']) {
     assert.ok(runWorkerFirst.includes(route), 'Worker must own route: ' + route);
   }
