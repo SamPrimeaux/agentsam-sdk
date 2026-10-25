@@ -20,6 +20,8 @@ for (const relative of [
   "brand/agentsam-mark.svg",
   "brand/agentsam-local-studio-icon.png",
   "favicon.svg",
+  "studio-cms-source-host.js",
+  "studio-cms-source-host.css",
   "__agentsam/pwa/icon-180.png",
   "__agentsam/pwa/icon-192.png",
   "__agentsam/pwa/icon-512.png",
@@ -30,6 +32,9 @@ for (const relative of [
 await mkdir(output, { recursive: true });
 await cp(path.join(source, "brand"), path.join(output, "brand"), { recursive: true });
 await cp(path.join(source, "favicon.svg"), path.join(output, "favicon.svg"));
+for (const name of ["studio-cms-source-host.js", "studio-cms-source-host.css"]) {
+  await cp(path.join(source, name), path.join(output, name));
+}
 await mkdir(path.join(output, "__agentsam", "pwa"), { recursive: true });
 for (const name of ["icon-180.png", "icon-192.png", "icon-512.png"]) {
   await cp(

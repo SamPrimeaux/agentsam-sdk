@@ -3623,9 +3623,15 @@
       window.initAgentsamDrawer();
       return;
     }
-    if (document.getElementById('te-agentsam-side-assistant-script')) return;
+    // Share the existing in-flight shell script; loading this classic script twice
+    // redeclares its icon constants and prevents AgentSam initialization.
+    const existing = document.getElementById('agentsam-script');
+    if (existing) {
+      existing.addEventListener('load', function() { window.initAgentsamDrawer?.(); }, { once: true });
+      return;
+    }
     const script = document.createElement('script');
-    script.id = 'te-agentsam-side-assistant-script';
+    script.id = 'agentsam-script';
     script.src = '/admin/js/agentsam.js';
     script.addEventListener('load', function() { window.initAgentsamDrawer?.(); }, { once: true });
     script.addEventListener('error', function() { setNote('AgentSam Side Assistant failed to load.', 'error'); }, { once: true });
