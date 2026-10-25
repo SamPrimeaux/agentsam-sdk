@@ -43,6 +43,7 @@ assert.ok(fs.existsSync(path.join(assetsDir, "site", "global", "installables.jso
 assert.ok(fs.existsSync(path.join(assetsDir, "brand", "agentsam-mark-on-dark.svg")), "hosted AgentSam dark mark asset required");
 assert.ok(fs.existsSync(path.join(assetsDir, "brand", "agentsam-mark-on-light.svg")), "hosted AgentSam light mark asset required");
 assert.ok(fs.existsSync(path.join(assetsDir, "brand", "agentsam-local-studio-icon.png")), "hosted AgentSam app icon asset required");
+assert.ok(fs.existsSync(path.join(assetsDir, "shared", "app-icon.png")), "auth portal login icon must be shipped with clean production builds");
 assert.ok(fs.existsSync(path.join(assetsDir, "favicon.svg")), "hosted AgentSam favicon asset required");
 assert.ok(fs.existsSync(path.join(assetsDir, "__agentsam", "pwa", "icon-180.png")), "hosted AgentSam apple-touch icon required");
 assert.ok(fs.existsSync(path.join(assetsDir, "__agentsam", "pwa", "icon-192.png")), "hosted AgentSam PWA 192 icon required");
