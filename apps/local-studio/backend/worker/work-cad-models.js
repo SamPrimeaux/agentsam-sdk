@@ -64,7 +64,7 @@ export async function handleWorkCadRequest(request, env, owner) {
     } catch { return []; }
   });
   if (!records.length) return response({ ok: false, error: 'cad_storage_not_registered' }, 404);
-  const { prefix, bindingName } = records[0];
+  const { prefix, bindingName, currentPrefix, current, bucket } = records[0];
   if (assetId) {
     const row = await env.DB.prepare("SELECT id, name, r2_key, content_hash, validation_status FROM agentsam_artifacts WHERE id = ? AND artifact_status IN ('draft','published')")
       .bind(assetId).first();
