@@ -30,6 +30,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "macOS": {
+      "signingIdentity": "-"
+    },
     "externalBin": [
       "binaries/agentsamd",
       "binaries/node"

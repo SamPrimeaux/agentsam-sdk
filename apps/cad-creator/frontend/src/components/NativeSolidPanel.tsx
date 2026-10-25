@@ -9,6 +9,6 @@ export function NativeSolidPanel({project,elementId}:{project:ProjectState;eleme
  <label className="cad-property"><span>Solid format</span><select aria-label="Solid export format" value={format} onChange={e=>setFormat(e.target.value)}>{['step','brep','gltf','ifc'].map(f=><option key={f} value={f}>{f.toUpperCase()}</option>)}</select></label>
  <button className="cad-clear-selection" type="button" disabled={busy||volume==null} onClick={()=>void save()}>Export selected solid</button>
  <div className="cad-native-drawings">{(['plan','section','elevation']as const).map(view=><button className="cad-clear-selection" type="button" key={view} disabled={busy||volume==null} onClick={()=>void save(view)}>{view[0].toUpperCase()+view.slice(1)} SVG</button>)}</div>
- {path&&<p className="cad-property-help" style={{overflowWrap:'anywhere'}}>{path}</p>}
+ {path&&<p className="cad-property-help break-words">{path}</p>}
  <p className="cad-property-help">Element IDs persist through parameter edits and replay. Edge/face indices belong to this evaluated shape.</p></section>;
 }

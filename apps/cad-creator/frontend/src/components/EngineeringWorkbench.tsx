@@ -282,7 +282,7 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
   aria-pressed={opts.active} disabled={opts.disabled} onClick={e=>{run();e.currentTarget.closest('details')?.removeAttribute('open')}}>{icon}{label}{opts.kbd&&<kbd>{opts.kbd}</kbd>}</button>;
  const direct=(id:ActiveTool)=>{const t=CAD_STUDIO_TOOLS.find(x=>x.id===id)!;
   return <button key={id} type="button" title={`${t.label} (${t.shortcut})`} aria-label={`${t.label} (${t.shortcut})`} aria-pressed={tool===id}
-   className={tool===id?'active':''} disabled={readOnly&&!['select','measure','pan'].includes(id)} onClick={()=>onTool(id)}><t.icon size={17}/></button>};
+   className={tool===id?'active':''} disabled={readOnly&&!['select','measure','pan'].includes(id)} onClick={()=>onTool(id)}><t.icon size={17}/><span className="cad-focus-help">{t.label} ({t.shortcut})</span></button>};
  const draft=workspace==='plan'&&studioView==='edit';
 
  const kit=useKit();
