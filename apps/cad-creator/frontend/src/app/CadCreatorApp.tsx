@@ -401,6 +401,25 @@ export function CadCreatorApp({
     if (canCollaborate) collaborationClient.sendProjectUpdate(blank);
   };
 
+  // Hosted mode, nothing registered open: a chosen starter becomes an explicit, unsaved local copy.
+  // It never stands in for a registered project; picking one from the Project menu clears it again.
+  const startFromTemplate = (copy: ProjectState, name: string) => {
+    setTemplateCopyName(name);
+    setProject(copy);
+    setCurrentUser((prev) => (prev.role === 'Viewer' ? { ...prev, role: 'Editor' } : prev));
+    setSourceStatus('loaded');
+    setSourceError('');
+    setHistory([]);
+    setRedoStack([]);
+    setUiSelection(null);
+    setCadSelection(null);
+    setVerifiedProjectRevision(null);
+    setActiveWorkspace('plan');
+    setPlanLayout('split');
+    setActiveTool('select');
+    showToast(`Started an unsaved copy of "${name}"`);
+  };
+
   const handleRedo = () => {
     if (isViewer || redoStack.length === 0) return;
     const next = redoStack[redoStack.length - 1];
