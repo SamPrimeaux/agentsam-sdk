@@ -61,8 +61,13 @@ function siteOrigin(env) {
 
 function publicMediaUrl(env, row) {
   if (!row?.url) return null;
-  if (/^https?:\/\//i.test(row.url)) return row.url;
-  return `${siteOrigin(env)}${String(row.url).startsWith("/") ? "" : "/"}${row.url}`;
+  if (/^https:\/\//i.test(row.url)) return row.url;
+  const origin = siteOrigin(env);
+  if (origin) return origin + (String(row.url).startsWith("/") ? "" : "/") + row.url;
+  // Deployment-specific CDN, never a brand-specific fallback.
+  const cdn = String(env.ASSET_PUBLIC_BASE_URL || "").replace(/\/$/, "");
+  return /^https:\/\//i.test(cdn) && row.r2_key
+    ? cdn + "/" + String(row.r2_key).replace(/^\/+/, "") : null;
 }
 
 function providerErrorResponse(error) {
@@ -346,6 +351,42 @@ async function saveDraft(request, env) {
     removeFlatBackground: Boolean(body.placement?.removeFlatBackground ?? draft?.placement?.removeFlatBackground ?? false),
     notes: String(body.notes ?? draft?.placement?.notes ?? "").slice(0, 10000),
   };
+  // Store independent front/back (and future print-location) artwork inside
+  // the existing draft JSON contract. The active legacy columns remain
+  // authoritative for single-location provider operations.
+  const rawSides = body.placement?.sides ?? draft?.placement?.sides ?? {};
+  if (!rawSides || typeof rawSides !== "object" || Array.isArray(rawSides) ||
+      Object.keys(rawSides).length > 10) {
+    return json({ ok: false, error: "Invalid print-location artwork map" }, { status: 400 });
+  }
+  const allowedLocations = await env.DB.prepare(
+    "SELECT print_location_id FROM completeful_catalog_print_locations WHERE completeful_product_id = ?"
+  ).bind(selection.resolvedProductId).all();
+  const locationSet = new Set((allowedLocations.results || []).map((row) => row.print_location_id));
+  const sides = {};
+  for (const [sideId, value] of Object.entries(rawSides)) {
+    if (!locationSet.has(sideId) || !value || typeof value !== "object" || Array.isArray(value)) {
+      return json({ ok: false, error: "Unknown or invalid print location in artwork map" }, { status: 400 });
+    }
+    const mediaId = (name) => value[name] ? Number(value[name]) : null;
+    const original = mediaId("original_media_asset_id");
+    const prepared = mediaId("prepared_media_asset_id");
+    const preview = mediaId("preview_media_asset_id");
+    for (const item of [original, prepared, preview]) {
+      if (item !== null && (!Number.isSafeInteger(item) || item <= 0 || !(await mediaById(env, item)))) {
+        return json({ ok: false, error: "Print location references missing artwork" }, { status: 400 });
+      }
+    }
+    sides[sideId] = {
+      original_media_asset_id: original, prepared_media_asset_id: prepared, preview_media_asset_id: preview,
+      x: Number(value.x ?? 50), y: Number(value.y ?? 50), scale: Number(value.scale ?? 80),
+      rotation: Number(value.rotation ?? 0), flipX: Boolean(value.flipX), flipY: Boolean(value.flipY),
+      trimTransparent: Boolean(value.trimTransparent),
+      removeFlatBackground: Boolean(value.removeFlatBackground),
+      showArtwork: value.showArtwork !== false,
+    };
+  }
+  placement.sides = sides;
   const state = preparedMediaId ? "prepared" : "draft";
   const designSignature = (value) =>
     JSON.stringify({
@@ -361,6 +402,7 @@ async function saveDraft(request, env) {
       flipY: Boolean(value.placement?.flipY ?? false),
       trimTransparent: Boolean(value.placement?.trimTransparent ?? false),
       removeFlatBackground: Boolean(value.placement?.removeFlatBackground ?? false),
+      sides: value.placement?.sides || {},
     });
   const designChanged =
     !draft ||
@@ -451,7 +493,37 @@ async function getDraft(request, env, url, id = null) {
   return json({ ok: true, draft });
 }
 
+function decoratedPrintLocationIds(draft) {
+  return Object.entries(draft.placement?.sides || {})
+    .filter(([, side]) => side?.original_media_asset_id && side.showArtwork !== false)
+    .map(([id]) => id);
+}
+
+export async function preparedPrintFiles(env, draft, selection) {
+  const decoratedIds = decoratedPrintLocationIds(draft);
+  if (decoratedIds.length < 2) return null;
+  const valid = new Set(selection.locations.map((location) => location.print_location_id));
+  const printFiles = [];
+  for (const id of decoratedIds) {
+    const side = draft.placement.sides[id];
+    if (!valid.has(id)) {
+      throw Object.assign(new Error("Selected print locations changed; reopen Product Studio"),
+        { status: 409, code: "print_location_selection_changed" });
+    }
+    const art = await mediaById(env, side.prepared_media_asset_id);
+    const url = publicMediaUrl(env, art);
+    if (!art || String(art.content_type || "").toLowerCase() !== "image/png" ||
+        !url || !url.startsWith("https://")) {
+      throw Object.assign(new Error("Prepare a verified PNG print file for each side before creating a supplier product"),
+        { status: 409, code: "print_location_artwork_unprepared" });
+    }
+    printFiles.push({ print_location_id: id, url });
+  }
+  return printFiles;
+}
+
 async function createDesign(env, draft) {
+  // Single-location design path; multi-side uses shop-product print_files.
   // Provider designs must use the reviewed manufacturing derivative, never
   // silently fall back to the original artwork or a browser placement preview.
   if (!draft.prepared_media_asset_id) {
@@ -699,7 +771,8 @@ async function createLocalMappings(env, draft, selection, providerProductId, des
   const product = await env.DB.prepare(`SELECT * FROM products WHERE id = ?`).bind(draft.product_id).first();
   if (!product) throw new Error("Draft product no longer exists");
   const shopId = draft.completeful_shop_id;
-  const selectionJson = JSON.stringify({ include: "selected", variant_ids: draft.selected_variant_ids });
+  const selectionJson = JSON.stringify({ include: "selected", variant_ids: draft.selected_variant_ids,
+    print_location_ids: draft.print_location_ids });
 
   await env.DB.prepare(
     `INSERT INTO completeful_product_links
@@ -795,6 +868,14 @@ async function createProductFromDraft(request, env, id) {
   ).bind(draft.product_id).first();
   if (link?.completeful_store_product_id) {
     const linkedSelection = parseJson(link.selection_json, {});
+    const linkedLocations = normalizeIds(linkedSelection.print_location_ids || []);
+    if (decoratedPrintLocationIds(draft).length > 1 &&
+        (linkedLocations.length !== draft.print_location_ids.length ||
+          draft.print_location_ids.some((id) => !linkedLocations.includes(id)))) {
+      return json({ ok: false, code: "supplier_print_locations_changed",
+        error: "The existing supplier product does not match both print locations. Reconcile it before reusing." },
+        { status: 409 });
+    }
     const linkedIds = normalizeIds(linkedSelection.variant_ids || []);
     const requestedIds = normalizeIds(draft.selected_variant_ids);
     if (linkedIds.length !== requestedIds.length ||
@@ -843,9 +924,18 @@ async function createProductFromDraft(request, env, id) {
   ).bind(product.title, product.description || null, product.price_cents, id).run();
   draft = await loadDraft(env, id);
   try {
-    const design = await createDesign(env, draft);
+    const multiLocation = decoratedPrintLocationIds(draft).length > 1;
+    const selection = await validateSelection(env, draft.completeful_catalog_product_id,
+      draft.selected_variant_ids, draft.print_location_ids);
+    const printFiles = multiLocation ? await preparedPrintFiles(env, draft, selection) : null;
+    const design = multiLocation
+      ? { designId: null, shop: draft.completeful_shop_id
+        ? { completeful_shop_id: draft.completeful_shop_id } : await primaryShop(env) }
+      : await createDesign(env, draft);
+    if (!design.shop?.completeful_shop_id) {
+      throw Object.assign(new Error("Select a Completeful shop first"), { status: 409 });
+    }
     draft = await loadDraft(env, id);
-    const selection = design.selection;
     const allVariantRows = await env.DB.prepare(
       `SELECT completeful_variant_id FROM completeful_catalog_variants WHERE completeful_product_id = ?`,
     )
@@ -885,8 +975,7 @@ async function createProductFromDraft(request, env, id) {
               title: draft.title,
               description: draft.description || null,
               retail_price: Number(draft.retail_price_cents) / 100,
-              sku: `fnf-${draft.product_id}`,
-              design_id: design.designId,
+              ...(printFiles ? { print_files: printFiles } : { design_id: design.designId }),
               preview_url: draft.completeful_render_url || null,
               variants: providerSelection,
             },
@@ -987,6 +1076,12 @@ async function publishDraft(request, env, id) {
   const required = draft.selected_variant_ids.length;
   const problems = [];
   if (!link?.completeful_store_product_id) problems.push("Completeful product mapping is missing");
+  const linkedLocations = normalizeIds(parseJson(link?.selection_json, {}).print_location_ids || []);
+  if (decoratedPrintLocationIds(draft).length > 1 &&
+    (linkedLocations.length !== draft.print_location_ids.length ||
+      draft.print_location_ids.some((id) => !linkedLocations.includes(id)))) {
+    problems.push("Supplier front/back print locations do not match this saved revision");
+  }
   if (Number(mapped?.n || 0) !== required) problems.push(`Only ${mapped?.n || 0} of ${required} selected variants are mapped`);
   if (!product?.image_url) problems.push("Approve or attach a storefront image before publishing");
   if (Number(product?.price_cents || 0) <= 0) problems.push("Retail price must be above $0");

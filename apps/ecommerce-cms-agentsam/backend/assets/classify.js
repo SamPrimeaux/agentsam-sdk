@@ -151,6 +151,14 @@ export function classifyMediaAsset(input) {
         : "Transparent brand mark retained as production-capable PNG";
     pipeline = productStudioProductionMaster ? "no_transform" : mediaKind === "icon" ? "icon" : "image";
     outputFormat = mime;
+  } else if (ext === "webp" && (mediaKind === "image" || mediaKind === "icon")) {
+    // A delivered WebP has already undergone lossy encoding. Re-running the
+    // automatic optimizer generates another visually worse version, not a
+    // better source image. Only explicit editing may produce a new revision.
+    assetRole = "canonical";
+    pipeline = "no_transform";
+    outputFormat = mime;
+    promoteDeletesIntake = false;
   } else if (mediaKind === "icon") {
     assetRole = "canonical";
     pipeline = "icon";

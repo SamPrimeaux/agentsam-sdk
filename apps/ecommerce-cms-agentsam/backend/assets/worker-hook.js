@@ -53,6 +53,7 @@ export function planAssetIngest(input) {
     transformPolicy === "preserve" && detectedClassification.media_kind !== "unsupported"
       ? {
           ...detectedClassification,
+          asset_role: derivativeRole === "original/master" ? "master" : detectedClassification.asset_role,
           pipeline: "no_transform",
           output_format: contentType,
           retain_master_reason:
