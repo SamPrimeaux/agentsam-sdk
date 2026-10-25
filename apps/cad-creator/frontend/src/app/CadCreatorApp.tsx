@@ -226,6 +226,8 @@ export function CadCreatorApp({
   const [isSketchModalOpen, setIsSketchModalOpen] = useState(false);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isTemplateLibraryOpen, setIsTemplateLibraryOpen] = useState(false);
+  // Hosted mode only: name of the unsaved template copy being edited. Null means no copy is open.
+  const [templateCopyName, setTemplateCopyName] = useState<string | null>(null);
   const [isExportPublishOpen, setIsExportPublishOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
