@@ -85,5 +85,36 @@ export async function handleWorkCadRequest(request, env, owner) {
   }
   const rows = await env.DB.prepare("SELECT id, name, r2_key, artifact_status, validation_status, content_hash, updated_at FROM agentsam_artifacts WHERE substr(r2_key,1,length(?)) = ? AND artifact_status IN ('draft','published') ORDER BY updated_at DESC LIMIT 400")
     .bind(prefix, prefix).all();
-  return response({ ok: true, project: { id: project.id, name: project.name }, revisions: groupCadArtifacts(rows.results || []) });
+  const revisions = groupCadArtifacts(rows.results || []);
+  // One living model: the active viewer is resolved from verified, owner-owned
+  // artifacts. Historical revisions remain available but never become projects.
+  if (current && currentPrefix && current.modelAssetId) {
+    const ids = [current.modelAssetId, current.nativeBimAssetId, current.ifcAssetId]
+      .filter(value => typeof value === 'string' && /^[a-zA-Z0-9_-]+$/.test(value));
+    const slug = currentPrefix.split('/')[1];
+    const result = await env.DB.prepare(
+      `SELECT id, name, r2_key, artifact_status, validation_status, content_hash, updated_at
+       FROM agentsam_artifacts WHERE id IN (${ids.map(() => '?').join(',')})
+       AND user_id = ? AND r2_bucket = ? AND project_key = ? AND artifact_status IN ('draft','published')`
+    ).bind(...ids, owner, bucket, slug).all();
+    const verified = (id) => (result.results || []).find(row =>
+      row.id === id && row.r2_key.startsWith(currentPrefix)
+      && row.validation_status === 'asset-verified' && !!row.content_hash);
+    const model = verified(current.modelAssetId);
+    if (model) {
+      const entry = (row) => ({
+        id: row.id, name: row.name, status: row.artifact_status,
+        validationStatus: row.validation_status, contentHash: row.content_hash,
+      });
+      const native = [verified(current.nativeBimAssetId), verified(current.ifcAssetId)]
+        .filter(Boolean).map(entry);
+      revisions.unshift({
+        revision: 'current', label: current.label || 'Current model',
+        status: 'draft', updatedAt: Number(model.updated_at) || 0,
+        bimRevision: current.bimRevision || null, sceneRevision: current.sceneRevision || null,
+        models: [entry(model)], documents: [], native,
+      });
+    }
+  }
+  return response({ ok: true, project: { id: project.id, name: project.name }, revisions });
 }
