@@ -30,14 +30,14 @@ export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onExit }) => (
           Opens an unsaved copy. Pick a saved project from the menu above to inspect a registered model instead.
         </p>
       </div>
-      {onBrowseAll && (
+      {onExit && (
         <button
           type="button"
-          onClick={onBrowseAll}
+          onClick={onExit}
           className="flex min-h-9 items-center gap-1.5 rounded-lg border border-white/15 px-3 text-xs text-slate-200 hover:bg-white/10"
         >
-          <Layers className="h-3.5 w-3.5" />
-          <span>Browse full library</span>
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>Back to workspace</span>
         </button>
       )}
     </div>
