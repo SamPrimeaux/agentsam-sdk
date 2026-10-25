@@ -16,6 +16,8 @@ test("CAD approval validates selected project/revision and never trusts guest re
   assert.throws(() => validateCadApproval({ ...proposal, args: { ...proposal.args, expected_revision: 5 } }, selection), /revision_or_shape_mismatch/);
   assert.throws(() => validateCadApproval({ ...proposal, args: { ...proposal.args, project_id: "other" } }, selection), /revision_or_shape_mismatch/);
   assert.throws(() => validateCadApproval(proposal, null), /selection_required/);
+  assert.throws(() => validateCadApproval({...proposal,args:{...proposal.args,expected_revision:0}},{...selection,revision:0,revision_ref:'current'}), /verified_runtime_revision_required/);
+  assert.throws(() => validateCadApproval(proposal,{...selection,revision_ref:'current'}), /verified_runtime_revision_required/);
 });
 
 test("CAD proposal writes require explicit local approval and one revisioned tool request", async () => {

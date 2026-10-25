@@ -44,7 +44,7 @@ fn generate_pkce_pair() -> (String, String) {
 #[command]
 pub async fn start_cloudflare_oauth(
     pkce_state: State<'_, PkceState>,
-    app_handle: AppHandle,
+    _app_handle: AppHandle,
 ) -> Result<String, String> {
     let (verifier, challenge) = generate_pkce_pair();
 
@@ -65,18 +65,18 @@ pub async fn start_cloudflare_oauth(
     );
 
     // Open native browser
-    tauri_plugin_shell::ShellExt::shell(&app_handle)
-        .open(auth_url, None)
+    crate::commands::system::open_external_url(auth_url)
         .map_err(|e| format!("Failed to open browser: {}", e))?;
 
     Ok("OAuth flow initiated".into())
 }
 
 /// 2. Triggered when `deep_link::handle_callback` receives `agentsam://oauth/callback?code=XYZ`
+#[command]
 pub async fn handle_oauth_deep_link(
     code: String,
-    pkce_state: &PkceState,
-    session_state: &IdentitySessionState,
+    pkce_state: State<'_, PkceState>,
+    session_state: State<'_, IdentitySessionState>,
 ) -> Result<OAuthTokenResponse, String> {
     let verifier = {
         let mut guard = pkce_state.verifier.lock().map_err(|_| "PKCE lock failed")?;
@@ -108,7 +108,7 @@ pub async fn handle_oauth_deep_link(
         .map_err(|e| format!("Failed to parse token response: {}", e))?;
 
     // Store the long-lived refresh token in native Keychain (1 write, 0 prompt loops)
-    keychain::identity_session_set_internal(session_state, &tokens.refresh_token)?;
+    keychain::identity_session_set_internal(&session_state, &tokens.refresh_token)?;
 
     Ok(tokens)
 }

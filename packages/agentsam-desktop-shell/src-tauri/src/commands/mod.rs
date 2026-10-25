@@ -27,3 +27,5 @@ pub mod updater;
 
 // Optional native AgentSam sprite companion.
 pub mod agent_sam_pet;
+
+pub mod cad_engine;

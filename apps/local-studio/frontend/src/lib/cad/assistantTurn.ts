@@ -19,7 +19,7 @@ export function formatCadAssistantPrompt(turn: CadAssistantTurn): string {
   const sel = turn.selection;
   const context = sel
     ? `Selected CAD object: ${sel.object.label} (${sel.object.type}, ${sel.object.id}).
-Workspace: ${sel.workspace}. Project: ${sel.project_id}. Revision: ${sel.revision}. Units: ${sel.object.units}.`
+Workspace: ${sel.workspace}. Project: ${sel.project_id}. Revision: ${sel.revision_ref || sel.revision || 'Unsaved draft'}. Units: ${sel.object.units}.`
     : "No CAD object selected.";
   return `CAD Creator request:
 ${turn.prompt.trim()}

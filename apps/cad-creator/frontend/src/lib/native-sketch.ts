@@ -6,6 +6,8 @@ export interface NativeSketchStroke {
   id: string;
   kind: NativeSketchKind;
   points: NativeSketchPoint[];
+  purpose?:'layout'|'markup';
+  targetId?:string;
 }
 
 export interface SketchConversionPlan {
@@ -68,6 +70,7 @@ export function buildNativeSketchOperations(strokes: NativeSketchStroke[], proje
   };
 
   for (const stroke of strokes) {
+    if(stroke.purpose==='markup')continue;
     if (converted.has(stroke.id)) continue;
     if (stroke.points.length < 2 || !stroke.points.every(valid)) {
       warnings.push('Sketch ' + stroke.id + ' has invalid or missing coordinates.');

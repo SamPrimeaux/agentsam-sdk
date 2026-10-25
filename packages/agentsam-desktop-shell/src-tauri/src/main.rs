@@ -6,7 +6,7 @@ mod menu;
 mod tray;
 
 use commands::{
-    agent_sam_pet, agentsamd, cad, chrome_browser, cloudflare_desktop_identity, deep_link,
+    agent_sam_pet, agentsamd, cad, cad_engine, chrome_browser, cloudflare_desktop_identity, deep_link,
     google_desktop_identity, keychain, local_content, local_identity, local_lsp, local_node,
     local_provider, local_sqlite, native_capabilities, system, updater,
 };
@@ -18,6 +18,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .manage(cloudflare_desktop_identity::PkceState::default())
         .manage(agentsamd::AgentsamdState::default())
+        .manage(cad_engine::CadEngineState::default())
         .manage(local_lsp::LocalLspState::default())
         .manage(local_content::LocalContentState::default())
         .manage(deep_link::DeepLinkState::default())
@@ -71,10 +72,12 @@ fn main() {
             google_desktop_identity::google_desktop_identity_login,
             // Cloudflare Desktop Identity Commands
             cloudflare_desktop_identity::start_cloudflare_oauth,
+            cloudflare_desktop_identity::handle_oauth_deep_link,
             cloudflare_desktop_identity::get_cloudflare_session,
             cloudflare_desktop_identity::logout_cloudflare,
             cloudflare_desktop_identity::silent_session_restore,
             // CAD Engine Commands
+            cad_engine::cad_engine_request,
             cad::generate_cad_mesh,
             cad::export_step_file,
             agent_sam_pet::toggle_agent_sam_pet,

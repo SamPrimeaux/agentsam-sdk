@@ -1,3 +1,4 @@
+import {nativePlanLayer,disposeNativeLayer} from '../lib/native-mesh-three';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
@@ -7,6 +8,8 @@ import {createTerrainDocument,addSculptStroke,validateTerrainDocument,type Terra
 import {ViewCube} from './ViewCube';
 import {publishWorldView,registerWorldView,type WorldViewCommands} from '../lib/world-view-store';
 import {createTerrainProjection,type TerrainProjection} from '../lib/world-terrain-three';
+import type {CadSceneElement,CadSceneSettings,ProjectState} from '@inneranimalmedia/agentsam-cad-shared';
+import {indexSceneElements,applySceneElementEdits,sceneElementBounds,type SceneBinding} from '../lib/scene-elements-three';
 
 type Zone={roomId:string;label:string;candidateCameraBlenderXYZMetres?:number[];anchorStatus?:string};
 type Handoff={projectId:string;sceneRevision:string;scene:{nodeCount:number;architectureNodeCount:number;glbSha256:string};zones:Zone[]};
@@ -16,6 +19,11 @@ type ViewPreset='iso'|'plan'|'front'|'side';
 export type CadSceneInventoryGroup = {category:string; count:number};
 const POSKEY='agentsam.dreamhouse.camera.v1.1';
 const ORBIT_SPEED=0.007;
+const fitDistance=(size:THREE.Vector3,camera:THREE.PerspectiveCamera|null)=>{
+ const halfVertical=THREE.MathUtils.degToRad((camera?.fov||56)/2);
+ const halfLimit=Math.atan(Math.tan(halfVertical)*Math.min(1,camera?.aspect||1));
+ return Math.max(4,size.length()*.56/Math.sin(halfLimit));
+};
 
 export interface CadWorldViewportProps {
  modelUrl:string;
@@ -27,8 +35,13 @@ export interface CadWorldViewportProps {
  siteEditable?:boolean;
  onSelect?:(s:Selected)=>void;
  onSceneInventory?:(groups:CadSceneInventoryGroup[])=>void;
+ onSceneElements?:(elements:CadSceneElement[])=>void;
+ sceneElements?:CadSceneElement[];
+ selectedElementId?:string;
+ layoutProject?:ProjectState;
+ onSceneSettings?:(updates:Partial<CadSceneSettings>)=>void;
 }
-export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,siteEditable=!readOnly,onSelect,onSceneInventory}:CadWorldViewportProps) {
+export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readOnly=true,siteEditable=!readOnly,onSelect,onSceneInventory,onSceneElements,sceneElements=[],selectedElementId,layoutProject,onSceneSettings}:CadWorldViewportProps) {
  const mount=useRef<HTMLDivElement>(null),renderer=useRef<THREE.WebGLRenderer|null>(null),
  sceneRef=useRef<THREE.Scene|null>(null),cameraRef=useRef<THREE.PerspectiveCamera|null>(null);
  const assetRef=useRef<THREE.Object3D|null>(null),collidersRef=useRef<THREE.Object3D[]>([]);
@@ -45,6 +58,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
  [error,setError]=useState(''),[progress,setProgress]=useState('Resolving project geometry…'),
  [handoff,setHandoff]=useState<Handoff|null>(null),[selection,setSelection]=useState<Selected|null>(null),
  [roofVisible,setRoofVisible]=useState(true),[hour,setHour]=useState<'day'|'evening'>('day');
+ const [nativeStatus,setNativeStatus]=useState('');
  const [wireframe,setWireframe]=useState(false),[viewPreset,setViewPreset]=useState<ViewPreset>('iso');
  const [terrain,setTerrain]=useState<TerrainDocument>(()=>createTerrainDocument());
  const [terrainOpen,setTerrainOpen]=useState(false);
@@ -52,11 +66,29 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
  const [brushRadius,setBrushRadius]=useState(12),[brushStrength,setBrushStrength]=useState(3);
  const bounds=useRef(new THREE.Box3());
  const modelBounds=useRef(new THREE.Box3());
+ const bindings=useRef(new Map<string,SceneBinding>());
+ const selectedBox=useRef<THREE.Box3Helper|null>(null);
+ const sourceColors=useRef(new Map<THREE.Material,THREE.Color>());
  const environmentRef=useRef<{sky:Sky;sun:THREE.DirectionalLight;fill:THREE.HemisphereLight}|null>(null);
  const materialSets=useRef(new Map<THREE.Mesh,{lit:THREE.Material|THREE.Material[];color:THREE.Material|THREE.Material[]}>());
  const [shading,setShading]=useState<'lit'|'color'>('lit');
  const [exposure,setExposure]=useState(.72),[sunStrength,setSunStrength]=useState(1),[fillStrength,setFillStrength]=useState(.55);
  const [skyVisible,setSkyVisible]=useState(true);
+ const settings=layoutProject?.sceneSettings;
+ useEffect(()=>{
+  if(settings?.shading)setShading(settings.shading);
+  if(settings?.exposure!=null)setExposure(settings.exposure);
+  if(settings?.sun!=null)setSunStrength(settings.sun);
+  if(settings?.ambient!=null)setFillStrength(settings.ambient);
+  if(settings?.sky!=null)setSkyVisible(settings.sky);
+  if(settings?.daylight!=null)setHour(settings.daylight?'day':'evening');
+  if(settings?.roofVisible!=null)setRoofVisible(settings.roofVisible);
+ },[settings]);
+ useEffect(()=>{if(settings?.terrain)setTerrain(validateTerrainDocument(settings.terrain))},[settings?.terrain]);
+ const changeTerrain=(next:TerrainDocument|((previous:TerrainDocument)=>TerrainDocument))=>{
+  const value=typeof next==='function'?next(terrainDocRef.current):next;
+  terrainDocRef.current=value;setTerrain(value);onSceneSettings?.({terrain:value});
+ };
  const displayRef=useRef({mode,roofVisible,hour});
  useEffect(()=>{displayRef.current={mode,roofVisible,hour}},[mode,roofVisible,hour]);
  useEffect(()=>{terrainDocRef.current=terrain},[terrain]);
@@ -74,7 +106,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   if(modelBounds.current.isEmpty())return;
   const center=modelBounds.current.getCenter(new THREE.Vector3()),size=modelBounds.current.getSize(new THREE.Vector3());
   target.current.copy(center);
-  orbit.current={az:0.85,el:0.5,distance:Math.max(12,size.length()*0.56)};
+  orbit.current={az:0.85,el:0.5,distance:fitDistance(size,cameraRef.current)};
   setViewPreset('iso');
   walk.current.position.set(center.x,Math.max(1.7,bounds.current.min.y+1.7),center.z);
   setMode('orbit');
@@ -83,7 +115,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   if(modelBounds.current.isEmpty())return;
   const size=modelBounds.current.getSize(new THREE.Vector3());
   target.current.copy(modelBounds.current.getCenter(new THREE.Vector3()));
-  const distance=Math.max(12,size.length()*(preset==='plan'?.8:.66));
+  const distance=fitDistance(size,cameraRef.current);
   orbit.current=preset==='plan'
     ?{az:0,el:Math.PI/2-.025,distance}
     :preset==='front'?{az:0,el:.075,distance}
@@ -108,14 +140,18 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
  worldApi.current={
   setMode:next=>{if(next==='walk')walk.current.active=false;setMode(next)},
   setView,frame:reset,
-  toggleRoof:()=>setRoofVisible(v=>!v),
-  toggleDaylight:()=>setHour(v=>v==='day'?'evening':'day'),
+  toggleRoof:()=>{setRoofVisible(!roofVisible);onSceneSettings?.({roofVisible:!roofVisible})},
+  toggleDaylight:()=>{setHour(hour==='day'?'evening':'day');onSceneSettings?.({daylight:hour!=='day'})},
   toggleWireframe:()=>setWireframe(v=>!v),
   visitRoom:id=>{const z=handoff?.zones.find(x=>x.roomId===id);if(z)visit(z)},
   capture:exportSnapshot,
   toggleSite:()=>{setTerrainOpen(v=>!v);setSelection(null);window.dispatchEvent(new Event('cad:terrain-inspect'))},
-  setShading,setExposure,setSun:setSunStrength,setAmbient:setFillStrength,setSky:setSkyVisible,
-  resetLight:()=>{setShading('lit');setExposure(.72);setSunStrength(1);setFillStrength(.55);setSkyVisible(true);setHour('day');},
+  setShading:value=>{setShading(value);onSceneSettings?.({shading:value})},
+  setExposure:value=>{setExposure(value);onSceneSettings?.({exposure:value})},
+  setSun:value=>{setSunStrength(value);onSceneSettings?.({sun:value})},
+  setAmbient:value=>{setFillStrength(value);onSceneSettings?.({ambient:value})},
+  setSky:value=>{setSkyVisible(value);onSceneSettings?.({sky:value})},
+  resetLight:()=>{setShading('lit');setExposure(.72);setSunStrength(1);setFillStrength(.55);setSkyVisible(true);setHour('day');onSceneSettings?.({shading:'lit',exposure:.72,sun:1,ambient:.55,sky:true,daylight:true});},
  };
  useEffect(()=>registerWorldView(()=>worldApi.current as Partial<WorldViewCommands>),[]);
  useEffect(()=>{publishWorldView({kind:'world',ready,mode,viewPreset,roofVisible,daylight:hour==='day',wireframe,shading,exposure,sun:sunStrength,ambient:fillStrength,sky:skyVisible,
@@ -123,8 +159,8 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   [ready,mode,viewPreset,roofVisible,hour,wireframe,handoff,terrainOpen,siteEditable,sceneLabel,revision,shading,exposure,sunStrength,fillStrength,skyVisible]);
  // Site edits persist on this device per project revision until a revision host is connected.
  const terrainKey=`cad.terrain.v1:${sceneLabel}:${revision}`;
- useEffect(()=>{try{const raw=localStorage.getItem(terrainKey);if(raw)setTerrain(validateTerrainDocument(JSON.parse(raw)))}catch{/* storage unavailable or invalid */}},[terrainKey]);
- useEffect(()=>{try{localStorage.setItem(terrainKey,JSON.stringify(terrain))}catch{/* storage unavailable */}},[terrain,terrainKey]);
+ useEffect(()=>{if(onSceneSettings)return;try{const raw=localStorage.getItem(terrainKey);if(raw)setTerrain(validateTerrainDocument(JSON.parse(raw)))}catch{/* storage unavailable or invalid */}},[terrainKey,onSceneSettings]);
+ useEffect(()=>{if(onSceneSettings)return;try{localStorage.setItem(terrainKey,JSON.stringify(terrain))}catch{/* storage unavailable */}},[terrain,terrainKey,onSceneSettings]);
  useEffect(()=>{
   const host=mount.current;if(!host)return;
   let alive=true;
@@ -136,7 +172,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   context.outputColorSpace=THREE.SRGBColorSpace;context.toneMapping=THREE.ACESFilmicToneMapping;
   context.toneMappingExposure=.72;
   context.shadowMap.enabled=true;
-  context.shadowMap.type=THREE.PCFSoftShadowMap;
+  context.shadowMap.type=THREE.PCFShadowMap;
   renderer.current=context;host.appendChild(context.domElement);
   const sun=new THREE.DirectionalLight('#fff0d7',1.05);sun.position.set(80,125,55);sun.castShadow=true;
   const shadowSize=window.innerWidth<768?1024:2048;
@@ -275,7 +311,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
         // Retain the imported physical materials: replacing every PBR shader
         // with MeshBasicMaterial discards all directional lighting and shadows.
         // Keep the historical unlit swatches available as an explicit fallback.
-        const lit=o.material;
+        const lit=Array.isArray(o.material)?o.material.map(m=>m.clone()):o.material.clone();
         const color=Array.isArray(lit)?lit.map(materialColor):materialColor(lit);
         materialSets.current.set(o,{lit,color});
         o.material=lit;
@@ -290,6 +326,8 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
         if(category)categories.set(category,(categories.get(category)||0)+1);
         if(['wall','slab','roof','site','door'].includes(category))structure.push(o);
       });
+      bindings.current=indexSceneElements(gltfRoot);
+      onSceneElements?.([...bindings.current.values()].map(binding=>binding.element));
       onSceneInventory?.([...categories].map(([category,count])=>({category,count})).sort((a,b)=>b.count-a.count));
       collidersRef.current=structure;
       assetRef.current=gltfRoot;scene.add(gltfRoot);loaded=true;
@@ -314,17 +352,48 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
    sky.geometry.dispose();sky.material.dispose();
    environmentRef.current=null;
    materialSets.current.clear();
+   bindings.current.clear();sourceColors.current.clear();
+   if(selectedBox.current){selectedBox.current.geometry.dispose();(selectedBox.current.material as THREE.Material).dispose();selectedBox.current=null;}
    if(context.domElement.parentElement===host)host.removeChild(context.domElement);
    context.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;
   };
  },[modelUrl,manifestUrl]);
  useEffect(()=>{
-  if(!assetRef.current)return;
-  assetRef.current.traverse(node=>{
-   const cat=String(node.userData?.Category||'').toLowerCase();
-   if(/roof|gable/.test(node.name.toLowerCase())||cat==='roof')node.visible=roofVisible;
-  });
- },[roofVisible,ready]);
+  if(!ready)return;
+  applySceneElementEdits(bindings.current,sceneElements,roofVisible);
+  const edits=new Map(sceneElements.map(element=>[element.id,element]));
+  for(const [mesh,variants] of materialSets.current){
+    const element=edits.get(String(mesh.userData.CadElementId));
+    for(const variant of [variants.lit,variants.color])for(const mat of Array.isArray(variant)?variant:[variant]){
+      const colored=mat as THREE.MeshStandardMaterial;
+      if(!colored.color)continue;
+      if(!sourceColors.current.has(mat))sourceColors.current.set(mat,colored.color.clone());
+      colored.color.copy(element?.color?new THREE.Color(element.color):sourceColors.current.get(mat)!);
+    }
+  }
+  const scene=sceneRef.current;if(!scene)return;
+  if(selectedBox.current){scene.remove(selectedBox.current);selectedBox.current.geometry.dispose();(selectedBox.current.material as THREE.Material).dispose();selectedBox.current=null;}
+  const binding=selectedElementId?bindings.current.get(selectedElementId):undefined;
+  if(binding){const helper=new THREE.Box3Helper(sceneElementBounds(binding),new THREE.Color('#82a7fb'));scene.add(helper);selectedBox.current=helper;}
+ },[sceneElements,selectedElementId,roofVisible,ready]);
+ useEffect(()=>{
+  const focus=(event:Event)=>{
+    const binding=bindings.current.get((event as CustomEvent<string>).detail);if(!binding)return;
+    const box=sceneElementBounds(binding);target.current.copy(box.getCenter(new THREE.Vector3()));
+    const center=target.current,building=modelBounds.current;
+    const sides=[{distance:Math.abs(center.x-building.min.x),az:-Math.PI/2},{distance:Math.abs(building.max.x-center.x),az:Math.PI/2},{distance:Math.abs(center.z-building.min.z),az:Math.PI},{distance:Math.abs(building.max.z-center.z),az:0}].sort((a,b)=>a.distance-b.distance);
+    orbit.current={az:sides[0].az,el:.15,distance:Math.max(fitDistance(box.getSize(new THREE.Vector3()),cameraRef.current),sides[0].distance+3)};setMode('orbit');
+  };
+  window.addEventListener('cad:frame-element',focus);return()=>window.removeEventListener('cad:frame-element',focus);
+ },[]);
+ // Layout geometry is tessellated from the same native BRep used for export.
+ useEffect(()=>{
+  const scene=sceneRef.current;if(!scene||!ready||!layoutProject?.sceneSource||!layoutProject.walls.length){setNativeStatus('');return;}
+  let cancelled=false,layer:THREE.Group|undefined;
+  const material=new THREE.MeshStandardMaterial({color:'#82a7fb',roughness:.7});setNativeStatus('Evaluating native layout…');
+  void nativePlanLayer(layoutProject,()=>material).then(result=>{if(cancelled){disposeNativeLayer(result);return;}layer=result;scene.add(layer);setNativeStatus('Layout: OCCT solids');},error=>{if(!cancelled)setNativeStatus(String(error).includes('requires_desktop')?'Native layout evaluation requires Local Studio desktop':String(error));});
+  return()=>{cancelled=true;if(layer){scene.remove(layer);disposeNativeLayer(layer);}material.dispose();};
+ },[ready,layoutProject?.walls,layoutProject?.doors,layoutProject?.windows,layoutProject?.nativeHistory,layoutProject?.sceneSource]);
  useEffect(()=>{
   const environment=environmentRef.current,scene=sceneRef.current;
   if(!environment||!scene)return;
@@ -364,9 +433,9 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   const hit=ray.intersectObject(assetRef.current,true)[0]?.object;
   if(!hit)return;
   let o:THREE.Object3D|null=hit;
-  while(o&&!o.userData?.DesignId)o=o.parent;
+  while(o&&!o.userData?.CadElementId&&!o.userData?.DesignId)o=o.parent;
   if(!o)return;
-  const selected={designId:String(o.userData.DesignId),category:String(o.userData.Category||'component'),nodeName:o.name,source:String(o.userData.Source||revision)};
+  const selected={designId:String(o.userData.CadElementId||o.userData.DesignId),category:String(o.userData.Category||'component'),nodeName:o.name,source:String(o.userData.Source||revision)};
   setSelection(selected);onSelect?.(selected);
  },[ready,onSelect]);
  const sculptAt=useCallback((event:React.PointerEvent<HTMLDivElement>,force=false)=>{
@@ -381,8 +450,8 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   if(!intersection)return;
   const local=intersection.point.clone().sub(terrainOrigin.current);
   lastBrushAt.current=now;
-  setTerrain(current=>addSculptStroke(current,local.x,local.z,brush.radius,brush.strength,brush.mode!));
- },[]);
+  changeTerrain(current=>addSculptStroke(current,local.x,local.z,brush.radius,brush.strength,brush.mode!));
+ },[onSceneSettings]);
  const start=useCallback((e:React.PointerEvent<HTMLDivElement>)=>{
   if(e.button!==0&&e.pointerType==='mouse')return;
   if(e.pointerType==='touch'){
@@ -426,21 +495,22 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
      onWheel={e=>{
        if(displayRef.current.mode!=='orbit')return;
        const extent=modelBounds.current.getSize(new THREE.Vector3()).length();
-       const minDistance=Math.max(6,extent*.45);
+       const minDistance=selectedElementId?1.5:Math.max(6,extent*.45);
        const maxDistance=Math.max(250,minDistance*8);
        const step=Math.max(-240,Math.min(240,e.deltaY));
        orbit.current.distance=Math.max(minDistance,Math.min(maxDistance,orbit.current.distance*Math.exp(step*.0015)));
      }}/>
+   {nativeStatus&&<div className="absolute bottom-3 left-3 text-xs bg-slate-950/80 text-slate-100 px-2 py-1" role="status">{nativeStatus}</div>}
    {mode==='walk'&&<div className="pointer-events-none absolute bottom-14 left-1/2 -translate-x-1/2 rounded-lg bg-[#111b2c]/85 px-3 py-2 text-center text-xs text-white/90">W A S D · drag to look · Shift to move faster</div>}
    {mode==='walk'&&<div className="absolute bottom-16 left-3 z-20 flex gap-1 sm:hidden">
      {(['KeyW','KeyA','KeyS','KeyD'] as const).map((key,i)=><button key={key} type="button" aria-label={'Move '+['forward','left','back','right'][i]}
        onPointerDown={e=>{e.preventDefault();pressed.current.add(key)}} onPointerUp={()=>pressed.current.delete(key)} onPointerCancel={()=>pressed.current.delete(key)}
        className="rounded-lg border border-white/20 bg-slate-800/90 px-3 py-2.5 text-xs font-bold">{['↑','←','↓','→'][i]}</button>)}
    </div>}
-   {siteEditable&&terrainOpen&&<TerrainEditorPanel document={terrain} onChange={setTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
+   {siteEditable&&terrainOpen&&<TerrainEditorPanel document={terrain} onChange={changeTerrain} sculptMode={sculptMode} onSculptMode={next=>{setSculptMode(next);if(next)setMode('orbit')}}
      brushRadius={brushRadius} onBrushRadius={setBrushRadius} brushStrength={brushStrength} onBrushStrength={setBrushStrength}
      onFitSite={fitSite} onClose={()=>{setTerrainOpen(false);setSculptMode(null)}}/>}
-   {!terrainOpen&&selection&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">
+   {!terrainOpen&&selection&&!onSelect&&<aside className="absolute bottom-12 right-3 z-20 w-[min(310px,70vw)] rounded-lg border border-white/20 bg-[#101a2b]/95 p-3 text-xs shadow-xl" aria-label="Selected BIM element">
      <div className="flex justify-between gap-2"><strong>BIM · {selection.category}</strong><button onClick={()=>setSelection(null)} aria-label="Close BIM inspector">×</button></div>
      <p className="mt-1 break-all font-mono text-sky-200">{selection.designId}</p>
      <p className="mt-1 text-slate-400">{selection.nodeName} · {selection.source}</p>

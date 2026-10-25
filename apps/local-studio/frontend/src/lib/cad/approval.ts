@@ -9,6 +9,8 @@ export function isLocalCadExecutionHost(hostname: string): boolean {
 /** The guest can request a write, but never choose its revision authority. */
 export function validateCadApproval(proposal: CadProposal, selection: CadSelectionContext | null): Record<string, unknown> {
   if (!selection) throw new Error("cad_selection_required");
+  if (!Number.isSafeInteger(selection.revision) || selection.revision < 1 || selection.revision_ref)
+    throw new Error("cad_verified_runtime_revision_required");
   const args = proposal.args;
   if (proposal.tool !== "design_apply_operation"
     || args.project_id !== selection.project_id

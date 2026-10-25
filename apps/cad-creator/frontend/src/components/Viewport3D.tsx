@@ -1,3 +1,4 @@
+import {nativePlanLayer,disposeNativeLayer} from '../lib/native-mesh-three';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ViewCube } from './ViewCube';
 import { publishWorldView, registerWorldView, type WorldViewCommands } from '../lib/world-view-store';
@@ -32,6 +33,7 @@ export const Viewport3D: React.FC<Props> = ({
   // The canonical project, not viewport-local state, owns persisted scene lighting.
   const timeOfDay = project.lighting.timeOfDay || 'noon';
   const sunIntensity = project.lighting.intensity ?? 1.1;
+  const [nativeStatus,setNativeStatus]=useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fpHelp, setFpHelp] = useState(true);
 
@@ -402,6 +404,7 @@ export const Viewport3D: React.FC<Props> = ({
       }
     });
 
+    const previewWalls=new THREE.Group();bimRoot.add(previewWalls);
     // 2. Render Walls with Window & Door Cutouts
     project.walls.forEach((wall) => {
       const dx = (wall.x2 - wall.x1) * SCALE;
@@ -431,7 +434,7 @@ export const Viewport3D: React.FC<Props> = ({
         wallMesh.rotation.y = -angle;
         wallMesh.castShadow = true;
         wallMesh.receiveShadow = true;
-        bimRoot.add(wallMesh);
+        previewWalls.add(wallMesh);
       } else {
         // Parametric segmented wall with cutouts
         const segments: { start: number; end: number; type: 'wall' | 'door' | 'window'; item?: any }[] = [];
@@ -485,7 +488,7 @@ export const Viewport3D: React.FC<Props> = ({
             segMesh.rotation.y = -angle;
             segMesh.castShadow = true;
             segMesh.receiveShadow = true;
-            bimRoot.add(segMesh);
+            previewWalls.add(segMesh);
           } else if (seg.type === 'door') {
             const doorItem: DoorElement = seg.item;
             const doorHeight = (doorItem.height || 84) * SCALE;
@@ -498,7 +501,7 @@ export const Viewport3D: React.FC<Props> = ({
               headerMesh.position.set(posX, doorHeight + headerHeight / 2, posZ);
               headerMesh.rotation.y = -angle;
               headerMesh.castShadow = true;
-              bimRoot.add(headerMesh);
+              previewWalls.add(headerMesh);
             }
 
             // 3D Door Frame & Leaf
@@ -526,7 +529,7 @@ export const Viewport3D: React.FC<Props> = ({
             leafMesh.castShadow = true;
             doorGroup.add(leafMesh);
 
-            bimRoot.add(doorGroup);
+            previewWalls.add(doorGroup);
           } else if (seg.type === 'window') {
             const winItem: WindowElement = seg.item;
             const elevation = (winItem.elevation || 36) * SCALE;
@@ -540,7 +543,7 @@ export const Viewport3D: React.FC<Props> = ({
               sillMesh.position.set(posX, elevation / 2, posZ);
               sillMesh.rotation.y = -angle;
               sillMesh.castShadow = true;
-              bimRoot.add(sillMesh);
+              previewWalls.add(sillMesh);
             }
             // Wall above window
             if (topHeader > 0.05) {
@@ -549,7 +552,7 @@ export const Viewport3D: React.FC<Props> = ({
               topMesh.position.set(posX, elevation + winH + topHeader / 2, posZ);
               topMesh.rotation.y = -angle;
               topMesh.castShadow = true;
-              bimRoot.add(topMesh);
+              previewWalls.add(topMesh);
             }
 
             // Window Frame & Glass
@@ -565,7 +568,7 @@ export const Viewport3D: React.FC<Props> = ({
             frame.castShadow = true;
             winGroup.add(glass, frame);
 
-            bimRoot.add(winGroup);
+            previewWalls.add(winGroup);
           }
         });
       }
@@ -612,6 +615,14 @@ export const Viewport3D: React.FC<Props> = ({
     }
 
     scene.add(bimRoot);
+    let cancelled=false,nativeLayer:THREE.Group|undefined;
+    if(project.walls.length){setNativeStatus('Evaluating OCCT solid…');
+      void nativePlanLayer(project,wall=>getMaterial(wall.material,wall.color),1).then(layer=>{
+        if(cancelled){disposeNativeLayer(layer);return;}nativeLayer=layer;bimRoot.remove(previewWalls);
+        previewWalls.traverse(node=>{if(node instanceof THREE.Mesh)node.geometry.dispose();});
+        bimRoot.add(layer);setNativeStatus('OCCT solids · mesh from BRep');
+      },error=>{if(!cancelled)setNativeStatus(String(error).includes('requires_desktop')?'Approximate preview · native solids require Local Studio desktop':String(error));});
+    }else setNativeStatus('');
 
     // Calculate center point of all walls to position camera target
     if (project.walls.length > 0) {
@@ -623,6 +634,7 @@ export const Viewport3D: React.FC<Props> = ({
       });
       targetRef.current.set(sumX / count, 1.2, sumZ / count);
     }
+    return()=>{cancelled=true;scene.remove(bimRoot);bimRoot.traverse(node=>{if(node instanceof THREE.Mesh)node.geometry.dispose();});};
   }, [project, showRoof, getMaterial]);
 
   // Mouse drag & zoom handlers for orbit & firstperson
@@ -703,6 +715,7 @@ export const Viewport3D: React.FC<Props> = ({
 
   return (
     <div className="w-full h-full relative bg-[#121212] flex flex-col select-none overflow-hidden group">
+      {nativeStatus&&<div role="status" className="absolute bottom-3 left-3 z-20 text-xs bg-slate-950/80 text-slate-100 px-2 py-1">{nativeStatus}</div>}
       {/* Main 3D Canvas Mounting Container */}
       <div
         ref={mountRef}

@@ -415,6 +415,7 @@ const config = {
             [appManifestRel]: 'runtime/identity/app.json',
             ...(targetFamily === 'desktop'
               ? {
+                  'generated/runtime/cad/': 'runtime/cad/',
                   '../../agentsam-database-editor/scripts/local-sqlite-bridge.mjs':
                     'runtime/database/scripts/local-sqlite-bridge.mjs',
                   '../../agentsam-database-editor/src/adapters/sqlite.js':

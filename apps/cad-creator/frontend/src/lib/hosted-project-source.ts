@@ -1,4 +1,5 @@
 import type { ProjectState } from '@inneranimalmedia/agentsam-cad-shared';
+import {createEmptyCadProject} from './create-empty-project';
 
 export interface CadAsset { id: string; name: string; status: string; validationStatus: string; contentHash: string | null; stale?: boolean }
 export interface CadRevision { revision: string; status: string; updatedAt: number; label?: string; parentRevision?: string; bimRevision?: string | null; sceneRevision?: string | null; models: CadAsset[]; documents: CadAsset[]; native: CadAsset[] }
@@ -33,13 +34,19 @@ export async function loadHostedProject(projectId: string, requestedRevision?: s
   const model = revision.models.find((a) => a.validationStatus === 'asset-verified') || revision.models[0];
   // The latest visual scene can legitimately advance ahead of the IFC/2D review.
   // Never load an older drafting document and mislabel it as aligned V1.5 geometry.
-  if (revision.revision === 'current' && !revision.documents.length)
-    return { project: null, registry, revision, modelUrl: cadAssetUrl(projectId, model.id) };
+  if (revision.revision === 'current' && !revision.documents.length) {
+    if(!model.contentHash)throw new Error('The registered scene needs its source hash before edits can be saved.');
+    const project:ProjectState={...createEmptyCadProject(),id:registry.project.id,name:registry.project.name,
+      sceneSource:{assetId:model.id,contentHash:model.contentHash,revision:revision.sceneRevision||revision.revision,units:'m',axes:'gltf-y-up'},sceneElements:[]};
+    return {project,registry,revision,modelUrl:cadAssetUrl(projectId,model.id)};
+  }
   const document = revision.documents.find((a) => a.validationStatus === 'asset-verified') || revision.documents[0];
   const source = await readJson<ProjectState>(cadAssetUrl(projectId, document.id), fetcher);
   if (!source || typeof source.id !== 'string' || !Array.isArray(source.walls) || !Array.isArray(source.rooms))
     throw new Error('Saved CAD source is not an editable design document. The current canvas was retained.');
-  return { project: source, registry, revision, modelUrl: cadAssetUrl(projectId, model.id) };
+  if(source.sceneSource && (source.sceneSource.assetId!==model.id || source.sceneSource.contentHash!==model.contentHash))
+    throw new Error('This document belongs to a different model source. Reconcile its scene binding before editing.');
+  return { project: {...source,id:registry.project.id}, registry, revision, modelUrl: cadAssetUrl(projectId, model.id) };
 }
 
 export interface HostedSaveReceipt {
@@ -50,9 +57,9 @@ export interface HostedSaveReceipt {
 export const cadDocumentsUrl = (id: string, base: string) => `${cadRegistryUrl(id)}/documents?base=${encodeURIComponent(base)}`;
 
 /** Saves an edit as a new revision of the project; the base revision is never modified. */
-export async function saveHostedProject(projectId: string, project: ProjectState, baseRevision: string, fetcher: typeof fetch = fetch): Promise<HostedSaveReceipt> {
+export async function saveHostedProject(projectId: string, project: ProjectState, baseRevision: string, fetcher: typeof fetch = fetch, expectedHash?:string): Promise<HostedSaveReceipt> {
   const res = await fetcher(cadDocumentsUrl(projectId, baseRevision), {
-    method: 'PUT', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(project),
+    method: 'PUT', credentials: 'same-origin', headers: { 'content-type': 'application/json',...(expectedHash?{'if-match':expectedHash}:{}) }, body: JSON.stringify(project),
   });
   const data = await res.json().catch(() => null) as { ok?: boolean; error?: string; receipt?: HostedSaveReceipt } | null;
   if (!res.ok || !data?.ok || !data.receipt)

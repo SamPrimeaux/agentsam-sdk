@@ -1,3 +1,4 @@
+import {NativeSolidPanel} from './NativeSolidPanel';
 import {WorldViewSection} from './WorldViewSection';
 import {KIT, chooseKitTool, isKitActive, viewerSafe, type Group, type MenuId} from './sketch-kit-catalog';
 import {useKit} from '../lib/sketch-kit-store';
@@ -9,11 +10,12 @@ import {Layers3, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen,
  MousePointer2, DoorOpen, Ruler, PencilRuler, Hand, Eraser, Square, SlidersHorizontal, Blocks, Undo2, Redo2, Bot, Activity,
  BrickWall, AppWindow, RectangleHorizontal, PenTool, LayoutPanelLeft, History, Download, Sofa} from 'lucide-react';
 import './engineering-workbench.css';
+import {patchSceneElement} from '../lib/scene-document';
 
-export type CadElementGroup = 'walls'|'doors'|'windows'|'rooms'|'furniture'|'parametricObjects';
+export type CadElementGroup = 'walls'|'doors'|'windows'|'rooms'|'furniture'|'parametricObjects'|'sceneElements';
 export type CadElementSelection = {group:CadElementGroup;id:string}|null;
 const GROUP_ICONS:Record<CadElementGroup,React.ComponentType<{size?:number}>> = {
- walls:Layers3, doors:DoorOpen, windows:Grid2X2, rooms:Square, furniture:Box, parametricObjects:Blocks
+ walls:Layers3, doors:DoorOpen, windows:Grid2X2, rooms:Square, furniture:Box, parametricObjects:Blocks,sceneElements:Layers3
 };
 type Update = (updater:(p:ProjectState)=>ProjectState)=>void;
 const groups = (p:ProjectState):Array<{id:CadElementGroup;title:string;entries:{id:string;label:string}[]}> => [
@@ -23,6 +25,7 @@ const groups = (p:ProjectState):Array<{id:CadElementGroup;title:string;entries:{
  {id:'rooms',title:'Spaces',entries:p.rooms.map(x=>({id:x.id,label:x.name}))},
  {id:'furniture',title:'Fixtures',entries:p.furniture.map(x=>({id:x.id,label:x.name}))},
  {id:'parametricObjects',title:'Parametric',entries:(p.parametricObjects||[]).map(x=>({id:x.id,label:x.name}))},
+ {id:'sceneElements',title:'Scene elements',entries:(p.sceneElements||[]).map(x=>({id:x.id,label:x.category.replaceAll('-',' ')+' · '+x.name}))},
 ];
 
 export function CadProjectExplorer({project,selection,onSelect,onClose,sceneInventory}:{
@@ -30,7 +33,8 @@ export function CadProjectExplorer({project,selection,onSelect,onClose,sceneInve
  sceneInventory?:Array<{category:string;count:number}>;
 }) {
  const [filter,setFilter]=useState('');
- const [closed,setClosed]=useState<Record<string,boolean>>({});
+ const [closed,setClosed]=useState<Record<string,boolean>>({sceneElements:true});
+ React.useEffect(()=>{if(selection)setClosed(previous=>({...previous,[selection.group]:false}))},[selection?.group]);
  const data=useMemo(()=>groups(project),[project]);
  return <aside className="cad-work-pane" aria-label="CAD project explorer">
   <header className="cad-pane-head"><span><Layers3 size={16}/> Project explorer</span>
@@ -72,9 +76,9 @@ function Numeric({label,value,onCommit,min,unit='in'}:{
    onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&(min==null||n>=min)&&n!==value)onCommit(n);else e.target.value=String(value)}}/>
    <small>{unit}</small></div></label>;
 }
-export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly}:{
+export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview}:{
  project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onChange:Update;
- onClose:()=>void;readOnly:boolean
+ onClose:()=>void;readOnly:boolean;onReview?:()=>void
 }) {
  const [tab,setTab]=useState<'object'|'project'|'scene'>('object');
  React.useEffect(()=>{if(selection)setTab('object')},[selection?.group,selection?.id]);
@@ -104,6 +108,11 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
 
  const update=(key:string,value:unknown)=>{
   if(!selection)return;
+  if(selection.group==='sceneElements'){
+    try{const next=patchSceneElement(project,selection.id,{[key]:value});setOperationError(null);onChange(()=>next);}
+    catch(error){setOperationError(error instanceof Error?error.message:String(error))}
+    return;
+  }
   const mapping={
     walls:['update_wall','wallId'],doors:['update_door','doorId'],
     windows:['update_window','windowId'],rooms:['update_room','roomId'],
@@ -130,7 +139,7 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
    {(['object','project','scene'] as const).map(view=><button key={view} role="tab" aria-selected={tab===view}
     className={tab===view?'active':''} onClick={()=>setTab(view)}>{view[0].toUpperCase()+view.slice(1)}</button>)}</div>
   <div className="cad-property-scroll">{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}{tab==='scene'&&<WorldViewSection/>}<fieldset disabled={readOnly}>
-  {tab==='scene'?
+  {tab==='scene'?project.sceneSource?<p className="cad-property-help">View, lighting and site controls save with this project revision.</p>:
   <><h4>Environment & lighting</h4>
    <label className="cad-property"><span>Time of day</span><select aria-label="Scene time of day" value={project.lighting.timeOfDay} onChange={e=>patchLighting({timeOfDay:e.target.value as ProjectState['lighting']['timeOfDay']})}>
     {(['morning','noon','sunset','night'] as const).map(v=><option key={v} value={v}>{v[0].toUpperCase()+v.slice(1)}</option>)}</select></label>
@@ -155,6 +164,25 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
    {groups(project).map(g=><div className="cad-property-summary" key={g.id}><span>{g.title}</span><b>{g.entries.length}</b></div>)}
   </>:
   <><div className="cad-inspected-id"><small>{selection.group}</small><strong>{record.id}</strong></div>
+   {selection.group==='sceneElements'&&<>
+    <h4>Scene element</h4>
+    <label className="cad-property"><span>Name</span><input aria-label="Element name" value={String(record.name)} onChange={event=>update('name',event.target.value)}/></label>
+    <label className="cad-property"><span>Visible</span><input aria-label="Element visible" type="checkbox" checked={Boolean(record.visible)} onChange={event=>update('visible',event.target.checked)}/></label>
+    <h4>Placement · metres</h4>
+    {(['X','Y','Z'] as const).map((axis,index)=><Numeric key={axis} label={'Offset '+axis} unit="m" value={(record.offset as number[])[index]}
+      onCommit={value=>{const offset=[...(record.offset as number[])];offset[index]=value;update('offset',offset)}}/>)}
+    <Numeric label="Vertical rotation" unit="°" value={Number(record.rotation)} onCommit={value=>update('rotation',value)}/>
+    <h4>Finish</h4>
+    <label className="cad-property"><span>Color override</span><input aria-label="Element finish color" type="color" value={String(record.color||'#cccccc')} onChange={event=>update('color',event.target.value)}/></label>
+    <button className="cad-clear-selection" type="button" disabled={!record.color} onClick={()=>update('color',undefined)}>Restore source material color</button>
+    <h4>Review note</h4>
+    <textarea aria-label="Element review note" rows={3} maxLength={2000} value={String(record.note||'')} onChange={event=>update('note',event.target.value)}/>
+    <button className="cad-clear-selection" type="button" onClick={()=>window.dispatchEvent(new CustomEvent('cad:frame-element',{detail:record.id}))}>Frame selected element</button>
+    {onReview&&<button className="cad-clear-selection" type="button" onClick={onReview}>Sketch a fix for this element</button>}
+    <h4>Source binding</h4>
+    <p className="cad-property-help">{String(record.category)} · {String(record.source)}</p>
+    <p className="cad-property-help">Placement and finish edits save with this project. Native BIM dimensions are changed through the modeling operation.</p>
+   </>}
    {selection.group==='walls'&&<><h4>Wall geometry</h4>{num('Start X','x1')}{num('Start Y','y1')}
     {num('End X','x2')}{num('End Y','y2')}{num('Thickness','thickness',0.1)}{num('Height','height3D',1)}
     <label className="cad-property"><span>Material</span><select value={String(record.material)} onChange={e=>update('material',e.target.value as WallMaterial)}>
@@ -201,6 +229,7 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
      </label>;
     }):<p className="cad-property-help">This feature has no editable generator parameters in the project.</p>}
     <p className="cad-property-help">Parameters are applied to the canonical generator recipe. Use Parametric tools to edit source code and regenerate artifacts.</p></>}
+   {(['walls','doors','windows'].includes(selection.group))&&<NativeSolidPanel project={project} elementId={selection.group==='walls'?selection.id:String(record.wallId)}/>}
    <button type="button" className="cad-clear-selection" onClick={()=>onSelect(null)}>Clear selection</button></>}
   </fieldset></div>
   <footer className="cad-pane-note">Edits use the current project, undo history, and save workflow.</footer>
