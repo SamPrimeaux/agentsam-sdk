@@ -42,7 +42,7 @@ export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onBrowseAll }) 
       )}
     </div>
 
-    <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))' }}>
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
       {TEMPLATE_METADATA_LIST.map((tpl) => (
         <button
           key={tpl.id}
