@@ -58,8 +58,15 @@ export const TemplateLibraryModal: React.FC<Props> = ({
   }, [selectedCategory, searchQuery]);
 
   const activeTemplate = useMemo(() => {
-    return TEMPLATE_METADATA_LIST.find((t) => t.id === selectedTemplateId) || filteredTemplates[0] || TEMPLATE_METADATA_LIST[0];
+    return filteredTemplates.find((t) => t.id === selectedTemplateId) || filteredTemplates[0] || TEMPLATE_METADATA_LIST[0];
   }, [selectedTemplateId, filteredTemplates]);
+
+  React.useEffect(()=>{
+    if(!isOpen)return;
+    const onEscape=(event:KeyboardEvent)=>{if(event.key==='Escape')onClose()};
+    document.addEventListener('keydown',onEscape);
+    return ()=>document.removeEventListener('keydown',onEscape);
+  },[isOpen,onClose]);
 
   if (!isOpen) return null;
 
@@ -67,7 +74,7 @@ export const TemplateLibraryModal: React.FC<Props> = ({
     if (!permissions.canLoadTemplates) return;
     // Clone template state with fresh ID and current timestamp
     const cloned: ProjectState = {
-      ...tpl.project,
+      ...structuredClone(tpl.project),
       id: `proj_${Date.now()}`,
       updatedAt: Date.now(),
       version: 1,
@@ -77,7 +84,7 @@ export const TemplateLibraryModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="cad-template-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-2 md:p-6 select-none">
+    <div className="cad-template-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-2 md:p-6 select-none" role="dialog" aria-modal="true" aria-label="CAD project template library">
       <div className="cad-template-dialog bg-[#252525] border border-[#333] rounded-2xl w-full max-w-5xl h-[min(90dvh,52rem)] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="p-3.5 border-b border-[#333] flex items-center justify-between bg-[#252525] shrink-0">
@@ -86,7 +93,7 @@ export const TemplateLibraryModal: React.FC<Props> = ({
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <h2 className="text-sm font-bold text-white">AgentSam Studio Template Library</h2>
                 <span className="px-1.5 py-0.2 bg-blue-500/20 border border-blue-500/40 text-blue-300 rounded text-[length:var(--text-xs)] font-mono">
                   Parametric BIM & Spatial Sets
@@ -122,7 +129,7 @@ export const TemplateLibraryModal: React.FC<Props> = ({
               return (
                 <button
                   key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
+                  onClick={() => setSelectedCategory(cat.id)} aria-pressed={selectedCategory===cat.id}
                   className={`px-2.5 py-1 rounded text-xs font-medium flex items-center space-x-1.5 whitespace-nowrap transition ${
                     selectedCategory === cat.id
                       ? 'bg-blue-600 text-white shadow-sm'

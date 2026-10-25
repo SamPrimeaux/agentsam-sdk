@@ -1,6 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
-import type {ProjectState, ActiveTool, WallMaterial, DesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
+import type {ProjectState, ActiveTool, WallMaterial, DesignOperation, ParametricParameterDef} from '@inneranimalmedia/agentsam-cad-shared';
 import {Layers3, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen,
  Search, ChevronRight, ChevronDown, Box, Plus, ArrowUpRight, Grid2X2,
  MousePointer2, DoorOpen, Ruler, PencilRuler, Hand, Eraser, Square, SlidersHorizontal, Blocks, Undo2, Redo2, Bot, Activity} from 'lucide-react';
@@ -8,6 +8,9 @@ import './engineering-workbench.css';
 
 export type CadElementGroup = 'walls'|'doors'|'windows'|'rooms'|'furniture'|'parametricObjects';
 export type CadElementSelection = {group:CadElementGroup;id:string}|null;
+const GROUP_ICONS:Record<CadElementGroup,React.ComponentType<{size?:number}>> = {
+ walls:Layers3, doors:DoorOpen, windows:Grid2X2, rooms:Square, furniture:Box, parametricObjects:Blocks
+};
 type Update = (updater:(p:ProjectState)=>ProjectState)=>void;
 const groups = (p:ProjectState):Array<{id:CadElementGroup;title:string;entries:{id:string;label:string}[]}> => [
  {id:'walls',title:'Walls',entries:p.walls.map(x=>({id:x.id,label:x.id}))},
@@ -35,12 +38,13 @@ export function CadProjectExplorer({project,selection,onSelect,onClose}:{
    const entries=g.entries.filter(e=>(e.id+' '+e.label).toLowerCase().includes(filter.toLowerCase()));
    if(filter&&!entries.length)return null;
    const isClosed=!filter&&closed[g.id];
+   const GroupIcon=GROUP_ICONS[g.id];
    return <section className="cad-tree-group" key={g.id}>
-    <button className="cad-tree-heading" onClick={()=>setClosed(c=>({...c,[g.id]:!c[g.id]}))}>
-     {isClosed?<ChevronRight size={14}/>:<ChevronDown size={14}/>}<span>{g.title}</span><small>{g.entries.length}</small></button>
+    <button className="cad-tree-heading" aria-expanded={!isClosed} onClick={()=>setClosed(c=>({...c,[g.id]:!c[g.id]}))}>
+     {isClosed?<ChevronRight size={14}/>:<ChevronDown size={14}/>}<GroupIcon size={14}/><span>{g.title}</span><small>{g.entries.length}</small></button>
     {!isClosed&&entries.map(e=><button title={e.id} key={e.id} onClick={()=>onSelect({group:g.id,id:e.id})}
-     className={'cad-tree-item'+(selection?.group===g.id&&selection.id===e.id?' active':'')}>
-     <Square size={12}/><span>{e.label}</span></button>)}
+     aria-pressed={selection?.group===g.id&&selection.id===e.id} className={'cad-tree-item'+(selection?.group===g.id&&selection.id===e.id?' active':'')}>
+     <GroupIcon size={13}/><span>{e.label}</span></button>)}
    </section>;
   })}
   </div>
@@ -61,9 +65,32 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
  project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onChange:Update;
  onClose:()=>void;readOnly:boolean
 }) {
- const [tab,setTab]=useState<'object'|'project'>('object');
+ const [tab,setTab]=useState<'object'|'project'|'scene'>('object');
+ React.useEffect(()=>{if(selection)setTab('object')},[selection?.group,selection?.id]);
+ const patchLighting=(updates:Partial<ProjectState['lighting']>)=>onChange(p=>({...p,lighting:{...p.lighting,...updates}}));
  const [operationError,setOperationError]=useState<string|null>(null);
  const record=(selection&&(project[selection.group]||[]).find(x=>x.id===selection.id)) as unknown as (Record<string, unknown> & {id:string})|null;
+ const parametric=selection?.group==='parametricObjects'?project.parametricObjects?.find(x=>x.id===selection.id):undefined;
+ const patchParameter=(parameterName:string,value:number|string|boolean)=>{
+  if(!parametric)return;
+  const operation={id:'cad-ui-'+Date.now(),timestamp:Date.now(),type:'update_parametric_parameter',
+   parametricObjectId:parametric.id,parameterName,value} as DesignOperation;
+  const check=applyDesignOperation(project,operation);
+  if(!check.success){setOperationError(check.error||'Invalid parametric value');return;}
+  setOperationError(null);
+  onChange(previous=>{
+   const applied=applyDesignOperation(previous,operation);
+   return applied.success?applied.project:previous;
+  });
+ };
+ const patchTransform=(key:keyof NonNullable<typeof parametric>['transform'],value:number)=>{
+  if(!parametric)return;
+  onChange(previous=>({...previous,parametricObjects:(previous.parametricObjects||[]).map(obj=>
+   obj.id===parametric.id?{...obj,transform:{...obj.transform,[key]:value}}:obj)}));
+ };
+ const paramDefs:ParametricParameterDef[]=parametric?.parameterDefs?.length?parametric.parameterDefs:
+  Object.entries(parametric?.parameters||{}).map(([name,value])=>({name,label:name,type:typeof value==='number'?'number':typeof value==='boolean'?'boolean':'string',value}));
+
  const update=(key:string,value:unknown)=>{
   if(!selection)return;
   const mapping={
@@ -88,10 +115,25 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
  return <aside className="cad-work-pane cad-properties" aria-label="CAD inspector">
   <header className="cad-pane-head"><span><SlidersHorizontal size={16}/> Properties</span>
    <button aria-label="Hide property inspector" title="Hide property inspector" onClick={onClose}><PanelRightClose size={17}/><span className="cad-focus-help">Hide property inspector</span></button></header>
-  <div className="cad-pane-tabs"><button className={tab==='object'?'active':''} onClick={()=>setTab('object')}>Object</button>
-   <button className={tab==='project'?'active':''} onClick={()=>setTab('project')}>Project</button></div>
+  <div className="cad-pane-tabs" role="tablist" aria-label="Inspector">
+   {(['object','project','scene'] as const).map(view=><button key={view} role="tab" aria-selected={tab===view}
+    className={tab===view?'active':''} onClick={()=>setTab(view)}>{view[0].toUpperCase()+view.slice(1)}</button>)}</div>
   <div className="cad-property-scroll">{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}<fieldset disabled={readOnly}>
-  {tab==='project'||!selection||!record?
+  {tab==='scene'?
+  <><h4>Environment & lighting</h4>
+   <label className="cad-property"><span>Time of day</span><select aria-label="Scene time of day" value={project.lighting.timeOfDay} onChange={e=>patchLighting({timeOfDay:e.target.value as ProjectState['lighting']['timeOfDay']})}>
+    {(['morning','noon','sunset','night'] as const).map(v=><option key={v} value={v}>{v[0].toUpperCase()+v.slice(1)}</option>)}</select></label>
+   <Numeric label="Sun intensity" unit="×" min={0.2} value={project.lighting.intensity} onCommit={n=>patchLighting({intensity:Math.min(2,n)})}/>
+   <Numeric label="Sun altitude" unit="°" min={0} value={project.lighting.sunAltitude} onCommit={n=>patchLighting({sunAltitude:Math.min(90,n)})}/>
+   <Numeric label="Sun azimuth" unit="°" min={0} value={project.lighting.sunAzimuth} onCommit={n=>patchLighting({sunAzimuth:Math.min(360,n)})}/>
+   <label className="cad-property"><span>Shadows</span><input aria-label="Scene shadows" type="checkbox" checked={project.lighting.shadows} onChange={e=>patchLighting({shadows:e.target.checked})}/></label>
+   <label className="cad-property"><span>Ambient color</span><input aria-label="Scene ambient color" type="color" value={/^#[0-9a-f]{6}$/i.test(project.lighting.ambientColor)?project.lighting.ambientColor:'#ffffff'} onChange={e=>patchLighting({ambientColor:e.target.value})}/></label>
+   <h4>Building envelope</h4>
+   <label className="cad-property"><span>Roof profile</span><select aria-label="Roof profile" value={project.roofType} onChange={e=>onChange(p=>({...p,roofType:e.target.value as ProjectState['roofType']}))}>
+    <option value="none">No roof</option><option value="flat">Flat</option><option value="gable">Gable</option></select></label>
+   <p className="cad-property-help">Scene changes live in the current CAD project and participate in its undo and save history.</p>
+  </>:
+  tab==='project'||!selection||!record?
   <><h4>Document</h4>
    <label className="cad-property"><span>Project name</span><input aria-label="Project name" value={project.name} onChange={e=>onChange(p=>({...p,name:e.target.value}))}/></label>
    <Numeric label="Grid spacing" value={project.gridSize} min={1} onCommit={n=>onChange(p=>({...p,gridSize:n}))}/>
@@ -106,20 +148,48 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
     {num('End X','x2')}{num('End Y','y2')}{num('Thickness','thickness',0.1)}{num('Height','height3D',1)}
     <label className="cad-property"><span>Material</span><select value={String(record.material)} onChange={e=>update('material',e.target.value as WallMaterial)}>
      {['drywall','brick','concrete','glass','wood_panel','steel'].map(v=><option key={v} value={v}>{v.replace('_',' ')}</option>)}</select></label>
+    <label className="cad-property"><span>Finish color</span><input type="color" aria-label="Wall finish color" value={typeof record.color==='string'&&/^#[0-9a-f]{6}$/i.test(record.color)?record.color:'#cccccc'} onChange={e=>update('color',e.target.value)}/></label>
     <label className="cad-property"><span>Exterior</span><input type="checkbox" checked={!!record.exterior} onChange={e=>update('exterior',e.target.checked)}/></label></>}
    {selection.group==='doors'&&<><h4>Opening</h4>{num('Width','width',1)}{num('Height','height',1)}
     {num('Position on wall','distanceAlongWall',0,'ratio')}
+    {num('Open angle','openAngle',0,'°')}
     <label className="cad-property"><span>Swing</span><select value={String(record.swing)} onChange={e=>update('swing',e.target.value)}>{['left','right','sliding','double','pocket'].map(v=><option key={v}>{v}</option>)}</select></label>
     <p className="cad-property-help">Host wall: {String(record.wallId)}</p></>}
    {selection.group==='windows'&&<><h4>Opening</h4>{num('Width','width',1)}{num('Height','height',1)}
-    {num('Sill elevation','elevation',0)}{num('Position on wall','distanceAlongWall',0,'ratio')}</>}
+    {num('Sill elevation','elevation',0)}{num('Position on wall','distanceAlongWall',0,'ratio')}
+    <label className="cad-property"><span>Style</span><select value={String(record.style)} onChange={e=>update('style',e.target.value)}>{['casement','sliding','picture','hung'].map(v=><option key={v}>{v}</option>)}</select></label></>}
    {selection.group==='rooms'&&<><h4>Space</h4><label className="cad-property"><span>Room name</span><input value={String(record.name)} onChange={e=>update('name',e.target.value)}/></label>
+    <label className="cad-property"><span>Floor material</span><select value={String(record.floorMaterial)} onChange={e=>update('floorMaterial',e.target.value)}>
+     {['hardwood','marble','tile','polished_concrete','carpet','terrazzo'].map(v=><option key={v} value={v}>{v.replaceAll('_',' ')}</option>)}</select></label>
+    <label className="cad-property"><span>Floor color</span><input type="color" aria-label="Space floor color" value={String(record.color||'#aaaaaa')} onChange={e=>update('color',e.target.value)}/></label>
     <div className="cad-property-summary"><span>Recorded area</span><b>{String(record.areaSqFt)} ft²</b></div></>}
-   {selection.group==='furniture'&&<><h4>Fixture placement</h4>{num('X','x')}{num('Y','y')}
-    {num('Width','w',0.1)}{num('Depth','d',0.1)}{num('Height','h',0.1)}{num('Rotation','rotation',undefined,'°')}</>}
-   {selection.group==='parametricObjects'&&<><h4>Parametric feature</h4>
+   {selection.group==='furniture'&&<><h4>Fixture placement</h4>
+    <label className="cad-property"><span>Name</span><input aria-label="Fixture name" value={String(record.name)} onChange={e=>update('name',e.target.value)}/></label>
+    {num('X','x')}{num('Y','y')}
+    {num('Width','w',0.1)}{num('Depth','d',0.1)}{num('Height','h',0.1)}{num('Rotation','rotation',undefined,'°')}
+    <h4>Material & finish</h4>
+    <label className="cad-property"><span>Finish color</span><input aria-label="Fixture color" type="color" value={String(record.color||'#aaaaaa')} onChange={e=>update('color',e.target.value)}/></label>
+    <label className="cad-property"><span>Material</span><input aria-label="Fixture material" value={String(record.material||'')} onChange={e=>update('material',e.target.value)}/></label></>}
+   {selection.group==='parametricObjects'&&parametric&&<><h4>Parametric feature</h4>
     <div className="cad-property-summary"><span>Generator</span><b>{String(record.generator)}</b></div>
-    <p className="cad-property-help">Open Parametric tools for source editing and native generation.</p></>}
+    <h4>Placement</h4>
+    {(['x','y','z'] as const).map(axis=><Numeric key={axis} label={axis.toUpperCase()} value={parametric.transform[axis]}
+      onCommit={value=>patchTransform(axis,value)}/>)}
+    <h4>Generator parameters</h4>
+    {paramDefs.length?paramDefs.map(def=>{
+     const value=parametric.parameters[def.name]??def.value;
+     if(def.type==='number')return <Numeric key={def.name} label={def.label||def.name}
+       value={Number(value)} min={def.min} unit={def.unit||''} onCommit={n=>patchParameter(def.name,def.max!=null?Math.min(n,def.max):n)}/>;
+     return <label key={def.name} className="cad-property"><span>{def.label||def.name}</span>
+      {def.type==='boolean'?<input type="checkbox" aria-label={def.label||def.name} checked={Boolean(value)} onChange={e=>patchParameter(def.name,e.target.checked)}/>:
+       def.type==='select'?<select aria-label={def.label||def.name} value={String(value)} onChange={e=>{
+        const selected=def.options?.find(option=>String(option.value)===e.target.value);
+        patchParameter(def.name,selected?.value??e.target.value);
+       }}>{def.options?.map(option=><option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}</select>:
+       <input aria-label={def.label||def.name} value={String(value)} onChange={e=>patchParameter(def.name,e.target.value)}/>}
+     </label>;
+    }):<p className="cad-property-help">This feature has no editable generator parameters in the project.</p>}
+    <p className="cad-property-help">Parameters are applied to the canonical generator recipe. Use Parametric tools to edit source code and regenerate artifacts.</p></>}
    <button type="button" className="cad-clear-selection" onClick={()=>onSelect(null)}>Clear selection</button></>}
   </fieldset></div>
   <footer className="cad-pane-note">Edits use the current project, undo history, and save workflow.</footer>
@@ -145,6 +215,22 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
  onToggleDiagnostics:()=>void;showDiagnostics:boolean;
  studioView:'preview'|'edit'|'code';onStudioView:(v:'preview'|'edit'|'code')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;
 }) {
+ const toolbarRef=React.useRef<HTMLDivElement>(null);
+ React.useEffect(()=>{
+  const root=toolbarRef.current;
+  if(!root)return;
+  const closeMenus=(except?:HTMLDetailsElement)=>root.querySelectorAll<HTMLDetailsElement>('details.cad-toolbar-menu[open]').forEach(menu=>{if(menu!==except)menu.open=false});
+  const onToggle=(event:Event)=>{
+   const menu=event.target;
+   if(menu instanceof HTMLDetailsElement&&menu.open)closeMenus(menu);
+  };
+  const onOutside=(event:PointerEvent)=>{if(!root.contains(event.target as Node))closeMenus()};
+  const onEscape=(event:KeyboardEvent)=>{if(event.key==='Escape')closeMenus()};
+  root.addEventListener('toggle',onToggle,true);
+  document.addEventListener('pointerdown',onOutside,true);
+  document.addEventListener('keydown',onEscape);
+  return ()=>{root.removeEventListener('toggle',onToggle,true);document.removeEventListener('pointerdown',onOutside,true);document.removeEventListener('keydown',onEscape)};
+ },[]);
  const button=(label:string,icon:React.ReactNode,handler:()=>void,active=false,disabled=false)=><button
   type="button" aria-label={label} title={label} aria-pressed={active} className={active?'active':''}
   disabled={disabled} onClick={handler}>{icon}</button>;
@@ -158,7 +244,7 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
   };
   window.addEventListener('keydown',keys);return()=>window.removeEventListener('keydown',keys);
  },[onTool,workspace,studioView,readOnly]);
- return <div className="cad-real-toolbar" role="toolbar" aria-label="CAD authoring tools" data-studio-toolbar="progressive">
+ return <div ref={toolbarRef} className="cad-real-toolbar" role="toolbar" aria-label="CAD authoring tools" data-studio-toolbar="progressive">
   <div className="cad-view-tabs" role="group" aria-label="Studio view">
    {(['preview','edit','code'] as const).map(v=><button key={v} type="button" title={v==='code'?'Code / parametric model':v==='preview'?'Preview current model':'Edit current project'}
      aria-label={v==='code'?'Code / parametric model':v==='preview'?'Preview current model':'Edit current project'}

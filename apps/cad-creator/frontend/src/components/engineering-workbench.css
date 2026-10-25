@@ -178,3 +178,30 @@
  .cad-tool-actions>.cad-runtime-menu{display:none}
  .cad-toolbar-popover{inset-inline-end:0;max-width:min(84vw,20rem)}
 }
+
+/* Inspector / explorer polishing: keep independent panes aligned with the
+   same density and semantic affordances used by the CAD authoring toolbar. */
+.cad-work-pane{border-radius:.625rem}
+.cad-pane-head{padding-inline:.75rem;gap:.5rem}
+.cad-pane-head>span{min-width:0;gap:.55rem}
+.cad-tree-heading,.cad-tree-item{gap:.55rem}
+.cad-tree-heading>svg,.cad-tree-item>svg{flex:0 0 auto;color:var(--cad-muted)}
+.cad-tree-item.active>svg{color:var(--cad-accent)}
+.cad-tree-heading small{min-width:2ch;text-align:end}
+.cad-tree-search{margin:.65rem .75rem;height:2.2rem;min-height:2.2rem}
+.cad-pane-tabs button{min-width:0;letter-spacing:.01em}
+.cad-pane-tabs button:hover{background:var(--cad-hover);color:var(--cad-ink)}
+.cad-property-scroll h4{padding-top:.25rem;border-top:1px solid var(--cad-line)}
+.cad-property :is(input,select):focus-visible{outline:2px solid var(--cad-accent);outline-offset:1px}
+.cad-property>input[type=color]{height:2rem;width:3rem;min-width:3rem;padding:.2rem;cursor:pointer}
+.cad-property>input[type=checkbox]{cursor:pointer}
+.cad-property-scroll fieldset:disabled{opacity:.7}
+.cad-property-scroll fieldset:disabled :is(input,select){cursor:not-allowed}
+.cad-real-toolbar{gap:.25rem}
+.cad-tool-cluster{gap:.15rem;flex-shrink:0}
+.cad-tool-actions{gap:.15rem}
+.cad-toolbar-menu>summary{display:flex;justify-content:center;align-items:center}
+.cad-toolbar-menu[open]{z-index:140}
+.cad-toolbar-popover button[aria-pressed=true]{color:var(--cad-accent);background:color-mix(in srgb,var(--cad-accent) 15%,var(--cad-surface))}
+.cad-template-dialog{min-width:0}
+.cad-template-dialog .cad-template-overlay{min-width:0}
