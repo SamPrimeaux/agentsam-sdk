@@ -56,12 +56,12 @@ export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onBrowseAll }) 
           </div>
           <div className="flex flex-1 flex-col gap-1 p-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate font-mono text-[10px] uppercase tracking-wide text-blue-400">{tpl.categoryLabel}</span>
-              <span className="shrink-0 font-mono text-[10px] text-slate-400">{tpl.dimensions}</span>
+              <span className="truncate font-mono text-[length:var(--text-xs)] uppercase tracking-wide text-blue-400">{tpl.categoryLabel}</span>
+              <span className="shrink-0 font-mono text-[length:var(--text-xs)] text-slate-400">{tpl.dimensions}</span>
             </div>
             <h3 className="text-xs font-semibold text-white">{tpl.name}</h3>
             <p className="line-clamp-2 text-[11px] text-slate-400">{tpl.description}</p>
-            <div className="mt-auto flex items-center justify-between pt-2 font-mono text-[10px] text-slate-500">
+            <div className="mt-auto flex items-center justify-between pt-2 font-mono text-[length:var(--text-xs)] text-slate-500">
               <span>
                 {tpl.project.walls.length} walls · {tpl.project.rooms.length} zones · {tpl.project.furniture.length} fixtures
               </span>
