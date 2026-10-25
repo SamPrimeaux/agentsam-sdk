@@ -420,10 +420,25 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
           aria-pressed={viewPreset===preset}>{{iso:'Isometric',plan:'Top',front:'Front',side:'Side'}[preset]}</button>)}
        </div>
        <strong>Environment</strong>
+       <div className="cad-world-menu-row" aria-label="Scene display modes">
+        <button type="button" title="Physically shaded imported materials" aria-pressed={shading==='lit'} onClick={()=>setShading('lit')}>Materials</button>
+        <button type="button" title="Unlit authored color swatches" aria-pressed={shading==='color'} onClick={()=>setShading('color')}>Source colors</button>
+        <button type="button" title="Toggle sky" aria-pressed={skyVisible} onClick={()=>setSkyVisible(v=>!v)}>{skyVisible?'Sky':'Studio'}</button>
+       </div>
+       <label className="cad-world-setting">Exposure <input type="range" min="0.25" max="1.4" step=".05"
+          value={exposure} onChange={e=>setExposure(Number(e.target.value))} aria-label="Scene exposure"/>
+         <output>{exposure.toFixed(2)}</output></label>
+       <label className="cad-world-setting">Sun <input type="range" min="0" max="2" step=".1"
+          value={sunStrength} onChange={e=>setSunStrength(Number(e.target.value))} aria-label="Sun strength"/>
+         <output>{sunStrength.toFixed(1)}</output></label>
+       <label className="cad-world-setting">Ambient <input type="range" min="0" max="2" step=".1"
+          value={fillStrength} onChange={e=>setFillStrength(Number(e.target.value))} aria-label="Ambient light"/>
+         <output>{fillStrength.toFixed(1)}</output></label>
        <div className="cad-world-menu-row">
         <button type="button" title="Toggle roof" aria-pressed={!roofVisible} onClick={()=>setRoofVisible(v=>!v)}>Roof {roofVisible?'on':'off'}</button>
         <button type="button" title="Change daylight" onClick={()=>setHour(v=>v==='day'?'evening':'day')}>{hour==='day'?'Daylight':'Evening'}</button>
         <button type="button" title="Toggle wireframe" aria-pressed={wireframe} onClick={()=>setWireframe(v=>!v)}>Wireframe</button>
+        <button type="button" title="Restore default scene lighting" onClick={()=>{setShading('lit');setExposure(.72);setSunStrength(1);setFillStrength(.55);setSkyVisible(true);setHour('day');}}>Reset light</button>
        </div>
        <label className="cad-world-room">Room <select aria-label="BIM room destinations" defaultValue="" onChange={e=>{const z=handoff?.zones.find(x=>x.roomId===e.target.value);if(z)visit(z)}}>
           <option value="">Choose room</option>{handoff?.zones.map(zone=><option key={zone.roomId} value={zone.roomId}>{zone.label}</option>)}
