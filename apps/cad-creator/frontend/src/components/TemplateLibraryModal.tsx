@@ -72,14 +72,7 @@ export const TemplateLibraryModal: React.FC<Props> = ({
 
   const handleApply = (tpl: TemplateMetadata) => {
     if (!permissions.canLoadTemplates) return;
-    // Clone template state with fresh ID and current timestamp
-    const cloned: ProjectState = {
-      ...structuredClone(tpl.project),
-      id: `proj_${Date.now()}`,
-      updatedAt: Date.now(),
-      version: 1,
-    };
-    onSelectTemplate(cloned);
+    onSelectTemplate(cloneTemplateProject(tpl));
     onClose();
   };
 
