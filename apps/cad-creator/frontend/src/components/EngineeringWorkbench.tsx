@@ -55,7 +55,7 @@ export function CadProjectExplorer({project,selection,onSelect,onClose,sceneInve
    </section>;
   })}
   </div>
-  <footer className="cad-pane-note">Select an element to edit its real document properties.</footer>
+  <footer className="cad-pane-note">{sceneInventory ? 'Scene inspection only. Editing requires the reconciled FreeCAD/IFC document.' : 'Select an element to edit its real document properties.'}</footer>
  </aside>;
 }
 
