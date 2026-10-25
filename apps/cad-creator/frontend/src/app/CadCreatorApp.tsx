@@ -578,12 +578,6 @@ export function CadCreatorApp({
               >BIM Starters</button>
               <button
                 type="button"
-                onClick={() => setModelModule((m) => m === 'parametric' ? null : 'parametric')}
-                aria-expanded={modelModule === 'parametric'}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)]"
-              >Parametric tools</button>
-              <button
-                type="button"
                 onClick={() => setIsTemplateLibraryOpen(true)}
                 className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)] flex items-center gap-1"
               >
