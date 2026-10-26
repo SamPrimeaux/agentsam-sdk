@@ -58,7 +58,14 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
     }}],
   });
   const source = Buffer.from(result.outputFiles[0].text).toString('base64');
-  const { resolveEcommerceAdminPath } = await import('data:text/javascript;base64,' + source);
+  const { resolveEcommerceAdminPath, resolveEcommerceAssetPath } = await import('data:text/javascript;base64,' + source);
+  assert.equal(resolveEcommerceAssetPath('/admin/products'), '/ecommerce-cms-agentsam/admin/products.html');
+  assert.equal(resolveEcommerceAssetPath('/admin/product-edit?id=12'), '/ecommerce-cms-agentsam/admin/product-edit.html?id=12');
+  assert.equal(resolveEcommerceAssetPath('/admin/products/create/blueprint_12'), '/ecommerce-cms-agentsam/admin/_spa/index.html?__route=%2Fproducts%2Fcreate%2Fblueprint_12');
+  assert.equal(resolveEcommerceAssetPath('//outside.test/admin/products'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/products?view=collections'), '/admin/products?view=collections');
+  assert.equal(resolveEcommerceAdminPath('/admin/products?view=platform'), '/admin/products?view=platform');
+  assert.equal(resolveEcommerceAdminPath('/admin/products?view=made-up'), null);
   for (const href of paths) {
     assert.equal(resolveEcommerceAdminPath(href), href, 'valid route changed: ' + href);
   }

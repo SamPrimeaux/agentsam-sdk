@@ -166,6 +166,7 @@ function PencilSparklesIcon({ size = 22 }: { size?: number }) {
 const tabs = [
   { id: "options", label: "Options", icon: "options" },
   { id: "upload", label: "Upload", icon: "upload" },
+  { id: "designs", label: "Designs", icon: "image" },
   { id: "layers", label: "Layers", icon: "layers" },
   { id: "tools", label: "Tools", icon: "tools" },
 ];
@@ -200,6 +201,12 @@ export default function StudioWorkspace({
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [albums, setAlbums] = useState<Array<{ id: number; name: string; asset_count?: number }>>([]);
   const [albumId, setAlbumId] = useState(0);
+  const [targetAlbumId, setTargetAlbumId] = useState(0);
+  const [collectionName, setCollectionName] = useState("");
+  const [designName, setDesignName] = useState("");
+  const [collectionEditorOpen, setCollectionEditorOpen] = useState(false);
+  const [designView, setDesignView] = useState<"mine" | "shared">("mine");
+  const [mediaReload, setMediaReload] = useState(0);
   const [mediaPage, setMediaPage] = useState(1);
   const [mediaHasMore, setMediaHasMore] = useState(false);
   const [asset, setAsset] = useState<MediaAsset | null>(null);
@@ -375,6 +382,10 @@ export default function StudioWorkspace({
     setManageVariants(false);
     setPanelOpen((current) => next === tab ? !current : true);
     setTab(next);
+    if (next === "designs") {
+      setArtworkScope("library");
+      if (asset) setDesignName(asset.filename.replace(/\.[^.]+$/, ""));
+    }
     // On small screens the tools remain in a compact bottom pane; keep the canvas visible.
   }
   const location = detail.print_locations.find(
@@ -668,7 +679,7 @@ export default function StudioWorkspace({
     return () => clearTimeout(timer);
   }, [mediaSearch]);
   useEffect(() => {
-    if (tab !== "upload" && tab !== "tools") return;
+    if (tab !== "upload" && tab !== "tools" && tab !== "designs") return;
     const controller = new AbortController();
     queueMicrotask(() => {
       if (!controller.signal.aborted) {
@@ -708,7 +719,7 @@ export default function StudioWorkspace({
         if (!controller.signal.aborted) setBusy("");
       });
     return () => controller.abort();
-  }, [tab, albumId, mediaPage, mediaQuery, artworkScope]);
+  }, [tab, albumId, mediaPage, mediaQuery, artworkScope, mediaReload]);
   useEffect(() => {
     if (!asset) return;
     let active = true;
@@ -823,6 +834,7 @@ export default function StudioWorkspace({
   }
 
   function choose(a: MediaAsset) {
+    setDesignName(a.filename.replace(/\.[^.]+$/, ""));
     setDimensions(null);
     setCroppedPreview(null);
     setCropError("");
@@ -872,6 +884,68 @@ export default function StudioWorkspace({
     if (options.sourceAsset?.id) form.append("source_media_asset_id", String(options.sourceAsset.id));
     const result = await adminFormFetch<{ assets?: MediaAsset[] }>("/api/admin/media", form);
     return result.assets?.[0];
+  }
+
+  async function createDesignCollection() {
+    const name = collectionName.trim();
+    if (!name) { setError("Name the collection first."); return; }
+    setBusy("collection");
+    setError("");
+    try {
+      // Existing Media Album contract: memberships reference assets, not copies in R2.
+      const result = await adminFetch<{ album: { id: number; name: string; asset_count?: number } }>(
+        "/api/admin/media/albums", {
+          method: "POST",
+          body: JSON.stringify({ name, kind: "album", description: "Product Studio design collection" }),
+        });
+      setAlbums((current) => [...current, result.album].sort((a,b) => a.name.localeCompare(b.name)));
+      setTargetAlbumId(result.album.id);
+      setCollectionEditorOpen(false);
+      setCollectionName("");
+      setNotice(`Collection “${result.album.name}” created. Choose an artwork to add.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not create collection");
+    } finally { setBusy(""); }
+  }
+
+  async function addSelectedToCollection() {
+    if (!asset || !targetAlbumId) { setError("Select artwork and a destination collection."); return; }
+    setBusy("collection");
+    setError("");
+    try {
+      await adminFetch("/api/admin/media/batch", {
+        method: "POST",
+        body: JSON.stringify({ action: "album_add", ids: [asset.id], album_id: targetAlbumId }),
+      });
+      // Read the real membership count: album_add is idempotent for repeats.
+      const refreshed = await adminFetch<{ albums: Array<{ id: number; name: string; asset_count?: number }> }>(
+        "/api/admin/media/albums");
+      setAlbums(refreshed.albums);
+      setMediaReload((n) => n + 1);
+      setNotice(`“${asset.filename}” added to the collection.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not add artwork to collection");
+    } finally { setBusy(""); }
+  }
+
+  async function renameSelectedDesign() {
+    if (!asset) { setError("Select a design to rename."); return; }
+    const base = designName.trim().replace(/[\/\\]/g, "-").replace(/\.[a-z0-9]+$/i, "").slice(0, 180);
+    if (!base) { setError("Enter a design name."); return; }
+    const extension = asset.filename.match(/\.[a-z0-9]+$/i)?.[0] || "";
+    const filename = base + extension;
+    if (filename === asset.filename) return;
+    setBusy("rename");
+    setError("");
+    try {
+      const result = await adminFetch<{ asset: MediaAsset }>(
+        `/api/admin/media/${asset.id}`, { method: "PATCH", body: JSON.stringify({ filename }) });
+      setAsset(result.asset);
+      setMedia((current) => current.map((item) => item.id === result.asset.id ? result.asset : item));
+      setNotice(`Design renamed to “${filename}”. The original media bytes were not changed.`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not rename design");
+    } finally { setBusy(""); }
   }
 
   async function upload(file?: File): Promise<boolean> {
@@ -1019,10 +1093,14 @@ export default function StudioWorkspace({
       const allSides = { ...sidePlacements, [locationId]: snapshotActiveSide() };
       const persistedSides: Record<string, StoredSidePlacement> = {};
       for (const [id, side] of Object.entries(allSides)) {
+        // Moving or replacing artwork invalidates only that side's derivative.
+        const matchingPrepared = Boolean(side.preparedAsset && side.preparedFor ===
+          placementKey(side.asset?.id, variantId, id, side.x, side.y, side.scale,
+            side.rotation, side.flipX, side.flipY, side.trimTransparent, side.removeFlatBackground));
         persistedSides[id] = {
           original_media_asset_id: side.asset?.id || null,
-          prepared_media_asset_id: side.preparedAsset?.id || null,
-          preview_media_asset_id: side.previewAsset?.id || null,
+          prepared_media_asset_id: matchingPrepared ? side.preparedAsset?.id || null : null,
+          preview_media_asset_id: matchingPrepared ? side.previewAsset?.id || null : null,
           x: side.x, y: side.y, scale: side.scale, rotation: side.rotation,
           flipX: side.flipX, flipY: side.flipY,
           trimTransparent: side.trimTransparent, removeFlatBackground: side.removeFlatBackground,
@@ -1087,16 +1165,10 @@ export default function StudioWorkspace({
     const needsPreparation = !preparedAsset || preparedFor !== currentPlacementKey;
     const saved = needsPreparation ? await prepareArtwork() : await saveDraft();
     if (!saved) return;
-    const stagedSides = saved.placement?.sides || {};
-    const unfinished = Object.entries(stagedSides).filter(([, side]) =>
-      side.original_media_asset_id && side.showArtwork &&
-      !side.prepared_media_asset_id);
-    if (unfinished.length) {
-      const side = detail.print_locations.find((candidate) => candidate.print_location_id === unfinished[0][0]);
-      setError(`Prepare ${side?.name || "the other side"} artwork for print before continuing. Your design is saved.`);
-      return;
-    }
-    const productId = Number(saved.product_id);
+    // A visible logo is not yet a supplier print file. Prepare every active side.
+    const ready = await prepareRemainingSides(saved);
+    if (!ready) return;
+    const productId = Number(ready.product_id);
     if (!Number.isSafeInteger(productId) || productId <= 0) {
       setError("The design was saved, but no storefront draft product was returned. Reopen the design before continuing.");
       return;
@@ -1105,17 +1177,23 @@ export default function StudioWorkspace({
     window.location.assign("/admin/product-edit?id=" + encodeURIComponent(String(productId)));
   }
 
-  async function buildPreparedArtworkBlob(placementScale: number = scale) {
-    if (!asset || !showArtwork || !printPixels) {
+  async function buildPreparedArtworkBlob(
+    placementScale: number = scale,
+    targetSide: EditorSidePlacement = snapshotActiveSide(),
+    targetLocation = location,
+  ) {
+    const targetAsset = targetSide.asset;
+    const targetPixels = printPixelSize(targetLocation);
+    if (!targetAsset || !targetSide.showArtwork || !targetPixels) {
       throw new Error("Add artwork and select a print area with known pixel dimensions first.");
     }
-    const { width, height } = printPixels;
+    const { width, height } = targetPixels;
     if (width * height > 32000000) {
       throw new Error("This print area is too large for safe browser preparation.");
     }
     const image = new Image();
     image.crossOrigin = "anonymous";
-    image.src = asset.url;
+    image.src = targetAsset.url;
     await image.decode();
     const source = document.createElement("canvas");
     source.width = image.naturalWidth;
@@ -1124,13 +1202,25 @@ export default function StudioWorkspace({
     if (!sourceContext) throw new Error("Artwork preparation is unavailable");
     sourceContext.drawImage(image, 0, 0);
     const sourcePixels = sourceContext.getImageData(0, 0, source.width, source.height);
-    if (removeFlatBackground) {
+    if (targetSide.removeFlatBackground) {
       removeConnectedFlatBackground(sourcePixels.data, source.width, source.height);
       sourceContext.putImageData(sourcePixels, 0, 0);
     }
-    const crop = trimTransparent
+    const crop = targetSide.trimTransparent
       ? alphaBounds(sourcePixels.data, source.width, source.height)
       : { x: 0, y: 0, width: source.width, height: source.height };
+    // Secondary sides follow the same print-resolution floor as the active side.
+    // Do not turn a low-resolution back logo into a silently approved print file.
+    if (targetLocation?.print_location_id !== locationId) {
+      const quality = studioArtworkQuality({
+        location: targetLocation,
+        source: { width: source.width, height: source.height },
+        crop, scalePercent: placementScale, fileName: targetAsset.filename,
+      });
+      if (quality.lowResolution) {
+        throw new Error(`${targetLocation?.name || "Other side"}: ${quality.badge} is below the supplier target. Choose sharper artwork or reduce its print scale.`);
+      }
+    }
     const canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -1138,9 +1228,9 @@ export default function StudioWorkspace({
     if (!ctx) throw new Error("Canvas preparation is unavailable");
     const w = (width * placementScale) / 100;
     const h = (crop.height / crop.width) * w;
-    ctx.translate((width * x) / 100, (height * y) / 100);
-    ctx.rotate((rotation * Math.PI) / 180);
-    ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+    ctx.translate((width * targetSide.x) / 100, (height * targetSide.y) / 100);
+    ctx.rotate((targetSide.rotation * Math.PI) / 180);
+    ctx.scale(targetSide.flipX ? -1 : 1, targetSide.flipY ? -1 : 1);
     ctx.drawImage(source, crop.x, crop.y, crop.width, crop.height, -w / 2, -h / 2, w, h);
     return new Promise<Blob>((resolve, reject) =>
       canvas.toBlob(
@@ -1235,6 +1325,70 @@ export default function StudioWorkspace({
       return saved;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Artwork preparation failed");
+      return null;
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function prepareRemainingSides(saved: StudioDraft): Promise<StudioDraft | null> {
+    const sides = { ...(saved.placement?.sides || {}) };
+    const localSides = { ...sidePlacements, [locationId]: snapshotActiveSide() };
+    const updatedSides = { ...localSides };
+    let changed = false;
+    try {
+      for (const [id, side] of Object.entries(sides)) {
+        if (!side.original_media_asset_id || !side.showArtwork) continue;
+        const area = detail.print_locations.find((item) => item.print_location_id === id);
+        if (!area || !printPixelSize(area)) throw new Error(`Missing supplier print dimensions for ${id}`);
+        // The current side was prepared by prepareArtwork() immediately above.
+        if (id === locationId && side.prepared_media_asset_id) continue;
+        let stored = updatedSides[id];
+        if (!stored?.asset || stored.asset.id !== side.original_media_asset_id) {
+          const response = await adminFetch<{ asset: MediaAsset }>(
+            `/api/admin/media/${side.original_media_asset_id}`);
+          if (!response.asset) throw new Error(`Missing source artwork for ${area.name}`);
+          stored = { ...side, asset: response.asset, preparedAsset: null,
+            previewAsset: null, preparedFor: null };
+        }
+        const expected = placementKey(stored.asset?.id, variantId, id, side.x, side.y,
+          side.scale, side.rotation, side.flipX, side.flipY,
+          side.trimTransparent, side.removeFlatBackground);
+        if (side.prepared_media_asset_id && stored.preparedAsset?.id === side.prepared_media_asset_id
+          && stored.preparedFor === expected) continue;
+        setBusy("prepare");
+        setNotice(`Preparing ${area.name} artwork for print…`);
+        const placed = { ...stored, ...side, asset: stored.asset };
+        const blob = await buildPreparedArtworkBlob(side.scale, placed, area);
+        const filename = `prepared-${catalogId.slice(0, 8)}-${id.slice(0, 8)}-${crypto.randomUUID().slice(0, 12)}.png`;
+        const uploaded = await uploadMediaFile(
+          new File([blob], filename, { type: "image/png" }), "studio/prepared",
+          { derivativeRole: "manufacturing", transformPolicy: "preserve", sourceAsset: stored.asset });
+        if (!uploaded) throw new Error(`The ${area.name} print file could not be saved`);
+        sides[id] = { ...side, prepared_media_asset_id: uploaded.id, preview_media_asset_id: null };
+        updatedSides[id] = { ...placed, preparedAsset: uploaded, previewAsset: null, preparedFor: expected };
+        changed = true;
+      }
+      if (!changed) { setNotice(""); return saved; }
+      const response = await adminFetch<{ draft: StudioDraft }>("/api/admin/product-studio/drafts", {
+        method: "POST",
+        body: JSON.stringify({
+          id: saved.id, product_id: saved.product_id, catalog_product_id: catalogId,
+          selected_variant_ids: selectedVariantIds,
+          print_location_ids: Object.entries(sides).filter(([, side]) =>
+            side.original_media_asset_id && side.showArtwork).map(([id]) => id),
+          original_media_asset_id: saved.original_media_asset_id ?? null,
+          prepared_media_asset_id: saved.prepared_media_asset_id ?? null,
+          preview_media_asset_id: saved.preview_media_asset_id ?? null,
+          title: saved.title, placement: { ...saved.placement, sides },
+        }),
+      });
+      setDraft(response.draft);
+      setSidePlacements(updatedSides);
+      setNotice("");
+      return response.draft;
+    } catch (e) {
+      setError(`Could not prepare both sides: ${e instanceof Error ? e.message : "Unknown error"}. Your design is saved.`);
       return null;
     } finally {
       setBusy("");
@@ -1581,8 +1735,9 @@ export default function StudioWorkspace({
               )}
             </div>
           )}
-          {tab === "upload" && (
+          {(tab === "upload" || tab === "designs") && (
             <div className="ps-asset-rail">
+              {tab === "upload" && <>
               <button type="button" className="ps-upload-zone" disabled={Boolean(busy)}
                 onClick={() => fileInput.current?.click()}
                 onDragOver={(event) => event.preventDefault()}
@@ -1593,17 +1748,80 @@ export default function StudioWorkspace({
               </button>
               <input ref={fileInput} type="file" hidden accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
                 onChange={(event) => void upload(event.target.files?.[0])} />
+              </>}
+              {tab === "designs" && (
+                <div className="ps-designs-controls">
+                  <label className="ps-asset-search">
+                    <StudioIcon name="search" size={15} />
+                    <input type="search" value={mediaSearch}
+                      onChange={(event) => setMediaSearch(event.target.value)}
+                      placeholder="Search designs and logos" aria-label="Search designs" />
+                  </label>
+                  <div className="ps-designs-toolbar">
+                    <strong>Design library</strong>
+                    <button type="button" className="ps-designs-create"
+                      onClick={() => setCollectionEditorOpen((value) => !value)}
+                      aria-expanded={collectionEditorOpen}>+ Collection</button>
+                  </div>
+                  {collectionEditorOpen && (
+                    <form className="ps-collection-create" onSubmit={(event) => {
+                      event.preventDefault(); void createDesignCollection();
+                    }}>
+                      <input value={collectionName} maxLength={120} autoFocus
+                        onChange={(event) => setCollectionName(event.target.value)}
+                        aria-label="Collection name" placeholder="Collection name" />
+                      <button type="submit" disabled={Boolean(busy) || !collectionName.trim()}>Create</button>
+                      <button type="button" onClick={() => setCollectionEditorOpen(false)}
+                        aria-label="Cancel collection creation">×</button>
+                    </form>
+                  )}
+                  <div className="ps-designs-tabs" role="group" aria-label="Design library view">
+                    <button type="button" className={designView === "mine" ? "is-active" : ""}
+                      aria-pressed={designView === "mine"} onClick={() => setDesignView("mine")}>Design library</button>
+                    <button type="button" className={designView === "shared" ? "is-active" : ""}
+                      aria-pressed={designView === "shared"} onClick={() => setDesignView("shared")}>Shared with me</button>
+                  </div>
+                </div>
+              )}
               <div className="ps-asset-rail__heading">
-                <strong>Artwork</strong>
+                <strong>{tab === "designs" ? "Collections" : "Artwork"}</strong>
                 <a href="/admin/media" title="Organize media albums" aria-label="Organize media albums">Manage</a>
               </div>
               <select className="ps-asset-album" value={albumId} aria-label="Artwork album"
                 onChange={(event) => { setAlbumId(Number(event.target.value)); setMediaPage(1); setMedia([]); }}>
-                <option value={0}>All artwork</option>
+                <option value={0}>{tab === "designs" ? "All designs" : "All artwork"}</option>
                 {albums.map((album) => (
                   <option key={album.id} value={album.id}>{album.name} ({album.asset_count ?? 0})</option>
                 ))}
               </select>
+              {tab === "designs" && designView === "mine" && (
+                <div className="ps-designs-add">
+                  <select value={targetAlbumId} aria-label="Destination collection"
+                    onChange={(event) => setTargetAlbumId(Number(event.target.value))}>
+                    <option value={0}>Choose collection…</option>
+                    {albums.map((album) => <option key={album.id} value={album.id}>{album.name}</option>)}
+                  </select>
+                  <button type="button" disabled={!asset || !targetAlbumId || Boolean(busy)}
+                    onClick={() => void addSelectedToCollection()}>Add selected</button>
+                </div>
+              )}
+              {tab === "designs" && designView === "mine" && asset && (
+                <form className="ps-designs-rename" onSubmit={(event) => {
+                  event.preventDefault(); void renameSelectedDesign();
+                }}>
+                  <label htmlFor="ps-design-rename-input">Selected design name</label>
+                  <div>
+                    <input id="ps-design-rename-input" value={designName}
+                      onChange={(event) => setDesignName(event.target.value)}
+                      placeholder="Name this design" maxLength={180} />
+                    <button type="submit" disabled={Boolean(busy) || !designName.trim()}>Rename</button>
+                  </div>
+                </form>
+              )}
+              {tab === "designs" && designView === "shared" && (
+                <p className="ps-asset-status" role="status">Individual design sharing requires member-specific collection permissions. Collections already organize the account's existing media library; sharing grants are not enabled yet.</p>
+              )}
+              {(tab === "upload" || designView === "mine") && <>
               <div className="ps-asset-scope" role="group" aria-label="Artwork source">
                 {([["studio", "Studio artwork"], ["library", "Whole library"]] as const).map(([value, label]) => (
                   <button type="button" key={value} className={artworkScope === value ? "is-active" : ""}
@@ -1613,11 +1831,11 @@ export default function StudioWorkspace({
                   </button>
                 ))}
               </div>
-              <label className="ps-asset-search">
+              {tab === "upload" && <label className="ps-asset-search">
                 <StudioIcon name="search" size={15} />
                 <input type="search" value={mediaSearch} onChange={(event) => setMediaSearch(event.target.value)}
                   placeholder="Find artwork" aria-label="Search media library" />
-              </label>
+              </label>}
               {busy === "library" && <p className="ps-asset-status" role="status">Loading artwork…</p>}
               <div className="ps-media-grid">
                 {filteredMedia.map((item) => (
@@ -1643,6 +1861,7 @@ export default function StudioWorkspace({
                   Load more artwork
                 </button>
               )}
+              </>}
             </div>
           )}
           {tab === "layers" && (

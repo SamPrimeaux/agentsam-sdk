@@ -37,7 +37,7 @@ export async function servePackagedConsole(request, assets) {
   headers.set("cache-control", "private, no-store");
   headers.delete("content-length");
   const html = (await result.text())
-    .replace(/<script src="\/admin\/js\/shell\.js"><\/script>/,
+    .replace(/<script src="\/admin\/js\/shell\.js"><\/script>(?:<script src="\/admin\/host-config\.js"><\/script>)?/,
       '<script src="/admin/js/shell.js"></script><script src="/admin/host-config.js"></script>' +
       (file === "theme-editor.html" ? '<link rel="stylesheet" href="/studio-cms-source-host.css"><script src="/studio-cms-source-host.js"></script>' : ''))
     .replaceAll("Fuel & Free Time Admin", "AgentSam Admin")

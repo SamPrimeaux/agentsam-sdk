@@ -63,7 +63,7 @@ test('immutable product sources and packaged shell are the authority', () => {
 
   const app = readFileSync(new URL('../frontend/src/routes/__root.tsx', import.meta.url), 'utf8');
   assert.match(app, /return \(isApp \|\| isStudioAdminPath\(pathname\)\) \? <PackagedConsoleFrame><AgentSamShell embedded \/><\/PackagedConsoleFrame> : <Outlet \/>/);
-  assert.match(app, /title="AgentSam Commerce home"/);
+  assert.match(app, /title="AgentSam home"/);
   for (const file of [
     'frontend/public/admin/host-config.js',
     '.output/public/admin/js/shell.js',
@@ -131,7 +131,7 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
     assert.ok(channelPaths.includes(path), path);
   }
   assert.equal(context.NAV.channels.find((section) => section.id === 'audience').children[0].label, 'Subscribers');
-  assert.equal(context.NAV.apps.some((entry) => entry.id === 'email'), true);
+  assert.equal(context.NAV.apps.some((entry) => entry.id === 'work-mail' && entry.href === '/mail'), true);
   const installedPaths = [
     ...context.NAV.main.flatMap((item) => [item.href, ...(item.children || []).map((entry) => entry.href)]),
     ...channelPaths,
@@ -281,4 +281,36 @@ test('CAD inherits the full hosted canvas height without another global sidebar'
   assert.match(frame, /className="absolute inset-0 block h-full w-full border-0"/);
   assert.match(frame, /presentation=embedded|cadEmbeddedUrl/);
   assert.match(shell, /!embedded \? <Nav\.Sidenav \/>/);
+});
+
+test('embedded desktop navigation reaches its parent and API requests use the native host', async () => {
+  const source = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
+  const events=[]; const destinations=[]; const requests=[];
+  const bridge={
+    navigate:path=>destinations.push(path),
+    activateAssistant:()=>{},
+    request:async request=>{requests.push(request.url);return new Response('{"ok":true}');},
+  };
+  const context={
+    NAV:{main:[],channels:[],apps:[]}, renderSideNav:()=>'<nav></nav>',
+    CONSOLE_APPEARANCE_KEY:'appearance', localStorage:{getItem:()=> 'dark'},
+    Request,Response,URL,encodeURIComponent,
+    window:{parent:{agentsamConsoleHost:bridge},location:{origin:'https://native.test',href:'https://native.test/admin/products.html',hash:''},fetch:async()=>{throw Error('wrong cookie transport');}},
+    document:{addEventListener:(_name,handler)=>events.push(handler)},
+  };
+  runInNewContext(source,context);
+  const visit=(path,target=null)=>{
+    const link={getAttribute:name=>name==='href'?path:target,hasAttribute:()=>false};
+    const event={target:{closest:selector=>selector==='a[href]'?link:null},defaultPrevented:false,preventDefault(){}};
+    for(const handler of events) handler(event);
+  };
+  visit('/admin/agentsam');
+  visit('/mail');
+  visit('/admin/products?view=collections');
+  visit('/admin/products','_blank');
+  visit('https://other.example/admin/products');
+  assert.deepEqual(destinations,['/admin/agentsam','/mail','/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fproducts%3Fview%3Dcollections']);
+  assert.equal(context.window.location.hash,'');
+  assert.equal((await (await context.window.fetch('https://native.test/api/admin/products')).json()).ok,true);
+  assert.deepEqual(requests,['https://native.test/api/admin/products']);
 });

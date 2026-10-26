@@ -149,7 +149,7 @@ export async function invokeIdentity(payload: Record<string, unknown>): Promise<
 }
 
 
-export type StudioServiceOperation = "inventory" | "chat" | "vault" | "cms" | "database" | "connections" | "plugins" | "work" | "settings";
+export type StudioServiceOperation = "inventory" | "chat" | "vault" | "cms" | "database" | "connections" | "plugins" | "work" | "settings" | "commerce";
 
 export async function invokeLocalProvider<T = Record<string, unknown>>(payload: {
   operation: "inventory" | "chat" | "select_model";
@@ -175,6 +175,8 @@ export type StudioServiceResponse = {
 
 export async function invokeStudioService(payload: {
   operation: StudioServiceOperation;
+  body_base64?: string;
+  content_type?: string;
   account_id?: string | null;
   body?: unknown;
   path?: string;

@@ -7,13 +7,31 @@
 
   // Platform destinations remain top-level. Installed commerce capabilities
   // reuse the original Console hierarchy rather than becoming a flat site list.
+  const desktopHost = window.parent !== window ? window.parent?.agentsamConsoleHost : null;
+  const desktop = Boolean(window.__AGENTSAM_DESKTOP__ || desktopHost);
+  if (desktopHost) {
+    window.__AGENTSAM_DESKTOP__ = true;
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async function (input, init) {
+      const request = new Request(input, init);
+      const url = new URL(request.url, window.location.href);
+      if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/admin/')) return originalFetch(input, init);
+      return desktopHost.request(request);
+    };
+  }
+  // The top-level native workbench hydrates from its existing shared identity
+  // store; do not race it with a cookie fetch against the static Tauri origin.
+  if (desktop && !desktopHost && typeof loadShellUser === 'function') {
+    loadShellUser = async function () { return window.__shellUser || null; };
+  }
   const main = [
     { href: "/admin/home", label: "Home", icon: "home" },
     { id: "products", label: "Products", icon: "products", href: "/admin/products", children: [
-      { href: "/admin/products/create", label: "Create product" },
+      { href: "/admin/products/create", label: "Product Studio" },
       { href: "/admin/products/help/artwork", label: "Artwork help" },
       { href: "/admin/products", label: "All products" },
-      { href: "/admin/products", label: "Collections" },
+      { href: "/admin/products?view=collections", label: "Collections" },
+      { href: "/admin/products?view=platform", label: "Platform products" },
       { href: "/admin/inventory", label: "Inventory" },
       { href: "/admin/orders", label: "Orders" },
       { href: "/admin/discounts", label: "Discounts" }
@@ -45,9 +63,10 @@
     { href: "/admin/agentsam", label: "AgentSam", icon: "agentic" },
     { href: "/admin/cad", label: "CAD Creator", icon: "products" },
     { href: "/admin/moviemode", label: "MovieMode", icon: "content" },
-    { id: "email", href: "/admin/email", label: "Email", icon: "email", children: [
-      { href: "/admin/email", label: "Inbox" },
-      { href: "/admin/email?folder=sent", label: "Sent" }
+    { id: "work-mail", href: "/mail", label: "Email", icon: "email", children: [
+      { href: "/mail", label: "Mail & connections" },
+      { href: "/admin/email", label: "Store mailboxes" },
+      { href: "/settings/integrations", label: "Integrations" }
     ] },
     { href: "/settings/general", label: "Settings", icon: "settings" }
   ];
@@ -67,18 +86,39 @@
   const originalSideNav = renderSideNav;
   renderSideNav = function (active, userNav, options) {
     return originalSideNav(active, userNav, options)
-      .replaceAll("Fuel &amp; Free Time", "AgentSam")
+      .replace('<strong>Fuel &amp; Free Time</strong>', '<strong data-profile-name>Account</strong>')
+      .replace('href="/admin/account"', 'href="/settings/general"')
+      .replace('href="/admin/preferences" class="console-menu-item"', 'href="/settings/integrations" class="console-menu-item"')
+      .replace('Store preferences</a>', 'Integrations</a>')
+      .replace('Account &amp; password</a>', 'Account settings</a>')
+      .replace('<button class="admin-logout-btn" type="button">Log out</button>', '<a href="/settings/general" class="admin-logout-btn">Account settings</a>')
       .replaceAll("https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail", "/brand/agentsam-gorilla/v1/pet/animated/ledge-idle.gif");
   };
   try {
     if (!localStorage.getItem(CONSOLE_APPEARANCE_KEY))
       localStorage.setItem(CONSOLE_APPEARANCE_KEY, "dark");
   } catch { /* Private browsing keeps the original renderer's default. */ }
-  if (window.__AGENTSAM_DESKTOP__ && !window.__agentsamConsoleLinks) {
+  const originalProfile = typeof hydrateShellProfile === 'function' ? hydrateShellProfile : null;
+  if (originalProfile) hydrateShellProfile = function (user) {
+    originalProfile(user && { ...user, avatar_url: user.avatar_url || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg' });
+    document.querySelectorAll('.console-profile-store-logo').forEach(image => {
+      image.src = user?.avatar_url && safeAvatarUrl(user.avatar_url) || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg';
+    });
+  };
+  if (desktopHost) {
+    document.addEventListener('click', event => {
+      if (!event.target?.closest?.('#agentsam-toggle')) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      desktopHost.activateAssistant();
+    }, true);
+  }
+  if (desktop && !window.__agentsamConsoleLinks) {
     window.__agentsamConsoleLinks = true;
     document.addEventListener("click", function (event) {
       const link = event.target?.closest?.("a[href]");
       if (event.defaultPrevented || !link || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+      if (link.getAttribute('target') === '_blank' || link.hasAttribute?.('download')) return;
       const path = link.getAttribute("href");
       if (!path || !path.startsWith("/") || path.startsWith("//")) return;
       event.preventDefault();
@@ -88,7 +128,8 @@
         : path.startsWith("/admin/")
           ? "/apps/ecommerce-cms-agentsam?page=" + encodeURIComponent(path)
           : path;
-      window.location.hash = "#" + destination;
+      if (desktopHost) desktopHost.navigate(destination);
+      else window.location.hash = "#" + destination;
     }, true);
   }
 })();

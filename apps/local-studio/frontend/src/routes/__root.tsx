@@ -1,4 +1,4 @@
-import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Navigate, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
 import { AgentSamShell } from "../../agentsam/AgentSamShell";
 import { PackagedConsoleFrame } from "../../agentsam/PackagedConsoleFrame";
 import { AuthProvider } from "@/lib/auth/provider";
@@ -77,13 +77,19 @@ function RootDocument() {
 
 function ApplicationOutlet() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (pathname === "/admin/home" && typeof window !== 'undefined' && window.__AGENTSAM_DESKTOP__) {
+    return <Navigate to="/apps/ecommerce-cms-agentsam" search={{ page: '/admin/home' }} replace />;
+  }
   if (pathname === "/admin/home") {
     return <iframe
-      title="AgentSam Commerce home"
+      title="AgentSam home"
       src="/ecommerce-cms-agentsam/admin/home.html"
       className="fixed inset-0 z-10 h-full w-full border-0 bg-background"
     />;
   }
+  // Installed pages keep the existing navigation/runtime context even though
+  // the product owns its one visible console frame.
+  if (pathname === '/apps/ecommerce-cms-agentsam') return <AgentSamShell embedded />;
   const isApp = pathname === "/" || /^\/(agentsam|chats|cms|sites|store|content|cad|samsketch|database|projects|artifacts|mail|tickets|collaborate|files|browse|cli|ship|widgets|settings)(\/|$)/.test(pathname);
   return (isApp || isStudioAdminPath(pathname)) ? <PackagedConsoleFrame><AgentSamShell embedded /></PackagedConsoleFrame> : <Outlet />;
 }

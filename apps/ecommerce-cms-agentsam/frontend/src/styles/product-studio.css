@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  color: #919c85;
+  color: var(--ps-muted);
   width: 100%;
   height: 100%;
   font-size: 10px;
@@ -14,12 +14,12 @@
   scroll-margin-top: 75px;
 }
 .product-studio-shell {
-  --ps-ink: #23212b;
-  --ps-muted: #6d6976;
-  --ps-line: #e2dfe9;
-  --ps-accent: var(--accent, #8b5cf6);
-  --ps-accent-soft: color-mix(in srgb, var(--ps-accent) 12%, white);
-  --ps-paper: #faf9fc;
+  --ps-ink: var(--c-ink, #23212b);
+  --ps-muted: var(--c-muted, #6d6976);
+  --ps-line: var(--c-line, #e2dfe9);
+  --ps-accent: var(--c-focus, var(--accent, #666666));
+  --ps-accent-soft: color-mix(in srgb, var(--ps-accent) 12%, var(--c-surface, white));
+  --ps-paper: var(--c-bg, #faf9fc);
   background: var(--ps-paper);
   color: var(--ps-ink);
   padding: 26px clamp(18px, 3.6vw, 64px) 48px;
@@ -53,7 +53,7 @@
   cursor: not-allowed;
 }
 .product-studio-shell :focus-visible {
-  outline: 3px solid #7c984c;
+  outline: 3px solid var(--ps-accent);
   outline-offset: 4px;
 }
 .product-studio-shell a {
@@ -89,7 +89,7 @@
   font-size: 10px;
   font-weight: 750;
   letter-spacing: 0.16em;
-  color: #70796a;
+  color: var(--ps-muted);
 }
 .ps-hero {
   display: grid;
@@ -100,12 +100,12 @@
   margin-bottom: 32px;
   overflow: hidden;
   border-radius: 24px;
-  background: #f0f2e9;
+  background: var(--c-surface-2, #f0f0f0);
   padding: 42px 48px;
 }
 .ps-kicker {
   font-size: 12px;
-  color: #59634f;
+  color: var(--ps-muted);
 }
 .ps-hero h1 {
   font-size: clamp(35px, 4vw, 62px);
@@ -117,12 +117,12 @@
 .ps-hero h1 em {
   font-weight: 450;
   font-style: normal;
-  color: #778961;
+  color: var(--ps-accent);
 }
 .ps-hero p {
   font-size: 14px;
   line-height: 1.7;
-  color: #6a7163;
+  color: var(--ps-muted);
   margin: 0 0 26px;
 }
 .ps-button {
@@ -143,15 +143,15 @@
     transform 0.18s;
 }
 .ps-button:hover {
-  background: #f0f3e9;
+  background: var(--ps-accent-soft);
 }
 .ps-primary {
-  background: var(--ps-ink);
-  color: white !important;
-  border-color: var(--ps-ink);
+  background: var(--c-accent, #333);
+  color: var(--c-accent-ink, #fff) !important;
+  border-color: var(--c-accent, #333);
 }
 .ps-primary:hover {
-  background: #424c36;
+  background: var(--c-accent-hover, #222);
 }
 .ps-wide {
   width: 100%;
@@ -232,7 +232,7 @@
   align-items: center;
   justify-content: center;
   gap: 25px;
-  color: #94a67a;
+  color: var(--ps-accent);
 }
 .ps-hero-empty span {
   font-size: 30px;
@@ -258,12 +258,12 @@
 }
 .ps-collections button:hover,
 .ps-collections button.is-active {
-  background: #e8eedc;
-  border-color: #bccb9f;
+  background: var(--ps-accent-soft);
+  border-color: var(--ps-accent);
 }
 .ps-collection-number {
   font-size: 10px;
-  color: #8a937f;
+  color: var(--ps-muted);
   margin-bottom: 5px;
 }
 .ps-collections strong {
@@ -303,7 +303,7 @@
   min-height: 48px;
   flex: 1;
   max-width: 660px;
-  color: #91988a;
+  color: var(--ps-muted);
 }
 .ps-search input {
   border: 0;
@@ -336,7 +336,7 @@
 .ps-product-photo {
   aspect-ratio: 1.03;
   position: relative;
-  background: #efefe9;
+  background: var(--c-surface-2, #f3f3f3);
   border-radius: 13px;
   overflow: hidden;
   display: grid;
@@ -505,7 +505,7 @@
   min-width: 0;
   max-width: 100%;
   aspect-ratio: 1;
-  background: #eeefe8;
+  background: var(--c-surface-2, #f3f3f3);
   border-radius: 20px;
   overflow: hidden;
 }
@@ -536,7 +536,7 @@
   overflow: hidden;
 }
 .ps-thumbnails button.is-active {
-  border: 2px solid #7f9564;
+  border: 2px solid var(--ps-accent);
 }
 .ps-thumbnails img {
   width: 100%;
@@ -800,7 +800,7 @@
   display: block;
   width: 100%;
   margin: 15px 0;
-  accent-color: #718a51;
+  accent-color: var(--ps-accent);
   min-height: 24px;
 }
 .ps-paper-note {
@@ -992,7 +992,7 @@
   justify-content: center;
   border: 1px dashed #acb79b;
   border-radius: 12px;
-  background: #f0f3e9;
+  background: var(--ps-accent-soft);
   width: 100%;
   padding: 28px 15px;
   font-size: 12px;
@@ -1630,7 +1630,7 @@
 .ps-mini-map small { display: block; padding: 7px 8px; font-size: 9px; color: var(--ps-muted); line-height: 1.3; }
 .ps-canvas-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; padding: 8px; font-size: 11px; }
 .ps-canvas-controls label { display: flex; align-items: center; gap: 8px; }
-.ps-canvas-controls input { max-width: 150px; accent-color: #718a51; }
+.ps-canvas-controls input { max-width: 150px; accent-color: var(--ps-accent); }
 @media (max-width: 1100px) and (min-width: 761px) {
   .ps-workspace-body.is-panel-collapsed { grid-template-columns: 66px minmax(0, 1fr); }
 }
@@ -1662,7 +1662,7 @@
 .ps-design-guide__identity strong { font-size: 13px; color: #2c3728; }
 .ps-design-guide__identity small { font-size: 10px; color: #687664; }
 .ps-design-garment-guide { position: absolute; width: 100%; height: 100%; max-height: none; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; opacity: .65; }
-.ps-design-print-area { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(44%, 290px); min-height: 0; max-height: none; overflow: hidden; border: 1px dashed #758e65; background: #ffffff0a; box-shadow: none; isolation: isolate; }
+.ps-design-print-area { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(44%, 290px); min-height: 0; max-height: none; overflow: hidden; border: 1px dashed var(--ps-accent); background: #ffffff0a; box-shadow: none; isolation: isolate; }
 .ps-design-print-area.is-gridded { background-image: linear-gradient(#7c987123 1px,transparent 1px),linear-gradient(90deg,#7c987123 1px,transparent 1px),linear-gradient(#4b714a24 1px,transparent 1px),linear-gradient(90deg,#4b714a24 1px,transparent 1px); background-size: 10% 10%,10% 10%,50% 50%,50% 50%; }
 .ps-design-crosshair-x,.ps-design-crosshair-y { position: absolute; z-index: 1; pointer-events: none; }
 .ps-design-crosshair-x { top: 50%; left: 0; right: 0; border-top: 1px dashed #71956891; }
@@ -2481,3 +2481,86 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 .ps-catalog-refresh:focus-visible{outline:2px solid #886bbc;outline-offset:2px}
 .ps-catalog-refresh:disabled{opacity:.42;cursor:wait}
 @media(prefers-reduced-motion:reduce){.ps-catalog-refresh{transition:none}}
+
+/* Product Studio Designs: uses the same media_album CRUD and asset identities
+   as Media Library. Artwork is never copied when added to a collection. */
+.product-studio-shell .ps-designs-controls { display: grid; gap: 10px; min-width: 0; }
+.product-studio-shell .ps-designs-toolbar,
+.product-studio-shell .ps-designs-add { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.product-studio-shell .ps-designs-toolbar { justify-content: space-between; }
+.product-studio-shell .ps-designs-toolbar strong { font-size: 12px; }
+.product-studio-shell .ps-designs-create,
+.product-studio-shell .ps-designs-add button,
+.product-studio-shell .ps-collection-create button {
+  min-height: 38px; border: 1px solid var(--ps-line); border-radius: 8px;
+  background: var(--ps-paper); color: var(--ps-ink); padding: 7px 10px; cursor: pointer;
+  font-size: 11px; font-weight: 650; flex-shrink: 0;
+}
+.product-studio-shell .ps-designs-create:hover,
+.product-studio-shell .ps-designs-add button:hover { border-color: var(--ps-accent); }
+.product-studio-shell .ps-designs-add button:disabled,
+.product-studio-shell .ps-collection-create button:disabled { opacity: .5; cursor: not-allowed; }
+.product-studio-shell .ps-designs-tabs { display: flex; min-width: 0; gap: 4px; border-bottom: 1px solid var(--ps-line); }
+.product-studio-shell .ps-designs-tabs button {
+  appearance: none; flex: 1 1 0; min-width: 0; min-height: 38px;
+  border: 0; border-bottom: 2px solid transparent; background: transparent;
+  color: var(--ps-muted); font-size: 11px; cursor: pointer;
+}
+.product-studio-shell .ps-designs-tabs button.is-active {
+  color: var(--ps-accent); border-bottom-color: var(--ps-accent); font-weight: 700;
+}
+.product-studio-shell .ps-collection-create { display: flex; align-items: stretch; gap: 5px; min-width: 0; }
+.product-studio-shell .ps-collection-create input,
+.product-studio-shell .ps-designs-add select {
+  min-width: 0; width: 100%; flex: 1; border: 1px solid var(--ps-line);
+  border-radius: 8px; background: var(--ps-paper); color: var(--ps-ink);
+  padding: 8px; font-size: 12px;
+}
+.product-studio-shell .ps-asset-rail:has(.ps-designs-controls) .ps-media-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+}
+.product-studio-shell .ps-asset-rail:has(.ps-designs-controls) .ps-media-grid button {
+  min-height: 80px; display: grid; align-content: start; gap: 3px;
+}
+.product-studio-shell .ps-asset-rail:has(.ps-designs-controls) .ps-media-grid img {
+  width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--ps-paper);
+}
+@media (min-width: 1200px) {
+  .product-studio-shell .ps-workspace-body:not(.is-panel-collapsed) {
+    grid-template-columns: 76px minmax(300px, 330px) minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .product-studio-shell .ps-designs-create,
+  .product-studio-shell .ps-designs-add button,
+  .product-studio-shell .ps-collection-create button { min-height: 44px; }
+  .product-studio-shell .ps-designs-tabs button { min-height: 44px; }
+  .product-studio-shell .ps-asset-rail:has(.ps-designs-controls) .ps-media-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 30dvh;
+  }
+  .product-studio-shell .ps-designs-add { flex-wrap: wrap; }
+  .product-studio-shell .ps-designs-add select { flex-basis: 100%; min-height: 44px; }
+}
+.product-studio-shell .ps-designs-rename { display: grid; gap: 6px; min-width: 0; }
+.product-studio-shell .ps-designs-rename label { font-size: 11px; font-weight: 600; color: var(--ps-muted); }
+.product-studio-shell .ps-designs-rename > div { display: flex; gap: 6px; min-width: 0; }
+.product-studio-shell .ps-designs-rename input {
+  min-width: 0; flex: 1; border: 1px solid var(--ps-line); border-radius: 8px;
+  padding: 8px; background: var(--ps-paper); color: var(--ps-ink); font-size: 12px;
+}
+.product-studio-shell .ps-designs-rename button {
+  flex: 0 0 auto; border-radius: 8px; border: 1px solid var(--ps-line);
+  background: var(--ps-paper); color: var(--ps-ink); min-height: 40px; padding: 8px 10px;
+  font-size: 11px; font-weight: 650; cursor: pointer;
+}
+@media(max-width:760px) {
+  .product-studio-shell .ps-designs-rename button { min-height: 44px; }
+}
+
+/* Shell theme applies to controls; production artboard colors remain artwork. */
+.product-studio-shell :is(.ps-search,.ps-toolpanel,.ps-thumbnails button,.ps-colorway,.ps-ai-options,.ps-ai-source,.ps-designs-rename) {
+  background: var(--c-surface, #fff);
+  color: var(--ps-ink);
+}
+.product-studio-shell .ps-product-badge { background: var(--c-surface, #fff); color: var(--ps-ink); }
+.product-studio-shell .ps-search { color: var(--ps-muted); }

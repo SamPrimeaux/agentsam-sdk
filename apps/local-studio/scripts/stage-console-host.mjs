@@ -3,7 +3,7 @@
  * Stage the unmodified Ecommerce Console artifacts for the Local Studio host.
  * This assembles source assets; no CSS/markup/renderer transformation.
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -62,6 +62,22 @@ mkdirSync(productStage, { recursive: true });
 mkdirSync(hostAdmin, { recursive: true });
 cpSync(source, productStage, { recursive: true, force: true });
 cpSync(path.join(source, 'admin'), hostAdmin, { recursive: true, force: true });
+// The product assets stay intact; inject the installation adapter only into
+// this host's staged copies. Desktop HTML does not pass through the Worker.
+function bindHost(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) bindHost(file);
+    else if (entry.name.endsWith('.html')) {
+      const html = readFileSync(file, 'utf8');
+      if (!html.includes('/admin/js/shell.js') || html.includes('/admin/host-config.js')) continue;
+      writeFileSync(file, html.replace('<script src="/admin/js/shell.js"></script>',
+        '<script src="/admin/js/shell.js"></script><script src="/admin/host-config.js"></script>'));
+    }
+  }
+}
+bindHost(productStage);
+bindHost(hostAdmin);
 const index = readFileSync(path.join(source, 'admin/_spa/index.html'), 'utf8')
   .replace(/(\b(?:href|src)=["'])\/(?!\/)/g, '$1/ecommerce-cms-agentsam/');
 writeFileSync(path.join(productStage, 'index.html'), index);
