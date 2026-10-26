@@ -62,6 +62,7 @@ import localStudioApp from "../../agentsam.app.json";
 import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
 import clientCmsApp from "../../../client-cms-editor/agentsam.app.json";
 import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
+import { handleStudioPlatformProducts } from "./studio-platform-products.js";
 import { servePackagedConsole } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
 import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
@@ -114,6 +115,9 @@ function isLocalStudioCommerceApi(pathname) {
     || pathname === "/api/admin/me"
     || pathname === "/api/admin/products"
     || /^\/api\/admin\/(?:products\/\d+(?:\/variants|\/images(?:\/\d+(?:\/primary)?)?)?|variants\/\d+(?:\/inventory)?|inventory|collections)$/.test(pathname)
+    || pathname === "/api/admin/platform/bindings"
+    || pathname === "/api/admin/media" || pathname.startsWith("/api/admin/media/")
+    || pathname.startsWith("/api/admin/assets/")
     || pathname.startsWith("/api/admin/product-studio/")
     || pathname.startsWith("/api/admin/completeful/")
     || pathname.startsWith("/api/admin/cms/")
@@ -271,7 +275,7 @@ async function probeInnerAnimalMediaOAuth(env) {
  * use the Keychain-backed Bearer session. Returns null when neither credential
  * is present or the session is missing/expired/revoked.
  */
-async function resolveSessionUserId(request, env) {
+async function resolveSessionUser(request, env) {
   if (!env.DB) return null;
   if (!request.headers.get("cookie") && !request.headers.get("authorization")) return null;
   try {
@@ -282,11 +286,15 @@ async function resolveSessionUserId(request, env) {
       routeRegistry: ROUTE_REGISTRY,
     });
     const ctx = await identity.sessionFromRequest(request);
-    return ctx?.user?.id || null;
+    return ctx?.user?.id ? ctx.user : null;
   } catch (err) {
     console.error("session_resolve_error", String(err));
     return null;
   }
+}
+
+async function resolveSessionUserId(request, env) {
+  return (await resolveSessionUser(request, env))?.id || null;
 }
 
 /**
@@ -757,13 +765,23 @@ export default {
       return handleCompletefulWebhook(request, env);
     }
 
+    if (url.pathname === '/api/admin/platform/products' || url.pathname.startsWith('/api/admin/platform/products/')) {
+      return handleStudioPlatformProducts(request, env, await resolveSessionUserId(request, env));
+    }
+
     // Resolve Local Studio identity for the packaged commerce API. Never proxy
     // to the separately installed ecommerce Worker or trust client identities.
     if (url.pathname.startsWith("/api/admin/") && isLocalStudioCommerceApi(url.pathname)) {
       if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
-      const userId = await resolveSessionUserId(request, env);
-      if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
-      const studioUser = { id: userId, account_id: userId, role: "owner" };
+      const principal = await resolveSessionUser(request, env);
+      if (!principal) return json({ ok: false, error: "unauthorized" }, 401);
+      const studioUser = { ...principal, id: principal.id, account_id: principal.id, role: "owner" };
+      if (url.pathname === "/api/admin/me") {
+        try {
+          const preference = await handleStudioAccountAvatar(new Request(request.url), env, principal.id);
+          if (preference.ok) studioUser.avatar_url = (await preference.json()).avatar_url || principal.avatar_url || null;
+        } catch { /* Identity remains usable when optional profile preferences are unavailable. */ }
+      }
       return handleEcommerceAdminApi(request, env, url, context, studioUser);
     }
 

@@ -1,3 +1,4 @@
+use base64::Engine;
 use reqwest::Method;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -77,6 +78,10 @@ struct StudioServiceBridgeRequest {
     #[serde(default)]
     body: Option<Value>,
     #[serde(default)]
+    body_base64: Option<String>,
+    #[serde(default)]
+    content_type: Option<String>,
+    #[serde(default)]
     path: Option<String>,
     #[serde(default)]
     method: Option<String>,
@@ -98,6 +103,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             let path = request.path.as_deref().unwrap_or("").trim();
             let root = path == "/api/settings/skills"
                 || path == "/api/settings/preferences"
+                || path == "/api/settings/account-avatar"
                 || path == "/api/settings/agents"
                 || path == "/api/settings/agents/policy";
             let skill = path.strip_prefix("/api/settings/skills/").is_some_and(|id| {
@@ -124,7 +130,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 Method::GET => root,
                 Method::POST => path == "/api/settings/skills" || path == "/api/settings/agents",
                 Method::PUT => skill || agent || path == "/api/settings/agents/policy"
-                    || path == "/api/settings/preferences",
+                    || path == "/api/settings/preferences" || path == "/api/settings/account-avatar",
                 Method::DELETE => skill || agent,
                 _ => false,
             };
@@ -296,6 +302,28 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 _ => return Err("studio_service_database_method_invalid".into()),
             };
             Ok((method, path.to_string()))
+        }
+        "commerce" => {
+            let path = request.path.as_deref().unwrap_or("");
+            let url = reqwest::Url::parse(&format!("https://console.invalid{path}"))
+                .map_err(|_| "studio_service_commerce_path_invalid")?;
+            let route = url.path();
+            let allowed = ["/api/admin/me", "/api/admin/overview", "/api/admin/products", "/api/admin/collections", "/api/admin/inventory", "/api/admin/media", "/api/admin/platform/products", "/api/admin/platform/bindings"].contains(&route)
+                || ["/api/admin/platform/products/", "/api/admin/products/", "/api/admin/variants/", "/api/admin/product-studio/", "/api/admin/completeful/", "/api/admin/media/", "/api/admin/assets/", "/api/admin/cms/", "/api/admin/agentsam/", "/api/admin/theme-editor/", "/api/admin/store/"].iter().any(|prefix| route.starts_with(prefix));
+            if !allowed || !path.starts_with("/api/admin/") || url.host_str() != Some("console.invalid")
+                || path.contains("..") || path.contains('%') && path.split('?').next().unwrap_or("").contains('%')
+                || path.contains('\\') || path.contains('#') || path.chars().any(char::is_control) {
+                return Err("studio_service_commerce_path_invalid".into());
+            }
+            let method = match request.method.as_deref().unwrap_or("GET") {
+                "GET" => Method::GET, "POST" => Method::POST, "PUT" => Method::PUT,
+                "PATCH" => Method::PATCH, "DELETE" => Method::DELETE,
+                _ => return Err("studio_service_commerce_method_invalid".into()),
+            };
+            if ["/api/admin/me", "/api/admin/overview", "/api/admin/platform/bindings"].contains(&route) && method != Method::GET {
+                return Err("studio_service_commerce_method_invalid".into());
+            }
+            Ok((method, path.to_owned()))
         }
         "cms" => {
             let path = request.path.as_deref().unwrap_or("").trim();
@@ -534,7 +562,17 @@ async fn service_studio_bridge(
         }
     }
 
-    if method != Method::GET {
+    if request.operation.trim() == "commerce" && request.body_base64.is_some() {
+        let encoded = request.body_base64.as_deref().unwrap_or("");
+        let content_type = request.content_type.as_deref().unwrap_or("");
+        if encoded.len() > 32 * 1024 * 1024 || content_type.chars().any(char::is_control)
+            || !(content_type.starts_with("multipart/form-data; boundary=") || content_type.starts_with("image/") || content_type == "application/octet-stream") {
+            return Err("studio_service_commerce_upload_invalid".into());
+        }
+        let bytes = base64::engine::general_purpose::STANDARD.decode(encoded)
+            .map_err(|_| "studio_service_commerce_upload_invalid")?;
+        builder = builder.header("content-type", content_type).body(bytes);
+    } else if method != Method::GET {
         builder = builder.json(&request.body.unwrap_or_else(|| json!({})));
     }
 
@@ -808,6 +846,25 @@ mod tests {
     }
 
     #[test]
+    fn commerce_bridge_allows_only_installed_product_routes() {
+        for (path, method) in [("/api/admin/me", "GET"), ("/api/admin/products/12", "PUT"),
+            ("/api/admin/collections", "POST"), ("/api/admin/media", "POST"),
+            ("/api/admin/platform/products/prod_one", "PATCH")] {
+            let request: StudioServiceBridgeRequest = serde_json::from_value(json!({
+                "operation":"commerce","path":path,"method":method
+            })).unwrap();
+            assert!(studio_service_route(&request).is_ok(), "{path}");
+        }
+        for path in ["https://evil.invalid/api/admin/products", "/api/admin/login", "/api/admin/me/../login",
+            "/api/admin/media/../../vault", "/api/admin/products/%2e%2e/login", "/api/admin/mediasecrets", "/api/vault/secrets"] {
+            let request: StudioServiceBridgeRequest = serde_json::from_value(json!({
+                "operation":"commerce","path":path,"method":"GET"
+            })).unwrap();
+            assert!(studio_service_route(&request).is_err(), "{path}");
+        }
+    }
+
+    #[test]
     fn work_bridge_allows_only_bounded_work_routes() {
         for (path, method) in [
             ("/api/work/snapshot?surface=mail", "GET"),
@@ -833,7 +890,7 @@ mod tests {
             let request = StudioServiceBridgeRequest {
                 operation: "work".into(),
                 account_id: None,
-                body: None,
+                body: None, body_base64: None, content_type: None,
                 path: Some(path.into()),
                 method: Some(method.into()),
             };
@@ -849,7 +906,7 @@ mod tests {
             let request = StudioServiceBridgeRequest {
                 operation: "work".into(),
                 account_id: None,
-                body: None,
+                body: None, body_base64: None, content_type: None,
                 path: Some(invalid_path.into()),
                 method: Some("GET".into()),
             };
@@ -875,7 +932,7 @@ mod tests {
             let request = StudioServiceBridgeRequest {
                 operation: "plugins".into(),
                 account_id: None,
-                body: None,
+                body: None, body_base64: None, content_type: None,
                 path: Some(path.into()),
                 method: Some(method.into()),
             };
@@ -884,7 +941,7 @@ mod tests {
         let invalid = StudioServiceBridgeRequest {
             operation: "plugins".into(),
             account_id: None,
-            body: None,
+            body: None, body_base64: None, content_type: None,
             path: Some("/api/plugins/install/https://localhost".into()),
             method: Some("POST".into()),
         };
@@ -896,7 +953,7 @@ mod tests {
         let settings = StudioServiceBridgeRequest {
             operation: "plugins".into(),
             account_id: None,
-            body: None,
+            body: None, body_base64: None, content_type: None,
             path: Some("/api/plugins/plg_test123".into()),
             method: Some("PATCH".into()),
         };
@@ -907,7 +964,7 @@ mod tests {
         let execute = StudioServiceBridgeRequest {
             operation: "plugins".into(),
             account_id: None,
-            body: None,
+            body: None, body_base64: None, content_type: None,
             path: Some("/api/plugins/tools/execute".into()),
             method: Some("POST".into()),
         };
@@ -940,7 +997,7 @@ mod tests {
             ("/api/settings/skills/skill_1234", "DELETE"),
         ] {
             let request = StudioServiceBridgeRequest {
-                operation: "settings".into(),account_id:None,body:None,
+                operation: "settings".into(),account_id:None,body: None, body_base64: None, content_type: None,
                 path:Some(path.into()),method:Some(method.into()),
             };
             let (actual, target) = studio_service_route(&request).expect("settings route");
@@ -955,7 +1012,7 @@ mod tests {
             ("https://evil.invalid/api/settings/agents", "GET"),
         ] {
             let request = StudioServiceBridgeRequest {
-                operation:"settings".into(),account_id:None,body:None,
+                operation:"settings".into(),account_id:None,body: None, body_base64: None, content_type: None,
                 path:Some(path.into()),method:Some(method.into()),
             };
             assert!(studio_service_route(&request).is_err(), "should deny {path} {method}");
@@ -965,7 +1022,7 @@ mod tests {
     #[test]
     fn plugin_workspace_bridge_is_read_only_and_exact() {
         let request=StudioServiceBridgeRequest {
-            operation:"plugins".into(),account_id:None,body:None,
+            operation:"plugins".into(),account_id:None,body: None, body_base64: None, content_type: None,
             path:Some("/api/plugins/plg_1234/workspace".into()),method:Some("GET".into()),
         };
         assert_eq!(studio_service_route(&request).unwrap().0,Method::GET);
@@ -978,7 +1035,7 @@ mod tests {
         let request = StudioServiceBridgeRequest {
             operation: "vault".into(),
             account_id: None,
-            body: None,
+            body: None, body_base64: None, content_type: None,
             path: Some("/api/vault/secrets/usec_test".into()),
             method: Some("DELETE".into()),
         };

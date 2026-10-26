@@ -22,12 +22,22 @@ import { IconAction } from '@/components/ui/icon-action';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
-import { isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
+import { invokeStudioService, isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settings';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { NotificationsMenu } from './NotificationsMenu';
 import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
+
+async function accountAvatarRequest(options: RequestInit = {}) {
+  if (!isPackagedDesktop()) return fetch('/api/settings/account-avatar', options);
+  const result = await invokeStudioService({
+    operation: 'settings', path: '/api/settings/account-avatar',
+    method: options.method === 'PUT' ? 'PUT' : 'GET',
+    body: typeof options.body === 'string' ? JSON.parse(options.body) : undefined,
+  });
+  return new Response(result.body, { status: result.status, headers: { 'content-type': result.content_type || 'application/json' } });
+}
 
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
 
@@ -53,11 +63,16 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const pendingChromeShares = useRef<ChromeTabShare[]>([]);
   hydratedRef.current = state.hydrated;
   useEffect(() => {
-    if (!user?.id || isPackagedDesktop()) return;
+    if (!user?.id || user.isDevFallback) return;
     const controller = new AbortController();
-    void fetch('/api/settings/account-avatar', { credentials: 'same-origin', signal: controller.signal })
+    void accountAvatarRequest({ credentials: 'same-origin', signal: controller.signal })
       .then(async (res) => res.ok ? res.json() as Promise<{avatar_url?: string | null}> : null)
-      .then(data => { if (!controller.signal.aborted) setAccountAvatarUrl(data?.avatar_url || null); })
+      .then(data => {
+        if (controller.signal.aborted) return;
+        setAccountAvatarUrl(data?.avatar_url || null);
+        const shell = window as Window & { __shellUser?: Record<string, unknown>; hydrateShellProfile?: (profile: unknown) => void };
+        if (shell.__shellUser?.id === user.id) shell.hydrateShellProfile?.({ ...shell.__shellUser, avatar_url: data?.avatar_url || user.profileImageUrl });
+      })
       .catch(() => { /* Auth image remains a usable fallback when preferences cannot be read. */ });
     return () => controller.abort();
   }, [user?.id]);
@@ -358,7 +373,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         </label>
         <button type="button" className="as-nav-button" disabled={avatarSaving} onClick={() => {
           setAvatarSaving(true);
-          void fetch('/api/settings/account-avatar', {
+          void accountAvatarRequest({
             method: 'PUT', credentials: 'same-origin',
             headers: { 'content-type': 'application/json' }, body: JSON.stringify({ avatar_url: avatarDraft.trim() || null }),
           }).then(async response => {

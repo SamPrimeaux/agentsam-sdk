@@ -92,5 +92,19 @@
    The packaged shell's global toolbar must not create a second header. */
 /* The packaged header stays visible; child conversation chrome is not global chrome. */
 #agentsam-host-workspace .agentsam-page-layout > .as-nav-topbar { display: none; }
+/* The header already consumes its flex height. A 100% main below it clips
+   the composer by exactly that header height in WKWebView and short windows. */
 body.agentsam-conversation-route .console-workspace,
-body.agentsam-conversation-route .console-main { min-height: 0; height: 100%; }
+body.agentsam-conversation-route .console-main { min-height: 0; }
+body.console-body-bleed:has([data-agentsam-console-host]) .console-main--bleed {
+  height: auto;
+  flex: 1 1 0%;
+  min-height: 0;
+  scrollbar-gutter: auto;
+}
+#agentsam-host-workspace .agentsam-route:has(.agentsam-page-layout) {
+  display: flex;
+  overflow: hidden;
+}
+#agentsam-host-workspace .agentsam-page-layout { flex: 1 1 0%; min-height: 0; min-width: 0; height: auto; width: 100%; }
+#agentsam-host-workspace .agentsam-workspace { overflow: hidden; }

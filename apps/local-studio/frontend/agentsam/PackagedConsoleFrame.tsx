@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouterState } from '@tanstack/react-router';
 import './packaged-console-frame.css';
+import { useCurrentUserState } from '@/lib/auth/use-current-user';
 
 type WindowWithConsole = Window & {
   renderShell?: (active: string, html: string, options?: Record<string, unknown>) => void;
@@ -28,8 +29,22 @@ function loadScript(src: string): Promise<void> {
  */
 export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: state => state.location.pathname });
+  const { user, isPending } = useCurrentUserState();
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [error, setError] = useState('');
+  useEffect(() => {
+    if (!target || isPending) return;
+    const scope = window as WindowWithConsole & { __shellUser?: unknown; hydrateShellProfile?: (user: unknown) => void };
+    const profile = {
+      id: user?.isDevFallback ? null : user?.id,
+      display_name: user?.isDevFallback ? 'Local account' : user?.displayName || user?.primaryEmail || 'Account',
+      email: user?.isDevFallback ? '' : user?.primaryEmail || '',
+      avatar_url: user?.profileImageUrl || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg',
+      role: user?.isDevFallback || !user ? 'Sign in required' : 'Account',
+    };
+    scope.__shellUser = profile;
+    scope.hydrateShellProfile?.(profile);
+  }, [target, user, isPending]);
   // The packaged nav renders only once. Keep the active link in sync with
   // client-side route transitions without repainting the sidebar or losing the portal.
   useEffect(() => {
