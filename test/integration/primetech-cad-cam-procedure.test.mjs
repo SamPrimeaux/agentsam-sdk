@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createProcedureCatalog, validateProcedureManifest } from '../packages/primetech-procedures/src/index.js';
+import { createProcedureCatalog, validateProcedureManifest } from '../../packages/primetech-procedures/src/index.js';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const procedureRoot = path.join(root, 'packages/primetech-procedures/procedures/cad.motor-bearing-end-plate');
 const manifest = JSON.parse(fs.readFileSync(path.join(procedureRoot, 'procedure.json'), 'utf8'));
 
