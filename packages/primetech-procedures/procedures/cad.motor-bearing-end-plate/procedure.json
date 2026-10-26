@@ -1,0 +1,101 @@
+{
+  "schema": "inneranimalmedia.primetech.procedure.v1",
+  "id": "cad.motor-bearing-end-plate",
+  "version": "0.1.0",
+  "summary": "Build a parametric motor/bearing end plate, verify STEP geometry, and generate drawing, toolpath, generic NC review output, and a source-inclusive artifact bundle.",
+  "effect": "export",
+  "capabilities": ["sam.superbash"],
+  "runtime": {
+    "kind": "python",
+    "entrypoint": "run.py",
+    "min_python": "3.10",
+    "dependencies": [],
+    "interpreter_candidates": ["python3.12", "python3.11", "python3.10", "python3"]
+  },
+  "input_schema": {
+    "type": "object",
+    "required": ["variant"],
+    "properties": {
+      "variant": {"type": "string", "enum": ["candidate-150mm"]},
+      "output_dir": {
+        "type": "string",
+        "pattern": "^\\.agentsam/artifacts/cam/[a-z0-9-]+/[a-z0-9-]+$",
+        "maxLength": 160
+      }
+    },
+    "additionalProperties": false
+  },
+  "output_schema": {
+    "type": "object",
+    "required": ["schema", "ok", "part_id", "revision", "design_status", "artifact_directory", "files", "verification", "toolpath", "delivery"],
+    "properties": {
+      "schema": {"const": "inneranimalmedia.cam.pipeline-result.v1"},
+      "ok": {"type": "boolean", "const": true},
+      "part_id": {"const": "motor-bearing-end-plate"},
+      "revision": {"type": "string"},
+      "design_status": {"const": "proposal_not_approved"},
+      "artifact_directory": {"type": "string"},
+      "files": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name", "bytes", "sha256"],
+          "properties": {
+            "name": {"type": "string"},
+            "bytes": {"type": "integer", "minimum": 0},
+            "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+          },
+          "additionalProperties": false
+        }
+      },
+      "verification": {
+        "type": "object",
+        "required": ["geometry_checks_pass", "toolpath_checks_pass", "geometry_check_count", "toolpath_check_count", "gcode_motion_line_count", "failed_geometry_checks"],
+        "properties": {
+          "geometry_checks_pass": {"type": "boolean", "const": true},
+          "toolpath_checks_pass": {"type": "boolean", "const": true},
+          "geometry_check_count": {"type": "integer", "minimum": 1},
+          "toolpath_check_count": {"type": "integer", "minimum": 1},
+          "gcode_motion_line_count": {"type": "integer", "minimum": 1},
+          "failed_geometry_checks": {"type": "array", "items": {"type": "string"}, "maxItems": 0}
+        },
+        "additionalProperties": false
+      },
+      "toolpath": {
+        "type": "object",
+        "required": ["dialect", "status", "move_count", "gcode_sha256", "estimated_cycle_time_seconds"],
+        "properties": {
+          "dialect": {"const": "generic_fanuc_style"},
+          "status": {"const": "UNVERIFIED"},
+          "move_count": {"type": "integer", "minimum": 1},
+          "gcode_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "estimated_cycle_time_seconds": {"type": "number", "minimum": 0}
+        },
+        "additionalProperties": false
+      },
+      "delivery": {
+        "type": "object",
+        "required": ["zip_name", "zip_sha256", "manifest_name", "manifest_sha256", "file_count", "total_bytes"],
+        "properties": {
+          "zip_name": {"type": "string"},
+          "zip_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "manifest_name": {"type": "string"},
+          "manifest_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+          "file_count": {"type": "integer", "minimum": 1},
+          "total_bytes": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "additionalProperties": false
+  },
+  "verification": {
+    "kind": "output_schema",
+    "expected": "inneranimalmedia.cam.pipeline-result.v1"
+  },
+  "flags": {
+    "network": false,
+    "physical_hardware": false,
+    "requires_operator_review": true
+  }
+}

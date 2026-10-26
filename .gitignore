@@ -83,3 +83,6 @@ apps/agentsam-go-worker/runtime/.agentsam-build-source
 # Generated host assets are assembled from the Ecommerce package; only host-config.js is source.
 /apps/local-studio/frontend/public/admin/*
 !/apps/local-studio/frontend/public/admin/host-config.js
+
+# Generated PrimeTech CAD/CAM design-review artifacts; not source
+/.agentsam/artifacts/cam/
