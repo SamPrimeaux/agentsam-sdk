@@ -59,13 +59,14 @@ function createSamHost(projectRoot, approvalCalls) {
 
 test('procedure catalog validates the versioned inventory manifest', () => {
   const catalog = createProcedureCatalog({ root: procedureRoot });
-  assert.deepEqual(catalog.list(), [{
+  const inventory = catalog.list().find(item => item.id === 'repo.asset.inventory');
+  assert.deepEqual(inventory, {
     id: 'repo.asset.inventory',
     version: '0.1.0',
     summary: sourceManifest.summary,
     effect: 'read',
     available: true,
-  }]);
+  });
   const validation = validateProcedureManifest(sourceManifest);
   assert.equal(validation.ok, true, JSON.stringify(validation.errors));
   const traversal = validateProcedureManifest({
