@@ -125,7 +125,7 @@ export function mountProgressiveStudio(options: MountOptions) {
     note: tool.note,
   })));
   const iconCount = document.getElementById("icon-count");
-  if (iconCount) iconCount.textContent = `${iconEntries.length} semantic tools`;
+  if (iconCount) iconCount.textContent = `${iconEntries.length} reference icons`;
 
   function renderIcons() {
     const query = iconSearch.value.trim().toLowerCase();

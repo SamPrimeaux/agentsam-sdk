@@ -126,3 +126,72 @@ html,body,#app{width:100%;height:100%;min-width:0;min-height:0;margin:0;overflow
  .studio-shell .timeline-top .tag{max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 @media(prefers-reduced-motion:reduce){.studio-shell .studio-panel-resize:after,.studio-shell .studio-timeline-resize:after,.studio-shell .left,.studio-shell .right{transition:none!important}}
+
+/* Studio craft pass, 2026-10-25. Improve the existing authoring surfaces in
+   place: no replacement shell, duplicate controls, or new scene authority. */
+@media(min-width:851px){
+ .studio-shell .app{--library-width:264px;--inspector-width:288px}
+ .studio-shell .app[data-timeline-collapsed="true"]{grid-template-rows:54px minmax(0,1fr) 38px}
+ .studio-shell .app>.studio-panel-resize.library-resize,
+ .studio-shell .app>.studio-panel-resize.inspector-resize{top:54px}
+}
+/* Story typography belongs to presentation playback, not the working canvas. */
+.studio-shell .app:not([data-scene-mode="story"]) .canvas-header{opacity:0;visibility:hidden;pointer-events:none}
+.studio-shell .app[data-scene-mode="story"] .canvas-header{opacity:1;visibility:visible}
+.studio-shell .sam-shell-topbar-host .as-nav-topbar-leading:after{content:"SamSketch · Studio";font-size:11px;letter-spacing:-.01em;font-weight:650;color:#e8ebf1}
+.studio-shell .studio-project-chip{font-size:12px;letter-spacing:-.01em;border-color:#454a53;background:#202329}
+.studio-shell .studio-project-chip:focus-visible{outline:2px solid #91afff;outline-offset:2px}
+/* Six existing, functioning viewport operations, centered and explicitly named. */
+.studio-shell .canvas-tools{top:12px;left:50%;right:auto;transform:translateX(-50%);display:flex;gap:2px;padding:5px 6px;max-width:calc(100% - 24px);background:rgba(22,26,33,.9);border:1px solid rgba(170,191,222,.2);border-radius:12px;box-shadow:0 10px 26px rgba(15,24,43,.14);backdrop-filter:blur(18px)}
+.studio-shell .canvas-tools .icon-control{display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;min-width:53px;min-height:47px;padding:6px 6px 5px;border:1px solid transparent;border-radius:8px;background:transparent;color:#bbc6d7;line-height:1;cursor:pointer;transition:background .14s,border-color .14s,color .14s}
+.studio-shell .canvas-tools .icon-control svg{width:17px;height:17px}
+.studio-shell .canvas-tools .icon-control::after{font-size:9px;font-weight:650;letter-spacing:.01em;line-height:1.15}
+.studio-shell .canvas-tools #mode-select::after{content:"Select"}
+.studio-shell .canvas-tools #mode-orbit::after{content:"Orbit"}
+.studio-shell .canvas-tools #mode-story::after{content:"Story"}
+.studio-shell .canvas-tools #frame::after{content:"Frame"}
+.studio-shell .canvas-tools #grid::after{content:"Grid"}
+.studio-shell .canvas-tools #wireframe::after{content:"Edges"}
+.studio-shell .canvas-tools .icon-control:hover{background:rgba(132,164,215,.13);border-color:rgba(154,185,231,.24);color:#fff}
+.studio-shell .canvas-tools .icon-control.active,.studio-shell .canvas-tools .icon-control[aria-pressed="true"]{background:#284878;border-color:#527dbd;color:#f7fbff}
+.studio-shell .canvas-tools .icon-control:focus-visible{outline:2px solid #9bbaff;outline-offset:2px}
+.studio-shell .canvas-tools .toolbar-separator{width:1px;height:27px;margin:10px 4px;background:rgba(184,199,222,.2)}
+/* Bibliographic icon catalog stays distinct from live tool actions. */
+.studio-shell .icon-library-selection{font-size:11px;line-height:1.45;border-radius:10px}
+.studio-shell .icon-family{margin-bottom:15px}
+.studio-shell .icon-family>header{font-size:11px;letter-spacing:.015em;margin-bottom:7px}
+.studio-shell .icon-family-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.studio-shell .icon-library-card{min-height:68px;padding:8px 4px;gap:6px;border-radius:9px;background:#212630;border:1px solid #343c4a;color:#b7c7e1}
+.studio-shell .icon-library-card>span{width:27px;height:27px;color:#a4bef3}
+.studio-shell .icon-library-card strong{font-size:10px;line-height:1.25;color:#cad5e7;font-weight:600;white-space:normal;text-align:center;overflow:visible}
+.studio-shell .icon-library-card:hover,.studio-shell .icon-library-card.is-selected{border-color:#7293d3;background:#283b5a;color:#fff}
+.studio-shell .icon-library-card.is-selected strong{color:#fff}
+.studio-shell .icon-library-card:focus-visible{outline:2px solid #99b6ee;outline-offset:2px}
+/* Source-backed asset cards: stable thumbnails, legible provenance, clear add action. */
+.studio-shell .template-catalog{gap:9px}
+.studio-shell .model-inventory-card{border:1px solid #333c4a;border-radius:12px;background:#20252d;transition:border-color .15s,background .15s,transform .15s}
+.studio-shell .model-inventory-card:hover{border-color:#6486c0;background:#293241;transform:translateY(-1px)}
+.studio-shell .model-inventory-card:focus-visible{outline:2px solid #9abaff;outline-offset:2px}
+.studio-shell .model-inventory-card .template-picture{aspect-ratio:1.24;background:#151b25;overflow:hidden}
+.studio-shell .model-inventory-card .template-picture img{display:block;width:100%;height:100%;object-fit:contain}
+.studio-shell .model-inventory-card .template-details strong{font-size:11px;line-height:1.35;color:#eef1f7}
+.studio-shell .model-inventory-card .template-details small{font-size:10px;line-height:1.4;color:#9ca9bc}
+.studio-shell .model-inventory-card .template-add{color:#a9c3f4}
+/* Inspector remains the editing authority; make precise fields easier to scan. */
+.studio-shell .right .inspector-heading{font-size:11px;letter-spacing:.035em;text-transform:none;padding:14px 16px}
+.studio-shell #inspector .field label{font-size:11px;font-weight:620;letter-spacing:0}
+.studio-shell #inspector .field input[type=text],
+.studio-shell #inspector .field input[type=number],
+.studio-shell #inspector .field select{min-height:34px;border-radius:8px;font-size:12px;font-variant-numeric:tabular-nums}
+.studio-shell .library-tabs button{font-size:11px;min-height:35px;font-weight:650}
+.studio-shell .canvas-status{max-width:min(420px,65%);font-size:10px}
+@media(max-width:1050px){
+ .studio-shell .canvas-tools .icon-control{min-width:39px;min-height:37px}
+ .studio-shell .canvas-tools .icon-control::after{display:none}
+ .studio-shell .canvas-tools .toolbar-separator{height:23px;margin:6px 3px}
+}
+@media(prefers-reduced-motion:reduce){.studio-shell .model-inventory-card{transition:none;transform:none!important}}
+
+/* A design-study label is not a runtime health indicator. */
+.studio-shell .sam-shell-study-status{display:none!important}
+@media(max-width:1050px){.studio-shell .canvas-tools{overflow-x:auto;scrollbar-width:none;justify-content:flex-start}.studio-shell .canvas-tools::-webkit-scrollbar{display:none}}
