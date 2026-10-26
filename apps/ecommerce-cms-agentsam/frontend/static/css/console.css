@@ -2293,6 +2293,7 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 
 /* One platform top bar. Chat/Work slots into the host header, not a child header. */
 /* Search is a right-aligned global action; the center is reserved for Chat/Work. */
+.console-topbar:not(.console-topbar--agentsam) .console-topbar-actions .console-search-wrap,
 .console-topbar-actions .console-search-wrap {
   position: static; left: auto; right: auto; transform: none;
   flex: none; display: flex; width: auto; max-width: none; padding: 0; pointer-events: auto;
@@ -2310,3 +2311,13 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
 .console-notifications-menu[hidden] { display: none; }
 .console-notifications-menu strong { font-size: 13px; }
 .console-notifications-menu p { margin: 10px 0 0; line-height: 1.5; color: var(--c-muted); }
+
+/* Keep all global actions separate from the shared Chat/Work controls on phones. */
+@media (max-width: 560px) {
+  .console-topbar:has(#agentsam-console-mode-slot:not(:empty)) { gap: 6px; padding-right: 8px; }
+  .console-topbar:has(#agentsam-console-mode-slot:not(:empty)) .console-topbar-spacer { flex: 0 0 46px; }
+  #agentsam-console-mode-slot:not(:empty) { position: static; transform: none; flex: 1 1 0%; min-width: 0; width: auto; display: flex; justify-content: center; }
+  #agentsam-console-mode-slot .agentsam-mode-host { min-width: 0; width: 100%; max-width: 160px; }
+  #agentsam-console-mode-slot .as-nav-mode-switch { width: 100%; min-width: 0; }
+  #agentsam-console-mode-slot .as-nav-mode-switch button { min-width: 0; padding-inline: 10px; }
+}
