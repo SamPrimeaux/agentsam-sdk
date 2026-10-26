@@ -284,6 +284,14 @@ async function ensureDraftProduct(env, body, catalogProduct) {
   return env.DB.prepare(`SELECT * FROM products WHERE id = ?`).bind(result.meta.last_row_id).first();
 }
 
+// Reused by the editor save route and the supplier preflight. No provider call
+// may infer readiness from only the currently viewed print location.
+export function studioDraftPrintReady(preparedMediaId, sides = {}) {
+  const decorated = Object.values(sides).filter((side) =>
+    side?.original_media_asset_id && side.showArtwork !== false);
+  return Boolean(preparedMediaId) && decorated.every((side) => Boolean(side.prepared_media_asset_id));
+}
+
 async function saveDraft(request, env) {
   const body = await readJson(request);
   const catalogProductId = String(body.catalog_product_id || "").trim();
@@ -387,7 +395,8 @@ async function saveDraft(request, env) {
     };
   }
   placement.sides = sides;
-  const state = preparedMediaId ? "prepared" : "draft";
+  // Artwork visible on both sides is not necessarily print-ready on both sides.
+  const state = studioDraftPrintReady(preparedMediaId, sides) ? "prepared" : "draft";
   const designSignature = (value) =>
     JSON.stringify({
       variants: value.variants,
@@ -434,7 +443,7 @@ async function saveDraft(request, env) {
     await env.DB.prepare(
       `UPDATE product_studio_drafts
         SET completeful_shop_id = ?, placement_json = ?, preview_media_asset_id = ?, title = ?, description = ?, retail_price_cents = ?,
-            state = CASE WHEN state = 'error' THEN ? ELSE state END,
+            state = CASE WHEN state IN ('draft','prepared','error') THEN ? ELSE state END,
             last_error_code = NULL, last_error_message = NULL, updated_at = datetime('now')
         WHERE id = ?`,
     )

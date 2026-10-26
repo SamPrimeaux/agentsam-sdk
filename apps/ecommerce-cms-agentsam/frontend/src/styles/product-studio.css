@@ -2481,3 +2481,78 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 .ps-catalog-refresh:focus-visible{outline:2px solid #886bbc;outline-offset:2px}
 .ps-catalog-refresh:disabled{opacity:.42;cursor:wait}
 @media(prefers-reduced-motion:reduce){.ps-catalog-refresh{transition:none}}
+
+/* Product Studio Designs: uses the same media_album CRUD and asset identities
+   as Media Library. Artwork is never copied when added to a collection. */
+.product-studio-shell .ps-designs-controls { display: grid; gap: 10px; min-width: 0; }
+.product-studio-shell .ps-designs-toolbar,
+.product-studio-shell .ps-designs-add { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.product-studio-shell .ps-designs-toolbar { justify-content: space-between; }
+.product-studio-shell .ps-designs-toolbar strong { font-size: 12px; }
+.product-studio-shell .ps-designs-create,
+.product-studio-shell .ps-designs-add button,
+.product-studio-shell .ps-collection-create button {
+  min-height: 38px; border: 1px solid var(--ps-line); border-radius: 8px;
+  background: var(--ps-paper); color: var(--ps-ink); padding: 7px 10px; cursor: pointer;
+  font-size: 11px; font-weight: 650; flex-shrink: 0;
+}
+.product-studio-shell .ps-designs-create:hover,
+.product-studio-shell .ps-designs-add button:hover { border-color: var(--ps-accent); }
+.product-studio-shell .ps-designs-add button:disabled,
+.product-studio-shell .ps-collection-create button:disabled { opacity: .5; cursor: not-allowed; }
+.product-studio-shell .ps-designs-tabs { display: flex; min-width: 0; gap: 4px; border-bottom: 1px solid var(--ps-line); }
+.product-studio-shell .ps-designs-tabs button {
+  appearance: none; flex: 1 1 0; min-width: 0; min-height: 38px;
+  border: 0; border-bottom: 2px solid transparent; background: transparent;
+  color: var(--ps-muted); font-size: 11px; cursor: pointer;
+}
+.product-studio-shell .ps-designs-tabs button.is-active {
+  color: var(--ps-accent); border-bottom-color: var(--ps-accent); font-weight: 700;
+}
+.product-studio-shell .ps-collection-create { display: flex; align-items: stretch; gap: 5px; min-width: 0; }
+.product-studio-shell .ps-collection-create input,
+.product-studio-shell .ps-designs-add select {
+  min-width: 0; width: 100%; flex: 1; border: 1px solid var(--ps-line);
+  border-radius: 8px; background: var(--ps-paper); color: var(--ps-ink);
+  padding: 8px; font-size: 12px;
+}
+.product-studio-shell .ps-asset-rail:has(.ps-designs-controls) .ps-media-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+}
+.product-studio-shell .ps-asset-rail:has(.ps-designs-controls) .ps-media-grid button {
+  min-height: 80px; display: grid; align-content: start; gap: 3px;
+}
+.product-studio-shell .ps-asset-rail:has(.ps-designs-controls) .ps-media-grid img {
+  width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--ps-paper);
+}
+@media (min-width: 1200px) {
+  .product-studio-shell .ps-workspace-body:not(.is-panel-collapsed) {
+    grid-template-columns: 76px minmax(300px, 330px) minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .product-studio-shell .ps-designs-create,
+  .product-studio-shell .ps-designs-add button,
+  .product-studio-shell .ps-collection-create button { min-height: 44px; }
+  .product-studio-shell .ps-designs-tabs button { min-height: 44px; }
+  .product-studio-shell .ps-asset-rail:has(.ps-designs-controls) .ps-media-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 30dvh;
+  }
+  .product-studio-shell .ps-designs-add { flex-wrap: wrap; }
+  .product-studio-shell .ps-designs-add select { flex-basis: 100%; min-height: 44px; }
+}
+.product-studio-shell .ps-designs-rename { display: grid; gap: 6px; min-width: 0; }
+.product-studio-shell .ps-designs-rename label { font-size: 11px; font-weight: 600; color: var(--ps-muted); }
+.product-studio-shell .ps-designs-rename > div { display: flex; gap: 6px; min-width: 0; }
+.product-studio-shell .ps-designs-rename input {
+  min-width: 0; flex: 1; border: 1px solid var(--ps-line); border-radius: 8px;
+  padding: 8px; background: var(--ps-paper); color: var(--ps-ink); font-size: 12px;
+}
+.product-studio-shell .ps-designs-rename button {
+  flex: 0 0 auto; border-radius: 8px; border: 1px solid var(--ps-line);
+  background: var(--ps-paper); color: var(--ps-ink); min-height: 40px; padding: 8px 10px;
+  font-size: 11px; font-weight: 650; cursor: pointer;
+}
+@media(max-width:760px) {
+  .product-studio-shell .ps-designs-rename button { min-height: 44px; }
+}
