@@ -227,8 +227,9 @@ def detail(t: dict) -> str:
   <div class="detail-head">
     <a class="breadcrumb" href="/themes">← All themes</a><span>·</span><strong>{esc(t["name"])}</strong>
     <div class="device-switch">
-      <button data-device="desktop" class="active" onclick="setDevice('desktop')">Desktop</button>
-      <button data-device="mobile" onclick="setDevice('mobile')">Mobile</button>
+      <button data-device="desktop" class="active" aria-pressed="true" onclick="setDevice('desktop')">Desktop</button>
+      <button data-device="tablet" aria-pressed="false" onclick="setDevice('tablet')">Tablet</button>
+      <button data-device="mobile" aria-pressed="false" onclick="setDevice('mobile')">Mobile</button>
     </div>
   </div>
 
