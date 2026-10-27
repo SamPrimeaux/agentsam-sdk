@@ -117,6 +117,10 @@ button{cursor:pointer}
 .help-content section{padding:0 0 32px}
 .help-content h2{font-size:24px;letter-spacing:-.035em}
 .help-content p,.help-content li{line-height:1.7;color:#555}
+@media(prefers-reduced-motion:reduce){
+  .theme-card,.card-preview iframe,.card-preview::before,.card-preview::after,.preview-frame-wrap{transition:none}
+  .theme-card:hover,.theme-card:focus-visible{transform:none}
+}
 @media(max-width:1100px){
   .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .detail-sections{grid-template-columns:1fr}
