@@ -78,8 +78,9 @@ button{cursor:pointer}
 .device-switch button{border:0;background:transparent;border-radius:9px;padding:8px 12px;font-size:12px;font-weight:650}
 .device-switch button.active{background:#171717;color:#fff}
 .preview-stage{background:#141414;border-radius:24px;padding:28px 24px 92px;min-height:720px;position:relative;overflow:hidden}
-.preview-frame-wrap{margin:0 auto;transition:.28s ease;width:100%;height:620px}
-.preview-frame-wrap.mobile{width:390px}
+.preview-frame-wrap{margin:0 auto;transition:width .28s ease;width:100%;height:620px;max-width:100%}
+.preview-frame-wrap.tablet{width:min(820px,100%)}
+.preview-frame-wrap.mobile{width:min(390px,100%)}
 .preview-frame{width:100%;height:100%;border:0;border-radius:16px;background:#fff;box-shadow:0 25px 65px rgba(0,0,0,.45)}
 .action-rail{position:absolute;bottom:18px;left:18px;right:18px;background:rgba(255,255,255,.96);backdrop-filter:blur(18px);border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 12px 32px rgba(0,0,0,.18)}
 .action-rail strong{font-size:16px;letter-spacing:-.02em}
