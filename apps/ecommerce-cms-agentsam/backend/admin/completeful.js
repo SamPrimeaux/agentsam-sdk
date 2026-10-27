@@ -121,6 +121,8 @@ async function status(env) {
     provider: "completeful",
     api_base: await completefulApiBase(env),
     key_mode: mode,
+    credential_source: env.COMPLETEFUL_CREDENTIAL_SOURCE || (mode === "missing" ? null : "worker_secret"),
+    setup_href: "/settings/keys?add=completeful",
     allow_live_writes: completefulLiveWritesAllowed(env),
     primary_shop: primaryShop,
     sync,
@@ -180,6 +182,13 @@ export async function handleCompletefulAdminApi(request, env, url) {
     }
 
     if (path === "/api/admin/completeful/catalog/sync" && method === "POST") {
+      if (completefulKeyMode(env) === "missing") {
+        return json({
+          ok: false, error: "Connect your Completeful API key in AgentSam Keys & Secrets.",
+          code: "completeful_not_configured",
+          setup_href: "/settings/keys?add=completeful",
+        }, { status: 503 });
+      }
       const body = await readJson(request);
       const result = await syncCompletefulCatalog(env, {
         reset: body.reset !== false,

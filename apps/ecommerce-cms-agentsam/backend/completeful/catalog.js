@@ -79,7 +79,20 @@ export async function getCompletefulSyncState(env) {
 }
 
 export async function getCompletefulCounts(env) {
-  return env.DB.prepare(
+  // The Completeful catalog schema is installed independently from the
+  // optional webhook-subscription registry on a fresh AgentSam D1 instance.
+  // Never take down the product catalog/status when that optional table is absent.
+  let subscriptions = 0;
+  try {
+    const row = await env.DB.prepare(
+      "SELECT COUNT(*) AS n FROM agentsam_webhooks "
+      + "WHERE provider = 'completeful' AND status != 'retired'",
+    ).first();
+    subscriptions = Number(row?.n || 0);
+  } catch (error) {
+    if (!/no such table: agentsam_webhooks/i.test(String(error?.message || error))) throw error;
+  }
+  const counts = await env.DB.prepare(
     `SELECT
        (SELECT COUNT(*) FROM completeful_shops) AS shops,
        (SELECT COUNT(*) FROM completeful_catalog_products) AS catalog_products,
@@ -91,11 +104,10 @@ export async function getCompletefulCounts(env) {
        (SELECT COUNT(*) FROM completeful_variant_links) AS variant_links,
        (SELECT COUNT(*) FROM completeful_order_links) AS order_links,
        (SELECT COUNT(*) FROM completeful_operations) AS operations,
-       (SELECT COUNT(*) FROM agentsam_webhooks
-         WHERE provider = 'completeful' AND status != 'retired') AS webhook_subscriptions,
        (SELECT COUNT(*) FROM agentsam_webhook_events
          WHERE provider = 'completeful') AS webhook_events`,
   ).first();
+  return { ...counts, webhook_subscriptions: subscriptions };
 }
 
 export async function refreshCompletefulShops(env) {
@@ -419,6 +431,13 @@ export async function statementsForCatalogProduct(env, product, syncToken, reque
 }
 
 export async function syncCompletefulCatalog(env, options = {}) {
+  // A fresh D1 installation has a valid sync-state table but no seed row.
+  // Create it only when the authenticated user starts a real supplier sync.
+  await env.DB.prepare(
+    "INSERT INTO completeful_catalog_sync_state (id, status) VALUES (1, 'never') "
+    + "ON CONFLICT(id) DO NOTHING",
+  ).run();
+
   const reset = options.reset !== false;
   const limit = clampInt(options.limit, DEFAULT_PAGE_LIMIT, 1, MAX_PAGE_LIMIT);
   const maxPages = clampInt(options.max_pages ?? options.maxPages, DEFAULT_MAX_PAGES, 1, MAX_SYNC_PAGES);

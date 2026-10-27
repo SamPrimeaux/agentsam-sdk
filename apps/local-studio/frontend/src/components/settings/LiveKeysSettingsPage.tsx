@@ -16,7 +16,9 @@ export function LiveKeysSettingsPage() {
   const [credRefresh, setCredRefresh] = useState(0);
   const [secretRefresh, setSecretRefresh] = useState(0);
   const [mintOpen, setMintOpen] = useState(false);
-  const [addSecretOpen, setAddSecretOpen] = useState(false);
+  const setupCompleteful = typeof window !== "undefined"
+    && new URLSearchParams(window.location.search).get("add") === "completeful";
+  const [addSecretOpen, setAddSecretOpen] = useState(setupCompleteful);
   const packaged = isPackagedDesktop();
   const [signedIn, setSignedIn] = useState(!packaged);
   const [identityReady, setIdentityReady] = useState(!packaged);
@@ -40,6 +42,11 @@ export function LiveKeysSettingsPage() {
             </span>
             <h1 className="text-lg font-semibold tracking-tight text-foreground">Keys & Secrets</h1>
           </div>
+          {setupCompleteful ? (
+            <a href="/admin/products/create" className="mt-2 inline-flex text-sm text-accent underline underline-offset-4">
+              Return to Product Studio
+            </a>
+          ) : null}
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Mint AgentSam account (aak_ / AGENTSAM_API_KEY) or service (brk_ / AGENTSAM_BRIDGE_KEY)
             credentials, and store provider BYOK for Studio chat and terminal. Names are yours — no
@@ -99,6 +106,7 @@ export function LiveKeysSettingsPage() {
           onMinted={() => setCredRefresh((n) => n + 1)}
         />
         <AddKeyModal
+          initialService={setupCompleteful ? "completeful" : "openai"}
           open={addSecretOpen}
           onOpenChange={setAddSecretOpen}
           onSaved={refreshSecrets}

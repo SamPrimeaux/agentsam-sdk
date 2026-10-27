@@ -77,6 +77,19 @@ try {
     }
     console.log(`PASS ${pathname}: ${response.status}`);
   }
+  // Protected Completeful routes must reach the JSON API, never fall through
+  // to a static HTML page or an unhandled Worker exception.
+  for (const pathname of [
+    '/api/admin/completeful/status',
+    '/api/admin/completeful/catalog?category=apparel',
+  ]) {
+    const response = await request(pathname);
+    const contentType = response.headers.get('content-type') || '';
+    if (response.status !== 401 || !contentType.includes('application/json')) {
+      throw new Error(`${pathname} expected protected JSON 401, got ${response.status}: ${contentType}`);
+    }
+    console.log(`PASS ${pathname}: authenticated JSON route`);
+  }
   // The platform must never serve the embedded customer's legacy login
   // or send AgentSam credentials to /api/admin/login.
   for (const legacyLogin of [

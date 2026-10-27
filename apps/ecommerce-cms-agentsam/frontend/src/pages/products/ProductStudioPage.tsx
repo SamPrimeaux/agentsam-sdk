@@ -57,6 +57,7 @@ export default function ProductStudioPage() {
   const [refresh, setRefresh] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [syncHealth, setSyncHealth] = useState<CatalogSyncHealth | null>(null);
+  const [completefulConfigured, setCompletefulConfigured] = useState<boolean | null>(null);
   const [notice, setNotice] = useState("");
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [catalogWarning, setCatalogWarning] = useState("");
@@ -77,7 +78,7 @@ export default function ProductStudioPage() {
     return () => clearTimeout(timer);
   }, [query]);
   useEffect(() => {
-    if (productId) return;
+    if (productId || isPlatformCategory) return;
     const controller = new AbortController();
     queueMicrotask(() => {
       if (!controller.signal.aborted) {
@@ -111,7 +112,7 @@ export default function ProductStudioPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [search, offset, refresh, productId, category]);
+  }, [search, offset, refresh, productId, category, isPlatformCategory]);
   useEffect(() => {
     if (!productId) return;
     const controller = new AbortController();
@@ -164,9 +165,19 @@ export default function ProductStudioPage() {
   useEffect(() => {
     if (productId) return;
     const controller = new AbortController();
-    adminFetch<{ sync?: CatalogSyncHealth }>("/api/admin/completeful/status", { signal: controller.signal })
-      .then((data) => { if (!controller.signal.aborted) setSyncHealth(data.sync || null); })
-      .catch(() => { if (!controller.signal.aborted) setSyncHealth(null); });
+    adminFetch<{ sync?: CatalogSyncHealth; configured: boolean }>("/api/admin/completeful/status", { signal: controller.signal })
+      .then((data) => {
+        if (!controller.signal.aborted) {
+          setSyncHealth(data.sync || null);
+          setCompletefulConfigured(data.configured);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setSyncHealth(null);
+          setCompletefulConfigured(null);
+        }
+      });
     return () => controller.abort();
   }, [productId, refresh]);
   const stopSync = useRef(false);
@@ -177,7 +188,14 @@ export default function ProductStudioPage() {
     setError("");
     setNotice("Connecting to Completeful…");
     try {
-      const state = await adminFetch<{ sync?: { next_cursor?: string; status?: string } }>("/api/admin/completeful/status");
+      const state = await adminFetch<{
+        configured: boolean; sync?: { next_cursor?: string; status?: string };
+      }>("/api/admin/completeful/status");
+      if (!state.configured) {
+        setCompletefulConfigured(false);
+        setNotice("Connect Completeful in AgentSam Keys & Secrets, then refresh your products.");
+        return;
+      }
       let reset = !state.sync?.next_cursor;
       let failures = 0;
       while (!stopSync.current) {
@@ -358,6 +376,16 @@ export default function ProductStudioPage() {
                 </>
               ) : (
                 <>
+              {completefulConfigured === false && (
+                <div className="ps-feedback" role="status">
+                  <strong>Connect Completeful to browse real supplier products</strong>
+                  <p>Your AgentSam catalog is separate from Fuel N Free Time. Add your own
+                    Completeful key in the existing account vault, then sync the catalog into this D1.</p>
+                  <a className="ps-button ps-primary" href="/settings/keys?add=completeful">
+                    Connect Completeful
+                  </a>
+                </div>
+              )}
               {(syncHealth?.status === "error" || syncHealth?.status === "partial") && (
                 <div className="ps-catalog-sync-alert" role="alert">
                   <strong>{syncHealth.status === "error" ? "Completeful catalog refresh failed" : "Completeful catalog refresh incomplete"}</strong>
@@ -439,17 +467,16 @@ export default function ProductStudioPage() {
                       ? "Try a product, material, or print method."
                       : "Load the latest Completeful products to explore images, options, and print areas."}
                   </p>
-                  <button
-                    className="ps-button ps-primary"
-                    disabled={syncing}
-                    onClick={search ? () => setQuery("") : syncCatalog}
-                  >
-                    {search
-                      ? "See all products"
-                      : syncing
-                        ? "Loading catalog…"
-                        : "Load products"}
-                  </button>
+                  {completefulConfigured === false ? (
+                    <a className="ps-button ps-primary" href="/settings/keys?add=completeful">
+                      Connect Completeful
+                    </a>
+                  ) : (
+                    <button className="ps-button ps-primary" disabled={syncing}
+                      onClick={search ? () => setQuery("") : syncCatalog}>
+                      {search ? "See all products" : syncing ? "Loading catalog…" : "Load products"}
+                    </button>
+                  )}
                 </div>
               )}
               <div className="ps-catalog-grid" aria-busy={loading}>

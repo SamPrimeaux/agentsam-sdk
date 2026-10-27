@@ -13,6 +13,7 @@ const SERVICES = [
   { value: "xai", label: "xAI / Grok" },
   { value: "cursor", label: "Cursor" },
   { value: "cloudflare", label: "Cloudflare" },
+  { value: "completeful", label: "Completeful (product supplier)" },
   { value: "meshy", label: "Meshy" },
   { value: "resend", label: "Resend" },
   { value: "tavily", label: "Tavily" },
@@ -28,10 +29,12 @@ export function AddKeyModal({
   open,
   onOpenChange,
   onSaved,
+  initialService = "openai",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
+  initialService?: (typeof SERVICES)[number]["value"];
 }) {
   const [service, setService] = useState<(typeof SERVICES)[number]["value"]>("openai");
   const [name, setName] = useState("");
@@ -46,8 +49,8 @@ export function AddKeyModal({
     setName("");
     setValue("");
     setShowValue(false);
-    setService("openai");
-  }, [open]);
+    setService(initialService);
+  }, [open, initialService]);
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
