@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { listCanonicalPageRows } from "../backend/cms/page-inventory.mjs";
+import { resolveSingleCmsAccount } from "../backend/cms/studio-bridge.js";
 
 function fixture() {
   const sqlite = new DatabaseSync(":memory:");
