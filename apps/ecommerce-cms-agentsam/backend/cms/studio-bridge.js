@@ -10,6 +10,16 @@ import { verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from './studio-
 
 const PREFIX='/api/internal/studio-cms/';
 const WRITE_METHODS=new Set(['POST','PUT','PATCH','DELETE']);
+// A store Worker owns one ecommerce CMS account. Resolve it from the installed
+// canonical pages rather than taking an account ID from a signed remote actor.
+// Multi-account deployments must provide a project-to-account mapping instead.
+export async function resolveSingleCmsAccount(env) {
+  const {results=[]}=await env.DB.prepare(
+    'SELECT account_id FROM cms_pages GROUP BY account_id LIMIT 2'
+  ).all();
+  if(results.length!==1) throw new Error('cms_bridge_account_scope_ambiguous');
+  return results[0].account_id;
+}
 function error(code,status){return Response.json({ok:false,error:code},{status,headers:{'cache-control':'no-store'}});}
 
 export async function handleStudioCmsBridge(request,env){
@@ -57,7 +67,7 @@ export async function handleStudioCmsBridge(request,env){
   if(WRITE_METHODS.has(method))opts.body=request.body;
   try{
     const { handleAdminCmsApi } = await import('./api.js');
-    const upstream=await handleAdminCmsApi(new Request(adminUrl,opts),env,adminUrl);
+    const upstream=await handleAdminCmsApi(new Request(adminUrl,opts),env,adminUrl,{accountId:await resolveSingleCmsAccount(env)});
     if(!upstream)return error('cms_bridge_route_not_found',404);
     const response=new Response(upstream.body,upstream);
     response.headers.set('cache-control','no-store');

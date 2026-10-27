@@ -2,6 +2,7 @@ import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
 import { readCanonicalComposition } from "./canonical-composition.mjs";
+import { listCanonicalPageRows } from "./page-inventory.mjs";
 import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
 import { reconcileCanonicalBlocks } from "../../cms/authoring/block-projection.ts";
 import { validateThemeSettings, validateThemeCss } from "./theme-style-contract.mjs";
@@ -530,29 +531,28 @@ export async function getPreviewPage(env, slug) {
   };
 }
 
-export async function listPagesAdmin(env) {
-  const { results } = await env.DB.prepare(
-    `SELECT p.id, p.slug, p.title, p.status, p.updated_at,
-            (SELECT COUNT(*) FROM page_sections s WHERE s.page_id = p.id) AS section_count,
-            (SELECT content_json FROM page_sections s
-             WHERE s.page_id = p.id ORDER BY sort_order ASC, id ASC LIMIT 1) AS preview_json
-     FROM pages p
-     ORDER BY p.title ASC`
-  ).all();
-
+export async function listPagesAdmin(env, accountId) {
+  // Site-owned canonical instances are the page inventory authority.
+  // Legacy page/section pointers are consumed only by the existing editor and
+  // storefront renderer until their R2 revisions are fully reconciled.
+  const rows = await listCanonicalPageRows(env.DB, accountId);
   const pages = [];
-  for (const row of results) {
-    const published = await getPublishedPage(env, row.slug);
-    const content = await loadSectionsFromDb(env, row.slug, row.id);
+  for (const row of rows) {
+    const legacyId = row.legacy_page_id == null ? null : Number(row.legacy_page_id);
+    const published = legacyId == null ? null : await getPublishedPage(env, row.slug);
+    const content = legacyId == null ? [] : await loadSectionsFromDb(env, row.slug, legacyId);
     const linked = content.some((section) => section.content?.__editor?.source === "live-storefront");
+    const canonicalPreview = extractPreview(parseContent(row.preview_json));
     pages.push({
       id: row.id,
+      legacy_page_id: legacyId,
       slug: row.slug,
       title: row.title,
       status: row.status,
       updated_at: row.updated_at,
       section_count: row.section_count,
-      preview: await previewForPage(env, row.slug, row.id, row.preview_json),
+      preview: canonicalPreview || (legacyId == null ? "" : await previewForPage(env, row.slug, legacyId, null)),
+      source: "cms-d1",
       ...resolvePageAuthority(row.slug, CMS_STOREFRONT_ROUTES, {
         seeded: true,
         cmsPublished: Boolean(published),
@@ -561,6 +561,8 @@ export async function listPagesAdmin(env) {
     });
   }
 
+  // The route catalog may expose a live page that has not been imported yet.
+  // Clearly distinguish that discovery-only entry from a real CMS document.
   const existing = new Set(pages.map((page) => page.slug));
   for (const registryPage of listRegistryPages()) {
     if (existing.has(registryPage.slug)) continue;
@@ -578,7 +580,7 @@ export async function listPagesAdmin(env) {
   }
 
   pages.sort((a, b) => String(a.title || a.slug).localeCompare(String(b.title || b.slug)));
-  return { ok: true, pages };
+  return { ok: true, source: "cms_pages+cms_page_sections", pages };
 }
 
 export async function getPageAdmin(env, slug) {
@@ -1784,7 +1786,8 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   }
 
   if (path === "/api/admin/cms/pages" && method === "GET") {
-    return json(await listPagesAdmin(env));
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    return json(await listPagesAdmin(env, context.accountId));
   }
 
   let m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)$/);
