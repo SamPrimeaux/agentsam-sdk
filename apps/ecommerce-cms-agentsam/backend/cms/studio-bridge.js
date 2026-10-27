@@ -67,7 +67,7 @@ export async function handleStudioCmsBridge(request,env){
   if(WRITE_METHODS.has(method))opts.body=request.body;
   try{
     const { handleAdminCmsApi } = await import('./api.js');
-    const upstream=await handleAdminCmsApi(new Request(adminUrl,opts),env,adminUrl);
+    const upstream=await handleAdminCmsApi(new Request(adminUrl,opts),env,adminUrl,{accountId:await resolveSingleCmsAccount(env)});
     if(!upstream)return error('cms_bridge_route_not_found',404);
     const response=new Response(upstream.body,upstream);
     response.headers.set('cache-control','no-store');
