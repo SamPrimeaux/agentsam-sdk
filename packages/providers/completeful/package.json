@@ -55,5 +55,6 @@
   "types": "./src/index.d.ts",
   "devDependencies": {
     "typescript": "^5.9.3"
-  }
+  },
+  "releaseTrain": "independent"
 }

@@ -60,15 +60,19 @@ const workspaces = files
   .map((file) => ({ file, manifest: read(file) }))
   .filter(({ manifest }) => manifest.name?.startsWith('@inneranimalmedia/'));
 const workspaceNames = new Set(workspaces.map(({ manifest }) => manifest.name));
+const workspaceByName = new Map(workspaces.map(({ manifest }) => [manifest.name, manifest]));
+const isIndependentlyVersioned = (manifest) => manifest.releaseTrain === 'independent';
+
 
 function relative(file) {
   return path.relative(root, file) || 'package.json';
 }
 
-function expectedDependencyVersion(spec) {
-  // This monorepo intentionally uses an exact first-party release train. Keeping
-  // one syntax also makes packed-consumer and registry verification deterministic.
-  return targetVersion;
+function expectedDependencyVersion(name) {
+  // Exact first-party pins: independently released public packages use their
+  // own version, while the coordinated SDK packages use the train version.
+  const manifest = workspaceByName.get(name);
+  return manifest && isIndependentlyVersioned(manifest) ? manifest.version : targetVersion;
 }
 
 function releaseManifestDrift() {
@@ -107,14 +111,17 @@ function check() {
     // Private source workspaces (including CAD kernels) are bundled by their
     // public host packages and deliberately keep their own local versions.
     if (isPrivate) continue;
-    if (manifest.version !== targetVersion) {
+    if (manifest.releaseTrain && !['independent', 'coordinated'].includes(manifest.releaseTrain)) {
+      failures.push(manifest.name + ': invalid releaseTrain policy ' + manifest.releaseTrain);
+    }
+    if (!isIndependentlyVersioned(manifest) && manifest.version !== targetVersion) {
       failures.push(`${manifest.name}: version ${manifest.version || '<missing>'} != ${targetVersion} (${relative(file)})`);
     }
     for (const section of sections) {
       for (const [name, spec] of Object.entries(manifest[section] || {})) {
         if (!workspaceNames.has(name)) continue;
         dependencyEdges += 1;
-        const expected = expectedDependencyVersion(spec);
+        const expected = expectedDependencyVersion(name);
         if (spec !== expected) {
           failures.push(`${manifest.name}: ${section}.${name}=${spec} != ${expected} (${relative(file)})`);
         }
@@ -160,7 +167,7 @@ function align() {
   let changedEdges = 0;
   for (const { file, manifest } of workspaces) {
     let changed = false;
-    if (manifest.version !== targetVersion) {
+    if (!isIndependentlyVersioned(manifest) && manifest.version !== targetVersion) {
       manifest.version = targetVersion;
       changedVersions += 1;
       changed = true;
@@ -169,7 +176,7 @@ function align() {
       if (!manifest[section]) continue;
       for (const [name, spec] of Object.entries(manifest[section])) {
         if (!workspaceNames.has(name)) continue;
-        const expected = expectedDependencyVersion(spec);
+        const expected = expectedDependencyVersion(name);
         if (spec !== expected) {
           manifest[section][name] = expected;
           changedEdges += 1;
