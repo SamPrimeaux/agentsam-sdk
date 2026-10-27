@@ -1,8 +1,13 @@
 function setDevice(device){
   const wrap=document.querySelector('.preview-frame-wrap');
-  if(!wrap)return;
+  if(!wrap || !['desktop','tablet','mobile'].includes(device))return;
+  wrap.classList.toggle('tablet',device==='tablet');
   wrap.classList.toggle('mobile',device==='mobile');
-  document.querySelectorAll('[data-device]').forEach(b=>b.classList.toggle('active',b.dataset.device===device));
+  document.querySelectorAll('[data-device]').forEach(button=>{
+    const active=button.dataset.device===device;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  });
 }
 function openUse(slug,name,features){
   const modal=document.getElementById('use-modal');
