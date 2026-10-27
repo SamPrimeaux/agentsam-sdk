@@ -13,6 +13,20 @@ test("universal creation palette resolves from console theme", () => {
   }
 });
 
+test("home creation hero uses the console theme in both light and dark modes", () => {
+  const css = source("static/css/home-workspace.css");
+  const region = css.split("/* Compact presentation of Product Studio's existing ps-hero composition. */")[1]
+    .split("@media (prefers-reduced-motion: reduce)")[0];
+  const hero = region.split("\n").filter((line) => line.includes("fnf-home-create-hero") ||
+    line.includes("var(--c-") || line.includes("color-mix(")).join("\n");
+  for (const token of ["--c-surface", "--c-surface-2", "--c-line", "--c-muted",
+    "--c-focus", "--c-accent", "--c-accent-ink", "--c-ink"]) {
+    assert.ok(hero.includes("var(" + token + ")"), "Missing theme token " + token);
+  }
+  // No styling regression to the retired fixed olive palette.
+  assert.doesNotMatch(hero, /#(?:f0f2e9|e8ecdf|778961|77836b|94a67a|29341820)\b/i);
+});
+
 test("navigation toggle morphs in place at upper-left, with persistent DOM and aria state", () => {
   const shell = source("shell.js");
   const css = source("static/css/console.css");
