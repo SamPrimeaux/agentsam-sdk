@@ -1610,10 +1610,12 @@ body.console-theme.console-nav-collapsed { --c-nav-w: 0px; }
 .console-nav-ghost-toggle--persistent {
   position: fixed;
   top: 0;
-  left: var(--c-nav-w, 0px);
-  z-index: 170;
+  /* Always occupy the actual top-left corner, including when the rail is open.
+     This button transforms in place: it must not travel alongside the rail. */
+  left: 0;
+  z-index: 180;
   display: inline-flex;
-  width: 46px;
+  width: 52px;
   height: var(--c-topbar-h, 56px);
   border: 0;
   border-right: 1px solid rgba(255,255,255,.1);
@@ -1623,7 +1625,7 @@ body.console-theme.console-nav-collapsed { --c-nav-w: 0px; }
   box-shadow: none;
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  transition: left .28s cubic-bezier(.2,.8,.2,1), background .2s ease;
+  transition: background .2s ease, color .2s ease;
 }
 /* One persistent topbar toggle; profile navigation does not duplicate it. */
 .console-sidenav-profile-row .console-nav-collapse { display: none; }
@@ -2320,4 +2322,36 @@ body.console-nav-collapsed .console-nav-ghost-toggle--persistent:hover::before {
   #agentsam-console-mode-slot .agentsam-mode-host { min-width: 0; width: 100%; max-width: 160px; }
   #agentsam-console-mode-slot .as-nav-mode-switch { width: 100%; min-width: 0; }
   #agentsam-console-mode-slot .as-nav-mode-switch button { min-width: 0; padding-inline: 10px; }
+}
+
+/* Persistent and mobile hamburger-to-X transition; one mounted icon, no swap. */
+.console-nav-ghost-toggle .console-nav-morph {
+  position: relative;
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+.console-nav-morph > span {
+  position: absolute;
+  left: 1px;
+  top: 9px;
+  width: 18px;
+  height: 1.8px;
+  border-radius: 999px;
+  background: currentColor;
+  transform-origin: center;
+  transition: transform 220ms cubic-bezier(.2,.75,.2,1), opacity 140ms ease;
+}
+.console-nav-morph > span:first-child { transform: translateY(-6px); }
+.console-nav-morph > span:nth-child(2) { transform: scaleX(.75); transform-origin: left center; }
+.console-nav-morph > span:last-child { transform: translateY(6px); }
+.console-nav-ghost-toggle.is-expanded .console-nav-morph > span:first-child,
+body.admin-nav-open #admin-menu-toggle .console-nav-morph > span:first-child { transform: rotate(45deg); }
+.console-nav-ghost-toggle.is-expanded .console-nav-morph > span:nth-child(2),
+body.admin-nav-open #admin-menu-toggle .console-nav-morph > span:nth-child(2) { transform: scaleX(0); opacity: 0; }
+.console-nav-ghost-toggle.is-expanded .console-nav-morph > span:last-child,
+body.admin-nav-open #admin-menu-toggle .console-nav-morph > span:last-child { transform: rotate(-45deg); }
+@media (prefers-reduced-motion: reduce) {
+  .console-nav-morph > span { transition: none; }
 }

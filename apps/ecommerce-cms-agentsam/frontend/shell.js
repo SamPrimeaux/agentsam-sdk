@@ -785,8 +785,9 @@ function renderShell(activeHref, mainHtml, options = {}) {
           </div>
           <nav class="console-sidenav admin-nav admin-nav--drawer" data-nav-package="mobile-glass-drawer" style="display:block;width:100%;border:0;background:transparent;padding:0">${renderSideNav(activeHref, null, { drawer: true })}</nav>
         </aside>` : "";
+  const navMorphIcon = `<span class="console-nav-morph" aria-hidden="true"><span></span><span></span><span></span></span>`;
   const mobileDrawerTrigger = includeMobileDrawer ? `<button type="button" class="console-nav-ghost-toggle admin-menu-toggle" id="admin-menu-toggle" aria-label="Show sidebar" title="Show sidebar" aria-expanded="false" aria-controls="admin-drawer">
-          ${icon("textAlignStart", 21, "console-nav-ghost-icon")}
+          ${navMorphIcon}
         </button>` : "";
   const adminChrome = shellMode.hideAdminNav ? "" : `
       <header class="console-topbar">
@@ -818,7 +819,7 @@ function renderShell(activeHref, mainHtml, options = {}) {
       <div class="console-body">
         ${shellMode.hideAdminNav ? "" : `<aside class="console-sidenav admin-sidebar" data-nav-package="persistent-frosted-rail">${renderSideNav(activeHref)}</aside>`}
         ${shellMode.hideAdminNav ? "" : mobileDrawerTrigger}
-        ${shellMode.hideAdminNav ? "" : `<button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">${icon("textAlignStart", 21, "console-nav-ghost-icon")}</button>`}
+        ${shellMode.hideAdminNav ? "" : `<button type="button" class="console-nav-ghost-toggle console-nav-ghost-toggle--persistent" data-console-nav-toggle aria-label="Show sidebar" title="Show sidebar">${navMorphIcon}</button>`}
         ${shellMode.hideAdminNav ? "" : mobileDrawerMarkup}
         <div class="console-workspace">
           <main class="${mainClass}">${mainHtml}</main>
@@ -1057,7 +1058,7 @@ function syncPersistentNavState() {
     button.setAttribute("aria-label", label);
     button.setAttribute("title", label);
     button.setAttribute("aria-expanded", String(!collapsed));
-    button.innerHTML = icon(collapsed ? "textAlignStart" : "arrowLeftToLine", 21, "console-nav-ghost-icon");
+    button.classList.toggle("is-expanded", !collapsed);
   });
 }
 
@@ -1169,6 +1170,8 @@ function initMobileNav() {
     }
     document.body.classList.toggle("admin-nav-open", open);
     toggle.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-label", open ? "Close sidebar" : "Show sidebar");
+    toggle.setAttribute("title", open ? "Close sidebar" : "Show sidebar");
     drawer.setAttribute("aria-hidden", String(!open));
     backdrop?.setAttribute("aria-hidden", String(!open));
   }

@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { adminFetch } from "../../lib/api";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
+import PlatformProductCatalog from "./PlatformProductCatalog";
 import {
   catalogProductId,
   catalogVariantId,
@@ -29,12 +30,13 @@ type CatalogSyncHealth = { status: string; updated_at?: string | null;
   last_error_message?: string | null; page_count?: number; product_count?: number };
 
 const collections = [
-  { name: "Everything", query: "", caption: "Find your next idea" },
-  { name: "Apparel", query: "", category: "apparel", caption: "Shirts, layers & more" },
-  { name: "Tumblers", query: "tumbler", caption: "Everyday essentials" },
-  { name: "Framed decor", query: "frame", caption: "Make a space their own" },
-  { name: "Hats", query: "hat", caption: "Small things. Big personality." },
-];
+  { name: "Applications", key: "applications", caption: "Apps and software" },
+  { name: "Apparel", key: "apparel", caption: "Clothing and garments" },
+  { name: "Accessories", key: "accessories", caption: "Goods and objects" },
+  { name: "Automations", key: "automations", caption: "Agents and workflows" },
+  { name: "Templates", key: "templates", caption: "Reusable starting points" },
+] as const;
+type CreationCategory = typeof collections[number]["key"];
 export default function ProductStudioPage() {
   const navigate = useNavigate();
   const { productId } = useParams();
@@ -42,6 +44,8 @@ export default function ProductStudioPage() {
   const resumeDraftId = new URLSearchParams(location.search).get("resume");
   const surface = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
+  const [creationCategory, setCreationCategory] = useState<CreationCategory>("applications");
+  const isPlatformCategory = creationCategory === "applications" || creationCategory === "automations" || creationCategory === "templates";
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
@@ -284,9 +288,9 @@ export default function ProductStudioPage() {
                     <em>your next idea.</em>
                   </h1>
                   <p>
-                    Discover a product you love. Make it your own.
+                    Discover something to build on. Make it your own.
                     <br />
-                    Bring your artwork, or start with a spark.
+                    Start with an existing product or a fresh idea.
                   </p>
                   <a href="#studio-catalog" className="ps-button ps-primary">
                     Explore the catalog <StudioIcon name="arrow" size={18} />
@@ -330,9 +334,9 @@ export default function ProductStudioPage() {
                 {collections.map((c, i) => (
                   <button
                     key={c.name}
-                    className={query === c.query && category === (c.category || "") ? "is-active" : ""}
-                    onClick={() => { setCategory(c.category || ""); setQuery(c.query); setOffset(0); }}
-                    aria-pressed={query === c.query && category === (c.category || "")}
+                    className={creationCategory === c.key ? "is-active" : ""}
+                    onClick={() => { setCreationCategory(c.key); setCategory(c.key === "apparel" ? "apparel" : ""); setQuery(""); setOffset(0); }}
+                    aria-pressed={creationCategory === c.key}
                   >
                     <span className="ps-collection-number">0{i + 1}</span>
                     <strong>{c.name}</strong>
@@ -340,6 +344,20 @@ export default function ProductStudioPage() {
                   </button>
                 ))}
               </div>
+              {isPlatformCategory ? (
+                <>
+                  <div className="ps-search-row">
+                    <label className="ps-search">
+                      <StudioIcon name="search" />
+                      <input type="search" aria-label="Search AgentSam products"
+                        placeholder="Search your products, packages, templates…"
+                        value={query} onChange={(e) => setQuery(e.target.value)} />
+                    </label>
+                  </div>
+                  <PlatformProductCatalog kind={creationCategory as "applications" | "automations" | "templates"} search={query} refresh={refresh} />
+                </>
+              ) : (
+                <>
               {(syncHealth?.status === "error" || syncHealth?.status === "partial") && (
                 <div className="ps-catalog-sync-alert" role="alert">
                   <strong>{syncHealth.status === "error" ? "Completeful catalog refresh failed" : "Completeful catalog refresh incomplete"}</strong>
@@ -516,6 +534,8 @@ export default function ProductStudioPage() {
                   Brainstorm with AgentSam <StudioIcon name="arrow" size={16} />
                 </a>
               </footer>
+                </>
+              )}
             </>
           ) : (
             <>

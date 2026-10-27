@@ -2564,3 +2564,54 @@ body.product-studio-focused .product-studio-shell { padding: 0; min-height: calc
 }
 .product-studio-shell .ps-product-badge { background: var(--c-surface, #fff); color: var(--ps-ink); }
 .product-studio-shell .ps-search { color: var(--ps-muted); }
+
+/* AgentSam registered products within the existing creation page. */
+.ps-platform-description {
+  color: var(--ps-muted);
+  font-size: 12px;
+  margin: -8px 0 15px;
+}
+.ps-platform > .ps-result-count { display: block; margin: 0 0 18px; }
+.ps-platform-card .ps-product-photo {
+  border: 1px solid var(--ps-line);
+  background: var(--c-surface, var(--ps-paper));
+}
+.ps-platform-initials {
+  font-size: clamp(26px, 5vw, 50px);
+  font-weight: 650;
+  color: var(--ps-muted);
+  letter-spacing: -.07em;
+}
+.ps-platform-inspector {
+  scroll-margin-top: 82px;
+  border: 1px solid var(--ps-line);
+  background: var(--c-surface, var(--ps-paper));
+  border-radius: 17px;
+  padding: clamp(18px, 3vw, 30px);
+  margin-top: 30px;
+}
+.ps-platform-inspector-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.ps-platform-inspector h3 { font-size: 23px; margin: 8px 0 0; }
+.ps-platform-inspector > p { font-size: 12px; line-height: 1.6; color: var(--ps-muted); }
+.ps-platform-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 15px; }
+.ps-platform-fields label { display: flex; flex-direction: column; gap: 7px; font-size: 12px; font-weight: 600; }
+.ps-platform-fields input, .ps-platform-fields textarea {
+  width: 100%;
+  border: 1px solid var(--ps-line);
+  background: var(--c-surface-2, var(--ps-paper));
+  color: var(--ps-ink);
+  border-radius: 9px;
+  min-height: 43px;
+  padding: 11px;
+  font: inherit;
+}
+.ps-platform-wide { grid-column: 1 / -1; }
+.ps-platform-wide > .ps-result-count { margin-left: 10px; }
+@media (max-width:650px) {
+  .ps-platform-fields { grid-template-columns: 1fr; }
+}
