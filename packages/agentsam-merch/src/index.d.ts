@@ -314,3 +314,18 @@ export function completefulProfileContext(
   location?: Record<string, unknown>,
 ): Readonly<Record<string, unknown>>;
 export function completefulTarget(location?: Record<string, unknown>): Readonly<ManufacturingTarget>;
+
+
+// Portable collection planning and merchandising presentation contracts.
+export {
+  MERCH_ASSORTMENT_RECIPES, assortmentSearchTerms, DEFAULT_COLLECTION_RULES,
+  normalizeCollectionRules, matchesCollectionRules, resolveCollectionMembers,
+} from "./collection-planning.js";
+export type { MerchCollectionRules, MerchCollectionRuleCondition, MerchAssortmentRecipe } from "./collection-planning.js";
+export {
+  normalizeMerchHero, parseMerchHero, renderMerchHero, serializeMerchHero,
+} from "./merch-hero.js";
+export type { MerchHeroInput } from "./merch-hero.js";
+
+export { collectionShowcaseStyle, renderMerchCollectionShowcase } from "./collection-showcase.js";
+export type { MerchShowcaseInput, MerchShowcaseProduct } from "./collection-showcase.js";
