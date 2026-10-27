@@ -61,7 +61,7 @@ function AccountRoute() {
 function ProductStudioRoute() {
   const { productId } = useParams();
   useEffect(() => {
-    document.title = "Create & Explore Designs — Fuel & Free Time Admin";
+    document.title = "Create & Explore — Product Studio";
   }, []);
   return <ProductStudioPage key={productId || "catalog"} />;
 }

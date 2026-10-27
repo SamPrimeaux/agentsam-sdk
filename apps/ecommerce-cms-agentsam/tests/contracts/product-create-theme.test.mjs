@@ -47,4 +47,6 @@ test("Product Create uses existing account product endpoint and Completeful cata
   assert.match(studio, /PlatformProductCatalog/);
   assert.match(studio, /<StudioWorkspace/);
   assert.match(studio, /\/api\/admin\/completeful\/catalog/);
+  const routes = source("src/App.tsx");
+  assert.match(routes, /Create & Explore — Product Studio/);
 });
