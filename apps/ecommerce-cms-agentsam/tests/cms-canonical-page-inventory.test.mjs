@@ -61,3 +61,19 @@ test("a site with only canonical records is listable without legacy tables", asy
     await assert.rejects(listCanonicalPageRows(db, ""), /account_required/);
   } finally { sqlite.close(); }
 });
+
+test("signed remote CMS account resolver refuses ambiguous D1 scope", async () => {
+  const { sqlite } = fixture();
+  const env = {
+    DB: {
+      prepare(sql) {
+        return { async all() { return { results: sqlite.prepare(sql).all() }; } };
+      },
+    },
+  };
+  try {
+    await assert.rejects(resolveSingleCmsAccount(env), /account_scope_ambiguous/);
+    sqlite.exec("DELETE FROM cms_pages WHERE account_id = 'account-b'");
+    assert.equal(await resolveSingleCmsAccount(env), "account-a");
+  } finally { sqlite.close(); }
+});
