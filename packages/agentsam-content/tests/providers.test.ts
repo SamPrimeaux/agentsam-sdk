@@ -40,7 +40,7 @@ describe("providers", () => {
 
     const listed = await p.list();
     expect(listed.objects[0]?.ref).toBe("img1");
-    expect(calls[0]).toContain("/accounts/acc/images/v1");
+    expect(calls[0]).toContain("/accounts/acc/images/v2");
 
     expect(p.deliveryUrl("img1", { width: 1280, format: "avif" })).toBe(
       "https://imagedelivery.net/HASH/img1/w=1280,f=avif",
