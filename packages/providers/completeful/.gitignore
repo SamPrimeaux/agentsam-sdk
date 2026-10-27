@@ -1,0 +1,2 @@
+# TypeScript outputs are generated before packaging, not hand-edited source.
+dist/

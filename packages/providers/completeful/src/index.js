@@ -4,6 +4,9 @@ export {
   completefulApiBase,
   completefulKeyMode,
   createCompletefulClient,
+  CompletefulContractError,
+  COMPLETEFUL_CONTRACT,
+  COMPLETEFUL_OPERATIONS,
 } from './client.js';
 
 export {

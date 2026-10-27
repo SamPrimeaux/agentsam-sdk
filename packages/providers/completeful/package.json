@@ -1,22 +1,43 @@
 {
   "name": "@inneranimalmedia/agentsam-provider-completeful",
-  "version": "2.6.13",
+  "version": "2.6.14",
   "private": false,
   "description": "Portable Completeful provider adapter and AgentSam tool definitions.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js",
-    "./client": "./src/client.js",
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./src/client.js"
+    },
     "./tools": "./src/tools.js",
     "./webhooks": "./src/webhooks.js",
-    "./events": "./src/events.js"
+    "./events": "./src/events.js",
+    "./api": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./types": {
+      "types": "./dist/generated/types.generated.d.ts",
+      "default": "./dist/generated/operations.generated.js"
+    }
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "npm run build && npm run typecheck:consumer && node --test test/*.test.mjs",
+    "build": "npm run generate:check && tsc -p tsconfig.json",
+    "generate": "node scripts/generate.mjs",
+    "generate:check": "node scripts/generate.mjs --check",
+    "typecheck:consumer": "tsc -p test/types/tsconfig.json",
+    "prepack": "npm run build"
   },
   "files": [
+    "dist",
     "src",
+    "openapi",
     "README.md"
   ],
   "engines": {
@@ -30,5 +51,9 @@
     "type": "git",
     "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
     "directory": "packages/providers/completeful"
+  },
+  "types": "./src/index.d.ts",
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
