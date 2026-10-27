@@ -51,9 +51,15 @@ button{cursor:pointer}
 .control{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:#333;min-width:0}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;padding-bottom:72px}
 .theme-card{background:#fff;border:1px solid #e1e1dc;border-radius:18px;overflow:hidden;transition:.2s ease;min-width:0;display:block;color:inherit}
-.theme-card:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(20,20,20,.11);border-color:#cfcfca}
-.card-preview{height:280px;padding:12px;background:#e9e9e4;overflow:hidden;position:relative}
-.card-preview iframe{width:1280px;height:800px;border:0;border-radius:10px;transform:scale(.22);transform-origin:top left;pointer-events:none;background:#fff}
+.theme-card:hover,.theme-card:focus-visible{transform:translateY(-3px);box-shadow:0 18px 40px rgba(20,20,20,.11);border-color:#bcbcb6}
+.theme-card:focus-visible{outline:3px solid #7551c9;outline-offset:3px}
+.card-preview{height:280px;padding:12px;background:#e9e9e4;overflow:hidden;position:relative;isolation:isolate}
+.card-preview iframe{width:1280px;height:800px;border:0;border-radius:10px;transform:scale(.22);transform-origin:top left;pointer-events:none;background:#fff;transition:filter .3s ease}
+.card-preview::before{content:"";position:absolute;inset:0;z-index:1;background:rgba(17,17,17,.18);opacity:0;pointer-events:none;transition:opacity .3s ease}
+.card-preview::after{content:"Explore live preview ↗";position:absolute;z-index:2;top:50%;left:50%;transform:translate(-50%,-40%);color:#171717;background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.3);box-shadow:0 12px 36px rgba(0,0,0,.2);border-radius:999px;padding:12px 18px;font-size:13px;font-weight:750;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .3s ease,transform .3s ease}
+.theme-card:hover .card-preview iframe,.theme-card:focus-visible .card-preview iframe{filter:blur(4px) brightness(.83)}
+.theme-card:hover .card-preview::before,.theme-card:hover .card-preview::after,.theme-card:focus-visible .card-preview::before,.theme-card:focus-visible .card-preview::after{opacity:1}
+.theme-card:hover .card-preview::after,.theme-card:focus-visible .card-preview::after{transform:translate(-50%,-50%)}
 .card-info{padding:15px 16px 16px}
 .card-top{display:flex;align-items:start;gap:12px}
 .card-title{font-size:17px;font-weight:800;letter-spacing:-.025em}
