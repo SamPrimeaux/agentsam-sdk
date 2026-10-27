@@ -129,17 +129,26 @@ export class CloudflareImagesTransport {
     images: CfImageRecord[];
     nextCursor?: string;
   }> {
-    const page = opts?.cursor ?? "1";
-    const perPage = opts?.limit ?? 100;
-    const res = await this.fetchImpl(`${this.base}?page=${page}&per_page=${perPage}`, {
+    // V1 pagination is deprecated. V2 uses an opaque continuation token; never
+    // infer the next page from result count or catalog an incomplete gallery.
+    const base = this.base.replace(/\/v1\/?$/, "/v2");
+    const perPage = Math.max(10, Math.min(1000, Math.floor(opts?.limit ?? 100)));
+    const params = new URLSearchParams({ per_page: String(perPage) });
+    if (opts?.cursor) params.set("continuation_token", opts.cursor);
+    const res = await this.fetchImpl(`${base}?${params.toString()}`, {
       headers: this.authHeaders(),
     });
     if (!res.ok) throw new Error(`cloudflare-images list failed: ${res.status}`);
-    const body = (await res.json()) as { result?: { images?: CfImageRecord[] } };
-    const images = body.result?.images ?? [];
+    const body = (await res.json()) as {
+      success?: boolean;
+      result?: { images?: CfImageRecord[]; continuation_token?: string };
+    };
+    if (body.success === false || !body.result || !Array.isArray(body.result.images)) {
+      throw new Error("cloudflare-images list returned an invalid response");
+    }
     return {
-      images,
-      nextCursor: images.length === perPage ? String(Number(page) + 1) : undefined,
+      images: body.result.images,
+      nextCursor: body.result.continuation_token || undefined,
     };
   }
 
