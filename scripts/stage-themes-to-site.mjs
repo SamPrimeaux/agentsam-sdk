@@ -222,8 +222,9 @@ function detailPage(t) {
   <div class="detail-head">
     <div class="breadcrumb"><a href="/themes/">Themes</a> / ${esc(t.name)}</div>
     <div class="device-switch">
-      <button type="button" class="active" data-device="desktop" onclick="setDevice('desktop')">Desktop</button>
-      <button type="button" data-device="mobile" onclick="setDevice('mobile')">Mobile</button>
+      <button type="button" class="active" aria-pressed="true" data-device="desktop" onclick="setDevice('desktop')">Desktop</button>
+      <button type="button" aria-pressed="false" data-device="tablet" onclick="setDevice('tablet')">Tablet</button>
+      <button type="button" aria-pressed="false" data-device="mobile" onclick="setDevice('mobile')">Mobile</button>
     </div>
   </div>
   <div class="preview-stage">
