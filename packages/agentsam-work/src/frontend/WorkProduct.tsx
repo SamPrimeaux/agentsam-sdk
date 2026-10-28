@@ -358,7 +358,22 @@ export function WorkProduct({
           }
         />
       ) : null}
-      {surface === "artifacts" ? <ArtifactsSurface artifacts={snapshot.artifacts} /> : null}
+      {surface === "artifacts" ? <ArtifactsSurface
+        artifacts={snapshot.artifacts}
+        onOpenArtifact={host.openArtifact}
+        initialSource={(() => {
+          if (typeof window === "undefined") return "all";
+          const value = new URLSearchParams(window.location.search).get("source");
+          return value === "r2" || value === "local" || value === "google-drive" || value === "shared-drives" || value === "artifacts"
+            ? value : "all";
+        })()}
+        initialView={(() => {
+          if (typeof window === "undefined") return "all";
+          const value = new URLSearchParams(window.location.search).get("view");
+          return value === "recent" || value === "starred" || value === "trash" || value === "shared"
+            ? value : "all";
+        })()}
+      /> : null}
       {surface === "projects" ? (
         <ProjectsSurface
           projects={snapshot.projects}

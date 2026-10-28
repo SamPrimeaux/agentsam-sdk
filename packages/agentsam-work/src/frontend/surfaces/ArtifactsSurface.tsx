@@ -1,5 +1,5 @@
 import { FileArchive, FileCode2, FileImage, FileText, Grid2X2, List } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { WorkArtifact } from "../../contracts/index";
 import { WorkSearch } from "../WorkShell";
 
@@ -10,22 +10,37 @@ function iconFor(kind: WorkArtifact["kind"]) {
   return FileText;
 }
 
-export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
+export function ArtifactsSurface({ artifacts, title = "All sources", heading = "My artifacts",
+  initialSource = "all", initialView = "all", onOpenArtifact,
+  emptyMessage = "No files are registered for this view. Provider connections are not inferred from empty results.",
+}: { artifacts: WorkArtifact[]; title?: string; heading?: string;
+  initialSource?: WorkArtifact["source"] | "all";
+  initialView?: "all" | "recent" | "starred" | "shared" | "trash";
+  emptyMessage?: string;
+  onOpenArtifact?: (artifact: WorkArtifact) => void | Promise<void> }) {
   const [query, setQuery] = useState("");
   const [grid, setGrid] = useState(true);
-  const [source, setSource] = useState<WorkArtifact["source"] | "all">("all");
+  const [source, setSource] = useState<WorkArtifact["source"] | "all">(initialSource);
+  useEffect(() => setSource(initialSource), [initialSource]);
   const [kind, setKind] = useState<WorkArtifact["kind"] | "all">("all");
-  const sources = [...new Set(artifacts.map((artifact) => artifact.source))].sort();
+  const [view, setView] = useState(initialView);
+  useEffect(() => setView(initialView), [initialView]);
+  // Show storage choices even before their adapter has supplied any data.
+  // Empty != disconnected: connection health requires a separate verified provider read.
+  const sources: WorkArtifact["source"][] = ["artifacts", "r2", "google-drive", "shared-drives", "local"];
   const kinds = [...new Set(artifacts.map((artifact) => artifact.kind))].sort();
   const visible = useMemo(
     () => artifacts.filter((artifact) =>
       artifact.name.toLowerCase().includes(query.toLowerCase()) &&
       (source === "all" || artifact.source === source) &&
-      (kind === "all" || artifact.kind === kind),
-    ),
-    [artifacts, query, source, kind],
+      (kind === "all" || artifact.kind === kind) &&
+      (view === "trash" ? artifact.deleted === true : artifact.deleted !== true) &&
+      (view !== "starred" || artifact.starred === true) &&
+      (view !== "shared" || artifact.shared === true)
+    ).sort((a, b) => view === "recent" ? (b.updatedAt || 0) - (a.updatedAt || 0) : 0),
+    [artifacts, query, source, kind, view],
   );
-  const filtered = Boolean(query || source !== "all" || kind !== "all");
+  const filtered = Boolean(query || source !== "all" || kind !== "all" || view !== "all");
 
   return (
     <div className="agentsam-work-artifacts">
@@ -35,7 +50,7 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
 
       <div className="agentsam-work-artifacts__content">
         <div className="agentsam-work-artifacts__heading">
-          <h1>All sources</h1>
+          <h1>{view !== "all" ? view === "shared" ? "Shared with me" : view.charAt(0).toUpperCase()+view.slice(1) : title}</h1>
           <div className="agentsam-work-artifacts__spacer" />
           <button type="button" className="agentsam-work-toolbar-button" data-primary={!grid} onClick={() => setGrid(false)} aria-label="List view">
             <List size={15} /><span>List</span>
@@ -60,19 +75,22 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
         <section className="agentsam-work-card agentsam-work-artifacts__card">
           <div className="agentsam-work-artifacts__card-heading">
             <div>
-              <h2>My artifacts</h2>
-              <div className="agentsam-work-artifacts__subtitle">Saved generations, uploads and AgentSam artifacts</div>
+              <h2>{heading}</h2>
+              <div className="agentsam-work-artifacts__subtitle">Verified registered files, grouped by storage source</div>
             </div>
             <div className="agentsam-work-artifacts__spacer" />
             <span className="agentsam-work-artifacts__muted">{visible.length} items</span>
-            <span className="agentsam-work-artifacts__muted">All account files</span>
+            <span className="agentsam-work-artifacts__muted">Registered sources</span>
           </div>
 
           <div className={`agentsam-work-artifacts__items${grid ? " is-grid" : " is-list"}`}>
             {!visible.length ? (
               <div className="agentsam-work-empty agentsam-work-artifacts__empty">
                 <strong>{artifacts.length > 0 && filtered ? "No matching artifacts" : "No artifacts yet"}</strong>
-                <p>Account-owned files from R2 and connected sources will appear here. This view is not backed by sample fixture content.</p>
+                <p>{view !== "all"
+                  ? "No registered files have verified " + view + " metadata in this provider view. This is not proof the provider is empty."
+                  : source === "all" ? emptyMessage
+                  : "No " + source + " files returned by the active Work storage adapter. An OAuth connection alone does not establish file listing access."}</p>
               </div>
             ) : null}
             {visible.map((artifact) => {
@@ -95,6 +113,11 @@ export function ArtifactsSurface({ artifacts }: { artifacts: WorkArtifact[] }) {
                   <div className="agentsam-work-artifacts__meta">
                     {artifact.source} · {artifact.sizeLabel || "—"} · {artifact.updatedLabel || "—"}
                   </div>
+                  {artifact.source === "local" && onOpenArtifact ?
+                    <button type="button" className="agentsam-work-toolbar-button"
+                      onClick={() => void onOpenArtifact(artifact)}>Open in Files editor</button> : null}
+                  {artifact.preview ? <a className="agentsam-work-toolbar-button" href={artifact.preview}
+                    target="_blank" rel="noopener noreferrer">View preview</a> : null}
                 </article>
               );
             })}

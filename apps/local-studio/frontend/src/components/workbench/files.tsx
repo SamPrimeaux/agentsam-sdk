@@ -126,6 +126,17 @@ function TreeRows({
 
 export function FilesStage({ tab }: { tab: SideTab }) {
   const project = useActiveProject();
+  const workspaces = useWorkStore((s) => s.projects);
+  const selectWorkspace = useWorkStore((s) => s.setActiveProject);
+  const createWorkspace = useWorkStore((s) => s.createProject);
+  const connectHostWorkspace = useWorkStore((s) => s.createFilesystemProject);
+  const [hostLaneOpen, setHostLaneOpen] = useState(false);
+  const [hostLaneName, setHostLaneName] = useState("");
+  const [hostRuntimeUrl, setHostRuntimeUrl] = useState("http://127.0.0.1:3099");
+  const [hostLaneBusy, setHostLaneBusy] = useState(false);
+  const [hostLaneError, setHostLaneError] = useState<string | null>(null);
+  const [newWorkspaceOpen, setNewWorkspaceOpen] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
   const upsertFile = useWorkStore((s) => s.upsertFile);
   const deleteFile = useWorkStore((s) => s.deleteFile);
   const selectFile = useWorkStore((s) => s.selectFile);
@@ -350,7 +361,60 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col md:flex-row">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-sidebar/60 px-2 py-2" aria-label="Editor workspaces">
+        <label className="min-w-0 flex-1 text-[11px] text-muted-foreground">
+          Workspace lane
+          <select aria-label="Active editor workspace" className="mt-1 block min-h-9 w-full min-w-0 rounded-md border border-border bg-background px-2 text-xs text-foreground"
+            value={project.id} onChange={event=>{selectWorkspace(event.target.value);setMobileList(false);}}>
+            {workspaces.map(workspace=><option key={workspace.id} value={workspace.id}>
+              {workspace.name} · {workspace.kind === "filesystem" ? "host" : "scratch"}
+            </option>)}
+          </select>
+        </label>
+        <Button type="button" size="sm" variant="outline" className="self-end"
+          aria-label="New isolated scratch workspace" onClick={()=>setNewWorkspaceOpen(value=>!value)}>
+          <Plus className="size-3.5"/> New
+        </Button>
+        <Button type="button" size="sm" variant="outline" className="self-end"
+          aria-label="Connect an authorized local filesystem lane" onClick={()=>{setHostLaneOpen(value=>!value);setHostLaneError(null);}}>
+          <Folder className="size-3.5"/> Host
+        </Button>
+        {hostLaneOpen&&<form className="flex w-full flex-col gap-2 rounded-md border border-border p-2" onSubmit={event=>{
+          event.preventDefault();
+          if(hostLaneBusy)return;
+          setHostLaneBusy(true);setHostLaneError(null);
+          void connectHostWorkspace({root:"",name:hostLaneName.trim()||undefined,runtimeBaseUrl:hostRuntimeUrl.trim()})
+            .then(()=>{setHostLaneOpen(false);setHostLaneName("");setMobileList(false);})
+            .catch(error=>setHostLaneError(error instanceof Error?error.message:String(error)))
+            .finally(()=>setHostLaneBusy(false));
+        }}>
+          <p className="text-[11px] text-muted-foreground">Attach a local runtime bound to a separate Git worktree. The runtime reports and authorizes its root; the browser cannot choose one.</p>
+          <Input aria-label="Local lane display name" placeholder="Website / CAD / Software"
+            value={hostLaneName} onChange={event=>setHostLaneName(event.target.value)} maxLength={80}/>
+          <Input aria-label="Loopback runtime endpoint" type="url" required
+            value={hostRuntimeUrl} onChange={event=>setHostRuntimeUrl(event.target.value)} />
+          {hostLaneError&&<p role="alert" className="text-xs text-destructive">{hostLaneError}</p>}
+          <Button type="submit" size="sm" disabled={hostLaneBusy}>{hostLaneBusy?"Checking runtime…":"Connect authorized root"}</Button>
+        </form>}
+        {newWorkspaceOpen&&<form className="flex w-full flex-wrap gap-2" onSubmit={event=>{
+          event.preventDefault();
+          const name=newWorkspaceName.trim();
+          if (!name) return;
+          createWorkspace(name);
+          setNewWorkspaceName("");
+          setNewWorkspaceOpen(false);
+          setMobileList(false);
+        }}>
+          <Input aria-label="New scratch workspace name" autoFocus placeholder="Website · Parametric CAD · Software"
+            value={newWorkspaceName} onChange={event=>setNewWorkspaceName(event.target.value)} className="min-w-36 flex-1" required maxLength={80}/>
+          <Button type="submit" size="sm">Create scratch lane</Button>
+        </form>}
+        <p className="w-full text-[10px] leading-snug text-muted-foreground">
+          Monaco files are scoped by workspace. Independent filesystem agents require separate authorized Git worktrees; sharing a root does not isolate writes.
+        </p>
+      </div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
       <div
         className={cn(
           "flex min-h-0 flex-col border-border bg-sidebar md:w-56 md:shrink-0 md:border-r",
@@ -660,6 +724,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
           </form>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

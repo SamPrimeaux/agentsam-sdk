@@ -1,3 +1,5 @@
+import {createThreeViewport} from '@inneranimalmedia/agentsam-3d-viewer';
+import {CadSourceInspector} from './CadSourceInspector';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -7,6 +9,12 @@ type SourceObject = { name: string; label: string; type: string; visible: boolea
 type Starter = {
   id: string; title: string; objectCount: number; meshCount: number;
   sourceSha256: string; workingExists?: boolean; objects?: SourceObject[];
+};
+type DiscoveredSource = {
+  id:string; project:string; revision:string; relativePath:string; format:string;
+  role:'native-bim'|'parametric'|'presentation'|'exchange'|'verification';
+  status:'source-only'|'review-only'|'verification-only';
+  bytes:number; sha256:string;
 };
 const asset = (id: string, kind: 'preview' | 'thumbnail' | 'source' | 'working') =>
   `/api/cad/bim-starters/${encodeURIComponent(id)}/file/${kind}`;
@@ -28,23 +36,15 @@ function BimViewport({ id, version, focused, hidden, isolated, onPick }: {
     if (!mount) return;
     setLoadError('');
     objectsRef.current.clear();
-    const scene = new THREE.Scene();
-    sceneRef.current = scene;
-    scene.background = new THREE.Color('#111722');
-    scene.add(new THREE.HemisphereLight(0xf8fafc, 0x364152, 1.25));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.65);
-    sun.position.set(20, 35, 25);
-    scene.add(sun);
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 10000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.setSize(mount.clientWidth || 400, mount.clientHeight || 500);
-    mount.appendChild(renderer.domElement);
-    const orbit = new OrbitControls(camera, renderer.domElement);
-    orbit.enableDamping = true;
-    orbit.minDistance = 0.1;
-    orbit.maxDistance = 2000;
+    const viewport=createThreeViewport(mount,{THREE,OrbitControls},{
+      wrapper:false,autoRender:false,background:'#111722',fov:42,
+      near:.01,far:10000,maxPixelRatio:2,
+      enableDamping:true,minDistance:.1,maxDistance:2000,
+    });
+    const scene=viewport.scene as THREE.Scene;sceneRef.current=scene;
+    const camera=viewport.camera as THREE.PerspectiveCamera;
+    const renderer=viewport.renderer as unknown as THREE.WebGLRenderer;
+    const orbit=viewport.controls as OrbitControls;
     const ray = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     const pick = (event: PointerEvent) => {
@@ -77,42 +77,12 @@ function BimViewport({ id, version, focused, hidden, isolated, onPick }: {
       for (const [name, object] of objectsRef.current) {
         object.visible = !state.hidden.includes(name) && (!state.isolated || state.isolated === name);
       }
-      const bounds = new THREE.Box3().setFromObject(preview);
-      if (!bounds.isEmpty()) {
-        const center = bounds.getCenter(new THREE.Vector3());
-        const size = bounds.getSize(new THREE.Vector3());
-        const distance = Math.max(size.length() * 1.3, 1);
-        camera.position.copy(center.clone().add(new THREE.Vector3(distance * 0.8, distance * 0.55, distance * 0.8)));
-        camera.near = Math.max(distance / 10000, 0.005);
-        camera.far = distance * 20;
-        camera.updateProjectionMatrix();
-        orbit.target.copy(center);
-        orbit.maxDistance = distance * 6;
-        orbit.update();
-      }
+      viewport.fit(preview);
     }, undefined, () => { if (alive) setLoadError('The 3D preview could not load. The original FreeCAD file is still available.'); });
-    const resize = new ResizeObserver(() => {
-      if (!alive) return;
-      const width = Math.max(1, mount.clientWidth), height = Math.max(1, mount.clientHeight);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
-    });
-    resize.observe(mount);
-    let frame = 0;
-    const tick = () => {
-      if (!alive) return;
-      frame = requestAnimationFrame(tick);
-      if (document.hidden) return;
-      orbit.update();
-      renderer.render(scene, camera);
-    };
-    tick();
+    viewport.resize();
+    viewport.start();
     return () => {
       alive = false;
-      cancelAnimationFrame(frame);
-      resize.disconnect();
-      orbit.dispose();
       renderer.domElement.removeEventListener('pointerdown', onDown);
       renderer.domElement.removeEventListener('pointerup', onUp);
       if (preview) {
@@ -124,8 +94,7 @@ function BimViewport({ id, version, focused, hidden, isolated, onPick }: {
         });
       }
       if (markerRef.current) scene.remove(markerRef.current);
-      renderer.dispose();
-      renderer.domElement.remove();
+      viewport.dispose();
       objectsRef.current.clear();
       sceneRef.current = null;
     };
@@ -163,6 +132,8 @@ function BimViewport({ id, version, focused, hidden, isolated, onPick }: {
 
 export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
   const [starters, setStarters] = useState<Starter[]>([]);
+  const [discovered, setDiscovered] = useState<DiscoveredSource[]>([]);
+  const [selectedSourceId,setSelectedSourceId]=useState<string|null>(null);
   const [active, setActive] = useState<Starter | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [hidden, setHidden] = useState<string[]>([]);
@@ -181,11 +152,12 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
         }
         return r.json();
       })
-      .then((data) => { if (!Array.isArray(data.starters)) throw new Error('Native BIM library response is invalid.'); setStarters(data.starters); })
+      .then((data) => { if (!Array.isArray(data.starters)) throw new Error('Native BIM library response is invalid.'); setStarters(data.starters); setDiscovered(Array.isArray(data.discovered) ? data.discovered : []); })
       .catch((e) => { if (!controller.signal.aborted) setError(e.message); });
     return () => controller.abort();
   }, []);
   const open = async (id: string) => {
+    setSelectedSourceId(null);
     setError('');
     setSelected(null);
     setHidden([]);
@@ -203,6 +175,7 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
     (item.label + ' ' + item.name + ' ' + item.type).toLowerCase().includes(query.toLowerCase())
   ) ?? [];
   const item = active?.objects?.find((o) => o.name === selected);
+  const inspectedSource=discovered.find(item=>item.id===selectedSourceId)||null;
   const openNative = async () => {
     if (!active) return;
     setNativeStatus('');
@@ -238,11 +211,11 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
     <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2 text-xs">
       <button onClick={onReturn} className="rounded border border-white/20 px-3 py-1 hover:bg-white/10">Return to CAD canvas</button>
       {active && <button onClick={() => { setActive(null); setSelected(null); }} className="rounded border border-white/20 px-3 py-1">BIM Library</button>}
-      <span className="font-semibold">{active ? active.title : 'Native BIM Starter Library'}</span>
+      <span className="font-semibold">{active ? active.title : inspectedSource ? 'Source inspector' : 'Native BIM Starter Library'}</span>
       {active && <span className="text-slate-400">{active.objectCount} original objects · {active.meshCount} preview meshes</span>}
     </div>
     {error && <div role="alert" className="p-4 text-sm text-amber-300">{error}</div>}
-    {!active ? <div className="grid flex-1 content-start gap-4 overflow-y-auto p-5 sm:grid-cols-2">
+    {!active&&inspectedSource ? <CadSourceInspector source={inspectedSource} onBack={()=>setSelectedSourceId(null)}/> : !active ? <div className="grid flex-1 content-start gap-4 overflow-y-auto p-5 sm:grid-cols-2">
       {starters.map((starter) => <button key={starter.id} aria-label={`Open ${starter.title} FreeCAD project`} onClick={() => void open(starter.id)}
         className="overflow-hidden rounded-lg border border-white/15 bg-slate-900 text-left hover:border-amber-400/60">
         <span className="sr-only">{`Open ${starter.title} FreeCAD project`}</span>
@@ -253,6 +226,24 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
         </div>
       </button>)}
       {!starters.length && !error && <div className="text-sm text-slate-400">No BIM starters imported into the local CAD library.</div>}
+      {discovered.length>0 && <section className="sm:col-span-2 mt-1 rounded-lg border border-white/15 bg-slate-900/60 p-4" aria-label="Source-backed project assets">
+        <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div><h3 className="font-semibold">Discovered project sources · {discovered.length}</h3>
+            <p className="mt-1 text-xs text-slate-400">Verified local file hashes. These are candidates for BIM import, not automatically editable studio objects.</p></div>
+          <span className="rounded border border-amber-500/30 px-2 py-1 text-xs text-amber-200">Local discovery · source preserved</span>
+        </header>
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {discovered.map(source=><button type="button" aria-label={'Inspect '+source.relativePath} onClick={()=>setSelectedSourceId(source.id)}
+            key={source.id} className="min-w-0 rounded border border-white/10 bg-[#141c29] p-3 text-left hover:border-sky-500/60">
+            <div className="flex items-center justify-between gap-2"><b className="text-xs">{source.revision} · {source.format}</b>
+              <span className="text-xs text-slate-400">{source.status==='review-only'?'Scene review':source.status==='source-only'?'Source available':'Evidence'}</span></div>
+            <div className="mt-1 break-all text-xs text-slate-200">{source.relativePath}</div>
+            <div className="mt-2 text-xs text-slate-400">{source.project} · {(source.bytes/1024/1024).toFixed(2)} MB · SHA-256 {source.sha256.slice(0,12)}…</div>
+            <div className="mt-2 text-xs text-sky-400">Inspect source →</div>
+          </button>)}
+        </div>
+        <p className="mt-3 text-xs text-amber-200">A DreamHouse V1.5 review scene is not a synchronized FreeCAD/IFC BIM. Native source promotion must be verified separately.</p>
+      </section>}
     </div> : <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       <div className="min-h-[320px] flex-1">
         <BimViewport key={active.id + previewVersion} id={active.id} version={String(previewVersion) + active.sourceSha256}

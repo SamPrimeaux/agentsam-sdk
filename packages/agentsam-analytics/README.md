@@ -42,3 +42,19 @@ authority and canonical errors, then recorded through this event contract.
 Provider-specific Analytics SQL and Basin querying belongs to
 `@inneranimalmedia/agentsam-connector-cloudflare`, never inside a React
 component or a merchant-specific analytics implementation.
+
+## Account-first operational tool metrics (v2.6.14)
+
+The Tools tab is backed by the authenticated-account endpoint
+\`GET /api/analytics/tool-usage?range=30d\`. The host never accepts an account ID
+from the browser's query/body; it binds the session owner to each D1 query.
+
+Source of truth: \`agentsam_tool_call_log\`, grouped by tool and day. Existing
+\`idx_tool_call_account_time\` supports scoped reads. Metrics include recorded calls,
+success/failure counts, duration, cache hits and **recorded** costs. Unrecorded
+executions, model cost or absent provider data are not inferred.
+
+Existing \`agentsam_analytics\` is a separate normalized stream with different
+coverage. Do not substitute its low event count for the actual number of tool calls.
+Do not read \`agentsam_tool_stats_compacted\` until its compactor is demonstrably
+populated. All metrics remain D1-backed, not mock fixtures.

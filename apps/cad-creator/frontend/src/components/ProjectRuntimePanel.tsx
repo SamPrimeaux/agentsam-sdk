@@ -13,7 +13,17 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
   return()=>{mounted=false;};},[]);
  const current=useRef(project),synced=useRef(''),adoptedId=useRef('');
  current.current=project;
- async function call(name:string,args:any){const res=await fetch('/api/cad/project/tools/'+name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(args)});const body=await res.json();if(!res.ok||!body.ok)throw new Error(body.error||'Project operation failed');return body.result;}
+ async function call(name:string,args:unknown){
+  const response=await fetch('/api/cad/project/tools/'+name,{method:'POST',
+   headers:{'Content-Type':'application/json'},body:JSON.stringify(args)});
+  const raw=await response.text();
+  let body:{ok?:boolean;result?:any;error?:string};
+  try{body=raw.trim()?JSON.parse(raw):{error:'CAD service returned an empty response'};}
+  catch{throw new Error('CAD service returned invalid JSON (HTTP '+response.status+'). Verify the local server and selected project.')}
+  if(!response.ok||!body.ok)throw new Error(body.error||'CAD operation failed (HTTP '+response.status+')');
+  return body.result;
+ }
+
  function adopt(row:any){synced.current=JSON.stringify(row.project);adoptedId.current=row.project.id;setRevision(row.revision);onVerifiedRevision?.(row.revision,row.project.id);onLoad(row.project);}
  useEffect(()=>{let cancelled=false;setLoadId(project.id);setArtifact('');
   if(adoptedId.current===project.id)return;
@@ -25,14 +35,14 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
   }).catch(()=>{if(!cancelled)setStatus('Unsaved');});return()=>{cancelled=true;};
  },[project.id]);
  useEffect(()=>{const events=new EventSource('/api/cad/project/events');events.onmessage=e=>{
-  const row=JSON.parse(e.data);if(row.project.id!==current.current.id)return;
+  let row:any;try{row=JSON.parse(e.data)}catch{return}if(row?.project?.id!==current.current.id)return;
   const next=JSON.stringify(row.project),local=JSON.stringify(current.current);
   if(local!==next&&local!==synced.current){setStatus('External revision '+row.revision+' available. Local edits retained; reopen to reconcile.');return;}
   synced.current=next;adoptedId.current=row.project.id;setRevision(row.revision);onVerifiedRevision?.(row.revision,row.project.id);onLoad(row.project);setStatus('Revision '+row.revision);
  };return()=>events.close();},[onLoad]);
  async function run(action:string){if(readOnly&&action!=='load')return;setBusy(true);setArtifact('');try{
   if(action==='load'){const r=await call('design_project_get',{project_id:loadId});adopt(r);setStatus('Loaded revision '+r.revision);}
-  if(action==='save'||action==='render'){const r=await call('design_project_save',{project,expected_revision:revision});adopt(r);setStatus('Saved revision '+r.revision);
+  if(action==='save'||action==='render'){const r=await call('design_project_save',{project,expected_revision:revision});adopt(r);setStatus('Saved revision '+r.revision);window.dispatchEvent(new CustomEvent('agentsam:cad-save-status',{detail:'Saved CAD revision '+r.revision}));
    if(action==='render'){const input={project_id:project.id,revision:r.revision};await call('design_model_build',input);await call('design_model_inspect',input);await call('design_model_export',{...input,format:'glb'});await call('design_model_render',input);setArtifact('/api/cad/project/artifact/'+project.id+'/'+r.revision+'/courtyard.png');setArtifactLabel('View courtyard render');setStatus('Built and rendered revision '+r.revision);}
   }
   if(action==='solid'){
@@ -55,12 +65,11 @@ export function ProjectRuntimePanel({project,onLoad,readOnly=false,onVerifiedRev
    setStatus('OCCT '+build.native_version+' STEP verified · revision '+saved.revision);
   }
   if(action==='restore'){const r=await call('design_project_restore',{project_id:project.id,revision:Number(restoreRevision),expected_revision:revision});adopt(r);setStatus('Restored as revision '+r.revision);}
- }catch(e:any){setStatus(e.message);}finally{setBusy(false);}}
+ }catch(e:any){setStatus(e.message);window.dispatchEvent(new CustomEvent('agentsam:cad-save-status',{detail:'CAD operation failed: '+e.message}));}finally{setBusy(false);}}
+ useEffect(()=>{const save=()=>{if(!readOnly&&!busy)void run('save')};window.addEventListener('agentsam:cad-save-revision',save);return()=>window.removeEventListener('agentsam:cad-save-revision',save)},[readOnly,busy,project,revision]);
  return <div className="cad-project-runtime-shell flex min-w-0 items-center gap-2 text-slate-200" data-cad-project-runtime>
   <div className="flex min-w-0 items-center gap-2">
     <span className="hidden font-semibold text-slate-400 sm:inline" title={project.name}>Revision {revision || '—'}</span>
-    <button type="button" disabled={busy||readOnly} onClick={()=>run('save')}
-      className="shrink-0 rounded-md bg-white/10 px-2.5 py-1 font-medium text-slate-100 hover:bg-white/20 disabled:opacity-40">Save revision</button>
     <span className="max-w-[min(34vw,370px)] truncate text-slate-400" role="status" title={status}>{busy?'Working…':status}</span>
   </div>
   <details className="group relative shrink-0">

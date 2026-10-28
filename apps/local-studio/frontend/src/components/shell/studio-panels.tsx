@@ -383,7 +383,8 @@ export function ProjectsPanel() {
                     name: name || undefined,
                   });
                   setFsOpen(false);
-                  void navigate({ to: "/files" });
+                  useWorkStore.getState().openSideTab("files", { ephemeral: false });
+                  void navigate({ to: "/admin/agentsam" });
                 } catch (err) {
                   setFsError(err instanceof Error ? err.message : String(err));
                 }

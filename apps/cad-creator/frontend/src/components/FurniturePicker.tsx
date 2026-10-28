@@ -18,7 +18,7 @@ interface Props {
   onSelectFurniture: (type: string, name: string, category: FurnitureCategory, w: number, d: number, h: number, color: string) => void;
 }
 
-interface FurniturePreset {
+export interface FurniturePreset {
   type: string;
   name: string;
   category: FurnitureCategory;
@@ -29,7 +29,7 @@ interface FurniturePreset {
   description: string;
 }
 
-const PRESETS: FurniturePreset[] = [
+export const ARCHITECTURAL_STOCK: FurniturePreset[] = [
   // Seating
   { type: 'sofa_3seater', name: '3-Seater Modern Sofa', category: 'seating', w: 84, d: 36, h: 32, color: '#334155', description: 'Deep seat upholstered sofa' },
   { type: 'sofa_sectional', name: 'L-Shape Sectional Sofa', category: 'seating', w: 108, d: 72, h: 32, color: '#1e293b', description: 'Corner sectional with chaise' },
@@ -65,7 +65,7 @@ export const FurniturePicker: React.FC<Props> = ({ isOpen, onClose, onSelectFurn
 
   if (!isOpen) return null;
 
-  const filtered = PRESETS.filter((p) => {
+  const filtered = ARCHITECTURAL_STOCK.filter((p) => {
     const matchesCat = selectedCategory === 'all' || p.category === selectedCategory;
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase());
     return matchesCat && matchesSearch;

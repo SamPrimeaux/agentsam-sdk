@@ -2,6 +2,8 @@ import { canonicalStudioPath } from "../../../../shared/studio-admin-routes.mjs"
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { createHttpWorkHost, createWorkCrud } from "@inneranimalmedia/agentsam-work/client";
+import { useWorkStore } from "@/lib/work/store";
+import { listLocalWorkspaceArtifacts, localArtifactTarget } from "@/lib/work/local-artifacts";
 import { localStudioProjectChats } from "@/lib/project-chat-links";
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, openExternalUrl } from "@/lib/desktop/tauri";
 import { WorkProduct } from "@inneranimalmedia/agentsam-work/frontend";
@@ -9,7 +11,7 @@ import { AutoRagWorkflowDialog } from "@inneranimalmedia/agentsam-workbench/know
 import "@inneranimalmedia/agentsam-workbench/knowledge/autorag-workflow.css";
 import { localStudioAutoRagHost } from "@/lib/knowledge/autorag-host";
 import { getDesktopWorkspaceContext } from "@/lib/desktop/tauri";
-import type { WorkHost, WorkSurfaceId, WorkProject, WorkProjectApp } from "@inneranimalmedia/agentsam-work/contracts";
+import type { WorkHost, WorkSurfaceId, WorkProject, WorkProjectApp, WorkArtifact, WorkSnapshot } from "@inneranimalmedia/agentsam-work/contracts";
 import "@inneranimalmedia/agentsam-work/theme.css";
 
 /**
@@ -204,10 +206,32 @@ function createDesktopWorkHost(): WorkHost {
   };
 }
 
+/** Files are read from the actual authorized runtime's already-indexed file list.
+ * This is browser-side only; never upload local paths, contents or capabilities to D1. */
+function withIndexedLocalArtifacts(snapshot: WorkSnapshot): WorkSnapshot {
+  const state = useWorkStore.getState();
+  const localFiles = listLocalWorkspaceArtifacts(state.projects, state.trails);
+  return { ...snapshot, artifacts: [...snapshot.artifacts, ...localFiles] };
+}
+function openIndexedLocalArtifact(artifact: WorkArtifact) {
+  const state = useWorkStore.getState();
+  const target = localArtifactTarget(artifact.id, state.projects);
+  if (!target) return;
+  state.setActiveProject(target.projectId);
+  state.openSideTab("files", { ephemeral: false, fileId: target.fileId, title: target.path });
+}
+
 /** Shared live projects/tickets authority for Work and the AgentSam composer. */
 export function sharedLiveWorkHost(): WorkHost {
   if (isPackagedDesktop()) {
-    sharedDesktopWorkHost ||= createDesktopWorkHost();
+    if (!sharedDesktopWorkHost) {
+      const desktop = createDesktopWorkHost();
+      sharedDesktopWorkHost = {
+        ...desktop,
+        snapshot: async request => withIndexedLocalArtifacts(await desktop.snapshot(request)),
+        openArtifact: openIndexedLocalArtifact,
+      };
+    }
     return sharedDesktopWorkHost;
   }
   if (!sharedHttpWorkHost) {
@@ -216,6 +240,7 @@ export function sharedLiveWorkHost(): WorkHost {
       ...base,
       ...localStudioProjectChats,
       projectApps: studioProjectApps,
+      openArtifact: openIndexedLocalArtifact,
       async snapshot(request = {}) {
         const selected = request.mailConnectionId || readStoredMailConnectionId();
         const snapshot = await base.snapshot({
@@ -225,7 +250,7 @@ export function sharedLiveWorkHost(): WorkHost {
         if (snapshot.activeMailConnectionId) {
           writeStoredMailConnectionId(snapshot.activeMailConnectionId);
         }
-        return snapshot;
+        return withIndexedLocalArtifacts(snapshot);
       },
       async connectMail(provider = "google_gmail") {
         if (provider === "cloudflare") {

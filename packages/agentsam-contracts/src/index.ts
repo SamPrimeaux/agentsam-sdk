@@ -14,3 +14,5 @@ export * from './identity';
 export * from './repository';
 export * from './errors';
 export * from './widgets';
+export * from './spawn-policy';
+export * from './resource-scope';

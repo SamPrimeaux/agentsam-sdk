@@ -2,6 +2,7 @@ import {useState, type CSSProperties} from 'react';
 import {BookOpen, FolderOpen, Globe, LayoutGrid, MessageCircle, Plus, Settings2} from 'lucide-react';
 import {Nav, type NavMode, type NavValue} from '../../../../../packages/agentsam-nav/src/index';
 import {CadCreatorApp} from './CadCreatorApp';
+import {isTrustedLocalCadHost} from '../lib/project-access';
 
 /**
  * The public standalone CAD route uses the SAME navigation package that owns
@@ -10,10 +11,12 @@ import {CadCreatorApp} from './CadCreatorApp';
  */
 export function CadStandaloneShell() {
   const [mode,setMode] = useState<NavMode>('work');
-  const [activeProject,setActiveProject] = useState('Example Home');
+  // Only loopback can open the registered local DreamHouse source; public builds remain examples.
+  const ownerLocal=typeof window!=='undefined'&&isTrustedLocalCadHost(window.location.hostname)&&new URLSearchParams(window.location.search).get('access')!=='public-demo';
+  const [activeProject,setActiveProject] = useState(ownerLocal?'DreamHouse V1 (WIP schematic)':'Example Home');
   const go = (to:string) => {
     if (to === '/cad') {setMode('work');return;}
-    if (to === '/cad/world') {window.dispatchEvent(new Event('agentsam:cad-open-dreamhouse'));setActiveProject('DreamHouse · Public Example');setMode('work');return;}
+    if (to === '/cad/world') {window.dispatchEvent(new Event('agentsam:cad-open-dreamhouse'));setActiveProject(ownerLocal?'DreamHouse V1 (WIP schematic)':'DreamHouse · Public Example');setMode('work');return;}
     if (to === '/cad/new') {
       // The CAD app handles model creation; enter its existing New workflow.
       window.dispatchEvent(new Event('agentsam:cad-new-project'));
@@ -28,10 +31,10 @@ export function CadStandaloneShell() {
   const data:NavValue = {
     mode,onModeChange:setMode,
     brand:{name:'AgentSam',home:'/cad',logo:'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d1864d11-4485-4a38-1849-168f567aa200/avatar'},
-    project:{id:'public-demo',name:activeProject},
+    project:{id:ownerLocal?'dreamhouse-v1-wip':'public-demo',name:activeProject},
     destinations:[
       {id:'cad',label:'CAD Creator',href:'/cad',icon:<img src="/studio/samsketch-icon.png" alt="" width={20} height={20} className="rounded-md"/>,active:true},
-      {id:'dreamhouse',label:'DreamHouse · Public Example',href:'/cad/world',icon:<LayoutGrid/>},
+      {id:'dreamhouse',label:ownerLocal?'DreamHouse · V1 schematic':'DreamHouse · Public Example',href:'/cad/world',icon:<LayoutGrid/>},
       {id:'new',label:'New CAD project',href:'/cad/new',icon:<Plus/>},
       {id:'projects',label:'Projects',href:'/projects',icon:<FolderOpen/>},
       {id:'library',label:'Library',href:'/artifacts',icon:<BookOpen/>},
@@ -46,7 +49,7 @@ export function CadStandaloneShell() {
     <Nav.Scope className="cad-platform-shell" data-agentsam-app-shell="cad-creator">
       <Nav.Sidenav />
       <div className="cad-platform-main">
-        <Nav.Topbar startup showNavigationTrigger showAccount={false}
+        <Nav.Topbar showNavigationTrigger={false} showAccount={false}
           rightSlot={<a className="cad-platform-open-account" href={hosted+'/agentsam'} target="_blank" rel="noreferrer">Open AgentSam <span aria-hidden>↗</span></a>}/>
         <div className="cad-platform-content" data-mode={mode}>
           {mode === 'chat' && <section className="cad-platform-chat" aria-label="CAD conversation">
@@ -59,7 +62,7 @@ export function CadStandaloneShell() {
             </div>
           </section>}
           <div className={'cad-platform-canvas '+(mode==='chat'?'cad-platform-canvas--chat':'')}>
-            <CadCreatorApp presentation="embedded" accessMode="public-demo"/>
+            <CadCreatorApp presentation="embedded" accessMode={ownerLocal?"owner":"public-demo"}/>
           </div>
         </div>
       </div>

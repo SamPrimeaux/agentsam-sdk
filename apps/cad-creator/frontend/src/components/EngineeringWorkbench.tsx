@@ -1,3 +1,6 @@
+import {CadProjectTakeoff} from './CadProjectTakeoff';
+import {WALL_MATERIALS,defaultWallAssembly,wallAssemblyTotal,validateWallAssembly,cloneAssembly} from '../lib/cad/wall-assemblies';
+import {CadPerformancePanel} from './CadPerformancePanel';
 import {NativeSolidPanel} from './NativeSolidPanel';
 import {WorldViewSection} from './WorldViewSection';
 import {KIT, chooseKitTool, isKitActive, viewerSafe, type Group, type MenuId} from './sketch-kit-catalog';
@@ -8,7 +11,7 @@ import type {ProjectState, ActiveTool, WallMaterial, DesignOperation, Parametric
 import {Layers3, PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen,
  Search, ChevronRight, ChevronDown, Box, Plus,  Grid2X2,
  MousePointer2, DoorOpen, Ruler, PencilRuler, Hand, Eraser, Square, SlidersHorizontal, Blocks, Undo2, Redo2, Bot, Activity,
- BrickWall, AppWindow, RectangleHorizontal, PenTool, LayoutPanelLeft, History, Download, Sofa} from 'lucide-react';
+ BrickWall, AppWindow, RectangleHorizontal, PenTool, LayoutPanelLeft, History, Download, Save, Sofa} from 'lucide-react';
 import './engineering-workbench.css';
 import {patchSceneElement} from '../lib/scene-document';
 
@@ -76,9 +79,9 @@ function Numeric({label,value,onCommit,min,unit='in'}:{
    onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&(min==null||n>=min)&&n!==value)onCommit(n);else e.target.value=String(value)}}/>
    <small>{unit}</small></div></label>;
 }
-export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview}:{
+export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview,onEditCode}:{
  project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onChange:Update;
- onClose:()=>void;readOnly:boolean;onReview?:()=>void
+ onClose:()=>void;readOnly:boolean;onReview?:()=>void;onEditCode?:()=>void
 }) {
  const [tab,setTab]=useState<'object'|'project'|'scene'>('object');
  React.useEffect(()=>{if(selection)setTab('object')},[selection?.group,selection?.id]);
@@ -130,6 +133,30 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
     return applied.success?applied.project:previous;
   });
  };
+ const patchAssembly=(assembly:import('@inneranimalmedia/agentsam-cad-shared').WallAssembly)=>{
+  if(selection?.group!=='walls'||readOnly)return;
+  const error=validateWallAssembly(assembly);
+  if(error){setOperationError(error);return}
+  const operation={id:'cad-assembly-'+Date.now(),timestamp:Date.now(),type:'update_wall',wallId:selection.id,
+   updates:{assembly,thickness:wallAssemblyTotal(assembly),material:assembly.layers[0].material}} as unknown as DesignOperation;
+  const checked=applyDesignOperation(project,operation);
+  if(!checked.success){setOperationError(checked.error||'Assembly update was rejected');return}
+  setOperationError(null);
+  onChange(previous=>{const result=applyDesignOperation(previous,operation);return result.success?result.project:previous});
+ };
+ const deleteSelection=()=>{
+  if(!selection||readOnly||selection.group==='sceneElements')return;
+  const types:Partial<Record<CadElementGroup,[string,string]>>={walls:['delete_wall','wallId'],doors:['delete_door','doorId'],windows:['delete_window','windowId'],rooms:['delete_room','roomId'],furniture:['delete_fixture','fixtureId'],parametricObjects:['delete_parametric_object','parametricObjectId']};
+  const entry=types[selection.group];if(!entry)return;
+  const openingCount=selection.group==='walls'?project.doors.filter(d=>d.wallId===selection.id).length+project.windows.filter(w=>w.wallId===selection.id).length:0;
+  if(!window.confirm('Delete '+selection.group.slice(0,-1)+' '+selection.id+(openingCount?' and '+openingCount+' hosted opening(s)':'')+' from this CAD revision?'))return;
+  const operation={id:'cad-delete-'+Date.now(),timestamp:Date.now(),type:entry[0],[entry[1]]:selection.id} as unknown as DesignOperation;
+  const checked=applyDesignOperation(project,operation);
+  if(!checked.success){setOperationError(checked.error||'Delete was rejected');return}
+  setOperationError(null);
+  onChange(previous=>{const result=applyDesignOperation(previous,operation);return result.success?result.project:previous});
+  onSelect(null);
+ };
  const num=(label:string,key:string,min?:number,unit='in')=>record&&typeof record[key as keyof typeof record]==='number'?
   <Numeric key={key} label={label} value={Number(record[key])} min={min} unit={unit} onCommit={n=>update(key,n)}/>:null;
  return <aside className="cad-work-pane cad-properties" aria-label="CAD inspector">
@@ -138,7 +165,7 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
   <div className="cad-pane-tabs" role="tablist" aria-label="Inspector">
    {(['object','project','scene'] as const).map(view=><button key={view} role="tab" aria-selected={tab===view}
     className={tab===view?'active':''} onClick={()=>setTab(view)}>{view[0].toUpperCase()+view.slice(1)}</button>)}</div>
-  <div className="cad-property-scroll">{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}{tab==='scene'&&<WorldViewSection/>}<fieldset disabled={readOnly}>
+  <div className="cad-property-scroll">{readOnly&&<p role="status" className="cad-inspector-readonly">Read-only scene or project. Open a registered editable CAD document to save geometry and BIM changes.</p>}{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}{tab==='scene'&&<WorldViewSection/>}<fieldset disabled={readOnly}>
   {tab==='scene'?project.sceneSource?<p className="cad-property-help">View, lighting and site controls save with this project revision.</p>:
   <><h4>Environment & lighting</h4>
    <label className="cad-property"><span>Time of day</span><select aria-label="Scene time of day" value={project.lighting.timeOfDay} onChange={e=>patchLighting({timeOfDay:e.target.value as ProjectState['lighting']['timeOfDay']})}>
@@ -162,6 +189,7 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
     onChange={e=>onChange(p=>({...p,snapToGrid:e.target.checked}))}/></label>
    <h4>Composition</h4>
    {groups(project).map(g=><div className="cad-property-summary" key={g.id}><span>{g.title}</span><b>{g.entries.length}</b></div>)}
+   <CadProjectTakeoff project={project}/>
   </>:
   <><div className="cad-inspected-id"><small>{selection.group}</small><strong>{record.id}</strong></div>
    {selection.group==='sceneElements'&&<>
@@ -184,11 +212,31 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
     <p className="cad-property-help">Placement and finish edits save with this project. Native BIM dimensions are changed through the modeling operation.</p>
    </>}
    {selection.group==='walls'&&<><h4>Wall geometry</h4>{num('Start X','x1')}{num('Start Y','y1')}
-    {num('End X','x2')}{num('End Y','y2')}{num('Thickness','thickness',0.1)}{num('Height','height3D',1)}
-    <label className="cad-property"><span>Material</span><select value={String(record.material)} onChange={e=>update('material',e.target.value as WallMaterial)}>
-     {['drywall','brick','concrete','glass','wood_panel','steel'].map(v=><option key={v} value={v}>{v.replace('_',' ')}</option>)}</select></label>
+    {num('End X','x2')}{num('End Y','y2')}{!record.assembly&&num('Thickness','thickness',0.1)}{num('Height','height3D',1)}
+    {!record.assembly&&<label className="cad-property"><span>Material</span><select value={String(record.material)} onChange={e=>update('material',e.target.value as WallMaterial)}>
+     {['drywall','brick','concrete','glass','wood_panel','steel'].map(v=><option key={v} value={v}>{v.replace('_',' ')}</option>)}</select></label>}
     <label className="cad-property"><span>Finish color</span><input type="color" aria-label="Wall finish color" value={typeof record.color==='string'&&/^#[0-9a-f]{6}$/i.test(record.color)?record.color:'#cccccc'} onChange={e=>update('color',e.target.value)}/></label>
-    <label className="cad-property"><span>Exterior</span><input type="checkbox" checked={!!record.exterior} onChange={e=>update('exterior',e.target.checked)}/></label></>}
+    <label className="cad-property"><span>Exterior</span><input type="checkbox" checked={!!record.exterior} onChange={e=>update('exterior',e.target.checked)}/></label>
+    <h4>BIM construction assembly</h4>
+    <label className="cad-property"><span>Assembly name</span><input aria-label="Wall assembly name" value={defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement).name}
+      onChange={e=>patchAssembly({...defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement),name:e.target.value})}/></label>
+    {defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement).layers.map((layer,index)=>
+      <div className="cad-assembly-layer" key={layer.id}>
+        <div className="cad-assembly-layer-heading"><strong>Layer {index+1}</strong>
+         <button type="button" aria-label={'Remove assembly layer '+layer.name} disabled={defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement).layers.length===1}
+           onClick={()=>patchAssembly({...defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement),layers:defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement).layers.filter(l=>l.id!==layer.id)})}>Remove</button>
+        </div>
+        <label>Layer name<input aria-label={'Assembly layer '+(index+1)+' name'} value={layer.name} onChange={e=>patchAssembly({...defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement),layers:defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement).layers.map(l=>l.id===layer.id?{...l,name:e.target.value}:l)})}/></label>
+        <label>Material<select aria-label={'Assembly layer '+(index+1)+' material'} value={layer.material} onChange={e=>patchAssembly({...defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement),layers:defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement).layers.map(l=>l.id===layer.id?{...l,material:e.target.value as WallMaterial}:l)})}>
+          {WALL_MATERIALS.map(material=><option key={material} value={material}>{material.replace('_',' ')}</option>)}
+        </select></label>
+        <Numeric label={'Layer '+(index+1)+' thickness'} unit="in" min={0.001} value={layer.thickness}
+          onCommit={n=>patchAssembly({...defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement),layers:defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement).layers.map(l=>l.id===layer.id?{...l,thickness:n}:l)})}/>
+      </div>)}
+    <button className="cad-clear-selection" type="button" onClick={()=>patchAssembly({...defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement),layers:[...defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement).layers,{id:'layer-'+Date.now(),name:'New layer',material:'wood_panel',thickness:0.5}]})}>+ Add material layer</button>
+    <div className="cad-property-summary"><span>Assembly total</span><b>{wallAssemblyTotal(defaultWallAssembly(record as unknown as import('@inneranimalmedia/agentsam-cad-shared').WallElement))} in</b></div>
+    <p className="cad-property-help">Layer metadata is saved with this wall. The native solid uses the summed wall thickness; individual ply solids are not yet evaluated.</p>
+    </>}
    {selection.group==='doors'&&<><h4>Opening</h4>{num('Width','width',1)}{num('Height','height',1)}
     {num('Position on wall','distanceAlongWall',0,'ratio')}
     {num('Open angle','openAngle',0,'°')}
@@ -229,7 +277,9 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
      </label>;
     }):<p className="cad-property-help">This feature has no editable generator parameters in the project.</p>}
     <p className="cad-property-help">Parameters are applied to the canonical generator recipe. Use Parametric tools to edit source code and regenerate artifacts.</p></>}
+   {onEditCode&&selection.group!=='sceneElements'&&<button type="button" className="cad-clear-selection" onClick={onEditCode}>Edit source / parameters in Code</button>}
    {(['walls','doors','windows'].includes(selection.group))&&<NativeSolidPanel project={project} elementId={selection.group==='walls'?selection.id:String(record.wallId)}/>}
+   {selection.group!=='sceneElements'&&<button type="button" className="cad-clear-selection cad-delete-element" onClick={deleteSelection}>Delete selected element</button>}
    <button type="button" className="cad-clear-selection" onClick={()=>onSelect(null)}>Clear selection</button></>}
   </fieldset></div>
   <footer className="cad-pane-note">Edits use the current project, undo history, and save workflow.</footer>
@@ -246,14 +296,14 @@ export const CAD_STUDIO_TOOLS:{id:ActiveTool;label:string;shortcut:string;tier:1
  {id:'eraser',label:'Erase',shortcut:'E',tier:2,icon:Eraser},
  {id:'pan',label:'Pan',shortcut:'H',tier:2,icon:Hand}
 ];
-export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onMore,moreOpen,accent,onAccentChange,isDark,onToggleDark,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,runtimeSlot,projectSlot,onFixtures}:{
+export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock}:{
  tool:ActiveTool;onTool:(v:ActiveTool)=>void;workspace:string;onWorkspace:(v:'plan'|'model'|'robotics')=>void;
- planLayout:'2d'|'split'|'sketch';onPlanLayout:(v:'2d'|'split'|'sketch')=>void;readOnly:boolean;
+ planLayout:'2d'|'split';onPlanLayout:(v:'2d'|'split')=>void;readOnly:boolean;
  onNew:()=>void;onTemplates:()=>void;onExport:()=>void;onToggleExplorer:()=>void;onToggleInspector:()=>void;
- explorerOpen:boolean;inspectorOpen:boolean;onMore:()=>void;moreOpen:boolean;accent:string;onAccentChange:(v:string)=>void;isDark:boolean;onToggleDark:()=>void;
+ explorerOpen:boolean;inspectorOpen:boolean;
  onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean;
  onToggleDiagnostics:()=>void;showDiagnostics:boolean;
- studioView:'preview'|'edit'|'code';onStudioView:(v:'preview'|'edit'|'code')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onFixtures?:()=>void;
+ studioView:'preview'|'edit'|'code';onStudioView:(v:'preview'|'edit'|'code')=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
 }) {
  const toolbarRef=React.useRef<HTMLDivElement>(null);
  React.useEffect(()=>{
@@ -286,9 +336,9 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
  const draft=workspace==='plan'&&studioView==='edit';
 
  const kit=useKit();
- const kitItems=(menuId:MenuId,groups:Group[])=>KIT.filter(k=>k.menus.includes(menuId)&&groups.includes(k.group)).map(k=>
-  item(<k.icon size={16}/>,k.label,()=>chooseKitTool(k,onTool,onFixtures),
-   {active:isKitActive(k,tool,kit.tool),disabled:(readOnly&&!viewerSafe(k))||(k.place&&!onFixtures),kbd:k.key}));
+ const kitItems=(menuId:MenuId,groups:Group[])=>KIT.filter(k=>(k.live||k.place)&&k.menus.includes(menuId)&&groups.includes(k.group)).map(k=>
+  item(<k.icon size={16}/>,k.label,()=>chooseKitTool(k,onTool,onStock),
+   {active:isKitActive(k,tool,kit.tool),disabled:(readOnly&&!viewerSafe(k))||(k.place&&!onStock),kbd:k.key}));
  React.useEffect(()=>{
   const keys=(event:KeyboardEvent)=>{
    if(event.metaKey||event.ctrlKey||event.altKey||workspace!=='plan'||studioView!=='edit')return;
@@ -305,12 +355,21 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
      aria-label={v==='code'?'Code / parametric model':v==='preview'?'Preview current model':'Edit current project'}
      aria-pressed={studioView===v} className={studioView===v?'active':''} onClick={()=>onStudioView(v)}>{v[0].toUpperCase()+v.slice(1)}</button>)}
   </div>
-  <div className="cad-tool-cluster cad-pane-toggles">
-   {button('Objects / project explorer',<PanelLeftOpen size={17}/>,onToggleExplorer,explorerOpen)}
-   {button('Properties / contextual inspector',<PanelRightOpen size={17}/>,onToggleInspector,inspectorOpen)}
+  <div className="cad-viewport-modes" role="group" aria-label="Canvas arrangement">
+   {(['2d','3d','split'] as const).map(mode=><button type="button" key={mode}
+    title={mode==='2d'?'Plan canvas':mode==='3d'?'3D model canvas':'Linked 2D and 3D canvas'}
+    aria-label={mode==='2d'?'2D plan canvas':mode==='3d'?'3D model canvas':'Split 2D and 3D canvas'}
+    aria-pressed={viewportMode===mode} onClick={()=>onViewportMode(mode)}>
+    {mode==='2d'?<Square size={16}/>:mode==='3d'?<Box size={16}/>:<LayoutPanelLeft size={16}/>}
+    <span>{mode==='split'?'Split':mode.toUpperCase()}</span>
+   </button>)}
+  </div>
+  <div className="cad-tool-cluster cad-pane-toggles" role="group" aria-label="Workspace panels">
+   {button('Objects / project explorer',<PanelLeftOpen size={18}/>,onToggleExplorer,explorerOpen)}
+   {button('Properties / contextual inspector',<PanelRightOpen size={18}/>,onToggleInspector,inspectorOpen)}
   </div>
   <div className="cad-tool-cluster cad-direct-tools" aria-label="Pointer tools">
-   {draft&&(['select','pan','measure'] as ActiveTool[]).map(direct)}
+   {draft&&(['select','pan','wall','room','door','window','measure','eraser'] as ActiveTool[]).map(direct)}
   </div>
   {studioView==='edit'&&<div className="cad-tool-cluster cad-create-tools" aria-label="Create objects">
    {menu('Create · templates, parts, stock, project',<Plus size={18}/>,<>
@@ -318,58 +377,24 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
      {item(<Blocks size={16}/>,'Browse templates',onTemplates,{disabled:readOnly})}
      <h6 className="cad-menu-head">Parts</h6>
      {kitItems('create',['Draw'])}
-     <h6 className="cad-menu-head">Reusable stock</h6>
-     {kitItems('create',['Place'])}
+     {item(<Box size={16}/>,'Stock · architectural assets',onStock)}
      <h6 className="cad-menu-head">Project</h6>
      {item(<Plus size={16}/>,'Blank project',onNew,{disabled:readOnly})}
      {item(<PencilRuler size={16}/>,'Parametric part · Code',()=>onStudioView('code'))}
    </>)}
-   {draft&&menu('2D objects · draw and annotate',<Square size={18}/>,<>
-     <h6 className="cad-menu-head">Draw</h6>{kitItems('2d',['Draw'])}
-     <h6 className="cad-menu-head">Annotate</h6>{kitItems('2d',['Annotate'])}
-   </>,KIT.some(k=>k.menus.includes('2d')&&isKitActive(k,tool,kit.tool)))}
-   {menu('3D objects · solids and booleans',<Box size={18}/>,<>
-     <h6 className="cad-menu-head">Solids</h6>{kitItems('3d',['Solids'])}
-     <h6 className="cad-menu-head">Workspace</h6>
-     {item(<Box size={16}/>,'3D model workspace',()=>onWorkspace('model'),{active:workspace==='model'})}
-   </>,workspace==='model'||KIT.some(k=>k.menus.includes('3d')&&isKitActive(k,tool,kit.tool)))}
-   {draft&&menu('Paths · pen, spline, freehand',<PenTool size={18}/>,<>
-     <h6 className="cad-menu-head">Paths</h6>{kitItems('path',['Paths','Draw'])}
-     <h6 className="cad-menu-head">Freehand</h6>
-     {item(<PenTool size={16}/>,'Freehand → CAD',()=>onPlanLayout(planLayout==='sketch'?'split':'sketch'),{active:planLayout==='sketch',disabled:readOnly})}
-   </>,planLayout==='sketch'||KIT.some(k=>k.menus.includes('path')&&isKitActive(k,tool,kit.tool)))}
   </div>}
   <div className="cad-tool-cluster cad-edit-history">
    {button('Undo (⌘Z)',<Undo2 size={16}/>,onUndo,false,!canUndo)}
    {button('Redo (⇧⌘Z)',<Redo2 size={16}/>,onRedo,false,!canRedo)}
   </div>
   <div className="cad-tool-cluster cad-tool-actions">
-   <details className="cad-toolbar-menu cad-workspace-picker">
-    <summary aria-label="Workspace" title="Workspace · Draft, 3D or Robotics">{workspace==='plan'?<PencilRuler size={17}/>:workspace==='model'?<Box size={17}/>:<Bot size={17}/>}<span>{workspace==='plan'?'Draft':workspace==='model'?'3D':'Robotics'}</span><ChevronDown size={14}/></summary>
-    <div className="cad-toolbar-popover" role="group" aria-label="Workspace choices">
-     {(['plan','model','robotics'] as const).map(w=><button key={w} type="button" aria-pressed={workspace===w} onClick={e=>{onWorkspace(w);e.currentTarget.closest('details')?.removeAttribute('open')}}>
-       {w==='plan'?<PencilRuler size={16}/>:w==='model'?<Box size={16}/>:<Bot size={16}/>}{w==='plan'?'Draft':w==='model'?'3D model':'Robotics'}</button>)}
-    </div>
-   </details>
-   {workspace==='plan'&&studioView==='edit'&&<details className="cad-toolbar-menu">
-     <summary aria-label="Viewport arrangement" title="Viewport arrangement"><LayoutPanelLeft size={18}/></summary>
-     <div className="cad-toolbar-popover" role="group" aria-label="Viewport arrangement">
-      {(['split','2d','sketch'] as const).map(v=><button key={v} type="button" aria-pressed={planLayout===v} onClick={e=>{onPlanLayout(v);e.currentTarget.closest('details')?.removeAttribute('open')}}>{v==='split'?'SamSketch + 3D':v==='2d'?'SamSketch 2D':'Freehand → CAD'}</button>)}
-     </div>
-   </details>}
-   <details className="cad-toolbar-menu cad-advanced-menu">
-     <summary title="Advanced tools and appearance" aria-label="Advanced tools and appearance"><SlidersHorizontal size={18}/></summary>
-     <div className="cad-toolbar-popover" role="group" aria-label="Advanced studio settings">
-      <button type="button" onClick={onMore} aria-pressed={moreOpen}>Advanced CAD tools</button>
-      {workspace==='robotics'&&<button type="button" onClick={onToggleDiagnostics} aria-pressed={showDiagnostics}>Robotics diagnostics</button>}
-      <label>Accent <input aria-label="Interface accent" type="color" value={accent} onChange={e=>onAccentChange(e.target.value)}/></label>
-      <button type="button" onClick={onToggleDark}>{isDark?'Light interface':'Dark interface'}</button>
-     </div>
-   </details>
+   <button type="button" className="cad-cam-switch" aria-label="CAM manufacturing workspace" aria-pressed={workspace==='robotics'} title="Manufacturing preparation"
+    onClick={()=>onWorkspace('robotics')}>CAM</button>
+   <button type="button" className="cad-toolbar-save" disabled={saveDisabled} title={saveLabel||'Save revision'} aria-label={saveLabel||'Save revision'} onClick={onSave}><Save size={16}/><span>Save</span></button>
    <details className="cad-toolbar-menu cad-project-menu"><summary aria-label="Project revisions" title="Project revisions and native tools"><History size={18}/></summary>
     <div className="cad-runtime-slot">{projectSlot}</div></details>
-   <details className="cad-toolbar-menu cad-runtime-menu"><summary aria-label="Connected engines" title="Connected engines"><Activity size={18}/></summary>
-    <div className="cad-runtime-slot">{runtimeSlot}</div></details>
+   <details className="cad-toolbar-menu cad-runtime-menu"><summary aria-label="Scene performance" title="Scene performance and optimization"><Activity size={18}/></summary>
+    <div className="cad-runtime-slot"><CadPerformancePanel /></div></details>
    {button('Export project',<Download size={18}/>,onExport)}
   </div>
  </div>;

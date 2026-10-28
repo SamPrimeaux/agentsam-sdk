@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cad-backend",
-  "version": "2.6.13",
+  "version": "2.6.15",
   "private": true,
   "type": "module",
   "scripts": {

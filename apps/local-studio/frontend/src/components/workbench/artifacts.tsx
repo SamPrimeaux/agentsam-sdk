@@ -71,7 +71,7 @@ export function ArtifactsStage() {
                         return;
                       }
                       selectFile(file.id);
-                      void navigate({ to: "/files" });
+                      useWorkStore.getState().openSideTab("files", { ephemeral: false });
                     }}
                   >
                     {kind === "deploy" ? (

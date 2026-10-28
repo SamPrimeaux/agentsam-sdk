@@ -105,7 +105,14 @@ export type WorkArtifact = {
   id: string;
   name: string;
   kind: "image" | "document" | "code" | "archive" | "other";
-  source: "artifacts" | "r2" | "google-drive" | "local";
+  source: "artifacts" | "r2" | "google-drive" | "shared-drives" | "local";
+  /** Only an explicit, account-owned project association; never guessed from filenames. */
+  projectId?: string | null;
+  /** Storage view flags are provider-derived; absent flags must not imply availability. */
+  updatedAt?: number | null;
+  starred?: boolean;
+  shared?: boolean;
+  deleted?: boolean;
   preview?: string | null;
   mime?: string | null;
   sizeLabel?: string | null;
@@ -322,11 +329,24 @@ export type WorkProjectInsights = {
   rules: { id: string; title: string; version: number; updatedAt: string } | null;
   costsConnected: boolean;
   rulesConnected: boolean;
+  measurements?: {
+    projectId: string;
+    measured: { hours: number; seconds: number; entries: number; available: boolean; excludedEntries: number; basis: string };
+    activeTimer: { id: string; startedAt: number; label: string } | null;
+    costs: { currency: string; recordedTotal: number; lineItems: number; apiTokens: number } | null;
+    legacy: { hours: number; cost: number; tokens: number; status: string } | null;
+  } | null;
+  connections?: { type: string; name: string; configured: boolean; verification: string }[];
 };
 export interface WorkHost {
   snapshot(request?: WorkSnapshotRequest): Promise<WorkSnapshot>;
+  /** Open an artifact in a host-owned editor/provider; the package never invents download URLs. */
+  openArtifact?(artifact: WorkArtifact): void | Promise<void>;
   /** Optional verified D1 insights, account-scoped by the server. */
   projectInsights?(projectId: string): Promise<WorkProjectInsights>;
+  projectTimer?(projectId: string, action: "start" | "stop", timerId?: string): Promise<{
+    measurements: NonNullable<WorkProjectInsights["measurements"]>; metricsPersisted: boolean
+  }>;
   /** Resolve project-aware installed applications without redefining project identity. */
   projectApps?(project: WorkProject): WorkProjectApp[];
   listProjectChats?(projectId: string): Promise<WorkProjectChat[]>;

@@ -17,9 +17,9 @@ function fakeRuntime() {
   class Vector3 { set(...values) { this.values = values; return this; } copy(value) { this.values = value.values; return this; } clone() { const out = new Vector3(); out.values = [...(this.values || [0,0,0])]; return out; } add(value) { this.values = this.values.map((v,i)=>v+(value.values?.[i]||0)); return this; } }
   class Scene { add() {} }
   class Color { constructor(value) { this.value = value; } }
-  class Camera { constructor(fov, aspect, near, far) { this.fov=fov;this.aspect=aspect;this.near=near;this.far=far;this.position=new Vector3(); } updateProjectionMatrix() { events.resize += 1; } }
+  class Camera { constructor(fov, aspect, near, far) { this.fov=fov;this.aspect=aspect;this.near=near;this.far=far;this.position=new Vector3();this.up=new Vector3(); } updateProjectionMatrix() { events.resize += 1; } }
   class Renderer { constructor(options) { this.options=options;this.domElement=new FakeElement('canvas');this.shadowMap={};this.capabilities={getMaxAnisotropy:()=>8}; } setPixelRatio(value) { this.pixelRatio=value; } setSize(width,height,updateStyle) { this.size={width,height,updateStyle}; } render() { events.render += 1; } dispose() { events.disposedRenderer += 1; } }
-  class Controls { constructor(camera,element) { this.camera=camera;this.element=element;this.target=new Vector3(); } update() {} dispose() { events.disposedControls += 1; } }
+  class Controls { constructor(camera,element) { this.camera=camera;this.element=element;this.target=new Vector3();this.cameraUpAtConstruction=[...(camera.up.values||[])]; } update() {} dispose() { events.disposedControls += 1; } }
   return { events, runtime: { THREE: {
     Scene, Color, PerspectiveCamera: Camera, WebGLRenderer: Renderer,
     SRGBColorSpace: 'srgb', NoToneMapping: 'none',
@@ -67,4 +67,30 @@ test('shared viewport reuses host runtime, keeps direct canvas behind overlays, 
   assert.equal(events.disposedRenderer, 1);
   assert.equal(events.disposedControls, 1);
   assert.equal(observer.disconnected, true);
+}));
+
+test('shared viewport supports custom-camera hosts with no OrbitControls, and still resizes/disposes', () => withFakeDom((getObserver) => {
+  const host = new FakeElement('section');
+  const {runtime,events}=fakeRuntime();
+  delete runtime.OrbitControls;
+  const viewport=createThreeViewport(host,runtime,{wrapper:false,controls:false,lights:false,autoRender:false});
+  assert.equal(viewport.controls,null);
+  viewport.render();
+  getObserver().callback();
+  assert.equal(viewport.renderer.size.width,640);
+  viewport.dispose();
+  assert.equal(events.render,1);
+  assert.equal(events.disposedRenderer,1);
+  assert.equal(events.disposedControls,0);
+  assert.equal(host.children.length,0);
+}));
+
+test('shared viewport establishes robotics Z-up camera before OrbitControls are constructed',()=>withFakeDom(()=>{
+  const host=new FakeElement('div');
+  const {runtime,events}=fakeRuntime();
+  const viewport=createThreeViewport(host,runtime,{wrapper:false,autoRender:false,lights:false,cameraUp:[0,0,1],maxPixelRatio:2});
+  assert.deepEqual(viewport.controls.cameraUpAtConstruction,[0,0,1]);
+  assert.equal(viewport.renderer.pixelRatio,2);
+  viewport.dispose();
+  assert.equal(events.disposedControls,1);
 }));

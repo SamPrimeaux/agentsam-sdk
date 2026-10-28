@@ -2,6 +2,7 @@
  * Project insights from the SAME D1 as tickets/projects/chat sessions.
  * Strict account ownership; absence of cost/usage tables is unknown, not $0.
  */
+import { readProjectMeasurements } from './work-project-metrics.js';
 const clean = (value) => String(value ?? '').trim();
 const num = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
 
@@ -37,5 +38,34 @@ export async function readProjectInsights(db, ownerId, projectId) {
       if (doc) rules = { id: doc.id, title: doc.title, version: Number(doc.version) || 1, updatedAt: doc.updated_at };
     }
   }
-  return { projectId: id, costs, rules, costsConnected: Boolean(costsTable), rulesConnected: Boolean(rulesTable) };
+  let measurements = null;
+  try { measurements = await readProjectMeasurements(db, owner, id, { authorized: true }); }
+  catch (err) { console.error('project_measurements_unavailable', String(err)); }
+  // The current USD ledger supersedes a generic legacy sum once available.
+  // Keep the old guarded cost query only for older local schemas.
+  if (measurements) costs = measurements.costs
+    ? {currency:measurements.costs.currency,recordedTotal:measurements.costs.recordedTotal,
+       lineItems:measurements.costs.lineItems} : null;
+  let connections = [];
+  try {
+    const storage = await db.prepare(
+      "SELECT storage_type, storage_name, status FROM project_storage WHERE project_id=? ORDER BY storage_type, storage_name"
+    ).bind(id).all();
+    const oauth = await db.prepare(
+      "SELECT provider, COUNT(*) AS active FROM user_oauth_tokens " +
+      "WHERE user_id=? AND is_active=1 AND (revoked_at IS NULL OR revoked_at=0) " +
+      "AND provider IN ('cloudflare','github','google_drive') GROUP BY provider"
+    ).bind(owner).all();
+    const active = new Map((oauth.results || []).map(x => [x.provider, num(x.active)]));
+    const providers = { github:'github', google_drive:'google_drive' };
+    connections = (storage.results || []).map(row => {
+      const type=clean(row.storage_type).toLowerCase();
+      const provider=providers[type] || null;
+      return { type, name: clean(row.storage_name), configured: clean(row.status).toLowerCase()==='active',
+        verification: provider ? (active.get(provider)>0?'oauth_record_active':'oauth_reauthorization_required')
+          : 'storage_registration_only' };
+    });
+  } catch (err) { console.error('project_connections_unavailable', String(err)); }
+  return { projectId: id, costs, rules, measurements, connections,
+    costsConnected: Boolean(costsTable), rulesConnected: Boolean(rulesTable) };
 }

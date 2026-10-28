@@ -10,9 +10,10 @@ import { TicketsSurface } from "./TicketsSurface";
 import { TicketTable } from "../TicketTable";
 import { ProjectChatsPanel } from "../ProjectChatsPanel";
 import { TimelineView } from "../TimelineView";
+import { ArtifactsSurface } from "./ArtifactsSurface";
 import { timelineItems } from "../ticket-plan";
 
-type Tab = "overview" | "tickets" | "timeline" | "calendar" | "chats";
+type Tab = "overview" | "gallery" | "tickets" | "timeline" | "calendar" | "chats";
 
 export function ProjectDetailSurface({
   project,
@@ -38,7 +39,7 @@ export function ProjectDetailSurface({
   onNavigate: WorkNavigate;
   onOpenTicket?: (ticket: WorkTicket) => void;
   onCreateTicket?: () => void;
-  chatHost?: Pick<WorkHost, "listProjectChats" | "listAssignableChats" | "assignProjectChat" | "createProjectChat" | "projectInsights" | "projectApps">;
+  chatHost?: Pick<WorkHost, "listProjectChats" | "listAssignableChats" | "assignProjectChat" | "createProjectChat" | "projectInsights" | "projectTimer" | "projectApps" | "openArtifact">;
   /** Host-supplied control for codebase / knowledge indexing. */
   knowledgeAction?: ReactNode;
 }) {
@@ -51,6 +52,25 @@ export function ProjectDetailSurface({
   const [showAllFocus, setShowAllFocus] = useState(false);
   const [insights, setInsights] = useState<WorkProjectInsights | null>(null);
   const [insightsError, setInsightsError] = useState("");
+  const [timerBusy, setTimerBusy] = useState(false);
+  const [timerMessage, setTimerMessage] = useState("");
+  async function changeTimer(action: "start" | "stop") {
+    if (!chatHost?.projectTimer || timerBusy) return;
+    const timerId = insights?.measurements?.activeTimer?.id;
+    if (action === "stop" && !timerId) return;
+    setTimerBusy(true);
+    setTimerMessage("");
+    try {
+      const result = await chatHost.projectTimer(project.id, action, timerId);
+      const latest = await chatHost.projectInsights?.(project.id);
+      setInsights(latest || (prev => prev ? { ...prev, measurements: result.measurements } : prev));
+      setTimerMessage(result.metricsPersisted
+        ? action === "start" ? "Work timer running" : "Work session recorded"
+        : "Work saved to time entries; metrics snapshot needs database migration");
+    } catch (error) {
+      setTimerMessage(error instanceof Error ? error.message : "Work timer unavailable");
+    } finally { setTimerBusy(false); }
+  }
   useEffect(() => {
     if (!chatHost?.projectInsights) return;
     let cancelled = false;
@@ -81,6 +101,7 @@ export function ProjectDetailSurface({
       setCreatingChat(false);
     }
   }
+  const projectArtifacts = useMemo(() => artifacts.filter(a => a.projectId === project.id && !a.deleted), [artifacts, project.id]);
   const mine = useMemo(() => tickets.filter((t) => sameProject(t, project)), [tickets, project]);
   const open = mine.filter(isOpen);
   const shipped = mine.filter((ticket) => ticket.status === "shipped");
@@ -140,7 +161,7 @@ export function ProjectDetailSurface({
       </section>
 
       <div className="aw-tabs" role="tablist">
-        {([["overview", "Overview"], ["tickets", `Tickets ${mine.length || ""}`], ["timeline", "Timeline"], ["chats", "Chats"], ["calendar", "Calendar"]] as Array<[Tab, string]>).map(([id, label]) => (
+        {([["overview", "Overview"], ["gallery", "Gallery " + (projectArtifacts.length || "")], ["tickets", `Tickets ${mine.length || ""}`], ["timeline", "Timeline"], ["chats", "Chats"], ["calendar", "Calendar"]] as Array<[Tab, string]>).map(([id, label]) => (
           <button key={id} type="button" role="tab" className="aw-tab" data-active={tab === id} aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>
         ))}
       </div>
@@ -201,6 +222,13 @@ export function ProjectDetailSurface({
         </div>
       ) : null}
 
+      {tab === "gallery" ? <ArtifactsSurface
+        artifacts={projectArtifacts}
+        onOpenArtifact={chatHost?.openArtifact}
+        title={project.name + " · Gallery"}
+        heading="Project files"
+        emptyMessage="No registered files are associated with this project yet. The gallery only shows explicit project-linked media, not guessed filename matches."
+      /> : null}
       {tab === "tickets" ? (
         <TicketsSurface
           embedded
@@ -261,10 +289,33 @@ export function ProjectDetailSurface({
             <div><span>Open tickets</span><strong>{open.length}</strong></div>
             <div><span>Blocked tickets</span><strong>{focus.blockedCount}</strong></div>
             <div><span>Estimated effort</span><strong>{project.estimatedMinutes ? (Math.round(project.estimatedMinutes / 60 * 10) / 10) + "h" : "—"}</strong></div>
-            <div><span>Tracked time</span><strong>{project.trackedMinutes ? (Math.round(project.trackedMinutes / 60 * 10) / 10) + "h" : "Not connected"}</strong></div>
+            <div><span>Measured work</span><strong>{insights?.measurements?.measured.available
+              ? insights.measurements.measured.hours.toFixed(2) + "h" : "No measured sessions"}</strong></div>
             <div><span>Recorded cost</span><strong>{insights?.costs ? new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(insights.costs.recordedTotal) : "No measured entries"}</strong></div>
+            {insights?.measurements?.costs ? <div><span>Attributed API tokens</span><strong>{insights.measurements.costs.apiTokens.toLocaleString()}</strong></div> : null}
             {project.launchDate ? <div><span>Target launch</span><strong>{formatDate(project.launchDate)}</strong></div> : null}
           </div>
+          {chatHost?.projectTimer && insights?.measurements ? <section className="aw-project-inspector__group">
+            <h3>Work time</h3>
+            {insights.measurements.activeTimer ? <>
+              <p>Running since {new Date(insights.measurements.activeTimer.startedAt*1000).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}
+                {" · "}{insights.measurements.activeTimer.label}</p>
+              <button type="button" className="aw-btn" disabled={timerBusy} onClick={() => void changeTimer("stop")}>Stop & record time</button>
+            </> : <button type="button" className="aw-btn" disabled={timerBusy} onClick={() => void changeTimer("start")}>Start project work</button>}
+            {insights.measurements.measured.excludedEntries > 0 ? <p>
+              {insights.measurements.measured.excludedEntries} older or unverified entries excluded from measured time.
+            </p> : null}
+            {insights.measurements.legacy ? <p>Legacy time estimate: {insights.measurements.legacy.hours}h (unverified, excluded).</p> : null}
+            {timerMessage ? <p role="status">{timerMessage}</p> : null}
+          </section> : null}
+          {insights?.connections?.length ? <section className="aw-project-inspector__group">
+            <h3>Connected project resources</h3>
+            {insights.connections.map((resource,i)=><p key={resource.type+"-"+resource.name+"-"+i}>
+              <strong>{resource.name}</strong> · {resource.type} · {resource.verification === "oauth_record_active"
+                ? "OAuth record active (not API verified)" : resource.verification === "oauth_reauthorization_required"
+                ? "OAuth reauthorization needed" : "Registered (not connection verified)"}
+            </p>)}
+          </section> : null}
           {insightsError ? <p role="status" className="aw-project-inspector__notice">Stats currently unavailable: {insightsError}</p> : null}
           {insights?.costs ? <p className="aw-project-inspector__notice">{insights.costs.lineItems} recorded cost entries · excludes unallocated provider costs</p> : null}
           <section className="aw-project-inspector__group">

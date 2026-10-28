@@ -1,21 +1,8 @@
+import {nativeHistory,planFeatures} from '@inneranimalmedia/agentsam-cad-shared';
+export {nativeHistory,planFeatures} from '@inneranimalmedia/agentsam-cad-shared';
 import type {ProjectState} from '@inneranimalmedia/agentsam-cad-shared';
 import {AGENTSAM_PREVIEW_BRIDGE_CHANNEL,isAllowedBridgeMessage} from './agentsam-preview-bridge';
-export type NativeOperation=Record<string,unknown>;
-export type NativeHistory={version:1;operations:NativeOperation[];cursor:number};
 export type NativeMesh={id:string;positions:number[];normals:number[];indices:number[];units:'mm';axes:'z-up';volume_mm3:number;revision:number};
-/** The plan is inches; OCCT receives millimetres, Z-up. Opening positions are
- * centre ratios, matching SamSketch, and are converted to left-edge distances. */
-export function planFeatures(project:ProjectState):NativeOperation[]{
- const ops:NativeOperation[]=[];
- for(const wall of project.walls){const length=Math.hypot(wall.x2-wall.x1,wall.y2-wall.y1);
-  ops.push({id:wall.id,type:'wall',start:[wall.x1*25.4,wall.y1*25.4],end:[wall.x2*25.4,wall.y2*25.4],thickness:wall.thickness*25.4,height:wall.height3D*25.4});
-  for(const opening of [...project.doors,...project.windows].filter(o=>o.wallId===wall.id)){
-   ops.push({id:opening.id,type:'opening',host:wall.id,offset:(opening.distanceAlongWall*length-opening.width/2)*25.4,width:opening.width*25.4,height:opening.height*25.4,sill:('elevation'in opening?opening.elevation:0)*25.4});
-  }
- }
- return ops;
-}
-export function nativeHistory(project:ProjectState):NativeHistory{return project.nativeHistory||{version:1,operations:[{type:'$syncPlan',operations:planFeatures(project)}],cursor:1};}
 /** Called in the same state transaction as a plan edit, so one undo step restores
  * both the plan and the native event cursor. There is no second project tree. */
 export function recordNativePlanChange(previous:ProjectState,next:ProjectState):ProjectState{
@@ -46,6 +33,21 @@ export function withNativeProject<T>(project:ProjectState,read:(request:(r:Recor
  const result=tasks.then(work);tasks=result.catch(()=>{});return result;
 }
 export async function projectSolidMeshes(project:ProjectState):Promise<NativeMesh[]>{
+ const isStandalone=window.parent===window && !((window as unknown as {__TAURI__?:unknown}).__TAURI__);
+ if(isStandalone && ['127.0.0.1','localhost','::1'].includes(window.location.hostname)){
+  const response=await fetch('/api/cad/project/native/evaluate',{
+   method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({project})
+  });
+  const raw=await response.text();
+  let result:any;
+  try{result=raw.trim()?JSON.parse(raw):null}
+  catch{throw new Error('Local CAD engine returned invalid JSON (HTTP '+response.status+'). Restart the local CAD service.')}
+  if(!result)throw new Error('Local CAD engine returned an empty response (HTTP '+response.status+').');
+  if(!response.ok||result?.engine!=='occt'||result?.verified!==true||!Array.isArray(result.meshes))
+   throw new Error(result?.error||'native_wall_evaluation_failed');
+  return result.meshes as NativeMesh[];
+ }
  return withNativeProject(project,async request=>{const output:NativeMesh[]=[];for(const wall of project.walls)output.push(await request({action:'mesh',id:wall.id}));return output;});
 }
 export function exportNativeElement(project:ProjectState,id:string,format:string,view?:'plan'|'section'|'elevation'){

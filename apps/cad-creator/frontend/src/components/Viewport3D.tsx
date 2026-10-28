@@ -1,3 +1,5 @@
+import {createThreeViewport} from '@inneranimalmedia/agentsam-3d-viewer';
+import {trackCadRenderer} from '../lib/cad/scene-performance';
 import {nativePlanLayer,disposeNativeLayer} from '../lib/native-mesh-three';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ViewCube } from './ViewCube';
@@ -42,6 +44,9 @@ export const Viewport3D: React.FC<Props> = ({
   const previousMousePositionRef = useRef({ x: 0, y: 0 });
   const orbitAngleRef = useRef({ theta: 0.8, phi: 0.7, radius: 18 });
   const targetRef = useRef<THREE.Vector3>(new THREE.Vector3(4, 1, 3.5));
+  const frameProjectRef = useRef<string>('');
+  const groundRef = useRef<THREE.Mesh|null>(null);
+  const gridRef = useRef<THREE.GridHelper|null>(null);
 
   // First person controls state
   const fpPosRef = useRef<THREE.Vector3>(new THREE.Vector3(2, 1.6, 2));
@@ -148,28 +153,18 @@ export const Viewport3D: React.FC<Props> = ({
   useEffect(() => {
     if (!mountRef.current) return;
     const container = mountRef.current;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-
-    // Scene
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#090d16');
-    sceneRef.current = scene;
-
-    // Camera
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    cameraRef.current = camera;
-
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
-    container.replaceChildren(renderer.domElement);
-    rendererRef.current = renderer;
+    // One shared renderer lifecycle for BIM + DreamHouse world + SamSketch.
+    // CAD owns camera modes and native geometry; viewer owns canvas, GPU and resizing.
+    const viewport = createThreeViewport(container, {THREE}, {
+      wrapper:false,controls:false,autoRender:false,lights:false,
+      fov:45,near:0.1,far:1000,maxPixelRatio:2,background:'#090d16',
+      preserveDrawingBuffer:true,
+      shadowMap:{enabled:true,type:THREE.PCFShadowMap},
+      toneMapping:THREE.ACESFilmicToneMapping,toneMappingExposure:1.0,
+    });
+    const scene=viewport.scene as THREE.Scene;sceneRef.current=scene;
+    const camera=viewport.camera as THREE.PerspectiveCamera;cameraRef.current=camera;
+    const renderer=viewport.renderer as unknown as THREE.WebGLRenderer;rendererRef.current=renderer;
 
     // Lighting setup
     const hemiLight = new THREE.HemisphereLight('#ffffff', '#334155', 0.6);
@@ -205,12 +200,15 @@ export const Viewport3D: React.FC<Props> = ({
     ground.position.y = -0.01;
     ground.receiveShadow = true;
     scene.add(ground);
+    groundRef.current=ground;
 
     const gridHelper = new THREE.GridHelper(50, 50, '#1e293b', '#0f172a');
     gridHelper.position.y = 0;
     scene.add(gridHelper);
+    gridRef.current=gridHelper;
 
     // Animation / Render loop
+    const measureScene = trackCadRenderer("3D model preview", renderer, container);
     let lastTime = performance.now();
     const animate = (currentTime: number) => {
       const delta = (currentTime - lastTime) / 1000;
@@ -276,22 +274,12 @@ export const Viewport3D: React.FC<Props> = ({
       }
 
       renderer.render(scene, cameraRef.current!);
+      measureScene(currentTime);
       animFrameIdRef.current = requestAnimationFrame(animate);
     };
     animFrameIdRef.current = requestAnimationFrame(animate);
 
-    // Resize observer
-    const handleResize = () => {
-      if (!container || !cameraRef.current || !rendererRef.current) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      cameraRef.current.aspect = w / h;
-      cameraRef.current.updateProjectionMatrix();
-      rendererRef.current.setSize(w, h);
-    };
-    window.addEventListener('resize', handleResize);
-    const resizeObserver = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(handleResize) : null;
-    if (resizeObserver) resizeObserver.observe(container);
+    viewport.resize(); // The shared viewer tracks container size changes.
 
     // Keyboard handlers
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -305,11 +293,9 @@ export const Viewport3D: React.FC<Props> = ({
 
     return () => {
       if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
-      window.removeEventListener('resize', handleResize);
-      resizeObserver?.disconnect();
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      renderer.dispose();
+      viewport.dispose();
     };
   }, [cameraMode]);
 
@@ -621,18 +607,31 @@ export const Viewport3D: React.FC<Props> = ({
         if(cancelled){disposeNativeLayer(layer);return;}nativeLayer=layer;bimRoot.remove(previewWalls);
         previewWalls.traverse(node=>{if(node instanceof THREE.Mesh)node.geometry.dispose();});
         bimRoot.add(layer);setNativeStatus('OCCT solids · mesh from BRep');
-      },error=>{if(!cancelled)setNativeStatus(String(error).includes('requires_desktop')?'Approximate preview · native solids require Local Studio desktop':String(error));});
+      },error=>{if(!cancelled)setNativeStatus(String(error).includes('requires_desktop')?'Native OCCT unavailable — check local CAD engine':String(error));});
     }else setNativeStatus('');
 
-    // Calculate center point of all walls to position camera target
-    if (project.walls.length > 0) {
-      let sumX = 0, sumZ = 0, count = 0;
-      project.walls.forEach((w) => {
-        sumX += (w.x1 + w.x2) * SCALE;
-        sumZ += (w.y1 + w.y2) * SCALE;
-        count += 2;
-      });
-      targetRef.current.set(sumX / count, 1.2, sumZ / count);
+    // Focus once per authoritative project: use geometry bounds rather than an
+    // arbitrary origin/camera. User-driven orbit stays intact during live edits.
+    if(project.walls.length){
+      const x=project.walls.flatMap(w=>[w.x1,w.x2]).map(v=>v*SCALE);
+      const z=project.walls.flatMap(w=>[w.y1,w.y2]).map(v=>v*SCALE);
+      const minX=Math.min(...x),maxX=Math.max(...x),minZ=Math.min(...z),maxZ=Math.max(...z);
+      const cx=(minX+maxX)/2,cz=(minZ+maxZ)/2;
+      const span=Math.max(5,Math.hypot(maxX-minX,maxZ-minZ));
+      groundRef.current?.position.set(cx,-.01,cz);
+      if(groundRef.current)groundRef.current.scale.setScalar(Math.max(1,span*1.65/60));
+      gridRef.current?.position.set(cx,0,cz);
+      if(gridRef.current)gridRef.current.scale.setScalar(Math.max(1,span*1.5/50));
+      if(frameProjectRef.current!==project.id){
+        const maxH=Math.max(...project.walls.map(w=>w.height3D*SCALE));
+        targetRef.current.set(cx,maxH*.5,cz);
+        const aspect=mountRef.current?mountRef.current.clientWidth/Math.max(1,mountRef.current.clientHeight):1;
+        // 45° perspective FOV, margin for site/roof.
+        const fovRad=Math.PI/4;
+        const fitted=span/(2*Math.tan(fovRad/2))*1.18*Math.max(1,1/Math.max(.55,aspect));
+        orbitAngleRef.current.radius=Math.max(12,fitted);
+        frameProjectRef.current=project.id;
+      }
     }
     return()=>{cancelled=true;scene.remove(bimRoot);bimRoot.traverse(node=>{if(node instanceof THREE.Mesh)node.geometry.dispose();});};
   }, [project, showRoof, getMaterial]);

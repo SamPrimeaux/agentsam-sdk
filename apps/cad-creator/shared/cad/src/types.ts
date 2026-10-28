@@ -4,6 +4,18 @@ export type WallMaterial = 'drywall' | 'brick' | 'concrete' | 'glass' | 'wood_pa
 
 export type FloorMaterial = 'hardwood' | 'marble' | 'tile' | 'polished_concrete' | 'carpet' | 'terrazzo';
 
+/** Editable BIM assembly metadata. Total layer thickness drives the existing
+ * overall wall solid. Individual OCCT ply solids require separate validation. */
+export interface WallAssemblyLayer {
+  id: string;
+  name: string;
+  material: WallMaterial;
+  thickness: number; // inches
+}
+export interface WallAssembly {
+  name: string;
+  layers: WallAssemblyLayer[]; // interior to exterior
+}
 export interface WallElement {
   id: string;
   x1: number;
@@ -13,6 +25,7 @@ export interface WallElement {
   thickness: number; // in inches (e.g. 6)
   height3D: number; // in inches (e.g. 96 or 108)
   material: WallMaterial;
+  assembly?: WallAssembly;
   color?: string;
   exterior?: boolean;
   sourceSketchShapeIds?: string[];

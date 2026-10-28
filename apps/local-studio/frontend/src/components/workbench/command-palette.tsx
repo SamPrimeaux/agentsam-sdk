@@ -87,7 +87,8 @@ export function CommandPalette() {
           </Command.Item>
           <Command.Item
             onSelect={() => {
-              void navigate({ to: "/files" });
+              openSideTab("files", { ephemeral: false });
+              void navigate({ to: "/admin/agentsam" });
               setOpen(false);
             }}
           >

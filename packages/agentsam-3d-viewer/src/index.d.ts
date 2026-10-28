@@ -3,7 +3,7 @@ export type ModelFormat = 'glb' | 'gltf' | 'stl';
 /** The host passes its own Three.js runtime to avoid bundling a second copy. */
 export interface ThreeRuntime {
   THREE: any;
-  OrbitControls: new (camera: any, element: HTMLElement) => any;
+  OrbitControls?: new (camera: any, element: HTMLElement) => any; // required unless controls:false
   GLTFLoader?: new () => any;
   STLLoader?: new () => any;
 }
@@ -15,6 +15,7 @@ export interface ThreeViewportOptions {
   wrapper?: boolean;
   insertCanvasFirst?: boolean;
   minHeight?: string;
+  cameraUp?: [number, number, number]; // set before OrbitControls initialization
   fov?: number;
   near?: number;
   far?: number;
@@ -31,6 +32,7 @@ export interface ThreeViewportOptions {
   gridDivisions?: number;
   showAxes?: boolean;
   axesSize?: number;
+  controls?: boolean; // false for hosts with their own camera controller, e.g. BIM walkthrough
   enableDamping?: boolean;
   dampingFactor?: number;
   minDistance?: number;
@@ -57,7 +59,7 @@ export interface ThreeViewportHandle {
   scene: any;
   camera: any;
   renderer: ThreeRendererLike;
-  controls: any;
+  controls: any | null;
   render(): void;
   fit(object: any, padding?: number): { center: any; size: any; distance: number } | null;
   resize(): void;

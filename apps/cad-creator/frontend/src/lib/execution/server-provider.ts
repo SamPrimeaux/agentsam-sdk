@@ -9,12 +9,10 @@ import {
   BlenderExecutionRequest,
   BlenderExecutionResult,
 } from './types';
-import { LocalExecutionProvider } from './local-provider';
 
 export class ServerExecutionProvider implements DesignExecutionProvider {
   id = 'docker-service';
   displayName = 'Isolated CAD Container Service';
-  private fallback = new LocalExecutionProvider();
 
   async capabilities(): Promise<ExecutionCapabilities> {
     try {
@@ -24,7 +22,7 @@ export class ServerExecutionProvider implements DesignExecutionProvider {
       }
     } catch (e) {}
     return {
-      supportsNativeOpenScad: true,
+      supportsNativeOpenScad: false,
       supportsClientSideCsg: true,
       supportedFormats: ['stl', '3mf', 'dxf', 'obj', 'scad'],
       maxTimeoutMs: 45000,
@@ -40,9 +38,9 @@ export class ServerExecutionProvider implements DesignExecutionProvider {
       }
     } catch (e) {}
     return {
-      status: 'healthy',
+      status: 'unavailable',
       backend: 'docker-service',
-      message: 'Server CAD Execution Service Online',
+      message: 'Server CAD execution not verified. Native exports unavailable.',
     };
   }
 
@@ -61,10 +59,8 @@ export class ServerExecutionProvider implements DesignExecutionProvider {
       const errData = await res.json().catch(() => ({ error: 'Server execution failed' }));
       throw new Error(errData.error || 'Server CAD execution failed');
     } catch (err: any) {
-      // Gracefully fall back to local provider with diagnostic log
-      const localResult = await this.fallback.executeOpenScad(request);
-      localResult.logs.unshift(`[FALLBACK] Server endpoint unavailable (${err.message}). Using local CAD kernel.`);
-      return localResult;
+      // Do not replace a failed native compile with simulated STL geometry.
+      throw new Error('Verified OpenSCAD export unavailable: '+String(err?.message||err));
     }
   }
 

@@ -15,6 +15,7 @@ import type {
 const SECTIONS: Array<{ key: AgentSamAnalyticsSection; label: string }> = [
   { key: "overview", label: "Overview" },
   { key: "usage", label: "Usage & Cost" },
+  { key: "tool-usage", label: "Tools" },
   { key: "performance", label: "Performance" },
   { key: "health", label: "Health" },
   { key: "scores", label: "Scores" },
@@ -288,9 +289,27 @@ function Scores({ data }: { data: AgentSamAnalyticsReadModels["scores"] }) {
   );
 }
 
+function ToolUsage({data}:{data:AgentSamAnalyticsReadModels["tool-usage"]}) {
+  return <section className="aa-section">
+    <div className="aa-kpis">
+      <KPI label="Measured tool calls" value={fmtNum(data.totals.calls)} icon="activity"/>
+      <KPI label="Tool success rate" value={pct(data.totals.success_rate)} icon="shield"/>
+      <KPI label="Avg execution" value={ms(data.totals.average_duration_ms)} icon="clock"/>
+      <KPI label="Recorded tool cost" value={money(data.totals.recorded_cost_usd)} icon="finance"/>
+    </div>
+    <div className="aa-section-head"><div><h3>Real tool execution</h3>
+      <p>Source: {data.source}. Metrics are account-scoped from recorded calls; untracked executions are not included.</p>
+    </div></div>
+    <DataTable columns={["Tool","Calls","Successful","Failures","Success rate","Avg latency","Cache hits"]}
+      rows={data.by_tool.map(row=>[row.tool_key,row.calls,row.successes,row.failures,
+        pct(row.success_rate),ms(row.average_duration_ms),row.cache_hits])}/>
+    <p>Measured coverage: {fmtNum(data.coverage.measured_calls)} calls. Unrecorded model/provider costs are not inferred.</p>
+  </section>;
+}
+
 export function AgentSamAnalyticsPage({ baseUrl = "" }: { baseUrl?: string }) {
   const [range, setRange] = useState<RangeKey>("30d");
-  const [section, setSection] = useState<AgentSamAnalyticsSection>("overview");
+  const [section, setSection] = useState<AgentSamAnalyticsSection>("tool-usage");
   const [loaded, setLoaded] = useState<Partial<AgentSamAnalyticsReadModels>>({});
   const [error, setError] = useState<string | null>(null);
 
@@ -323,6 +342,9 @@ export function AgentSamAnalyticsPage({ baseUrl = "" }: { baseUrl?: string }) {
     }
     if (section === "usage") {
       return <Usage data={data as AgentSamAnalyticsReadModels["usage"]} />;
+    }
+    if (section === "tool-usage") {
+      return <ToolUsage data={data as AgentSamAnalyticsReadModels["tool-usage"]} />;
     }
     if (section === "performance") {
       return <Performance data={data as AgentSamAnalyticsReadModels["performance"]} />;
