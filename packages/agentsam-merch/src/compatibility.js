@@ -3,6 +3,7 @@ import {
   normalizeFormat,
   normalizeManufacturingProfile,
 } from "./profile.js";
+import { effectiveArtworkDpi } from "./geometry.js";
 
 export const COMPATIBILITY_STATUS = Object.freeze({
   READY: "ready",
@@ -95,7 +96,23 @@ export function calculateEffectivePpi(assetInput, profileInput, target = {}) {
     });
   }
 
-  const { widthIn, heightIn } = targetGeometry(profile, target);
+  // A target with placement percent describes a provider artboard, not a
+  // finished print size. Compute its true aspect-preserving inches once.
+  const placement = target.placementWidthPercent != null &&
+    target.printWidthIn != null && target.printHeightIn != null
+      ? effectiveArtworkDpi({
+          sourceWidthPx: asset.widthPx ?? asset.contentWidthPx,
+          sourceHeightPx: asset.heightPx ?? asset.contentHeightPx,
+          cropWidthPx: asset.contentWidthPx, cropHeightPx: asset.contentHeightPx,
+          printWidthIn: Number(target.printWidthIn),
+          printHeightIn: Number(target.printHeightIn),
+          placementWidthPercent: Number(target.placementWidthPercent),
+          placementHeightPercent: target.placementHeightPercent == null
+            ? undefined : Number(target.placementHeightPercent),
+        }) : null;
+  const { widthIn, heightIn } = placement
+    ? { widthIn: placement.printedWidthIn, heightIn: placement.printedHeightIn }
+    : targetGeometry(profile, target);
   const widthPpi = widthIn ? asset.contentWidthPx / widthIn : null;
   const heightPpi = heightIn ? asset.contentHeightPx / heightIn : null;
   const samples = [widthPpi, heightPpi].filter((value) => value != null);

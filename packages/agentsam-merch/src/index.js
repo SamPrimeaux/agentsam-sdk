@@ -10,6 +10,7 @@ export {
   validateManufacturingProfile,
 } from "./profile.js";
 export { createManufacturingProfileRegistry } from "./profile-registry.js";
+export { effectiveArtworkDpi, providerPrintSizeIn, rasterResolutionPreflight } from "./geometry.js";
 export {
   COMPATIBILITY_STATUS,
   calculateEffectivePpi,

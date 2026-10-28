@@ -314,3 +314,23 @@ export function completefulProfileContext(
   location?: Record<string, unknown>,
 ): Readonly<Record<string, unknown>>;
 export function completefulTarget(location?: Record<string, unknown>): Readonly<ManufacturingTarget>;
+
+/** Source-pixel geometry (never inferred from a mockup delivery image). */
+export interface PrintGeometryInput {
+  sourceWidthPx: number; sourceHeightPx: number;
+  cropWidthPx?: number; cropHeightPx?: number;
+  printWidthIn: number; printHeightIn: number;
+  placementWidthPercent: number; placementHeightPercent?: number;
+}
+export interface PrintGeometryResult {
+  dpi: number; exactDpi: number; dpiX: number; dpiY: number;
+  printedWidthIn: number; printedHeightIn: number; fitsPrintHeight: boolean;
+}
+export function providerPrintSizeIn(location: {unit?: string|null; dpi?: number|null;
+  file_width?: number|null; file_height?: number|null;}|null|undefined): {width:number; height:number}|null;
+export function effectiveArtworkDpi(input: PrintGeometryInput): PrintGeometryResult|null;
+export function rasterResolutionPreflight(input: Omit<PrintGeometryInput,"placementWidthPercent"> & {
+  placementWidthPercent?: number; targetPpi?: number|null;
+}): Readonly<{geometry:PrintGeometryResult|null;effectivePpi:number|null;
+  targetPpi:number|null;meetsTarget:boolean|null;requiredWidthPx:number|null;
+  requiredHeightPx:number|null;status:"unverified"|"meets_resolution"|"needs_review"}>;
