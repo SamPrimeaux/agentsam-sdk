@@ -1,4 +1,5 @@
 import {CadProjectTakeoff} from './CadProjectTakeoff';
+import {CadInspectorSource} from './CadInspectorSource';
 import {WALL_MATERIALS,defaultWallAssembly,wallAssemblyTotal,validateWallAssembly,cloneAssembly} from '../lib/cad/wall-assemblies';
 import {CadPerformancePanel} from './CadPerformancePanel';
 import {NativeSolidPanel} from './NativeSolidPanel';
@@ -79,12 +80,13 @@ function Numeric({label,value,onCommit,min,unit='in'}:{
    onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&(min==null||n>=min)&&n!==value)onCommit(n);else e.target.value=String(value)}}/>
    <small>{unit}</small></div></label>;
 }
-export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview,onEditCode}:{
+export function CadPropertyInspector({project,selection,onSelect,onChange,onClose,readOnly,onReview,sourceRequest}:{
  project:ProjectState;selection:CadElementSelection;onSelect:(s:CadElementSelection)=>void;onChange:Update;
- onClose:()=>void;readOnly:boolean;onReview?:()=>void;onEditCode?:()=>void
+ onClose:()=>void;readOnly:boolean;onReview?:()=>void;sourceRequest?:number
 }) {
- const [tab,setTab]=useState<'object'|'project'|'scene'>('object');
+ const [tab,setTab]=useState<'object'|'project'|'scene'|'source'>('object');
  React.useEffect(()=>{if(selection)setTab('object')},[selection?.group,selection?.id]);
+ React.useEffect(()=>{if(sourceRequest)setTab('source')},[sourceRequest]);
  const patchLighting=(updates:Partial<ProjectState['lighting']>)=>onChange(p=>({...p,lighting:{...p.lighting,...updates}}));
  const [operationError,setOperationError]=useState<string|null>(null);
  const record=(selection&&(project[selection.group]||[]).find(x=>x.id===selection.id)) as unknown as (Record<string, unknown> & {id:string})|null;
@@ -163,9 +165,9 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
   <header className="cad-pane-head"><span><SlidersHorizontal size={16}/> Properties</span>
    <button aria-label="Hide property inspector" title="Hide property inspector" onClick={onClose}><PanelRightClose size={17}/><span className="cad-focus-help">Hide property inspector</span></button></header>
   <div className="cad-pane-tabs" role="tablist" aria-label="Inspector">
-   {(['object','project','scene'] as const).map(view=><button key={view} role="tab" aria-selected={tab===view}
+   {(['object','project','scene','source'] as const).map(view=><button key={view} role="tab" aria-selected={tab===view}
     className={tab===view?'active':''} onClick={()=>setTab(view)}>{view[0].toUpperCase()+view.slice(1)}</button>)}</div>
-  <div className="cad-property-scroll">{readOnly&&<p role="status" className="cad-inspector-readonly">Read-only scene or project. Open a registered editable CAD document to save geometry and BIM changes.</p>}{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}{tab==='scene'&&<WorldViewSection/>}<fieldset disabled={readOnly}>
+  <div className="cad-property-scroll">{readOnly&&<p role="status" className="cad-inspector-readonly">Read-only scene or project. Open a registered editable CAD document to save geometry and BIM changes.</p>}{operationError&&<p className="cad-operation-error" role="alert">{operationError}</p>}{tab==='source'?<CadInspectorSource project={project} selection={selection} onChange={onChange} readOnly={readOnly}/>:<>{tab==='scene'&&<WorldViewSection/>}<fieldset disabled={readOnly}>
   {tab==='scene'?project.sceneSource?<p className="cad-property-help">View, lighting and site controls save with this project revision.</p>:
   <><h4>Environment & lighting</h4>
    <label className="cad-property"><span>Time of day</span><select aria-label="Scene time of day" value={project.lighting.timeOfDay} onChange={e=>patchLighting({timeOfDay:e.target.value as ProjectState['lighting']['timeOfDay']})}>
@@ -277,11 +279,11 @@ export function CadPropertyInspector({project,selection,onSelect,onChange,onClos
      </label>;
     }):<p className="cad-property-help">This feature has no editable generator parameters in the project.</p>}
     <p className="cad-property-help">Parameters are applied to the canonical generator recipe. Use Parametric tools to edit source code and regenerate artifacts.</p></>}
-   {onEditCode&&selection.group!=='sceneElements'&&<button type="button" className="cad-clear-selection" onClick={onEditCode}>Edit source / parameters in Code</button>}
+   {selection.group!=='sceneElements'&&<button type="button" className="cad-clear-selection" onClick={()=>setTab('source')}>Edit selected element source</button>}
    {(['walls','doors','windows'].includes(selection.group))&&<NativeSolidPanel project={project} elementId={selection.group==='walls'?selection.id:String(record.wallId)}/>}
    {selection.group!=='sceneElements'&&<button type="button" className="cad-clear-selection cad-delete-element" onClick={deleteSelection}>Delete selected element</button>}
    <button type="button" className="cad-clear-selection" onClick={()=>onSelect(null)}>Clear selection</button></>}
-  </fieldset></div>
+  </fieldset></>}</div>
   <footer className="cad-pane-note">Edits use the current project, undo history, and save workflow.</footer>
  </aside>;
 }
@@ -296,14 +298,14 @@ export const CAD_STUDIO_TOOLS:{id:ActiveTool;label:string;shortcut:string;tier:1
  {id:'eraser',label:'Erase',shortcut:'E',tier:2,icon:Eraser},
  {id:'pan',label:'Pan',shortcut:'H',tier:2,icon:Hand}
 ];
-export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock}:{
+export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLayout,onPlanLayout,readOnly,onNew,onTemplates,onExport,onToggleExplorer,onToggleInspector,explorerOpen,inspectorOpen,onUndo,onRedo,canUndo,canRedo,onToggleDiagnostics,showDiagnostics,studioView,onStudioView,viewportMode,onViewportMode,runtimeSlot,projectSlot,onSave,saveDisabled,saveLabel,onStock,onOpenSource,onParametric}:{
  tool:ActiveTool;onTool:(v:ActiveTool)=>void;workspace:string;onWorkspace:(v:'plan'|'model'|'robotics')=>void;
  planLayout:'2d'|'split';onPlanLayout:(v:'2d'|'split')=>void;readOnly:boolean;
  onNew:()=>void;onTemplates:()=>void;onExport:()=>void;onToggleExplorer:()=>void;onToggleInspector:()=>void;
  explorerOpen:boolean;inspectorOpen:boolean;
  onUndo:()=>void;onRedo:()=>void;canUndo:boolean;canRedo:boolean;
  onToggleDiagnostics:()=>void;showDiagnostics:boolean;
- studioView:'preview'|'edit'|'code';onStudioView:(v:'preview'|'edit'|'code')=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
+ studioView:'preview'|'edit';onStudioView:(v:'preview'|'edit')=>void;onOpenSource:()=>void;onParametric:()=>void;viewportMode:'2d'|'3d'|'split';onViewportMode:(v:'2d'|'3d'|'split')=>void;runtimeSlot:React.ReactNode;projectSlot:React.ReactNode;onSave:()=>void;saveDisabled?:boolean;saveLabel?:string;onStock:()=>void;
 }) {
  const toolbarRef=React.useRef<HTMLDivElement>(null);
  React.useEffect(()=>{
@@ -351,9 +353,11 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
  },[onTool,workspace,studioView,readOnly]);
  return <div ref={toolbarRef} className="cad-real-toolbar" role="toolbar" aria-label="CAD authoring tools" data-studio-toolbar="progressive">
   <div className="cad-view-tabs" role="group" aria-label="Studio view">
-   {(['preview','edit','code'] as const).map(v=><button key={v} type="button" title={v==='code'?'Code / parametric model':v==='preview'?'Preview current model':'Edit current project'}
-     aria-label={v==='code'?'Code / parametric model':v==='preview'?'Preview current model':'Edit current project'}
+   {(['preview','edit'] as const).map(v=><button key={v} type="button" title={v==='preview'?'Preview current model':'Edit current project'}
+     aria-label={v==='preview'?'Preview current model':'Edit current project'}
      aria-pressed={studioView===v} className={studioView===v?'active':''} onClick={()=>onStudioView(v)}>{v[0].toUpperCase()+v.slice(1)}</button>)}
+   <button type="button" aria-label="Edit selected element source in Properties" title="Source · selected element inspector"
+     onClick={onOpenSource}>Source</button>
   </div>
   <div className="cad-viewport-modes" role="group" aria-label="Canvas arrangement">
    {(['2d','3d','split'] as const).map(mode=><button type="button" key={mode}
@@ -380,7 +384,7 @@ export function CadEngineeringToolbar({tool,onTool,workspace,onWorkspace,planLay
      {item(<Box size={16}/>,'Stock · architectural assets',onStock)}
      <h6 className="cad-menu-head">Project</h6>
      {item(<Plus size={16}/>,'Blank project',onNew,{disabled:readOnly})}
-     {item(<PencilRuler size={16}/>,'Parametric part · Code',()=>onStudioView('code'))}
+     {item(<PencilRuler size={16}/>,'Parametric parts · Libraries',onParametric)}
    </>)}
   </div>}
   <div className="cad-tool-cluster cad-edit-history">

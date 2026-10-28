@@ -13,7 +13,8 @@ const FORBIDDEN_PATTERNS = [
   { pattern: /\/etc\/|\/var\/|\/tmp\/|\/bin\/|\/usr\/|C:\\|D:\\/i, message: 'Hardcoded absolute filesystem paths are prohibited.' },
 ];
 
-export function validateOpenScadSource(source: string): OpenScadValidationResult {
+/** Library declarations are allowed ONLY in the native-backed editor; runtime must still verify installed files. */
+export function validateOpenScadSource(source: string, options:{allowLibraryImports?:boolean}={}): OpenScadValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -26,12 +27,18 @@ export function validateOpenScadSource(source: string): OpenScadValidationResult
     errors.push('Source code exceeds the maximum allowed length (500KB).');
   }
 
-  // Check forbidden security patterns
+  // The browser sandbox never resolves library dependencies. Editing may retain
+  // safe relative .scad statements; native compilation will verify their files.
+  const checkedSource=options.allowLibraryImports
+    ? source.replace(/^\s*(?:include|use)\s*<[A-Za-z0-9_./-]+\.scad>\s*;?\s*$/gm,'')
+    : source;
   for (const rule of FORBIDDEN_PATTERNS) {
-    if (rule.pattern.test(source)) {
-      errors.push(rule.message);
-    }
+    if (rule.pattern.test(checkedSource)) errors.push(rule.message);
   }
+  if(options.allowLibraryImports && /\.\.[/\\]/.test(source))
+    errors.push('Library paths must not traverse outside trusted include roots.');
+  if(options.allowLibraryImports && /\b(?:include|use)\s*<\//.test(source))
+    errors.push('Absolute OpenSCAD library paths are prohibited.');
 
   // Check balanced braces / parenthesis basic structural checks
   let openBraces = 0;

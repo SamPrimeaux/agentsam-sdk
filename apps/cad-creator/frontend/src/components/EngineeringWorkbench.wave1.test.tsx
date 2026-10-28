@@ -7,9 +7,9 @@ const noop = vi.fn();
 const props: React.ComponentProps<typeof CadEngineeringToolbar> = {
   tool:'select', onTool:noop, workspace:'plan', onWorkspace:noop,
   planLayout:'split', onPlanLayout:noop, readOnly:false,
-  onNew:noop, onTemplates:noop, onExport:noop,
+  onNew:noop, onTemplates:noop, onExport:noop, onOpenSource:noop,
   onToggleExplorer:noop, onToggleInspector:noop,
-  explorerOpen:false, inspectorOpen:true, onStock:noop,
+  explorerOpen:false, inspectorOpen:true, onStock:noop, onParametric:noop,
   onUndo:noop, onRedo:noop, canUndo:true, canRedo:false,
   onToggleDiagnostics:noop, showDiagnostics:false,
   studioView:'edit', onStudioView:noop,

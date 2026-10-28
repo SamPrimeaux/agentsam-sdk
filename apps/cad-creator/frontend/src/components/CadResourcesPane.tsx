@@ -1,16 +1,22 @@
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {ARCHITECTURAL_STOCK,type FurniturePreset} from './FurniturePicker';
+import {OPENSCAD_PARAMETRIC_TEMPLATES} from '../lib/openscad/generator';
+import {OpenScadLibraryPane} from './OpenScadLibraryPane';
 import {useMemo} from 'react';
 import type {ProjectState,WallAssembly} from '@inneranimalmedia/agentsam-cad-shared';
 import {Box,Layers3,Library,PanelLeftClose} from 'lucide-react';
 import {WALL_ASSEMBLY_STARTERS,cloneAssembly,defaultWallAssembly,wallAssemblyTotal} from '../lib/cad/wall-assemblies';
 import type {CadElementSelection} from './EngineeringWorkbench';
 
-export function CadResourcesPane({mode,project,selection,onSelect,onClose,onApplyAssembly,onPlaceStock,readOnly,onOpenTemplates,sceneInventory}:{
+export function CadResourcesPane({mode,project,selection,onSelect,onClose,onApplyAssembly,onPlaceStock,onCreateParametric,onInsertScadImport,readOnly,onOpenTemplates,sceneInventory,preferredSection}:{
  mode:'assets'|'libraries';project:ProjectState;selection:CadElementSelection;
  onSelect:(value:CadElementSelection)=>void;onClose:()=>void;onApplyAssembly:(assembly:WallAssembly)=>void;onPlaceStock:(preset:FurniturePreset)=>void;
+ onCreateParametric:(templateKey:string)=>void;onInsertScadImport:(importLine:string)=>void;
  readOnly:boolean;onOpenTemplates:()=>void;sceneInventory?:Array<{category:string;count:number}>;
+ preferredSection?:'assemblies'|'stock'|'parametric'|'openscad';
 }){
+ const [librarySection,setLibrarySection]=useState<'assemblies'|'stock'|'parametric'|'openscad'>(preferredSection||'assemblies');
+ useEffect(()=>{if(preferredSection)setLibrarySection(preferredSection)},[preferredSection]);
  const [stockSearch,setStockSearch]=useState('');
  const [stockCategory,setStockCategory]=useState('all');
  const filteredStock=ARCHITECTURAL_STOCK.filter(stock=>(stockCategory==='all'||stock.category===stockCategory)&&
@@ -46,6 +52,12 @@ export function CadResourcesPane({mode,project,selection,onSelect,onClose,onAppl
      {project.sceneSource&&<p className="cad-pane-note">Scene source {project.sceneSource.assetId} · revision {project.sceneSource.revision}. Imported mesh assets are not editable BIM components.</p>}
      {sceneInventory?.map(item=><div className="cad-property-summary" key={item.category}><span>{item.category.replaceAll('-',' ')}</span><b>{item.count}</b></div>)}
     </>:<>
+     <div className="cad-resource-subtabs" role="tablist" aria-label="Library categories">
+      {(['assemblies','stock','parametric','openscad'] as const).map(section=>
+       <button key={section} role="tab" type="button" aria-selected={librarySection===section}
+        onClick={()=>setLibrarySection(section)}>{section==='openscad'?'OpenSCAD':section[0].toUpperCase()+section.slice(1)}</button>)}
+     </div>
+     {librarySection==='assemblies'&&<>
      <p className="cad-pane-note">Assembly starters are copied into your selected wall. Edit their real material-layer properties in the inspector.</p>
      <h4>Wall assemblies</h4>
      {WALL_ASSEMBLY_STARTERS.map(template=><div className="cad-library-assembly" key={template.name}>
@@ -58,6 +70,10 @@ export function CadResourcesPane({mode,project,selection,onSelect,onClose,onAppl
          {selectedWall?'Apply to '+selectedWall.id:'Select a wall first'}
        </button>
      </div>)}
+     <h4>Project templates</h4>
+     <button type="button" className="cad-clear-selection" onClick={onOpenTemplates}>Browse saved drafting templates</button>
+     </>}
+     {librarySection==='stock'&&<>
      <h4>Architectural stock · fixtures &amp; furniture</h4>
      <label className="cad-stock-search">Search stock
       <input type="search" value={stockSearch} onChange={event=>setStockSearch(event.target.value)} placeholder="Sofa, table, plant, vanity…" aria-label="Search architectural stock"/>
@@ -73,8 +89,23 @@ export function CadResourcesPane({mode,project,selection,onSelect,onClose,onAppl
        <button type="button" disabled={readOnly} onClick={()=>onPlaceStock(item)}>Place</button>
      </article>)}
      {!filteredStock.length&&<p className="cad-pane-note">No stock items match your filters.</p>}</div>
-     <h4>Project templates</h4>
-     <button type="button" className="cad-clear-selection" onClick={onOpenTemplates}>Browse saved drafting templates</button>
+     </>}
+     {librarySection==='parametric'&&<>
+     <h4>Parametric generators · OpenSCAD</h4>
+     <p className="cad-property-help">Create a real parametric part in this project, then edit its dimensions and source in Properties.</p>
+     <div className="cad-generator-list">
+      {Object.entries(OPENSCAD_PARAMETRIC_TEMPLATES).map(([key,template])=>
+       <div key={key} className="cad-generator-card">
+        <strong>{template.name}</strong><small>{template.description}</small>
+        <button type="button" disabled={readOnly} onClick={()=>onCreateParametric(key)}>Add to project</button>
+       </div>)}
+     </div>
+     </>}
+     {librarySection==='openscad'&&<>
+     <h4>Registered OpenSCAD libraries</h4>
+     <p className="cad-property-help">Catalog entries are not installed dependencies. Select a parametric part before inserting an import into its source.</p>
+     <OpenScadLibraryPane compact disabled={readOnly||selection?.group!=='parametricObjects'} onInsert={onInsertScadImport}/>
+     </>}
     </>}
    </div>
  </aside>;

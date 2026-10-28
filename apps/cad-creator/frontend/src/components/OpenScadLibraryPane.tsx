@@ -30,7 +30,7 @@ const edit=(row:ScadLibrary):Draft=>({
  expected_updated_at:row.updated_at,
 });
 const CATALOG='/api/agentsam/openscad-libraries';
-export function OpenScadLibraryPane({onInsert,disabled}:{onInsert:(line:string)=>void;disabled:boolean}){
+export function OpenScadLibraryPane({onInsert,disabled,compact=false}:{onInsert:(line:string)=>void;disabled:boolean;compact?:boolean}){
  const [rows,setRows]=useState<ScadLibrary[]>(fromSnapshot);
  const [live,setLive]=useState(false),[canManage,setCanManage]=useState(false);
  const [query,setQuery]=useState(''),[safeOnly,setSafeOnly]=useState(false),[onlyActive,setOnlyActive]=useState(true);
@@ -97,7 +97,7 @@ export function OpenScadLibraryPane({onInsert,disabled}:{onInsert:(line:string)=
    setSelected(null);await reload();setNotice('Library deactivated in D1.');
   }catch(e){setNotice(e instanceof Error?e.message:String(e))}finally{setBusy(false)}
  };
- return <aside className="w-full lg:w-80 min-h-0 shrink-0 border border-slate-700 rounded-lg flex flex-col bg-slate-900/80" aria-label="OpenSCAD libraries">
+ return <aside className={compact?'cad-scad-library-embedded min-h-0 border rounded-lg flex flex-col':'w-full lg:w-80 min-h-0 shrink-0 border border-slate-700 rounded-lg flex flex-col bg-slate-900/80'} aria-label="OpenSCAD libraries">
   <header className="p-3 border-b border-slate-700 space-y-2">
    <div className="flex justify-between items-center gap-2">
     <span className="font-semibold text-sm flex items-center gap-2"><BookOpen size={16}/> OpenSCAD libraries</span>
