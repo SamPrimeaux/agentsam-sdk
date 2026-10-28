@@ -15,7 +15,7 @@ The complete built platform ships in `site/`; installation does not depend on th
 Resolve ships a **portable multi-page portal** in `site/portal/` with a single
 route/configuration authority in `src/portal-templates.mjs`.
 
-The portal provides: collections, an individual collection, storefront password
+The portal provides: three collections and individual collection pages, products and product details, gift cards, search, checkout preview, editorial/blogs, a 404 template, structured metaobject preview, storefront password
 experience, customer sign-in, sign-up, dashboard, orders, saved items, profile and
 cart. It uses dynamic brand tokens (name, logo asset URL, burgundy accent, gradient,
 glass opacity and parallax), with reduced-motion support.
@@ -42,3 +42,24 @@ orders, inventory-priced carts and Stripe payments before switching from preview
 The CMS inspector edits appearance/interaction in the existing local Theme Studio
 and can export a draft JSON proposal. It is not a substitute for a permissioned
 customer-account backend.
+
+### Resolve authenticity and catalog sync
+
+The customer routes live **inside the packaged Resolve theme**, not as an unrelated
+new commerce theme. The portal imports the original Resolve compiled CSS, reuses
+its capsule navigation system, Cormorant/Geist typography, black/white/oxblood
+editorial treatment, and **actual package-owned editorial media**. The original
+Resolve React storefront in site/index.html and its compiled JS remain unchanged.
+
+The original compiled React demo contains 13 product examples. Their ID, names,
+price, category, description and linked original media paths are extracted into
+site/portal/catalog.js using npm run sync:demo-catalog (Python available at dev
+build time). This is not a production inventory feed. Never generate imaginary
+products when original Resolve data is available. The local preview uses those
+examples, while live inventory must come from an authorized tenant catalog.
+
+The AgentSam SDK local Theme Studio opens Resolve by default on bare localhost
+editor links. It exposes **21 draft-only page templates**, section selection,
+editable text/media/spacing/visibility, additive sections and the same app-embed
+bridge for the original home and all customer routes. No D1, Stripe, or login
+backend is written from the local preview.

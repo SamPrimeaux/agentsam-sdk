@@ -79,7 +79,7 @@ const previewCatalog = [
 const find=(p)=>{
  if(p==='/themes/resolve/demo/portal'||p.startsWith('/themes/resolve/demo/portal/')){
    const relative=p.replace(/^\/themes\/resolve\/demo\/portal\/?/,'').replace(/\/$/,'');
-   if(relative==='portal.js'||relative==='portal.css')return path.join(resolvePortalRoot,relative);
+   if(relative==='portal.js'||relative==='portal.css'||relative==='catalog.js')return path.join(resolvePortalRoot,relative);
    if(!relative||portalTemplateForPath(relative))return path.join(resolvePortalRoot,'index.html');
    return null;
  }
@@ -119,7 +119,16 @@ const find=(p)=>{
 };
 const server=http.createServer(async(req,res)=>{
  try{
-  const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
+  const requestUrl=new URL(req.url,'http://localhost');
+  const pathname=decodeURIComponent(requestUrl.pathname);
+  // Localhost is the Resolve commerce design studio. A bare editor URL must
+  // never fall into a disconnected Violet production mode and show a white iframe.
+  if(pathname==='/admin/theme-editor' && !requestUrl.searchParams.has('showcase')){
+    requestUrl.searchParams.set('showcase','resolve');
+    if(!requestUrl.searchParams.has('slug'))requestUrl.searchParams.set('slug','home');
+    res.writeHead(302,{Location:requestUrl.pathname+requestUrl.search});
+    res.end();return;
+  }
   if(pathname==='/api/admin/completeful/catalog' && req.method==='GET'){
    const url = new URL(req.url,'http://localhost');
    const search = (url.searchParams.get('search') || '').trim().toLowerCase();
@@ -189,7 +198,7 @@ const server=http.createServer(async(req,res)=>{
      status:'draft',template_key:page.template_key,preview_only:true
    })))}));return;
   }
-  const portalSlug=pathname.match(/^\/api\/admin\/cms\/pages\/(resolve-[a-z-]+)$/);
+  const portalSlug=pathname.match(/^\/api\/admin\/cms\/pages\/(resolve-[a-z0-9-]+)$/);
   const portalDef=portalSlug && portalTemplateForSlug(portalSlug[1]);
   if(portalDef && req.method==='GET'){
     res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
@@ -206,8 +215,10 @@ const server=http.createServer(async(req,res)=>{
   }
   if(pathname==='/api/admin/cms/themes' && req.method==='GET'){
    res.writeHead(200,{'Content-Type':'application/json'});
-   res.end(JSON.stringify({ok:true,active_theme:{slug:'violet',name:'Violet',state:'preview'},
-     preview_theme:{slug:'violet',name:'Violet',state:'preview'},themes:[],content_version:1}));return;
+   res.end(JSON.stringify({ok:true,active_theme:null,
+     preview_theme:{slug:'resolve',name:'Resolve',state:'preview'},
+     themes:[{slug:'resolve',name:'Resolve',state:'preview'},
+             {slug:'violet',name:'Violet',state:'preview'}],content_version:1}));return;
   }
   if(pathname==='/api/admin/cms/registry' && req.method==='GET'){
    res.writeHead(200,{'Content-Type':'application/json'});
@@ -232,6 +243,10 @@ const server=http.createServer(async(req,res)=>{
    let html=data.toString();
    if(target===path.join(resolvePortalRoot,'index.html')){
      html=html.replaceAll('__RESOLVE_PORTAL_BASE__','/themes/resolve/demo/portal/');
+     if(requestUrl.searchParams.has('studio_preview')){
+       // The same manifest-driven embed bridge runs on native Resolve AND portal pages.
+       html=html.replace('</body>','<script src="/admin/js/resolve-preview-bridge.js"></script></body>');
+     }
    }
    if(pathname==='/themes/resolve/demo/' && new URL(req.url,'http://localhost').searchParams.has('studio_preview')){
      html=html.replace('</body>','<script src="/admin/js/resolve-preview-bridge.js"></script></body>');

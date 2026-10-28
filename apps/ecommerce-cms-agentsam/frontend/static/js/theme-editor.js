@@ -809,11 +809,25 @@
     { id: 'metaobject', title: 'Create metaobject template', icon: 'plus', template: 'metaobject', create: true },
   ];
   if (resolveShowcase) {
+    const products = storefrontMenu.find(item => item.id === 'products');
+    products.children = [
+      {title:'All products',page:'resolve-products'},
+      {title:'Default product',page:'resolve-product'}
+    ];
     const collections = storefrontMenu.find(item => item.id === 'collections');
     collections.children = [
       { title: 'Collections list', page: 'resolve-collections' },
       { title: 'Default collection', page: 'resolve-collection' },
+      { title: 'Leather studies', page: 'resolve-leather' },
+      { title: 'Knitwear edit', page: 'resolve-knitwear' },
     ];
+    for(const [id,page] of [
+      ['gift-card','resolve-gift-card'],['search','resolve-search'],
+      ['checkout','resolve-checkout'],['404','resolve-404'],['metaobject','resolve-metaobject']]){
+      storefrontMenu.find(item => item.id===id).page=page;
+    }
+    storefrontMenu.find(item=>item.id==='blogs').children=[{title:'Editorial archive',page:'resolve-blogs'}];
+    storefrontMenu.find(item=>item.id==='posts').children=[{title:'Editorial article',page:'resolve-article'}];
     const cart = storefrontMenu.find(item => item.id === 'cart'); cart.page = 'resolve-cart';
     const password = storefrontMenu.find(item => item.id === 'password'); password.page = 'resolve-password';
     storefrontMenu.splice(storefrontMenu.findIndex(item => item.id === 'checkout') + 1, 0, {
@@ -2604,6 +2618,12 @@
   }
 
   async function openMiniAgentSam() {
+    if(localShowcase) {
+      // The SDK preview has no authenticated AgentSam API. Do not open an
+      // unusable composer or surface a failed-module banner over the inspector.
+      setNote('AgentSam AI requires a connected workspace. Local section, app and theme controls remain editable.','info');
+      return;
+    }
     const selection = selectedAgentResource();
     if (!selection) { setNote('Select a section or editable field before asking AgentSam.'); return; }
     const tick = ++miniAgentSamSelectionTick;

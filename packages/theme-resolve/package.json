@@ -19,10 +19,12 @@
     "src",
     "site",
     "README.md",
-    "prebuild.json"
+    "prebuild.json",
+    "scripts"
   ],
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "sync:demo-catalog": "python3 scripts/sync-demo-catalog.py"
   },
   "engines": {
     "node": ">=22 <25"

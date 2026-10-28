@@ -40,3 +40,32 @@ and transact only private drafts. Account/customer auth must be separate from ad
 - Form validation server-side and consent handling.
 - Authenticated CMS save/publish and tenant permission checks.
 - Manual end-to-end checkout and account QA before any public launch.
+
+## In-place Resolve correction, acceptance wave
+
+The earlier capsule/card/illustration prototype was judged visually detached from
+the original Resolve theme. The latest revision restores the original black,
+white and oxblood palette, uppercase headings, original capsule navigation,
+shared theme CSS, original editorial imagery, and original **13-product demo
+catalog**. There is no new fake product inventory or geometry illustration.
+
+Use **http://127.0.0.1:4357/admin/theme-editor?slug=home**; localhost now redirects
+to Resolve mode instead of the disconnected Violet production editor. The top
+page picker has real local preview drafts for 21 pages, including Products,
+Collections, Gift Card, Cart, Checkout, Blogs, Articles, Search, Password,
+Customer Accounts, 404 and Metaobjects.
+
+The left section list now has a working Add section chooser (rich-text editorial,
+image feature, newsletter, featured collections), plus content editing in the
+right inspector. The local preview bridge also runs app-embed previews on portal
+routes, with the same manifest registry as the original homepage. The section
+JSON and brand settings are browser-local drafts, not published records.
+
+To resync demo products from the actual bundled Resolve site after a source
+update, run npm run sync:demo-catalog in packages/theme-resolve. This generator
+fails closed if the bundled product source or media paths do not match.
+
+Manual browser visual acceptance remains required; Chrome headless on the Mac
+aborted (exit -6), so the automated tests validate page/route rendering and
+contracts, not pixel-level design fidelity. No backend auth, Stripe, D1,
+account, or checkout transactions have been claimed or performed.

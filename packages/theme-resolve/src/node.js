@@ -44,6 +44,9 @@ function rewriteStaticBase(root, basePath) {
       if (entry.isDirectory()) { queue.push(target); continue; }
       if (!TEXT_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) continue;
       let text = fs.readFileSync(target, 'utf8');
+      // Resolve's original compiled React storefront still includes theme-gallery
+      // asset paths. Rebase them to THIS tenant's installed theme, not the gallery.
+      text = text.replaceAll('/themes/resolve/demo/', basePath);
       for (const segment of STATIC_ROOTS) {
         text = text.replaceAll('/' + segment + '/', basePath + segment + '/');
       }

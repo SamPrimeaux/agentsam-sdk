@@ -9,13 +9,14 @@ import {
 test('Resolve storefront extends to independently routable account, collections, cart, and password templates',()=>{
  const paths=RESOLVE_PORTAL_TEMPLATES.map(p=>p.path);
  assert.equal(new Set(paths).size,paths.length);
- for(const route of ['collections','collections/atelier','customer/sign-in','customer/sign-up','customer/account',
- 'customer/orders','customer/saved','customer/profile','cart','password']) {
+ for(const route of ['collections','collections/atelier','collections/leather','collections/knitwear','customer/sign-in','customer/sign-up','customer/account',
+ 'customer/orders','customer/saved','customer/profile','cart','password',
+ 'products','products/sable-blazer','gift-card','search','checkout','blogs','blogs/material-patina','404','metaobject']) {
   assert.ok(paths.includes(route),route);
   assert.equal(portalTemplateForPath(route)?.path,route);
   assert.equal(portalHref(route),'/themes/resolve/demo/portal/'+route);
  }
- assert.equal(RESOLVE_PORTAL_TEMPLATES.length,10);
+ assert.equal(RESOLVE_PORTAL_TEMPLATES.length,21);
 });
 test('Every portal page maps to a draft CMS page with stable section keys, never a real user/order table',()=>{
  for(const template of RESOLVE_PORTAL_TEMPLATES){
@@ -46,6 +47,17 @@ test('Portal has dynamic branding, parallax and explicit fake-session controls, 
  assert.match(js,/sessionStorage/);
  assert.match(js,/data-cms-section/);
  assert.match(js,/data-action="add-cart"/);
+ assert.match(html,/index-BSaLpPG1.css/);
+ assert.match(html,/catalog.js/);
+ const compiled=readFileSync(new URL('../site/assets/index-D8au46Z5.js',import.meta.url),'utf8');
+ const generated=readFileSync(new URL('../site/portal/catalog.js',import.meta.url),'utf8');
+ assert.match(compiled,/SABLE BLAZER/);
+ assert.match(generated,/SABLE BLAZER/);
+ assert.match(generated,/SHARP LEATHER TRENCH/);
+ assert.match(generated,/packaged-resolve-demo/);
+ assert.doesNotMatch(generated,/Kage Overcoat/);
+ assert.match(js,/mediaFor/);
+ assert.doesNotMatch(js,/rp-collection-visual:before/);
  assert.match(js,/customer\/sign-up/);
  assert.match(js,/auth-form/);
  assert.doesNotMatch(js,/GitHub Token|githubToken|ghp_/);
@@ -53,9 +65,10 @@ test('Portal has dynamic branding, parallax and explicit fake-session controls, 
   assert.ok(Object.hasOwn(RESOLVE_PORTAL_BRAND,key));
 });
 
-test('Portal renders all 10 routes in a minimal browser environment without submitting auth data',()=>{
+test('Portal renders all 21 routes in a minimal browser environment without submitting auth data',()=>{
 
  const script=readFileSync(new URL('../site/portal/portal.js',import.meta.url),'utf8');
+ const canonicalCatalog=readFileSync(new URL('../site/portal/catalog.js',import.meta.url),'utf8');
  const paths=RESOLVE_PORTAL_TEMPLATES.map(t=>t.path);
  for(const route of paths){
   const app={innerHTML:'',dataset:{}};
@@ -71,6 +84,7 @@ test('Portal renders all 10 routes in a minimal browser environment without subm
    documentElement:{style:{setProperty:()=>{}}},
    getElementById:id=>id==='app'?app:null,
    querySelectorAll:()=>[],
+   querySelector:()=>null,
    addEventListener:(name,fn)=>{(callbacks[name]||=[]).push(fn);}
   };
   const win={};
@@ -85,10 +99,11 @@ test('Portal renders all 10 routes in a minimal browser environment without subm
    history:{pushState:(_a,_b,to)=>{location.pathname=new URL(to,origin).pathname;},
      replaceState:(_a,_b,to)=>{location.pathname=new URL(to,origin).pathname;}}
   };
+  vm.runInNewContext(canonicalCatalog,context,{timeout:1000});
   vm.runInNewContext(script,context,{timeout:1000});
   assert.match(app.innerHTML,/<main\b/,route);
   assert.match(app.innerHTML,/RESOLVE/,route);
-  assert.match(app.innerHTML,/No live authentication or payments/,route);
+  assert.match(app.innerHTML,/Not connected to customers or payments/,route);
   if(route==='customer/sign-in'){
    assert.match(app.innerHTML,/type="email"/);
    assert.match(app.innerHTML,/type="password"/);

@@ -21,11 +21,20 @@
   var onNavigatePage=null;
   var portalBrand={
     name:'RESOLVE',tagline:'Objects of lasting desire.',logo_url:'',
-    accent:'#8b181b',backdrop_from:'#131720',backdrop_mid:'#412634',backdrop_to:'#84636b',
-    glass_opacity:0.12,parallax_enabled:true,parallax_strength:18,
+    accent:'#8b181b',backdrop_from:'#0b0b0b',backdrop_mid:'#231418',backdrop_to:'#493036',
+    glass_opacity:0.1,parallax_enabled:true,parallax_strength:18,
     signup_enabled:true,password_gate_enabled:false,show_guest_checkout:true
   };
   const PORTAL_BRAND_KEY='resolve.portal.preview.brand.v1';
+  const EXTRA_TYPES=[
+    {type:'rich-text',label:'Rich text editorial',icon:'≡'},
+    {type:'media-feature',label:'Image + content feature',icon:'▧'},
+    {type:'newsletter-callout',label:'Newsletter section',icon:'✉'},
+    {type:'collection-strip',label:'Featured collections',icon:'▦'}
+  ];
+  function extraSections(){
+    return portalPage ? sectionSettings[portalPage.slug+':_extra']||[] : [];
+  }
   function visibleSections(){
     if(!portalPage)return sections;
     return [{key:'header',label:'Header',icon:'☷',group:'HEADER'}]
@@ -33,6 +42,7 @@
         key:item.key,label:item.key.replace(/-/g,' ').replace(/^\w/,c=>c.toUpperCase()),
         icon:'▤',group:'TEMPLATE'
       })))
+      .concat(extraSections().map(item=>({key:item.key,label:item.label,icon:'⊞',group:'ADDED SECTIONS'})))
       .concat([{key:'footer',label:'Footer',icon:'☷',group:'FOOTER'}]);
   }
   function pagePath(slug){
@@ -94,6 +104,14 @@
         sections:sectionSettings,
         scroll:false
       },extra||{}),location.origin);
+      frame.contentWindow.postMessage(Object.assign({
+        type:'agentsam:resolve-update',
+        selected:selectionType==='section'?selected:null,
+        scroll:false,
+        previewing:previewing,
+        sections:sectionSettings,
+        embeds:catalog.map(function(app){return Object.assign({key:app.key,name:app.name},stateFor(app));})
+      },extra||{}),location.origin);
       return;
     }
     frame.contentWindow.postMessage(Object.assign({
@@ -154,15 +172,40 @@
         '<span>'+s.icon+'</span><span>'+esc(s.label)+'</span><small>'+
         (present===false?'Unmapped':'Edit')+'</small></button>';
     });
-    tree.innerHTML=html+'<button type="button" class="rs-add-section" data-rs-add>+ Add section / app block</button>'+
-      '<p class="rs-tree-note">Selections scroll to real Resolve anchors. Missing anchors are labeled; no storefront code is rewritten.</p>';
+    tree.innerHTML=html+'<button type="button" class="rs-add-section" data-rs-add>+ Add section</button>'+
+      '<div id="rs-section-library" hidden class="rs-section-library"><div class="rs-group-heading">ADD A RESOLVE SECTION</div>'+
+      EXTRA_TYPES.map(item=>'<button type="button" class="rs-section-choice" data-rs-template="'+item.type+'"><span>'+item.icon+'</span>'+item.label+' <span>＋</span></button>').join('')+
+      '<button class="rs-section-choice" data-rs-embed-shortcut type="button">✣ App embed →</button></div>'+
+      '<p class="rs-tree-note">Each section is selectable and editable in the preview. New sections remain local draft until an authorized CMS save.</p>';
     var title=el('te-tree-title');if(title)title.textContent=portalPage?portalPage.title:'Resolve · Home';
     tree.querySelectorAll('[data-rs-section]').forEach(function(btn){
       btn.addEventListener('click',function(){selectSection(btn.dataset.rsSection,true);});
     });
     tree.querySelector('[data-rs-add]')?.addEventListener('click',function(){
+      const library=tree.querySelector('#rs-section-library');
+      library.hidden=!library.hidden;
+    });
+    tree.querySelectorAll('[data-rs-template]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        if(!portalPage){note('Choose a Resolve page before adding sections.');return;}
+        const template=EXTRA_TYPES.find(t=>t.type===btn.dataset.rsTemplate);
+        if(!template)return;
+        const extras=extraSections().slice();
+        if(extras.length>=20){note('Maximum 20 local draft sections per page.');return;}
+        const key='custom-'+template.type+'-'+Date.now().toString(36);
+        extras.push({key,label:template.label,type:template.type});
+        sectionSettings[portalPage.slug+':_extra']=extras;
+        sectionSettings[portalPage.slug+':'+key]={
+          visible:true,padding:48,heading:template.label.toUpperCase(),
+          description:'A considered addition to the Resolve archive.',
+          button_label:'EXPLORE THE EDIT'
+        };
+        selected=key;selectionType='section';save();renderSections();renderInspector();sync({scroll:true});
+        note('Added '+template.label+' to this page draft.');
+      });
+    });
+    tree.querySelector('[data-rs-embed-shortcut]')?.addEventListener('click',function(){
       document.querySelector('[data-drawer-mode="app-embeds"]')?.click();
-      note('Select a storefront embed. Its preview is editable, but no live app is installed.');
     });
   }
   function inspectorTitle(title,subtitle) {
@@ -242,7 +285,14 @@
       '<p class="rs-inspector-hint">'+esc(item.label)+' · '+esc(portalPage.template_key)+' · local draft preview</p>'+
       check('Section enabled','section_visible',cfg.visible!==false)+
       input('Vertical padding (px)','section_padding',cfg.padding||0,'number','min="0" max="160"')+
+      '<div class="rs-group-heading">Section content</div>'+
+      input('Heading','section_heading',cfg.heading||'')+
+      '<label class="rs-control">Description<textarea data-rs-input="section_description" rows="3">'+esc(cfg.description||'')+'</textarea></label>'+
+      input('Call to action label','section_button_label',cfg.button_label||'')+
+      selectWidget(['theme-default','media-216610d365.webp','media-a70660bfa9.webp','media-ced60fcecc.webp','media-2a9e0f623f.webp','media-bc1322e813.webp'],
+        cfg.media||'theme-default','section_media')+
       '<button type="button" class="rs-secondary" data-rs-portal-jump>Jump to selected section</button>'+
+      (item.key.startsWith('custom-')?'<button type="button" class="rs-secondary" data-rs-portal-remove>Remove added section</button>':'')+
       '<div class="rs-group-heading">Brand identity</div>'+
       input('Brand name','name',portalBrand.name)+
       input('Tagline','tagline',portalBrand.tagline)+
@@ -270,9 +320,16 @@
       input.addEventListener('input',()=>{
         const key=input.dataset.rsInput;
         const val=input.type==='number'?Number(input.value):input.value;
-        if(key==='section_padding'){
+        if(key.startsWith('section_')){
           const id=portalPage.slug+':'+item.key;
-          sectionSettings[id]={...sectionSettings[id],padding:Math.max(0,Math.min(160,val))};
+          const patch={
+            section_padding:{padding:Math.max(0,Math.min(160,val))},
+            section_heading:{heading:String(val).slice(0,150)},
+            section_description:{description:String(val).slice(0,500)},
+            section_button_label:{button_label:String(val).slice(0,80)},
+            section_media:{media:String(val)}
+          }[key];
+          if(patch)sectionSettings[id]={...sectionSettings[id],...patch};
           save();
         } else {
           portalBrand[key]=val;
@@ -295,6 +352,12 @@
       });
     });
     panel.querySelector('[data-rs-portal-jump]')?.addEventListener('click',()=>sync({scroll:true}));
+    panel.querySelector('[data-rs-portal-remove]')?.addEventListener('click',()=>{
+      sectionSettings[portalPage.slug+':_extra']=extraSections().filter(section=>section.key!==item.key);
+      delete sectionSettings[portalPage.slug+':'+item.key];
+      selected=visibleSections().find(section=>section.group==='TEMPLATE')?.key||'header';
+      save();renderSections();renderInspector();sync();
+    });
     panel.querySelector('[data-rs-portal-copy]')?.addEventListener('click',async()=>{
       const content=JSON.stringify({
         page:portalPage,brand_settings:portalBrand,
