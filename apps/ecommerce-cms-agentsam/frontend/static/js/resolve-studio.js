@@ -15,7 +15,7 @@
     {key:'footer',label:'Footer',icon:'☷',group:'FOOTER'}
   ];
   var catalog=[], records={}, selected='hero', selectionType='section', previewing=null, connected=false;
-  var available={}, sectionSettings={};
+  var available={}, sectionSettings={}, themeSettings={}, localDrafts={};
   var portalPage=null;
   var portalTemplateRoutes=[];
   var onNavigatePage=null;
@@ -75,9 +75,70 @@
       var saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
       records=saved.records&&typeof saved.records==='object'?saved.records:{};
       sectionSettings=saved.sections&&typeof saved.sections==='object'?saved.sections:{};
-    }catch(_){records={};sectionSettings={};}
+      themeSettings=saved.themeSettings&&typeof saved.themeSettings==='object'?saved.themeSettings:{};
+      localDrafts=saved.localDrafts&&typeof saved.localDrafts==='object'?saved.localDrafts:{};
+    }catch(_){records={};sectionSettings={};themeSettings={};localDrafts={};}
   }
-  function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify({records:records,sections:sectionSettings}));}
+  function save(){
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({
+      records,sections:sectionSettings,themeSettings,localDrafts
+    }));
+  }
+  const DRAFT_TEMPLATES={
+    products:{source:'resolve-product',path:'products/sable-blazer',sections:['product-gallery','product-info','product-actions','recommendations']},
+    collections:{source:'resolve-collection',path:'collections/atelier',sections:['collection-hero','product-grid','filters']},
+    pages:{source:'resolve-page',path:'pages/about',sections:['page-hero','page-body','page-cta']},
+    blogs:{source:'resolve-blogs',path:'blogs',sections:['editorial-heading','editorial-list']},
+    posts:{source:'resolve-article',path:'blogs/material-patina',sections:['article-title','article-cover','article-body']},
+    metaobject:{source:'resolve-metaobject',path:'metaobject',sections:['metaobject-header','metaobject-fields']}
+  };
+  function getDraft(slug){return localDrafts[slug]?JSON.parse(JSON.stringify(localDrafts[slug])):null;}
+  function getDrafts(){return Object.values(localDrafts).map(d=>({
+    slug:d.slug,title:d.title,status:'draft',preview_only:true,localDraft:true,
+    kind:d.kind,template_key:d.template_key
+  }));}
+  function createDraft(kind,title){
+    const pattern=DRAFT_TEMPLATES[kind];const clean=String(title||'').trim().slice(0,90);
+    if(!pattern||!clean)throw Error('Choose a type and enter a title.');
+    const slug='resolve-draft-'+kind+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6);
+    const draft={slug,title:clean,id:'local-'+slug,page_type:'standard',
+      template_key:'resolve/'+kind,status:'draft',content_authority:'cms-draft',
+      kind,localDraft:true,preview_only:true,
+      metadata_json:JSON.stringify({theme:'resolve',preview_only:true,path:pattern.path,localDraft:true,source:pattern.source}),
+      sections:pattern.sections.map((key,index)=>({
+        id:slug+':'+key,key,section_key:key,section_type:key,
+        sort_order:index,status:'draft',content:{heading:clean,__editor:{visibility:{enabled:true},templateKey:key}}
+      }))
+    };
+    localDrafts[slug]=draft;
+    const first=pattern.sections[0];
+    sectionSettings[slug+':'+first]={heading:clean,visible:true};
+    save();return getDraft(slug);
+  }
+  function deleteDraft(slug){
+    if(!localDrafts[slug])return false;
+    delete localDrafts[slug];
+    for(const key of Object.keys(sectionSettings))if(key.startsWith(slug+':'))delete sectionSettings[key];
+    save();return true;
+  }
+  function getThemeSettings(){return JSON.parse(JSON.stringify(themeSettings));}
+  function updateThemeSettings(next){
+    if(!next||typeof next!=='object'||Array.isArray(next))return false;
+    if(JSON.stringify(next).length>20000)return false;
+    themeSettings=JSON.parse(JSON.stringify(next));
+    // The customer portal's original brand token contract is the single
+    // rendering authority, even when edited from global Theme settings.
+    if(typeof themeSettings['brand.name']==='string')
+      portalBrand.name=themeSettings['brand.name'].trim().slice(0,48)||'RESOLVE';
+    if(typeof themeSettings['brand.tagline']==='string')
+      portalBrand.tagline=themeSettings['brand.tagline'].slice(0,130);
+    if(typeof themeSettings['brand.logo']==='string')
+      portalBrand.logo_url=themeSettings['brand.logo'];
+    if(typeof themeSettings['palette.accent']==='string' && /^#[0-9a-f]{6}$/i.test(themeSettings['palette.accent']))
+      portalBrand.accent=themeSettings['palette.accent'];
+    try{localStorage.setItem(PORTAL_BRAND_KEY,JSON.stringify(portalBrand));}catch(_){}
+    save();sync();return true;
+  }
   function stateFor(app) {
     var r=records[app.key];
     if (!r) return {installed:false,config:Object.assign({},app.default_config||{})};
@@ -99,6 +160,7 @@
     if(portalPage){
       frame.contentWindow.postMessage(Object.assign({
         type:'agentsam:resolve-portal-config',
+        pageSlug:portalPage?.slug,themeSettings:themeSettings,
         brand:portalBrand,
         selected:selectionType==='section'?selected:null,
         sections:sectionSettings,
@@ -106,6 +168,7 @@
       },extra||{}),location.origin);
       frame.contentWindow.postMessage(Object.assign({
         type:'agentsam:resolve-update',
+        themeSettings:themeSettings,
         selected:selectionType==='section'?selected:null,
         scroll:false,
         previewing:previewing,
@@ -309,6 +372,9 @@
       check('Show customer sign up','signup_enabled',portalBrand.signup_enabled)+
       check('Preview storefront password gate','password_gate_enabled',portalBrand.password_gate_enabled)+
       check('Allow guest checkout path','show_guest_checkout',portalBrand.show_guest_checkout)+
+      (portalPage.localDraft?'<div class="rs-group-heading">Draft management</div>'+
+        '<div class="rs-setup-list"><b>Local draft · '+esc(portalPage.title)+'</b><div>This page is stored in this browser and can be edited or discarded without changing any customer records.</div></div>'+
+        '<button type="button" class="rs-secondary" data-rs-delete-draft>Discard local draft</button>':'')+
       '<div class="rs-group-heading">Template status</div>'+
       '<div class="rs-setup-list"><b>CMS page: '+esc(portalPage.slug)+'</b>'+
       '<div>✓ Route/template metadata resolved</div><div>✓ Theme previews and GUI settings available</div>'+
@@ -351,6 +417,15 @@
         sync();
       });
     });
+    panel.querySelector('[data-rs-delete-draft]')?.addEventListener('click',()=>{
+      if(!portalPage?.localDraft)return;
+      if(!window.confirm('Discard this local CMS draft? This cannot affect the live site.'))return;
+      const slug=portalPage.slug;
+      if(deleteDraft(slug)){
+        onNavigatePage?.('resolve-collections');
+        note('Local draft removed. The original Resolve templates are unchanged.');
+      }
+    });
     panel.querySelector('[data-rs-portal-jump]')?.addEventListener('click',()=>sync({scroll:true}));
     panel.querySelector('[data-rs-portal-remove]')?.addEventListener('click',()=>{
       sectionSettings[portalPage.slug+':_extra']=extraSections().filter(section=>section.key!==item.key);
@@ -360,7 +435,7 @@
     });
     panel.querySelector('[data-rs-portal-copy]')?.addEventListener('click',async()=>{
       const content=JSON.stringify({
-        page:portalPage,brand_settings:portalBrand,
+        page:portalPage,brand_settings:portalBrand,theme_settings:themeSettings,
         local_section_settings:Object.fromEntries(Object.entries(sectionSettings).filter(([key])=>key.startsWith(portalPage.slug+':'))),
         preview_only:true
       },null,2);
@@ -523,7 +598,11 @@
     selectApp:selectApp,
     setPage:setPage,
     pagePath:pagePath,
+    getDraft:getDraft,getDrafts:getDrafts,createDraft:createDraft,deleteDraft:deleteDraft,
+    getThemeSettings:getThemeSettings,updateThemeSettings:updateThemeSettings,
     registerNavigator:function(callback){onNavigatePage=callback;},
-    getConfiguration:function(){return JSON.parse(JSON.stringify({records:records,sections:sectionSettings}));}
+    getConfiguration:function(){return JSON.parse(JSON.stringify({
+      records:records,sections:sectionSettings,themeSettings:themeSettings,localDrafts:localDrafts
+    }));}
   };
 })();

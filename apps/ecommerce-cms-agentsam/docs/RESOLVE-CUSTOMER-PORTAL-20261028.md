@@ -69,3 +69,27 @@ Manual browser visual acceptance remains required; Chrome headless on the Mac
 aborted (exit -6), so the automated tests validate page/route rendering and
 contracts, not pixel-level design fidelity. No backend auth, Stripe, D1,
 account, or checkout transactions have been claimed or performed.
+
+## Wave 3 — local empty states and global design controls (2026-10-28)
+
+Theme Studio now presents a 22-template Resolve library and a six-type local draft
+creation workflow: Products, Collections, Pages, Blogs, Articles, and Metaobjects.
+Selecting a category in the top page picker reveals canonical starter layouts,
+existing local drafts and a Create local draft call to action. The named-draft
+form produces tenant-independent draft specifications in the existing browser
+state. Drafts can be selected, edited, and discarded; they never write D1.
+
+Theme settings are now an 18-category, schema-driven accordion with controls for:
+logo and favicon; colors; typography; page; animations; badges; buttons; cart;
+drawers; icons; input fields; popovers and modals; prices; product cards; search;
+swatches; variant pickers; and sanitized custom CSS. Config lives in the same
+local Resolve Studio record and is projected into both storefront previews using
+one package-owned CSS/settings script. Supported controls apply immediately;
+controls requiring absent components are staged as draft values, not falsely
+presented as published or backend-active. The connected production CMS settings
+renderer remains unchanged and is not superseded for non-Resolve editors.
+
+QA: browser-sandbox configuration, D1-write refusal, draft creation/deletion and
+preview CSS safety are covered by automated tests. Chrome headless pixel QA still
+requires an interactive Mac browser acceptance pass. Live auth, Stripe, real
+catalog sync and production publish remain unconnected.

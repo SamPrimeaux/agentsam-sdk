@@ -11,12 +11,12 @@ test('Resolve storefront extends to independently routable account, collections,
  assert.equal(new Set(paths).size,paths.length);
  for(const route of ['collections','collections/atelier','collections/leather','collections/knitwear','customer/sign-in','customer/sign-up','customer/account',
  'customer/orders','customer/saved','customer/profile','cart','password',
- 'products','products/sable-blazer','gift-card','search','checkout','blogs','blogs/material-patina','404','metaobject']) {
+ 'pages/about','products','products/sable-blazer','gift-card','search','checkout','blogs','blogs/material-patina','404','metaobject']) {
   assert.ok(paths.includes(route),route);
   assert.equal(portalTemplateForPath(route)?.path,route);
   assert.equal(portalHref(route),'/themes/resolve/demo/portal/'+route);
  }
- assert.equal(RESOLVE_PORTAL_TEMPLATES.length,21);
+ assert.equal(RESOLVE_PORTAL_TEMPLATES.length,22);
 });
 test('Every portal page maps to a draft CMS page with stable section keys, never a real user/order table',()=>{
  for(const template of RESOLVE_PORTAL_TEMPLATES){
@@ -65,7 +65,7 @@ test('Portal has dynamic branding, parallax and explicit fake-session controls, 
   assert.ok(Object.hasOwn(RESOLVE_PORTAL_BRAND,key));
 });
 
-test('Portal renders all 21 routes in a minimal browser environment without submitting auth data',()=>{
+test('Portal renders all 22 routes in a minimal browser environment without submitting auth data',()=>{
 
  const script=readFileSync(new URL('../site/portal/portal.js',import.meta.url),'utf8');
  const canonicalCatalog=readFileSync(new URL('../site/portal/catalog.js',import.meta.url),'utf8');

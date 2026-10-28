@@ -13,6 +13,8 @@ export const RESOLVE_PORTAL_TEMPLATES=Object.freeze([
     sections:['collection-hero','product-grid','filters']},
   {slug:'resolve-knitwear',path:'collections/knitwear',title:'Knitwear collection',template_key:'resolve/collection',
     sections:['collection-hero','product-grid','filters']},
+  {slug:'resolve-page',path:'pages/about',title:'Standard page',template_key:'resolve/page',
+    sections:['page-hero','page-body','page-cta']},
   {slug:'resolve-products',path:'products',title:'Products',template_key:'resolve/products',
     sections:['product-hero','filters','product-grid']},
   {slug:'resolve-product',path:'products/sable-blazer',title:'Product detail',template_key:'resolve/product',

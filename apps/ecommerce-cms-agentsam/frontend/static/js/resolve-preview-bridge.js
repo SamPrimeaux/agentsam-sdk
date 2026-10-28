@@ -173,6 +173,7 @@
     if (event.source!==window.parent || event.origin!==location.origin) return;
     var message=event.data;
     if (!message || message.type!=='agentsam:resolve-update') return;
+    window.ResolveThemeSettingsPreview?.apply(message.themeSettings||{});
     if (Array.isArray(message.embeds)) state.embeds=message.embeds;
     if (message.previewing!==undefined) state.previewing=message.previewing;
     state.delayElapsed={};

@@ -3608,3 +3608,18 @@ dialog.te-section-menu .te-section-catalog-item--visual {
 .rs-section-choice:hover{background:#f6f3fa}
 .rs-section-choice:last-child{border-bottom:0}
 .rs-control textarea{width:100%;min-height:72px;font:inherit;border:1px solid #d7d3dc;border-radius:6px;padding:10px;resize:vertical}
+/* Picker empty states: give merchants a working draft creation path. */
+.te-creation-empty{margin:12px 9px 7px;border:1px solid #e4dfea;border-radius:10px;padding:15px 12px;background:linear-gradient(140deg,#fff,#faf8ff);display:grid;gap:8px}
+.te-creation-symbol{font-size:21px;color:#7555cf;background:#eeeafa;border-radius:10px;width:36px;height:36px;display:grid;place-items:center}
+.te-creation-empty strong{font-size:12px;font-weight:750;color:#242128}
+.te-creation-empty p,.te-creation-workflow p{font-size:11px;line-height:1.55;color:#706a76;margin:0}
+.te-creation-empty small{font-size:9px;color:#938d99}
+.te-creation-primary{background:#17151d!important;border:1px solid #17151d!important;border-radius:7px!important;color:#fff!important;padding:11px 12px!important;min-height:38px;font-size:11px!important;font-weight:700!important;cursor:pointer!important}
+.te-creation-primary:hover{background:#6c46bc!important;border-color:#6c46bc!important}
+.te-creation-workflow{padding:15px;display:grid;gap:14px}
+.te-creation-workflow h3{font-size:16px;margin:0}
+.te-creation-workflow form{display:grid;gap:14px}
+.te-creation-workflow label{display:grid;gap:6px;font-size:11px;font-weight:700}
+.te-creation-workflow input{width:100%;border:1px solid #cfcbd5;border-radius:7px;padding:11px;font:12px system-ui}
+.te-creation-hint{background:#f6f3fb;border-radius:7px;font-size:10px;padding:11px;color:#686173;line-height:1.5}
+.te-creation-back{background:none;border:0;color:#6650a0;padding:4px;text-align:left;cursor:pointer;font-size:11px}

@@ -25,7 +25,9 @@ test('Resolve portal page navigation, CMS draft fixtures, stylesheet and JS are 
   assert.match(markup,/portal\.js/);
   if(template.slug==='resolve-sign-in'){
     const inspect=await fetch(origin+'/themes/resolve/demo/portal/'+template.path+'?studio_preview=1');
-    assert.match(await inspect.text(),/resolve-preview-bridge\.js/);
+    const inspectionMarkup=await inspect.text();
+    assert.match(inspectionMarkup,/resolve-preview-bridge\.js/);
+    assert.match(inspectionMarkup,/preview-settings\.js/);
   }
   const fixture=await fetch(origin+'/api/admin/cms/pages/'+template.slug);
   assert.equal(fixture.status,200);
@@ -34,7 +36,7 @@ test('Resolve portal page navigation, CMS draft fixtures, stylesheet and JS are 
   assert.deepEqual(data.page.sections.map(s=>s.key),template.sections);
   assert.equal(data.page.status,'draft');
  }
- for(const path of ['portal.css','portal.js','catalog.js']){
+ for(const path of ['portal.css','portal.js','catalog.js','preview-settings.js']){
   const res=await fetch(origin+'/themes/resolve/demo/portal/'+path);
   assert.equal(res.status,200,path);
  }

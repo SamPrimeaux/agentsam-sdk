@@ -26,6 +26,7 @@
   let mobileMenu = false;
   let activeFilter = 'ALL';
   let editorSectionSettings = {};
+  let editorPageSlug = null;
   let editorSelection = null;
   let state = {page:'collections',message:'',orderFilter:'all'};
   function readState() {
@@ -65,7 +66,7 @@
   function getRoute(){
     const path=decodeURIComponent(location.pathname).replace(/\/+$/,'');
     const rest=path.startsWith(PREFIX)?path.slice(PREFIX.length+1):'collections';
-    const allowed=['collections','collections/atelier','collections/leather','collections/knitwear','products','products/sable-blazer','gift-card','search','checkout','blogs','blogs/material-patina','404','metaobject','customer/sign-in','customer/sign-up','customer/account','customer/orders','customer/saved','customer/profile','cart','password'];
+    const allowed=['collections','collections/atelier','collections/leather','collections/knitwear','pages/about','products','products/sable-blazer','gift-card','search','checkout','blogs','blogs/material-patina','404','metaobject','customer/sign-in','customer/sign-up','customer/account','customer/orders','customer/saved','customer/profile','cart','password'];
     return allowed.includes(rest)?rest:'collections';
   }
   function persist() {
@@ -266,6 +267,12 @@
         '<aside class="rp-summary" data-cms-section="order-summary"><h2>ORDER SUMMARY</h2><p class="rp-muted">Cart items: '+cart.reduce((n,i)=>n+i.quantity,0)+
         '</p><strong>'+currency(cart.reduce((n,i)=>n+(catalog.find(p=>p.id===i.id)?.price||0)*i.quantity,0))+
         '</strong><button class="rp-btn full" type="button" data-action="preview-only">Payment unavailable · Preview</button></aside></div>';
+    }else if(route==='pages/about'){
+      content=intro('THE RESOLVE ATELIER','A WORLD OF ITS OWN','An editorial page template for stories, services and brand information.')+
+        '<div class="rp-utility-grid"><div class="rp-editorial-photo" data-cms-section="page-hero"><img src="'+esc(mediaFor('leather-tee'))+'" alt="Resolve editorial feature"></div>'+
+        '<div class="rp-panel" data-cms-section="page-body"><span class="rp-eyebrow">CONSIDERED DETAILS</span><h2>MADE TO ENDURE.</h2>'+
+        '<p class="rp-muted">Every piece begins with a question of form, movement and memory. This local page template can be renamed, extended and edited from the CMS.</p>'+
+        '<div data-cms-section="page-cta"><a href="'+href('collections')+'" data-nav class="rp-btn">EXPLORE THE ARCHIVE</a></div></div></div>';
     }else if(route==='blogs'){
       content=intro('THE DISPATCH · RESOLVE ATELIER','THE EDITORIAL ARCHIVE','Ideas, materials and conversations that outlive seasons.')+
         '<div class="rp-utility-grid" data-cms-section="editorial-list"><a href="'+href('blogs/material-patina')+'" data-nav class="rp-editorial-photo">'+
@@ -312,12 +319,12 @@
   function applyEditorSections(scroll=false) {
     const routeSlug={'collections':'collections','collections/atelier':'collection','collections/leather':'leather','collections/knitwear':'knitwear',
         'products':'products','products/sable-blazer':'product',
-        'gift-card':'gift-card','search':'search','checkout':'checkout',
+        'gift-card':'gift-card','search':'search','checkout':'checkout','pages/about':'page',
         'blogs':'blogs','blogs/material-patina':'article','404':'404','metaobject':'metaobject',
         'password':'password','customer/sign-in':'sign-in','customer/sign-up':'sign-up',
         'customer/account':'account','customer/orders':'orders','customer/saved':'saved',
         'customer/profile':'profile','cart':'cart'}[state.page]||'collections';
-    const namespace='resolve-'+routeSlug;
+    const namespace=editorPageSlug?.startsWith('resolve-draft-')?editorPageSlug:'resolve-'+routeSlug;
     const container=document.querySelector('main .rp-container')||document.querySelector('main');
     if(container){
       container.querySelectorAll('[data-rp-added-section]').forEach(el=>el.remove());
@@ -387,7 +394,7 @@
     else if(['customer/sign-in','customer/sign-up','password'].includes(state.page))
       body=authForm(state.page==='customer/sign-up'&&!brand.signup_enabled?'customer/sign-in':state.page);
     else if(state.page==='cart')body=cartPage();
-    else if(['products','products/sable-blazer','gift-card','search','checkout','blogs','blogs/material-patina','404','metaobject'].includes(state.page))body=utilityPage(state.page);
+    else if(['products','products/sable-blazer','gift-card','search','checkout','blogs','blogs/material-patina','404','metaobject','pages/about'].includes(state.page))body=utilityPage(state.page);
     else if(brand.password_gate_enabled&&!demoActive)body=authForm('password');
     else body=collectionPage(state.page.startsWith('collections/'));
     app.innerHTML=nav()+(state.message?'<div role="status" style="padding:12px 18px;background:#fff8f0;color:#69444d;text-align:center">'+esc(state.message)+'</div>':'')+body+footer();
@@ -489,9 +496,12 @@
       if(msg?.type!=='agentsam:resolve-portal-config')return;
       brand=sanitizeBrand({...brand,...msg.brand});
       if(msg.sections && typeof msg.sections==='object')editorSectionSettings=msg.sections;
+      window.ResolveThemeSettingsPreview?.apply(msg.themeSettings||{});
+      editorPageSlug=typeof msg.pageSlug==='string' && /^resolve-draft-[a-z0-9-]+$/.test(msg.pageSlug)
+        ? msg.pageSlug : null;
       if(typeof msg.selected==='string')editorSelection=msg.selected;
       localStorage.setItem(BRANDED_KEY,JSON.stringify(brand));
-      if(msg.route && typeof msg.route==='string' && ['collections','collections/atelier','collections/leather','collections/knitwear','products','products/sable-blazer','gift-card','search','checkout','blogs','blogs/material-patina','404','metaobject','password','customer/sign-in','customer/sign-up','customer/account','customer/orders','customer/saved','customer/profile','cart'].includes(msg.route)){
+      if(msg.route && typeof msg.route==='string' && ['collections','collections/atelier','collections/leather','collections/knitwear','pages/about','products','products/sable-blazer','gift-card','search','checkout','blogs','blogs/material-patina','404','metaobject','pages/about','password','customer/sign-in','customer/sign-up','customer/account','customer/orders','customer/saved','customer/profile','cart'].includes(msg.route)){
         history.replaceState(null,'',href(msg.route));
       }
       render();

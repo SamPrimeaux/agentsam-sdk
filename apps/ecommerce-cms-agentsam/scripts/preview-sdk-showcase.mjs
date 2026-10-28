@@ -79,7 +79,7 @@ const previewCatalog = [
 const find=(p)=>{
  if(p==='/themes/resolve/demo/portal'||p.startsWith('/themes/resolve/demo/portal/')){
    const relative=p.replace(/^\/themes\/resolve\/demo\/portal\/?/,'').replace(/\/$/,'');
-   if(relative==='portal.js'||relative==='portal.css'||relative==='catalog.js')return path.join(resolvePortalRoot,relative);
+   if(relative==='portal.js'||relative==='portal.css'||relative==='catalog.js'||relative==='preview-settings.js')return path.join(resolvePortalRoot,relative);
    if(!relative||portalTemplateForPath(relative))return path.join(resolvePortalRoot,'index.html');
    return null;
  }
@@ -245,11 +245,11 @@ const server=http.createServer(async(req,res)=>{
      html=html.replaceAll('__RESOLVE_PORTAL_BASE__','/themes/resolve/demo/portal/');
      if(requestUrl.searchParams.has('studio_preview')){
        // The same manifest-driven embed bridge runs on native Resolve AND portal pages.
-       html=html.replace('</body>','<script src="/admin/js/resolve-preview-bridge.js"></script></body>');
+       html=html.replace('</body>','<script src="/themes/resolve/demo/portal/preview-settings.js"></script><script src="/admin/js/resolve-preview-bridge.js"></script></body>');
      }
    }
    if(pathname==='/themes/resolve/demo/' && new URL(req.url,'http://localhost').searchParams.has('studio_preview')){
-     html=html.replace('</body>','<script src="/admin/js/resolve-preview-bridge.js"></script></body>');
+     html=html.replace('</body>','<script src="/themes/resolve/demo/portal/preview-settings.js"></script><script src="/admin/js/resolve-preview-bridge.js"></script></body>');
    }
    html=html.replaceAll('Fuel & Free Time Admin','AgentSam SDK Commerce · Local Preview').replaceAll('Fuel & Free Time','AgentSam SDK');
    data=Buffer.from(html);

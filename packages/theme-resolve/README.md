@@ -63,3 +63,17 @@ editor links. It exposes **21 draft-only page templates**, section selection,
 editable text/media/spacing/visibility, additive sections and the same app-embed
 bridge for the original home and all customer routes. No D1, Stripe, or login
 backend is written from the local preview.
+
+### Local merchant studio controls
+
+The ecommerce CMS's localhost editor adds a named draft creation flow for pages,
+products, collections, blogs, articles, and metaobjects, plus an 18-category
+appearance inspector. This is an editor extension of Resolve's existing
+package, not a separately branded replacement. The shared preview settings script
+inside site/portal/preview-settings.js applies to both packaged storefront and
+customer pages. It uses validated fields and safely filtered optional CSS,
+respects reduced motion, and never loads credentials or sends payments.
+
+Drafts and global settings persist only in the browser-local Resolve studio
+record. The publish button is disabled in local showcase mode. Production CMS
+settings continue to use the original authenticated brand-section adapter.

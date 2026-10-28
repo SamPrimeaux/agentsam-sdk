@@ -3,6 +3,9 @@
   "use strict";
   const host = document.querySelector('[data-drawer-panel="theme-settings"]');
   if (!host) return;
+  // The connected merchant editor keeps its authoritative CMS settings bridge.
+  // Resolve's isolated localhost preview has a separate, complete local inspector.
+  if (new URLSearchParams(location.search).get('showcase') === 'resolve') return;
   const bridge = () => window.CmsThemeSettings;
   const colorLabels = {
     canvas: ["Page canvas","--h-color-canvas"],

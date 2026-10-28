@@ -984,6 +984,7 @@
     const root = byId('te-page-options');
     const source = host ? pages : (pages.length ? pages : fallbackPages);
     const pageFor = key => source.find(p => p.slug === key);
+    const canCreateResolve = resolveShowcase && ['products','collections','pages','blogs','posts','metaobject'].includes(pagePickerCategory);
     const match = (text) => !needle || String(text || '').toLowerCase().includes(needle);
     const row = (title, iconText, attrs, detail, arrow) =>
       '<button type="button" class="te-page-option' + (detail === 'UI scaffold' ? ' is-scaffold' : '') + '" ' + attrs + '><span class="te-picker-icon" aria-hidden="true">' + pickerIcon(iconText) + '</span>' +
@@ -997,23 +998,42 @@
       html += '<div class="te-picker-heading">' + cmsEscapeHtml(parent.title) + '</div>';
       const children = [...(parent.children || [])];
       if (parent.resource === 'pages') {
-        children.push(...source.filter(p => p.slug !== 'site').map(p => ({ title: p.title || humanize(p.slug), page: p.slug })));
+        children.push(...source.filter(p => !p.slug.startsWith('resolve-') && p.slug !== 'site').map(p => ({ title: p.title || humanize(p.slug), page: p.slug })));
+        if(resolveShowcase)children.push({title:'Default content page',page:'resolve-page'});
       }
+      if(resolveShowcase)children.push(...(window.AgentSamResolveStudio?.getDrafts?.()||[])
+        .filter(p=>p.kind===parent.id).map(p=>({title:p.title+' · Draft',page:p.slug})));
       if (parent.resource === 'products' || parent.resource === 'collections') {
         children.push(...(catalogResources[parent.resource] || []).slice(0, 25).map(p => ({
           title: p.title || p.name || p.slug || 'Untitled',
           resource: parent.resource, id: p.id,
         })));
       }
-      children.push({ title: parent.resource === 'pages' ? 'Create page template' : 'Create ' + parent.title.toLowerCase().replace(/s$/, '') + ' template',
+      if(!resolveShowcase)children.push({ title: parent.resource === 'pages' ? 'Create page template' : 'Create ' + parent.title.toLowerCase().replace(/s$/, '') + ' template',
         template: 'metaobject' });
       html += children.map(child => row(child.title, 'page',
         child.page ? 'data-picker-page="' + cmsEscapeAttr(child.page) + '"' :
         child.resource && child.id ? 'data-picker-resource="' + cmsEscapeAttr(child.resource) + '" data-resource-id="' + cmsEscapeAttr(child.id) + '"' :
         'data-picker-template="' + cmsEscapeAttr(child.template || 'metaobject') + '"', child.page ? '' : 'UI scaffold', false)).join('');
+      if(canCreateResolve){
+        const instructions={
+          products:['Build your first product template','Start with the existing Resolve product layout and style its sections. Product inventory comes later.'],
+          collections:['Design a new collection','Create a reusable collection landing page. Associate inventory when the store is connected.'],
+          pages:['Create a content page','A reusable page layout for About, FAQ, policies and information.'],
+          blogs:['Create a blog layout','Organize stories in an editorial archive. No publishing yet.'],
+          posts:['Create an article template','Prepare a long-form story layout with media and rich content.'],
+          metaobject:['Create a structured template','Define a reusable template before connecting its data fields.']
+        };
+        const [title,subtitle]=instructions[parent.id];
+        html+='<div class="te-creation-empty" role="region" aria-label="Create '+cmsEscapeAttr(parent.title)+'">'+
+          '<div class="te-creation-symbol">＋</div><strong>'+cmsEscapeHtml(title)+'</strong>'+
+          '<p>'+cmsEscapeHtml(subtitle)+'</p>'+
+          '<button type="button" class="te-creation-primary" data-picker-create="'+cmsEscapeAttr(parent.id)+'">Create local draft +</button>'+
+          '<small>Preview only · No D1 records or live storefront changes</small></div>';
+      }
     } else {
       html = storefrontMenu.filter(group => match(group.title) || (needle && group.children?.some(ch => match(ch.title)))).map(group => {
-        const hasChildren = !!(group.children || group.resource);
+        const hasChildren = !!(group.children || group.resource || (resolveShowcase && group.id==='metaobject'));
         const page = group.page ? pageFor(group.page) : null;
         const divider = !needle && ['cart', 'pages', 'search'].includes(group.id)
           ? '<div class="te-picker-divider" role="separator"></div>' : '';
@@ -1024,21 +1044,59 @@
           (!hasChildren && !page) ? 'UI scaffold' : '', hasChildren);
       }).join('');
     }
-    root.innerHTML = html || '<div class="te-empty">No matching storefront templates.</div>';
+    root.innerHTML = html || (resolveShowcase?
+      '<div class="te-creation-empty"><strong>Nothing matches that search.</strong>'+
+      '<p>Try a different keyword, or open a resource category to create a new local draft template.</p>'+
+      '<button type="button" class="te-creation-primary" data-picker-clear>Explore templates</button></div>' :
+      '<div class="te-empty">No matching storefront templates.</div>');
+    root.querySelector('[data-picker-clear]')?.addEventListener('click',()=>{
+      pagePickerCategory=null;byId('te-page-search').value='';renderPageOptions('');
+    });
     root.querySelectorAll('[data-picker-category]').forEach(button =>
       button.addEventListener('click', () => { pagePickerCategory = button.dataset.pickerCategory; byId('te-page-search').value = ''; renderPageOptions(''); }));
     root.querySelector('[data-picker-back]')?.addEventListener('click', () => { pagePickerCategory = null; renderPageOptions(''); });
     root.querySelectorAll('[data-picker-page]').forEach(button => button.addEventListener('click', () => {
       switchPage(button.dataset.pickerPage);
     }));
-    root.querySelectorAll('[data-picker-template]').forEach(button => button.addEventListener('click', () =>
-      showScaffoldTemplate(button.dataset.pickerTemplate, button.querySelector('strong').textContent)));
+    root.querySelectorAll('[data-picker-create]').forEach(button=>button.addEventListener('click',()=>openResolveCreation(button.dataset.pickerCreate)));
+    root.querySelectorAll('[data-picker-template]').forEach(button => button.addEventListener('click', () => {
+      if(resolveShowcase){
+        const type=button.dataset.pickerTemplate;
+        openResolveCreation(type==='metaobject'?'metaobject':type==='product'?'products':type==='collection'?'collections':
+          type==='blog'?'blogs':type==='article'?'posts':'pages');
+      }else showScaffoldTemplate(button.dataset.pickerTemplate, button.querySelector('strong').textContent);
+    }));
     root.querySelectorAll('[data-picker-resource]').forEach(button => button.addEventListener('click', () => {
       const url = button.dataset.pickerResource === 'products'
         ? '/admin/product-edit?id=' + encodeURIComponent(button.dataset.resourceId) : '/admin/collections';
       if (localShowcase) showScaffoldTemplate(button.dataset.pickerResource, button.querySelector('strong').textContent);
       else window.location.href = url;
     }));
+  }
+
+  function openResolveCreation(kind){
+    const root=byId('te-page-options');
+    if(!root)return;
+    const labels={products:'Product template',collections:'Collection template',pages:'Content page',blogs:'Blog',posts:'Article',metaobject:'Metaobject'};
+    if(!labels[kind])return;
+    root.innerHTML='<div class="te-creation-workflow">'+
+      '<button class="te-creation-back" type="button" data-creation-back>‹ Back to '+cmsEscapeHtml(labels[kind])+'s</button>'+
+      '<div class="te-creation-symbol">＋</div><h3>New '+cmsEscapeHtml(labels[kind])+'</h3>'+
+      '<p>Start with Resolve’s authentic sections. Edit content and layout in the same CMS studio.</p>'+
+      '<form data-resolve-create-form><label>Template name<input name="title" maxlength="90" required autofocus placeholder="e.g. Autumn archive"></label>'+
+      '<div class="te-creation-hint">Creates a reusable local draft. Product records, URLs, and production publishing are not connected.</div>'+
+      '<button class="te-creation-primary" type="submit">Create & edit draft →</button></form></div>';
+    root.querySelector('[data-creation-back]')?.addEventListener('click',()=>{pagePickerCategory=kind;renderPageOptions('');});
+    root.querySelector('[data-resolve-create-form]')?.addEventListener('submit',event=>{
+      event.preventDefault();
+      const title=new FormData(event.currentTarget).get('title')?.toString().trim();
+      try{
+        const draft=window.AgentSamResolveStudio?.createDraft(kind,title);
+        if(!draft)throw Error('Resolve draft creation is unavailable.');
+        switchPage(draft.slug);
+      }catch(error){setNote(error.message||String(error),'error');}
+    });
+    root.querySelector('[name="title"]')?.focus();
   }
 
   function blockSchemaFor(section, meta) {
@@ -3065,8 +3123,10 @@
     setSaveState('Loading');
     try {
       await loadCmsRegistry();
+      const localDraft=resolveShowcase && window.AgentSamResolveStudio?.getDraft?.(slug);
       const results = await Promise.all([
-        editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug)),
+        localDraft ? Promise.resolve({page:localDraft,seeded:false}) :
+          editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug)),
         editorRequest('/api/admin/cms/pages').catch(function() { return { pages: [] }; }),
         host ? Promise.resolve({ page: { slug: 'site', title: 'Global', sections: [], status: 'draft' } })
              : adminFetch('/api/admin/cms/pages/site')
@@ -3091,6 +3151,7 @@
       byId('te-save').textContent = 'Save';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
+      if(resolveShowcase)pages.push(...(window.AgentSamResolveStudio?.getDrafts?.()||[]));
       document.dispatchEvent(new CustomEvent('theme-editor:global-settings-ready'));
 
       (pageData.sections || []).forEach(function(section) { section.__ownerSlug = slug; });
