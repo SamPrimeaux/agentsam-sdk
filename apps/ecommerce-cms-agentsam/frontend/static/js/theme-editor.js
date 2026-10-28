@@ -771,22 +771,64 @@
     else clearTimeout(autosaveTimer);
   }
 
+  // The picker is a storefront resource navigator, not a flat CMS-page dropdown.
+  // Product and collection records link to their *real* editors until a template
+  // assignment API exists; never silently pretend those resources are CMS pages.
+  const pickerResources = { products: [], collections: [], loaded: false };
+  async function loadPickerResources() {
+    if (host || pickerResources.loaded) return;
+    pickerResources.loaded = true;
+    const results = await Promise.allSettled([
+      editorRequest('/api/admin/products'),
+      editorRequest('/api/admin/collections'),
+    ]);
+    if (results[0].status === 'fulfilled') pickerResources.products = results[0].value.products || [];
+    if (results[1].status === 'fulfilled') pickerResources.collections = results[1].value.collections || [];
+    if (!byId('te-page-popover')?.hidden) renderPageOptions(byId('te-page-search')?.value || '');
+  }
+
   function renderPageOptions(query) {
     const needle = String(query || '').trim().toLowerCase();
     const source = host ? pages : (pages.length ? pages : fallbackPages);
-    const filtered = source.filter(function(page) {
+    const groups = { home: [], products: [], collections: [], cart: [], checkout: [], pages: [] };
+    for (const page of source) {
+      const id = String(page.slug || '').toLowerCase();
+      const type = String(page.kind || page.page_kind || '').toLowerCase();
+      if (id === 'home' || id === 'shop') groups.home.push(page);
+      else if (id === 'cart' || type === 'cart') groups.cart.push(page);
+      else if (id === 'checkout' || type === 'checkout') groups.checkout.push(page);
+      else if (type === 'product' || id === 'product' || id === 'product-default') groups.products.push(page);
+      else if (type === 'collection' || id === 'collection' || id === 'collection-default') groups.collections.push(page);
+      else groups.pages.push(page);
+    }
+    const match = (title, detail = '') => !needle || (title + ' ' + detail).toLowerCase().includes(needle);
+    const pageRow = (page) => {
       const title = page.title || humanize(page.slug);
-      return !needle || title.toLowerCase().includes(needle) || page.slug.toLowerCase().includes(needle);
-    });
-
-    byId('te-page-options').innerHTML = filtered.length ? filtered.map(function(page) {
+      if (!match(title, page.slug + ' ' + pageRoute(page.slug))) return '';
       return '<button type="button" class="te-page-option' + (page.slug === slug ? ' is-active' : '') + '" data-page-slug="' + cmsEscapeAttr(page.slug) + '">' +
-        icon.page + '<span><strong style="font-size:12px">' + cmsEscapeHtml(page.title || humanize(page.slug)) + '</strong><span style="display:block;font-size:10px;color:#858580;margin-top:2px">' +
-        cmsEscapeHtml(pageRoute(page.slug) || 'No public route connected') + '</span></span></button>';
-    }).join('') : '<div class="te-empty">No pages match that search.</div>';
-
-    byId('te-page-options').querySelectorAll('[data-page-slug]').forEach(function(button) {
-      button.addEventListener('click', function() { switchPage(button.dataset.pageSlug); });
+        icon.page + '<span><strong>' + cmsEscapeHtml(title) + '</strong><small>' +
+        cmsEscapeHtml(pageRoute(page.slug) || 'Connect route to publish') + '</small></span></button>';
+    };
+    const resourceRows = (type, records) => records.filter(item => match(item.title || item.name || item.slug || '', type)).slice(0, 40).map(item => {
+      const label = item.title || item.name || item.slug || 'Untitled';
+      const href = type === 'Products' ? '/admin/product-edit?id=' + encodeURIComponent(item.id) : '/admin/collections';
+      return '<a class="te-page-option te-resource-option" href="' + cmsEscapeAttr(href) + '">' + icon.page +
+        '<span><strong>' + cmsEscapeHtml(label) + '</strong><small>' +
+        (type === 'Products' ? 'Edit product · ' : 'Manage collection · ') + cmsEscapeHtml(item.slug || String(item.id)) +
+        '</small></span></a>';
+    }).join('');
+    const section = (label, body) => body ? '<div class="te-picker-group"><div class="te-picker-heading">' + label + '</div>' + body + '</div>' : '';
+    const out = [
+      section('Home page', groups.home.map(pageRow).join('')),
+      section('Products', groups.products.map(pageRow).join('') + resourceRows('Products', pickerResources.products)),
+      section('Collections', groups.collections.map(pageRow).join('') + resourceRows('Collections', pickerResources.collections)),
+      section('Cart', groups.cart.map(pageRow).join('')),
+      section('Checkout', groups.checkout.map(pageRow).join('')),
+      section('Pages', groups.pages.map(pageRow).join('')),
+    ].join('');
+    byId('te-page-options').innerHTML = out || '<div class="te-empty">No matching storefront resources.</div>';
+    byId('te-page-options').querySelectorAll('[data-page-slug]').forEach(button => {
+      button.addEventListener('click', () => switchPage(button.dataset.pageSlug));
     });
   }
 
