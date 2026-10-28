@@ -183,12 +183,15 @@ export async function runBrandAssetCommand(argv = [], options = {}) {
   const [action = 'help', ...rest] = opts.positionals;
 
   if (action === 'help' || action === '--help' || action === '-h') {
-    write(`usage: brand-assets <inspect|derive|optimize|processors|ingest|build|pack|preview|plan|promote|publish|verify|assets|presets|templates|roles> [options]
+    write(`usage: brand-assets <inspect|derive|optimize|processors|ingest|build|iconography|pack|preview|plan|promote|publish|verify|assets|presets|templates|roles> [options]
 
 Brand compiler (v2 — brand.pack.json is source of truth):
   ingest <path|zip|tar|folder>   Classify assets → brand.pack.json
   build --from <pack>            Compile dist + studio + optional zip export
+  iconography --from <manifest> --out <dir>
+                                Build semantic SVG/raster family + source-derived clay GLBs
   preview --from <dist|zip>      Localhost gallery / studio
+          --keep-alive            Keep the localhost preview server running
   optimize <file>                Role-aware encode (processor adapter — not Squoosh CLI)
   processors                     List sharp / squoosh-binary / native / cloudflare
   templates                      List uniform brand templates
@@ -199,11 +202,34 @@ Examples:
   agentsam brand optimize ./logo.png --role logo.primary --processor sharp
   agentsam brand ingest ./exports --brand acme --template product-saas
   agentsam brand build --from .agentsam/brand/packs/acme --out ./dist/acme
+  agentsam brand iconography --from packages/agentsam-brand/assets/iconography/v1/iconography.manifest.json --out ./out/iconography/r01
 `);
     return 0;
   }
 
   try {
+    if (action === 'iconography') {
+      const manifestPath = opts.from || rest[0];
+      if (!manifestPath || !opts.out) {
+        write('iconography requires --from <iconography.manifest.json> and --out <output directory>\n');
+        return 2;
+      }
+      const { buildIconographyPack } = await import('../core/iconography/build.js');
+      let normalizeSvg;
+      try {
+        ({ normalizeSvgMarkup: normalizeSvg } = await import('../../../agentsam-merch/src/node/vector.js'));
+      } catch {
+        // Standalone agentsam-brand uses its dependency-free normalizer.
+      }
+      const result = await buildIconographyPack({
+        manifestPath: path.resolve(opts.cwd, manifestPath),
+        outDir: path.resolve(opts.cwd, opts.out),
+        normalizeSvg,
+      });
+      writeResult(write, opts, result);
+      return result.ok ? 0 : 1;
+    }
+
     if (action === 'presets') {
       writeResult(write, opts, { presets: listDerivativePresets() });
       return 0;
@@ -379,6 +405,7 @@ Examples:
         cwd: opts.cwd,
         open: !opts.noOpen,
         waitForEnter: !opts.json && process.stdin.isTTY,
+        keepAlive: opts.keepAlive === true,
         write,
       });
       if (opts.json) writeResult(write, opts, result);

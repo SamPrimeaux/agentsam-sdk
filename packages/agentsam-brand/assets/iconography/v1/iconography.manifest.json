@@ -1,0 +1,185 @@
+{
+  "$schema": "agentsam.brand-iconography.v1",
+  "schema": "agentsam.brand-iconography.v1",
+  "kit_id": "inneranimalmedia-agentsam-iconography",
+  "revision": "r03",
+  "title": "InnerAnimalMedia / AgentSam System Iconography — canonical desktop-source relief r03",
+  "source_policy": "Preserve the canonical InnerAnimalMedia PWA icon and AgentSam desktop icon master as immutable inputs. Derive clay presentation variants from their source pixels; normalize semantic system vectors without baking labels into artwork.",
+  "source_catalog": "sources/system-icons.json",
+  "app_icons": [
+    {
+      "id": "inneranimalmedia",
+      "name": "InnerAnimalMedia",
+      "source": "sources/inneranimalmedia-pwa-icon-512.png",
+      "source_kind": "canonical-pwa-icon",
+      "source_repository": "inneranimalmedia",
+      "source_repository_path": "app/dashboard/public/pwa/icon-512.png",
+      "source_authority": "InnerAnimalMedia dashboard PWA icon",
+      "related_source_manifest": "sources/inneranimalmedia-pwa-icon-source.json",
+      "mask": {
+        "threshold_low": 0.58,
+        "threshold_high": 0.84,
+        "safe_inset": 0.12
+      },
+      "platform_exports": [
+        "png-sizes",
+        "ico"
+      ],
+      "platform_colorway": "graphite"
+    },
+    {
+      "id": "agentsam-desktop",
+      "name": "AgentSam",
+      "source": "sources/agentsam-desktop-icon-1024-master.png",
+      "source_kind": "canonical-desktop-app-icon-master",
+      "source_repository": "agentsam-sdk",
+      "source_repository_path": "packages/agentsam-desktop-shell/src-tauri/icons/icon-1024-master.png",
+      "source_authority": "Canonical AgentSam desktop icon master; exact source pixels are immutable",
+      "upstream_vector_mark": "sources/agentsam-mark.svg",
+      "upstream_desktop_master": "sources/agentsam-desktop-icon-1024-master.png",
+      "mask": {
+        "threshold_low": 0.58,
+        "threshold_high": 0.84,
+        "safe_inset": 0.12
+      },
+      "platform_exports": [
+        "png-sizes",
+        "ico",
+        "macos-icns"
+      ],
+      "upstream_local_studio_icon": "sources/agentsam-local-studio-icon.png",
+      "platform_colorway": "graphite"
+    }
+  ],
+  "colorways": [
+    {
+      "id": "graphite",
+      "label": "Graphite clay",
+      "base_top": "#343941",
+      "base_bottom": "#15171c",
+      "mark": "#f7f8fb",
+      "roughness": 0.48,
+      "metallic": 0.02
+    },
+    {
+      "id": "frost",
+      "label": "Frost porcelain",
+      "base_top": "#ffffff",
+      "base_bottom": "#dfe7ef",
+      "mark": "#167ac5",
+      "roughness": 0.42,
+      "metallic": 0.01
+    },
+    {
+      "id": "cobalt",
+      "label": "Cobalt clay",
+      "base_top": "#38b4f4",
+      "base_bottom": "#0759a9",
+      "mark": "#ffffff",
+      "roughness": 0.4,
+      "metallic": 0.02
+    }
+  ],
+  "system_icons": {
+    "catalog": "sources/system-icons.json",
+    "view_box": "0 0 24 24",
+    "stroke_width": 2,
+    "stroke_linecap": "round",
+    "stroke_linejoin": "round",
+    "raster_sizes": [
+      24,
+      32,
+      48,
+      64,
+      128
+    ],
+    "colorways": [
+      "ink",
+      "paper",
+      "blue"
+    ],
+    "clay_tile_size": 256
+  },
+  "system_colorways": [
+    {
+      "id": "ink",
+      "stroke": "#17324a",
+      "tile_top": "#ffffff",
+      "tile_bottom": "#e7eef5",
+      "shadow": "#9cabb9",
+      "highlight": "#ffffff"
+    },
+    {
+      "id": "paper",
+      "stroke": "#f7f9fc",
+      "tile_top": "#343941",
+      "tile_bottom": "#15171c",
+      "shadow": "#080a0d",
+      "highlight": "#6e7784"
+    },
+    {
+      "id": "blue",
+      "stroke": "#ffffff",
+      "tile_top": "#38b4f4",
+      "tile_bottom": "#0759a9",
+      "shadow": "#003d7b",
+      "highlight": "#bfeeff"
+    }
+  ],
+  "clay_renderer": {
+    "engine": "blender",
+    "purpose": "Blender authors source-derived GLB meshes only; it is not a generic GLB optimizer. Interactive clay presentation is rendered by the existing Three.js/WebGL CAD Studio viewer.",
+    "mesh_resolution": 512,
+    "render_resolution": 512,
+    "turntable_resolution": 384,
+    "turntable_frames": 36,
+    "turntable_fps": 24,
+    "render_angles": [
+      "hero",
+      "front",
+      "top"
+    ],
+    "include_turntable_for": [
+      "graphite"
+    ],
+    "units": "icon-units",
+    "icon_width": 2,
+    "tile_thickness": 0.28,
+    "relief_height": 0.12,
+    "preview_engine": "Three.js/WebGL (AgentSam CAD Studio)",
+    "static_renders_required": false,
+    "render_skip_reason": "Blender background rendering aborts on this host even for a minimal scene; do not claim static renders. Preview the validated GLB models in the browser-based CAD Studio."
+  },
+  "delivery": {
+    "source_masters_immutable": true,
+    "output_is_derivative_only": true,
+    "no_application_integration": true,
+    "manufacturing_note": "Clay GLB and raster previews are presentation derivatives. Use normalized 2D SVG masters, not clay meshes, for garment decoration, engraving, laser, and CNC manufacturing."
+  },
+  "supporting_sources": [
+    {
+      "id": "agentsam-mark-vector",
+      "path": "sources/agentsam-mark.svg",
+      "authority": "Existing vector mark referenced by the Local Studio app-icon composer",
+      "repository_path": "agentsam-sdk:packages/agentsam-desktop-shell/icons/local-studio/AgentSam-Mark.svg"
+    },
+    {
+      "id": "agentsam-desktop-icon-master",
+      "path": "sources/agentsam-desktop-icon-1024-master.png",
+      "authority": "Canonical source master for AgentSam desktop-icon derivatives; retained immutably for provenance",
+      "repository_path": "agentsam-sdk:packages/agentsam-desktop-shell/src-tauri/icons/icon-1024-master.png"
+    },
+    {
+      "id": "inneranimalmedia-pwa-source-metadata",
+      "path": "sources/inneranimalmedia-pwa-icon-source.json",
+      "authority": "PWA source manifest for the canonical InnerAnimalMedia icon",
+      "repository_path": "inneranimalmedia:app/dashboard/public/pwa/icon-source.json"
+    },
+    {
+      "id": "lucide-react-license",
+      "path": "sources/system/LICENSE-lucide-react.txt",
+      "authority": "Lucide React license text for bundled system-icon source geometry",
+      "repository_path": "agentsam-sdk:node_modules/lucide-react/LICENSE"
+    }
+  ]
+}

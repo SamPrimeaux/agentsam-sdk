@@ -117,3 +117,9 @@ See `packages/theme-scenes/README.md`. Studio shell (Moon Glass → Brand Studio
 
 <!-- agentsam:trademark-notice -->
 > Independent project. Not affiliated with, endorsed by, or sponsored by Cloudflare, Inc. or by any other company whose products are named here. Cloudflare is a registered trademark of Cloudflare, Inc. Other names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).
+
+## Source-driven iconography packs
+
+`agentsam brand iconography --from <iconography.manifest.json> --out <output-dir>` builds a versioned icon family from the sources named in the manifest. The build preserves source masters, records source/output SHA-256 hashes, normalizes semantic SVG masters, emits color/size derivatives, and can invoke the configured Blender lane to author real relief GLBs and reproducible renders from source-derived masks. Blender is used for model authoring and rendering—not as a generic GLB optimizer. Generated output directories are replaceable only when they carry this kit's ownership marker; unrelated directories are never overwritten.
+
+The current `assets/iconography/v1` source set uses the canonical InnerAnimalMedia dashboard PWA icon and the actual AgentSam Tauri desktop icon master as immutable clay-model inputs. The Local Studio public icon and upstream SVG mark remain provenance references, not substitute logo sources. It also includes 64 normalized semantic system-icon sources. The system icon paths originate from the existing Lucide UI library (ISC); they are normalized v1 masters, not yet bespoke-redrawn glyphs. Clay GLBs are presentation derivatives in icon-units and must not be used as manufacturing geometry. For apparel, laser, engraving and CNC work, use verified 2D vector masters and the merch preflight pipeline.

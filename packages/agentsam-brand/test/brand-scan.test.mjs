@@ -14,6 +14,7 @@ function fixtureRepo() {
   execFileSync('git', ['init'], { cwd: root, stdio: 'ignore' });
   execFileSync('git', ['config', 'user.email', 'test@example.com'], { cwd: root, stdio: 'ignore' });
   execFileSync('git', ['config', 'user.name', 'Test'], { cwd: root, stdio: 'ignore' });
+  execFileSync('git', ['config', 'commit.gpgsign', 'false'], { cwd: root, stdio: 'ignore' });
   fs.writeFileSync(path.join(root, '.gitignore'), 'ignored/\nnode_modules/\n');
   fs.mkdirSync(path.join(root, 'src/styles'), { recursive: true });
   fs.mkdirSync(path.join(root, 'src/components'), { recursive: true });

@@ -30,11 +30,14 @@
   "files": [
     "bin",
     "src",
+    "assets",
+    "scripts/iconography",
     "README.md"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "pack:dry": "npm pack --dry-run"
+    "pack:dry": "npm pack --dry-run",
+    "iconography:refresh-system": "node scripts/iconography/import-lucide-icons.mjs"
   },
   "repository": {
     "type": "git",
