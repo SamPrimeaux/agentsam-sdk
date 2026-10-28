@@ -201,6 +201,89 @@ export async function traceRasterToSvg(
   }
 }
 
+/**
+ * Dependency-free SVG normalization for icon and manufacturing workflows.
+ * It standardizes the SVG viewport and root stroke contract without rewriting
+ * path data. It intentionally does not trace raster artwork or outline fonts.
+ */
+export function normalizeSvgMarkup(
+  svg,
+  {
+    width = 24,
+    height = 24,
+    viewBox,
+    stroke = "currentColor",
+    strokeWidth = 2,
+    fill = "none",
+    iconId,
+    semanticId,
+  } = {},
+) {
+  const source = String(svg ?? "").trim();
+  const openingMatch = source.match(/<svg\b[^>]*>/i);
+  const opening = openingMatch?.[0];
+  const prefix = openingMatch ? source.slice(0, openingMatch.index).trim() : "";
+  if (!opening || !/<\/svg>\s*$/i.test(source) || (prefix && !/^<\?xml\b[^?]*\?>$/i.test(prefix))) {
+    const error = new Error("SVG normalization requires one complete <svg> root.");
+    error.code = "svg_root_invalid";
+    throw error;
+  }
+  if (/<\s*(?:script|foreignObject|iframe|object|embed)\b/i.test(source)
+      || /\bon[a-z]+\s*=/i.test(source)
+      || /(?:href|xlink:href)\s*=\s*["']\s*(?:https?:|javascript:|data:text\/html)/i.test(source)) {
+    const error = new Error("SVG contains active or external content and cannot be normalized as a trusted icon.");
+    error.code = "svg_active_content";
+    throw error;
+  }
+  if (/<text\b/i.test(source)) {
+    const error = new Error("SVG contains live text; outline it with an approved font-aware workflow before manufacturing.");
+    error.code = "svg_live_text";
+    throw error;
+  }
+
+  const attr = (name) => {
+    const match = opening.match(new RegExp(`\\b${name}\\s*=\\s*["']([^"']+)["']`, "i"));
+    return match?.[1] ?? null;
+  };
+  const resolvedViewBox = String(viewBox || attr("viewBox") || "").trim();
+  const numbers = resolvedViewBox.split(/[\s,]+/).map(Number);
+  if (numbers.length !== 4 || numbers.some((n) => !Number.isFinite(n)) || numbers[2] <= 0 || numbers[3] <= 0) {
+    const error = new Error("SVG requires a finite, positive four-number viewBox.");
+    error.code = "svg_viewbox_invalid";
+    throw error;
+  }
+  const numericStroke = Number(strokeWidth);
+  if (!Number.isFinite(numericStroke) || numericStroke < 1 || numericStroke > 3) {
+    const error = new Error("Icon stroke width must be between 1 and 3 units for a 24-unit icon grid.");
+    error.code = "svg_stroke_width_invalid";
+    throw error;
+  }
+  const idAttrs = [
+    iconId ? `id="icon-${String(iconId).replace(/[^a-zA-Z0-9_-]/g, "-")}"` : "",
+    semanticId ? `data-semantic="${String(semanticId).replace(/&/g, "&amp;").replace(/"/g, "&quot;")}"` : "",
+  ].filter(Boolean).join(" ");
+  const normalizedRoot = `<svg xmlns="http://www.w3.org/2000/svg" width="${Number(width)}" height="${Number(height)}" viewBox="${resolvedViewBox}" fill="${fill}" stroke="${stroke}" stroke-width="${numericStroke}" stroke-linecap="round" stroke-linejoin="round"${idAttrs ? ` ${idAttrs}` : ""}>`;
+  const inner = source.slice(openingMatch.index + opening.length).replace(/<\/svg>\s*$/i, "").trim();
+  if (!/<(?:path|line|polyline|polygon|circle|rect|ellipse)\b/i.test(inner)) {
+    const error = new Error("SVG contains no supported visible geometry.");
+    error.code = "svg_geometry_missing";
+    throw error;
+  }
+  const normalized = `<?xml version="1.0" encoding="UTF-8"?>\n${normalizedRoot}${inner}</svg>\n`;
+  return Object.freeze({
+    svg: normalized,
+    hasExplicitViewBox: true,
+    hasLiveText: false,
+    pathCount: (inner.match(/<(?:path|line|polyline|polygon|circle|rect|ellipse)\b/gi) || []).length,
+    viewBox: resolvedViewBox,
+    width: Number(width),
+    height: Number(height),
+    strokeWidth: numericStroke,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  });
+}
+
 export async function normalizeSvgWithSvgo(
   svg,
   { multipass = true } = {},

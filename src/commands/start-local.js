@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { startLocalPtyServer } from '../local-pty/server.js';
+import { usageError } from '../../packages/agentsam-errors/src/cli.js';
 
 function readConfig(cwd) {
   const configPath = path.join(cwd, '.agentsam', 'config.json');
@@ -32,17 +33,17 @@ export function parseStartLocalArgs(args = []) {
   const opts = {};
   for (let i = 0; i < args.length; i += 1) {
     const key = args[i];
-    if (key !== '--cwd' && key !== '--port') throw new Error('start-local: unknown argument ' + key);
+    if (key !== '--cwd' && key !== '--port') throw usageError('start-local: unknown argument ' + key, { command: 'agentsam start-local' });
     const value = args[++i];
-    if (!value || value.startsWith('--')) throw new Error('start-local: missing value for ' + key);
+    if (!value || value.startsWith('--')) throw usageError('start-local: missing value for ' + key, { command: 'agentsam start-local' });
     if (key === '--cwd') {
       const root = path.resolve(value);
-      if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) throw new Error('start-local: root must be an existing directory');
+      if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) throw usageError('start-local: root must be an existing directory', { command: 'agentsam start-local' });
       opts.cwd = root;
     } else {
-      if (!/^[0-9]+$/.test(value)) throw new Error('start-local: port must be an integer');
+      if (!/^[0-9]+$/.test(value)) throw usageError('start-local: port must be an integer', { command: 'agentsam start-local' });
       const port = Number(value);
-      if (port < 1024 || port > 65535) throw new Error('start-local: port must be between 1024 and 65535');
+      if (port < 1024 || port > 65535) throw usageError('start-local: port must be between 1024 and 65535', { command: 'agentsam start-local' });
       opts.port = port;
     }
   }

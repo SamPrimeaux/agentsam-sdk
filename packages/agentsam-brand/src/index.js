@@ -161,6 +161,7 @@ export {
 export {
   buildBrandPackFromGraph,
 } from './core/v2/compile.js';
+export { buildIconographyPack } from './core/iconography/build.js';
 export {
   BRAND_TEMPLATES,
   listBrandTemplates,
@@ -202,4 +203,5 @@ export const BRAND_CAPABILITY_META = Object.freeze({
   'brand.promote': { id: 'brand.promote', deterministic: true, model_required: false, side_effects: 'storage-optional' },
   'brand.publish': { id: 'brand.publish', deterministic: true, model_required: false, side_effects: 'storage-adapter' },
   'brand.verify': { id: 'brand.verify', deterministic: true, model_required: false, side_effects: 'none' },
+  'brand.iconography.build': { id: 'brand.iconography.build', deterministic: true, model_required: false, side_effects: 'filesystem-and-renderer' },
 });

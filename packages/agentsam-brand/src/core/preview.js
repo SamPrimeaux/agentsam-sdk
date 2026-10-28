@@ -92,6 +92,7 @@ export async function previewBrandPack({
   cwd = process.cwd(),
   open = true,
   waitForEnter = true,
+  keepAlive = false,
   write = (s) => process.stdout.write(s),
 } = {}) {
   const root = resolvePackRoot(from, { cwd });
@@ -127,6 +128,7 @@ export async function previewBrandPack({
         '.avif': 'image/avif',
         '.gif': 'image/gif',
         '.svg': 'image/svg+xml',
+        '.mp4': 'video/mp4',
       };
       res.writeHead(200, { 'Content-Type': types[ext] || 'application/octet-stream' });
       fs.createReadStream(filePath).pipe(res);
@@ -145,6 +147,8 @@ export async function previewBrandPack({
   if (open) {
     try { openBrowser(url); } catch { /* ignore */ }
   }
+
+  if (keepAlive) return { ok: true, capability: 'brand.preview', url, root, port, keepAlive: true };
 
   if (waitForEnter && process.stdin.isTTY) {
     write('Press Enter to stop preview…\n');
