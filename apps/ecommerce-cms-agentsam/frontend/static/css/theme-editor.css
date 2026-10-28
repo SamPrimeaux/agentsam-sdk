@@ -243,6 +243,42 @@
   font-weight: 600;
 }
 
+/* Shopify-style resource grouping in the existing theme navigation. */
+.te-picker-group + .te-picker-group {
+  border-top: 1px solid var(--te-border);
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.te-picker-heading {
+  color: var(--te-muted);
+  padding: 9px 10px 5px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .085em;
+  text-transform: uppercase;
+}
+.te-page-option strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.te-page-option small {
+  display: block;
+  font-size: 10px;
+  color: var(--te-muted);
+  margin-top: 3px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.te-resource-option {
+  text-decoration: none;
+}
+.te-resource-option:focus-visible,
+.te-page-option:focus-visible {
+  outline: 2px solid var(--te-accent);
+  outline-offset: -2px;
+}
+
 .te-toolbar-btn.is-primary {
   border-color: #171716;
   background: #171716;
