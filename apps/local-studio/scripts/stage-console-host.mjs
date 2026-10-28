@@ -3,10 +3,13 @@
  * Stage the unmodified Ecommerce Console artifacts for the Local Studio host.
  * This assembles source assets; no CSS/markup/renderer transformation.
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {listLocalThemeProducts} from '../../../packages/catalog/src/theme-products.mjs';
+import {materializePrebuild as materializeViolet} from '../../../packages/theme-violet/src/node.js';
+import {materializePrebuild as materializeJournal} from '../../../packages/theme-plain-jane/src/node.js';
 
 const localStudio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = path.resolve(localStudio, '../ecommerce-cms-agentsam');
@@ -81,5 +84,37 @@ bindHost(hostAdmin);
 const index = readFileSync(path.join(source, 'admin/_spa/index.html'), 'utf8')
   .replace(/(\b(?:href|src)=["'])\/(?!\/)/g, '$1/ecommerce-cms-agentsam/');
 writeFileSync(path.join(productStage, 'index.html'), index);
+
+
+// Stage source-derived, read-only theme demonstrations for the hosted Sites
+// catalog. This is not a theme installation, purchase, or CMS import.
+const previewRoot = path.join(localStudio, 'frontend/public/themes');
+const demoRoot = path.join(previewRoot, 'violet/demo');
+materializeViolet(demoRoot, {basePath:'/themes/violet/demo/'});
+const journalDemo = path.join(previewRoot, 'plain-jane/demo');
+// Only the generated, bounded preview staging directory is replaceable.
+// The package's customer-facing materializer still refuses to overwrite.
+rmSync(journalDemo,{recursive:true,force:true});
+materializeJournal(journalDemo,{basePath:'/themes/plain-jane/demo/'});
+const resolveSrc = path.resolve(localStudio,'../theme-gallery-preview/themes/resolve/site');
+const resolveDest = path.join(previewRoot,'resolve/demo');
+if (!existsSync(path.join(resolveSrc,'index.html'))) throw new Error('Resolve canonical compiled preview unavailable');
+rmSync(resolveDest,{recursive:true,force:true});
+cpSync(resolveSrc,resolveDest,{recursive:true});
+const previewCatalog=await listLocalThemeProducts();
+if(previewCatalog.length!==3 || previewCatalog.some(entry=>!entry.preview_ready))
+ throw new Error('Theme preview catalog incomplete; refuse to stage stale product listing');
+const products=previewCatalog.map(item=>({
+  ...item,
+  // No unreviewed packaged downloads are advertised by the hosted gallery.
+  download_url:null,download_kind:null,installed:false,purchasable:false,
+  install_status:'not_connected',state:'preview_only',
+  editor_url:'/admin/theme-editor?showcase='+encodeURIComponent(item.slug)+'&slug='+
+    (item.slug==='plain-jane'?'journal-home':'home'),
+  preview_url:'/themes/'+item.slug+'/demo/'
+}));
+const catalogPath=path.join(productStage,'admin/data/theme-products.json');
+mkdirSync(path.dirname(catalogPath),{recursive:true});
+writeFileSync(catalogPath,JSON.stringify({ok:true,status:'preview_only',products},null,2)+'\n');
 
 console.log('[console-host] staged ORIGINAL Ecommerce Admin into Local Studio web and desktop asset roots');

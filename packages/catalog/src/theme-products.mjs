@@ -16,7 +16,9 @@ export async function listLocalThemeProducts(){
       const category=prebuild.category || ({resolve:'Commerce',violet:'Nonprofit', 'plain-jane':'Editorial / Blog'}[slug]);
       const rootPath=slug==='plain-jane'
         ?path.join(root,'site/index.html')
-        :path.resolve(root,'../../apps/theme-gallery-preview/themes/'+slug+'/site/index.html');
+        :slug==='violet'
+          ?path.join(root,'site/index.html')
+          :path.resolve(root,'../../apps/theme-gallery-preview/themes/'+slug+'/site/index.html');
       const ready=await stat(rootPath).then(s=>s.isFile()).catch(()=>false);
       const previewZip=path.join(tmpdir(),'agentsam-template-releases','plain-jane-journal-0.1.0-preview.zip');
       const downloadable=slug==='plain-jane' && await stat(previewZip).then(s=>s.isFile()&&s.size>0).catch(()=>false);

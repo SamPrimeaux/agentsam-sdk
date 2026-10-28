@@ -2355,3 +2355,29 @@ body.admin-nav-open #admin-menu-toggle .console-nav-morph > span:last-child { tr
 @media (prefers-reduced-motion: reduce) {
   .console-nav-morph > span { transition: none; }
 }
+
+/* Genuine current-theme states; an unconfigured site must never appear active. */
+.online-store-badge--empty,
+.online-store-badge--pending { background:#f3f0eb; color:#58534c; }
+.online-store-badge--error { background:#fff0ee; color:#a72d1d; }
+.online-store-preview[data-preview-status="empty"] iframe,
+.online-store-preview[data-preview-status="error"] iframe { display:none; }
+.online-store-preview[data-preview-status="error"] .online-store-preview-message,
+.online-store-preview[data-preview-status="empty"] .online-store-preview-message {
+ display:flex; flex-direction:column; align-items:center; justify-content:center;
+ gap:12px; padding:22px; line-height:1.4;
+}
+.online-store-preview-message p {max-width:350px;margin:0;color:#615e5a;}
+.online-store-preview-message .btn {position:relative;z-index:3;}
+.online-store-head, .online-store-active, .online-store-perf {min-width:0;}
+@media (max-width:900px) {
+  .online-store, .online-store-card, .online-store-head {max-width:100%;min-width:0;}
+  .online-store-head {align-items:flex-start;flex-wrap:wrap;}
+  .online-store-actions {min-width:0;flex-wrap:wrap;justify-content:flex-start;}
+  .online-store-perf {width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;}
+  .online-store-perf-stat {min-width:125px;}
+  .online-store-preview--desktop {width:100%;min-width:0;}
+}
+
+.online-store-preview[data-preview-status="external"] iframe {display:none;}
+.online-store-preview[data-preview-status="external"] .online-store-preview-message {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}

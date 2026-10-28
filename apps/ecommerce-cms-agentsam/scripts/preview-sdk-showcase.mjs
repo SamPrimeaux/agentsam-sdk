@@ -14,7 +14,8 @@ const staticRoot=path.join(root,'frontend/static');
 const distRoot=path.join(root,'frontend/dist');
 // Serve the real packaged theme assets; local preview never forks the storefront.
 const themeRoots=Object.fromEntries(['violet','resolve'].map(theme=>[theme,path.resolve(root,'../theme-gallery-preview/themes/'+theme+'/site')]));
-const violetRoot=themeRoots.violet;
+const violetRoot=path.resolve(root,'../../packages/theme-violet/site');
+themeRoots.violet=violetRoot;
 const journalRoot=path.resolve(root,'../../packages/theme-plain-jane/site');
 const journalManifest=JSON.parse(await readFile(path.join(journalRoot,'journal-cms-manifest.json'),'utf8'));
 const journalPages=journalManifest.pages.map(page=>({

@@ -6,6 +6,7 @@ renderShell("/admin/store", `
         <h1>Online Store</h1>
       </div>
       <div class="online-store-actions">
+        <a href="#theme-product-marketplace" class="btn ghost small" id="browse-themes-shortcut">Browse templates</a>
         <button type="button" class="online-store-pill" id="store-visibility-btn" aria-haspopup="true">
           <span class="online-store-pill-dot" aria-hidden="true"></span>
           <span id="store-visibility-label">Checking…</span>
@@ -47,17 +48,17 @@ renderShell("/admin/store", `
     <section class="online-store-card online-store-active" aria-label="Current theme">
       <div class="online-store-previews">
         <div class="online-store-preview online-store-preview--desktop">
-          <iframe id="theme-preview-desktop" title="Published desktop storefront preview" loading="eager"></iframe><span class="online-store-preview-caption">Desktop · Live storefront</span>
+          <iframe id="theme-preview-desktop" title="Desktop storefront preview" loading="eager"></iframe><span class="online-store-preview-caption">Desktop · Verified live only</span>
         </div>
         <div class="online-store-preview online-store-preview--mobile">
-          <iframe id="theme-preview-mobile" title="Published mobile storefront preview" loading="eager"></iframe><span class="online-store-preview-caption">Mobile</span>
+          <iframe id="theme-preview-mobile" title="Mobile storefront preview" loading="eager"></iframe><span class="online-store-preview-caption">Mobile</span>
         </div>
       </div>
       <div class="online-store-theme-meta">
         <div>
           <div class="online-store-theme-name">
             <span id="active-theme-name">Loading site…</span>
-            <span class="online-store-badge online-store-badge--active">Active</span>
+            <span class="online-store-badge online-store-badge--pending" id="active-theme-status">Checking…</span>
           </div>
           <div class="online-store-theme-sub" id="active-theme-saved">Last saved: —</div>
           <div class="online-store-version" id="active-theme-version" hidden>
@@ -234,6 +235,64 @@ function setPreviewFrames(href) {
   });
 }
 
+function showThemeUnavailable(state, message) {
+  const status = document.getElementById("active-theme-status");
+  const name = document.getElementById("active-theme-name");
+  const saved = document.getElementById("active-theme-saved");
+  const edit = document.getElementById("edit-theme-btn");
+  if (status) {
+    status.className = "online-store-badge online-store-badge--" + state;
+    status.textContent = state === "error" ? "Unavailable" : "Not configured";
+  }
+  if (name) name.textContent = state === "error" ? "Could not load storefront" : "No active theme";
+  if (saved) saved.textContent = message;
+  if (edit) {
+    edit.href = "#theme-product-marketplace";
+    edit.textContent = "Browse templates";
+  }
+  document.getElementById("active-theme-version").hidden = true;
+  if (typeof storefrontPreviewObserver !== "undefined" && storefrontPreviewObserver) storefrontPreviewObserver.disconnect();
+  for (const id of ["theme-preview-desktop", "theme-preview-mobile"]) {
+    const iframe = document.getElementById(id);
+    if (!iframe) continue;
+    iframe.removeAttribute("src");
+    iframe.onload = iframe.onerror = null;
+    const shell = iframe.parentElement;
+    shell.dataset.previewStatus = state;
+    shell.querySelector(".online-store-preview-message")?.remove();
+    const placeholder = document.createElement("div");
+    placeholder.className = "online-store-preview-message";
+    const heading = document.createElement("strong");
+    heading.textContent = state === "error" ? "Preview could not be loaded" : "Your storefront starts here";
+    const body = document.createElement("p");
+    body.textContent = message;
+    placeholder.append(heading, body);
+    if (state === "error") {
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "btn ghost small";
+      retry.textContent = "Retry";
+      retry.addEventListener("click", () => location.reload());
+      placeholder.append(retry);
+    } else {
+      const browse = document.createElement("a");
+      browse.className = "btn ghost small";
+      browse.href = "#theme-product-marketplace";
+      browse.textContent = "Browse templates";
+      placeholder.append(browse);
+    }
+    shell.appendChild(placeholder);
+  }
+}
+function showActiveTheme(theme) {
+  const status = document.getElementById("active-theme-status");
+  status.className = "online-store-badge online-store-badge--" + (theme.verified === true ? "active" : "pending");
+  status.textContent = theme.verified === true ? "Active" : "Unverified";
+  const edit = document.getElementById("edit-theme-btn");
+  edit.href = theme.edit_href || "/admin/theme-editor?slug=home";
+  edit.textContent = "Edit theme";
+}
+
 (async function () {
   try {
     const d = await adminFetch("/api/admin/store/online");
@@ -271,9 +330,12 @@ function setPreviewFrames(href) {
       "Last saved: " + fmtStoreDate(theme?.last_saved);
     const editLink = document.getElementById("edit-theme-btn");
     editLink.href = theme?.edit_href || "/admin/theme-editor?slug=home";
-    if (!theme) document.querySelector(".online-store-badge--active").textContent = "Not configured";
-    else if (embeddedHost && !theme.verified) document.querySelector(".online-store-badge--active").textContent = "Theme unverified";
-    setPreviewFrames(embeddedHost ? theme?.preview_href : (theme?.preview_href || "/"));
+    if (theme?.preview_href && theme?.name) {
+      showActiveTheme(theme);
+      setPreviewFrames(theme.preview_href);
+    } else {
+      showThemeUnavailable("empty", "No published theme has been confirmed. Preview a package or create your first theme draft.");
+    }
 
     if (theme?.version_available) {
       const ver = document.getElementById("active-theme-version");
@@ -295,6 +357,8 @@ function setPreviewFrames(href) {
     });
   } catch (err) {
     console.error(err);
+    showThemeUnavailable("error", "The store service is unavailable. Retry, or browse preview-only templates below.");
+    document.getElementById("store-visibility-label").textContent = "Unverified";
   }
 })();
 
