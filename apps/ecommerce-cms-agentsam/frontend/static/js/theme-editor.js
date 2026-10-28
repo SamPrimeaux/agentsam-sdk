@@ -2,10 +2,13 @@
   const host = window.AgentSamThemeEditorHost || null;
   const editorRequest = host ? host.adapter.request.bind(host.adapter) : window.adminFetch;
   const params = new URLSearchParams(location.search);
-  let slug = host?.page || params.get('slug') || 'shop';
+  const violetShowcase = !host && params.get('showcase') === 'violet';
+  let slug = host?.page || params.get('slug') || (violetShowcase ? 'home' : 'shop');
   let pageData = null;
   let siteData = null;
   let pages = [];
+  let pagePickerCategory = null;
+  let showcaseTemplate = null;
   let activeSectionKey = null;
   let activeSectionOwner = slug;
   let selectedTheme = 'heuristic';
@@ -199,7 +202,7 @@
 
             '<div class="te-page-menu">',
               '<button type="button" class="te-page-trigger" id="te-page-trigger" aria-expanded="false" title="Choose a storefront page"><span class="te-page-trigger__content">', icon.page, '<strong id="te-page-title">Loading…</strong></span><span aria-hidden="true">⌄</span></button>',
-              '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store pages" autocomplete="off" aria-label="Search pages"><div class="te-page-options" id="te-page-options"></div></div>',
+              '<div class="te-page-popover" id="te-page-popover" hidden><input class="te-page-search" id="te-page-search" placeholder="Search online store" autocomplete="off" aria-label="Search storefront templates and pages"><div class="te-page-options" id="te-page-options"></div></div>',
             '</div>',
             '<span class="te-save-state" id="te-save-state" role="status" aria-live="polite" title="Loading" aria-label="Loading">Loading</span>',
           '</div>',
@@ -515,6 +518,11 @@
   function syncPublishCapability() {
     const button = byId('te-publish');
     if (!button) return;
+    if (violetShowcase) {
+      button.disabled = true;
+      button.title = 'Violet preview-only showcase — publishing is disabled';
+      return;
+    }
     if (host && host.adapter.capabilities?.publish === false) {
       button.disabled = true;
       button.title = 'This draft theme workspace does not publish pages directly. Publish the reviewed theme from Online Store.';
@@ -739,7 +747,7 @@
 
   function schedulePrivateAutosave() {
     clearTimeout(autosaveTimer);
-    if (!dirty || liveUnimported || autosaveFailed) return;
+    if (!dirty || liveUnimported || autosaveFailed || violetShowcase) return;
     autosaveTimer = setTimeout(function() {
       void saveDraft({ automatic: true });
     }, 900);
@@ -759,35 +767,225 @@
     dirty = Boolean(value);
     const save = byId('te-save');
     if (save) {
-      save.disabled = liveUnimported || (!dirty && !hasEditedThisSession);
+      save.disabled = violetShowcase || liveUnimported || (!dirty && !hasEditedThisSession);
       save.classList.toggle('is-dirty', dirty);
       save.setAttribute('aria-label', dirty ? 'Save unsaved draft changes' : 'Save draft — latest changes already saved');
       save.title = dirty ? 'Save draft changes (⌘S)' : 'Draft is saved — Save again if needed (⌘S)';
     }
-    if (liveUnimported) setSaveState('Preview only');
+    if (violetShowcase) setSaveState('Violet · local preview only');
+    else if (liveUnimported) setSaveState('Preview only');
     else if (dirty) setSaveState('Unsaved changes', 'dirty');
     else setSaveState('Saved', 'saved');
     if (dirty) schedulePrivateAutosave();
     else clearTimeout(autosaveTimer);
   }
 
+  const storefrontMenu = [
+    { id: 'home', title: 'Home page', icon: 'home', page: 'home' },
+    { id: 'products', title: 'Products', icon: 'product', children: [
+      { title: 'Default product', template: 'product' },
+      { title: 'Products list', template: 'products-list' },
+    ], resource: 'products' },
+    { id: 'collections', title: 'Collections', icon: 'collection', children: [
+      { title: 'Default collection', template: 'collection' },
+      { title: 'Collections list', template: 'collections-list' },
+    ], resource: 'collections' },
+    { id: 'gift-card', title: 'Gift card', icon: 'gift', template: 'gift-card' },
+    { id: 'cart', title: 'Cart', icon: 'cart', template: 'cart' },
+    { id: 'checkout', title: 'Checkout & customer accounts', icon: 'checkout', template: 'checkout' },
+    { id: 'pages', title: 'Pages', icon: 'page', resource: 'pages' },
+    { id: 'blogs', title: 'Blogs', icon: 'blog', children: [
+      { title: 'Default blog', template: 'blog' },
+    ] },
+    { id: 'posts', title: 'Blog posts', icon: 'post', children: [
+      { title: 'Default article', template: 'article' },
+    ] },
+    { id: 'search', title: 'Search', icon: 'search', template: 'search' },
+    { id: 'password', title: 'Password', icon: 'lock', template: 'password' },
+    { id: '404', title: '404 page', icon: 'gift', template: '404' },
+    { id: 'metaobject', title: 'Create metaobject template', icon: 'plus', template: 'metaobject', create: true },
+  ];
+  const pickerIconPaths = {
+    home:'<path d="m3 10 9-7 9 7v10H3zM9 20v-6h6v6"/>',
+    product:'<path d="M3 4h10l8 8-9 9-9-9z"/><circle cx="8" cy="9" r="1"/>',
+    collection:'<path d="M3 8 12 3l9 5-9 5zM3 12l9 5 9-5M3 16l9 5 9-5"/>',
+    gift:'<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18M12 8v13M12 8S5 7 7 4s5 0 5 4zm0 0s7-1 5-4-5 0-5 4Z"/>',
+    cart:'<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l3.5 13h11L22 7H5"/>',
+    checkout:'<path d="M3 5h18v14H3zM3 10h18m-6 5 2 2 3-3"/>',
+    page:'<path d="M6 3h9l3 3v15H6zM15 3v4h3"/>',
+    blog:'<path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"/>',
+    post:'<path d="M5 3h14v18H5zM9 7h6M9 11h6M9 15h3"/>',
+    search:'<circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>',
+    lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+    plus:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'
+  };
+  function pickerIcon(kind) {
+    return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      (pickerIconPaths[kind] || pickerIconPaths.page) + '</svg>';
+  }
+  const catalogResources = { products: [], collections: [], loaded: false };
+
+  async function loadStorefrontResources() {
+    if (host || violetShowcase || catalogResources.loaded) return;
+    catalogResources.loaded = true;
+    const requests = await Promise.allSettled([
+      editorRequest('/api/admin/products'),
+      editorRequest('/api/admin/collections'),
+    ]);
+    if (requests[0].status === 'fulfilled') catalogResources.products = requests[0].value.products || [];
+    if (requests[1].status === 'fulfilled') catalogResources.collections = requests[1].value.collections || [];
+    if (!byId('te-page-popover')?.hidden) renderPageOptions(byId('te-page-search').value);
+  }
+
+  function showScaffoldTemplate(template, title) {
+    if (!violetShowcase) {
+      setNote('Template scaffold is for local UI review only. Install and connect this template before editing or publishing.', 'info');
+      closePageMenu();
+      return;
+    }
+    showcaseTemplate = { template, title, subtitle: 'Customize this Violet template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
+    byId('te-page-title').textContent = title;
+    byId('te-tree-title').textContent = title;
+    byId('te-tree').innerHTML = '<div class="te-tree-scaffold"><div class="te-picker-heading">Header</div>' +
+      '<div class="te-tree-scaffold-row">▤ &nbsp; Violet header</div><div class="te-picker-heading">Template</div>' +
+      '<div class="te-tree-scaffold-row">▤ &nbsp; ' + cmsEscapeHtml(title) + '</div>' +
+      '<div class="te-tree-scaffold-row">⊕ &nbsp; Add section · UI scaffold</div>' +
+      '<div class="te-picker-heading">Footer</div><div class="te-tree-scaffold-row">▤ &nbsp; Violet footer</div></div>';
+    closePageMenu();
+    renderScaffoldInspector();
+    refreshPreview();
+    setNote('Violet · ' + title + ' — local template scaffold. No data is connected or published.');
+  }
+
+  function renderScaffoldInspector() {
+    if (!showcaseTemplate || !violetShowcase) return;
+    const data = showcaseTemplate;
+    const formTemplate = ['checkout','metaobject','contact'].includes(data.template);
+    byId('te-inspector-title').textContent = data.title;
+    byId('te-inspector-subtitle').textContent = 'Violet · local template settings';
+    byId('te-section-status').textContent = 'preview';
+    const panel = byId('te-inspector-body');
+    panel.innerHTML = '<div class="te-scaffold-controls"><div class="te-picker-heading">Template content</div>' +
+      '<label>Heading<input type="text" maxlength="110" data-scaffold-setting="title" value="' + cmsEscapeAttr(data.title) + '"></label>' +
+      '<label>Description<textarea rows="3" data-scaffold-setting="subtitle">' + cmsEscapeHtml(data.subtitle) + '</textarea></label>' +
+      (formTemplate ? '<label>Button label<input type="text" maxlength="60" data-scaffold-setting="buttonLabel" value="' + cmsEscapeAttr(data.buttonLabel) + '"></label>' +
+      '<div class="te-picker-heading">Form fields · local only</div><div data-scaffold-fields>' +
+      data.fields.map((label,index) => '<div class="te-scaffold-field"><input aria-label="Field ' + (index+1) + '" data-scaffold-field="' + index + '" value="' + cmsEscapeAttr(label) + '">' +
+      '<button type="button" data-scaffold-remove="' + index + '" aria-label="Remove field ' + (index+1) + '">×</button></div>').join('') +
+      '</div><button type="button" class="te-scaffold-add" data-scaffold-add>+ Add form field</button>' : '') +
+      '<div class="te-scaffold-readonly">UI preview only. No Stripe, forms, or D1 records are changed.</div></div>';
+    panel.querySelectorAll('[data-scaffold-setting]').forEach(input => input.addEventListener('input', () => {
+      if (!showcaseTemplate) return;
+      showcaseTemplate[input.dataset.scaffoldSetting] = input.value;
+      if (input.dataset.scaffoldSetting === 'title') {
+        byId('te-page-title').textContent = input.value || 'Untitled template';
+        byId('te-tree-title').textContent = input.value || 'Untitled template';
+      }
+      refreshPreview();
+    }));
+    panel.querySelectorAll('[data-scaffold-field]').forEach(input => input.addEventListener('input', () => {
+      if (!showcaseTemplate) return;
+      showcaseTemplate.fields[Number(input.dataset.scaffoldField)] = input.value;
+      refreshPreview();
+    }));
+    panel.querySelectorAll('[data-scaffold-remove]').forEach(button => button.addEventListener('click', () => {
+      if (!showcaseTemplate) return;
+      showcaseTemplate.fields.splice(Number(button.dataset.scaffoldRemove),1);
+      renderScaffoldInspector();
+      refreshPreview();
+    }));
+    panel.querySelector('[data-scaffold-add]')?.addEventListener('click', () => {
+      if (!showcaseTemplate || showcaseTemplate.fields.length >= 12) return;
+      showcaseTemplate.fields.push('New field');
+      renderScaffoldInspector();
+      refreshPreview();
+    });
+  }
+
+  function renderVioletScaffold(template, title) {
+    const safeTitle = cmsEscapeHtml(showcaseTemplate?.title || title);
+    const safeSubtitle = cmsEscapeHtml(showcaseTemplate?.subtitle || '');
+    const safeButton = cmsEscapeHtml(showcaseTemplate?.buttonLabel || 'Continue');
+    const safeKind = cmsEscapeHtml(template);
+    const cards = template === 'products-list' || template === 'collection' || template === 'collections-list'
+      ? '<div class="v-cards"><div>Campaign essentials</div><div>Community merch</div><div>Supporter gifts</div></div>' : '';
+    const form = template === 'checkout' || template === 'contact' || template === 'metaobject'
+      ? '<div class="v-form">' + (showcaseTemplate?.fields || []).map((label,index) =>
+        '<label>' + cmsEscapeHtml(label) + '<input type="text" placeholder="' + cmsEscapeAttr(label) + '" disabled></label>').join('') +
+        '<button type="button" disabled>' + safeButton + ' · preview only</button></div>' : '';
+    const empty = template === 'cart' ? '<div class="v-empty">Your cart is empty<div class="v-sub">Continue exploring the Violet storefront.</div></div>' : '';
+    const search = template === 'search' ? '<div class="v-form"><input placeholder="Search Violet" disabled></div>' : '';
+    const password = template === 'password' ? '<div class="v-form"><input type="password" placeholder="Store password" disabled></div>' : '';
+    const body = '<div class="v-sub">' + safeSubtitle + '</div>' +
+      (form || empty || search || password || cards || '<div class="v-sub">Connect this template to live content after approving the interface.</div>');
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<link rel="stylesheet" href="/themes/violet/demo/global/cpas-public-surface.css">' +
+      '<style>body{background:#101127;color:#f6f4ff;font-family:Inter,system-ui,sans-serif;margin:0}.v-header{display:flex;align-items:center;justify-content:space-between;padding:19px 5%;border-bottom:1px solid #ffffff23;background:#15162d}.v-brand{display:flex;align-items:center;gap:11px;font-weight:800}.v-brand img{width:33px;height:33px;object-fit:contain}.v-nav{display:flex;gap:24px;font-size:12px;color:#c1bad2}.v-main{min-height:60vh;padding:64px max(6%,24px);background:radial-gradient(circle at 80% 0%,#713f862f,transparent 48%)}.v-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.17em;color:#c695ed;font-weight:800}.v-main h1{font-family:Georgia,serif;font-size:clamp(35px,5vw,68px);margin:18px 0 10px;letter-spacing:-.04em}.v-sub{color:#bdb7c9;font-size:14px;max-width:520px;line-height:1.6}.v-preview{display:inline-flex;font-size:11px;color:#d8bee8;background:#a758c520;border:1px solid #be8ace54;border-radius:100px;padding:7px 12px;margin-top:20px}.v-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:35px}.v-cards>div{min-height:160px;background:linear-gradient(130deg,#36203d,#25273b);border:1px solid #635070;border-radius:12px;display:flex;align-items:flex-end;padding:20px;font-weight:700}.v-form{max-width:540px;margin-top:30px;display:grid;gap:12px}.v-form label{display:grid;gap:6px;font-size:12px;color:#ddd}.v-form input,.v-form textarea{box-sizing:border-box;padding:13px 15px;width:100%;background:#ffffffef;border:0;border-radius:8px;color:#242424}.v-form button{padding:14px;border:0;border-radius:8px;background:#9345bb;color:#fff;font-weight:750}.v-empty{text-align:center;font-size:22px;font-weight:700;padding:55px 0}.v-footer{padding:27px 5%;border-top:1px solid #ffffff23;color:#a9a4b8;font-size:12px}.v-foot-row{display:flex;justify-content:space-between}@media(max-width:650px){.v-nav{display:none}.v-cards{grid-template-columns:1fr}.v-main{padding:45px 20px}}</style></head>' +
+      '<body data-studio-template="' + safeKind + '"><header class="v-header"><div class="v-brand"><img alt="" src="/themes/violet/demo/assets/generated/theme-mark.svg">Violet</div><div class="v-nav"><span>Home</span><span>Campaigns</span><span>Stories</span><span>Get involved</span></div></header>' +
+      '<main class="v-main"><div class="v-kicker">Violet theme · ' + safeKind + '</div><h1>' + safeTitle + '</h1>' + body +
+      '<div class="v-preview">UI scaffold · Not connected to customer data</div></main><footer class="v-footer"><div class="v-foot-row"><span>Violet Initiative</span><span>AgentSam Commerce · local preview</span></div></footer></body></html>';
+  }
+
   function renderPageOptions(query) {
     const needle = String(query || '').trim().toLowerCase();
+    const root = byId('te-page-options');
     const source = host ? pages : (pages.length ? pages : fallbackPages);
-    const filtered = source.filter(function(page) {
-      const title = page.title || humanize(page.slug);
-      return !needle || title.toLowerCase().includes(needle) || page.slug.toLowerCase().includes(needle);
-    });
-
-    byId('te-page-options').innerHTML = filtered.length ? filtered.map(function(page) {
-      return '<button type="button" class="te-page-option' + (page.slug === slug ? ' is-active' : '') + '" data-page-slug="' + cmsEscapeAttr(page.slug) + '">' +
-        icon.page + '<span><strong style="font-size:12px">' + cmsEscapeHtml(page.title || humanize(page.slug)) + '</strong><span style="display:block;font-size:10px;color:#858580;margin-top:2px">' +
-        cmsEscapeHtml(pageRoute(page.slug) || 'No public route connected') + '</span></span></button>';
-    }).join('') : '<div class="te-empty">No pages match that search.</div>';
-
-    byId('te-page-options').querySelectorAll('[data-page-slug]').forEach(function(button) {
-      button.addEventListener('click', function() { switchPage(button.dataset.pageSlug); });
-    });
+    const pageFor = key => source.find(p => p.slug === key);
+    const match = (text) => !needle || String(text || '').toLowerCase().includes(needle);
+    const row = (title, iconText, attrs, detail, arrow) =>
+      '<button type="button" class="te-page-option' + (detail === 'UI scaffold' ? ' is-scaffold' : '') + '" ' + attrs + '><span class="te-picker-icon" aria-hidden="true">' + pickerIcon(iconText) + '</span>' +
+      '<span class="te-picker-copy"><strong>' + cmsEscapeHtml(title) + '</strong>' +
+      (detail ? '<small>' + cmsEscapeHtml(detail) + '</small>' : '') + '</span>' +
+      (arrow ? '<span class="te-picker-chevron" aria-hidden="true">›</span>' : '') + '</button>';
+    let html = '';
+    const parent = storefrontMenu.find(group => group.id === pagePickerCategory);
+    if (parent && !needle) {
+      html = '<button type="button" class="te-page-option te-picker-back" data-picker-back="true"><span class="te-picker-icon" aria-hidden="true">‹</span><span class="te-picker-copy"><strong>Back to online store</strong></span></button>';
+      html += '<div class="te-picker-heading">' + cmsEscapeHtml(parent.title) + '</div>';
+      const children = [...(parent.children || [])];
+      if (parent.resource === 'pages') {
+        children.push(...source.filter(p => p.slug !== 'site').map(p => ({ title: p.title || humanize(p.slug), page: p.slug })));
+      }
+      if (parent.resource === 'products' || parent.resource === 'collections') {
+        children.push(...(catalogResources[parent.resource] || []).slice(0, 25).map(p => ({
+          title: p.title || p.name || p.slug || 'Untitled',
+          resource: parent.resource, id: p.id,
+        })));
+      }
+      children.push({ title: parent.resource === 'pages' ? 'Create page template' : 'Create ' + parent.title.toLowerCase().replace(/s$/, '') + ' template',
+        template: 'metaobject' });
+      html += children.map(child => row(child.title, 'page',
+        child.page ? 'data-picker-page="' + cmsEscapeAttr(child.page) + '"' :
+        child.resource && child.id ? 'data-picker-resource="' + cmsEscapeAttr(child.resource) + '" data-resource-id="' + cmsEscapeAttr(child.id) + '"' :
+        'data-picker-template="' + cmsEscapeAttr(child.template || 'metaobject') + '"', child.page ? '' : 'UI scaffold', false)).join('');
+    } else {
+      html = storefrontMenu.filter(group => match(group.title) || (needle && group.children?.some(ch => match(ch.title)))).map(group => {
+        const hasChildren = !!(group.children || group.resource);
+        const page = group.page ? pageFor(group.page) : null;
+        const divider = !needle && ['cart', 'pages', 'search'].includes(group.id)
+          ? '<div class="te-picker-divider" role="separator"></div>' : '';
+        return divider + row(group.title, group.icon,
+          hasChildren ? 'data-picker-category="' + cmsEscapeAttr(group.id) + '"' :
+            page ? 'data-picker-page="' + cmsEscapeAttr(page.slug) + '"' :
+            'data-picker-template="' + cmsEscapeAttr(group.template || group.id) + '"',
+          (!hasChildren && !page) ? 'UI scaffold' : '', hasChildren);
+      }).join('');
+    }
+    root.innerHTML = html || '<div class="te-empty">No matching storefront templates.</div>';
+    root.querySelectorAll('[data-picker-category]').forEach(button =>
+      button.addEventListener('click', () => { pagePickerCategory = button.dataset.pickerCategory; byId('te-page-search').value = ''; renderPageOptions(''); }));
+    root.querySelector('[data-picker-back]')?.addEventListener('click', () => { pagePickerCategory = null; renderPageOptions(''); });
+    root.querySelectorAll('[data-picker-page]').forEach(button => button.addEventListener('click', () => {
+      switchPage(button.dataset.pickerPage);
+    }));
+    root.querySelectorAll('[data-picker-template]').forEach(button => button.addEventListener('click', () =>
+      showScaffoldTemplate(button.dataset.pickerTemplate, button.querySelector('strong').textContent)));
+    root.querySelectorAll('[data-picker-resource]').forEach(button => button.addEventListener('click', () => {
+      const url = button.dataset.pickerResource === 'products'
+        ? '/admin/product-edit?id=' + encodeURIComponent(button.dataset.resourceId) : '/admin/collections';
+      if (violetShowcase) showScaffoldTemplate(button.dataset.pickerResource, button.querySelector('strong').textContent);
+      else window.location.href = url;
+    }));
   }
 
   function blockSchemaFor(section, meta) {
@@ -2704,6 +2902,19 @@
   }
 
   async function refreshPreview() {
+    if (violetShowcase) {
+      const frame = byId('theme-preview');
+      if (showcaseTemplate) {
+        frame.removeAttribute('src');
+        frame.srcdoc = renderVioletScaffold(showcaseTemplate.template, showcaseTemplate.title);
+      } else {
+        frame.removeAttribute('srcdoc');
+        frame.src = '/themes/violet/demo/';
+      }
+      byId('te-open-tab').href = '/themes/violet/demo/';
+      byId('te-preview-label').textContent = 'Violet · ' + (showcaseTemplate?.title || 'Home page') + ' · local UI preview';
+      return;
+    }
     if (host) {
       try {
         const preview = await host.adapter.resolvePreview(slug, pageData);
@@ -2849,6 +3060,7 @@
   // Serialize writes and snapshot each section before awaiting the network. A later
   // keystroke must remain dirty even if an earlier autosave finishes afterward.
   async function saveDraft({ automatic = false } = {}) {
+    if (violetShowcase) { setNote('Violet showcase is UI-only. No CMS writes occur.', 'info'); return false; }
     if (saveInFlight) {
       const previousSaved = await saveInFlight;
       if (!previousSaved) return false;
@@ -2943,6 +3155,7 @@
   }
 
   async function publishPage() {
+    if (violetShowcase) { setNote('Violet showcase cannot publish to a customer site.'); return false; }
     // The explicit Publish live menu action is the merchant confirmation.
     // Keep publish capability/preflight checks without a second browser-native dialog.
     if (publishInFlight) return false;
@@ -3217,7 +3430,9 @@
   }
 
   async function switchPage(nextSlug) {
-    if (!nextSlug || nextSlug === slug) {
+    const hadScaffold = violetShowcase && !!showcaseTemplate;
+    if (violetShowcase) showcaseTemplate = null;
+    if (!nextSlug || (nextSlug === slug && !hadScaffold)) {
       closePageMenu();
       return;
     }
@@ -3282,6 +3497,12 @@
     try {
       if (host && host.adapter && typeof host.adapter.getThemeIdentity === 'function') {
         applyThemeIdentity(await host.adapter.getThemeIdentity());
+        return;
+      }
+      if (violetShowcase) {
+        selectedTheme = 'heuristic';
+        applyThemeIdentity({ name: 'Violet', status: 'preview' });
+        byId('te-theme-trigger-label').textContent = 'Violet';
         return;
       }
       const catalog = await editorRequest('/api/admin/cms/themes');
@@ -3390,8 +3611,10 @@
     closeThemeMenu();
     byId('te-page-popover').hidden = false;
     byId('te-page-trigger').setAttribute('aria-expanded', 'true');
+    pagePickerCategory = null;
     byId('te-page-search').value = '';
     renderPageOptions('');
+    loadStorefrontResources().catch(() => {});
     requestAnimationFrame(function() { byId('te-page-search').focus(); });
   }
 
@@ -3989,5 +4212,9 @@
       return true;
     },
   };
+  if (violetShowcase) {
+    const save = byId('te-save'); if (save) { save.disabled = true; save.title = 'UI-only Violet showcase'; }
+    const publish = byId('te-publish'); if (publish) { publish.disabled = true; publish.title = 'No live publishing from local showcase'; }
+  }
   loadPage();
 })();

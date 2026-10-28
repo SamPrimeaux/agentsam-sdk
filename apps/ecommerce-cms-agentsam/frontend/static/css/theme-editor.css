@@ -3461,3 +3461,92 @@ dialog.te-section-menu .te-section-catalog-item--visual {
 .te-section-css textarea[aria-invalid=true]{border-color:#b8313c}
 .te-section-css-feedback{min-height:16px;margin:4px 0 10px;color:#ac2c32;font-size:11px;line-height:1.4}
 \n.te-link-group-label{font-size:10px;font-weight:700;color:#78737f;padding:9px 10px 4px;text-transform:uppercase;letter-spacing:.07em}\n
+/* Storefront template navigator — Shopify-style hierarchy, AgentSam controls. */
+.te-page-popover {
+  width: 282px;
+  padding: 7px;
+  max-height: min(540px, calc(100dvh - 112px));
+  border-radius: 12px;
+  box-shadow: 0 16px 45px rgba(15, 19, 33, .14), 0 2px 7px rgba(15,19,33,.08);
+  border-color: #e0e1e4;
+}
+.te-page-search {
+  height: 35px;
+  background: #fff;
+  border: 1px solid #d3d4d8;
+  margin-bottom: 5px;
+  padding-inline: 11px;
+  font-size: 12px;
+}
+.te-page-options { max-height: min(480px, calc(100dvh - 170px)); scrollbar-width: thin; }
+.te-page-option {
+  min-height: 34px;
+  border-radius: 6px;
+  padding: 6px 9px;
+  gap: 9px;
+  font-size: 12px;
+  transition: background .12s ease;
+}
+.te-page-option:hover { background: #f2f3f5; }
+.te-page-option:focus-visible { outline: 2px solid #3976eb; outline-offset: -2px; }
+.te-picker-icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  color: #4d515a;
+  width: 16px;
+  height: 18px;
+  flex-shrink: 0;
+  font-size: 16px;
+  font-weight: 550;
+}
+.te-picker-copy { min-width: 0; flex: 1; display: block; }
+.te-picker-copy strong { font-size: 12px; font-weight: 540; line-height: 1.25; display: block; }
+.te-picker-copy small { font-size: 10px; color: #8c8596; margin-top: 3px; display: block; }
+.te-page-option.is-scaffold .te-picker-copy small { color: #8b6c9d; }
+.te-picker-chevron { color: #737781; margin-left: auto; font-size: 18px; line-height: 1; }
+.te-picker-heading {
+  margin: 8px 2px 2px;
+  padding: 7px 8px 4px;
+  border-top: 1px solid #e9e9ed;
+  text-transform: uppercase;
+  color: #787983;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+.te-tree-scaffold { padding: 12px 4px; }
+.te-tree-scaffold .te-picker-heading { padding-left: 12px; }
+.te-tree-scaffold-row {
+  color: #4b5262;
+  padding: 11px 13px;
+  font-size: 12px;
+  font-weight: 550;
+  border-radius: 7px;
+  margin: 2px 0;
+  background: #f8f8fa;
+}
+@media (max-width: 680px) {
+  .te-page-popover {
+    width: min(325px, calc(100vw - 24px));
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .te-page-option { min-height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .te-page-option { transition: none; }
+}
+
+.te-picker-divider{border-top:1px solid #e9e9ed;margin:5px 4px;}
+.te-picker-back{color:#475066;font-weight:700;}
+
+.te-scaffold-controls{display:grid;gap:12px;padding:12px;}
+.te-scaffold-controls label{display:grid;gap:6px;font-size:11px;font-weight:650;color:#4d515e;}
+.te-scaffold-controls input,.te-scaffold-controls textarea{width:100%;box-sizing:border-box;border:1px solid #dce0e6;border-radius:8px;padding:10px;background:#fff;font-size:12px;line-height:1.4;font-family:inherit;color:#273044;}
+.te-scaffold-controls input:focus,.te-scaffold-controls textarea:focus{outline:2px solid #9e83d1;outline-offset:1px;}
+.te-scaffold-field{display:flex;align-items:center;gap:6px;margin:7px 0;}
+.te-scaffold-field input{flex:1;min-width:0;}
+.te-scaffold-field button,.te-scaffold-add{border:1px solid #dce0e6;background:#fff;border-radius:8px;padding:8px 11px;color:#464c59;cursor:pointer;}
+.te-scaffold-add{width:100%;font-size:12px;font-weight:650;}
+.te-scaffold-readonly{font-size:11px;line-height:1.5;color:#6b6878;border-top:1px solid #e6e2e8;padding-top:13px;}

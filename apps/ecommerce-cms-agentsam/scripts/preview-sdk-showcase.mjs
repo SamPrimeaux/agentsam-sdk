@@ -4,9 +4,12 @@ import http from 'node:http';
 import {readFile,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {getRegistryPage} from '../backend/cms/registry.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const staticRoot=path.join(root,'frontend/static');
 const distRoot=path.join(root,'frontend/dist');
+// Serve the already-packaged Violet prebuild from the monorepo; do not fork its assets.
+const violetRoot=path.resolve(root,'../theme-gallery-preview/themes/violet/site');
 const port=Number(process.env.PORT||4327);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.json':'application/json','.woff2':'font/woff2'};
 const spa=new Set(['analytics','account','products/create','products/help/artwork']);
@@ -67,6 +70,16 @@ const previewCatalog = [
   }
 ];
 const find=(p)=>{
+ if(p.startsWith('/assets/generated/')){
+   const target=path.resolve(violetRoot,'assets/generated',p.slice('/assets/generated/'.length));
+   return target.startsWith(violetRoot+path.sep) ? target : null;
+ }
+ if(p==='/themes/violet/demo'||p==='/themes/violet/demo/')return path.join(violetRoot,'index.html');
+ if(p.startsWith('/themes/violet/demo/')){
+   const relative=p.slice('/themes/violet/demo/'.length);
+   const target=path.resolve(violetRoot,relative);
+   return target.startsWith(violetRoot+path.sep) ? target : null;
+ }
  if(p==='/')return path.join(staticRoot,'home.html');
  if(p==='/admin/registry-build-edit')return path.join(staticRoot,'registry-build-edit.html');
  if(p==='/admin/product-edit')return path.join(staticRoot,'product-edit.html');
@@ -137,13 +150,34 @@ const server=http.createServer(async(req,res)=>{
    };
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(payload));return;
   }
+  // Isolated CMS fixtures: no tenant D1, no writes, no Stripe.
+  if(pathname==='/api/admin/cms/pages' && req.method==='GET'){
+   res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
+   res.end(JSON.stringify({pages:['home','shop','about'].map(slug=>({
+     slug,title:getRegistryPage(slug).title,live_route:slug==='home'?'/':'/'+slug
+   }))}));return;
+  }
+  const previewPage=pathname.match(/^\/api\/admin\/cms\/pages\/(home|shop|about|site)$/);
+  if(previewPage && req.method==='GET'){
+   res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
+   res.end(JSON.stringify({page:getRegistryPage(previewPage[1]),seeded:false}));return;
+  }
+  if(pathname==='/api/admin/cms/themes' && req.method==='GET'){
+   res.writeHead(200,{'Content-Type':'application/json'});
+   res.end(JSON.stringify({ok:true,active_theme:{slug:'violet',name:'Violet',state:'preview'},
+     preview_theme:{slug:'violet',name:'Violet',state:'preview'},themes:[],content_version:1}));return;
+  }
+  if(pathname==='/api/admin/cms/registry' && req.method==='GET'){
+   res.writeHead(200,{'Content-Type':'application/json'});
+   res.end(JSON.stringify({registry:[],sections:[]}));return;
+  }
   if(pathname==='/api/admin/collections'){res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({collections:[]}));return}
   if(pathname.startsWith('/api/')){res.writeHead(503,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'preview_only',message:'This is an isolated UI preview. Backend APIs and tenant data are not connected.'}));return}
   if(req.method!=='GET'&&req.method!=='HEAD'){res.writeHead(405);res.end();return}
   let target=(pathname==='/admin/product-edit' && /^\d+$/.test(new URL(req.url,'http://localhost').searchParams.get('id')||''))?path.join(staticRoot,'product-edit.html'):find(pathname);
   if(!target){res.writeHead(302,{Location:'/admin/home'});res.end();return}
   target=path.resolve(target);
-  if(![staticRoot,distRoot,path.join(root,'frontend')].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
+  if(![staticRoot,distRoot,path.join(root,'frontend'),violetRoot].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
   let data=await readFile(target);
   const ext=path.extname(target);
   if(ext==='.html'){
