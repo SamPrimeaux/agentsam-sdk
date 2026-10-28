@@ -808,6 +808,25 @@
     { id: '404', title: '404 page', icon: 'gift', template: '404' },
     { id: 'metaobject', title: 'Create metaobject template', icon: 'plus', template: 'metaobject', create: true },
   ];
+  if (resolveShowcase) {
+    const collections = storefrontMenu.find(item => item.id === 'collections');
+    collections.children = [
+      { title: 'Collections list', page: 'resolve-collections' },
+      { title: 'Default collection', page: 'resolve-collection' },
+    ];
+    const cart = storefrontMenu.find(item => item.id === 'cart'); cart.page = 'resolve-cart';
+    const password = storefrontMenu.find(item => item.id === 'password'); password.page = 'resolve-password';
+    storefrontMenu.splice(storefrontMenu.findIndex(item => item.id === 'checkout') + 1, 0, {
+      id: 'customer', title: 'Customer accounts', icon: 'checkout', children: [
+        { title: 'Sign in', page: 'resolve-sign-in' },
+        { title: 'Sign up', page: 'resolve-sign-up' },
+        { title: 'Account overview', page: 'resolve-account' },
+        { title: 'Order history', page: 'resolve-orders' },
+        { title: 'Saved pieces', page: 'resolve-saved' },
+        { title: 'Profile & preferences', page: 'resolve-profile' },
+      ],
+    });
+  }
   const pickerIconPaths = {
     home:'<path d="m3 10 9-7 9 7v10H3zM9 20v-6h6v6"/>',
     product:'<path d="M3 4h10l8 8-9 9-9-9z"/><circle cx="8" cy="9" r="1"/>',
@@ -2933,16 +2952,21 @@
   async function refreshPreview() {
     if (resolveShowcase) {
       const frame = byId('theme-preview');
-      const url = '/themes/resolve/demo/?studio_preview=1';
+      const portalPath = window.AgentSamResolveStudio?.pagePath?.(slug);
+      const url = portalPath
+        ? '/themes/resolve/demo/portal/' + portalPath + '?studio_preview=1'
+        : '/themes/resolve/demo/?studio_preview=1';
       if (showcaseTemplate) {
         frame.removeAttribute('src');
         frame.srcdoc = renderResolveScaffold(showcaseTemplate.template, showcaseTemplate.title);
       } else {
         frame.removeAttribute('srcdoc');
-        if (!frame.getAttribute('src')?.includes('/themes/resolve/demo/')) frame.src = url;
+        if (frame.getAttribute('src') !== url) frame.src = url;
         window.AgentSamResolveStudio?.sync?.();
       }
-      byId('te-open-tab').href = '/themes/resolve/demo/';
+      byId('te-open-tab').href = portalPath
+        ? '/themes/resolve/demo/portal/' + portalPath
+        : '/themes/resolve/demo/';
       byId('te-preview-label').textContent = 'Resolve · ' + (showcaseTemplate?.title || 'interactive') + ' · local preview only';
       return;
     }
@@ -3028,6 +3052,7 @@
              : adminFetch('/api/admin/cms/pages/site')
       ]);
       pageData = results[0].page;
+      if (resolveShowcase) window.AgentSamResolveStudio?.setPage?.(pageData);
       liveUnimported = pageData.content_authority === 'storefront-html';
       missingSourceSections = Array.isArray(pageData.missing_source_sections)
         ? pageData.missing_source_sections.filter(function(key) {
@@ -4260,6 +4285,7 @@
     const save = byId('te-save'); if (save) { save.disabled = true; save.title = 'Local theme showcase · no CMS writes'; }
     const publish = byId('te-publish'); if (publish) { publish.disabled = true; publish.title = 'No live publishing from local showcase'; }
   }
+  window.AgentSamResolveStudio?.registerNavigator?.(nextSlug=>switchPage(nextSlug));
   window.AgentSamResolveStudio?.mount?.();
   loadPage();
 })();

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {RESOLVE_PORTAL_TEMPLATES} from './portal-templates.mjs';
 
 const SOURCE = fileURLToPath(new URL('../site/', import.meta.url));
 const TEXT_EXTENSIONS = new Set(['.html', '.css', '.js', '.json', '.svg', '.xml', '.webmanifest']);
@@ -63,6 +64,21 @@ export function materializePrebuild(target, options = {}) {
   fs.rmSync(destination, { recursive: true, force: true });
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.cpSync(SOURCE, destination, { recursive: true });
+  // One portable portal base owns all customer page routes and assets,
+  // regardless of which prefixed host path installs the Resolve theme.
+  const portalIndex = path.join(destination, 'portal', 'index.html');
+  if (fs.existsSync(portalIndex)) {
+    const html = fs.readFileSync(portalIndex, 'utf8');
+    const resolvedHtml=html.replaceAll('__RESOLVE_PORTAL_BASE__', basePath + 'portal/');
+    fs.writeFileSync(portalIndex, resolvedHtml);
+    // Materialize each public route as a physical static page, preserving
+    // deep-link refreshes on hosts with no catch-all SPA rewrite configured.
+    for (const template of RESOLVE_PORTAL_TEMPLATES) {
+      const routeDir=path.join(destination,'portal',template.path);
+      fs.mkdirSync(routeDir,{recursive:true});
+      fs.writeFileSync(path.join(routeDir,'index.html'),resolvedHtml);
+    }
+  }
   rewriteStaticBase(destination, basePath);
   rewriteCanonicalOrigin(destination, canonicalOrigin);
   return { destination, basePath, canonicalOrigin, theme: "resolve" };

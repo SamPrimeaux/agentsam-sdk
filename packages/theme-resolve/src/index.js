@@ -67,3 +67,5 @@ export function createProductRow({ accountId = null, repositoryId = null, status
     ],
   };
 }
+
+export {RESOLVE_PORTAL_TEMPLATES,RESOLVE_PORTAL_BRAND,portalCmsPage,portalHref,portalTemplateForSlug} from './portal-templates.mjs';

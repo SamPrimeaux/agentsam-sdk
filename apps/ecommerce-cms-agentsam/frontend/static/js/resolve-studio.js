@@ -16,11 +16,51 @@
   ];
   var catalog=[], records={}, selected='hero', selectionType='section', previewing=null, connected=false;
   var available={}, sectionSettings={};
+  var portalPage=null;
+  var portalTemplateRoutes=[];
+  var onNavigatePage=null;
+  var portalBrand={
+    name:'RESOLVE',tagline:'Objects of lasting desire.',logo_url:'',
+    accent:'#8b181b',backdrop_from:'#131720',backdrop_mid:'#412634',backdrop_to:'#84636b',
+    glass_opacity:0.12,parallax_enabled:true,parallax_strength:18,
+    signup_enabled:true,password_gate_enabled:false,show_guest_checkout:true
+  };
+  const PORTAL_BRAND_KEY='resolve.portal.preview.brand.v1';
+  function visibleSections(){
+    if(!portalPage)return sections;
+    return [{key:'header',label:'Header',icon:'☷',group:'HEADER'}]
+      .concat((portalPage.sections||[]).map(item=>({
+        key:item.key,label:item.key.replace(/-/g,' ').replace(/^\w/,c=>c.toUpperCase()),
+        icon:'▤',group:'TEMPLATE'
+      })))
+      .concat([{key:'footer',label:'Footer',icon:'☷',group:'FOOTER'}]);
+  }
+  function pagePath(slug){
+    if(!portalPage || portalPage.slug!==slug)return null;
+    try{
+      const meta=typeof portalPage.metadata_json==='string'
+        ? JSON.parse(portalPage.metadata_json) : portalPage.metadata_json;
+      return meta?.theme==='resolve' && /^[a-z0-9/-]+$/.test(meta.path) ? meta.path : null;
+    }catch(_){return null;}
+  }
+  function setPage(page){
+    portalPage=page?.slug?.startsWith('resolve-')?page:null;
+    available={};
+    const choices=visibleSections();
+    if(!choices.some(item=>item.key===selected) || selectionType==='app'){
+      selected=choices.find(item=>item.group==='TEMPLATE')?.key||'header';
+      selectionType='section';
+    }
+  }
   function el(id){return document.getElementById(id);}
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(x){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&quot;'}[x];
   });}
   function read() {
+    try {
+      const stored=JSON.parse(localStorage.getItem(PORTAL_BRAND_KEY)||'null');
+      if(stored && typeof stored==='object')portalBrand={...portalBrand,...stored};
+    }catch(_){}
     try{
       var saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
       records=saved.records&&typeof saved.records==='object'?saved.records:{};
@@ -46,6 +86,16 @@
   function sync(extra) {
     var frame=el('theme-preview');
     if (!frame || !frame.contentWindow) return;
+    if(portalPage){
+      frame.contentWindow.postMessage(Object.assign({
+        type:'agentsam:resolve-portal-config',
+        brand:portalBrand,
+        selected:selectionType==='section'?selected:null,
+        sections:sectionSettings,
+        scroll:false
+      },extra||{}),location.origin);
+      return;
+    }
     frame.contentWindow.postMessage(Object.assign({
       type:'agentsam:resolve-update',
       selected:selected,
@@ -92,11 +142,11 @@
       btn.addEventListener('click',function(){selectApp(btn.dataset.rsChoose);});
     });
   }
-  function section(key) {return sections.find(function(s){return s.key===key;});}
+  function section(key) {return visibleSections().find(function(s){return s.key===key;});}
   function renderSections() {
     var tree=el('te-tree');if(!tree)return;
     var html='',group='';
-    sections.forEach(function(s){
+    visibleSections().forEach(function(s){
       if(group!==s.group) {group=s.group;html+='<div class="rs-tree-group">'+group+'</div>';}
       var selectedClass=selected===s.key&&selectionType==='section'?' is-selected':'';
       var present=available[s.key];
@@ -106,7 +156,7 @@
     });
     tree.innerHTML=html+'<button type="button" class="rs-add-section" data-rs-add>+ Add section / app block</button>'+
       '<p class="rs-tree-note">Selections scroll to real Resolve anchors. Missing anchors are labeled; no storefront code is rewritten.</p>';
-    var title=el('te-tree-title');if(title)title.textContent='Resolve · Home';
+    var title=el('te-tree-title');if(title)title.textContent=portalPage?portalPage.title:'Resolve · Home';
     tree.querySelectorAll('[data-rs-section]').forEach(function(btn){
       btn.addEventListener('click',function(){selectSection(btn.dataset.rsSection,true);});
     });
@@ -140,6 +190,7 @@
     var panel=el('te-inspector-body');
     if(!panel)return;
     if(selectionType==='app') {renderAppInspector();return;}
+    if(portalPage){renderPortalInspector();return;}
     var item=section(selected)||sections[0];
     inspectorTitle(item.label,'Resolve · '+item.group.toLowerCase()+' / section');
     var c=sectionSettings[item.key]||{};
@@ -180,6 +231,81 @@
     renderInspector();
     sync();
   }
+  function renderPortalInspector(){
+    const panel=el('te-inspector-body');
+    const item=section(selected)||visibleSections()[0];
+    inspectorTitle(item.label,'Resolve · '+(portalPage?.title||'Customer portal'));
+    const cfg=sectionSettings[portalPage.slug+':'+item.key]||{};
+    const isAuth=portalPage.template_key?.includes('sign-')||portalPage.template_key==='resolve/password';
+    panel.innerHTML='<div class="rs-inspector">'+
+      '<div class="rs-group-heading">Selected section</div>'+
+      '<p class="rs-inspector-hint">'+esc(item.label)+' · '+esc(portalPage.template_key)+' · local draft preview</p>'+
+      check('Section enabled','section_visible',cfg.visible!==false)+
+      input('Vertical padding (px)','section_padding',cfg.padding||0,'number','min="0" max="160"')+
+      '<button type="button" class="rs-secondary" data-rs-portal-jump>Jump to selected section</button>'+
+      '<div class="rs-group-heading">Brand identity</div>'+
+      input('Brand name','name',portalBrand.name)+
+      input('Tagline','tagline',portalBrand.tagline)+
+      input('Logo asset URL','logo_url',portalBrand.logo_url||'')+
+      input('Accent color','accent',portalBrand.accent,'color')+
+      '<div class="rs-group-heading">Atmosphere & parallax</div>'+
+      input('Gradient start','backdrop_from',portalBrand.backdrop_from,'color')+
+      input('Gradient midpoint','backdrop_mid',portalBrand.backdrop_mid,'color')+
+      input('Gradient end','backdrop_to',portalBrand.backdrop_to,'color')+
+      input('Glass opacity (0.04–0.33)','glass_opacity',portalBrand.glass_opacity,'number','min="0.04" max="0.33" step="0.01"')+
+      check('Pointer parallax enabled','parallax_enabled',portalBrand.parallax_enabled)+
+      input('Parallax strength (0–35)','parallax_strength',portalBrand.parallax_strength,'number','min="0" max="35" step="1"')+
+      '<div class="rs-group-heading">Customer portal behavior</div>'+
+      check('Show customer sign up','signup_enabled',portalBrand.signup_enabled)+
+      check('Preview storefront password gate','password_gate_enabled',portalBrand.password_gate_enabled)+
+      check('Allow guest checkout path','show_guest_checkout',portalBrand.show_guest_checkout)+
+      '<div class="rs-group-heading">Template status</div>'+
+      '<div class="rs-setup-list"><b>CMS page: '+esc(portalPage.slug)+'</b>'+
+      '<div>✓ Route/template metadata resolved</div><div>✓ Theme previews and GUI settings available</div>'+
+      '<div>○ Account authentication not connected</div><div>○ Customer orders/cart backend not connected</div>'+
+      '<div>○ Publish to a real tenant not available</div></div>'+
+      '<button type="button" class="rs-secondary" data-rs-portal-copy>Copy CMS page draft JSON</button>'+
+      '<p class="rs-inspector-hint">This is editable local design configuration. Do not enter real passwords or customer data.</p></div>';
+    panel.querySelectorAll('[data-rs-input]').forEach(input=>{
+      input.addEventListener('input',()=>{
+        const key=input.dataset.rsInput;
+        const val=input.type==='number'?Number(input.value):input.value;
+        if(key==='section_padding'){
+          const id=portalPage.slug+':'+item.key;
+          sectionSettings[id]={...sectionSettings[id],padding:Math.max(0,Math.min(160,val))};
+          save();
+        } else {
+          portalBrand[key]=val;
+          localStorage.setItem(PORTAL_BRAND_KEY,JSON.stringify(portalBrand));
+        }
+        sync();
+      });
+    });
+    panel.querySelectorAll('[data-rs-check]').forEach(box=>{
+      box.addEventListener('change',()=>{
+        const key=box.dataset.rsCheck;
+        if(key==='section_visible'){
+          const id=portalPage.slug+':'+item.key;
+          sectionSettings[id]={...sectionSettings[id],visible:box.checked};save();
+        } else {
+          portalBrand[key]=box.checked;
+          localStorage.setItem(PORTAL_BRAND_KEY,JSON.stringify(portalBrand));
+        }
+        sync();
+      });
+    });
+    panel.querySelector('[data-rs-portal-jump]')?.addEventListener('click',()=>sync({scroll:true}));
+    panel.querySelector('[data-rs-portal-copy]')?.addEventListener('click',async()=>{
+      const content=JSON.stringify({
+        page:portalPage,brand_settings:portalBrand,
+        local_section_settings:Object.fromEntries(Object.entries(sectionSettings).filter(([key])=>key.startsWith(portalPage.slug+':'))),
+        preview_only:true
+      },null,2);
+      try{await navigator.clipboard.writeText(content);note('CMS page draft configuration copied — no customer credentials.');}
+      catch(_){note('Clipboard unavailable in this browser context.');}
+    });
+  }
+
   function renderAppInspector() {
     var app=catalog.find(function(entry){return entry.key===selected;});
     if(!app){selectionType='section';renderInspector();return;}
@@ -294,14 +420,26 @@
     el('theme-preview')?.addEventListener('load',function(){connected=false;sync();});
     window.addEventListener('message',function(event){
       if(event.origin!==location.origin || event.source!==el('theme-preview')?.contentWindow)return;
-      if(event.data?.type==='agentsam:resolve-ready') {connected=true;sync();}
+      if(event.data?.type==='agentsam:resolve-ready' || event.data?.type==='agentsam:resolve-portal-ready') {connected=true;sync();}
+      if(event.data?.type==='agentsam:resolve-portal-select') selectSection(event.data.key,false);
+      if(event.data?.type==='agentsam:resolve-portal-route' && onNavigatePage){
+        const matching=portalTemplateRoutes.find(item=>item.path===event.data.route);
+        if(matching && portalPage?.slug!==matching.slug) onNavigatePage(matching.slug);
+      }
       if(event.data?.type==='agentsam:resolve-select') selectSection(event.data.key,false);
       if(event.data?.type==='agentsam:resolve-notice')note(event.data.message||'Local preview form submission disabled.');
-      if(event.data?.type==='agentsam:resolve-detected') {
+      if(event.data?.type==='agentsam:resolve-detected' || event.data?.type==='agentsam:resolve-portal-detected') {
         available=event.data.available||{};renderSections();
         if(selectionType==='section')renderInspector();
       }
     });
+    try{
+      const response=await fetch('/api/admin/cms/resolve-portal/templates',{credentials:'same-origin'});
+      if(response.ok){
+        const data=await response.json();
+        portalTemplateRoutes=Array.isArray(data.templates)?data.templates:[];
+      }
+    }catch(_){}
     try {
       var response=await fetch('/api/admin/cms/embed-catalog',{credentials:'same-origin'});
       if(!response.ok)throw Error('Manifest catalog unavailable');
@@ -320,6 +458,9 @@
     sync:sync,
     selectSection:selectSection,
     selectApp:selectApp,
+    setPage:setPage,
+    pagePath:pagePath,
+    registerNavigator:function(callback){onNavigatePage=callback;},
     getConfiguration:function(){return JSON.parse(JSON.stringify({records:records,sections:sectionSettings}));}
   };
 })();

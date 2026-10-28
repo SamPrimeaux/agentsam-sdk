@@ -12,7 +12,8 @@
   "exports": {
     ".": "./src/index.js",
     "./node": "./src/node.js",
-    "./site/*": "./site/*"
+    "./site/*": "./site/*",
+    "./portal": "./src/portal-templates.mjs"
   },
   "files": [
     "src",
