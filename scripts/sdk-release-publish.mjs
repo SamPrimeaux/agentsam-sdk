@@ -12,6 +12,10 @@ const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
 const sdk=read(path.join(root,'package.json')),version=sdk.version;
 if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('stable_sdk_version_required');
 const ignored=new Set(['node_modules','dist','build','.git','.wrangler','.agentsam','target','.output']);
+const independent=new Set([
+ '@inneranimalmedia/agentsam-provider-completeful',
+ '@inneranimalmedia/agentsam-merch',
+]);
 const entries=[];
 function scan(dir){
  if(!fs.existsSync(dir))return;
@@ -32,7 +36,7 @@ scan(path.join(root,'packages'));scan(path.join(root,'apps'));
 const all=new Map(entries.map(x=>[x.name,x]));
 if(all.size!==entries.length)throw Error('duplicate_first_party_package');
 all.set(sdk.name,{name:sdk.name,manifest:sdk,cwd:root,rel:'package.json'});
-const allowed=new Map([...all].filter(([name,x])=>name===sdk.name||(x.manifest.private!==true&&x.manifest.publishConfig?.access==='public')));
+const allowed=new Map([...all].filter(([name,x])=>!independent.has(name)&&(name===sdk.name||(x.manifest.private!==true&&x.manifest.publishConfig?.access==='public'))));
 if(all.size<65||allowed.size<50)throw Error('incomplete_package_inventory');
 // Private source-only workspaces are included in the SDK bundle where needed,
 // but they are not published release-train packages and may keep local versions.
@@ -40,7 +44,7 @@ for(const x of allowed.values()){
  if(x.manifest.version!==version)throw Error('release_train_drift:'+x.name);
  for(const sec of ['dependencies','devDependencies','peerDependencies','optionalDependencies'])
   for(const [name,spec]of Object.entries(x.manifest[sec]||{}))
-   if(all.has(name)&&spec!==version)throw Error('dependency_pin_drift:'+x.name+'->'+name+'@'+spec);
+   if(all.has(name)&&spec!==(independent.has(name)?all.get(name).manifest.version:version))throw Error('dependency_pin_drift:'+x.name+'->'+name+'@'+spec);
 }
 const seen=new Set(),active=new Set(),order=[];
 function visit(name){
@@ -51,6 +55,7 @@ function visit(name){
  for(const sec of ['dependencies','peerDependencies','optionalDependencies'])
   for(const dep of Object.keys(x.manifest[sec]||{})){
    if(!all.has(dep))continue;
+   if(independent.has(dep))continue; // separately versioned / published
    if(!allowed.has(dep)){
     if(sec==='peerDependencies'&&x.manifest.peerDependenciesMeta?.[dep]?.optional)continue;
     throw Error('public_package_depends_on_private:'+name+'->'+dep);

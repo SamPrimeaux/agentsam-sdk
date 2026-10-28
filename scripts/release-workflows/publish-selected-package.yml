@@ -1,0 +1,54 @@
+name: Publish selected AgentSam package
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Independent npm package to publish
+        required: true
+        type: choice
+        options:
+          - completeful
+          - merch
+          - ecommerce
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: agentsam-npm-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - name: Verify package selected
+        run: |
+          node scripts/publish-selected-package.mjs --check '${{ inputs.package }}'
+          node --test test/selected-package-release.test.mjs
+      - name: Install
+        run: npm ci --ignore-scripts
+      - name: Verify selected release
+        env:
+          TARGET: ${{ inputs.package }}
+        run: |
+          case "$TARGET" in
+            completeful) npm --prefix packages/providers/completeful test ;;
+            merch) npm --prefix packages/agentsam-merch test ;;
+            ecommerce)
+              npm ci --prefix apps/ecommerce-cms-agentsam --ignore-scripts --no-audit --no-fund
+              npm ci --prefix apps/ecommerce-cms-agentsam/frontend --ignore-scripts --no-audit --no-fund
+              npm --prefix apps/ecommerce-cms-agentsam run release:verify
+              ;;
+            *) exit 1 ;;
+          esac
+      - name: Publish only the selected package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: node scripts/publish-selected-package.mjs --publish '${{ inputs.package }}'
