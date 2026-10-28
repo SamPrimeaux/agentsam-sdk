@@ -6,6 +6,7 @@
 <title>Online Store — Fuel & Free Time Admin</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
+<link rel="stylesheet" href="/admin/css/theme-product-browser.css">
 </head>
 <body>
 <script src="/admin/js/shell.js"></script>
@@ -95,6 +96,22 @@ renderShell("/admin/store", `
     </header>
 
     <section class="online-store-card online-store-drafts" id="draft-themes" aria-label="Draft themes"></section>
+    <section class="online-store-card theme-marketplace" id="theme-product-marketplace" aria-label="Browse reusable theme templates">
+      <header class="theme-marketplace-heading">
+        <div><span class="theme-marketplace-eyebrow">AgentSam · Product library</span>
+          <h2>Browse Templates</h2>
+          <p>Choose a real packaged theme to preview or customize in the local Studio. Nothing is installed or published automatically.</p>
+        </div>
+        <span class="theme-marketplace-count" id="theme-marketplace-count">Loading catalog…</span>
+      </header>
+      <div class="theme-marketplace-controls">
+        <label>Find a template<input type="search" id="theme-marketplace-search" placeholder="Search by name or category…" aria-label="Search theme templates"></label>
+        <label>Category<select id="theme-marketplace-filter" aria-label="Filter themes by category"><option value="all">All categories</option></select></label>
+      </div>
+      <div class="theme-marketplace-grid" id="theme-marketplace-grid" aria-live="polite">
+        <p class="theme-marketplace-empty">Loading available packages…</p>
+      </div>
+    </section>
   </div>
 `);
 
@@ -313,5 +330,6 @@ document.getElementById("import-theme-btn")?.addEventListener("click", () => {
   alert("Theme import is coming soon. Use the theme editor to customize your live storefront.");
 });
 </script>
+<script src="/admin/js/theme-product-browser.js"></script>
 </body>
 </html>

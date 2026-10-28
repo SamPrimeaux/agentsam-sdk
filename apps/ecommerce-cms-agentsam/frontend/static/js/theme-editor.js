@@ -2,10 +2,12 @@
   const host = window.AgentSamThemeEditorHost || null;
   const editorRequest = host ? host.adapter.request.bind(host.adapter) : window.adminFetch;
   const params = new URLSearchParams(location.search);
-  const showcaseTheme = !host && ['violet','resolve'].includes(params.get('showcase')) ? params.get('showcase') : '';
+  const showcaseTheme = !host && ['violet','resolve','plain-jane'].includes(params.get('showcase')) ? params.get('showcase') : '';
   const violetShowcase = showcaseTheme === 'violet';
   const resolveShowcase = showcaseTheme === 'resolve';
+  const journalShowcase = showcaseTheme === 'plain-jane';
   const localShowcase = Boolean(showcaseTheme);
+  const showcaseDisplayName = journalShowcase ? 'Plain Jane Journal' : resolveShowcase ? 'Resolve' : 'Violet';
   let slug = host?.page || params.get('slug') || (localShowcase ? 'home' : 'shop');
   let pageData = null;
   let siteData = null;
@@ -523,7 +525,7 @@
     if (!button) return;
     if (localShowcase) {
       button.disabled = true;
-      button.title = (resolveShowcase ? 'Resolve' : 'Violet') + ' preview-only showcase — publishing is disabled';
+      button.title = showcaseDisplayName + ' preview-only showcase — publishing is disabled';
       return;
     }
     if (host && host.adapter.capabilities?.publish === false) {
@@ -775,7 +777,7 @@
       save.setAttribute('aria-label', dirty ? 'Save unsaved draft changes' : 'Save draft — latest changes already saved');
       save.title = dirty ? 'Save draft changes (⌘S)' : 'Draft is saved — Save again if needed (⌘S)';
     }
-    if (localShowcase) setSaveState((resolveShowcase ? 'Resolve' : 'Violet') + ' · local preview only');
+    if (localShowcase) setSaveState(showcaseDisplayName + ' · local preview only');
     else if (liveUnimported) setSaveState('Preview only');
     else if (dirty) setSaveState('Unsaved changes', 'dirty');
     else setSaveState('Saved', 'saved');
@@ -840,6 +842,24 @@
         { title: 'Profile & preferences', page: 'resolve-profile' },
       ],
     });
+  }
+  if (journalShowcase) {
+    storefrontMenu.splice(0,storefrontMenu.length,
+      {id:'home',title:'Journal home',icon:'home',page:'journal-home'},
+      {id:'blogs',title:'Blog index',icon:'blog',children:[{title:'Notes on a quieter life',page:'journal-home'}]},
+      {id:'posts',title:'Articles',icon:'post',children:[
+        {title:'The art of slow travel',page:'journal-the-art-of-slow-travel'},
+        {title:'Analog photography in a digital age',page:'journal-analog-photography-digital-age'}
+      ]},
+      {id:'gallery',title:'Photography',icon:'collection',page:'journal-photography'},
+      {id:'pages',title:'Pages',icon:'page',children:[
+        {title:'About',page:'journal-about'},
+        {title:'Contact',page:'journal-contact'},
+        {title:'Privacy',page:'journal-privacy'},
+        {title:'Terms',page:'journal-terms'},
+        {title:'404',page:'journal-404'}
+      ]}
+    );
   }
   const pickerIconPaths = {
     home:'<path d="m3 10 9-7 9 7v10H3zM9 20v-6h6v6"/>',
@@ -3028,6 +3048,19 @@
   }
 
   async function refreshPreview() {
+    if (journalShowcase) {
+      const frame=byId('theme-preview');
+      const meta=typeof pageData?.metadata_json==='string'
+        ? JSON.parse(pageData.metadata_json) : pageData?.metadata_json||{};
+      const path=typeof meta?.path==='string' && /^[a-z0-9/-]*$/.test(meta.path)?meta.path:'';
+      const route='/themes/plain-jane/demo/'+path;
+      const src=route+(route.includes('?')?'&':'?')+'studio_preview=1';
+      frame.removeAttribute('srcdoc');
+      if(frame.getAttribute('src')!==src)frame.src=src;
+      byId('te-open-tab').href=route;
+      byId('te-preview-label').textContent='Plain Jane Journal · '+(pageData?.title||'Journal')+' · read-only CMS source';
+      return;
+    }
     if (resolveShowcase) {
       const frame = byId('theme-preview');
       const portalPath = window.AgentSamResolveStudio?.pagePath?.(slug);
@@ -3651,8 +3684,8 @@
       }
       if (localShowcase) {
         selectedTheme = 'heuristic';
-        applyThemeIdentity({ name: showcaseTheme === 'resolve' ? 'Resolve' : 'Violet', status: 'preview' });
-        byId('te-theme-trigger-label').textContent = showcaseTheme === 'resolve' ? 'Resolve' : 'Violet';
+        applyThemeIdentity({ name: showcaseDisplayName, status: 'preview' });
+        byId('te-theme-trigger-label').textContent = showcaseDisplayName;
         return;
       }
       const catalog = await editorRequest('/api/admin/cms/themes');

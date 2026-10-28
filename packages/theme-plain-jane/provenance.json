@@ -1,0 +1,16 @@
+{
+  "schema": "agentsam.product-provenance.v1",
+  "upstream": "https://github.com/SamPrimeaux/inneranimalmedia-blog-template",
+  "commit": "9e4c0f867da45304b7e12f2639c1b01363417ad3",
+  "snapshotDate": "2026-10-28",
+  "sourceRoot": "source",
+  "generatedBuildRoot": "site",
+  "appliedIntegrationPatches": [
+    "BrowserRouter basename honors Vite base URL",
+    "AppLogo asset URL honors Vite base URL",
+    "CMS fixture resolveAsset honors Vite base URL",
+    "Vite client type declaration"
+  ],
+  "status": "review_before_distribution",
+  "publishApproved": false
+}

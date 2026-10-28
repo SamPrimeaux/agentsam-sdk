@@ -1,0 +1,46 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap');
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+:root {
+  --bg: #F9F8F6;
+  --text: #1A1A1A;
+  --text-muted: #4A4A4A;
+  --accent: #D96C4A;
+  --border-subtle: rgba(26, 26, 26, 0.05);
+  --border-divider: rgba(26, 26, 26, 0.10);
+  --border-input: rgba(26, 26, 26, 0.20);
+  --overlay-scrim: rgba(26, 26, 26, 0.60);
+  --hero-gradient: rgba(26, 26, 26, 0.80);
+  --lightbox-bg: rgba(26, 26, 26, 0.95);
+  --selection-bg: rgba(217, 108, 74, 0.20);
+}
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  
+  --color-paper: var(--bg);
+  --color-ink: var(--text);
+  --color-ink-light: var(--text-muted);
+  --color-accent: var(--accent);
+}
+
+@layer base {
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-serif);
+    letter-spacing: -0.025em;
+  }
+
+  ::selection {
+    background-color: var(--selection-bg);
+    color: var(--text);
+  }
+}

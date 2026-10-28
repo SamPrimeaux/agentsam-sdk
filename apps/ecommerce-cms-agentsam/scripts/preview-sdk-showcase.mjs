@@ -3,8 +3,11 @@
 import http from 'node:http';
 import {readFile,stat} from 'node:fs/promises';
 import path from 'node:path';
+import {tmpdir} from 'node:os';
+import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {getRegistryPage} from '../backend/cms/registry.js';
+import {listLocalThemeProducts} from '../../../packages/catalog/src/theme-products.mjs';
 import {RESOLVE_PORTAL_TEMPLATES,portalCmsPage,portalTemplateForSlug,portalTemplateForPath} from '../../../packages/theme-resolve/src/portal-templates.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const staticRoot=path.join(root,'frontend/static');
@@ -12,6 +15,14 @@ const distRoot=path.join(root,'frontend/dist');
 // Serve the real packaged theme assets; local preview never forks the storefront.
 const themeRoots=Object.fromEntries(['violet','resolve'].map(theme=>[theme,path.resolve(root,'../theme-gallery-preview/themes/'+theme+'/site')]));
 const violetRoot=themeRoots.violet;
+const journalRoot=path.resolve(root,'../../packages/theme-plain-jane/site');
+const journalManifest=JSON.parse(await readFile(path.join(journalRoot,'journal-cms-manifest.json'),'utf8'));
+const journalPages=journalManifest.pages.map(page=>({
+  slug:page.slug,title:page.title,status:'draft',template_key:page.template_key,
+  live_route:'/themes/plain-jane/demo/'+page.path,
+  preview_only:true
+}));
+const journalPaths=new Set(journalManifest.pages.map(p=>p.path));
 const resolvePortalRoot=path.resolve(root,'../../packages/theme-resolve/site/portal');
 const port=Number(process.env.PORT||4327);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.json':'application/json','.woff2':'font/woff2'};
@@ -77,6 +88,14 @@ const previewCatalog = [
   }
 ];
 const find=(p)=>{
+ if(p==='/themes/plain-jane/demo'||p.startsWith('/themes/plain-jane/demo/')){
+   const relative=p.replace(/^\/themes\/plain-jane\/demo\/?/,'').replace(/\/$/,'');
+   if(!relative||journalPaths.has(relative))return path.join(journalRoot,'index.html');
+   if(!(/^(?:assets|images|icons)\/[a-z0-9._/-]+$/.test(relative)) && relative!=='journal-cms-manifest.json')return null;
+   const target=path.resolve(journalRoot,relative);
+   return target.startsWith(journalRoot+path.sep)?target:null;
+ }
+
  if(p==='/themes/resolve/demo/portal'||p.startsWith('/themes/resolve/demo/portal/')){
    const relative=p.replace(/^\/themes\/resolve\/demo\/portal\/?/,'').replace(/\/$/,'');
    if(relative==='portal.js'||relative==='portal.css'||relative==='catalog.js'||relative==='preview-settings.js')return path.join(resolvePortalRoot,relative);
@@ -189,14 +208,49 @@ const server=http.createServer(async(req,res)=>{
    res.end(JSON.stringify({ok:true,preview_only:true,apps}));return;
   }
   // Isolated CMS fixtures: no tenant D1, no writes, no Stripe.
+  if(pathname==='/api/admin/theme-products/plain-jane/download' && req.method==='GET'){
+    // Only serve the explicitly built local preview artifact. No install/payment.
+    const zip=path.join(tmpdir(),'agentsam-template-releases','plain-jane-journal-0.1.0-preview.zip');
+    try{
+      const [data,checksumLine]=await Promise.all([readFile(zip),readFile(zip+'.sha256','utf8')]);
+      const actual=createHash('sha256').update(data).digest('hex');
+      if(checksumLine.split(/\s+/)[0]!==actual){
+        res.writeHead(409,{'Content-Type':'application/json'});
+        res.end(JSON.stringify({error:'artifact_checksum_mismatch'}));return;
+      }
+      res.writeHead(200,{'Content-Type':'application/zip','Cache-Control':'no-store',
+        'X-Content-Type-Options':'nosniff',
+        'Content-Length':String(data.length),
+        'Content-Disposition':'attachment; filename="plain-jane-journal-0.1.0-preview.zip"'});
+      res.end(data);
+    }catch{
+      res.writeHead(404,{'Content-Type':'application/json'});
+      res.end(JSON.stringify({error:'preview_artifact_missing',message:'Generate the local preview ZIP before downloading.'}));
+    }
+    return;
+  }
+  if(pathname==='/api/admin/theme-products' && req.method==='GET'){
+    const products=await listLocalThemeProducts();
+    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
+    res.end(JSON.stringify({ok:true,preview_only:true,products}));return;
+  }
   if(pathname==='/api/admin/cms/pages' && req.method==='GET'){
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
    res.end(JSON.stringify({pages:['home','shop','about'].map(slug=>({
      slug,title:getRegistryPage(slug).title,live_route:slug==='home'?'/':'/'+slug
-   })).concat(RESOLVE_PORTAL_TEMPLATES.map(page=>({
+   })).concat(journalPages).concat(RESOLVE_PORTAL_TEMPLATES.map(page=>({
      slug:page.slug,title:page.title,live_route:'/themes/resolve/demo/portal/'+page.path,
      status:'draft',template_key:page.template_key,preview_only:true
    })))}));return;
+  }
+  const journalSlug=pathname.match(/^\/api\/admin\/cms\/pages\/(journal-[a-z0-9-]+)$/);
+  const journalPage=journalSlug && journalManifest.pages.find(page=>page.slug===journalSlug[1]);
+  if(journalPage && req.method==='GET'){
+    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
+    res.end(JSON.stringify({page:{
+      ...journalPage,metadata_json:JSON.stringify({theme:'plain-jane',path:journalPage.path}),
+      content_authority:'cms-draft'
+    },seeded:false,preview_only:true}));return;
   }
   const portalSlug=pathname.match(/^\/api\/admin\/cms\/pages\/(resolve-[a-z0-9-]+)$/);
   const portalDef=portalSlug && portalTemplateForSlug(portalSlug[1]);
@@ -236,7 +290,7 @@ const server=http.createServer(async(req,res)=>{
     res.writeHead(302,{Location:'/admin/home'});res.end();return;
   }
   target=path.resolve(target);
-  if(![staticRoot,distRoot,path.join(root,'frontend'),resolvePortalRoot,...Object.values(themeRoots)].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
+  if(![staticRoot,distRoot,path.join(root,'frontend'),resolvePortalRoot,journalRoot,...Object.values(themeRoots)].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
   let data=await readFile(target);
   const ext=path.extname(target);
   if(ext==='.html'){

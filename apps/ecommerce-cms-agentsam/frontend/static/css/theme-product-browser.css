@@ -1,0 +1,25 @@
+.theme-marketplace{padding:24px 26px;margin-top:16px}
+.theme-marketplace-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.theme-marketplace-heading h2{font-size:22px;line-height:1.2;margin:4px 0}
+.theme-marketplace-heading p{color:#8f879a;font-size:12px;margin:0;max-width:520px;line-height:1.55}
+.theme-marketplace-eyebrow{font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:#a78fe5;font-weight:700}
+.theme-marketplace-count{font-size:11px;background:#f1eafa;border:1px solid #e8dff6;border-radius:999px;padding:6px 10px;color:#5c427f}
+.theme-marketplace-controls{display:flex;gap:12px;margin:18px 0 20px;flex-wrap:wrap}
+.theme-marketplace-controls label{display:grid;gap:5px;flex:1;min-width:180px;font-size:11px;color:#767080}
+.theme-marketplace-controls input,.theme-marketplace-controls select{background:#fff;color:#28252e;border:1px solid #d6cfdb;border-radius:8px;height:38px;padding:0 12px;font:12px system-ui}
+.theme-marketplace-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.theme-marketplace-item{border:1px solid #dfdce5;border-radius:12px;overflow:hidden;background:#fff;min-width:0}
+.theme-marketplace-visual{height:180px;overflow:hidden;background:#efeceb;position:relative}
+.theme-marketplace-frame{position:absolute;top:0;left:0;display:block;width:1100px;height:660px;transform:scale(.32);transform-origin:0 0;border:0;pointer-events:none}
+.theme-marketplace-unavailable{display:grid;place-items:center;height:100%;color:#777}
+.theme-marketplace-state{position:absolute;bottom:10px;left:10px;background:#26212ddc;color:white;font-size:10px;padding:5px 8px;border-radius:6px}
+.theme-marketplace-body{padding:15px 14px 14px;display:grid;gap:7px}
+.theme-marketplace-category{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#7852b5;font-weight:700}
+.theme-marketplace-body h3{font-size:17px;margin:0;color:#26212d}
+.theme-marketplace-body p{font-size:11px;line-height:1.55;color:#797384;margin:0;min-height:45px}
+.theme-marketplace-meta{font:10px/1.5 ui-monospace,SFMono-Regular,monospace;color:#888292;word-break:break-word}
+.theme-marketplace-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:7px}
+.theme-marketplace-disclaimer{font-size:10px!important;min-height:0!important;color:#978d9a!important}
+.theme-marketplace-empty{padding:26px 16px;border:1px dashed #bfb7c9;border-radius:9px;text-align:center;grid-column:1/-1}
+.theme-marketplace-empty p{font-size:11px;color:#8c8491}
+@media(max-width:650px){.theme-marketplace{padding:15px 13px}.theme-marketplace-grid{grid-template-columns:1fr}.theme-marketplace-visual{height:175px}.theme-marketplace-controls label{min-width:0;flex-basis:100%}}

@@ -1,0 +1,12 @@
+{
+  "schema": "agentsam.package.v1",
+  "id": "theme-plain-jane",
+  "name": "@inneranimalmedia/theme-plain-jane",
+  "class": "theme",
+  "purpose": "Read-only editorial journal and photography CMS starter with externally editable manifest.",
+  "status": "review",
+  "catalog_status": "needs-review",
+  "registry": {"kind": "local-package", "name": "@inneranimalmedia/theme-plain-jane", "public_claim": false},
+  "review_required": ["distribution-license", "production-cms-adapter", "install-receipt", "tenant-isolation"],
+  "evidence": {"directory": "packages/theme-plain-jane", "purpose_source": "source snapshot"}
+}

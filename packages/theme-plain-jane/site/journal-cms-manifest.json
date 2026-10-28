@@ -1,0 +1,1588 @@
+{
+  "schema": "agentsam.cms-source-manifest.v1",
+  "theme": "plain-jane",
+  "site_slug": "plain-jane-journal",
+  "preview_only": true,
+  "source": "SamPrimeaux/inneranimalmedia-blog-template",
+  "definitions": [
+    "journal-header",
+    "journal-footer",
+    "journal-home-hero",
+    "journal-latest-entries",
+    "journal-post-hero",
+    "journal-post-body",
+    "journal-about-profile",
+    "journal-photo-gallery",
+    "journal-article-card",
+    "journal-lead-paragraph",
+    "journal-text-block",
+    "journal-heading-block",
+    "journal-quote-embed",
+    "journal-image-embed",
+    "journal-gallery-embed",
+    "journal-author-bio",
+    "journal-photo-item",
+    "journal-nav-link"
+  ],
+  "pages": [
+    {
+      "slug": "journal-home",
+      "source_slug": "home",
+      "title": "Notes on a quieter life",
+      "page_type": "blog",
+      "path": "",
+      "template_key": "plain-jane/blog",
+      "status": "draft",
+      "seo_json": {
+        "title": "Plain Jane Journal — Notes on a quieter life",
+        "description": "Essays, photography, and reflections on finding meaning in the spaces between the noise.",
+        "og_image_asset_id": "asset-og-default"
+      },
+      "og_image_asset_id": "asset-og-default",
+      "manifest": {
+        "page_id": "page-journal-home",
+        "slug": "home",
+        "title": "Notes on a quieter life",
+        "page_type": "blog",
+        "sections": [
+          {
+            "id": "sec-home-hero",
+            "definition_key": "journal-home-hero",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-home-hero-default",
+            "section_order": 1,
+            "blocks": [
+              {
+                "id": "blk-home-hero-card",
+                "definition_key": "journal-article-card",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-article-card-featured",
+                "block_order": 1
+              }
+            ]
+          },
+          {
+            "id": "sec-home-entries",
+            "definition_key": "journal-latest-entries",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-latest-entries-default",
+            "section_order": 2,
+            "blocks": [
+              {
+                "id": "blk-home-entry-1",
+                "definition_key": "journal-article-card",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-article-card-standard",
+                "block_order": 1
+              },
+              {
+                "id": "blk-home-entry-2",
+                "definition_key": "journal-article-card",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-article-card-standard",
+                "block_order": 2
+              },
+              {
+                "id": "blk-home-entry-3",
+                "definition_key": "journal-article-card",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-article-card-standard",
+                "block_order": 3
+              },
+              {
+                "id": "blk-home-entry-4",
+                "definition_key": "journal-article-card",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-article-card-standard",
+                "block_order": 4
+              }
+            ]
+          }
+        ]
+      },
+      "sections": [
+        {
+          "id": "sec-home-hero",
+          "key": "sec-home-hero",
+          "definition_key": "journal-home-hero",
+          "template_sku": "tpl-journal-home-hero-default",
+          "content": {
+            "title_prefix": "Notes on a ",
+            "title_highlight": "quieter",
+            "title_suffix": " life.",
+            "subtitle": "Essays, photography, and reflections on finding meaning in the spaces between the noise."
+          },
+          "blocks": [
+            {
+              "id": "blk-home-hero-card",
+              "section_id": "sec-home-hero",
+              "definition_key": "journal-article-card",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-article-card-featured",
+              "block_order": 1,
+              "status": "active",
+              "content_json": {
+                "slug": "the-art-of-slow-travel",
+                "title": "The Art of Slow Travel: Finding Meaning in the In-Between",
+                "excerpt": "Why rushing from landmark to landmark is ruining our ability to truly experience the world around us.",
+                "date": "October 12, 2023",
+                "read_time": "8 min read",
+                "category": "Travel",
+                "cover_asset_id": "asset-cover-slow-travel",
+                "author_name": "Jane Doe",
+                "author_avatar_asset_id": "asset-author-avatar",
+                "featured": true
+              }
+            }
+          ],
+          "sort_order": 0,
+          "status": "draft"
+        },
+        {
+          "id": "sec-home-entries",
+          "key": "sec-home-entries",
+          "definition_key": "journal-latest-entries",
+          "template_sku": "tpl-journal-latest-entries-default",
+          "content": {
+            "section_title": "Latest Entries",
+            "view_all_label": "View All",
+            "view_all_path": "#"
+          },
+          "blocks": [
+            {
+              "id": "blk-home-entry-1",
+              "section_id": "sec-home-entries",
+              "definition_key": "journal-article-card",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-article-card-standard",
+              "block_order": 1,
+              "status": "active",
+              "content_json": {
+                "slug": "analog-photography-digital-age",
+                "title": "Embracing Analog in a Hyper-Digital Age",
+                "excerpt": "There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film.",
+                "date": "September 28, 2023",
+                "read_time": "5 min read",
+                "category": "Photography",
+                "cover_asset_id": "asset-cover-analog",
+                "author_name": "Jane Doe",
+                "author_avatar_asset_id": "asset-author-avatar",
+                "featured": false
+              }
+            },
+            {
+              "id": "blk-home-entry-2",
+              "section_id": "sec-home-entries",
+              "definition_key": "journal-article-card",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-article-card-standard",
+              "block_order": 2,
+              "status": "active",
+              "content_json": {
+                "slug": "morning-rituals",
+                "title": "Morning Rituals That Actually Work",
+                "excerpt": "Beyond the 5 AM club: finding a morning routine that respects your natural rhythms rather than fighting them.",
+                "date": "September 15, 2023",
+                "read_time": "6 min read",
+                "category": "Lifestyle",
+                "cover_asset_id": "asset-cover-morning",
+                "author_name": "Jane Doe",
+                "author_avatar_asset_id": "asset-author-avatar",
+                "featured": false
+              }
+            },
+            {
+              "id": "blk-home-entry-3",
+              "section_id": "sec-home-entries",
+              "definition_key": "journal-article-card",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-article-card-standard",
+              "block_order": 3,
+              "status": "active",
+              "content_json": {
+                "slug": "architecture-of-silence",
+                "title": "The Architecture of Silence",
+                "excerpt": "Exploring spaces designed specifically to cultivate quiet and reflection in modern cities.",
+                "date": "August 30, 2023",
+                "read_time": "10 min read",
+                "category": "Design",
+                "cover_asset_id": "asset-cover-silence",
+                "author_name": "Jane Doe",
+                "author_avatar_asset_id": "asset-author-avatar",
+                "featured": false
+              }
+            },
+            {
+              "id": "blk-home-entry-4",
+              "section_id": "sec-home-entries",
+              "definition_key": "journal-article-card",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-article-card-standard",
+              "block_order": 4,
+              "status": "active",
+              "content_json": {
+                "slug": "taste-of-memory",
+                "title": "The Taste of Memory",
+                "excerpt": "How a simple bowl of broth transported me back to a rainy afternoon in Kyoto.",
+                "date": "August 12, 2023",
+                "read_time": "4 min read",
+                "category": "Food",
+                "cover_asset_id": "asset-cover-memory",
+                "author_name": "Jane Doe",
+                "author_avatar_asset_id": "asset-author-avatar",
+                "featured": false
+              }
+            }
+          ],
+          "sort_order": 1,
+          "status": "draft"
+        }
+      ]
+    },
+    {
+      "slug": "journal-the-art-of-slow-travel",
+      "source_slug": "the-art-of-slow-travel",
+      "title": "The Art of Slow Travel: Finding Meaning in the In-Between",
+      "page_type": "post",
+      "path": "post/the-art-of-slow-travel",
+      "template_key": "plain-jane/post",
+      "status": "draft",
+      "seo_json": {
+        "title": "The Art of Slow Travel — Plain Jane Journal",
+        "description": "Why rushing from landmark to landmark is ruining our ability to truly experience the world around us.",
+        "og_image_asset_id": "asset-cover-slow-travel"
+      },
+      "og_image_asset_id": "asset-cover-slow-travel",
+      "manifest": {
+        "page_id": "page-journal-post-slow-travel",
+        "slug": "the-art-of-slow-travel",
+        "title": "The Art of Slow Travel: Finding Meaning in the In-Between",
+        "page_type": "post",
+        "sections": [
+          {
+            "id": "sec-post-1-hero",
+            "definition_key": "journal-post-hero",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-post-hero-default",
+            "section_order": 1,
+            "blocks": []
+          },
+          {
+            "id": "sec-post-1-body",
+            "definition_key": "journal-post-body",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-post-body-default",
+            "section_order": 2,
+            "blocks": [
+              {
+                "id": "blk-p1-lead",
+                "definition_key": "journal-lead-paragraph",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-lead-paragraph-default",
+                "block_order": 1
+              },
+              {
+                "id": "blk-p1-text-1",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 2
+              },
+              {
+                "id": "blk-p1-text-2",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 3
+              },
+              {
+                "id": "blk-p1-quote",
+                "definition_key": "journal-quote-embed",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-quote-embed-default",
+                "block_order": 4
+              },
+              {
+                "id": "blk-p1-head-1",
+                "definition_key": "journal-heading-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-heading-block-default",
+                "block_order": 5
+              },
+              {
+                "id": "blk-p1-text-3",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 6
+              },
+              {
+                "id": "blk-p1-img",
+                "definition_key": "journal-image-embed",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-image-embed-wide",
+                "block_order": 7
+              },
+              {
+                "id": "blk-p1-text-4",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 8
+              },
+              {
+                "id": "blk-p1-head-2",
+                "definition_key": "journal-heading-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-heading-block-default",
+                "block_order": 9
+              },
+              {
+                "id": "blk-p1-gallery",
+                "definition_key": "journal-gallery-embed",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-gallery-embed-default",
+                "block_order": 10
+              },
+              {
+                "id": "blk-p1-text-5",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 11
+              },
+              {
+                "id": "blk-p1-author",
+                "definition_key": "journal-author-bio",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-author-bio-default",
+                "block_order": 12
+              }
+            ]
+          }
+        ]
+      },
+      "sections": [
+        {
+          "id": "sec-post-1-hero",
+          "key": "sec-post-1-hero",
+          "definition_key": "journal-post-hero",
+          "template_sku": "tpl-journal-post-hero-default",
+          "content": {
+            "show_gradient": true,
+            "min_height": "500px"
+          },
+          "blocks": [],
+          "sort_order": 0,
+          "status": "draft"
+        },
+        {
+          "id": "sec-post-1-body",
+          "key": "sec-post-1-body",
+          "definition_key": "journal-post-body",
+          "template_sku": "tpl-journal-post-body-default",
+          "content": {
+            "prose_width": "max-w-3xl"
+          },
+          "blocks": [
+            {
+              "id": "blk-p1-lead",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-lead-paragraph",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-lead-paragraph-default",
+              "block_order": 1,
+              "status": "active",
+              "content_json": {
+                "text": "Why rushing from landmark to landmark is ruining our ability to truly experience the world around us."
+              }
+            },
+            {
+              "id": "blk-p1-text-1",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 2,
+              "status": "active",
+              "content_json": {
+                "text": "The modern world demands our constant attention. We are bombarded with notifications, emails, and the endless scroll of social media. In this cacophony, silence has become a luxury, a rare commodity that we must actively seek out and cultivate."
+              }
+            },
+            {
+              "id": "blk-p1-text-2",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 3,
+              "status": "active",
+              "content_json": {
+                "text": "But what does it mean to truly embrace silence? It is not merely the absence of noise, but a state of being—a profound stillness that allows us to connect with our inner selves and the world around us in a more meaningful way."
+              }
+            },
+            {
+              "id": "blk-p1-quote",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-quote-embed",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-quote-embed-default",
+              "block_order": 4,
+              "status": "active",
+              "content_json": {
+                "quote": "In the attitude of silence the soul finds the path in a clearer light, and what is elusive and deceptive resolves itself into crystal clearness.",
+                "author": "Mahatma Gandhi"
+              }
+            },
+            {
+              "id": "blk-p1-head-1",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-heading-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-heading-block-default",
+              "block_order": 5,
+              "status": "active",
+              "content_json": {
+                "text": "The Architecture of Quiet Spaces",
+                "level": 2
+              }
+            },
+            {
+              "id": "blk-p1-text-3",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 6,
+              "status": "active",
+              "content_json": {
+                "text": "Throughout history, humans have designed spaces specifically to foster contemplation and peace. From the soaring arches of Gothic cathedrals to the minimalist serenity of Japanese Zen gardens, these environments share a common purpose: to quiet the mind and elevate the spirit."
+              }
+            },
+            {
+              "id": "blk-p1-img",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-image-embed",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-image-embed-wide",
+              "block_order": 7,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-embed-architecture",
+                "alt": "Minimalist architecture",
+                "caption": "The interplay of light and shadow creates a natural rhythm that encourages reflection.",
+                "size": "wide"
+              }
+            },
+            {
+              "id": "blk-p1-text-4",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 8,
+              "status": "active",
+              "content_json": {
+                "text": "When we enter these spaces, we instinctively lower our voices. Our breathing slows. We become acutely aware of the subtle details—the texture of stone, the play of light on water, the gentle rustle of leaves. This heightened awareness is the gift of silence."
+              }
+            },
+            {
+              "id": "blk-p1-head-2",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-heading-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-heading-block-default",
+              "block_order": 9,
+              "status": "active",
+              "content_json": {
+                "text": "Cultivating Your Own Sanctuary",
+                "level": 2
+              }
+            },
+            {
+              "id": "blk-p1-gallery",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-gallery-embed",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-gallery-embed-default",
+              "block_order": 10,
+              "status": "active",
+              "content_json": {
+                "images": [
+                  {
+                    "asset_id": "asset-gallery-1",
+                    "alt": "Morning light",
+                    "caption": "Morning light"
+                  },
+                  {
+                    "asset_id": "asset-gallery-2",
+                    "alt": "Coffee cup",
+                    "caption": "Coffee cup"
+                  },
+                  {
+                    "asset_id": "asset-gallery-3",
+                    "alt": "Open book",
+                    "caption": "Open book"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "blk-p1-text-5",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 11,
+              "status": "active",
+              "content_json": {
+                "text": "Start small. Turn off your phone for an hour. Sit by a window and watch the clouds drift by. Take a walk without headphones. Notice the sounds that emerge when the artificial noise fades away—the hum of the refrigerator, the distant chirp of a bird, the rhythm of your own breath."
+              }
+            },
+            {
+              "id": "blk-p1-author",
+              "section_id": "sec-post-1-body",
+              "definition_key": "journal-author-bio",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-author-bio-default",
+              "block_order": 12,
+              "status": "active",
+              "content_json": {
+                "name": "Jane Doe",
+                "bio": "Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.",
+                "avatar_asset_id": "asset-author-avatar",
+                "twitter": "@janedoe",
+                "instagram": "@jane.captures"
+              }
+            }
+          ],
+          "sort_order": 1,
+          "status": "draft"
+        }
+      ]
+    },
+    {
+      "slug": "journal-analog-photography-digital-age",
+      "source_slug": "analog-photography-digital-age",
+      "title": "Embracing Analog in a Hyper-Digital Age",
+      "page_type": "post",
+      "path": "post/analog-photography-digital-age",
+      "template_key": "plain-jane/post",
+      "status": "draft",
+      "seo_json": {
+        "title": "Embracing Analog — Plain Jane Journal",
+        "description": "There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film.",
+        "og_image_asset_id": "asset-cover-analog"
+      },
+      "og_image_asset_id": "asset-cover-analog",
+      "manifest": {
+        "page_id": "page-journal-post-analog",
+        "slug": "analog-photography-digital-age",
+        "title": "Embracing Analog in a Hyper-Digital Age",
+        "page_type": "post",
+        "sections": [
+          {
+            "id": "sec-post-2-hero",
+            "definition_key": "journal-post-hero",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-post-hero-default",
+            "section_order": 1,
+            "blocks": []
+          },
+          {
+            "id": "sec-post-2-body",
+            "definition_key": "journal-post-body",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-post-body-default",
+            "section_order": 2,
+            "blocks": [
+              {
+                "id": "blk-p2-lead",
+                "definition_key": "journal-lead-paragraph",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-lead-paragraph-default",
+                "block_order": 1
+              },
+              {
+                "id": "blk-p2-text-1",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 2
+              },
+              {
+                "id": "blk-p2-quote",
+                "definition_key": "journal-quote-embed",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-quote-embed-default",
+                "block_order": 3
+              },
+              {
+                "id": "blk-p2-text-2",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 4
+              },
+              {
+                "id": "blk-p2-author",
+                "definition_key": "journal-author-bio",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-author-bio-default",
+                "block_order": 5
+              }
+            ]
+          }
+        ]
+      },
+      "sections": [
+        {
+          "id": "sec-post-2-hero",
+          "key": "sec-post-2-hero",
+          "definition_key": "journal-post-hero",
+          "template_sku": "tpl-journal-post-hero-default",
+          "content": {
+            "show_gradient": true,
+            "min_height": "500px"
+          },
+          "blocks": [],
+          "sort_order": 0,
+          "status": "draft"
+        },
+        {
+          "id": "sec-post-2-body",
+          "key": "sec-post-2-body",
+          "definition_key": "journal-post-body",
+          "template_sku": "tpl-journal-post-body-default",
+          "content": {
+            "prose_width": "max-w-3xl"
+          },
+          "blocks": [
+            {
+              "id": "blk-p2-lead",
+              "section_id": "sec-post-2-body",
+              "definition_key": "journal-lead-paragraph",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-lead-paragraph-default",
+              "block_order": 1,
+              "status": "active",
+              "content_json": {
+                "text": "There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film."
+              }
+            },
+            {
+              "id": "blk-p2-text-1",
+              "section_id": "sec-post-2-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 2,
+              "status": "active",
+              "content_json": {
+                "text": "In an era where we capture thousands of images on smartphones only to never look at them again, working with a roll of 36 exposures imposes a deliberate slowness. Each press of the shutter button is a financial and temporal commitment."
+              }
+            },
+            {
+              "id": "blk-p2-quote",
+              "section_id": "sec-post-2-body",
+              "definition_key": "journal-quote-embed",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-quote-embed-default",
+              "block_order": 3,
+              "status": "active",
+              "content_json": {
+                "quote": "Limitations produce focus. When you only have thirty-six frames, you learn to look twice before looking through the glass.",
+                "author": "Anonymous Printmaker"
+              }
+            },
+            {
+              "id": "blk-p2-text-2",
+              "section_id": "sec-post-2-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 4,
+              "status": "active",
+              "content_json": {
+                "text": "The tactile sensation of advancing film by thumb, setting manual aperture rings, and looking through an optical prism reconnects the image-maker with physical physics and patience."
+              }
+            },
+            {
+              "id": "blk-p2-author",
+              "section_id": "sec-post-2-body",
+              "definition_key": "journal-author-bio",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-author-bio-default",
+              "block_order": 5,
+              "status": "active",
+              "content_json": {
+                "name": "Jane Doe",
+                "bio": "Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.",
+                "avatar_asset_id": "asset-author-avatar",
+                "twitter": "@janedoe",
+                "instagram": "@jane.captures"
+              }
+            }
+          ],
+          "sort_order": 1,
+          "status": "draft"
+        }
+      ]
+    },
+    {
+      "slug": "journal-about",
+      "source_slug": "about",
+      "title": "About Jane",
+      "page_type": "about",
+      "path": "about",
+      "template_key": "plain-jane/about",
+      "status": "draft",
+      "seo_json": {
+        "title": "About Jane — Plain Jane Journal",
+        "description": "Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.",
+        "og_image_asset_id": "asset-author-portrait"
+      },
+      "og_image_asset_id": "asset-author-portrait",
+      "manifest": {
+        "page_id": "page-journal-about",
+        "slug": "about",
+        "title": "About Jane",
+        "page_type": "about",
+        "sections": [
+          {
+            "id": "sec-about-profile",
+            "definition_key": "journal-about-profile",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-about-profile-default",
+            "section_order": 1,
+            "blocks": [
+              {
+                "id": "blk-about-p1",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 1
+              },
+              {
+                "id": "blk-about-p2",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 2
+              },
+              {
+                "id": "blk-about-p3",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 3
+              }
+            ]
+          }
+        ]
+      },
+      "sections": [
+        {
+          "id": "sec-about-profile",
+          "key": "sec-about-profile",
+          "definition_key": "journal-about-profile",
+          "template_sku": "tpl-journal-about-profile-default",
+          "content": {
+            "portrait_asset_id": "asset-author-portrait",
+            "heading": "About Jane",
+            "bio_quote": "Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.",
+            "inquiries_title": "Connect & Inquiries",
+            "email": "hello@janedoe.com",
+            "twitter": "@janedoe",
+            "instagram": "@jane.captures"
+          },
+          "blocks": [
+            {
+              "id": "blk-about-p1",
+              "section_id": "sec-about-profile",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 1,
+              "status": "active",
+              "content_json": {
+                "text": "I started this space as a way to document the quiet moments that often go unnoticed. In a world that constantly demands our attention and pushes us to move faster, I found myself craving stillness."
+              }
+            },
+            {
+              "id": "blk-about-p2",
+              "section_id": "sec-about-profile",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 2,
+              "status": "active",
+              "content_json": {
+                "text": "Through my photography and essays, I explore the intersection of travel, mindfulness, and the art of paying attention. Whether I'm wandering through the bustling streets of Tokyo or sitting in a quiet cafe in Paris, my goal is always to capture the essence of a place and the feeling of being fully present in it."
+              }
+            },
+            {
+              "id": "blk-about-p3",
+              "section_id": "sec-about-profile",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 3,
+              "status": "active",
+              "content_json": {
+                "text": "Thank you for being here. I hope these stories inspire you to slow down, look closer, and find your own moments of quiet amidst the noise."
+              }
+            }
+          ],
+          "sort_order": 0,
+          "status": "draft"
+        }
+      ]
+    },
+    {
+      "slug": "journal-photography",
+      "source_slug": "photography",
+      "title": "Selected Works",
+      "page_type": "work",
+      "path": "photography",
+      "template_key": "plain-jane/work",
+      "status": "draft",
+      "seo_json": {
+        "title": "Selected Works — Plain Jane Journal",
+        "description": "A collection of moments captured across different cities and landscapes.",
+        "og_image_asset_id": "asset-photo-1"
+      },
+      "og_image_asset_id": "asset-photo-1",
+      "manifest": {
+        "page_id": "page-journal-photography",
+        "slug": "photography",
+        "title": "Selected Works",
+        "page_type": "work",
+        "sections": [
+          {
+            "id": "sec-photo-gallery",
+            "definition_key": "journal-photo-gallery",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-photo-gallery-default",
+            "section_order": 1,
+            "blocks": [
+              {
+                "id": "blk-ph-1",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 1
+              },
+              {
+                "id": "blk-ph-2",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 2
+              },
+              {
+                "id": "blk-ph-3",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 3
+              },
+              {
+                "id": "blk-ph-4",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 4
+              },
+              {
+                "id": "blk-ph-5",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 5
+              },
+              {
+                "id": "blk-ph-6",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 6
+              },
+              {
+                "id": "blk-ph-7",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 7
+              },
+              {
+                "id": "blk-ph-8",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 8
+              },
+              {
+                "id": "blk-ph-9",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 9
+              },
+              {
+                "id": "blk-ph-10",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 10
+              },
+              {
+                "id": "blk-ph-11",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 11
+              },
+              {
+                "id": "blk-ph-12",
+                "definition_key": "journal-photo-item",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-photo-item-default",
+                "block_order": 12
+              }
+            ]
+          }
+        ]
+      },
+      "sections": [
+        {
+          "id": "sec-photo-gallery",
+          "key": "sec-photo-gallery",
+          "definition_key": "journal-photo-gallery",
+          "template_sku": "tpl-journal-photo-gallery-default",
+          "content": {
+            "title": "Selected Works",
+            "description": "A collection of moments captured across different cities and landscapes. Focusing on light, shadow, and the quiet spaces in between.",
+            "columns": 4
+          },
+          "blocks": [
+            {
+              "id": "blk-ph-1",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 1,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-1",
+                "alt": "Urban landscape",
+                "caption": "Tokyo, 2023",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-2",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 2,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-2",
+                "alt": "Mountain range",
+                "caption": "Swiss Alps",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-3",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 3,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-3",
+                "alt": "Coffee shop",
+                "caption": "Morning rituals",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-4",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 4,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-4",
+                "alt": "Street photography",
+                "caption": "Shadows and light",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-5",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 5,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-5",
+                "alt": "Portrait",
+                "caption": "Strangers",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-6",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 6,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-6",
+                "alt": "Ocean waves",
+                "caption": "Pacific coast",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-7",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 7,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-7",
+                "alt": "Architecture",
+                "caption": "Concrete geometry",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-8",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 8,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-8",
+                "alt": "Forest path",
+                "caption": "Into the woods",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-9",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 9,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-9",
+                "alt": "Desert dunes",
+                "caption": "Golden hour",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-10",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 10,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-10",
+                "alt": "City lights",
+                "caption": "Midnight",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-11",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 11,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-11",
+                "alt": "Still life",
+                "caption": "Details",
+                "width": 1200,
+                "height": 800
+              }
+            },
+            {
+              "id": "blk-ph-12",
+              "section_id": "sec-photo-gallery",
+              "definition_key": "journal-photo-item",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-photo-item-default",
+              "block_order": 12,
+              "status": "active",
+              "content_json": {
+                "asset_id": "asset-photo-12",
+                "alt": "Canyon",
+                "caption": "Vastness",
+                "width": 1200,
+                "height": 800
+              }
+            }
+          ],
+          "sort_order": 0,
+          "status": "draft"
+        }
+      ]
+    },
+    {
+      "slug": "journal-contact",
+      "source_slug": "contact",
+      "title": "Get in Touch",
+      "page_type": "contact",
+      "path": "contact",
+      "template_key": "plain-jane/contact",
+      "status": "draft",
+      "seo_json": {
+        "title": "Contact — Plain Jane Journal",
+        "description": "Direct inquiries, editorial commissions, and conversations.",
+        "og_image_asset_id": "asset-og-default"
+      },
+      "og_image_asset_id": "asset-og-default",
+      "manifest": {
+        "page_id": "page-journal-contact",
+        "slug": "contact",
+        "title": "Get in Touch",
+        "page_type": "contact",
+        "sections": [
+          {
+            "id": "sec-contact-body",
+            "definition_key": "journal-post-body",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-post-body-default",
+            "section_order": 1,
+            "blocks": [
+              {
+                "id": "blk-contact-head",
+                "definition_key": "journal-heading-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-heading-block-default",
+                "block_order": 1
+              },
+              {
+                "id": "blk-contact-lead",
+                "definition_key": "journal-lead-paragraph",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-lead-paragraph-default",
+                "block_order": 2
+              },
+              {
+                "id": "blk-contact-text",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 3
+              }
+            ]
+          }
+        ]
+      },
+      "sections": [
+        {
+          "id": "sec-contact-body",
+          "key": "sec-contact-body",
+          "definition_key": "journal-post-body",
+          "template_sku": "tpl-journal-post-body-default",
+          "content": {
+            "prose_width": "max-w-3xl"
+          },
+          "blocks": [
+            {
+              "id": "blk-contact-head",
+              "section_id": "sec-contact-body",
+              "definition_key": "journal-heading-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-heading-block-default",
+              "block_order": 1,
+              "status": "active",
+              "content_json": {
+                "text": "Contact & Editorial Correspondence",
+                "level": 2
+              }
+            },
+            {
+              "id": "blk-contact-lead",
+              "section_id": "sec-contact-body",
+              "definition_key": "journal-lead-paragraph",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-lead-paragraph-default",
+              "block_order": 2,
+              "status": "active",
+              "content_json": {
+                "text": "For writing commissions, print acquisitions, or conversations about stillness, please reach out via the channels below."
+              }
+            },
+            {
+              "id": "blk-contact-text",
+              "section_id": "sec-contact-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 3,
+              "status": "active",
+              "content_json": {
+                "text": "Direct email: hello@janedoe.com. I read every message and respond within a few days."
+              }
+            }
+          ],
+          "sort_order": 0,
+          "status": "draft"
+        }
+      ]
+    },
+    {
+      "slug": "journal-404",
+      "source_slug": "404",
+      "title": "Page Not Found",
+      "page_type": "404",
+      "path": "404",
+      "template_key": "plain-jane/404",
+      "status": "draft",
+      "seo_json": {
+        "title": "404 Not Found — Plain Jane Journal",
+        "description": "The page you requested could not be located.",
+        "og_image_asset_id": "asset-og-default"
+      },
+      "og_image_asset_id": "asset-og-default",
+      "manifest": {
+        "page_id": "page-journal-404",
+        "slug": "404",
+        "title": "Page Not Found",
+        "page_type": "404",
+        "sections": [
+          {
+            "id": "sec-404-body",
+            "definition_key": "journal-post-body",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-post-body-default",
+            "section_order": 1,
+            "blocks": [
+              {
+                "id": "blk-404-head",
+                "definition_key": "journal-heading-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-heading-block-default",
+                "block_order": 1
+              },
+              {
+                "id": "blk-404-lead",
+                "definition_key": "journal-lead-paragraph",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-lead-paragraph-default",
+                "block_order": 2
+              },
+              {
+                "id": "blk-404-text",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 3
+              }
+            ]
+          }
+        ]
+      },
+      "sections": [
+        {
+          "id": "sec-404-body",
+          "key": "sec-404-body",
+          "definition_key": "journal-post-body",
+          "template_sku": "tpl-journal-post-body-default",
+          "content": {
+            "prose_width": "max-w-3xl"
+          },
+          "blocks": [
+            {
+              "id": "blk-404-head",
+              "section_id": "sec-404-body",
+              "definition_key": "journal-heading-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-heading-block-default",
+              "block_order": 1,
+              "status": "active",
+              "content_json": {
+                "text": "404 — A Quiet Dead End",
+                "level": 2
+              }
+            },
+            {
+              "id": "blk-404-lead",
+              "section_id": "sec-404-body",
+              "definition_key": "journal-lead-paragraph",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-lead-paragraph-default",
+              "block_order": 2,
+              "status": "active",
+              "content_json": {
+                "text": "The page you are looking for has moved, was archived, or never existed in this quiet space."
+              }
+            },
+            {
+              "id": "blk-404-text",
+              "section_id": "sec-404-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 3,
+              "status": "active",
+              "content_json": {
+                "text": "You can return to the journal home page or browse the photography archives."
+              }
+            }
+          ],
+          "sort_order": 0,
+          "status": "draft"
+        }
+      ]
+    },
+    {
+      "slug": "journal-privacy",
+      "source_slug": "privacy",
+      "title": "Privacy Policy",
+      "page_type": "legal",
+      "path": "privacy",
+      "template_key": "plain-jane/legal",
+      "status": "draft",
+      "seo_json": {
+        "title": "Privacy Policy — Plain Jane Journal",
+        "description": "How we respect your attention and privacy on Plain Jane Journal.",
+        "og_image_asset_id": "asset-og-default"
+      },
+      "og_image_asset_id": "asset-og-default",
+      "manifest": {
+        "page_id": "page-journal-privacy",
+        "slug": "privacy",
+        "title": "Privacy Policy",
+        "page_type": "legal",
+        "sections": [
+          {
+            "id": "sec-privacy-body",
+            "definition_key": "journal-post-body",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-post-body-default",
+            "section_order": 1,
+            "blocks": [
+              {
+                "id": "blk-priv-head",
+                "definition_key": "journal-heading-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-heading-block-default",
+                "block_order": 1
+              },
+              {
+                "id": "blk-priv-lead",
+                "definition_key": "journal-lead-paragraph",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-lead-paragraph-default",
+                "block_order": 2
+              },
+              {
+                "id": "blk-priv-text",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 3
+              }
+            ]
+          }
+        ]
+      },
+      "sections": [
+        {
+          "id": "sec-privacy-body",
+          "key": "sec-privacy-body",
+          "definition_key": "journal-post-body",
+          "template_sku": "tpl-journal-post-body-default",
+          "content": {
+            "prose_width": "max-w-3xl"
+          },
+          "blocks": [
+            {
+              "id": "blk-priv-head",
+              "section_id": "sec-privacy-body",
+              "definition_key": "journal-heading-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-heading-block-default",
+              "block_order": 1,
+              "status": "active",
+              "content_json": {
+                "text": "Privacy Policy",
+                "level": 2
+              }
+            },
+            {
+              "id": "blk-priv-lead",
+              "section_id": "sec-privacy-body",
+              "definition_key": "journal-lead-paragraph",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-lead-paragraph-default",
+              "block_order": 2,
+              "status": "active",
+              "content_json": {
+                "text": "This journal is built on the philosophy of quiet observation. We do not track your digital life across the web."
+              }
+            },
+            {
+              "id": "blk-priv-text",
+              "section_id": "sec-privacy-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 3,
+              "status": "active",
+              "content_json": {
+                "text": "We do not sell personal data, inject third-party ad pixels, or run behavioral surveillance. If you write an email to the author, your address is solely used to reply."
+              }
+            }
+          ],
+          "sort_order": 0,
+          "status": "draft"
+        }
+      ]
+    },
+    {
+      "slug": "journal-terms",
+      "source_slug": "terms",
+      "title": "Terms of Service",
+      "page_type": "legal",
+      "path": "terms",
+      "template_key": "plain-jane/legal",
+      "status": "draft",
+      "seo_json": {
+        "title": "Terms of Service — Plain Jane Journal",
+        "description": "Terms and conditions for remixing and reading Plain Jane Journal.",
+        "og_image_asset_id": "asset-og-default"
+      },
+      "og_image_asset_id": "asset-og-default",
+      "manifest": {
+        "page_id": "page-journal-terms",
+        "slug": "terms",
+        "title": "Terms of Service",
+        "page_type": "legal",
+        "sections": [
+          {
+            "id": "sec-terms-body",
+            "definition_key": "journal-post-body",
+            "version": "1.0.0",
+            "template_sku": "tpl-journal-post-body-default",
+            "section_order": 1,
+            "blocks": [
+              {
+                "id": "blk-terms-head",
+                "definition_key": "journal-heading-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-heading-block-default",
+                "block_order": 1
+              },
+              {
+                "id": "blk-terms-lead",
+                "definition_key": "journal-lead-paragraph",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-lead-paragraph-default",
+                "block_order": 2
+              },
+              {
+                "id": "blk-terms-text",
+                "definition_key": "journal-text-block",
+                "version": "1.0.0",
+                "template_sku": "tpl-journal-text-block-default",
+                "block_order": 3
+              }
+            ]
+          }
+        ]
+      },
+      "sections": [
+        {
+          "id": "sec-terms-body",
+          "key": "sec-terms-body",
+          "definition_key": "journal-post-body",
+          "template_sku": "tpl-journal-post-body-default",
+          "content": {
+            "prose_width": "max-w-3xl"
+          },
+          "blocks": [
+            {
+              "id": "blk-terms-head",
+              "section_id": "sec-terms-body",
+              "definition_key": "journal-heading-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-heading-block-default",
+              "block_order": 1,
+              "status": "active",
+              "content_json": {
+                "text": "Terms of Service",
+                "level": 2
+              }
+            },
+            {
+              "id": "blk-terms-lead",
+              "section_id": "sec-terms-body",
+              "definition_key": "journal-lead-paragraph",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-lead-paragraph-default",
+              "block_order": 2,
+              "status": "active",
+              "content_json": {
+                "text": "This journal template is made to be remixed, published, and enjoyed as a clean foundation for personal expression."
+              }
+            },
+            {
+              "id": "blk-terms-text",
+              "section_id": "sec-terms-body",
+              "definition_key": "journal-text-block",
+              "version": "1.0.0",
+              "template_sku": "tpl-journal-text-block-default",
+              "block_order": 3,
+              "status": "active",
+              "content_json": {
+                "text": "All original photography and essays are copyright Jane Doe. When using this template for your own CMS, replace sample media and copy with your original work."
+              }
+            }
+          ],
+          "sort_order": 0,
+          "status": "draft"
+        }
+      ]
+    }
+  ]
+}

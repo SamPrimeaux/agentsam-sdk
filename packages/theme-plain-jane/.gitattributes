@@ -1,0 +1,3 @@
+# Vendored source is pinned from the originating GitHub repository.
+# Do not edit formatting to satisfy local whitespace-only checks.
+source/** -whitespace
