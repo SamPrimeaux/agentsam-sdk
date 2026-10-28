@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
+import {createThreeViewport,type ThreeViewportHandle} from '@inneranimalmedia/agentsam-3d-viewer';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
@@ -32,6 +33,7 @@ export class RenderSystem {
 
     private dummy = new THREE.Object3D();
     private container: HTMLElement;
+    private viewport: ThreeViewportHandle;
     private geomBuilder: GeomBuilder;
     private grid!: THREE.GridHelper;
 
@@ -49,27 +51,23 @@ export class RenderSystem {
         this.container = container;
         this.geomBuilder = new GeomBuilder(mujoco);
 
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0xdbeafe);
-
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
-        this.renderer.setSize(container.clientWidth, container.clientHeight);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        container.appendChild(this.renderer.domElement);
-
-        this.camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-        this.camera.up.set(0, 0, 1);
+        // Robotics has its own simulation/kinematics, but shares viewport/GPU lifecycle.
+        // cameraUp is applied before OrbitControls so the Z-up robot world stays consistent.
+        this.viewport = createThreeViewport(container, {THREE, OrbitControls}, {
+            wrapper:false,autoRender:false,lights:false,cameraUp:[0,0,1],
+            background:0xdbeafe,fov:45,near:0.1,far:1000,maxPixelRatio:2,
+            antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:true,
+            shadowMap:{enabled:true,type:THREE.PCFShadowMap},
+            enableDamping:true,dampingFactor:0.1,minDistance:0.1,maxDistance:100,
+        });
+        this.scene = this.viewport.scene as THREE.Scene;
+        this.renderer = this.viewport.renderer as unknown as THREE.WebGLRenderer;
+        this.camera = this.viewport.camera as THREE.PerspectiveCamera;
+        this.controls = this.viewport.controls as OrbitControls;
         this.camera.position.set(2, -1.5, 2.5);
         this.camera.lookAt(0, 0, 0);
-
-        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableDamping = true;
-        this.controls.dampingFactor = 0.1;
-        this.controls.minDistance = 0.1;
-        this.controls.maxDistance = 100;
         this.controls.target.set(0, 0, 0);
+        this.controls.update();
 
         this.simGroup = new THREE.Group();
         this.scene.add(this.simGroup);
@@ -80,7 +78,7 @@ export class RenderSystem {
         this.initContactMarkers();
         this.initGrid();
 
-        window.addEventListener('resize', this.onResize);
+        this.viewport.resize();
     }
 
     private initGrid() {
@@ -310,19 +308,10 @@ export class RenderSystem {
         return null;
     }
 
-    onResize = () => {
-        if (!this.container) return;
-        this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
-    };
+    onResize = () => this.viewport.resize();
 
     dispose() {
-        window.removeEventListener('resize', this.onResize);
-        this.controls.dispose();
-        this.renderer.dispose();
-        // StrictMode and workspace switching recreate the runtime. Dispose GPU
-        // resources AND detach its canvas or a dead one can cover the live view.
-        this.renderer.domElement.remove();
+        // StrictMode and workspace switches must release OrbitControls, WebGL and canvas.
+        this.viewport.dispose();
     }
 }

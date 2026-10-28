@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
 const cwd = fileURLToPath(new URL('../', import.meta.url));
-const modules = ['index','agent','events','run','tools','authority','execution','providers','hooks','artifacts','context','adapter','models','identity','repository','errors','widgets'];
+const modules = ['index','agent','events','run','tools','authority','execution','providers','hooks','artifacts','context','adapter','models','identity','repository','errors','widgets','spawn-policy','resource-scope'];
 rmSync(`${cwd}/dist`, { recursive: true, force: true });
 await build({
   absWorkingDir: cwd,

@@ -19,6 +19,9 @@ export interface OpenScadExecutionRequest {
 
 export interface OpenScadExecutionResult {
   success: boolean;
+  /** Only set true when a real compiler produced and hashed the artifact. */
+  verified?: boolean;
+  engine?: string;
   artifactContent?: string | Uint8Array;
   mimeType: string;
   filename: string;

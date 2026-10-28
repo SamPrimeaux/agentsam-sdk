@@ -1,6 +1,8 @@
 import express from 'express';
 import { installProjectRoutes } from './cad/project-routes';
 import { installBimStarterRoutes } from './cad/bim-starters';
+import { installCadSourceBrowserRoutes } from './cad/source-browser';
+import { installOpenScadLibraryProbeRoutes } from './cad/openscad-library-probe';
 import http from 'http';
 import path from 'path';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -24,6 +26,8 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 installProjectRoutes(app);
 installBimStarterRoutes(app);
+installCadSourceBrowserRoutes(app);
+installOpenScadLibraryProbeRoutes(app);
 
 // Lazy Gemini API initialization helper
 let aiClient: GoogleGenAI | null = null;
@@ -549,28 +553,26 @@ app.get('/api/cad/capabilities', (req, res) => {
 });
 
 app.post('/api/cad/execute', async (req, res) => {
+  const address=req.socket.remoteAddress||'';
+  const hostname=String(req.headers.host||'').split(':')[0];
+  if(!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(address)||
+     !['localhost','127.0.0.1'].includes(hostname))
+    return res.status(403).json({success:false,error:'native_cad_host_only'});
+  if(req.headers.origin && req.headers.origin!==req.protocol+'://'+req.headers.host)
+    return res.status(403).json({success:false,error:'origin_mismatch'});
   try {
-    const { source, outputFormat = 'stl', parameters = {}, filename = 'model.stl', timeoutMs = 20000 } = req.body;
-    if (!source) {
-      return res.status(400).json({ error: 'Source code is required' });
-    }
-
-    const result = await executeOpenScadCompiler({
-      source,
-      outputFormat,
-      parameters,
-      filename,
-      timeoutMs,
-    });
-
+    const {source,outputFormat='stl',parameters={},filename='model.stl'}=req.body||{};
+    if(typeof source!=='string'||!source.trim()||source.length>150000||
+      outputFormat!=='stl'||!parameters||typeof parameters!=='object'||Array.isArray(parameters))
+      return res.status(400).json({success:false,error:'invalid_native_compile_request'});
+    const result=await executeOpenScadCompiler({source,outputFormat:'stl',parameters,filename,timeoutMs:20000});
+    if(!result.success||result.verified!==true||!result.sha256||
+       !['openscad-native','openscad-docker'].includes(result.engine))
+      return res.status(424).json({success:false,error:result.error||'native_compilation_unverified',verified:false,logs:result.logs});
+    if(result.sizeBytes>8*1024*1024)return res.status(413).json({success:false,error:'artifact_too_large'});
     return res.json(result);
-  } catch (err: any) {
-    const isSecurity = String(err?.message || '').includes('Security Violation');
-    return res.status(isSecurity ? 403 : 500).json({
-      success: false,
-      error: err.message || 'OpenSCAD execution failure',
-      logs: [`[ERROR] ${err.message}`],
-    });
+  } catch(err:any) {
+    return res.status(422).json({success:false,error:err.message||'native_openscad_execution_failed'});
   }
 });
 

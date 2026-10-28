@@ -21,7 +21,7 @@
     "typescript"
   ],
   "name": "@inneranimalmedia/agentsam-analytics",
-  "purpose": "Portable AgentSam analytics read models and operational analytics surfaces.",
+  "purpose": "Portable account-scoped operational analytics backed by canonical AgentSam D1 tool-call events, execution timings, outcomes, and real recorded costs.",
   "registry": {
     "kind": "npm",
     "name": "@inneranimalmedia/agentsam-analytics",
@@ -38,5 +38,5 @@
   "status": "unknown",
   "topics": [],
   "use_when": [],
-  "version": "2.6.12"
+  "version": "2.6.14"
 }

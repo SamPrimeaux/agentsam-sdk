@@ -5,14 +5,13 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
 import { discoverOpenScad } from './discovery';
+import { probeOpenScadImport,openScadSearchRoots } from './openscad-library-probe';
 import { probeDockerServiceHealth, executeOpenScadDocker } from './docker-executor';
 
 const execFileAsync = promisify(execFile);
 
 export const FORBIDDEN_PATTERNS = [
   /\bimport\s*\(/i,
-  /\binclude\s*<(?!\s*MCAD)/i,
-  /\buse\s*<(?!\s*MCAD)/i,
   /\bexec\s*\(/i,
   /\bsystem\s*\(/i,
   /\bchild_process\b/i,
@@ -23,14 +22,16 @@ export const FORBIDDEN_PATTERNS = [
 ];
 
 export function validateOpenScadSource(source: string): void {
-  if (!source || !source.trim()) {
-    throw new Error('Source code is required');
+  if (!source?.trim() || source.length>150000) throw new Error('OpenSCAD source empty or too large');
+  for (const pattern of FORBIDDEN_PATTERNS){
+    if(pattern.test(source))throw new Error('Security Violation: forbidden source pattern');
   }
-
-  for (const pat of FORBIDDEN_PATTERNS) {
-    if (pat.test(source)) {
-      throw new Error(`Security Violation: forbidden pattern detected (${pat.toString()})`);
-    }
+  const uncommented=source.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'');
+  for(const match of uncommented.matchAll(/\b(?:include|use)\s*<([^>\n]+)>/g)){
+    if(!probeOpenScadImport(match[0]))throw new Error('openscad_library_missing_or_untrusted: '+match[0]);
+  }
+  if(/\b(?:include|use)\s*</.test(uncommented.replace(/\b(?:include|use)\s*<[^>\n]+>/g,''))){
+    throw new Error('invalid_openscad_import_syntax');
   }
 }
 
@@ -74,6 +75,12 @@ export async function executeOpenScadCompiler({
   timeoutMs = 15000,
 }: OpenScadExecuteOptions): Promise<OpenScadExecuteResult> {
   validateOpenScadSource(source);
+  if(!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/.test(filename))throw new Error('invalid_output_filename');
+  for(const [key,value] of Object.entries(parameters)){
+    if(!/^[A-Za-z_][A-Za-z0-9_]{0,70}$/.test(key))throw new Error('invalid_parameter_name');
+    if(typeof value==='string' && (value.length>200||/[\\\\\n\r]/.test(value)))throw new Error('invalid_parameter_value');
+    if(typeof value==='number'&&!Number.isFinite(value))throw new Error('invalid_parameter_value');
+  }
 
   const startTime = Date.now();
   const format = outputFormat.toLowerCase();
@@ -107,6 +114,7 @@ export async function executeOpenScadCompiler({
         cwd: tmpDir,
         timeout: timeoutMs,
         maxBuffer: 16 * 1024 * 1024,
+        env: {...process.env,OPENSCADPATH:openScadSearchRoots().filter(root=>fs.existsSync(root)).join(path.delimiter)},
       });
 
       if (!fs.existsSync(outputPath)) {
@@ -120,6 +128,7 @@ export async function executeOpenScadCompiler({
 
       return {
         success: true,
+        verified: true,
         engine: 'openscad-native',
         artifactContent,
         mimeType: format === 'stl' ? 'model/stl' : format === 'dxf' ? 'image/vnd.dxf' : 'text/plain',

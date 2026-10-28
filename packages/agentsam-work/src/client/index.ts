@@ -33,6 +33,7 @@ export function createWorkCrud(request: WorkRequest): Pick<
   | "updateProject"
   | "deleteProject"
   | "projectInsights"
+  | "projectTimer"
   | "createEvent"
   | "updateEvent"
   | "deleteEvent"
@@ -59,6 +60,11 @@ export function createWorkCrud(request: WorkRequest): Pick<
     },
     async projectInsights(projectId: string) {
       return (await json<{ insights: WorkProjectInsights }>(await request("/api/work/projects/" + id(projectId) + "/insights"))).insights;
+    },
+    async projectTimer(projectId: string, action: "start" | "stop", timerId?: string) {
+      return json<{ measurements: NonNullable<WorkProjectInsights["measurements"]>; metricsPersisted: boolean }>(
+        await request("/api/work/projects/" + id(projectId) + "/timer/" + action, "POST", timerId ? { timerId } : {})
+      );
     },
     async createEvent(input: WorkEventInput & { title: string; start: string }) {
       return (await json<{ event: WorkCalendarEvent }>(await request("/api/calendar/events", "POST", input))).event;

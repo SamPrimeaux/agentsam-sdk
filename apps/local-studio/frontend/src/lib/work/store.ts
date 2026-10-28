@@ -714,6 +714,20 @@ export const useWorkStore = create<WorkState>()(
         if (!probe.capability) {
           throw new Error("filesystem runtime did not mint a workspace capability");
         }
+        // Two tabs attached to one physical root cannot be independent work lanes.
+        // Reuse its existing project instead; distinct agents need distinct worktrees.
+        const attached = get().projects.find(p =>
+          p.kind === "filesystem" && p.workspaceRoot === authorizedRoot);
+        if (attached) {
+          if (attached.runtimeBaseUrl !== probe.baseUrl) {
+            throw new Error(
+              "This filesystem root is attached to another lane. " +
+              "Start the new runtime from a separate Git worktree to avoid overlapping writes."
+            );
+          }
+          set({ activeProjectId: attached.id });
+          return attached.id;
+        }
         const project = newFilesystemProject({
           name,
           root: authorizedRoot,

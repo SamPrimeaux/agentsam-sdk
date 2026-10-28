@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-contracts",
-  "version": "2.6.13",
+  "version": "2.6.15",
   "description": "Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repository context.",
   "type": "module",
   "main": "./dist/index.js",
@@ -72,6 +72,14 @@
     "./widgets": {
       "types": "./dist/widgets.d.ts",
       "import": "./dist/widgets.js"
+    },
+    "./spawn-policy": {
+      "types": "./dist/spawn-policy.d.ts",
+      "import": "./dist/spawn-policy.js"
+    },
+    "./resource-scope": {
+      "types": "./dist/resource-scope.d.ts",
+      "import": "./dist/resource-scope.js"
     }
   },
   "scripts": {

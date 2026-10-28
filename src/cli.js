@@ -8,7 +8,7 @@ import { writeScaffoldFiles } from './lib/write-files.js';
 import { initializeGitRepository } from './lib/init-git.js';
 import { initializeLocalSqlite } from './local/sqlite.js';
 import { printContextSummary } from './lib/detect-context.js';
-import { runStartLocal } from './commands/start-local.js';
+import { runStartLocal, parseStartLocalArgs } from './commands/start-local.js';
 import { runOllama } from './commands/ollama.js';
 import { runModels } from './commands/models.js';
 import { runApp } from './commands/app.js';
@@ -663,8 +663,9 @@ if (command === 'inspect' && (rest.includes('--help') || rest.includes('-h'))) {
     process.exitCode = 1;
   }
 } else if (command === 'start-local') {
-  if (rest.includes('--help') || rest.includes('-h')) console.log('agentsam start-local — start the local PTY and filesystem server at 127.0.0.1:3099 (Ctrl+C to stop)');
-  else await runStartLocal({});
+  if (rest.includes('--help') || rest.includes('-h'))
+    console.log('agentsam start-local [--cwd /authorized/worktree] [--port 3099]\nRun separate local services for independent Git worktrees. Defaults to the current project and port 3099.');
+  else await runStartLocal(parseStartLocalArgs(rest));
 } else if (command === 'ollama') {
   try {
     await runOllama(rest);

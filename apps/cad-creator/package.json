@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cad-creator",
-  "version": "2.6.13",
+  "version": "2.6.15",
   "description": "Prepackaged AgentSam CAD, spatial design, and robotics application kit.",
   "type": "module",
   "license": "FSL-1.1-MIT",
@@ -37,7 +37,8 @@
     "backend/runtime/",
     "scripts/prepare-cad-runtime.mjs",
     "scripts/stage-cad-v2-schema.mjs",
-    "schemas/"
+    "schemas/",
+    "data/"
   ],
   "scripts": {
     "dev": "npm run prepare:runtime && npm run dev -w @inneranimalmedia/agentsam-cad-backend",

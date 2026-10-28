@@ -2,8 +2,8 @@ import { inferModelFormat } from './format.js';
 
 export { inferModelFormat, SUPPORTED_MODEL_FORMATS } from './format.js';
 
-function validateRuntime(runtime) {
-  if (!runtime?.THREE || typeof runtime.THREE.Scene !== 'function' || typeof runtime.OrbitControls !== 'function') {
+function validateRuntime(runtime, needsControls = true) {
+  if (!runtime?.THREE || typeof runtime.THREE.Scene !== 'function' || (needsControls && typeof runtime.OrbitControls !== 'function')) {
     throw new Error('agentsam_3d_runtime_required');
   }
   return runtime;
@@ -38,7 +38,7 @@ function disposeObject(object) {
  * Use autoRender:false when the host owns its animation loop or scene interactions.
  */
 export function createThreeViewport(container, runtime, options = {}) {
-  const { THREE, OrbitControls } = validateRuntime(runtime);
+  const { THREE, OrbitControls } = validateRuntime(runtime, options.controls !== false);
   if (!container || typeof container.appendChild !== 'function') {
     throw new Error('agentsam_3d_container_required');
   }
@@ -84,6 +84,7 @@ export function createThreeViewport(container, runtime, options = {}) {
     options.near ?? 0.01,
     options.far ?? 10000,
   );
+  if (options.cameraUp) camera.up.set(...options.cameraUp);
   camera.position.set(4, 3, 5);
   const renderer = new THREE.WebGLRenderer({
     antialias: options.antialias !== false,
@@ -103,12 +104,14 @@ export function createThreeViewport(container, runtime, options = {}) {
   if (options.insertCanvasFirst) root.insertBefore(renderer.domElement, root.firstChild);
   else root.appendChild(renderer.domElement);
 
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = options.enableDamping !== false;
-  controls.dampingFactor = options.dampingFactor ?? 0.05;
-  controls.minDistance = options.minDistance ?? 0.1;
-  controls.maxDistance = options.maxDistance ?? 2000;
-  controls.update();
+  const controls = options.controls === false ? null : new OrbitControls(camera, renderer.domElement);
+  if (controls) {
+    controls.enableDamping = options.enableDamping !== false;
+    controls.dampingFactor = options.dampingFactor ?? 0.05;
+    controls.minDistance = options.minDistance ?? 0.1;
+    controls.maxDistance = options.maxDistance ?? 2000;
+    controls.update();
+  }
 
   let disposed = false;
   let frame = 0;
@@ -126,7 +129,7 @@ export function createThreeViewport(container, runtime, options = {}) {
 
   const render = () => {
     if (disposed) return;
-    controls.update();
+    controls?.update();
     renderer.render(scene, camera);
   };
   const tick = () => {
@@ -148,9 +151,13 @@ export function createThreeViewport(container, runtime, options = {}) {
     camera.near = Math.max(distance / 10000, 0.005);
     camera.far = Math.max(distance * 20, 100);
     camera.updateProjectionMatrix();
-    controls.target.copy(center);
-    controls.maxDistance = Math.max(distance * 6, controls.minDistance * 10);
-    controls.update();
+    if (controls) {
+      controls.target.copy(center);
+      controls.maxDistance = Math.max(distance * 6, controls.minDistance * 10);
+      controls.update();
+    } else {
+      camera.lookAt(center);
+    }
     return { center, size, distance };
   }
 
@@ -168,7 +175,7 @@ export function createThreeViewport(container, runtime, options = {}) {
     stop();
     resizeObserver?.disconnect();
     if (!resizeObserver) window.removeEventListener('resize', resize);
-    controls.dispose();
+    controls?.dispose();
     renderer.dispose();
     if (ownsRoot) root.remove();
     else renderer.domElement.remove();

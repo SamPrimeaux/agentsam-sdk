@@ -147,3 +147,31 @@ test('Work delegates installed project apps to the host instead of defining a se
   assert.match(localStudio, /\/admin\/cad\?project=/);
   assert.doesNotMatch(detail, /\/admin\/cad/);
 });
+
+test("Project Gallery uses explicit project-linked media and Work Artifacts source views",()=>{
+  const detail=readFileSync(new URL('../src/frontend/surfaces/ProjectDetailSurface.tsx',import.meta.url),'utf8');
+  const artifacts=readFileSync(new URL('../src/frontend/surfaces/ArtifactsSurface.tsx',import.meta.url),'utf8');
+  assert.match(detail,/a\.projectId === project\.id/);
+  assert.match(detail,/tab === "gallery"/);
+  assert.match(artifacts,/initialSource/);
+  assert.match(artifacts,/view === "trash"/);
+  assert.match(artifacts,/onOpenArtifact/);
+});
+
+test('Work project timer uses the same transport in hosted and desktop Work', async () => {
+  const { createWorkCrud } = await import('../dist/client/index.js');
+  const calls=[];
+  const crud=createWorkCrud(async (path,method,body)=>{
+    calls.push({path,method,body});
+    return new Response(JSON.stringify({measurements:{projectId:'p1'},metricsPersisted:true}),{
+      status:200,headers:{'content-type':'application/json'}
+    });
+  });
+  const result=await crud.projectTimer('p1','start');
+  assert.equal(result.metricsPersisted,true);
+  await crud.projectTimer('p1','stop','te_a');
+  assert.deepEqual(calls,[
+    {path:'/api/work/projects/p1/timer/start',method:'POST',body:{}},
+    {path:'/api/work/projects/p1/timer/stop',method:'POST',body:{timerId:'te_a'}},
+  ]);
+});

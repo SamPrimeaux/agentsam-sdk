@@ -41,6 +41,7 @@ import {
 import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
+import {handleOpenScadLibraries} from "./cad-openscad-libraries.js";
 import { canonicalStudioPath, isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
 import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
@@ -53,6 +54,7 @@ import { handleStudioUserPreferences, handleStudioAccountAvatar } from "./studio
 import { readPluginWorkspace } from "./plugin-workspace.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
+import { queryAccountToolUsage } from "./analytics-tool-usage-v2.js";
 import {
   mintStudioCredential,
   listStudioCredentials,
@@ -1045,6 +1047,16 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         );
       }
 
+      if(url.pathname==='/api/analytics/tool-usage'){
+        // A bridge key cannot supply arbitrary identity. Only a verified
+        // account session can access private operational metrics.
+        if(!sid)return json({ok:false,error:'authenticated_account_required'},401);
+        try{return json(await queryAccountToolUsage(env,sid,url.searchParams.get('range')||'30d'));}
+        catch(error){
+          console.warn('tool_metrics_unavailable',String(error?.message||error).slice(0,120));
+          return json({ok:false,error:'tool_metrics_unavailable'},503);
+        }
+      }
       const result = await handleAnalyticsQueryRequest(request, env);
       return json(result.body, result.status, result.headers || {});
     }
@@ -1065,6 +1077,13 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       const userId = await sessionUser();
       if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
       return handleWorkRequest(request, env, userId);
+    }
+
+    if(url.pathname==='/api/agentsam/openscad-libraries'||
+       url.pathname.startsWith('/api/agentsam/openscad-libraries/')){
+      const accountId=await sessionUser();
+      if(!accountId)return json({ok:false,error:'unauthorized'},401);
+      return handleOpenScadLibraries(request,env,{id:accountId});
     }
 
     if (isConnectionsRegistry) {

@@ -1,11 +1,11 @@
 {
   "name": "@inneranimalmedia/agentsam-local-studio-frontend",
-  "version": "2.6.13",
+  "version": "2.6.14",
   "private": true,
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/vault/device-sync.test.ts src/lib/runtime-visuals/local-studio-runtime.test.ts src/lib/work/model-inventory-core.test.ts src/lib/terminal-sessions.test.ts src/lib/desktop/chrome-share.test.ts src/lib/desktop/connection-deep-link.test.ts"
+    "test": "node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/vault/device-sync.test.ts src/lib/runtime-visuals/local-studio-runtime.test.ts src/lib/work/model-inventory-core.test.ts src/lib/work/local-artifacts.test.ts src/lib/terminal-sessions.test.ts src/lib/desktop/chrome-share.test.ts src/lib/desktop/connection-deep-link.test.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
@@ -16,7 +16,7 @@
     "@inneranimalmedia/agentsam-content": "2.6.13",
     "@inneranimalmedia/agentsam-campaign": "2.6.13",
     "@inneranimalmedia/agentsam-content-studio": "2.6.13",
-    "@inneranimalmedia/agentsam-contracts": "2.6.13",
+    "@inneranimalmedia/agentsam-contracts": "2.6.15",
     "@inneranimalmedia/agentsam-ide": "2.6.13",
     "@inneranimalmedia/agentsam-key-manager": "2.6.13",
     "@inneranimalmedia/agentsam-loading-scene": "2.6.13",

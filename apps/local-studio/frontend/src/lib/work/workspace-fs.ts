@@ -5,6 +5,8 @@
  * Runtime → authorized local PTY/FS HTTP (/v1/fs) — never localStorage authority
  */
 
+import { trustedLoopbackRuntimeOrigin } from "./workspace-origin";
+
 export type WorkspaceKind = "scratch" | "filesystem";
 
 export type WorkspaceFileEntry = {
@@ -274,7 +276,8 @@ export class RuntimeFilesystemAdapter implements WorkspaceAdapter {
 
 export async function probeLocalRuntime(baseUrl = "http://127.0.0.1:3099") {
   try {
-    const root = baseUrl.replace(/\/$/, "");
+    const root = trustedLoopbackRuntimeOrigin(baseUrl);
+    if (!root) return { ok: false as const, error: "runtime_must_be_loopback_http" };
     const res = await fetch(`${root}/health`, { signal: AbortSignal.timeout(1500) });
     if (!res.ok) return { ok: false as const, error: `http_${res.status}` };
     const data = (await res.json()) as {

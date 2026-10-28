@@ -1,3 +1,5 @@
+import {createThreeViewport} from '@inneranimalmedia/agentsam-3d-viewer';
+import {trackCadRenderer} from '../lib/cad/scene-performance';
 import {nativePlanLayer,disposeNativeLayer} from '../lib/native-mesh-three';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
@@ -165,15 +167,17 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   const host=mount.current;if(!host)return;
   let alive=true;
   let gltfRoot:THREE.Object3D|null=null;
-  const scene=new THREE.Scene();scene.background=new THREE.Color('#0a1420');sceneRef.current=scene;
-  const camera=new THREE.PerspectiveCamera(56,1,.06,2400);cameraRef.current=camera;
-  const context=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false,preserveDrawingBuffer:true});
-  context.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
-  context.outputColorSpace=THREE.SRGBColorSpace;context.toneMapping=THREE.ACESFilmicToneMapping;
-  context.toneMappingExposure=.72;
-  context.shadowMap.enabled=true;
-  context.shadowMap.type=THREE.PCFShadowMap;
-  renderer.current=context;host.appendChild(context.domElement);
+  // Shared renderer lifecycle; the DreamHouse orbit/walk camera controller remains native to CAD.
+  const viewport=createThreeViewport(host,{THREE},{
+    wrapper:false,controls:false,autoRender:false,lights:false,
+    fov:56,near:.06,far:2400,maxPixelRatio:2,background:'#0a1420',
+    powerPreference:'high-performance',preserveDrawingBuffer:true,
+    shadowMap:{enabled:true,type:THREE.PCFShadowMap},
+    toneMapping:THREE.ACESFilmicToneMapping,toneMappingExposure:.72,
+  });
+  const scene=viewport.scene as THREE.Scene;sceneRef.current=scene;
+  const camera=viewport.camera as THREE.PerspectiveCamera;cameraRef.current=camera;
+  const context=viewport.renderer as unknown as THREE.WebGLRenderer;renderer.current=context;
   const sun=new THREE.DirectionalLight('#fff0d7',1.05);sun.position.set(80,125,55);sun.castShadow=true;
   const shadowSize=window.innerWidth<768?1024:2048;
   sun.shadow.mapSize.set(shadowSize,shadowSize);sun.shadow.camera.left=-105;sun.shadow.camera.right=105;
@@ -189,11 +193,11 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   scene.add(sky);
   scene.fog=new THREE.Fog('#b5c5cb',260,1150);
   environmentRef.current={sky,sun,fill};
-  const resize=()=>{const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);camera.aspect=w/h;camera.updateProjectionMatrix();context.setSize(w,h)};
-  const observer=new ResizeObserver(resize);observer.observe(host);resize();
+  viewport.resize(); // Shared viewport owns ResizeObserver and GPU canvas sizing.
   const ray=new THREE.Raycaster();const floorRay=new THREE.Raycaster();
   let animation=0,last=performance.now();
   let loaded=false;
+  const measureScene=trackCadRenderer("Registered DreamHouse scene",context,host);
   const animate=(now:number)=>{
    if(!alive)return;
    const delta=Math.min((now-last)/1000,.075);last=now;
@@ -242,6 +246,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
     camera.rotation.y=view.yaw;camera.rotation.x=view.pitch;camera.rotation.z=0;
    }
    context.render(scene,camera);
+   measureScene(now);
    animation=requestAnimationFrame(animate);
   };
   animation=requestAnimationFrame(animate);
@@ -250,8 +255,11 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
     if(manifestUrl){
      const manifestResponse=await fetch(manifestUrl,{credentials:'same-origin'});
      if(manifestResponse.ok){
-      const manifest: Handoff=await manifestResponse.json();
-      if(alive&&Array.isArray(manifest.zones))setHandoff(manifest);
+      const raw=await manifestResponse.text();
+      if(raw.trim()){
+       try{const manifest: Handoff=JSON.parse(raw);if(alive&&Array.isArray(manifest.zones))setHandoff(manifest)}
+       catch{if(alive)setProgress('Model handoff metadata invalid; opening scene geometry.')}
+      }
      }
     }
     if(!alive)return;setProgress('Streaming registered model geometry…');
@@ -300,7 +308,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
         const material=new THREE.MeshBasicMaterial({
           name:'CAD Color Fidelity · '+source.name,
           color:gltf.color?.clone()||new THREE.Color('#a6a9a7'),
-          map:gltf.map||null,transparent:gltf.transparent,opacity:gltf.opacity,
+          map:gltf.map??null,transparent:gltf.transparent,opacity:gltf.opacity,
           side:gltf.side,alphaTest:gltf.alphaTest,toneMapped:false,
         });
         authoredMaterialPalette.set(source,material);
@@ -345,7 +353,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   const onKeyUp=(e:KeyboardEvent)=>pressed.current.delete(e.code);
   window.addEventListener('keydown',onKey);window.addEventListener('keyup',onKeyUp);
   return()=>{
-   alive=false;cancelAnimationFrame(animation);observer.disconnect();
+   alive=false;cancelAnimationFrame(animation);
    window.removeEventListener('keydown',onKey);window.removeEventListener('keyup',onKeyUp);
    terrainProjection.current?.dispose();terrainProjection.current=null;
    gltfRoot?.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry.dispose();const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>m.dispose())}});
@@ -354,8 +362,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
    materialSets.current.clear();
    bindings.current.clear();sourceColors.current.clear();
    if(selectedBox.current){selectedBox.current.geometry.dispose();(selectedBox.current.material as THREE.Material).dispose();selectedBox.current=null;}
-   if(context.domElement.parentElement===host)host.removeChild(context.domElement);
-   context.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;
+   viewport.dispose();renderer.current=null;sceneRef.current=null;cameraRef.current=null;
   };
  },[modelUrl,manifestUrl]);
  useEffect(()=>{
@@ -391,7 +398,7 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
   const scene=sceneRef.current;if(!scene||!ready||!layoutProject?.sceneSource||!layoutProject.walls.length){setNativeStatus('');return;}
   let cancelled=false,layer:THREE.Group|undefined;
   const material=new THREE.MeshStandardMaterial({color:'#82a7fb',roughness:.7});setNativeStatus('Evaluating native layout…');
-  void nativePlanLayer(layoutProject,()=>material).then(result=>{if(cancelled){disposeNativeLayer(result);return;}layer=result;scene.add(layer);setNativeStatus('Layout: OCCT solids');},error=>{if(!cancelled)setNativeStatus(String(error).includes('requires_desktop')?'Native layout evaluation requires Local Studio desktop':String(error));});
+  void nativePlanLayer(layoutProject,()=>material).then(result=>{if(cancelled){disposeNativeLayer(result);return;}layer=result;scene.add(layer);setNativeStatus('Layout: OCCT solids');},error=>{if(!cancelled)setNativeStatus(String(error).includes('requires_desktop')?'Native model evaluation unavailable':String(error));});
   return()=>{cancelled=true;if(layer){scene.remove(layer);disposeNativeLayer(layer);}material.dispose();};
  },[ready,layoutProject?.walls,layoutProject?.doors,layoutProject?.windows,layoutProject?.nativeHistory,layoutProject?.sceneSource]);
  useEffect(()=>{

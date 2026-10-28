@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-cad-frontend",
-  "version": "2.6.13",
+  "version": "2.6.15",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,6 +14,7 @@
     "typography:lint": "node --experimental-strip-types ../scripts/verify-typography.ts && npm run typography:check"
   },
   "dependencies": {
+    "@inneranimalmedia/agentsam-3d-viewer": "0.2.0",
     "@inneranimalmedia/agentsam-cad-shared": "2.6.13",
     "@inneranimalmedia/agentsam-workbench": "2.6.13",
     "chess.js": "^1.4.0",

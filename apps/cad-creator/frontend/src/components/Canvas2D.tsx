@@ -1,3 +1,4 @@
+import {ARCHITECTURAL_STOCK} from './FurniturePicker';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   ActiveTool, 
@@ -133,29 +134,6 @@ export const Canvas2D: React.FC<Props> = ({
     const inc = Math.round(inches % 12);
     return `${ft}' - ${inc}"`;
   }, [unit]);
-
-  // Compute Floorplan Analytics (Gross Area, Perimeter, Cost)
-  const stats = React.useMemo(() => {
-    let totalRoomArea = 0;
-    project.rooms.forEach((r) => (totalRoomArea += r.areaSqFt || 0));
-
-    let totalWallLength = 0;
-    project.walls.forEach((w) => {
-      totalWallLength += Math.hypot(w.x2 - w.x1, w.y2 - w.y1);
-    });
-
-    const totalSqFt = Math.max(
-      totalRoomArea,
-      project.walls.length >= 4 ? (totalWallLength / 48) ** 2 : 0
-    );
-    const estCost = Math.round(totalSqFt * 185); // $185 per sq ft avg construction
-
-    return {
-      areaSqFt: Math.round(totalSqFt),
-      perimeterFt: Math.round(totalWallLength / 12),
-      estCost,
-    };
-  }, [project]);
 
   // Render 2D Canvas Loop
   useEffect(() => {
@@ -733,24 +711,27 @@ export const Canvas2D: React.FC<Props> = ({
     // 6. Tool: Place Furniture
     if (activeTool === 'furniture') {
       const type = selectedFurnitureType || 'sofa_3seater';
+      const stock = ARCHITECTURAL_STOCK.find(item=>item.type===type);
+      if(!stock)return;
       const newFurniture: FurnitureElement = {
         id: `furn_${Date.now()}`,
         type,
-        category: 'seating',
-        name: type.replace('_', ' ').toUpperCase(),
+        category: stock.category,
+        name: stock.name,
         x: snappedWorld.x,
         y: snappedWorld.y,
-        w: 60,
-        d: 36,
-        h: 32,
+        w: stock.w,
+        d: stock.d,
+        h: stock.h,
         rotation: 0,
-        color: '#334155',
+        color: stock.color,
       };
       onProjectChange((prev) => ({
         ...prev,
         furniture: [...prev.furniture, newFurniture],
         updatedAt: Date.now(),
       }));
+      onToolChange('select'); // One explicit placement per chosen library asset.
     }
 
     // 7. Tool: Measure
@@ -832,7 +813,8 @@ export const Canvas2D: React.FC<Props> = ({
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
+    // React wheel handlers are passive in modern browsers. The canvas owns its zoom
+    // and the editor stage prevents page scrolling by layout rather than preventDefault.
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
     setZoom((prev) => Math.max(0.2, Math.min(4.0, prev * zoomFactor)));
   };
@@ -1026,26 +1008,6 @@ export const Canvas2D: React.FC<Props> = ({
         onWheel={handleWheel}
         className="w-full h-full cursor-crosshair"
       />
-
-      {/* Bottom Area & Construction Stats HUD */}
-      <div className="absolute bottom-2.5 left-2.5 z-10 flex items-center space-x-2 pointer-events-none">
-        <div className="bg-[#252525] border border-[#333] px-3 py-1.5 rounded shadow-lg flex items-center space-x-3 text-xs">
-          <div>
-            <span className="text-gray-500 block text-[length:var(--text-xs)] uppercase font-bold tracking-wider">Total Area</span>
-            <span className="font-bold text-white text-xs">{stats.areaSqFt} sq ft</span>
-          </div>
-          <div className="w-[1px] h-5 bg-[#444]"></div>
-          <div>
-            <span className="text-gray-500 block text-[length:var(--text-xs)] uppercase font-bold tracking-wider">Perimeter</span>
-            <span className="font-semibold text-gray-300 text-xs">{stats.perimeterFt} ft</span>
-          </div>
-          <div className="w-[1px] h-5 bg-[#444]"></div>
-          <div>
-            <span className="text-gray-500 block text-[length:var(--text-xs)] uppercase font-bold tracking-wider">Est. Budget</span>
-            <span className="font-semibold text-emerald-400 text-xs">${stats.estCost.toLocaleString()}</span>
-          </div>
-        </div>
-      </div>
 
       {/* Zoom / Grid Controls Bottom Right */}
       <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center space-x-0.5 bg-[#252525] border border-[#333] p-0.5 rounded shadow-lg">

@@ -24,10 +24,37 @@ function findProjectRoot(startDir) {
 }
 
 /**
+ * Parse only the explicit local-root and port flags. The user starts each lane
+ * themselves; a browser or agent cannot choose arbitrary host paths.
+ * @param {string[]} args
+ */
+export function parseStartLocalArgs(args = []) {
+  const opts = {};
+  for (let i = 0; i < args.length; i += 1) {
+    const key = args[i];
+    if (key !== '--cwd' && key !== '--port') throw new Error('start-local: unknown argument ' + key);
+    const value = args[++i];
+    if (!value || value.startsWith('--')) throw new Error('start-local: missing value for ' + key);
+    if (key === '--cwd') {
+      const root = path.resolve(value);
+      if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) throw new Error('start-local: root must be an existing directory');
+      opts.cwd = root;
+    } else {
+      if (!/^[0-9]+$/.test(value)) throw new Error('start-local: port must be an integer');
+      const port = Number(value);
+      if (port < 1024 || port > 65535) throw new Error('start-local: port must be between 1024 and 65535');
+      opts.port = port;
+    }
+  }
+  return opts;
+}
+
+/**
  * @param {{ cwd?: string, port?: number }} [opts]
  */
 export async function runStartLocal(opts = {}) {
-  const root = findProjectRoot(opts.cwd || process.cwd());
+  // An explicitly selected worktree root must not be replaced by a parent repo.
+  const root = opts.cwd ? path.resolve(opts.cwd) : findProjectRoot(process.cwd());
   const config = readConfig(root);
   const port = opts.port ?? config?.pty_port ?? 3099;
 

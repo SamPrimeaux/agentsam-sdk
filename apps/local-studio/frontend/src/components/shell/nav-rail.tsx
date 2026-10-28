@@ -38,7 +38,6 @@ const ITEMS = [
   { to: "/projects", label: "Projects", icon: FolderGit2, match: (p: string) => p.startsWith("/projects") },
   { to: "/artifacts", label: "Artifacts", icon: Box, match: (p: string) => p.startsWith("/artifacts") },
   { to: "/analytics", label: "Analytics", icon: BarChart3, match: (p: string) => p.startsWith("/analytics") },
-  { to: "/files", label: "Files", icon: FileCode, match: (p: string) => p.startsWith("/files") },
   { to: "/browse", label: "Browser", icon: Globe, match: (p: string) => p.startsWith("/browse") },
 ] as const;
 

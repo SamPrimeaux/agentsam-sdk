@@ -6,7 +6,8 @@ export type AgentSamAnalyticsSection =
   | "usage"
   | "performance"
   | "health"
-  | "scores";
+  | "scores"
+  | "tool-usage";
 
 export type AnalyticsSummary = {
   total_events: number;
@@ -113,10 +114,25 @@ export type AgentSamScoresReadModel = {
   }>;
 };
 
+export type AgentSamToolUsageReadModel = {
+  schema: "agentsam.tool-usage.v2";
+  range: AgentSamAnalyticsRange;
+  generated_at: string;
+  source: "agentsam_tool_call_log";
+  scope: "authenticated_account";
+  coverage: { first_event_unix:number|null; last_event_unix:number|null; measured_calls:number };
+  totals: { calls:number; successes:number; failures:number; success_rate:number|null;
+    average_duration_ms:number|null; recorded_cost_usd:number };
+  by_tool:Array<{tool_key:string;calls:number;successes:number;failures:number;success_rate:number|null;
+    average_duration_ms:number|null;max_duration_ms:number|null;cache_hits:number;recorded_cost_usd:number}>;
+  by_day:Array<{day:string;calls:number;successes:number;failures:number}>;
+};
+
 export type AgentSamAnalyticsReadModels = {
   overview: AgentSamOverviewReadModel;
   usage: AgentSamUsageReadModel;
   performance: AgentSamPerformanceReadModel;
   health: AgentSamHealthReadModel;
   scores: AgentSamScoresReadModel;
+  "tool-usage": AgentSamToolUsageReadModel;
 };

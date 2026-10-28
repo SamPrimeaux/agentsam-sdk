@@ -1,9 +1,13 @@
+import {CadCamWorkspace} from '../components/CadCamWorkspace';
+import {CadCodeWorkspace} from '../components/CadCodeWorkspace';
 import {recordNativePlanChange} from '../lib/native-engine';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {applyDesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
+import type {DesignOperation} from '@inneranimalmedia/agentsam-cad-shared';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   ProjectState,
@@ -29,17 +33,14 @@ import { collaborationClient } from '../lib/socket';
 import { Canvas2D } from '../components/Canvas2D';
 import { Viewport3D } from '../components/Viewport3D';
 import {CadWorldViewport} from '../components/DreamHouseWorldViewport';
+import {CadResourcesPane} from '../components/CadResourcesPane';
+import {cloneAssembly,validateWallAssembly,wallAssemblyTotal} from '../lib/cad/wall-assemblies';
 import { listHostedProjects, loadHostedProject, saveHostedProject, type CadHostedSelection } from '../lib/hosted-project-source';
 import { BimStartersWorkspace } from '../components/BimStartersWorkspace';
-import { NativeSketchCanvas } from '../components/NativeSketchCanvas';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import { ExportPublishModal } from '../components/ExportPublishModal';
-import { FurniturePicker } from '../components/FurniturePicker';
-import { SketchUploadModal } from '../components/SketchUploadModal';
 import { CloudProjectsModal } from '../components/CloudProjectsModal';
 import { TemplateDrawer } from '../components/TemplateDrawer';
-import { SamSketchRail } from '../components/SamSketchRail';
-import { SamSketchOptionsBar } from '../components/SamSketchOptionsBar';
 import { TemplateStarterGrid } from '../components/TemplateStarterGrid';
 import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
@@ -172,11 +173,11 @@ export function CadCreatorApp({
 
   // 2. Workspace & Layout State
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceId>(initialWorkspace === 'parametric' || initialWorkspace === 'render' ? 'model' : initialWorkspace);
-  const [planLayout, setPlanLayout] = useState<'2d' | 'split' | 'sketch'>('split');
+  const [planLayout, setPlanLayout] = useState<'2d' | 'split'>('split');
+  const [splitRatio, setSplitRatio] = useState(50);
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [explorerOpen, setExplorerOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
   const [inspectorOpen, setInspectorOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
-  const [advancedToolsOpen, setAdvancedToolsOpen] = useState(false);
   const [studioView,setStudioView]=useState<'preview'|'edit'|'code'>('edit');
   const [uiSelection, setUiSelection] = useState<CadElementSelection>(null);
   // Embedded CAD starts with the model as the stage. Show one contextual drawer
@@ -184,16 +185,10 @@ export function CadCreatorApp({
   useEffect(() => {
     if (presentation !== 'embedded' || !uiSelection) return;
     setInspectorOpen(true);
-    setExplorerOpen(false);
+    if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);
   }, [presentation, uiSelection]);
-  const [cadAccent, setCadAccent] = useState<string>(() => {
-    if (typeof window === 'undefined') return '#82a7fb';
-    const color = window.localStorage.getItem('agentsam.cad.interface.accent');
-    return color && /^#[0-9a-f]{6}$/i.test(color) ? color : '#82a7fb';
-  });
-  useEffect(() => {
-    if (typeof window !== 'undefined') window.localStorage.setItem('agentsam.cad.interface.accent', cadAccent);
-  }, [cadAccent]);
+  // Appearance belongs to the AgentSam host navigation/theme provider.
+  const cadAccent = 'var(--nav-accent, var(--color-accent, #82a7fb))';
   const [selectedFurnitureType, setSelectedFurnitureType] = useState<string | null>(null);
   const [unit, setUnit] = useState<MeasurementUnit>('ft');
   const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
@@ -224,14 +219,14 @@ export function CadCreatorApp({
   const { capabilities: liveCapabilities, report: cadToolsReport } = useCadTools();
 
   // 3. Modals State
-  const [isFurniturePickerOpen, setIsFurniturePickerOpen] = useState(false);
-  const [isSketchModalOpen, setIsSketchModalOpen] = useState(false);
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isTemplateLibraryOpen, setIsTemplateLibraryOpen] = useState(false);
+  const [leftPanelTab,setLeftPanelTab]=useState<'objects'|'assets'|'libraries'>('objects');
   // Hosted mode only: name of the unsaved template copy being edited. Null means no copy is open.
   const [templateCopyName, setTemplateCopyName] = useState<string | null>(null);
   const [isExportPublishOpen, setIsExportPublishOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  useEffect(()=>{const onSave=(event:Event)=>setToastMessage((event as CustomEvent<string>).detail);window.addEventListener('agentsam:cad-save-status',onSave);return()=>window.removeEventListener('agentsam:cad-save-status',onSave)},[]);
 
   // 4. Real-time Multiplayer Collaboration & Roles
   const [roomId, setRoomId] = useState<string>(() => {
@@ -353,7 +348,7 @@ export function CadCreatorApp({
 
   // Project state updater with History & Socket broadcasting
   // Hosted projects are writable only for the owner (decided by the server) and only when a native design document is loaded.
-  const hostedWritable = accessMode === 'hosted-project' && !!hostedSelection?.project && hostedSelection.registry.access?.canWrite === true;
+  const hostedWritable = accessMode === 'hosted-project' && !!hostedSelection?.project && !!hostedSelection.revision.documents.length && hostedSelection.registry.access?.canWrite === true;
   useEffect(() => {
     if (accessMode !== 'hosted-project') return;
     setCurrentUser(user => { const role = hostedWritable ? 'Editor' : 'Viewer'; return user.role === role ? user : { ...user, role }; });
@@ -420,7 +415,7 @@ export function CadCreatorApp({
     updateProject(previous=>({...previous,sketchDocument:{...previous.sketchDocument,review:{
       note:'note' in element?String(element.note||''):'',targetId:element.id,
       targetLabel:'name' in element?String(element.name):element.id,revisionRef:hostedSelection?.revision.revision}}}));
-    setActiveWorkspace('plan');setPlanLayout('sketch');
+    setActiveWorkspace('plan');setPlanLayout('split');
   };
   const submitCadRequest=async(prompt:string,interfaceSelection:unknown=null)=>{
     const review=sceneReviewContext(project,uiSelection?.id);
@@ -544,15 +539,17 @@ export function CadCreatorApp({
           canUndo={history.length > 0 && !isViewer} canRedo={redoStack.length > 0 && !isViewer}
           workspace={activeWorkspace} onWorkspace={handleSelectWorkspace}
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
-          onNew={startBlankProject} onTemplates={() => {setExplorerOpen(true);setIsTemplateLibraryOpen(true)}} onFixtures={() => setIsFurniturePickerOpen(true)}
+          onNew={startBlankProject} onTemplates={() => {setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(true)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false)}}
           onExport={() => setIsExportPublishOpen(true)}
-          onToggleExplorer={() => { if ((presentation === 'embedded' || window.matchMedia('(max-width: 920px)').matches) && !explorerOpen) setInspectorOpen(false); setExplorerOpen(v => !v); }}
-          onToggleInspector={() => { if ((presentation === 'embedded' || window.matchMedia('(max-width: 920px)').matches) && !inspectorOpen) setExplorerOpen(false); setInspectorOpen(v => !v); }}
+          onSave={()=>{if(accessMode==='hosted-project'){void saveHostedRevision()}else window.dispatchEvent(new Event('agentsam:cad-save-revision'))}}
+          saveDisabled={isViewer||hostedSaving}
+          saveLabel={accessMode==='hosted-project'&&!hostedWritable?'No editable registered BIM document':hostedDirty?'Save edited DreamHouse revision':'Save revision'}
+          onToggleExplorer={() => {if(window.matchMedia('(max-width: 660px)').matches&&!explorerOpen)setInspectorOpen(false);setExplorerOpen(v => !v);}}
+          onToggleInspector={() => {if(window.matchMedia('(max-width: 660px)').matches&&!inspectorOpen)setExplorerOpen(false);setInspectorOpen(v => !v);}}
           explorerOpen={explorerOpen} inspectorOpen={inspectorOpen}
-          onMore={() => setAdvancedToolsOpen(v => !v)} moreOpen={advancedToolsOpen}
-          accent={cadAccent} onAccentChange={setCadAccent}
-          isDark={isDarkMode} onToggleDark={() => setIsDarkMode(v => !v)}
           studioView={studioView} onStudioView={v=>{setStudioView(v);if(v==='preview'){handleSelectWorkspace('model');setExplorerOpen(false);setInspectorOpen(false)}else if(v==='code'){handleSelectWorkspace('model')}else {handleSelectWorkspace('plan')}}}
+          viewportMode={activeWorkspace==='plan'?(planLayout==='split'?'split':'2d'):'3d'}
+          onViewportMode={mode=>{setStudioView('edit');if(mode==='3d'){handleSelectWorkspace('model')}else{handleSelectWorkspace('plan');setPlanLayout(mode)}}}
           projectSlot={accessMode === 'hosted-project' ? (hostedWritable
             ? <div className="flex items-center gap-2 text-xs text-slate-300"><span>{hostedDirty ? 'Unsaved changes' : 'All changes saved'} · {hostedSelection?.revision.label || hostedSelection?.revision.revision}</span><button type="button" disabled={!hostedDirty || hostedSaving} onClick={() => void saveHostedRevision()}>{hostedSaving ? 'Saving…' : 'Save revision'}</button></div>
             : <span className="text-xs text-slate-400">{templateCopyName ? 'Unsaved template copy · use Export to keep it' : 'Registered BIM · this revision has no editable design document'}</span>) : <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
@@ -561,150 +558,21 @@ export function CadCreatorApp({
             isSynced={isSynced} isDarkMode={isDarkMode} capabilities={liveCapabilities}/>}
         />
       )}
-      {/* Advanced contextual operations are preserved and revealed by More tools. */}
-      {advancedToolsOpen && (
-      <div className={`h-10 px-3.5 border-b flex items-center justify-between text-xs z-20 shrink-0 backdrop-blur-md ${isDarkMode ? 'bg-slate-900/80 border-white/10 text-slate-300' : 'bg-slate-100/90 border-slate-200 text-slate-700'}`}>
-        <button type="button" onClick={() => setChromeFolded(true)} aria-label="Fold workspace controls" title="Fold controls for more canvas" className="mr-2 rounded bg-slate-800 px-2 py-0.5 text-[length:var(--text-sm)] hover:bg-slate-700">Fold ×</button>
-        {/* Workspace Context Controls */}
-        {activeWorkspace === 'plan' && (
-          <div className="flex items-center gap-3">
-            {/* Plan Layout Mode */}
-            <div className="flex bg-black/20 p-0.5 rounded-lg border border-inherit">
-              <button
-                type="button"
-                onClick={() => setPlanLayout('2d')}
-                className={`px-2 py-0.5 rounded text-[length:var(--text-sm)] font-semibold flex items-center gap-1 ${
-                  planLayout === '2d' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Layers className="size-3" />
-                <span>2D Plan</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPlanLayout('split')}
-                className={`px-2 py-0.5 rounded text-[length:var(--text-sm)] font-semibold flex items-center gap-1 ${
-                  planLayout === 'split' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Columns className="size-3" />
-                <span>Split View</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPlanLayout('sketch')}
-                className={`px-2 py-0.5 rounded text-[length:var(--text-sm)] font-semibold flex items-center gap-1 ${
-                  planLayout === 'sketch' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Sparkles className="size-3 text-amber-400" />
-                <span>SamSketch</span>
-              </button>
-            </div>
-
-            {/* Grid Snap & Units */}
-            <div className="flex items-center gap-2 pl-2 border-l border-inherit/40 text-[length:var(--text-sm)] font-mono">
-              <button
-                type="button"
-                onClick={() => updateProject((prev) => ({ ...prev, snapToGrid: !prev.snapToGrid }))}
-                disabled={isViewer}
-                className={`flex items-center gap-1 ${project.snapToGrid ? 'text-indigo-400 font-semibold' : 'text-slate-500'}`}
-              >
-                <Magnet className="size-3" />
-                <span>Snap {project.gridSize || 12}"</span>
-              </button>
-
-              <select
-                value={unit}
-                onChange={(e) => setUnit(e.target.value as MeasurementUnit)}
-                className="bg-transparent text-[length:var(--text-sm)] text-slate-300 focus:outline-none cursor-pointer"
-              >
-                <option value="ft" className="bg-slate-900">ft - in</option>
-                <option value="in" className="bg-slate-900">inches</option>
-                <option value="m" className="bg-slate-900">meters</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {activeWorkspace === 'model' && (
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-xs text-indigo-400 flex items-center gap-1.5">
-              <Box className="size-3.5" />
-              <span>3D Spatial Scene Assembly</span>
-            </span>
-            <div className="flex items-center gap-1 border-l border-inherit/40 pl-3">
-              <button
-                type="button"
-                onClick={() => setIsFurniturePickerOpen(true)}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)] flex items-center gap-1"
-              >
-                <Armchair className="size-3 text-indigo-400" />
-                <span>Insert Asset</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowBimStarters((previous) => !previous)}
-                className="rounded bg-amber-500/15 px-2 py-1 text-[length:var(--text-sm)] text-amber-300 hover:bg-amber-500/25"
-              >BIM Starters</button>
-            </div>
-          </div>
-        )}
-
-        {activeWorkspace === 'robotics' && (
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-xs text-indigo-400 flex items-center gap-1.5">
-              <Activity className="size-3.5" />
-              <span>Franka Panda 7-DOF · MuJoCo 500Hz Simulation</span>
-            </span>
-            <span className="text-[length:var(--text-xs)] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Kinematics Online
-            </span>
-          </div>
-        )}
-
-        {/* Right side of contextual toolbar */}
-        <div className="flex items-center gap-2">
-          {!isViewer && activeWorkspace === 'plan' && (
-            <>
-              <button
-                type="button"
-                onClick={() => setIsFurniturePickerOpen(true)}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)] flex items-center gap-1"
-              >
-                <Armchair className="size-3 text-indigo-400" />
-                <span>Fixtures</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsSketchModalOpen(true)}
-                className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 text-slate-300 text-[length:var(--text-sm)] flex items-center gap-1"
-              >
-                <FileScan className="size-3 text-indigo-400" />
-                <span>Vision Sketch</span>
-              </button>
-            </>
-          )}
-
-          <div className="flex items-center bg-black/20 border border-inherit/40 rounded px-1.5 py-0.5 space-x-1">
-            <Shield className="size-3 text-slate-400" />
-            <span className="text-[length:var(--text-xs)] font-mono text-slate-300">{currentUser.role}</span>
-          </div>
-        </div>
-      </div>
-      )}
-
       </>)}
       {/* 3. Main Stage (canvas-first, no assistant sidebar) */}
       <main className="flex-1 flex overflow-hidden relative min-h-0">
         <div className="cad-workspace-body">
+          {(explorerOpen || inspectorOpen) && <button type="button" className="cad-panel-scrim" aria-label="Close open CAD panels"
+            onClick={()=>{setExplorerOpen(false);setInspectorOpen(false)}} />}
           {(activeWorkspace === 'plan' || activeWorkspace === 'model') && explorerOpen && (
             <div className="cad-left-dock">
               <div className="cad-dock-tabs" role="tablist" aria-label="Left panel">
-                <button type="button" role="tab" aria-selected={!isTemplateLibraryOpen} onClick={() => setIsTemplateLibraryOpen(false)}>Objects</button>
-                <button type="button" role="tab" aria-selected={isTemplateLibraryOpen} onClick={() => setIsTemplateLibraryOpen(true)}>Templates</button>
+                {(['objects','assets','libraries'] as const).map(tab=><button type="button" key={tab} role="tab"
+                  aria-selected={leftPanelTab===tab} onClick={()=>{setLeftPanelTab(tab);setIsTemplateLibraryOpen(false);}}>
+                  {tab[0].toUpperCase()+tab.slice(1)}
+                </button>)}
               </div>
-              {isTemplateLibraryOpen
+              {leftPanelTab==='libraries'&&isTemplateLibraryOpen
                 ? <TemplateDrawer onClose={() => setIsTemplateLibraryOpen(false)}
                     canLoad={getPermissions(accessMode === 'hosted-project' && !hostedSelection ? 'Editor' : currentUser.role).canLoadTemplates}
                     onApply={tmpl => {
@@ -713,14 +581,29 @@ export function CadCreatorApp({
                       updateProject(() => ({ ...tmpl, id: `proj_${Date.now()}`, updatedAt: Date.now(), version: 1 }));
                       showToast(`Loaded "${tmpl.name}" template`);
                     }} />
-                : <CadProjectExplorer project={project} selection={uiSelection}
+                : leftPanelTab==='objects'
+                  ? <CadProjectExplorer project={project} selection={uiSelection}
                     sceneInventory={hostedSelection?.revision.revision==='current'&&!hostedSelection.project ? sceneInventory : undefined}
-                    onSelect={setUiSelection} onClose={() => setExplorerOpen(false)} />}
+                    onSelect={next=>{setUiSelection(next);if(next){setInspectorOpen(true);if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);}}}
+                    onClose={() => setExplorerOpen(false)} />
+                  : <CadResourcesPane mode={leftPanelTab} project={project} selection={uiSelection} readOnly={isViewer}
+                      sceneInventory={sceneInventory} onClose={()=>setExplorerOpen(false)}
+                      onSelect={next=>{setUiSelection(next);setInspectorOpen(true);if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);}}
+                      onOpenTemplates={()=>setIsTemplateLibraryOpen(true)}
+                      onPlaceStock={preset=>{if(isViewer)return;setSelectedFurnitureType(preset.type);setActiveTool('furniture');setStudioView('edit');handleSelectWorkspace('plan');setPlanLayout('split');showToast('Click the 2D plan to place '+preset.name);}}
+                      onApplyAssembly={assembly=>{
+                        if(uiSelection?.group!=='walls'||validateWallAssembly(assembly))return;
+                        const selectedId=uiSelection.id;
+                        const operation={id:'cad-library-'+Date.now(),timestamp:Date.now(),type:'update_wall',wallId:selectedId,
+                          updates:{assembly:cloneAssembly(assembly),thickness:wallAssemblyTotal(assembly),material:assembly.layers[0].material}} as DesignOperation;
+                        updateProject(previous=>{const applied=applyDesignOperation(previous,operation);return applied.success?applied.project:previous});
+                      }}/>}
+
             </div>
           )}
         {/* PRIMARY VIEWPORT STAGE */}
-        <section className="cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]">
-          {studioView === 'edit' && (activeWorkspace === 'plan' || activeWorkspace === 'model') && <div className="cad-optbar-wrap"><SamSketchOptionsBar activeTool={activeTool} /></div>}
+        <section className={'cad-workspace-stage flex-1 flex overflow-hidden relative bg-[#121212]'+(activeWorkspace==='plan'&&planLayout==='split'?' cad-stage-split':'')}
+          style={{'--cad-split':splitRatio+'%'} as React.CSSProperties}>
           {sourceStatus === 'unavailable' && sourceError && (
             <div role="alert" className="absolute left-3 top-3 z-40 max-w-[min(430px,calc(100%-24px))] rounded-xl border border-amber-400/35 bg-slate-950/95 p-3 text-xs text-slate-100 shadow-xl">
               <strong>{accessMode === 'hosted-project' ? 'Registered CAD project unavailable' : accessMode === 'owner' ? 'Owner project unavailable' : 'Public example unavailable'}</strong>
@@ -732,11 +615,13 @@ export function CadCreatorApp({
           )}
           {/* A registered project BIM is resolved through its D1/R2 revision records.
               The visual GLB is never the authoritative editable source. */}
+          {studioView==='code'&&<CadCodeWorkspace project={project} selection={uiSelection} readOnly={isViewer}
+            onUpdateProject={next=>updateProject(()=>next)} onBack={()=>{setStudioView('edit');handleSelectWorkspace('plan')}}/>}
           {/* WORKSPACE 1: PLAN */}
-          {activeWorkspace === 'plan' && (
+          {studioView!=='code'&&activeWorkspace === 'plan' && (
             <>
               {(planLayout === '2d' || planLayout === 'split') && (
-                <div className={`h-full relative ${planLayout === 'split' ? 'w-1/2 border-r border-white/10' : 'w-full'}`}>
+                <div className={`cad-plan-pane h-full relative min-w-0 ${planLayout === 'split' ? 'border-r border-white/10' : 'w-full'}`} style={planLayout==='split'?{width:splitRatio+'%',flex:'none'}:undefined}>
                   <Canvas2D
                     project={project}
                     activeTool={activeTool}
@@ -757,7 +642,7 @@ export function CadCreatorApp({
                         room:'rooms', furniture:'furniture', parametric:'parametricObjects'
                       };
                       const group = groupMap[type];
-                      if (group) { setUiSelection({group,id}); setInspectorOpen(true); if (presentation === 'embedded' || window.matchMedia('(max-width: 920px)').matches) setExplorerOpen(false); }
+                      if (group) { setUiSelection({group,id}); setInspectorOpen(true); if (window.matchMedia('(max-width: 660px)').matches) setExplorerOpen(false); }
                       try {
                         const revision = verifiedSelectionRevision(project.id, verifiedProjectRevision);
                         if (revision === null) {
@@ -770,12 +655,33 @@ export function CadCreatorApp({
                       } catch { /* selection without real id supplies no context */ }
                     }}
                   />
-                  <SamSketchRail tool={activeTool} onTool={setActiveTool} readOnly={isViewer} onPlace={() => setIsFurniturePickerOpen(true)} />
+
                 </div>
               )}
 
+              {planLayout === 'split' && <div className="cad-split-handle" role="separator" tabIndex={0}
+                aria-label="Resize linked 2D and 3D views" aria-valuemin={25} aria-valuemax={75} aria-valuenow={Math.round(splitRatio)}
+                aria-valuetext={Math.round(splitRatio)+'% 2D, '+Math.round(100-splitRatio)+'% 3D'}
+                style={{left:splitRatio+'%'}}
+                onPointerDown={event=>{if(event.button!==0)return;event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId)}}
+                onPointerMove={event=>{
+                  if(!event.currentTarget.hasPointerCapture(event.pointerId))return;
+                  const rect=event.currentTarget.parentElement?.getBoundingClientRect();
+                  if(!rect)return;
+                  const vertical=window.matchMedia('(max-width: 660px) and (orientation: portrait)').matches;
+                  const fraction=vertical?(event.clientY-rect.top)/rect.height:(event.clientX-rect.left)/rect.width;
+                  setSplitRatio(Math.max(25,Math.min(75,Math.round(fraction*100))));
+                }}
+                onPointerUp={event=>{if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId)}}
+                onKeyDown={event=>{
+                  const shift=event.key==='ArrowLeft'||event.key==='ArrowUp'?-5:event.key==='ArrowRight'||event.key==='ArrowDown'?5:0;
+                  if(shift||event.key==='Home'||event.key==='End'){
+                    event.preventDefault();
+                    setSplitRatio(current=>event.key==='Home'?25:event.key==='End'?75:Math.max(25,Math.min(75,current+shift)));
+                  }
+                }}><span aria-hidden="true"/></div>}
               {(planLayout === 'split') && (
-                <div className="h-full relative w-1/2">
+                <div className="cad-world-pane h-full relative min-w-0" style={{width:(100-splitRatio)+'%',flex:'none'}}>
                   {hostedSelection && sourceStatus==='loaded'
                     ? <CadWorldViewport modelUrl={hostedSelection.modelUrl} sceneLabel={hostedSelection.registry.project.name} revision={hostedSelection.revision.sceneRevision||hostedSelection.revision.revision}
                         readOnly={isViewer} siteEditable={!isViewer} onSceneInventory={setSceneInventory} onSceneElements={registerSceneElements}
@@ -787,22 +693,12 @@ export function CadCreatorApp({
                 </div>
               )}
 
-              {planLayout === 'sketch' && (
-                <div className="w-full h-full relative">
-                  <NativeSketchCanvas
-                    project={project}
-                    onUpdateProject={(newProj) => updateProject(() => newProj)}
-                    canEdit={!isViewer}
-                    selectedElementId={uiSelection?.id}
-                    onRequestAgent={()=>void submitCadRequest(project.sketchDocument?.review?.note||'Review the marked-up element and sketch. Propose the changes needed in this existing project.')}
-                  />
-                </div>
-              )}
+
             </>
           )}
 
           {/* WORKSPACE 2: MODEL */}
-          {activeWorkspace === 'model' && (
+          {studioView!=='code'&&activeWorkspace === 'model' && (
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
               : hostedSelection && sourceStatus==='loaded'
@@ -816,61 +712,11 @@ export function CadCreatorApp({
             </div>
           )}
 
-          {/* Legacy panel routes remain registered for existing links; primary navigation has three destinations. */}
-          {/* WORKSPACE 4: ROBOTICS */}
-          {activeWorkspace === 'robotics' && (
-            <div className="w-full h-full relative">
-              <div ref={roboticsContainerRef} className="absolute inset-0" />
-              <div className="absolute inset-0 z-10 pointer-events-none">
-                <div className="w-full h-full pointer-events-none">
-                  <React.Suspense
-                    fallback={(
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-950 text-slate-300">
-                        <div className="flex items-center gap-3 text-xs font-mono">
-                          <div className="h-4 w-4 rounded-full border-2 border-emerald-500/30 border-t-emerald-400 animate-spin" />
-                          Loading robotics runtime…
-                        </div>
-                      </div>
-                    )}
-                  >
-                    <LazyRoboticsWorkspace
-                      containerRef={roboticsContainerRef}
-                      isDarkMode={roboticsDarkMode}
-                      toggleDarkMode={() => setRoboticsDarkMode((value) => !value)}
-                      showDiagnostics={showRoboticsDiagnostics}
-                      setShowDiagnostics={setShowRoboticsDiagnostics}
-                      onOpenToolIntegration={(toolId) => {
-                        if (toolId === 'openscad') handleSelectWorkspace('model');
-                        else if (toolId === 'blender' || toolId === 'meshy') handleSelectWorkspace('render');
-                        else handleSelectWorkspace('model');
-                      }}
-                      toolCapabilities={liveCapabilities.map((c) => ({
-                        id: c.id,
-                        name: c.name,
-                        status: c.status,
-                        version: c.version,
-                        lane: c.lane,
-                        description: c.description || '',
-                        supportedFormats:
-                          c.id === 'openscad'
-                            ? ['SCAD', 'STL', 'DXF', '3MF']
-                            : c.id === 'blender'
-                              ? ['BLEND', 'GLB', 'OBJ', 'PNG']
-                              : c.id === 'freecad'
-                                ? ['STEP', 'IGES', 'BREP', 'FCStd']
-                                : c.id === 'meshy'
-                                  ? ['GLB', 'USDZ', 'FBX']
-                                  : ['XML', 'MJCF', 'URDF'],
-                      }))}
-                    />
-                  </React.Suspense>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Rendering now shows the current project instead of opening disconnected prototype dialogs. */}
-          {activeWorkspace === 'render' && (
+          {/* Manufacturing planning is separate from the Franka chess game. */}
+          {studioView!=='code'&&activeWorkspace==='robotics'&&
+           <CadCamWorkspace project={project} onCode={()=>setStudioView('code')} onExport={()=>setIsExportPublishOpen(true)}/>}
+                    {/* Rendering now shows the current project instead of opening disconnected prototype dialogs. */}
+          {studioView!=='code'&&activeWorkspace === 'render' && (
             <div className="w-full h-full">
               <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>
             </div>
@@ -879,7 +725,8 @@ export function CadCreatorApp({
           {(activeWorkspace === 'plan' || activeWorkspace === 'model' || activeWorkspace === 'render') && inspectorOpen && (
             <CadPropertyInspector project={project} selection={uiSelection}
               onSelect={setUiSelection} onChange={updateProject}
-              onClose={() => setInspectorOpen(false)} readOnly={isViewer} onReview={reviewSelectedElement}/>
+              onClose={() => setInspectorOpen(false)} readOnly={isViewer} onReview={reviewSelectedElement}
+              onEditCode={()=>{setStudioView('code');handleSelectWorkspace('model')}}/>
           )}
         </div>
       </main>
@@ -895,33 +742,6 @@ export function CadCreatorApp({
         {copilotDraft && <><textarea readOnly value={copilotDraft} aria-label="CAD request draft" rows={4} className="mt-2 w-full rounded bg-slate-800 p-2 text-white"/><button type="button" onClick={() => void navigator.clipboard.writeText(copilotDraft)}>Copy request</button></>}
       </aside>}
 
-      <FurniturePicker
-        isOpen={isFurniturePickerOpen}
-        onClose={() => setIsFurniturePickerOpen(false)}
-        onSelectFurniture={(type, name, category, w, d, h, color) => {
-          if (isViewer) return;
-          setSelectedFurnitureType(type);
-          setActiveTool('furniture');
-          const newFurn = {
-            id: `furn_${Date.now()}`,
-            type,
-            category,
-            name,
-            x: 150,
-            y: 150,
-            w,
-            d,
-            h,
-            rotation: 0,
-            color
-          };
-          updateProject((prev) => ({
-            ...prev,
-            furniture: [...prev.furniture, newFurn],
-            updatedAt: Date.now()
-          }));
-        }}
-      />
 
       <ExportPublishModal
         isOpen={isExportPublishOpen}
@@ -930,22 +750,6 @@ export function CadCreatorApp({
         canExport={permissions.canExport}
       />
 
-      <SketchUploadModal
-        isOpen={isSketchModalOpen}
-        onClose={() => setIsSketchModalOpen(false)}
-        onApplyParsedPlan={(plan) => {
-          if (isViewer) return;
-          updateProject((prev) => ({
-            ...prev,
-            walls: plan.walls && plan.walls.length > 0 ? plan.walls : prev.walls,
-            doors: plan.doors ? plan.doors : prev.doors,
-            windows: plan.windows ? plan.windows : prev.windows,
-            furniture: plan.furniture && plan.furniture.length > 0 ? plan.furniture : prev.furniture,
-            rooms: plan.rooms && plan.rooms.length > 0 ? plan.rooms : prev.rooms,
-            updatedAt: Date.now()
-          }));
-        }}
-      />
 
       {/* Toast Notification */}
       {toastMessage && (

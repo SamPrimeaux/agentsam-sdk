@@ -19,6 +19,12 @@ export function validateProject(p) {
   for(const w of p.walls||[]) {
     if (!w) continue;
     if (![w.x1,w.y1,w.x2,w.y2].every(finite)||!positive(w.thickness)||!positive(w.height3D)||Math.hypot(w.x2-w.x1,w.y2-w.y1)<1e-6) errors.push('invalid_wall:'+w.id);
+    if(w.assembly){
+      const layers=w.assembly.layers;
+      if(typeof w.assembly.name!=='string'||!w.assembly.name.trim()||!Array.isArray(layers)||!layers.length||layers.length>20||
+         layers.some(layer=>!layer||typeof layer.id!=='string'||!layer.id||typeof layer.name!=='string'||!layer.name.trim()||!positive(layer.thickness)||!['drywall','brick','concrete','glass','wood_panel','steel'].includes(layer.material))||
+         Math.abs(layers.reduce((sum,layer)=>sum+layer.thickness,0)-w.thickness)>0.002) errors.push('invalid_wall_assembly:'+w.id);
+    }
   }
   for(const e of [...(p.doors||[]),...(p.windows||[])]) {
     if (!e) continue;

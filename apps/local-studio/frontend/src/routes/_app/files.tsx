@@ -1,49 +1,16 @@
-import { useEffect, useMemo } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { FilesStage } from "@/components/workbench/files";
+import { useEffect } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useWorkStore } from "@/lib/work/store";
-import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
 
-export const Route = createFileRoute("/_app/files")({
-  component: FilesPage,
-});
+/** Compatibility route: Files is an IDE side-stage, never a second full-page editor. */
+export const Route = createFileRoute("/_app/files")({ component: OpenFilesInAgentSam });
 
-function FilesPage() {
-  const sideTabs = useWorkStore((s) => s.sideTabs);
+function OpenFilesInAgentSam() {
+  const navigate = useNavigate();
   const openSideTab = useWorkStore((s) => s.openSideTab);
-  const activeProjectId = useWorkStore((s) => s.activeProjectId);
-  const projects = useWorkStore((s) => s.projects);
-  const project = projects.find((p) => p.id === activeProjectId) ?? projects[0]!;
-
   useEffect(() => {
-    if (!useWorkStore.getState().sideTabs.some((t) => t.kind === "files")) {
-      openSideTab("files", { ephemeral: false, fileId: project.files[0]?.id ?? null });
-    }
-  }, [openSideTab, project.files]);
-
-  const tab = useMemo((): SideTab => {
-    const existing = sideTabs.find((t) => t.kind === "files");
-    if (existing) return existing;
-    return {
-      id: "files-page",
-      kind: "files",
-      title: "Files",
-      ephemeral: false,
-      messages: [],
-      parentTrailId: null,
-      keptTrailId: null,
-      url: "",
-      srcdoc: null,
-      fileId: project.files[0]?.id ?? null,
-      history: [],
-      historyIndex: -1,
-      reportToLead: false,
-    };
-  }, [sideTabs, project.files]);
-
-  return (
-    <div className="h-full min-h-0">
-      <FilesStage tab={tab} />
-    </div>
-  );
+    openSideTab("files", { ephemeral: false, title: "Files" });
+    void navigate({ to: "/admin/agentsam", replace: true });
+  }, [navigate, openSideTab]);
+  return null;
 }

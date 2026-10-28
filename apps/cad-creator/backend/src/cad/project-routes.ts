@@ -1,3 +1,4 @@
+import {evaluateNativePreview} from './native-preview';
 import path from 'node:path';
 import fs from 'node:fs';
 import type {Express, Request} from 'express';
@@ -24,10 +25,35 @@ export function installProjectRoutes(app: Express) {
   try {return ['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress||'')&&['localhost','127.0.0.1','[::1]'].includes(new URL('http://'+req.headers.host).hostname);}
   catch{return false;}
  };
+ // Discovery describes the actually bound local runtime. A D1 registration is not a
+ // hosted execution receipt; clients must not treat this endpoint as hosted activation.
+ app.get('/api/cad/project/capabilities',async(req,res)=>{
+  if(!local(req))return res.status(403).json({ok:false,error:'local_design_host_only'});
+  try{
+   const native=await runtime.nativeDoctor();
+   return res.json({
+    ok:true,contract:'cad.project.v1',execution_lane:'local',
+    tools:runtime.catalog().map(({name,description,capability_key,input_schema})=>({
+     name,description,capability_key,input_schema,local_available:true,
+     hosted_available:false,
+    })),
+    native,hosted:{available:false,reason:'authenticated_host_dispatch_not_verified'},
+   });
+  }catch(e:any){
+   return res.status(503).json({ok:false,error:e?.message||'cad_capabilities_unavailable'});
+  }
+ });
  app.get('/api/cad/project/native/doctor',async(req,res)=>{
   if(!local(req))return res.status(403).json({error:'local_design_host_only'});
   try{return res.json(await runtime.nativeDoctor());}
   catch{return res.status(503).json({engine:'occt',available:false,ready:false,reason:'native_probe_failed'});}
+ });
+ app.post('/api/cad/project/native/evaluate',async(req,res)=>{
+  if(!local(req))return res.status(403).json({error:'local_design_host_only'});
+  if(req.headers.origin&&req.headers.origin!==req.protocol+'://'+req.headers.host)
+   return res.status(403).json({error:'origin_mismatch'});
+  try{return res.json(await evaluateNativePreview(req.body?.project));}
+  catch(e:any){return res.status(422).json({error:e?.message||'native_preview_failed'});}
  });
  app.post('/api/cad/project/tools/:name',async(req,res)=>{
   if(!local(req))return res.status(403).json({error:'local_design_host_only'});

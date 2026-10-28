@@ -6,6 +6,7 @@
 import { resolveWebsiteAssets } from './bindings.js';
 import { handleWorkCadRequest, isWorkCadRequest } from './work-cad-models.js';
 import { readProjectInsights } from './work-project-insights.js';
+import { handleProjectTimer } from './work-project-metrics.js';
 import { handleWorkData, isWorkDataRequest, listEvents, listProjects, listTickets, ticketAnalytics } from './work-data.js';
 import { beginGmailOAuth, disconnectGmail, listGmailConnections, loadGmailMessages, mutateGmailMessage, sendGmailMessage } from './gmail-service.js';
 
@@ -174,6 +175,119 @@ function relativeLabel(unixSeconds) {
   return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+/** Read a registered private drawing only through its owning project and
+ * its matching R2 storage registration. No raw bucket key in the client URL. */
+export async function readProjectDrawingFile(env, owner, projectId, drawingId) {
+  if(!env.DB?.prepare || !env.CAD_PROJECT_ASSETS?.get || !clean(owner) ||
+     !/^\d+$/.test(String(drawingId))) {
+    return json({ok:false,error:'drawing_unavailable'},404);
+  }
+  const row=await env.DB.prepare(
+    "SELECT d.r2_key,d.filename,d.title FROM project_draws d " +
+    "JOIN projects p ON p.id=d.project_id " +
+    "JOIN project_storage s ON s.id=d.storage_id AND s.project_id=p.id " +
+    "WHERE d.id=? AND d.project_id=? AND p.owner_user_id=? " +
+    "AND LOWER(s.storage_type)='r2' AND s.storage_name='cad' AND s.status='active' LIMIT 1"
+  ).bind(Number(drawingId),projectId,owner).first();
+  if(!row || !clean(row.r2_key))return json({ok:false,error:'drawing_not_found'},404);
+  const file=await env.CAD_PROJECT_ASSETS.get(clean(row.r2_key));
+  if(!file)return json({ok:false,error:'drawing_file_missing'},404);
+  const name=(clean(row.filename)||clean(row.title)||('drawing-'+drawingId))
+    .replace(/[\r\n"\\]/g,'_').slice(0,120);
+  const lower=name.toLowerCase();
+  const inline= /\.(pdf|png|jpe?g|webp|gif)$/i.test(lower);
+  const type=/\.pdf$/i.test(lower)?'application/pdf':
+    /\.png$/i.test(lower)?'image/png':
+    /\.jpe?g$/i.test(lower)?'image/jpeg':
+    /\.webp$/i.test(lower)?'image/webp':
+    /\.gif$/i.test(lower)?'image/gif':'application/octet-stream';
+  return new Response(file.body,{status:200,headers:{
+    'content-type':type,
+    'content-disposition':(inline?'inline':'attachment')+'; filename="'+name+'"',
+    'cache-control':'private, no-store',
+    'x-content-type-options':'nosniff',
+    'x-frame-options':'SAMEORIGIN',
+    'content-security-policy':"default-src 'none'; frame-ancestors 'self'",
+  }});
+}
+
+/** Registered CAD drawings are still first-class project files, even before
+ * they are reindexed into media_assets. Require both the canonical project owner
+ * and an existing matching project_storage registration. Never expose R2 keys. */
+export async function loadProjectDraws(db,owner) {
+  if (!db?.prepare || !clean(owner)) return [];
+  try {
+    const result = await db.prepare(
+      "SELECT d.id,d.project_id,d.title,d.filename,d.generation_type,d.created_at,d.sha256 " +
+      "FROM project_draws d JOIN projects p ON p.id=d.project_id " +
+      "JOIN project_storage s ON s.id=d.storage_id AND s.project_id=d.project_id " +
+      "WHERE p.owner_user_id=? ORDER BY d.created_at DESC,d.id DESC LIMIT 500"
+    ).bind(owner).all();
+    return (result.results||[]).map(row=>{
+      const name=clean(row.title)||clean(row.filename)||('CAD drawing '+row.id);
+      const when=Date.parse(clean(row.created_at).replace(' ','T')+'Z');
+      return {
+        id:'draw:'+row.id,
+        projectId:clean(row.project_id),
+        name,
+        source:'artifacts',
+        kind:kindFromName(clean(row.filename)||name,null),
+        preview:'/api/work/projects/'+encodeURIComponent(clean(row.project_id))+'/draws/'+encodeURIComponent(String(row.id))+'/file',
+        updatedAt:Number.isFinite(when)?when:null,
+        updatedLabel:Number.isFinite(when)?relativeLabel(when/1000):null,
+        description:clean(row.generation_type)||'CAD drawing',
+      };
+    });
+  } catch (err) {
+    console.error('work_project_draws_unavailable',String(err));
+    return [];
+  }
+}
+
+/** Explicit project media registrations. Project authorization comes from the
+ * same owner-scoped projects table as Work, never from a bucket key prefix. */
+export async function loadProjectMedia(db, owner, origin) {
+  if (!db?.prepare || !owner) return [];
+  try {
+    const data = await db.prepare(
+      "SELECT m.id, m.project_id, m.filename, m.object_key, m.source_kind, " +
+      "m.content_type, m.media_kind, m.size_bytes, m.updated_at, m.source_uri, m.status " +
+      "FROM media_assets m INNER JOIN projects p ON p.id = m.project_id " +
+      "WHERE p.owner_user_id = ? " +
+      "ORDER BY m.updated_at DESC LIMIT 150"
+    ).bind(owner).all();
+    return (data.results || []).map(row => {
+      const name = clean(row.filename) || clean(row.object_key).split('/').pop() || clean(row.id);
+      const mime = clean(row.content_type) || null;
+      const source = ['r2', 'local', 'google-drive', 'shared-drives'].includes(row.source_kind) ? row.source_kind : 'artifacts';
+      const publicPrefix = 'sites/agentsam-sdk/public/';
+      const key = clean(row.object_key);
+      // Never turn arbitrary private R2 keys into unauthenticated public URLs.
+      const deleted = ['deleted', 'trashed'].includes(clean(row.status).toLowerCase());
+      const preview = !deleted && source === 'r2' && mime?.startsWith('image/') && key.startsWith(publicPrefix)
+        ? origin + '/site/' + encodeURI(key.slice(publicPrefix.length))
+        : null;
+      const updated = Date.parse(clean(row.updated_at).replace(' ', 'T') + 'Z');
+      return {
+        id: 'media:' + row.id,
+        name,
+        kind: kindFromName(name, mime),
+        source,
+        projectId: clean(row.project_id),
+        deleted,
+        updatedAt: Number.isFinite(updated) ? updated : null,
+        preview,
+        mime,
+        sizeLabel: formatBytes(row.size_bytes),
+        updatedLabel: Number.isFinite(updated) ? relativeLabel(updated / 1000) : null,
+      };
+    });
+  } catch (err) {
+    console.error('work_project_gallery_unavailable', String(err));
+    return [];
+  }
+}
+
 async function loadArtifacts(env, origin) {
   const website = resolveWebsiteAssets(env);
   if (!website?.binding?.list) return [];
@@ -208,6 +322,7 @@ async function loadArtifacts(env, origin) {
           mime,
           sizeLabel: formatBytes(obj.size),
           updatedLabel: relativeLabel(uploaded),
+          updatedAt: uploaded ? uploaded * 1000 : null,
         });
       }
     } catch (err) {
@@ -223,6 +338,8 @@ export function isWorkRequest(pathname) {
     pathname === '/api/work/snapshot' ||
     isWorkCadRequest(pathname) ||
     /^\/api\/work\/projects\/[^/]+\/insights$/.test(pathname) ||
+    /^\/api\/work\/projects\/[^/]+\/timer\/(start|stop)$/.test(pathname) ||
+    /^\/api\/work\/projects\/[^/]+\/draws\/\d+\/file$/.test(pathname) ||
     pathname === '/api/work/gmail/oauth/start' ||
     pathname === '/api/work/gmail/status' ||
     pathname === '/api/work/gmail/disconnect' ||
@@ -248,6 +365,16 @@ export async function handleWorkRequest(request, env, accountId) {
       return insights ? json({ ok: true, insights }) : json({ ok: false, error: 'project_not_found' }, 404);
     }
 
+    const fileRoute = /^\/api\/work\/projects\/([^/]+)\/draws\/(\d+)\/file$/.exec(url.pathname);
+    if(fileRoute && method==='GET'){
+      return readProjectDrawingFile(env,accountId,decodeURIComponent(fileRoute[1]),fileRoute[2]);
+    }
+    const timerRoute = /^\/api\/work\/projects\/([^/]+)\/timer\/(start|stop)$/.exec(url.pathname);
+    if (timerRoute && method === 'POST') {
+      const id = decodeURIComponent(timerRoute[1]);
+      return handleProjectTimer(request, env.DB, accountId, id, timerRoute[2]);
+    }
+
     if (url.pathname === '/api/work/snapshot' && method === 'GET') {
       const surface = clean(url.searchParams.get('surface'));
       const needsTickets = !surface || ['tickets', 'projects', 'project-detail', 'artifact-tickets', 'calendar'].includes(surface);
@@ -256,12 +383,16 @@ export async function handleWorkRequest(request, env, accountId) {
       const needsCalendar = !surface || ['calendar', 'project-detail'].includes(surface);
       const needsMail = surface === 'mail';
 
-      const [tickets, artifacts, gmailConnections, cloudflareMail] = await Promise.all([
+      const [tickets, publicArtifacts, registeredMedia, projectDraws, gmailConnections, cloudflareMail] = await Promise.all([
         needsTickets ? listTickets(env.DB, accountId) : Promise.resolve([]),
         needsArtifacts ? loadArtifacts(env, url.origin) : Promise.resolve([]),
+        needsArtifacts ? loadProjectMedia(env.DB, accountId, url.origin) : Promise.resolve([]),
+        needsArtifacts ? loadProjectDraws(env.DB, accountId) : Promise.resolve([]),
         needsMail ? listGmailConnections(env, accountId) : Promise.resolve([]),
         needsMail ? loadCloudflareMailConnection(env, accountId) : Promise.resolve(null),
       ]);
+      // Prefer registered project metadata without losing the existing R2 view.
+      const artifacts = [...registeredMedia, ...projectDraws, ...publicArtifacts];
       const mailConnections = needsMail
         ? [...gmailConnections, ...(cloudflareMail ? [cloudflareMail] : [])]
         : [];

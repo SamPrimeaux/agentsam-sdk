@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import type { Express, Request } from 'express';
+import { discoverCadSources, ownerCadRoots } from './source-discovery';
 
 const libraryRoot = () => path.resolve(process.env.AGENTSAM_CAD_BIM_LIBRARY || path.join(os.homedir(), '.agentsam/cad/bim-starters'));
 const validId = (id: string) => /^[a-z0-9][a-z0-9_-]{0,79}$/.test(id);
@@ -37,7 +38,7 @@ export function installBimStarterRoutes(app: Express): void {
         .map((dir) => readStarter(dir.name)?.starter).filter((item): item is Starter => !!item)
         .map(({ objects: _objects, ...row }) => row)
       : [];
-    res.json({ ok: true, starters: items, localOnly: true });
+    res.json({ ok: true, schema: 'agentsam.cad.source-library.v2', starters: items, discovered: discoverCadSources(ownerCadRoots()), localOnly: true });
   });
   app.get('/api/cad/bim-starters/:id', (req, res) => {
     if (!local(req)) return res.sendStatus(403);

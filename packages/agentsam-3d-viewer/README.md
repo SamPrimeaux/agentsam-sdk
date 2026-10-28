@@ -1,6 +1,6 @@
 # `@inneranimalmedia/agentsam-3d-viewer`
 
-A presentation-only, framework-agnostic Three.js capability for any AgentSam product or public site. It does not create geometry and does not initialize OCCT. Use it to display existing GLB, GLTF, or STL assets with responsive sizing, orbit controls, camera fitting, accessible loading/error status, and deterministic disposal.
+A reusable rendering and native-CAD mesh-display capability for any AgentSam product or public site. It does not create geometry and does not initialize OCCT; verified native C++ OCCT B-rep solids remain authoritative in the CAD engine. Use it to display existing GLB, GLTF, or STL assets with responsive sizing, orbit controls, camera fitting, accessible loading/error status, and deterministic disposal.
 
 ## Mount an existing model
 
@@ -31,3 +31,28 @@ Use `createThreeViewport(container, runtime, { autoRender: false })` when a prod
 The package reads GLB/GLTF/STL. Precision geometry, Boolean operations, and STEP authoring belong to `@inneranimalmedia/agentsam-occt`; viewer and engine remain separate so marketing pages can display a model without loading the OCCT WebAssembly kernel.
 
 This workspace package remains private until public-site consumption and cross-browser WebGL QA are complete.
+
+## Shared engineering viewport (v0.2)
+
+Use `createThreeViewport(container, { THREE }, { controls: false, autoRender: false, wrapper: false })`
+when the host owns camera navigation, as DreamHouse orbit/walk and CAD Model do.
+The returned camera, scene and WebGL renderer use the common GPU lifecycle,
+resize observer, color space and cleanup. Do not create another WebGLRenderer
+inside those hosts; custom camera controls and CAD object picking stay in the host.
+
+Use `createOcctMeshGeometry(nativeMesh, { THREE })` (or the `/occt` subpath)
+for a **display mesh produced by the verified C++ OCCT engine**. It checks
+`units: mm`, `axes: z-up`, indices and finite vertex data, maps the result into
+Three.js meter / Y-up coordinates and preserves the native data unchanged.
+It never turns arbitrary triangle soup into an exact CAD solid.
+
+Integration receipts:
+- SamSketch: `apps/samsketch/src/main.ts`
+- CAD model: `apps/cad-creator/frontend/src/components/Viewport3D.tsx`
+- DreamHouse world: `apps/cad-creator/frontend/src/components/DreamHouseWorldViewport.tsx`
+- Native geometry: `apps/cad-creator/frontend/src/lib/native-mesh-three.ts`
+
+Robotics `RenderSystem` now uses this shared viewport lifecycle with Z-up
+camera initialization; robot motion/physics and transform controls stay in
+robotics. Next work is consolidating scene picking, section planes and BIM
+inspection extensions. The viewer does **not** execute a C++ kernel in-browser.

@@ -24,21 +24,23 @@ import { validateOpenScadSource } from '../lib/openscad/sandbox';
 import { getExecutionProvider } from '../lib/execution';
 import { exportProjectToArtifact, downloadFile } from '../lib/exporters';
 import { applyDesignOperation } from '@inneranimalmedia/agentsam-cad-shared';
+import {OpenScadLibraryPane,insertOpenScadImport} from './OpenScadLibraryPane';
 
 interface ParametricEditorProps {
   project: DesignProject;
   onUpdateProject: (newProject: DesignProject) => void;
   canEdit: boolean;
+  initialObjectId?: string;
 }
 
 export const ParametricEditor: React.FC<ParametricEditorProps> = ({
   project,
   onUpdateProject,
-  canEdit,
+  canEdit, initialObjectId,
 }) => {
   const parametricObjects = project.parametricObjects || [];
   const [selectedObjId, setSelectedObjId] = useState<string>(
-    parametricObjects[0]?.id || ''
+    initialObjectId || parametricObjects[0]?.id || ''
   );
   const [activeSubTab, setActiveSubTab] = useState<'params' | 'code' | 'fullbim' | 'logs'>('params');
   const [executionLogs, setExecutionLogs] = useState<string[]>([
@@ -46,11 +48,13 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
   ]);
   const [isCompiling, setIsCompiling] = useState(false);
   const [sourceCodeOverride, setSourceCodeOverride] = useState<string>('');
+  const [libraryOpen,setLibraryOpen]=useState(false);
 
   const selectedObj = useMemo(() => {
     return parametricObjects.find((o) => o.id === selectedObjId) || parametricObjects[0];
   }, [parametricObjects, selectedObjId]);
 
+  useEffect(()=>{if(initialObjectId){setSelectedObjId(initialObjectId);setActiveSubTab('code')}},[initialObjectId]);
   // Keep source code editor in sync
   useEffect(() => {
     if (selectedObj) {
@@ -142,14 +146,15 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
         source: code,
         outputFormat: 'stl',
         parameters: selectedObj?.parameters,
-        filename: `${(selectedObj?.name || project.name).toLowerCase().replace(/\s+/g, '_')}.stl`,
+        filename: ((selectedObj?.name || project.name).toLowerCase().replace(/[^a-z0-9_-]+/g,'_').slice(0,70)||'model')+'.stl',
       });
 
       setExecutionLogs((prev) => [...prev, ...res.logs]);
-      if (res.success && res.artifactContent) {
-        downloadFile(res.artifactContent as string, res.filename, 'model/stl');
+      if (res.success && res.sha256 && res.verified===true && typeof res.artifactContent==='string') {
+        downloadFile(res.artifactContent,res.filename,'model/stl');
+        setExecutionLogs(previous=>[...previous,'[VERIFIED] Native compiler STL SHA-256: '+res.sha256]);
       } else {
-        alert(`Compilation failed: ${res.error || 'Unknown error'}`);
+        setExecutionLogs(previous=>[...previous,'[REJECTED] '+(res.error||'No verified native artifact returned')]);
       }
     } catch (err: any) {
       setExecutionLogs((prev) => [...prev, `[ERROR] ${err.message}`]);
@@ -278,6 +283,10 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
+            {activeSubTab==='code'&&<button type="button" aria-expanded={libraryOpen} aria-label="Toggle OpenSCAD libraries"
+              onClick={()=>setLibraryOpen(v=>!v)} className="px-2 py-1.5 border border-slate-700 rounded text-xs hover:bg-slate-800">
+              {libraryOpen?'Hide libraries':'Libraries'}
+            </button>}
             {selectedObj && (
               <button
                 onClick={handleDeleteSelected}
@@ -461,29 +470,33 @@ export const ParametricEditor: React.FC<ParametricEditorProps> = ({
           )}
 
           {activeSubTab === 'code' && (
-            <div className="h-full flex flex-col space-y-2">
+            <div className="h-full min-h-0 flex flex-col lg:flex-row gap-2 overflow-y-auto">
               <textarea
                 value={sourceCodeOverride}
-                onChange={(e) => {
-                  setSourceCodeOverride(e.target.value);
-                  if (selectedObj && canEdit) {
-                    const res = applyDesignOperation(project, {
-                      id: `op_src_${selectedObj.id}`,
-                      type: 'update_parametric_source',
-                      parametricObjectId: selectedObj.id,
-                      source: e.target.value,
-                      timestamp: Date.now(),
-                    });
-                    if (res.success) onUpdateProject(res.project);
-                  }
-                }}
+                onChange={(e) => setSourceCodeOverride(e.target.value)}
                 disabled={!canEdit}
                 spellCheck={false}
-                className="w-full flex-1 bg-slate-900 font-mono text-xs text-purple-300 p-4 rounded-xl border border-slate-800 focus:outline-none focus:border-purple-500/50 resize-none min-h-[400px]"
+                className="w-full flex-1 bg-slate-900 font-mono text-xs text-purple-300 p-4 rounded-xl border border-slate-800 focus:outline-none focus:border-purple-500/50 resize-none min-h-[320px]"
               />
+              {libraryOpen&&<OpenScadLibraryPane disabled={!canEdit} onInsert={line=>{
+                try{setSourceCodeOverride(previous=>insertOpenScadImport(previous,line));setExecutionLogs(previous=>[...previous,'[LIBRARY] Inserted registered import '+line]);}
+                catch(e){setExecutionLogs(previous=>[...previous,'[LIBRARY] '+String(e)]);}
+              }}/>}
             </div>
           )}
 
+          {activeSubTab === 'code'&&selectedObj&&<div className="flex justify-end gap-2 px-4 pb-3">
+            <button type="button" className="rounded-md border border-slate-700 px-3 py-1.5 text-xs"
+             onClick={()=>setSourceCodeOverride(selectedObj.source||generateOpenScadFromParametric(selectedObj))}>Revert</button>
+            <button type="button" className="rounded-md bg-purple-600 px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+             disabled={!canEdit||!validationResult.valid||sourceCodeOverride===selectedObj.source}
+             onClick={()=>{
+              const result=applyDesignOperation(project,{id:'cad-code-'+crypto.randomUUID(),timestamp:Date.now(),type:'update_parametric_source',
+                parametricObjectId:selectedObj.id,source:sourceCodeOverride});
+              if(result.success){onUpdateProject(result.project);setExecutionLogs(previous=>[...previous,'[APPLIED] Validated OpenSCAD source for '+selectedObj.id]);}
+              else setExecutionLogs(previous=>[...previous,'[REJECTED] '+result.error]);
+             }}>Apply source to project</button>
+           </div>}
           {activeSubTab === 'fullbim' && (
             <div className="h-full flex flex-col space-y-2">
               <div className="text-xs text-slate-400 mb-1">
