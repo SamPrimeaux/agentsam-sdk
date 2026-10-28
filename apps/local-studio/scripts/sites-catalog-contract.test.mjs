@@ -35,6 +35,9 @@ test('staged product catalog and all three original preview entrypoints exist',(
  const base='frontend/public/';
  for(const slug of ['violet','resolve','plain-jane'])
   assert.ok(existsSync(path.join(studio,base,'themes',slug,'demo/index.html')),slug);
+ for(const slug of ['violet','resolve','plain-jane'])
+  assert.ok(existsSync(path.join(studio,'.output/public/themes',slug,'demo/index.html')),slug+' compiled demo');
+ assert.ok(existsSync(path.join(studio,'.output/public/themes/violet/demo/global/cpas-shell.css')));
  const json=JSON.parse(read(base+'ecommerce-cms-agentsam/admin/data/theme-products.json'));
  assert.equal(json.ok,true);
  assert.equal(json.products.length,3);

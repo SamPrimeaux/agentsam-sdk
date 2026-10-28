@@ -25,7 +25,18 @@ if (process.argv.includes('--stage') || process.argv.includes('--desktop')) {
   }
   mkdirSync(destination, { recursive: true });
   cpSync(hostAdmin, destination, { recursive: true, force: true });
-  console.log('[console-host] root /admin assets staged to ' + destination);
+  // Copy the packaged, generated demo pages *after* Vite has emitted its
+  // /themes/<sku> entrypoints. Keep both the editor's original theme routes
+  // and the complete demo/ subroutes consumed by the source-backed gallery.
+  const compiledRoot = path.join(localStudio, process.argv.includes('--desktop') ? 'desktop-dist' : '.output/public');
+  const previewSource = path.join(localStudio, 'frontend/public/themes');
+  for (const slug of ['resolve', 'violet', 'plain-jane']) {
+    if (!existsSync(path.join(previewSource, slug, 'demo/index.html'))) {
+      throw new Error('Missing generated theme demo for '+slug);
+    }
+  }
+  cpSync(previewSource, path.join(compiledRoot, 'themes'), {recursive:true, force:true});
+  console.log('[console-host] root /admin + source-backed theme demos staged to ' + compiledRoot);
   process.exit(0);
 }
 // The ecommerce dashboard is a separately installable frontend with its own
