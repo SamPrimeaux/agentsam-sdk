@@ -8,10 +8,15 @@ import {getRegistryPage} from '../backend/cms/registry.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const staticRoot=path.join(root,'frontend/static');
 const distRoot=path.join(root,'frontend/dist');
-// Serve the already-packaged Violet prebuild from the monorepo; do not fork its assets.
-const violetRoot=path.resolve(root,'../theme-gallery-preview/themes/violet/site');
+// Serve the real packaged theme assets; local preview never forks the storefront.
+const themeRoots=Object.fromEntries(['violet','resolve'].map(theme=>[theme,path.resolve(root,'../theme-gallery-preview/themes/'+theme+'/site')]));
+const violetRoot=themeRoots.violet;
 const port=Number(process.env.PORT||4327);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.json':'application/json','.woff2':'font/woff2'};
+const storefrontManifestPaths=[
+ path.join(root,'agentsam.app.json'),
+ path.join(root,'apps/resend/agentsam.app.json')
+];
 const spa=new Set(['analytics','account','products/create','products/help/artwork']);
 // Read-only supplier examples for this isolated UI preview. Production uses the
 // authenticated Completeful adapter; these records keep the local visual route
@@ -70,6 +75,12 @@ const previewCatalog = [
   }
 ];
 const find=(p)=>{
+ const themeRoute=p.match(/^\/themes\/(violet|resolve)\/demo(?:\/(.*))?$/);
+ if(themeRoute){
+   const themeRoot=themeRoots[themeRoute[1]];
+   const target=path.resolve(themeRoot,themeRoute[2]||'index.html');
+   return target===path.resolve(themeRoot,'index.html') || target.startsWith(themeRoot+path.sep) ? target : null;
+ }
  if(p.startsWith('/assets/generated/')){
    const target=path.resolve(violetRoot,'assets/generated',p.slice('/assets/generated/'.length));
    return target.startsWith(violetRoot+path.sep) ? target : null;
@@ -150,6 +161,15 @@ const server=http.createServer(async(req,res)=>{
    };
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(payload));return;
   }
+  if(pathname==='/api/admin/cms/embed-catalog' && req.method==='GET'){
+   const manifests=await Promise.all(storefrontManifestPaths.map(async file=>JSON.parse(await readFile(file,'utf8'))));
+   const apps=manifests.flatMap(app=>(app.storefront_embeds||[]).map(embed=>({
+     ...embed,provider:app.id,provider_name:app.provider||app.name,
+     installed:app.id==='ecommerce-cms-agentsam',connection_status:'preview_only'
+   })));
+   res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
+   res.end(JSON.stringify({ok:true,preview_only:true,apps}));return;
+  }
   // Isolated CMS fixtures: no tenant D1, no writes, no Stripe.
   if(pathname==='/api/admin/cms/pages' && req.method==='GET'){
    res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'});
@@ -177,11 +197,15 @@ const server=http.createServer(async(req,res)=>{
   let target=(pathname==='/admin/product-edit' && /^\d+$/.test(new URL(req.url,'http://localhost').searchParams.get('id')||''))?path.join(staticRoot,'product-edit.html'):find(pathname);
   if(!target){res.writeHead(302,{Location:'/admin/home'});res.end();return}
   target=path.resolve(target);
-  if(![staticRoot,distRoot,path.join(root,'frontend'),violetRoot].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
+  if(![staticRoot,distRoot,path.join(root,'frontend'),...Object.values(themeRoots)].some(x=>target.startsWith(path.resolve(x)+path.sep))){res.writeHead(403);res.end();return}
   let data=await readFile(target);
   const ext=path.extname(target);
   if(ext==='.html'){
-   let html=data.toString().replaceAll('Fuel & Free Time Admin','AgentSam SDK Commerce · Local Preview').replaceAll('Fuel & Free Time','AgentSam SDK');
+   let html=data.toString();
+   if(pathname==='/themes/resolve/demo/' && new URL(req.url,'http://localhost').searchParams.has('studio_preview')){
+     html=html.replace('</body>','<script src="/admin/js/resolve-preview-bridge.js"></script></body>');
+   }
+   html=html.replaceAll('Fuel & Free Time Admin','AgentSam SDK Commerce · Local Preview').replaceAll('Fuel & Free Time','AgentSam SDK');
    data=Buffer.from(html);
   }
   res.writeHead(200,{'Content-Type':mime[ext]||'application/octet-stream','Cache-Control':'no-store'});if(req.method==='HEAD')res.end();else res.end(data);

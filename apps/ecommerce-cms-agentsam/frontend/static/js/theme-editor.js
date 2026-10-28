@@ -2,8 +2,11 @@
   const host = window.AgentSamThemeEditorHost || null;
   const editorRequest = host ? host.adapter.request.bind(host.adapter) : window.adminFetch;
   const params = new URLSearchParams(location.search);
-  const violetShowcase = !host && params.get('showcase') === 'violet';
-  let slug = host?.page || params.get('slug') || (violetShowcase ? 'home' : 'shop');
+  const showcaseTheme = !host && ['violet','resolve'].includes(params.get('showcase')) ? params.get('showcase') : '';
+  const violetShowcase = showcaseTheme === 'violet';
+  const resolveShowcase = showcaseTheme === 'resolve';
+  const localShowcase = Boolean(showcaseTheme);
+  let slug = host?.page || params.get('slug') || (localShowcase ? 'home' : 'shop');
   let pageData = null;
   let siteData = null;
   let pages = [];
@@ -518,9 +521,9 @@
   function syncPublishCapability() {
     const button = byId('te-publish');
     if (!button) return;
-    if (violetShowcase) {
+    if (localShowcase) {
       button.disabled = true;
-      button.title = 'Violet preview-only showcase — publishing is disabled';
+      button.title = (resolveShowcase ? 'Resolve' : 'Violet') + ' preview-only showcase — publishing is disabled';
       return;
     }
     if (host && host.adapter.capabilities?.publish === false) {
@@ -747,7 +750,7 @@
 
   function schedulePrivateAutosave() {
     clearTimeout(autosaveTimer);
-    if (!dirty || liveUnimported || autosaveFailed || violetShowcase) return;
+    if (!dirty || liveUnimported || autosaveFailed || localShowcase) return;
     autosaveTimer = setTimeout(function() {
       void saveDraft({ automatic: true });
     }, 900);
@@ -767,12 +770,12 @@
     dirty = Boolean(value);
     const save = byId('te-save');
     if (save) {
-      save.disabled = violetShowcase || liveUnimported || (!dirty && !hasEditedThisSession);
+      save.disabled = localShowcase || liveUnimported || (!dirty && !hasEditedThisSession);
       save.classList.toggle('is-dirty', dirty);
       save.setAttribute('aria-label', dirty ? 'Save unsaved draft changes' : 'Save draft — latest changes already saved');
       save.title = dirty ? 'Save draft changes (⌘S)' : 'Draft is saved — Save again if needed (⌘S)';
     }
-    if (violetShowcase) setSaveState('Violet · local preview only');
+    if (localShowcase) setSaveState((resolveShowcase ? 'Resolve' : 'Violet') + ' · local preview only');
     else if (liveUnimported) setSaveState('Preview only');
     else if (dirty) setSaveState('Unsaved changes', 'dirty');
     else setSaveState('Saved', 'saved');
@@ -826,7 +829,7 @@
   const catalogResources = { products: [], collections: [], loaded: false };
 
   async function loadStorefrontResources() {
-    if (host || violetShowcase || catalogResources.loaded) return;
+    if (host || localShowcase || catalogResources.loaded) return;
     catalogResources.loaded = true;
     const requests = await Promise.allSettled([
       editorRequest('/api/admin/products'),
@@ -838,12 +841,12 @@
   }
 
   function showScaffoldTemplate(template, title) {
-    if (!violetShowcase) {
+    if (!localShowcase) {
       setNote('Template scaffold is for local UI review only. Install and connect this template before editing or publishing.', 'info');
       closePageMenu();
       return;
     }
-    showcaseTemplate = { template, title, subtitle: 'Customize this Violet template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
+    showcaseTemplate = { template, title, subtitle: 'Customize this ' + (resolveShowcase ? 'Resolve' : 'Violet') + ' template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
     byId('te-page-title').textContent = title;
     byId('te-tree-title').textContent = title;
     byId('te-tree').innerHTML = '<div class="te-tree-scaffold"><div class="te-picker-heading">Header</div>' +
@@ -854,15 +857,15 @@
     closePageMenu();
     renderScaffoldInspector();
     refreshPreview();
-    setNote('Violet · ' + title + ' — local template scaffold. No data is connected or published.');
+    setNote((resolveShowcase ? 'Resolve' : 'Violet') + ' · ' + title + ' — local template scaffold. No data is connected or published.');
   }
 
   function renderScaffoldInspector() {
-    if (!showcaseTemplate || !violetShowcase) return;
+    if (!showcaseTemplate || !localShowcase) return;
     const data = showcaseTemplate;
     const formTemplate = ['checkout','metaobject','contact'].includes(data.template);
     byId('te-inspector-title').textContent = data.title;
-    byId('te-inspector-subtitle').textContent = 'Violet · local template settings';
+    byId('te-inspector-subtitle').textContent = (resolveShowcase ? 'Resolve' : 'Violet') + ' · local template settings';
     byId('te-section-status').textContent = 'preview';
     const panel = byId('te-inspector-body');
     panel.innerHTML = '<div class="te-scaffold-controls"><div class="te-picker-heading">Template content</div>' +
@@ -900,6 +903,23 @@
       renderScaffoldInspector();
       refreshPreview();
     });
+  }
+
+  function renderResolveScaffold(template, title) {
+    const data = showcaseTemplate || { title, subtitle: '', buttonLabel: 'Continue', fields: [] };
+    const safeTitle = cmsEscapeHtml(data.title || title);
+    const safeSubtitle = cmsEscapeHtml(data.subtitle || '');
+    const needsForm = ['checkout','metaobject','contact','search'].includes(template);
+    const form = needsForm
+      ? '<div class="r-fields">' + (data.fields || []).map(label =>
+        '<label>' + cmsEscapeHtml(label) + '<input disabled placeholder="' + cmsEscapeAttr(label) + '"></label>').join('') +
+        '<button disabled>' + cmsEscapeHtml(data.buttonLabel || 'Continue') + ' · Preview</button></div>'
+      : '<div class="r-placeholders"><div></div><div></div><div></div></div>';
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<style>body{margin:0;background:#fbfaf9;color:#0c0c0c;font:14px Geist,Arial,sans-serif}.r-head{background:#0b0b0b;padding:25px 5%;color:#fff;display:flex;justify-content:space-between;letter-spacing:.16em;font-size:11px}.r-head b{letter-spacing:.28em}.r-body{padding:100px max(6%,25px);min-height:55vh}.r-kicker{font-size:10px;letter-spacing:.2em;color:#8b181b;text-transform:uppercase;font-weight:750}.r-body h1{font-size:clamp(38px,5vw,72px);max-width:750px;line-height:1.05;text-transform:uppercase;letter-spacing:-.04em}.r-body p{color:#747474;max-width:500px;line-height:1.65}.r-fields{display:grid;gap:10px;max-width:510px;margin-top:40px}.r-fields label{font-size:11px;display:grid;gap:7px}.r-fields input{height:40px;padding:10px;border:1px solid #dedede}.r-fields button{background:#111;color:white;border:0;padding:15px}.r-placeholders{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:40px}.r-placeholders div{background:#efebed;height:180px}.r-foot{background:#111;color:#888;padding:25px 6%;font-size:11px}.r-tag{display:inline-block;margin-top:30px;padding:10px;border:1px solid #d3bec5;color:#8b181b;font-size:10px}@media(max-width:600px){.r-body{padding:60px 22px}.r-placeholders{grid-template-columns:1fr}}</style></head><body>' +
+      '<header class="r-head"><span>SHOP &nbsp; WARDROBE &nbsp; EDITORIAL</span><b>◆ RESOLVE ◆</b></header><main class="r-body">' +
+      '<div class="r-kicker">Resolve template · ' + cmsEscapeHtml(template) + '</div><h1>' + safeTitle + '</h1><p>' + safeSubtitle + '</p>' + form +
+      '<div class="r-tag">UI scaffold · Not connected to customer data</div></main><footer class="r-foot">RESOLVE ATELIER &nbsp; · &nbsp; AgentSam local preview</footer></body></html>';
   }
 
   function renderVioletScaffold(template, title) {
@@ -983,7 +1003,7 @@
     root.querySelectorAll('[data-picker-resource]').forEach(button => button.addEventListener('click', () => {
       const url = button.dataset.pickerResource === 'products'
         ? '/admin/product-edit?id=' + encodeURIComponent(button.dataset.resourceId) : '/admin/collections';
-      if (violetShowcase) showScaffoldTemplate(button.dataset.pickerResource, button.querySelector('strong').textContent);
+      if (localShowcase) showScaffoldTemplate(button.dataset.pickerResource, button.querySelector('strong').textContent);
       else window.location.href = url;
     }));
   }
@@ -1072,6 +1092,10 @@
   }
 
   function renderTree() {
+    if (resolveShowcase && window.AgentSamResolveStudio?.renderSections) {
+      window.AgentSamResolveStudio.renderSections();
+      return;
+    }
     const pageSections = ownerSections(slug);
     const siteSections = ownerSections('site');
     const header = siteSections.find(function(section) { return section.key === 'header'; });
@@ -1831,6 +1855,11 @@
   }
 
   function renderInspector() {
+    if (localShowcase && showcaseTemplate) { renderScaffoldInspector(); return; }
+    if (resolveShowcase && window.AgentSamResolveStudio?.renderInspector) {
+      window.AgentSamResolveStudio.renderInspector();
+      return;
+    }
     const section = currentSection();
     if (!section) {
       byId('te-inspector-body').innerHTML = '<div class="te-empty">Select a section or block in the page structure to begin editing.</div>';
@@ -2902,6 +2931,21 @@
   }
 
   async function refreshPreview() {
+    if (resolveShowcase) {
+      const frame = byId('theme-preview');
+      const url = '/themes/resolve/demo/?studio_preview=1';
+      if (showcaseTemplate) {
+        frame.removeAttribute('src');
+        frame.srcdoc = renderResolveScaffold(showcaseTemplate.template, showcaseTemplate.title);
+      } else {
+        frame.removeAttribute('srcdoc');
+        if (!frame.getAttribute('src')?.includes('/themes/resolve/demo/')) frame.src = url;
+        window.AgentSamResolveStudio?.sync?.();
+      }
+      byId('te-open-tab').href = '/themes/resolve/demo/';
+      byId('te-preview-label').textContent = 'Resolve · ' + (showcaseTemplate?.title || 'interactive') + ' · local preview only';
+      return;
+    }
     if (violetShowcase) {
       const frame = byId('theme-preview');
       if (showcaseTemplate) {
@@ -3060,7 +3104,7 @@
   // Serialize writes and snapshot each section before awaiting the network. A later
   // keystroke must remain dirty even if an earlier autosave finishes afterward.
   async function saveDraft({ automatic = false } = {}) {
-    if (violetShowcase) { setNote('Violet showcase is UI-only. No CMS writes occur.', 'info'); return false; }
+    if (localShowcase) { setNote('Local showcase is UI-only. No CMS writes occur.', 'info'); return false; }
     if (saveInFlight) {
       const previousSaved = await saveInFlight;
       if (!previousSaved) return false;
@@ -3155,7 +3199,7 @@
   }
 
   async function publishPage() {
-    if (violetShowcase) { setNote('Violet showcase cannot publish to a customer site.'); return false; }
+    if (localShowcase) { setNote('Local showcase cannot publish to a customer site.'); return false; }
     // The explicit Publish live menu action is the merchant confirmation.
     // Keep publish capability/preflight checks without a second browser-native dialog.
     if (publishInFlight) return false;
@@ -3430,8 +3474,8 @@
   }
 
   async function switchPage(nextSlug) {
-    const hadScaffold = violetShowcase && !!showcaseTemplate;
-    if (violetShowcase) showcaseTemplate = null;
+    const hadScaffold = localShowcase && !!showcaseTemplate;
+    if (localShowcase) showcaseTemplate = null;
     if (!nextSlug || (nextSlug === slug && !hadScaffold)) {
       closePageMenu();
       return;
@@ -3499,10 +3543,10 @@
         applyThemeIdentity(await host.adapter.getThemeIdentity());
         return;
       }
-      if (violetShowcase) {
+      if (localShowcase) {
         selectedTheme = 'heuristic';
-        applyThemeIdentity({ name: 'Violet', status: 'preview' });
-        byId('te-theme-trigger-label').textContent = 'Violet';
+        applyThemeIdentity({ name: showcaseTheme === 'resolve' ? 'Resolve' : 'Violet', status: 'preview' });
+        byId('te-theme-trigger-label').textContent = showcaseTheme === 'resolve' ? 'Resolve' : 'Violet';
         return;
       }
       const catalog = await editorRequest('/api/admin/cms/themes');
@@ -4212,9 +4256,10 @@
       return true;
     },
   };
-  if (violetShowcase) {
-    const save = byId('te-save'); if (save) { save.disabled = true; save.title = 'UI-only Violet showcase'; }
+  if (localShowcase) {
+    const save = byId('te-save'); if (save) { save.disabled = true; save.title = 'Local theme showcase · no CMS writes'; }
     const publish = byId('te-publish'); if (publish) { publish.disabled = true; publish.title = 'No live publishing from local showcase'; }
   }
+  window.AgentSamResolveStudio?.mount?.();
   loadPage();
 })();

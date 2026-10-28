@@ -13,8 +13,8 @@ test('Shopify-style storefront template navigation is complete and preview-only 
  assert.match(script,/function renderPageOptions\(query\)/);
  assert.match(script,/data-picker-category/);
  assert.match(script,/data-picker-back/);
- assert.match(script,/if \(violetShowcase\) \{ setNote\('Violet showcase is UI-only/);
- assert.match(script,/if \(violetShowcase\) \{ setNote\('Violet showcase cannot publish/);
+ assert.match(script,/if \(localShowcase\) \{ setNote\('Local showcase is UI-only/);
+ assert.match(script,/if \(localShowcase\) \{ setNote\('Local showcase cannot publish/);
  assert.match(script,/loadStorefrontResources/);
  assert.match(script,/showScaffoldTemplate/);
  assert.match(script,/renderVioletScaffold/);
