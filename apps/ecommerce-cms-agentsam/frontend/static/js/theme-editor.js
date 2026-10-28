@@ -3434,6 +3434,7 @@
     byId('te-page-trigger').setAttribute('aria-expanded', 'true');
     byId('te-page-search').value = '';
     renderPageOptions('');
+    loadPickerResources().catch(function(error) { console.warn('Commerce resources unavailable:', error?.message || error); });
     requestAnimationFrame(function() { byId('te-page-search').focus(); });
   }
 
