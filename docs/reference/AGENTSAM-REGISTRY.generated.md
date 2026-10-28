@@ -215,9 +215,9 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 
 | Package ID | npm name | Catalog status | Purpose |
 | --- | --- | --- | --- |
-| `agentsam-3d-viewer` | `@inneranimalmedia/agentsam-3d-viewer` | needs-review | Shared framework-agnostic Three.js viewer for GLB, GLTF, and STL assets across public pages and AgentSam workspace… |
+| `agentsam-3d-viewer` | `@inneranimalmedia/agentsam-3d-viewer` | needs-review | Shared framework-agnostic Three.js viewport, model viewing, and verified OCCT mesh display adapters for BIM, robot… |
 | `agentsam-abs` | `@inneranimalmedia/agentsam-abs` | needs-review | AgentSam Auto Browser Shell: dual-mode Explore/Build browser surface with provider-agnostic generative navigation,… |
-| `agentsam-analytics` | `@inneranimalmedia/agentsam-analytics` | needs-review | Portable AgentSam analytics read models and operational analytics surfaces. |
+| `agentsam-analytics` | `@inneranimalmedia/agentsam-analytics` | needs-review | Portable account-scoped operational analytics backed by canonical AgentSam D1 tool-call events, execution timings,… |
 | `agentsam-assets-core` | `@inneranimalmedia/agentsam-assets-core` | needs-review | Shared Asset Core: canonical ast_* identity, machine facts, provenance, and provider representations. Peer BrandPa… |
 | `agentsam-brand` | `@inneranimalmedia/agentsam-brand` | needs-review | Deterministic Brand Intelligence + portable brand-asset promotion SDK for AgentSam (inspect, derive, plan, promote… |
 | `agentsam-browser-surface` | `@inneranimalmedia/agentsam-browser-surface` | needs-review | AgentSamBrowserSurface: a portable Browse/Build browser capability with a provider registry so the lightweight Loc… |

@@ -11,7 +11,11 @@
       "commands": [],
       "evidence": {
         "consumers": [
-          "apps/samsketch/src/main.ts"
+          "apps/samsketch/src/main.ts",
+          "apps/cad-creator/frontend/src/components/DreamHouseWorldViewport.tsx",
+          "apps/cad-creator/frontend/src/lib/native-mesh-three.ts",
+          "apps/cad-creator/frontend/src/components/Viewport3D.tsx",
+          "apps/cad-creator/frontend/src/lib/robotics/runtime/RenderSystem.ts"
         ],
         "directory": "packages/agentsam-3d-viewer",
         "tests": [
@@ -36,7 +40,7 @@
         "typescript"
       ],
       "name": "@inneranimalmedia/agentsam-3d-viewer",
-      "purpose": "Shared framework-agnostic Three.js viewer for GLB, GLTF, and STL assets across public pages and AgentSam workspaces.",
+      "purpose": "Shared framework-agnostic Three.js viewport, model viewing, and verified OCCT mesh display adapters for BIM, robotics and public scenes; native OCCT stays geometry authority.",
       "registry": {
         "kind": "npm-workspace",
         "name": "@inneranimalmedia/agentsam-3d-viewer",
@@ -55,9 +59,10 @@
       ],
       "use_when": [
         "Showing an existing GLB, GLTF, or STL in a public marketing page or application panel",
-        "Creating a reusable Three.js viewport while keeping CAD-specific selection and scene logic in the host"
+        "Creating a reusable Three.js viewport while keeping CAD-specific selection and scene logic in the host",
+        "Displaying validated native OCCT tessellations with consistent units, axes and indexed triangles"
       ],
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "avoid_when": [],
@@ -125,7 +130,7 @@
         "typescript"
       ],
       "name": "@inneranimalmedia/agentsam-analytics",
-      "purpose": "Portable AgentSam analytics read models and operational analytics surfaces.",
+      "purpose": "Portable account-scoped operational analytics backed by canonical AgentSam D1 tool-call events, execution timings, outcomes, and real recorded costs.",
       "registry": {
         "kind": "npm",
         "name": "@inneranimalmedia/agentsam-analytics",
@@ -142,7 +147,7 @@
       "status": "unknown",
       "topics": [],
       "use_when": [],
-      "version": "2.6.12"
+      "version": "2.6.14"
     },
     {
       "avoid_when": [],

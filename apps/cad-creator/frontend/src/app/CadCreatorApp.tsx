@@ -1,5 +1,6 @@
 import {CadCamWorkspace} from '../components/CadCamWorkspace';
-import {CadCodeWorkspace} from '../components/CadCodeWorkspace';
+import {OPENSCAD_PARAMETRIC_TEMPLATES} from '../lib/openscad/generator';
+import {insertOpenScadImport} from '../components/OpenScadLibraryPane';
 import {recordNativePlanChange} from '../lib/native-engine';
 /**
  * @license
@@ -178,7 +179,9 @@ export function CadCreatorApp({
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [explorerOpen, setExplorerOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
   const [inspectorOpen, setInspectorOpen] = useState(() => presentation !== 'embedded' && (typeof window === 'undefined' || !window.matchMedia('(max-width: 920px)').matches));
-  const [studioView,setStudioView]=useState<'preview'|'edit'|'code'>('edit');
+  const [studioView,setStudioView]=useState<'preview'|'edit'>('edit');
+  const [sourceRequest,setSourceRequest]=useState(0);
+  const [libraryPreferredSection,setLibraryPreferredSection]=useState<'assemblies'|'stock'|'parametric'|'openscad'>('assemblies');
   const [uiSelection, setUiSelection] = useState<CadElementSelection>(null);
   // Embedded CAD starts with the model as the stage. Show one contextual drawer
   // only when the user selects an element or requests a panel.
@@ -539,7 +542,8 @@ export function CadCreatorApp({
           canUndo={history.length > 0 && !isViewer} canRedo={redoStack.length > 0 && !isViewer}
           workspace={activeWorkspace} onWorkspace={handleSelectWorkspace}
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
-          onNew={startBlankProject} onTemplates={() => {setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(true)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false)}}
+          onNew={startBlankProject} onTemplates={() => {setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(true)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('stock')}}
+          onParametric={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('parametric')}}
           onExport={() => setIsExportPublishOpen(true)}
           onSave={()=>{if(accessMode==='hosted-project'){void saveHostedRevision()}else window.dispatchEvent(new Event('agentsam:cad-save-revision'))}}
           saveDisabled={isViewer||hostedSaving}
@@ -547,7 +551,8 @@ export function CadCreatorApp({
           onToggleExplorer={() => {if(window.matchMedia('(max-width: 660px)').matches&&!explorerOpen)setInspectorOpen(false);setExplorerOpen(v => !v);}}
           onToggleInspector={() => {if(window.matchMedia('(max-width: 660px)').matches&&!inspectorOpen)setExplorerOpen(false);setInspectorOpen(v => !v);}}
           explorerOpen={explorerOpen} inspectorOpen={inspectorOpen}
-          studioView={studioView} onStudioView={v=>{setStudioView(v);if(v==='preview'){handleSelectWorkspace('model');setExplorerOpen(false);setInspectorOpen(false)}else if(v==='code'){handleSelectWorkspace('model')}else {handleSelectWorkspace('plan')}}}
+          studioView={studioView} onStudioView={v=>{setStudioView(v);if(v==='preview'){handleSelectWorkspace('model');setExplorerOpen(false);setInspectorOpen(false)}else {handleSelectWorkspace('plan')}}}
+          onOpenSource={()=>{setStudioView('edit');setSourceRequest(n=>n+1);setInspectorOpen(true);if(activeWorkspace==='robotics')handleSelectWorkspace('model');if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);}}
           viewportMode={activeWorkspace==='plan'?(planLayout==='split'?'split':'2d'):'3d'}
           onViewportMode={mode=>{setStudioView('edit');if(mode==='3d'){handleSelectWorkspace('model')}else{handleSelectWorkspace('plan');setPlanLayout(mode)}}}
           projectSlot={accessMode === 'hosted-project' ? (hostedWritable
@@ -586,11 +591,47 @@ export function CadCreatorApp({
                     sceneInventory={hostedSelection?.revision.revision==='current'&&!hostedSelection.project ? sceneInventory : undefined}
                     onSelect={next=>{setUiSelection(next);if(next){setInspectorOpen(true);if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);}}}
                     onClose={() => setExplorerOpen(false)} />
-                  : <CadResourcesPane mode={leftPanelTab} project={project} selection={uiSelection} readOnly={isViewer}
+                  : <CadResourcesPane mode={leftPanelTab} project={project} selection={uiSelection} readOnly={isViewer} preferredSection={libraryPreferredSection}
                       sceneInventory={sceneInventory} onClose={()=>setExplorerOpen(false)}
                       onSelect={next=>{setUiSelection(next);setInspectorOpen(true);if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);}}
                       onOpenTemplates={()=>setIsTemplateLibraryOpen(true)}
                       onPlaceStock={preset=>{if(isViewer)return;setSelectedFurnitureType(preset.type);setActiveTool('furniture');setStudioView('edit');handleSelectWorkspace('plan');setPlanLayout('split');showToast('Click the 2D plan to place '+preset.name);}}
+                      onCreateParametric={key=>{
+                        if(isViewer)return;
+                        const template=OPENSCAD_PARAMETRIC_TEMPLATES[key];
+                        if(!template){showToast('Unknown parametric generator');return}
+                        const objectId='param_'+crypto.randomUUID();
+                        const part={
+                          id:objectId,name:template.name,generator:'openscad' as const,generatorTemplate:key,
+                          parameters:{...template.defaultParams},parameterDefs:template.parameterDefs,
+                          transform:{x:48,y:48,z:0,rotationY:0},
+                          source:template.generateScad(template.defaultParams),updatedAt:Date.now()
+                        };
+                        const operation={id:'cad-part-'+crypto.randomUUID(),timestamp:Date.now(),type:'create_parametric_object',parametricObject:part} as DesignOperation;
+                        const checked=applyDesignOperation(project,operation);
+                        if(!checked.success){showToast(checked.error||'Could not create parametric part');return}
+                        updateProject(previous=>{const next=applyDesignOperation(previous,operation);return next.success?next.project:previous});
+                        setUiSelection({group:'parametricObjects',id:objectId});setInspectorOpen(true);
+                        setSourceRequest(n=>n+1);
+                        if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);
+                        showToast('Added '+template.name+' to project');
+                      }}
+                      onInsertScadImport={line=>{
+                        if(isViewer||uiSelection?.group!=='parametricObjects')return;
+                        const part=project.parametricObjects?.find(value=>value.id===uiSelection.id);
+                        if(!part)return;
+                        if(part.generator!=='openscad'){showToast('Only OpenSCAD parts accept .scad library imports.');return}
+                        let nextSource:string;
+                        try{nextSource=insertOpenScadImport(part.source||'',line)}
+                        catch(error){showToast(error instanceof Error?error.message:'Invalid import');return}
+                        const operation={id:'cad-part-import-'+crypto.randomUUID(),timestamp:Date.now(),type:'update_parametric_source',parametricObjectId:part.id,source:nextSource} as DesignOperation;
+                        const checked=applyDesignOperation(project,operation);
+                        if(!checked.success){showToast(checked.error||'Library import rejected');return}
+                        updateProject(previous=>{const next=applyDesignOperation(previous,operation);return next.success?next.project:previous});
+                        setInspectorOpen(true);setSourceRequest(n=>n+1);
+                        if(window.matchMedia('(max-width: 660px)').matches)setExplorerOpen(false);
+                        showToast('Inserted '+line+' in selected part source');
+                      }}
                       onApplyAssembly={assembly=>{
                         if(uiSelection?.group!=='walls'||validateWallAssembly(assembly))return;
                         const selectedId=uiSelection.id;
@@ -615,10 +656,8 @@ export function CadCreatorApp({
           )}
           {/* A registered project BIM is resolved through its D1/R2 revision records.
               The visual GLB is never the authoritative editable source. */}
-          {studioView==='code'&&<CadCodeWorkspace project={project} selection={uiSelection} readOnly={isViewer}
-            onUpdateProject={next=>updateProject(()=>next)} onBack={()=>{setStudioView('edit');handleSelectWorkspace('plan')}}/>}
           {/* WORKSPACE 1: PLAN */}
-          {studioView!=='code'&&activeWorkspace === 'plan' && (
+          {activeWorkspace === 'plan' && (
             <>
               {(planLayout === '2d' || planLayout === 'split') && (
                 <div className={`cad-plan-pane h-full relative min-w-0 ${planLayout === 'split' ? 'border-r border-white/10' : 'w-full'}`} style={planLayout==='split'?{width:splitRatio+'%',flex:'none'}:undefined}>
@@ -698,7 +737,7 @@ export function CadCreatorApp({
           )}
 
           {/* WORKSPACE 2: MODEL */}
-          {studioView!=='code'&&activeWorkspace === 'model' && (
+          {activeWorkspace === 'model' && (
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
               : hostedSelection && sourceStatus==='loaded'
@@ -713,10 +752,10 @@ export function CadCreatorApp({
           )}
 
           {/* Manufacturing planning is separate from the Franka chess game. */}
-          {studioView!=='code'&&activeWorkspace==='robotics'&&
-           <CadCamWorkspace project={project} onCode={()=>setStudioView('code')} onExport={()=>setIsExportPublishOpen(true)}/>}
+          {activeWorkspace==='robotics'&&
+           <CadCamWorkspace project={project} onCode={()=>{setStudioView('edit');setSourceRequest(n=>n+1);setInspectorOpen(true);handleSelectWorkspace('model')}} onExport={()=>setIsExportPublishOpen(true)}/>}
                     {/* Rendering now shows the current project instead of opening disconnected prototype dialogs. */}
-          {studioView!=='code'&&activeWorkspace === 'render' && (
+          {activeWorkspace === 'render' && (
             <div className="w-full h-full">
               <Viewport3D project={project} onLightingChange={isViewer?undefined:updates=>updateProject(p=>({...p,lighting:{...p.lighting,...updates}}))}/>
             </div>
@@ -726,7 +765,7 @@ export function CadCreatorApp({
             <CadPropertyInspector project={project} selection={uiSelection}
               onSelect={setUiSelection} onChange={updateProject}
               onClose={() => setInspectorOpen(false)} readOnly={isViewer} onReview={reviewSelectedElement}
-              onEditCode={()=>{setStudioView('code');handleSelectWorkspace('model')}}/>
+              sourceRequest={sourceRequest}/>
           )}
         </div>
       </main>
