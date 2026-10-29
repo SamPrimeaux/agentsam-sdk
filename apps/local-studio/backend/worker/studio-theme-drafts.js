@@ -25,8 +25,16 @@ function draft(row) {
   name:row.name,theme_slug:row.slug,
   package:config.package||null,version:config.version||null,
   status:'draft',created_at:row.created_at,installed:false,
-  editor_url:config.source_slug?'/admin/theme-editor?showcase='+encodeURIComponent(config.source_slug)+'&slug='+(config.source_slug==='plain-jane'?'journal-home':'home'):null
+  site_linked:false,meta:config.package||'Packaged theme',preview_url:config.preview_url||null,
+  // Editing is enabled ONLY after a site / CMS installation transaction.
+  edit_href:null
  };
+}
+export async function listStudioThemeDrafts(env,userId) {
+ const rows=await env.DB.prepare(
+  "SELECT id,name,slug,config,created_at FROM cms_themes WHERE workspace_id=? AND status='draft' AND slug LIKE 'draft-%' ORDER BY created_at DESC LIMIT 60"
+ ).bind(userId).all();
+ return (rows.results||[]).map(draft).filter(row=>allowed.test(row.slug||''));
 }
 export async function handleStudioThemeDrafts(request,env,userId) {
  if(!userId)return answer({ok:false,error:'unauthorized'},401);
@@ -34,10 +42,7 @@ export async function handleStudioThemeDrafts(request,env,userId) {
  const url=new URL(request.url);
  if(request.method==='GET'){
   try{
-   const rows=await env.DB.prepare(
-    "SELECT id,name,slug,config,created_at FROM cms_themes WHERE workspace_id=? AND status='draft' AND slug LIKE 'draft-%' ORDER BY created_at DESC LIMIT 60"
-   ).bind(userId).all();
-   return answer({ok:true,drafts:(rows.results||[]).map(draft).filter(row=>allowed.test(row.slug||''))});
+   return answer({ok:true,drafts:await listStudioThemeDrafts(env,userId)});
   }catch{return answer({ok:false,error:'theme_drafts_unavailable'},503)}
  }
  if(request.method!=='POST')return answer({ok:false,error:'method_not_allowed'},405);

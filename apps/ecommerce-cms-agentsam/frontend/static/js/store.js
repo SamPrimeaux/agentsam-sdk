@@ -12,7 +12,7 @@ renderShell("/admin/store", `
           <span id="store-visibility-label">Checking…</span>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <a href="/" class="btn ghost small" target="_blank" rel="noopener">View store</a>
+        <button type="button" class="btn ghost small" id="view-storefront-btn" disabled title="Connect a site to preview the published storefront">View site</button>
         <button type="button" class="online-store-icon-btn" aria-label="More actions">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
         </button>
@@ -132,22 +132,76 @@ function labelMetricAvailability(node, metric) {
     ? "Not measured yet — no storefront analytics data available" : "";
 }
 
+function escapeThemeText(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[char]));
+}
 function renderDraftRow(theme) {
+  const name=escapeThemeText(theme.name||"Untitled theme");
+  const meta=escapeThemeText(theme.meta||theme.package||"Packaged theme");
+  const version=escapeThemeText(theme.version||"");
+  const preview=typeof theme.preview_url==="string" && /^\/(?!\/)[a-zA-Z0-9_./-]+$/.test(theme.preview_url)
+    ? theme.preview_url : "";
   return `
-    <div class="online-store-draft-row">
-      <div class="online-store-draft-thumb" aria-hidden="true"><span>Theme</span></div>
+    <div class="online-store-draft-row" data-draft-id="${escapeThemeText(theme.id)}">
+      <div class="online-store-draft-thumb" aria-hidden="true"><span>Draft</span></div>
       <div class="online-store-draft-copy">
-        <div class="online-store-draft-name">${theme.name}</div>
-        <div class="online-store-draft-meta">${theme.meta}</div>
-        <div class="online-store-version"><span class="online-store-version-dot" aria-hidden="true"></span>Version ${theme.version} available</div>
+        <div class="online-store-draft-name">${name}</div>
+        <div class="online-store-draft-meta">${meta}${version?' · v'+version:''}</div>
+        <div class="online-store-version">Private draft · Not published</div>
       </div>
       <div class="online-store-draft-actions">
-        <button type="button" class="online-store-icon-btn" aria-label="Theme options"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg></button>
-        <button type="button" class="btn ghost small draft-publish" data-theme-id="${theme.id}">Publish</button>
-        <a href="${theme.edit_href}" class="btn ghost small">Edit theme</a>
+        ${preview?'<button type="button" class="btn ghost small" data-theme-draft-preview="'+escapeThemeText(preview)+'">Preview</button>':''}
+        <button type="button" class="btn ghost small" disabled title="Connect this draft to a CMS site before editing">Connect site to edit</button>
       </div>
     </div>`;
 }
+function paintStoreDrafts(drafts) {
+  const container=document.getElementById("draft-themes");
+  if(!container)return;
+  container.innerHTML=(drafts||[]).map(renderDraftRow).join("");
+  container.querySelectorAll("[data-theme-draft-preview]").forEach(button=>{
+    button.addEventListener("click",()=>{
+      const url=button.dataset.themeDraftPreview;
+      const dialog=document.createElement("dialog");
+      dialog.className="theme-marketplace-dialog";
+      const header=document.createElement("div");
+      header.className="theme-marketplace-dialog-head";
+      const title=document.createElement("strong");
+      title.textContent="Draft preview · Not published";
+      const close=document.createElement("button");
+      close.className="btn ghost small";close.type="button";close.textContent="Close";
+      close.addEventListener("click",()=>dialog.close());
+      header.append(title,close);
+      const iframe=document.createElement("iframe");
+      iframe.className="theme-marketplace-dialog-frame";
+      iframe.title="Unpublished theme draft preview";
+      iframe.setAttribute("sandbox","allow-scripts");
+      iframe.src=url;
+      dialog.append(header,iframe);
+      dialog.addEventListener("close",()=>dialog.remove(),{once:true});
+      document.body.append(dialog);dialog.showModal();
+    });
+  });
+}
+document.addEventListener("agentsam:theme-draft-added",event=>{
+  const draft=event.detail;
+  if(!draft?.id)return;
+  const container=document.getElementById("draft-themes");
+  const existing=Array.from(container?.querySelectorAll("[data-draft-id]")||[]).some(node=>node.dataset.draftId===draft.id);
+  if(existing)return;
+  container?.insertAdjacentHTML("afterbegin",renderDraftRow(draft));
+  const cards=Array.from(container?.querySelectorAll("[data-draft-id]")||[]);
+  // Rebind preview handlers without duplicating previously added rows.
+  const drafts=cards.map(card=>({
+    id:card.dataset.draftId,name:card.querySelector(".online-store-draft-name")?.textContent,
+    meta:card.querySelector(".online-store-draft-meta")?.textContent,
+    preview_url:card.querySelector("[data-theme-draft-preview]")?.dataset.themeDraftPreview
+  }));
+  paintStoreDrafts(drafts);
+  container?.scrollIntoView({behavior:"smooth",block:"center"});
+});
 
 // Render the actual *published* storefront. The old ?preview=1 selected an
 // authenticated CMS draft and did not represent the active live theme.
@@ -235,6 +289,14 @@ function setPreviewFrames(href) {
   });
 }
 
+function setStoreViewButton(url) {
+  const view=document.getElementById("view-storefront-btn");
+  if(!view)return;
+  const trusted=typeof url==="string" && /^https:\/\/[^\s<>"']+$/.test(url);
+  view.disabled=!trusted;
+  view.title=trusted ? "Open your connected published storefront" : "Connect a site before opening its storefront";
+  view.onclick=trusted ? ()=>window.open(url,"_blank","noopener,noreferrer") : null;
+}
 function showThemeUnavailable(state, message) {
   const status=document.getElementById("active-theme-status");
   const name=document.getElementById("active-theme-name");
@@ -336,6 +398,7 @@ function showActiveTheme(theme) {
     }
     sessions.title = "Storefront sessions are not measured yet when shown as —";
 
+    setStoreViewButton(d.store?.visibility==="public" ? d.store?.url : null);
     const theme = d.active_theme;
     document.getElementById("active-theme-name").textContent = theme?.name || "No active theme";
     document.getElementById("active-theme-saved").textContent =
@@ -356,9 +419,7 @@ function showActiveTheme(theme) {
         `Version ${theme.version_available} available`;
     }
 
-    document.getElementById("draft-themes").innerHTML = (d.draft_themes || [])
-      .map(renderDraftRow)
-      .join("");
+    paintStoreDrafts(d.draft_themes || []);
 
     // Do not pretend that publishing the Shop CMS page publishes a theme.
     // Keep draft rows read-only until a real theme publish transaction exists.

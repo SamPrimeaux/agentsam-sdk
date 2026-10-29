@@ -50,6 +50,7 @@
      if(!res.ok||!data.ok)throw Error(data.error||'Draft was not saved');
      drafts=[...drafts.filter(d=>d.slug!==product.slug),data.draft];
      render();
+     document.dispatchEvent(new CustomEvent('agentsam:theme-draft-added',{detail:data.draft}));
    }catch(error){
      button.disabled=false;button.textContent='Add to Drafts';
      const card=button.closest('.theme-marketplace-item');
@@ -61,13 +62,13 @@
  }
  function render(){
    const q=search.value.trim().toLowerCase(),category=filter.value;
-   const visible=products.filter(product=>(category==='all'||product.category===category)
+   const visible=products.filter(product=>!drafts.some(d=>d.slug===product.slug) && (category==='all'||product.category===category)
      && (!q || [product.name,product.category,product.description].join(' ').toLowerCase().includes(q)));
    root.replaceChildren();
-   count.textContent=visible.length+' of '+products.length+' packages';
+   count.textContent=visible.length+' available · '+drafts.length+' in Drafts';
    if(!visible.length){
      const empty=node('div','theme-marketplace-empty');
-     empty.append(node('strong','','No templates match those filters.'),node('p','','Try another category or clear your search.'));
+     empty.append(node('strong','',drafts.length===products.length?'All templates added to Drafts.':'No templates match those filters.'),node('p','','Open Draft themes above or change your filters.'));
      const clear=node('button','btn ghost small','Clear filters');
      clear.type='button';clear.addEventListener('click',()=>{search.value='';filter.value='all';render();});
      empty.append(clear);root.append(empty);return;
@@ -76,15 +77,15 @@
      const card=node('article','theme-marketplace-item');
      const visual=node('div','theme-marketplace-visual');
      const preview=sameOriginUrl(product.preview_url);
-     if(preview&&product.preview_ready){
-       const frame=node('iframe','theme-marketplace-frame');
-       frame.title=product.name+' static theme preview';
-       frame.loading='lazy';frame.tabIndex=-1;
-       frame.setAttribute('sandbox','allow-scripts');
-       frame.src=preview.toString();
-       visual.append(frame);
+     const thumbnail=sameOriginUrl(product.thumbnail_url);
+     if(thumbnail && product.preview_ready){
+       const image=node('img','theme-marketplace-thumb');
+       image.loading='lazy';
+       image.alt=product.name+' theme artwork';
+       image.src=thumbnail.toString();
+       visual.append(image);
      }else{
-       visual.append(node('div','theme-marketplace-unavailable','Preview not built'));
+       visual.append(node('div','theme-marketplace-unavailable','Preview artwork unavailable'));
      }
      visual.append(node('span','theme-marketplace-state',product.preview_ready?'Preview available':'Source only'));
      const body=node('div','theme-marketplace-body');
@@ -98,28 +99,12 @@
        open.addEventListener('click',()=>previewInsideStudio(product));
        actions.append(open);
      }
-     const saved=drafts.find(d=>d.slug===product.slug);
-     const add=node('button','btn small',saved?'In Drafts ✓':'Add to Drafts');
-     add.type='button';add.disabled=Boolean(saved);
-     if(!saved)add.addEventListener('click',()=>void addDraft(product,add));
+     const add=node('button','btn small','Add to Drafts');
+     add.type='button';
+     add.addEventListener('click',()=>void addDraft(product,add));
      actions.append(add);
-     const download=sameOriginUrl(product.download_url);
-     if(download && product.download_kind==='preview_zip'){
-       const a=node('a','btn ghost small','Download preview ZIP');
-       a.href=download.toString();
-       a.setAttribute('download','');
-       a.title='Read-only demo and CMS seed; not a production installer';
-       actions.append(a);
-     }
-     const editor=sameOriginUrl(product.editor_url);
-     if(editor && saved){
-       const a=node('a','btn ghost small','Editor preview');
-       a.href=editor.pathname+editor.search;
-       a.title='Open the packaged editor preview. Site binding and publishing are not connected.';
-       actions.append(a);
-     }
      body.append(actions);
-     const foot=node('p','theme-marketplace-disclaimer',saved?'Private draft saved · Not published or site-linked':'Add to Drafts to save this package selection. No site changes until linked.');
+     const foot=node('p','theme-marketplace-disclaimer','Add to Drafts to save this theme under your Online Store. Site installation is a separate step.');
      body.append(foot);
      card.append(visual,body);root.append(card);
    }

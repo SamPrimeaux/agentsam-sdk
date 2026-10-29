@@ -51,7 +51,21 @@ function agentsamMount() {
 function renderAgentsamShell() {
   if (document.getElementById("agentsam-drawer")) return;
 
-  const dock = document.getElementById("agentsam-dock");
+  // Theme Studio is a workspace, not a modal. If the host's console shell
+  // failed to provide its right rail, restore the in-flow dock in the same
+  // workspace before mounting AgentSam. Desktop must never use a backdrop.
+  let dock = document.getElementById("agentsam-dock");
+  if (!dock && location.pathname === "/admin/theme-editor" &&
+      window.matchMedia("(min-width: 901px)").matches) {
+    const main=document.querySelector(".console-workspace > .console-main");
+    if (main) {
+      dock=document.createElement("aside");
+      dock.id="agentsam-dock";
+      dock.className="agentsam-dock";
+      dock.setAttribute("aria-label","AgentSam assistant workspace");
+      main.insertAdjacentElement("afterend",dock);
+    }
+  }
   agentsamDockMode = dock ? "docked" : "overlay";
   document.body.classList.toggle("agentsam-overlay-mode", agentsamDockMode === "overlay");
 

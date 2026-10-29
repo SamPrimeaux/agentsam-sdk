@@ -33,3 +33,24 @@ test('Settings shell host is session-gated, read-only and stays on the current a
  assert.match(stage,/nitro.fetch/);
  assert.match(stage,/No account data/);
 });
+
+test('AgentSam Work, CAD and MovieMode use authenticated canonical React shells',()=>{
+ const routes=['agentsam','cad','moviemode','moviemode/edit','projects'];
+ for(const route of routes){
+  const source=path.join(root,'.output/public/studio-app-shell',route,'index.html');
+  assert.ok(existsSync(source),'missing Studio mount: '+route);
+  const html=readFileSync(source,'utf8');
+  assert.match(html,/^<!DOCTYPE html>/i);
+  assert.ok(html.includes('/assets/'));
+  assert.doesNotMatch(html,/password_hash|client_secret/i);
+ }
+ const worker=readFileSync(path.join(root,'backend/worker/index.js'),'utf8');
+ const begin=worker.indexOf('    // Canonical React app mounts are served');
+ const end=worker.indexOf('    // Settings are served as build-generated',begin);
+ assert.ok(begin>0 && end>begin);
+ const section=worker.slice(begin,end);
+ assert.match(section,/resolveSessionUserId\(request,env\)/);
+ assert.match(section,/studio-app-shell/);
+ assert.match(section,/cache-control","private, no-store"/);
+ assert.doesNotMatch(section,/env\.DB\.prepare|INSERT INTO|UPDATE |DELETE FROM/);
+});

@@ -68,6 +68,20 @@ test('template Add really stores a private, workspace-scoped CMS draft',async()=
  const other=await handleStudioThemeDrafts(new Request(url),env,'user-2');
  assert.equal((await other.json()).drafts.length,0);
 });
+test('online store projects private theme drafts from the same CMS authority',async()=>{
+ const {env}=fixture();
+ const url=base+'/api/admin/theme-products/drafts';
+ const request=new Request(url,{method:'POST',headers:{origin:base,'content-type':'application/json'},body:JSON.stringify({slug:'violet'})});
+ assert.equal((await handleStudioThemeDrafts(request,env,'user-1')).status,201);
+ const projected=await handleStudioSitesOverview(new Request(base+'/api/admin/store/online'),env,'user-1');
+ const data=await projected.json();
+ assert.equal(data.draft_themes.length,1);
+ assert.equal(data.draft_themes[0].slug,'violet');
+ assert.equal(data.draft_themes[0].site_linked,false);
+ assert.equal(data.draft_themes[0].edit_href,null);
+ const other=await handleStudioSitesOverview(new Request(base+'/api/admin/store/online'),env,'user-2');
+ assert.equal((await other.json()).draft_themes.length,0);
+});
 test('template draft creation refuses unauthenticated, CSRF and unsupported catalog writes',async()=>{
  const {env,rows}=fixture(),url=base+'/api/admin/theme-products/drafts';
  const payload=(body,headers={})=>new Request(url,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(body)});
@@ -91,4 +105,12 @@ test('retired Atlas route is absent, redirects to the single Theme Studio, and S
  assert.match(editor,/journal-the-art-of-slow-travel/);
  assert.match(editor,/resolve-product/);
 
+});
+
+test('Theme Studio assistant uses an in-flow dock on desktop, not a modal backdrop',()=>{
+ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+ const source=readFileSync(path.join(root,'../ecommerce-cms-agentsam/frontend/static/js/agentsam.js'),'utf8');
+ assert.match(source,/location\.pathname === "\/admin\/theme-editor"/);
+ assert.match(source,/className="agentsam-dock"/);
+ assert.match(source,/main\.insertAdjacentElement\("afterend",dock\)/);
 });

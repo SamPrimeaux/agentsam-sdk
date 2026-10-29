@@ -31,4 +31,22 @@ for(const unit of units){
   await mkdir(directory,{recursive:true});
   await writeFile(path.join(directory,'index.html'),html,'utf8');
 }
+// Keep the REAL React AgentSam/Work, CAD and MovieMode mounts hydrated by
+// their canonical router. These modules fail only when Cloudflare's Nitro SSR
+// runs them at request time, just as Settings previously did.
+const studioApps=['agentsam','cad','moviemode','moviemode/edit','projects'];
+for(const route of studioApps){
+  const url='https://agentsam.inneranimalmedia.com/admin/'+route;
+  const rendered=await nitro.fetch(new Request(url),{},{
+    waitUntil(){},passThroughOnException(){},
+  });
+  const html=await rendered.text();
+  if(rendered.status!==200 || !html.startsWith('<!DOCTYPE html>') ||
+     !html.includes('/assets/') || html.length<2500)
+    throw new Error('Studio app SSR shell invalid for '+route+': HTTP '+rendered.status);
+  const directory=path.join(studio,'.output/public/studio-app-shell',route);
+  await mkdir(directory,{recursive:true});
+  await writeFile(path.join(directory,'index.html'),html,'utf8');
+}
 console.log('[settings-shell] Staged '+units.length+' source-rendered, data-free Settings routes');
+console.log('[studio-app-shell] Staged '+studioApps.length+' canonical React app mounts');

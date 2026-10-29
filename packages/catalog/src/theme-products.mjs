@@ -30,6 +30,13 @@ export async function listLocalThemeProducts(){
         package:packageInfo.name,version:packageInfo.version,
         source:slug==='plain-jane'?'SamPrimeaux/inneranimalmedia-blog-template':'SamPrimeaux/agentsam-sdk',
         preview_url:ready?'/themes/'+slug+'/demo/':null,
+        // Same package-owned artwork as the preview; no separate screenshot
+        // service or duplicated heavyweight iframe per gallery card.
+        thumbnail_url:ready?({
+          resolve:'/themes/resolve/demo/assets/generated/social-card.webp',
+          violet:'/themes/violet/demo/assets/generated/social-card.webp',
+          'plain-jane':'/themes/plain-jane/demo/images/og-journal.svg',
+        }[slug]||null):null,
         editor_url:ready?'/admin/theme-editor?showcase='+encodeURIComponent(slug)+'&slug='+(slug==='plain-jane'?'journal-home':'home'):null,
         cms_manifest_url:slug==='plain-jane'?'/themes/plain-jane/demo/journal-cms-manifest.json':null,
         preview_ready:ready,

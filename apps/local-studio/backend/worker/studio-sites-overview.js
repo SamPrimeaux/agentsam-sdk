@@ -1,3 +1,4 @@
+import { listStudioThemeDrafts } from './studio-theme-drafts.js';
 /**
  * Studio Sites read-model. Hosted Studio D1 is not the legacy Ecommerce
  * customer pages/page_sections schema. Use account-scoped CMS tables.
@@ -14,10 +15,13 @@ export async function handleStudioSitesOverview(request, env, accountId) {
     await env.DB.prepare("SELECT id FROM cms_sites LIMIT 1").first();
     cmsConnected = true;
   } catch {}
+  let drafts=[];
+  try { drafts=await listStudioThemeDrafts(env,accountId); }
+  catch { /* The starter store stays usable even if draft storage is offline. */ }
   return response({
     ok:true,source:'studio_cms_site_read_model',
     store:{visibility:'unpublished',url:null,domain:null,company_name:null},
-    performance:emptyPerformance,active_theme:null,draft_themes:[],
+    performance:emptyPerformance,active_theme:null,draft_themes:drafts,
     preview_theme:null,pages:[],cms_connected:cmsConnected,setup_required:true,
   });
 }

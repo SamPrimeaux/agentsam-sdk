@@ -46,5 +46,9 @@ test('staged product catalog and all three original preview entrypoints exist',(
   assert.equal(entry.purchasable,false);
   assert.equal(entry.state,'preview_only');
   assert.match(entry.preview_url,/^\/themes\/[^/]+\/demo\/$/);
+  assert.match(entry.thumbnail_url,/^\/themes\/[^/]+\/demo\//);
+  assert.ok(existsSync(path.join(studio,'.output/public',entry.thumbnail_url.slice(1))),
+    'Missing source-derived image for '+entry.slug);
+
  }
 });
