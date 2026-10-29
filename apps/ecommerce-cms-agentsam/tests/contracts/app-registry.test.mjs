@@ -21,6 +21,7 @@ test("bundled Apps resolve to self-contained contracts and implementation paths"
     "growth",
     "completeful",
     "resend",
+    "form-studio",
   ]);
 
   for (const entry of registry.apps) {
