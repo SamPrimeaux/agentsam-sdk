@@ -1,0 +1,62 @@
+{
+  "schema": "agentsam.cms-presets.v1",
+  "owner": "form-studio",
+  "presets": [
+    {
+      "key": "basic",
+      "kind": "form",
+      "title": "Contact / inquiry",
+      "description": "Name, email and message.",
+      "icon": "message-square",
+      "required_capability": "forms.create"
+    },
+    {
+      "key": "volunteer",
+      "kind": "form",
+      "title": "Volunteer interest",
+      "description": "Capture volunteers and their interests.",
+      "icon": "heart-handshake",
+      "required_capability": "forms.create"
+    },
+    {
+      "key": "newsletter",
+      "kind": "form",
+      "title": "Newsletter signup",
+      "description": "Explicit consent and email confirmation.",
+      "icon": "mail",
+      "required_capability": "forms.create"
+    },
+    {
+      "key": "application",
+      "kind": "form",
+      "title": "Application",
+      "description": "Multi-step application with conditional fields.",
+      "icon": "clipboard-list",
+      "required_capability": "forms.create"
+    },
+    {
+      "key": "information",
+      "kind": "modal",
+      "title": "Information popup",
+      "description": "Reusable content modal with configurable action.",
+      "icon": "info",
+      "required_capability": "modals.create"
+    },
+    {
+      "key": "donation",
+      "kind": "modal",
+      "title": "Donation popup",
+      "description": "Brand-aware donation flow linked to a provider.",
+      "icon": "heart",
+      "required_capability": "modals.create"
+    },
+    {
+      "key": "event-checkout",
+      "kind": "checkout",
+      "title": "Event checkout",
+      "description": "Server-priced tickets, registration fields and payment.",
+      "icon": "ticket",
+      "required_capability": "checkouts.create"
+    }
+  ]
+}
