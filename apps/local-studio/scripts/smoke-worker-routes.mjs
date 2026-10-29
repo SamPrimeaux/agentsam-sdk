@@ -65,14 +65,18 @@ try {
   }
   if (!ready) throw new Error('local_worker_not_ready');
   for (const [pathname, allowed] of [
-    ['/admin/cad', [200]],
+    ['/admin/cad', [200, 302]],
     ['/admin/agentsam', [200, 302]],
     ['/admin/products', [200]],
   ]) {
     const response = await request(pathname);
     const payload = await response.text();
+    const loginTarget = response.status === 302
+      ? new URL(response.headers.get('location') || '/', base) : null;
     if (!allowed.includes(response.status) ||
-        (response.status === 200 && !payload.toLowerCase().includes('<!doctype html'))) {
+        (response.status === 200 && !payload.toLowerCase().includes('<!doctype html')) ||
+        (loginTarget && (loginTarget.pathname !== '/auth/login' ||
+          loginTarget.searchParams.get('next') !== pathname))) {
       throw new Error(`${pathname} returned ${response.status}: ${payload.slice(0, 350)}`);
     }
     console.log(`PASS ${pathname}: ${response.status}`);
