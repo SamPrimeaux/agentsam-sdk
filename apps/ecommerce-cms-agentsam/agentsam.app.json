@@ -274,5 +274,104 @@
       "index": "admin/_spa/index.html",
       "scope_asset_urls": true
     }
-  }
+  },
+  "storefront_embeds": [
+    {
+      "key": "announcement_bar",
+      "name": "Announcement bar",
+      "icon": "megaphone",
+      "tagline": "Show a reusable storewide notice or offer.",
+      "category": "Marketing",
+      "capabilities": [
+        "cms.embed.render"
+      ],
+      "surfaces": [
+        "storefront_embed",
+        "cms_block"
+      ],
+      "permissions": [
+        "Read your public brand settings"
+      ],
+      "default_config": {
+        "enabled": false,
+        "placement": "top",
+        "trigger": "immediate",
+        "heading": "A thoughtful update",
+        "subtitle": "Discover what is new in the studio.",
+        "button_label": "Explore",
+        "button_href": "#collection-tab",
+        "accent": "#8b181b",
+        "background": "#141414",
+        "delay_ms": 0,
+        "dismissible": true
+      }
+    },
+    {
+      "key": "announcement_modal",
+      "name": "Announcement popup",
+      "icon": "megaphone",
+      "tagline": "A timed or on-demand announcement overlay with a call to action.",
+      "category": "Marketing",
+      "capabilities": [
+        "cms.embed.render"
+      ],
+      "surfaces": [
+        "storefront_embed",
+        "cms_block"
+      ],
+      "permissions": [
+        "Read public site settings"
+      ],
+      "default_config": {
+        "enabled": false,
+        "placement": "center",
+        "trigger": "delay",
+        "heading": "An Atelier announcement",
+        "subtitle": "Discover our upcoming collection.",
+        "button_label": "Explore the collection",
+        "button_href": "#collection-tab",
+        "accent": "#8b181b",
+        "background": "#171717",
+        "delay_ms": 3000,
+        "dismissible": true
+      }
+    },
+    {
+      "key": "contact_form",
+      "name": "Contact form",
+      "icon": "mail",
+      "tagline": "Collect messages with editable fields and consent.",
+      "category": "Forms",
+      "capabilities": [
+        "form.submit"
+      ],
+      "surfaces": [
+        "storefront_embed",
+        "cms_block"
+      ],
+      "permissions": [
+        "Store submitted contact details"
+      ],
+      "default_config": {
+        "enabled": false,
+        "placement": "inline",
+        "trigger": "manual",
+        "heading": "Contact the Atelier",
+        "subtitle": "Send us a note.",
+        "button_label": "Send message",
+        "accent": "#8b181b",
+        "background": "#171717",
+        "required_fields": [
+          "email",
+          "first_name"
+        ],
+        "fields": [
+          "first_name",
+          "email",
+          "message"
+        ],
+        "delay_ms": 0
+      }
+    }
+  ]
 }
