@@ -65,8 +65,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
 
   function assetFromLocation() {
     const raw = new URL(location.href).searchParams.get('asset');
-    const id = Number(raw);
-    return raw && Number.isSafeInteger(id) && id > 0 ? id : null;
+    return raw && /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/.test(raw) ? raw : null;
   }
 
   function updateDetailUrl(id, mode = 'push') {
@@ -81,7 +80,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     const serial = ++detailFetchSerial;
     if (!id) { closeDrawer({ updateHistory: false }); return; }
     try {
-      const inPage = assets.find(asset => Number(asset.id) === id);
+      const inPage = assets.find(asset => String(asset.id) === id);
       let asset = inPage;
       if (!asset) {
         const result = await adminFetch(`/api/admin/media/${id}`);
@@ -384,7 +383,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
         switch (action.dataset.mediaAction) {
           case 'view': openDrawer(asset); break;
           case 'edit': openDrawer(asset); els.fieldFilename?.focus(); break;
-          case 'gallery': if (!selectedIds.has(Number(id))) toggleSelection(id, false); openGalleryDialog(); break;
+          case 'gallery': if (!selectedIds.has(String(id))) toggleSelection(id, false); openGalleryDialog(); break;
           case 'download': if (asset) {
             const a = document.createElement('a'); a.href = mediaUrl(asset); a.download = asset.filename || 'image'; a.rel = 'noopener'; document.body.append(a); a.click(); a.remove();
           } break;
@@ -469,8 +468,8 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       else if (action === "optimize") void runBatchAction("optimize");
       else if (action === "seo") {
         if (selectedIds.size === 1) {
-          const id = Number([...selectedIds][0]);
-          const asset = assets.find((item) => Number(item.id) === id);
+          const id = String([...selectedIds][0]);
+          const asset = assets.find((item) => String(item.id) === id);
           if (asset) {
             openDrawer(asset);
             setInspectorTab("seo");
@@ -732,27 +731,27 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
   }
 
   function toggleSelection(id, range = false) {
-    const numericId = Number(id);
-    if (!Number.isInteger(numericId)) return;
+    const assetId = String(id);
+    if (!assetId) return;
 
     if (range && lastSelectedId != null) {
-      const ordered = assets.map((asset) => Number(asset.id));
-      const from = ordered.indexOf(Number(lastSelectedId));
-      const to = ordered.indexOf(numericId);
+      const ordered = assets.map((asset) => String(asset.id));
+      const from = ordered.indexOf(String(lastSelectedId));
+      const to = ordered.indexOf(assetId);
       if (from !== -1 && to !== -1) {
         const start = Math.min(from, to);
         const end = Math.max(from, to);
         for (const selectedId of ordered.slice(start, end + 1)) selectedIds.add(selectedId);
       } else {
-        selectedIds.add(numericId);
+        selectedIds.add(assetId);
       }
-    } else if (selectedIds.has(numericId)) {
-      selectedIds.delete(numericId);
+    } else if (selectedIds.has(assetId)) {
+      selectedIds.delete(assetId);
     } else {
-      selectedIds.add(numericId);
+      selectedIds.add(assetId);
     }
 
-    lastSelectedId = numericId;
+    lastSelectedId = assetId;
     renderGrid();
     renderBatchBar();
     emitSelection();
@@ -807,7 +806,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
   }
 
   function selectCurrentPage() {
-    assets.forEach((asset) => selectedIds.add(Number(asset.id)));
+    assets.forEach((asset) => selectedIds.add(String(asset.id)));
     renderGrid();
     renderBatchBar();
     emitSelection();
@@ -959,10 +958,10 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       list
         .map(
           (a) => `
-      <article class="media-item${selectedIds.has(Number(a.id)) ? " is-selected" : ""}${sortMode === "manual" ? " is-sortable" : ""}" draggable="${sortMode === "manual" ? "true" : "false"}" data-id="${a.id}" data-status="${a.status || "ready"}" tabindex="0" role="button" aria-label="Open ${a.filename}">
+      <article class="media-item${selectedIds.has(String(a.id)) ? " is-selected" : ""}${sortMode === "manual" ? " is-sortable" : ""}" draggable="${sortMode === "manual" ? "true" : "false"}" data-id="${a.id}" data-status="${a.status || "ready"}" tabindex="0" role="button" aria-label="Open ${a.filename}">
         <div class="media-item-thumb">
-          <button type="button" class="media-select-toggle${selectedIds.has(Number(a.id)) ? " is-selected" : ""}" data-media-select="${a.id}" aria-label="${selectedIds.has(Number(a.id)) ? "Deselect" : "Select"} ${a.filename}" aria-pressed="${selectedIds.has(Number(a.id)) ? "true" : "false"}">
-            ${selectedIds.has(Number(a.id)) ? "✓" : ""}
+          <button type="button" class="media-select-toggle${selectedIds.has(String(a.id)) ? " is-selected" : ""}" data-media-select="${a.id}" aria-label="${selectedIds.has(String(a.id)) ? "Deselect" : "Select"} ${a.filename}" aria-pressed="${selectedIds.has(String(a.id)) ? "true" : "false"}">
+            ${selectedIds.has(String(a.id)) ? "✓" : ""}
           </button>
           <button type="button" class="media-card-menu-trigger" data-media-actions="${a.id}" aria-label="Actions for ${escapeHtml(a.filename)}" aria-haspopup="menu" aria-expanded="false">⋮</button>
           <div class="media-card-menu" role="menu" aria-label="Asset actions" hidden>
@@ -1055,7 +1054,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       await adminFetch("/api/admin/media/reorder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: [{ id: Number(id), folder, display_order: order }] }),
+        body: JSON.stringify({ items: [{ id: String(id), folder, display_order: order }] }),
       });
       if (activeFolder && activeFolder !== folder) {
         await load();
@@ -1494,7 +1493,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
 
   function navigateDrawer(delta) {
     if (!selected || !assets.length) return;
-    const index = assets.findIndex((asset) => Number(asset.id) === Number(selected.id));
+    const index = assets.findIndex((asset) => String(asset.id) === String(selected.id));
     if (index < 0) return;
     const next = assets[index + delta];
     if (next) openDrawer(next, { historyMode: 'replace' });
@@ -1561,9 +1560,9 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
         els.note.style.display = "block";
         els.note.textContent = "Applied " + fields.length + " approved SEO field" + (fields.length === 1 ? "" : "s") + ".";
       }
-      const selectedId = Number(selected.id);
+      const selectedId = String(selected.id);
       await load();
-      const refreshed = assets.find((asset) => Number(asset.id) === selectedId);
+      const refreshed = assets.find((asset) => String(asset.id) === selectedId);
       if (refreshed) {
         openDrawer(refreshed);
         setInspectorTab("seo");
@@ -1584,7 +1583,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
     try {
       const result = await adminFetch("/api/admin/media/batch", {
         method: "POST",
-        body: JSON.stringify({ ids: [Number(selected.id)], action }),
+        body: JSON.stringify({ ids: [String(selected.id)], action }),
       });
       if (els.note) {
         els.note.className = "admin-note success";
@@ -1594,7 +1593,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
           : "Applied safe metadata suggestions to this asset.";
       }
       await load();
-      const refreshed = assets.find((asset) => Number(asset.id) === Number(selected?.id));
+      const refreshed = assets.find((asset) => String(asset.id) === Number(selected?.id));
       if (refreshed) openDrawer(refreshed);
       return result;
     } catch (error) {
@@ -1792,7 +1791,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       });
       selected = data.asset;
       await load();
-      const refreshed = assets.find((asset) => Number(asset.id) === Number(data.asset?.id)) || data.asset;
+      const refreshed = assets.find((asset) => String(asset.id) === Number(data.asset?.id)) || data.asset;
       openDrawer(refreshed);
     } catch (err) {
       alert(err.message);
@@ -1869,7 +1868,7 @@ import { createMediaAssetWorkbench } from "/admin/workbench/media-asset-workbenc
       }
       if (!res.ok) throw new Error(data?.error || "Upload failed (HTTP " + res.status + ")");
       const n = data.assets?.length || 0;
-      const uploadedIds = (data.assets || []).map((asset) => Number(asset.id)).filter(Number.isInteger);
+      const uploadedIds = (data.assets || []).map((asset) => String(asset.id)).filter(Number.isInteger);
       if (albumId && uploadedIds.length) await addIdsToAlbum(uploadedIds, albumId);
       const processing = (data.assets || []).some((a) => a.status === "processing");
       els.note.textContent = processing
