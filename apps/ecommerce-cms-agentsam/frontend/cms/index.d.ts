@@ -33,3 +33,10 @@ export declare function renderThemePage(...args: any[]): string;
 export declare function validateThemeProject(project: unknown): unknown;
 
 export { ECOMMERCE_CMS_CAPABILITIES, assertEcommerceCmsAuthoringContract } from './capabilities.mjs';
+
+export declare const FORM_STUDIO_VERSION: string;
+export declare const FORM_STUDIO_KINDS: readonly string[];
+export declare function createFormStudioComponent(React: { createElement: (...args: any[]) => any; useState: any; useEffect: any }): any;
+export declare function assertFormStudioAdapter(adapter: Record<string, unknown>): Record<string, unknown>;
+export declare function normalizeStudioResource(resource: Record<string, unknown>): Record<string, unknown>;
+export declare function filterStudioResources(resources: any[], filters?: {kind?:string; status?:string; search?:string}): any[];
