@@ -266,6 +266,6 @@ export function createFormStudioComponent(React) {
                   disabled: !editable }),
                 input("Description", { value: doc.description || "",
                   onChange: e => patch({ description: e.target.value }), disabled: !editable }, true),
-                h("p", { className: "afs-muted" }, "The website, form submissions and payment provider remain managed by the host."))))));
+                h("p", { className: "afs-muted" }, "The website, form submissions and payment provider remain managed by the host.")))));
   };
 }
