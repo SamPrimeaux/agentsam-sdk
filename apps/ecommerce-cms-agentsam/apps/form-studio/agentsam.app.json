@@ -1,0 +1,40 @@
+{
+  "schema": "agentsam.app.v1",
+  "id": "form-studio",
+  "name": "Form & Modal Studio",
+  "kind": "app",
+  "role": "content-studio",
+  "category": "cms",
+  "status": "bundled",
+  "routes": [
+    "/admin/forms"
+  ],
+  "provides": [
+    "cms.form.author",
+    "cms.modal.author",
+    "cms.checkout.configure",
+    "cms.form.publish",
+    "cms.form.preview",
+    "cms.presets.list"
+  ],
+  "implementation": {
+    "frontend": [
+      "frontend/form-studio/index.mjs",
+      "frontend/form-studio/styles.css"
+    ],
+    "presets": "apps/form-studio/presets.json"
+  },
+  "adapter_contract": "frontend/form-studio/README.md",
+  "navigation": {
+    "placement": "cms",
+    "label": "Forms & Modals"
+  },
+  "capabilities": {
+    "forms": "read-write",
+    "modals": "adapter-dependent",
+    "checkout": "adapter-dependent",
+    "submissions": "source-owned",
+    "payments": "provider-owned"
+  },
+  "notes": "Reusable interface only. Host owns data, payments, published versions, auth, resource permissions, and tenant scoping. No customer-specific code or schema migrations."
+}
