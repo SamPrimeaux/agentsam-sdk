@@ -317,7 +317,10 @@ document.getElementById('platform-product-editor').addEventListener('submit', as
   finally { button.disabled = false; }
 });
 if (productView === 'collections') void refreshCollections();
-if (productView === 'platform') void refreshPlatformProducts();
+if (productView === 'platform') {
+  document.title = 'Platform products — AgentSam';
+  void refreshPlatformProducts();
+}
 </script>
 </body>
 </html>
