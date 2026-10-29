@@ -297,6 +297,12 @@ async function refreshPlatformProducts() {
 }
 document.getElementById('platform-product-search').addEventListener('input', renderPlatformProducts);
 document.getElementById('platform-product-kind').addEventListener('change', renderPlatformProducts);
+document.getElementById('platform-product-collection').addEventListener('change', renderPlatformProducts);
+document.querySelector('#platform-product-editor [name="thumbnail_url"]').addEventListener('input', event => {
+  if (!editingPlatformProduct) return;
+  const preview = { ...editingPlatformProduct, thumbnail_url: event.target.value.trim() };
+  document.getElementById('platform-editor-preview').replaceChildren(platformIcon(preview, 'platform-editor-icon'));
+});
 document.getElementById('platform-editor-close').addEventListener('click', () => { document.getElementById('platform-product-editor').hidden = true; editingPlatformProduct = null; });
 document.getElementById('platform-product-editor').addEventListener('submit', async event => {
   event.preventDefault(); if (!editingPlatformProduct) return;
