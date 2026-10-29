@@ -69,6 +69,7 @@ import { handleStudioSitesOverview } from "./studio-sites-overview.js";
 import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
 import { servePackagedConsole } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
+import { handlePlatformMediaRead } from "./platform-media-library.js";
 import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
 
 const APP = localStudioApp;
