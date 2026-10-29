@@ -37,17 +37,57 @@ renderShell('/admin/products', `
     </form>
     <p id="collections-status" role="status"></p><div id="collections-list" class="admin-card"></div>
   </section>
-  <section id="platform-products" hidden>
-    <h2>Platform products</h2><p>Saved products from your account and registered repositories. Release versions remain managed by their release workflow.</p>
-    <p id="platform-status" role="status"></p><div id="platform-list" class="admin-card"></div>
-    <form id="platform-product-editor" class="product-card" hidden>
-      <h3 id="platform-product-title">Product details</h3>
-      <label>Name<input name="name" maxlength="160" required></label>
-      <label>Description<textarea name="description" rows="3"></textarea></label>
-      <label>Collection<input name="collection" maxlength="120"></label>
-      <label>Image URL<input name="thumbnail_url" type="text"></label>
-      <button class="btn primary" type="submit">Save product details</button>
-      <button class="btn ghost" type="button" id="platform-editor-close">Close</button>
+  <section id="platform-products" class="platform-catalog" hidden>
+    <div class="platform-catalog-heading">
+      <div>
+        <p class="platform-eyebrow">DIGITAL PRODUCT LIBRARY</p>
+        <h2>Platform products</h2>
+        <p>Manage applications, templates, themes and reusable tools with the same catalog experience as your store products. Release versions remain managed by their release workflow.</p>
+      </div>
+      <span id="platform-product-count" class="platform-count" aria-live="polite"></span>
+    </div>
+    <div class="platform-catalog-controls">
+      <label class="platform-search-label" for="platform-product-search">Search products
+        <input type="search" id="platform-product-search" placeholder="Search name, package or collection…" autocomplete="off">
+      </label>
+      <label for="platform-product-kind">Product type
+        <select id="platform-product-kind"><option value="all">All product types</option></select>
+      </label>
+    </div>
+    <p id="platform-status" role="status" aria-live="polite"></p>
+    <div id="platform-list" class="admin-card platform-catalog-card">
+      <div class="platform-table-scroll">
+        <table class="admin-table platform-product-table">
+          <thead><tr><th>Product</th><th>Type</th><th>Collection</th><th>Status</th><th>Version</th><th><span class="platform-visually-hidden">Action</span></th></tr></thead>
+          <tbody id="platform-products-body"><tr><td colspan="6" class="admin-empty">Loading products…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <form id="platform-product-editor" class="product-card platform-product-editor" hidden>
+      <div class="platform-editor-header">
+        <div>
+          <p class="platform-eyebrow">PRODUCT DETAILS</p>
+          <h3 id="platform-product-title">Edit product</h3>
+          <p>Presentation details only. Package identity, repository provenance and release status stay with their authoritative systems.</p>
+        </div>
+        <button class="btn ghost" type="button" id="platform-editor-close">Close</button>
+      </div>
+      <div class="platform-editor-layout">
+        <div class="platform-editor-visual">
+          <div id="platform-editor-preview" class="platform-editor-preview" aria-label="Product image preview"></div>
+          <p>Use an icon, product cover or verified R2/Cloudflare Images URL. This image appears in your catalog without changing the package.</p>
+        </div>
+        <div class="platform-editor-fields">
+          <label>Product name<input name="name" type="text" maxlength="160" required></label>
+          <label>Collection / grouping<input name="collection" type="text" maxlength="120" placeholder="e.g. Website Prebuilds"></label>
+          <label>Icon or cover image URL<input name="thumbnail_url" type="url" maxlength="2048" placeholder="https://assets.example.com/products/cover.webp"></label>
+          <label>Description<textarea name="description" maxlength="8000" rows="5" placeholder="What does this product help customers build or accomplish?"></textarea></label>
+        </div>
+      </div>
+      <div class="platform-editor-actions">
+        <span id="platform-editor-meta"></span>
+        <button class="btn primary" type="submit">Save product details</button>
+      </div>
     </form>
   </section>
   <div class="admin-card" id="store-products-table">
