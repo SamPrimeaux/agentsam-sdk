@@ -54,6 +54,7 @@ import {
 import { planProductAssetOptimization } from "../assets/product-optimize.js";
 import { groupProductInventory, resolveProductSource, validateInventoryAdjustment } from "../../packages/agentsam-merch/src/product-spine.js";
 import { handleAdminCmsApi } from "../cms/api.js";
+import { queryNewsletterSubscribers } from "../storefront/newsletter-admin.js";
 import { getFinanceAnalytics } from "./analytics-finance.js";
 import { getHealthAnalytics } from "./analytics-health.js";
 import { fetchCloudflareLiveLogs } from "./analytics-live-logs.js";
@@ -216,9 +217,9 @@ async function overview(request, env) {
       env.DB.prepare(`SELECT COUNT(*) AS n FROM products`).first(),
       env.DB.prepare(`SELECT COALESCE(SUM(inventory_qty), 0) AS n FROM product_variants`).first(),
       env.DB.prepare(`SELECT COUNT(*) AS n FROM product_variants WHERE inventory_qty <= 3`).first(),
-      env.DB.prepare(`SELECT COUNT(*) AS n FROM newsletter_subscribers`).first(),
+      env.DB.prepare(`SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE status = 'subscribed'`).first(),
       env.DB.prepare(
-        `SELECT email, source_page, created_at FROM newsletter_subscribers ORDER BY id DESC LIMIT 5`
+        `SELECT email, source_path AS source_page, status, created_at FROM newsletter_subscribers WHERE status = 'subscribed' ORDER BY created_at DESC LIMIT 5`
       ).all(),
       env.DB.prepare(`SELECT COUNT(*) AS n FROM orders`).first(),
     ]);
@@ -687,15 +688,6 @@ async function getOrder(request, env, id) {
   return json({ ok: true, order, items });
 }
 
-// ----- Subscribers -----
-
-async function listSubscribers(request, env) {
-  const { results } = await env.DB.prepare(
-    `SELECT id, email, source_page, created_at FROM newsletter_subscribers ORDER BY id DESC LIMIT 500`
-  ).all();
-  return json({ ok: true, subscribers: results });
-}
-
 // ----- Router -----
 
 export async function handleAdminApi(request, env, url, executionCtx = null, trustedSessionUser = null) {
@@ -809,7 +801,7 @@ export async function handleAdminApi(request, env, url, executionCtx = null, tru
   if (path === "/api/admin/orders" && method === "GET") return listOrders(request, env);
   let orderMatch = path.match(/^\/api\/admin\/orders\/(\d+)$/);
   if (orderMatch && method === "GET") return getOrder(request, env, orderMatch[1]);
-  if (path === "/api/admin/subscribers" && method === "GET") return listSubscribers(request, env);
+  if (path === "/api/admin/subscribers" && method === "GET") return json({ ok: true, ...await queryNewsletterSubscribers(env, url) });
 
   if (path === "/api/admin/brand" && method === "GET") return getBrandWorkspace(env, { includeAssets: url.searchParams.get("include_assets") !== "0" });
   if (path === "/api/admin/brand/assets" && method === "GET") return searchBrandAssets(request, env);

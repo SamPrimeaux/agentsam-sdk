@@ -225,7 +225,8 @@ function renderCommunity(section) {
 function renderNewsletter(section) {
   const copy = requiredBlock(section, "copy.section-heading").content;
   const form = requiredBlock(section, "form.email").content;
-  return `<section class="hc-section hc-newsletter" data-h-section="${escapeHtml(section.id)}"><div class="h-container hc-newsletter__inner"><div><p class="h-eyebrow">First access</p><h2>${escapeHtml(copy.title)}</h2><p>${escapeHtml(copy.body)}</p></div><form action="/api/newsletter" method="post"><label class="sr-only" for="hc-email">Email address</label><input id="hc-email" name="email" type="email" required placeholder="${escapeHtml(form.placeholder)}"><button type="submit">${escapeHtml(form.buttonLabel)}</button></form></div></section>`;
+  const formId = `hc-email-${String(section.id).replace(/[^a-z0-9_-]/gi, "-")}`;
+  return `<section class="hc-section hc-newsletter" data-h-section="${escapeHtml(section.id)}"><div class="h-container hc-newsletter__inner"><div><p class="h-eyebrow">First access</p><h2>${escapeHtml(copy.title)}</h2><p>${escapeHtml(copy.body)}</p></div><form data-newsletter-form data-newsletter-source="cms_block" data-newsletter-ref="${escapeHtml(section.id)}" data-consent-text="Submitted the ${escapeHtml(copy.title)} newsletter signup form."><label class="sr-only" for="${escapeHtml(formId)}">Email address</label><input id="${escapeHtml(formId)}" name="email" type="email" autocomplete="email" required placeholder="${escapeHtml(form.placeholder)}"><button type="submit">${escapeHtml(form.buttonLabel)}</button></form></div></section>`;
 }
 
 const renderers = new Map([
