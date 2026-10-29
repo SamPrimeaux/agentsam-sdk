@@ -53,8 +53,8 @@ export function createFormStudioComponent(React) {
     h("span", null, label), h(multiline ? "textarea" : "input", {
       ...props, className: "afs-input", rows: multiline ? 3 : undefined,
     }));
-  const press = (label, onClick, className = "", disabled = false) =>
-    h("button", { type: "button", onClick, disabled, className: "afs-button " + className }, label);
+  const press = (label, onClick, className = "", disabled = false, key = undefined) =>
+    h("button", { type: "button", key, onClick, disabled, className: "afs-button " + className }, label);
   const normalizedStatus = (status) =>
     ["active", "published"].includes(status) ? "Published" : status === "archived" ? "Archived" : "Draft";
 
@@ -195,7 +195,7 @@ export function createFormStudioComponent(React) {
       !doc ? h("div", { className: "afs-listview" },
         h("div", { className: "afs-filter-row" },
           h("nav", { className: "afs-pills", "aria-label": "Resource type" },
-            kinds.map(([k, label]) => press(label, () => setKind(k), kind === k ? "selected" : "quiet"))),
+            kinds.map(([k, label]) => press(label, () => setKind(k), kind === k ? "selected" : "quiet", false, k))),
           h("select", { className: "afs-input afs-filter", value: statusFilter, "aria-label": "Filter status",
             onChange: e => setStatusFilter(e.target.value) },
             ["all", "published", "draft"].map(v => h("option", { value: v, key: v }, v === "all" ? "Any status" : v))),
@@ -226,15 +226,15 @@ export function createFormStudioComponent(React) {
           h("strong", null, "Structure"),
           h("nav", { className: "afs-pills", "aria-label": "Editor mode" },
             ["build", "design", "settings"].map(p => press(p[0].toUpperCase() + p.slice(1),
-              () => setPanel(p), panel === p ? "selected" : "quiet"))),
+              () => setPanel(p), panel === p ? "selected" : "quiet", false, p))),
           doc.kind === "form" && panel === "build"
             ? h("div", { className: "afs-structure" },
               doc.fields.map(f => press(f.label || "Untitled", () => setSelectedField(f.id),
-                selectedField === f.id ? "selected afs-structure-item" : "quiet afs-structure-item")),
+                selectedField === f.id ? "selected afs-structure-item" : "quiet afs-structure-item", false, f.id)),
               h("div", { className: "afs-add-fields" },
                 h("small", null, "ADD FIELD"),
                 fields.map(([type, label]) =>
-                  press("+ " + label, () => addField(type), "quiet", !editable))))
+                  press("+ " + label, () => addField(type), "quiet", !editable, type))))
             : h("div", { className: "afs-structure" },
               h("p", null, doc.kind === "form" ? "Reusable appearance & behavior" :
                 "This resource stays linked to its existing published runtime."),
@@ -243,7 +243,7 @@ export function createFormStudioComponent(React) {
         h("div", { className: "afs-canvas" },
           h("div", { className: "afs-devicebar" },
             ["desktop", "tablet", "mobile"].map(d => press(d[0].toUpperCase() + d.slice(1),
-              () => setDevice(d), device === d ? "selected" : "quiet"))),
+              () => setDevice(d), device === d ? "selected" : "quiet", false, d))),
           doc.kind === "form" ?
             h("div", { className: "afs-form-preview afs-" + device, style: {
               "--afs-preview-accent": appearance.accent || "#7c3aed",
