@@ -1730,7 +1730,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     const result = await createThemeProject(env, context.accountId, body.project);
     return json(result, { status: result.status || (result.ok ? 201 : 400) });
   }
-  const themeProjectMatch = path.match(/^\\/api\\/admin\\/cms\\/theme-projects\\/([A-Za-z0-9_-]{1,160})$/);
+  const themeProjectMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})$/);
   if (themeProjectMatch && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     const result = await getThemeProject(env, context.accountId, themeProjectMatch[1]);
@@ -1743,7 +1743,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     const result = await saveThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version);
     return json(result, { status: result.status || (result.ok ? 200 : 400) });
   }
-  const themeInstallMatch = path.match(/^\\/api\\/admin\\/cms\\/themes\\/([a-z][a-z0-9-]{0,63})\\/install$/);
+  const themeInstallMatch = path.match(/^\/api\/admin\/cms\/themes\/([a-z][a-z0-9-]{0,63})\/install$/);
   if (themeInstallMatch && method === "POST") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
