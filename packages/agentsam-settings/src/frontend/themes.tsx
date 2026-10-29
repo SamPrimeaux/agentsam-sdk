@@ -44,10 +44,11 @@ export function SettingsThemeGallery({ themes, host, onChanged = () => {} }: { t
           <p className="text-xs text-muted-foreground">{theme.status || theme.source}</p>
           <div className="flex flex-wrap gap-2">
             {theme.previewUrl && <button className={button} onClick={() => setPreview(theme)}><Expand size={14} />Preview</button>}
-            {host.activateTheme && theme.capabilities?.editable && <button className={button} disabled={busy !== null || theme.active} onClick={() => void run(theme.id, () => host.activateTheme?.(theme.id))}>Use theme</button>}
-            {host.editTheme && theme.capabilities?.editable && <button className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.editTheme?.(theme.id))}><Pencil size={14} />Edit</button>}
+            {host.installTheme && ['bundled', 'installed', 'workspace'].includes(theme.source || '') && theme.capabilities?.editable && <button className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.installTheme?.(theme.id))}><Plus size={14} />{theme.draftId ? 'Open draft' : 'Add to Drafts'}</button>}
+            {host.activateTheme && theme.source === 'cms-draft' && theme.capabilities?.editable && <button className={button} disabled={busy !== null || theme.active} onClick={() => void run(theme.id, () => host.activateTheme?.(theme.id))}>Use theme</button>}
+            {host.editTheme && ['cms-draft', 'local', 'imported'].includes(theme.source || '') && theme.capabilities?.editable && <button className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.editTheme?.(theme.id))}><Pencil size={14} />Edit draft</button>}
             {host.duplicateTheme && theme.capabilities?.duplicable && <button className={button} disabled={busy !== null} onClick={() => { setName(theme.name + ' revision'); setAuthor(theme); }}><Copy size={14} />Revise</button>}
-            {host.exportTheme && theme.source === 'local' && <button className={button} onClick={() => void run(theme.id, () => host.exportTheme?.(theme.id))}><Download size={14} />Export draft</button>}
+            {host.exportTheme && ['cms-draft', 'local', 'imported'].includes(theme.source || '') && <button className={button} onClick={() => void run(theme.id, () => host.exportTheme?.(theme.id))}><Download size={14} />Export draft</button>}
           </div>
         </div>
       </article>)}

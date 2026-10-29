@@ -1,6 +1,7 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
+import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject } from "./theme-project-store.mjs";
 import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows } from "./page-inventory.mjs";
 import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
@@ -1715,6 +1716,40 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     catch { return json({error:"Invalid JSON"}, {status:400}); }
     const result = await acceptGeneratedSection(env,generatedMatch[1],context.accountId,body);
     return json(result,{status:result.status || 200});
+  }
+
+  if (path === "/api/admin/cms/theme-projects" && method === "GET") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    const result = await listThemeProjects(env, context.accountId);
+    return json(result, { status: result.status || (result.ok ? 200 : 503) });
+  }
+  if (path === "/api/admin/cms/theme-projects" && method === "POST") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    let body;
+    try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const result = await createThemeProject(env, context.accountId, body.project);
+    return json(result, { status: result.status || (result.ok ? 201 : 400) });
+  }
+  const themeProjectMatch = path.match(/^\\/api\\/admin\\/cms\\/theme-projects\\/([A-Za-z0-9_-]{1,160})$/);
+  if (themeProjectMatch && method === "GET") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    const result = await getThemeProject(env, context.accountId, themeProjectMatch[1]);
+    return json(result, { status: result.status || (result.ok ? 200 : 404) });
+  }
+  if (themeProjectMatch && method === "PUT") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    let body;
+    try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const result = await saveThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version);
+    return json(result, { status: result.status || (result.ok ? 200 : 400) });
+  }
+  const themeInstallMatch = path.match(/^\\/api\\/admin\\/cms\\/themes\\/([a-z][a-z0-9-]{0,63})\\/install$/);
+  if (themeInstallMatch && method === "POST") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    let body;
+    try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const result = await installThemeDraft(env, context.accountId, themeInstallMatch[1], body);
+    return json(result, { status: result.status || (result.ok ? 201 : 400) });
   }
 
   if (path === "/api/admin/cms/themes" && method === "GET") {
