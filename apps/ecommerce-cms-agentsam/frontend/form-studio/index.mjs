@@ -35,7 +35,7 @@ export function filterStudioResources(resources, { kind = "all", status = "all",
   const q = String(search).trim().toLocaleLowerCase();
   return (resources || []).filter(r =>
     (kind === "all" || r.kind === kind) &&
-    (status === "all" || r.status === status) &&
+    (status === "all" || (status === "published" ? ["active", "published"].includes(r.status) : r.status === status)) &&
     (!q || (r.title + " " + (r.key || r.id)).toLocaleLowerCase().includes(q))
   );
 }
@@ -129,13 +129,14 @@ export function createFormStudioComponent(React) {
       if (!can(cap)) { setError("This editor is not connected to a writable " + doc.kind + " adapter."); return; }
       setBusy(true); setError(""); setNotice("");
       try {
+        let current = doc;
         if (dirty) {
-          const saved = await adapter.saveResource(doc);
-          setDoc(normalizeStudioResource(saved));
+          current = normalizeStudioResource(await adapter.saveResource(doc));
+          setDoc(current);
           setDirty(false);
         }
         if (publish) {
-          const published = await adapter.publishResource(doc);
+          const published = await adapter.publishResource(current);
           if (published) setDoc(normalizeStudioResource(published));
         }
         await refresh();
