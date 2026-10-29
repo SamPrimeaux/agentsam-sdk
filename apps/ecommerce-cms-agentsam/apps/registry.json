@@ -21,6 +21,11 @@
       "id": "resend",
       "contract": "apps/resend/agentsam.app.json",
       "bundled": true
+    },
+    {
+      "id": "form-studio",
+      "contract": "apps/form-studio/agentsam.app.json",
+      "bundled": true
     }
   ]
 }
