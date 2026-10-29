@@ -20,3 +20,6 @@ export { createCmsThemeEditorAdapter } from '../theme-editor/cms-adapter.mjs';
 export { createThemeEditorBridge, ThemeEditorCapabilityError } from '../theme-editor/bridge.mjs';
 export { createThemeProjectAdapter, renderThemePage, validateThemeProject } from '../theme-editor/project.mjs';
 export { ECOMMERCE_CMS_CAPABILITIES, assertEcommerceCmsAuthoringContract } from './capabilities.mjs';
+
+// CMS-side Form & Modal Studio is an installable app, not a tenant-specific UI.
+export { FORM_STUDIO_VERSION, FORM_STUDIO_KINDS, createFormStudioComponent, assertFormStudioAdapter, normalizeStudioResource, filterStudioResources } from '../form-studio/index.mjs';
