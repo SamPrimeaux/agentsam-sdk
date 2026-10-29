@@ -113,15 +113,24 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
 }
 
 /** Store is injected: IndexedDB, filesystem, SQLite or HTTP all share the same editing model. */
-export function createThemeProjectAdapter(project, store, { publish, resolveAssetBase = (base) => base } = {}) {
+export function createThemeProjectAdapter(project, store, { publish, resolveAssetBase = (base) => base, listMedia, uploadMedia } = {}) {
   let state = validateThemeProject(project);
   state.sectionTemplates ||= Object.fromEntries(state.pages.flatMap((p) => p.sections).map((s) => [s.schema.key, clone(s)]));
   const get = (slug) => { const p = state.pages.find((p) => p.slug === slug); if (!p) throw new Error('theme_page_not_found'); return p; };
   const section = (slug, key) => { const s = get(slug).sections.find((s) => s.key === key); if (!s) throw new Error('theme_section_not_found'); return s; };
-  const persist = async () => { state.updatedAt = new Date().toISOString(); await store.save(clone(state)); };
+  const persist = async () => {
+    const expectedVersion = Number(state.revision || 0);
+    const candidate = clone(state);
+    candidate.revision = expectedVersion + 1;
+    candidate.updatedAt = new Date().toISOString();
+    const saved = await store.save(candidate, { expectedVersion });
+    state = validateThemeProject(saved || candidate);
+    return clone(state);
+  };
   return {
     capabilities: { publish: Boolean(publish) },
     getProject: async () => clone(state),
+    getThemeIdentity: async () => ({ name: state.name, status: 'Draft' }),
     async updatePageSettings(slug, { name, title, tokens }) {
       if (typeof name !== 'string' || !name.trim() || typeof title !== 'string' || !title.trim()) throw new Error('theme_settings_invalid');
       state.name = name.trim(); get(slug).title = title.trim();
@@ -129,7 +138,16 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
       await persist(); return clone(state);
     },
     listPages: async () => state.pages.map(({ slug, title }) => ({ slug, title })),
-    getPage: async (slug) => clone(get(slug)),
+    getPage: async (slug) => {
+      const page = clone(get(slug));
+      page.sections = page.sections.map((item, index) => ({
+        ...item,
+        type: item.type || item.schema?.key || item.key,
+        preset: item.preset || item.schema?.key || item.key,
+        sort_order: item.sort_order ?? index,
+      }));
+      return page;
+    },
     getRegistry: async () => ({ pages: Object.fromEntries(state.pages.map((p) => [p.slug, { sections: { ...Object.fromEntries(Object.values(state.sectionTemplates).map((s) => [s.schema.key, s.schema])), ...Object.fromEntries(p.sections.map((s) => [s.key, s.schema])) } }])) }),
     resolvePreview: async (slug, draft) => { const p = draft || get(slug); return { html: renderThemePage(p, state.tokens, { baseUrl: p.assetBase ? await resolveAssetBase(p.assetBase) : undefined }) }; },
     async saveDraft(slug, key, content, expectedVersion) {
@@ -161,8 +179,9 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
     async removeBlock(slug, key, id) { const s = section(slug, key); s.content.__editor.blocks = s.content.__editor.blocks.filter((b) => b.id !== id); delete s.content[id]; await persist(); return {}; },
     async moveBlock(slug, key, id, index) { const s = section(slug, key); const blocks = s.content.__editor.blocks; const i = blocks.findIndex((b) => b.id === id); if (i < 0) throw new Error('theme_block_not_found'); const [b] = blocks.splice(i, 1); blocks.splice(index, 0, b); await persist(); return {}; },
     async publish(slug) { if (!publish) throw new Error('theme_publish_adapter_not_configured'); return publish(clone(state), slug); },
-    listMedia: async () => clone(state.media || []),
+    listMedia: async () => typeof listMedia === 'function' ? clone(await listMedia()) : clone(state.media || []),
     async uploadMedia(files) {
+      if (typeof uploadMedia === 'function') return uploadMedia(files);
       const assets = await Promise.all(files.map((file) => new Promise((resolve, reject) => {
         const reader = new FileReader(); reader.onerror = reject;
         reader.onload = () => resolve({ id: crypto.randomUUID(), filename: file.name, content_type: file.type, url: reader.result }); reader.readAsDataURL(file);

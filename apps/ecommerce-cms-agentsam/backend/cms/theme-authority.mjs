@@ -33,12 +33,39 @@ function current(row) {
   };
 }
 async function installed(env, accountId) {
-  const result = await env.DB.prepare(
-    "SELECT id, artifact_key, version, status, manifest_r2_key, metadata_json, source_ref, source_kind, created_at FROM cms_artifacts WHERE account_id=? AND artifact_type='theme' AND status='ready' ORDER BY created_at DESC"
-  ).bind(accountId).all();
-  return (result.results || []).filter(row => row.artifact_key.startsWith('theme/')).map(row => ({
-    ...row, slug: row.artifact_key.slice(6), metadata: parsed(row.metadata_json),
-  })).filter(row => VALID.test(row.slug));
+  const [artifactResult, projectResult] = await Promise.all([
+    env.DB.prepare(
+      "SELECT id, artifact_key, version, status, manifest_r2_key, metadata_json, source_ref, source_kind, created_at FROM cms_artifacts WHERE account_id=? AND artifact_type='theme' AND status='ready' ORDER BY created_at DESC"
+    ).bind(accountId).all(),
+    env.DB.prepare(
+      "SELECT inline_content_json FROM cms_globals WHERE account_id=? AND global_type='theme-project' AND status!='archived' ORDER BY updated_at DESC"
+    ).bind(accountId).all(),
+  ]);
+  const projectBySlug = new Map();
+  for (const row of projectResult.results || []) {
+    const project = parsed(row.inline_content_json, null);
+    if (project?.sourceThemeId && !projectBySlug.has(project.sourceThemeId)) {
+      projectBySlug.set(project.sourceThemeId, project);
+    }
+  }
+  const bySlug = new Map();
+  for (const row of artifactResult.results || []) {
+    if (!row.artifact_key.startsWith('theme/')) continue;
+    const slug = row.artifact_key.slice(6);
+    if (!VALID.test(slug)) continue;
+    const metadata = parsed(row.metadata_json);
+    const project = projectBySlug.get(slug);
+    if (!metadata.project_id && project?.id) metadata.project_id = project.id;
+    if (!metadata.preview_url && project?.sourcePreviewUrl) metadata.preview_url = project.sourcePreviewUrl;
+    const candidate = { ...row, slug, metadata };
+    const previous = bySlug.get(slug);
+    if (!previous || Boolean(candidate.metadata.project_id) && !Boolean(previous.metadata.project_id) ||
+        (Boolean(candidate.metadata.project_id) === Boolean(previous.metadata.project_id) &&
+          String(candidate.created_at || '') > String(previous.created_at || ''))) {
+      bySlug.set(slug, candidate);
+    }
+  }
+  return [...bySlug.values()];
 }
 function appearance(row, state) {
   const slug = row?.slug || DEFAULT;
@@ -56,8 +83,10 @@ function appearance(row, state) {
     state: slug === state.active ? 'active' : 'draft',
     preview_selected: slug === state.preview,
     editor_mode: 'canonical-cms',
-    preview_href: '/admin/theme-editor?slug=shop',
-    edit_href: '/admin/theme-editor?slug=shop',
+    preview_href: artifact?.metadata?.preview_url || '/admin/theme-editor?slug=shop',
+    edit_href: artifact?.metadata?.project_id
+      ? '/admin/theme-project-editor?project=' + encodeURIComponent(artifact.metadata.project_id)
+      : '/admin/theme-editor?slug=shop',
     review_ready: Boolean(state.reviewed[slug]),
     // Only the existing Heuristic renderer is connected to public page delivery.
     // A ready R2 bundle alone is never a publication authorization.
