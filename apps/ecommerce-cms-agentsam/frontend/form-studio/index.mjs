@@ -58,7 +58,7 @@ export function createFormStudioComponent(React) {
   const normalizedStatus = (status) =>
     ["active", "published"].includes(status) ? "Published" : status === "archived" ? "Archived" : "Draft";
 
-  return function FormStudio({ adapter, presets = [], onExit, title = "Forms & Modals" }) {
+  return function FormStudio({ adapter, presets = [], onExit, title = "Forms & Modals", initialResourceId = null }) {
     assertFormStudioAdapter(adapter);
     const [resources, setResources] = React.useState([]);
     const [kind, setKind] = React.useState("all");
@@ -80,11 +80,24 @@ export function createFormStudioComponent(React) {
     }
     React.useEffect(() => {
       let active = true;
-      adapter.listResources().then((all) => {
-        if (active) setResources((all || []).map(normalizeStudioResource));
+      adapter.listResources().then(async (all) => {
+        if (!active) return;
+        const rows = (all || []).map(normalizeStudioResource);
+        setResources(rows);
+        if (initialResourceId) {
+          const ref = rows.find(row => row.id === initialResourceId);
+          if (ref) {
+            const item = normalizeStudioResource(await adapter.getResource(ref));
+            if (active) {
+              setDoc(item);
+              setSelectedField(item.fields[0]?.id || null);
+              setDirty(false);
+            }
+          }
+        }
       }).catch((e) => { if (active) setError(e.message || "Unable to load resources"); });
       return () => { active = false; };
-    }, [adapter]);
+    }, [adapter, initialResourceId]);
 
     const can = (key) => adapter.capabilities[key] === true;
     async function open(r) {
@@ -126,7 +139,12 @@ export function createFormStudioComponent(React) {
     async function save(publish = false) {
       if (!doc || busy) return;
       const cap = doc.kind + "s." + (publish ? "publish" : "edit");
-      if (!can(cap)) { setError("This editor is not connected to a writable " + doc.kind + " adapter."); return; }
+      if (!can(cap) || publishedFormWithoutStaging) {
+        setError(publishedFormWithoutStaging
+          ? "Published forms are read-only until this site's safe draft staging is connected."
+          : "This editor is not connected to a writable " + doc.kind + " adapter.");
+        return;
+      }
       setBusy(true); setError(""); setNotice("");
       try {
         let current = doc;
@@ -148,7 +166,12 @@ export function createFormStudioComponent(React) {
       kind, status: statusFilter, search: query,
     });
     const selected = doc?.fields.find((f) => f.id === selectedField);
-    const editable = doc && can(doc.kind + "s.edit");
+    // Current legacy form APIs overwrite published data on Save. Fail closed
+    // until the host implements a verified draft/publish boundary.
+    const publishedFormWithoutStaging = !!(doc && doc.kind === "form" &&
+      ["active", "published"].includes(doc.status) &&
+      !can("forms.safePublishedDraft"));
+    const editable = !!(doc && can(doc.kind + "s.edit") && !publishedFormWithoutStaging);
     const appearance = doc?.settings?.theme || {};
     const updateTheme = (patchValue) => patch({ settings: {
       ...doc.settings, theme: { ...appearance, ...patchValue },
@@ -164,7 +187,8 @@ export function createFormStudioComponent(React) {
           doc && h("span", { className: "afs-status" }, normalizedStatus(doc.status)),
           doc ? press("All resources", () => { setDoc(null); setDirty(false); setError(""); }, "quiet") : null,
           doc ? press("Save", () => save(false), "", busy || !dirty || !editable) : null,
-          doc ? press("Publish", () => save(true), "primary", busy || !can(doc.kind + "s.publish")) : null,
+          doc ? press("Publish", () => save(true), "primary",
+            busy || publishedFormWithoutStaging || !can(doc.kind + "s.publish")) : null,
           !doc ? press("Create", () => setCreating(!creating), "primary") : null)),
       error ? h("p", { className: "afs-alert", role: "alert" }, error) : null,
       notice ? h("p", { className: "afs-notice", role: "status" }, notice) : null,
@@ -243,6 +267,8 @@ export function createFormStudioComponent(React) {
               can(doc.kind + "s.openSource") ? press("Open current editor", () => adapter.openSource(doc)) : null)),
         h("aside", { className: "afs-right" },
           h("strong", null, "Inspector"),
+          publishedFormWithoutStaging
+            ? h("p", { className: "afs-muted" }, "Published form: preview only. Draft editing will be enabled when this site's versioned draft API is connected.") : null,
           doc.kind === "form" && panel === "build" && selected
             ? h("div", { className: "afs-inspector-controls" },
               input("Question label", { value: selected.label || "",
