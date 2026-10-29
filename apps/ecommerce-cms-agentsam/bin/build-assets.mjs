@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as bundle } from "esbuild";
+import { execFileSync } from "node:child_process";
 
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dest = path.join(app, "dist/assets");
@@ -15,6 +16,7 @@ const copy = async (from, to) => {
   await mkdir(path.dirname(to), { recursive: true });
   await cp(from, to, { recursive: true });
 };
+execFileSync(process.execPath, [source("scripts/sync-theme-embed-catalog.mjs")], { stdio: "inherit" });
 await rm(dest, { recursive: true, force: true });
 await mkdir(dest, { recursive: true });
 await copy(source("frontend/static"), path.join(dest, "admin"));

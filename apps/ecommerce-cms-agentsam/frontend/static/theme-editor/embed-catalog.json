@@ -1,0 +1,156 @@
+{
+  "schema": "agentsam.theme-embed-ui-catalog.v1",
+  "source": "package-manifests",
+  "preview_only": true,
+  "apps": [
+    {
+      "key": "announcement_bar",
+      "name": "Announcement bar",
+      "icon": "megaphone",
+      "tagline": "Show a reusable storewide notice or offer.",
+      "category": "Marketing",
+      "provider": "AgentSam Ecommerce + CMS",
+      "default_config": {
+        "enabled": false,
+        "placement": "top",
+        "trigger": "immediate",
+        "heading": "A thoughtful update",
+        "subtitle": "Discover what is new in the studio.",
+        "button_label": "Explore",
+        "button_href": "#collection-tab",
+        "accent": "#8b181b",
+        "background": "#141414",
+        "delay_ms": 0,
+        "dismissible": true
+      },
+      "surfaces": [
+        "storefront_embed",
+        "cms_block"
+      ]
+    },
+    {
+      "key": "announcement_modal",
+      "name": "Announcement popup",
+      "icon": "megaphone",
+      "tagline": "A timed or on-demand announcement overlay with a call to action.",
+      "category": "Marketing",
+      "provider": "AgentSam Ecommerce + CMS",
+      "default_config": {
+        "enabled": false,
+        "placement": "center",
+        "trigger": "delay",
+        "heading": "An Atelier announcement",
+        "subtitle": "Discover our upcoming collection.",
+        "button_label": "Explore the collection",
+        "button_href": "#collection-tab",
+        "accent": "#8b181b",
+        "background": "#171717",
+        "delay_ms": 3000,
+        "dismissible": true
+      },
+      "surfaces": [
+        "storefront_embed",
+        "cms_block"
+      ]
+    },
+    {
+      "key": "contact_form",
+      "name": "Contact form",
+      "icon": "mail",
+      "tagline": "Collect messages with editable fields and consent.",
+      "category": "Forms",
+      "provider": "AgentSam Ecommerce + CMS",
+      "default_config": {
+        "enabled": false,
+        "placement": "inline",
+        "trigger": "manual",
+        "heading": "Contact the Atelier",
+        "subtitle": "Send us a note.",
+        "button_label": "Send message",
+        "accent": "#8b181b",
+        "background": "#171717",
+        "required_fields": [
+          "email",
+          "first_name"
+        ],
+        "fields": [
+          "first_name",
+          "email",
+          "message"
+        ],
+        "delay_ms": 0
+      },
+      "surfaces": [
+        "storefront_embed",
+        "cms_block"
+      ]
+    },
+    {
+      "key": "newsletter_subscribe",
+      "name": "Email subscriptions",
+      "icon": "send",
+      "tagline": "Newsletter signups, name personalization and opt-in.",
+      "category": "Email",
+      "provider": "Email",
+      "default_config": {
+        "enabled": false,
+        "placement": "inline",
+        "trigger": "manual",
+        "heading": "The edit, in your inbox",
+        "subtitle": "Studio news, new releases and stories.",
+        "button_label": "Subscribe",
+        "accent": "#8b181b",
+        "background": "#0b0b0b",
+        "required_fields": [
+          "email",
+          "first_name"
+        ],
+        "fields": [
+          "first_name",
+          "email"
+        ],
+        "double_opt_in": true,
+        "delay_ms": 0,
+        "source_type": "form"
+      },
+      "surfaces": [
+        "storefront_embed",
+        "cms_block",
+        "automation"
+      ]
+    },
+    {
+      "key": "newsletter_modal",
+      "name": "Newsletter popup",
+      "icon": "mail-open",
+      "tagline": "A timed, scroll-triggered or exit-intent newsletter modal.",
+      "category": "Email",
+      "provider": "Email",
+      "default_config": {
+        "enabled": false,
+        "placement": "bottom-right",
+        "trigger": "delay",
+        "heading": "Take 15% Off Your First Order",
+        "subtitle": "Subscribe for private releases and early access.",
+        "button_label": "Join the list",
+        "accent": "#8b181b",
+        "background": "#151515",
+        "required_fields": [
+          "email",
+          "first_name"
+        ],
+        "fields": [
+          "first_name",
+          "email"
+        ],
+        "double_opt_in": true,
+        "dismissible": true,
+        "delay_ms": 3000,
+        "source_type": "popup"
+      },
+      "surfaces": [
+        "storefront_embed"
+      ]
+    }
+  ]
+}

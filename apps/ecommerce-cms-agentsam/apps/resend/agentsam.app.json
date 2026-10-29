@@ -55,5 +55,88 @@
       "email_provider_status"
     ],
     "notes": "Mailbox reads and sends reuse mail_mailboxes owner_user_id/owner_auth_email/access_json authorization. Email send is approval/confirmation gated."
-  }
+  },
+  "storefront_embeds": [
+    {
+      "key": "newsletter_subscribe",
+      "name": "Email subscriptions",
+      "icon": "send",
+      "tagline": "Newsletter signups, name personalization and opt-in.",
+      "category": "Email",
+      "capabilities": [
+        "email.contacts.sync",
+        "email.send"
+      ],
+      "surfaces": [
+        "storefront_embed",
+        "cms_block",
+        "automation"
+      ],
+      "permissions": [
+        "Save email addresses and consent",
+        "Send opt-in and welcome messages through a connected provider"
+      ],
+      "default_config": {
+        "enabled": false,
+        "placement": "inline",
+        "trigger": "manual",
+        "heading": "The edit, in your inbox",
+        "subtitle": "Studio news, new releases and stories.",
+        "button_label": "Subscribe",
+        "accent": "#8b181b",
+        "background": "#0b0b0b",
+        "required_fields": [
+          "email",
+          "first_name"
+        ],
+        "fields": [
+          "first_name",
+          "email"
+        ],
+        "double_opt_in": true,
+        "delay_ms": 0,
+        "source_type": "form"
+      }
+    },
+    {
+      "key": "newsletter_modal",
+      "name": "Newsletter popup",
+      "icon": "mail-open",
+      "tagline": "A timed, scroll-triggered or exit-intent newsletter modal.",
+      "category": "Email",
+      "capabilities": [
+        "email.contacts.sync",
+        "email.send"
+      ],
+      "surfaces": [
+        "storefront_embed"
+      ],
+      "permissions": [
+        "Save email addresses and consent",
+        "Send opt-in emails through a connected provider"
+      ],
+      "default_config": {
+        "enabled": false,
+        "placement": "bottom-right",
+        "trigger": "delay",
+        "heading": "Take 15% Off Your First Order",
+        "subtitle": "Subscribe for private releases and early access.",
+        "button_label": "Join the list",
+        "accent": "#8b181b",
+        "background": "#151515",
+        "required_fields": [
+          "email",
+          "first_name"
+        ],
+        "fields": [
+          "first_name",
+          "email"
+        ],
+        "double_opt_in": true,
+        "dismissible": true,
+        "delay_ms": 3000,
+        "source_type": "popup"
+      }
+    }
+  ]
 }
