@@ -64,22 +64,25 @@ try {
     await pause(500);
   }
   if (!ready) throw new Error('local_worker_not_ready');
-  for (const [pathname, allowed] of [
-    ['/admin/cad', [200, 302]],
-    ['/admin/agentsam', [200, 302]],
-    ['/admin/products', [200]],
+  for (const { pathname, allowed, redirectTo, redirectNext } of [
+    { pathname: '/admin/cad', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/cad' },
+    { pathname: '/admin/agentsam', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/agentsam' },
+    { pathname: '/admin/products', allowed: [302], redirectTo: '/admin/products/create' },
+    { pathname: '/sites?showcase=resolve', allowed: [302], redirectTo: '/auth/login', redirectNext: '/sites?showcase=resolve' },
   ]) {
     const response = await request(pathname);
     const payload = await response.text();
-    const loginTarget = response.status === 302
+    const target = response.status === 302
       ? new URL(response.headers.get('location') || '/', base) : null;
     if (!allowed.includes(response.status) ||
         (response.status === 200 && !payload.toLowerCase().includes('<!doctype html')) ||
-        (loginTarget && (loginTarget.pathname !== '/auth/login' ||
-          loginTarget.searchParams.get('next') !== pathname))) {
-      throw new Error(`${pathname} returned ${response.status}: ${payload.slice(0, 350)}`);
+        (target && redirectTo && target.pathname !== redirectTo) ||
+        (target && redirectNext && target.searchParams.get('next') !== redirectNext)) {
+      throw new Error(pathname + ' returned ' + response.status + ', location=' +
+        (target?.pathname || 'none') + ': ' + payload.slice(0, 350));
     }
-    console.log(`PASS ${pathname}: ${response.status}`);
+    console.log('PASS ' + pathname + ': ' + response.status +
+      (target ? ' -> ' + target.pathname : ''));
   }
   // Protected Completeful routes must reach the JSON API, never fall through
   // to a static HTML page or an unhandled Worker exception.

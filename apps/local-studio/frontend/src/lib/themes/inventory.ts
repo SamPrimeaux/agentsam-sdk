@@ -127,11 +127,10 @@ export async function createThemeDraft(id: string | null, name: string) {
 }
 
 export function openThemeProject(id: string) {
-  const params = new URLSearchParams();
-  params.set('page', `/admin/theme-project-editor?project=${id}`);
-  window.dispatchEvent(new CustomEvent('agentsam:navigate', {
-    detail: { to: `/apps/ecommerce-cms-agentsam?${params.toString()}` },
-  }));
+  // Open the existing CMS editor directly. The app-shell wrapper was a second
+  // navigation layer and obscured the canonical installed-project URL.
+  const params = new URLSearchParams({ project: id });
+  window.location.assign('/admin/theme-project-editor?' + params.toString());
 }
 
 export const themeManagement = {

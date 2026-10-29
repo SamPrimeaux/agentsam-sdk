@@ -176,6 +176,9 @@ function renderDraftRow(theme) {
   const version=escapeThemeText(theme.version||"");
   const preview=typeof theme.preview_url==="string" && /^\/(?!\/)[a-zA-Z0-9_./-]+$/.test(theme.preview_url)
     ? theme.preview_url : "";
+  const installHref=theme.slug
+    ? "/themes?theme="+encodeURIComponent(String(theme.slug))
+    : "/themes";
   return `
     <div class="online-store-draft-row" data-draft-id="${escapeThemeText(theme.id)}">
       <div class="online-store-draft-thumb" aria-hidden="true"><span>Draft</span></div>
@@ -188,7 +191,7 @@ function renderDraftRow(theme) {
          ${preview?'<a class="btn ghost small" href="'+escapeThemeText(preview)+'" target="_blank" rel="noopener noreferrer" data-theme-draft-preview="'+escapeThemeText(preview)+'">Explore preview</a>':''}
         ${theme.installed && theme.edit_href
           ? '<a class="btn ghost small" href="'+escapeThemeText(theme.edit_href)+'">Customize draft</a>'
-          : '<a class="btn ghost small" href="/themes">Finish installation</a>'}
+          : '<a class="btn ghost small" href="'+escapeThemeText(installHref)+'">Finish installation</a>'}
       </div>
     </div>`;
 }

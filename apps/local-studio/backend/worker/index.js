@@ -793,10 +793,36 @@ export default {
       return Response.redirect(target,302);
     }
 
+    // The hosted catalog uses the canonical Ecommerce React Product Studio,
+    // not the legacy product table. Customer Workers retain their own routes.
+    if (request.method === "GET" &&
+        (url.pathname === "/admin/products" || url.pathname === "/admin/products.html")) {
+      const target = new URL("/admin/products/create", request.url);
+      target.search = url.search;
+      return Response.redirect(target, 302);
+    }
+
+    // /sites is a legacy entry URL. The ecommerce CMS owns the canonical
+    // store route; keep auth and query state, then send users to that existing UI.
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        url.pathname === "/sites") {
+      const account = await resolveSessionUserId(request, env);
+      if (!account) {
+        return Response.redirect(url.origin + LOGIN_PATH + "?next=" +
+          encodeURIComponent(url.pathname + url.search), 302);
+      }
+      const target = new URL("/admin/store", request.url);
+      target.search = url.search;
+      return new Response(null, {
+        status: 302,
+        headers: { location: target.toString(), "cache-control": "private, no-store" },
+      });
+    }
+
     // Existing Ecommerce console UI is served by the Local Studio Worker.
     // The packaged UI and its APIs remain on this origin and use Local Studio D1.
     if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname === "/sites" || (url.pathname.startsWith("/admin/") && !isStudioAdminPath(url.pathname)))) {
+        (url.pathname.startsWith("/admin/") && !isStudioAdminPath(url.pathname))) {
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
       const mounted = await servePackagedConsole(request, env.ASSETS);
       if (mounted) return mounted;

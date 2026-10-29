@@ -11,7 +11,6 @@ const filePattern = /^\/admin\/(?:css|js|partials|brand|assets|dock|profile-popu
 export function resolveConsoleFile(pathname) {
   // Studio-owned authenticated app paths must reach Nitro, not legacy Ecommerce HTML.
   if (isStudioAdminPath(pathname)) return null;
-  if (pathname === "/sites") return "store.html";
   if (pathname === "/admin/host-config.js") return null;
   const match = adminRouteForPath(pathname);
   if (match?.handler === "admin-html") return (match.asset || "/admin/" + match.page + ".html").replace(/^\/admin\//, "");
@@ -26,7 +25,7 @@ export async function servePackagedConsole(request, assets) {
   const uri = new URL(request.url);
   // Cloudflare's default HTML handling redirects explicit .html asset
   // URLs to clean URLs. Fetch the canonical clean path directly so the
-  // browser remains on /admin/* or /sites, not the package asset prefix.
+  // browser remains on the canonical /admin/* path, not the package asset prefix.
   uri.pathname = prefix + (file === "_spa/index.html"
     ? "_spa/" : file.endsWith(".html") ? file.slice(0, -5) : file);
   uri.search = "";

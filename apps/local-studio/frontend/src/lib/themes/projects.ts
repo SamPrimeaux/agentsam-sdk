@@ -1,5 +1,6 @@
 // Theme project content is owned by the authenticated CMS v2 API (D1 pointers + R2 revisions).
 // IndexedDB remains only for active-view preference and one-time migration of older local drafts.
+// @ts-ignore Public portable JavaScript theme project contract has no bundled TS declaration.
 import { validateThemeProject } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project';
 export const THEME_PROJECTS_CHANGED = 'agentsam:theme-projects-changed';
 const API = '/api/admin/cms/theme-projects';

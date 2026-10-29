@@ -5,7 +5,9 @@
  */
 import { listThemeProjects } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
 const answer=(payload,status=200)=>Response.json(payload,{status,headers:{'cache-control':'private, no-store'}});
-const allowed=/^(resolve|violet|plain-jane)$/;
+// Only historical cms_themes selections are restricted to this legacy catalog.
+// Canonical CMS v2 projects are listed from the account-scoped project store.
+const legacyCatalogSlug=/^(resolve|violet|plain-jane)$/;
 async function slugFor(accountId,sourceSlug) {
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(accountId));
  const owner=Array.from(new Uint8Array(digest)).slice(0,10).map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -37,8 +39,7 @@ export async function listStudioThemeDrafts(env,userId) {
  let installed=[];
  try {
   const response=await listThemeProjects(env,userId);
-  if(response.ok)installed=response.projects.filter(project=>allowed.test(project.sourceThemeId||''))
-    .map(project=>({
+  if(response.ok)installed=response.projects.map(project=>({
       id:project.id,slug:project.sourceThemeId,name:project.name,
       theme_slug:project.sourceThemeId,package:project.packageName,
       version:project.sourcePackageVersion,status:'draft',
@@ -52,7 +53,7 @@ export async function listStudioThemeDrafts(env,userId) {
  ).bind(userId).all();
  const installedSlugs=new Set(installed.map(row=>row.slug));
  return [...installed,...(rows.results||[]).map(draft)
-   .filter(row=>allowed.test(row.slug||'')&&!installedSlugs.has(row.slug))];
+   .filter(row=>legacyCatalogSlug.test(row.slug||'')&&!installedSlugs.has(row.slug))];
 }
 export async function handleStudioThemeDrafts(request,env,userId) {
  if(!userId)return answer({ok:false,error:'unauthorized'},401);
@@ -67,7 +68,7 @@ export async function handleStudioThemeDrafts(request,env,userId) {
  if(request.headers.get('origin')!==url.origin)return answer({ok:false,error:'origin_not_allowed'},403);
  if(!request.headers.get('content-type')?.startsWith('application/json'))return answer({ok:false,error:'json_content_type_required'},415);
  const body=await request.json().catch(()=>null);
- if(!body || typeof body!=='object' || Array.isArray(body) || Object.keys(body).some(k=>k!=='slug') || !allowed.test(body.slug||''))
+ if(!body || typeof body!=='object' || Array.isArray(body) || Object.keys(body).some(k=>k!=='slug') || !legacyCatalogSlug.test(body.slug||''))
   return answer({ok:false,error:'template_not_supported'},400);
  let product;
  try{ product=(await catalog(env,request)).find(p=>p.slug===body.slug && p.preview_ready); }
