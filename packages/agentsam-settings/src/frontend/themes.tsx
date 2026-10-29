@@ -1,18 +1,15 @@
 import { useRef, useState, useEffect } from 'react';
-import { Copy, Download, Expand, Pencil, Plus, Upload, X } from 'lucide-react';
+import { Copy, Download, Expand, Pencil, Plus, Upload } from 'lucide-react';
 import type { SettingsHost, SettingsTheme } from '../contracts';
 
 /** Management UX only. Theme inventory, persistence, activation and authoring belong to the host. */
 export function SettingsThemeGallery({ themes, host, onChanged = () => {} }: { themes: SettingsTheme[]; host: SettingsHost; onChanged?: () => void }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
-  const [preview, setPreview] = useState<SettingsTheme | null>(null);
   const [author, setAuthor] = useState<SettingsTheme | 'new' | null>(null);
   const [name, setName] = useState('');
   const file = useRef<HTMLInputElement>(null);
-  const dialog = useRef<HTMLDialogElement>(null);
   const naming = useRef<HTMLDialogElement>(null);
-  useEffect(() => { if (preview) dialog.current?.showModal(); else dialog.current?.close(); }, [preview]);
   useEffect(() => { if (author) naming.current?.showModal(); else naming.current?.close(); }, [author]);
   const run = async (id: string, action: () => unknown) => {
     setBusy(id); setError('');
@@ -43,19 +40,16 @@ export function SettingsThemeGallery({ themes, host, onChanged = () => {} }: { t
           <p className="truncate font-mono text-xs text-muted-foreground" title={theme.packageName}>{theme.packageName}</p>
           <p className="text-xs text-muted-foreground">{theme.status || theme.source}</p>
           <div className="flex flex-wrap gap-2">
-            {theme.previewUrl && <button className={button} onClick={() => setPreview(theme)}><Expand size={14} />Preview</button>}
-            {host.activateTheme && theme.capabilities?.editable && <button className={button} disabled={busy !== null || theme.active} onClick={() => void run(theme.id, () => host.activateTheme?.(theme.id))}>Use theme</button>}
-            {host.editTheme && theme.capabilities?.editable && <button className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.editTheme?.(theme.id))}><Pencil size={14} />Edit</button>}
+            {theme.previewUrl && <a className={button} href={theme.previewUrl} target="_blank" rel="noopener noreferrer" aria-label={"Explore " + theme.name + " theme preview in a new tab"}><Expand size={14} />Explore preview</a>}
+            {host.installTheme && ['bundled', 'installed', 'workspace'].includes(theme.source || '') && theme.capabilities?.editable && <button className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.installTheme?.(theme.id))}><Plus size={14} />{theme.draftId ? 'Open draft' : 'Add to Drafts'}</button>}
+            {host.activateTheme && theme.source === 'cms-draft' && theme.capabilities?.editable && <button className={button} disabled={busy !== null || theme.active} onClick={() => void run(theme.id, () => host.activateTheme?.(theme.id))}>Use theme</button>}
+            {host.editTheme && ['cms-draft', 'local', 'imported'].includes(theme.source || '') && theme.capabilities?.editable && <button className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.editTheme?.(theme.id))}><Pencil size={14} />Edit draft</button>}
             {host.duplicateTheme && theme.capabilities?.duplicable && <button className={button} disabled={busy !== null} onClick={() => { setName(theme.name + ' revision'); setAuthor(theme); }}><Copy size={14} />Revise</button>}
-            {host.exportTheme && theme.source === 'local' && <button className={button} onClick={() => void run(theme.id, () => host.exportTheme?.(theme.id))}><Download size={14} />Export draft</button>}
+            {host.exportTheme && ['cms-draft', 'local', 'imported'].includes(theme.source || '') && <button className={button} onClick={() => void run(theme.id, () => host.exportTheme?.(theme.id))}><Download size={14} />Export draft</button>}
           </div>
         </div>
       </article>)}
     </div>
-    <dialog ref={dialog} onClose={() => setPreview(null)} className="m-auto w-[min(1200px,94vw)] rounded-xl border border-border bg-card p-0 text-foreground backdrop:bg-black/60">
-      <div className="flex items-center justify-between border-b border-border p-3"><h3>{preview?.name}</h3><button className={button} aria-label="Close preview" onClick={() => setPreview(null)}><X size={18} /></button></div>
-      {preview && <iframe title={`${preview.name} preview`} src={preview.previewUrl} sandbox="allow-scripts" className="h-[75dvh] w-full border-0" />}
-    </dialog>
     <dialog ref={naming} onClose={() => setAuthor(null)} className="m-auto w-[min(440px,94vw)] rounded-xl border border-border bg-card p-5 text-foreground backdrop:bg-black/60">
       <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); const source = author; if (!source || !name.trim()) return; void run('author', async () => { if (source === 'new') await host.createTheme?.(name.trim()); else await host.duplicateTheme?.(source.id, name.trim()); setAuthor(null); }); }}>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

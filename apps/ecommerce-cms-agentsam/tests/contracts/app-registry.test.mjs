@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -29,7 +29,15 @@ test("bundled Apps resolve to self-contained contracts and implementation paths"
     assert.match(contract.role, /-app$/);
     for (const values of Object.values(contract.implementation || {})) {
       for (const relative of Array.isArray(values) ? values : [values]) {
-        await access(path.join(appRoot, relative));
+        if (relative.includes("*")) {
+          const directory = path.join(appRoot, path.dirname(relative));
+          const [prefix, suffix] = path.basename(relative).split("*");
+          const matches = (await readdir(directory)).filter(name =>
+            name.startsWith(prefix) && name.endsWith(suffix));
+          assert.ok(matches.length > 0, "Manifest glob must match real files: " + relative);
+        } else {
+          await access(path.join(appRoot, relative));
+        }
       }
     }
   }

@@ -1721,8 +1721,16 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-function ThemesView({ themes, host, onChanged }: { themes: SettingsTheme[]; host: SettingsHost; onChanged: () => void }) {
-  return <><AppearancePreferences /><SettingsThemeGallery themes={themes} host={host} onChanged={onChanged} /></>;
+function ThemesView({ themes: _themes, host: _host, onChanged: _onChanged }: { themes: SettingsTheme[]; host: SettingsHost; onChanged: () => void }) {
+  // Account appearance preferences and customer storefront themes are different
+  // resources. The reusable website theme library belongs under Online Store.
+  return <><AppearancePreferences />
+    <Section title="Storefront design" description="Website templates belong to the Ecommerce CMS, not your dashboard appearance.">
+      <a href="/sites" className="inline-flex rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-foreground hover:bg-muted">
+        Open Online Store and installed drafts
+      </a>
+    </Section>
+  </>;
 }
 
 const freshAgent=():SettingsAgentDraft=>({
@@ -2363,7 +2371,7 @@ function AppearancePreferences() {
           </div>
         </div>
         <p className="mt-3 text-[10px] text-muted-foreground">
-          Prefer product themes from the Themes unit for gallery projections. Accent here only tints shell chrome.
+          Appearance preferences control the AgentSam dashboard. Storefront themes and installed drafts are managed separately in Online Store.
         </p>
       </div>
     </Section>
@@ -2758,12 +2766,19 @@ export function SettingsProductPage({
   const defaultView = unit?.views?.[0]?.id ?? "";
   const [activeView, setActiveView] = useState(requestedView || defaultView);
   const [snapshot, setSnapshot] = useState<SettingsSnapshot | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     const refresh = () => {
       void host.snapshot().then((next) => {
-        if (!cancelled) setSnapshot(next);
+        if (!cancelled) {
+          setSnapshot(next);
+          setLoadError(false);
+        }
+      }).catch(() => {
+        if (!cancelled) setLoadError(true);
       });
     };
     refresh();
@@ -2772,7 +2787,7 @@ export function SettingsProductPage({
       cancelled = true;
       unsubscribe?.();
     };
-  }, [host, unitId]);
+  }, [host, unitId, retryKey]);
 
   useEffect(() => {
     setActiveView(requestedView || defaultView);
@@ -2789,8 +2804,12 @@ export function SettingsProductPage({
 
   if (!snapshot) {
     return (
-      <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
-        Loading settings…
+      <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 px-5 text-center">
+        <h1 className="text-base font-semibold text-foreground">Settings</h1>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {loadError ? "Your settings could not be loaded. No preferences were changed." : "Loading settings…"}
+        </p>
+        {loadError ? <button type="button" className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground" onClick={() => { setLoadError(false); setRetryKey(value => value + 1); }}>Retry settings</button> : null}
       </div>
     );
   }

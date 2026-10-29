@@ -323,7 +323,7 @@ async function unitEconomics(env, sinceModifier, current, previous) {
 
   const subscribers = await safeFirst(
     env,
-    `SELECT COUNT(*) AS n FROM newsletter_subscribers`
+    `SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE status = 'subscribed'`
   );
 
   const aiCost = await safeFirst(

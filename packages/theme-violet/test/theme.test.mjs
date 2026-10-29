@@ -45,3 +45,17 @@ test('violet product row is package-first', () => {
   assert.equal(row.metadata.prebuild_root, 'site');
   assert.equal(row.metadata.portable, true);
 });
+
+test('violet packaged storefront loads its base shell before section styles', () => {
+  const root = resolvePrebuildRoot();
+  const html = fs.readFileSync(path.join(root,'index.html'),'utf8');
+  assert.match(html, /href="\.\/global\/cpas-shell\.css"/);
+  assert.match(html, /href="\.\/global\/cpas-public-surface\.css"/);
+  assert.ok(html.indexOf('cpas-shell.css') < html.indexOf('cpas-public-surface.css'));
+  const nested=fs.readFileSync(path.join(root,'pages/index.html'),'utf8');
+  assert.match(nested,/href="\.\.\/global\/cpas-shell\.css"/);
+  assert.ok(nested.indexOf('cpas-shell.css') < nested.indexOf('cpas-public-surface.css'));
+  const css = fs.readFileSync(path.join(root,'global/cpas-shell.css'),'utf8');
+  assert.match(css, /\.logo-link img,/);
+  assert.match(css, /\.site-header\s*\{/);
+});

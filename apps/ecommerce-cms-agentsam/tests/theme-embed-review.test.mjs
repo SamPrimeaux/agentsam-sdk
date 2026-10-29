@@ -78,6 +78,6 @@ test('review UI is manifest-backed and never exposes install, publish or Copy JS
   for(const key of ['brand.logoUrl','page.maxWidth','inputs.radius','overlays.placement','icons.style']){
     assert.ok(settings.includes(key),'missing CMS-connected theme draft control '+key);
   }
-  assert.match(core,/function renderPageOptions/);
-  assert.match(core,/function renderPageOptions/);
+  assert.match(core,/Matching CMS pages/);
+  assert.match(core,/localShowcase \|\| new URLSearchParams\(location.search\)\.get\('ui_review'\) === '1'/);
 });

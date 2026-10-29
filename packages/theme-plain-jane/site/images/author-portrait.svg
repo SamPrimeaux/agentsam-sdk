@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
+  <rect width="800" height="1000" fill="#E8E4DF" />
+  <circle cx="400" cy="360" r="140" fill="#D5D0C9" stroke="#1A1A1A" stroke-width="1.5" />
+  <path d="M220 720 C220 540, 580 540, 580 720" fill="#C8C2BA" stroke="#1A1A1A" stroke-width="1.5" />
+  <circle cx="400" cy="340" r="6" fill="#D96C4A" />
+  <text x="400" y="780" font-family="'Playfair Display', Georgia, serif" font-size="36" fill="#1A1A1A" text-anchor="middle">Jane Doe</text>
+  <text x="400" y="820" font-family="'DM Sans', sans-serif" font-size="16" fill="#4A4A4A" text-anchor="middle" letter-spacing="2">ESSAYIST & PHOTOGRAPHER</text>
+</svg>

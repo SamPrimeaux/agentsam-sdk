@@ -65,6 +65,8 @@ import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
 import clientCmsApp from "../../../client-cms-editor/agentsam.app.json";
 import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
 import { handleStudioPlatformProducts } from "./studio-platform-products.js";
+import { handleStudioSitesOverview } from "./studio-sites-overview.js";
+import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
 import { servePackagedConsole } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
 import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
@@ -775,6 +777,22 @@ export default {
       }
     }
 
+    // Legacy Ecommerce email entry is only a compatibility link. The reusable
+    // AgentSam Work Mail surface owns the inbox on this host.
+    if (request.method === "GET" &&
+        (url.pathname === "/admin/email" || url.pathname === "/admin/email.html")) {
+      const target = new URL("/mail", request.url);
+      target.search = url.search;
+      return Response.redirect(target, 302);
+    }
+
+    // Retire the duplicate donor Atlas page. Existing deep links lead into
+    // the canonical in-app Theme Studio; shared section runtime is retained.
+    if (url.pathname === "/admin/revise-atlas" || url.pathname === "/admin/revise-atlas.html") {
+      const target=new URL('/admin/theme-editor?slug=home&catalog=revise',request.url);
+      return Response.redirect(target,302);
+    }
+
     // Existing Ecommerce console UI is served by the Local Studio Worker.
     // The packaged UI and its APIs remain on this origin and use Local Studio D1.
     if ((request.method === "GET" || request.method === "HEAD") &&
@@ -789,6 +807,27 @@ export default {
     if (url.pathname === "/api/webhooks/completeful") {
       if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
       return handleCompletefulWebhook(request, env);
+    }
+
+    // Read-only packaged theme catalog for the authenticated Sites dashboard.
+    // No writes, entitlements, or theme activation may flow through this reader.
+    if (url.pathname === '/api/admin/theme-products/drafts') {
+      const principal=await resolveSessionUser(request,env);
+      return handleStudioThemeDrafts(request,env,principal?.id||null);
+    }
+    if (url.pathname === '/api/admin/theme-products') {
+      if (request.method !== 'GET') return json({ok:false,error:'method_not_allowed'},405);
+      const principal = await resolveSessionUser(request, env);
+      if (!principal) return json({ok:false,error:'unauthorized'},401);
+      const assetURL = new URL(request.url);
+      assetURL.pathname = '/ecommerce-cms-agentsam/admin/data/theme-products.json';
+      assetURL.search = '';
+      const catalogAsset = await env.ASSETS.fetch(new Request(assetURL,request));
+      if (!catalogAsset.ok) return json({ok:false,error:'catalog_not_staged'},503);
+      const catalog = await catalogAsset.json().catch(()=>null);
+      if (!catalog?.ok || !Array.isArray(catalog.products))
+        return json({ok:false,error:'catalog_manifest_invalid'},503);
+      return json(catalog,200);
     }
 
     if (url.pathname === '/api/admin/platform/products' || url.pathname.startsWith('/api/admin/platform/products/')) {
@@ -808,6 +847,8 @@ export default {
           if (preference.ok) studioUser.avatar_url = (await preference.json()).avatar_url || principal.avatar_url || null;
         } catch { /* Identity remains usable when optional profile preferences are unavailable. */ }
       }
+      if (url.pathname === "/api/admin/store/online" && request.method === "GET")
+        return handleStudioSitesOverview(request, env, principal.id);
       const commerceEnv = url.pathname.startsWith("/api/admin/completeful/")
         ? await completefulAccountEnvironment(env, principal.id)
         : env;
@@ -882,6 +923,73 @@ export default {
       const cmsActorId = await resolveSessionUserId(request, env);
       if (!cmsActorId) return json({ ok: false, error: "unauthorized" }, 401);
       return handleCmsWorkerRequest(request, env, cmsActorId);
+    }
+
+    // Canonical React app mounts are served as data-free, pre-rendered
+    // document shells, never the Ecommerce's legacy /admin/agentsam.html.
+    // The packaged Workbench, CAD and MovieMode route chunks hydrate in-place.
+    // This also avoids the Cloudflare-only Nitro SSR 500 for these app routes.
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        (url.pathname === "/admin/agentsam" ||
+         url.pathname === "/admin/cad" ||
+         url.pathname === "/admin/moviemode" ||
+         url.pathname === "/admin/moviemode/edit" ||
+         url.pathname === "/admin/projects" ||
+         url.pathname === "/mail" ||
+         url.pathname === "/artifacts" ||
+         url.pathname === "/artifacts/tickets" ||
+         url.pathname === "/tickets" ||
+         url.pathname === "/themes")) {
+      const account=await resolveSessionUserId(request,env);
+      if(!account){
+        return Response.redirect(url.origin+LOGIN_PATH+"?next="+
+          encodeURIComponent(url.pathname+url.search),302);
+      }
+      const assetUrl=new URL(request.url);
+      // Both /admin/* mounts and Work package top-level routes hydrate the
+      // same canonical React app; no legacy HTML donor is introduced.
+      const shellRoute=url.pathname.startsWith("/admin/")
+        ? url.pathname.slice("/admin".length) : url.pathname;
+      assetUrl.pathname="/studio-app-shell"+shellRoute+"/";
+      assetUrl.search="";
+      const shell=await env.ASSETS.fetch(new Request(assetUrl,{method:"GET"}));
+      if(!shell.ok)return json({ok:false,error:"studio_app_shell_unavailable"},503);
+      const headers=new Headers(shell.headers);
+      headers.set("content-type","text/html; charset=utf-8");
+      headers.set("cache-control","private, no-store");
+      headers.delete("content-length");
+      return new Response(request.method==="HEAD"?null:shell.body,{status:200,headers});
+    }
+
+    // Settings are served as build-generated, canonical React route shells.
+    // The browser hydrates the installed Settings package normally. This
+    // isolates Cloudflare's Settings-only Nitro SSR failure without creating
+    // a separate editor, storing fake preferences or exposing account data.
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        (url.pathname === "/settings" || url.pathname.startsWith("/settings/"))) {
+      const unit=url.pathname.split("/").filter(Boolean)[1] || "general";
+      const allowed=new Set(["general","agents","customize","design","git-prs",
+        "codebase","network","runtime","themes","storage","keys","usage",
+        "notifications","docs","integrations"]);
+      if(url.pathname === "/settings" || !allowed.has(unit))
+        return Response.redirect(new URL("/settings/general",request.url),302);
+      const account=await resolveSessionUserId(request,env);
+      if(!account){
+        const next=encodeURIComponent(url.pathname+url.search);
+        return Response.redirect(url.origin+LOGIN_PATH+"?next="+next,302);
+      }
+      const assetUrl=new URL(request.url);
+      assetUrl.pathname="/studio-settings-shell/"+unit+"/";
+      assetUrl.search="";
+      const shell=await env.ASSETS.fetch(new Request(assetUrl,{method:"GET"}));
+      if(!shell.ok)return json({ok:false,error:"settings_shell_unavailable"},503);
+      const headers=new Headers(shell.headers);
+      headers.set("content-type","text/html; charset=utf-8");
+      headers.set("cache-control","private, no-store");
+      headers.delete("content-length");
+      return new Response(request.method === "HEAD" ? null : shell.body,{
+        status:200,headers,
+      });
     }
 
     // Gate authenticated Studio app routes from the app manifest mounts.

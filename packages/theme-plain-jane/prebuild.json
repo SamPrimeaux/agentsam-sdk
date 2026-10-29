@@ -1,0 +1,20 @@
+{
+  "schema": "agentsam.prebuild.v1",
+  "id": "plain-jane",
+  "package": "@inneranimalmedia/theme-plain-jane",
+  "version": "0.1.0",
+  "siteRoot": "site",
+  "entrypoint": "index.html",
+  "rootDeployable": true,
+  "portable": true,
+  "materializer": {"export": "@inneranimalmedia/theme-plain-jane/node", "function": "materializePrebuild"},
+  "defaults": {"basePath": "/", "canonicalOrigin": "https://example.com/", "apiBasePath": "/api/cms"},
+  "cmsManifest": "journal-cms-manifest.json",
+  "category": "Editorial / Blog",
+  "description": "Original Plain Jane Journal pages, articles, photography and CMS manifest.",
+  "notes": [
+    "The embedded front end is read-only. Content writes are the host CMS responsibility.",
+    "The local showcase uses preview fixtures, not a real tenant account.",
+    "Product release/license and authorized installation require a separate promotion review."
+  ]
+}

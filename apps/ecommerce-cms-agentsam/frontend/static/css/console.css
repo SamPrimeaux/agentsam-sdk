@@ -2355,3 +2355,71 @@ body.admin-nav-open #admin-menu-toggle .console-nav-morph > span:last-child { tr
 @media (prefers-reduced-motion: reduce) {
   .console-nav-morph > span { transition: none; }
 }
+
+/* Genuine current-theme states; an unconfigured site must never appear active. */
+.online-store-badge--empty,
+.online-store-badge--pending { background:#f3f0eb; color:#58534c; }
+.online-store-badge--error { background:#fff0ee; color:#a72d1d; }
+.online-store-preview[data-preview-status="empty"] iframe,
+.online-store-preview[data-preview-status="error"] iframe { display:none; }
+.online-store-preview[data-preview-status="error"] .online-store-preview-message,
+.online-store-preview[data-preview-status="empty"] .online-store-preview-message {
+ display:flex; flex-direction:column; align-items:center; justify-content:center;
+ gap:12px; padding:22px; line-height:1.4;
+}
+.online-store-preview-message p {max-width:350px;margin:0;color:#615e5a;}
+.online-store-preview-message .btn {position:relative;z-index:3;}
+.online-store-head, .online-store-active, .online-store-perf {min-width:0;}
+@media (max-width:900px) {
+  .online-store, .online-store-card, .online-store-head {max-width:100%;min-width:0;}
+  .online-store-head {align-items:flex-start;flex-wrap:wrap;}
+  .online-store-actions {min-width:0;flex-wrap:wrap;justify-content:flex-start;}
+  .online-store-perf {width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;}
+  .online-store-perf-stat {min-width:125px;}
+  .online-store-preview--desktop {width:100%;min-width:0;}
+}
+
+.online-store-preview[data-preview-status="external"] iframe {display:none;}
+.online-store-preview[data-preview-status="external"] .online-store-preview-message {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;}
+
+/* Zero-site storefront: always provide a legible, non-interactive visual. */
+.online-store-preview[data-preview-status="starter"] iframe{display:none}
+.online-store-preview[data-preview-status="starter"]{background:#f5f2ed}
+.online-store-starter{position:absolute;top:0;left:0;transform-origin:top left;overflow:hidden;background:#faf8f4;color:#302822;font-family:Inter,system-ui,sans-serif;pointer-events:none;text-align:left}
+.starter-announcement{background:#282d2a;color:#fff;padding:11px 25px;text-align:center;font-size:13px;letter-spacing:.04em}
+.starter-navbar{padding:22px 35px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e0dbd2;font-size:15px}
+.starter-navbar strong{letter-spacing:.12em;font-size:20px}
+.starter-navbar span{color:#564f46}
+.starter-hero{display:grid;grid-template-columns:1fr 44%;min-height:395px;background:linear-gradient(120deg,#efe7dd,#dcd7cf);overflow:hidden}
+.starter-hero-copy{display:flex;align-items:flex-start;flex-direction:column;justify-content:center;padding:48px 68px}
+.starter-hero-copy small{font-size:13px;letter-spacing:.13em;font-weight:700;color:#645747}
+.starter-hero-copy h2{margin:16px 0!important;max-width:580px;font:bold clamp(40px,4vw,57px)/1.12 Georgia,serif!important;color:#282822!important}
+.starter-hero-copy p{max-width:430px;font-size:17px;line-height:1.6;color:#554b42}
+.starter-faux-cta{margin-top:17px;padding:15px 21px;border-radius:3px;background:#253c33;color:#fff;font-size:14px;font-weight:600}
+.starter-art{position:relative;overflow:hidden;background:linear-gradient(150deg,#bac5b5,#627b67)}
+.starter-art span{position:absolute;background:#e8d6bd;border-radius:120px 120px 20px 20px;transform:rotate(-18deg)}
+.starter-art span:nth-child(1){width:65%;height:74%;bottom:-24%;left:2%}
+.starter-art span:nth-child(2){width:62%;height:88%;bottom:-19%;right:-17%;background:#37594d;transform:rotate(22deg)}
+.starter-art span:nth-child(3){width:45%;height:70%;bottom:-28%;left:25%;background:#bf9885;transform:rotate(4deg)}
+.starter-collection-heading{display:flex;align-items:center;justify-content:space-between;padding:36px 50px 20px;font-size:20px}
+.starter-collection-heading span{font-size:13px;color:#736b64}
+.starter-product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:19px;padding:0 50px}
+.starter-product-grid div{display:grid;gap:10px;font-size:14px}
+.starter-product-grid i{height:140px;background:linear-gradient(145deg,#d3c5ae,#9c9b86);border-radius:4px}
+.starter-product-grid div:nth-child(2) i{background:linear-gradient(145deg,#9ab5a6,#526c62)}
+.starter-product-grid div:nth-child(3) i{background:linear-gradient(145deg,#d5b7aa,#a4746a)}
+.starter-bottom{padding:26px 50px;color:#7d746d;font-size:12px}
+@media(max-width:900px){.online-store-previews{align-items:stretch}.online-store-preview--desktop{min-height:250px}}
+
+/* Contrast law for light panels nested inside the dark AgentSam shell. */
+.online-store-card,
+.online-store-perf{color:#211f24}
+.online-store-theme-name #active-theme-name,
+.online-store-draft-name,
+.online-store-drafts-head h2{color:#242028!important}
+.online-store-draft-meta,
+.online-store-theme-sub,
+.online-store-drafts-head p{color:#55505b!important}
+.online-store-perf-stat .label{color:#57515a!important}
+.online-store-perf-stat .value{color:#27242b!important}
+.online-store-starter .starter-hero-copy h2{color:#282822!important}

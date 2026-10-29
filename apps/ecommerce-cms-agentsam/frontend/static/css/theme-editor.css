@@ -3497,3 +3497,165 @@ dialog.te-section-menu .te-section-catalog-item--visual {
 .te-section-css textarea[aria-invalid=true]{border-color:#b8313c}
 .te-section-css-feedback{min-height:16px;margin:4px 0 10px;color:#ac2c32;font-size:11px;line-height:1.4}
 \n.te-link-group-label{font-size:10px;font-weight:700;color:#78737f;padding:9px 10px 4px;text-transform:uppercase;letter-spacing:.07em}\n
+/* Storefront template navigator — Shopify-style hierarchy, AgentSam controls. */
+.te-page-popover {
+  width: 282px;
+  padding: 7px;
+  max-height: min(540px, calc(100dvh - 112px));
+  border-radius: 12px;
+  box-shadow: 0 16px 45px rgba(15, 19, 33, .14), 0 2px 7px rgba(15,19,33,.08);
+  border-color: #e0e1e4;
+}
+.te-page-search {
+  height: 35px;
+  background: #fff;
+  border: 1px solid #d3d4d8;
+  margin-bottom: 5px;
+  padding-inline: 11px;
+  font-size: 12px;
+}
+.te-page-options { max-height: min(480px, calc(100dvh - 170px)); scrollbar-width: thin; }
+.te-page-option {
+  min-height: 34px;
+  border-radius: 6px;
+  padding: 6px 9px;
+  gap: 9px;
+  font-size: 12px;
+  transition: background .12s ease;
+}
+.te-page-option:hover { background: #f2f3f5; }
+.te-page-option:focus-visible { outline: 2px solid #3976eb; outline-offset: -2px; }
+.te-picker-icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  color: #4d515a;
+  width: 16px;
+  height: 18px;
+  flex-shrink: 0;
+  font-size: 16px;
+  font-weight: 550;
+}
+.te-picker-copy { min-width: 0; flex: 1; display: block; }
+.te-picker-copy strong { font-size: 12px; font-weight: 540; line-height: 1.25; display: block; }
+.te-picker-copy small { font-size: 10px; color: #8c8596; margin-top: 3px; display: block; }
+.te-page-option.is-scaffold .te-picker-copy small { color: #8b6c9d; }
+.te-picker-chevron { color: #737781; margin-left: auto; font-size: 18px; line-height: 1; }
+.te-picker-heading {
+  margin: 8px 2px 2px;
+  padding: 7px 8px 4px;
+  border-top: 1px solid #e9e9ed;
+  text-transform: uppercase;
+  color: #787983;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+.te-tree-scaffold { padding: 12px 4px; }
+.te-tree-scaffold .te-picker-heading { padding-left: 12px; }
+.te-tree-scaffold-row {
+  color: #4b5262;
+  padding: 11px 13px;
+  font-size: 12px;
+  font-weight: 550;
+  border-radius: 7px;
+  margin: 2px 0;
+  background: #f8f8fa;
+}
+@media (max-width: 680px) {
+  .te-page-popover {
+    width: min(325px, calc(100vw - 24px));
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .te-page-option { min-height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .te-page-option { transition: none; }
+}
+
+.te-picker-divider{border-top:1px solid #e9e9ed;margin:5px 4px;}
+.te-picker-back{color:#475066;font-weight:700;}
+
+.te-scaffold-controls{display:grid;gap:12px;padding:12px;}
+.te-scaffold-controls label{display:grid;gap:6px;font-size:11px;font-weight:650;color:#4d515e;}
+.te-scaffold-controls input,.te-scaffold-controls textarea{width:100%;box-sizing:border-box;border:1px solid #dce0e6;border-radius:8px;padding:10px;background:#fff;font-size:12px;line-height:1.4;font-family:inherit;color:#273044;}
+.te-scaffold-controls input:focus,.te-scaffold-controls textarea:focus{outline:2px solid #9e83d1;outline-offset:1px;}
+.te-scaffold-field{display:flex;align-items:center;gap:6px;margin:7px 0;}
+.te-scaffold-field input{flex:1;min-width:0;}
+.te-scaffold-field button,.te-scaffold-add{border:1px solid #dce0e6;background:#fff;border-radius:8px;padding:8px 11px;color:#464c59;cursor:pointer;}
+.te-scaffold-add{width:100%;font-size:12px;font-weight:650;}
+.te-scaffold-readonly{font-size:11px;line-height:1.5;color:#6b6878;border-top:1px solid #e6e2e8;padding-top:13px;}
+
+/* Resolve app-embeds and section editing workbench (local preview). */
+.rs-app-list{padding:4px 7px 18px;display:grid;gap:9px}
+.rs-app-summary{font-size:10px;line-height:1.45;color:#6a6d78;padding:6px 3px}
+.rs-app-footnote{border-top:1px solid #e4e4e9;padding-top:12px}
+.rs-app-card{display:flex;align-items:flex-start;gap:10px;background:#fff;border:1px solid #e2e2e8;border-radius:11px;padding:12px 9px;text-align:left;cursor:pointer;color:#172136;width:100%;min-width:0}
+.rs-app-card:hover{border-color:#aa95d6;background:#fcfaff}
+.rs-app-card.is-selected{outline:2px solid #9364cb;outline-offset:-1px;background:#f8f4fd}
+.rs-app-icon{display:flex;align-items:center;justify-content:center;flex:0 0 36px;height:36px;background:#f0e9fb;color:#7432ac;border-radius:9px;font-size:20px}
+.rs-app-copy{min-width:0;display:grid;gap:4px;flex:1}
+.rs-app-copy strong{font-size:12px;font-weight:750}
+.rs-app-copy small{font-size:10px;color:#687184;line-height:1.45}
+.rs-app-meta{display:flex;justify-content:space-between;gap:3px;align-items:center;flex-wrap:wrap;margin-top:4px;font-size:9px;color:#7b7185}
+.rs-app-meta em{font-style:normal;border-radius:5px;padding:3px 6px;background:#f2f1f6}
+.rs-app-meta .is-green{color:#247c54}
+.rs-tree-group{font-size:10px;font-weight:800;color:#777986;letter-spacing:.09em;padding:15px 11px 10px;border-top:1px solid #e3e4eb}
+.rs-tree-row{display:flex;gap:10px;width:100%;min-height:36px;align-items:center;text-align:left;border:0;background:transparent;border-radius:6px;color:#282d39;font-size:12px;font-weight:620;padding:8px 11px;cursor:pointer}
+.rs-tree-row:hover{background:#f3f4f8}
+.rs-tree-row.is-selected{background:#245ad1;color:#fff}
+.rs-tree-row small{margin-left:auto;font-size:9px;color:inherit;opacity:.65}
+.rs-add-section{background:transparent;border:0;color:#2465cb;cursor:pointer;padding:14px 10px;text-align:left;font-size:12px;font-weight:700}
+.rs-tree-note{border-top:1px solid #e7e7eb;margin:0;padding:12px;font-size:10px;color:#83818d;line-height:1.5}
+.rs-inspector{display:grid;gap:12px;padding:15px 14px 22px}
+.rs-group-heading{font-size:12px;font-weight:800;color:#2b303b;border-top:1px solid #e5e5e9;padding-top:15px}
+.rs-inspector-hint{font-size:11px;line-height:1.5;color:#777987;margin:0}
+.rs-control{font-size:11px;color:#454b57;font-weight:650;display:grid;gap:7px;min-width:0;text-transform:none}
+.rs-control input,.rs-control select,.rs-control textarea{min-width:0;width:100%;min-height:35px;border:1px solid #dadee6;border-radius:7px;padding:8px 9px;background:#fff;color:#202533;font:12px/1.4 Arial,sans-serif;box-sizing:border-box}
+.rs-control input[type=color]{padding:2px;cursor:pointer}
+.rs-control textarea{resize:vertical}
+.rs-control input:focus,.rs-control textarea:focus,.rs-control select:focus{outline:2px solid #a384e9;outline-offset:1px}
+.rs-toggle{display:flex;gap:10px;align-items:center;font-weight:650;color:#3c4454;font-size:11px;min-height:30px}
+.rs-toggle input{width:17px;height:17px;accent-color:#8752b3}
+.rs-primary,.rs-secondary,.rs-danger{width:100%;font-size:11px;font-weight:750;padding:10px;border-radius:8px;cursor:pointer;min-height:36px}
+.rs-primary{background:#713cc0;border:1px solid #713cc0;color:white}
+.rs-secondary{background:#fff;border:1px solid #cbd1de;color:#30394d}
+.rs-danger{background:#fff;border:1px solid #efd9e1;color:#a43049}
+.rs-qa{font-size:11px;color:#775f84;background:#f5f2f9;border-radius:8px;padding:10px;line-height:1.5}
+.rs-app-detail-heading{display:flex;gap:10px;align-items:center}
+.rs-app-detail-heading div{display:grid;gap:4px}
+.rs-app-detail-heading b{font-size:13px}
+.rs-app-detail-heading small{font-size:10px;color:#808292}
+.rs-state-label{font-size:10px;color:#776c87}
+.rs-setup-list{display:grid;gap:7px;background:#f6f5f8;border:1px solid #e9e7ee;padding:12px;border-radius:8px;font-size:10px;color:#5c6270;line-height:1.5}
+.rs-setup-list b{font-size:11px;color:#33394b}
+.rs-field-entry{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e2e5eb;border-radius:7px;padding:7px 9px;margin-bottom:6px;color:#505767;font-size:11px}
+.rs-field-entry button{border:0;background:transparent;cursor:pointer;font-size:17px}
+@media(max-width:700px){.rs-app-card{min-height:62px}.rs-tree-row{min-height:44px}}
+
+/* App call-to-action inside preview-only announcement popup */
+.rs-preview-cta{background:#fff;color:#111;border:0;border-radius:2px;padding:12px 18px;font:750 11px Geist,Arial,sans-serif;letter-spacing:.1em;cursor:pointer}
+
+/* Resolve local studio: functional section library and editable content inspector. */
+.rs-section-library{margin:8px 8px 16px;padding:13px;border:1px solid #dfdce4;background:#fff;border-radius:10px}
+.rs-section-library[hidden]{display:none}
+.rs-section-choice{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;border-bottom:1px solid #eae9ed;background:white;padding:12px 8px;text-align:left;font-size:12px;color:#28232d;cursor:pointer}
+.rs-section-choice:hover{background:#f6f3fa}
+.rs-section-choice:last-child{border-bottom:0}
+.rs-control textarea{width:100%;min-height:72px;font:inherit;border:1px solid #d7d3dc;border-radius:6px;padding:10px;resize:vertical}
+/* Picker empty states: give merchants a working draft creation path. */
+.te-creation-empty{margin:12px 9px 7px;border:1px solid #e4dfea;border-radius:10px;padding:15px 12px;background:linear-gradient(140deg,#fff,#faf8ff);display:grid;gap:8px}
+.te-creation-symbol{font-size:21px;color:#7555cf;background:#eeeafa;border-radius:10px;width:36px;height:36px;display:grid;place-items:center}
+.te-creation-empty strong{font-size:12px;font-weight:750;color:#242128}
+.te-creation-empty p,.te-creation-workflow p{font-size:11px;line-height:1.55;color:#706a76;margin:0}
+.te-creation-empty small{font-size:9px;color:#938d99}
+.te-creation-primary{background:#17151d!important;border:1px solid #17151d!important;border-radius:7px!important;color:#fff!important;padding:11px 12px!important;min-height:38px;font-size:11px!important;font-weight:700!important;cursor:pointer!important}
+.te-creation-primary:hover{background:#6c46bc!important;border-color:#6c46bc!important}
+.te-creation-workflow{padding:15px;display:grid;gap:14px}
+.te-creation-workflow h3{font-size:16px;margin:0}
+.te-creation-workflow form{display:grid;gap:14px}
+.te-creation-workflow label{display:grid;gap:6px;font-size:11px;font-weight:700}
+.te-creation-workflow input{width:100%;border:1px solid #cfcbd5;border-radius:7px;padding:11px;font:12px system-ui}
+.te-creation-hint{background:#f6f3fb;border-radius:7px;font-size:10px;padding:11px;color:#686173;line-height:1.5}
+.te-creation-back{background:none;border:0;color:#6650a0;padding:4px;text-align:left;cursor:pointer;font-size:11px}

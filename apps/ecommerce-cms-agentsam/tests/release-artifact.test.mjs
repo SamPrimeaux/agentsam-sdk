@@ -48,6 +48,8 @@ test("npm release list includes backend, frontend, modules, schemas, and built a
   for (const prefix of ["cms/", "db/", "theme/", "tests/", "packages/"]) {
     assert.ok(entries.some((f) => f.startsWith(prefix)), `Missing tarball family: ${prefix}`);
   }
+  assert.ok(!entries.includes("scripts/preview-sdk-showcase.mjs"),
+    "monorepo-only preview server must not ship in the standalone app package");
   const forbidden = entries.filter((f) =>
     /(^|\/)(?:node_modules|\.git|\.wrangler|\.env[^/]*|\.dev\.vars[^/]*|\.DS_Store)(?:\/|$)/i.test(f) ||
     /\.(?:sqlite|db|pem|key|p12)$/i.test(f));

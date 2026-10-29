@@ -1,11 +1,34 @@
 -- @inneranimalmedia/ecommerce-cms-agentsam — portable baseline D1 schema
 
 CREATE TABLE IF NOT EXISTS newsletter_subscribers (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  email        TEXT NOT NULL UNIQUE,
-  source_page  TEXT,
-  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+  id                  TEXT PRIMARY KEY DEFAULT ('sub_' || lower(hex(randomblob(8)))),
+  email               TEXT NOT NULL UNIQUE CHECK(email = lower(trim(email)) AND instr(email, '@') > 1),
+  first_name          TEXT,
+  last_name           TEXT,
+  status              TEXT NOT NULL DEFAULT 'pending'
+                        CHECK(status IN ('pending','subscribed','unsubscribed','bounced','complained')),
+  source_type         TEXT NOT NULL DEFAULT 'form',
+  source_ref          TEXT,
+  source_path         TEXT,
+  attribution_json    TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(attribution_json)),
+  consent_text        TEXT,
+  consent_ip_hash     TEXT,
+  confirm_token_hash  TEXT,
+  confirmed_at        TEXT,
+  subscribed_at       TEXT,
+  unsubscribed_at     TEXT,
+  unsubscribe_token   TEXT NOT NULL UNIQUE DEFAULT (lower(hex(randomblob(16)))),
+  tags_json           TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(tags_json) AND json_type(tags_json)='array'),
+  metadata_json       TEXT NOT NULL DEFAULT '{}' CHECK(json_valid(metadata_json)),
+  last_event_at       TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  provider_contact_id TEXT
 );
+CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_status_created
+  ON newsletter_subscribers(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_source_path
+  ON newsletter_subscribers(source_path);
 
 -- ===== Account identity =====
 

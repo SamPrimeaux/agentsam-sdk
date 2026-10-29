@@ -6,12 +6,13 @@ renderShell("/admin/store", `
         <h1>Online Store</h1>
       </div>
       <div class="online-store-actions">
+        <a href="#theme-product-marketplace" class="btn ghost small" id="browse-themes-shortcut">Browse templates</a>
         <button type="button" class="online-store-pill" id="store-visibility-btn" aria-haspopup="true">
           <span class="online-store-pill-dot" aria-hidden="true"></span>
           <span id="store-visibility-label">Checking…</span>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <a href="/" class="btn ghost small" target="_blank" rel="noopener">View store</a>
+        <button type="button" class="btn ghost small" id="view-storefront-btn" disabled title="Connect a site to preview the published storefront">View site</button>
         <button type="button" class="online-store-icon-btn" aria-label="More actions">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
         </button>
@@ -47,17 +48,17 @@ renderShell("/admin/store", `
     <section class="online-store-card online-store-active" aria-label="Current theme">
       <div class="online-store-previews">
         <div class="online-store-preview online-store-preview--desktop">
-          <iframe id="theme-preview-desktop" title="Published desktop storefront preview" loading="eager"></iframe><span class="online-store-preview-caption">Desktop · Live storefront</span>
+          <iframe id="theme-preview-desktop" title="Desktop storefront preview" loading="eager"></iframe><span class="online-store-preview-caption">Desktop · Verified live only</span>
         </div>
         <div class="online-store-preview online-store-preview--mobile">
-          <iframe id="theme-preview-mobile" title="Published mobile storefront preview" loading="eager"></iframe><span class="online-store-preview-caption">Mobile</span>
+          <iframe id="theme-preview-mobile" title="Mobile storefront preview" loading="eager"></iframe><span class="online-store-preview-caption">Mobile</span>
         </div>
       </div>
       <div class="online-store-theme-meta">
         <div>
           <div class="online-store-theme-name">
             <span id="active-theme-name">Loading site…</span>
-            <span class="online-store-badge online-store-badge--active">Active</span>
+            <span class="online-store-badge online-store-badge--pending" id="active-theme-status">Checking…</span>
           </div>
           <div class="online-store-theme-sub" id="active-theme-saved">Last saved: —</div>
           <div class="online-store-version" id="active-theme-version" hidden>
@@ -131,22 +132,76 @@ function labelMetricAvailability(node, metric) {
     ? "Not measured yet — no storefront analytics data available" : "";
 }
 
+function escapeThemeText(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[char]));
+}
 function renderDraftRow(theme) {
+  const name=escapeThemeText(theme.name||"Untitled theme");
+  const meta=escapeThemeText(theme.meta||theme.package||"Packaged theme");
+  const version=escapeThemeText(theme.version||"");
+  const preview=typeof theme.preview_url==="string" && /^\/(?!\/)[a-zA-Z0-9_./-]+$/.test(theme.preview_url)
+    ? theme.preview_url : "";
   return `
-    <div class="online-store-draft-row">
-      <div class="online-store-draft-thumb" aria-hidden="true"><span>Theme</span></div>
+    <div class="online-store-draft-row" data-draft-id="${escapeThemeText(theme.id)}">
+      <div class="online-store-draft-thumb" aria-hidden="true"><span>Draft</span></div>
       <div class="online-store-draft-copy">
-        <div class="online-store-draft-name">${theme.name}</div>
-        <div class="online-store-draft-meta">${theme.meta}</div>
-        <div class="online-store-version"><span class="online-store-version-dot" aria-hidden="true"></span>Version ${theme.version} available</div>
+        <div class="online-store-draft-name">${name}</div>
+        <div class="online-store-draft-meta">${meta}${version?' · v'+version:''}</div>
+        <div class="online-store-version">Private draft · Not published</div>
       </div>
       <div class="online-store-draft-actions">
-        <button type="button" class="online-store-icon-btn" aria-label="Theme options"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg></button>
-        <button type="button" class="btn ghost small draft-publish" data-theme-id="${theme.id}">Publish</button>
-        <a href="${theme.edit_href}" class="btn ghost small">Edit theme</a>
+        ${preview?'<button type="button" class="btn ghost small" data-theme-draft-preview="'+escapeThemeText(preview)+'">Preview</button>':''}
+        <button type="button" class="btn ghost small" disabled title="Connect this draft to a CMS site before editing">Connect site to edit</button>
       </div>
     </div>`;
 }
+function paintStoreDrafts(drafts) {
+  const container=document.getElementById("draft-themes");
+  if(!container)return;
+  container.innerHTML=(drafts||[]).map(renderDraftRow).join("");
+  container.querySelectorAll("[data-theme-draft-preview]").forEach(button=>{
+    button.addEventListener("click",()=>{
+      const url=button.dataset.themeDraftPreview;
+      const dialog=document.createElement("dialog");
+      dialog.className="theme-marketplace-dialog";
+      const header=document.createElement("div");
+      header.className="theme-marketplace-dialog-head";
+      const title=document.createElement("strong");
+      title.textContent="Draft preview · Not published";
+      const close=document.createElement("button");
+      close.className="btn ghost small";close.type="button";close.textContent="Close";
+      close.addEventListener("click",()=>dialog.close());
+      header.append(title,close);
+      const iframe=document.createElement("iframe");
+      iframe.className="theme-marketplace-dialog-frame";
+      iframe.title="Unpublished theme draft preview";
+      iframe.setAttribute("sandbox","allow-scripts");
+      iframe.src=url;
+      dialog.append(header,iframe);
+      dialog.addEventListener("close",()=>dialog.remove(),{once:true});
+      document.body.append(dialog);dialog.showModal();
+    });
+  });
+}
+document.addEventListener("agentsam:theme-draft-added",event=>{
+  const draft=event.detail;
+  if(!draft?.id)return;
+  const container=document.getElementById("draft-themes");
+  const existing=Array.from(container?.querySelectorAll("[data-draft-id]")||[]).some(node=>node.dataset.draftId===draft.id);
+  if(existing)return;
+  container?.insertAdjacentHTML("afterbegin",renderDraftRow(draft));
+  const cards=Array.from(container?.querySelectorAll("[data-draft-id]")||[]);
+  // Rebind preview handlers without duplicating previously added rows.
+  const drafts=cards.map(card=>({
+    id:card.dataset.draftId,name:card.querySelector(".online-store-draft-name")?.textContent,
+    meta:card.querySelector(".online-store-draft-meta")?.textContent,
+    preview_url:card.querySelector("[data-theme-draft-preview]")?.dataset.themeDraftPreview
+  }));
+  paintStoreDrafts(drafts);
+  container?.scrollIntoView({behavior:"smooth",block:"center"});
+});
 
 // Render the actual *published* storefront. The old ?preview=1 selected an
 // authenticated CMS draft and did not represent the active live theme.
@@ -234,6 +289,84 @@ function setPreviewFrames(href) {
   });
 }
 
+function setStoreViewButton(url) {
+  const view=document.getElementById("view-storefront-btn");
+  if(!view)return;
+  const trusted=typeof url==="string" && /^https:\/\/[^\s<>"']+$/.test(url);
+  view.disabled=!trusted;
+  view.title=trusted ? "Open your connected published storefront" : "Connect a site before opening its storefront";
+  view.onclick=trusted ? ()=>window.open(url,"_blank","noopener,noreferrer") : null;
+}
+function showThemeUnavailable(state, message) {
+  const status=document.getElementById("active-theme-status");
+  const name=document.getElementById("active-theme-name");
+  const saved=document.getElementById("active-theme-saved");
+  const edit=document.getElementById("edit-theme-btn");
+  if(status){
+    status.className="online-store-badge online-store-badge--pending";
+    status.textContent="Unpublished";
+  }
+  if(name)name.textContent="Your starter storefront";
+  if(saved)saved.textContent=state==="error"
+    ? "Store data is unavailable. This is a safe, local starter preview — nothing is published."
+    : "Start from a template or connect a site. This preview is not published.";
+  if(edit){edit.href="#theme-product-marketplace";edit.textContent="Add your first theme";}
+  document.getElementById("active-theme-version").hidden=true;
+  if (typeof storefrontPreviewObserver !== "undefined" && storefrontPreviewObserver) storefrontPreviewObserver.disconnect();
+  const frames=[
+    ["theme-preview-desktop",1100],
+    ["theme-preview-mobile",390],
+  ];
+  const sizeStarter=()=>{
+    frames.forEach(([id,virtualWidth])=>{
+      const shell=document.getElementById(id)?.parentElement;
+      const page=shell?.querySelector(".online-store-starter");
+      if(!page)return;
+      const scale=(shell.clientWidth||virtualWidth)/virtualWidth;
+      page.style.width=virtualWidth+"px";
+      page.style.height="840px";
+      page.style.transform="scale("+scale+")";
+    });
+  };
+  for(const [id,virtualWidth] of frames){
+    const frame=document.getElementById(id);
+    if(!frame)continue;
+    frame.removeAttribute("src");
+    frame.onload=frame.onerror=null;
+    const shell=frame.parentElement;
+    shell.dataset.previewStatus="starter";
+    shell.querySelector(".online-store-preview-message")?.remove();
+    shell.querySelector(".online-store-starter")?.remove();
+    const page=document.createElement("div");
+    page.className="online-store-starter";
+    page.setAttribute("aria-label","Unpublished starter store visual preview");
+    page.innerHTML='<div class="starter-announcement">A new store starts here · Preview only</div>'+
+      '<div class="starter-navbar"><strong>YOUR STORE</strong><span>Shop &nbsp; Collections &nbsp; About</span><span>⌕ &nbsp; ♡ &nbsp; ▢</span></div>'+
+      '<section class="starter-hero"><div class="starter-hero-copy"><small>YOUR NEXT CHAPTER</small>'+
+      '<h2>A storefront with room to grow.</h2><p>Connect a theme, add your products, and make this space your own.</p>'+
+      '<span class="starter-faux-cta">Explore the collection&nbsp; →</span></div>'+
+      '<div class="starter-art" aria-hidden="true"><span></span><span></span><span></span></div></section>'+
+      '<div class="starter-collection-heading"><strong>Featured collections</strong><span>Curated for your brand</span></div>'+
+      '<div class="starter-product-grid"><div><i></i><b>Collection One</b></div><div><i></i><b>Collection Two</b></div><div><i></i><b>Collection Three</b></div></div>'+
+      '<div class="starter-bottom">Your store · Unpublished preview</div>';
+    shell.append(page);
+    if("ResizeObserver" in window){
+      if(typeof storefrontPreviewObserver==="undefined")continue;
+      if(!storefrontPreviewObserver)storefrontPreviewObserver=new ResizeObserver(sizeStarter);
+      storefrontPreviewObserver.observe(shell);
+    }
+  }
+  sizeStarter();
+}
+function showActiveTheme(theme) {
+  const status = document.getElementById("active-theme-status");
+  status.className = "online-store-badge online-store-badge--" + (theme.verified === true ? "active" : "pending");
+  status.textContent = theme.verified === true ? "Active" : "Unverified";
+  const edit = document.getElementById("edit-theme-btn");
+  edit.href = theme.edit_href || "/admin/theme-editor?slug=home";
+  edit.textContent = "Edit theme";
+}
+
 (async function () {
   try {
     const d = await adminFetch("/api/admin/store/online");
@@ -265,15 +398,19 @@ function setPreviewFrames(href) {
     }
     sessions.title = "Storefront sessions are not measured yet when shown as —";
 
+    setStoreViewButton(d.store?.visibility==="public" ? d.store?.url : null);
     const theme = d.active_theme;
     document.getElementById("active-theme-name").textContent = theme?.name || "No active theme";
     document.getElementById("active-theme-saved").textContent =
       "Last saved: " + fmtStoreDate(theme?.last_saved);
     const editLink = document.getElementById("edit-theme-btn");
     editLink.href = theme?.edit_href || "/admin/theme-editor?slug=home";
-    if (!theme) document.querySelector(".online-store-badge--active").textContent = "Not configured";
-    else if (embeddedHost && !theme.verified) document.querySelector(".online-store-badge--active").textContent = "Theme unverified";
-    setPreviewFrames(embeddedHost ? theme?.preview_href : (theme?.preview_href || "/"));
+    if (theme?.preview_href && theme?.name) {
+      showActiveTheme(theme);
+      setPreviewFrames(theme.preview_href);
+    } else {
+      showThemeUnavailable("empty", "No published theme has been confirmed. Preview a package or create your first theme draft.");
+    }
 
     if (theme?.version_available) {
       const ver = document.getElementById("active-theme-version");
@@ -282,9 +419,7 @@ function setPreviewFrames(href) {
         `Version ${theme.version_available} available`;
     }
 
-    document.getElementById("draft-themes").innerHTML = (d.draft_themes || [])
-      .map(renderDraftRow)
-      .join("");
+    paintStoreDrafts(d.draft_themes || []);
 
     // Do not pretend that publishing the Shop CMS page publishes a theme.
     // Keep draft rows read-only until a real theme publish transaction exists.
@@ -295,6 +430,8 @@ function setPreviewFrames(href) {
     });
   } catch (err) {
     console.error(err);
+    showThemeUnavailable("error", "The store service is unavailable. Retry, or browse preview-only templates below.");
+    document.getElementById("store-visibility-label").textContent = "Unverified";
   }
 })();
 

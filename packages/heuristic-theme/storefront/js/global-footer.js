@@ -220,12 +220,12 @@
         const response = await fetch("/api/newsletter", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ email, source_page: location.pathname }),
+          body: JSON.stringify({ email, source_path: location.pathname, source_page: location.pathname, source_type: "footer", source_ref: "global-footer", consent_text: "Submitted the Fuel & Free Time footer newsletter signup form." }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || "Could not save signup");
         input.value = "";
-        status.textContent = "You're in. Watch your inbox.";
+        status.textContent = data.message || "Check your inbox to confirm your subscription.";
         status.className = "fft-newsletter-status is-success";
       } catch (error) {
         status.textContent = error && error.message ? error.message : "Could not save signup.";

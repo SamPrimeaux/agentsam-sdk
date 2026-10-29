@@ -249,7 +249,9 @@ export type SettingsTheme = {
   category: string;
   swatches: string[];
   version?: string;
-  source?: 'bundled' | 'installed' | 'workspace' | 'local' | 'imported';
+  source?: 'bundled' | 'installed' | 'workspace' | 'local' | 'imported' | 'cms-draft';
+  /** ID of the already-installed CMS draft for this library package, if any. */
+  draftId?: string;
   status?: string;
   previewUrl?: string;
   capabilities?: { preview: boolean; editable: boolean; duplicable: boolean; publishable: boolean };
@@ -358,6 +360,7 @@ export interface SettingsHost {
   openWidget?(id: string): void;
   removeWidget?(id: string): Promise<void>;
   activateTheme?(id: string): Promise<void>;
+  installTheme?(id: string): Promise<void>;
   editTheme?(id: string): Promise<void>;
   duplicateTheme?(id: string, name: string): Promise<void>;
   createTheme?(name: string): Promise<void>;

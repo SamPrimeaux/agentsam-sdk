@@ -1,0 +1,33 @@
+{
+  "name": "@inneranimalmedia/theme-plain-jane",
+  "version": "0.1.0",
+  "description": "Plain Jane Journal — a source-driven, read-only editorial CMS starter",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./node": "./src/node.js",
+    "./prebuild": "./prebuild.json",
+    "./site/*": "./site/*"
+  },
+  "files": ["src", "scripts", "site", "source", "prebuild.json", "README.md", "agentsam.package.json", "provenance.json"],
+  "scripts": {
+    "build": "cd source && npm run lint && npx vite build --base /themes/plain-jane/demo/ --outDir ../site --emptyOutDir && npx tsx ../scripts/export-cms-manifest.mts",
+    "test": "node --test test/*.test.mjs",
+    "pack:check": "npm pack --dry-run --json"
+  },
+  "engines": {"node": ">=22 <25"},
+  "license": "UNLICENSED",
+  "agentsam": {
+    "kind": "theme",
+    "slug": "plain-jane",
+    "family": "editorial-blog",
+    "installable": false,
+    "portable": true,
+    "prebuildRoot": "site",
+    "canonicalId": "plain-jane",
+    "normalization": "local_preview_ready",
+    "sourceRepository": "SamPrimeaux/inneranimalmedia-blog-template"
+  }
+}

@@ -46,38 +46,7 @@ import {
   handleResendWebhookLegacy,
 } from "./webhooks/resend.js";
 import { handleCompletefulWebhook } from "./webhooks/completeful.js";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-async function handleNewsletter(request, env) {
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: "Invalid request body" }, { status: 400 });
-  }
-
-  const email = (body.email || "").trim().toLowerCase();
-  const sourcePage = (body.source_page || "").slice(0, 200);
-
-  if (!EMAIL_RE.test(email)) {
-    return Response.json({ error: "Enter a valid email" }, { status: 400 });
-  }
-
-  try {
-    await env.DB.prepare(
-      `INSERT INTO newsletter_subscribers (email, source_page, created_at)
-       VALUES (?, ?, datetime('now'))
-       ON CONFLICT(email) DO NOTHING`
-    )
-      .bind(email, sourcePage)
-      .run();
-  } catch (err) {
-    return Response.json({ error: "Could not save signup" }, { status: 500 });
-  }
-
-  return Response.json({ ok: true });
-}
+import { handleNewsletterSignup, handleNewsletterConfirm, handleNewsletterUnsubscribe } from "./storefront/newsletter.js";
 
 // Serve an object straight out of the media R2 bucket. Public — these are
 // product/marketing images meant to be viewed on the storefront.
@@ -248,7 +217,13 @@ export default {
     }
 
     if (path === "/api/newsletter" && request.method === "POST") {
-      return handleNewsletter(request, env);
+      return handleNewsletterSignup(request, env);
+    }
+    if (path === "/api/newsletter/confirm" && request.method === "GET") {
+      return handleNewsletterConfirm(request, env, url);
+    }
+    if (path === "/api/newsletter/unsubscribe" && request.method === "GET") {
+      return handleNewsletterUnsubscribe(request, env, url);
     }
 
     if (path === "/api/attribution/visit" && request.method === "POST") {

@@ -102,7 +102,7 @@ async function getOverview(env) {
     env.DB.prepare(`SELECT COUNT(*) AS n, COALESCE(SUM(total_cents), 0) AS revenue FROM orders`)
       .first()
       .catch(() => ({ n: 0, revenue: 0 })),
-    env.DB.prepare(`SELECT COUNT(*) AS n FROM newsletter_subscribers`)
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE status = 'subscribed'`)
       .first()
       .catch(() => ({ n: 0 })),
     env.DB.prepare(
@@ -426,7 +426,7 @@ async function sendCampaignEmail(env, campaign, pack, { mode, testEmail, user, o
     recipients = [testEmail || user.email].filter(Boolean);
   } else if (mode === "broadcast") {
     const { results } = await env.DB.prepare(
-      `SELECT email FROM newsletter_subscribers ORDER BY created_at DESC LIMIT 500`
+      `SELECT email FROM newsletter_subscribers WHERE status = 'subscribed' ORDER BY subscribed_at DESC, created_at DESC LIMIT 500`
     ).all();
     recipients = (results || []).map((r) => r.email).filter(Boolean);
   }

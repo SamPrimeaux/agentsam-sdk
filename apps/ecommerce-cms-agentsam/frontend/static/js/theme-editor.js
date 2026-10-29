@@ -1,11 +1,22 @@
 (() => {
-  const host = window.AgentSamThemeEditorHost || null;
-  const editorRequest = host ? host.adapter.request.bind(host.adapter) : window.adminFetch;
   const params = new URLSearchParams(location.search);
-  let slug = host?.page || params.get('slug') || 'shop';
+  const showcaseTheme = ['violet','resolve','plain-jane'].includes(params.get('showcase')) ? params.get('showcase') : '';
+  // Packaged showcase previews are accessible inside both localhost and the
+  // hosted Studio. They are deliberately read-only and must not inherit the
+  // authenticated CMS write adapter until a real site is connected.
+  const host = showcaseTheme ? null : (window.AgentSamThemeEditorHost || null);
+  const editorRequest = host ? host.adapter.request.bind(host.adapter) : window.adminFetch;
+  const violetShowcase = showcaseTheme === 'violet';
+  const resolveShowcase = showcaseTheme === 'resolve';
+  const journalShowcase = showcaseTheme === 'plain-jane';
+  const localShowcase = Boolean(showcaseTheme);
+  const showcaseDisplayName = journalShowcase ? 'Plain Jane Journal' : resolveShowcase ? 'Resolve' : 'Violet';
+  let slug = host?.page || params.get('slug') || (localShowcase ? 'home' : 'shop');
   let pageData = null;
   let siteData = null;
   let pages = [];
+  let pagePickerCategory = null;
+  let showcaseTemplate = null;
   let activeSectionKey = null;
   let activeSectionOwner = slug;
   let selectedTheme = 'heuristic';
@@ -515,6 +526,11 @@
   function syncPublishCapability() {
     const button = byId('te-publish');
     if (!button) return;
+    if (localShowcase) {
+      button.disabled = true;
+      button.title = showcaseDisplayName + ' preview-only showcase — publishing is disabled';
+      return;
+    }
     if (host && host.adapter.capabilities?.publish === false) {
       button.disabled = true;
       button.title = 'This draft theme workspace does not publish pages directly. Publish the reviewed theme from Online Store.';
@@ -739,7 +755,7 @@
 
   function schedulePrivateAutosave() {
     clearTimeout(autosaveTimer);
-    if (!dirty || liveUnimported || autosaveFailed) return;
+    if (!dirty || liveUnimported || autosaveFailed || localShowcase) return;
     autosaveTimer = setTimeout(function() {
       void saveDraft({ automatic: true });
     }, 900);
@@ -759,77 +775,394 @@
     dirty = Boolean(value);
     const save = byId('te-save');
     if (save) {
-      save.disabled = liveUnimported || (!dirty && !hasEditedThisSession);
+      save.disabled = localShowcase || liveUnimported || (!dirty && !hasEditedThisSession);
       save.classList.toggle('is-dirty', dirty);
       save.setAttribute('aria-label', dirty ? 'Save unsaved draft changes' : 'Save draft — latest changes already saved');
       save.title = dirty ? 'Save draft changes (⌘S)' : 'Draft is saved — Save again if needed (⌘S)';
     }
-    if (liveUnimported) setSaveState('Preview only');
+    if (localShowcase) setSaveState(showcaseDisplayName + ' · local preview only');
+    else if (liveUnimported) setSaveState('Preview only');
     else if (dirty) setSaveState('Unsaved changes', 'dirty');
     else setSaveState('Saved', 'saved');
     if (dirty) schedulePrivateAutosave();
     else clearTimeout(autosaveTimer);
   }
 
-  // The picker is a storefront resource navigator, not a flat CMS-page dropdown.
-  // Product and collection records link to their *real* editors until a template
-  // assignment API exists; never silently pretend those resources are CMS pages.
-  const pickerResources = { products: [], collections: [], loaded: false };
-  async function loadPickerResources() {
-    if (host || pickerResources.loaded) return;
-    pickerResources.loaded = true;
-    const results = await Promise.allSettled([
+  const storefrontMenu = [
+    { id: 'home', title: 'Home page', icon: 'home', page: 'home' },
+    { id: 'products', title: 'Products', icon: 'product', children: [
+      { title: 'Default product', template: 'product' },
+      { title: 'Products list', template: 'products-list' },
+    ], resource: 'products' },
+    { id: 'collections', title: 'Collections', icon: 'collection', children: [
+      { title: 'Default collection', template: 'collection' },
+      { title: 'Collections list', template: 'collections-list' },
+    ], resource: 'collections' },
+    { id: 'gift-card', title: 'Gift card', icon: 'gift', template: 'gift-card' },
+    { id: 'cart', title: 'Cart', icon: 'cart', template: 'cart' },
+    { id: 'checkout', title: 'Checkout & customer accounts', icon: 'checkout', template: 'checkout' },
+    { id: 'pages', title: 'Pages', icon: 'page', resource: 'pages' },
+    { id: 'blogs', title: 'Blogs', icon: 'blog', children: [
+      { title: 'Default blog', template: 'blog' },
+    ] },
+    { id: 'posts', title: 'Blog posts', icon: 'post', children: [
+      { title: 'Default article', template: 'article' },
+    ] },
+    { id: 'search', title: 'Search', icon: 'search', template: 'search' },
+    { id: 'password', title: 'Password', icon: 'lock', template: 'password' },
+    { id: '404', title: '404 page', icon: 'gift', template: '404' },
+    { id: 'metaobject', title: 'Create metaobject template', icon: 'plus', template: 'metaobject', create: true },
+  ];
+  if (!localShowcase) {
+    storefrontMenu.unshift({
+      id:'starter-kits',title:'Browse packaged templates',icon:'collection',children:[
+        {title:'Plain Jane · Blog home',preset:'plain-jane',page:'journal-home'},
+        {title:'Plain Jane · Article',preset:'plain-jane',page:'journal-the-art-of-slow-travel'},
+        {title:'Resolve · Product page',preset:'resolve',page:'resolve-product'},
+        {title:'Resolve · Collection',preset:'resolve',page:'resolve-collection'},
+        {title:'Violet · Campaign page',preset:'violet',page:'home'}
+      ]
+    });
+    storefrontMenu.find(item=>item.id==='blogs').children.push(
+      {title:'Plain Jane journal archive',preset:'plain-jane',page:'journal-home'});
+    storefrontMenu.find(item=>item.id==='posts').children.push(
+      {title:'Plain Jane article',preset:'plain-jane',page:'journal-the-art-of-slow-travel'});
+    storefrontMenu.find(item=>item.id==='products').children.push(
+      {title:'Resolve product page',preset:'resolve',page:'resolve-product'});
+    storefrontMenu.find(item=>item.id==='collections').children.push(
+      {title:'Resolve collection page',preset:'resolve',page:'resolve-collection'});
+  }
+  if (resolveShowcase) {
+    const products = storefrontMenu.find(item => item.id === 'products');
+    products.children = [
+      {title:'All products',page:'resolve-products'},
+      {title:'Default product',page:'resolve-product'}
+    ];
+    const collections = storefrontMenu.find(item => item.id === 'collections');
+    collections.children = [
+      { title: 'Collections list', page: 'resolve-collections' },
+      { title: 'Default collection', page: 'resolve-collection' },
+      { title: 'Leather studies', page: 'resolve-leather' },
+      { title: 'Knitwear edit', page: 'resolve-knitwear' },
+    ];
+    for(const [id,page] of [
+      ['gift-card','resolve-gift-card'],['search','resolve-search'],
+      ['checkout','resolve-checkout'],['404','resolve-404'],['metaobject','resolve-metaobject']]){
+      storefrontMenu.find(item => item.id===id).page=page;
+    }
+    storefrontMenu.find(item=>item.id==='blogs').children=[{title:'Editorial archive',page:'resolve-blogs'}];
+    storefrontMenu.find(item=>item.id==='posts').children=[{title:'Editorial article',page:'resolve-article'}];
+    const cart = storefrontMenu.find(item => item.id === 'cart'); cart.page = 'resolve-cart';
+    const password = storefrontMenu.find(item => item.id === 'password'); password.page = 'resolve-password';
+    storefrontMenu.splice(storefrontMenu.findIndex(item => item.id === 'checkout') + 1, 0, {
+      id: 'customer', title: 'Customer accounts', icon: 'checkout', children: [
+        { title: 'Sign in', page: 'resolve-sign-in' },
+        { title: 'Sign up', page: 'resolve-sign-up' },
+        { title: 'Account overview', page: 'resolve-account' },
+        { title: 'Order history', page: 'resolve-orders' },
+        { title: 'Saved pieces', page: 'resolve-saved' },
+        { title: 'Profile & preferences', page: 'resolve-profile' },
+      ],
+    });
+  }
+  if (journalShowcase) {
+    storefrontMenu.splice(0,storefrontMenu.length,
+      {id:'home',title:'Journal home',icon:'home',page:'journal-home'},
+      {id:'blogs',title:'Blog index',icon:'blog',children:[{title:'Notes on a quieter life',page:'journal-home'}]},
+      {id:'posts',title:'Articles',icon:'post',children:[
+        {title:'The art of slow travel',page:'journal-the-art-of-slow-travel'},
+        {title:'Analog photography in a digital age',page:'journal-analog-photography-digital-age'}
+      ]},
+      {id:'gallery',title:'Photography',icon:'collection',page:'journal-photography'},
+      {id:'pages',title:'Pages',icon:'page',children:[
+        {title:'About',page:'journal-about'},
+        {title:'Contact',page:'journal-contact'},
+        {title:'Privacy',page:'journal-privacy'},
+        {title:'Terms',page:'journal-terms'},
+        {title:'404',page:'journal-404'}
+      ]}
+    );
+  }
+  const pickerIconPaths = {
+    home:'<path d="m3 10 9-7 9 7v10H3zM9 20v-6h6v6"/>',
+    product:'<path d="M3 4h10l8 8-9 9-9-9z"/><circle cx="8" cy="9" r="1"/>',
+    collection:'<path d="M3 8 12 3l9 5-9 5zM3 12l9 5 9-5M3 16l9 5 9-5"/>',
+    gift:'<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18M12 8v13M12 8S5 7 7 4s5 0 5 4zm0 0s7-1 5-4-5 0-5 4Z"/>',
+    cart:'<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l3.5 13h11L22 7H5"/>',
+    checkout:'<path d="M3 5h18v14H3zM3 10h18m-6 5 2 2 3-3"/>',
+    page:'<path d="M6 3h9l3 3v15H6zM15 3v4h3"/>',
+    blog:'<path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"/>',
+    post:'<path d="M5 3h14v18H5zM9 7h6M9 11h6M9 15h3"/>',
+    search:'<circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/>',
+    lock:'<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+    plus:'<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'
+  };
+  function pickerIcon(kind) {
+    return '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      (pickerIconPaths[kind] || pickerIconPaths.page) + '</svg>';
+  }
+  const catalogResources = { products: [], collections: [], loaded: false };
+
+  async function loadStorefrontResources() {
+    if (host || localShowcase || catalogResources.loaded) return;
+    catalogResources.loaded = true;
+    const requests = await Promise.allSettled([
       editorRequest('/api/admin/products'),
       editorRequest('/api/admin/collections'),
     ]);
-    if (results[0].status === 'fulfilled') pickerResources.products = results[0].value.products || [];
-    if (results[1].status === 'fulfilled') pickerResources.collections = results[1].value.collections || [];
-    if (!byId('te-page-popover')?.hidden) renderPageOptions(byId('te-page-search')?.value || '');
+    if (requests[0].status === 'fulfilled') catalogResources.products = requests[0].value.products || [];
+    if (requests[1].status === 'fulfilled') catalogResources.collections = requests[1].value.collections || [];
+    if (!byId('te-page-popover')?.hidden) renderPageOptions(byId('te-page-search').value);
+  }
+
+  function showScaffoldTemplate(template, title) {
+    if (!localShowcase) {
+      // Route to a real packaged preview within Theme Studio instead of
+      // presenting an empty, disconnected, ad-hoc page inspector.
+      const journal=['article','blog','page','contact'].includes(template);
+      const params=new URLSearchParams({
+        showcase:journal?'plain-jane':'resolve',
+        slug:journal?(template==='article'?'journal-the-art-of-slow-travel':'journal-home')
+          :(['product','products'].includes(template)?'resolve-product':'resolve-collection')
+      });
+      window.location.assign('/admin/theme-editor?'+params.toString());
+      return;
+    }
+    showcaseTemplate = { template, title, subtitle: 'Customize this ' + (resolveShowcase ? 'Resolve' : 'Violet') + ' template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
+    byId('te-page-title').textContent = title;
+    byId('te-tree-title').textContent = title;
+    byId('te-tree').innerHTML = '<div class="te-tree-scaffold"><div class="te-picker-heading">Header</div>' +
+      '<div class="te-tree-scaffold-row">▤ &nbsp; Violet header</div><div class="te-picker-heading">Template</div>' +
+      '<div class="te-tree-scaffold-row">▤ &nbsp; ' + cmsEscapeHtml(title) + '</div>' +
+      '<div class="te-tree-scaffold-row">⊕ &nbsp; Add section · UI scaffold</div>' +
+      '<div class="te-picker-heading">Footer</div><div class="te-tree-scaffold-row">▤ &nbsp; Violet footer</div></div>';
+    closePageMenu();
+    renderScaffoldInspector();
+    refreshPreview();
+    setNote((resolveShowcase ? 'Resolve' : 'Violet') + ' · ' + title + ' — local template scaffold. No data is connected or published.');
+  }
+
+  function renderScaffoldInspector() {
+    if (!showcaseTemplate || !localShowcase) return;
+    const data = showcaseTemplate;
+    const formTemplate = ['checkout','metaobject','contact'].includes(data.template);
+    byId('te-inspector-title').textContent = data.title;
+    byId('te-inspector-subtitle').textContent = (resolveShowcase ? 'Resolve' : 'Violet') + ' · local template settings';
+    byId('te-section-status').textContent = 'preview';
+    const panel = byId('te-inspector-body');
+    panel.innerHTML = '<div class="te-scaffold-controls"><div class="te-picker-heading">Template content</div>' +
+      '<label>Heading<input type="text" maxlength="110" data-scaffold-setting="title" value="' + cmsEscapeAttr(data.title) + '"></label>' +
+      '<label>Description<textarea rows="3" data-scaffold-setting="subtitle">' + cmsEscapeHtml(data.subtitle) + '</textarea></label>' +
+      (formTemplate ? '<label>Button label<input type="text" maxlength="60" data-scaffold-setting="buttonLabel" value="' + cmsEscapeAttr(data.buttonLabel) + '"></label>' +
+      '<div class="te-picker-heading">Form fields · local only</div><div data-scaffold-fields>' +
+      data.fields.map((label,index) => '<div class="te-scaffold-field"><input aria-label="Field ' + (index+1) + '" data-scaffold-field="' + index + '" value="' + cmsEscapeAttr(label) + '">' +
+      '<button type="button" data-scaffold-remove="' + index + '" aria-label="Remove field ' + (index+1) + '">×</button></div>').join('') +
+      '</div><button type="button" class="te-scaffold-add" data-scaffold-add>+ Add form field</button>' : '') +
+      '<div class="te-scaffold-readonly">UI preview only. No Stripe, forms, or D1 records are changed.</div></div>';
+    panel.querySelectorAll('[data-scaffold-setting]').forEach(input => input.addEventListener('input', () => {
+      if (!showcaseTemplate) return;
+      showcaseTemplate[input.dataset.scaffoldSetting] = input.value;
+      if (input.dataset.scaffoldSetting === 'title') {
+        byId('te-page-title').textContent = input.value || 'Untitled template';
+        byId('te-tree-title').textContent = input.value || 'Untitled template';
+      }
+      refreshPreview();
+    }));
+    panel.querySelectorAll('[data-scaffold-field]').forEach(input => input.addEventListener('input', () => {
+      if (!showcaseTemplate) return;
+      showcaseTemplate.fields[Number(input.dataset.scaffoldField)] = input.value;
+      refreshPreview();
+    }));
+    panel.querySelectorAll('[data-scaffold-remove]').forEach(button => button.addEventListener('click', () => {
+      if (!showcaseTemplate) return;
+      showcaseTemplate.fields.splice(Number(button.dataset.scaffoldRemove),1);
+      renderScaffoldInspector();
+      refreshPreview();
+    }));
+    panel.querySelector('[data-scaffold-add]')?.addEventListener('click', () => {
+      if (!showcaseTemplate || showcaseTemplate.fields.length >= 12) return;
+      showcaseTemplate.fields.push('New field');
+      renderScaffoldInspector();
+      refreshPreview();
+    });
+  }
+
+  function renderResolveScaffold(template, title) {
+    const data = showcaseTemplate || { title, subtitle: '', buttonLabel: 'Continue', fields: [] };
+    const safeTitle = cmsEscapeHtml(data.title || title);
+    const safeSubtitle = cmsEscapeHtml(data.subtitle || '');
+    const needsForm = ['checkout','metaobject','contact','search'].includes(template);
+    const form = needsForm
+      ? '<div class="r-fields">' + (data.fields || []).map(label =>
+        '<label>' + cmsEscapeHtml(label) + '<input disabled placeholder="' + cmsEscapeAttr(label) + '"></label>').join('') +
+        '<button disabled>' + cmsEscapeHtml(data.buttonLabel || 'Continue') + ' · Preview</button></div>'
+      : '<div class="r-placeholders"><div></div><div></div><div></div></div>';
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<style>body{margin:0;background:#fbfaf9;color:#0c0c0c;font:14px Geist,Arial,sans-serif}.r-head{background:#0b0b0b;padding:25px 5%;color:#fff;display:flex;justify-content:space-between;letter-spacing:.16em;font-size:11px}.r-head b{letter-spacing:.28em}.r-body{padding:100px max(6%,25px);min-height:55vh}.r-kicker{font-size:10px;letter-spacing:.2em;color:#8b181b;text-transform:uppercase;font-weight:750}.r-body h1{font-size:clamp(38px,5vw,72px);max-width:750px;line-height:1.05;text-transform:uppercase;letter-spacing:-.04em}.r-body p{color:#747474;max-width:500px;line-height:1.65}.r-fields{display:grid;gap:10px;max-width:510px;margin-top:40px}.r-fields label{font-size:11px;display:grid;gap:7px}.r-fields input{height:40px;padding:10px;border:1px solid #dedede}.r-fields button{background:#111;color:white;border:0;padding:15px}.r-placeholders{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:40px}.r-placeholders div{background:#efebed;height:180px}.r-foot{background:#111;color:#888;padding:25px 6%;font-size:11px}.r-tag{display:inline-block;margin-top:30px;padding:10px;border:1px solid #d3bec5;color:#8b181b;font-size:10px}@media(max-width:600px){.r-body{padding:60px 22px}.r-placeholders{grid-template-columns:1fr}}</style></head><body>' +
+      '<header class="r-head"><span>SHOP &nbsp; WARDROBE &nbsp; EDITORIAL</span><b>◆ RESOLVE ◆</b></header><main class="r-body">' +
+      '<div class="r-kicker">Resolve template · ' + cmsEscapeHtml(template) + '</div><h1>' + safeTitle + '</h1><p>' + safeSubtitle + '</p>' + form +
+      '<div class="r-tag">UI scaffold · Not connected to customer data</div></main><footer class="r-foot">RESOLVE ATELIER &nbsp; · &nbsp; AgentSam local preview</footer></body></html>';
+  }
+
+  function renderVioletScaffold(template, title) {
+    const safeTitle = cmsEscapeHtml(showcaseTemplate?.title || title);
+    const safeSubtitle = cmsEscapeHtml(showcaseTemplate?.subtitle || '');
+    const safeButton = cmsEscapeHtml(showcaseTemplate?.buttonLabel || 'Continue');
+    const safeKind = cmsEscapeHtml(template);
+    const cards = template === 'products-list' || template === 'collection' || template === 'collections-list'
+      ? '<div class="v-cards"><div>Campaign essentials</div><div>Community merch</div><div>Supporter gifts</div></div>' : '';
+    const form = template === 'checkout' || template === 'contact' || template === 'metaobject'
+      ? '<div class="v-form">' + (showcaseTemplate?.fields || []).map((label,index) =>
+        '<label>' + cmsEscapeHtml(label) + '<input type="text" placeholder="' + cmsEscapeAttr(label) + '" disabled></label>').join('') +
+        '<button type="button" disabled>' + safeButton + ' · preview only</button></div>' : '';
+    const empty = template === 'cart' ? '<div class="v-empty">Your cart is empty<div class="v-sub">Continue exploring the Violet storefront.</div></div>' : '';
+    const search = template === 'search' ? '<div class="v-form"><input placeholder="Search Violet" disabled></div>' : '';
+    const password = template === 'password' ? '<div class="v-form"><input type="password" placeholder="Store password" disabled></div>' : '';
+    const body = '<div class="v-sub">' + safeSubtitle + '</div>' +
+      (form || empty || search || password || cards || '<div class="v-sub">Connect this template to live content after approving the interface.</div>');
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<link rel="stylesheet" href="/themes/violet/demo/global/cpas-public-surface.css">' +
+      '<style>body{background:#101127;color:#f6f4ff;font-family:Inter,system-ui,sans-serif;margin:0}.v-header{display:flex;align-items:center;justify-content:space-between;padding:19px 5%;border-bottom:1px solid #ffffff23;background:#15162d}.v-brand{display:flex;align-items:center;gap:11px;font-weight:800}.v-brand img{width:33px;height:33px;object-fit:contain}.v-nav{display:flex;gap:24px;font-size:12px;color:#c1bad2}.v-main{min-height:60vh;padding:64px max(6%,24px);background:radial-gradient(circle at 80% 0%,#713f862f,transparent 48%)}.v-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.17em;color:#c695ed;font-weight:800}.v-main h1{font-family:Georgia,serif;font-size:clamp(35px,5vw,68px);margin:18px 0 10px;letter-spacing:-.04em}.v-sub{color:#bdb7c9;font-size:14px;max-width:520px;line-height:1.6}.v-preview{display:inline-flex;font-size:11px;color:#d8bee8;background:#a758c520;border:1px solid #be8ace54;border-radius:100px;padding:7px 12px;margin-top:20px}.v-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:35px}.v-cards>div{min-height:160px;background:linear-gradient(130deg,#36203d,#25273b);border:1px solid #635070;border-radius:12px;display:flex;align-items:flex-end;padding:20px;font-weight:700}.v-form{max-width:540px;margin-top:30px;display:grid;gap:12px}.v-form label{display:grid;gap:6px;font-size:12px;color:#ddd}.v-form input,.v-form textarea{box-sizing:border-box;padding:13px 15px;width:100%;background:#ffffffef;border:0;border-radius:8px;color:#242424}.v-form button{padding:14px;border:0;border-radius:8px;background:#9345bb;color:#fff;font-weight:750}.v-empty{text-align:center;font-size:22px;font-weight:700;padding:55px 0}.v-footer{padding:27px 5%;border-top:1px solid #ffffff23;color:#a9a4b8;font-size:12px}.v-foot-row{display:flex;justify-content:space-between}@media(max-width:650px){.v-nav{display:none}.v-cards{grid-template-columns:1fr}.v-main{padding:45px 20px}}</style></head>' +
+      '<body data-studio-template="' + safeKind + '"><header class="v-header"><div class="v-brand"><img alt="" src="/themes/violet/demo/assets/generated/theme-mark.svg">Violet</div><div class="v-nav"><span>Home</span><span>Campaigns</span><span>Stories</span><span>Get involved</span></div></header>' +
+      '<main class="v-main"><div class="v-kicker">Violet theme · ' + safeKind + '</div><h1>' + safeTitle + '</h1>' + body +
+      '<div class="v-preview">UI scaffold · Not connected to customer data</div></main><footer class="v-footer"><div class="v-foot-row"><span>Violet Initiative</span><span>AgentSam Commerce · local preview</span></div></footer></body></html>';
   }
 
   function renderPageOptions(query) {
     const needle = String(query || '').trim().toLowerCase();
+    const root = byId('te-page-options');
     const source = host ? pages : (pages.length ? pages : fallbackPages);
-    const groups = { home: [], products: [], collections: [], cart: [], checkout: [], pages: [] };
-    for (const page of source) {
-      const id = String(page.slug || '').toLowerCase();
-      const type = String(page.kind || page.page_kind || '').toLowerCase();
-      if (id === 'home' || id === 'shop') groups.home.push(page);
-      else if (id === 'cart' || type === 'cart') groups.cart.push(page);
-      else if (id === 'checkout' || type === 'checkout') groups.checkout.push(page);
-      else if (type === 'product' || id === 'product' || id === 'product-default') groups.products.push(page);
-      else if (type === 'collection' || id === 'collection' || id === 'collection-default') groups.collections.push(page);
-      else groups.pages.push(page);
+    const pageFor = key => source.find(p => p.slug === key);
+    const canCreateResolve = resolveShowcase && ['products','collections','pages','blogs','posts','metaobject'].includes(pagePickerCategory);
+    const match = (text) => !needle || String(text || '').toLowerCase().includes(needle);
+    const row = (title, iconText, attrs, detail, arrow) =>
+      '<button type="button" class="te-page-option' + (detail === 'UI scaffold' ? ' is-scaffold' : '') + '" ' + attrs + '><span class="te-picker-icon" aria-hidden="true">' + pickerIcon(iconText) + '</span>' +
+      '<span class="te-picker-copy"><strong>' + cmsEscapeHtml(title) + '</strong>' +
+      (detail ? '<small>' + cmsEscapeHtml(detail) + '</small>' : '') + '</span>' +
+      (arrow ? '<span class="te-picker-chevron" aria-hidden="true">›</span>' : '') + '</button>';
+    let html = '';
+    const parent = storefrontMenu.find(group => group.id === pagePickerCategory);
+    if (parent && !needle) {
+      html = '<button type="button" class="te-page-option te-picker-back" data-picker-back="true"><span class="te-picker-icon" aria-hidden="true">‹</span><span class="te-picker-copy"><strong>Back to online store</strong></span></button>';
+      html += '<div class="te-picker-heading">' + cmsEscapeHtml(parent.title) + '</div>';
+      const children = [...(parent.children || [])];
+      if (parent.resource === 'pages') {
+        children.push(...source.filter(p => !p.slug.startsWith('resolve-') && p.slug !== 'site').map(p => ({ title: p.title || humanize(p.slug), page: p.slug })));
+        if(resolveShowcase)children.push({title:'Default content page',page:'resolve-page'});
+      }
+      if(resolveShowcase)children.push(...(window.AgentSamResolveStudio?.getDrafts?.()||[])
+        .filter(p=>p.kind===parent.id).map(p=>({title:p.title+' · Draft',page:p.slug})));
+      if (parent.resource === 'products' || parent.resource === 'collections') {
+        children.push(...(catalogResources[parent.resource] || []).slice(0, 25).map(p => ({
+          title: p.title || p.name || p.slug || 'Untitled',
+          resource: parent.resource, id: p.id,
+        })));
+      }
+      if(!resolveShowcase)children.push({ title: parent.resource === 'pages' ? 'Start from page template' : 'Start from ' + parent.title.toLowerCase().replace(/s$/, '') + ' template',
+        template: ({posts:'article',blogs:'blog',products:'product',collections:'collection',pages:'page'})[parent.id] || 'metaobject' });
+      html += children.map(child => row(child.title, 'page',
+        child.preset ? 'data-picker-preset="' + cmsEscapeAttr(child.preset) + '" data-preset-page="' + cmsEscapeAttr(child.page) + '"' :
+        child.page ? 'data-picker-page="' + cmsEscapeAttr(child.page) + '"' :
+        child.resource && child.id ? 'data-picker-resource="' + cmsEscapeAttr(child.resource) + '" data-resource-id="' + cmsEscapeAttr(child.id) + '"' :
+        'data-picker-template="' + cmsEscapeAttr(child.template || 'metaobject') + '"', child.page ? '' : 'UI scaffold', false)).join('');
+      if(canCreateResolve){
+        const instructions={
+          products:['Build your first product template','Start with the existing Resolve product layout and style its sections. Product inventory comes later.'],
+          collections:['Design a new collection','Create a reusable collection landing page. Associate inventory when the store is connected.'],
+          pages:['Create a content page','A reusable page layout for About, FAQ, policies and information.'],
+          blogs:['Create a blog layout','Organize stories in an editorial archive. No publishing yet.'],
+          posts:['Create an article template','Prepare a long-form story layout with media and rich content.'],
+          metaobject:['Create a structured template','Define a reusable template before connecting its data fields.']
+        };
+        const [title,subtitle]=instructions[parent.id];
+        html+='<div class="te-creation-empty" role="region" aria-label="Create '+cmsEscapeAttr(parent.title)+'">'+
+          '<div class="te-creation-symbol">＋</div><strong>'+cmsEscapeHtml(title)+'</strong>'+
+          '<p>'+cmsEscapeHtml(subtitle)+'</p>'+
+          '<button type="button" class="te-creation-primary" data-picker-create="'+cmsEscapeAttr(parent.id)+'">Create local draft +</button>'+
+          '<small>Preview only · No D1 records or live storefront changes</small></div>';
+      }
+    } else {
+      html = storefrontMenu.filter(group => match(group.title) || (needle && group.children?.some(ch => match(ch.title)))).map(group => {
+        const hasChildren = !!(group.children || group.resource || (resolveShowcase && group.id==='metaobject'));
+        const page = group.page ? pageFor(group.page) : null;
+        const divider = !needle && ['cart', 'pages', 'search'].includes(group.id)
+          ? '<div class="te-picker-divider" role="separator"></div>' : '';
+        return divider + row(group.title, group.icon,
+          hasChildren ? 'data-picker-category="' + cmsEscapeAttr(group.id) + '"' :
+            page ? 'data-picker-page="' + cmsEscapeAttr(page.slug) + '"' :
+            'data-picker-template="' + cmsEscapeAttr(group.template || group.id) + '"',
+          (!hasChildren && !page) ? 'UI scaffold' : '', hasChildren);
+      }).join('');
     }
-    const match = (title, detail = '') => !needle || (title + ' ' + detail).toLowerCase().includes(needle);
-    const pageRow = (page) => {
-      const title = page.title || humanize(page.slug);
-      if (!match(title, page.slug + ' ' + pageRoute(page.slug))) return '';
-      return '<button type="button" class="te-page-option' + (page.slug === slug ? ' is-active' : '') + '" data-page-slug="' + cmsEscapeAttr(page.slug) + '">' +
-        icon.page + '<span><strong>' + cmsEscapeHtml(title) + '</strong><small>' +
-        cmsEscapeHtml(pageRoute(page.slug) || 'Connect route to publish') + '</small></span></button>';
-    };
-    const resourceRows = (type, records) => records.filter(item => match(item.title || item.name || item.slug || '', type)).slice(0, 40).map(item => {
-      const label = item.title || item.name || item.slug || 'Untitled';
-      const href = type === 'Products' ? '/admin/product-edit?id=' + encodeURIComponent(item.id) : '/admin/collections';
-      return '<a class="te-page-option te-resource-option" href="' + cmsEscapeAttr(href) + '">' + icon.page +
-        '<span><strong>' + cmsEscapeHtml(label) + '</strong><small>' +
-        (type === 'Products' ? 'Edit product · ' : 'Manage collection · ') + cmsEscapeHtml(item.slug || String(item.id)) +
-        '</small></span></a>';
-    }).join('');
-    const section = (label, body) => body ? '<div class="te-picker-group"><div class="te-picker-heading">' + label + '</div>' + body + '</div>' : '';
-    const out = [
-      section('Home page', groups.home.map(pageRow).join('')),
-      section('Products', groups.products.map(pageRow).join('') + resourceRows('Products', pickerResources.products)),
-      section('Collections', groups.collections.map(pageRow).join('') + resourceRows('Collections', pickerResources.collections)),
-      section('Cart', groups.cart.map(pageRow).join('')),
-      section('Checkout', groups.checkout.map(pageRow).join('')),
-      section('Pages', groups.pages.map(pageRow).join('')),
-    ].join('');
-    byId('te-page-options').innerHTML = out || '<div class="te-empty">No matching storefront resources.</div>';
-    byId('te-page-options').querySelectorAll('[data-page-slug]').forEach(button => {
-      button.addEventListener('click', () => switchPage(button.dataset.pageSlug));
+    // One search across actual authorized CMS pages, not only menu headings.
+    // Preserve category browsing and do not invent templates or draft pages.
+    if (needle && !parent) {
+      const realPages=source.filter(p=>p.slug && match([p.title,p.slug,p.route,p.live_route].join(' '))).slice(0,30);
+      if(realPages.length)html=
+        '<div class="te-picker-heading">Matching CMS pages ('+realPages.length+')</div>'+
+        realPages.map(p=>row(p.title||humanize(p.slug),'page',
+          'data-picker-page="'+cmsEscapeAttr(p.slug)+'"',p.live_route||p.route||'',false)).join('')+
+        (html?'<div class="te-picker-divider" role="separator"></div>'+html:'');
+    }
+    root.innerHTML = html || (resolveShowcase?
+      '<div class="te-creation-empty"><strong>Nothing matches that search.</strong>'+
+      '<p>Try a different keyword, or open a resource category to create a new local draft template.</p>'+
+      '<button type="button" class="te-creation-primary" data-picker-clear>Explore templates</button></div>' :
+      '<div class="te-empty">No matching storefront templates.</div>');
+    root.querySelector('[data-picker-clear]')?.addEventListener('click',()=>{
+      pagePickerCategory=null;byId('te-page-search').value='';renderPageOptions('');
     });
+    root.querySelectorAll('[data-picker-category]').forEach(button =>
+      button.addEventListener('click', () => { pagePickerCategory = button.dataset.pickerCategory; byId('te-page-search').value = ''; renderPageOptions(''); }));
+    root.querySelector('[data-picker-back]')?.addEventListener('click', () => { pagePickerCategory = null; renderPageOptions(''); });
+    root.querySelectorAll('[data-picker-preset]').forEach(button => button.addEventListener('click', () => {
+      const preset=button.dataset.pickerPreset;
+      const page=button.dataset.presetPage;
+      if(!['resolve','plain-jane','violet'].includes(preset)||!page)return;
+      window.location.assign('/admin/theme-editor?'+new URLSearchParams({showcase:preset,slug:page}).toString());
+    }));
+    root.querySelectorAll('[data-picker-page]').forEach(button => button.addEventListener('click', () => {
+      switchPage(button.dataset.pickerPage);
+    }));
+    root.querySelectorAll('[data-picker-create]').forEach(button=>button.addEventListener('click',()=>openResolveCreation(button.dataset.pickerCreate)));
+    root.querySelectorAll('[data-picker-template]').forEach(button => button.addEventListener('click', () => {
+      if(resolveShowcase){
+        const type=button.dataset.pickerTemplate;
+        openResolveCreation(type==='metaobject'?'metaobject':type==='product'?'products':type==='collection'?'collections':
+          type==='blog'?'blogs':type==='article'?'posts':'pages');
+      }else showScaffoldTemplate(button.dataset.pickerTemplate, button.querySelector('strong').textContent);
+    }));
+    root.querySelectorAll('[data-picker-resource]').forEach(button => button.addEventListener('click', () => {
+      const url = button.dataset.pickerResource === 'products'
+        ? '/admin/product-edit?id=' + encodeURIComponent(button.dataset.resourceId) : '/admin/collections';
+      if (localShowcase) showScaffoldTemplate(button.dataset.pickerResource, button.querySelector('strong').textContent);
+      else window.location.href = url;
+    }));
+  }
+
+  function openResolveCreation(kind){
+    const root=byId('te-page-options');
+    if(!root)return;
+    const labels={products:'Product template',collections:'Collection template',pages:'Content page',blogs:'Blog',posts:'Article',metaobject:'Metaobject'};
+    if(!labels[kind])return;
+    root.innerHTML='<div class="te-creation-workflow">'+
+      '<button class="te-creation-back" type="button" data-creation-back>‹ Back to '+cmsEscapeHtml(labels[kind])+'s</button>'+
+      '<div class="te-creation-symbol">＋</div><h3>New '+cmsEscapeHtml(labels[kind])+'</h3>'+
+      '<p>Start with Resolve’s authentic sections. Edit content and layout in the same CMS studio.</p>'+
+      '<form data-resolve-create-form><label>Template name<input name="title" maxlength="90" required autofocus placeholder="e.g. Autumn archive"></label>'+
+      '<div class="te-creation-hint">Creates a reusable local draft. Product records, URLs, and production publishing are not connected.</div>'+
+      '<button class="te-creation-primary" type="submit">Create & edit draft →</button></form></div>';
+    root.querySelector('[data-creation-back]')?.addEventListener('click',()=>{pagePickerCategory=kind;renderPageOptions('');});
+    root.querySelector('[data-resolve-create-form]')?.addEventListener('submit',event=>{
+      event.preventDefault();
+      const title=new FormData(event.currentTarget).get('title')?.toString().trim();
+      try{
+        const draft=window.AgentSamResolveStudio?.createDraft(kind,title);
+        if(!draft)throw Error('Resolve draft creation is unavailable.');
+        switchPage(draft.slug);
+      }catch(error){setNote(error.message||String(error),'error');}
+    });
+    root.querySelector('[name="title"]')?.focus();
   }
 
   function blockSchemaFor(section, meta) {
@@ -916,6 +1249,10 @@
   }
 
   function renderTree() {
+    if (resolveShowcase && window.AgentSamResolveStudio?.renderSections) {
+      window.AgentSamResolveStudio.renderSections();
+      return;
+    }
     const pageSections = ownerSections(slug);
     const siteSections = ownerSections('site');
     const header = siteSections.find(function(section) { return section.key === 'header'; });
@@ -1675,6 +2012,11 @@
   }
 
   function renderInspector() {
+    if (localShowcase && showcaseTemplate) { renderScaffoldInspector(); return; }
+    if (resolveShowcase && window.AgentSamResolveStudio?.renderInspector) {
+      window.AgentSamResolveStudio.renderInspector();
+      return;
+    }
     const section = currentSection();
     if (!section) {
       byId('te-inspector-body').innerHTML = '<div class="te-empty">Select a section or block in the page structure to begin editing.</div>';
@@ -2400,6 +2742,12 @@
   }
 
   async function openMiniAgentSam() {
+    if(localShowcase) {
+      // The SDK preview has no authenticated AgentSam API. Do not open an
+      // unusable composer or surface a failed-module banner over the inspector.
+      setNote('AgentSam AI requires a connected workspace. Local section, app and theme controls remain editable.','info');
+      return;
+    }
     const selection = selectedAgentResource();
     if (!selection) { setNote('Select a section or editable field before asking AgentSam.'); return; }
     const tick = ++miniAgentSamSelectionTick;
@@ -2746,6 +3094,52 @@
   }
 
   async function refreshPreview() {
+    if (journalShowcase) {
+      const frame=byId('theme-preview');
+      const meta=typeof pageData?.metadata_json==='string'
+        ? JSON.parse(pageData.metadata_json) : pageData?.metadata_json||{};
+      const path=typeof meta?.path==='string' && /^[a-z0-9/-]*$/.test(meta.path)?meta.path:'';
+      const route='/themes/plain-jane/demo/'+path;
+      const src=route+(route.includes('?')?'&':'?')+'studio_preview=1';
+      frame.removeAttribute('srcdoc');
+      if(frame.getAttribute('src')!==src)frame.src=src;
+      byId('te-open-tab').href=route;
+      byId('te-preview-label').textContent='Plain Jane Journal · '+(pageData?.title||'Journal')+' · read-only CMS source';
+      return;
+    }
+    if (resolveShowcase) {
+      const frame = byId('theme-preview');
+      const portalPath = window.AgentSamResolveStudio?.pagePath?.(slug);
+      const url = portalPath
+        ? '/themes/resolve/demo/portal/' + portalPath + '?studio_preview=1'
+        : '/themes/resolve/demo/?studio_preview=1';
+      if (showcaseTemplate) {
+        frame.removeAttribute('src');
+        frame.srcdoc = renderResolveScaffold(showcaseTemplate.template, showcaseTemplate.title);
+      } else {
+        frame.removeAttribute('srcdoc');
+        if (frame.getAttribute('src') !== url) frame.src = url;
+        window.AgentSamResolveStudio?.sync?.();
+      }
+      byId('te-open-tab').href = portalPath
+        ? '/themes/resolve/demo/portal/' + portalPath
+        : '/themes/resolve/demo/';
+      byId('te-preview-label').textContent = 'Resolve · ' + (showcaseTemplate?.title || 'interactive') + ' · local preview only';
+      return;
+    }
+    if (violetShowcase) {
+      const frame = byId('theme-preview');
+      if (showcaseTemplate) {
+        frame.removeAttribute('src');
+        frame.srcdoc = renderVioletScaffold(showcaseTemplate.template, showcaseTemplate.title);
+      } else {
+        frame.removeAttribute('srcdoc');
+        frame.src = '/themes/violet/demo/';
+      }
+      byId('te-open-tab').href = '/themes/violet/demo/';
+      byId('te-preview-label').textContent = 'Violet · ' + (showcaseTemplate?.title || 'Home page') + ' · local UI preview';
+      return;
+    }
     if (host) {
       try {
         const preview = await host.adapter.resolvePreview(slug, pageData);
@@ -2808,13 +3202,16 @@
     setSaveState('Loading');
     try {
       await loadCmsRegistry();
+      const localDraft=resolveShowcase && window.AgentSamResolveStudio?.getDraft?.(slug);
       const results = await Promise.all([
-        editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug)),
+        localDraft ? Promise.resolve({page:localDraft,seeded:false}) :
+          editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug)),
         editorRequest('/api/admin/cms/pages').catch(function() { return { pages: [] }; }),
         host ? Promise.resolve({ page: { slug: 'site', title: 'Global', sections: [], status: 'draft' } })
              : adminFetch('/api/admin/cms/pages/site')
       ]);
       pageData = results[0].page;
+      if (resolveShowcase) window.AgentSamResolveStudio?.setPage?.(pageData);
       liveUnimported = pageData.content_authority === 'storefront-html';
       missingSourceSections = Array.isArray(pageData.missing_source_sections)
         ? pageData.missing_source_sections.filter(function(key) {
@@ -2833,6 +3230,7 @@
       byId('te-save').textContent = 'Save';
       siteData = results[2].page;
       pages = (results[1].pages || []).filter(function(page) { return page.slug !== 'site'; });
+      if(resolveShowcase)pages.push(...(window.AgentSamResolveStudio?.getDrafts?.()||[]));
       document.dispatchEvent(new CustomEvent('theme-editor:global-settings-ready'));
 
       (pageData.sections || []).forEach(function(section) { section.__ownerSlug = slug; });
@@ -2891,6 +3289,7 @@
   // Serialize writes and snapshot each section before awaiting the network. A later
   // keystroke must remain dirty even if an earlier autosave finishes afterward.
   async function saveDraft({ automatic = false } = {}) {
+    if (localShowcase) { setNote('Local showcase is UI-only. No CMS writes occur.', 'info'); return false; }
     if (saveInFlight) {
       const previousSaved = await saveInFlight;
       if (!previousSaved) return false;
@@ -2985,6 +3384,7 @@
   }
 
   async function publishPage() {
+    if (localShowcase) { setNote('Local showcase cannot publish to a customer site.'); return false; }
     // The explicit Publish live menu action is the merchant confirmation.
     // Keep publish capability/preflight checks without a second browser-native dialog.
     if (publishInFlight) return false;
@@ -3259,7 +3659,9 @@
   }
 
   async function switchPage(nextSlug) {
-    if (!nextSlug || nextSlug === slug) {
+    const hadScaffold = localShowcase && !!showcaseTemplate;
+    if (localShowcase) showcaseTemplate = null;
+    if (!nextSlug || (nextSlug === slug && !hadScaffold)) {
       closePageMenu();
       return;
     }
@@ -3324,6 +3726,12 @@
     try {
       if (host && host.adapter && typeof host.adapter.getThemeIdentity === 'function') {
         applyThemeIdentity(await host.adapter.getThemeIdentity());
+        return;
+      }
+      if (localShowcase) {
+        selectedTheme = 'heuristic';
+        applyThemeIdentity({ name: showcaseDisplayName, status: 'preview' });
+        byId('te-theme-trigger-label').textContent = showcaseDisplayName;
         return;
       }
       const catalog = await editorRequest('/api/admin/cms/themes');
@@ -3432,9 +3840,10 @@
     closeThemeMenu();
     byId('te-page-popover').hidden = false;
     byId('te-page-trigger').setAttribute('aria-expanded', 'true');
+    pagePickerCategory = null;
     byId('te-page-search').value = '';
     renderPageOptions('');
-    loadPickerResources().catch(function(error) { console.warn('Commerce resources unavailable:', error?.message || error); });
+    loadStorefrontResources().catch(() => {});
     requestAnimationFrame(function() { byId('te-page-search').focus(); });
   }
 
@@ -4032,5 +4441,11 @@
       return true;
     },
   };
+  if (localShowcase || new URLSearchParams(location.search).get('ui_review') === '1') {
+    const save = byId('te-save'); if (save) { save.disabled = true; save.title = 'Read-only UI review · no CMS writes'; }
+    const publish = byId('te-publish'); if (publish) { publish.disabled = true; publish.title = 'No publishing from UI review'; }
+  }
+  window.AgentSamResolveStudio?.registerNavigator?.(nextSlug=>switchPage(nextSlug));
+  window.AgentSamResolveStudio?.mount?.();
   loadPage();
 })();

@@ -1,64 +1,70 @@
 (function () {
-  function feedback(form, msg, isError) {
+  var selector = 'form[data-newsletter-form], form.fnf-newsletter-form, .hc-newsletter form';
+
+  function feedback(form, message, isError) {
     var note = form.querySelector('.fnf-nl-note');
     if (!note) {
-      note = document.createElement('div');
+      note = document.createElement('p');
       note.className = 'fnf-nl-note';
+      note.setAttribute('role', 'status');
+      note.setAttribute('aria-live', 'polite');
       note.style.cssText = 'margin-top:8px;font-size:13px;font-weight:600;';
       form.appendChild(note);
     }
-    note.textContent = msg;
+    note.textContent = message;
     note.style.color = isError ? '#ff6b4a' : '#9fe6a0';
   }
 
-  function handleSubmit(e) {
-    var form = e.target;
+  function handleSubmit(event) {
+    var form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.matches(selector) || form.matches('[data-global-newsletter]')) return;
     var emailInput = form.querySelector('input[type="email"]');
     if (!emailInput) return;
 
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
+    event.preventDefault();
+    event.stopImmediatePropagation();
     var email = emailInput.value.trim();
-    if (!email) return;
+    if (!email || !emailInput.checkValidity()) {
+      feedback(form, 'Enter a valid email address.', true);
+      emailInput.focus();
+      return;
+    }
 
-    var submitBtn = form.querySelector('button[type="submit"], button');
-    if (submitBtn) submitBtn.disabled = true;
+    var submitButton = form.querySelector('button[type="submit"], button');
+    if (submitButton) submitButton.disabled = true;
+    feedback(form, 'Sending your confirmation link…', false);
+    var firstName = form.querySelector('[name="first_name"]');
+    var lastName = form.querySelector('[name="last_name"]');
+    var sourceType = form.dataset.newsletterSource || 'cms_block';
+    var sourceRef = form.dataset.newsletterRef || null;
 
     fetch('/api/newsletter', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email: email, source_page: location.pathname }),
+      body: JSON.stringify({
+        email: email,
+        first_name: firstName ? firstName.value.trim() : '',
+        last_name: lastName ? lastName.value.trim() : '',
+        source_path: location.pathname,
+        source_page: location.pathname,
+        source_type: sourceType,
+        source_ref: sourceRef,
+        consent_text: form.dataset.consentText || 'Submitted the Fuel & Free Time newsletter signup form.'
+      })
     })
-      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-      .then(function (res) {
-        if (res.ok) {
-          feedback(form, "You're in. Watch for drops.", false);
+      .then(function (response) { return response.json().then(function (data) { return { ok: response.ok, data: data }; }); })
+      .then(function (result) {
+        if (result.ok) {
+          feedback(form, result.data.message || 'Check your inbox to confirm your subscription.', false);
           form.reset();
         } else {
-          feedback(form, res.d && res.d.error ? res.d.error : 'Something went wrong.', true);
+          feedback(form, result.data && result.data.error ? result.data.error : 'Something went wrong. Please try again.', true);
         }
       })
-      .catch(function () {
-        feedback(form, 'Network error — try again.', true);
-      })
-      .finally(function () {
-        if (submitBtn) submitBtn.disabled = false;
-      });
+      .catch(function () { feedback(form, 'Network error — please try again.', true); })
+      .finally(function () { if (submitButton) submitButton.disabled = false; });
   }
 
-  function init() {
-    var forms = document.querySelectorAll('form');
-    forms.forEach(function (form) {
-      if (form.querySelector('input[type="email"]')) {
-        form.addEventListener('submit', handleSubmit, true);
-      }
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  // Delegation also catches newsletter blocks that page-composer renders after DOMContentLoaded.
+  document.addEventListener('submit', handleSubmit, true);
 })();

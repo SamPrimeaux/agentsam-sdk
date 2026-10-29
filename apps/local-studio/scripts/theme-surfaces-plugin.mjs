@@ -70,6 +70,10 @@ export function themeSurfacesPlugin() {
     for (const [name, source] of [['runtime.js', 'js/theme-editor.js'], ['shared.js', 'js/pages-shared.js'], ['editor.css', 'css/theme-editor.css']]) {
       inventory.assets.set('theme-editor/' + name, join(editor, source));
     }
+    const themeEditorSource = resolve(repoRoot, 'apps/ecommerce-cms-agentsam/frontend/theme-editor');
+    for (const name of ['project.mjs', 'bridge.mjs', 'mount.mjs']) {
+      inventory.assets.set('theme-editor/' + name, join(themeEditorSource, name));
+    }
     // The original merchant-facing Online Store is packaged alongside Theme Studio.
     // Reuse its own DOM, script and responsive CSS in both hosted and desktop Studio.
     for (const [name, source] of [
@@ -94,7 +98,7 @@ export function themeSurfacesPlugin() {
         const key = decodeURIComponent((req.url || '').split('?')[0]).replace(/^\//, '');
         const file = inventory.assets.get(key);
         if (!file) return next();
-        const mime = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
+        const mime = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
         res.setHeader('content-type', mime[extname(file)] || 'application/octet-stream');
         res.end(readFileSync(file));
       });

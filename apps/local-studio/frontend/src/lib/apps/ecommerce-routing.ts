@@ -24,6 +24,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     !excluded.has(route.id) && isRoute(url.pathname, route.path))) return null;
   const safe = new URLSearchParams();
   const recognized = url.pathname === '/admin/theme-editor' ? 'slug'
+    : url.pathname === '/admin/theme-project-editor' ? 'project'
     : url.pathname === '/admin/product-edit' ? 'id'
     : url.pathname === '/admin/products' ? 'view'
     : url.pathname === '/admin/email' ? 'folder' : null;
