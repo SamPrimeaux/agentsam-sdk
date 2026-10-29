@@ -78,7 +78,10 @@
     },
     "./admin/surface": "./frontend/admin.surface.json",
     "./apps/registry": "./apps/registry.json",
-    "./backend/routes": "./backend/lib/route-manifest.js"
+    "./backend/routes": "./backend/lib/route-manifest.js",
+    "./form-studio": "./frontend/form-studio/index.mjs",
+    "./form-studio/styles": "./frontend/form-studio/styles.css",
+    "./form-studio/presets": "./apps/form-studio/presets.json"
   },
   "publishConfig": {
     "access": "public",
