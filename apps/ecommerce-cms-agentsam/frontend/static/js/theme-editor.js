@@ -1,8 +1,11 @@
 (() => {
-  const host = window.AgentSamThemeEditorHost || null;
-  const editorRequest = host ? host.adapter.request.bind(host.adapter) : window.adminFetch;
   const params = new URLSearchParams(location.search);
-  const showcaseTheme = !host && ['violet','resolve','plain-jane'].includes(params.get('showcase')) ? params.get('showcase') : '';
+  const showcaseTheme = ['violet','resolve','plain-jane'].includes(params.get('showcase')) ? params.get('showcase') : '';
+  // Packaged showcase previews are accessible inside both localhost and the
+  // hosted Studio. They are deliberately read-only and must not inherit the
+  // authenticated CMS write adapter until a real site is connected.
+  const host = showcaseTheme ? null : (window.AgentSamThemeEditorHost || null);
+  const editorRequest = host ? host.adapter.request.bind(host.adapter) : window.adminFetch;
   const violetShowcase = showcaseTheme === 'violet';
   const resolveShowcase = showcaseTheme === 'resolve';
   const journalShowcase = showcaseTheme === 'plain-jane';
@@ -810,6 +813,25 @@
     { id: '404', title: '404 page', icon: 'gift', template: '404' },
     { id: 'metaobject', title: 'Create metaobject template', icon: 'plus', template: 'metaobject', create: true },
   ];
+  if (!localShowcase) {
+    storefrontMenu.unshift({
+      id:'starter-kits',title:'Browse packaged templates',icon:'collection',children:[
+        {title:'Plain Jane · Blog home',preset:'plain-jane',page:'journal-home'},
+        {title:'Plain Jane · Article',preset:'plain-jane',page:'journal-the-art-of-slow-travel'},
+        {title:'Resolve · Product page',preset:'resolve',page:'resolve-product'},
+        {title:'Resolve · Collection',preset:'resolve',page:'resolve-collection'},
+        {title:'Violet · Campaign page',preset:'violet',page:'home'}
+      ]
+    });
+    storefrontMenu.find(item=>item.id==='blogs').children.push(
+      {title:'Plain Jane journal archive',preset:'plain-jane',page:'journal-home'});
+    storefrontMenu.find(item=>item.id==='posts').children.push(
+      {title:'Plain Jane article',preset:'plain-jane',page:'journal-the-art-of-slow-travel'});
+    storefrontMenu.find(item=>item.id==='products').children.push(
+      {title:'Resolve product page',preset:'resolve',page:'resolve-product'});
+    storefrontMenu.find(item=>item.id==='collections').children.push(
+      {title:'Resolve collection page',preset:'resolve',page:'resolve-collection'});
+  }
   if (resolveShowcase) {
     const products = storefrontMenu.find(item => item.id === 'products');
     products.children = [
@@ -895,8 +917,15 @@
 
   function showScaffoldTemplate(template, title) {
     if (!localShowcase) {
-      setNote('Template scaffold is for local UI review only. Install and connect this template before editing or publishing.', 'info');
-      closePageMenu();
+      // Route to a real packaged preview within Theme Studio instead of
+      // presenting an empty, disconnected, ad-hoc page inspector.
+      const journal=['article','blog','page','contact'].includes(template);
+      const params=new URLSearchParams({
+        showcase:journal?'plain-jane':'resolve',
+        slug:journal?(template==='article'?'journal-the-art-of-slow-travel':'journal-home')
+          :(['product','products'].includes(template)?'resolve-product':'resolve-collection')
+      });
+      window.location.assign('/admin/theme-editor?'+params.toString());
       return;
     }
     showcaseTemplate = { template, title, subtitle: 'Customize this ' + (resolveShowcase ? 'Resolve' : 'Violet') + ' template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
@@ -1029,9 +1058,10 @@
           resource: parent.resource, id: p.id,
         })));
       }
-      if(!resolveShowcase)children.push({ title: parent.resource === 'pages' ? 'Create page template' : 'Create ' + parent.title.toLowerCase().replace(/s$/, '') + ' template',
-        template: 'metaobject' });
+      if(!resolveShowcase)children.push({ title: parent.resource === 'pages' ? 'Start from page template' : 'Start from ' + parent.title.toLowerCase().replace(/s$/, '') + ' template',
+        template: ({posts:'article',blogs:'blog',products:'product',collections:'collection',pages:'page'})[parent.id] || 'metaobject' });
       html += children.map(child => row(child.title, 'page',
+        child.preset ? 'data-picker-preset="' + cmsEscapeAttr(child.preset) + '" data-preset-page="' + cmsEscapeAttr(child.page) + '"' :
         child.page ? 'data-picker-page="' + cmsEscapeAttr(child.page) + '"' :
         child.resource && child.id ? 'data-picker-resource="' + cmsEscapeAttr(child.resource) + '" data-resource-id="' + cmsEscapeAttr(child.id) + '"' :
         'data-picker-template="' + cmsEscapeAttr(child.template || 'metaobject') + '"', child.page ? '' : 'UI scaffold', false)).join('');
@@ -1075,6 +1105,12 @@
     root.querySelectorAll('[data-picker-category]').forEach(button =>
       button.addEventListener('click', () => { pagePickerCategory = button.dataset.pickerCategory; byId('te-page-search').value = ''; renderPageOptions(''); }));
     root.querySelector('[data-picker-back]')?.addEventListener('click', () => { pagePickerCategory = null; renderPageOptions(''); });
+    root.querySelectorAll('[data-picker-preset]').forEach(button => button.addEventListener('click', () => {
+      const preset=button.dataset.pickerPreset;
+      const page=button.dataset.presetPage;
+      if(!['resolve','plain-jane','violet'].includes(preset)||!page)return;
+      window.location.assign('/admin/theme-editor?'+new URLSearchParams({showcase:preset,slug:page}).toString());
+    }));
     root.querySelectorAll('[data-picker-page]').forEach(button => button.addEventListener('click', () => {
       switchPage(button.dataset.pickerPage);
     }));

@@ -6,7 +6,7 @@
  * it only unlocks that one statement, and the model cannot know it before the preview runs. After the owner
  * agrees, the model repeats the call with the code and the statement executes.
  */
-import { checkSql, type D1Kind } from "./d1-sql.ts";
+import { checkSql, type D1Kind } from "./d1-sql.js";
 
 const CONFIRM_WINDOW_MS = 10 * 60 * 1000;
 const DEFAULT_MAX_ROWS = 100;

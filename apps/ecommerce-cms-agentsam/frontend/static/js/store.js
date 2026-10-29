@@ -236,53 +236,65 @@ function setPreviewFrames(href) {
 }
 
 function showThemeUnavailable(state, message) {
-  const status = document.getElementById("active-theme-status");
-  const name = document.getElementById("active-theme-name");
-  const saved = document.getElementById("active-theme-saved");
-  const edit = document.getElementById("edit-theme-btn");
-  if (status) {
-    status.className = "online-store-badge online-store-badge--" + state;
-    status.textContent = state === "error" ? "Unavailable" : "Not configured";
+  const status=document.getElementById("active-theme-status");
+  const name=document.getElementById("active-theme-name");
+  const saved=document.getElementById("active-theme-saved");
+  const edit=document.getElementById("edit-theme-btn");
+  if(status){
+    status.className="online-store-badge online-store-badge--pending";
+    status.textContent="Unpublished";
   }
-  if (name) name.textContent = state === "error" ? "Could not load storefront" : "No active theme";
-  if (saved) saved.textContent = message;
-  if (edit) {
-    edit.href = "#theme-product-marketplace";
-    edit.textContent = "Browse templates";
-  }
-  document.getElementById("active-theme-version").hidden = true;
+  if(name)name.textContent="Your starter storefront";
+  if(saved)saved.textContent=state==="error"
+    ? "Store data is unavailable. This is a safe, local starter preview — nothing is published."
+    : "Start from a template or connect a site. This preview is not published.";
+  if(edit){edit.href="#theme-product-marketplace";edit.textContent="Add your first theme";}
+  document.getElementById("active-theme-version").hidden=true;
   if (typeof storefrontPreviewObserver !== "undefined" && storefrontPreviewObserver) storefrontPreviewObserver.disconnect();
-  for (const id of ["theme-preview-desktop", "theme-preview-mobile"]) {
-    const iframe = document.getElementById(id);
-    if (!iframe) continue;
-    iframe.removeAttribute("src");
-    iframe.onload = iframe.onerror = null;
-    const shell = iframe.parentElement;
-    shell.dataset.previewStatus = state;
+  const frames=[
+    ["theme-preview-desktop",1100],
+    ["theme-preview-mobile",390],
+  ];
+  const sizeStarter=()=>{
+    frames.forEach(([id,virtualWidth])=>{
+      const shell=document.getElementById(id)?.parentElement;
+      const page=shell?.querySelector(".online-store-starter");
+      if(!page)return;
+      const scale=(shell.clientWidth||virtualWidth)/virtualWidth;
+      page.style.width=virtualWidth+"px";
+      page.style.height="840px";
+      page.style.transform="scale("+scale+")";
+    });
+  };
+  for(const [id,virtualWidth] of frames){
+    const frame=document.getElementById(id);
+    if(!frame)continue;
+    frame.removeAttribute("src");
+    frame.onload=frame.onerror=null;
+    const shell=frame.parentElement;
+    shell.dataset.previewStatus="starter";
     shell.querySelector(".online-store-preview-message")?.remove();
-    const placeholder = document.createElement("div");
-    placeholder.className = "online-store-preview-message";
-    const heading = document.createElement("strong");
-    heading.textContent = state === "error" ? "Preview could not be loaded" : "Your storefront starts here";
-    const body = document.createElement("p");
-    body.textContent = message;
-    placeholder.append(heading, body);
-    if (state === "error") {
-      const retry = document.createElement("button");
-      retry.type = "button";
-      retry.className = "btn ghost small";
-      retry.textContent = "Retry";
-      retry.addEventListener("click", () => location.reload());
-      placeholder.append(retry);
-    } else {
-      const browse = document.createElement("a");
-      browse.className = "btn ghost small";
-      browse.href = "#theme-product-marketplace";
-      browse.textContent = "Browse templates";
-      placeholder.append(browse);
+    shell.querySelector(".online-store-starter")?.remove();
+    const page=document.createElement("div");
+    page.className="online-store-starter";
+    page.setAttribute("aria-label","Unpublished starter store visual preview");
+    page.innerHTML='<div class="starter-announcement">A new store starts here · Preview only</div>'+
+      '<div class="starter-navbar"><strong>YOUR STORE</strong><span>Shop &nbsp; Collections &nbsp; About</span><span>⌕ &nbsp; ♡ &nbsp; ▢</span></div>'+
+      '<section class="starter-hero"><div class="starter-hero-copy"><small>YOUR NEXT CHAPTER</small>'+
+      '<h2>A storefront with room to grow.</h2><p>Connect a theme, add your products, and make this space your own.</p>'+
+      '<span class="starter-faux-cta">Explore the collection&nbsp; →</span></div>'+
+      '<div class="starter-art" aria-hidden="true"><span></span><span></span><span></span></div></section>'+
+      '<div class="starter-collection-heading"><strong>Featured collections</strong><span>Curated for your brand</span></div>'+
+      '<div class="starter-product-grid"><div><i></i><b>Collection One</b></div><div><i></i><b>Collection Two</b></div><div><i></i><b>Collection Three</b></div></div>'+
+      '<div class="starter-bottom">Your store · Unpublished preview</div>';
+    shell.append(page);
+    if("ResizeObserver" in window){
+      if(typeof storefrontPreviewObserver==="undefined")continue;
+      if(!storefrontPreviewObserver)storefrontPreviewObserver=new ResizeObserver(sizeStarter);
+      storefrontPreviewObserver.observe(shell);
     }
-    shell.appendChild(placeholder);
   }
+  sizeStarter();
 }
 function showActiveTheme(theme) {
   const status = document.getElementById("active-theme-status");

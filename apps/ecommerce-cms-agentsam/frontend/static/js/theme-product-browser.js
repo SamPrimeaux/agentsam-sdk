@@ -1,4 +1,4 @@
-/* Catalog browser is read-only. Product/package identity comes from the server. */
+/* Package catalog previews + authenticated, source-backed draft creation. */
 (() => {
  'use strict';
  const root=document.getElementById('theme-marketplace-grid');
@@ -7,6 +7,7 @@
  const filter=document.getElementById('theme-marketplace-filter');
  const count=document.getElementById('theme-marketplace-count');
  let products=[];
+ let drafts=[];
  const node=(tag,className,text)=>{
    const element=document.createElement(tag);
    if(className)element.className=className;
@@ -20,6 +21,44 @@
      return url.origin===location.origin?url:null;
    }catch{return null;}
  };
+ function previewInsideStudio(product){
+   const url=sameOriginUrl(product.preview_url);
+   if(!url)return;
+   const dialog=node('dialog','theme-marketplace-dialog');
+   const header=node('div','theme-marketplace-dialog-head');
+   header.append(node('strong','',product.name+' · Packaged preview'));
+   const close=node('button','btn ghost small','Close');
+   close.type='button';close.addEventListener('click',()=>dialog.close());
+   header.append(close);
+   const frame=node('iframe','theme-marketplace-dialog-frame');
+   frame.title=product.name+' preview';
+   frame.src=url.toString();
+   frame.setAttribute('sandbox','allow-scripts');
+   dialog.append(header,frame);
+   dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+   document.body.append(dialog);dialog.showModal();
+ }
+ async function addDraft(product,button){
+   button.disabled=true;button.textContent='Adding…';
+   try{
+     const res=await fetch('/api/admin/theme-products/drafts',{
+       method:'POST',credentials:'same-origin',
+       headers:{'content-type':'application/json'},
+       body:JSON.stringify({slug:product.slug})
+     });
+     const data=await res.json();
+     if(!res.ok||!data.ok)throw Error(data.error||'Draft was not saved');
+     drafts=[...drafts.filter(d=>d.slug!==product.slug),data.draft];
+     render();
+   }catch(error){
+     button.disabled=false;button.textContent='Add to Drafts';
+     const card=button.closest('.theme-marketplace-item');
+     card?.querySelector('.theme-marketplace-error')?.remove();
+     const warning=node('p','theme-marketplace-error','Could not add draft: '+error.message);
+     warning.setAttribute('role','alert');
+     card?.querySelector('.theme-marketplace-body')?.append(warning);
+   }
+ }
  function render(){
    const q=search.value.trim().toLowerCase(),category=filter.value;
    const visible=products.filter(product=>(category==='all'||product.category===category)
@@ -47,17 +86,23 @@
      }else{
        visual.append(node('div','theme-marketplace-unavailable','Preview not built'));
      }
-     visual.append(node('span','theme-marketplace-state',product.preview_ready?'Local preview':'Source only'));
+     visual.append(node('span','theme-marketplace-state',product.preview_ready?'Preview available':'Source only'));
      const body=node('div','theme-marketplace-body');
      body.append(node('span','theme-marketplace-category',product.category),node('h3','',product.name),node('p','',product.description));
      const meta=node('div','theme-marketplace-meta',product.package+' · v'+product.version);
      body.append(meta);
      const actions=node('div','theme-marketplace-actions');
      if(preview){
-       const a=node('a','btn ghost small','View site');
-       a.href=preview.toString();a.target='_blank';a.rel='noopener noreferrer';
-       actions.append(a);
+       const open=node('button','btn ghost small','Preview');
+       open.type='button';
+       open.addEventListener('click',()=>previewInsideStudio(product));
+       actions.append(open);
      }
+     const saved=drafts.find(d=>d.slug===product.slug);
+     const add=node('button','btn small',saved?'In Drafts ✓':'Add to Drafts');
+     add.type='button';add.disabled=Boolean(saved);
+     if(!saved)add.addEventListener('click',()=>void addDraft(product,add));
+     actions.append(add);
      const download=sameOriginUrl(product.download_url);
      if(download && product.download_kind==='preview_zip'){
        const a=node('a','btn ghost small','Download preview ZIP');
@@ -67,12 +112,14 @@
        actions.append(a);
      }
      const editor=sameOriginUrl(product.editor_url);
-     if(editor){
-       const a=node('a','btn small','Open in Studio');
-       a.href=editor.toString();actions.append(a);
+     if(editor && saved){
+       const a=node('a','btn ghost small','Editor preview');
+       a.href=editor.pathname+editor.search;
+       a.title='Open the packaged editor preview. Site binding and publishing are not connected.';
+       actions.append(a);
      }
      body.append(actions);
-     const foot=node('p','theme-marketplace-disclaimer','Uninstalled product · CMS install and checkout not connected');
+     const foot=node('p','theme-marketplace-disclaimer',saved?'Private draft saved · Not published or site-linked':'Add to Drafts to save this package selection. No site changes until linked.');
      body.append(foot);
      card.append(visual,body);root.append(card);
    }
@@ -84,6 +131,11 @@
      const data=await res.json();
      if(!data.ok||!Array.isArray(data.products))throw Error('Catalog response not supported');
      products=data.products.filter(p=>p&&p.slug&&p.name);
+     const draftResult=await fetch('/api/admin/theme-products/drafts',{credentials:'same-origin',cache:'no-store'}).catch(()=>null);
+     if(draftResult?.ok){
+       const saved=await draftResult.json().catch(()=>null);
+       drafts=Array.isArray(saved?.drafts)?saved.drafts:[];
+     }
      filter.replaceChildren(new Option('All categories','all'));
      for(const category of [...new Set(products.map(p=>p.category))].sort()){
        filter.add(new Option(category,category));

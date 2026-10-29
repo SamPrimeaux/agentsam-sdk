@@ -2758,12 +2758,19 @@ export function SettingsProductPage({
   const defaultView = unit?.views?.[0]?.id ?? "";
   const [activeView, setActiveView] = useState(requestedView || defaultView);
   const [snapshot, setSnapshot] = useState<SettingsSnapshot | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     const refresh = () => {
       void host.snapshot().then((next) => {
-        if (!cancelled) setSnapshot(next);
+        if (!cancelled) {
+          setSnapshot(next);
+          setLoadError(false);
+        }
+      }).catch(() => {
+        if (!cancelled) setLoadError(true);
       });
     };
     refresh();
@@ -2772,7 +2779,7 @@ export function SettingsProductPage({
       cancelled = true;
       unsubscribe?.();
     };
-  }, [host, unitId]);
+  }, [host, unitId, retryKey]);
 
   useEffect(() => {
     setActiveView(requestedView || defaultView);
@@ -2789,8 +2796,12 @@ export function SettingsProductPage({
 
   if (!snapshot) {
     return (
-      <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
-        Loading settings…
+      <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 px-5 text-center">
+        <h1 className="text-base font-semibold text-foreground">Settings</h1>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          {loadError ? "Your settings could not be loaded. No preferences were changed." : "Loading settings…"}
+        </p>
+        {loadError ? <button type="button" className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground" onClick={() => { setLoadError(false); setRetryKey(value => value + 1); }}>Retry settings</button> : null}
       </div>
     );
   }

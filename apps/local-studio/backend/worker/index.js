@@ -65,6 +65,8 @@ import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
 import clientCmsApp from "../../../client-cms-editor/agentsam.app.json";
 import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
 import { handleStudioPlatformProducts } from "./studio-platform-products.js";
+import { handleStudioSitesOverview } from "./studio-sites-overview.js";
+import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
 import { servePackagedConsole } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
 import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
@@ -775,6 +777,13 @@ export default {
       }
     }
 
+    // Retire the duplicate donor Atlas page. Existing deep links lead into
+    // the canonical in-app Theme Studio; shared section runtime is retained.
+    if (url.pathname === "/admin/revise-atlas" || url.pathname === "/admin/revise-atlas.html") {
+      const target=new URL('/admin/theme-editor?slug=home&catalog=revise',request.url);
+      return Response.redirect(target,302);
+    }
+
     // Existing Ecommerce console UI is served by the Local Studio Worker.
     // The packaged UI and its APIs remain on this origin and use Local Studio D1.
     if ((request.method === "GET" || request.method === "HEAD") &&
@@ -793,6 +802,10 @@ export default {
 
     // Read-only packaged theme catalog for the authenticated Sites dashboard.
     // No writes, entitlements, or theme activation may flow through this reader.
+    if (url.pathname === '/api/admin/theme-products/drafts') {
+      const principal=await resolveSessionUser(request,env);
+      return handleStudioThemeDrafts(request,env,principal?.id||null);
+    }
     if (url.pathname === '/api/admin/theme-products') {
       if (request.method !== 'GET') return json({ok:false,error:'method_not_allowed'},405);
       const principal = await resolveSessionUser(request, env);
@@ -825,6 +838,8 @@ export default {
           if (preference.ok) studioUser.avatar_url = (await preference.json()).avatar_url || principal.avatar_url || null;
         } catch { /* Identity remains usable when optional profile preferences are unavailable. */ }
       }
+      if (url.pathname === "/api/admin/store/online" && request.method === "GET")
+        return handleStudioSitesOverview(request, env, principal.id);
       const commerceEnv = url.pathname.startsWith("/api/admin/completeful/")
         ? await completefulAccountEnvironment(env, principal.id)
         : env;
