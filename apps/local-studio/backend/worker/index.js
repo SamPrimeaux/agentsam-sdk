@@ -916,6 +916,37 @@ export default {
       return handleCmsWorkerRequest(request, env, cmsActorId);
     }
 
+    // Settings are served as build-generated, canonical React route shells.
+    // The browser hydrates the installed Settings package normally. This
+    // isolates Cloudflare's Settings-only Nitro SSR failure without creating
+    // a separate editor, storing fake preferences or exposing account data.
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        (url.pathname === "/settings" || url.pathname.startsWith("/settings/"))) {
+      const unit=url.pathname.split("/").filter(Boolean)[1] || "general";
+      const allowed=new Set(["general","agents","customize","design","git-prs",
+        "codebase","network","runtime","themes","storage","keys","usage",
+        "notifications","docs","integrations"]);
+      if(url.pathname === "/settings" || !allowed.has(unit))
+        return Response.redirect(new URL("/settings/general",request.url),302);
+      const account=await resolveSessionUserId(request,env);
+      if(!account){
+        const next=encodeURIComponent(url.pathname+url.search);
+        return Response.redirect(url.origin+LOGIN_PATH+"?next="+next,302);
+      }
+      const assetUrl=new URL(request.url);
+      assetUrl.pathname="/studio-settings-shell/"+unit+"/";
+      assetUrl.search="";
+      const shell=await env.ASSETS.fetch(new Request(assetUrl,{method:"GET"}));
+      if(!shell.ok)return json({ok:false,error:"settings_shell_unavailable"},503);
+      const headers=new Headers(shell.headers);
+      headers.set("content-type","text/html; charset=utf-8");
+      headers.set("cache-control","private, no-store");
+      headers.delete("content-length");
+      return new Response(request.method === "HEAD" ? null : shell.body,{
+        status:200,headers,
+      });
+    }
+
     // Gate authenticated Studio app routes from the app manifest mounts.
     if (request.method === "GET" && isProtectedAppPath(url.pathname)) {
       try {
