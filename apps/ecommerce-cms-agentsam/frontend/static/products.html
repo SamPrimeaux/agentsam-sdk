@@ -221,8 +221,10 @@ function openPlatformProduct(product) {
 function renderPlatformProducts() {
   const search = document.getElementById('platform-product-search').value.trim().toLowerCase();
   const kind = document.getElementById('platform-product-kind').value;
+  const collection = document.getElementById('platform-product-collection').value;
   const visible = platformItems.filter(product => {
     if (kind !== 'all' && product.kind !== kind) return false;
+    if (collection !== 'all' && product.collection !== collection) return false;
     return !search || [product.name, product.slug, product.kind, product.package_name, product.collection, product.description]
       .some(value => String(value || '').toLowerCase().includes(search));
   });
