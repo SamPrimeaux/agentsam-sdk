@@ -2,7 +2,7 @@
   "schema": "agentsam.prebuild.v1",
   "id": "resolve",
   "package": "@inneranimalmedia/theme-resolve",
-  "version": "2.6.11",
+  "version": "2.6.13",
   "siteRoot": "site",
   "entrypoint": "index.html",
   "rootDeployable": true,

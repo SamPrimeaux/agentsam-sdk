@@ -4,7 +4,7 @@ const THEME = {
   "slug": "resolve",
   "family": "luxury-commerce",
   "displayName": "Resolve",
-  "version": "2.6.11",
+  "version": "2.6.13",
   "kind": "prebuild",
   "icon": "theme",
   "package": "@inneranimalmedia/theme-resolve",
@@ -69,3 +69,5 @@ export function createProductRow({ accountId = null, repositoryId = null, status
 }
 
 export {RESOLVE_PORTAL_TEMPLATES,RESOLVE_PORTAL_BRAND,portalCmsPage,portalHref,portalTemplateForSlug} from './portal-templates.mjs';
+
+export { RESOLVE_STOREFRONT_TEMPLATES, RESOLVE_DEFAULT_THEME_SETTINGS, cloneResolveStorefrontTemplates } from './storefront-templates.mjs';
