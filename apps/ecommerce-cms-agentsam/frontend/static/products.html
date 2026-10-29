@@ -280,6 +280,12 @@ async function refreshPlatformProducts() {
     const kinds = [...new Set(platformItems.map(p => p.kind).filter(Boolean))].sort();
     for (const kind of kinds) select.add(new Option(platformKindLabel(kind), kind));
     select.value = kinds.includes(previousKind) ? previousKind : 'all';
+    const collectionSelect = document.getElementById('platform-product-collection');
+    const previousCollection = collectionSelect.value;
+    collectionSelect.replaceChildren(new Option('All collections', 'all'));
+    const collections = [...new Set(platformItems.map(p => p.collection).filter(Boolean))].sort();
+    for (const collection of collections) collectionSelect.add(new Option(collection, collection));
+    collectionSelect.value = collections.includes(previousCollection) ? previousCollection : 'all';
     renderPlatformProducts();
     status.textContent = '';
   } catch (error) {
