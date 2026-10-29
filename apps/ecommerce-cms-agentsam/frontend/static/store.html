@@ -182,11 +182,13 @@ function renderDraftRow(theme) {
       <div class="online-store-draft-copy">
         <div class="online-store-draft-name">${name}</div>
         <div class="online-store-draft-meta">${meta}${version?' · v'+version:''}</div>
-        <div class="online-store-version">Private draft · Not published</div>
+        <div class="online-store-version">${theme.installed?'Installed CMS draft · Not published':'Saved theme selection · Finish installation'}</div>
       </div>
       <div class="online-store-draft-actions">
-        ${preview?'<button type="button" class="btn ghost small" data-theme-draft-preview="'+escapeThemeText(preview)+'">Preview</button>':''}
-        <button type="button" class="btn ghost small" disabled title="Connect this draft to a CMS site before editing">Connect site to edit</button>
+         ${preview?'<a class="btn ghost small" href="'+escapeThemeText(preview)+'" target="_blank" rel="noopener noreferrer" data-theme-draft-preview="'+escapeThemeText(preview)+'">Explore preview</a>':''}
+        ${theme.installed && theme.edit_href
+          ? '<a class="btn ghost small" href="'+escapeThemeText(theme.edit_href)+'">Customize draft</a>'
+          : '<a class="btn ghost small" href="/themes">Finish installation</a>'}
       </div>
     </div>`;
 }
@@ -194,29 +196,7 @@ function paintStoreDrafts(drafts) {
   const container=document.getElementById("draft-themes");
   if(!container)return;
   container.innerHTML=(drafts||[]).map(renderDraftRow).join("");
-  container.querySelectorAll("[data-theme-draft-preview]").forEach(button=>{
-    button.addEventListener("click",()=>{
-      const url=button.dataset.themeDraftPreview;
-      const dialog=document.createElement("dialog");
-      dialog.className="theme-marketplace-dialog";
-      const header=document.createElement("div");
-      header.className="theme-marketplace-dialog-head";
-      const title=document.createElement("strong");
-      title.textContent="Draft preview · Not published";
-      const close=document.createElement("button");
-      close.className="btn ghost small";close.type="button";close.textContent="Close";
-      close.addEventListener("click",()=>dialog.close());
-      header.append(title,close);
-      const iframe=document.createElement("iframe");
-      iframe.className="theme-marketplace-dialog-frame";
-      iframe.title="Unpublished theme draft preview";
-      iframe.setAttribute("sandbox","allow-scripts");
-      iframe.src=url;
-      dialog.append(header,iframe);
-      dialog.addEventListener("close",()=>dialog.remove(),{once:true});
-      document.body.append(dialog);dialog.showModal();
-    });
-  });
+
 }
 document.addEventListener("agentsam:theme-draft-added",event=>{
   const draft=event.detail;
@@ -230,7 +210,9 @@ document.addEventListener("agentsam:theme-draft-added",event=>{
   const drafts=cards.map(card=>({
     id:card.dataset.draftId,name:card.querySelector(".online-store-draft-name")?.textContent,
     meta:card.querySelector(".online-store-draft-meta")?.textContent,
-    preview_url:card.querySelector("[data-theme-draft-preview]")?.dataset.themeDraftPreview
+    preview_url:card.querySelector("[data-theme-draft-preview]")?.dataset.themeDraftPreview,
+    installed:Boolean(card.querySelector('a[href*="/admin/theme-project-editor?project="]')),
+    edit_href:card.querySelector('a[href*="/admin/theme-project-editor?project="]')?.getAttribute('href')
   }));
   paintStoreDrafts(drafts);
   container?.scrollIntoView({behavior:"smooth",block:"center"});
@@ -442,8 +424,19 @@ function showActiveTheme(theme) {
     if (theme?.preview_href && theme?.name) {
       showActiveTheme(theme);
       setPreviewFrames(theme.preview_href);
+    } else if (d.preview_theme?.installed && d.preview_theme?.preview_href) {
+      // Installed draft, not an active or published storefront.
+      const preview=d.preview_theme;
+      setPreviewFrames(preview.preview_href);
+      document.getElementById("active-theme-name").textContent=preview.name+" · Draft preview";
+      document.getElementById("active-theme-status").textContent="Unpublished";
+      document.getElementById("active-theme-status").className="online-store-badge online-store-badge--pending";
+      document.getElementById("active-theme-saved").textContent="Installed CMS project · Customize before publishing.";
+      editLink.href=preview.edit_href;
+      editLink.textContent="Customize draft";
+      document.querySelector(".online-store-preview-caption").textContent="Desktop · Draft preview";
     } else {
-      showThemeUnavailable("empty", "No published theme has been confirmed. Preview a package or create your first theme draft.");
+      showThemeUnavailable("empty", "No installed CMS theme is available. Finish installation in the Theme Store to customize.");
     }
 
     if (theme?.version_available) {

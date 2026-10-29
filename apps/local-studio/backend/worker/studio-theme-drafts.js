@@ -3,6 +3,7 @@
  * This is a private, account-scoped selection/config draft; the CMS renderer
  * must be connected and verified separately before publishing.
  */
+import { listThemeProjects } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
 const answer=(payload,status=200)=>Response.json(payload,{status,headers:{'cache-control':'private, no-store'}});
 const allowed=/^(resolve|violet|plain-jane)$/;
 async function slugFor(accountId,sourceSlug) {
@@ -31,10 +32,27 @@ function draft(row) {
  };
 }
 export async function listStudioThemeDrafts(env,userId) {
+ // The canonical CMS v2 project is the real installed, editable draft.
+ // cms_themes is retained read-only for historical unlinked selections.
+ let installed=[];
+ try {
+  const response=await listThemeProjects(env,userId);
+  if(response.ok)installed=response.projects.filter(project=>allowed.test(project.sourceThemeId||''))
+    .map(project=>({
+      id:project.id,slug:project.sourceThemeId,name:project.name,
+      theme_slug:project.sourceThemeId,package:project.packageName,
+      version:project.sourcePackageVersion,status:'draft',
+      created_at:project.createdAt,installed:true,site_linked:false,
+      meta:project.packageName,preview_url:project.sourcePreviewUrl,
+      edit_href:'/admin/theme-project-editor?project='+encodeURIComponent(project.id)
+    }));
+ }catch{/* A missing v2 table does not erase historical selections. */}
  const rows=await env.DB.prepare(
   "SELECT id,name,slug,config,created_at FROM cms_themes WHERE workspace_id=? AND status='draft' AND slug LIKE 'draft-%' ORDER BY created_at DESC LIMIT 60"
  ).bind(userId).all();
- return (rows.results||[]).map(draft).filter(row=>allowed.test(row.slug||''));
+ const installedSlugs=new Set(installed.map(row=>row.slug));
+ return [...installed,...(rows.results||[]).map(draft)
+   .filter(row=>allowed.test(row.slug||'')&&!installedSlugs.has(row.slug))];
 }
 export async function handleStudioThemeDrafts(request,env,userId) {
  if(!userId)return answer({ok:false,error:'unauthorized'},401);

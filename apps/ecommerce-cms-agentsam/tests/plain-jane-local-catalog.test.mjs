@@ -23,8 +23,9 @@ test('Local site dashboard has a functional template browser and never a pretend
  assert.match(html,/Browse Templates/);
  assert.match(html,/theme-product-browser\.js/);
  assert.match(code,/\/api\/admin\/theme-products/);
- assert.match(code,/Open in Studio/);
- assert.match(code,/Uninstalled product/);
+ assert.match(code,/Explore preview/);
+ assert.match(code,/noopener noreferrer/);
+ assert.doesNotMatch(code,/theme-marketplace-dialog/);
  assert.doesNotMatch(code,/fetch\([^)]*\/publish/);
 });
 test('Local studio recognizes Journal preview without altering tenant authoring routes',()=>{

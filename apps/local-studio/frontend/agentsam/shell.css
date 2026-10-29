@@ -350,13 +350,24 @@
   .agentsam-plugin-trigger-label { display: none; }
 }
 
-/* Keep the Chat/Work switch accessible even after the first message. */
-.agentsam-page-layout .as-nav-topbar { position: relative; }
-.agentsam-page-layout .as-nav-topbar > .as-nav-mode-switch {
-  position: absolute; left: 50%; transform: translateX(-50%);
+/* Chat/Work is a welcome-state choice, not global navigation. It lives
+   below the host top bar and leaves the viewport once messages begin. */
+.agentsam-welcome-mode-bar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--nav-border, var(--border));
+  background: var(--nav-canvas, var(--background));
+}
+.agentsam-welcome-mode-bar .as-nav-mode-switch {
+  border: 1px solid var(--nav-border, var(--border));
 }
 @media (max-width: 650px) {
-  .agentsam-page-layout .as-nav-topbar > .as-nav-mode-switch { left: 43%; }
+  .agentsam-welcome-mode-bar { min-height: 48px; }
+  .agentsam-welcome-mode-bar .as-nav-mode-switch button { padding-inline: 16px; }
 }
 
 /* Context controls belong to the conversation viewport, not a second global topbar. */

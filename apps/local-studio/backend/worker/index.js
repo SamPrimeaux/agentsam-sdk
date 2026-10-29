@@ -777,6 +777,15 @@ export default {
       }
     }
 
+    // Legacy Ecommerce email entry is only a compatibility link. The reusable
+    // AgentSam Work Mail surface owns the inbox on this host.
+    if (request.method === "GET" &&
+        (url.pathname === "/admin/email" || url.pathname === "/admin/email.html")) {
+      const target = new URL("/mail", request.url);
+      target.search = url.search;
+      return Response.redirect(target, 302);
+    }
+
     // Retire the duplicate donor Atlas page. Existing deep links lead into
     // the canonical in-app Theme Studio; shared section runtime is retained.
     if (url.pathname === "/admin/revise-atlas" || url.pathname === "/admin/revise-atlas.html") {
@@ -925,14 +934,23 @@ export default {
          url.pathname === "/admin/cad" ||
          url.pathname === "/admin/moviemode" ||
          url.pathname === "/admin/moviemode/edit" ||
-         url.pathname === "/admin/projects")) {
+         url.pathname === "/admin/projects" ||
+         url.pathname === "/mail" ||
+         url.pathname === "/artifacts" ||
+         url.pathname === "/artifacts/tickets" ||
+         url.pathname === "/tickets" ||
+         url.pathname === "/themes")) {
       const account=await resolveSessionUserId(request,env);
       if(!account){
         return Response.redirect(url.origin+LOGIN_PATH+"?next="+
           encodeURIComponent(url.pathname+url.search),302);
       }
       const assetUrl=new URL(request.url);
-      assetUrl.pathname="/studio-app-shell"+url.pathname.slice("/admin".length)+"/";
+      // Both /admin/* mounts and Work package top-level routes hydrate the
+      // same canonical React app; no legacy HTML donor is introduced.
+      const shellRoute=url.pathname.startsWith("/admin/")
+        ? url.pathname.slice("/admin".length) : url.pathname;
+      assetUrl.pathname="/studio-app-shell"+shellRoute+"/";
       assetUrl.search="";
       const shell=await env.ASSETS.fetch(new Request(assetUrl,{method:"GET"}));
       if(!shell.ok)return json({ok:false,error:"studio_app_shell_unavailable"},503);

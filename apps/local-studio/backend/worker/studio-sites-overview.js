@@ -18,10 +18,16 @@ export async function handleStudioSitesOverview(request, env, accountId) {
   let drafts=[];
   try { drafts=await listStudioThemeDrafts(env,accountId); }
   catch { /* The starter store stays usable even if draft storage is offline. */ }
+  const installed=drafts.find(theme=>theme.installed===true && theme.preview_url && theme.edit_href);
   return response({
     ok:true,source:'studio_cms_site_read_model',
     store:{visibility:'unpublished',url:null,domain:null,company_name:null},
     performance:emptyPerformance,active_theme:null,draft_themes:drafts,
-    preview_theme:null,pages:[],cms_connected:cmsConnected,setup_required:true,
+    // A project preview is never proof that its site is published.
+    preview_theme:installed?{
+      id:installed.id,name:installed.name,preview_href:installed.preview_url,
+      edit_href:installed.edit_href,verified:false,installed:true
+    }:null,
+    pages:[],cms_connected:cmsConnected,setup_required:true,
   });
 }

@@ -8,6 +8,7 @@ import {handleStudioThemeDrafts} from '../backend/worker/studio-theme-drafts.js'
 const base='https://agentsam.inneranimalmedia.com';
 function fixture(){
  const rows=new Map();
+ const projects=new Map();
  const calls=[];
  const env={
   ASSETS:{fetch:async()=>Response.json({products:[
@@ -19,7 +20,7 @@ function fixture(){
     bind(...args){
      calls.push({sql,args});
      return {
-      all:async()=>({results:sql.includes('FROM cms_themes')?[...rows.values()].filter(row=>row.workspace_id===args[0]):[]}),
+      all:async()=>({results:sql.includes('FROM cms_themes')?[...rows.values()].filter(row=>row.workspace_id===args[0]):sql.includes('FROM cms_globals')?(projects.get(args[0])||[]):[]}),
       first:async()=>[...rows.values()].find(row=>row.workspace_id===args[0]&&row.slug===args[1])||null,
       run:async()=>{
        if(sql.startsWith('INSERT INTO cms_themes')){
@@ -34,7 +35,7 @@ function fixture(){
    };
   }}
  };
- return {env,rows,calls};
+ return {env,rows,calls,projects};
 }
 test('unlinked studio store uses cms_sites, never unscoped legacy Ecommerce tables',async()=>{
  const {env,calls}=fixture();
@@ -82,6 +83,27 @@ test('online store projects private theme drafts from the same CMS authority',as
  const other=await handleStudioSitesOverview(new Request(base+'/api/admin/store/online'),env,'user-2');
  assert.equal((await other.json()).draft_themes.length,0);
 });
+test('installed CMS v2 projects supersede legacy selections and expose only an account-owned editor',async()=>{
+ const {env,projects}=fixture();
+ const url=base+'/api/admin/theme-products/drafts';
+ await handleStudioThemeDrafts(new Request(url,{method:'POST',headers:{origin:base,'content-type':'application/json'},body:JSON.stringify({slug:'resolve'})}),env,'user-1');
+ projects.set('user-1',[{inline_content_json:JSON.stringify({
+   id:'theme_resolve',name:'Resolve',sourceThemeId:'resolve',
+   packageName:'@inneranimalmedia/theme-resolve',sourcePackageVersion:'2.6.13',
+   sourcePreviewUrl:'/themes/resolve/demo/',createdAt:'2026-10-29T12:00:00Z'
+ })}]);
+ const read=async account=>(await (await handleStudioSitesOverview(
+   new Request(base+'/api/admin/store/online'),env,account)).json());
+ const mine=await read('user-1');
+ assert.equal(mine.draft_themes.length,1,'an installed project replaces its placeholder');
+ assert.equal(mine.draft_themes[0].installed,true);
+ assert.equal(mine.draft_themes[0].edit_href,'/admin/theme-project-editor?project=theme_resolve');
+ assert.equal(mine.preview_theme.preview_href,'/themes/resolve/demo/');
+ assert.equal(mine.active_theme,null,'draft preview never becomes published');
+ const other=await read('user-2');
+ assert.equal(other.preview_theme,null);
+ assert.deepEqual(other.draft_themes,[]);
+});
 test('template draft creation refuses unauthenticated, CSRF and unsupported catalog writes',async()=>{
  const {env,rows}=fixture(),url=base+'/api/admin/theme-products/drafts';
  const payload=(body,headers={})=>new Request(url,{method:'POST',headers:{'content-type':'application/json',...headers},body:JSON.stringify(body)});
@@ -98,7 +120,8 @@ test('retired Atlas route is absent, redirects to the single Theme Studio, and S
  assert.match(read('frontend/src/routes/(apps)/settings/$unit.tsx'),/import\("@\/components\/settings\/LocalStudioSettingsPage"\)/);
  const browser=read('../ecommerce-cms-agentsam/frontend/static/js/theme-product-browser.js');
  assert.match(browser,/Add to Drafts/);
- assert.match(browser,/theme-marketplace-dialog/);
+ assert.match(browser,/Explore preview/);
+ assert.doesNotMatch(browser,/theme-marketplace-dialog/);
  const editor=read('../ecommerce-cms-agentsam/frontend/static/js/theme-editor.js');
  assert.match(editor,/const host = showcaseTheme \? null/);
  assert.match(editor,/data-picker-preset/);

@@ -24,6 +24,18 @@
   if (desktop && !desktopHost && typeof loadShellUser === 'function') {
     loadShellUser = async function () { return window.__shellUser || null; };
   }
+  // Hosted AgentSam uses the real CMS project installer in Theme Store.
+  // Standalone Ecommerce customers keep their own install adapters.
+  window.__AGENTSAM_THEME_STORE_URL = "/themes";
+  if (window.location?.pathname === "/sites") {
+    const updateThemeEntry = () => {
+      const browse = document.getElementById("browse-themes-shortcut");
+      if (browse) browse.href = "/themes";
+    };
+    if (document.readyState === "loading")
+      document.addEventListener("DOMContentLoaded", updateThemeEntry, { once: true });
+    else updateThemeEntry();
+  }
   const main = [
     { href: "/admin/home", label: "Home", icon: "home" },
     { id: "products", label: "Products", icon: "products", href: "/admin/products", children: [
@@ -94,10 +106,49 @@
       .replace('<button class="admin-logout-btn" type="button">Log out</button>', '<a href="/settings/general" class="admin-logout-btn">Account settings</a>')
       .replaceAll("https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail", "/brand/agentsam-gorilla/v1/pet/animated/ledge-idle.gif");
   };
-  try {
-    if (!localStorage.getItem(CONSOLE_APPEARANCE_KEY))
-      localStorage.setItem(CONSOLE_APPEARANCE_KEY, "dark");
-  } catch { /* Private browsing keeps the original renderer's default. */ }
+  // The hosted Ecommerce Console and React Local Studio must read the same
+  // user-selected shell colorway. Do not mutate the customer Console package.
+  // This adapter runs after shell.js and before renderShell on packaged pages.
+  function preferredDashboardAppearance() {
+    try {
+      const value = JSON.parse(localStorage.getItem("agentsam-shell-appearance-v1") || "null");
+      if (!value || !["light", "dark", "system"].includes(value.theme)) return null;
+      const mode = value.theme === "system"
+        ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+        : value.theme;
+      const accent = /^#[0-9a-f]{6}$/i.test(value.accent || "") ? value.accent : null;
+      return { mode, accent };
+    } catch { return null; }
+  }
+  // Some embedded hosts intentionally mock only the navigation primitives.
+  // In those hosts do not create a second theme engine or assume shell.js APIs.
+  if (typeof readConsoleAppearance === "function" &&
+      typeof applyConsoleAppearance === "function") {
+    const originalReadAppearance = readConsoleAppearance;
+    const originalApplyAppearance = applyConsoleAppearance;
+    readConsoleAppearance = function () {
+      return preferredDashboardAppearance()?.mode || originalReadAppearance();
+    };
+    applyConsoleAppearance = function (value) {
+      const preferred = preferredDashboardAppearance();
+      const mode = originalApplyAppearance(preferred?.mode || value);
+      const root = document.documentElement;
+      // Reapplying a mode must also clear previous custom accent overrides.
+      for (const key of ["--c-accent", "--c-accent-ink", "--c-focus"]) root.style.removeProperty(key);
+      if (preferred?.accent) {
+        root.style.setProperty("--c-accent", preferred.accent);
+        root.style.setProperty("--c-accent-ink", "#ffffff");
+        root.style.setProperty("--c-focus", preferred.accent);
+      }
+      return mode;
+    };
+    window.addEventListener("agentsam:shell-appearance", () =>
+      applyConsoleAppearance(readConsoleAppearance()));
+    window.addEventListener("storage", (event) => {
+      if (event.key === "agentsam-shell-appearance-v1")
+        applyConsoleAppearance(readConsoleAppearance());
+    });
+  }
   const originalProfile = typeof hydrateShellProfile === 'function' ? hydrateShellProfile : null;
   if (originalProfile) hydrateShellProfile = function (user) {
     originalProfile(user && { ...user, avatar_url: user.avatar_url || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg' });

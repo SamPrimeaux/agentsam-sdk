@@ -21,23 +21,6 @@
      return url.origin===location.origin?url:null;
    }catch{return null;}
  };
- function previewInsideStudio(product){
-   const url=sameOriginUrl(product.preview_url);
-   if(!url)return;
-   const dialog=node('dialog','theme-marketplace-dialog');
-   const header=node('div','theme-marketplace-dialog-head');
-   header.append(node('strong','',product.name+' · Packaged preview'));
-   const close=node('button','btn ghost small','Close');
-   close.type='button';close.addEventListener('click',()=>dialog.close());
-   header.append(close);
-   const frame=node('iframe','theme-marketplace-dialog-frame');
-   frame.title=product.name+' preview';
-   frame.src=url.toString();
-   frame.setAttribute('sandbox','allow-scripts');
-   dialog.append(header,frame);
-   dialog.addEventListener('close',()=>dialog.remove(),{once:true});
-   document.body.append(dialog);dialog.showModal();
- }
  async function addDraft(product,button){
    button.disabled=true;button.textContent='Adding…';
    try{
@@ -94,17 +77,27 @@
      body.append(meta);
      const actions=node('div','theme-marketplace-actions');
      if(preview){
-       const open=node('button','btn ghost small','Preview');
-       open.type='button';
-       open.addEventListener('click',()=>previewInsideStudio(product));
+       const open=node('a','btn ghost small','Explore preview');
+       open.href=preview.toString();
+       open.target='_blank';
+       open.rel='noopener noreferrer';
        actions.append(open);
      }
-     const add=node('button','btn small','Add to Drafts');
-     add.type='button';
-     add.addEventListener('click',()=>void addDraft(product,add));
-     actions.append(add);
+     const installer=window.__AGENTSAM_THEME_STORE_URL;
+     if (installer && /^\/[a-zA-Z0-9/_-]+$/.test(installer)) {
+       // The hosted Studio installs editable CMS v2 projects. Do not create
+       // another unlinked cms_themes placeholder from this catalog.
+       const add=node('a','btn small','Install in Theme Store');
+       add.href=installer+'?theme='+encodeURIComponent(product.slug);
+       actions.append(add);
+     } else {
+       const add=node('button','btn small','Add to Drafts');
+       add.type='button';
+       add.addEventListener('click',()=>void addDraft(product,add));
+       actions.append(add);
+     }
      body.append(actions);
-     const foot=node('p','theme-marketplace-disclaimer','Add to Drafts to save this theme under your Online Store. Site installation is a separate step.');
+     const foot=node('p','theme-marketplace-disclaimer',installer?'Use the Theme Store to install a real editable CMS draft.':'Add to Drafts saves an unlinked selection; site installation is a separate step.');
      body.append(foot);
      card.append(visual,body);root.append(card);
    }

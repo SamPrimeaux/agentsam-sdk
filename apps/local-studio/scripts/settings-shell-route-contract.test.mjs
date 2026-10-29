@@ -35,7 +35,7 @@ test('Settings shell host is session-gated, read-only and stays on the current a
 });
 
 test('AgentSam Work, CAD and MovieMode use authenticated canonical React shells',()=>{
- const routes=['agentsam','cad','moviemode','moviemode/edit','projects'];
+ const routes=['agentsam','cad','moviemode','moviemode/edit','projects','mail','artifacts','artifacts/tickets','tickets','themes'];
  for(const route of routes){
   const source=path.join(root,'.output/public/studio-app-shell',route,'index.html');
   assert.ok(existsSync(source),'missing Studio mount: '+route);

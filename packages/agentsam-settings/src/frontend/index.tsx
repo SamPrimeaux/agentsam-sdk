@@ -1721,8 +1721,16 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-function ThemesView({ themes, host, onChanged }: { themes: SettingsTheme[]; host: SettingsHost; onChanged: () => void }) {
-  return <><AppearancePreferences /><SettingsThemeGallery themes={themes} host={host} onChanged={onChanged} /></>;
+function ThemesView({ themes: _themes, host: _host, onChanged: _onChanged }: { themes: SettingsTheme[]; host: SettingsHost; onChanged: () => void }) {
+  // Account appearance preferences and customer storefront themes are different
+  // resources. The reusable website theme library belongs under Online Store.
+  return <><AppearancePreferences />
+    <Section title="Storefront design" description="Website templates belong to the Ecommerce CMS, not your dashboard appearance.">
+      <a href="/sites" className="inline-flex rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-foreground hover:bg-muted">
+        Open Online Store and installed drafts
+      </a>
+    </Section>
+  </>;
 }
 
 const freshAgent=():SettingsAgentDraft=>({
@@ -2363,7 +2371,7 @@ function AppearancePreferences() {
           </div>
         </div>
         <p className="mt-3 text-[10px] text-muted-foreground">
-          Prefer product themes from the Themes unit for gallery projections. Accent here only tints shell chrome.
+          Appearance preferences control the AgentSam dashboard. Storefront themes and installed drafts are managed separately in Online Store.
         </p>
       </div>
     </Section>
