@@ -36,8 +36,11 @@ test("compatibility manifests point at their canonical owner instead of becoming
   }
 });
 
-test("canonical app manifest compatibility mirror cannot drift", async () => {
+test("host install state points to the canonical ecommerce app without replacing its contract", async () => {
   const canonical = await json(path.join(appRoot, "agentsam.app.json"));
-  const mirror = await json(path.join(appRoot, ".agentsam/app.json"));
-  assert.deepEqual(mirror, canonical);
+  const hostInstall = await json(path.join(appRoot, ".agentsam/app.json"));
+  assert.equal(hostInstall.schema, "agentsam.host-install.v1");
+  assert.equal(hostInstall.app_id, canonical.id);
+  assert.ok(hostInstall.mounts.some(mount => mount.id === "admin" && mount.path === "/admin"));
+  assert.ok(canonical.apps.bundled.includes("form-studio"));
 });
