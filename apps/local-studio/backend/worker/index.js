@@ -841,6 +841,13 @@ export default {
       if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
       const principal = await resolveSessionUser(request, env);
       if (!principal) return json({ ok: false, error: "unauthorized" }, 401);
+      // Preview only: IAM_MAIN has a different media schema from merchant D1.
+      // Keep mutations on the existing route until provider adapters and album
+      // persistence are feature-complete; never silently reinterpret IDs.
+      if (env.AGENTSAM_PLATFORM_MEDIA_REGISTRY === "preview" && request.method === "GET" &&
+          (url.pathname === "/api/admin/media" || /^\/api\/admin\/media\/[^/]+$/.test(url.pathname))) {
+        return handlePlatformMediaRead(request, env, url, principal);
+      }
       const studioUser = { ...principal, id: principal.id, account_id: principal.id, role: "owner" };
       if (url.pathname === "/api/admin/me") {
         try {
