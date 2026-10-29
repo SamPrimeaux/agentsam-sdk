@@ -3,7 +3,7 @@
   "id": "form-studio",
   "name": "Form & Modal Studio",
   "kind": "app",
-  "role": "content-studio",
+  "role": "content-app",
   "category": "cms",
   "status": "bundled",
   "routes": [
