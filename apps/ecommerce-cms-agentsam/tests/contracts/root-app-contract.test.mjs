@@ -12,7 +12,7 @@ test("root Ecommerce contract classifies admin as core and product/growth/provid
   const manifest = await json(path.join(appRoot, "agentsam.app.json"));
   assert.equal(manifest.surfaces.admin.kind, "core-surface");
   assert.equal(manifest.surfaces.admin.contract, "frontend/admin.surface.json");
-  assert.deepEqual(manifest.apps.bundled, ["product-studio", "growth", "completeful", "resend"]);
+  assert.deepEqual(manifest.apps.bundled, ["product-studio", "growth", "completeful", "resend", "form-studio"]);
   assert.ok(!manifest.features.includes("admin.shell-nav"));
   assert.ok(!manifest.features.includes("commerce.product-studio"));
   assert.ok(!manifest.features.includes("growth.campaigns"));
