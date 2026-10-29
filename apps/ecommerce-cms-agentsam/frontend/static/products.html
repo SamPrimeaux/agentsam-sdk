@@ -169,27 +169,123 @@ document.getElementById('create-collection').addEventListener('submit', async ev
   finally { button.disabled = false; }
 });
 let platformItems = []; let editingPlatformProduct = null;
-async function refreshPlatformProducts() {
-  const status = document.getElementById('platform-status'); status.textContent = 'Loading platform products…';
-  try {
-    const data = await adminFetch('/api/admin/platform/products'); platformItems = data.products || [];
-    const list = document.getElementById('platform-list'); list.replaceChildren();
-    for (const product of platformItems) {
-      const row = document.createElement('div'); row.className = 'product-platform-row';
-      const label = document.createElement('span'); label.textContent = product.name + ' · ' + product.kind + ' · ' + product.status;
-      const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'btn ghost'; edit.textContent = 'Edit details';
-      edit.addEventListener('click', () => {
-        editingPlatformProduct = product;
-        const form = document.getElementById('platform-product-editor'); form.hidden = false;
-        document.getElementById('platform-product-title').textContent = product.name;
-        for (const key of ['name', 'description', 'collection', 'thumbnail_url']) form.elements[key].value = product[key] || '';
-        form.elements.name.focus(); form.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-      });
-      row.append(label, edit); list.appendChild(row);
-    }
-    status.textContent = platformItems.length ? '' : 'No platform products are registered for this account.';
-  } catch (error) { status.textContent = error.message; }
+const platformKindLabels = {
+  'app': 'Application', 'theme': 'Theme', 'sdk-package': 'SDK package',
+  'ui-component': 'UI component', 'section': 'Section', 'block': 'Block',
+  'integration': 'Integration', 'service': 'Service', 'product': 'Digital product',
+  'collection': 'Collection', 'product-line': 'Product line', 'script': 'Script',
+  'solution': 'Solution',
+};
+function platformKindLabel(value) {
+  return platformKindLabels[value] || String(value || 'Product').replace(/-/g, ' ');
 }
+function safePlatformImage(value) {
+  return typeof value === 'string' && (/^https:\/\/[^\s<>"']+$/i.test(value) || /^\/(?!\/)[^\s<>"']+$/.test(value));
+}
+function platformIcon(product, className) {
+  const wrapper = document.createElement('span');
+  wrapper.className = className;
+  const image = product.thumbnail_url;
+  if (safePlatformImage(image)) {
+    const img = document.createElement('img');
+    img.alt = ''; img.loading = 'lazy'; img.src = image;
+    img.addEventListener('error', () => { wrapper.replaceChildren(platformInitials(product)); }, { once: true });
+    wrapper.appendChild(img);
+  } else {
+    wrapper.appendChild(platformInitials(product));
+  }
+  return wrapper;
+}
+function platformInitials(product) {
+  const initials = document.createElement('span');
+  initials.className = 'platform-initials';
+  initials.textContent = String(product.name || 'Product').split(/\s+/).slice(0, 2).map(word => word[0] || '').join('').toUpperCase();
+  return initials;
+}
+function openPlatformProduct(product) {
+  editingPlatformProduct = product;
+  const form = document.getElementById('platform-product-editor');
+  form.hidden = false;
+  document.getElementById('platform-product-title').textContent = product.name;
+  document.getElementById('platform-editor-preview').replaceChildren(platformIcon(product, 'platform-editor-icon'));
+  document.getElementById('platform-editor-meta').textContent =
+    [platformKindLabel(product.kind), product.status, product.version && ('v' + product.version)].filter(Boolean).join(' · ');
+  for (const key of ['name', 'description', 'collection', 'thumbnail_url']) form.elements[key].value = product[key] || '';
+  form.querySelector('[type="submit"]').disabled = !product.revision;
+  form.scrollIntoView({ block: 'start', behavior: 'auto' });
+  form.elements.name.focus({ preventScroll: true });
+}
+function renderPlatformProducts() {
+  const search = document.getElementById('platform-product-search').value.trim().toLowerCase();
+  const kind = document.getElementById('platform-product-kind').value;
+  const visible = platformItems.filter(product => {
+    if (kind !== 'all' && product.kind !== kind) return false;
+    return !search || [product.name, product.slug, product.kind, product.package_name, product.collection, product.description]
+      .some(value => String(value || '').toLowerCase().includes(search));
+  });
+  const tbody = document.getElementById('platform-products-body');
+  tbody.replaceChildren();
+  const count = document.getElementById('platform-product-count');
+  count.textContent = visible.length + ' of ' + platformItems.length + ' products';
+  if (!visible.length) {
+    const row = tbody.insertRow();
+    const cell = row.insertCell();
+    cell.colSpan = 6; cell.className = 'admin-empty';
+    cell.textContent = platformItems.length ? 'No products match these filters.' : 'No platform products are registered for this account.';
+    return;
+  }
+  for (const product of visible) {
+    const row = tbody.insertRow();
+    const identityCell = row.insertCell();
+    const identity = document.createElement('div');
+    identity.className = 'platform-product-identity';
+    identity.appendChild(platformIcon(product, 'platform-product-thumb'));
+    const copy = document.createElement('div'); copy.className = 'platform-product-copy';
+    const name = document.createElement('strong'); name.textContent = product.name;
+    const subtitle = document.createElement('small'); subtitle.textContent = product.package_name || product.slug || '';
+    copy.append(name, subtitle); identity.appendChild(copy); identityCell.appendChild(identity);
+    const kindCell = row.insertCell(); kindCell.textContent = platformKindLabel(product.kind);
+    const collectionCell = row.insertCell();
+    collectionCell.textContent = product.collection || 'Unassigned';
+    if (!product.collection) collectionCell.classList.add('platform-muted');
+    const statusCell = row.insertCell();
+    const statusBadge = document.createElement('span');
+    statusBadge.className = 'platform-product-status platform-product-status--' +
+      (['production','wired','scaffolded','prototype','deprecated'].includes(product.status) ? product.status : 'other');
+    statusBadge.textContent = product.status || 'Registered';
+    statusCell.appendChild(statusBadge);
+    const versionCell = row.insertCell(); versionCell.textContent = product.version || '—';
+    const actionCell = row.insertCell();
+    const edit = document.createElement('button'); edit.type = 'button';
+    edit.className = 'btn ghost small'; edit.textContent = 'Edit';
+    edit.setAttribute('aria-label', 'Edit ' + product.name);
+    edit.addEventListener('click', () => openPlatformProduct(product));
+    actionCell.appendChild(edit);
+  }
+}
+async function refreshPlatformProducts() {
+  const status = document.getElementById('platform-status');
+  status.textContent = 'Loading platform products…';
+  try {
+    const data = await adminFetch('/api/admin/platform/products');
+    platformItems = Array.isArray(data.products) ? data.products : [];
+    const select = document.getElementById('platform-product-kind');
+    const previousKind = select.value;
+    select.replaceChildren(new Option('All product types', 'all'));
+    const kinds = [...new Set(platformItems.map(p => p.kind).filter(Boolean))].sort();
+    for (const kind of kinds) select.add(new Option(platformKindLabel(kind), kind));
+    select.value = kinds.includes(previousKind) ? previousKind : 'all';
+    renderPlatformProducts();
+    status.textContent = '';
+  } catch (error) {
+    document.getElementById('platform-product-count').textContent = '';
+    const tbody = document.getElementById('platform-products-body');
+    tbody.replaceChildren();
+    status.textContent = 'Could not load platform products: ' + (error.message || 'Request failed');
+  }
+}
+document.getElementById('platform-product-search').addEventListener('input', renderPlatformProducts);
+document.getElementById('platform-product-kind').addEventListener('change', renderPlatformProducts);
 document.getElementById('platform-editor-close').addEventListener('click', () => { document.getElementById('platform-product-editor').hidden = true; editingPlatformProduct = null; });
 document.getElementById('platform-product-editor').addEventListener('submit', async event => {
   event.preventDefault(); if (!editingPlatformProduct) return;
