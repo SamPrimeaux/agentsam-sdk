@@ -825,8 +825,10 @@
 .platform-product-copy small { font-size:10px; color:var(--c-muted); overflow-wrap:anywhere; }
 .platform-muted { color:var(--c-muted) !important; }
 .platform-product-status { display:inline-block; padding:5px 9px; border-radius:99px; font-size:10px; text-transform:capitalize; font-weight:650; background:var(--c-surface-2); color:var(--c-muted); border:1px solid var(--c-line); }
-.platform-product-status--production,.platform-product-status--wired { background:var(--c-good-bg); color:var(--c-good); border-color:transparent; }
-.platform-product-status--prototype,.platform-product-status--scaffolded { background:var(--c-warn-bg); color:var(--c-warn); border-color:transparent; }
+.platform-product-status--production { background:var(--c-good-bg); color:var(--c-good); border-color:transparent; }
+.platform-product-status--wired { background:var(--c-hover); color:var(--c-ink-2); border-color:var(--c-line); }
+.platform-product-status--scaffolded { background:var(--c-warn-bg); color:var(--c-warn); border-color:transparent; }
+.platform-product-status--prototype { background:var(--c-surface-2); color:var(--c-muted); }
 .platform-product-editor { margin:18px 0 28px; background:var(--c-surface); border:1px solid var(--c-line); border-radius:var(--c-radius); padding:20px; color:var(--c-ink); scroll-margin-top:20px; }
 .platform-editor-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding-bottom:17px; border-bottom:1px solid var(--c-line); }
 .platform-editor-header h3 { margin:4px 0 5px; font-size:21px; font-weight:650; letter-spacing:-.03em; }
