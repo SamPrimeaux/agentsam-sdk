@@ -1094,6 +1094,16 @@
           (!hasChildren && !page) ? 'UI scaffold' : '', hasChildren);
       }).join('');
     }
+    // One search across actual authorized CMS pages, not only menu headings.
+    // Preserve category browsing and do not invent templates or draft pages.
+    if (needle && !parent) {
+      const realPages=source.filter(p=>p.slug && match([p.title,p.slug,p.route,p.live_route].join(' '))).slice(0,30);
+      if(realPages.length)html=
+        '<div class="te-picker-heading">Matching CMS pages ('+realPages.length+')</div>'+
+        realPages.map(p=>row(p.title||humanize(p.slug),'page',
+          'data-picker-page="'+cmsEscapeAttr(p.slug)+'"',p.live_route||p.route||'',false)).join('')+
+        (html?'<div class="te-picker-divider" role="separator"></div>'+html:'');
+    }
     root.innerHTML = html || (resolveShowcase?
       '<div class="te-creation-empty"><strong>Nothing matches that search.</strong>'+
       '<p>Try a different keyword, or open a resource category to create a new local draft template.</p>'+
@@ -4431,9 +4441,9 @@
       return true;
     },
   };
-  if (localShowcase) {
-    const save = byId('te-save'); if (save) { save.disabled = true; save.title = 'Local theme showcase · no CMS writes'; }
-    const publish = byId('te-publish'); if (publish) { publish.disabled = true; publish.title = 'No live publishing from local showcase'; }
+  if (localShowcase || new URLSearchParams(location.search).get('ui_review') === '1') {
+    const save = byId('te-save'); if (save) { save.disabled = true; save.title = 'Read-only UI review · no CMS writes'; }
+    const publish = byId('te-publish'); if (publish) { publish.disabled = true; publish.title = 'No publishing from UI review'; }
   }
   window.AgentSamResolveStudio?.registerNavigator?.(nextSlug=>switchPage(nextSlug));
   window.AgentSamResolveStudio?.mount?.();

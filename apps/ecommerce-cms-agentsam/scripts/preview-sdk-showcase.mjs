@@ -143,7 +143,7 @@ const server=http.createServer(async(req,res)=>{
   const pathname=decodeURIComponent(requestUrl.pathname);
   // Localhost is the Resolve commerce design studio. A bare editor URL must
   // never fall into a disconnected Violet production mode and show a white iframe.
-  if(pathname==='/admin/theme-editor' && !requestUrl.searchParams.has('showcase')){
+  if(pathname==='/admin/theme-editor' && !requestUrl.searchParams.has('showcase') && requestUrl.searchParams.get('ui_review')!=='1'){
     requestUrl.searchParams.set('showcase','resolve');
     if(!requestUrl.searchParams.has('slug'))requestUrl.searchParams.set('slug','home');
     res.writeHead(302,{Location:requestUrl.pathname+requestUrl.search});
