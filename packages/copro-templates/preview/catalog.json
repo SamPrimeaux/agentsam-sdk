@@ -1,0 +1,838 @@
+{
+  "schema": "copro.creative-catalog.v1",
+  "status": "prototype/not-integrated",
+  "items": [
+    {
+      "id": "creative:kinetic-stack",
+      "category": "template",
+      "name": "Kinetic word stack",
+      "durationUs": 4000000,
+      "preview": "thumbnails/creative-kinetic-stack.svg",
+      "source": "RenderComp/free-remotion-templates"
+    },
+    {
+      "id": "creative:chapter-divider",
+      "category": "template",
+      "name": "Chapter divider",
+      "durationUs": 5000000,
+      "preview": "thumbnails/creative-chapter-divider.svg",
+      "source": "RenderComp/free-remotion-templates"
+    },
+    {
+      "id": "creative:product-launch",
+      "category": "template",
+      "name": "Product launch",
+      "durationUs": 6000000,
+      "preview": "thumbnails/creative-product-launch.svg",
+      "source": "zz41354899/SwiftClip"
+    },
+    {
+      "id": "creative:quote-story",
+      "category": "template",
+      "name": "Quote story",
+      "durationUs": 8000000,
+      "preview": "thumbnails/creative-quote-story.svg",
+      "source": "zz41354899/SwiftClip"
+    },
+    {
+      "id": "creative:floating-cards",
+      "category": "template",
+      "name": "Floating feature cards",
+      "durationUs": 5000000,
+      "preview": "thumbnails/creative-floating-cards.svg",
+      "source": "reactvideoeditor/clippkit"
+    },
+    {
+      "id": "creative:flip-showcase",
+      "category": "template",
+      "name": "Flip showcase",
+      "durationUs": 5000000,
+      "preview": "thumbnails/creative-flip-showcase.svg",
+      "source": "reactvideoeditor/clippkit"
+    },
+    {
+      "id": "creative:documentary-opener",
+      "category": "template",
+      "name": "Documentary opener",
+      "durationUs": 7000000,
+      "preview": "thumbnails/creative-documentary-opener.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:social-story",
+      "category": "template",
+      "name": "Social story",
+      "durationUs": 6000000,
+      "preview": "thumbnails/creative-social-story.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:product-grid",
+      "category": "template",
+      "name": "Product grid",
+      "durationUs": 6000000,
+      "preview": "thumbnails/creative-product-grid.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:technical-explainer",
+      "category": "template",
+      "name": "Technical explainer",
+      "durationUs": 7000000,
+      "preview": "thumbnails/creative-technical-explainer.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:architectural-review",
+      "category": "template",
+      "name": "Architectural review",
+      "durationUs": 7000000,
+      "preview": "thumbnails/creative-architectural-review.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:data-brief",
+      "category": "template",
+      "name": "Data brief",
+      "durationUs": 6000000,
+      "preview": "thumbnails/creative-data-brief.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:lower-third",
+      "category": "template",
+      "name": "Editorial lower third",
+      "durationUs": 5000000,
+      "preview": "thumbnails/creative-lower-third.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:caption-story",
+      "category": "template",
+      "name": "Word focus captions",
+      "durationUs": 6000000,
+      "preview": "thumbnails/creative-caption-story.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:photo-montage",
+      "category": "template",
+      "name": "Photo montage",
+      "durationUs": 6000000,
+      "preview": "thumbnails/creative-photo-montage.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:film-title",
+      "category": "template",
+      "name": "Film title",
+      "durationUs": 6000000,
+      "preview": "thumbnails/creative-film-title.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:audiogram",
+      "category": "template",
+      "name": "Audio story",
+      "durationUs": 6000000,
+      "preview": "thumbnails/creative-audiogram.svg",
+      "source": "original"
+    },
+    {
+      "id": "creative:end-card",
+      "category": "template",
+      "name": "End card",
+      "durationUs": 5000000,
+      "preview": "thumbnails/creative-end-card.svg",
+      "source": "original"
+    },
+    {
+      "id": "fade-in",
+      "category": "animation",
+      "name": "fade · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/fade-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "fade-out",
+      "category": "animation",
+      "name": "fade · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/fade-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "fade-combo",
+      "category": "animation",
+      "name": "fade · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/fade-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "rise-in",
+      "category": "animation",
+      "name": "rise · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/rise-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "rise-out",
+      "category": "animation",
+      "name": "rise · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/rise-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "rise-combo",
+      "category": "animation",
+      "name": "rise · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/rise-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "slide-left-in",
+      "category": "animation",
+      "name": "slide left · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/slide-left-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "slide-left-out",
+      "category": "animation",
+      "name": "slide left · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/slide-left-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "slide-left-combo",
+      "category": "animation",
+      "name": "slide left · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/slide-left-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "slide-right-in",
+      "category": "animation",
+      "name": "slide right · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/slide-right-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "slide-right-out",
+      "category": "animation",
+      "name": "slide right · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/slide-right-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "slide-right-combo",
+      "category": "animation",
+      "name": "slide right · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/slide-right-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "zoom-in",
+      "category": "animation",
+      "name": "zoom · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/zoom-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "zoom-out",
+      "category": "animation",
+      "name": "zoom · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/zoom-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "zoom-combo",
+      "category": "animation",
+      "name": "zoom · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/zoom-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "spin-in",
+      "category": "animation",
+      "name": "spin · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/spin-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "spin-out",
+      "category": "animation",
+      "name": "spin · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/spin-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "spin-combo",
+      "category": "animation",
+      "name": "spin · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/spin-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "blur-in",
+      "category": "animation",
+      "name": "blur · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/blur-in.svg",
+      "source": "degueba/onda"
+    },
+    {
+      "id": "blur-out",
+      "category": "animation",
+      "name": "blur · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/blur-out.svg",
+      "source": "degueba/onda"
+    },
+    {
+      "id": "blur-combo",
+      "category": "animation",
+      "name": "blur · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/blur-combo.svg",
+      "source": "degueba/onda"
+    },
+    {
+      "id": "spring-in",
+      "category": "animation",
+      "name": "spring · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/spring-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "spring-out",
+      "category": "animation",
+      "name": "spring · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/spring-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "spring-combo",
+      "category": "animation",
+      "name": "spring · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/spring-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "bounce-in",
+      "category": "animation",
+      "name": "bounce · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/bounce-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "bounce-out",
+      "category": "animation",
+      "name": "bounce · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/bounce-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "bounce-combo",
+      "category": "animation",
+      "name": "bounce · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/bounce-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "shake-in",
+      "category": "animation",
+      "name": "shake · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/shake-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "shake-out",
+      "category": "animation",
+      "name": "shake · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/shake-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "shake-combo",
+      "category": "animation",
+      "name": "shake · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/shake-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "flip-in",
+      "category": "animation",
+      "name": "flip · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/flip-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "flip-out",
+      "category": "animation",
+      "name": "flip · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/flip-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "flip-combo",
+      "category": "animation",
+      "name": "flip · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/flip-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "wipe-in",
+      "category": "animation",
+      "name": "wipe · in",
+      "durationUs": 800000,
+      "preview": "thumbnails/wipe-in.svg",
+      "source": "original"
+    },
+    {
+      "id": "wipe-out",
+      "category": "animation",
+      "name": "wipe · out",
+      "durationUs": 800000,
+      "preview": "thumbnails/wipe-out.svg",
+      "source": "original"
+    },
+    {
+      "id": "wipe-combo",
+      "category": "animation",
+      "name": "wipe · combo",
+      "durationUs": 2400000,
+      "preview": "thumbnails/wipe-combo.svg",
+      "source": "original"
+    },
+    {
+      "id": "gl:BlockDissolve",
+      "category": "transition",
+      "name": "Block Dissolve",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-BlockDissolve.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:BookFlip",
+      "category": "transition",
+      "name": "Book Flip",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-BookFlip.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:Bounce",
+      "category": "transition",
+      "name": "Bounce",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-Bounce.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:BowTieHorizontal",
+      "category": "transition",
+      "name": "Bow Tie Horizontal",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-BowTieHorizontal.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:BowTieVertical",
+      "category": "transition",
+      "name": "Bow Tie Vertical",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-BowTieVertical.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:BurnThrough",
+      "category": "transition",
+      "name": "Burn Through",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-BurnThrough.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:CircleIris",
+      "category": "transition",
+      "name": "Circle Iris",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-CircleIris.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:CircleOpen",
+      "category": "transition",
+      "name": "Circle Open",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-CircleOpen.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:ColorDistance",
+      "category": "transition",
+      "name": "Color Distance",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-ColorDistance.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:CrossWarp",
+      "category": "transition",
+      "name": "Cross Warp",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-CrossWarp.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:CrossZoom",
+      "category": "transition",
+      "name": "Cross Zoom",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-CrossZoom.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:Directional",
+      "category": "transition",
+      "name": "Directional",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-Directional.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:DirectionalWarp",
+      "category": "transition",
+      "name": "Directional Warp",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-DirectionalWarp.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:DirectionalWipe",
+      "category": "transition",
+      "name": "Directional Wipe",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-DirectionalWipe.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:Dreamy",
+      "category": "transition",
+      "name": "Dreamy",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-Dreamy.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:DreamyZoom",
+      "category": "transition",
+      "name": "Dreamy Zoom",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-DreamyZoom.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:Fade",
+      "category": "transition",
+      "name": "Fade",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-Fade.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:FilmBurn",
+      "category": "transition",
+      "name": "Film Burn",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-FilmBurn.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:GlitchDisplace",
+      "category": "transition",
+      "name": "Glitch Displace",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-GlitchDisplace.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:GlitchMemories",
+      "category": "transition",
+      "name": "Glitch Memories",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-GlitchMemories.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:GridFlip",
+      "category": "transition",
+      "name": "Grid Flip",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-GridFlip.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:InvertedPageCurl",
+      "category": "transition",
+      "name": "Inverted Page Curl",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-InvertedPageCurl.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:Morph",
+      "category": "transition",
+      "name": "Morph",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-Morph.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:Pixelize",
+      "category": "transition",
+      "name": "Pixelize",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-Pixelize.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:PolkaDotsCurtain",
+      "category": "transition",
+      "name": "Polka Dots Curtain",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-PolkaDotsCurtain.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:Ripple",
+      "category": "transition",
+      "name": "Ripple",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-Ripple.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:SimpleZoom",
+      "category": "transition",
+      "name": "Simple Zoom",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-SimpleZoom.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:SimpleZoomOut",
+      "category": "transition",
+      "name": "Simple Zoom Out",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-SimpleZoomOut.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:StereoViewer",
+      "category": "transition",
+      "name": "Stereo Viewer",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-StereoViewer.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:Swirl",
+      "category": "transition",
+      "name": "Swirl",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-Swirl.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:WaterDrop",
+      "category": "transition",
+      "name": "Water Drop",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-WaterDrop.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "gl:Wind",
+      "category": "transition",
+      "name": "Wind",
+      "durationUs": 2000000,
+      "preview": "thumbnails/gl-Wind.svg",
+      "source": "gl-transitions/gl-transitions"
+    },
+    {
+      "id": "copro:anamorphic-flash",
+      "category": "transition",
+      "name": "Anamorphic Flash",
+      "durationUs": 2000000,
+      "preview": "thumbnails/copro-anamorphic-flash.svg",
+      "source": "original"
+    },
+    {
+      "id": "copro:shutter-bands",
+      "category": "transition",
+      "name": "Shutter Bands",
+      "durationUs": 2000000,
+      "preview": "thumbnails/copro-shutter-bands.svg",
+      "source": "original"
+    },
+    {
+      "id": "copro:focus-pull",
+      "category": "transition",
+      "name": "Focus Pull",
+      "durationUs": 2000000,
+      "preview": "thumbnails/copro-focus-pull.svg",
+      "source": "original"
+    },
+    {
+      "id": "copro:blueprint-reveal",
+      "category": "transition",
+      "name": "Blueprint Reveal",
+      "durationUs": 2000000,
+      "preview": "thumbnails/copro-blueprint-reveal.svg",
+      "source": "original"
+    },
+    {
+      "id": "film-grain",
+      "category": "overlay",
+      "name": "film grain",
+      "durationUs": 4000000,
+      "preview": "thumbnails/film-grain.svg",
+      "source": "degueba/onda"
+    },
+    {
+      "id": "vignette",
+      "category": "overlay",
+      "name": "vignette",
+      "durationUs": 4000000,
+      "preview": "thumbnails/vignette.svg",
+      "source": "original"
+    },
+    {
+      "id": "letterbox",
+      "category": "overlay",
+      "name": "letterbox",
+      "durationUs": 4000000,
+      "preview": "thumbnails/letterbox.svg",
+      "source": "original"
+    },
+    {
+      "id": "scanlines",
+      "category": "overlay",
+      "name": "scanlines",
+      "durationUs": 4000000,
+      "preview": "thumbnails/scanlines.svg",
+      "source": "original"
+    },
+    {
+      "id": "light-leak",
+      "category": "overlay",
+      "name": "light leak",
+      "durationUs": 4000000,
+      "preview": "thumbnails/light-leak.svg",
+      "source": "original"
+    },
+    {
+      "id": "dust",
+      "category": "overlay",
+      "name": "dust",
+      "durationUs": 4000000,
+      "preview": "thumbnails/dust.svg",
+      "source": "original"
+    },
+    {
+      "id": "blueprint-grid",
+      "category": "overlay",
+      "name": "blueprint grid",
+      "durationUs": 4000000,
+      "preview": "thumbnails/blueprint-grid.svg",
+      "source": "original"
+    },
+    {
+      "id": "halftone",
+      "category": "overlay",
+      "name": "halftone",
+      "durationUs": 4000000,
+      "preview": "thumbnails/halftone.svg",
+      "source": "original"
+    },
+    {
+      "id": "clean",
+      "category": "treatment",
+      "name": "clean",
+      "durationUs": 4000000,
+      "preview": "thumbnails/clean.svg",
+      "source": "original"
+    },
+    {
+      "id": "monochrome",
+      "category": "treatment",
+      "name": "monochrome",
+      "durationUs": 4000000,
+      "preview": "thumbnails/monochrome.svg",
+      "source": "original"
+    },
+    {
+      "id": "warm-film",
+      "category": "treatment",
+      "name": "warm-film",
+      "durationUs": 4000000,
+      "preview": "thumbnails/warm-film.svg",
+      "source": "original"
+    },
+    {
+      "id": "cool-steel",
+      "category": "treatment",
+      "name": "cool-steel",
+      "durationUs": 4000000,
+      "preview": "thumbnails/cool-steel.svg",
+      "source": "original"
+    },
+    {
+      "id": "typewriter",
+      "category": "graphic",
+      "name": "Typewriter sequence",
+      "durationUs": 4000000,
+      "preview": "thumbnails/typewriter.svg",
+      "source": "av/remotion-bits"
+    },
+    {
+      "id": "counter",
+      "category": "graphic",
+      "name": "Keyframe counter",
+      "durationUs": 4000000,
+      "preview": "thumbnails/counter.svg",
+      "source": "av/remotion-bits"
+    }
+  ]
+}
