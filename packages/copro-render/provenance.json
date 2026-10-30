@@ -1,0 +1,563 @@
+{
+  "schema": "copro.creative-provenance.v1",
+  "inspectedAt": "2026-10-30",
+  "runtimeDependenciesAdded": [],
+  "optionalHostDependencies": [
+    {
+      "name": "gsap",
+      "testedVersion": "3.15.0",
+      "loading": "explicit host injection after account-scoped installation"
+    }
+  ],
+  "scope": "Source ports and raw shaders; upstream engines and their dependency graphs are not installed.",
+  "records": [
+    {
+      "repository": "degueba/onda",
+      "tree": "3c814051269597b31fee1603bef7ccfb93d091b6",
+      "declaredLicense": "MIT",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "ad9babcfdac64015660a99aa7867df60e47fdb8c"
+        },
+        {
+          "path": "LICENSE",
+          "blob": "74436cdb70b66cabdcd2197755fd5670251615f0"
+        },
+        {
+          "path": "registry/components/count-up/CountUp.tsx",
+          "blob": "c8d34b7fee90f8fb70e0088d8c443669dc2048e9"
+        },
+        {
+          "path": "registry/components/blur-reveal/BlurReveal.tsx",
+          "blob": "56a0abc21123ac9348632bf13da9378304cf3214"
+        },
+        {
+          "path": "registry/components/grain-overlay/GrainOverlay.tsx",
+          "blob": "efcae31042957e48f562799d9445b79243bc0cf0"
+        },
+        {
+          "path": "registry/components/bento-grid/BentoGrid.tsx",
+          "blob": "5cc5828b0eee781935aabe3368b76eeabf26ff80"
+        }
+      ],
+      "dependencies": {
+        "@remotion/cli": "^4.0.466",
+        "@remotion/media-utils": "^4.0.466",
+        "@remotion/motion-blur": "^4.0.466",
+        "@remotion/paths": "^4.0.466",
+        "@remotion/player": "^4.0.466",
+        "@remotion/transitions": "^4.0.466",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "remotion": "^4.0.466",
+        "zod": "^3.23.0"
+      },
+      "status": "adapted-source",
+      "revision": "3c814051269597b31fee1603bef7ccfb93d091b6"
+    },
+    {
+      "repository": "av/remotion-bits",
+      "tree": "de35fda84b7b6acbe549a0b302a82ef211e8ef1e",
+      "declaredLicense": "MIT",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "4edd8fa651a4c363cb30c2b19c4d3c86a6b6bb43"
+        },
+        {
+          "path": "src/components/TypeWriter.tsx",
+          "blob": "3c39779e3859c36f39bbfef9fcad77851cc3695b"
+        },
+        {
+          "path": "src/components/AnimatedCounter.tsx",
+          "blob": "e177e03da3a98444c3a5b901f4d1e77f4652b0f5"
+        }
+      ],
+      "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.27.1",
+        "@types/three": "^0.182.0",
+        "prism-react-renderer": "^2.4.1",
+        "three": "^0.182.0"
+      },
+      "status": "adapted-source",
+      "revision": "de35fda84b7b6acbe549a0b302a82ef211e8ef1e"
+    },
+    {
+      "repository": "reactvideoeditor/clippkit",
+      "tree": "5973421d5dbf88954ec22c21ab666b3bfc2dac46",
+      "declaredLicense": "MIT",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "4c2f2be1a8928c9c2ca2b413eecee1aeaa36dce3"
+        },
+        {
+          "path": "LICENSE.md",
+          "blob": "821bd7a33fbcc364af7d4497e1bd2c96a0e0cd75"
+        },
+        {
+          "path": "apps/docs/registry/default/components/floating-card.tsx",
+          "blob": "85d5c0cda4463c31ec17e077f65157c44a55c0e5"
+        },
+        {
+          "path": "apps/docs/registry/default/components/card-flip.tsx",
+          "blob": "ead4bce48034ae13dae97af740cfa390a08fb1c6"
+        }
+      ],
+      "dependencies": {},
+      "status": "adapted-source",
+      "revision": "5973421d5dbf88954ec22c21ab666b3bfc2dac46"
+    },
+    {
+      "repository": "RenderComp/free-remotion-templates",
+      "tree": "f648980e528defb7594e24c6447055f0540f340b",
+      "declaredLicense": "MIT",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "933320780fdbed4394852f2b2f5bfa3e00b712b7"
+        },
+        {
+          "path": "LICENSE",
+          "blob": "ce53e1738e9002569c99b35539b657a4ced4ce11"
+        },
+        {
+          "path": "src/components/kinetic-word-stack/KineticWordStack.tsx",
+          "blob": "f1ede83292fae4b3dd6fd7767e0827a062411b94"
+        },
+        {
+          "path": "src/components/chapter-title/ChapterTitle.tsx",
+          "blob": "ca1c946937cf540f9b1f7de659113b3153f7ae27"
+        }
+      ],
+      "dependencies": {
+        "@remotion/cli": "4.0.518",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "remotion": "4.0.518"
+      },
+      "status": "adapted-source",
+      "revision": "f648980e528defb7594e24c6447055f0540f340b"
+    },
+    {
+      "repository": "zz41354899/SwiftClip",
+      "tree": "1ab39033ea0aa254b80371dbaea902e7bb15fe62",
+      "declaredLicense": "ISC",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "66a052ca29bc1431c9543dfafd61a3cf035519c9"
+        },
+        {
+          "path": "LICENSE",
+          "blob": "b28829dce2be814f4f808a40ffd101e1e7d47139"
+        },
+        {
+          "path": "remotion/ProductLaunch.tsx",
+          "blob": "3973fd9b3dda406473f32adf5eb05fd188110143"
+        },
+        {
+          "path": "remotion/QuoteStory.tsx",
+          "blob": "5ef9c42b6abb9d64023d849cac937e7c7e8a5520"
+        }
+      ],
+      "dependencies": {
+        "@radix-ui/react-dialog": "^1.1.15",
+        "@remotion/bundler": "^4.0.455",
+        "@remotion/cli": "^4.0.455",
+        "@remotion/player": "^4.0.455",
+        "@remotion/renderer": "^4.0.455",
+        "@types/node": "^25.6.0",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
+        "autoprefixer": "^10.5.0",
+        "clsx": "^2.1.1",
+        "eslint": "^9.39.4",
+        "eslint-config-next": "^16.2.4",
+        "framer-motion": "^12.38.0",
+        "lucide-react": "^1.14.0",
+        "next": "^16.2.4",
+        "postcss": "^8.5.12",
+        "react": "^19.2.5",
+        "react-dom": "^19.2.5",
+        "react-icons": "^5.6.0",
+        "remotion": "^4.0.455",
+        "tailwind-merge": "^3.5.0",
+        "tailwindcss": "^3.4.19",
+        "typescript": "^6.0.3"
+      },
+      "status": "adapted-source",
+      "revision": "1ab39033ea0aa254b80371dbaea902e7bb15fe62"
+    },
+    {
+      "repository": "gl-transitions/gl-transitions",
+      "tree": "0efa1651dfdbc0cdbd57f4cda55f12d8b3dbc0c5",
+      "declaredLicense": "MIT",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "839d3694f5269b92773d8a4c6e86cbc19e3af7fb"
+        },
+        {
+          "path": "LICENSE",
+          "blob": "7a1f053650848112e9448f829b3a5c81ea405e45"
+        },
+        {
+          "path": "transitions/Fade.glsl",
+          "blob": "7855085e5cf9b1b1ba7e8607e30a600f633c3fea"
+        },
+        {
+          "path": "transitions/Directional.glsl",
+          "blob": "c350e44a07e680b75497c45335a482e879e0fdf8"
+        },
+        {
+          "path": "transitions/DirectionalWipe.glsl",
+          "blob": "05e8266f18d80584872715aa737b55457969942c"
+        },
+        {
+          "path": "transitions/DirectionalWarp.glsl",
+          "blob": "b05f7e0479b62ede44145c2e0847b37d1be9b87f"
+        },
+        {
+          "path": "transitions/SimpleZoom.glsl",
+          "blob": "7e7bbac78a608058665259e796fbf2595bb67ffa"
+        },
+        {
+          "path": "transitions/SimpleZoomOut.glsl",
+          "blob": "ec823da7f97aac74abfc1480d9dbf61f82122b88"
+        },
+        {
+          "path": "transitions/CrossZoom.glsl",
+          "blob": "4a9f1db5b55e46667935130178f7d75334e80822"
+        },
+        {
+          "path": "transitions/Dreamy.glsl",
+          "blob": "3a565a5c0fe31a8f72986d019d8595f04fbfe170"
+        },
+        {
+          "path": "transitions/DreamyZoom.glsl",
+          "blob": "0f896b5832e3e9febdebcbd60d13ead9acad488f"
+        },
+        {
+          "path": "transitions/Swirl.glsl",
+          "blob": "f36640825153bd76c84b03c2d857fb14b22c51a4"
+        },
+        {
+          "path": "transitions/Pixelize.glsl",
+          "blob": "9191f0431833e61b1a88a3446c347452ff017775"
+        },
+        {
+          "path": "transitions/Morph.glsl",
+          "blob": "7b4d41bc6b2de8ac3833b449aa7cc07a9d459b46"
+        },
+        {
+          "path": "transitions/GlitchMemories.glsl",
+          "blob": "3f88ede04becb64b029d5fc31af3d7b8ee6d599b"
+        },
+        {
+          "path": "transitions/GlitchDisplace.glsl",
+          "blob": "f1be0008293b44a39a33a4062ca7c0ab8f988600"
+        },
+        {
+          "path": "transitions/FilmBurn.glsl",
+          "blob": "e16d8707478a9c811865dcac4112bc11f2a46a53"
+        },
+        {
+          "path": "transitions/BurnThrough.glsl",
+          "blob": "3b7d7035314b393ea108c41424cf97be68d14103"
+        },
+        {
+          "path": "transitions/CircleOpen.glsl",
+          "blob": "8e89aa8731d9319dc32fe0ca0f5a56d3806aa32c"
+        },
+        {
+          "path": "transitions/CircleIris.glsl",
+          "blob": "79934e8b1043a61d2a3321033ff9eb40ee9cd16d"
+        },
+        {
+          "path": "transitions/CrossWarp.glsl",
+          "blob": "d87bf09333e5a4e1484c886210e302198cda528a"
+        },
+        {
+          "path": "transitions/Ripple.glsl",
+          "blob": "b218a90209ea7a3d5f5fb4ce403cabace3cadab3"
+        },
+        {
+          "path": "transitions/GridFlip.glsl",
+          "blob": "65d256284602d137ad6f694ed18dabbadc2ffbd7"
+        },
+        {
+          "path": "transitions/Wind.glsl",
+          "blob": "2f0ff1553118848ac70cc956ee910cdace640d8e"
+        },
+        {
+          "path": "transitions/PolkaDotsCurtain.glsl",
+          "blob": "aa4f3aaa85ba038eeb54aaec42113dbff675dff8"
+        },
+        {
+          "path": "transitions/BowTieHorizontal.glsl",
+          "blob": "6b4b716ac457ec63e3f29fd70de6078e83258c7e"
+        },
+        {
+          "path": "transitions/BowTieVertical.glsl",
+          "blob": "10680d6652219ef6d88617df113276f156f991cd"
+        },
+        {
+          "path": "transitions/InvertedPageCurl.glsl",
+          "blob": "fa521746d46a3b98263509f69929ebc4a98e5904"
+        },
+        {
+          "path": "transitions/StereoViewer.glsl",
+          "blob": "80d3d1e9d673d42bcaf1fbf7590243d5c78c1e72"
+        },
+        {
+          "path": "transitions/WaterDrop.glsl",
+          "blob": "a95ee44252505f7d6deb933a28c9b29efda68de5"
+        },
+        {
+          "path": "transitions/ColorDistance.glsl",
+          "blob": "58b58a8c20088fcfbae88cabe8c8d64a5770f789"
+        },
+        {
+          "path": "transitions/BlockDissolve.glsl",
+          "blob": "752052bc12ccb7b3b6882929cb2d7c5637a9462b"
+        },
+        {
+          "path": "transitions/BookFlip.glsl",
+          "blob": "46ab07b7113be0675634d284ce527385571c4b9f"
+        },
+        {
+          "path": "transitions/Bounce.glsl",
+          "blob": "d4bfaa8e732ad4768c51239a39c0c8d336be9b27"
+        }
+      ],
+      "dependencies": {
+        "canvaskit-wasm": "0.42.0",
+        "pngjs": "^7.0.0"
+      },
+      "status": "adapted-source",
+      "revision": "0efa1651dfdbc0cdbd57f4cda55f12d8b3dbc0c5"
+    },
+    {
+      "repository": "motion-canvas/motion-canvas",
+      "tree": "7b91435c301d530351dcf5ebb91dd139c002e405",
+      "declaredLicense": "MIT",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "128ee3a8c79eefbbd0c047ba08b820c8f11d84c6"
+        },
+        {
+          "path": "LICENSE",
+          "blob": "b30f04e173f68773714b7d9e2652caecbeec53f9"
+        },
+        {
+          "path": "packages/2d/src/lib/scenes/makeScene2D.ts",
+          "blob": "78a80e9b0586b7e5879d388c689581d53ba72125"
+        }
+      ],
+      "dependencies": {},
+      "status": "evaluated-not-installed",
+      "revision": "7b91435c301d530351dcf5ebb91dd139c002e405"
+    },
+    {
+      "repository": "theatre-js/theatre",
+      "tree": "6ea82b938ea49609489f6377ded693ccc6ee8f5b",
+      "declaredLicense": "Apache-2.0",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "c3fcbf10ea59709d57e21c8f66e7b97023ba1c66"
+        },
+        {
+          "path": "LICENSE",
+          "blob": "5cdf25efd64842fdfde11ad49db04cd4a3efbd63"
+        },
+        {
+          "path": "packages/core/src/sequences/TheatreSequence.ts",
+          "blob": "41fca2af52eb9706f57ca5e4a77812866a2c52af"
+        }
+      ],
+      "dependencies": {
+        "@actions/core": "^1.10.0"
+      },
+      "status": "evaluated-not-installed",
+      "revision": "6ea82b938ea49609489f6377ded693ccc6ee8f5b"
+    },
+    {
+      "repository": "greensock/GSAP",
+      "tree": "13e2b790546426a1a2e0e9b409f3f8dc6d6611f2",
+      "declaredLicense": "Standard 'no charge' license: https://gsap.com/standard-license.",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "6d9c0c424b35d554b930f5efc1e2f43e006809cd"
+        },
+        {
+          "path": "esm/CustomEase.js",
+          "blob": "f705b6bf84c671ee1f7ae2a4b5e23777032f4880"
+        }
+      ],
+      "dependencies": {},
+      "status": "optional-host-injected",
+      "revision": "13e2b790546426a1a2e0e9b409f3f8dc6d6611f2"
+    },
+    {
+      "repository": "Vanilagy/mediabunny",
+      "tree": "cd6612380c7e3f1261d74b9b550e6fc3b65a53bc",
+      "declaredLicense": "MPL-2.0",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "f6519fcdabfd7ca820cc80a22d37d8321ba555f0"
+        },
+        {
+          "path": "LICENSE",
+          "blob": "d0a1fa1482eea82e19510e7920cbe3a03e41f691"
+        },
+        {
+          "path": "src/input.ts",
+          "blob": "26a436fff59f8e86a03fc71e55453b9747621183"
+        },
+        {
+          "path": "src/output.ts",
+          "blob": "10e79085e8aa16b7f09a6b237390d7ba5e877610"
+        },
+        {
+          "path": "src/conversion.ts",
+          "blob": "468482d6412532a84d261f25ab88f0f8ab962239"
+        }
+      ],
+      "dependencies": {
+        "@types/dom-mediacapture-transform": "^0.1.11",
+        "@types/dom-webcodecs": "0.1.13"
+      },
+      "status": "evaluated-not-installed",
+      "revision": "cd6612380c7e3f1261d74b9b550e6fc3b65a53bc"
+    },
+    {
+      "repository": "WebAV-Tech/WebAV",
+      "tree": "42dd6fd65ccbda39c729265c14aab56ac4d28235",
+      "declaredLicense": "MIT",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "2b69b20d53a31ee3a330125ac75a5589a9ac2808"
+        },
+        {
+          "path": "LICENSE",
+          "blob": "6714f0f6d6003679585560759aa7e44f220e7534"
+        },
+        {
+          "path": "packages/av-cliper/src/combinator.ts",
+          "blob": "406c68c6c5b56f67d85e37dea19895c6779f6c05"
+        }
+      ],
+      "dependencies": {},
+      "status": "evaluated-not-installed",
+      "revision": "42dd6fd65ccbda39c729265c14aab56ac4d28235"
+    },
+    {
+      "repository": "openvideodev/react-video-editor",
+      "tree": "9a8c5296da4b258f66dfb7ad73de96be62478bca",
+      "declaredLicense": "NOASSERTION",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "7e4cbfb3afb9bcf77bcc5cd5a55edb7b306ddaf5"
+        },
+        {
+          "path": "LICENSE",
+          "blob": "96a1d716bd970005ab1a65768ffc8ee6588b130a"
+        },
+        {
+          "path": "src/components/editor/editor.tsx",
+          "blob": "3e9100b0cb592d35c07b576e9324d0f125a95bce"
+        }
+      ],
+      "dependencies": {
+        "@aws-sdk/client-s3": "^3.922.0",
+        "@aws-sdk/s3-request-presigner": "^3.946.0",
+        "@deepgram/sdk": "^4.11.2",
+        "@openvideo/core": "1.3.1",
+        "@openvideo/engine-pixi": "1.3.1",
+        "@openvideo/timeline": "1.3.1",
+        "@radix-ui/react-avatar": "^1.1.11",
+        "@radix-ui/react-checkbox": "^1.3.3",
+        "@radix-ui/react-collapsible": "^1.1.12",
+        "@radix-ui/react-dialog": "^1.1.15",
+        "@radix-ui/react-dropdown-menu": "^2.1.16",
+        "@radix-ui/react-popover": "^1.1.15",
+        "@radix-ui/react-scroll-area": "^1.2.10",
+        "@radix-ui/react-select": "^2.2.6",
+        "@radix-ui/react-separator": "^1.1.8",
+        "@radix-ui/react-slider": "^1.3.6",
+        "@radix-ui/react-slot": "^1.2.4",
+        "@radix-ui/react-tabs": "^1.1.13",
+        "@radix-ui/react-tooltip": "^1.2.8",
+        "@remixicon/react": "^4.9.0",
+        "@tanstack/react-query": "^5.0.0",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "color": "^5.0.3",
+        "framer-motion": "^12.38.0",
+        "hotkeys-js": "^4.0.0",
+        "lodash": "^4.17.21",
+        "mediabunny": "^1.26.0",
+        "mime": "^4.1.0",
+        "motion": "^12.23.26",
+        "nanoid": "^5.0.7",
+        "next": "16.2.6",
+        "next-themes": "^0.4.6",
+        "opfs-tools": "^0.7.2",
+        "pixi.js": "^8.14.3",
+        "radix-ui": "^1.4.3",
+        "react": "19.2.0",
+        "react-dom": "19.2.0",
+        "react-resizable-panels": "^3.0.6",
+        "shadcn": "^4.11.1",
+        "sonner": "^2.0.7",
+        "tailwind-merge": "^3.6.0",
+        "tinyld": "^1.3.4",
+        "zod": "^4.1.13",
+        "zustand": "^5.0.4"
+      },
+      "status": "evaluated-not-installed",
+      "revision": "9a8c5296da4b258f66dfb7ad73de96be62478bca"
+    },
+    {
+      "repository": "pixijs/pixijs",
+      "tree": "2e8cacbe1ed4ed0fc31d5b59b9895c811ac0e003",
+      "declaredLicense": "MIT",
+      "files": [
+        {
+          "path": "package.json",
+          "blob": "08202105c23161049228e2d11cf1419c3ee96202"
+        },
+        {
+          "path": "LICENSE",
+          "blob": "13f706e9d211dabcd69c80951b0f834f9c70f6c6"
+        },
+        {
+          "path": "src/index.ts",
+          "blob": "f1b19985738a070a61ed8825145326bb6a1ea2df"
+        }
+      ],
+      "dependencies": {
+        "@pixi/colord": "^2.9.6",
+        "@types/earcut": "^3.0.0",
+        "@webgpu/types": "^0.1.69",
+        "@xmldom/xmldom": "^0.8.15",
+        "earcut": "^3.0.2",
+        "eventemitter3": "^5.0.1",
+        "gifuct-js": "^2.1.2",
+        "ismobilejs": "^1.1.1",
+        "parse-svg-path": "^0.2.0",
+        "tiny-lru": "^11.4.7"
+      },
+      "status": "evaluated-not-installed",
+      "revision": "2e8cacbe1ed4ed0fc31d5b59b9895c811ac0e003"
+    }
+  ]
+}

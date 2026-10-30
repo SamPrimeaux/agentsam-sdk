@@ -30,3 +30,5 @@ export {
   verifyPluginProduct,
   buildPluginQualityReceipt,
 } from './productization.js';
+
+export { GSAP_CREATIVE_PLUGIN, installGSAPCreativePlugin, createGSAPCreativeDispatcher } from './creative.js';

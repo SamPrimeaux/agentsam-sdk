@@ -10,11 +10,14 @@
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./transitions": "./src/transitions/index.js"
   },
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    "THIRD_PARTY_NOTICES.md",
+    "provenance.json"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
