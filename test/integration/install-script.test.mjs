@@ -38,7 +38,9 @@ test('install.sh passes bash syntax validation', () => {
 test('install.sh installs selected app packages directly instead of manufacturing SDK wrappers', () => {
   const cases = [
     ['cad', 'cad-creator', 'agentsam-cad-creator', '@inneranimalmedia/agentsam-cad-creator'],
-    ['cms', 'client-cms-editor', 'agentsam-cms', '@inneranimalmedia/client-cms-editor'],
+    ['cms', 'ecommerce-cms-agentsam', 'agentsam-ecommerce', '@inneranimalmedia/ecommerce-cms-agentsam'],
+    ['commerce', 'ecommerce-cms-agentsam', 'agentsam-ecommerce', '@inneranimalmedia/ecommerce-cms-agentsam'],
+    ['client-cms-editor', 'client-cms-editor', 'agentsam-cms', '@inneranimalmedia/client-cms-editor'],
     ['studio', 'local-studio', 'agentsam-studio', '@inneranimalmedia/agentsam-local-studio'],
     ['ecommerce', 'ecommerce-cms-agentsam', 'agentsam-ecommerce', '@inneranimalmedia/ecommerce-cms-agentsam'],
     ['database', 'database-editor', 'agentsam-database-editor', '@inneranimalmedia/agentsam-database-editor'],

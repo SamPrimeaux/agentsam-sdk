@@ -19,6 +19,12 @@ export function resolveConsoleFile(pathname) {
   return null;
 }
 
+/** Canonical Products opens Ecommerce's working catalog; create remains a distinct Product Studio route. */
+export function shouldServeProductCatalogView(url) {
+  if (!(url instanceof URL) || url.pathname !== '/admin/products') return false;
+  return ['store', 'collections', 'platform'].includes(url.searchParams.get('view') || 'store');
+}
+
 export async function servePackagedConsole(request, assets) {
   const file = resolveConsoleFile(new URL(request.url).pathname);
   if (!file) return null;

@@ -64,10 +64,23 @@ try {
     await pause(500);
   }
   if (!ready) throw new Error('local_worker_not_ready');
-  for (const { pathname, allowed, redirectTo, redirectNext } of [
+  for (const { pathname, allowed, redirectTo, redirectNext, bodyContains } of [
     { pathname: '/admin/cad', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/cad' },
     { pathname: '/admin/agentsam', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/agentsam' },
-    { pathname: '/admin/products', allowed: [302], redirectTo: '/admin/products/create' },
+    { pathname: '/admin/products', allowed: [200], bodyContains: 'Manage catalog items' },
+    { pathname: '/admin/products?view=collections', allowed: [200], bodyContains: 'Manage catalog items' },
+    { pathname: '/admin/products?view=platform', allowed: [200], bodyContains: 'Manage catalog items' },
+    { pathname: '/admin/products/create', allowed: [200] },
+    { pathname: '/admin/inventory', allowed: [200] },
+    { pathname: '/admin/orders', allowed: [200] },
+    { pathname: '/admin/discounts', allowed: [200] },
+    { pathname: '/admin/content', allowed: [200] },
+    { pathname: '/admin/store', allowed: [200] },
+    { pathname: '/admin/pages', allowed: [200] },
+    { pathname: '/admin/theme-editor?slug=home', allowed: [200] },
+    { pathname: '/admin/preferences', allowed: [200] },
+    { pathname: '/admin/subscribers', allowed: [200] },
+    { pathname: '/admin/products.html', allowed: [302], redirectTo: '/admin/products' },
     { pathname: '/sites?showcase=resolve', allowed: [302], redirectTo: '/auth/login', redirectNext: '/sites?showcase=resolve' },
   ]) {
     const response = await request(pathname);
@@ -76,6 +89,7 @@ try {
       ? new URL(response.headers.get('location') || '/', base) : null;
     if (!allowed.includes(response.status) ||
         (response.status === 200 && !payload.toLowerCase().includes('<!doctype html')) ||
+        (bodyContains && !payload.includes(bodyContains)) ||
         (target && redirectTo && target.pathname !== redirectTo) ||
         (target && redirectNext && target.searchParams.get('next') !== redirectNext)) {
       throw new Error(pathname + ' returned ' + response.status + ', location=' +

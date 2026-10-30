@@ -31,7 +31,7 @@ Flags:
   --version <ver>   Install a specific npm package version
   --channel <name>  latest|beta (npm dist-tag)
   --app-id <id>     Stable app id (local-studio|cad-creator|client-cms-editor|ecommerce-cms-agentsam|database-editor)
-  --app <alias>     Legacy alias: studio|cad|cms|ecommerce|database
+  --app <alias>     Alias: studio|cad|cms|commerce|ecommerce|database (cms -> Ecommerce CMS)
   --prefix <dir>    Legacy wrapper bin directory (default: ~/.local/bin)
   --help            Show this help
 EOF
@@ -44,17 +44,19 @@ select_app() {
       APP_PACKAGE="@inneranimalmedia/agentsam-cad-creator"
       APP_BIN="agentsam-cad-creator"
       ;;
-    cms|client-cms-editor)
+    client-cms-editor)
+      # Explicit compatibility only. New CMS installs use Ecommerce CMS.
       APP_SELECTOR="client-cms-editor"
       APP_PACKAGE="@inneranimalmedia/client-cms-editor"
       APP_BIN="agentsam-cms"
+      echo "warning: client-cms-editor is deprecated; new CMS installations should use ecommerce-cms-agentsam" >&2
       ;;
     studio|local-studio)
       APP_SELECTOR="local-studio"
       APP_PACKAGE="@inneranimalmedia/agentsam-local-studio"
       APP_BIN="agentsam-studio"
       ;;
-    ecommerce|ecommerce-cms-agentsam)
+    cms|commerce|ecommerce|ecommerce-cms-agentsam)
       APP_SELECTOR="ecommerce-cms-agentsam"
       APP_PACKAGE="@inneranimalmedia/ecommerce-cms-agentsam"
       APP_BIN="agentsam-ecommerce"

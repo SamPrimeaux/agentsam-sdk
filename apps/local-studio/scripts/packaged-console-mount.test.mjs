@@ -9,7 +9,6 @@ import { handleStudioAccountAvatar } from '../backend/worker/studio-user-prefere
 test('platform routes resolve to the real Ecommerce application bundle', () => {
   for (const [path, file] of [
     ['/admin/home', 'home.html'],
-    ['/sites', 'store.html'],
     ['/admin/store', 'store.html'],
     ['/admin/pages', 'pages.html'],
     ['/admin/theme-editor', 'theme-editor.html'],
@@ -18,7 +17,7 @@ test('platform routes resolve to the real Ecommerce application bundle', () => {
     ['/admin/partials/growth-app.html', 'partials/growth-app.html'],
     ['/admin/analytics/overview', '_spa/index.html'],
   ]) assert.equal(resolveConsoleFile(path), file, path);
-  for (const path of ['/api/admin/me', '/admin/../../secret', '/admin/unknown']) {
+  for (const path of ['/sites', '/api/admin/me', '/admin/../../secret', '/admin/unknown']) {
     assert.equal(resolveConsoleFile(path), null, path);
   }
 });
@@ -79,8 +78,14 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.equal((shell.match(/<Nav\.Sidenav \/>/g) || []).length, 1);
   assert.doesNotMatch(shell, /includeMobileDrawer|renderShell\(/);
   assert.doesNotMatch(shell, /href: '\/cli'/);
-  assert.match(shell, /defaultOpen peekable/);
-  assert.match(shell, /label: 'AgentSam'/);
+  assert.match(shell, /defaultOpen resizable/);
+  assert.doesNotMatch(shell, /defaultOpen peekable/);
+  assert.match(shell, /fetch\('\/admin\/data\/navigation\.json'/);
+  assert.match(shell, /navigation\.primary/);
+  assert.match(shell, /navigation\.channels/);
+  assert.match(shell, /navigation\.utilities/);
+  assert.match(shell, /showSidebarHeader: false/);
+  assert.doesNotMatch(shell, /id: 'cad', label: 'CAD Creator'/);
   assert.match(shell, /<SideStage workFocused=\{globalAssistantFocused\}/);
   assert.match(shell, /!isConversation && state.sideOpen/);
   assert.match(shell, /<Nav\.Topbar className="platform-console-topbar">/);
@@ -97,41 +102,72 @@ test('admin home resolves to the packaged Ecommerce home on Local Studio', () =>
   assert.match(worker, /handleCompletefulWebhook/);
 });
 
-test('AgentSam app and approved Ecommerce groups keep their actual route ownership', () => {
+test('AgentSam app and approved Ecommerce groups keep their actual route ownership', async () => {
   const source = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
+  const projection = JSON.parse(readFileSync(new URL('../frontend/public/admin/data/navigation.json', import.meta.url), 'utf8'));
+  const requested = [];
   const context = {
     NAV: { main: [], channels: [], apps: [] },
     renderSideNav: () => '<nav></nav>',
     localStorage: { getItem: () => 'dark', setItem: () => {} },
     CONSOLE_APPEARANCE_KEY: 'console-appearance',
-    window: { __AGENTSAM_DESKTOP__: false },
+    document: { querySelectorAll: () => [], addEventListener: () => {} },
+    window: { __AGENTSAM_DESKTOP__: false, fetch: async (url) => {
+      requested.push(url);
+      return { ok: true, json: async () => projection };
+    } },
   };
   runInNewContext(source, context);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(requested, ['/admin/data/navigation.json']);
+  assert.deepEqual(Array.from(context.NAV.apps, (item) => item.id), projection.apps.map((item) => item.id));
   assert.equal(context.NAV.main[0].href, '/admin/home');
   assert.equal(context.NAV.main.some((item) => item.href === '/agentsam'), false);
   assert.equal(context.NAV.apps.filter((item) => item.href === '/admin/agentsam').length, 1);
   assert.equal(context.NAV.apps.find((item) => item.href === '/admin/agentsam').label, 'AgentSam');
-  assert.equal(context.NAV.apps.some((item) => item.href === '/browse' || item.href === '/media' || item.href === '/samsketch'), false);
+  assert.equal(context.NAV.apps.some((item) => item.href === '/browse' || item.href === '/media'), false);
+  assert.equal(context.NAV.apps.some((item) => item.id === 'samsketch' && item.href === '/samsketch'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/moviemode'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/cad'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/cli'), false);
+  assert.equal(context.NAV.apps.some((item) => item.id === 'ecommerce-cms-agentsam'), false);
+  assert.equal(context.NAV.apps.some((item) => item.href === '/admin/growth'), true);
   const products = context.NAV.main.find((item) => item.id === 'products');
-  const productPaths = new Set(products.children.map((item) => item.href));
-  for (const path of ['/admin/products/create', '/admin/products/help/artwork',
-    '/admin/products', '/admin/inventory', '/admin/orders', '/admin/discounts']) {
-    assert.ok(productPaths.has(path), path);
-  }
+  assert.equal(products.href, '/admin/products');
+  assert.deepEqual(Array.from(products.children, (item) => [item.label, item.href]), [
+    ['Product Studio', '/admin/products/create'],
+    ['Store products', '/admin/products?view=store'],
+    ['Collections', '/admin/products?view=collections'],
+    ['Platform products', '/admin/products?view=platform'],
+    ['Artwork Help', '/admin/products/help/artwork'],
+    ['Inventory', '/admin/inventory'], ['Orders', '/admin/orders'],
+    ['Discounts', '/admin/discounts'],
+  ]);
   const analytics = context.NAV.main.find((item) => item.id === 'analytics');
+  assert.equal(analytics.href, '/admin/analytics/overview');
   assert.deepEqual(Array.from(analytics.children, (entry) => entry.href), [
-    '/admin/analytics/overview', '/admin/analytics/finance', '/admin/analytics/health'
+    '/admin/analytics/finance', '/admin/analytics/health'
+  ]);
+  const content = context.NAV.main.find((item) => item.id === 'content');
+  assert.equal(content.href, '/admin/content');
+  assert.deepEqual(Array.from(content.children, (entry) => entry.href), [
+    '/admin/content?kind=image', '/admin/content?kind=video',
   ]);
   const channelPaths = context.NAV.channels.flatMap((section) =>
-    (section.children || []).map((item) => item.href.split('?')[0]));
-  for (const path of ['/admin/pages', '/admin/theme-editor', '/admin/preferences', '/admin/subscribers']) {
-    assert.ok(channelPaths.includes(path), path);
-  }
-  assert.equal(context.NAV.channels.find((section) => section.id === 'audience').children[0].label, 'Subscribers');
-  assert.equal(context.NAV.apps.some((entry) => entry.id === 'work-mail' && entry.href === '/mail'), true);
+    [section.href, ...(section.children || []).map((item) => item.href)].filter(Boolean).map((href) => href.split('?')[0]));
+  assert.deepEqual(Array.from(context.NAV.channels, (item) => [item.label, item.href]), [
+    ['Online Store', '/admin/store'], ['Audience', '/admin/subscribers']
+  ]);
+  assert.equal(context.NAV.channels.find((section) => section.id === 'audience').children, undefined);
+  assert.deepEqual(Array.from(context.NAV.utilities), []);
+  assert.match(source, /id:'account',label:'Account'/);
+  assert.doesNotMatch(source, /id: 'appearance'|id: 'integrations'/);
+  const docs = readFileSync(new URL('../frontend/src/routes/(apps)/docs.tsx', import.meta.url), 'utf8');
+  assert.match(docs, /href="\/admin\/products\/help\/artwork"/);
+  // Curated discovery does not retire existing product/editor/help URLs.
+  assert.equal(resolveConsoleFile('/admin/products/create'), '_spa/index.html');
+  assert.equal(resolveConsoleFile('/admin/products/help/artwork'), '_spa/index.html');
+  assert.equal(context.NAV.apps.some((entry) => entry.id === 'work-mail' || entry.href === '/mail'), false);
   const installedPaths = [
     ...context.NAV.main.flatMap((item) => [item.href, ...(item.children || []).map((entry) => entry.href)]),
     ...channelPaths,

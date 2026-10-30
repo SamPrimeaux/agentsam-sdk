@@ -30,7 +30,7 @@ import {
 import { mergeBoundWorkersAIInventory } from "./bound-workers-inventory.js";
 import { handleCmsWorkerRequest } from "./cms-service.js";
 import { serveCanonicalHomepage } from "./canonical-homepage.js";
-import { isPublicSitePath, servePublicSitePage } from "./public-site.js";
+import { isPublicSitePath, publicSitePathForRequest, servePublicSitePage } from "./public-site.js";
 import { handlePublicConfigRequest } from "./public-config.js";
 import { handleGoogleDesktopExchangeRequest } from "./goaude.js";
 import {
@@ -67,8 +67,10 @@ import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
 import { handleStudioPlatformProducts } from "./studio-platform-products.js";
 import { handleStudioSitesOverview } from "./studio-sites-overview.js";
 import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
-import { servePackagedConsole } from "./packaged-console.js";
+import { handleStudioThemes } from "./studio-themes.js";
+import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
+import { handleStudioContentMediaApi } from "./content-media-api.js";
 import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
 
 const APP = localStudioApp;
@@ -793,12 +795,14 @@ export default {
       return Response.redirect(target,302);
     }
 
-    // The hosted catalog uses the canonical Ecommerce React Product Studio,
-    // not the legacy product table. Customer Workers retain their own routes.
-    if (request.method === "GET" &&
-        (url.pathname === "/admin/products" || url.pathname === "/admin/products.html")) {
-      const target = new URL("/admin/products/create", request.url);
-      target.search = url.search;
+    // Ecommerce's existing product catalog owns /admin/products. Keep the
+    // richer Product Studio on /admin/products/create; never redirect the
+    // Products parent into creation. Normalize obsolete or invalid view URLs.
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        (url.pathname === "/admin/products.html" ||
+         (url.pathname === "/admin/products" && !shouldServeProductCatalogView(url)))) {
+      const target = new URL("/admin/products", request.url);
+      if (!shouldServeProductCatalogView(target)) target.searchParams.delete("view");
       return Response.redirect(target, 302);
     }
 
@@ -833,6 +837,13 @@ export default {
     if (url.pathname === "/api/webhooks/completeful") {
       if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
       return handleCompletefulWebhook(request, env);
+    }
+
+    // Account-scoped theme registry. Shared presets are read-only; every
+    // customization is cloned into a private cms_themes row for this account.
+    if (url.pathname === '/api/studio/themes' || url.pathname.startsWith('/api/studio/themes/')) {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioThemes(request, env, principal?.id || null);
     }
 
     // Read-only packaged theme catalog for the authenticated Sites dashboard.
@@ -878,17 +889,20 @@ export default {
       const commerceEnv = url.pathname.startsWith("/api/admin/completeful/")
         ? await completefulAccountEnvironment(env, principal.id)
         : env;
+      const providerMediaResponse = await handleStudioContentMediaApi(request, env, studioUser, url);
+      if (providerMediaResponse) return providerMediaResponse;
       return handleEcommerceAdminApi(request, commerceEnv, url, context, studioUser);
     }
 
     // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
-    if (request.method === "GET" && isPublicSitePath(url.pathname)) {
-      const page = await servePublicSitePage(request, env, url.pathname, {
+    const publicPath = publicSitePathForRequest(request);
+    if (request.method === "GET" && isPublicSitePath(publicPath)) {
+      const page = await servePublicSitePage(request, env, publicPath, {
         siteSlug: "agentsam-sdk",
       });
       if (page) return page;
-      // `/` keeps the edge-partial homepage fallback if R2 + static assets are missing
-      if (url.pathname === "/" || url.pathname === "/index.html") {
+      // Only the primary AgentSam hostname falls back to the marketing homepage.
+      if ((url.pathname === "/" || url.pathname === "/index.html") && publicPath === url.pathname) {
         return serveCanonicalHomepage(request, env);
       }
     }
