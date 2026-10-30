@@ -57,22 +57,39 @@ export function appManifestSources() {
   return paths.map((path) => ({ path, manifest: read(path) }));
 }
 
-export function staleLockTarballs(lock, version) {
-  return Object.entries(lock.packages || {}).filter(([key, p]) =>
-    key.includes('node_modules/@inneranimalmedia/') && !p.link &&
-    typeof p.version === 'string' && p.version !== version)
-    .map(([key, p]) => key + '@' + p.version);
+export function staleLockTarballs(lock, requirements) {
+  const expected = new Map(requirements.map(({ name, version }) => [name, version]));
+  const seen = new Set();
+  const stale = [];
+  for (const [key, pkg] of Object.entries(lock.packages || {})) {
+    if (!key.includes('node_modules/@inneranimalmedia/')) continue;
+    const marker = 'node_modules/';
+    const name = key.slice(key.lastIndexOf(marker) + marker.length);
+    const version = expected.get(name);
+    if (!version) continue;
+    seen.add(name);
+    if (pkg.link) continue;
+    if (typeof pkg.version === 'string' && pkg.version !== version) {
+      stale.push(key + '@' + pkg.version + ' (expected ' + version + ')');
+    }
+  }
+  for (const [name, version] of expected) {
+    if (!seen.has(name)) stale.push('missing lock entry ' + name + '@' + version);
+  }
+  return stale;
 }
 
 async function main() {
   const manifests = appManifestSources();
   const version = manifests[0].manifest.version;
-  const registry = await registryStatus(requiredPublishedPackages(manifests));
-  const stale = staleLockTarballs(read('package-lock.json'), version);
+  const requirements = requiredPublishedPackages(manifests);
+  const registry = await registryStatus(requirements);
+  const stale = staleLockTarballs(read('package-lock.json'), requirements);
   const missing = registry.results.filter((r) => !r.published);
   const ready = registry.ready && stale.length === 0;
   console.log('Local Studio first-party registry: ' +
-    (registry.results.length - missing.length) + '/' + registry.results.length + ' published @' + version);
+    (registry.results.length - missing.length) + '/' + registry.results.length +
+    ' exact dependencies published (app ' + version + ')');
   if (missing.length) console.log('Unpublished: ' + missing.map((r) => r.name + '@' + r.version).join(', '));
   if (stale.length) console.log('Stale app lock entries: ' + stale.join(', '));
   if (process.argv.includes('--github-output') && process.env.GITHUB_OUTPUT) {

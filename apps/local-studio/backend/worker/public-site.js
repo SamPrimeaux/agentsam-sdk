@@ -42,6 +42,19 @@ const PUBLIC_SITE_HTML = Object.freeze({
   '/docs/sam/infrastructure-cookbooks/': 'docs/sam/infrastructure-cookbooks/index.html',
 });
 
+/**
+ * The dedicated Theme Store hostname serves the generated /themes gallery at /.
+ * Keep /themes as a backwards-compatible path on the shared AgentSam host.
+ */
+export function publicSitePathForRequest(request) {
+  const url = new URL(request.url);
+  const host = url.hostname.toLowerCase();
+  if (host === 'themes.inneranimalmedia.com' && (url.pathname === '/' || url.pathname === '/index.html')) {
+    return '/themes';
+  }
+  return url.pathname;
+}
+
 export function isPublicSitePath(pathname) {
   return (
     Object.hasOwn(PUBLIC_SITE_HTML, pathname) ||

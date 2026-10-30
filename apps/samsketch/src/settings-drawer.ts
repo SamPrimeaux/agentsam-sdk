@@ -100,7 +100,7 @@ function panel(tab: Tab) {
       ${toggle("Contact shadow","shadows.contact",true)}`;
     case "global": return `
       <p class="settings-description">Workspace behavior and panel preferences.</p>
-      ${select("Workspace appearance","global.theme",[["light","Light"],["dark","Dark"]],document.documentElement.dataset.samsketchTheme==="dark"?"dark":"light")}
+      <p class="settings-description">Appearance inherits AgentSam Settings.</p>
       ${toggle("Reduce motion","global.reducedMotion",matchMedia("(prefers-reduced-motion: reduce)").matches)}
       ${toggle("Show object properties","global.properties",true)}
       ${toggle("Keep timeline visible","global.timeline",true)}

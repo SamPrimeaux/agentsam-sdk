@@ -27,6 +27,12 @@ export function validateCadGuestMessage(event: MessageEvent, iframe: HTMLIFrameE
   return d;
 }
 export function installCadHostBridge(iframe: () => HTMLIFrameElement | null, handlers: CadHostHandlers): () => void {
+  const syncAppearance = () => {
+    const root = document.documentElement;
+    postToCadGuest(iframe(), {type:'set-theme', theme:root.dataset.theme === 'light' ? 'light' : 'dark', accent:getComputedStyle(root).getPropertyValue('--color-accent').trim()});
+  };
+  const observer = new MutationObserver(syncAppearance);
+  observer.observe(document.documentElement, {attributes:true, attributeFilter:['data-theme','style']});
   const onMessage = (event: MessageEvent) => {
     const d = validateCadGuestMessage(event, iframe()); if (!d) return;
     if (d.type === "cad.engine.request") {
@@ -36,13 +42,13 @@ export function installCadHostBridge(iframe: () => HTMLIFrameElement | null, han
       if(!invoke){reply({error:"native_cad_requires_desktop_host"});return;}
       void invoke("cad_engine_request",{projectId:d.project_id,request:d.request}).then(result=>reply({result}),error=>reply({error:String(error)}));
     }
-    else if (d.type === "ready") handlers.onReady?.(Array.isArray(d.workspaces) ? d.workspaces : []);
+    else if (d.type === "ready") { syncAppearance(); handlers.onReady?.(Array.isArray(d.workspaces) ? d.workspaces : []); }
     else if (d.type === "cad.selection") handlers.onSelection?.(d.selection);
     else if (d.type === "assistant.request") void handlers.onAssistantRequest?.({ request_id: d.request_id, prompt: d.prompt, selection: d.selection ?? null });
     else if (d.type === "cad.proposal") handlers.onProposal?.(d.proposal);
   };
   window.addEventListener("message", onMessage);
-  return () => window.removeEventListener("message", onMessage);
+  return () => { observer.disconnect(); window.removeEventListener("message", onMessage); };
 }
 export function postToCadGuest(iframe: HTMLIFrameElement | null, msg: { type: string; [k: string]: unknown }) {
   iframe?.contentWindow?.postMessage({ ...msg, channel: CAD_BRIDGE_CHANNEL, version: 1 }, window.location.origin);

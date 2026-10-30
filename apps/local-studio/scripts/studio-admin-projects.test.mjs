@@ -9,14 +9,17 @@ const source = (path) => readFileSync(new URL('../' + path, import.meta.url), 'u
 
 test('canonical Projects owns one host-neutral Work UI; old flat paths redirect without leaks', () => {
   assert.deepEqual(STUDIO_ADMIN_MOUNTS.map((mount) => mount.canonical), [
-    '/admin/projects', '/admin/agentsam', '/admin/cad', '/admin/cad', '/admin/moviemode'
+    '/admin/projects', '/admin/home', '/admin/agentsam', '/admin/cad', '/admin/cad', '/admin/moviemode'
   ]);
   assert.equal(canonicalStudioPath('/projects'), '/admin/projects');
   assert.equal(canonicalStudioPath('/projects/proj_123'), '/admin/projects/proj_123');
+  assert.equal(canonicalStudioPath('/admin/home'), null, 'canonical commerce home must not redirect to itself');
+  assert.equal(canonicalStudioPath('/admin/home/'), '/admin/home', 'canonical commerce home tolerates a trailing slash');
   assert.equal(canonicalStudioPath('/projects-other'), null);
   assert.equal(canonicalStudioPath('/public/projects'), null);
   assert.equal(canonicalStudioPath('/api/projects'), null);
   assert.ok(isStudioAdminPath('/admin/projects'));
+  assert.ok(isStudioAdminPath('/admin/home'));
   assert.ok(isStudioAdminPath('/admin/projects/proj_123'));
   assert.equal(isStudioAdminPath('/admin/projects-other'), false);
   assert.equal(isStudioAdminPath('/admin/agentsam'), true);
@@ -34,11 +37,12 @@ test('AgentSam canonical route requires authentication and preserves legacy chil
   assert.equal(resolveConsoleFile('/admin/agentsam'), null);
   assert.match(source('frontend/src/routes/(apps)/admin/agentsam.tsx'), /component: AgentSamPage/);
 });
-test('the Ecommerce mount does not capture Studio Projects; existing product pages keep their owner', () => {
+test('Studio owns the authenticated home entry while installed Ecommerce pages keep their product owner', () => {
   assert.equal(resolveConsoleFile('/admin/projects'), null);
   assert.equal(resolveConsoleFile('/admin/agentsam'), null);
   assert.equal(resolveConsoleFile('/admin/projects/proj_123'), null);
-  assert.equal(resolveConsoleFile('/admin/home'), 'home.html');
+  assert.equal(resolveConsoleFile('/admin/home'), null);
+  assert.equal(resolveConsoleFile('/admin/home', { allowEmbeddedHome: true }), 'home.html');
   assert.equal(resolveConsoleFile('/admin/pages'), 'pages.html');
   assert.equal(resolveConsoleFile('/admin/growth'), 'growth.html');
 });

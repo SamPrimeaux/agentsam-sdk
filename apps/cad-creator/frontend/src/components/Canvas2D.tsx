@@ -1010,16 +1010,16 @@ export const Canvas2D: React.FC<Props> = ({
       />
 
       {/* Zoom / Grid Controls Bottom Right */}
-      <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center space-x-0.5 bg-[#252525] border border-[#333] p-0.5 rounded shadow-lg">
+      <div className="cad-canvas-controls absolute bottom-2.5 right-2.5 z-10 flex items-center space-x-0.5 p-0.5 rounded shadow-lg">
         <button
-          onClick={() => setZoom((z) => Math.min(4, z + 0.2))}
+          aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(4, z + 0.2))}
           className="p-1 text-gray-400 hover:text-white rounded hover:bg-[#333] transition"
         >
           <ZoomIn className="w-3.5 h-3.5" />
         </button>
         <span className="text-[length:var(--text-xs)] text-gray-400 font-mono px-1">{Math.round(zoom * 100)}%</span>
         <button
-          onClick={() => setZoom((z) => Math.max(0.2, z - 0.2))}
+          aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(0.2, z - 0.2))}
           className="p-1 text-gray-400 hover:text-white rounded hover:bg-[#333] transition"
         >
           <ZoomOut className="w-3.5 h-3.5" />

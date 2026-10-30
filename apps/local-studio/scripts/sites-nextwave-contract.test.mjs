@@ -123,7 +123,8 @@ test('retired Atlas route is absent, redirects to the single Theme Studio, and S
  assert.match(browser,/Explore preview/);
  assert.doesNotMatch(browser,/theme-marketplace-dialog/);
  const editor=read('../ecommerce-cms-agentsam/frontend/static/js/theme-editor.js');
- assert.match(editor,/const host = showcaseTheme \? null/);
+ assert.match(editor,/const host = window\.AgentSamThemeEditorHost \|\| null/);
+ assert.match(editor,/const editorRequest = host \? host\.adapter\.request\.bind\(host\.adapter\) : window\.adminFetch/);
  assert.match(editor,/data-picker-preset/);
  assert.match(editor,/journal-the-art-of-slow-travel/);
  assert.match(editor,/resolve-product/);

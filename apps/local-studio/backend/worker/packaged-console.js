@@ -8,9 +8,10 @@ import { isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
 const prefix = "/ecommerce-cms-agentsam/admin/";
 const filePattern = /^\/admin\/(?:css|js|partials|brand|assets|dock|profile-popup|media-kit|workbench|theme-previews|_spa|analytics)\/[\w./-]+$/;
 
-export function resolveConsoleFile(pathname) {
+export function resolveConsoleFile(pathname, { allowEmbeddedHome = false } = {}) {
   // Studio-owned authenticated app paths must reach Nitro, not legacy Ecommerce HTML.
-  if (isStudioAdminPath(pathname)) return null;
+  // The installed-app iframe may explicitly request the packaged Ecommerce home.
+  if (isStudioAdminPath(pathname) && !(allowEmbeddedHome && pathname === '/admin/home')) return null;
   if (pathname === "/admin/host-config.js") return null;
   const match = adminRouteForPath(pathname);
   if (match?.handler === "admin-html") return (match.asset || "/admin/" + match.page + ".html").replace(/^\/admin\//, "");
@@ -25,10 +26,11 @@ export function shouldServeProductCatalogView(url) {
   return ['store', 'collections', 'platform'].includes(url.searchParams.get('view') || 'store');
 }
 
-export async function servePackagedConsole(request, assets) {
-  const file = resolveConsoleFile(new URL(request.url).pathname);
-  if (!file) return null;
+export async function servePackagedConsole(request, assets, { allowStudioHome = false } = {}) {
   const uri = new URL(request.url);
+  const allowEmbeddedHome = uri.pathname === '/admin/home' && (allowStudioHome || uri.searchParams.get('__agentsamEmbedded') === '1');
+  const file = resolveConsoleFile(uri.pathname, { allowEmbeddedHome });
+  if (!file) return null;
   // Cloudflare's default HTML handling redirects explicit .html asset
   // URLs to clean URLs. Fetch the canonical clean path directly so the
   // browser remains on the canonical /admin/* path, not the package asset prefix.

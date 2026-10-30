@@ -9,6 +9,7 @@ await build({
   absWorkingDir: cwd,
   entryPoints: {
     index: 'src/index.ts',
+    appearance: 'src/appearance.ts',
     'contracts/index': 'src/contracts/index.ts',
     'frontend/index': 'src/frontend/index.tsx',
     'fixtures/index': 'src/fixtures/index.ts',

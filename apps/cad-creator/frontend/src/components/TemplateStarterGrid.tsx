@@ -34,7 +34,7 @@ export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onExit }) => (
         <button
           type="button"
           onClick={onExit}
-          className="flex min-h-9 items-center gap-1.5 rounded-lg border border-white/15 px-3 text-xs text-slate-200 hover:bg-white/10"
+          className="flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--cad-line)] px-3 text-xs text-slate-200 hover:bg-white/10"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           <span>Back to workspace</span>
@@ -49,24 +49,24 @@ export const TemplateStarterGrid: React.FC<Props> = ({ onSelect, onExit }) => (
           type="button"
           onClick={() => onSelect(cloneTemplateProject(tpl), tpl.name)}
           aria-label={`Start editing ${tpl.name}`}
-          className="group flex flex-col overflow-hidden rounded-xl border border-white/10 bg-slate-900 text-left transition hover:border-blue-500/60 hover:bg-slate-900/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+          className="group flex flex-col overflow-hidden rounded-xl border border-[var(--cad-line)] bg-slate-900 text-left transition hover:border-blue-500/60 hover:bg-slate-900/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
         >
           <span className="sr-only">Start editing {tpl.name}</span>
-          <div className="h-28 w-full border-b border-white/10 bg-[#161616]">
+          <div className="h-28 w-full border-b border-[var(--cad-line)] bg-[#161616]">
             <TemplateSchematic project={tpl.project} />
           </div>
           <div className="flex flex-1 flex-col gap-1 p-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate font-mono text-[length:var(--text-xs)] uppercase tracking-wide text-blue-400">{tpl.categoryLabel}</span>
+              <span className="truncate font-mono text-[length:var(--text-xs)] uppercase tracking-wide text-[var(--cad-accent-ink)]">{tpl.categoryLabel}</span>
               <span className="shrink-0 font-mono text-[length:var(--text-xs)] text-slate-400">{tpl.dimensions}</span>
             </div>
-            <h3 className="text-xs font-semibold text-white">{tpl.name}</h3>
+            <h3 className="text-xs font-semibold text-[var(--cad-ink)]">{tpl.name}</h3>
             <p className="line-clamp-2 text-[length:var(--text-sm)] text-slate-400">{tpl.description}</p>
             <div className="mt-auto flex items-center justify-between pt-2 font-mono text-[length:var(--text-xs)] text-slate-500">
               <span>
                 {tpl.project.walls.length} walls · {tpl.project.rooms.length} zones · {tpl.project.furniture.length} fixtures
               </span>
-              <ArrowRight className="h-3.5 w-3.5 text-slate-500 transition group-hover:text-blue-400" />
+              <ArrowRight className="h-3.5 w-3.5 text-slate-500 transition group-hover:text-[var(--cad-accent-ink)]" />
             </div>
           </div>
         </button>

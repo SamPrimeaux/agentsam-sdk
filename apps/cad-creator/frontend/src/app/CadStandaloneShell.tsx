@@ -1,6 +1,7 @@
 import {useState, type CSSProperties} from 'react';
 import {BookOpen, FolderOpen, Globe, LayoutGrid, MessageCircle, Plus, Settings2} from 'lucide-react';
 import {Nav, type NavMode, type NavValue} from '../../../../../packages/agentsam-nav/src/index';
+import {useShellAppearance} from '../../../../../packages/agentsam-settings/src/appearance';
 import {CadCreatorApp} from './CadCreatorApp';
 import {isTrustedLocalCadHost} from '../lib/project-access';
 
@@ -10,6 +11,7 @@ import {isTrustedLocalCadHost} from '../lib/project-access';
  * CAD remains mounted across Chat/Work mode changes to preserve unsaved edits.
  */
 export function CadStandaloneShell() {
+  const {theme,accent} = useShellAppearance();
   const [mode,setMode] = useState<NavMode>('work');
   // Only loopback can open the registered local DreamHouse source; public builds remain examples.
   const ownerLocal=typeof window!=='undefined'&&isTrustedLocalCadHost(window.location.hostname)&&new URLSearchParams(window.location.search).get('access')!=='public-demo';
@@ -29,7 +31,7 @@ export function CadStandaloneShell() {
   };
   const hosted = 'https://agentsam.inneranimalmedia.com';
   const data:NavValue = {
-    mode,onModeChange:setMode,
+    mode,onModeChange:setMode,showSidebarHeader:false,showHistory:false,
     brand:{name:'AgentSam',home:'/cad',logo:'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/d1864d11-4485-4a38-1849-168f567aa200/avatar'},
     project:{id:ownerLocal?'dreamhouse-v1-wip':'public-demo',name:activeProject},
     destinations:[
@@ -45,11 +47,11 @@ export function CadStandaloneShell() {
     onCreateConversation:()=>go('/agentsam'),
     accountActions:[{id:'signin',label:'Open AgentSam account',icon:<Settings2/>,onSelect:()=>go('/settings/general')}]
   };
-  return <Nav.Provider value={data} theme="dark" accentColor="#82a7fb" defaultOpen={false} peekable resizable>
+  return <Nav.Provider value={data} theme={theme} accentColor={accent} defaultOpen={false} resizable storageKey="agentsam-nav:local">
     <Nav.Scope className="cad-platform-shell" data-agentsam-app-shell="cad-creator">
       <Nav.Sidenav />
       <div className="cad-platform-main">
-        <Nav.Topbar showNavigationTrigger={false} showAccount={false}
+        <Nav.Topbar showNavigationTrigger showAccount={false}
           rightSlot={<a className="cad-platform-open-account" href={hosted+'/agentsam'} target="_blank" rel="noreferrer">Open AgentSam <span aria-hidden>↗</span></a>}/>
         <div className="cad-platform-content" data-mode={mode}>
           {mode === 'chat' && <section className="cad-platform-chat" aria-label="CAD conversation">

@@ -2,7 +2,7 @@
 /**
  * Local Studio is an independently locked product workspace.
  * Cloudflare Workers Builds uses Node 22 + npm 10.9.2 and npm ci.
- * Keep the product lock aligned with the current release train, local source links, and the
+ * Keep the product lock aligned with each workspace manifest, the current SDK release train, local source links, and the
  * lru-cache peer required by Nitro/unstorage.
  */
 import fs from 'node:fs';
@@ -28,8 +28,10 @@ if (lock.version !== version) fail('Local Studio lock version ' + lock.version +
 if (packages['']?.version !== version) fail('Local Studio root lock package version mismatch');
 
 for (const key of ['frontend', 'backend', 'shared/agentsam']) {
-  if (packages[key]?.version !== version) {
-    fail(key + ' lock version ' + String(packages[key]?.version || '<missing>') + ' != ' + version);
+  const workspaceManifest = JSON.parse(fs.readFileSync(path.join(appRoot, key, 'package.json'), 'utf8'));
+  if (packages[key]?.version !== workspaceManifest.version) {
+    fail(key + ' lock version ' + String(packages[key]?.version || '<missing>') +
+      ' != workspace manifest ' + String(workspaceManifest.version || '<missing>'));
   }
 }
 

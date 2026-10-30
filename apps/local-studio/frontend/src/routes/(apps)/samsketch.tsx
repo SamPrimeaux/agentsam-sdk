@@ -26,7 +26,7 @@ type SamSketchMessage = {
 export const Route = createFileRoute("/(apps)/samsketch")({ component: SamSketchPage });
 
 function SamSketchPage() {
-  const { data } = useNav();
+  const { data,theme,accentColor } = useNav();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [selection, setSelection] = useState<SamSketchContext | null>(null);
   const [ready, setReady] = useState(false);
@@ -44,6 +44,7 @@ function SamSketchPage() {
       if (message?.channel !== "agentsam.samsketch.v1" || message.version !== 1) return;
       if (message.type === "ready") {
         setReady(true);
+        postToSamSketch({type:"set-theme",theme:theme==='light'?'light':'dark',accent:accentColor});
         postToSamSketch({ type: "host-mode", mode: data.mode });
       }
       if (message.type === "selection" && message.selection) setSelection(message.selection);
@@ -67,12 +68,13 @@ function SamSketchPage() {
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [data.mode, data.onModeChange, postToSamSketch, selection]);
+  }, [data.mode, data.onModeChange, postToSamSketch, selection,theme,accentColor]);
 
   useEffect(() => {
     postToSamSketch({ type: "host-mode", mode: data.mode });
   }, [data.mode, postToSamSketch]);
 
+  useEffect(() => {postToSamSketch({type:'set-theme',theme:theme==='light'?'light':'dark',accent:accentColor});},[theme,accentColor,postToSamSketch]);
   return (
     <div className="flex size-full min-h-0 overflow-hidden bg-background">
       <div className={"min-h-0 min-w-0 flex-1 overflow-hidden " + (chatOpen ? "hidden md:block" : "block")}>

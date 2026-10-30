@@ -3,13 +3,17 @@ import {readFileSync,existsSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import test from 'node:test';
+import { resolveConsoleFile } from '../backend/worker/packaged-console.js';
 const studio=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const read=(p)=>readFileSync(path.join(studio,p),'utf8');
 test('hosted Sites uses packaged Ecommerce UI and truthful missing-theme states',()=>{
  const worker=read('backend/worker/packaged-console.js');
  const html=read('../ecommerce-cms-agentsam/frontend/static/store.html');
  const js=read('../ecommerce-cms-agentsam/frontend/static/js/store.js');
- assert.match(worker,/pathname === "\/sites"/);
+ const sitesRoute=read('frontend/src/routes/(apps)/sites.tsx');
+ assert.match(sitesRoute,/window\.location\.replace\('\/admin\/store'/);
+ assert.equal(resolveConsoleFile('/admin/store'),'store.html');
+ assert.equal(resolveConsoleFile('/sites'),null);
  for(const content of [html,js]){
   assert.match(content,/id="browse-themes-shortcut"/);
   assert.match(content,/showThemeUnavailable/);
@@ -38,7 +42,7 @@ test('staged product catalog and all three original preview entrypoints exist',(
  for(const slug of ['violet','resolve','plain-jane'])
   assert.ok(existsSync(path.join(studio,'.output/public/themes',slug,'demo/index.html')),slug+' compiled demo');
  assert.ok(existsSync(path.join(studio,'.output/public/themes/violet/demo/global/cpas-shell.css')));
- const json=JSON.parse(read(base+'ecommerce-cms-agentsam/admin/data/theme-products.json'));
+ const json=JSON.parse(read('.output/public/ecommerce-cms-agentsam/admin/data/theme-products.json'));
  assert.equal(json.ok,true);
  assert.equal(json.products.length,3);
  for(const entry of json.products){

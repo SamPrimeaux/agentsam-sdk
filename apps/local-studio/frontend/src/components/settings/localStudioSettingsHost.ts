@@ -301,7 +301,13 @@ function emptySnapshot(): SettingsSnapshot {
 async function liveSnapshot(): Promise<SettingsSnapshot> {
   const snapshot = emptySnapshot();
   const desktop = isPackagedDesktop();
-  snapshot.themes = await listStudioThemes();
+  try {
+    snapshot.themes = await listStudioThemes();
+  } catch {
+    // A disconnected theme store must not prevent account and runtime settings.
+    snapshot.themes = [];
+    snapshot.health = "attention";
+  }
 
   const [inventoryResult, pluginResult, skillsResult, agentsResult, prefsResult, signedIn, workspace] = await Promise.all([
     loadEffectiveModelInventory().then(
@@ -410,6 +416,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
 }
 
 export const localStudioSettingsHost: SettingsHost = {
+  documentationHref: "/docs",
   ...themeManagement,
   async capabilities() {
     return capabilities;

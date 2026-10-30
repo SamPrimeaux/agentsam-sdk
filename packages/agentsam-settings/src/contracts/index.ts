@@ -249,13 +249,27 @@ export type SettingsTheme = {
   category: string;
   swatches: string[];
   version?: string;
-  source?: 'bundled' | 'installed' | 'workspace' | 'local' | 'imported' | 'cms-draft';
+  source?: 'bundled' | 'installed' | 'workspace' | 'local' | 'imported' | 'cms-draft' | 'catalog' | 'account-custom';
   /** ID of the already-installed CMS draft for this library package, if any. */
   draftId?: string;
   status?: string;
   previewUrl?: string;
+  previewImageUrl?: string | null;
+  slug?: string;
+  themeFamily?: string;
+  cssVars?: Record<string, string>;
+  visibility?: 'public' | 'private';
+  accountOwned?: boolean;
+  ownerAccountId?: string | null;
+  aliasOfThemeId?: string | null;
   capabilities?: { preview: boolean; editable: boolean; duplicable: boolean; publishable: boolean };
   active?: boolean;
+};
+
+export type SettingsThemeStyle = {
+  name?: string;
+  themeFamily?: string;
+  cssVars?: Record<string, string>;
 };
 
 export type SettingsStorageTarget = {
@@ -340,6 +354,7 @@ export type SettingsSnapshot = {
 };
 
 export interface SettingsHost {
+  documentationHref?: string;
   capabilities(): Promise<SettingsCapabilities>;
   snapshot(): Promise<SettingsSnapshot>;
   saveAgent?(draft: SettingsAgentDraft, id?: string): Promise<void>;
@@ -360,10 +375,14 @@ export interface SettingsHost {
   openWidget?(id: string): void;
   removeWidget?(id: string): Promise<void>;
   activateTheme?(id: string): Promise<void>;
+  applyTheme?(id: string): Promise<void>;
   installTheme?(id: string): Promise<void>;
   editTheme?(id: string): Promise<void>;
-  duplicateTheme?(id: string, name: string): Promise<void>;
-  createTheme?(name: string): Promise<void>;
+  duplicateTheme?(id: string, name: string, style?: SettingsThemeStyle): Promise<SettingsTheme | void>;
+  createTheme?(name: string, style?: SettingsThemeStyle): Promise<SettingsTheme | void>;
+  updateTheme?(id: string, style: SettingsThemeStyle): Promise<SettingsTheme | void>;
+  archiveTheme?(id: string): Promise<void>;
+  restoreTheme?(id: string): Promise<void>;
   importTheme?(project: unknown): Promise<void>;
   exportTheme?(id: string): Promise<void>;
   subscribe?(unitId: SettingsUnitId, callback: () => void): () => void;

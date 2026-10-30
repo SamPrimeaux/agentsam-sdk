@@ -36,52 +36,8 @@
       document.addEventListener("DOMContentLoaded", updateThemeEntry, { once: true });
     else updateThemeEntry();
   }
-  const main = [
-    { href: "/admin/home", label: "Home", icon: "home" },
-    { id: "products", label: "Products", icon: "products", href: "/admin/products", children: [
-      { href: "/admin/products/create", label: "Product Studio" },
-      { href: "/admin/products/help/artwork", label: "Artwork help" },
-      { href: "/admin/products", label: "All products" },
-      { href: "/admin/products?view=collections", label: "Collections" },
-      { href: "/admin/products?view=platform", label: "Platform products" },
-      { href: "/admin/inventory", label: "Inventory" },
-      { href: "/admin/orders", label: "Orders" },
-      { href: "/admin/discounts", label: "Discounts" }
-    ] },
-    { href: "/admin/growth", label: "Growth", icon: "growth" },
-    { href: "/admin/content", label: "Content", icon: "content" },
-    { id: "analytics", label: "Analytics", icon: "analytics", href: "/admin/analytics/overview", children: [
-      { href: "/admin/analytics/overview", label: "Overview" },
-      { href: "/admin/analytics/finance", label: "Finance" },
-      { href: "/admin/analytics/health", label: "Health" }
-    ] },
-    { href: "/admin/projects", label: "Projects", icon: "content" },
-    { href: "/artifacts", label: "Library", icon: "content" },
-    { href: "/tickets", label: "Tickets", icon: "orders" }
-  ];
-  const channels = [
-    { id: "online-store", href: "/sites", label: "Sites / Online Store", icon: "store", children: [
-      { href: "/admin/pages", label: "Pages" },
-      { href: "/admin/theme-editor?slug=home", label: "Theme Editor" },
-      { href: "/admin/preferences", label: "Preferences" }
-    ] },
-    // /admin/subscribers is a newsletter list, NOT the commerce customer CRM.
-    // Keep its honest name until an actual customer directory route is installed.
-    { id: "audience", label: "Audience", icon: "customers", children: [
-      { href: "/admin/subscribers", label: "Subscribers" }
-    ] }
-  ];
-  const apps = [
-    { href: "/admin/agentsam", label: "AgentSam", icon: "agentic" },
-    { href: "/admin/cad", label: "CAD Creator", icon: "products" },
-    { href: "/admin/moviemode", label: "MovieMode", icon: "content" },
-    { id: "work-mail", href: "/mail", label: "Email", icon: "email", children: [
-      { href: "/mail", label: "Mail & connections" },
-      { href: "/admin/email", label: "Store mailboxes" },
-      { href: "/settings/integrations", label: "Integrations" }
-    ] },
-    { href: "/settings/general", label: "Settings", icon: "settings" }
-  ];
+  // This host consumes the curated navigation projection, not the route catalog.
+  const main = [], channels = [], apps = [];
   // Growth is an installed product view. Its platform appearance is an
   // additive token override, not an edit to the customer's themed CSS.
   if (window.location?.pathname === "/admin/growth" &&
@@ -95,6 +51,22 @@
   NAV.main.splice(0, NAV.main.length, ...main);
   NAV.channels.splice(0, NAV.channels.length, ...channels);
   NAV.apps.splice(0, NAV.apps.length, ...apps);
+  // Installed apps are projected from the host manifest, never assumed from a menu fixture.
+  NAV.apps.splice(0, NAV.apps.length);
+  if (typeof window.fetch === 'function') window.fetch('/admin/data/navigation.json', {credentials:'same-origin'})
+    .then(response => { if (!response.ok) throw new Error('Application navigation unavailable'); return response.json(); })
+    .then(data => {
+      if (data.schema !== 'agentsam.host-navigation.v1' || !Array.isArray(data.apps)) throw new Error('Invalid application navigation');
+      const inHostedAppFrame = Boolean(window.parent && window.parent !== window && !desktopHost);
+      NAV.main.splice(0, NAV.main.length, ...(data.primary || []).map(item =>
+        inHostedAppFrame && item.id === 'home'
+          ? { ...item, href: '/admin/home?__agentsamEmbedded=1' }
+          : item));
+      NAV.channels.splice(0, NAV.channels.length, ...(data.channels || []));
+      NAV.utilities = data.utilities || [];
+      NAV.apps.splice(0, NAV.apps.length, ...data.apps.map(app => ({id:app.id,href:app.href,label:app.label,icon:app.icon})));
+      updateSharedNavigation();
+    }).catch(error => console.error('[navigation/apps]', error));
   const originalSideNav = renderSideNav;
   renderSideNav = function (active, userNav, options) {
     return originalSideNav(active, userNav, options)
@@ -149,8 +121,198 @@
         applyConsoleAppearance(readConsoleAppearance());
     });
   }
+  // Host composition only: the same published Nav components used by Studio.
+  let sharedNavigation = null;
+  let sharedNavReady = null;
+  let sharedNavPath = (window.location?.pathname || '/admin/home') + (window.location?.search || '');
+  const originalHydrateNav = typeof hydrateShellNav === 'function' ? hydrateShellNav : null;
+  // Static product pages read the existing Studio conversation persistence only.
+  // Writes remain with Studio's Work store; the React host supplies its live callbacks.
+  let registeredProjects = [], projectHistoryStatus = 'loading';
+  async function refreshWorkspaceProjects() {
+    projectHistoryStatus='loading';updateSharedNavigation();
+    try {
+      const response=await fetch('/api/work/snapshot?surface=projects',{credentials:'same-origin'});
+      if(!response.ok)throw new Error('Project registry unavailable');
+      const payload=await response.json();
+      if(!Array.isArray(payload.snapshot?.projects))throw new Error('Project registry unavailable');
+      registeredProjects=payload.snapshot.projects;projectHistoryStatus='ready';
+    } catch {projectHistoryStatus='error';}
+    updateSharedNavigation();
+  }
+  function updateStoredTrail(id, transform) {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('agentsam-work-v1') || 'null');
+      if (!saved?.state || !Array.isArray(saved.state.trails)) return false;
+      let found = false;
+      saved.state.trails = saved.state.trails.map(trail => {
+        if (trail.id !== id) return trail;
+        found = true;
+        return transform(trail);
+      });
+      if (!found) return false;
+      window.localStorage.setItem('agentsam-work-v1', JSON.stringify(saved));
+      window.dispatchEvent(new CustomEvent('agentsam:workspace-navigation'));
+      return true;
+    } catch { return false; }
+  }
+  async function patchRegisteredProject(id, patch, failureMessage) {
+    try {
+      const response = await fetch('/api/projects/' + encodeURIComponent(id), {
+        method: 'PATCH', credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' }, body: JSON.stringify(patch)
+      });
+      if (!response.ok) throw new Error('Project update failed (' + response.status + ')');
+      await refreshWorkspaceProjects();
+      return true;
+    } catch (error) {
+      console.error('[workspace-navigation] project update failed', error);
+      window.alert(failureMessage);
+      return false;
+    }
+  }
+  function workspaceNavigation() {
+    if(window.__agentsamWorkspaceNavigation)return window.__agentsamWorkspaceNavigation;
+    let trails=[];
+    try {const saved=JSON.parse(localStorage.getItem('agentsam-work-v1') || 'null');trails=Array.isArray(saved?.state?.trails)?saved.state.trails:[];}catch{/* Unavailable persistence has an honest empty state. */}
+    return {
+      projects:registeredProjects.map(item=>{const updatedAt=Date.parse(item.updatedAt || '');return {id:item.id,name:item.name,pinned:item.starred,updatedAt:Number.isFinite(updatedAt)?updatedAt:undefined};}),
+      conversations:trails.filter(item=>item.id!=='trail-studio'||item.messages?.some(message=>message.role==='user')).map(item=>({id:item.id,title:item.title,projectId:item.workProjectId,pinned:item.pinned,updatedAt:item.updatedAt})),
+      historyStatus:projectHistoryStatus,onRetryHistory:refreshWorkspaceProjects,
+      onSelectConversation:id=>navigateHost('/chats/'+encodeURIComponent(id)),
+      onSelectProject:id=>navigateHost('/admin/projects/'+encodeURIComponent(id)),
+      onPinConversation:id=>{
+        if (!updateStoredTrail(id, trail=>({...trail,pinned:!trail.pinned}))) window.alert('Conversation pin could not be saved. Please retry.');
+      },
+      onRenameConversation:(id,title)=>{
+        const normalized=String(title || '').trim();
+        if (!normalized) return;
+        if (!updateStoredTrail(id, trail=>({...trail,title:normalized,updatedAt:Date.now()}))) window.alert('Conversation name could not be saved. Please retry.');
+      },
+      onPinProject:id=>{
+        const selected=registeredProjects.find(item=>item.id===id);
+        if (selected) void patchRegisteredProject(id,{starred:!selected.starred},'Project pin could not be saved. Please retry.');
+      },
+      onRenameProject:(id,name)=>{
+        const normalized=String(name || '').trim();
+        if (normalized) void patchRegisteredProject(id,{name:normalized},'Project name could not be saved. Please retry.');
+      },
+    };
+  }
+  function navigationValue(user) {
+    const profile = user || window.__shellUser || {};
+    const toDestination = (item, index) => ({
+      id: item.id || item.href || String(index), label: item.label, href: item.href,
+      icon: item.icon ? window.AgentSamNav?.navIcon?.(({agentic:'agentsam',email:'mail',messageSquare:'agentsam',box:'cad',film:'moviemode',globe:'browser'})[item.icon] || item.icon) : undefined,
+      children: item.children?.map(toDestination)
+    });
+    const nav = buildUserNav(profile);
+    return {
+      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/docs' : sharedNavPath, showHistory: true, showSidebarHeader: false,
+      ...workspaceNavigation(),
+      ...(sharedNavPath.startsWith('/settings') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/settings/general'}]} : {}),
+      ...(sharedNavPath.startsWith('/admin/products/help/artwork') ? {breadcrumbs:[{id:'docs',label:'Docs',href:'/docs'},{id:'artwork-guide',label:'Artwork Help'}]} : {}),
+      brand: { name: 'AgentSam', logo: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', home: '/admin/home' },
+      destinations: [...nav.main, { id: 'sales-channels', label: 'Sales channels', icon: 'store', children: nav.channels },
+        { id: 'installed-apps', label: 'Apps', icon: 'apps', children: nav.apps }, ...(nav.utilities || [])].map(toDestination),
+      account: { id: profile.id || 'local', name: profile.id ? profile.display_name || profile.email || 'Account' : 'Local account',
+        avatar: safeAvatarUrl(profile.avatar_url) || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', plan: profile.id ? profile.email || 'Personal workspace' : 'Sign in required' },
+      accountActions: [
+        { id:'account',label:'Account',onSelect:() => navigateHost('/settings/general') },
+        { id:'settings',label:'Settings',onSelect:() => navigateHost('/settings/general') },
+        ...(!profile.id ? [{id:'sign-in',label:'Sign in',onSelect:() => navigateHost('/auth/login')}] : profile.can_sign_out === false ? [] : [{
+          id:'sign-out',label:'Sign out',separatorBefore:true,onSelect:async () => {
+            if (window.__agentsamSignOut) { await window.__agentsamSignOut(); return; }
+            const response=await fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'});
+            if(response.ok) window.location.assign('/auth/login');
+            else window.alert('Sign out could not be completed. Please try again.');
+          }
+        }])
+      ],
+      onNavigate: navigateHost
+    };
+  }
+  function navigateHost(href) {
+    if (desktopHost) desktopHost.navigate(href);
+    else if (desktop) window.location.hash = '#' + href;
+    else if (document.querySelector('#agentsam-host-workspace .agentsam-shell')) window.dispatchEvent(new CustomEvent('agentsam:navigate', {detail:{to:href}}));
+    else {
+      const link = document.createElement('a'); link.href = href;
+      document.body.appendChild(link); link.click(); link.remove();
+    }
+  }
+  function loadSharedNavigation() {
+    if (sharedNavReady) return sharedNavReady;
+    sharedNavReady = new Promise((resolve, reject) => {
+      if (!document.getElementById('agentsam-shared-nav-css')) {
+        const css = document.createElement('link'); css.id = 'agentsam-shared-nav-css';
+        css.rel = 'stylesheet'; css.href = '/admin/css/agentsam-nav.css'; document.head.appendChild(css);
+        const hostCss = document.createElement('link'); hostCss.rel = 'stylesheet';
+        hostCss.href = '/admin/css/shared-nav-host.css'; document.head.appendChild(hostCss);
+      }
+      if (window.AgentSamNav) { resolve(); return; }
+      const script = document.createElement('script'); script.src = '/admin/js/agentsam-nav.js';
+      script.onload = () => resolve(); script.onerror = () => reject(new Error('Navigation could not load'));
+      document.head.appendChild(script);
+    });
+    return sharedNavReady;
+  }
+  async function mountSharedNavigation() {
+    await loadSharedNavigation();
+    const aside = document.querySelector('.console-sidenav.admin-sidebar');
+    if (!aside || document.body.dataset.shellMode === 'theme-editor') return;
+    sharedNavigation?.unmount();
+    aside.replaceChildren(); aside.classList.remove('is-collapsed');
+    document.body.classList.add('agentsam-shared-navigation', 'admin-dock-off');
+    const leading = document.querySelector('.console-topbar-spacer');
+    if (leading) {
+      leading.removeAttribute('aria-hidden');
+      leading.innerHTML = '<button type="button" class="console-icon-btn" data-shared-nav-toggle aria-label="Toggle sidebar" title="Toggle sidebar">' + icon('textAlignStart') + '</button><div class="console-route-label"></div>';
+    }
+    sharedNavigation = window.AgentSamNav.mountNav({
+      breadcrumbs: leading?.querySelector('.console-route-label'),
+      sidenav: aside, value: navigationValue(), resizable: true,
+      onStateChange: ({open}) => leading?.querySelector('[data-shared-nav-toggle]')?.setAttribute('aria-expanded', String(open)),
+      storageKey: 'agentsam-nav:' + (window.__shellUser?.id || 'local'),
+      theme: document.documentElement.dataset.theme || readConsoleAppearance(), tokens: { font: 'Inter, system-ui, sans-serif', 'label-size':'14px', 'meta-size':'12px', 'row-height':'36px' }
+    });
+    updateSharedNavigation();
+    if (!window.__agentsamWorkspaceNavigation) void refreshWorkspaceProjects();
+  }
+  function updateSharedNavigation(user) {
+    sharedNavigation?.update({ value: navigationValue(user), theme: document.documentElement.dataset.theme || readConsoleAppearance(), storageKey: 'agentsam-nav:' + ((user || window.__shellUser)?.id || 'local') });
+  }
+  if (typeof renderShell === 'function') {
+    const originalRender = renderShell;
+    renderShell = function (active, html, options) {
+      sharedNavigation?.unmount(); sharedNavigation = null;
+      sharedNavPath = (active || window.location.pathname) + (active?.includes('?') ? '' : window.location.search);
+      const result = originalRender(active, html, options);
+      mountSharedNavigation().catch(error => console.error('[navigation]', error));
+      return result;
+    };
+  }
+  if (originalHydrateNav) hydrateShellNav = function (user, active) {
+    sharedNavPath = active ? active + (active.includes('?') ? '' : (window.location?.search || '')) : sharedNavPath;
+    if (!sharedNavigation) originalHydrateNav(user, active);
+    else hydrateShellProfile(user);
+    updateSharedNavigation(user);
+  };
+  window.addEventListener?.('agentsam:navigation', event => {
+    sharedNavPath = event.detail?.pathname || window.location.pathname;
+    updateSharedNavigation();
+  });
+  window.addEventListener?.('agentsam:shell-appearance', () => updateSharedNavigation());
+  window.addEventListener?.('agentsam:workspace-navigation', () => updateSharedNavigation());
+  if (typeof MutationObserver !== 'undefined') new MutationObserver(() => updateSharedNavigation()).observe(document.documentElement, {attributes:true,attributeFilter:['data-theme']});
+  if (typeof document !== 'undefined') document.addEventListener('click', event => {
+    if (!sharedNavigation || !event.target?.closest?.('[data-shared-nav-toggle], [data-console-nav-toggle], #admin-menu-toggle')) return;
+    event.preventDefault(); event.stopImmediatePropagation(); sharedNavigation.toggle();
+  }, true);
   const originalProfile = typeof hydrateShellProfile === 'function' ? hydrateShellProfile : null;
   if (originalProfile) hydrateShellProfile = function (user) {
+    user = window.__shellUser || user;
+    updateSharedNavigation(user);
     originalProfile(user && { ...user, avatar_url: user.avatar_url || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg' });
     document.querySelectorAll('.console-profile-store-logo').forEach(image => {
       image.src = user?.avatar_url && safeAvatarUrl(user.avatar_url) || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg';

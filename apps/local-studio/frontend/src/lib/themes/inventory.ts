@@ -1,5 +1,6 @@
 import bundled from 'virtual:agentsam-theme-inventory';
 import type { SettingsTheme } from '@inneranimalmedia/agentsam-settings/contracts';
+import { THEME_PROJECTS_CHANGED } from './projects';
 // @ts-ignore Public portable JavaScript theme authoring contract.
 import { THEME_PROJECT_SCHEMA, extractThemePage, validateThemeProject, renderThemePage } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project';
 import { getActiveThemeId, setActiveThemeId, themeProjectStore } from './projects';
@@ -17,9 +18,87 @@ function draftPreview(project: any) {
 }
 
 export type BundledTheme = SettingsTheme & { pages: { slug: string; title: string; url: string }[] };
+async function registryRequest(path: string, method = 'GET', body?: unknown) {
+  const response = await fetch(path, {
+    method,
+    credentials: 'same-origin',
+    headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(String(payload?.error || `theme_request_failed_${response.status}`));
+  }
+  return payload;
+}
+
+const activeThemeVariableNames = new Set<string>();
+
+function applyThemeVariables(theme: SettingsTheme | undefined) {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  for (const key of activeThemeVariableNames) root.style.removeProperty(key);
+  activeThemeVariableNames.clear();
+  if (theme?.cssVars) {
+    for (const [key, value] of Object.entries(theme.cssVars)) {
+      if (/^--[a-zA-Z0-9_-]{1,78}$/.test(key) && typeof value === 'string' && value.length <= 120) {
+        root.style.setProperty(key, value);
+        activeThemeVariableNames.add(key);
+      }
+    }
+  }
+  window.dispatchEvent(new CustomEvent('iam:invalidate-active-theme-fetch'));
+}
+
+function apiTheme(value: any): SettingsTheme {
+  return {
+    ...value,
+    id: String(value.id),
+    name: String(value.name || 'Untitled theme'),
+    packageName: String(value.packageName || 'Theme library'),
+    category: String(value.category || value.themeFamily || 'Theme'),
+    swatches: Array.isArray(value.swatches) ? value.swatches : [],
+    cssVars: value.cssVars && typeof value.cssVars === 'object' ? value.cssVars : {},
+    capabilities: value.capabilities || { preview: true, editable: value.source === 'account-custom', duplicable: true, publishable: false },
+  } as SettingsTheme;
+}
+
+/** Apply the account's active cms_themes record to the host shell without
+ * triggering draft migration or loading the full Theme Studio inventory. */
+export async function applyActiveStudioTheme(): Promise<SettingsTheme | null> {
+  if (typeof window === 'undefined') return null;
+  const registry = await registryRequest('/api/studio/themes');
+  const activeId = registry?.activeThemeId ? String(registry.activeThemeId) : '';
+  if (!activeId || !Array.isArray(registry?.themes)) {
+    applyThemeVariables(undefined);
+    return null;
+  }
+  const activeTheme = registry.themes.map(apiTheme).find((theme: SettingsTheme) => theme.id === activeId) || null;
+  applyThemeVariables(activeTheme || undefined);
+  return activeTheme;
+}
+
+/** The live DB registry is authoritative. A failed project-draft endpoint must
+ * never take the entire Settings snapshot down; bundled packages remain a safe fallback. */
 export async function listStudioThemes(): Promise<SettingsTheme[]> {
-  if (typeof window === 'undefined') return bundled;
-  const [projects, activeId] = await Promise.all([themeProjectStore.list(), getActiveThemeId()]);
+  if (typeof window === 'undefined') return bundled as SettingsTheme[];
+
+  const [registryResult, projectsResult, localActiveResult] = await Promise.allSettled([
+    registryRequest('/api/studio/themes'),
+    themeProjectStore.list(),
+    getActiveThemeId(),
+  ]);
+  const registry = registryResult.status === 'fulfilled' ? registryResult.value : null;
+  const projects = projectsResult.status === 'fulfilled' ? projectsResult.value : [];
+  const localActiveId = localActiveResult.status === 'fulfilled' ? localActiveResult.value : undefined;
+  const registryActiveId = registry?.activeThemeId ? String(registry.activeThemeId) : undefined;
+
+  const catalogThemes: SettingsTheme[] = Array.isArray(registry?.themes)
+    ? registry.themes.map(apiTheme)
+    : [];
+  if (registryResult.status === 'fulfilled') {
+    applyThemeVariables(registryActiveId ? catalogThemes.find(theme => theme.id === registryActiveId) : undefined);
+  }
   const installedBySource = new Map<string, any>();
   for (const project of projects) {
     if (!project.sourceThemeId) continue;
@@ -32,7 +111,7 @@ export async function listStudioThemes(): Promise<SettingsTheme[]> {
     ...theme,
     draftId: installedBySource.get(theme.id)?.id,
   }));
-  const drafts = projects.map((project) => ({
+  const drafts: SettingsTheme[] = projects.map((project) => ({
     id: project.id,
     name: project.name,
     packageName: project.sourcePackage || 'Local theme project',
@@ -44,7 +123,11 @@ export async function listStudioThemes(): Promise<SettingsTheme[]> {
     swatches: Object.values(project.tokens || {}).filter((v): v is string => typeof v === 'string' && /^#[0-9a-f]{3,8}$/i.test(v)),
     capabilities: { preview: true, editable: true, duplicable: true, publishable: false },
   }));
-  return [...packages, ...drafts].map((theme) => ({ ...theme, active: theme.id === activeId }));
+  const all = [...catalogThemes, ...packages, ...drafts];
+  return all.map((theme) => ({
+    ...theme,
+    active: theme.id === registryActiveId || theme.id === localActiveId || Boolean(theme.active),
+  }));
 }
 
 async function buildThemeProject(descriptor: BundledTheme, name: string, id: string) {
@@ -144,17 +227,50 @@ export const themeManagement = {
     if (!project) throw new Error('theme_not_found');
     await setActiveThemeId(project.id);
   },
+  async applyTheme(id: string) {
+    const payload = await registryRequest('/api/studio/themes/' + encodeURIComponent(id) + '/apply', 'POST', {});
+    applyThemeVariables(apiTheme(payload.theme));
+    window.dispatchEvent(new Event(THEME_PROJECTS_CHANGED));
+  },
   async editTheme(id: string) {
     const project = await themeProjectStore.get(id) || await installThemeDraft(id);
     openThemeProject(project.id);
   },
-  async duplicateTheme(id: string, name: string) {
-    const project = await createThemeDraft(id, name);
-    openThemeProject(project.id);
+  async duplicateTheme(id: string, name: string, style: { themeFamily?: string; cssVars?: Record<string, string> } = {}) {
+    const payload = await registryRequest('/api/studio/themes', 'POST', {
+      name,
+      source_theme_id: id,
+      theme_family: style.themeFamily,
+      css_vars: style.cssVars,
+    });
+    window.dispatchEvent(new Event(THEME_PROJECTS_CHANGED));
+    return apiTheme(payload.theme);
   },
-  async createTheme(name: string) {
-    const project = await createThemeDraft(null, name);
-    openThemeProject(project.id);
+  async createTheme(name: string, style: { themeFamily?: string; cssVars?: Record<string, string> } = {}) {
+    const payload = await registryRequest('/api/studio/themes', 'POST', {
+      name,
+      theme_family: style.themeFamily,
+      css_vars: style.cssVars,
+    });
+    window.dispatchEvent(new Event(THEME_PROJECTS_CHANGED));
+    return apiTheme(payload.theme);
+  },
+  async updateTheme(id: string, style: { name?: string; themeFamily?: string; cssVars?: Record<string, string> }) {
+    const payload = await registryRequest(`/api/studio/themes/${encodeURIComponent(id)}`, 'PUT', {
+      name: style.name,
+      theme_family: style.themeFamily,
+      css_vars: style.cssVars,
+    });
+    window.dispatchEvent(new Event(THEME_PROJECTS_CHANGED));
+    return apiTheme(payload.theme);
+  },
+  async archiveTheme(id: string) {
+    await registryRequest(`/api/studio/themes/${encodeURIComponent(id)}`, 'DELETE');
+    window.dispatchEvent(new Event(THEME_PROJECTS_CHANGED));
+  },
+  async restoreTheme(id: string) {
+    await registryRequest(`/api/studio/themes/${encodeURIComponent(id)}/restore`, 'POST', {});
+    window.dispatchEvent(new Event(THEME_PROJECTS_CHANGED));
   },
   async importTheme(value: unknown) {
     const project = validateThemeProject(value);

@@ -11,6 +11,7 @@ const cmsFrame = read('frontend/src/components/sites/CmsOnlineStoreFrame.tsx');
 const sitesPage = read('frontend/src/components/sites/SitesStudioPage.tsx');
 const cmsRoute = read('frontend/src/routes/(apps)/cms.tsx');
 const globalShell = read('frontend/agentsam/AgentSamShell.tsx');
+const navigationProjection = read('scripts/studio-navigation.mjs');
 const docsHome = read('frontend/src/routes/(apps)/docs.tsx');
 const cmsGuide = read('frontend/src/routes/(apps)/help/cms.tsx');
 const routeTree = read('frontend/src/routeTree.gen.ts');
@@ -32,8 +33,9 @@ test('Sites distinguishes content-only records from connected storefronts and lo
 });
 
 test('global and contextual help icons lead to real documentation routes', () => {
-  assert.match(globalShell, /Help & documentation/);
-  assert.match(globalShell, /go\('\/docs'\)/);
+  assert.match(navigationProjection, /id:'help',label:'Help & documentation',href:'\/docs',icon:'help'/);
+  assert.match(globalShell, /help:CircleHelp/);
+  assert.match(globalShell, /onNavigate: go/);
   assert.match(cmsRoute, /<Navigate[\s\S]*to="\/apps\/ecommerce-cms-agentsam"[\s\S]*search=\{\{ page: '\/admin\/store' \}\}/);
   assert.match(docsHome, /createFileRoute\('\/\(apps\)\/docs'\)/);
   assert.match(sitesPage, /go\('\/help\/cms'\)/);

@@ -51,7 +51,9 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
       ]},
       {id:'projects',label:'Projects',href:'/admin/projects',icon:'projects'},
       {id:'library',label:'Library',href:'/artifacts',icon:'library'},
-      {id:'tickets',label:'Tickets',href:'/tickets',icon:'tickets'}
+      {id:'media',label:'Media',href:'/media',icon:'film'},
+      {id:'tickets',label:'Tickets',href:'/tickets',icon:'tickets'},
+      {id:'help',label:'Help & documentation',href:'/docs',icon:'help'}
     ],
     channels: commerce ? [
       {id:'online-store',label:'Online Store',href:'/admin/store',icon:'store',children:[

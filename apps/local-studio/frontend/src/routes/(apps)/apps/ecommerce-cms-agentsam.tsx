@@ -38,13 +38,17 @@ function EcommerceAppHost() {
   const page = resolveEcommerceAdminPath(search.page || '/admin/store');
   const assetPath = page && (isPackagedDesktop() ? resolveEcommerceAssetPath(page) : page);
   const url = typeof window !== 'undefined' && assetPath
-    ? new URL(assetPath, window.location.origin).toString()
+    ? (() => {
+      const resolved = new URL(assetPath, window.location.origin);
+      if (!isPackagedDesktop() && page === '/admin/home') resolved.searchParams.set('__agentsamEmbedded', '1');
+      return resolved.toString();
+    })()
     : null;
 
   if (!bridgeReady || authPending) return <p className="p-8 text-muted-foreground">Loading AgentSam account…</p>;
   if (!user && !localPreview) return <RedirectToSignIn />;
 
-  return <section className="fixed inset-0 flex min-h-0 flex-col bg-background" data-agentsam-installed-app="ecommerce-cms-agentsam">
+  return <section className="flex h-full min-h-0 w-full flex-col bg-background" data-agentsam-installed-app="ecommerce-cms-agentsam">
     {!page ? <p role="alert" className="p-8 text-sm text-destructive">That product route is unavailable.</p>
       : !url ? <p role="alert" className="p-8 text-sm text-destructive">This product route is unavailable.</p>
       : <iframe title="Ecommerce CMS — complete admin application" src={url} className="min-h-0 w-full flex-1 border-0" referrerPolicy="strict-origin-when-cross-origin" allow="fullscreen" />}

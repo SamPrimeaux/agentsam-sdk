@@ -43,10 +43,29 @@ test('network errors and non-exact first-party pins cannot be mistaken for a def
   await assert.rejects(registryStatus([{ name: '@inneranimalmedia/example', version: '2.6.13' }], async () => ({ status: 503 })), /npm_registry_status/);
 });
 
-test('detects stale registry tarballs without rejecting local workspace links', () => {
-  assert.deepEqual(staleLockTarballs({ packages: {
+test('checks lock tarballs against their exact manifest pins, not the Local Studio app version', () => {
+  const requirements = requiredPublishedPackages(input);
+  const lock = { packages: {
     'node_modules/@inneranimalmedia/agentsam-campaign': { version: '2.6.12' },
     'node_modules/@inneranimalmedia/agentsam-nav': { link: true, resolved: '../../packages/agentsam-nav' },
     'backend/node_modules/@inneranimalmedia/agentsam-sdk': { version: '2.6.13' },
-  } }, '2.6.13'), ['node_modules/@inneranimalmedia/agentsam-campaign@2.6.12']);
+    'frontend/node_modules/@inneranimalmedia/agentsam-campaign': { version: '2.6.13' },
+    'node_modules/@inneranimalmedia/agentsam-sdk': { link: true, resolved: '../../packages/agentsam-sdk' },
+  } };
+  assert.deepEqual(staleLockTarballs(lock, requirements), [
+    'node_modules/@inneranimalmedia/agentsam-campaign@2.6.12 (expected 2.6.13)',
+  ]);
+  const candidateLock = { packages: {
+    'backend/node_modules/@inneranimalmedia/agentsam-sdk': { version: '2.6.13' },
+    'frontend/node_modules/@inneranimalmedia/agentsam-campaign': { version: '2.6.13' },
+    'node_modules/@inneranimalmedia/agentsam-sdk': { link: true, resolved: '../../packages/agentsam-sdk' },
+  } };
+  assert.deepEqual(staleLockTarballs(candidateLock, requirements), []);
+});
+
+test('reports a missing lock entry for an exact published dependency', () => {
+  assert.deepEqual(staleLockTarballs({ packages: {} }, requiredPublishedPackages(input)), [
+    'missing lock entry @inneranimalmedia/agentsam-sdk@2.6.13',
+    'missing lock entry @inneranimalmedia/agentsam-campaign@2.6.13',
+  ]);
 });

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import type { NavTheme, NavValue, NavTokens } from './contracts.js';
+import { resolveNavDestinations, navBreadcrumbs } from './utils.js';
 
 export type NavContextValue = {
   data: NavValue;
@@ -15,6 +16,7 @@ export type NavContextValue = {
   resizable: boolean;
   width: number;
   mobileBreakpoint: number;
+  storageKey?: string;
   setOpen: (open: boolean) => void;
   toggle: () => void;
   close: () => void;
@@ -34,11 +36,13 @@ export type NavProviderProps = PropsWithChildren<{
   mobileBreakpoint?: number;
   peekable?: boolean;
   resizable?: boolean;
+  /** Installation/account scoped key. Omit to keep shell preferences in memory. */
+  storageKey?: string;
 }>;
 
 export function NavProvider({
   children,
-  value: data = {},
+  value: input = {},
   tokens = {},
   theme = 'dark',
   accentColor = '#8B5CF6',
@@ -46,13 +50,34 @@ export function NavProvider({
   mobileBreakpoint = 768,
   peekable = false,
   resizable = false,
+  storageKey,
 }: NavProviderProps) {
+  const data = useMemo(() => {
+    const destinations = resolveNavDestinations(input.destinations ?? [], input.pathname);
+    return { ...input, destinations, breadcrumbs: input.breadcrumbs ?? navBreadcrumbs(destinations) };
+  }, [input]);
   const [menu, setMenu] = useState<string | null>(null);
-  const [desktopOpen, setDesktopOpen] = useState(defaultOpen);
+  const [desktopOpen, setDesktopOpen] = useState(() => defaultOpen && (typeof window === 'undefined' || window.innerWidth >= 1024));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isPeeking, setPeeking] = useState(false);
-  const [width, setWidthState] = useState(268);
+  const [width, setWidthState] = useState(264);
+  const [loadedKey, setLoadedKey] = useState<string | undefined>();
+  useEffect(() => {
+    if (!storageKey) { setLoadedKey(undefined); return; }
+    setDesktopOpen(defaultOpen && window.innerWidth >= 1024);
+    setWidthState(264);
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(storageKey) ?? 'null');
+      if (typeof saved?.open === 'boolean') setDesktopOpen(saved.open);
+      if (Number.isFinite(saved?.width)) setWidthState(Math.max(208, Math.min(400, Math.round(saved.width))));
+    } catch { /* Unavailable or malformed preferences never prevent navigation. */ }
+    setLoadedKey(storageKey);
+  }, [storageKey, defaultOpen]);
+  useEffect(() => {
+    if (!storageKey || loadedKey !== storageKey) return;
+    try { window.localStorage.setItem(storageKey, JSON.stringify({ open: desktopOpen, width })); } catch { /* Private browsing / full storage. */ }
+  }, [storageKey, loadedKey, desktopOpen, width]);
 
   useEffect(() => {
     const query = window.matchMedia(`(max-width: ${mobileBreakpoint - 1}px)`);
@@ -74,7 +99,7 @@ export function NavProvider({
   const close = useCallback(() => setOpen(false), [setOpen]);
   const toggle = useCallback(() => setOpen(!open), [open, setOpen]);
   const setWidth = useCallback((next: number) => {
-    setWidthState(Math.max(208, Math.min(400, Math.round(next))));
+    if (Number.isFinite(next)) setWidthState(Math.max(208, Math.min(400, Math.round(next))));
   }, []);
 
   useEffect(() => {
@@ -100,13 +125,14 @@ export function NavProvider({
     resizable,
     width,
     mobileBreakpoint,
+    storageKey,
     setOpen,
     toggle,
     close,
     setPeeking,
     setWidth,
     scrollToItem,
-  }), [data, tokens, theme, accentColor, menu, close, isMobile, isPeeking, mobileBreakpoint, open, peekable, resizable, scrollToItem, setOpen, setWidth, toggle, width]);
+  }), [data, tokens, theme, accentColor, menu, close, isMobile, isPeeking, mobileBreakpoint, open, peekable, resizable, scrollToItem, setOpen, setWidth, storageKey, toggle, width]);
 
   return <NavContext.Provider value={value}>{children}</NavContext.Provider>;
 }

@@ -1,5 +1,6 @@
 import nitroWorker from "../../.output/server/index.mjs";
 import { serveCadChessAsset } from "./cad-chess-assets.js";
+import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
 import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cfoa/src/routes.js";
@@ -718,6 +719,8 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+    const navigationAsset = await serveStudioNavigationAsset(request, env);
+    if (navigationAsset) return navigationAsset;
     // Legacy Ecommerce Console login belongs to customer installations, not
     // the hosted AgentSam identity boundary. Never serve its Fuel & Free Time
     // form or submit credentials to the unrelated /api/admin/login endpoint.
@@ -823,10 +826,25 @@ export default {
       });
     }
 
+    // The canonical Studio Home entry reuses the real packaged Ecommerce
+    // dashboard surface, but requires a Local Studio session and receives the
+    // same host-owned shell projection as every other installed console page.
+    if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/admin/home") {
+      const account = await resolveSessionUserId(request, env);
+      if (!account) {
+        const next = encodeURIComponent(url.pathname + url.search);
+        return Response.redirect(url.origin + LOGIN_PATH + "?next=" + next, 302);
+      }
+      const home = await servePackagedConsole(request, env.ASSETS, { allowStudioHome: true });
+      return home || json({ ok: false, error: "studio_home_unavailable" }, 503);
+    }
+
     // Existing Ecommerce console UI is served by the Local Studio Worker.
     // The packaged UI and its APIs remain on this origin and use Local Studio D1.
+    const embeddedEcommerceHome = url.pathname === "/admin/home"
+      && url.searchParams.get("__agentsamEmbedded") === "1";
     if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname.startsWith("/admin/") && !isStudioAdminPath(url.pathname))) {
+        (url.pathname.startsWith("/admin/") && (!isStudioAdminPath(url.pathname) || embeddedEcommerceHome))) {
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
       const mounted = await servePackagedConsole(request, env.ASSETS);
       if (mounted) return mounted;

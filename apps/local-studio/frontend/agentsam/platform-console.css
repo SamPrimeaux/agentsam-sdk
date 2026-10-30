@@ -3,24 +3,24 @@
 .platform-console {
   --nav-width: 246px;
   --nav-rail-width: 58px;
-  --nav-canvas: #1b1b20;
-  --nav-sidebar: #24222a;
-  --nav-surface: #292730;
-  --nav-popover: #292730;
-  --nav-text: #eeeaf2;
-  --nav-muted: #aaa3b1;
+  --nav-canvas: #171717;
+  --nav-sidebar: #212121;
+  --nav-surface: #262626;
+  --nav-popover: #262626;
+  --nav-text: #ececec;
+  --nav-muted: #aaaaaa;
   --nav-border: #ffffff16;
   --nav-hover: #ffffff0b;
   --nav-selected: #ffffff13;
   background: var(--nav-canvas);
 }
 .platform-console[data-nav-theme="light"] {
-  --nav-canvas: #f5f4f7;
-  --nav-sidebar: #f0eef3;
+  --nav-canvas: #fafafa;
+  --nav-sidebar: #f1f1f1;
   --nav-surface: #fff;
   --nav-popover: #fff;
-  --nav-text: #26232b;
-  --nav-muted: #6f6a76;
+  --nav-text: #202020;
+  --nav-muted: #636363;
   --nav-border: #28202d1f;
   --nav-selected: #2a22300e;
 }
@@ -32,11 +32,11 @@
 .platform-console .as-nav-destinations { padding: 8px 8px 14px; }
 .platform-console .as-nav-destination {
   min-height: 36px; padding: 7px 10px; gap: 11px; border-radius: 8px;
-  font-size: 13px; color: var(--nav-muted); line-height: 1.3;
+  font-size: 14px; color: var(--nav-muted); line-height: 20px; height:36px;
 }
 .platform-console .as-nav-destination[data-active],
 .platform-console .as-nav-destination:hover { background: var(--nav-selected); color: var(--nav-text); }
-.platform-console .as-nav-destination svg { width: 16px; height: 16px; }
+.platform-console .as-nav-destination svg { width: 18px; height: 18px; }
 .platform-console .as-nav-sidenav-foot { border-top: 1px solid var(--nav-border); }
 .platform-console .agentsam-main { background: var(--nav-canvas); }
 .platform-console .platform-console-topbar {

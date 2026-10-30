@@ -1,3 +1,4 @@
+import { readShellAppearancePreference, SHELL_APPEARANCE_STORAGE_ID, useShellAppearance } from "../appearance";
 import { SettingsThemeGallery } from "./themes";
 import { WidgetGalleryPreview } from "./WidgetGalleryPreview";
 export { SettingsThemeGallery } from "./themes";
@@ -104,13 +105,13 @@ function PublisherMark({url,className = "size-4"}: {url?: string | null; classNa
 
 function statusTone(status: HealthState | SettingsCredential["status"]) {
   if (status === "healthy" || status === "active") {
-    return "border-emerald-500/20 bg-emerald-500/8 text-emerald-300";
+    return "border-emerald-500/20 bg-emerald-500/8 text-[var(--settings-success-ink)]";
   }
   if (status === "attention" || status === "expired") {
-    return "border-amber-500/20 bg-amber-500/8 text-amber-300";
+    return "border-amber-500/20 bg-amber-500/8 text-[var(--settings-warning-ink)]";
   }
   if (status === "blocked" || status === "revoked") {
-    return "border-red-500/20 bg-red-500/8 text-red-300";
+    return "border-red-500/20 bg-red-500/8 text-[var(--settings-danger-ink)]";
   }
   return "border-border bg-muted/40 text-muted-foreground";
 }
@@ -158,22 +159,23 @@ export function SettingsShell({
   activeUnit: SettingsUnitId;
   onNavigate: (unit: SettingsUnitId) => void;
   children: ReactNode;
-  /** Sidebar footer — live vault when unset uses production copy. */
+  /** Optional status supplied by the host product. */
   railStatus?: { title: string; detail: string };
   /** Compact breadcrumb root supplied by the host product. */
   rootLabel?: string;
   /** Returns to the host product without coupling Settings to a router. */
   onExit?: () => void;
 }) {
+  const {theme:settingsTheme} = useShellAppearance();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const activeLabel = manifest.units.find((unit) => unit.id === activeUnit)?.label ?? "Settings";
   const status = railStatus ?? {
-    title: activeUnit === "keys" ? "Account vault" : "Local Studio",
+    title: activeUnit === "keys" ? "Account vault" : manifest.productName,
     detail:
       activeUnit === "keys"
-        ? "Secrets encrypt to your account. No project scope."
-        : "Settings shell. Keys use the live vault.",
+        ? "Manage your saved credentials."
+        : "Manage your account and preferences.",
   };
 
   const rail = (
@@ -240,7 +242,7 @@ export function SettingsShell({
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full bg-background text-foreground max-md:[&_button]:min-h-11">
+    <div style={{'--settings-warning-ink':settingsTheme === 'light' ? '#8a5a00' : '#fcd34d','--settings-success-ink':settingsTheme === 'light' ? '#11643f' : '#6ee7b7','--settings-danger-ink':settingsTheme === 'light' ? '#b42323' : '#fca5a5'} as React.CSSProperties} className="flex h-full min-h-0 w-full bg-background text-foreground max-md:[&_button]:min-h-11">
       <aside
         className={cx(
           "hidden shrink-0 border-r border-border/70 bg-background md:block",
@@ -830,7 +832,7 @@ function PluginCustomizeView({
     ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
     : state === "Available"
       ? "border-sky-400/30 bg-sky-400/10 text-sky-300"
-      : "border-amber-400/25 bg-amber-400/10 text-amber-300";
+      : "border-amber-400/25 bg-amber-400/10 text-[var(--settings-warning-ink)]";
   const anySelected = Boolean(selected);
 
   const focusedPlugin=plugins.find(item=>item.id===focusedPluginId);
@@ -860,7 +862,7 @@ function PluginCustomizeView({
             <p className="text-[12px] text-muted-foreground">
               {isBrand?"Approved brand identity, supporting evidence and saved contract.":"Briefs, campaign concepts and plans for this authorized workspace."}
             </p>
-            <span className="mt-2 inline-block text-[10px] text-emerald-300">Connected · {focusedPlugin.toolCount} registered tools</span>
+            <span className="mt-2 inline-block text-[10px] text-[var(--settings-success-ink)]">Connected · {focusedPlugin.toolCount} registered tools</span>
           </div>
           <button type="button" disabled={workspaceBusy} onClick={()=>void openWorkspace(focusedPlugin.id)}
             className="ml-auto rounded-lg border border-border p-2 text-muted-foreground hover:text-foreground" aria-label="Refresh workspace">
@@ -868,7 +870,7 @@ function PluginCustomizeView({
           </button>
         </header>
         {workspaceBusy ? <p className="text-[12px] text-muted-foreground">Reading your authorized plugin workspace…</p> : null}
-        {workspaceError ? <p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-amber-200">
+        {workspaceError ? <p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-[var(--settings-warning-ink)]">
           {workspaceError}. Reconnect the plugin or verify the registered context tool.
         </p> : null}
         {workspace && !workspaceError ? (
@@ -1017,7 +1019,7 @@ function PluginCustomizeView({
             ))}
           </div>
           {catalogError ? (
-            <div className="flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/[0.065] p-3 text-[11px] text-amber-200">
+            <div className="flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/[0.065] p-3 text-[11px] text-[var(--settings-warning-ink)]">
               <AlertTriangle className="mt-0.5 size-4 shrink-0"/>
               <span>{catalogError}{catalog?.errors?.length ? ` Affected source${catalog.errors.length===1?"":"s"}: ${catalog.errors.map(error=>error.source).join(", ")}.` : ""}</span>
             </div>
@@ -1109,7 +1111,7 @@ function PluginCustomizeView({
                     <div key={tool.id} className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2">
                       <div className="flex items-center justify-between gap-2">
                         <span className="min-w-0 text-[11px] font-medium text-foreground">{tool.title || tool.id}</span>
-                        <span className={cx("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium",tool.readOnly?"bg-sky-400/10 text-sky-300":"bg-amber-400/10 text-amber-300")}>{tool.readOnly?"Read / prepare":"Write · approval"}</span>
+                        <span className={cx("shrink-0 rounded px-1.5 py-0.5 text-[9px] font-medium",tool.readOnly?"bg-sky-400/10 text-sky-300":"bg-amber-400/10 text-[var(--settings-warning-ink)]")}>{tool.readOnly?"Read / prepare":"Write · approval"}</span>
                       </div>
                       <p className="mt-1 break-all font-mono text-[9px] text-muted-foreground">{tool.id} · {tool.scopes.join(', ')}</p>
                     </div>
@@ -1155,8 +1157,8 @@ function PluginCustomizeView({
                 )}
               </div>
             ) : null}
-            {actionError ? <div role="alert" className="rounded-lg border border-red-400/30 bg-red-400/10 p-3 text-[11px] text-red-300">{actionError}</div> : null}
-            {notice ? <div role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 p-3 text-[11px] text-emerald-300">{notice}</div> : null}
+            {actionError ? <div role="alert" className="rounded-lg border border-red-400/30 bg-red-400/10 p-3 text-[11px] text-[var(--settings-danger-ink)]">{actionError}</div> : null}
+            {notice ? <div role="status" className="rounded-lg border border-emerald-400/25 bg-emerald-400/10 p-3 text-[11px] text-[var(--settings-success-ink)]">{notice}</div> : null}
 
             {installed && isRunnable(installed) && host.readPluginWorkspace ? (
               <button type="button" onClick={()=>void openWorkspace(installed.id)}
@@ -1174,7 +1176,7 @@ function PluginCustomizeView({
               ) : null}
               {selectedCatalog && plugins.some(plugin=>plugin.pluginKey===selectedCatalog.pluginKey && plugin.setupStatus!=="connected") ? (
                 <div className="rounded-lg border border-amber-400/25 bg-amber-400/[0.06] p-3 text-[11px] leading-relaxed text-muted-foreground">
-                  <span className="font-medium text-amber-300">Installed · authorization required.</span> This plugin's MCP tools will not run in Studio until a supported OAuth connection and tool registration flow is completed.
+                  <span className="font-medium text-[var(--settings-warning-ink)]">Installed · authorization required.</span> This plugin's MCP tools will not run in Studio until a supported OAuth connection and tool registration flow is completed.
                 </div>
               ) : null}
               {(installed?.setupUrl || installed?.installationKey === "catalog-v1") && host.beginPluginSetup ? (
@@ -1595,7 +1597,7 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
       >
         {createdSecret ? (
           <div className="space-y-5">
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/8 p-3 text-[11px] leading-5 text-amber-200">
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/8 p-3 text-[11px] leading-5 text-[var(--settings-warning-ink)]">
               You will not be able to view this key again after closing this sheet.
             </div>
             <SensitiveInput
@@ -1721,16 +1723,8 @@ function KeysView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-function ThemesView({ themes: _themes, host: _host, onChanged: _onChanged }: { themes: SettingsTheme[]; host: SettingsHost; onChanged: () => void }) {
-  // Account appearance preferences and customer storefront themes are different
-  // resources. The reusable website theme library belongs under Online Store.
-  return <><AppearancePreferences />
-    <Section title="Storefront design" description="Website templates belong to the Ecommerce CMS, not your dashboard appearance.">
-      <a href="/sites" className="inline-flex rounded-lg border border-border bg-card px-4 py-2 text-xs font-medium text-foreground hover:bg-muted">
-        Open Online Store and installed drafts
-      </a>
-    </Section>
-  </>;
+function ThemesView({ themes, host, onChanged }: { themes: SettingsTheme[]; host: SettingsHost; onChanged: () => void }) {
+  return <SettingsThemeGallery themes={themes} host={host} onChanged={onChanged} />;
 }
 
 const freshAgent=():SettingsAgentDraft=>({
@@ -1820,7 +1814,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
   }
   if(view==="policy"){
     return <Section title="Agent execution policy" description="Stored for your account in the existing agentsam_user_policy registry.">
-      {snapshot.agentError?<p role="alert" className="text-[12px] text-amber-300">{snapshot.agentError}</p>:null}
+      {snapshot.agentError?<p role="alert" className="text-[12px] text-[var(--settings-warning-ink)]">{snapshot.agentError}</p>:null}
       <div className="space-y-4 rounded-xl border border-border/70 p-4">
         {([
           ["allowSubagentSpawn","Allow subagent spawning","Permit approved agent profiles to delegate work."],
@@ -1842,7 +1836,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
             {[1,2,3,4,5].map(value=><option key={value} value={value}>{value}</option>)}
           </select>
         </label>
-        {error?<p role="alert" className="text-[11px] text-red-300">{error}</p>:null}
+        {error?<p role="alert" className="text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
         <button type="button" onClick={()=>void savePolicy()} disabled={busy||!host.updateAgentPolicy||!!snapshot.agentError}
           className="rounded-lg bg-violet-600 px-4 py-2 text-[12px] font-medium text-white disabled:opacity-50">
           Save execution policy
@@ -1857,7 +1851,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
           className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-medium text-white disabled:opacity-50">
           <Plus className="size-3.5"/> New agent
         </button>}>
-        {snapshot.agentError?<p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-amber-300">
+        {snapshot.agentError?<p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-[var(--settings-warning-ink)]">
           Failed to load account agent records: {snapshot.agentError}
         </p>:snapshot.agents.length?(
           <div className="grid gap-3 md:grid-cols-2">
@@ -1869,7 +1863,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
                     <div className="min-w-0"><p className="truncate text-[13px] font-semibold">{agent.name}</p>
                     <p className="text-[10px] text-muted-foreground">/{agent.slug}</p></div>
                   </div>
-                  <span className={cx("rounded-full px-2 py-1 text-[10px]",agent.active?"bg-emerald-500/10 text-emerald-300":"bg-muted text-muted-foreground")}>
+                  <span className={cx("rounded-full px-2 py-1 text-[10px]",agent.active?"bg-emerald-500/10 text-[var(--settings-success-ink)]":"bg-muted text-muted-foreground")}>
                     {agent.active?"Enabled":"Archived"}
                   </span>
                 </div>
@@ -1880,7 +1874,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
                     {agent.readOnly?"View":"Edit"} profile
                   </button>
                   {!agent.readOnly&&agent.active&&host.archiveAgent?
-                    <button type="button" disabled={busy} className="rounded-lg px-3 py-1.5 text-[11px] text-muted-foreground hover:text-red-300" onClick={()=>void archive(agent)}>Archive</button>:null}
+                    <button type="button" disabled={busy} className="rounded-lg px-3 py-1.5 text-[11px] text-muted-foreground hover:text-[var(--settings-danger-ink)]" onClick={()=>void archive(agent)}>Archive</button>:null}
                 </div>
               </article>
             ))}
@@ -1913,7 +1907,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
               {draft.modelId&&!selectedModel?<option value={draft.modelId}>{draft.modelId} (saved; not verified)</option>:null}
               {availableModels.map(model=><option key={model.id} value={model.id}>{model.provider}: {model.name}</option>)}
             </select>
-            {!availableModels.length?<p className="text-[10px] text-amber-300">No verified models discovered. You can save the agent, but cannot claim it is runnable yet.</p>:null}
+            {!availableModels.length?<p className="text-[10px] text-[var(--settings-warning-ink)]">No verified models discovered. You can save the agent, but cannot claim it is runnable yet.</p>:null}
           </label>
           <label className="block space-y-2">
             <span className="text-[11px] font-medium">Agent instructions</span>
@@ -1954,7 +1948,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
             <input type="checkbox" checked={draft.active} onChange={event=>setDraft(current=>({...current,active:event.target.checked}))}/>
             Enabled
           </label>
-          {error?<p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[11px] text-red-300">{error}</p>:null}
+          {error?<p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
           <div className="flex justify-end gap-2 border-t border-border/70 pt-4">
             <button type="button" className="rounded-lg border border-border px-4 py-2 text-[11px]" onClick={()=>setEditing(false)}>Cancel</button>
             <button type="button" disabled={busy||selected?.readOnly||!host.saveAgent} onClick={()=>void saveAgent()}
@@ -1995,7 +1989,7 @@ function CustomizeView({
             </div>)}
           </div>
         ):<p className="text-[12px] text-muted-foreground">No personal agent profiles saved yet.</p>}
-        {snapshot.agentError?<p role="alert" className="text-[11px] text-amber-300">{snapshot.agentError}</p>:null}
+        {snapshot.agentError?<p role="alert" className="text-[11px] text-[var(--settings-warning-ink)]">{snapshot.agentError}</p>:null}
         {host.openSettingsUnit?<button type="button" onClick={()=>host.openSettingsUnit?.("agents")}
           className="rounded-lg border border-border px-4 py-2 text-[12px] hover:bg-muted">Create or edit agents →</button>:null}
       </div>
@@ -2176,7 +2170,7 @@ function CustomizeView({
             </select>
           </label>
           )}
-          {formError ? <p role="alert" className="rounded-lg border border-red-500/30 p-2 text-[11px] text-red-300">{formError}</p> : null}
+          {formError ? <p role="alert" className="rounded-lg border border-red-500/30 p-2 text-[11px] text-[var(--settings-danger-ink)]">{formError}</p> : null}
 
           <div className="flex items-center justify-between border-t border-border/70 pt-4">
             <div>
@@ -2184,7 +2178,7 @@ function CustomizeView({
                 <button
                   type="button"
                   onClick={() => void remove()}
-                  className="h-8 rounded-md px-2.5 text-[10px] text-red-300 hover:bg-red-500/10"
+                  className="h-8 rounded-md px-2.5 text-[10px] text-[var(--settings-danger-ink)] hover:bg-red-500/10"
                 >
                   Delete
                 </button>
@@ -2244,7 +2238,7 @@ function GeneralView({snapshot,host,onChanged}:{
      </Section>
      <AppearancePreferences/>
      <Section title="Application preferences" description="Saved under your account using the existing user UI preferences registry.">
-       {snapshot.general.preferencesError?<p role="alert" className="rounded-xl border border-amber-500/25 p-3 text-[11px] text-amber-300">
+       {snapshot.general.preferencesError?<p role="alert" className="rounded-xl border border-amber-500/25 p-3 text-[11px] text-[var(--settings-warning-ink)]">
          {snapshot.general.preferencesError}. Changes cannot be saved until the service is available.
        </p>:null}
        <div className="space-y-4 rounded-xl border border-border/70 p-4">
@@ -2260,9 +2254,9 @@ function GeneralView({snapshot,host,onChanged}:{
                className="size-4 accent-violet-500"/>
            </label>
          ))}
-         {error?<p role="alert" className="text-[11px] text-red-300">{error}</p>:null}
+         {error?<p role="alert" className="text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
          <button type="button" disabled={busy||!!snapshot.general.preferencesError||!host.updateGeneralPreferences}
-           onClick={()=>void save()} className="rounded-lg bg-violet-600 px-4 py-2 text-[11px] font-medium text-white disabled:opacity-50">
+           onClick={()=>void save()} className="rounded-lg bg-violet-600 px-4 py-2 text-[11px] font-medium text-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100">
            Save preferences
          </button>
        </div>
@@ -2271,7 +2265,6 @@ function GeneralView({snapshot,host,onChanged}:{
  );
 }
 
-const SHELL_APPEARANCE_STORAGE_ID = "agentsam-shell-appearance-v1";
 const SHELL_ACCENTS = [
   { id: "#8B5CF6", label: "Violet" },
   { id: "#2563EB", label: "Blue" },
@@ -2280,28 +2273,7 @@ const SHELL_ACCENTS = [
 ] as const;
 
 
-export type ShellAppearancePreference = {
-  theme: "dark" | "light" | "system";
-  accent: string;
-};
-
-export function readShellAppearancePreference(
-  storage?: Pick<Storage, "getItem">,
-): ShellAppearancePreference | null {
-  const source =
-    storage ?? (typeof window !== "undefined" ? window.localStorage : undefined);
-  if (!source) return null;
-  try {
-    const value = source.getItem(SHELL_APPEARANCE_STORAGE_ID);
-    if (!value) return null;
-    const raw = JSON.parse(value) as Partial<ShellAppearancePreference>;
-    if (raw.theme !== "dark" && raw.theme !== "light" && raw.theme !== "system") return null;
-    if (typeof raw.accent !== "string" || !/^#[0-9a-f]{6}$/i.test(raw.accent)) return null;
-    return { theme: raw.theme, accent: raw.accent };
-  } catch {
-    return null;
-  }
-}
+export { readShellAppearancePreference, type ShellAppearancePreference } from "../appearance";
 
 function AppearancePreferences() {
   const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
@@ -2430,7 +2402,7 @@ function DesignView({snapshot,host}:{
               className="mt-4 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open plugin connections →</button>:null}
           </div>
         ):loading?<p role="status" className="text-[12px] text-muted-foreground">Loading your authorized brand identity…</p>
-        :error?<p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-amber-300">{error}</p>
+        :error?<p role="alert" className="rounded-xl border border-amber-500/30 p-4 text-[12px] text-[var(--settings-warning-ink)]">{error}</p>
         :!latest?<div className="rounded-xl border border-dashed border-border/70 p-5">
           <p className="text-[13px] font-medium">No approved BrandContract saved</p>
           <p className="mt-2 text-[12px] text-muted-foreground">
@@ -2487,7 +2459,7 @@ function GitView({snapshot}:{snapshot:SettingsSnapshot}) {
     <>
       <Section title="GitHub authorization" description="Non-secret evidence from the account's existing OAuth registry. An active grant does not itself prove GitHub API access.">
         {!data?.available ? (
-          <p role="status" className="rounded-xl border border-amber-500/25 p-4 text-[12px] text-amber-200">
+          <p role="status" className="rounded-xl border border-amber-500/25 p-4 text-[12px] text-[var(--settings-warning-ink)]">
             OAuth connection status is unavailable. No disconnected state is inferred.
           </p>
         ) : (
@@ -2637,30 +2609,10 @@ function NotificationsView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-function DocsView() {
-  return (
-    <>
-      <Section title="Product documentation" description="Settings should point to the same contracts the product actually uses.">
-        <div className="divide-y divide-border/60 rounded-lg border border-border/70">
-          {[
-            ["Settings host contract", "Normalized adapters between presentation and runtime."],
-            ["Identity & OAuth", "Account authority, web clients, native clients and provider connections."],
-            ["Keys & vault", "AgentSam-issued credentials, BYOK provider secrets and encryption boundaries."],
-            ["Local runtime", "Tauri bootstrap, agentsamd and machine enrollment."],
-          ].map(([title, description]) => (
-            <button key={title} type="button" className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/35">
-              <BookOpen className="size-3.5 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1">
-                <span className="block text-[12px] font-medium">{title}</span>
-                <span className="mt-0.5 block text-[10px] text-muted-foreground">{description}</span>
-              </span>
-              <ChevronRight className="size-3.5 text-muted-foreground" />
-            </button>
-          ))}
-        </div>
-      </Section>
-    </>
-  );
+function DocsView({host}: {host:SettingsHost}) {
+  return <Section title="Documentation" description="Guides for your applications and workflows.">
+    {host.documentationHref ? <a href={host.documentationHref} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35"><BookOpen className="size-4" /><span>Open help center</span><ChevronRight className="ml-auto size-4" /></a> : <p className="text-sm text-muted-foreground">Documentation is not connected for this installation.</p>}
+  </Section>;
 }
 
 function KeysSubView({ view, snapshot }: { view: string; snapshot: SettingsSnapshot }) {
@@ -2743,7 +2695,7 @@ function renderUnit(
     case "notifications":
       return <NotificationsView snapshot={snapshot} />;
     case "docs":
-      return <DocsView />;
+      return <DocsView host={host} />;
     default:
       return null;
   }
