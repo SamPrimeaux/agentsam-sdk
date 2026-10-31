@@ -29,3 +29,8 @@ body.agentsam-shared-navigation .console-shell *::-webkit-scrollbar-track { back
 body.agentsam-shared-navigation .console-shell *::-webkit-scrollbar-thumb { background:color-mix(in srgb,var(--c-muted) 38%,transparent); border:2px solid transparent; background-clip:padding-box; border-radius:8px; }
 body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
 @media(forced-colors:active) { body.agentsam-shared-navigation .console-shell, body.agentsam-shared-navigation .console-shell * { scrollbar-color:auto; } }
+
+.console-notifications-menu { max-height:min(70dvh,560px); overflow:auto; overscroll-behavior:contain; }
+.studio-notification { padding:12px 0; border-bottom:1px solid var(--c-line); overflow-wrap:anywhere; }
+.studio-notification p { margin:5px 0; white-space:pre-wrap; }
+.studio-notification small { color:var(--c-muted); }

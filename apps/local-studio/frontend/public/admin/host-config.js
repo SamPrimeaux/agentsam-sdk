@@ -397,4 +397,39 @@
       else window.location.hash = "#" + destination;
     }, true);
   }
+
+  // The host projects the same authenticated feed as the React shell.
+  async function loadAccountNotifications() {
+    const panel = document.getElementById('console-notifications-menu');
+    if (!panel) return;
+    const heading = document.createElement('strong'); heading.textContent = 'Notifications';
+    const state = document.createElement('p'); state.setAttribute('role','status'); state.textContent = 'Loading notifications…';
+    panel.replaceChildren(heading,state);
+    try {
+      const response = await window.fetch('/api/settings/notifications',{credentials:'same-origin',cache:'no-store'});
+      if (!response.ok) throw new Error('notifications_unavailable');
+      const payload = await response.json();
+      if (!payload.ok || !Array.isArray(payload.notifications)) throw new Error('notifications_unavailable');
+      state.remove();
+      if (!payload.notifications.length) {
+        const empty = document.createElement('p'); empty.textContent = 'No notifications yet.'; panel.appendChild(empty);
+      }
+      for (const item of payload.notifications) {
+        const article = document.createElement('article'); article.className = 'studio-notification';
+        const title = document.createElement('strong'); title.textContent = item.title;
+        const message = document.createElement('p'); message.textContent = item.message;
+        const time = document.createElement('small'); time.textContent = item.channel+' · '+new Date(item.createdAt*1000).toLocaleString();
+        article.append(title,message,time); panel.appendChild(article);
+      }
+    } catch {
+      state.textContent = 'Notifications could not load.';
+    }
+    const refresh = document.createElement('button'); refresh.type='button'; refresh.className='console-btn';
+    refresh.textContent='Refresh notifications'; refresh.addEventListener('click',()=>void loadAccountNotifications()); panel.appendChild(refresh);
+  }
+  document.addEventListener('click',event=>{
+    if (event.target?.closest?.('#console-notifications-trigger') &&
+        document.getElementById('console-notifications-trigger')?.getAttribute('aria-expanded') !== 'true') void loadAccountNotifications();
+  },true);
+
 })();
