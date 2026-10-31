@@ -5,6 +5,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolveConsoleFile, servePackagedConsole } from '../backend/worker/packaged-console.js';
 import { canonicalStudioPath, isStudioAdminPath } from '../shared/studio-admin-routes.mjs';
 import { handleStudioAccountAvatar } from '../backend/worker/studio-user-preferences.js';
+import { studioNavigationProjection } from './studio-navigation.mjs';
 
 test('platform routes resolve to the real Ecommerce application bundle', () => {
   for (const [path, file] of [
@@ -126,7 +127,7 @@ test('admin home resolves to the packaged Ecommerce home on Local Studio', () =>
 
 test('AgentSam app and approved Ecommerce groups keep their actual route ownership', async () => {
   const source = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
-  const projection = JSON.parse(readFileSync(new URL('../frontend/public/admin/data/navigation.json', import.meta.url), 'utf8'));
+  const projection = studioNavigationProjection();
   const requested = [];
   const context = {
     NAV: { main: [], channels: [], apps: [] },
