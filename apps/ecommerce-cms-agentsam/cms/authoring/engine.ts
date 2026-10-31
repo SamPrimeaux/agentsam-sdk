@@ -131,7 +131,7 @@ export function normalizeDefinition(raw: unknown): Definition {
   const artifactReady = isObject(raw.artifact) &&
     typeof raw.artifact.id === 'string' &&
     typeof raw.artifact.contentHash === 'string' &&
-    typeof raw.artifact.manifestR2Key === 'string';
+    typeof raw.artifact.manifestObjectKey === 'string';
   const displayLabel = Array.isArray(metadata.displayLabel) &&
     metadata.displayLabel.every(v => typeof v === 'string')
       ? metadata.displayLabel as string[] : ['heading','title','text','label'];

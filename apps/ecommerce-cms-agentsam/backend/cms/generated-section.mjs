@@ -149,7 +149,7 @@ export async function persistGeneratedImplementation(env, accountId, record, sec
     normalized_by:String(provenance.normalized_by||provenance.normalizedBy||'agentsam').slice(0,128),
     created_at:provenance.created_at||new Date().toISOString(),implementation_class:'artifact_static'});
   await env.DB.batch([
-    env.DB.prepare(`INSERT INTO cms_artifacts (id,account_id,artifact_key,artifact_type,version,r2_prefix,manifest_r2_key,content_hash,content_mode,status,source_kind,source_ref,metadata_json)
+    env.DB.prepare(`INSERT INTO cms_artifacts (id,account_id,artifact_key,artifact_type,version,object_prefix,manifest_object_key,content_hash,content_mode,status,source_kind,source_ref,metadata_json)
       VALUES (?,? ,?,'section',?,?,?,?,'component','ready','generator','code.generate',?)
       ON CONFLICT(account_id,artifact_key,version) DO NOTHING`)
       .bind(artifactId,accountId,"section/"+digest,version,prefix,key,digest,meta),
@@ -163,27 +163,29 @@ export async function persistGeneratedImplementation(env, accountId, record, sec
 
 export async function attachGeneratedImplementations(env, slug, sections, accountId = null) {
   if (!sections?.some((s)=>s.content?.__editor?.generated)) return sections;
+  const legacyPage = await env.DB.prepare("SELECT id FROM pages WHERE slug=? LIMIT 1").bind(slug).first();
+  if (!legacyPage?.id) return sections;
   let tenant = accountId;
-  if (!tenant) {
-    const page = await env.DB.prepare("SELECT account_id FROM cms_pages WHERE slug = ? LIMIT 1").bind(slug).first();
-    tenant = page?.account_id;
-  }
-  if (!tenant) return sections;
+  const page = await env.DB.prepare(`SELECT id,account_id,site_id FROM cms_pages
+    WHERE legacy_page_id=? AND (? IS NULL OR account_id=?) LIMIT 1`)
+    .bind(legacyPage.id,tenant,tenant).first();
+  if (!page || !page.id) return sections;
+  tenant = page.account_id;
   return Promise.all(sections.map(async (section)=>{
     const editor = section.content?.__editor;
     if (!editor?.generated || !editor.artifactId) return section;
-    const artifact = await env.DB.prepare("SELECT manifest_r2_key,content_hash FROM cms_artifacts WHERE id = ? AND account_id = ? AND status = 'ready'")
+    const artifact = await env.DB.prepare("SELECT manifest_object_key,content_hash FROM cms_artifacts WHERE id = ? AND account_id = ? AND status = 'ready'")
       .bind(editor.artifactId,tenant).first();
     if (!artifact) return section;
-    const manifest = await readR2Json(env,artifact.manifest_r2_key);
+    const manifest = await readR2Json(env,artifact.manifest_object_key);
     if (!manifest || manifest.schema !== "cms.generated-implementation.v1") return section;
     const settings = Object.fromEntries(Object.entries(section.content).filter(([key])=>key !== "__editor"));
     const checked = inspectGeneratedSection({canonical:manifest.canonical,definition:{...manifest.definition,settings:manifest.fields},settings},section.key);
     if (!checked.ok) return section;
     if (await sha256(JSON.stringify(manifest)) !== artifact.content_hash) return section;
-    const placed=await env.DB.prepare(`SELECT s.id FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id
-      WHERE p.account_id=? AND p.slug=? AND s.section_key=? LIMIT 1`)
-      .bind(tenant,slug,section.key).first();
+    const placed=await env.DB.prepare(`SELECT s.id FROM cms_page_sections s
+      WHERE s.account_id=? AND s.page_id=? AND s.section_key=? LIMIT 1`)
+      .bind(tenant,page.id,section.key).first();
     if(!placed?.id)return section;
     try {
       const renderedImplementation=materializeGeneratedStatic(

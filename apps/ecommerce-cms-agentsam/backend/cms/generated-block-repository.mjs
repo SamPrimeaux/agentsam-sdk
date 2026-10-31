@@ -157,6 +157,10 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       const supplied = input.provenance || {};
       const promptHash = supplied.prompt_hash || supplied.promptHash || digest.slice(0, 8);
       const createdAt = supplied.created_at || supplied.createdAt || new Date().toISOString();
+      const scope = await sql.first(`SELECT p.site_id FROM cms_page_sections s
+        JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+        WHERE s.id=? AND s.account_id=?`, [input.sectionId, input.accountId]);
+      if (!scope?.site_id) return { ok: false, status: 409, error: "cms_block_site_scope_missing", written: false };
       const provenance = {
         generator: supplied.generator || "agentsam",
         namespace: "agentsam",
@@ -175,9 +179,9 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       };
       try {
         await sql.batch([
-          { sql: "INSERT INTO " + TABLES.artifacts + " (id, account_id, artifact_key, artifact_type, version, r2_prefix, manifest_r2_key, content_hash, content_mode, status, source_kind, source_ref, metadata_json) VALUES (?, ?, ?, 'embed', '1', ?, ?, ?, 'component', 'ready', 'generator', ?, ?) ON CONFLICT(account_id, artifact_key, version) DO UPDATE SET manifest_r2_key = excluded.manifest_r2_key, content_hash = excluded.content_hash, source_ref = excluded.source_ref, metadata_json = excluded.metadata_json", params: ["cmsa_" + hash16, input.accountId, "block/" + hash16, "cms/artifacts/block/" + hash16 + "/", key, digest, picked.capability, JSON.stringify(provenance)] },
+          { sql: "INSERT INTO " + TABLES.artifacts + " (id, account_id, artifact_key, artifact_type, version, object_prefix, manifest_object_key, content_hash, content_mode, status, source_kind, source_ref, metadata_json) VALUES (?, ?, ?, 'embed', '1', ?, ?, ?, 'component', 'ready', 'generator', ?, ?) ON CONFLICT(account_id, artifact_key, version) DO UPDATE SET manifest_object_key = excluded.manifest_object_key, content_hash = excluded.content_hash, source_ref = excluded.source_ref, metadata_json = excluded.metadata_json", params: ["cmsa_" + hash16, input.accountId, "block/" + hash16, "cms/artifacts/block/" + hash16 + "/", key, digest, picked.capability, JSON.stringify(provenance)] },
           { sql: "INSERT INTO " + TABLES.blocks + " (id, account_id, section_id, parent_block_id, block_key, block_type, sort_order, status, content_json, artifact_id, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?) ON CONFLICT(section_id, block_key) DO UPDATE SET block_type = excluded.block_type, content_json = excluded.content_json, artifact_id = excluded.artifact_id, metadata_json = excluded.metadata_json, parent_block_id = excluded.parent_block_id, updated_at = datetime('now')", params: [blockId, input.accountId, input.sectionId, input.parentBlockId || null, blockKey, semanticType, input.index || 0, JSON.stringify(input.settingsValues || {}), "cmsa_" + hash16, JSON.stringify({ generated: true, definition: definition || { type: semanticType }, provenance })] },
-          { sql: "INSERT INTO " + TABLES.revisions + " (account_id, entity_type, entity_id, revision_number, revision_kind, content_hash, snapshot_json, metadata_json) SELECT ?, 'block', ?, COALESCE(MAX(revision_number), 0) + 1, 'draft', ?, ?, ? FROM " + TABLES.revisions + " WHERE account_id = ? AND entity_type = 'block' AND entity_id = ?", params: [input.accountId, blockId, digest, JSON.stringify({ artifactId: "cmsa_" + hash16, settings: input.settingsValues || {}, canonical: stableCanonical }), JSON.stringify(provenance), input.accountId, blockId] },
+          { sql: "INSERT INTO " + TABLES.revisions + " (account_id, site_id, entity_type, entity_id, revision_number, revision_kind, content_hash, snapshot_json, metadata_json) SELECT ?, ?, 'block', ?, COALESCE(MAX(revision_number), 0) + 1, 'draft', ?, ?, ? FROM " + TABLES.revisions + " WHERE account_id = ? AND site_id = ? AND entity_type = 'block' AND entity_id = ?", params: [input.accountId, scope.site_id, blockId, digest, JSON.stringify({ artifactId: "cmsa_" + hash16, settings: input.settingsValues || {}, canonical: stableCanonical }), JSON.stringify(provenance), input.accountId, scope.site_id, blockId] },
         ]);
       } catch (error) {
         return { ok: false, status: 500, error: error.message, orphan: key };
@@ -206,8 +210,20 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       await sql.run("UPDATE " + TABLES.blocks + " SET parent_block_id = ?, sort_order = ? WHERE account_id = ? AND id = ?", [newParentId || null, index || 0, accountId, blockId]);
       return { ok: true };
     },
-    writeRevision(accountId, entityType, entityId, snapshot) {
-      return sql.run("INSERT INTO " + TABLES.revisions + " (account_id, entity_type, entity_id, revision_number, snapshot_json) SELECT ?, ?, ?, COALESCE(MAX(revision_number), 0) + 1, ? FROM " + TABLES.revisions + " WHERE account_id = ? AND entity_type = ? AND entity_id = ?", [accountId, entityType, entityId, JSON.stringify(snapshot), accountId, entityType, entityId]);
+    async writeRevision(accountId, entityType, entityId, snapshot) {
+      const scope = entityType === "section"
+        ? await sql.first(`SELECT p.site_id FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id WHERE s.id=? AND s.account_id=?`, [entityId, accountId])
+        : entityType === "block"
+          ? await sql.first(`SELECT p.site_id FROM cms_section_blocks b JOIN cms_page_sections s ON s.id=b.section_id AND s.account_id=b.account_id JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id WHERE b.id=? AND b.account_id=?`, [entityId, accountId])
+          : null;
+      if (!scope?.site_id) throw Object.assign(new Error("cms_revision_site_scope_missing"), { status: 409 });
+      return sql.run(`INSERT INTO ${TABLES.revisions}
+        (account_id,site_id,entity_type,entity_id,revision_number,snapshot_json)
+        SELECT ?, ?, ?, ?, COALESCE(MAX(revision_number), 0) + 1, ?
+        FROM ${TABLES.revisions}
+        WHERE account_id=? AND site_id=? AND entity_type=? AND entity_id=?`,
+        [accountId, scope.site_id, entityType, entityId, JSON.stringify(snapshot),
+          accountId, scope.site_id, entityType, entityId]);
     },
     async listProvenance(accountId) {
       return sql.all("SELECT metadata_json FROM " + TABLES.artifacts + " WHERE account_id = ? AND source_kind = 'generator'", [accountId]);
@@ -236,9 +252,9 @@ export function createGeneratedBlockRepository(sql, objects, options = {}) {
       const output = [];
       for (const row of rows) {
         if (!row.artifact_id) continue;
-        const artifact = await sql.first("SELECT manifest_r2_key FROM " + TABLES.artifacts + " WHERE id = ? AND account_id = ?", [row.artifact_id, accountId]);
-        if (!artifact?.manifest_r2_key) return { ok: false, error: "artifact manifest missing" };
-        const raw = await objects.get(artifact.manifest_r2_key);
+        const artifact = await sql.first("SELECT manifest_object_key FROM " + TABLES.artifacts + " WHERE id = ? AND account_id = ?", [row.artifact_id, accountId]);
+        if (!artifact?.manifest_object_key) return { ok: false, error: "artifact manifest missing" };
+        const raw = await objects.get(artifact.manifest_object_key);
         const canonical = JSON.parse(raw);
         const wrapper='data-agentsam-block="__UID__"';
         const placed='data-agentsam-block="'+nsForms(row.id).blockId+'"';

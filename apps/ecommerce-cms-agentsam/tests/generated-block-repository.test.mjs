@@ -1,17 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { createGeneratedBlockRepository, createMemoryObjectStore, createSqlStore, ensureBlockTree } from "../backend/cms/generated-block-repository.mjs";
 
-const stub = readFileSync(new URL("../db/schema/accounts.stub.sql", import.meta.url), "utf8");
-const schema = readFileSync(new URL("../db/schema/cms.sql", import.meta.url), "utf8");
+import { schema, stub } from "./cms-schema.mjs";
 
 function openDb() {
   const db = new DatabaseSync(":memory:");
   db.exec(stub + "\n" + schema);
   db.prepare("INSERT INTO accounts (id) VALUES ('acct-a'), ('acct-b')").run();
-  db.prepare("INSERT INTO cms_pages (id, account_id, slug, title) VALUES ('page-a', 'acct-a', 'home', 'Home')").run();
+  db.prepare("INSERT INTO cms_sites (id,account_id,name,slug,status,is_default) VALUES ('site-a','acct-a','Site A','default','active',1),('site-b','acct-b','Site B','default','active',1)").run();
+  db.prepare("INSERT INTO cms_pages (id, account_id, site_id, slug, route_path, title) VALUES ('page-a', 'acct-a', 'site-a', 'home', '/', 'Home')").run();
   db.prepare("INSERT INTO cms_page_sections (id, account_id, page_id, section_key, section_type) VALUES ('section-a', 'acct-a', 'page-a', 'hero', 'hero')").run();
   return db;
 }
@@ -130,9 +129,16 @@ test("migration skips when the tree columns already exist", async () => {
 });
 
 
-test("app-local CMS schema is an exact mirror of the canonical root schema", () => {
-  const root = readFileSync(new URL("../../../db/schema/cms.sql", import.meta.url), "utf8");
-  assert.equal(schema, root);
+test("generated-block repository tests use the complete product migration chain", () => {
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS cms_sites/);
+  const db = openDb();
+  const artifactColumns = db.prepare("PRAGMA table_info(cms_artifacts)").all().map(row => row.name);
+  const revisionColumns = db.prepare("PRAGMA table_info(cms_revisions)").all().map(row => row.name);
+  assert.ok(artifactColumns.includes("manifest_object_key"));
+  assert.ok(artifactColumns.includes("object_prefix"));
+  assert.ok(!artifactColumns.includes("manifest_r2_key"));
+  assert.ok(revisionColumns.includes("site_id"));
+  db.close();
 });
 
 test("generated artifacts use the canonical manifest pointer contract", async () => {
@@ -140,12 +146,12 @@ test("generated artifacts use the canonical manifest pointer contract", async ()
   const { store } = repo(db);
   const saved = await store.saveGenerated({ accountId: "acct-a", sectionId: "section-a", blockId: "menu", blockKey: "menu", manifest: { canonical: canonical("menu") } });
   assert.equal(saved.ok, true);
-  const artifact = { ...db.prepare("SELECT artifact_type, content_mode, r2_prefix, manifest_r2_key, source_kind FROM cms_artifacts WHERE id = ?").get(saved.artifactId) };
+  const artifact = { ...db.prepare("SELECT artifact_type, content_mode, object_prefix, manifest_object_key, source_kind FROM cms_artifacts WHERE id = ?").get(saved.artifactId) };
   assert.deepEqual(artifact, {
     artifact_type: "embed",
     content_mode: "component",
-    r2_prefix: "cms/artifacts/block/" + saved.artifactId.replace(/^cmsa_/, "") + "/",
-    manifest_r2_key: saved.key,
+    object_prefix: "cms/artifacts/block/" + saved.artifactId.replace(/^cmsa_/, "") + "/",
+    manifest_object_key: saved.key,
     source_kind: "generator",
   });
 });

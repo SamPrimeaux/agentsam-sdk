@@ -19,7 +19,7 @@
     "deploy": "npm run build && wrangler deploy",
     "test:package": "node --test tests/package-boundaries.test.mjs && npm run test:tools",
     "typecheck:cms": "tsc --project tsconfig.cms.json",
-    "verify:cms": "npm run typecheck:cms && node --test tests/cms-setting-contract.test.mjs backend/cms/theme-route-patterns.test.mjs",
+    "verify:cms": "npm run typecheck:cms && node --test tests/cms-setting-contract.test.mjs backend/cms/theme-route-patterns.test.mjs && node --experimental-strip-types --test tests/cms-site-first-migration.test.mjs tests/cms-sites.test.mjs tests/cms-site-api.test.mjs tests/cms-theme-site-scope.test.mjs tests/cms-canonical-page-inventory.test.mjs tests/contracts/cms-data-family.test.mjs tests/contracts/cms-artifacts-block-system.test.mjs tests/generated-block-repository.test.mjs backend/cms/theme-project-store.test.mjs",
     "typecheck:tools": "tsc --project tsconfig.tools.json",
     "test:tools": "npm run typecheck:tools && node --test tests/typed-tool-registry.test.mjs tests/core-tools-readonly.test.mjs tests/d1-crud.test.mjs && node backend/tools/doctor.mjs",
     "test:release": "node --test tests/release-artifact.test.mjs tests/analytics-hosts.test.mjs tests/side-assistant-portability.test.mjs tests/newsletter-lifecycle.test.mjs",

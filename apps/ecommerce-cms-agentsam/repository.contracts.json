@@ -119,25 +119,33 @@
     },
     {
       "contract_key": "schema.cms-data-family",
-      "contract_version": "1.0.0",
+      "contract_version": "1.1.0",
       "contract_type": "schema",
-      "name": "CMS normalized data family",
-      "description": "Parallel normalized CMS page, section, block, revision and global tables with legacy provenance; renderer/editor authority remains on pages/page_sections during migration.",
-      "manifest_path": "db/migrate-cms-data-family-20261007.sql",
+      "name": "CMS normalized site-first data family",
+      "description": "Account-owned sites with site-scoped pages, sections, nested blocks, globals, revisions, navigation, immutable publications and mixed-content collections. Legacy storefront page/section tables remain a compatibility bridge until renderer and write paths are fully moved.",
+      "manifest_path": "db/migrations/004_cms_site_first.sql",
       "status": "active",
       "metadata": {
+        "canonical_schema": "db/schema/cms.sql",
+        "migration": "db/migrations/004_cms_site_first.sql",
+        "migration_runner": "db/schema/migrations/cms-site-first.mjs",
         "tables": [
+          "cms_sites",
           "cms_pages",
           "cms_page_sections",
           "cms_section_blocks",
           "cms_revisions",
-          "cms_globals"
+          "cms_globals",
+          "cms_navigation_menus",
+          "cms_publications",
+          "cms_collections",
+          "cms_collection_items"
         ],
-        "legacy_authority": [
+        "legacy_compatibility": [
           "pages",
           "page_sections"
         ],
-        "migration_mode": "parallel-backfill"
+        "migration_mode": "site-first-compatibility-bridge"
       }
     },
     {
