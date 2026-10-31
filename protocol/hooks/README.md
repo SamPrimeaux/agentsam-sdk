@@ -13,6 +13,8 @@ Hooks are policy and transformation ports, not identity or capability authoritie
 
 The optional portable registry is owned by `migrations/runtime/0005_agentsam_hooks.sql`; package lifecycle scripts generate the standalone schema-pack copy from that authority. It uses `owner_id` plus `scope_type`/`scope_ref`, not required tenant/workspace tables.
 
+User-visible notices and multi-channel delivery are a separate spine: `migrations/runtime/0010_agentsam_notifications.sql` (`notifications` + `notification_outbox`). Web Push device endpoints may still be `handler_type = web_push` rows here; inbox/history and email/imessage outbox rows do not live in `agentsam_hook`.
+
 Cross-language bindings live in `packages/agentsam-hooks`. Its `sync:protocol` pretest/prepack gate generates distributable schema copies from this authority; a package test verifies that those generated artifacts are byte-identical.
 
 Failed receipts do not invent a hook-only error taxonomy. They store `error_code`, `reason`, `domain`, `failure_class`, `stage`, `feature`, `failure_behavior`, `retryable`, `side_effect_state`, and `fingerprint` from `protocol/errors/error-catalog.json`. Adapter, protocol, and transport remain separate dimensions. Redacted native code/type/message evidence is stored in `native_evidence`. A failed post-tool or post-model hook records the already-applied side effect and is never routed back through the tool/model replay path.

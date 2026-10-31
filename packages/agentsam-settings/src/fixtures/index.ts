@@ -1,6 +1,7 @@
 import type {
   SettingsCapabilities,
   SettingsHost,
+  SettingsNotificationProfileUpdate,
   SettingsPlugin,
   SettingsSnapshot,
   SettingsWidget,
@@ -381,6 +382,33 @@ const baseSnapshot: SettingsSnapshot = {
       enabled: false,
     },
   ],
+  notificationProfile: {
+    email: "you@example.com",
+    phone: "+1 337 555 0142",
+    loginEmail: "you@example.com",
+    channels: { email: true, push: true, imessage: false, in_app: true },
+    events: [
+      {
+        id: "notify-runs",
+        label: "Agent run completion",
+        description: "Notify when long-running work finishes or needs input.",
+        enabled: true,
+      },
+      {
+        id: "notify-security",
+        label: "Security findings",
+        description: "Notify when credentials, policies or provider health need attention.",
+        enabled: true,
+      },
+      {
+        id: "notify-release",
+        label: "Release checks",
+        description: "Notify when a package or deploy preflight changes state.",
+        enabled: false,
+      },
+    ],
+  },
+  notificationProfileError: null,
   codebase: {
     indexedFiles: "6,482",
     symbols: "18,942",
@@ -425,6 +453,14 @@ export const firstRunSettingsFixture: SettingsSnapshot = {
   themes: baseSnapshot.themes.slice(0, 1),
   storage: baseSnapshot.storage.slice(0, 1),
   usage: baseSnapshot.usage.map((item) => ({ ...item, value: "—" })),
+  notifications: baseSnapshot.notifications.map((item) => ({ ...item, enabled: false })),
+  notificationProfile: {
+    email: "",
+    phone: "",
+    loginEmail: null,
+    channels: { email: false, push: false, imessage: false, in_app: true },
+    events: baseSnapshot.notifications.map((item) => ({ ...item, enabled: false })),
+  },
   network: { browser: "Not checked", tunnel: "Not connected", oauth: "Not connected", health: "unknown" },
   git: { ...baseSnapshot.git, repository: "Not connected", branch: "—", pullRequests: "—", health: "unknown" },
 };
@@ -488,6 +524,25 @@ export function createFixtureSettingsHost(
         plugins: current.plugins.map((plugin) =>
           plugin.id === id ? { ...plugin, enabled } : plugin,
         ),
+      };
+      subscribers.forEach((callback) => callback());
+    },
+    async updateNotificationSettings(settings: SettingsNotificationProfileUpdate) {
+      const events = (current.notificationProfile?.events || current.notifications).map((event) => {
+        const next = settings.events.find((row) => row.id === event.id);
+        return next ? { ...event, enabled: next.enabled } : event;
+      });
+      current = {
+        ...current,
+        notifications: events,
+        notificationProfile: {
+          email: settings.email,
+          phone: settings.phone,
+          loginEmail: current.notificationProfile?.loginEmail ?? null,
+          channels: { ...settings.channels },
+          events,
+        },
+        notificationProfileError: null,
       };
       subscribers.forEach((callback) => callback());
     },

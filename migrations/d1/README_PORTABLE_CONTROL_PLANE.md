@@ -11,6 +11,8 @@ one migration history.
 | 0012_agentsam_tools_required_seed.sql | Idempotent seed of required tool_key rows for GOAP / multitask. Manifest: registry/tools/required-seed.json. |
 | 0018_goap_control_plane_remaster.sql | Additive ticket/event contract remaster: structured goal spec, structured event payloads, workflow/action linkage. No new GOAP table family and no dependency on runtime workspace tables. |
 | migrations/runtime/0002_goap_blackboard_v1.sql | Evolves agentsam_workspace_state after runtime/0001 with blackboard schema identity + CAS revision. |
+| migrations/runtime/0005_agentsam_hooks.sql | Portable automation registry (`owner_id` + scope). Not the notification inbox. |
+| migrations/runtime/0010_agentsam_notifications.sql | Portable inbox (`notifications`) + delivery queue (`notification_outbox`, account-first + optional recipient). Channels include `imessage`. |
 
 ## Law
 

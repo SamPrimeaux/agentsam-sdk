@@ -63,6 +63,8 @@ import type {
   SettingsGeneralPreferences,
   SettingsManifest,
   SettingsModel,
+  SettingsNotificationChannels,
+  SettingsNotificationProfile,
   SettingsPlugin,
   SettingsDiscoveredPlugin,
   SettingsPluginDiscovery,
@@ -2580,32 +2582,203 @@ function UsageView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-function NotificationsView({ snapshot }: { snapshot: SettingsSnapshot }) {
-  const [items, setItems] = useState(snapshot.notifications);
+const CHANNEL_ROWS: Array<{
+  id: keyof SettingsNotificationChannels;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "in_app",
+    label: "In-app inbox",
+    description: "Show notices in Local Studio for this account.",
+  },
+  {
+    id: "email",
+    label: "Email",
+    description: "Deliver through the notification email on this account.",
+  },
+  {
+    id: "push",
+    label: "Web push",
+    description: "Browser or device push when a hook endpoint is registered.",
+  },
+  {
+    id: "imessage",
+    label: "iMessage / SMS",
+    description: "Route to the phone number saved below when the host adapter is available.",
+  },
+];
+
+function defaultNotificationProfile(snapshot: SettingsSnapshot): SettingsNotificationProfile {
+  if (snapshot.notificationProfile) return snapshot.notificationProfile;
+  return {
+    email: "",
+    phone: "",
+    loginEmail: null,
+    channels: { email: true, push: false, imessage: false, in_app: true },
+    events: snapshot.notifications,
+  };
+}
+
+function NotificationsView({
+  snapshot,
+  host,
+  onChanged,
+}: {
+  snapshot: SettingsSnapshot;
+  host: SettingsHost;
+  onChanged: () => Promise<void>;
+}) {
+  const [profile, setProfile] = useState<SettingsNotificationProfile>(() =>
+    defaultNotificationProfile(snapshot),
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    setProfile(defaultNotificationProfile(snapshot));
+  }, [snapshot.notificationProfile, snapshot.notifications, snapshot.notificationProfileError]);
+
+  async function save() {
+    if (!host.updateNotificationSettings) return;
+    setBusy(true);
+    setError("");
+    try {
+      await host.updateNotificationSettings({
+        email: profile.email,
+        phone: profile.phone,
+        channels: profile.channels,
+        events: profile.events.map(({ id, enabled }) => ({ id, enabled })),
+      });
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to save notification settings");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const canSave = !!host.updateNotificationSettings && !snapshot.notificationProfileError;
+
   return (
-    <Section title="Notification preferences" description="Only actionable changes should interrupt the user.">
-      <div className="rounded-lg border border-border/70 px-3">
-        {items.map((item) => (
-          <PreferenceRow
-            key={item.id}
-            label={item.label}
-            description={item.description}
-            trailing={
-              <Toggle
-                enabled={item.enabled}
-                onChange={(enabled) =>
-                  setItems((current) =>
-                    current.map((candidate) =>
-                      candidate.id === item.id ? { ...candidate, enabled } : candidate,
-                    ),
-                  )
-                }
-              />
-            }
-          />
-        ))}
-      </div>
-    </Section>
+    <>
+      <Section
+        title="Contact"
+        description="Where this account should receive email and phone deliveries. Login identity stays separate."
+      >
+        {snapshot.notificationProfileError ? (
+          <p
+            role="alert"
+            className="mb-3 rounded-xl border border-amber-500/25 p-3 text-[11px] text-[var(--settings-warning-ink)]"
+          >
+            {snapshot.notificationProfileError}. Changes cannot be saved until the service is available.
+          </p>
+        ) : null}
+        <div className="space-y-3 rounded-xl border border-border/70 p-4">
+          {profile.loginEmail ? (
+            <PreferenceRow
+              label="Login email"
+              description="Account identity used to sign in. Not overwritten by notification email."
+              value={profile.loginEmail}
+            />
+          ) : null}
+          <label className="block space-y-1.5">
+            <span className="text-[12px] font-medium">Notification email</span>
+            <span className="block text-[10px] text-muted-foreground">
+              Stored on accounts.notification_email for outbox delivery.
+            </span>
+            <input
+              type="email"
+              autoComplete="email"
+              value={profile.email}
+              disabled={!canSave}
+              onChange={(event) =>
+                setProfile((current) => ({ ...current, email: event.target.value }))
+              }
+              placeholder="you@company.com"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[12px] outline-none focus:border-foreground/40 disabled:opacity-60"
+            />
+          </label>
+          <label className="block space-y-1.5">
+            <span className="text-[12px] font-medium">Phone / iMessage handle</span>
+            <span className="block text-[10px] text-muted-foreground">
+              Saved on accounts.meta_json.notifications for SMS or Messages adapters.
+            </span>
+            <input
+              type="tel"
+              autoComplete="tel"
+              value={profile.phone}
+              disabled={!canSave}
+              onChange={(event) =>
+                setProfile((current) => ({ ...current, phone: event.target.value }))
+              }
+              placeholder="+1 337 555 0100"
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[12px] outline-none focus:border-foreground/40 disabled:opacity-60"
+            />
+          </label>
+        </div>
+      </Section>
+
+      <Section title="Channels" description="Choose which transports may deliver for this account.">
+        <div className="rounded-lg border border-border/70 px-3">
+          {CHANNEL_ROWS.map((row) => (
+            <PreferenceRow
+              key={row.id}
+              label={row.label}
+              description={row.description}
+              trailing={
+                <Toggle
+                  enabled={profile.channels[row.id]}
+                  onChange={(enabled) =>
+                    setProfile((current) => ({
+                      ...current,
+                      channels: { ...current.channels, [row.id]: enabled },
+                    }))
+                  }
+                />
+              }
+            />
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Events" description="Only actionable changes should interrupt the user.">
+        <div className="rounded-lg border border-border/70 px-3">
+          {profile.events.map((item) => (
+            <PreferenceRow
+              key={item.id}
+              label={item.label}
+              description={item.description}
+              trailing={
+                <Toggle
+                  enabled={item.enabled}
+                  onChange={(enabled) =>
+                    setProfile((current) => ({
+                      ...current,
+                      events: current.events.map((candidate) =>
+                        candidate.id === item.id ? { ...candidate, enabled } : candidate,
+                      ),
+                    }))
+                  }
+                />
+              }
+            />
+          ))}
+        </div>
+        {error ? (
+          <p role="alert" className="mt-3 text-[11px] text-[var(--settings-danger-ink)]">
+            {error}
+          </p>
+        ) : null}
+        <button
+          type="button"
+          disabled={busy || !canSave}
+          onClick={() => void save()}
+          className="mt-4 rounded-lg bg-violet-600 px-4 py-2 text-[11px] font-medium text-white disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
+        >
+          Save notification settings
+        </button>
+      </Section>
+    </>
   );
 }
 
@@ -2693,7 +2866,7 @@ function renderUnit(
     case "usage":
       return <UsageView snapshot={snapshot} />;
     case "notifications":
-      return <NotificationsView snapshot={snapshot} />;
+      return <NotificationsView snapshot={snapshot} host={host} onChanged={onChanged} />;
     case "docs":
       return <DocsView host={host} />;
     default:
