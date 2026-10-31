@@ -1,3 +1,4 @@
+import {useShellAppearance} from '../../../../../packages/agentsam-settings/src/appearance';
 import {CadCamWorkspace} from '../components/CadCamWorkspace';
 import {OPENSCAD_PARAMETRIC_TEMPLATES} from '../lib/openscad/generator';
 import {insertOpenScadImport} from '../components/OpenScadLibraryPane';
@@ -211,7 +212,10 @@ export function CadCreatorApp({
     window.addEventListener('agentsam:cad-assistant-response', handle);
     return () => window.removeEventListener('agentsam:cad-assistant-response', handle);
   }, []);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const settingsAppearance = useShellAppearance();
+  const [hostAppearance, setHostAppearance] = useState<{theme:'dark'|'light';accent?:string} | null>(null);
+  const appearance = hostAppearance ?? settingsAppearance;
+  const isDarkMode = appearance.theme === 'dark';
 
   // Robotics is an optional heavy workspace.
   const roboticsContainerRef = useRef<HTMLDivElement>(null);
@@ -269,7 +273,7 @@ export function CadCreatorApp({
     const bridge = installCadPreviewGuestBridge({
       activeWorkspace,
       onSelectWorkspace: (wsId) => handleSelectWorkspace(wsId as WorkspaceId),
-      onSetTheme: (dark) => setIsDarkMode(dark),
+      onSetTheme: (dark, accent) => setHostAppearance({theme:dark ? 'dark' : 'light',accent}),
       onAssistantResponse: (_rid, text) => window.dispatchEvent(new CustomEvent('agentsam:cad-assistant-response', { detail: text }))
     });
     bridgeRef.current = bridge;
@@ -506,9 +510,9 @@ export function CadCreatorApp({
     WORKSPACE_REGISTRY.find((w) => w.id === activeWorkspace) || WORKSPACE_REGISTRY[0];
 
   return (
-    <div data-appearance={isDarkMode ? 'dark' : 'light'}
-      style={{'--cad-accent': cadAccent} as React.CSSProperties}
-      className={`cad-workspace-ui relative flex flex-col h-full w-full min-w-0 min-h-0 font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+    <div data-appearance={isDarkMode ? 'dark' : 'light'} data-nav-theme={appearance.theme}
+      style={{'--cad-accent': cadAccent, '--nav-accent': appearance.accent} as React.CSSProperties}
+      className={`as-nav-scope cad-workspace-ui relative flex flex-col h-full w-full min-w-0 min-h-0 font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {accessMode === 'hosted-project' && (
         <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-white/10 bg-slate-900/95 px-3 py-1.5 text-xs" aria-label="Registered CAD project and revision">
           <label htmlFor="cad-hosted-project" className="text-slate-400">Project</label>

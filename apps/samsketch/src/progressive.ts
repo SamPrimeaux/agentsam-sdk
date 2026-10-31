@@ -184,20 +184,20 @@ export function mountProgressiveStudio(options: MountOptions) {
   const right = document.getElementById("right")!;
   function openInspector() {
     inspector.hidden = false;
-    assistant.hidden = true;
-    dockInspector.classList.add("active");
-    dockAgent.classList.remove("active");
+    if (assistant) assistant.hidden = true;
+    dockInspector?.classList.add("active");
+    dockAgent?.classList.remove("active");
     right.classList.add("open");
   }
-  dockInspector.addEventListener("click", openInspector);
-  dockAgent.addEventListener("click", () => {
+  dockInspector?.addEventListener("click", openInspector);
+  dockAgent?.addEventListener("click", () => {
     options.startBuild("Help me inspect the current scene and suggest the next useful modeling action. Preserve all source files.", "Scene");
   });
   if (matchMedia("(max-width:850px)").matches) {
     inspector.hidden = true;
-    assistant.hidden = true;
-    dockInspector.classList.remove("active");
-    dockAgent.classList.remove("active");
+    if (assistant) assistant.hidden = true;
+    dockInspector?.classList.remove("active");
+    dockAgent?.classList.remove("active");
     right.classList.remove("open");
   } else openInspector();
   return {

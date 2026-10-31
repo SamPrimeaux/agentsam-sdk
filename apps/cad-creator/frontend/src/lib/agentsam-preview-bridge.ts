@@ -28,7 +28,7 @@ export function isAllowedBridgeMessage(event: MessageEvent, allowedOrigins: stri
 export interface CadPreviewGuestBridgeOptions {
   activeWorkspace?: string; allowedOrigins?: string[];
   onSelectWorkspace?: (workspaceId: string) => void;
-  onSetTheme?: (isDark: boolean) => void;
+  onSetTheme?: (isDark: boolean, accent?: string) => void;
   onAssistantResponse?: (requestId: string, text: string) => void;
 }
 
@@ -46,7 +46,7 @@ export function installCadPreviewGuestBridge(options: CadPreviewGuestBridgeOptio
     const data: any = event.data;
     if (data.type === 'hello') announceReady();
     else if (data.type === 'set-workspace' && CAD_WORKSPACES.includes(data.workspace)) options.onSelectWorkspace?.(data.workspace);
-    else if (data.type === 'set-theme') options.onSetTheme?.(data.theme === 'dark');
+    else if (data.type === 'set-theme' && (data.theme === 'dark' || data.theme === 'light')) options.onSetTheme?.(data.theme === 'dark', /^#[0-9a-f]{6}$/i.test(data.accent || '') ? data.accent : undefined);
     else if (data.type === 'assistant.response' && typeof data.request_id === 'string' && typeof data.text === 'string') options.onAssistantResponse?.(data.request_id, data.text);
     // Any other inbound type is ignored: iframe messages never grant write authority.
   };

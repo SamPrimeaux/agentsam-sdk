@@ -9,6 +9,7 @@
  */
 export const STUDIO_ADMIN_MOUNTS = Object.freeze([
   Object.freeze({ id: 'work.projects', flat: '/projects', canonical: '/admin/projects' }),
+  Object.freeze({ id: 'commerce.home', flat: '/admin/home', canonical: '/admin/home', exactOnly: true }),
   Object.freeze({ id: 'agent.chat', flat: '/agentsam', canonical: '/admin/agentsam', exactOnly: true }),
   Object.freeze({ id: 'cad.studio', flat: '/cad', canonical: '/admin/cad' }),
   Object.freeze({ id: 'cad.samsketch-compat', flat: '/samsketch', canonical: '/admin/cad' }),
@@ -18,7 +19,17 @@ export const STUDIO_ADMIN_MOUNTS = Object.freeze([
 /** @param {string} pathname */
 export function canonicalStudioPath(pathname) {
   for (const mount of STUDIO_ADMIN_MOUNTS) {
-    if (pathname === mount.flat || (!('exactOnly' in mount && mount.exactOnly) && pathname.startsWith(mount.flat + '/'))) {
+    const exactOnly = 'exactOnly' in mount && mount.exactOnly;
+    if (pathname === mount.flat) {
+      // Canonical mounts must never redirect to themselves.
+      return pathname === mount.canonical ? null : mount.canonical;
+    }
+    // Normalize a trailing slash on an exact canonical document route without
+    // turning it into a self-redirect or claiming arbitrary child routes.
+    if (exactOnly && mount.flat === mount.canonical && pathname === mount.canonical + '/') {
+      return mount.canonical;
+    }
+    if (!exactOnly && pathname.startsWith(mount.flat + '/')) {
       return mount.canonical + pathname.slice(mount.flat.length);
     }
   }

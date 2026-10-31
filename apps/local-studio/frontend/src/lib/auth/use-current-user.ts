@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
-import { authClient, authEnabled } from "./client";
+import { authEnabled, getBearerToken } from "./client";
+import { createBrowserSessionStore, PENDING_BROWSER_SESSION } from "./browser-session";
 import { getTauriInvoke, invokeIdentity, isPackagedDesktop } from "@/lib/desktop/tauri";
 
 /** Normalized user shape used across the app, auth on or off. */
@@ -100,50 +101,42 @@ export type CurrentUserState = {
   user: AppUser | null;
   /** True while the session is still resolving — don't treat `user: null` as signed out yet. */
   isPending: boolean;
+  /** A transport failure is recoverable; it is not a signed-out result. */
+  error?: string | null;
 };
 
-/**
- * Current user + loading state. Same behavior in live preview and when deployed:
- *   - Auth enabled -> the real signed-in user; `user` is `null` while
- *                            the session resolves (`isPending: true`) and when
- *                            signed out (`isPending: false`). Session comes from
- *                            Better Auth `useSession()` → `/api/auth/get-session`
- *                            (cookie when deployed; bearer in live preview).
- *   - Auth disabled (`VITE_AUTH_ENABLED=false`) -> `DEV_USER`, never pending.
- *
- * Protect a route by waiting out `isPending` before acting on `user` —
- * redirecting on `user: null` alone bounces signed-in visitors to sign-in on
- * every hard reload:
- *
- *   import { RedirectToSignIn } from "@/lib/auth/gates";
- *   const { user, isPending } = useCurrentUserState();
- *   if (isPending) return null;              // still resolving — don't redirect yet
- *   if (!user) return <RedirectToSignIn />;  // definitely signed out
- *
- * `authEnabled` is a module-level constant fixed at load, so the guarded hook
- * call keeps a stable hook order across every render of a given component.
- */
+// One account read per webview, shared by every consumer. Native and disabled
+// auth modes retain their existing lifecycles and never initialize this store.
+export const browserIdentity = createBrowserSessionStore({
+  fetch: (...args) => fetch(...args), bearer: getBearerToken,
+});
+let browserSubscriptions = 0;
+const refreshBrowserIdentity = () => { void browserIdentity.refresh(); };
+function subscribeBrowserIdentity(listener: () => void) {
+  const unsubscribe = browserIdentity.subscribe(listener);
+  if (browserSubscriptions++ === 0) {
+    window.addEventListener('focus', refreshBrowserIdentity);
+    window.addEventListener('online', refreshBrowserIdentity);
+    refreshBrowserIdentity();
+  }
+  return () => {
+    unsubscribe();
+    if (--browserSubscriptions === 0) {
+      window.removeEventListener('focus', refreshBrowserIdentity);
+      window.removeEventListener('online', refreshBrowserIdentity);
+    }
+  };
+}
+
+/** Current principal from the same host authority that gates document routes. */
 export function useCurrentUserState(): CurrentUserState {
   if (isPackagedDesktop()) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- packaged-desktop mode is constant for the app lifetime
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- runtime is constant for the app lifetime
     return useDesktopCurrentUserState();
   }
   if (!authEnabled) return { user: DEV_USER, isPending: false };
-  // eslint-disable-next-line react-hooks/rules-of-hooks -- authEnabled is constant for the app's lifetime
-  const { data, isPending } = authClient.useSession();
-  const user = data?.user;
-  return {
-    user: user
-      ? {
-          id: user.id,
-          displayName: user.name ?? null,
-          primaryEmail: user.email ?? null,
-          profileImageUrl: user.image ?? null,
-          isDevFallback: false,
-        }
-      : null,
-    isPending,
-  };
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- runtime is constant for the app lifetime
+  return useSyncExternalStore(subscribeBrowserIdentity, browserIdentity.getSnapshot, () => PENDING_BROWSER_SESSION);
 }
 
 /**

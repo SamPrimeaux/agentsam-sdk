@@ -1,5 +1,4 @@
-import { useState, useSyncExternalStore, type ReactNode } from "react";
-import { Navigate } from "@tanstack/react-router";
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { GROK_PROVIDERS, authEnabled, signIn, signOut } from "./client";
 import { hasGateSessionMarker } from "./gate-session-marker";
 import { resolveSignInGateState } from "./sign-in-gate";
@@ -19,7 +18,7 @@ const noGateSessionOnServer = () => false;
  */
 
 /** Where `RedirectToSignIn` sends signed-out visitors. Create this route. */
-export const SIGN_IN_PATH = "/login";
+export const SIGN_IN_PATH = "/auth/login";
 
 /** Render children only when a user is present (real session, or the disabled-auth dev user). */
 export function SignedIn({ children }: { children: ReactNode }) {
@@ -38,15 +37,16 @@ export function SignedOut({ children }: { children: ReactNode }) {
 }
 
 /**
- * Client-side redirect to the sign-in route (TanStack `<Navigate>` — NOT a full
- * `window.location` reload). A hard navigation re-bootstraps the SPA and re-runs
- * session loading, which feels like a second "Loading…" on /login.
- *
- * Guard routes by waiting out `isPending` first (see `use-current-user`), then
- * render this.
+ * Leave the SPA for the host-owned identity portal, retaining the requested
+ * route. Callers must wait for a confirmed signed-out result before rendering.
+ * A session transport error remains pending and offers retry in AuthProvider.
  */
 export function RedirectToSignIn({ to = SIGN_IN_PATH }: { to?: string }) {
-  return <Navigate to={to} />;
+  const next = typeof window === 'undefined' ? '/' : window.location.pathname + window.location.search + window.location.hash;
+  // The IAM portal is a host-owned document, not a TanStack application route.
+  const destination = to + (to.includes('?') ? '&' : '?') + 'next=' + encodeURIComponent(next);
+  useEffect(() => { window.location.assign(destination); }, [destination]);
+  return null;
 }
 
 export function SignInGate({

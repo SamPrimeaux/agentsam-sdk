@@ -1,3 +1,5 @@
+import {observeShellAppearance} from '../../../packages/agentsam-settings/src/appearance';
+import '../../../packages/agentsam-nav/src/shell.css';
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { createThreeViewport } from "@inneranimalmedia/agentsam-3d-viewer";
@@ -99,9 +101,13 @@ function sendHostMessage(type:string,payload:Record<string,unknown>={}){
 }
 window.addEventListener("message",(event:MessageEvent)=>{
  if(event.origin!==window.location.origin||event.source!==window.parent)return;
- const message=event.data as {channel?:string;version?:number;type?:string;mode?:string};
+ const message=event.data as {channel?:string;version?:number;type?:string;mode?:string;theme?:string;accent?:string};
  if(message?.channel!=="agentsam.samsketch.v1"||message.version!==1)return;
  if(message.type==="host-mode"&&message.mode==="chat")settingsApi.close();
+ if(message.type==='set-theme'&&(message.theme==='light'||message.theme==='dark')) {
+  applyWorkspaceTheme(message.theme);
+  if(/^#[0-9a-f]{6}$/i.test(message.accent||''))document.documentElement.style.setProperty('--nav-accent',message.accent!);
+ }
 });
 const leftPane=appFrame.querySelector<HTMLElement>("#left")!;
 const rightPane=appFrame.querySelector<HTMLElement>("#right")!;
@@ -399,6 +405,8 @@ function setBackdrop(preset:string){
 }
 function applyWorkspaceTheme(theme:"light"|"dark"){
  document.documentElement.dataset.samsketchTheme=theme;
+ document.documentElement.classList.add('as-nav-scope');
+ document.documentElement.dataset.navTheme=theme;
  setBackdrop(currentBackdrop);
 }
 function stopStoryPlayback(){if(autoPlay!==null){window.clearInterval(autoPlay);autoPlay=null;}}
@@ -417,7 +425,7 @@ function resetStudioSettings(){
  light.intensity=3.5;light.color.set("#ffffff");fillLight.intensity=2.1;fillLight.color.set("#b1c9ff");ambientLight.intensity=2.1;
  floor.visible=true;floor.receiveShadow=true;floor.material.opacity=.13;renderer.toneMappingExposure=1.55;
  controls.enabled=true;controls.enableRotate=true;controls.enableZoom=true;controls.enablePan=true;
- doc.items.forEach(item=>item.material="clay");redraw();frame();applyWorkspaceTheme("light");setBackdrop("blue");
+ doc.items.forEach(item=>item.material="clay");redraw();frame();setBackdrop("blue");
  timelinePane.hidden=false;appFrame.dataset.timelineHidden="false";appFrame.dataset.libraryHidden="false";appFrame.dataset.inspectorHidden="false";
  appFrame.style.removeProperty("--library-width");appFrame.style.removeProperty("--inspector-width");appFrame.style.removeProperty("--timeline-height");
  toggleTimeline(false);
@@ -457,7 +465,7 @@ function applyStudioSetting(key:string,value:string|number|boolean){
   case "global.reducedMotion":reducedMotionOverride=Boolean(value);if(reducedMotionOverride)stopStoryPlayback();break;
   case "global.properties":{const inspector=document.getElementById("inspector");if(inspector)inspector.hidden=!Boolean(value);break;}
   case "global.timeline":timelinePane.hidden=!Boolean(value);appFrame.dataset.timelineHidden=String(!Boolean(value));break;
-  case "global.theme":applyWorkspaceTheme(String(value)==="dark"?"dark":"light");break;
+
  }
 }
 window.addEventListener("samsketch:settings.change",event=>{
@@ -625,3 +633,5 @@ progressive=mountProgressiveStudio({
 renderAll();
 announce("SamSketch ready · 20 compositions · 47 source parts · CAD kernel on demand");
 sendHostMessage("ready",{context:studioContext()});
+
+observeShellAppearance(({theme,accent})=>{applyWorkspaceTheme(theme);document.documentElement.style.setProperty('--nav-accent',accent);});

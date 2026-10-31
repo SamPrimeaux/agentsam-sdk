@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useRouterState } from '@tanstack/react-router';
 import './packaged-console-frame.css';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
+import { hasGateSessionMarker } from '@/lib/auth/gate-session-marker';
 
 type WindowWithConsole = Window & {
   renderShell?: (active: string, html: string, options?: Record<string, unknown>) => void;
@@ -29,6 +30,7 @@ function loadScript(src: string): Promise<void> {
  */
 export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: state => state.location.pathname });
+  const searchStr = useRouterState({ select: state => state.location.searchStr });
   const { user, isPending } = useCurrentUserState();
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [error, setError] = useState('');
@@ -40,7 +42,8 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
       display_name: user?.isDevFallback ? 'Local account' : user?.displayName || user?.primaryEmail || 'Account',
       email: user?.isDevFallback ? '' : user?.primaryEmail || '',
       avatar_url: user?.profileImageUrl || '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg',
-      role: user?.isDevFallback || !user ? 'Sign in required' : 'Account',
+      role: user?.isDevFallback || !user ? 'Sign in required' : user?.primaryEmail || 'Personal workspace',
+      can_sign_out: !hasGateSessionMarker(),
     };
     scope.__shellUser = profile;
     scope.hydrateShellProfile?.(profile);
@@ -50,6 +53,7 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!target) return;
     const activePath = pathname.startsWith('/chats') ? '/admin/agentsam' : pathname;
+    window.dispatchEvent(new CustomEvent('agentsam:navigation', { detail: { pathname: activePath + searchStr } }));
     document.querySelectorAll<HTMLAnchorElement>('#console-app .console-sidenav a.console-nav-item, #console-app .console-sidenav a.console-nav-child')
       .forEach((link) => {
         const url = new URL(link.href, window.location.href);
@@ -58,7 +62,7 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
         if (active) link.setAttribute('aria-current', 'page');
         else link.removeAttribute('aria-current');
       });
-  }, [pathname, target]);
+  }, [pathname, searchStr, target]);
   // The Ecommerce shell owns the navigation. The conversation page supplies its
   // own centered mode switch; do not stack a second global topbar above it.
   useEffect(() => {

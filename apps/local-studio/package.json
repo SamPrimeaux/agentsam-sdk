@@ -34,9 +34,9 @@
     "cf:d1:list": "wrangler d1 list",
     "cf:d1:tables": "wrangler d1 execute inneranimalmedia-business --remote --command=\"SELECT name FROM sqlite_master WHERE type='table' AND (name LIKE '%secret%' OR name LIKE '%oauth%' OR name='agentsam_user_ui_preferences') ORDER BY name;\"",
     "cf:verify-output": "node scripts/verify-cloudflare-output.mjs",
-    "cf:dry-run": "npm run build && npm run cf:verify-output && npm run cf:smoke:worker && wrangler deploy -c backend/wrangler.jsonc --dry-run",
+    "cf:dry-run": "npm run cf:build && wrangler deploy -c backend/wrangler.jsonc --dry-run",
     "cf:ensure-vault": "bash scripts/with-cloudflare-env.sh node scripts/ensure-vault-secret.mjs",
-    "cf:deploy": "npm run build && npm run cf:verify-output && npm run cf:smoke:worker && npm run cf:ensure-vault && bash scripts/with-cloudflare-env.sh node scripts/deploy-cloudflare.mjs",
+    "cf:deploy": "npm run cf:build && npm run cf:ensure-vault && bash scripts/with-cloudflare-env.sh node scripts/deploy-cloudflare.mjs",
     "cf:tail": "wrangler tail agentsam-sdk -c backend/wrangler.jsonc",
     "cf:env": "bash scripts/with-cloudflare-env.sh",
     "verify:npm10-lock": "node scripts/verify-npm10-lock.mjs",
@@ -46,7 +46,7 @@
     "smoke:commerce-store": "node scripts/smoke-commerce-store.mjs",
     "smoke:cms-site-fidelity": "node scripts/smoke-cms-site-fidelity.mjs",
     "smoke:creator-suite": "node scripts/smoke-creator-suite.mjs",
-    "verify:database-honesty": "node --test ../../test/database-hosted-honesty.test.mjs",
+    "verify:database-honesty": "node --test ../../test/integration/database-hosted-honesty.test.mjs",
     "smoke:desktop-auth": "node scripts/smoke-desktop-auth.mjs",
     "prepack": "npm run build:desktop",
     "verify:cms-architecture": "node scripts/verify-cms-architecture.mjs",
@@ -60,7 +60,8 @@
     "verify:desktop:all": "npm run verify:brand-assets && npm run build:desktop && npm run smoke:desktop && npm run smoke:desktop-cad && npm run smoke:themes && npm run smoke:cms-site-fidelity && npm run smoke:creator-suite && npm run smoke:desktop-auth",
     "verify:desktop:cad": "npm run verify:desktop && npm run smoke:desktop-cad",
     "verify:desktop:themes": "npm run verify:desktop && npm run smoke:themes && npm run smoke:cms-site-fidelity",
-    "cf:smoke:worker": "node scripts/smoke-worker-routes.mjs"
+    "cf:smoke:worker": "node scripts/smoke-worker-routes.mjs",
+    "cf:build": "npm run build:included:all && npm run build && npm run cf:verify-output && npm run cf:smoke:worker"
   },
   "dependencies": {
     "@cloudflare/codemode": "^0.5.2",

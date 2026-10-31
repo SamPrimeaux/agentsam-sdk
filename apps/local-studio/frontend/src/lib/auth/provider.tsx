@@ -1,15 +1,13 @@
 import type { ReactNode } from "react";
+import { browserIdentity, useCurrentUserState } from "./use-current-user";
 
-/**
- * App-wide client provider mounted once near the root (in `src/routes/__root.tsx`):
- *
- *   <AuthProvider><Outlet /></AuthProvider>
- *
- * Better Auth's React client (`@/lib/auth/client`) needs NO context provider —
- * its `useSession()` works standalone — so this is a passthrough today. It's
- * kept as the single, stable mount point for any future client-side providers
- * (e.g. a toast or theme provider) without churning the root shell.
- */
+/** Shared session recovery belongs above routes, so an outage cannot become a login redirect. */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  const { error } = useCurrentUserState();
+  return <>
+    {error ? <div role="alert" className="flex items-center justify-center gap-3 border-b border-border bg-card px-4 py-2 text-sm text-foreground">
+      <span>{error}</span><button type="button" className="rounded-md border border-border px-3 py-1 focus-visible:outline focus-visible:outline-2" onClick={() => { void browserIdentity.refresh(); }}>Retry account</button>
+    </div> : null}
+    {children}
+  </>;
 }

@@ -22,7 +22,7 @@ test("MovieMode remains one runnable application with a reusable Work host", () 
 
 test("Media replaces Utilities while Work exposes a focusable MovieMode tab", () => {
   const shell = read("../frontend/agentsam/AgentSamShell.tsx");
-  assert.match(shell, /id: 'media', label: 'Media'/);
+  assert.match(read('../scripts/studio-navigation.mjs'), /id:'media',label:'Media',href:'\/media',icon:'film'/);
   assert.doesNotMatch(shell, /id: 'utilities'/);
   assert.match(read("../frontend/agentsam/side-stage-actions.ts"), /tab: 'media'/);
   assert.match(read("../frontend/src/components/workbench/side-stage.tsx"), /MovieModeSurface workPane/);

@@ -20,7 +20,7 @@ test('host routes authenticated Ecommerce CMS and AgentSam APIs rather than retu
     assert.ok(worker.includes('pathname.startsWith("' + prefix + '")'), 'missing hosted route: ' + prefix);
   }
   assert.match(worker, /resolveSessionUserId\(request, env\)/);
-  assert.match(worker, /handleEcommerceAdminApi\(request, env/);
+  assert.match(worker, /handleEcommerceAdminApi\(request, commerceEnv, url, context, studioUser\)/);
 });
 test('dock derives its actual tabs from ecommerce app manifest and avoids a competing shell', () => {
   const product=JSON.parse(read('../../ecommerce-cms-agentsam/agentsam.app.json'));

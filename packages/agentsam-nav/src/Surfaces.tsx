@@ -1,15 +1,16 @@
-import { Fragment, useEffect, useId, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { ChevronDown, Files, Folder, MessageSquare, MoreHorizontal, PanelLeft, PanelTop, Pin, Pencil, Plus, Search, Share, Trash2, User } from 'lucide-react';
+import { ChevronDown, Files, Folder, MessageSquare, MoreHorizontal, PanelLeft, PanelTop, Pin, Pencil, Plus, Search, Share, Trash2, User, X } from 'lucide-react';
 import { useNav } from './NavProvider.js';
 import { NavTrigger } from './NavTrigger.js';
 import type { NavAccount, NavAction, NavConversation, NavDestination, NavProject } from './contracts.js';
-import { cx } from './utils.js';
+import { cx, navDestinationActive } from './utils.js';
 
 export function useNavStyle(): CSSProperties {
-  const { accentColor, tokens } = useNav();
-  return { ...Object.fromEntries(Object.entries(tokens).map(([key, value]) => [`--nav-${key}`, value])), '--nav-accent': accentColor } as CSSProperties;
+  const { accentColor, tokens, width, resizable } = useNav();
+  return { ...(resizable ? { '--nav-width': width + 'px' } : {}), ...Object.fromEntries(Object.entries(tokens).map(([key, value]) => [`--nav-${key}`, value])), '--nav-accent': accentColor } as CSSProperties;
 }
 
 export function NavScope({ className, style, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -23,8 +24,8 @@ function MenuActions({ actions }: { actions: NavAction[] }) {
   return <>{actions.map((action) => <Fragment key={action.id}>
     {action.separatorBefore ? <Menu.Separator className="as-nav-menu-separator" /> : null}
     {action.children?.length
-      ? <Menu.Sub><Menu.SubTrigger className="as-nav-menu-row" disabled={action.disabled}>{action.icon}<span>{action.label}</span><ChevronDown /></Menu.SubTrigger><Menu.Portal><Menu.SubContent data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover" sideOffset={6} collisionPadding={12}><MenuActions actions={action.children} /></Menu.SubContent></Menu.Portal></Menu.Sub>
-      : <Menu.Item className="as-nav-menu-row" disabled={action.disabled || !action.onSelect} data-destructive={action.destructive || undefined} onSelect={action.onSelect}>{action.icon ? <span className="as-nav-icon">{action.icon}</span> : null}<span>{action.label}</span></Menu.Item>}
+      ? <Menu.Sub><Menu.SubTrigger className="as-nav-menu-row" disabled={action.disabled}><span className="as-nav-icon">{action.icon}</span><span>{action.label}</span><ChevronDown /></Menu.SubTrigger><Menu.Portal><Menu.SubContent data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover" sideOffset={6} collisionPadding={12}><MenuActions actions={action.children} /></Menu.SubContent></Menu.Portal></Menu.Sub>
+      : <Menu.Item className="as-nav-menu-row" disabled={action.disabled || !action.onSelect} data-destructive={action.destructive || undefined} onSelect={action.onSelect}><span className="as-nav-icon">{action.icon}</span><span>{action.label}</span>{action.shortcut ? <kbd className="as-nav-shortcut">{action.shortcut}</kbd> : null}</Menu.Item>}
   </Fragment>)}</>;
 }
 
@@ -54,8 +55,20 @@ export function NavTopbarLogo({ variant = 'mark', onClick, toggle = false }: { v
   </button>;
 }
 
+export function NavBreadcrumbs() {
+  const { data, isMobile, close } = useNav();
+  const breadcrumbs = data.breadcrumbs ?? [];
+  return <nav className="as-nav-breadcrumbs" aria-label="Breadcrumb"><ol>{breadcrumbs.map((item, index) => <li key={item.id}>
+    {index > 0 ? <span aria-hidden="true" className="as-nav-separator">/</span> : null}
+    {index === breadcrumbs.length - 1 ? <span aria-current="page" title={item.label}>{item.label}</span> : item.href
+      ? <a href={item.href} onClick={(event) => { if (data.onNavigate) { event.preventDefault(); data.onNavigate(item.href!); } if (isMobile) close(); }}>{item.label}</a>
+      : <span>{item.label}</span>}
+  </li>)}</ol></nav>;
+}
+
 export function NavProjectContext() {
   const { data } = useNav();
+  if (!data.project && !data.conversation && data.breadcrumbs?.length) return <NavBreadcrumbs />;
   return <div className="as-nav-context">
     {data.project ? <><NavOverflowMenu label={data.project.name} actions={data.projectActions}><Folder /><span className="as-nav-project-name">{data.project.name}</span><ChevronDown /></NavOverflowMenu><span className="as-nav-separator">/</span></> : null}
     <span className="as-nav-title" title={data.conversation?.title}>{data.conversation?.title ?? data.brand?.name}</span>
@@ -142,6 +155,7 @@ export function NavTopbar({
 function RenameDialog({ open, onOpenChange, title, value, onSave }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; value: string; onSave: (value: string) => void }) {
   const { theme } = useNav();
   const [draft, setDraft] = useState(value);
+  useEffect(() => { if (open) setDraft(value); }, [open, value]);
   const style = useNavStyle();
   return <Dialog.Root open={open} onOpenChange={(next) => { if (next) setDraft(value); onOpenChange(next); }}><Dialog.Portal>
     <Dialog.Overlay className="as-nav-dialog-overlay" />
@@ -197,75 +211,142 @@ function ProjectRow({ item, conversations }: { item: NavProject; conversations: 
   </div>;
 }
 
-function SidenavContents() {
-  const { data, close, isMobile, open, setOpen } = useNav();
-  const activeGroupId = (data.destinations ?? []).find((item) =>
-    item.children?.some((child) => child.active) || (item.children?.length && item.active))?.id ?? null;
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(activeGroupId);
+function DestinationRow({ item, depth = 0 }: { item: NavDestination; depth?: number }) {
+  const { data, close, isMobile, open, setOpen, storageKey } = useNav();
+  const active = navDestinationActive(item);
+  const [expanded, setExpanded] = useState(active);
   useEffect(() => {
-    if (activeGroupId) setExpandedGroup(activeGroupId);
-  }, [activeGroupId]);
-  const selectDestination = (item: NavDestination) => {
-    if (item.onSelect) item.onSelect();
-    else if (item.href) data.onNavigate?.(item.href);
+    if (active) { setExpanded(true); return; }
+    if (!storageKey) return;
+    try { setExpanded(JSON.parse(localStorage.getItem(storageKey + ':groups') ?? '{}')[item.id] === true); } catch { /* Ignore unavailable preferences. */ }
+  }, [active, storageKey, item.id]);
+  const toggle = () => {
+    if (!open && !isMobile) setOpen(true);
+    setExpanded((current) => {
+      const next = !current;
+      if (storageKey) try {
+        const saved = JSON.parse(localStorage.getItem(storageKey + ':groups') ?? '{}');
+        localStorage.setItem(storageKey + ':groups', JSON.stringify({ ...saved, [item.id]: next }));
+      } catch { /* Shell remains usable without storage. */ }
+      return next;
+    });
+  };
+  const navigate = (event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>) => {
+    if (item.href && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)) return;
+    if (item.onSelect) { event.preventDefault(); item.onSelect(); }
+    else if (item.href && data.onNavigate) { event.preventDefault(); data.onNavigate(item.href); }
     if (isMobile) close();
   };
+  const rowClass = depth ? 'as-nav-submenu-link' : 'as-nav-destination';
+  if (item.children?.length) return <div className="as-nav-destination-group">
+    {item.href ? <div className="as-nav-parent-row" data-active={active || undefined}>
+      <a className={rowClass} href={item.href} title={item.label} aria-label={item.label} aria-current={item.active ? 'page' : undefined} data-active={item.active || undefined} onClick={navigate}>
+        {item.icon}<span>{item.label}</span>
+      </a>
+      <button type="button" className="as-nav-button as-nav-branch-toggle" title={(expanded ? 'Collapse ' : 'Expand ') + item.label} aria-label={(expanded ? 'Collapse ' : 'Expand ') + item.label} aria-expanded={expanded} aria-controls={'as-nav-submenu-' + item.id} onClick={toggle}>
+        <ChevronDown aria-hidden="true" className="as-nav-destination-chevron" />
+      </button>
+    </div> : <button type="button" className={rowClass} title={item.label} data-active={active || undefined} aria-expanded={expanded} aria-controls={'as-nav-submenu-' + item.id} onClick={toggle}>
+      {item.icon}<span>{item.label}</span><ChevronDown aria-hidden="true" className="as-nav-destination-chevron" />
+    </button>}
+    {expanded ? <div className="as-nav-submenu" role="group" aria-label={item.label + ' pages'} id={'as-nav-submenu-' + item.id}>
+      {item.children.map((child) => <DestinationRow key={child.id} item={child} depth={depth + 1} />)}
+    </div> : null}
+  </div>;
+  const props = { className: rowClass, title: item.label, 'aria-label': item.label, 'data-active': item.active || undefined, 'aria-current': item.active ? 'page' as const : undefined };
+  return item.href
+    ? <a {...props} href={item.href} onClick={navigate}>{item.icon}<span>{item.label}</span></a>
+    : <button {...props} type="button" disabled={!item.onSelect} onClick={navigate}>{item.icon}<span>{item.label}</span></button>;
+}
+
+function HistoryCollection({id,title,items,empty,searching=false}:{id:string;title:string;items:ReactNode[];empty:string;searching?:boolean}) {
+  const {storageKey} = useNav();
+  const [expanded,setExpanded] = useState(true);
+  const [more,setMore] = useState(false);
+  useEffect(() => {
+    if (!storageKey) return;
+    try { setExpanded(JSON.parse(localStorage.getItem(storageKey+':collections') || '{}')[id] !== false); } catch { /* Optional UI preferences. */ }
+  },[storageKey,id]);
+  const toggle = () => setExpanded(value => {
+    const next = !value;
+    if (storageKey) try { const saved=JSON.parse(localStorage.getItem(storageKey+':collections') || '{}');localStorage.setItem(storageKey+':collections',JSON.stringify({...saved,[id]:next})); } catch { /* Keep usable. */ }
+    return next;
+  });
+  const shown = searching || expanded;
+  return <section aria-label={title}><h2><button type="button" className="as-nav-collection-toggle" aria-expanded={shown} onClick={toggle}>{title}<ChevronDown style={{transform:shown?'rotate(0deg)':'rotate(-90deg)'}}/></button></h2>
+    {shown ? <>{items.length ? (more || searching ? items : items.slice(0,6)) : <p className="as-nav-empty">{empty}</p>}
+    {items.length>6 && !searching ? <button type="button" className="as-nav-collection-more" onClick={() => setMore(value => !value)}>{more?'Show less':'Show more'}</button> : null}</> : null}
+  </section>;
+}
+
+function SidenavContents() {
+  const { data, close, isMobile } = useNav();
   const [query, setQuery] = useState('');
   const normalized = query.trim().toLowerCase();
   const conversations = (data.conversations ?? []).filter((item) => !normalized || item.title.toLowerCase().includes(normalized));
   const projects = (data.projects ?? []).filter((item) => !normalized || item.name.toLowerCase().includes(normalized) || conversations.some((conversation) => conversation.projectId === item.id));
   const pinnedConversations = conversations.filter((item) => item.pinned);
   const pinnedProjects = projects.filter((item) => item.pinned);
-  const recent = conversations.filter((item) => !item.pinned && (!item.projectId || !projects.some((project) => project.id === item.projectId)));
+  const recent = conversations.filter((item) => !item.pinned).sort((a,b) => (b.updatedAt ?? 0)-(a.updatedAt ?? 0));
+  const newConversation = data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null;
+  const insertAfter = data.destinations?.some(item => item.id === data.newConversationAfter) ? data.newConversationAfter : undefined;
   return <>
-    <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /></div>
+    {data.showSidebarHeader !== false ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /></div> : isMobile ? <div className="as-nav-sidenav-head as-nav-sidenav-head--close"><button type="button" className="as-nav-button" aria-label="Close navigation" title="Close navigation" onClick={close}><X /></button></div> : null}
     <div className="as-nav-sidenav-main">
       <div className="as-nav-destinations">
-        {data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null}
-        {(data.destinations ?? []).map((item) => item.children?.length
-          ? <div className="as-nav-destination-group" key={item.id}>
-              <button type="button" className="as-nav-destination" title={item.label}
-                data-active={item.active || item.children.some((child) => child.active) || undefined}
-                aria-expanded={expandedGroup === item.id}
-                aria-controls={'as-nav-submenu-' + item.id}
-                onClick={() => {
-                  if (!open && !isMobile) setOpen(true);
-                  setExpandedGroup((current) => current === item.id ? null : item.id);
-                }}>
-                {item.icon}<span>{item.label}</span><ChevronDown aria-hidden="true" className="as-nav-destination-chevron" />
-              </button>
-              {expandedGroup === item.id
-                ? <div className="as-nav-submenu" role="group" aria-label={item.label + ' pages'} id={'as-nav-submenu-' + item.id}>
-                    {item.children.map((child) => <button type="button" key={child.id}
-                      className="as-nav-submenu-link" title={child.label}
-                      data-active={child.active || undefined}
-                      aria-current={child.active ? 'page' : undefined}
-                      disabled={!child.href && !child.onSelect} onClick={() => selectDestination(child)}>
-                      {child.icon ? <span className="as-nav-submenu-icon">{child.icon}</span> : null}
-                      <span>{child.label}</span>
-                    </button>)}
-                  </div>
-                : null}
-            </div>
-          : <button type="button" key={item.id} className="as-nav-destination" title={item.label} aria-label={item.label} data-active={item.active || undefined} onClick={() => selectDestination(item)}>{item.icon}<span>{item.label}</span></button>)}
+        {!insertAfter ? newConversation : null}
+        {(data.destinations ?? []).map((item) => <Fragment key={item.id}><DestinationRow item={item} />{item.id === insertAfter ? newConversation : null}</Fragment>)}
       </div>
-      <div className="as-nav-expanded-only as-nav-history">
-        <label className="as-nav-search"><Search /><input aria-label="Search conversations" placeholder="Search conversations" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-        {(pinnedProjects.length || pinnedConversations.length) ? <section><h2>Pinned</h2>{pinnedProjects.map((item) => <ProjectRow key={item.id} item={item} conversations={conversations} />)}{pinnedConversations.map((item) => <ConversationRow key={item.id} item={item} />)}</section> : null}
-        {projects.length ? <section><h2>Projects</h2>{projects.map((project) => <ProjectRow key={project.id} item={project} conversations={conversations} />)}</section> : null}
-        {recent.length ? <section><h2>Recent conversations</h2>{recent.map((item) => <ConversationRow key={item.id} item={item} />)}</section> : null}
-        {!conversations.length && !projects.length ? <p className="as-nav-empty">{query ? 'No matching conversations or projects' : 'Your conversations will appear here.'}</p> : null}
-      </div>
+      {data.showHistory !== false ? <div className="as-nav-expanded-only as-nav-history">
+        <label className="as-nav-search"><Search /><input aria-label="Search projects and conversations" placeholder="Search workspace" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+        <HistoryCollection id="projects" title="Projects" searching={Boolean(query)} empty={data.historyStatus === 'loading' ? 'Loading projects…' : data.historyStatus === 'error' ? 'Projects are unavailable.' : 'No projects yet.'}
+          items={projects.filter(item => !item.pinned).map(item => <ProjectRow key={item.id} item={item} conversations={conversations} />)} />
+        {data.historyStatus === 'error' && data.onRetryHistory ? <button type="button" className="as-nav-collection-more" onClick={data.onRetryHistory}>Retry projects</button> : null}
+        <HistoryCollection id="pinned" title="Pinned" searching={Boolean(query)} empty={query ? 'No matching pinned items.' : 'Pin projects or conversations from their menus.'}
+          items={[...pinnedProjects.map(item => <ProjectRow key={item.id} item={item} conversations={conversations} />),...pinnedConversations.map(item => <ConversationRow key={item.id} item={item} />)]} />
+        <HistoryCollection id="recent" title="Recent" searching={Boolean(query)} empty={query ? 'No matching activity.' : 'Your conversations will appear here.'}
+          items={[
+            ...recent.map(item => ({id:item.id,at:item.updatedAt || 0,row:<ConversationRow key={item.id} item={item} />})),
+            ...projects.filter(item => !item.pinned && item.updatedAt).map(item => ({id:item.id,at:item.updatedAt || 0,row:<ProjectRow key={item.id} item={item} conversations={[]} />}))
+          ].sort((a,b) => b.at-a.at).map(item => item.row)} />
+      </div> : null}
     </div>
     <div className="as-nav-sidenav-foot"><NavAccountSwitcher expanded /></div>
   </>;
 }
 
 export function NavSidenav() {
-  const { open, isMobile, isPeeking, peekable, setPeeking, setOpen, menu, theme } = useNav();
+  const { open, isMobile, isPeeking, peekable, setPeeking, setOpen, menu, theme, resizable, width, setWidth } = useNav();
   const style = useNavStyle();
+  const [hint, setHint] = useState<{label:string; top:number; left:number} | null>(null);
+  const hintTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const hideHint = () => { clearTimeout(hintTimer.current); setHint(null); };
+  const showHint = (target: EventTarget | null) => {
+    clearTimeout(hintTimer.current);
+    if (open || isMobile || !(target instanceof Element)) return;
+    const row = target.closest<HTMLElement>('.as-nav-destination, .as-nav-account button');
+    if (!row) return;
+    const label = row.getAttribute('aria-label') || row.getAttribute('title');
+    if (!label) return;
+    hintTimer.current = setTimeout(() => {
+      const rect = row.getBoundingClientRect();
+      setHint({label, top: Math.max(8, Math.min(window.innerHeight - 44, rect.top + (rect.height - 32) / 2)), left: rect.right + 10});
+    }, 350);
+  };
+  useEffect(() => { hideHint(); return () => clearTimeout(hintTimer.current); }, [open, isMobile, menu]);
   if (isMobile) return <Dialog.Root open={open} onOpenChange={setOpen}><Dialog.Portal><Dialog.Overlay className="as-nav-dialog-overlay" /><Dialog.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-mobile-drawer"><Dialog.Title className="as-nav-sr-only">Navigation</Dialog.Title><Dialog.Description className="as-nav-sr-only">Projects and conversations</Dialog.Description><SidenavContents /></Dialog.Content></Dialog.Portal></Dialog.Root>;
-  return <NavScope className="as-nav-sidenav-reserve" data-open={open}>
+  return <NavScope className="as-nav-sidenav-reserve" data-open={open}
+    onMouseOver={(event) => showHint(event.target)} onMouseOut={hideHint}
+    onFocus={(event) => { showHint(event.target); if (peekable && !open) setPeeking(true); }}
+    onBlur={(event) => { hideHint(); if (!event.currentTarget.contains(event.relatedTarget as Node | null) && !menu) setPeeking(false); }}
+    onPointerDown={hideHint} onScrollCapture={hideHint}>
+    {hint && !open ? createPortal(<div role="tooltip" data-nav-theme={theme} className="as-nav-scope as-nav-rail-tooltip" style={{...style, top:hint.top, left:hint.left}}>{hint.label}</div>, document.body) : null}
     <aside aria-label="Application navigation" className="as-nav-sidenav" data-expanded={open || isPeeking} onMouseEnter={() => { if (peekable && !open) setPeeking(true); }} onMouseLeave={() => { if (!menu) setPeeking(false); }}><SidenavContents /></aside>
+    {open && resizable ? <div className="as-nav-resize" role="separator" aria-label="Resize navigation" aria-orientation="vertical" aria-valuemin={208} aria-valuemax={400} aria-valuenow={width} tabIndex={0}
+      onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); setWidth(width + (event.key === 'ArrowLeft' ? -8 : 8)); } else if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); setWidth(event.key === 'Home' ? 208 : 400); } }}
+      onDoubleClick={() => setWidth(264)}
+      onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); }}
+      onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) setWidth(event.clientX - event.currentTarget.parentElement!.getBoundingClientRect().left); }}
+      onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }} /> : null}
   </NavScope>;
 }

@@ -1,62 +1,327 @@
-import { useRef, useState, useEffect } from 'react';
-import { Copy, Download, Expand, Pencil, Plus, Upload } from 'lucide-react';
-import type { SettingsHost, SettingsTheme } from '../contracts';
+import { useMemo, useRef, useState } from 'react';
+import {
+  Archive, Check, Copy, Download, Expand, Paintbrush, Plus, RotateCcw, Search, Upload, X,
+} from 'lucide-react';
+import type { SettingsHost, SettingsTheme, SettingsThemeStyle } from '../contracts';
 
-/** Management UX only. Theme inventory, persistence, activation and authoring belong to the host. */
-export function SettingsThemeGallery({ themes, host, onChanged = () => {} }: { themes: SettingsTheme[]; host: SettingsHost; onChanged?: () => void }) {
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState<string | null>(null);
-  const [author, setAuthor] = useState<SettingsTheme | 'new' | null>(null);
-  const [name, setName] = useState('');
-  const file = useRef<HTMLInputElement>(null);
-  const naming = useRef<HTMLDialogElement>(null);
-  useEffect(() => { if (author) naming.current?.showModal(); else naming.current?.close(); }, [author]);
-  const run = async (id: string, action: () => unknown) => {
-    setBusy(id); setError('');
-    try { await action(); onChanged(); }
-    catch (error) { setError(error instanceof Error ? error.message : String(error)); }
-    finally { setBusy(null); }
+type GalleryFilter = 'all' | 'mine' | 'archived';
+type ThemeEditorDraft = {
+  id?: string;
+  sourceThemeId?: string;
+  name: string;
+  themeFamily: string;
+  cssVars: Record<string, string>;
+};
+type TokenField = { key: string; label: string };
+const TOKEN_FIELDS: TokenField[] = [
+  { key: '--bg-canvas', label: 'Canvas' },
+  { key: '--bg-surface', label: 'Surface' },
+  { key: '--bg-panel', label: 'Panel' },
+  { key: '--bg-nav', label: 'Navigation' },
+  { key: '--bg-shell', label: 'Shell' },
+  { key: '--color-primary', label: 'Primary' },
+  { key: '--accent', label: 'Accent' },
+  { key: '--text-main', label: 'Main text' },
+  { key: '--text-muted', label: 'Muted text' },
+  { key: '--border', label: 'Border' },
+];
+const DEFAULT_VARS: Record<string, string> = {
+  '--bg-canvas': '#0f172a', '--bg-surface': '#1e293b', '--bg-panel': '#273449',
+  '--bg-nav': '#111827', '--bg-shell': '#0b1220', '--color-primary': '#3b82f6',
+  '--accent': '#60a5fa', '--text-main': '#e2e8f0', '--text-muted': '#94a3b8',
+  '--border': '#334155',
+};
+const button = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium text-foreground transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40';
+const primaryButton = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40';
+
+function colorInputValue(value: string | undefined, fallback: string) {
+  const raw = value || fallback;
+  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw;
+  if (/^#[0-9a-f]{3}$/i.test(raw)) return '#' + raw.slice(1).split('').map(part => part + part).join('');
+  return fallback;
+}
+function themeCss(theme: SettingsTheme) {
+  return theme.cssVars && Object.keys(theme.cssVars).length ? theme.cssVars : DEFAULT_VARS;
+}
+function friendlyError(error: unknown) {
+  const code = error instanceof Error ? error.message : String(error);
+  const messages: Record<string, string> = {
+    theme_in_use_select_another_theme_first: 'This theme is active. Apply another theme before archiving it.',
+    theme_in_use_by_site: 'This theme is still assigned to a site and cannot be archived yet.',
+    theme_not_found_or_not_owned: 'This theme is no longer available to your account. Refresh and try again.',
+    theme_source_not_found: 'The source preset is no longer available. Refresh the library and try again.',
+    account_not_found: 'Your signed-in account could not be resolved for this database.',
+    theme_store_unavailable: 'The theme database could not complete that change. No other account was modified.',
+    origin_not_allowed: 'This request was blocked because its origin could not be verified.',
   };
-  const button = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted disabled:opacity-40';
-  return <section className="space-y-4" data-settings-theme-gallery="">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 className="text-base font-medium">Themes</h2><p className="text-sm text-muted-foreground">Reusable themes and your editable drafts.</p></div>
-      <div className="flex gap-2">
-        {host.importTheme && <button className={button} onClick={() => file.current?.click()} disabled={busy !== null}><Upload size={16} />Import</button>}
-        {host.createTheme && <button className={button} onClick={() => { setName(''); setAuthor('new'); }}><Plus size={16} />Create theme</button>}
-        <input ref={file} type="file" accept="application/json,.json" hidden onChange={(event) => { const selected = event.target.files?.[0]; if (selected) void run('import', async () => host.importTheme?.(JSON.parse(await selected.text()))); event.target.value = ''; }} />
+  return messages[code] || code.replaceAll('_', ' ');
+}
+
+function ThemePreview({ theme }: { theme: SettingsTheme }) {
+  const vars = themeCss(theme);
+  const pick = (key: string, fallback: string) => vars[key] || fallback;
+  if (theme.previewImageUrl) {
+    return <img src={theme.previewImageUrl} alt={theme.name + ' preview'} className="h-full w-full object-cover" loading="lazy" />;
+  }
+  if (theme.previewUrl) {
+    return <iframe title={theme.name + ' preview'} src={theme.previewUrl} sandbox="" tabIndex={-1} loading="lazy"
+      style={{ width: '300%', height: '300%', transform: 'scale(.333333)', transformOrigin: 'top left', pointerEvents: 'none', border: 0 }} />;
+  }
+  return (
+    <div className="h-full w-full overflow-hidden p-3" style={{ background: pick('--bg-canvas', '#0f172a'), color: pick('--text-main', '#e2e8f0') }}>
+      <div className="flex h-6 items-center justify-between rounded-t-md px-2 text-[9px]" style={{ background: pick('--bg-nav', '#111827'), borderBottom: '1px solid ' + pick('--border', '#334155') }}>
+        <span className="font-semibold tracking-wide">STUDIO</span><span>•••</span>
+      </div>
+      <div className="flex h-[calc(100%-24px)] gap-2 rounded-b-md p-2" style={{ background: pick('--bg-shell', '#0b1220') }}>
+        <div className="w-[24%] space-y-2 rounded p-2" style={{ background: pick('--bg-nav', '#111827') }}>
+          <div className="h-1.5 w-4/5 rounded" style={{ background: pick('--text-muted', '#94a3b8') }} />
+          <div className="h-1.5 w-3/5 rounded" style={{ background: pick('--text-muted', '#94a3b8') }} />
+          <div className="h-1.5 w-4/5 rounded" style={{ background: pick('--color-primary', '#3b82f6') }} />
+        </div>
+        <div className="flex-1 rounded p-2" style={{ background: pick('--bg-surface', '#1e293b'), border: '1px solid ' + pick('--border', '#334155') }}>
+          <div className="mb-2 h-2 w-2/5 rounded" style={{ background: pick('--text-main', '#e2e8f0') }} />
+          <div className="mb-3 h-1.5 w-3/4 rounded" style={{ background: pick('--text-muted', '#94a3b8') }} />
+          <div className="h-5 w-1/3 rounded" style={{ background: pick('--color-primary', '#3b82f6') }} />
+        </div>
       </div>
     </div>
-    {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    {!themes.length && <p className="rounded-xl border border-border p-5 text-muted-foreground">No themes are available from this host.</p>}
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {themes.map((theme) => <article key={theme.id} className="overflow-hidden rounded-xl border border-border bg-card" data-theme-id={theme.id}>
-        <div className="relative h-44 overflow-hidden border-b border-border bg-muted">
-          {theme.previewUrl ? <iframe title={`${theme.name} thumbnail`} src={theme.previewUrl} sandbox="" tabIndex={-1} loading="lazy" style={{ width: '300%', height: '300%', transform: 'scale(.333333)', transformOrigin: 'top left', pointerEvents: 'none', border: 0 }} /> : <div className="flex h-full items-center justify-center px-5 text-center text-sm text-muted-foreground">{theme.status || 'No preview supplied'}</div>}
-          <div className="absolute bottom-3 left-3 flex gap-1.5">{theme.swatches.map((swatch) => <span key={swatch} className="size-5 rounded-full border border-border" style={{ background: swatch }} title={swatch} />)}</div>
-        </div>
-        <div className="space-y-3 p-4">
-          <div className="flex items-start justify-between gap-2"><div><h3 className="font-medium">{theme.name}</h3><p className="text-xs text-muted-foreground">{theme.category} · {theme.version || theme.source || 'Theme'}</p></div>{theme.active && <span className="rounded-full bg-muted px-2 py-1 text-xs">Active</span>}</div>
-          <p className="truncate font-mono text-xs text-muted-foreground" title={theme.packageName}>{theme.packageName}</p>
-          <p className="text-xs text-muted-foreground">{theme.status || theme.source}</p>
-          <div className="flex flex-wrap gap-2">
-            {theme.previewUrl && <a className={button} href={theme.previewUrl} target="_blank" rel="noopener noreferrer" aria-label={"Explore " + theme.name + " theme preview in a new tab"}><Expand size={14} />Explore preview</a>}
-            {host.installTheme && ['bundled', 'installed', 'workspace'].includes(theme.source || '') && theme.capabilities?.editable && <button className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.installTheme?.(theme.id))}><Plus size={14} />{theme.draftId ? 'Open draft' : 'Install & edit'}</button>}
-            {host.activateTheme && theme.source === 'cms-draft' && theme.capabilities?.editable && <button className={button} disabled={busy !== null || theme.active} onClick={() => void run(theme.id, () => host.activateTheme?.(theme.id))}>Use theme</button>}
-            {host.editTheme && ['cms-draft', 'local', 'imported'].includes(theme.source || '') && theme.capabilities?.editable && <button className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.editTheme?.(theme.id))}><Pencil size={14} />Edit draft</button>}
-            {host.duplicateTheme && theme.capabilities?.duplicable && <button className={button} disabled={busy !== null} onClick={() => { setName(theme.name + ' revision'); setAuthor(theme); }}><Copy size={14} />Revise</button>}
-            {host.exportTheme && ['cms-draft', 'local', 'imported'].includes(theme.source || '') && <button className={button} onClick={() => void run(theme.id, () => host.exportTheme?.(theme.id))}><Download size={14} />Export draft</button>}
-          </div>
-        </div>
-      </article>)}
+  );
+}
+
+/** Management UX only. Theme inventory and mutations belong to the authenticated host. */
+export function SettingsThemeGallery({
+  themes, host, onChanged = () => {},
+}: {
+  themes: SettingsTheme[];
+  host: SettingsHost;
+  onChanged?: () => void | Promise<void>;
+}) {
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
+  const [editor, setEditor] = useState<ThemeEditorDraft | null>(null);
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<GalleryFilter>('all');
+  const [newTokenKey, setNewTokenKey] = useState('--');
+  const [newTokenValue, setNewTokenValue] = useState('#ffffff');
+  const file = useRef<HTMLInputElement>(null);
+
+  const availableCount = themes.filter(theme => theme.status !== 'archived').length;
+  const ownCount = themes.filter(theme => theme.source === 'account-custom' && theme.status !== 'archived').length;
+  const archivedCount = themes.filter(theme => theme.source === 'account-custom' && theme.status === 'archived').length;
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return themes.filter(theme => {
+      if (filter === 'mine' && (theme.source !== 'account-custom' || theme.status === 'archived')) return false;
+      if (filter === 'archived' && (theme.source !== 'account-custom' || theme.status !== 'archived')) return false;
+      if (filter !== 'archived' && theme.status === 'archived') return false;
+      if (!needle) return true;
+      return [theme.name, theme.slug, theme.category, theme.packageName, theme.status]
+        .some(value => String(value || '').toLowerCase().includes(needle));
+    });
+  }, [themes, query, filter]);
+
+  const run = async (id: string, action: () => unknown | Promise<unknown>, success?: string) => {
+    setBusy(id); setError(''); setNotice('');
+    try {
+      await action();
+      await onChanged();
+      if (success) setNotice(success);
+    } catch (caught) {
+      setError(friendlyError(caught));
+    } finally { setBusy(null); }
+  };
+
+  const openCustomize = (theme?: SettingsTheme) => {
+    setError(''); setNotice('');
+    if (!theme) {
+      setEditor({ name: 'My theme', themeFamily: 'custom', cssVars: { ...DEFAULT_VARS } });
+      return;
+    }
+    const own = theme.source === 'account-custom' && theme.accountOwned !== false;
+    setEditor({
+      ...(own ? { id: theme.id } : { sourceThemeId: theme.id }),
+      name: own ? theme.name : theme.name + ' Custom',
+      themeFamily: theme.themeFamily || theme.category || 'custom',
+      cssVars: { ...DEFAULT_VARS, ...themeCss(theme) },
+    });
+  };
+
+  const saveEditor = async (applyAfterSave: boolean) => {
+    if (!editor || !editor.name.trim()) return;
+    const style: SettingsThemeStyle = {
+      name: editor.name.trim(),
+      themeFamily: editor.themeFamily,
+      cssVars: editor.cssVars,
+    };
+    setBusy('save'); setError(''); setNotice('');
+    try {
+      let saved: SettingsTheme | void;
+      if (editor.id) {
+        if (!host.updateTheme) throw new Error('theme_update_not_supported');
+        saved = await host.updateTheme(editor.id, style);
+      } else if (editor.sourceThemeId) {
+        if (!host.duplicateTheme) throw new Error('theme_customization_not_supported');
+        saved = await host.duplicateTheme(editor.sourceThemeId, editor.name.trim(), style);
+      } else {
+        if (!host.createTheme) throw new Error('theme_creation_not_supported');
+        saved = await host.createTheme(editor.name.trim(), style);
+      }
+      const savedId = (saved as SettingsTheme | undefined)?.id || editor.id || editor.sourceThemeId;
+      if (applyAfterSave && savedId) {
+        if (!host.applyTheme) throw new Error('theme_apply_not_supported');
+        await host.applyTheme(savedId);
+      }
+      setEditor(null);
+      await onChanged();
+      setNotice(applyAfterSave ? 'Theme saved and applied to your account.' : 'Private theme saved.');
+    } catch (caught) {
+      setError(friendlyError(caught));
+    } finally { setBusy(null); }
+  };
+
+  const buttonForApply = (theme: SettingsTheme) => {
+    if (theme.source === 'catalog' || theme.source === 'account-custom') {
+      return host.applyTheme ? () => host.applyTheme?.(theme.id) : undefined;
+    }
+    return host.activateTheme ? () => host.activateTheme?.(theme.id) : undefined;
+  };
+
+  const addToken = () => {
+    if (!editor) return;
+    const key = newTokenKey.trim();
+    if (!/^--[a-zA-Z0-9_-]{1,78}$/.test(key) || editor.cssVars[key] !== undefined || !newTokenValue.trim()) {
+      setError('Use a unique CSS variable name such as --brand-accent and provide a value.');
+      return;
+    }
+    setEditor({ ...editor, cssVars: { ...editor.cssVars, [key]: newTokenValue.trim() } });
+    setNewTokenKey('--'); setNewTokenValue('#ffffff'); setError('');
+  };
+
+  const knownKeys = new Set(TOKEN_FIELDS.map(field => field.key));
+  const extraTokens = editor ? Object.entries(editor.cssVars).filter(([key]) => !knownKeys.has(key)) : [];
+
+  return <section className="space-y-5" data-settings-theme-gallery="">
+    <header className="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[.16em] text-muted-foreground">Appearance</p>
+        <h2 className="mt-1 text-xl font-semibold tracking-tight">Theme Studio</h2>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Browse shared presets, preview the available styles, and save private account-owned custom themes. Shared presets are never edited in place.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {host.importTheme && <button className={button} onClick={() => file.current?.click()} disabled={busy !== null}><Upload size={15} />Import project</button>}
+        {host.createTheme && <button className={primaryButton} onClick={() => openCustomize()} disabled={busy !== null}><Plus size={15} />Create theme</button>}
+        <input ref={file} type="file" accept="application/json,.json" hidden onChange={event => {
+          const selected = event.target.files?.[0];
+          if (selected) void run('import', async () => host.importTheme?.(JSON.parse(await selected.text())), 'Theme project imported.');
+          event.target.value = '';
+        }} />
+      </div>
+    </header>
+
+    <div className="grid gap-3 sm:grid-cols-3">
+      <div className="rounded-xl border border-border bg-card p-4"><p className="text-xs text-muted-foreground">Available themes</p><p className="mt-1 text-2xl font-semibold tabular-nums">{availableCount}</p><p className="mt-1 text-xs text-muted-foreground">Shared presets + saved themes</p></div>
+      <div className="rounded-xl border border-border bg-card p-4"><p className="text-xs text-muted-foreground">My themes</p><p className="mt-1 text-2xl font-semibold tabular-nums">{ownCount}</p><p className="mt-1 text-xs text-muted-foreground">Private to your account</p></div>
+      <div className="rounded-xl border border-border bg-card p-4"><p className="text-xs text-muted-foreground">Archived</p><p className="mt-1 text-2xl font-semibold tabular-nums">{archivedCount}</p><p className="mt-1 text-xs text-muted-foreground">Recoverable, not hard-deleted</p></div>
     </div>
-    <dialog ref={naming} onClose={() => setAuthor(null)} className="m-auto w-[min(440px,94vw)] rounded-xl border border-border bg-card p-5 text-foreground backdrop:bg-black/60">
-      <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); const source = author; if (!source || !name.trim()) return; void run('author', async () => { if (source === 'new') await host.createTheme?.(name.trim()); else await host.duplicateTheme?.(source.id, name.trim()); setAuthor(null); }); }}>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <h3 className="font-medium">{author === 'new' ? 'Create theme' : 'Revise theme'}</h3>
-        <label className="block text-sm">Name<input autoFocus value={name} onChange={(event) => setName(event.target.value)} required className="mt-2 w-full rounded-lg border border-border bg-background p-3" /></label>
-        <div className="flex justify-end gap-2"><button type="button" className={button} onClick={() => setAuthor(null)}>Cancel</button><button className={button} disabled={busy !== null || !name.trim()}>Create draft</button></div>
-      </form>
-    </dialog>
+
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <label className="relative block min-w-0 flex-1">
+        <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search themes by name, family, or slug…" className="min-h-11 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring" />
+      </label>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Theme filters">
+        {([
+          ['all', `All available · ${availableCount}`],
+          ['mine', `My themes · ${ownCount}`],
+          ['archived', `Archived · ${archivedCount}`],
+        ] as [GalleryFilter, string][]).map(([key, label]) => (
+          <button key={key} type="button" className={filter === key ? primaryButton : button} onClick={() => setFilter(key)}>{label}</button>
+        ))}
+      </div>
+    </div>
+
+    {error && <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}
+    {notice && <p role="status" className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm">{notice}</p>}
+    {!filtered.length && <div className="rounded-xl border border-dashed border-border p-10 text-center"><p className="font-medium">No themes match this view</p><p className="mt-1 text-sm text-muted-foreground">Try another filter or create a theme of your own.</p></div>}
+
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {filtered.map(theme => {
+        const isCustom = theme.source === 'account-custom' && theme.accountOwned !== false;
+        const isArchived = theme.status === 'archived';
+        const canApply = Boolean(buttonForApply(theme));
+        return <article key={theme.id} className="overflow-hidden rounded-xl border border-border bg-card" data-theme-id={theme.id}>
+          <div className="relative h-44 overflow-hidden border-b border-border bg-muted">
+            <ThemePreview theme={theme} />
+            <div className="absolute bottom-3 left-3 flex gap-1.5">
+              {theme.swatches.slice(0, 7).map((swatch, index) => <span key={swatch + index} className="size-4 rounded-full border border-white/40 shadow-sm" style={{ background: swatch }} title={swatch} />)}
+            </div>
+            {theme.active && <span className="absolute right-3 top-3 rounded-full bg-emerald-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">Active</span>}
+          </div>
+          <div className="space-y-3 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0"><h3 className="truncate font-semibold">{theme.name}</h3><p className="mt-0.5 text-xs text-muted-foreground">{theme.category} · {theme.version || theme.source || 'Theme'}</p></div>
+              <span className="shrink-0 rounded-full border border-border px-2 py-1 text-[10px] text-muted-foreground">{isCustom ? 'Private' : theme.source === 'catalog' ? 'Shared' : 'Package'}</span>
+            </div>
+            <p className="truncate font-mono text-[11px] text-muted-foreground" title={theme.slug || theme.packageName}>{theme.slug || theme.packageName}</p>
+            <p className="text-xs text-muted-foreground">{isArchived ? 'Archived · can be restored' : theme.status || theme.source}</p>
+            <div className="flex flex-wrap gap-2">
+              {theme.previewUrl && <a className={button} href={theme.previewUrl} target="_blank" rel="noopener noreferrer" aria-label={'Explore ' + theme.name + ' preview in a new tab'}><Expand size={14} />Preview</a>}
+              {(theme.source === 'catalog' || isCustom) && !isArchived && <button type="button" className={primaryButton} disabled={busy !== null} onClick={() => openCustomize(theme)}><Paintbrush size={14} />Customize</button>}
+              {canApply && !isArchived && <button type="button" className={button} disabled={busy !== null || theme.active} onClick={() => void run(theme.id, buttonForApply(theme)!, 'Theme applied to your account.')}><Check size={14} />{theme.active ? 'Active' : 'Apply'}</button>}
+              {isCustom && !isArchived && <button type="button" className={button} disabled={busy !== null} onClick={() => {
+                if (window.confirm('Archive "' + theme.name + '"? It will remain recoverable. Active or site-assigned themes cannot be archived.')) {
+                  void run(theme.id, () => host.archiveTheme?.(theme.id), 'Theme archived.');
+                }
+              }}><Archive size={14} />Archive</button>}
+              {isCustom && isArchived && <button type="button" className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.restoreTheme?.(theme.id), 'Theme restored.')}><RotateCcw size={14} />Restore</button>}
+              {host.installTheme && ['bundled', 'installed', 'workspace'].includes(theme.source || '') && theme.capabilities?.editable && <button type="button" className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.installTheme?.(theme.id), 'Editable draft opened.')}><Plus size={14} />{theme.draftId ? 'Open draft' : 'Install & edit'}</button>}
+              {host.editTheme && theme.source === 'cms-draft' && theme.capabilities?.editable && <button type="button" className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.editTheme?.(theme.id))}><Paintbrush size={14} />Edit draft</button>}
+              {host.exportTheme && ['cms-draft', 'local', 'imported'].includes(theme.source || '') && <button type="button" className={button} disabled={busy !== null} onClick={() => void run(theme.id, () => host.exportTheme?.(theme.id))}><Download size={14} />Export</button>}
+            </div>
+          </div>
+        </article>;
+      })}
+    </div>
+
+    {editor && <div className="fixed inset-0 z-[100] flex justify-end bg-black/45" role="presentation">
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="Close theme customization" onClick={() => setEditor(null)} />
+      <aside role="dialog" aria-modal="true" aria-labelledby="theme-editor-title" className="relative z-10 flex h-full w-full max-w-xl flex-col border-l border-border bg-background text-foreground shadow-2xl">
+        <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+          <div><p className="text-[10px] font-semibold uppercase tracking-[.16em] text-muted-foreground">{editor.id ? 'Private theme' : editor.sourceThemeId ? 'Create private copy' : 'New theme'}</p><h3 id="theme-editor-title" className="mt-1 text-lg font-semibold">Customize theme</h3><p className="mt-1 text-xs text-muted-foreground">Changes are isolated to your account. Shared presets are never edited in place.</p></div>
+          <button type="button" className={button} aria-label="Close customization" onClick={() => setEditor(null)}><X size={16} /></button>
+        </header>
+        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
+          <label className="block text-sm font-medium">Theme name<input value={editor.name} onChange={event => setEditor({ ...editor, name: event.target.value })} maxLength={100} required className="mt-2 min-h-10 w-full rounded-lg border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring" /></label>
+          <label className="block text-sm font-medium">Theme family<select value={editor.themeFamily} onChange={event => setEditor({ ...editor, themeFamily: event.target.value })} className="mt-2 min-h-10 w-full rounded-lg border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring"><option value="custom">Custom</option><option value="dark">Dark</option><option value="light">Light</option><option value="brand">Brand</option><option value="dashboard">Dashboard</option><option value="editor">Editor</option></select></label>
+          <div><div className="mb-3"><h4 className="text-sm font-semibold">Core style tokens</h4><p className="mt-1 text-xs text-muted-foreground">Tune the core surfaces, accents, text and borders.</p></div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {TOKEN_FIELDS.map(field => <label key={field.key} className="block rounded-lg border border-border p-3 text-xs font-medium">
+                <span>{field.label}</span><span className="mt-2 flex items-center gap-2"><input type="color" aria-label={field.label + ' color picker'} value={colorInputValue(editor.cssVars[field.key], DEFAULT_VARS[field.key])} onChange={event => setEditor({ ...editor, cssVars: { ...editor.cssVars, [field.key]: event.target.value } })} className="size-8 shrink-0 cursor-pointer rounded border border-border bg-transparent p-0.5" /><input aria-label={field.key} value={editor.cssVars[field.key] || DEFAULT_VARS[field.key]} onChange={event => setEditor({ ...editor, cssVars: { ...editor.cssVars, [field.key]: event.target.value } })} className="min-w-0 w-full rounded border border-border bg-background px-2 py-2 font-mono text-[11px]" /></span>
+              </label>)}
+            </div>
+          </div>
+          <details className="rounded-xl border border-border">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Advanced CSS variables <span className="ml-1 text-xs font-normal text-muted-foreground">({extraTokens.length})</span></summary>
+            <div className="space-y-3 border-t border-border p-4">
+              {extraTokens.map(([key, value]) => <div key={key} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
+                <code className="truncate text-[10px] text-muted-foreground" title={key}>{key}</code><input aria-label={key + ' value'} value={value} onChange={event => setEditor({ ...editor, cssVars: { ...editor.cssVars, [key]: event.target.value } })} className="min-w-0 rounded border border-border bg-background px-2 py-2 font-mono text-[11px]" /><button type="button" className={button} aria-label={'Remove ' + key} onClick={() => { const next = { ...editor.cssVars }; delete next[key]; setEditor({ ...editor, cssVars: next }); }}><X size={13} /></button>
+              </div>)}
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                <input aria-label="New CSS variable name" value={newTokenKey} onChange={event => setNewTokenKey(event.target.value)} placeholder="--brand-accent" className="min-w-0 rounded border border-border bg-background px-2 py-2 font-mono text-[11px]" />
+                <input aria-label="New CSS variable value" value={newTokenValue} onChange={event => setNewTokenValue(event.target.value)} placeholder="#ffffff" className="min-w-0 rounded border border-border bg-background px-2 py-2 font-mono text-[11px]" />
+                <button type="button" className={button} onClick={addToken}><Plus size={13} />Add</button>
+              </div>
+            </div>
+          </details>
+          {error && <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</p>}
+        </div>
+        <footer className="flex flex-wrap justify-end gap-2 border-t border-border bg-card px-5 py-4">
+          <button type="button" className={button} disabled={busy !== null} onClick={() => setEditor(null)}>Cancel</button>
+          <button type="button" className={button} disabled={busy !== null || !editor.name.trim()} onClick={() => void saveEditor(false)}>{busy === 'save' ? 'Saving…' : 'Save'}</button>
+          <button type="button" className={primaryButton} disabled={busy !== null || !editor.name.trim()} onClick={() => void saveEditor(true)}>{busy === 'save' ? 'Saving…' : <><Check size={14} />Save & apply</>}</button>
+        </footer>
+      </aside>
+    </div>}
   </section>;
 }

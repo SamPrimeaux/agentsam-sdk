@@ -1,14 +1,12 @@
 import nitroWorker from "../../.output/server/index.mjs";
 import { serveCadChessAsset } from "./cad-chess-assets.js";
+import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
+import { resolveStudioSessionUser, guardStudioDocumentSession } from "./studio-session.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
 import installScript from "../../../../scripts/install.sh";
 import { handleCloudflareConnectionRequest, isCloudflareConnectionPath } from "../../../../packages/connectors/cfoa/src/routes.js";
 import { resolveCloudflareOAuthClient } from "../../../../packages/connectors/cfoa/src/index.js";
-import {
-  handleIdentityWorkerRequest,
-  createIdentityService,
-  createCloudflareD1Adapter,
-} from "../../../../packages/identity/src/server/worker-router.js";
+import { handleIdentityWorkerRequest } from "../../../../packages/identity/src/server/worker-router.js";
 import {
   IDENTITY_ROUTE_IDS,
   projectionFromAppManifest,
@@ -282,21 +280,13 @@ async function probeInnerAnimalMediaOAuth(env) {
  * is present or the session is missing/expired/revoked.
  */
 async function resolveSessionUser(request, env) {
-  if (!env.DB) return null;
-  if (!request.headers.get("cookie") && !request.headers.get("authorization")) return null;
-  try {
-    const adapter = createCloudflareD1Adapter(env.DB);
-    const identity = createIdentityService({
-      adapter,
-      app: APP,
-      routeRegistry: ROUTE_REGISTRY,
-    });
-    const ctx = await identity.sessionFromRequest(request);
-    return ctx?.user?.id ? ctx.user : null;
-  } catch (err) {
-    console.error("session_resolve_error", String(err));
-    return null;
-  }
+  return resolveStudioSessionUser(request, env, { app: APP, routeRegistry: ROUTE_REGISTRY });
+}
+
+async function guardStudioDocument(request, env) {
+  return guardStudioDocumentSession(request, {
+    resolveUser: () => resolveSessionUserId(request, env), loginPath: LOGIN_PATH,
+  });
 }
 
 async function resolveSessionUserId(request, env) {
@@ -718,6 +708,8 @@ export default {
   ...nitroWorker,
   async fetch(request, env, context) {
     const url = new URL(request.url);
+    const navigationAsset = await serveStudioNavigationAsset(request, env);
+    if (navigationAsset) return navigationAsset;
     // Legacy Ecommerce Console login belongs to customer installations, not
     // the hosted AgentSam identity boundary. Never serve its Fuel & Free Time
     // form or submit credentials to the unrelated /api/admin/login endpoint.
@@ -810,11 +802,8 @@ export default {
     // store route; keep auth and query state, then send users to that existing UI.
     if ((request.method === "GET" || request.method === "HEAD") &&
         url.pathname === "/sites") {
-      const account = await resolveSessionUserId(request, env);
-      if (!account) {
-        return Response.redirect(url.origin + LOGIN_PATH + "?next=" +
-          encodeURIComponent(url.pathname + url.search), 302);
-      }
+      const denied = await guardStudioDocument(request, env);
+      if (denied) return denied;
       const target = new URL("/admin/store", request.url);
       target.search = url.search;
       return new Response(null, {
@@ -823,10 +812,22 @@ export default {
       });
     }
 
+    // The canonical Studio Home entry reuses the real packaged Ecommerce
+    // dashboard surface, but requires a Local Studio session and receives the
+    // same host-owned shell projection as every other installed console page.
+    if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/admin/home") {
+      const denied = await guardStudioDocument(request, env);
+      if (denied) return denied;
+      const home = await servePackagedConsole(request, env.ASSETS, { allowStudioHome: true });
+      return home || json({ ok: false, error: "studio_home_unavailable" }, 503);
+    }
+
     // Existing Ecommerce console UI is served by the Local Studio Worker.
     // The packaged UI and its APIs remain on this origin and use Local Studio D1.
+    const embeddedEcommerceHome = url.pathname === "/admin/home"
+      && url.searchParams.get("__agentsamEmbedded") === "1";
     if ((request.method === "GET" || request.method === "HEAD") &&
-        (url.pathname.startsWith("/admin/") && !isStudioAdminPath(url.pathname))) {
+        (url.pathname.startsWith("/admin/") && (!isStudioAdminPath(url.pathname) || embeddedEcommerceHome))) {
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
       const mounted = await servePackagedConsole(request, env.ASSETS);
       if (mounted) return mounted;
@@ -980,11 +981,8 @@ export default {
          url.pathname === "/artifacts/tickets" ||
          url.pathname === "/tickets" ||
          url.pathname === "/themes")) {
-      const account=await resolveSessionUserId(request,env);
-      if(!account){
-        return Response.redirect(url.origin+LOGIN_PATH+"?next="+
-          encodeURIComponent(url.pathname+url.search),302);
-      }
+      const denied = await guardStudioDocument(request, env);
+      if (denied) return denied;
       const assetUrl=new URL(request.url);
       // Both /admin/* mounts and Work package top-level routes hydrate the
       // same canonical React app; no legacy HTML donor is introduced.
@@ -1013,11 +1011,8 @@ export default {
         "notifications","docs","integrations"]);
       if(url.pathname === "/settings" || !allowed.has(unit))
         return Response.redirect(new URL("/settings/general",request.url),302);
-      const account=await resolveSessionUserId(request,env);
-      if(!account){
-        const next=encodeURIComponent(url.pathname+url.search);
-        return Response.redirect(url.origin+LOGIN_PATH+"?next="+next,302);
-      }
+      const denied = await guardStudioDocument(request, env);
+      if (denied) return denied;
       const assetUrl=new URL(request.url);
       assetUrl.pathname="/studio-settings-shell/"+unit+"/";
       assetUrl.search="";
@@ -1034,23 +1029,8 @@ export default {
 
     // Gate authenticated Studio app routes from the app manifest mounts.
     if (request.method === "GET" && isProtectedAppPath(url.pathname)) {
-      try {
-        const identity = createIdentityService({
-          adapter: createCloudflareD1Adapter(env.DB),
-          app: APP,
-          routeRegistry: ROUTE_REGISTRY,
-        });
-        const ctx = await identity.sessionFromRequest(request);
-        if (!ctx) {
-          const next = encodeURIComponent(url.pathname + url.search);
-          return Response.redirect(
-            `${url.origin}${LOGIN_PATH}?next=${next}`,
-            302,
-          );
-        }
-      } catch (err) {
-        console.error("session_gate_error", String(err));
-      }
+      const denied = await guardStudioDocument(request, env);
+      if (denied) return denied;
     }
 
     // Authenticated identity for Studio routes. Resolved lazily (single D1

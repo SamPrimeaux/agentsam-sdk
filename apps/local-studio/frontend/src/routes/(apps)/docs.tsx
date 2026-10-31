@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { ArrowRight, BookOpen, CircleHelp, Globe2, LayoutTemplate, PanelsTopLeft, Store } from 'lucide-react';
+import { ArrowRight, BookOpen, CircleHelp, FileImage, Globe2, LayoutTemplate, PanelsTopLeft, Store } from 'lucide-react';
 
 export const Route = createFileRoute('/(apps)/docs')({ component: DocumentationHome });
 
@@ -48,6 +48,9 @@ function DocumentationHome() {
             </div>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <a href="/admin/products/help/artwork" className="flex items-center gap-3 rounded-xl border border-border p-4 text-left transition hover:bg-muted">
+              <FileImage size={18} className="text-muted-foreground" /><span className="min-w-0 flex-1"><strong className="block text-sm font-medium">Artwork Help</strong><span className="mt-1 block text-xs text-muted-foreground">File formats, print resolution, color, and production guidelines</span></span><ArrowRight size={15} />
+            </a>
             <button type="button" className="flex items-center gap-3 rounded-xl border border-border p-4 text-left transition hover:bg-muted" onClick={() => void navigate({ to: '/cms' })}>
               <Store size={18} className="text-muted-foreground" /><span className="min-w-0 flex-1"><strong className="block text-sm font-medium">Online Store / CMS</strong><span className="mt-1 block text-xs text-muted-foreground">Inspect site status and edit content</span></span><ArrowRight size={15} />
             </button>

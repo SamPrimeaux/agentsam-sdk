@@ -123,3 +123,13 @@ test('a normal host build does not sync websites or test theme catalogs automati
   assert.doesNotMatch(scripts['verify:desktop'],/smoke:themes|smoke:cms-site-fidelity|smoke:creator-suite/);
   assert.match(scripts['verify:desktop:all'],/smoke:themes/);
 });
+
+test('explicit Cloudflare release commands build every registered included app before verification',()=>{
+  const scripts=JSON.parse(fs.readFileSync(path.join(LOCAL_STUDIO,'package.json'),'utf8')).scripts;
+  assert.match(scripts['cf:build'],/npm run build:included:all/);
+  assert.match(scripts['cf:build'],/npm run build && npm run cf:verify-output && npm run cf:smoke:worker/);
+  assert.match(scripts['cf:dry-run'],/npm run cf:build/);
+  assert.match(scripts['cf:deploy'],/npm run cf:build/);
+  assert.doesNotMatch(scripts.build,/build:included:all/,'ordinary development builds remain scoped');
+  assert.doesNotMatch(scripts['build:desktop'],/build:included:all/,'desktop builds remain scoped');
+});
