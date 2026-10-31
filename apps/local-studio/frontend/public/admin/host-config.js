@@ -417,38 +417,69 @@
     }, true);
   }
 
-  // The host projects the same authenticated feed as the React shell.
+  // The legacy Ecommerce console uses the same authenticated inbox as the React shell.
+  let currentNotices=[];
+  let lastUnread=0;
+  async function inbox(path, method='GET') {
+    const response=await window.fetch(path,{method,credentials:'same-origin',cache:'no-store'});
+    if(!response.ok)throw new Error('notifications_unavailable');
+    return response.json();
+  }
+  function updateBell(count) {
+    const trigger=document.getElementById('console-notifications-trigger');
+    if(!trigger)return;
+    trigger.setAttribute('aria-label',count?`Notifications (${count} unread)`:'Notifications');
+    trigger.dataset.unreadCount=String(count);
+    const old=trigger.querySelector('[data-unread-dot]');
+    if(old)old.remove();
+    if(count>0){
+      const dot=document.createElement('span');dot.dataset.unreadDot='true';dot.setAttribute('aria-hidden','true');
+      dot.style.cssText='position:absolute;top:3px;right:3px;width:8px;height:8px;background:#f05252;border-radius:50%;pointer-events:none';
+      trigger.style.position='relative';trigger.append(dot);
+    }
+  }
   async function loadAccountNotifications() {
-    const panel = document.getElementById('console-notifications-menu');
-    if (!panel) return;
-    const heading = document.createElement('strong'); heading.textContent = 'Notifications';
-    const state = document.createElement('p'); state.setAttribute('role','status'); state.textContent = 'Loading notifications…';
+    const panel=document.getElementById('console-notifications-menu');
+    if(!panel)return;
+    const heading=document.createElement('strong');heading.textContent='Notifications';
+    const state=document.createElement('p');state.setAttribute('role','status');state.textContent='Loading notifications…';
     panel.replaceChildren(heading,state);
     try {
-      const response = await window.fetch('/api/settings/notifications',{credentials:'same-origin',cache:'no-store'});
-      if (!response.ok) throw new Error('notifications_unavailable');
-      const payload = await response.json();
-      if (!payload.ok || !Array.isArray(payload.notifications)) throw new Error('notifications_unavailable');
-      state.remove();
-      if (!payload.notifications.length) {
-        const empty = document.createElement('p'); empty.textContent = 'No notifications yet.'; panel.appendChild(empty);
-      }
-      for (const item of payload.notifications) {
-        const article = document.createElement('article'); article.className = 'studio-notification';
-        const title = document.createElement('strong'); title.textContent = item.title;
-        const message = document.createElement('p'); message.textContent = item.message;
-        const time = document.createElement('small'); time.textContent = item.channel+' · '+new Date(item.createdAt*1000).toLocaleString();
-        article.append(title,message,time); panel.appendChild(article);
-      }
-    } catch {
-      state.textContent = 'Notifications could not load.';
-    }
-    const refresh = document.createElement('button'); refresh.type='button'; refresh.className='console-btn';
-    refresh.textContent='Refresh notifications'; refresh.addEventListener('click',()=>void loadAccountNotifications()); panel.appendChild(refresh);
+      const payload=await inbox('/api/notifications?limit=20');
+      if(!payload.ok||!Array.isArray(payload.notifications))throw Error('invalid_inbox');
+      currentNotices=payload.notifications;lastUnread=payload.unreadCount||0;
+      updateBell(lastUnread);state.remove();
+      if(!currentNotices.length){const empty=document.createElement('p');empty.textContent='No notifications yet.';panel.append(empty);}
+      currentNotices.forEach(item=>{
+        const article=document.createElement('article');article.className='studio-notification';
+        const action=document.createElement('button');action.type='button';action.className='console-btn';
+        action.style.cssText='display:block;width:100%;text-align:left;white-space:normal';
+        action.textContent=(item.readAt?'':'● ')+item.title;
+        const message=document.createElement('p');message.textContent=item.message;
+        const when=document.createElement('small');when.textContent=item.channel+' · '+new Date(item.createdAt*1000).toLocaleString();
+        action.addEventListener('click',async()=>{
+          try{await inbox('/api/notifications/'+encodeURIComponent(item.id)+'/read','POST');await loadAccountNotifications();
+            if(typeof item.destination==='string'&&item.destination.startsWith('/')&&!item.destination.startsWith('//'))window.location.assign(item.destination);
+          }catch{state.textContent='Could not mark notification read.';panel.prepend(state);}
+        });
+        article.append(action,message,when);panel.append(article);
+      });
+      if(lastUnread>0){const all=document.createElement('button');all.className='console-btn';all.type='button';all.textContent='Mark all as read';
+        all.addEventListener('click',async()=>{try{await inbox('/api/notifications/read-all','POST');await loadAccountNotifications();}catch{state.textContent='Could not mark all read.';panel.prepend(state);}});
+        panel.append(all);}
+    }catch{state.textContent='Notifications could not load.';}
+    const refresh=document.createElement('button');refresh.type='button';refresh.className='console-btn';refresh.textContent='Refresh';
+    refresh.addEventListener('click',()=>void loadAccountNotifications());panel.append(refresh);
   }
   document.addEventListener('click',event=>{
-    if (event.target?.closest?.('#console-notifications-trigger') &&
-        document.getElementById('console-notifications-trigger')?.getAttribute('aria-expanded') !== 'true') void loadAccountNotifications();
+    if(event.target?.closest?.('#console-notifications-trigger'))void loadAccountNotifications();
   },true);
+  // Keep the icon fresh even when the menu stays closed.
+  {
+    const refreshCount=async()=>{try{const payload=await inbox('/api/notifications?limit=1');if(payload.ok)updateBell(payload.unreadCount||0);}catch{}};
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>void refreshCount(),{once:true});
+    else void refreshCount();
+    if(typeof window.setInterval==='function')window.setInterval(refreshCount,30_000);
+  }
 
 })();

@@ -845,7 +845,7 @@ export default {
 
     // Account-scoped theme registry. Shared presets are read-only; every
     // customization is cloned into a private cms_themes row for this account.
-    if (url.pathname === '/api/settings/notifications') {
+    if (url.pathname === '/api/notifications' || url.pathname.startsWith('/api/notifications/')) {
       const principal = await resolveSessionUser(request, env);
       return handleStudioNotifications(request, env, principal?.id || null);
     }
