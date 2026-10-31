@@ -239,22 +239,22 @@ test('legacy /cli opens an existing AgentSam side-panel terminal', () => {
 
 test('desktop Console links resolve to real platform or installed Ecommerce app routes', () => {
   const source = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
-  let click;
+  const clicks = [];
   const context = {
     NAV: { main: [], channels: [], apps: [] },
     renderSideNav: () => '<nav></nav>',
     localStorage: { getItem: () => 'dark' },
     CONSOLE_APPEARANCE_KEY: 'appearance',
     window: { __AGENTSAM_DESKTOP__: true, location: { hash: '' } },
-    document: { addEventListener: (_name, handler) => { click = handler; } },
+    document: { addEventListener: (name, handler) => { if (name === 'click') clicks.push(handler); } },
     encodeURIComponent,
   };
   runInNewContext(source, context);
-  assert.equal(typeof click, 'function');
+  assert.ok(clicks.length > 0);
   const visit = (path) => {
     let prevented = false;
-    click({
-      target: { closest: () => ({ getAttribute: () => path }) },
+    for (const click of clicks) click({
+      target: { closest: (selector) => selector === 'a[href]' ? { getAttribute: () => path } : null },
       defaultPrevented: false,
       preventDefault: () => { prevented = true; },
       metaKey: false, ctrlKey: false, altKey: false, shiftKey: false,
