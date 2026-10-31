@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
-import { Nav, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens } from '@inneranimalmedia/agentsam-nav';
+import { Nav, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
+import { projectStudioShellAppearance, applyStudioShellAppearance } from '../../shared/shell-appearance.mjs';
 import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, Search, Bell, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -70,6 +71,14 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const [theme, setTheme] = useState<NavTheme>('dark');
   const [accent, setAccent] = useState(accents[0]);
   const [navTokens, setNavTokens] = useState<NavTokens>({});
+  const [navigationStore, setNavigationStore] = useState<NavStateStore | undefined>(() =>
+    typeof window === 'undefined' ? undefined : (window as Window & { __agentsamNavigationStore?: NavStateStore }).__agentsamNavigationStore);
+  useEffect(() => {
+    const connect = () => setNavigationStore((window as Window & { __agentsamNavigationStore?: NavStateStore }).__agentsamNavigationStore);
+    connect();
+    window.addEventListener('agentsam:navigation-ready', connect);
+    return () => window.removeEventListener('agentsam:navigation-ready', connect);
+  }, []);
   const appearanceRef = useRef<ShellAppearancePreference | null>(null);
   const [sharing, setSharing] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
@@ -249,31 +258,17 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       try {
         const activeTheme = await applyActiveStudioTheme();
         if (revision !== themeSyncRevision) return;
-        if (!activeTheme) {
-          setNavTokens({});
-          return;
-        }
-        const vars = activeTheme.cssVars ?? {};
-        const pick = (...keys: string[]) => keys
-          .map((key) => vars[key])
-          .find((value) => typeof value === 'string' && value.trim()) || undefined;
-        const tokens: NavTokens = {
-          canvas: pick('--nav-canvas', '--bg-canvas', '--bg-app', '--bg-primary'),
-          sidebar: pick('--nav-sidebar', '--bg-sidebar', '--bg-nav', '--bg-shell'),
-          surface: pick('--nav-surface', '--bg-surface', '--bg-elevated', '--bg-secondary', '--bg-card'),
-          popover: pick('--nav-popover', '--bg-panel', '--bg-elevated', '--bg-card'),
-          text: pick('--nav-text', '--text-sidebar', '--text-nav', '--text-main', '--text-primary', '--color-text'),
-          muted: pick('--nav-muted', '--text-sidebar-muted', '--text-nav-muted', '--text-muted', '--text-secondary'),
-          border: pick('--nav-border', '--border-nav', '--border', '--border-subtle', '--color-border'),
-          hover: pick('--nav-hover', '--bg-hover', '--primary-dim', '--bg-secondary'),
-          selected: pick('--nav-selected', '--primary-dim', '--bg-hover', '--bg-secondary'),
-          danger: pick('--nav-danger', '--accent-danger', '--color-error'),
-        };
-        setNavTokens(Object.fromEntries(Object.entries(tokens).filter(([, value]) => Boolean(value))) as NavTokens);
-        const activeAccent = pick('--nav-accent', '--accent', '--color-primary', '--accent-primary');
-        if (activeAccent) setAccent(activeAccent);
-        const family = String(activeTheme.themeFamily || '').toLowerCase();
-        if (family === 'light' || family === 'dark') setTheme(family);
+        const preference = appearanceRef.current;
+        const stored = readTheme();
+        const fallbackTheme = preference?.theme === 'system'
+          ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+          : preference?.theme ?? (stored.monacoBase === 'vs' ? 'light' : 'dark');
+        const appearance = projectStudioShellAppearance(activeTheme, { theme:fallbackTheme, accentColor:preference?.accent ?? stored.tokens.accent });
+        applyStudioShellAppearance(appearance, document.documentElement);
+        setNavTokens(appearance.tokens);
+        setAccent(appearance.accentColor);
+        setTheme(appearance.theme);
+        window.dispatchEvent(new CustomEvent('agentsam:theme-applied', { detail:appearance }));
       } catch (error) {
         if (revision === themeSyncRevision) console.warn('[agentsam/theme-registry]', error);
       }
@@ -371,6 +366,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     conversations: state.trails.filter(item => item.id !== "trail-studio" || item.messages.some(message => message.role === "user")).map((item) => ({ id: item.id, title: item.title, projectId: item.workProjectId, pinned: item.pinned,updatedAt:item.updatedAt })),
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
     showSidebarHeader: false,
+    newConversationAfter: 'home',
     showHistory: isConversation,
     destinations: [
       // Render the platform-owned business destinations first. These are the
@@ -432,7 +428,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     window.dispatchEvent(new Event('agentsam:workspace-navigation'));
     return () => {if(host.__agentsamWorkspaceNavigation===projection)delete host.__agentsamWorkspaceNavigation;};
   },[state.trails,state.activeTrailId,workProjects,historyStatus]);
-  return <ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} tokens={navTokens} defaultOpen resizable storageKey={"agentsam-nav:" + (user && !user.isDevFallback ? user.id : "local")}>
+  return <ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} tokens={navTokens} defaultOpen resizable stateStore={navigationStore} storageKey={navigationStore ? undefined : "agentsam-nav:" + (user && !user.isDevFallback ? user.id : "local")}>
     <Nav.Scope className="agentsam-shell platform-console" data-agentsam-app-shell="local-studio" data-platform-console="true" data-conversation={isConversation ? "true" : "false"} data-embedded={embedded ? "true" : undefined}>
       {!embedded ? <Nav.Sidenav /> : null}<div className="agentsam-main">
         {!embedded && !isConversation ? <Nav.Topbar className="platform-console-topbar">

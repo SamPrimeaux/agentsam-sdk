@@ -23,8 +23,8 @@ test('Settings shell host is session-gated, read-only and stays on the current a
  const end=worker.indexOf('    // Gate authenticated Studio app routes',start);
  assert.ok(start>0 && end>start);
  const section=worker.slice(start,end);
- assert.match(section,/await resolveSessionUserId\(request,env\)/);
- assert.match(section,/Response.redirect\(url.origin\+LOGIN_PATH/);
+ assert.match(section,/await guardStudioDocument\(request, env\)/);
+ assert.match(section,/if \(denied\) return denied/);
  assert.match(section,/studio-settings-shell/);
  assert.match(section,/cache-control","private, no-store"/);
  assert.doesNotMatch(section,/env\.DB\.prepare/);
@@ -49,7 +49,7 @@ test('AgentSam Work, CAD and MovieMode use authenticated canonical React shells'
  const end=worker.indexOf('    // Settings are served as build-generated',begin);
  assert.ok(begin>0 && end>begin);
  const section=worker.slice(begin,end);
- assert.match(section,/resolveSessionUserId\(request,env\)/);
+ assert.match(section,/guardStudioDocument\(request, env\)/);
  assert.match(section,/studio-app-shell/);
  assert.match(section,/cache-control","private, no-store"/);
  assert.doesNotMatch(section,/env\.DB\.prepare|INSERT INTO|UPDATE |DELETE FROM/);

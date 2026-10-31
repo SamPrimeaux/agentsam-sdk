@@ -288,12 +288,14 @@ function SidenavContents() {
   const pinnedConversations = conversations.filter((item) => item.pinned);
   const pinnedProjects = projects.filter((item) => item.pinned);
   const recent = conversations.filter((item) => !item.pinned).sort((a,b) => (b.updatedAt ?? 0)-(a.updatedAt ?? 0));
+  const newConversation = data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null;
+  const insertAfter = data.destinations?.some(item => item.id === data.newConversationAfter) ? data.newConversationAfter : undefined;
   return <>
     {data.showSidebarHeader !== false ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /></div> : isMobile ? <div className="as-nav-sidenav-head as-nav-sidenav-head--close"><button type="button" className="as-nav-button" aria-label="Close navigation" title="Close navigation" onClick={close}><X /></button></div> : null}
     <div className="as-nav-sidenav-main">
       <div className="as-nav-destinations">
-        {data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null}
-        {(data.destinations ?? []).map((item) => <DestinationRow key={item.id} item={item} />)}
+        {!insertAfter ? newConversation : null}
+        {(data.destinations ?? []).map((item) => <Fragment key={item.id}><DestinationRow item={item} />{item.id === insertAfter ? newConversation : null}</Fragment>)}
       </div>
       {data.showHistory !== false ? <div className="as-nav-expanded-only as-nav-history">
         <label className="as-nav-search"><Search /><input aria-label="Search projects and conversations" placeholder="Search workspace" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
@@ -335,7 +337,9 @@ export function NavSidenav() {
   if (isMobile) return <Dialog.Root open={open} onOpenChange={setOpen}><Dialog.Portal><Dialog.Overlay className="as-nav-dialog-overlay" /><Dialog.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-mobile-drawer"><Dialog.Title className="as-nav-sr-only">Navigation</Dialog.Title><Dialog.Description className="as-nav-sr-only">Projects and conversations</Dialog.Description><SidenavContents /></Dialog.Content></Dialog.Portal></Dialog.Root>;
   return <NavScope className="as-nav-sidenav-reserve" data-open={open}
     onMouseOver={(event) => showHint(event.target)} onMouseOut={hideHint}
-    onFocus={(event) => showHint(event.target)} onBlur={hideHint} onPointerDown={hideHint} onScrollCapture={hideHint}>
+    onFocus={(event) => { showHint(event.target); if (peekable && !open) setPeeking(true); }}
+    onBlur={(event) => { hideHint(); if (!event.currentTarget.contains(event.relatedTarget as Node | null) && !menu) setPeeking(false); }}
+    onPointerDown={hideHint} onScrollCapture={hideHint}>
     {hint && !open ? createPortal(<div role="tooltip" data-nav-theme={theme} className="as-nav-scope as-nav-rail-tooltip" style={{...style, top:hint.top, left:hint.left}}>{hint.label}</div>, document.body) : null}
     <aside aria-label="Application navigation" className="as-nav-sidenav" data-expanded={open || isPeeking} onMouseEnter={() => { if (peekable && !open) setPeeking(true); }} onMouseLeave={() => { if (!menu) setPeeking(false); }}><SidenavContents /></aside>
     {open && resizable ? <div className="as-nav-resize" role="separator" aria-label="Resize navigation" aria-orientation="vertical" aria-valuemin={208} aria-valuemax={400} aria-valuenow={width} tabIndex={0}

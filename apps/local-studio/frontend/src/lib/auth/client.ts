@@ -4,9 +4,10 @@ import { runPreSignInSignOut, runSignOut } from "../../../../scripts/sign-out-pl
 import { GROK_PROVIDERS } from "./providers";
 
 /**
- * Better Auth client for this React SPA (browser-side).
- *
- * Talks to this app's OWN Better Auth at same-origin `/api/auth/*`. In the live
+ * Compatibility client for the original local/preview Better Auth runtime.
+ * The hosted Worker uses the SDK IAM authority; use-current-user projects its
+ * existing /api/auth/me contract and signOut selects the matching transport.
+ * In the live
  * preview the app is an embedded iframe with PARTITIONED cookies, so after a
  * popup sign-in it can't read the session cookie — it authenticates with a
  * bearer token instead (captured from the popup, see `signIn`). The `onRequest`
@@ -138,6 +139,20 @@ export async function signIn(
   const callbackURL = opts.callbackURL ?? "/";
   const errorCallbackURL = opts.errorCallbackURL ?? "/";
 
+  if (!inLivePreview()) {
+    const { browserIdentity } = await import("./use-current-user");
+    if (!browserIdentity.getRuntime()) await browserIdentity.refresh();
+    if (browserIdentity.getRuntime() === 'iam') {
+      // The installed host owns provider discovery and OAuth consent. Broker
+      // provider ids from the template are not IAM provider identifiers.
+      window.location.assign('/auth/login?next=' + encodeURIComponent(callbackURL));
+      return;
+    }
+    if (browserIdentity.getRuntime() !== 'better-auth') {
+      throw new Error('Account service is unavailable. Retry before signing in.');
+    }
+  }
+
   // Open the popup SYNCHRONOUSLY on the user gesture — before any await
   // (including signOut). Awaiting first drops user-gesture privilege in some
   // browsers when the opener is a cross-origin live-preview iframe.
@@ -164,7 +179,8 @@ export async function signIn(
     // Avoid a full iframe reload when we're already on the destination — that
     // reload was the slow "still loading after the popup closed" feeling.
     try {
-      await authClient.getSession();
+      const { browserIdentity } = await import("./use-current-user");
+      await browserIdentity.refresh(true);
     } catch {
       /* session store will recover on next useSession fetch */
     }
@@ -260,8 +276,10 @@ export async function signOut(redirectTo = "/"): Promise<void> {
     // Better Auth resolves with `{ error }` instead of rejecting, so surface a
     // failed response as a rejection for the sequence to act on.
     requestSignOut: async () => {
-      const { error } = await authClient.signOut();
-      if (error) throw new Error(error.message ?? "Sign-out failed");
+      // Browser identity negotiates the existing host authority: IAM's logout
+      // endpoint on the Worker, Better Auth's sign-out on the local/preview host.
+      const { browserIdentity } = await import("./use-current-user");
+      await browserIdentity.signOut();
     },
     clearToken: () => setBearerToken(null),
     redirect: () => {

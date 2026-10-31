@@ -124,6 +124,41 @@
   // Host composition only: the same published Nav components used by Studio.
   let sharedNavigation = null;
   let sharedNavReady = null;
+  let appearanceModule = null;
+  let sharedAppearance = null;
+  let appearanceAccount = null;
+  let appearanceRevision = 0;
+  let accountTheme = null;
+  let navigationMountRevision = 0;
+  function acceptShellAppearance(appearance) {
+    if (!appearance?.tokens || !['light','dark'].includes(appearance.theme)) return;
+    sharedAppearance = appearance;
+    appearanceModule?.applyStudioShellAppearance(appearance, document.documentElement);
+    sharedNavigation?.update(appearance);
+  }
+  async function refreshAccountAppearance(user) {
+    // React routes own their existing theme request; static Console routes use
+    // the same projection and authenticated endpoint through this host adapter.
+    if (!appearanceModule || document.getElementById('agentsam-host-workspace')) return;
+    const account = (user || window.__shellUser)?.id || null;
+    if (appearanceAccount === account) return;
+    appearanceAccount = account;
+    accountTheme = null;
+    const revision = ++appearanceRevision;
+    const preference = preferredDashboardAppearance();
+    const fallback = { theme:preference?.mode || document.documentElement.dataset.theme, accentColor:preference?.accent };
+    acceptShellAppearance(appearanceModule.projectStudioShellAppearance(null, fallback));
+    if (!account) return;
+    try {
+      const response = await fetch('/api/studio/themes', {credentials:'same-origin'});
+      if (!response.ok) throw new Error('Theme registry unavailable');
+      const data = await response.json();
+      if (revision !== appearanceRevision) return;
+      const active = data.themes?.find(theme => String(theme.id) === String(data.activeThemeId));
+      accountTheme = active || null;
+      acceptShellAppearance(appearanceModule.projectStudioShellAppearance(active, fallback));
+    } catch (error) { console.warn('[navigation/theme]', error); appearanceAccount = null; }
+  }
   let sharedNavPath = (window.location?.pathname || '/admin/home') + (window.location?.search || '');
   const originalHydrateNav = typeof hydrateShellNav === 'function' ? hydrateShellNav : null;
   // Static product pages read the existing Studio conversation persistence only.
@@ -208,7 +243,7 @@
     });
     const nav = buildUserNav(profile);
     return {
-      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/docs' : sharedNavPath, showHistory: true, showSidebarHeader: false,
+      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/docs' : sharedNavPath, showHistory: true, showSidebarHeader: false, newConversationAfter:'home',
       ...workspaceNavigation(),
       ...(sharedNavPath.startsWith('/settings') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/settings/general'}]} : {}),
       ...(sharedNavPath.startsWith('/admin/products/help/artwork') ? {breadcrumbs:[{id:'docs',label:'Docs',href:'/docs'},{id:'artwork-guide',label:'Artwork Help'}]} : {}),
@@ -258,9 +293,13 @@
     return sharedNavReady;
   }
   async function mountSharedNavigation() {
+    const revision = ++navigationMountRevision;
     await loadSharedNavigation();
+    if (revision !== navigationMountRevision) return;
     const aside = document.querySelector('.console-sidenav.admin-sidebar');
     if (!aside || document.body.dataset.shellMode === 'theme-editor') return;
+    appearanceModule = await import('/admin/js/shell-appearance.mjs');
+    if (revision !== navigationMountRevision || !aside.isConnected) return;
     sharedNavigation?.unmount();
     aside.replaceChildren(); aside.classList.remove('is-collapsed');
     document.body.classList.add('agentsam-shared-navigation', 'admin-dock-off');
@@ -272,15 +311,19 @@
     sharedNavigation = window.AgentSamNav.mountNav({
       breadcrumbs: leading?.querySelector('.console-route-label'),
       sidenav: aside, value: navigationValue(), resizable: true,
+      stateStore: window.__agentsamNavigationStore,
       onStateChange: ({open}) => leading?.querySelector('[data-shared-nav-toggle]')?.setAttribute('aria-expanded', String(open)),
       storageKey: 'agentsam-nav:' + (window.__shellUser?.id || 'local'),
-      theme: document.documentElement.dataset.theme || readConsoleAppearance(), tokens: { font: 'Inter, system-ui, sans-serif', 'label-size':'14px', 'meta-size':'12px', 'row-height':'36px' }
+      ...(sharedAppearance || appearanceModule.projectStudioShellAppearance(null, {theme:document.documentElement.dataset.theme || readConsoleAppearance(), accentColor:preferredDashboardAppearance()?.accent}))
     });
+    window.__agentsamNavigationStore = sharedNavigation.stateStore;
+    window.dispatchEvent(new Event('agentsam:navigation-ready'));
     updateSharedNavigation();
     if (!window.__agentsamWorkspaceNavigation) void refreshWorkspaceProjects();
   }
   function updateSharedNavigation(user) {
-    sharedNavigation?.update({ value: navigationValue(user), theme: document.documentElement.dataset.theme || readConsoleAppearance(), storageKey: 'agentsam-nav:' + ((user || window.__shellUser)?.id || 'local') });
+    sharedNavigation?.update({ value: navigationValue(user), ...(sharedAppearance || {theme:document.documentElement.dataset.theme || readConsoleAppearance()}), storageKey: 'agentsam-nav:' + ((user || window.__shellUser)?.id || 'local') });
+    void refreshAccountAppearance(user);
   }
   if (typeof renderShell === 'function') {
     const originalRender = renderShell;
@@ -302,8 +345,17 @@
     sharedNavPath = event.detail?.pathname || window.location.pathname;
     updateSharedNavigation();
   });
-  window.addEventListener?.('agentsam:shell-appearance', () => updateSharedNavigation());
+  function refreshAppearancePreference() {
+    if (appearanceModule && !document.getElementById('agentsam-host-workspace')) {
+      const preference = preferredDashboardAppearance();
+      acceptShellAppearance(appearanceModule.projectStudioShellAppearance(accountTheme, {theme:preference?.mode || document.documentElement.dataset.theme, accentColor:preference?.accent}));
+    }
+    updateSharedNavigation();
+  }
+  window.addEventListener?.('agentsam:shell-appearance', refreshAppearancePreference);
+  window.addEventListener?.('storage', event => { if (event.key === 'agentsam-shell-appearance-v1') refreshAppearancePreference(); });
   window.addEventListener?.('agentsam:workspace-navigation', () => updateSharedNavigation());
+  window.addEventListener?.('agentsam:theme-applied', event => acceptShellAppearance(event.detail));
   if (typeof MutationObserver !== 'undefined') new MutationObserver(() => updateSharedNavigation()).observe(document.documentElement, {attributes:true,attributeFilter:['data-theme']});
   if (typeof document !== 'undefined') document.addEventListener('click', event => {
     if (!sharedNavigation || !event.target?.closest?.('[data-shared-nav-toggle], [data-console-nav-toggle], #admin-menu-toggle')) return;

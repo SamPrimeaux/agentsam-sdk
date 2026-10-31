@@ -26,6 +26,8 @@ export interface NavValue {
   pathname?: string;
   /** Commerce or other non-conversation hosts may omit the history region. */
   showHistory?: boolean;
+  /** Insert the built-in New chat action after this destination id. */
+  newConversationAfter?: string;
   historyStatus?: "loading" | "error" | "ready";
   onRetryHistory?: () => void;
   /** Set false when the host already owns the single global sidebar toggle. */

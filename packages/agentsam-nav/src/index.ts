@@ -1,4 +1,5 @@
 export { Nav } from './Nav.js';
+export { createNavState, type NavState, type NavStateStore } from './state.js';
 export { resolveNavDestinations, navDestinationActive, navBreadcrumbs } from './utils.js';
 export * from './contracts.js';
 export * from './Surfaces.js';

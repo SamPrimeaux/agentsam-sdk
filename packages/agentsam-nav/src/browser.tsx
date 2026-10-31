@@ -2,6 +2,8 @@ import { createRoot } from 'react-dom/client';
 import { createElement, useEffect } from 'react';
 import { Home, ShoppingBag, Package, Users, TrendingUp, Tag, FileText, ChartNoAxesCombined, Store, Mail, Folder, Library, Ticket, Bot, Box, Clapperboard, Settings, Database, Terminal, Globe, Puzzle, Search, Palette, Link, LifeBuoy, LogOut, LayoutDashboard, Bell, Code, Image, CreditCard } from 'lucide-react';
 import { useNav } from './NavProvider.js';
+import { createNavState } from './state.js';
+export { createNavState } from './state.js';
 
 /** Hosts pass semantic icon names, never serialized SVG/HTML. */
 export function navIcon(name: string) {
@@ -26,8 +28,9 @@ export function mountNav(options: MountNavOptions) {
   const anchor = document.createElement('div');
   anchor.style.display = 'contents';
   (options.sidenav ?? options.topbar ?? options.breadcrumbs)!.parentElement!.appendChild(anchor);
-  const root = createRoot(anchor);
-  let current = options;
+  const root = createRoot(anchor, { identifierPrefix: 'agentsam-host-nav-' + crypto.randomUUID() + '-' });
+  const stateStore = options.stateStore ?? createNavState({ desktopOpen: (options.defaultOpen ?? true) && window.innerWidth >= 1024 });
+  let current = { ...options, stateStore };
   let controls: { toggle: () => void; setOpen: (open: boolean) => void } | undefined;
   function StateBridge() {
     const nav = useNav();
@@ -45,9 +48,10 @@ export function mountNav(options: MountNavOptions) {
   </Nav.Provider>);
   render();
   return {
+    stateStore,
     toggle() { controls?.toggle(); },
     setOpen(open: boolean) { controls?.setOpen(open); },
-    update(next: Partial<MountNavOptions>) { current = { ...current, ...next }; render(); },
+    update(next: Partial<MountNavOptions>) { current = { ...current, ...next, stateStore }; render(); },
     unmount() { root.unmount(); anchor.remove(); },
   };
 }

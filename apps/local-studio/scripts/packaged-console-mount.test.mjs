@@ -71,7 +71,7 @@ test('Growth partial serves from installed Ecommerce assets, not customer storag
 test('immutable product sources and packaged shell are the authority', () => {
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /servePackagedConsole/);
-  assert.match(worker, /url\.pathname === "\/admin\/home"[\s\S]{0,650}resolveSessionUserId\(request, env\)[\s\S]{0,650}allowStudioHome: true/);
+  assert.match(worker, /url\.pathname === "\/admin\/home"[\s\S]{0,650}guardStudioDocument\(request, env\)[\s\S]{0,650}allowStudioHome: true/);
   const cloudflare = readFileSync(new URL('../backend/wrangler.jsonc', import.meta.url), 'utf8');
   // wrangler.jsonc allows comments/trailing commas; parse the route array,
   // not the entire JSONC document with JSON.parse.
@@ -113,7 +113,7 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.match(shell, /<Nav\.Topbar className="platform-console-topbar">/);
 
   const css = readFileSync(new URL('../frontend/agentsam/platform-console.css', import.meta.url), 'utf8');
-  assert.match(css, /--nav-width: 246px/);
+  assert.doesNotMatch(css, /--nav-(?:width|rail-width):/, "Navigation geometry stays with agentsam-nav");
 });
 
 test('admin home resolves to the packaged Ecommerce home on Local Studio', () => {
