@@ -3,6 +3,19 @@ import type { AgentSamWidgetDefinition } from '@inneranimalmedia/agentsam-contra
 /** Only widgets with working packaged renderers belong here. */
 export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
   Object.freeze({
+    id: 'queues',
+    kind: 'queues',
+    title: 'Queue Depth',
+    description: 'Cloudflare transport backlog, consumers, and 24h history',
+    icon: 'layers',
+    category: 'glance',
+    tags: ['glance', 'queues', 'backlog', 'cloudflare'],
+    sizes: ['medium', 'large'] as const,
+    availability: 'ready',
+    ownerPackage: '@inneranimalmedia/agentsam-queue-control',
+    deeplink: '/widgets',
+  } satisfies AgentSamWidgetDefinition),
+  Object.freeze({
     id: 'countdown',
     kind: 'countdown',
     title: 'Countdown',
@@ -82,18 +95,6 @@ export const WIDGET_GALLERY_DEFINITIONS = Object.freeze([
     sizes: ['medium', 'large'] as const,
     availability: 'demo',
     ownerPackage: '@inneranimalmedia/agentsam-analytics',
-  } satisfies AgentSamWidgetDefinition),
-  Object.freeze({
-    id: 'queues',
-    kind: 'queues',
-    title: 'Queue Depth',
-    description: 'Inbound message backlog, priority distribution, and dead-letter count',
-    icon: 'layers',
-    category: 'glance',
-    tags: ['glance', 'queues', 'backlog', 'throughput'],
-    sizes: ['medium', 'large'] as const,
-    availability: 'demo',
-    ownerPackage: '@inneranimalmedia/agentsam-queue-control',
   } satisfies AgentSamWidgetDefinition),
   Object.freeze({
     id: 'runtime-state',
