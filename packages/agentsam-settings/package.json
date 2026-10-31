@@ -9,7 +9,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./appearance": { "types": "./dist/appearance.d.ts", "import": "./dist/appearance.js" },
+    "./appearance": {
+      "types": "./dist/appearance.d.ts",
+      "import": "./dist/appearance.js"
+    },
     "./contracts": {
       "types": "./dist/contracts/index.d.ts",
       "import": "./dist/contracts/index.js"
@@ -26,7 +29,8 @@
   "peerDependencies": {
     "lucide-react": "^0.510.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "@inneranimalmedia/agentsam-workbench": "2.6.13"
   },
   "publishConfig": {
     "access": "public"
