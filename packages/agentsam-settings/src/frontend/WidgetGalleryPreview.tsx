@@ -15,7 +15,7 @@ import {
  * a simulated approval, run, metric, or provider connection as live.
  * Real widget renderers continue to be owned by the Workbench widget surface.
  */
-export function WidgetGalleryPreview({ id }: { id: string }) {
+export function WidgetGalleryPreview({ id, interactive = false }: { id: string; interactive?: boolean }) {
   const line = (width: string, light = false) => (
     <span
       className={`block h-1.5 rounded-full ${light ? "bg-foreground/35" : "bg-foreground/10"}`}
@@ -97,7 +97,7 @@ export function WidgetGalleryPreview({ id }: { id: string }) {
     const entries = id === "jobs" ? [["Index workspace","2 min"],["Refresh analytics","15 min"],["Daily summary","Tomorrow"]] : id === "github-activity" ? [["Widget package updated","2h ago"],["Build checks passed","4h ago"],["Release branch synced","1d ago"]] : [["Dashboard snapshot","4 min"],["Project review","1h"],["Studio workspace","Yesterday"]];
     return <div className="flex h-full flex-col justify-center">{entries.map(([title, right],i)=><div key={title}>{row(title,right,i===1?"check":undefined)}</div>)}</div>;
   }
-  if (id === "queues") return <QueueDepthWidget compact />;
+  if (id === "queues") return <QueueDepthWidget compact interactive={interactive} />;
   if (id === "queue-status") {
     return <div className="flex h-full flex-col justify-between">
       <div className="grid grid-cols-3 gap-2">{[["12","Queued"],["04","Running"],["00","Failed"]].map(([v,l])=><div key={l}><span className="font-mono text-[22px] font-medium text-foreground">{v}</span><div className="mt-1 text-[9px] text-muted-foreground">{l}</div></div>)}</div>
