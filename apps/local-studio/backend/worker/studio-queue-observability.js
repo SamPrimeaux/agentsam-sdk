@@ -17,7 +17,7 @@ function providerConfig(env) {
 }
 
 function queueStatus(value) {
-  return value === true ? 'paused' : value === false ? 'active' : 'unknown';
+  return value === true ? 'delivery paused' : value === false ? 'delivery enabled' : 'unknown';
 }
 
 export function normalizeQueueInventory(queue, metrics, owners = {}) {
@@ -43,8 +43,12 @@ export function normalizeQueueInventory(queue, metrics, owners = {}) {
       dead_letter_queue: consumer.dead_letter_queue || null,
       settings: consumer.settings || {},
     })),
-    producers_total_count: Number(queue.producers_total_count ?? configuredProducers.length),
-    consumers_total_count: Number(queue.consumers_total_count ?? configuredConsumers.length),
+    producer_inventory_state: Array.isArray(queue.producers) ? 'ready' : 'unknown',
+    consumer_inventory_state: Array.isArray(queue.consumers) ? 'ready' : 'unknown',
+    producers_total_count: queue.producers_total_count == null && !Array.isArray(queue.producers)
+      ? null : Number(queue.producers_total_count ?? configuredProducers.length),
+    consumers_total_count: queue.consumers_total_count == null && !Array.isArray(queue.consumers)
+      ? null : Number(queue.consumers_total_count ?? configuredConsumers.length),
     metrics,
   };
 }
@@ -86,9 +90,13 @@ export async function handleStudioQueueObservability(request, env, accountId, {
       } catch { /* A failed metrics read must not display a fabricated zero. */ }
     }
     let enriched = queue;
-    if (!Array.isArray(queue.consumers) && queueId) {
-      try { enriched = { ...queue, consumers: await api.listConsumers(queueId) }; }
-      catch { /* Inventory may still display queue without consumer detail. */ }
+    if (queueId) {
+      try { enriched = { ...queue, ...await api.getQueue(queueId) }; }
+      catch { /* Retain list-level topology but do not fabricate missing bindings. */ }
+    }
+    if (!Array.isArray(enriched.consumers) && queueId) {
+      try { enriched = { ...enriched, consumers: await api.listConsumers(queueId) }; }
+      catch { /* Inventory remains visibly incomplete when consumers cannot be read. */ }
     }
     return normalizeQueueInventory(enriched, metrics, owners);
   }));
