@@ -1,12 +1,46 @@
 {
-  "schema": "agentsam.package.v1",
-  "id": "theme-plain-jane",
-  "name": "@inneranimalmedia/theme-plain-jane",
-  "class": "theme",
-  "purpose": "Read-only editorial journal and photography CMS starter with externally editable manifest.",
-  "status": "review",
+  "avoid_when": [
+    "A licensed production storefront or a verified CMS installation is required."
+  ],
   "catalog_status": "needs-review",
-  "registry": {"kind": "local-package", "name": "@inneranimalmedia/theme-plain-jane", "public_claim": false},
-  "review_required": ["distribution-license", "production-cms-adapter", "install-receipt", "tenant-isolation"],
-  "evidence": {"directory": "packages/theme-plain-jane", "purpose_source": "source snapshot"}
+  "class": "theme",
+  "commands": [],
+  "evidence": {
+    "directory": "packages/theme-plain-jane",
+    "purpose_source": "source snapshot"
+  },
+  "execution_domains": [
+    "node",
+    "browser"
+  ],
+  "id": "theme-plain-jane",
+  "install": [],
+  "languages": [
+    "javascript"
+  ],
+  "name": "@inneranimalmedia/theme-plain-jane",
+  "purpose": "Read-only editorial journal and photography CMS starter with externally editable manifest.",
+  "registry": {
+    "kind": "local-package",
+    "name": "@inneranimalmedia/theme-plain-jane",
+    "public_claim": false
+  },
+  "review_required": [
+    "distribution-license",
+    "production-cms-adapter",
+    "install-receipt",
+    "tenant-isolation"
+  ],
+  "schema": "agentsam.package.v1",
+  "status": "review",
+  "topics": [
+    "cms",
+    "editorial",
+    "photography",
+    "theme"
+  ],
+  "use_when": [
+    "Review a source-driven editorial journal and photography starter."
+  ],
+  "version": "0.1.0"
 }
