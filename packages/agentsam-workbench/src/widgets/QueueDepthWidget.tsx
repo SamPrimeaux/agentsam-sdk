@@ -28,7 +28,7 @@ function ageOf(timestamp: number | null | undefined) {
     ? `${Math.floor(age / 60_000)}m` : `${Math.floor(age / 3_600_000)}h`;
 }
 
-export function QueueDepthWidget({ compact = false }: { compact?: boolean }) {
+export function QueueDepthWidget({ compact = false, interactive = true }: { compact?: boolean; interactive?: boolean }) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [selectedId, setSelectedId] = useState('');
   const [state, setState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
@@ -91,10 +91,10 @@ export function QueueDepthWidget({ compact = false }: { compact?: boolean }) {
   const max = Math.max(1, ...points.map(p => p.backlog_count ?? 0));
   return <section className="flex min-w-0 flex-col gap-3 text-foreground" aria-label="Cloudflare queue depth">
     <div className="flex items-center justify-between gap-2">
-      <select aria-label="Physical queue" className="min-w-0 max-w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
+      {interactive ? <select aria-label="Physical queue" className="min-w-0 max-w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
         value={selected.queue_id} onChange={event => { setSelectedId(event.target.value); setShowHistory(false); }}>
         {snapshot.queues.map(queue => <option key={queue.queue_id} value={queue.queue_id}>{queue.queue_name}</option>)}
-      </select>
+      </select> : <span className="min-w-0 truncate text-xs font-medium">{selected.queue_name}</span>}
       <span className="shrink-0 text-[10px] text-muted-foreground">Cloudflare · live</span>
     </div>
     <div className="grid grid-cols-3 gap-2">
@@ -104,8 +104,8 @@ export function QueueDepthWidget({ compact = false }: { compact?: boolean }) {
     </div>
     <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground">
       <span>{selected.delivery_status} · {selected.producers_total_count} producers · {selected.consumers_total_count} consumers</span>
-      <button type="button" className="rounded border border-border px-2 py-1 text-foreground" onClick={() => setShowHistory(previous => !previous)}
-        aria-expanded={showHistory}>{showHistory ? 'Hide history' : '24h history'}</button>
+      {interactive && <button type="button" className="rounded border border-border px-2 py-1 text-foreground" onClick={() => setShowHistory(previous => !previous)}
+        aria-expanded={showHistory}>{showHistory ? 'Hide history' : '24h history'}</button>}
     </div>
     {showHistory && <div className="space-y-1" aria-label="Backlog over the last 24 hours">
       {history?.state === 'unavailable' ? <p className="text-xs text-muted-foreground">Historical analytics unavailable.</p>
