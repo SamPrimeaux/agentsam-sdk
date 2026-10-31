@@ -891,7 +891,7 @@ export default {
           if (preference.ok) studioUser.avatar_url = (await preference.json()).avatar_url || principal.avatar_url || null;
         } catch { /* Identity remains usable when optional profile preferences are unavailable. */ }
       }
-      if (url.pathname === "/api/admin/store/online" && request.method === "GET")
+      if (["/api/admin/store/online", "/api/admin/overview"].includes(url.pathname) && request.method === "GET")
         return handleStudioSitesOverview(request, env, principal.id);
       const commerceEnv = url.pathname.startsWith("/api/admin/completeful/")
         ? await completefulAccountEnvironment(env, principal.id)
