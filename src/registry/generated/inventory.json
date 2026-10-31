@@ -8,7 +8,7 @@
   "counts": {
     "commands": 76,
     "capabilities": 82,
-    "packages": 65
+    "packages": 66
   },
   "commands": [
     {
@@ -2746,7 +2746,7 @@
       "use_when": [
         "Reusable responsive navigation primitives for AgentSam dashboard-family applications."
       ],
-      "version": "2.6.12",
+      "version": "2.6.14",
       "readiness": "unverified"
     },
     {
@@ -4288,6 +4288,53 @@
       "readiness": "unverified"
     },
     {
+      "avoid_when": [
+        "A licensed production storefront or a verified CMS installation is required."
+      ],
+      "catalog_status": "needs-review",
+      "class": "theme",
+      "commands": [],
+      "evidence": {
+        "directory": "packages/theme-plain-jane",
+        "purpose_source": "source snapshot"
+      },
+      "execution_domains": [
+        "node",
+        "browser"
+      ],
+      "id": "theme-plain-jane",
+      "install": [],
+      "languages": [
+        "javascript"
+      ],
+      "name": "@inneranimalmedia/theme-plain-jane",
+      "purpose": "Read-only editorial journal and photography CMS starter with externally editable manifest.",
+      "registry": {
+        "kind": "local-package",
+        "name": "@inneranimalmedia/theme-plain-jane",
+        "public_claim": false
+      },
+      "review_required": [
+        "distribution-license",
+        "install-receipt",
+        "production-cms-adapter",
+        "tenant-isolation"
+      ],
+      "schema": "agentsam.package.v1",
+      "status": "review",
+      "topics": [
+        "cms",
+        "editorial",
+        "photography",
+        "theme"
+      ],
+      "use_when": [
+        "Review a source-driven editorial journal and photography starter."
+      ],
+      "version": "0.1.0",
+      "readiness": "unverified"
+    },
+    {
       "avoid_when": [],
       "catalog_status": "needs-review",
       "class": "theme",
@@ -4328,7 +4375,7 @@
       "use_when": [
         "A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbooks, stories, bundles, and micro-interactions that make the storefront feel directed instead of assembled."
       ],
-      "version": "2.6.12",
+      "version": "2.6.13",
       "readiness": "unverified"
     },
     {

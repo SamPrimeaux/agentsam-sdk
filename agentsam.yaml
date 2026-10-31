@@ -301,6 +301,10 @@ packages:
       name: "@inneranimalmedia/theme-iasf"
       path: "packages/theme-iasf"
       readiness: unverified
+    - id: "theme-plain-jane"
+      name: "@inneranimalmedia/theme-plain-jane"
+      path: "packages/theme-plain-jane"
+      readiness: unverified
     - id: "theme-resolve"
       name: "@inneranimalmedia/theme-resolve"
       path: "packages/theme-resolve"
