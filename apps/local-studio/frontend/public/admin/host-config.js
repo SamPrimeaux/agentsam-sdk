@@ -57,7 +57,7 @@
     .then(response => { if (!response.ok) throw new Error('Application navigation unavailable'); return response.json(); })
     .then(data => {
       if (data.schema !== 'agentsam.host-navigation.v1' || !Array.isArray(data.apps)) throw new Error('Invalid application navigation');
-      const inHostedAppFrame = Boolean(window.parent && window.parent !== window && !desktopHost);
+      const inHostedAppFrame = Boolean(window.parent && window.parent !== window && !desktopHost && !hostedParent());
       NAV.main.splice(0, NAV.main.length, ...(data.primary || []).map(item =>
         inHostedAppFrame && item.id === 'home'
           ? { ...item, href: '/admin/home?__agentsamEmbedded=1' }
@@ -267,7 +267,15 @@
       onNavigate: navigateHost
     };
   }
+  function hostedParent() {
+    try {
+      const parent = window.parent;
+      return !desktop && parent && parent !== window && parent.location?.origin === window.location?.origin ? parent : null;
+    } catch { return null; }
+  }
   function navigateHost(href) {
+    const parent = hostedParent();
+    if (parent && href.startsWith('/') && !href.startsWith('//')) { parent.location.assign(href); return; }
     if (desktopHost) desktopHost.navigate(href);
     else if (desktop) window.location.hash = '#' + href;
     else if (document.querySelector('#agentsam-host-workspace .agentsam-shell')) window.dispatchEvent(new CustomEvent('agentsam:navigate', {detail:{to:href}}));
@@ -276,6 +284,17 @@
       document.body.appendChild(link); link.click(); link.remove();
     }
   }
+  // Embedded product documents share the host URL, history and reload behavior.
+  document.addEventListener('click', event => {
+    const parent = hostedParent();
+    if (!parent || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || (event.button != null && event.button !== 0)) return;
+    const link = event.target?.closest?.('a[href]');
+    if (!link || (link.getAttribute('target') && link.getAttribute('target') !== '_self') || link.hasAttribute?.('download')) return;
+    const href = link.getAttribute('href');
+    if (!href || !href.startsWith('/') || href.startsWith('//')) return;
+    event.preventDefault(); event.stopImmediatePropagation();
+    parent.location.assign(href);
+  }, true);
   function loadSharedNavigation() {
     if (sharedNavReady) return sharedNavReady;
     sharedNavReady = new Promise((resolve, reject) => {
