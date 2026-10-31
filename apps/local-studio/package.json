@@ -61,7 +61,8 @@
     "verify:desktop:cad": "npm run verify:desktop && npm run smoke:desktop-cad",
     "verify:desktop:themes": "npm run verify:desktop && npm run smoke:themes && npm run smoke:cms-site-fidelity",
     "cf:smoke:worker": "node scripts/smoke-worker-routes.mjs",
-    "cf:build": "npm run build:included:all && npm run build && npm run cf:verify-output && npm run cf:smoke:worker"
+    "cf:build": "npm run build:included:all && npm run build && npm run cf:verify-output && npm run cf:smoke:worker",
+    "cf:build:source": "node scripts/cloudflare-source-build.mjs"
   },
   "dependencies": {
     "@cloudflare/codemode": "^0.5.2",
