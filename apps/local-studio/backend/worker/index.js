@@ -1,5 +1,6 @@
 import nitroWorker from "../../.output/server/index.mjs";
 import { serveCadChessAsset } from "./cad-chess-assets.js";
+import { handleStudioNotifications } from "./studio-notifications.js";
 import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
 import { resolveStudioSessionUser, guardStudioDocumentSession } from "./studio-session.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
@@ -842,6 +843,11 @@ export default {
 
     // Account-scoped theme registry. Shared presets are read-only; every
     // customization is cloned into a private cms_themes row for this account.
+    if (url.pathname === '/api/settings/notifications') {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioNotifications(request, env, principal?.id || null);
+    }
+
     if (url.pathname === '/api/studio/themes' || url.pathname.startsWith('/api/studio/themes/')) {
       const principal = await resolveSessionUser(request, env);
       return handleStudioThemes(request, env, principal?.id || null);
@@ -885,7 +891,7 @@ export default {
           if (preference.ok) studioUser.avatar_url = (await preference.json()).avatar_url || principal.avatar_url || null;
         } catch { /* Identity remains usable when optional profile preferences are unavailable. */ }
       }
-      if (url.pathname === "/api/admin/store/online" && request.method === "GET")
+      if (["/api/admin/store/online", "/api/admin/overview"].includes(url.pathname) && request.method === "GET")
         return handleStudioSitesOverview(request, env, principal.id);
       const commerceEnv = url.pathname.startsWith("/api/admin/completeful/")
         ? await completefulAccountEnvironment(env, principal.id)

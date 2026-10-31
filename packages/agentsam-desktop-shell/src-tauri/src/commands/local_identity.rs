@@ -104,6 +104,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             let root = path == "/api/settings/skills"
                 || path == "/api/settings/preferences"
                 || path == "/api/settings/account-avatar"
+                || path == "/api/settings/notifications"
                 || path == "/api/settings/agents"
                 || path == "/api/settings/agents/policy";
             let skill = path.strip_prefix("/api/settings/skills/").is_some_and(|id| {
@@ -989,6 +990,7 @@ mod tests {
             ("/api/settings/agents/asp_1234", "DELETE"),
             ("/api/settings/agents/policy", "GET"),
             ("/api/settings/agents/policy", "PUT"),
+            ("/api/settings/notifications", "GET"),
             ("/api/settings/preferences", "GET"),
             ("/api/settings/preferences", "PUT"),
             ("/api/settings/skills", "GET"),
@@ -1005,6 +1007,9 @@ mod tests {
             assert_eq!(target, path);
         }
         for (path, method) in [
+            ("/api/settings/notifications", "POST"),
+            ("/api/settings/notifications", "PUT"),
+            ("/api/settings/notifications", "DELETE"),
             ("/api/settings/agents/../vault/secrets", "GET"),
             ("/api/settings/agents/asp_1234", "POST"),
             ("/api/settings/skills/skill_1234", "GET"),
