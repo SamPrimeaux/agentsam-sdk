@@ -195,3 +195,21 @@ html,body,#app{width:100%;height:100%;min-width:0;min-height:0;margin:0;overflow
 /* A design-study label is not a runtime health indicator. */
 .studio-shell .sam-shell-study-status{display:none!important}
 @media(max-width:1050px){.studio-shell .canvas-tools{overflow-x:auto;scrollbar-width:none;justify-content:flex-start}.studio-shell .canvas-tools::-webkit-scrollbar{display:none}}
+
+/* Application chrome inherits the shared Settings palette; the authored scene keeps its backdrop. */
+html[data-nav-theme] .studio-shell{--panel:var(--nav-surface);--text:var(--nav-text);--muted:var(--nav-muted);--line:var(--nav-border);--accent:var(--nav-accent);background:var(--nav-canvas);color:var(--nav-text);}
+html[data-nav-theme] .studio-shell :is(.app,.top,.left,.right,.timeline,.section,.library-intro,.library-tabs,.dock-tabs,.inspector-heading,.sam-shell-topbar-host .as-nav-topbar){background:var(--nav-surface);color:var(--nav-text);border-color:var(--nav-border);}
+html[data-nav-theme] .studio-shell :is(.field input,.field select,.search-shell,.template-card,.layer,.preset,.studio-project-chip,.brand-choice button,.model-filters button,.skill-chips button,.library-tabs button){background:var(--nav-popover);color:var(--nav-text);border-color:var(--nav-border);}
+html[data-nav-theme] .studio-shell :is(.section-title,.field label,.library-intro strong,.template-details strong,.preset strong,.tag){color:var(--nav-text);}
+html[data-nav-theme] .studio-shell :is(.hint,.small,.help,.library-footnote,.library-intro span,.template-details small,.inventory-summary,.preset small){color:var(--nav-muted);}
+html[data-nav-theme] .studio-shell :is(.icon-control,.top-right .icon-control,.search-shell input){color:var(--nav-text);}
+html[data-nav-theme] .studio-shell :is(button:hover,.layer.selected,.library-tabs button.active,.model-filters button.active){background:var(--nav-selected);color:var(--nav-text);border-color:var(--nav-border);}
+html[data-nav-theme] :is(.sam-settings-drawer,.sam-assistant-drawer,.sam-settings-header,.sam-assistant-header){background:var(--nav-surface);color:var(--nav-text);border-color:var(--nav-border);}
+html[data-nav-theme] :is(button,input,select):focus-visible{outline:2px solid var(--nav-accent);outline-offset:2px;}
+
+html[data-nav-theme] .studio-shell #inspector :is(.section,.help,.hint){background:var(--nav-surface);color:var(--nav-text);border-color:var(--nav-border);}
+html[data-nav-theme] .studio-shell #inspector .field :is(input,select,textarea){background:var(--nav-popover);color:var(--nav-text);border-color:var(--nav-border);}
+html[data-nav-theme] .studio-shell #inspector :is(.field label,.section-title){color:var(--nav-muted);}
+html[data-nav-theme] .studio-shell :is(.canvas-tools,.canvas-status,.view-gizmo){background:var(--nav-surface);color:var(--nav-text);border-color:var(--nav-border);}
+html[data-nav-theme] .studio-shell :is(.canvas-tools .icon-control,.view-gizmo button,.timeline button,.template-add){background:var(--nav-surface);color:var(--nav-text);border-color:var(--nav-border);}
+html[data-nav-theme] .studio-shell :is(.canvas-tools .icon-control.active,.canvas-tools .icon-control[aria-pressed=true],.view-gizmo button.is-active){background:var(--nav-selected);color:var(--nav-text);border-color:var(--nav-accent);}

@@ -12,7 +12,7 @@
 | `protocol/capabilities/manifest.json` | 82 | Capability and agent-primitive declarations |
 | `src/lib/setup/recipes.js` | 4 | Native prerequisite install recipes |
 | `apps/*/agentsam.app.json and packages/*/agentsam.app.json` | 7 | APP manifests discoverable from this checkout |
-| `packages/catalog/generated/packages.json` | 65 | Package inventory rows (not npm publication proof) |
+| `packages/catalog/generated/packages.json` | 66 | Package inventory rows (not npm publication proof) |
 
 Manifest status: 56 stable, 26 experimental, 15 explicitly non-deterministic. Host binding and approval remain separate.
 
@@ -276,6 +276,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `theme-harbor` | `@inneranimalmedia/theme-harbor` | needs-review | A professional-services prebuild for trust-heavy businesses: clear service storytelling, proof, resources, and lea… |
 | `theme-heuristic` | `@inneranimalmedia/theme-heuristic` | needs-review | Stock AgentSam CMS storefront shell theme contract (heuristic-theme). |
 | `theme-iasf` | `@inneranimalmedia/theme-iasf` | needs-review | IASF — stock Inner Animal Storefront theme pack (normalized from studio-cms-editor harvest). |
+| `theme-plain-jane` | `@inneranimalmedia/theme-plain-jane` | needs-review | Read-only editorial journal and photography CMS starter with externally editable manifest. |
 | `theme-resolve` | `@inneranimalmedia/theme-resolve` | needs-review | A high-fashion commerce prebuild built around cinematic scroll, shoppable editorial, sticky purchase rails, lookbo… |
 | `theme-scenes` | `@inneranimalmedia/theme-scenes` | needs-review | Reusable scene / shell / block vocabulary for branded website experiences. BrandPack owns look; theme-scenes owns … |
 | `theme-summit` | `@inneranimalmedia/theme-summit` | needs-review | A restrained consulting and portfolio prebuild with editorial services, case studies, multilingual-ready structure… |

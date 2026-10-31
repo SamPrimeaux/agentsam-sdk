@@ -255,7 +255,7 @@
 @container (max-width: 24rem) {
  .agentsam-composer-actions { gap: .125rem; }
  .agentsam-composer-surface { padding: .4rem; border-radius: .9rem; }
- .agentsam-start-context { display: none; }
+ .agentsam-start-context { display: flex; }
 }
 
 /* Empty conversations are a single centered hero/composer composition.
@@ -322,7 +322,7 @@
 .agentsam-project-trigger[aria-expanded="true"] { background: var(--nav-selected); color: var(--nav-text); }
 .agentsam-project-trigger span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .agentsam-project-menu {
-  position: absolute; z-index: 95; bottom: calc(100% + 6px); left: 0;
+  position: fixed; z-index: 95; bottom: var(--project-menu-bottom, 60px); left: var(--project-menu-left, 16px);
   width: min(310px, calc(100vw - 32px)); max-height: min(380px, 55dvh);
   display: flex; flex-direction: column; gap: 7px; padding: 10px;
   color: var(--nav-text); border-radius: 16px; background: var(--nav-popover);
@@ -380,3 +380,12 @@
 @media (max-width: 650px) {
   .agentsam-context-tools { top: 4px; right: 4px; }
 }
+
+.agentsam-project-menu {top:auto;z-index:100;max-height:min(440px,65dvh);}
+.agentsam-project-option small{display:block;margin-top:2px;color:var(--nav-muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.agentsam-project-menu button:disabled{opacity:.5;cursor:default;}
+.agentsam-project-menu button:focus-visible,.agentsam-project-menu input:focus-visible{outline:2px solid var(--nav-accent);outline-offset:2px;}
+@media(max-width:767px){.agentsam-project-option,.agentsam-project-new-trigger{min-height:44px}.agentsam-project-heading button{min-width:44px;min-height:44px}}
+
+.agentsam-shell .agentsam-composer-actions button[data-agent-mode-trigger]{color:color-mix(in srgb,var(--composer-mode-accent) 60%,var(--nav-text));}
+.agentsam-shell .agentsam-composer-actions button[aria-label^="Select model:"]{color:var(--nav-muted);}

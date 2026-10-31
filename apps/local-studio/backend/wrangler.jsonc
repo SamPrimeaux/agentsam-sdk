@@ -81,6 +81,10 @@
     {
       "binding": "PLUGIN_CATALOG",
       "service": "agentsam-plugin-mcp"
+    },
+    {
+      "binding": "IAM_API",
+      "service": "inneranimalmedia"
     }
   ],
   "vpc_services": [

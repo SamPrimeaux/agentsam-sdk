@@ -1,0 +1,31 @@
+/* Host geometry only; navigation visuals and interactions belong to agentsam-nav. */
+body.agentsam-shared-navigation .console-sidenav.admin-sidebar { display:block!important; position:relative!important; inset:auto!important; transform:none!important; flex:0 0 auto; width:auto!important; min-width:0!important; padding:0!important; opacity:1; pointer-events:auto; border:0; background:transparent; box-shadow:none; overflow:visible; }
+body.agentsam-shared-navigation .console-sidenav .as-nav-sidenav-reserve { height:100%; }
+body.agentsam-shared-navigation .console-topbar-spacer { display:flex; align-items:center; gap:8px; width:auto; min-width:140px; padding-left:10px; }
+body.agentsam-shared-navigation .console-route-label { font-size:13px; font-weight:500; color:var(--c-ink-2); white-space:nowrap; }
+body.agentsam-shared-navigation .console-nav-ghost-toggle, body.agentsam-shared-navigation .admin-drawer, body.agentsam-shared-navigation .admin-drawer-backdrop { display:none!important; }
+body.agentsam-shared-navigation .console-workspace { min-width:0; flex:1; }
+@media(max-width:767px) { body.agentsam-shared-navigation .console-sidenav.admin-sidebar { position:static!important; width:0!important; } body.agentsam-shared-navigation .console-route-label { display:none; } body.agentsam-shared-navigation .console-topbar-spacer { min-width:36px; } }
+
+body.agentsam-shared-navigation .console-sidenav.admin-sidebar {height:calc(100dvh - var(--c-topbar-h,56px));min-height:0;}
+
+/* Hosted chrome follows the same appearance as the navigation and installed apps. */
+body.agentsam-shared-navigation .console-topbar {background:var(--c-surface-2);color:var(--c-ink);border-bottom:1px solid var(--c-line);}
+body.agentsam-shared-navigation .console-topbar .console-icon-btn {color:var(--c-ink-2);}
+body.agentsam-shared-navigation .console-topbar .console-icon-btn:hover {background:var(--c-hover);color:var(--c-ink);}
+body.agentsam-shared-navigation .console-route-label {color:var(--c-ink);}
+
+body.agentsam-shared-navigation .console-topbar .console-search{color:var(--c-ink-2);background:transparent;}
+body.agentsam-shared-navigation .console-topbar .console-search:hover{background:var(--c-hover);color:var(--c-ink);}
+
+/* Shared page/assistant scroll treatment; each existing pane retains its owner. */
+body.agentsam-shared-navigation .console-shell {
+  scrollbar-width:thin;
+  scrollbar-color:color-mix(in srgb,var(--c-muted) 42%,transparent) transparent;
+}
+body.agentsam-shared-navigation .console-shell * { scrollbar-width:inherit; scrollbar-color:inherit; }
+body.agentsam-shared-navigation .console-shell *::-webkit-scrollbar { width:8px; height:8px; }
+body.agentsam-shared-navigation .console-shell *::-webkit-scrollbar-track { background:transparent; }
+body.agentsam-shared-navigation .console-shell *::-webkit-scrollbar-thumb { background:color-mix(in srgb,var(--c-muted) 38%,transparent); border:2px solid transparent; background-clip:padding-box; border-radius:8px; }
+body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
+@media(forced-colors:active) { body.agentsam-shared-navigation .console-shell, body.agentsam-shared-navigation .console-shell * { scrollbar-color:auto; } }

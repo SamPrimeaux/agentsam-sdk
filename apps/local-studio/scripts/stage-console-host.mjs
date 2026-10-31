@@ -17,6 +17,8 @@ const source = path.join(app, 'dist/assets');
 const productStage = path.join(localStudio, 'frontend/public/ecommerce-cms-agentsam');
 const hostAdmin = path.join(localStudio, 'frontend/public/admin');
 const hostConfig = path.join(hostAdmin, 'host-config.js');
+const {writeStudioNavigation} = await import('./studio-navigation.mjs');
+writeStudioNavigation();
 
 if (process.argv.includes('--stage') || process.argv.includes('--desktop')) {
   const destination = path.join(localStudio, process.argv.includes('--desktop') ? 'desktop-dist/admin' : '.output/public/admin');
@@ -76,6 +78,14 @@ mkdirSync(productStage, { recursive: true });
 mkdirSync(hostAdmin, { recursive: true });
 cpSync(source, productStage, { recursive: true, force: true });
 cpSync(path.join(source, 'admin'), hostAdmin, { recursive: true, force: true });
+// Stage the canonical browser adapter, rather than another host navigation renderer.
+const navPackage = path.resolve(localStudio, '../../packages/agentsam-nav');
+execFileSync('npm', ['run', 'build'], {cwd: navPackage, stdio:'inherit'});
+cpSync(path.join(navPackage, 'dist/browser.global.js'), path.join(hostAdmin, 'js/agentsam-nav.js'));
+cpSync(path.join(navPackage, 'dist/theme.css'), path.join(hostAdmin, 'css/agentsam-nav.css'));
+cpSync(path.join(localStudio, 'shared/shell-appearance.mjs'), path.join(hostAdmin, 'js/shell-appearance.mjs'));
+cpSync(path.join(localStudio, 'frontend/agentsam/shared-nav-host.css'), path.join(hostAdmin, 'css/shared-nav-host.css'));
+
 // The product assets stay intact; inject the installation adapter only into
 // this host's staged copies. Desktop HTML does not pass through the Worker.
 function bindHost(directory) {

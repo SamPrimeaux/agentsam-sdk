@@ -301,6 +301,10 @@ packages:
       name: "@inneranimalmedia/theme-iasf"
       path: "packages/theme-iasf"
       readiness: unverified
+    - id: "theme-plain-jane"
+      name: "@inneranimalmedia/theme-plain-jane"
+      path: "packages/theme-plain-jane"
+      readiness: unverified
     - id: "theme-resolve"
       name: "@inneranimalmedia/theme-resolve"
       path: "packages/theme-resolve"
@@ -564,12 +568,12 @@ security_contract:
 
 release:
   root_sdk:
-    target_version: "2.6.13"
-    state: published
+    target_version: "2.6.15"
+    state: candidate
     registry: npm
     current_latest: "2.6.13"
     current_alpha: "2.0.0-alpha.identity.12"
-    candidate_base_head: 2d7c8214809bf9a947f6151e9745d98695892f46
+    candidate_base_head: 6360891d262df0ac938b4768321e717a343bc718
     published_at_utc: "2026-10-19T08:21:26.043Z"
     published_git_head: 4fdb762ede5c1d646e7162dd2f3ac7dbce168cae
     dist_integrity: "sha512-/GOvgMHMOESG6m+bZp65T+X4q+8UidUhqjDgHO8f5ilV25p01sKO7P/vyCWyheUdLiJQyST9ZqYT24IpsUAgSQ=="

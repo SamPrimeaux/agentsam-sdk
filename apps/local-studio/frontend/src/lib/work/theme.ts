@@ -71,7 +71,7 @@ export const THEME_PRESETS: Record<ThemePresetId, { label: string; tokens: Theme
       card: "#ebe7df",
       popover: "#ffffff",
       muted: "#e4dfd6",
-      mutedForeground: "#8a7f72",
+      mutedForeground: "#645e56",
       accent: "#8a7f72",
       accentForeground: "#f3f1ec",
       border: "#d5cec3",

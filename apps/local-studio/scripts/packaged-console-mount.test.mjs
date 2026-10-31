@@ -5,10 +5,10 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolveConsoleFile, servePackagedConsole } from '../backend/worker/packaged-console.js';
 import { canonicalStudioPath, isStudioAdminPath } from '../shared/studio-admin-routes.mjs';
 import { handleStudioAccountAvatar } from '../backend/worker/studio-user-preferences.js';
+import { studioNavigationProjection } from './studio-navigation.mjs';
 
 test('platform routes resolve to the real Ecommerce application bundle', () => {
   for (const [path, file] of [
-    ['/admin/home', 'home.html'],
     ['/admin/store', 'store.html'],
     ['/admin/pages', 'pages.html'],
     ['/admin/theme-editor', 'theme-editor.html'],
@@ -17,17 +17,39 @@ test('platform routes resolve to the real Ecommerce application bundle', () => {
     ['/admin/partials/growth-app.html', 'partials/growth-app.html'],
     ['/admin/analytics/overview', '_spa/index.html'],
   ]) assert.equal(resolveConsoleFile(path), file, path);
+  assert.equal(resolveConsoleFile('/admin/home'), null, 'Studio owns the top-level home entry');
+  assert.equal(resolveConsoleFile('/admin/home', { allowEmbeddedHome: true }), 'home.html', 'only the installed-app frame may request the packaged home');
   for (const path of ['/sites', '/api/admin/me', '/admin/../../secret', '/admin/unknown']) {
     assert.equal(resolveConsoleFile(path), null, path);
   }
 });
+test('canonical Studio Home serves the existing packaged dashboard with the shared host shell', async () => {
+  const seen = [];
+  const assets = { fetch(request) {
+    seen.push(new URL(request.url).pathname);
+    return Promise.resolve(new Response('<html><head></head><body><script src="/admin/js/shell.js"></script>home</body></html>', {
+      headers: { 'content-type': 'text/html' },
+    }));
+  } };
+  const response = await servePackagedConsole(
+    new Request('https://agentsam.inneranimalmedia.com/admin/home'),
+    assets,
+    { allowStudioHome: true },
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(seen, ['/ecommerce-cms-agentsam/admin/home']);
+  const html = await response.text();
+  assert.match(html, /host-config\.js/);
+  assert.match(html, /home/);
+});
+
 test('Worker serves packaged assets, not a customer Worker or a reconstructed shell', async () => {
   const seen = [];
   const env = { fetch(req) {
     seen.push(new URL(req.url).pathname);
     return Promise.resolve(new Response('<html><head></head><body><script src="/admin/js/shell.js"></script>product</body></html>', { headers: { 'content-type':'text/html' } }));
   } };
-  const res = await servePackagedConsole(new Request('https://agentsam.inneranimalmedia.com/admin/home'), env);
+  const res = await servePackagedConsole(new Request('https://agentsam.inneranimalmedia.com/admin/home?__agentsamEmbedded=1'), env);
   assert.equal(res.status, 200);
   assert.equal(seen[0], '/ecommerce-cms-agentsam/admin/home');
   assert.match(await res.text(), /host-config\.js/);
@@ -50,6 +72,7 @@ test('Growth partial serves from installed Ecommerce assets, not customer storag
 test('immutable product sources and packaged shell are the authority', () => {
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /servePackagedConsole/);
+  assert.match(worker, /url\.pathname === "\/admin\/home"[\s\S]{0,650}guardStudioDocument\(request, env\)[\s\S]{0,650}allowStudioHome: true/);
   const cloudflare = readFileSync(new URL('../backend/wrangler.jsonc', import.meta.url), 'utf8');
   // wrangler.jsonc allows comments/trailing commas; parse the route array,
   // not the entire JSONC document with JSON.parse.
@@ -91,7 +114,7 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.match(shell, /<Nav\.Topbar className="platform-console-topbar">/);
 
   const css = readFileSync(new URL('../frontend/agentsam/platform-console.css', import.meta.url), 'utf8');
-  assert.match(css, /--nav-width: 246px/);
+  assert.doesNotMatch(css, /--nav-(?:width|rail-width):/, "Navigation geometry stays with agentsam-nav");
 });
 
 test('admin home resolves to the packaged Ecommerce home on Local Studio', () => {
@@ -104,7 +127,7 @@ test('admin home resolves to the packaged Ecommerce home on Local Studio', () =>
 
 test('AgentSam app and approved Ecommerce groups keep their actual route ownership', async () => {
   const source = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
-  const projection = JSON.parse(readFileSync(new URL('../frontend/public/admin/data/navigation.json', import.meta.url), 'utf8'));
+  const projection = studioNavigationProjection();
   const requested = [];
   const context = {
     NAV: { main: [], channels: [], apps: [] },

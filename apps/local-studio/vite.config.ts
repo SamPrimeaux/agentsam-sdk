@@ -12,6 +12,7 @@ import { agentsamPwaPlugin } from "./scripts/agentsam-pwa-plugin.mjs";
 // @ts-expect-error JS plugin alongside the TS vite config
 import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
 import { themeSurfacesPlugin } from "./scripts/theme-surfaces-plugin.mjs";
+import { consoleDevPlugin } from "./scripts/console-dev-plugin.mjs";
 import { isMigrationFile } from "./scripts/migration-plan.mjs";
 
 // The CMS frontend is linked from a sibling application. With
@@ -529,6 +530,7 @@ export default defineConfig(({ command, isPreview }) => ({
     noExternal: [/^@radix-ui\//],
   },
   plugins: [
+    consoleDevPlugin(),
     themeSurfacesPlugin(),
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.

@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { optimizeWithScheduler } from "@inneranimalmedia/agentsam-brand";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,6 +40,8 @@ export const Route = createFileRoute("/api/content/optimize")({
         const outPath = path.join(outDir, `${safeName}-${Date.now()}.${outFormat}`);
         const inputBuffer = Buffer.from(dataBase64, "base64");
         try {
+          // Optional Node-native processors must not load with every app route.
+          const { optimizeWithScheduler } = await import("@inneranimalmedia/agentsam-brand");
           const result = await optimizeWithScheduler(inputBuffer, {
             format: outFormat,
             outPath,
