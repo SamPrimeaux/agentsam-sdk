@@ -105,6 +105,12 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 || path == "/api/settings/preferences"
                 || path == "/api/settings/account-avatar"
                 || path == "/api/settings/notifications"
+                || path == "/api/notifications"
+                || path == "/api/notifications/read-all"
+                || path.strip_prefix("/api/notifications/")
+                    .and_then(|rest| rest.strip_suffix("/read"))
+                    .is_some_and(|id| !id.is_empty() && id.len() <= 128
+                        && id.chars().all(|ch| ch.is_ascii_alphanumeric() || ch == '_' || ch == '-'))
                 || path == "/api/settings/agents"
                 || path == "/api/settings/agents/policy";
             let skill = path.strip_prefix("/api/settings/skills/").is_some_and(|id| {
@@ -128,10 +134,13 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 _ => return Err("studio_service_settings_method_invalid".into()),
             };
             let valid = match method {
-                Method::GET => root,
-                Method::POST => path == "/api/settings/skills" || path == "/api/settings/agents",
+                Method::GET => root && path != "/api/notifications/read-all" && !path.ends_with("/read"),
+                Method::POST => path == "/api/settings/skills" || path == "/api/settings/agents"
+                    || path == "/api/notifications/read-all"
+                    || (path.starts_with("/api/notifications/") && path.ends_with("/read")),
                 Method::PUT => skill || agent || path == "/api/settings/agents/policy"
-                    || path == "/api/settings/preferences" || path == "/api/settings/account-avatar",
+                    || path == "/api/settings/preferences" || path == "/api/settings/account-avatar"
+                    || path == "/api/settings/notifications",
                 Method::DELETE => skill || agent,
                 _ => false,
             };
@@ -991,6 +1000,10 @@ mod tests {
             ("/api/settings/agents/policy", "GET"),
             ("/api/settings/agents/policy", "PUT"),
             ("/api/settings/notifications", "GET"),
+            ("/api/settings/notifications", "PUT"),
+            ("/api/notifications", "GET"),
+            ("/api/notifications/read-all", "POST"),
+            ("/api/notifications/notif_123/read", "POST"),
             ("/api/settings/preferences", "GET"),
             ("/api/settings/preferences", "PUT"),
             ("/api/settings/skills", "GET"),
@@ -1008,8 +1021,10 @@ mod tests {
         }
         for (path, method) in [
             ("/api/settings/notifications", "POST"),
-            ("/api/settings/notifications", "PUT"),
             ("/api/settings/notifications", "DELETE"),
+            ("/api/notifications/read-all", "GET"),
+            ("/api/notifications/bad/read", "GET"),
+            ("/api/notifications/../read", "POST"),
             ("/api/settings/agents/../vault/secrets", "GET"),
             ("/api/settings/agents/asp_1234", "POST"),
             ("/api/settings/skills/skill_1234", "GET"),
