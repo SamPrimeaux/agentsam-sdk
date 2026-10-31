@@ -35,11 +35,21 @@ python3 scripts/platform-resource-rebuild/03_backfill.py --apply --confirm-produ
 
 # 5. Read-only parity and integrity checks (also asserts no leftover *_v2).
 python3 scripts/platform-resource-rebuild/04_validate.py
+
+# 6. After consumers are confirmed: drop parked resource *_legacy tables only.
+python3 scripts/platform-resource-rebuild/08_drop_legacy.py --apply --confirm-production
+
+# 7. Point views at canonical tables (required if any view still referenced *_legacy).
+wrangler d1 execute inneranimalmedia-business --remote --yes \
+  --file scripts/platform-resource-rebuild/sql/006_fix_studio_template_catalog_view.sql \
+  --config apps/local-studio/backend/wrangler.jsonc
 ```
 
-The backup step writes a local working copy under `~/.cache/agentsam/resource-rebuild/` and, when requested, uploads the SQL export and manifest to private `agent-sam/backups/d1/inneranimalmedia-business/resource-rebuild/`.
+The backup step writes a local working copy under `~/.cache/agentsam/resource-rebuild/` and, when requested, uploads the SQL export and manifest to the **agentsam-sdk worker** R2 binding `WEBSITE_ASSETS` → bucket `agentsam-os-blueprint-content` under `backups/d1/inneranimalmedia-business/resource-rebuild/`.
 
-Do not drop `*_legacy` until consumers are confirmed on the rebuilt schema and you have an explicit cleanup step. Rollback is restore-from-backup, not “flip `_v2` names.”
+`sql/004_drop_legacy.sql` does not touch unrelated `*_legacy` tables such as `agentsam_skill_*_legacy`. Rollback is restore-from-backup.
+
+Desktop `Notification` hooks are D1 SSOT on `agentsam_hook` (see `sql/005_widen_hook_trigger_and_seed_desktop_notifications.sql`), not Claude settings alone.
 
 ## Ordered R2 stock-library workflow
 

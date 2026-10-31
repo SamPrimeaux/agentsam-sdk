@@ -9,7 +9,10 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+# agentsam-sdk (Local Studio) worker: D1 + WEBSITE_ASSETS → agentsam-os-blueprint-content.
 WRANGLER_CONFIG = ROOT / "apps/local-studio/backend/wrangler.jsonc"
+R2_WRANGLER_CONFIG = WRANGLER_CONFIG
+BACKUP_R2_BUCKET = "agentsam-os-blueprint-content"
 DATABASE_NAME = "inneranimalmedia-business"
 PLATFORM_ACCOUNT_ID = "ede6590ac0d2fb7daf155b35653457b2"
 PLATFORM_OAUTH_USER_ID = "au_871d920d1233cbd1"
@@ -93,7 +96,7 @@ def d1_export(output: Path, tables: list[str]) -> None:
 def r2_put(bucket: str, key: str, source: Path, content_type: str = "application/octet-stream") -> None:
     command = wrangler() + [
         "r2", "object", "put", f"{bucket}/{key}", "--remote", "--file", str(source),
-        "--content-type", content_type, "--config", str(WRANGLER_CONFIG),
+        "--content-type", content_type, "--config", str(R2_WRANGLER_CONFIG),
     ]
     run(command, timeout=1800)
 
@@ -102,7 +105,7 @@ def r2_get(bucket: str, key: str, destination: Path, *, check: bool = True) -> s
     destination.parent.mkdir(parents=True, exist_ok=True)
     command = wrangler() + [
         "r2", "object", "get", f"{bucket}/{key}", "--remote", "--file", str(destination),
-        "--config", str(WRANGLER_CONFIG),
+        "--config", str(R2_WRANGLER_CONFIG),
     ]
     return run(command, timeout=1800, check=check)
 
