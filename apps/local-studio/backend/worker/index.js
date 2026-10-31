@@ -1,6 +1,7 @@
 import nitroWorker from "../../.output/server/index.mjs";
 import { serveCadChessAsset } from "./cad-chess-assets.js";
 import { handleStudioNotifications } from "./studio-notifications.js";
+import { handleStudioQueueObservability } from "./studio-queue-observability.js";
 import { serveStudioNavigationAsset } from "./studio-navigation-asset.js";
 import { resolveStudioSessionUser, guardStudioDocumentSession } from "./studio-session.js";
 import { serveIncludedWasmAsset } from "./included-wasm-assets.js";
@@ -736,6 +737,7 @@ export default {
     if (includedWasm) return includedWasm;
     const chessAsset = await serveCadChessAsset(request);
     if (chessAsset) return chessAsset;
+    const isQueueObservability = url.pathname === "/api/queues/observability";
     const isVault = url.pathname.startsWith("/api/vault/");
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
@@ -845,6 +847,16 @@ export default {
 
     // Account-scoped theme registry. Shared presets are read-only; every
     // customization is cloned into a private cms_themes row for this account.
+    if (isQueueObservability) {
+      try {
+        const accountId = await resolveSessionUserId(request, env);
+        return await handleStudioQueueObservability(request, env, accountId);
+      } catch (error) {
+        console.warn('studio_queue_observability_unavailable', String(error?.message || error).slice(0, 140));
+        return json({ ok: false, error: 'queue_observability_unavailable' }, 503, { 'cache-control': 'private, no-store' });
+      }
+    }
+
     if (url.pathname === '/api/notifications' || url.pathname.startsWith('/api/notifications/')) {
       const principal = await resolveSessionUser(request, env);
       return handleStudioNotifications(request, env, principal?.id || null);
