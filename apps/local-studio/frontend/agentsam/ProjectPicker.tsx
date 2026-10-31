@@ -4,6 +4,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { useNav } from '@inneranimalmedia/agentsam-nav';
 import type { WorkProject } from '@inneranimalmedia/agentsam-work/contracts';
 import { useWorkStore } from '@/lib/work/store';
+import { IconAction } from '@/components/ui/icon-action';
 
 /**
  * Project selection uses the very same WorkHost as /admin/projects.
@@ -100,10 +101,10 @@ export function ProjectPicker({ trailId }: { trailId: string }) {
       <Folder size={14} /><span>{active?.name || (projectId ? (loading ? 'Loading project…' : 'Project unavailable') : 'Choose project')}</span><ChevronDown size={13} />
     </button></Dialog.Trigger>
     <Dialog.Portal><Dialog.Content data-nav-theme={theme} className="as-nav-scope agentsam-project-menu" aria-describedby={undefined}
-      style={{position:'fixed',left:position.left,bottom:position.bottom,'--nav-accent':accentColor} as React.CSSProperties}>
+      style={{'--project-menu-left':position.left+'px','--project-menu-bottom':position.bottom+'px','--nav-accent':accentColor} as React.CSSProperties}>
       <Dialog.Title className="as-nav-sr-only">Choose project</Dialog.Title>
       <div className="agentsam-project-heading"><strong>Choose project</strong>
-        <button type="button" aria-label="Close project picker" onClick={() => setOpen(false)}><X size={15} /></button>
+        <IconAction label="Close project picker" onClick={() => setOpen(false)}><X size={15} aria-hidden="true" /></IconAction>
       </div>
       <label className="agentsam-project-search"><Search size={14} />
         <input aria-label="Search projects" autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects" />

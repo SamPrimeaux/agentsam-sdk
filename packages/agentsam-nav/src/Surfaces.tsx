@@ -19,12 +19,10 @@ export function NavScope({ className, style, ...props }: HTMLAttributes<HTMLDivE
 }
 
 function MenuActions({ actions }: { actions: NavAction[] }) {
-  const { theme } = useNav();
-  const style = useNavStyle();
   return <>{actions.map((action) => <Fragment key={action.id}>
     {action.separatorBefore ? <Menu.Separator className="as-nav-menu-separator" /> : null}
     {action.children?.length
-      ? <Menu.Sub><Menu.SubTrigger className="as-nav-menu-row" disabled={action.disabled}><span className="as-nav-icon">{action.icon}</span><span>{action.label}</span><ChevronDown /></Menu.SubTrigger><Menu.Portal><Menu.SubContent data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover" sideOffset={6} collisionPadding={12}><MenuActions actions={action.children} /></Menu.SubContent></Menu.Portal></Menu.Sub>
+      ? <Menu.Sub><Menu.SubTrigger className="as-nav-menu-row" disabled={action.disabled}><span className="as-nav-icon">{action.icon}</span><span>{action.label}</span><ChevronDown /></Menu.SubTrigger><Menu.Portal><Menu.SubContent asChild sideOffset={6} collisionPadding={12}><NavScope className="as-nav-popover"><MenuActions actions={action.children} /></NavScope></Menu.SubContent></Menu.Portal></Menu.Sub>
       : <Menu.Item className="as-nav-menu-row" disabled={action.disabled || !action.onSelect} data-destructive={action.destructive || undefined} onSelect={action.onSelect}><span className="as-nav-icon">{action.icon}</span><span>{action.label}</span>{action.shortcut ? <kbd className="as-nav-shortcut">{action.shortcut}</kbd> : null}</Menu.Item>}
   </Fragment>)}</>;
 }
@@ -211,6 +209,15 @@ function ProjectRow({ item, conversations }: { item: NavProject; conversations: 
   </div>;
 }
 
+/** Visible help on both hover and keyboard focus, with the button retaining its own name. */
+function NavIconAction({ label, children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
+  const id = useId();
+  return <span className="as-nav-icon-action">
+    <button aria-label={label} {...props} type="button" aria-describedby={id}>{children}</button>
+    <span id={id} role="tooltip" className="as-nav-icon-help">{label}</span>
+  </span>;
+}
+
 function DestinationRow({ item, depth = 0 }: { item: NavDestination; depth?: number }) {
   const { data, close, isMobile, open, setOpen, storageKey } = useNav();
   const active = navDestinationActive(item);
@@ -243,9 +250,9 @@ function DestinationRow({ item, depth = 0 }: { item: NavDestination; depth?: num
       <a className={rowClass} href={item.href} title={item.label} aria-label={item.label} aria-current={item.active ? 'page' : undefined} data-active={item.active || undefined} onClick={navigate}>
         {item.icon}<span>{item.label}</span>
       </a>
-      <button type="button" className="as-nav-button as-nav-branch-toggle" title={(expanded ? 'Collapse ' : 'Expand ') + item.label} aria-label={(expanded ? 'Collapse ' : 'Expand ') + item.label} aria-expanded={expanded} aria-controls={'as-nav-submenu-' + item.id} onClick={toggle}>
+      <NavIconAction className="as-nav-button as-nav-branch-toggle" label={(expanded ? 'Collapse ' : 'Expand ') + item.label} aria-expanded={expanded} aria-controls={'as-nav-submenu-' + item.id} onClick={toggle}>
         <ChevronDown aria-hidden="true" className="as-nav-destination-chevron" />
-      </button>
+      </NavIconAction>
     </div> : <button type="button" className={rowClass} title={item.label} data-active={active || undefined} aria-expanded={expanded} aria-controls={'as-nav-submenu-' + item.id} onClick={toggle}>
       {item.icon}<span>{item.label}</span><ChevronDown aria-hidden="true" className="as-nav-destination-chevron" />
     </button>}
@@ -273,7 +280,7 @@ function HistoryCollection({id,title,items,empty,searching=false}:{id:string;tit
     return next;
   });
   const shown = searching || expanded;
-  return <section aria-label={title}><h2><button type="button" className="as-nav-collection-toggle" aria-expanded={shown} onClick={toggle}>{title}<ChevronDown style={{transform:shown?'rotate(0deg)':'rotate(-90deg)'}}/></button></h2>
+  return <section aria-label={title}><h2><button type="button" className="as-nav-collection-toggle" aria-expanded={shown} onClick={toggle}>{title}<ChevronDown data-expanded={shown}/></button></h2>
     {shown ? <>{items.length ? (more || searching ? items : items.slice(0,6)) : <p className="as-nav-empty">{empty}</p>}
     {items.length>6 && !searching ? <button type="button" className="as-nav-collection-more" onClick={() => setMore(value => !value)}>{more?'Show less':'Show more'}</button> : null}</> : null}
   </section>;
@@ -291,7 +298,7 @@ function SidenavContents() {
   const newConversation = data.onCreateConversation ? <button type="button" className="as-nav-destination" title="New chat" aria-label="New chat" onClick={() => { data.onCreateConversation?.(); if (isMobile) close(); }}><Plus /><span>New chat</span></button> : null;
   const insertAfter = data.destinations?.some(item => item.id === data.newConversationAfter) ? data.newConversationAfter : undefined;
   return <>
-    {data.showSidebarHeader !== false ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /></div> : isMobile ? <div className="as-nav-sidenav-head as-nav-sidenav-head--close"><button type="button" className="as-nav-button" aria-label="Close navigation" title="Close navigation" onClick={close}><X /></button></div> : null}
+    {data.showSidebarHeader !== false ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /></div> : isMobile ? <div className="as-nav-sidenav-head as-nav-sidenav-head--close"><button type="button" className="as-nav-button" onClick={close}><X aria-hidden="true" /><span>Close navigation</span></button></div> : null}
     <div className="as-nav-sidenav-main">
       <div className="as-nav-destinations">
         {!insertAfter ? newConversation : null}
@@ -340,7 +347,7 @@ export function NavSidenav() {
     onFocus={(event) => { showHint(event.target); if (peekable && !open) setPeeking(true); }}
     onBlur={(event) => { hideHint(); if (!event.currentTarget.contains(event.relatedTarget as Node | null) && !menu) setPeeking(false); }}
     onPointerDown={hideHint} onScrollCapture={hideHint}>
-    {hint && !open ? createPortal(<div role="tooltip" data-nav-theme={theme} className="as-nav-scope as-nav-rail-tooltip" style={{...style, top:hint.top, left:hint.left}}>{hint.label}</div>, document.body) : null}
+    {hint && !open ? createPortal(<NavScope role="tooltip" className="as-nav-rail-tooltip" style={{'--nav-tooltip-top':hint.top+'px', '--nav-tooltip-left':hint.left+'px'} as CSSProperties}>{hint.label}</NavScope>, document.body) : null}
     <aside aria-label="Application navigation" className="as-nav-sidenav" data-expanded={open || isPeeking} onMouseEnter={() => { if (peekable && !open) setPeeking(true); }} onMouseLeave={() => { if (!menu) setPeeking(false); }}><SidenavContents /></aside>
     {open && resizable ? <div className="as-nav-resize" role="separator" aria-label="Resize navigation" aria-orientation="vertical" aria-valuemin={208} aria-valuemax={400} aria-valuenow={width} tabIndex={0}
       onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); setWidth(width + (event.key === 'ArrowLeft' ? -8 : 8)); } else if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); setWidth(event.key === 'Home' ? 208 : 400); } }}

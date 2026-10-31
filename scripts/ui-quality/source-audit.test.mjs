@@ -39,3 +39,17 @@ test('HTML requires img alt and forbids inline style', () => {
   const findings = auditUiSource('<img src="a.png"><p style="color: red">Hi</p>', 'index.html');
   assert.deepEqual(findings.map((f) => f.rule), ['image-alt', 'inline-static-style']);
 });
+
+test('resolves literal custom-property const bindings without accepting opaque styles', () => {
+  const good = 'function Good({ accent }) { const appearance = { "--nav-accent": accent } as React.CSSProperties; return <div style={appearance} />; }';
+  assert.deepEqual(auditUiSource(good, 'Good.tsx'), []);
+  for (const source of [
+    'const appearance = { color: "red" }; const Bad = () => <div style={appearance} />;',
+    'const appearance = getStyle(); const Bad = () => <div style={appearance} />;',
+    'const appearance = { ...unknown, "--accent": "red" }; const Bad = () => <div style={appearance} />;',
+    'const appearance = { "--accent": "red" }; function Bad({ appearance }) { return <div style={appearance} />; }',
+    'const appearance = { "--accent": "red" }; function Bad() { let appearance = { color: "red" }; return <div style={appearance} />; }',
+    'const appearance = { "--accent": "red" }; appearance.width = 200; const Bad = () => <div style={appearance} />;',
+    'let appearance = { "--accent": "red" }; const Bad = () => <div style={appearance} />;',
+  ]) assert.deepEqual(auditUiSource(source, 'Bad.tsx').map((f) => f.rule), ['inline-style']);
+});

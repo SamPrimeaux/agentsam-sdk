@@ -1012,17 +1012,17 @@ export const Canvas2D: React.FC<Props> = ({
       {/* Zoom / Grid Controls Bottom Right */}
       <div className="cad-canvas-controls absolute bottom-2.5 right-2.5 z-10 flex items-center space-x-0.5 p-0.5 rounded shadow-lg">
         <button
-          aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(4, z + 0.2))}
-          className="p-1 text-gray-400 hover:text-white rounded hover:bg-[#333] transition"
+          type="button" aria-label="Zoom in" onClick={() => setZoom((z) => Math.min(4, z + 0.2))}
+          className="inline-flex items-center gap-1 p-1 text-gray-400 hover:text-white rounded hover:bg-[#333] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <ZoomIn className="w-3.5 h-3.5" />
+          <ZoomIn className="w-3.5 h-3.5" aria-hidden="true" /><span className="text-[length:var(--text-xs)]">Zoom in</span>
         </button>
         <span className="text-[length:var(--text-xs)] text-gray-400 font-mono px-1">{Math.round(zoom * 100)}%</span>
         <button
-          aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(0.2, z - 0.2))}
-          className="p-1 text-gray-400 hover:text-white rounded hover:bg-[#333] transition"
+          type="button" aria-label="Zoom out" onClick={() => setZoom((z) => Math.max(0.2, z - 0.2))}
+          className="inline-flex items-center gap-1 p-1 text-gray-400 hover:text-white rounded hover:bg-[#333] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <ZoomOut className="w-3.5 h-3.5" />
+          <ZoomOut className="w-3.5 h-3.5" aria-hidden="true" /><span className="text-[length:var(--text-xs)]">Zoom out</span>
         </button>
         <button
           onClick={() => {
