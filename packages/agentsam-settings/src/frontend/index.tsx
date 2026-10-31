@@ -1382,12 +1382,12 @@ function WidgetCustomizeView({
           <div className="space-y-5">
             <div className="overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-muted/45 to-violet-400/[0.06] p-5">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Design preview</span>
+                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{selected.id === 'queues' ? 'Live queue metrics' : 'Design preview'}</span>
                 <span className="rounded-full border border-border bg-background/75 px-2 py-0.5 text-[9px] text-muted-foreground">
                   {selected.availability === "demo" ? "Concept · sample data" : "Packaged widget"}
                 </span>
               </div>
-              <div className="mx-auto h-40 max-w-sm"><WidgetGalleryPreview id={selected.id} /></div>
+              <div className="mx-auto min-h-40 max-w-sm"><WidgetGalleryPreview id={selected.id} interactive /></div>
             </div>
             <div className="rounded-lg border border-border/70 px-3">
               <PreferenceRow label="Status" description="Availability of this widget implementation." value={selected.availability === "demo" ? "Design concept · not yet installed" : "Ready to use"} />
