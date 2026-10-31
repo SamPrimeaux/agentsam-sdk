@@ -4,6 +4,7 @@ import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
 import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject } from "./theme-project-store.mjs";
 import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows } from "./page-inventory.mjs";
+import { ensureDefaultCmsSite, listCmsSites, createCmsSite, resolveCmsSite } from "./site-context.mjs";
 import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
 import { reconcileCanonicalBlocks } from "../../cms/authoring/block-projection.ts";
 import { validateThemeSettings, validateThemeCss } from "./theme-style-contract.mjs";
@@ -186,7 +187,9 @@ async function currentSectionVersion(env, pageId, sectionKey) {
  * invented from PAGE_REGISTRY. Unmanaged block rows are never overwritten. */
 async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) {
   let canonical = await env.DB.prepare(
-    `SELECT id,account_id,inline_content_json FROM cms_page_sections WHERE legacy_section_id=? LIMIT 1`
+    `SELECT s.id,s.account_id,s.inline_content_json,p.site_id FROM cms_page_sections s
+       JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+       WHERE s.legacy_section_id=? LIMIT 1`
   ).bind(legacySectionId).first();
   if (!canonical) {
     // The AgentSam generated-section acceptance path owns its own canonical
@@ -198,7 +201,7 @@ async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) 
     try {
     await env.DB.prepare(`INSERT INTO cms_page_sections
       (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,
-       status,inline_content_json,content_r2_key,content_version,content_hash)
+       status,inline_content_json,content_object_key,content_version,content_hash)
       SELECT p.account_id,p.id,s.id,s.section_key,?,s.sort_order,
              'draft',?,?,?,?
       FROM page_sections s JOIN cms_pages p ON p.legacy_page_id=s.page_id
@@ -215,7 +218,9 @@ async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) 
       throw error;
     }
     canonical = await env.DB.prepare(
-      `SELECT id,account_id,inline_content_json FROM cms_page_sections WHERE legacy_section_id=? LIMIT 1`
+      `SELECT s.id,s.account_id,s.inline_content_json,p.site_id FROM cms_page_sections s
+       JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+       WHERE s.legacy_section_id=? LIMIT 1`
     ).bind(legacySectionId).first();
   }
   if (!canonical) return {status:'unlinked',reason:'canonical_page_missing'};
@@ -227,7 +232,7 @@ async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) 
   if (Number(current?.content_version) !== Number(r2Meta.version))
     return {status:'superseded',reason:'later_section_version_committed'};
   const pointer = await env.DB.prepare(`UPDATE cms_page_sections
-    SET inline_content_json=?,content_r2_key=?,content_version=?,content_hash=?,
+    SET inline_content_json=?,content_object_key=?,content_version=?,content_hash=?,
         status='draft',updated_at=datetime('now')
     WHERE id=? AND legacy_section_id=?
       AND (content_version IS NULL OR content_version <= ?)`)
@@ -237,15 +242,15 @@ async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) 
     return {status:'superseded',reason:'canonical_pointer_has_newer_version'};
   if (content?.__editor?.generated) return {status:'generated_revision_owner'};
   await env.DB.prepare(`INSERT INTO cms_revisions
-    (account_id,entity_type,entity_id,revision_number,revision_kind,
-     content_r2_key,content_hash,snapshot_json,metadata_json)
-    SELECT ?, 'section', ?, ?, 'draft', ?, ?, '{}',
+    (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,
+     content_object_key,content_hash,snapshot_json,metadata_json)
+    SELECT ?, ?, 'section', ?, ?, 'draft', ?, ?, '{}',
            '{"source":"cms-editor-save","r2_authoritative":true}'
     WHERE NOT EXISTS (SELECT 1 FROM cms_revisions
-      WHERE entity_type='section' AND entity_id=? AND revision_kind='draft'
-        AND revision_number=? AND content_r2_key=?)`)
-    .bind(canonical.account_id,canonical.id,r2Meta.version,r2Meta.key,r2Meta.content_hash,
-      canonical.id,r2Meta.version,r2Meta.key).run();
+      WHERE site_id=? AND entity_type='section' AND entity_id=? AND revision_kind='draft'
+        AND revision_number=? AND content_object_key=?)`)
+    .bind(canonical.account_id,canonical.site_id,canonical.id,r2Meta.version,r2Meta.key,r2Meta.content_hash,
+      canonical.site_id,canonical.id,r2Meta.version,r2Meta.key).run();
   try {
     const blocks=await reconcileCanonicalBlocks(env.DB,{
       accountId:canonical.account_id,sectionId:canonical.id,content,
@@ -532,11 +537,14 @@ export async function getPreviewPage(env, slug) {
   };
 }
 
-export async function listPagesAdmin(env, accountId) {
+export async function listPagesAdmin(env, accountId, siteId = null) {
   // Site-owned canonical instances are the page inventory authority.
   // Legacy page/section pointers are consumed only by the existing editor and
   // storefront renderer until their R2 revisions are fully reconciled.
-  const rows = await listCanonicalPageRows(env.DB, accountId);
+  const site = siteId
+    ? await resolveCmsSite(env.DB, { accountId, siteId })
+    : await ensureDefaultCmsSite(env.DB, accountId);
+  const rows = await listCanonicalPageRows(env.DB, accountId, site.id);
   const pages = [];
   for (const row of rows) {
     const legacyId = row.legacy_page_id == null ? null : Number(row.legacy_page_id);
@@ -546,6 +554,9 @@ export async function listPagesAdmin(env, accountId) {
     const canonicalPreview = extractPreview(parseContent(row.preview_json));
     pages.push({
       id: row.id,
+      site_id: row.site_id,
+      route_path: row.route_path,
+      is_homepage: Boolean(row.is_homepage),
       legacy_page_id: legacyId,
       slug: row.slug,
       title: row.title,
@@ -565,7 +576,7 @@ export async function listPagesAdmin(env, accountId) {
   // The route catalog may expose a live page that has not been imported yet.
   // Clearly distinguish that discovery-only entry from a real CMS document.
   const existing = new Set(pages.map((page) => page.slug));
-  for (const registryPage of listRegistryPages()) {
+  for (const registryPage of (site.is_default ? listRegistryPages() : [])) {
     if (existing.has(registryPage.slug)) continue;
     pages.push({
       id: null,
@@ -581,7 +592,7 @@ export async function listPagesAdmin(env, accountId) {
   }
 
   pages.sort((a, b) => String(a.title || a.slug).localeCompare(String(b.title || b.slug)));
-  return { ok: true, source: "cms_pages+cms_page_sections", pages };
+  return { ok: true, source: "cms_pages+cms_page_sections", site, pages };
 }
 
 export async function getPageAdmin(env, slug) {
@@ -758,11 +769,12 @@ export async function updatePageMeta(env, slug, body) {
 }
 
 async function syncGeneratedRevision(env, slug, key, content, meta, metadata = {}) {
-  const instance=await env.DB.prepare(`SELECT s.id,s.account_id FROM cms_page_sections s
+  const legacyPage = await env.DB.prepare("SELECT id FROM pages WHERE slug=? LIMIT 1").bind(slug).first();
+  const instance=legacyPage ? await env.DB.prepare(`SELECT s.id,s.account_id,p.site_id FROM cms_page_sections s
     JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
-    WHERE p.slug=? AND s.section_key=?`).bind(slug,key).first();
+    WHERE p.legacy_page_id=? AND s.section_key=?`).bind(legacyPage.id,key).first() : null;
   if (!instance) throw new Error("Canonical generated section is missing");
-  await env.DB.prepare(`UPDATE cms_page_sections SET status='draft',content_r2_key=?,
+  await env.DB.prepare(`UPDATE cms_page_sections SET status='draft',content_object_key=?,
     content_version=?,content_hash=?,updated_at=datetime('now') WHERE id=? AND account_id=?`)
     .bind(meta.key,meta.version,meta.content_hash,instance.id,instance.account_id).run();
   const previous=await env.DB.prepare(`SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions
@@ -770,9 +782,9 @@ async function syncGeneratedRevision(env, slug, key, content, meta, metadata = {
     .bind(instance.account_id,instance.id).first();
   const next=Number(previous?.n||0)+1;
   await env.DB.prepare(`INSERT INTO cms_revisions
-    (account_id,entity_type,entity_id,revision_number,revision_kind,content_r2_key,content_hash,snapshot_json,metadata_json)
-    VALUES (?,'section',? ,?,'draft',?,?,?,?)`)
-    .bind(instance.account_id,instance.id,next,meta.key,meta.content_hash,
+    (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,content_object_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,?, 'section',? ,?,'draft',?,?,?,?)`)
+    .bind(instance.account_id,instance.site_id,instance.id,next,meta.key,meta.content_hash,
       JSON.stringify({content,artifactId:content.__editor.artifactId,definitionKey:content.__editor.definitionKey}),
       JSON.stringify({source:"agentsam",...metadata})).run();
   return next;
@@ -780,9 +792,10 @@ async function syncGeneratedRevision(env, slug, key, content, meta, metadata = {
 
 export async function listGeneratedRevisions(env,slug,key,accountId) {
   if (!accountId) return {error:"Account required",status:403};
-  const instance=await env.DB.prepare(`SELECT s.id FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id
-    WHERE s.account_id=? AND p.account_id=? AND p.slug=? AND s.section_key=?`)
-    .bind(accountId,accountId,slug,key).first();
+  const legacyPage=await env.DB.prepare("SELECT id FROM pages WHERE slug=? LIMIT 1").bind(slug).first();
+  const instance=legacyPage ? await env.DB.prepare(`SELECT s.id,p.site_id FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id
+    WHERE s.account_id=? AND p.account_id=? AND p.legacy_page_id=? AND s.section_key=?`)
+    .bind(accountId,accountId,legacyPage.id,key).first() : null;
   if (!instance) return {error:"Generated section not found",status:404};
   const response=await env.DB.prepare(`SELECT revision_number,content_hash,created_at,metadata_json FROM cms_revisions
     WHERE account_id=? AND entity_type='section' AND entity_id=? ORDER BY revision_number DESC LIMIT 50`)
@@ -992,14 +1005,14 @@ export async function restoreSectionRevision(env, slug, sectionKey, accountId, b
   if(body.expected_version!==undefined&&Number(body.expected_version)!==Number(legacy.content_version))
     return {error:'Draft changed since the requested restore',status:409,code:'cms_version_conflict'};
   const revision=await env.DB.prepare(
-    `SELECT content_r2_key FROM cms_revisions
+    `SELECT content_object_key FROM cms_revisions
        WHERE account_id=? AND entity_type='section' AND entity_id=?
-         AND revision_number=? AND content_r2_key IS NOT NULL
+         AND revision_number=? AND content_object_key IS NOT NULL
        ORDER BY CASE revision_kind WHEN 'draft' THEN 0 WHEN 'history' THEN 1 ELSE 2 END
        LIMIT 1`
   ).bind(accountId,canonical.id,revisionNumber).first();
-  if(!revision?.content_r2_key)return {error:'Revision not found',status:404};
-  const snapshot=await readR2Json(env,revision.content_r2_key);
+  if(!revision?.content_object_key)return {error:'Revision not found',status:404};
+  const snapshot=await readR2Json(env,revision.content_object_key);
   if(snapshot?.section_key!==sectionKey || !snapshot.content ||
      typeof snapshot.content!=='object' || Array.isArray(snapshot.content))
     return {error:'Revision content unavailable or corrupt',status:409};
@@ -1125,7 +1138,7 @@ export async function duplicateSection(env, slug, sectionKey, body = {}) {
     const created=await env.DB.prepare("SELECT id FROM page_sections WHERE page_id=? AND section_key=?")
       .bind(page.id,newKey).first();
     await env.DB.prepare(`INSERT INTO cms_page_sections
-      (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_r2_key,content_version,content_hash,metadata_json)
+      (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_object_key,content_version,content_hash,metadata_json)
       VALUES (?,?,?,?,?,?,'draft',?,?,?,?)`)
       .bind(canonicalSource.account_id,canonicalSource.page_id,created.id,newKey,templateKey,
         Number(sourceRow.sort_order||0)+5,saved.key,saved.version,saved.content_hash,
@@ -1614,7 +1627,8 @@ export async function acceptGeneratedSection(env, slug, accountId, body = {}) {
   if (!accountId) return { error:"Account required",status:403 };
   const page = await loadPageRow(env,slug);
   if (!page) return { error:"Open a private working draft before installing generated sections",status:409 };
-  const canonical = await env.DB.prepare("SELECT id FROM cms_pages WHERE account_id = ? AND slug = ?").bind(accountId,slug).first();
+  const site = await resolveCmsSite(env.DB, { accountId, createDefault: true });
+  const canonical = await env.DB.prepare("SELECT id,site_id FROM cms_pages WHERE account_id = ? AND site_id = ? AND slug = ?").bind(accountId,site.id,slug).first();
   if (!canonical) return {error:"Canonical CMS page is not available for this account",status:409};
 
   const existingKey = String(body.sectionKey || "");
@@ -1664,10 +1678,10 @@ export async function acceptGeneratedSection(env, slug, accountId, body = {}) {
   const legacy = await env.DB.prepare("SELECT id FROM page_sections WHERE page_id = ? AND section_key = ?")
     .bind(page.id,sectionKey).first();
   await env.DB.prepare(`INSERT INTO cms_page_sections
-    (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_r2_key,content_version,content_hash,metadata_json)
+    (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_object_key,content_version,content_hash,metadata_json)
     VALUES (?,?,?,?,?,?,'draft',?,?,?,?)
     ON CONFLICT(page_id,section_key) DO UPDATE SET section_type=excluded.section_type,
-      sort_order=excluded.sort_order,status='draft',content_r2_key=excluded.content_r2_key,
+      sort_order=excluded.sort_order,status='draft',content_object_key=excluded.content_object_key,
       content_version=excluded.content_version,content_hash=excluded.content_hash,
       metadata_json=excluded.metadata_json,updated_at=datetime('now')`)
     .bind(accountId,canonical.id,legacy?.id ?? null,sectionKey,written.type,position,
@@ -1677,9 +1691,9 @@ export async function acceptGeneratedSection(env, slug, accountId, body = {}) {
   const latest = await env.DB.prepare("SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions WHERE account_id = ? AND entity_type = 'section' AND entity_id = ?")
     .bind(accountId,section.id).first();
   await env.DB.prepare(`INSERT INTO cms_revisions
-    (account_id,entity_type,entity_id,revision_number,revision_kind,content_r2_key,content_hash,snapshot_json,metadata_json)
-    VALUES (?,'section',?,?,'draft',?,?,?,?)`)
-    .bind(accountId,section.id,Number(latest?.n||0)+1,meta.key,meta.content_hash,
+    (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,content_object_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,?, 'section',?,?,'draft',?,?,?,?)`)
+    .bind(accountId,canonical.site_id,section.id,Number(latest?.n||0)+1,meta.key,meta.content_hash,
       JSON.stringify({content,artifactId:written.artifactId,definitionKey:written.type}),
       JSON.stringify({source:"agentsam",version:written.version})).run();
   await markPageDraft(env,page.id,slug);
@@ -1720,27 +1734,27 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
 
   if (path === "/api/admin/cms/theme-projects" && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    const result = await listThemeProjects(env, context.accountId);
+    const result = await listThemeProjects(env, context.accountId, url.searchParams.get("site_id") || null);
     return json(result, { status: result.status || (result.ok ? 200 : 503) });
   }
   if (path === "/api/admin/cms/theme-projects" && method === "POST") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
-    const result = await createThemeProject(env, context.accountId, body.project);
+    const result = await createThemeProject(env, context.accountId, body.project, body.site_id || url.searchParams.get("site_id") || null);
     return json(result, { status: result.status || (result.ok ? 201 : 400) });
   }
   const themeProjectMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})$/);
   if (themeProjectMatch && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    const result = await getThemeProject(env, context.accountId, themeProjectMatch[1]);
+    const result = await getThemeProject(env, context.accountId, themeProjectMatch[1], url.searchParams.get("site_id") || null);
     return json(result, { status: result.status || (result.ok ? 200 : 404) });
   }
   if (themeProjectMatch && method === "PUT") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
-    const result = await saveThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version);
+    const result = await saveThemeProject(env, context.accountId, themeProjectMatch[1], body.project, body.expected_version, body.site_id || url.searchParams.get("site_id") || null);
     return json(result, { status: result.status || (result.ok ? 200 : 400) });
   }
   const themeInstallMatch = path.match(/^\/api\/admin\/cms\/themes\/([a-z][a-z0-9-]{0,63})\/install$/);
@@ -1748,13 +1762,13 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
-    const result = await installThemeDraft(env, context.accountId, themeInstallMatch[1], body);
+    const result = await installThemeDraft(env, context.accountId, themeInstallMatch[1], body, body.site_id || url.searchParams.get("site_id") || null);
     return json(result, { status: result.status || (result.ok ? 201 : 400) });
   }
 
   if (path === "/api/admin/cms/themes" && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    const result = await listStoreThemes(env, context.accountId);
+    const result = await listStoreThemes(env, context.accountId, url.searchParams.get("site_id") || null);
     return json(result, { status: result.ok ? 200 : 503 });
   }
   if (path === "/api/admin/cms/theme-selection" && method === "PUT") {
@@ -1763,7 +1777,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     try { body = await request.json(); }
     catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
     const result = await selectThemePreview(env, body.slug, context.accountId,
-      body.expected_version ?? null);
+      body.expected_version ?? null, body.site_id || url.searchParams.get("site_id") || null);
     return json(result, { status: result.status || 200 });
   }
 
@@ -1782,7 +1796,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     const requestedSlug = url.searchParams.get("slug") || "";
     if (!/^[a-z0-9-]{1,100}$/.test(requestedSlug))
       return json({error:"Invalid page slug"},{status:400});
-    const composition = await readCanonicalComposition(env,context.accountId,requestedSlug);
+    const composition = await readCanonicalComposition(env,context.accountId,requestedSlug,url.searchParams.get("site_id") || null);
     return composition
       ? json({ok:true,composition})
       : json({error:"Canonical page not found"},{status:404});
@@ -1820,9 +1834,34 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     return json(backfill);
   }
 
+  if (path === "/api/admin/cms/sites" && method === "GET") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    const sites = await listCmsSites(env.DB, context.accountId);
+    return json({ ok: true, sites, default_site_id: sites.find(site => site.is_default)?.id || null });
+  }
+  if (path === "/api/admin/cms/sites" && method === "POST") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    try {
+      const site = await createCmsSite(env.DB, context.accountId, body.site || body);
+      return json({ ok: true, site }, { status: 201 });
+    } catch (error) {
+      const message = String(error?.message || error);
+      const status = /invalid|required/.test(message) ? 400 : /unique|constraint/i.test(message) ? 409 : 500;
+      return json({ error: message }, { status });
+    }
+  }
+
   if (path === "/api/admin/cms/pages" && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    return json(await listPagesAdmin(env, context.accountId));
+    try {
+      return json(await listPagesAdmin(env, context.accountId, url.searchParams.get("site_id") || null));
+    } catch (error) {
+      const message = String(error?.message || error);
+      return json({ error: message }, { status: /not_found|required/.test(message) ? 404 : 400 });
+    }
   }
 
   let m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)$/);

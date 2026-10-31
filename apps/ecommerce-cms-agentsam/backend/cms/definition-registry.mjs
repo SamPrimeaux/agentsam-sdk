@@ -63,7 +63,7 @@ export function normalizeCmsDefinition(row) {
     ...(compositionError ? {compositionError} : {}),
     artifact: row.artifact_id && row.artifact_status === "ready"
       ? { id: row.artifact_id, type: row.artifact_type, version: row.artifact_version,
-          manifestR2Key: row.manifest_r2_key, contentHash: row.content_hash }
+          manifestObjectKey: row.manifest_object_key, contentHash: row.content_hash }
       : null,
   };
 }
@@ -82,7 +82,7 @@ export async function listCmsDefinitions(env, accountId, filters = {}) {
     d.category, d.origin, d.version, d.status, d.artifact_id,
     d.settings_schema_json, d.allowed_blocks_json, d.max_blocks, d.metadata_json,
     a.status AS artifact_status, a.artifact_type, a.version AS artifact_version,
-    a.manifest_r2_key, a.content_hash
+    a.manifest_object_key, a.content_hash
     FROM cms_definitions d
     LEFT JOIN cms_artifacts a ON a.id = d.artifact_id AND a.account_id = d.account_id
     WHERE d.account_id = ?`;

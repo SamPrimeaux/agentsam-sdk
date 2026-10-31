@@ -9,11 +9,10 @@ function canonical(id) {
   };
 }
 
-async function applySchema(sql) {
-  for (const statement of (stub + "\n" + schema).split(";")) {
-    const query = statement.trim();
-    if (query) await sql.run(query);
-  }
+async function applySchema(db) {
+  // D1.exec parses multi-statement SQL including CREATE TRIGGER bodies;
+  // splitting on semicolons corrupts trigger definitions.
+  await db.exec(stub + "\n" + schema);
 }
 
 export default {
@@ -22,9 +21,10 @@ export default {
     const objects = createMemoryObjectStore();
     const notes = [];
     try {
-      await applySchema(sql);
+      await applySchema(env.DB);
       await sql.run("INSERT INTO accounts (id) VALUES ('acct-a')");
-      await sql.run("INSERT INTO cms_pages (id, account_id, slug, title) VALUES ('page-a', 'acct-a', 'home', 'Home')");
+      await sql.run("INSERT INTO cms_sites (id, account_id, name, slug, is_default) VALUES ('site-a', 'acct-a', 'Site A', 'default', 1)");
+      await sql.run("INSERT INTO cms_pages (id, account_id, site_id, slug, title) VALUES ('page-a', 'acct-a', 'site-a', 'home', 'Home')");
       await sql.run("INSERT INTO cms_page_sections (id, account_id, page_id, section_key, section_type) VALUES ('section-a', 'acct-a', 'page-a', 'hero', 'hero')");
       const store = createGeneratedBlockRepository(sql, objects, { manifest: { cms: { blocks: { maxDepth: 2 } } } });
       const saved = await store.saveGenerated({ accountId: "acct-a", sectionId: "section-a", blockId: "menu", blockKey: "menu", manifest: { canonical: canonical("menu"), cms: { blocks: { maxDepth: 2 } } }, settingsValues: { padding: 8 } });

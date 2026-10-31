@@ -14,7 +14,7 @@ On phones, Theme Studio uses **one bounded work pane at a time** (Sections / Pre
 
 Every reference-driven change must follow: **reference contract → implementation → actual DOM/browser screenshot → visual comparison at desktop/tablet/mobile → fail on unjustified drift**. Keep the chosen reference and acceptance checks together under `docs/ui-reference/`; never claim pixel comparison when reference files are missing. Browser mount/geometry and keyboard interaction are acceptance requirements, not tests of module registration alone.
 
-**Assistant handoff authority:** mini composer sends text to the right-docked Side Assistant. Only an action-card click opens the left-side editable request and client-only temporary tree node; only its Send may start generation. The editor's existing generation session, lock, Stop/abort, native inspector, and R2/D1 accept/publish authority remain unchanged. A generated code preview is text-only and cannot execute source HTML/JS.
+**Assistant handoff authority:** mini composer sends text to the right-docked Side Assistant. Only an action-card click opens the left-side editable request and client-only temporary tree node; only its Send may start generation. The editor's existing generation session, lock, Stop/abort, native inspector, and the configured storage/database provider accept/publish authority remain unchanged. A generated code preview is text-only and cannot execute source HTML/JS.
 
 
 Scope: `apps/ecommerce-cms-agentsam/`. Read `theme/authoring.contract.json` before editing storefront sections, blocks, or Theme Studio. This is our portable adaptation of the Shopify theme authoring guide, **not a Liquid/Shopify runtime**.
@@ -25,15 +25,27 @@ Inspect existing code, schema, renderer, and tests **before adding anything**. E
 
 | Concept | Ecommerce authority |
 | --- | --- |
-| Page/resource | `cms_pages`, existing route/template resolution |
+| Site/page/resource | `cms_sites` + site-owned `cms_pages`, routes and templates |
 | Placed section | `cms_page_sections` |
 | Placed/nested block | `cms_section_blocks` |
 | Reusable section/block definition | `cms_definitions` (roll out through migration; do not assume deployed) |
-| Implementation and versions | `cms_artifacts`, immutable R2 objects |
-| Private work, publish, history | `cms_revisions` and current publishing API |
-| Global shared settings | `cms_globals` |
-| Images/video | `media_assets` or existing media references |
-| Products/collections/orders | Commerce resource bindings, never CMS-owned copies |
+| Implementation and versions | `cms_artifacts`, immutable provider-neutral object references resolved by AgentSam storage |
+| Private work, publish, history | `cms_revisions` + immutable site-level `cms_publications` releases |
+| Site-wide settings | `cms_globals`, scoped to `cms_sites` |
+| Images/video/3D | AgentSam shared asset authority; CMS stores typed references, placement and merchant-facing metadata, never a duplicate object inventory |
+| Commerce | Ecommerce CMS owns products, variants, pricing, collections, inventory, customers, orders, checkout and fulfillment domain data; external providers are optional integrations |
+| AgentSam infrastructure | AgentSam owns provider connections, credentials, resource discovery, storage/database registries and provider-specific adapters; the CMS consumes injected capabilities and does not recreate those registries |
+
+## Approved product architecture (canonical)
+
+- `apps/ecommerce-cms-agentsam` is the sole CMS and merchant website/commerce authority. Do not introduce another CMS runtime, schema, editor, renderer or authoring API.
+- Sites are first-class and belong to an account. Pages, navigation, globals, collections, revisions and publications are site-scoped; page sections and blocks inherit their site through their owning page/section.
+- The CMS owns merchant domain data. Product/order/customer/inventory/collection entities are not external resource bindings. Payment, fulfillment, email, analytics and similar services are optional integrations.
+- `cms_collections` are site-owned merchandising/editorial collections. They may mix product references, shared media references and CMS content/page references through `cms_collection_items`; they do not copy those underlying records. Existing `store_collections` remains a legacy product-catalog grouping until its read/write paths are explicitly bridged, not a substitute for the CMS mixed-content collection model.
+- One logical schema and migration authority must work across customer-selected SQLite, Cloudflare D1 and PostgreSQL providers. Dialect-specific migrations are permitted; divergent domain models are not.
+- Object storage is customer-selectable (local filesystem, R2 or S3-compatible). Canonical CMS records use provider-neutral object references. AgentSam resolves the configured provider; never add CMS-owned provider/resource registries.
+- Implementation status matters: Wave 1 makes the schema object-key names provider-neutral, but the current CMS runtime still calls the `WEBSITE_ASSETS` R2 binding in `backend/cms/r2-store.js` and generated-section code. Do not claim local/S3/R2 portability is complete until CMS consumes an injected AgentSam object-store capability and adapter tests cover each provider. The current site-first migration is SQLite/D1 dialect; a PostgreSQL migration/adapter remains required before claiming PostgreSQL support.
+- Shared media bytes and asset inventory remain AgentSam-owned. The CMS owns site-specific media references, placement, captions, alt text, SEO and collection relationships.
 
 Read `backend/cms/registry.js` and `cms/block-types.json` as existing compatibility inputs. Avoid creating a competing section renderer. Introduce runtime `cms_definitions` integration only when migrated and validated against these inputs.
 

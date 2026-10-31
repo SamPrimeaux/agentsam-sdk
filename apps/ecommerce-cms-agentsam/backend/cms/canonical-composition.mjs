@@ -1,21 +1,25 @@
 import { buildBlockTree } from "./composition-contract.ts";
+import { resolveCmsSite } from "./site-context.mjs";
 
 /**
  * Read the installed D1 document without interpreting PAGE_REGISTRY fixture
  * defaults as authored content. Consumers must explicitly choose draft/live.
  */
-export async function readCanonicalComposition(env, accountId, slug) {
+export async function readCanonicalComposition(env, accountId, slug, siteId = null) {
   if (!accountId || !/^[a-z0-9-]{1,100}$/.test(String(slug))) {
     throw new Error("cms_composition_invalid_scope");
   }
+  const site = siteId
+    ? await resolveCmsSite(env.DB, { accountId, siteId })
+    : await resolveCmsSite(env.DB, { accountId, createDefault: true });
   const page = await env.DB.prepare(
-    `SELECT id,slug,title,page_type,template_key,status,metadata_json
-       FROM cms_pages WHERE account_id=? AND slug=? LIMIT 1`
-  ).bind(accountId,slug).first();
+    `SELECT id,site_id,slug,title,page_type,template_key,status,metadata_json
+       FROM cms_pages WHERE account_id=? AND site_id=? AND slug=? LIMIT 1`
+  ).bind(accountId,site.id,slug).first();
   if (!page) return null;
   const sections = await env.DB.prepare(
     `SELECT id,section_key,section_type,sort_order,status,inline_content_json,
-            content_r2_key,content_version,metadata_json
+            content_object_key,content_version,metadata_json
        FROM cms_page_sections WHERE account_id=? AND page_id=?
          AND status NOT IN ('archived','removed')
        ORDER BY sort_order,id`
@@ -39,14 +43,14 @@ export async function readCanonicalComposition(env, accountId, slug) {
   return {
     authority:"cms_d1_installed",
     revision:"draft",
-    page:{id:page.id,slug:page.slug,title:page.title,
+    page:{id:page.id,siteId:page.site_id,slug:page.slug,title:page.title,
       pageType:page.page_type,templateKey:page.template_key,
       status:page.status,metadata:decode(page.metadata_json)},
     sections:(sections.results||[]).map(row=>({
       id:row.id,key:row.section_key,type:row.section_type,
       order:row.sort_order,status:row.status,
       settings:decode(row.inline_content_json),
-      contentR2Key:row.content_r2_key,
+      contentObjectKey:row.content_object_key,
       contentVersion:row.content_version,
       metadata:decode(row.metadata_json),
       blocks:buildBlockTree(row.id,blockRows.filter(b=>b.section_id===row.id)),

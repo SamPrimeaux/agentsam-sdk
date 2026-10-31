@@ -5,6 +5,7 @@
  */
 import { validateThemeProject } from "../../frontend/theme-editor/project.mjs";
 import { readR2Json, writeR2Json } from "./r2-store.js";
+import { resolveCmsSite } from "./site-context.mjs";
 
 const SAFE_ID = /^[A-Za-z0-9_-]{1,160}$/;
 const SAFE_SLUG = /^[a-z][a-z0-9-]{0,63}$/;
@@ -85,16 +86,19 @@ function projectR2Key(accountId, projectId, revision, hash) {
   return `cms/accounts/${encodeURIComponent(accountId)}/theme-projects/${encodeURIComponent(projectId)}/revisions/${String(revision).padStart(6, "0")}-${hash.slice(0, 16)}.json`;
 }
 
-async function projectRow(env, accountId, id) {
+async function projectRow(env, accountId, id, siteId = null) {
+  const site = siteId
+    ? await resolveCmsSite(env.DB, { accountId, siteId })
+    : await resolveCmsSite(env.DB, { accountId, createDefault: true });
   return env.DB.prepare(
-    "SELECT id,account_id,global_key,global_type,status,inline_content_json,content_r2_key,content_version,content_hash,created_at,updated_at FROM cms_globals WHERE account_id=? AND global_key=? AND global_type='theme-project' LIMIT 1"
-  ).bind(accountId, themeProjectGlobalKey(id)).first();
+    "SELECT id,account_id,site_id,global_key,global_type,status,inline_content_json,content_object_key,content_version,content_hash,created_at,updated_at FROM cms_globals WHERE account_id=? AND site_id=? AND global_key=? AND global_type='theme-project' LIMIT 1"
+  ).bind(accountId, site.id, themeProjectGlobalKey(id)).first();
 }
 
 async function projectFromRow(env, row) {
   if (!row) return null;
-  if (!row.content_r2_key) throw Object.assign(new Error("theme_project_content_pointer_missing"), { status: 503 });
-  const value = await readR2Json(env, row.content_r2_key);
+  if (!row.content_object_key) throw Object.assign(new Error("theme_project_content_pointer_missing"), { status: 503 });
+  const value = await readR2Json(env, row.content_object_key);
   if (!value) throw Object.assign(new Error("theme_project_content_unavailable"), { status: 503 });
   const project = validateThemeProjectPayload(value);
   if (project.id !== String(row.global_key).slice("theme-project:".length)) {
@@ -104,7 +108,12 @@ async function projectFromRow(env, row) {
   return project;
 }
 
-async function writeRevision(env, accountId, row, project, revision, reason) {
+async function writeRevision(env, accountId, row, project, revision, reason, siteId = null) {
+  const site = row?.site_id
+    ? { id: row.site_id }
+    : siteId
+      ? await resolveCmsSite(env.DB, { accountId, siteId })
+      : await resolveCmsSite(env.DB, { accountId, createDefault: true });
   const serialized = JSON.stringify(project);
   const contentHash = await hashText(serialized);
   const key = projectR2Key(accountId, project.id, revision, contentHash);
@@ -116,64 +125,68 @@ async function writeRevision(env, accountId, row, project, revision, reason) {
   if (!row) {
     const globalId = "cmsg_" + crypto.randomUUID().replaceAll("-", "").slice(0, 16);
     const inserted = await env.DB.prepare(
-      "INSERT INTO cms_globals (id,account_id,global_key,global_type,status,inline_content_json,content_r2_key,content_version,content_hash,metadata_json) VALUES (?,?,?,'theme-project','draft',?,?,?,?,?) ON CONFLICT(account_id,global_key) DO NOTHING"
-    ).bind(globalId, accountId, themeProjectGlobalKey(project.id), inline, key, revision, contentHash,
+      "INSERT INTO cms_globals (id,account_id,site_id,global_key,global_type,status,inline_content_json,content_object_key,content_version,content_hash,metadata_json) VALUES (?,?,?,?,'theme-project','draft',?,?,?,?,?) ON CONFLICT(site_id,global_key) DO NOTHING"
+    ).bind(globalId, accountId, site.id, themeProjectGlobalKey(project.id), inline, key, revision, contentHash,
       JSON.stringify({ source: "theme-store", schema: project.schema })).run();
     if (changes(inserted) !== 1) return { ok: false, status: 409, code: "theme_project_exists" };
-    row = await projectRow(env, accountId, project.id);
+    row = await projectRow(env, accountId, project.id, site.id);
   } else {
     const updated = await env.DB.prepare(
-      "UPDATE cms_globals SET inline_content_json=?,content_r2_key=?,content_version=?,content_hash=?,status='draft',updated_at=datetime('now') WHERE id=? AND account_id=? AND content_version=?"
-    ).bind(inline, key, revision, contentHash, row.id, accountId, revision - 1).run();
+      "UPDATE cms_globals SET inline_content_json=?,content_object_key=?,content_version=?,content_hash=?,status='draft',updated_at=datetime('now') WHERE id=? AND account_id=? AND site_id=? AND content_version=?"
+    ).bind(inline, key, revision, contentHash, row.id, accountId, site.id, revision - 1).run();
     if (changes(updated) !== 1) return { ok: false, status: 409, code: "theme_project_version_conflict" };
   }
   await env.DB.prepare(
-    "INSERT OR IGNORE INTO cms_revisions (account_id,entity_type,entity_id,revision_number,revision_kind,content_r2_key,content_hash,snapshot_json,metadata_json) VALUES (?,'global',?,?,'draft',?,?,?,?)"
-  ).bind(accountId, row.id, revision, key, contentHash,
+    "INSERT OR IGNORE INTO cms_revisions (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,content_object_key,content_hash,snapshot_json,metadata_json) VALUES (?,?, 'global',?,?,'draft',?,?,?,?)"
+  ).bind(accountId, site.id, row.id, revision, key, contentHash,
     JSON.stringify({ project_id: project.id, name: project.name, revision }),
     JSON.stringify({ source: "theme-store", reason })).run();
-  return { ok: true, project, row, content_r2_key: key, content_hash: contentHash };
+  return { ok: true, project, row, content_object_key: key, content_hash: contentHash };
 }
 
-export async function listThemeProjects(env, accountId) {
+export async function listThemeProjects(env, accountId, siteId = null) {
   if (!accountId) return { ok: false, status: 403, error: "account_required" };
+  const site = siteId
+    ? await resolveCmsSite(env.DB, { accountId, siteId })
+    : await resolveCmsSite(env.DB, { accountId, createDefault: true });
   const result = await env.DB.prepare(
-    "SELECT inline_content_json FROM cms_globals WHERE account_id=? AND global_type='theme-project' AND status!='archived' ORDER BY updated_at DESC"
-  ).bind(accountId).all();
+    "SELECT inline_content_json FROM cms_globals WHERE account_id=? AND site_id=? AND global_type='theme-project' AND status!='archived' ORDER BY updated_at DESC"
+  ).bind(accountId, site.id).all();
   const projects = (result.results || []).map((row) => parseObject(row.inline_content_json, null)).filter((item) =>
     item && SAFE_ID.test(String(item.id)) && typeof item.name === "string"
   );
   return { ok: true, source: "cms_globals+r2", projects };
 }
 
-export async function getThemeProject(env, accountId, id) {
+export async function getThemeProject(env, accountId, id, siteId = null) {
   if (!accountId) return { ok: false, status: 403, error: "account_required" };
   if (!SAFE_ID.test(String(id))) return { ok: false, status: 400, error: "theme_project_id_invalid" };
   try {
-    const row = await projectRow(env, accountId, id);
+    const row = await projectRow(env, accountId, id, siteId);
     if (!row) return { ok: false, status: 404, error: "theme_project_not_found" };
     const project = await projectFromRow(env, row);
     return { ok: true, project };
   } catch (error) {
-    return { ok: false, status: error.status || 503, error: error.message || "theme_project_read_failed" };
+    const message = String(error?.message || error || "theme_project_read_failed");
+    return { ok: false, status: error.status || (message.includes("not_found") ? 404 : 503), error: message };
   }
 }
 
-export async function createThemeProject(env, accountId, value) {
+export async function createThemeProject(env, accountId, value, siteId = null) {
   if (!accountId) return { ok: false, status: 403, error: "account_required" };
   if (!env.WEBSITE_ASSETS) return { ok: false, status: 503, error: "cms_r2_unavailable" };
   let project;
   try { project = validateThemeProjectPayload(value); }
   catch (error) { return { ok: false, status: 400, error: error.message || "theme_project_invalid" }; }
-  if (await projectRow(env, accountId, project.id)) {
+  if (await projectRow(env, accountId, project.id, siteId)) {
     return { ok: false, status: 409, error: "theme_project_exists" };
   }
   const now = new Date().toISOString();
   project = { ...project, revision: 1, createdAt: project.createdAt || now, updatedAt: now };
-  const saved = await writeRevision(env, accountId, null, project, 1, "create");
+  const saved = await writeRevision(env, accountId, null, project, 1, "create", siteId);
   if (!saved.ok) {
     if (saved.code === "theme_project_exists") {
-      const existing = await getThemeProject(env, accountId, project.id);
+      const existing = await getThemeProject(env, accountId, project.id, siteId);
       if (existing.ok) return { ok: true, unchanged: true, project: existing.project };
     }
     return { ok: false, status: saved.status || 503, error: saved.code || "theme_project_create_failed" };
@@ -191,7 +204,7 @@ function safePreviewUrl(value, slug) {
   } catch { return null; }
 }
 
-export async function installThemeDraft(env, accountId, slug, payload = {}) {
+export async function installThemeDraft(env, accountId, slug, payload = {}, siteId = null) {
   if (!accountId) return { ok: false, status: 403, error: "account_required" };
   if (!env.WEBSITE_ASSETS) return { ok: false, status: 503, error: "cms_r2_unavailable" };
   if (!SAFE_SLUG.test(String(slug))) return { ok: false, status: 400, error: "theme_slug_invalid" };
@@ -215,7 +228,7 @@ export async function installThemeDraft(env, accountId, slug, payload = {}) {
   project.sourcePreviewUrl = previewUrl;
 
   // The stable project ID is the idempotency key for one package's installed draft.
-  const existingRow = await projectRow(env, accountId, project.id);
+  const existingRow = await projectRow(env, accountId, project.id, siteId);
   if (existingRow) {
     try {
       const existing = await projectFromRow(env, existingRow);
@@ -258,17 +271,17 @@ export async function installThemeDraft(env, accountId, slug, payload = {}) {
   if (!artifactResult) {
     const artifactId = "cma_" + crypto.randomUUID().replaceAll("-", "").slice(0, 16);
     await env.DB.prepare(
-      "INSERT INTO cms_artifacts (id,account_id,artifact_key,artifact_type,version,r2_prefix,manifest_r2_key,content_hash,content_mode,status,source_kind,source_ref,metadata_json) VALUES (?,?,?,'theme',?,?,?,?,'manifest','ready','package',?,?) ON CONFLICT(account_id,artifact_key,version) DO NOTHING"
+      "INSERT INTO cms_artifacts (id,account_id,artifact_key,artifact_type,version,object_prefix,manifest_object_key,content_hash,content_mode,status,source_kind,source_ref,metadata_json) VALUES (?,?,?,'theme',?,?,?,?,'manifest','ready','package',?,?) ON CONFLICT(account_id,artifact_key,version) DO NOTHING"
     ).bind(artifactId, accountId, artifactKey, packageVersion, prefix, manifestKey, manifestHash, packageName,
       JSON.stringify({ label: project.name, project_id: project.id, preview_url: previewUrl, sourceThemeId: slug })).run();
   }
 
   const now = new Date().toISOString();
   project = { ...project, revision: 1, createdAt: project.createdAt || now, updatedAt: now };
-  const saved = await writeRevision(env, accountId, null, project, 1, "install");
+  const saved = await writeRevision(env, accountId, null, project, 1, "install", siteId);
   if (!saved.ok) {
     if (saved.code === "theme_project_exists") {
-      const existing = await getThemeProject(env, accountId, project.id);
+      const existing = await getThemeProject(env, accountId, project.id, siteId);
       if (existing.ok && existing.project.sourceThemeId === slug && existing.project.sourcePackage === packageName) {
         return { ok: true, installed: true, unchanged: true, project: existing.project };
       }
@@ -278,7 +291,7 @@ export async function installThemeDraft(env, accountId, slug, payload = {}) {
   return { ok: true, installed: true, unchanged: false, project };
 }
 
-export async function saveThemeProject(env, accountId, id, value, expectedVersion) {
+export async function saveThemeProject(env, accountId, id, value, expectedVersion, siteId = null) {
   if (!accountId) return { ok: false, status: 403, error: "account_required" };
   if (!env.WEBSITE_ASSETS) return { ok: false, status: 503, error: "cms_r2_unavailable" };
   if (!SAFE_ID.test(String(id))) return { ok: false, status: 400, error: "theme_project_id_invalid" };
@@ -287,7 +300,7 @@ export async function saveThemeProject(env, accountId, id, value, expectedVersio
   catch (error) { return { ok: false, status: 400, error: error.message || "theme_project_invalid" }; }
   if (project.id !== id) return { ok: false, status: 400, error: "theme_project_identity_mismatch" };
 
-  const row = await projectRow(env, accountId, id);
+  const row = await projectRow(env, accountId, id, siteId);
   if (!row) return { ok: false, status: 404, error: "theme_project_not_found" };
   const currentVersion = Number(row.content_version || 0);
   const expected = Number(expectedVersion);
@@ -302,7 +315,7 @@ export async function saveThemeProject(env, accountId, id, value, expectedVersio
     createdAt: project.createdAt || (await projectFromRow(env, row)).createdAt || now,
     updatedAt: now,
   };
-  const saved = await writeRevision(env, accountId, row, project, currentVersion + 1, "save");
+  const saved = await writeRevision(env, accountId, row, project, currentVersion + 1, "save", siteId);
   if (!saved.ok) return { ok: false, status: saved.status || 503, error: saved.code || "theme_project_save_failed" };
   return { ok: true, project };
 }
