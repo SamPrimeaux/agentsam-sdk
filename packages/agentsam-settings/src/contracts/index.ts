@@ -293,6 +293,35 @@ export type SettingsNotification = {
   enabled: boolean;
 };
 
+/** Delivery channels for Local Studio / portable hosts. */
+export type SettingsNotificationChannels = {
+  email: boolean;
+  push: boolean;
+  imessage: boolean;
+  in_app: boolean;
+};
+
+/**
+ * Account contact + channel/event prefs for the Notifications settings unit.
+ * SSOT is accounts.id: email → accounts.notification_email;
+ * phone/channels/events → accounts.meta_json.notifications.
+ */
+export type SettingsNotificationProfile = {
+  email: string;
+  phone: string;
+  /** Read-only login identity when distinct from notification email. */
+  loginEmail: string | null;
+  channels: SettingsNotificationChannels;
+  events: SettingsNotification[];
+};
+
+export type SettingsNotificationProfileUpdate = {
+  email: string;
+  phone: string;
+  channels: SettingsNotificationChannels;
+  events: Array<{ id: string; enabled: boolean }>;
+};
+
 export type SettingsSnapshot = {
   fixtureName: string;
   environmentLabel: string;
@@ -321,7 +350,10 @@ export type SettingsSnapshot = {
   themes: SettingsTheme[];
   storage: SettingsStorageTarget[];
   usage: SettingsUsage[];
+  /** Event toggles (also mirrored on notificationProfile.events when profile is loaded). */
   notifications: SettingsNotification[];
+  notificationProfile?: SettingsNotificationProfile | null;
+  notificationProfileError?: string | null;
   codebase: {
     indexedFiles: string;
     symbols: string;
@@ -361,6 +393,7 @@ export interface SettingsHost {
   archiveAgent?(id: string): Promise<void>;
   updateAgentPolicy?(policy: SettingsAgentPolicy): Promise<void>;
   updateGeneralPreferences?(preferences: SettingsGeneralPreferences): Promise<void>;
+  updateNotificationSettings?(settings: SettingsNotificationProfileUpdate): Promise<void>;
   openSettingsUnit?(unit: SettingsUnitId): void;
   upsertCatalogItem?(kind: SettingsCatalogKind, item: SettingsCatalogItem): Promise<void>;
   removeCatalogItem?(kind: SettingsCatalogKind, id: string): Promise<void>;

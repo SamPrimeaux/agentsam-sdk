@@ -11,6 +11,8 @@ import type {
   SettingsCatalogKind,
   SettingsHost,
   SettingsModel,
+  SettingsNotificationProfile,
+  SettingsNotificationProfileUpdate,
   SettingsPlugin,
   SettingsSnapshot,
   SettingsWidget,
@@ -211,6 +213,12 @@ async function loadGeneralSettings():Promise<SettingsGeneralPreferences>{
   return data.preferences;
 }
 
+async function loadNotificationSettings():Promise<SettingsNotificationProfile>{
+  const data=await settingsRequest<{ok:boolean;settings:SettingsNotificationProfile}>(
+    "/api/settings/notifications");
+  return data.settings;
+}
+
 async function loadAgentSettings():Promise<{
   agents:SettingsAgent[];templates:SettingsAgent[];policy:SettingsAgentPolicy;
 }> {
@@ -266,6 +274,8 @@ function emptySnapshot(): SettingsSnapshot {
     storage: [],
     usage: [],
     notifications: [],
+    notificationProfile: null,
+    notificationProfileError: null,
     codebase: {
       indexedFiles: "Not checked",
       symbols: "Not checked",
@@ -309,7 +319,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     snapshot.health = "attention";
   }
 
-  const [inventoryResult, pluginResult, skillsResult, agentsResult, prefsResult, signedIn, workspace] = await Promise.all([
+  const [inventoryResult, pluginResult, skillsResult, agentsResult, prefsResult, notificationsResult, signedIn, workspace] = await Promise.all([
     loadEffectiveModelInventory().then(
       (value) => ({ ok: true as const, value }),
       () => ({ ok: false as const, value: null }),
@@ -329,6 +339,10 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
     loadGeneralSettings().then(
       (value)=>({ok:true as const,value}),
       (error)=>({ok:false as const,error:String(error?.message||"Preferences unavailable"),value:null}),
+    ),
+    loadNotificationSettings().then(
+      (value)=>({ok:true as const,value}),
+      (error)=>({ok:false as const,error:String(error?.message||"Notification settings unavailable"),value:null}),
     ),
     desktop ? identitySessionExists().catch(() => false) : Promise.resolve(false),
     desktop ? getDesktopWorkspaceContext().catch(() => null) : Promise.resolve(null),
@@ -362,6 +376,14 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   snapshot.skills = skillsResult.value;
   if(prefsResult.ok)snapshot.general.preferences=prefsResult.value;
   else snapshot.general.preferencesError=prefsResult.error;
+  if(notificationsResult.ok&&notificationsResult.value){
+    snapshot.notificationProfile=notificationsResult.value;
+    snapshot.notifications=notificationsResult.value.events;
+    snapshot.notificationProfileError=null;
+  }else{
+    snapshot.notificationProfile=null;
+    snapshot.notificationProfileError=notificationsResult.error||"Notification settings unavailable";
+  }
   if(agentsResult.ok&&agentsResult.value) {
     snapshot.agents=agentsResult.value.agents;
     snapshot.agentTemplates=agentsResult.value.templates;
@@ -430,6 +452,10 @@ export const localStudioSettingsHost: SettingsHost = {
   },
   async updateGeneralPreferences(preferences:SettingsGeneralPreferences){
     await settingsRequest("/api/settings/preferences","PUT",preferences);
+    if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
+  },
+  async updateNotificationSettings(settings:SettingsNotificationProfileUpdate){
+    await settingsRequest("/api/settings/notifications","PUT",settings);
     if(typeof window!=="undefined")window.dispatchEvent(new CustomEvent(SETTINGS_CATALOG_CHANGED_EVENT));
   },
   async saveAgent(draft:SettingsAgentDraft,id?:string) {

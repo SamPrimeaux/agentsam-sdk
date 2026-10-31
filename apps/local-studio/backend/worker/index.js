@@ -50,6 +50,7 @@ import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOA
 import { handleStudioSkills } from "./studio-skills.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
 import { handleStudioUserPreferences, handleStudioAccountAvatar } from "./studio-user-preferences.js";
+import { handleStudioNotificationSettings } from "./studio-notification-settings.js";
 import { readPluginWorkspace } from "./plugin-workspace.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
 import { handleAnalyticsQueryRequest } from "./analytics-query-service.js";
@@ -741,6 +742,7 @@ export default {
     const isConnectionsRegistry = url.pathname === "/api/connections";
     const isStudioPreferences=url.pathname==="/api/settings/preferences";
     const isStudioAccountAvatar=url.pathname==="/api/settings/account-avatar";
+    const isStudioNotifications=url.pathname==="/api/settings/notifications";
     const isStudioAgentSettings=url.pathname==="/api/settings/agents"
       || url.pathname.startsWith("/api/settings/agents/");
     const isStudioSkills = url.pathname === "/api/settings/skills"
@@ -1072,6 +1074,13 @@ export default {
       catch(error){
         console.warn("studio_user_preferences_error",String(error?.message||error).slice(0,120));
         return json({ok:false,error:"preferences_unavailable"},503);
+      }
+    }
+    if(isStudioNotifications) {
+      try{return await handleStudioNotificationSettings(request,env,await sessionUser());}
+      catch(error){
+        console.warn("studio_notification_settings_error",String(error?.message||error).slice(0,120));
+        return json({ok:false,error:"notifications_unavailable"},503);
       }
     }
     if (isStudioAgentSettings) {

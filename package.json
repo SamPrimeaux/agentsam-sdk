@@ -136,6 +136,8 @@
     "./hooks/protocol/receipt": "./protocol/hooks/agentsam.hook.receipt.v1.schema.json",
     "./hooks/schema/manifest": "./packages/agentsam-hooks/schema/manifest.json",
     "./hooks/schema/sqlite": "./migrations/runtime/0005_agentsam_hooks.sql",
+    "./notifications/protocol": "./protocol/notifications/README.md",
+    "./notifications/schema/sqlite": "./migrations/runtime/0010_agentsam_notifications.sql",
     "./acp": "./src/acp/index.js",
     "./acp/http": "./src/acp/http.js",
     "./acp/runtime-selection": "./src/acp/runtime-selection.js",

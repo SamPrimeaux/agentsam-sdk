@@ -1,5 +1,10 @@
 # AgentSam — reusable themes, templates and apps
 
+> **Contract SSOT (2026-10-31):** `protocol/product-releases/README.md` +
+> `migrations/runtime/0011_agentsam_product_releases.sql`.
+> Product identity = live `agentsam_products`. Versioned artifacts =
+> `agentsam_product_releases`. Do **not** apply `desktop_shell_releases`.
+
 ## Product lifecycle decision
 
 Separate authored source Git repos, immutable built artifacts, catalog metadata
