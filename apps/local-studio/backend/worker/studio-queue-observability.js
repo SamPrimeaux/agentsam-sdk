@@ -109,7 +109,7 @@ export async function handleStudioQueueObservability(request, env, accountId, {
         body: JSON.stringify({
           query: `query QueueBacklogByHour($accountTag: string!, $queueId: string!, $datetimeStart: Time!, $datetimeEnd: Time!) {
             viewer { accounts(filter: { accountTag: $accountTag }) {
-              queuesBacklogAdaptiveGroups: queuesBacklogAdaptiveGroups(
+              backlog: queueBacklogAdaptiveGroups(
                 limit: 48,
                 filter: { queueId: $queueId, datetime_geq: $datetimeStart, datetime_leq: $datetimeEnd },
                 orderBy: [datetimeHour_ASC]
@@ -126,7 +126,7 @@ export async function handleStudioQueueObservability(request, env, accountId, {
       if (!response.ok || data.errors?.length) throw new Error('analytics_unavailable');
       history = {
         state: 'ready',
-        points: (data.data?.viewer?.accounts?.[0]?.queuesBacklogAdaptiveGroups || [])
+        points: (data.data?.viewer?.accounts?.[0]?.backlog || [])
           .map(point => ({
             at: point.dimensions?.datetimeHour || null,
             backlog_count: point.avg?.messages ?? null,
