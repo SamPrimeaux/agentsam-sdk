@@ -6,8 +6,8 @@ type Queue = {
   environment: string | null;
   owner_app: string | null;
   delivery_status: string;
-  producers_total_count: number;
-  consumers_total_count: number;
+  producers_total_count: number | null;
+  consumers_total_count: number | null;
   metrics: {
     state: string;
     backlog_count: number | null;
@@ -103,7 +103,7 @@ export function QueueDepthWidget({ compact = false, interactive = true }: { comp
       <div><div className="font-mono text-xl font-semibold">{metrics.state === 'ready' && metrics.backlog_bytes != null ? metrics.backlog_bytes.toLocaleString() : '—'}</div><div className="text-[10px] text-muted-foreground">Bytes</div></div>
     </div>
     <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground">
-      <span>{selected.delivery_status} · {selected.producers_total_count} producers · {selected.consumers_total_count} consumers</span>
+      <span>{selected.delivery_status} · {selected.producers_total_count ?? '—'} producers · {selected.consumers_total_count ?? '—'} consumers</span>
       {interactive && <button type="button" className="rounded border border-border px-2 py-1 text-foreground" onClick={() => setShowHistory(previous => !previous)}
         aria-expanded={showHistory}>{showHistory ? 'Hide history' : '24h history'}</button>}
     </div>
