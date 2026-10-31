@@ -110,9 +110,9 @@ export function QueueDepthWidget({ compact = false, interactive = true }: { comp
     {showHistory && <div className="space-y-1" aria-label="Backlog over the last 24 hours">
       {history?.state === 'unavailable' ? <p className="text-xs text-muted-foreground">Historical analytics unavailable.</p>
         : history?.state === 'ready' ? points.length ? <div className="flex h-12 items-end gap-px" role="img" aria-label="Hourly average backlog">
-          {points.map((point, index) => <div key={point.at || index} className="min-w-0 flex-1 rounded-t-sm bg-violet-400/75"
+          {points.map((point, index) => <div key={point.at || index} className="min-w-0 flex-1 rounded-t-sm bg-violet-400/75 h-[var(--queue-height)]"
             title={`${point.at || 'Unknown'}: ${point.backlog_count ?? 'unavailable'} messages`}
-            style={{ height: `${Math.max(2, ((point.backlog_count ?? 0) / max) * 100)}%` }}/>)}
+            style={{ '--queue-height': `${Math.max(2, ((point.backlog_count ?? 0) / max) * 100)}%` } as import('react').CSSProperties}/>)}
         </div> : <p className="text-xs text-muted-foreground">No historical samples for this period.</p>
         : <p className="text-xs text-muted-foreground">Loading history…</p>}
     </div>}
