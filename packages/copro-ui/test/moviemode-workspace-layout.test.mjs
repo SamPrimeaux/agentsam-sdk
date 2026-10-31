@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { CoProStudio } from '../dist/studio.js';
+import { CoProTimeline } from '../dist/timeline.js';
 import { ResizeHandle, loadWorkspaceLayout, DEFAULT_WORKSPACE_LAYOUT, clampWorkspaceSize } from '../dist/workspace-layout-moviemode.js';
 
 const project = {
@@ -13,6 +14,17 @@ const project = {
     }],
   }],
 };
+
+test('overlay image clips render one truncated label instead of duplicating the full asset id', () => {
+  const filename = 'DreamHouse-V1.4-pool.png:1792804639592:2149398';
+  const html = renderToStaticMarkup(React.createElement(CoProTimeline, {
+    project:{id:'overlay-label-fixture',tracks:[{id:'overlay-1',kind:'overlay',clips:[{id:'image-1',assetId:'asset:'+filename,startUs:0,inUs:0,durationUs:3_000_000}]}]},
+    playheadUs:0,
+  }));
+  assert.match(html,/class="copro-text-clip"><span>DreamHouse-V1\.4-pool\.png:1792804639592:2149398<\/span><\/span>/);
+  assert.doesNotMatch(html,/class="copro-clip-label"/);
+  assert.ok(html.includes('title="'+filename+'"'));
+});
 
 test('workspace defaults are bounded and can render without localStorage or window', () => {
   assert.deepEqual(loadWorkspaceLayout(), DEFAULT_WORKSPACE_LAYOUT);
@@ -42,7 +54,7 @@ test('desktop editor separates creation browser and selected clip inspector', ()
   assert.match(html, /aria-label="Resize clip inspector"/);
   assert.match(html, /aria-label="Resize timeline"/);
   assert.match(html, /data-layout-mode="wide"/);
-  assert.match(html, /sample\.webm/);
+  assert.match(html, /Drop files here or browse/);
   assert.doesNotMatch(html, /aria-modal="true"/);
 });
 
@@ -52,11 +64,21 @@ test('empty editor retains project details and full tool navigation without a cr
     project:{id:'project:blank',tracks:[{id:'v1',kind:'video',clips:[]}]},
     selectedClipId:null,playheadUs:0,projectTitle:'Launch walkthrough',
   }));
-  for (const label of ['MovieMode editing categories','Media collections','Import','Subprojects','Generate','Library','Project information','Launch walkthrough','Project details']) {
+  for (const label of ['MovieMode editing categories','Media collections','Import','Media','Subprojects','Yours','Generate','Spaces','Library','Project information','Launch walkthrough','Project details']) {
     const match = label==='Project details'? /aria-label="project settings"|>Project</i : label;
     assert.ok(typeof match==='string' ? html.includes(match) : match.test(html), label);
   }
   assert.doesNotMatch(html,/aria-modal="true"/);
+});
+
+test('empty preview offers direct import, template, and title entry points', () => {
+  const html = renderToStaticMarkup(React.createElement(CoProStudio, {
+    project:{id:'project:blank',tracks:[{id:'video',kind:'video',clips:[]}]},
+    selectedClipId:null,playheadUs:0,projectTitle:'Untitled project',
+  }));
+  assert.match(html,/data-state="empty"/);
+  assert.match(html,/aria-label="Start editing"/);
+  for (const label of ['Your canvas is ready','Import media','Browse templates','Add title']) assert.ok(html.includes(label),label);
 });
 
 test('reference-first desktop default is dense but fully user-adjustable',()=>{
@@ -74,4 +96,24 @@ test('reference-first desktop default is dense but fully user-adjustable',()=>{
   assert.match(html,/aria-label="Undock inspector"/);
   assert.match(html,/aria-label="Workspace layout preset"/);
   assert.doesNotMatch(html,/class="copro-desktop-rail"/);
+});
+
+test('generated composition clips keep their SVG preview and sample motion/graphics against the timeline', () => {
+  const composition={
+    id:'project:creative',canvas:{width:1920,height:1080,frameRate:30},
+    tracks:[{id:'creative-track',kind:'overlay',clips:[{
+      id:'creative-clip',assetId:'asset:creative',startUs:0,durationUs:4_000_000,
+      metadata:{creative:{schema:'copro.creative-clip.v1',parameters:{title:'Chapter'}},motion:{id:'rise-in'},graphic:{id:'counter',values:[0,25,50,75,100],durationUs:2_000_000}},
+    }]}],
+  };
+  const html=renderToStaticMarkup(React.createElement(CoProStudio,{
+    project:composition,selectedClipId:'creative-clip',playheadUs:1_000_000,projectTitle:'Creative preview',
+    previewSrc:'data:image/svg+xml;base64,PHN2Zy8+',previewKind:'image',
+    mediaItems:[{id:'asset:unrelated',name:'other.mp4',kind:'video',url:'blob:other'}],
+    sampleMotion:()=>({x:0,y:0,scale:1,rotation:0,opacity:1,blur:0,clipInset:0,scaleX:1}),
+    sampleGraphic:()=>({text:'50'}),
+  }));
+  assert.match(html,/src="data:image\/svg\+xml;base64,PHN2Zy8\+"/);
+  assert.match(html,/class="copro-preview-graphic copro-preview-graphic-counter"/);
+  assert.match(html,/>50<\/span>/);
 });

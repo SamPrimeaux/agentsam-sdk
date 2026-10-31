@@ -160,6 +160,70 @@ export function applyCoProCommand(inputProject, command) {
       break;
     }
 
+    case "clip.set_motion": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      const motion = String(payload.motion ?? "none");
+      const metadata = { ...(found.clip.metadata ?? {}) };
+      if (motion === "none") {
+        delete metadata.motion;
+      } else {
+        const durationUs = Number.isSafeInteger(payload.durationUs) && payload.durationUs > 0 ? payload.durationUs : 800_000;
+        const delayUs = Number.isSafeInteger(payload.delayUs) && payload.delayUs >= 0 ? payload.delayUs : 0;
+        const amplitude = payload.amplitude === undefined ? 80 : Number(payload.amplitude);
+        if (!Number.isFinite(amplitude) || Math.abs(amplitude) > 10_000) throw new Error("copro_motion_amplitude_invalid");
+        metadata.motion = { id: motion, durationUs, delayUs, amplitude };
+      }
+      found.clip.metadata = metadata;
+      break;
+    }
+
+    case "clip.set_creative_parameters": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      const current = found.clip.metadata?.creative;
+      if (!current || current.schema !== "copro.creative-clip.v1") throw new Error("copro_clip_creative_not_found");
+      const parameters = { ...(current.parameters ?? {}) };
+      for (const [key, value] of Object.entries(payload.patch ?? {})) {
+        if (["title", "subtitle", "label", "author", "contact"].includes(key)) {
+          if (typeof value !== "string" || value.length > 4000) throw new Error("copro_creative_text_parameter_invalid");
+        } else if (key === "accent" || key === "background" || key === "foreground") {
+          if (typeof value !== "string" || !/^#[0-9a-f]{6}$/i.test(value)) throw new Error("copro_creative_color_parameter_invalid");
+        } else {
+          throw new Error("copro_creative_parameter_not_editable");
+        }
+        parameters[key] = value;
+      }
+      found.clip.metadata = { ...(found.clip.metadata ?? {}), creative: { ...current, parameters } };
+      if (project.metadata?.creative) project.metadata = { ...project.metadata, creative: { ...project.metadata.creative, parameters: { ...(project.metadata.creative.parameters ?? {}), ...payload.patch } } };
+      if (project.metadata?.templateSlots) project.metadata = { ...project.metadata, templateSlots: { ...project.metadata.templateSlots, ...payload.patch } };
+      break;
+    }
+
+    case "clip.set_graphic": {
+      const found = locateClip(project, payload.clipId);
+      if (!found) throw new Error("copro_clip_not_found");
+      const graphic = payload.graphic;
+      const metadata = { ...(found.clip.metadata ?? {}) };
+      if (!graphic || graphic.id === "none") {
+        delete metadata.graphic;
+      } else {
+        if (!["typewriter", "counter"].includes(String(graphic.id))) throw new Error("copro_graphic_not_supported");
+        const durationUs = Number.isSafeInteger(graphic.durationUs) && graphic.durationUs > 0 ? graphic.durationUs : 1_000_000;
+        if (graphic.id === "typewriter") {
+          const sequence = graphic.sequence;
+          if (typeof graphic.text !== "string" || graphic.text.length > 4000) throw new Error("copro_typewriter_text_invalid");
+          if (!sequence || !Array.isArray(sequence.events) || sequence.events.length > 10_000 || sequence.events.some(event => !Number.isSafeInteger(event.timeUs) || typeof event.text !== "string" || event.text.length > 4000)) throw new Error("copro_typewriter_sequence_invalid");
+        } else {
+          const values = graphic.values;
+          if (!Array.isArray(values) || values.length < 2 || values.length > 100 || values.some(value => !Number.isFinite(value))) throw new Error("copro_counter_values_invalid");
+        }
+        metadata.graphic = { ...graphic, durationUs };
+      }
+      found.clip.metadata = metadata;
+      break;
+    }
+
     case "clip.set_transition": {
       const found = locateClip(project, payload.clipId);
       if (!found) throw new Error("copro_clip_not_found");

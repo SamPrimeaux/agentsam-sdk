@@ -2,6 +2,8 @@ import {useShellAppearance,shellAccentForeground} from '../../../packages/agents
 import '../../../packages/agentsam-nav/src/shell.css';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { coproAppManifest } from "./app-manifest";
+import { MOVIEMODE_SYSTEM_ICONS } from "./system-icons";
+import creativeCatalog from "@inneranimalmedia/copro-templates/catalog";
 import { importEvidencePackage } from "./evidence-import";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
 import { createCoProProject, createTrack, createClip, serializeCoProProject } from "@inneranimalmedia/copro-project";
@@ -13,6 +15,9 @@ import {
   type CoProProjectSummary,
   type CoProStudioAction,
   type CoProMediaShelfItem,
+  type CoProCreativeAsset,
+  type CoProMotionSampler,
+  type CoProGraphicSampler,
 } from "@inneranimalmedia/copro-ui";
 import "@inneranimalmedia/copro-ui/styles.css";
 
@@ -30,6 +35,17 @@ const FIXTURE_PROJECTS: CoProProjectSummary[] = [
   { id:"demo:weekend", title:"Weekend cut", subtitle:"Sample timeline · no video supplied", kind:"video", status:"draft", durationMs:11_900, aspectRatio:"9:16", updatedAt:"2026-10-04T17:10:00Z", thumbnailTone:"cyan", example:true },
   { id:"demo:caption", title:"Caption layout", subtitle:"Sample tracks & captions", kind:"video", status:"draft", durationMs:11_900, aspectRatio:"9:16", updatedAt:"2026-10-04T17:10:00Z", thumbnailTone:"violet", example:true },
 ];
+
+const CREATIVE_ASSET_SEED: CoProCreativeAsset[] = (creativeCatalog as any).items.map((entry: any) => ({
+  id: entry.id,
+  category: entry.category as CoProCreativeAsset["category"],
+  name: entry.name,
+  durationUs: entry.durationUs,
+  previewUrl: "",
+  previewFile: entry.preview,
+  source: entry.source,
+  aspectRatio: "16:9",
+}));
 
 function installCoProBrandIcons() {
   if (typeof document === "undefined") return;
@@ -100,26 +116,18 @@ function makeDemoProject(id = "project:demo", title = "Weekend cut") {
 }
 
 async function probeMediaDurationUs(file: File): Promise<number> {
-  if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) {
-    return 3_000_000;
-  }
-
+  if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) return 3_000_000;
   const url = URL.createObjectURL(file);
   try {
     const media = document.createElement(file.type.startsWith("audio/") ? "audio" : "video");
     media.preload = "metadata";
     media.src = url;
-
     const duration = await new Promise<number>((resolve) => {
-      const done = () => {
-        const seconds = Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 8;
-        resolve(seconds);
-      };
+      const done = () => resolve(Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 8);
       media.addEventListener("loadedmetadata", done, { once:true });
       media.addEventListener("error", () => resolve(8), { once:true });
       window.setTimeout(() => resolve(8), 2500);
     });
-
     return Math.max(100_000, Math.round(duration * 1_000_000));
   } finally {
     URL.revokeObjectURL(url);
@@ -178,6 +186,10 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
 
   const [savedProjects, setSavedProjects] = useState<CoProProjectSummary[]>([]);
   const [homeSection, setHomeSection] = useState<"home" | "templates">("home");
+  const [creativeAssets, setCreativeAssets] = useState<CoProCreativeAsset[]>(CREATIVE_ASSET_SEED);
+  const [creativeRenderer, setCreativeRenderer] = useState<((project: any, timeUs: number) => string | null) | null>(null);
+  const [motionSampler, setMotionSampler] = useState<CoProMotionSampler | null>(null);
+  const [graphicSampler, setGraphicSampler] = useState<CoProGraphicSampler | null>(null);
   const [initialTool, setInitialTool] = useState<"text" | "captions" | null>(null);
 
   async function refreshSavedProjects() {
@@ -196,6 +208,58 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }
 
   const projects = useMemo(() => [...savedProjects, ...FIXTURE_PROJECTS], [savedProjects]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([
+      import("@inneranimalmedia/copro-templates/creative"),
+      import("@inneranimalmedia/copro-templates/preview-thumbnails"),
+    ]).then(([creative, thumbnails]) => {
+      if (cancelled) return;
+      const byId = new Map(creative.CREATIVE_TEMPLATES.map((template) => [template.id,template]));
+      setCreativeAssets(current => current.map(asset => {
+        const template = byId.get(asset.id);
+        const thumbName = asset.previewFile?.split("/").pop() ?? "";
+        return {
+          ...asset,
+          previewUrl: thumbnails.CREATIVE_THUMBNAILS[thumbName] ?? "",
+          ...(template ? {
+            group: template.metadata.creative.category,
+            aspectRatio: template.canvas.width > template.canvas.height ? "16:9" : "9:16",
+            description: template.description,
+          } : {}),
+        };
+      }));
+    }).catch((error) => console.warn("CoPro creative catalog assets could not load",error));
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    const hasMotion = project.tracks.some((track:any) => track.clips.some((clip:any) => Boolean(clip.metadata?.motion?.id)));
+    const hasGraphic = project.tracks.some((track:any) => track.clips.some((clip:any) => Boolean(clip.metadata?.graphic?.id)));
+    if ((!hasMotion || motionSampler) && (!hasGraphic || graphicSampler)) return;
+    let cancelled = false;
+    void import("@inneranimalmedia/copro-templates/motion").then((motion) => {
+      if (cancelled) return;
+      if (hasMotion && !motionSampler) setMotionSampler(() => motion.sampleAnimation);
+      if (hasGraphic && !graphicSampler) setGraphicSampler(() => (graphic: Parameters<CoProGraphicSampler>[0],timeUs: number) => {
+        if (graphic.id === "typewriter" && graphic.sequence) return motion.sampleTypewriter(graphic.sequence as any,timeUs);
+        if (graphic.id === "counter" && graphic.values) return {text:motion.sampleCounter(graphic.values,timeUs,{durationUs:graphic.durationUs,decimals:graphic.decimals}).text};
+        return null;
+      });
+    }).catch((error) => console.warn("CoPro motion/graphic samplers could not load",error));
+    return () => { cancelled = true; };
+  }, [project,motionSampler,graphicSampler]);
+
+  useEffect(() => {
+    if (!creativeRenderer) return;
+    const hasCreative = project.tracks.some((track:any) => track.clips.some((clip:any) => Boolean(clip.metadata?.creative)));
+    if (!hasCreative) return;
+    const svg = creativeRenderer(project,Math.max(0,playheadUs));
+    if (!svg) { setPreviewSrc(null); setPreviewKind(null); return; }
+    setPreviewSrc("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
+    setPreviewKind("image");
+  }, [project,playheadUs,creativeRenderer]);
 
   useEffect(() => {
     let cancelled = false;
@@ -327,6 +391,26 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     showScreen("editor");
   }
 
+  async function openCreativeTemplate(id: string) {
+    const creative = await import("@inneranimalmedia/copro-templates/creative");
+    const next = creative.createCreativeProject(id,{
+      projectId:"project:creative:" + Date.now(),
+      now:new Date(),
+    });
+    await store.save(next);
+    await refreshSavedProjects();
+    const creativeClip = next.tracks.flatMap((track:any) => track.clips).find((clip:any) => clip.metadata?.creative);
+    const previewTimeUs = Math.min(1_200_000,Math.max(0,(creativeClip?.durationUs ?? 1) - 1));
+    const svg = creative.renderCreativeProjectFrame(next,previewTimeUs);
+    setCreativeRenderer(() => creative.renderCreativeProjectFrame);
+    installProject(next,creativeClip?.id ?? null);
+    setPlayheadUs(previewTimeUs);
+    setPreviewSrc(svg ? "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg) : null);
+    setPreviewKind(svg ? "image" : null);
+    setInitialTool(null);
+    showScreen("editor");
+  }
+
   async function renameProject(id: string, title: string) {
     const saved = await store.load(id);
     if (!saved) return;
@@ -339,6 +423,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }
 
   async function createBlank(tool: "text" | "captions" | null = null) {
+    setCreativeRenderer(null);
     const next = createCoProProject({ id:"project:new:" + Date.now(), title:"Untitled project" });
     next.tracks.push(createTrack({ id:"track:video", kind:"video", name:"Video" }));
     installProject(next, null);
@@ -350,6 +435,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }
 
   async function importFile(file: File) {
+    setCreativeRenderer(null);
     const old = previewSrc;
     if (old) URL.revokeObjectURL(old);
     const url = URL.createObjectURL(file);
@@ -567,8 +653,57 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     if (action.type === "text") { setProject(session.execute({ type:"clip.set_text", payload:{ clipId:action.clipId, text:action.text } })); return; }
     if (action.type === "effect") { setProject(session.execute({ type:"clip.set_effect", payload:{ clipId:action.clipId, effect:action.effect } })); return; }
     if (action.type === "transition") { setProject(session.execute({ type:"clip.set_transition", payload:{ clipId:action.clipId, transition:action.transition, durationUs:action.durationUs } })); return; }
+    if (action.type === "motion") {
+      if (action.motion === "none") {
+        setProject(session.execute({type:"clip.set_motion",payload:{clipId:action.clipId,motion:"none"}}));
+        return;
+      }
+      const motion = await import("@inneranimalmedia/copro-templates/motion");
+      const definition = motion.ANIMATIONS.find((item) => item.id === action.motion);
+      if (!definition) return;
+      setMotionSampler(() => motion.sampleAnimation);
+      setProject(session.execute({type:"clip.set_motion",payload:{clipId:action.clipId,motion:action.motion,durationUs:definition.durationUs}}));
+      return;
+    }
+    if (action.type === "graphic") {
+      if (action.graphic === "none") {
+        setProject(session.execute({type:"clip.set_graphic",payload:{clipId:action.clipId,graphic:null}}));
+        return;
+      }
+      const motion = await import("@inneranimalmedia/copro-templates/motion");
+      const clip = session.project.tracks.flatMap((track:any) => track.clips).find((item:any) => item.id === action.clipId);
+      let graphic: Record<string,unknown>;
+      if (action.graphic === "typewriter") {
+        const text = String(action.text ?? clip?.metadata?.graphic?.text ?? clip?.metadata?.text ?? "Make something worth remembering.");
+        const sequence = motion.createTypewriterEvents([text]);
+        graphic = {id:"typewriter",text,durationUs:sequence.durationUs,sequence};
+      } else if (action.graphic === "counter") {
+        graphic = {id:"counter",durationUs:2_000_000,values:[0,25,50,75,100],decimals:0};
+      } else return;
+      setGraphicSampler(() => (value: Parameters<CoProGraphicSampler>[0],timeUs: number) => {
+        if (value.id === "typewriter" && value.sequence) return motion.sampleTypewriter(value.sequence as any,timeUs);
+        if (value.id === "counter" && value.values) return {text:motion.sampleCounter(value.values,timeUs,{durationUs:value.durationUs,decimals:value.decimals}).text};
+        return null;
+      });
+      setProject(session.execute({type:"clip.set_graphic",payload:{clipId:action.clipId,graphic}}));
+      return;
+    }
+    if (action.type === "creative-parameters") {
+      setProject(session.execute({type:"clip.set_creative_parameters",payload:{clipId:action.clipId,patch:action.patch}}));
+      return;
+    }
     if (action.type === "track-state") { setProject(session.execute({ type:"track.set_state", payload:{ trackId:action.trackId, ...action.patch } })); return; }
     if (action.type === "track-reorder") { setProject(session.execute({ type:"track.reorder", payload:{ trackId:action.trackId, index:action.index } })); return; }
+
+    if (action.type === "import-media-batch") {
+      let nextAtUs = action.atUs;
+      for (const file of action.files) {
+        const item = await registerSessionMedia(file);
+        addSessionMediaToTimeline(item, nextAtUs);
+        nextAtUs += item.durationUs ?? 3_000_000;
+      }
+      return;
+    }
 
     if (action.type === "import-media") {
       const item = await registerSessionMedia(action.file);
@@ -648,6 +783,8 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     return <div data-nav-theme={theme} style={appearanceStyle} className="as-nav-scope copro-app-root">
       <CoProProjectsScreen
         projects={projects}
+        creativeAssets={creativeAssets}
+        onOpenCreativeTemplate={(id) => void openCreativeTemplate(id)}
         initialSection={homeSection}
         onOpenProject={openProject}
         onCreate={() => void createBlank()}
@@ -660,6 +797,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         onDeleteProject={(id) => void deleteSavedProject(id)}
         onDuplicateProject={(id) => void duplicateSavedProject(id)}
         appIconUrl={coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
+        systemIcons={MOVIEMODE_SYSTEM_ICONS}
       />
       <input ref={homeFileRef} type="file" accept="video/*,image/*,audio/*" className="copro-hidden-source-input" aria-label="Select a video, image or audio file" onChange={(event) => {
         const file = event.currentTarget.files?.[0];
@@ -687,6 +825,11 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     previewSrc={previewSrc}
     previewKind={previewKind}
     mediaItems={mediaItems}
+    creativeAssets={creativeAssets}
+    systemIcons={MOVIEMODE_SYSTEM_ICONS}
+    onOpenCreativeTemplate={(id) => void openCreativeTemplate(id)}
+    sampleMotion={motionSampler ?? undefined}
+    sampleGraphic={graphicSampler ?? undefined}
     onMediaAdd={(id, atUs) => {
       const item = mediaItems.find((entry) => entry.id === id);
       if (item) addSessionMediaToTimeline(item, atUs);

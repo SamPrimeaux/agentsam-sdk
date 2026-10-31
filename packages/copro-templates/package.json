@@ -11,8 +11,19 @@
   "exports": {
     ".": "./src/index.js",
     "./package.json": "./package.json",
-    "./creative": "./src/creative.js",
-    "./motion": "./src/motion.js"
+    "./creative": {
+      "types": "./src/creative.d.ts",
+      "import": "./src/creative.js"
+    },
+    "./motion": {
+      "types": "./src/motion.d.ts",
+      "import": "./src/motion.js"
+    },
+    "./catalog": "./preview/catalog.json",
+    "./preview-thumbnails": {
+      "types": "./src/preview-thumbnails.d.ts",
+      "import": "./src/preview-thumbnails.js"
+    }
   },
   "files": [
     "src",
