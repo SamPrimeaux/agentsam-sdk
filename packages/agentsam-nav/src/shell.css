@@ -189,3 +189,11 @@
 .as-nav-collection-more{padding:8px 12px;border:0;background:transparent;color:var(--nav-muted);font-size:var(--nav-meta-size);border-radius:var(--nav-radius);}
 .as-nav-collection-more:hover{background:var(--nav-selected);color:var(--nav-text);}
 .as-nav-history .as-nav-empty{margin:0;padding-block:6px;}
+
+.as-nav-rail-tooltip { top:var(--nav-tooltip-top); left:var(--nav-tooltip-left); }
+.as-nav-collection-toggle svg[data-expanded="false"] { transform:rotate(-90deg); }
+.as-nav-icon-action { position:relative; display:inline-flex; }
+.as-nav-icon-help { position:absolute; right:0; top:calc(100% + 4px); z-index:110; width:max-content; max-width:220px; padding:6px 10px; border:1px solid var(--nav-border); border-radius:var(--nav-radius); background:var(--nav-popover); color:var(--nav-text); box-shadow:var(--nav-shadow); font-size:var(--nav-meta-size); pointer-events:none; visibility:hidden; }
+.as-nav-icon-action:hover > .as-nav-icon-help,
+.as-nav-icon-action:focus-within > .as-nav-icon-help { visibility:visible; }
+.as-nav-sidenav:not([data-expanded="true"]) .as-nav-parent-row > .as-nav-icon-action { display:none; }

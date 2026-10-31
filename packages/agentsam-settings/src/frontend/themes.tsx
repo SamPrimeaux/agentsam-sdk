@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   Archive, Check, Copy, Download, Expand, Paintbrush, Plus, RotateCcw, Search, Upload, X,
 } from 'lucide-react';
@@ -60,28 +60,39 @@ function friendlyError(error: unknown) {
 function ThemePreview({ theme }: { theme: SettingsTheme }) {
   const vars = themeCss(theme);
   const pick = (key: string, fallback: string) => vars[key] || fallback;
-  if (theme.previewImageUrl) {
-    return <img src={theme.previewImageUrl} alt={theme.name + ' preview'} className="h-full w-full object-cover" loading="lazy" />;
+  const [failedImage, setFailedImage] = useState<string | null>(null);
+  if (theme.previewImageUrl && failedImage !== theme.previewImageUrl) {
+    return <img src={theme.previewImageUrl} alt={theme.name + ' preview'} className="h-full w-full object-cover" loading="lazy"
+      onError={() => setFailedImage(theme.previewImageUrl || null)} />;
   }
-  if (theme.previewUrl) {
+  if (!theme.previewImageUrl && theme.previewUrl) {
     return <iframe title={theme.name + ' preview'} src={theme.previewUrl} sandbox="" tabIndex={-1} loading="lazy"
-      style={{ width: '300%', height: '300%', transform: 'scale(.333333)', transformOrigin: 'top left', pointerEvents: 'none', border: 0 }} />;
+      className="pointer-events-none h-[300%] w-[300%] origin-top-left scale-[.333333] border-0" />;
   }
   return (
-    <div className="h-full w-full overflow-hidden p-3" style={{ background: pick('--bg-canvas', '#0f172a'), color: pick('--text-main', '#e2e8f0') }}>
-      <div className="flex h-6 items-center justify-between rounded-t-md px-2 text-[9px]" style={{ background: pick('--bg-nav', '#111827'), borderBottom: '1px solid ' + pick('--border', '#334155') }}>
+    <div role="img" aria-label={theme.name + ' interface color preview'} className="h-full w-full overflow-hidden bg-[var(--settings-preview-canvas)] p-3 text-[var(--settings-preview-text)]" style={{
+      '--settings-preview-canvas': pick('--bg-canvas', '#0f172a'),
+      '--settings-preview-text': pick('--text-main', '#e2e8f0'),
+      '--settings-preview-nav': pick('--bg-nav', '#111827'),
+      '--settings-preview-shell': pick('--bg-shell', '#0b1220'),
+      '--settings-preview-surface': pick('--bg-surface', '#1e293b'),
+      '--settings-preview-muted': pick('--text-muted', '#94a3b8'),
+      '--settings-preview-primary': pick('--color-primary', '#3b82f6'),
+      '--settings-preview-border': pick('--border', '#334155'),
+    } as CSSProperties}>
+      <div aria-hidden="true" className="flex h-6 items-center justify-between rounded-t-md border-b border-[var(--settings-preview-border)] bg-[var(--settings-preview-nav)] px-2 text-[9px]">
         <span className="font-semibold tracking-wide">STUDIO</span><span>•••</span>
       </div>
-      <div className="flex h-[calc(100%-24px)] gap-2 rounded-b-md p-2" style={{ background: pick('--bg-shell', '#0b1220') }}>
-        <div className="w-[24%] space-y-2 rounded p-2" style={{ background: pick('--bg-nav', '#111827') }}>
-          <div className="h-1.5 w-4/5 rounded" style={{ background: pick('--text-muted', '#94a3b8') }} />
-          <div className="h-1.5 w-3/5 rounded" style={{ background: pick('--text-muted', '#94a3b8') }} />
-          <div className="h-1.5 w-4/5 rounded" style={{ background: pick('--color-primary', '#3b82f6') }} />
+      <div aria-hidden="true" className="flex h-[calc(100%-24px)] gap-2 rounded-b-md bg-[var(--settings-preview-shell)] p-2">
+        <div className="w-[24%] space-y-2 rounded bg-[var(--settings-preview-nav)] p-2">
+          <div className="h-1.5 w-4/5 rounded bg-[var(--settings-preview-muted)]" />
+          <div className="h-1.5 w-3/5 rounded bg-[var(--settings-preview-muted)]" />
+          <div className="h-1.5 w-4/5 rounded bg-[var(--settings-preview-primary)]" />
         </div>
-        <div className="flex-1 rounded p-2" style={{ background: pick('--bg-surface', '#1e293b'), border: '1px solid ' + pick('--border', '#334155') }}>
-          <div className="mb-2 h-2 w-2/5 rounded" style={{ background: pick('--text-main', '#e2e8f0') }} />
-          <div className="mb-3 h-1.5 w-3/4 rounded" style={{ background: pick('--text-muted', '#94a3b8') }} />
-          <div className="h-5 w-1/3 rounded" style={{ background: pick('--color-primary', '#3b82f6') }} />
+        <div className="flex-1 rounded border border-[var(--settings-preview-border)] bg-[var(--settings-preview-surface)] p-2">
+          <div className="mb-2 h-2 w-2/5 rounded bg-[var(--settings-preview-text)]" />
+          <div className="mb-3 h-1.5 w-3/4 rounded bg-[var(--settings-preview-muted)]" />
+          <div className="h-5 w-1/3 rounded bg-[var(--settings-preview-primary)]" />
         </div>
       </div>
     </div>
@@ -254,7 +265,7 @@ export function SettingsThemeGallery({
           <div className="relative h-44 overflow-hidden border-b border-border bg-muted">
             <ThemePreview theme={theme} />
             <div className="absolute bottom-3 left-3 flex gap-1.5">
-              {theme.swatches.slice(0, 7).map((swatch, index) => <span key={swatch + index} className="size-4 rounded-full border border-white/40 shadow-sm" style={{ background: swatch }} title={swatch} />)}
+              {theme.swatches.slice(0, 7).map((swatch, index) => <span key={swatch + index} className="size-4 rounded-full border border-white/40 bg-[var(--settings-theme-swatch)] shadow-sm" style={{ '--settings-theme-swatch': swatch } as CSSProperties} title={swatch} />)}
             </div>
             {theme.active && <span className="absolute right-3 top-3 rounded-full bg-emerald-500 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">Active</span>}
           </div>
@@ -285,11 +296,11 @@ export function SettingsThemeGallery({
     </div>
 
     {editor && <div className="fixed inset-0 z-[100] flex justify-end bg-black/45" role="presentation">
-      <button type="button" className="absolute inset-0 cursor-default" aria-label="Close theme customization" onClick={() => setEditor(null)} />
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="Close theme customization" onClick={() => setEditor(null)}><span className="sr-only">Close theme customization</span></button>
       <aside role="dialog" aria-modal="true" aria-labelledby="theme-editor-title" className="relative z-10 flex h-full w-full max-w-xl flex-col border-l border-border bg-background text-foreground shadow-2xl">
         <header className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div><p className="text-[10px] font-semibold uppercase tracking-[.16em] text-muted-foreground">{editor.id ? 'Private theme' : editor.sourceThemeId ? 'Create private copy' : 'New theme'}</p><h3 id="theme-editor-title" className="mt-1 text-lg font-semibold">Customize theme</h3><p className="mt-1 text-xs text-muted-foreground">Changes are isolated to your account. Shared presets are never edited in place.</p></div>
-          <button type="button" className={button} aria-label="Close customization" onClick={() => setEditor(null)}><X size={16} /></button>
+          <button type="button" className={button} aria-label="Close customization" onClick={() => setEditor(null)}><X size={16} aria-hidden="true" />Close</button>
         </header>
         <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
           <label className="block text-sm font-medium">Theme name<input value={editor.name} onChange={event => setEditor({ ...editor, name: event.target.value })} maxLength={100} required className="mt-2 min-h-10 w-full rounded-lg border border-border bg-card px-3 text-sm outline-none focus:ring-2 focus:ring-ring" /></label>
@@ -305,7 +316,7 @@ export function SettingsThemeGallery({
             <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Advanced CSS variables <span className="ml-1 text-xs font-normal text-muted-foreground">({extraTokens.length})</span></summary>
             <div className="space-y-3 border-t border-border p-4">
               {extraTokens.map(([key, value]) => <div key={key} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
-                <code className="truncate text-[10px] text-muted-foreground" title={key}>{key}</code><input aria-label={key + ' value'} value={value} onChange={event => setEditor({ ...editor, cssVars: { ...editor.cssVars, [key]: event.target.value } })} className="min-w-0 rounded border border-border bg-background px-2 py-2 font-mono text-[11px]" /><button type="button" className={button} aria-label={'Remove ' + key} onClick={() => { const next = { ...editor.cssVars }; delete next[key]; setEditor({ ...editor, cssVars: next }); }}><X size={13} /></button>
+                <code className="truncate text-[10px] text-muted-foreground" title={key}>{key}</code><input aria-label={key + ' value'} value={value} onChange={event => setEditor({ ...editor, cssVars: { ...editor.cssVars, [key]: event.target.value } })} className="min-w-0 rounded border border-border bg-background px-2 py-2 font-mono text-[11px]" /><button type="button" className={button} aria-label={'Remove ' + key} onClick={() => { const next = { ...editor.cssVars }; delete next[key]; setEditor({ ...editor, cssVars: next }); }}><X size={13} aria-hidden="true" />Remove</button>
               </div>)}
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                 <input aria-label="New CSS variable name" value={newTokenKey} onChange={event => setNewTokenKey(event.target.value)} placeholder="--brand-accent" className="min-w-0 rounded border border-border bg-background px-2 py-2 font-mono text-[11px]" />

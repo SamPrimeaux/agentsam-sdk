@@ -49,6 +49,61 @@ export function auditUiSource(source, file) {
     }
     return false;
   };
+  const unwrap = (node) => {
+    while (node && (ts.isAsExpression(node) || ts.isSatisfiesExpression(node) ||
+      ts.isParenthesizedExpression(node))) node = node.expression;
+    return node;
+  };
+  // Follow only a lexical const initialized with a literal custom-property map.
+  // Unknown calls, spreads, ordinary CSS properties and shadowed bindings stay errors.
+  const customPropertyMap = (expression) => {
+    expression = unwrap(expression);
+    if (expression && ts.isIdentifier(expression)) {
+      const name = expression.text;
+      let scope = expression.parent;
+      let declaration;
+      while (scope) {
+        if (ts.isBlock(scope) || ts.isSourceFile(scope)) {
+          for (const statement of scope.statements) {
+            if (!ts.isVariableStatement(statement)) continue;
+            const candidate = statement.declarationList.declarations.find((item) =>
+              ts.isIdentifier(item.name) && item.name.text === name);
+            if (candidate) {
+              if (!(statement.declarationList.flags & ts.NodeFlags.Const)) return false;
+              declaration = candidate;
+              break;
+            }
+          }
+          if (declaration) break;
+        }
+        const bindsName = (binding) => ts.isIdentifier(binding) ? binding.text === name :
+          (ts.isObjectBindingPattern(binding) || ts.isArrayBindingPattern(binding)) &&
+          binding.elements.some((element) => ts.isBindingElement(element) && bindsName(element.name));
+        if (ts.isFunctionLike(scope) && scope.parameters.some((p) => bindsName(p.name))) return false;
+        scope = scope.parent;
+      }
+      if (!declaration) return false;
+      expression = unwrap(declaration.initializer);
+      let mutated = false;
+      const writes = (node) => {
+        if (ts.isBinaryExpression(node) &&
+            node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+            node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) {
+          let target = node.left;
+          while (ts.isPropertyAccessExpression(target) || ts.isElementAccessExpression(target)) target = target.expression;
+          if (ts.isIdentifier(target) && target.text === name) mutated = true;
+        }
+        ts.forEachChild(node, writes);
+      };
+      writes(scope);
+      if (mutated) return false;
+    }
+    return !!expression && ts.isObjectLiteralExpression(expression) &&
+      expression.properties.length > 0 && expression.properties.every((prop) =>
+        ts.isPropertyAssignment(prop) &&
+        (ts.isStringLiteral(prop.name) || ts.isIdentifier(prop.name)) &&
+        prop.name.text.startsWith('--'));
+  };
   function visit(node) {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = node.tagName.getText(sf);
@@ -70,15 +125,7 @@ export function auditUiSource(source, file) {
       const style = attribute(node, 'style');
       if (style) {
         const init = style.initializer;
-        let expression = init && ts.isJsxExpression(init) ? init.expression : null;
-        while (expression && (ts.isAsExpression(expression) ||
-          ts.isSatisfiesExpression(expression) || ts.isParenthesizedExpression(expression))) {
-          expression = expression.expression;
-        }
-        const object = expression && ts.isObjectLiteralExpression(expression) ? expression : null;
-        const allVars = object && object.properties.length > 0 &&
-          object.properties.every((prop) =>
-            ts.isPropertyAssignment(prop) && /^--/.test(prop.name.getText(sf).replace(/^["']|["']$/g, '')));
+        const allVars = customPropertyMap(init && ts.isJsxExpression(init) ? init.expression : null);
         if (!allVars) add(node, 'inline-style',
           'Use utility classes or packaged CSS; only CSS custom-property runtime bindings are exempt.');
       }

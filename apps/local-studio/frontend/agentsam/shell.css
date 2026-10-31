@@ -322,7 +322,7 @@
 .agentsam-project-trigger[aria-expanded="true"] { background: var(--nav-selected); color: var(--nav-text); }
 .agentsam-project-trigger span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .agentsam-project-menu {
-  position: absolute; z-index: 95; bottom: calc(100% + 6px); left: 0;
+  position: fixed; z-index: 95; bottom: var(--project-menu-bottom, 60px); left: var(--project-menu-left, 16px);
   width: min(310px, calc(100vw - 32px)); max-height: min(380px, 55dvh);
   display: flex; flex-direction: column; gap: 7px; padding: 10px;
   color: var(--nav-text); border-radius: 16px; background: var(--nav-popover);
