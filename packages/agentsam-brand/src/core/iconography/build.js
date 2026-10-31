@@ -4,9 +4,6 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import sharpModule from 'sharp';
-
-const sharp = sharpModule.default || sharpModule;
 const execFileAsync = promisify(execFile);
 const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex');
 const hashFile = async (file) => sha256(await fs.readFile(file));
@@ -41,7 +38,7 @@ function colorwayBackgroundSvg(size, colorway) {
 </svg>`);
 }
 
-async function buildMarkMask(sourcePath, outputPath, resolution, maskSpec = {}) {
+async function buildMarkMask(sharp, sourcePath, outputPath, resolution, maskSpec = {}) {
   const low = Number(maskSpec.threshold_low ?? 0.58);
   const high = Number(maskSpec.threshold_high ?? 0.84);
   const inset = Number(maskSpec.safe_inset ?? 0.08);
@@ -106,7 +103,7 @@ async function buildMarkMask(sourcePath, outputPath, resolution, maskSpec = {}) 
   return { path: outputPath, width: resolution, height: resolution, threshold_low: low, threshold_high: high, safe_inset: inset, coverage, connected_components: components.length, removed_components: removedComponents, minimum_component_pixels: minimumComponentPixels, sha256: await hashFile(outputPath) };
 }
 
-async function composeColorway(maskPath, size, colorway) {
+async function composeColorway(sharp, maskPath, size, colorway) {
   const { data } = await sharp(maskPath).resize(size, size, { fit: 'fill' }).greyscale().raw().toBuffer({ resolveWithObject: true });
   const color = hexRgb(colorway.mark);
   const rgba = Buffer.alloc(size * size * 4);
@@ -141,7 +138,7 @@ function normalizedSvgFallback(source, options = {}) {
   return { svg, pathCount: (inner.match(/<(?:path|line|polyline|polygon|circle|rect|ellipse)\b/gi) || []).length, viewBox, strokeWidth: 2, hasLiveText: false };
 }
 
-async function renderClaySystemTile(svgPath, outputPath, theme, size = 256) {
+async function renderClaySystemTile(sharp, svgPath, outputPath, theme, size = 256) {
   const glyphSize = Math.round(size * 0.47);
   const themedSvg = (await fs.readFile(svgPath, 'utf8')).replace(/stroke="currentColor"/g, `stroke="${theme.stroke}"`);
   const glyph = await sharp(Buffer.from(themedSvg), { density: 256 }).resize(glyphSize, glyphSize, { fit: 'contain' }).png().toBuffer();
@@ -305,6 +302,11 @@ export async function buildIconographyPack({ manifestPath, outDir, normalizeSvg 
   const catalogPath = path.resolve(sourceRoot, spec.source_catalog);
   const catalog = JSON.parse(await fs.readFile(catalogPath, 'utf8'));
   if (catalog.schema !== 'agentsam.brand-system-icons.v1' || catalog.icon_count !== catalog.icons.length) throw new Error('System icon catalog is invalid');
+  // Native rendering is a build-time capability. Importing the portable Brand
+  // API for inspection/planning must not initialize a platform-specific binary.
+  // Resolve it after input validation and before creating or replacing outputs.
+  const sharpModule = await import('sharp');
+  const sharp = sharpModule.default || sharpModule;
   const destination = path.resolve(outDir);
   const stagingRoot = path.resolve(process.env.AGENTSAM_ICONOGRAPHY_STAGING_ROOT || os.tmpdir());
   const staging = path.join(stagingRoot, `${path.basename(destination)}.staging-${process.pid}`);
@@ -357,12 +359,12 @@ export async function buildIconographyPack({ manifestPath, outDir, normalizeSvg 
       if (!metadata.width || !metadata.height || metadata.width !== metadata.height) throw new Error(`App icon must be square: ${app.source}`);
       const maskResolution = Math.min(1024, Math.max(512, metadata.width));
       const maskPath = path.join(staging, 'derived', 'masks', `${app.id}-mark-mask.png`);
-      const mask = await buildMarkMask(source.full, maskPath, maskResolution, app.mask);
+      const mask = await buildMarkMask(sharp, source.full, maskPath, maskResolution, app.mask);
       const input = { ...app, source_full: source.full, source_sha256: source.sha256, source_width: metadata.width, source_height: metadata.height, mask_path: maskPath, mask_sha256: mask.sha256, mask_resolution: maskResolution, mask_coverage: mask.coverage, mask_parameters: { threshold_low: mask.threshold_low, threshold_high: mask.threshold_high, safe_inset: mask.safe_inset } };
       appInputs.push(input);
       const sizes = [...new Set([metadata.width, ...([512, 256, 192, 180, 128, 64, 32, 16].filter((size) => size <= metadata.width))])].sort((a, b) => b - a);
       for (const colorway of spec.colorways) {
-        const full = await composeColorway(maskPath, metadata.width, colorway);
+        const full = await composeColorway(sharp, maskPath, metadata.width, colorway);
         const fullRaw = await sharp(full).raw().toBuffer({ resolveWithObject: true });
         const expectedMark = hexRgb(colorway.mark);
         let exactMarkPixels = 0;
@@ -406,7 +408,7 @@ export async function buildIconographyPack({ manifestPath, outDir, normalizeSvg 
           const meta = await sharp(pngPath).metadata();
           if (meta.width !== size || meta.height !== size) throw new Error(`Icon raster size mismatch: ${icon.id} ${size}`);
         }
-        await renderClaySystemTile(masterPath, path.join(staging, 'system-icons', 'clay', theme.id, `${icon.id}.png`), theme, spec.system_icons.clay_tile_size);
+        await renderClaySystemTile(sharp, masterPath, path.join(staging, 'system-icons', 'clay', theme.id, `${icon.id}.png`), theme, spec.system_icons.clay_tile_size);
       }
       iconMetadata.push({ ...icon, normalized_master: `system-icons/svg/master/${icon.id}.svg`, normalized_sha256: sha256(Buffer.from(svg)), geometry_count: geometryCount, normalized: true, verified: true });
       systemOutputs.push({ id: icon.id, svg: `system-icons/svg/master/${icon.id}.svg`, path_count: geometryCount, stroke_width: 2, view_box: '0 0 24 24', source_sha256: input.sha256, normalized_sha256: sha256(Buffer.from(svg)) });
