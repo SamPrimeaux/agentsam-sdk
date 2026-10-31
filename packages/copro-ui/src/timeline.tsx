@@ -32,6 +32,7 @@ export type CoProTrackView = {
 export type CoProProjectView = {
   id: string;
   tracks: CoProTrackView[];
+  canvas?: { width: number; height: number; frameRate?: number };
 };
 
 type TimelineProps = {
@@ -252,6 +253,7 @@ export function CoProTimeline({
                         data-copro-clip
                         className={"copro-clip copro-clip-" + track.kind + " " + (selected ? "is-selected" : "")}
                         style={{ "--copro-clip-left": left + "px", "--copro-clip-width": width + "px" } as React.CSSProperties}
+                        title={text ?? clip.assetId.replace(/^asset:/, "")}
                         onPointerDown={(event) => {
                           event.stopPropagation();
                           if (track.locked) return;
@@ -325,7 +327,7 @@ export function CoProTimeline({
                             ))}
                           </div>
                         ) : track.kind === "captions" || track.kind === "overlay" ? (
-                          <span className="copro-text-clip">{text ?? clip.assetId.replace(/^asset:/, "")}</span>
+                          <span className="copro-text-clip"><span>{text ?? clip.assetId.replace(/^asset:/, "")}</span></span>
                         ) : (
                           <div className="copro-clip-filmstrip" aria-hidden="true">
                             {Array.from({ length: Math.max(2, Math.ceil(width / 65)) }, (_, index) => {
@@ -336,10 +338,10 @@ export function CoProTimeline({
                           </div>
                         )}
 
-                        <span className="copro-clip-label">
+                        {track.kind !== "captions" && track.kind !== "overlay" && <span className="copro-clip-label">
                           {text ?? clip.assetId.replace(/^asset:/, "")}
                           {clip.playbackRate && clip.playbackRate !== 1 ? " · " + clip.playbackRate.toFixed(2) + "×" : ""}
-                        </span>
+                        </span>}
 
                         {clip.metadata?.transitionOut && (clip.metadata.transitionOut as any).type !== "none" ? (
                           <span className="copro-transition-marker" title={"Transition: " + String((clip.metadata.transitionOut as any).type)}>◇</span>

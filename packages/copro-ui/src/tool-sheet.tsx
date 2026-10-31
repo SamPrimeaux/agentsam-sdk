@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useState } from "react";
+import type { CoProCreativeAsset } from "./creative-types.js";
 import { FileAudio, Film, Upload, X } from "lucide-react";
 
 /** A single reusable tool body for the CoPro inspector, never a modal or a second editor. */
@@ -39,8 +40,16 @@ export type CoProToolPanelProps = {
   onMediaAdd?: (id: string) => void;
   currentEffect?: string;
   currentTransition?: string;
+  currentMotion?: string;
+  currentGraphic?: string;
+  currentGraphicText?: string;
+  creativeParameters?: Record<string, unknown>;
+  creativeAssets?: CoProCreativeAsset[];
   onEffectChange?: (effect: string) => void;
   onTransitionChange?: (transition: string) => void;
+  onMotionChange?: (motion: string) => void;
+  onGraphicChange?: (graphic: string, text?: string) => void;
+  onCreativeParametersChange?: (patch: Record<string, unknown>) => void;
 };
 
 const DESCRIPTION: Record<string, string> = {
@@ -56,7 +65,7 @@ const DESCRIPTION: Record<string, string> = {
   effects: "Choose a visual treatment for the selected clip.",
   transitions: "Choose how the selected clip moves into the next.",
   stickers: "Add editable annotations, arrows and graphic marks to the timeline.",
-  templates: "Reusable composition templates are not connected yet.",
+  templates: "Browse reusable, editable compositions from the CoPro creative library.",
   export: "Save an editable project file. Video rendering requires a connected runtime.",
 };
 
@@ -88,14 +97,23 @@ export function CoProToolPanel({
   onMediaAdd,
   currentEffect = "none",
   currentTransition = "none",
+  currentMotion = "",
+  currentGraphic = "",
+  currentGraphicText = "",
+  creativeParameters,
+  creativeAssets = [],
   onEffectChange,
   onTransitionChange,
+  onMotionChange,
+  onGraphicChange,
+  onCreativeParametersChange,
 }: CoProToolPanelProps) {
   const [speed, setSpeed] = useState(initialSpeed);
   const [volume, setVolume] = useState(Math.round(initialVolume * 100));
   const [text, setText] = useState(initialText);
   const [trimStart, setTrimStart] = useState((selectedClipStartUs / 1e6).toFixed(2));
   const [trimDuration, setTrimDuration] = useState((selectedClipDurationUs / 1e6).toFixed(2));
+  const [effectTab, setEffectTab] = useState<"looks" | "overlays" | "motion" | "graphics">("looks");
   const uploadId = useId();
   const titleId = useId();
 
@@ -104,6 +122,7 @@ export function CoProToolPanel({
   useEffect(() => setText(initialText), [initialText, tool, selectedClipId]);
   useEffect(() => setTrimStart((selectedClipStartUs / 1e6).toFixed(2)), [selectedClipStartUs, selectedClipId, tool]);
   useEffect(() => setTrimDuration((selectedClipDurationUs / 1e6).toFixed(2)), [selectedClipDurationUs, selectedClipId, tool]);
+  useEffect(() => setEffectTab("looks"), [tool, selectedClipId]);
 
   if (!tool) return null;
   const title = tool.charAt(0).toUpperCase() + tool.slice(1);
@@ -212,6 +231,14 @@ export function CoProToolPanel({
               {([ ["→","Arrow right"], ["←","Arrow left"], ["↑","Arrow up"], ["↓","Arrow down"], ["★","Star"], ["●","Point"], ["✓","Check"], ["!","Callout"], ["▶","Play marker"], ["✦","Spark"], ["+","Plus"], ["□","Square"] ] as const).map(([mark,label]) => <button type="button" key={mark} title={`Add ${label}`} aria-label={`Add ${label} to timeline`} onClick={() => onTextCommit?.(mark,"overlay")}><span>{mark}</span><small>{label}</small></button>)}
             </div>
           </div>
+        ) : isText && creativeParameters ? (
+          <div className="mm-creative-parameter-editor">
+            <div className="mm-creative-parameter-heading"><strong>Composition content</strong><span>Edits update the rendered composition and project history.</span></div>
+            <label><span>Title</span><input value={String(creativeParameters.title ?? "")} maxLength={4000} onChange={event=>onCreativeParametersChange?.({title:event.currentTarget.value})}/></label>
+            <label><span>Subtitle</span><textarea rows={3} value={String(creativeParameters.subtitle ?? "")} maxLength={4000} onChange={event=>onCreativeParametersChange?.({subtitle:event.currentTarget.value})}/></label>
+            <label><span>Chapter / eyebrow</span><input value={String(creativeParameters.label ?? "")} maxLength={4000} onChange={event=>onCreativeParametersChange?.({label:event.currentTarget.value})}/></label>
+            <label className="mm-creative-accent-row"><span>Accent color</span><input type="color" value={/^#[0-9a-f]{6}$/i.test(String(creativeParameters.accent ?? ""))?String(creativeParameters.accent):"#68dfc0"} onChange={event=>onCreativeParametersChange?.({accent:event.currentTarget.value})}/></label>
+          </div>
         ) : isText ? (
           <form className="copro-tool-control" onSubmit={(event)=>{
             event.preventDefault();
@@ -228,21 +255,50 @@ export function CoProToolPanel({
             <p className="copro-panel-note">Titles and captions are editable clips. Select one on the timeline to revise it.</p>
           </form>
         ) : tool === "effects" ? (
-          <div className="copro-tool-grid">
-            {[["none","Clean"],["punch","Punch"],["soft","Soft"],["film","Film"],["mono","Mono"],["warm","Warm"]].map(([id,label]) => (
-              <button aria-pressed={currentEffect===id} className={currentEffect===id?"is-active":""} key={id} onClick={()=>onEffectChange?.(id)}>
-                <i className={"copro-effect-preview copro-effect-"+id}>{label.slice(0,1)}</i><span>{label}</span>
+          <div className="copro-creative-picker">
+            <div className="copro-library-tabs" role="tablist" aria-label="Effect library">
+              {([ ["looks","Looks"], ["overlays","Overlays"], ["motion","Motion"], ["graphics","Graphics"] ] as const).map(([id,label]) => <button type="button" role="tab" aria-selected={effectTab===id} className={effectTab===id?"is-active":""} key={id} onClick={()=>setEffectTab(id)}>{label}</button>)}
+            </div>
+            {effectTab === "looks" ? <div className="copro-creative-grid">
+              {creativeAssets.filter(asset=>asset.category==="treatment").map(asset => <button type="button" key={asset.id} className={currentEffect===asset.id || (asset.id==="clean"&&currentEffect==="none")?"is-active":""} aria-pressed={currentEffect===asset.id || (asset.id==="clean"&&currentEffect==="none")} onClick={()=>onEffectChange?.(asset.id==="clean"?"none":asset.id)}>
+                <span className="copro-creative-thumb">{asset.previewUrl ? <img src={asset.previewUrl} alt="" loading="lazy"/> : <b>{asset.name.slice(0,2).toUpperCase()}</b>}</span><span>{asset.name.replaceAll("-"," ")}</span>
+              </button>)}
+              {[["none","Clean"],["punch","Punch"],["soft","Soft"],["film","Film"],["mono","Mono"],["warm","Warm"]].map(([id,label]) => <button type="button" aria-pressed={currentEffect===id} className={currentEffect===id?"is-active":""} key={id} onClick={()=>onEffectChange?.(id)}>
+                <span className={"copro-creative-thumb copro-effect-preview copro-effect-"+id}><b>{label.slice(0,1)}</b></span><span>{label}</span>
+              </button>)}
+            </div> : effectTab === "overlays" ? <div className="copro-creative-grid">
+              {creativeAssets.filter(asset=>asset.category==="overlay").map(asset => <button type="button" key={asset.id} className={currentEffect===`overlay:${asset.id}`?"is-active":""} aria-pressed={currentEffect===`overlay:${asset.id}`} onClick={()=>onEffectChange?.(`overlay:${asset.id}`)}>
+                <span className="copro-creative-thumb">{asset.previewUrl ? <img src={asset.previewUrl} alt="" loading="lazy"/> : <b>{asset.name.slice(0,2).toUpperCase()}</b>}</span><span>{asset.name.replaceAll("-"," ")}</span>
+              </button>)}
+            </div> : effectTab === "motion" ? <div className="copro-creative-grid">
+              <button type="button" aria-pressed={!currentMotion} className={!currentMotion?"is-active":""} onClick={()=>onMotionChange?.("none")}>
+                <span className="copro-creative-thumb copro-transition-none">∅</span><span>None</span>
               </button>
-            ))}
+              {creativeAssets.filter(asset=>asset.category==="animation").map(asset => <button type="button" key={asset.id} className={currentMotion===asset.id?"is-active":""} aria-pressed={currentMotion===asset.id} onClick={()=>onMotionChange?.(asset.id)}>
+                <span className="copro-creative-thumb">{asset.previewUrl ? <img src={asset.previewUrl} alt="" loading="lazy"/> : <b>{asset.name.slice(0,2).toUpperCase()}</b>}<small>{asset.durationUs?`${(asset.durationUs/1_000_000).toFixed(1)}s`:""}</small></span><span>{asset.name}</span>
+              </button>)}
+            </div> : <div className="copro-creative-grid">
+              <button type="button" aria-pressed={!currentGraphic} className={!currentGraphic?"is-active":""} onClick={()=>onGraphicChange?.("none")}>
+                <span className="copro-creative-thumb copro-transition-none">∅</span><span>None</span>
+              </button>
+              {creativeAssets.filter(asset=>asset.category==="graphic").map(asset => <button type="button" key={asset.id} className={currentGraphic===asset.id?"is-active":""} aria-pressed={currentGraphic===asset.id} onClick={()=>onGraphicChange?.(asset.id)}>
+                <span className="copro-creative-thumb">{asset.previewUrl ? <img src={asset.previewUrl} alt="" loading="lazy"/> : <b>{asset.name.slice(0,2).toUpperCase()}</b>}</span><span>{asset.name}</span>
+              </button>)}
+            </div>}
+            {effectTab === "graphics" && currentGraphic === "typewriter" && <label className="mm-graphic-text-control"><span>Typewriter copy</span><textarea rows={3} maxLength={4000} value={currentGraphicText} onChange={event=>onGraphicChange?.("typewriter",event.currentTarget.value)} placeholder="Write the words that animate onto the frame"/></label>}
+            <p className="copro-panel-note">Looks, overlays, motion and graphics are editor-preview integrations; encoded-video export/compositor parity remains a separate renderer task.</p>
           </div>
         ) : tool === "transitions" ? (
-          <div className="copro-tool-grid">
-            {[["none","None"],["crossfade","Crossfade"],["dip-black","Dip black"],["slide","Slide"],["zoom","Zoom"],["blur","Blur"]].map(([id,label]) => (
-              <button aria-pressed={currentTransition===id} className={currentTransition===id?"is-active":""} key={id} onClick={()=>onTransitionChange?.(id)}>
-                <i>{label.slice(0,1)}</i><span>{label}</span>
+          <div className="copro-creative-picker">
+            <div className="copro-creative-grid copro-transition-grid">
+              <button type="button" aria-pressed={currentTransition==="none"} className={currentTransition==="none"?"is-active":""} onClick={()=>onTransitionChange?.("none")}>
+                <span className="copro-creative-thumb copro-transition-none">∅</span><span>None</span>
               </button>
-            ))}
-            <p className="copro-panel-note">Transition metadata is preserved on the clip. Playback rendering support is still being integrated.</p>
+              {creativeAssets.filter(asset=>asset.category==="transition").map(asset => <button type="button" key={asset.id} className={currentTransition===asset.id?"is-active":""} aria-pressed={currentTransition===asset.id} onClick={()=>onTransitionChange?.(asset.id)}>
+                <span className="copro-creative-thumb">{asset.previewUrl ? <img src={asset.previewUrl} alt="" loading="lazy"/> : <b>{asset.name.slice(0,2).toUpperCase()}</b>}</span><span>{asset.name}</span>
+              </button>)}
+            </div>
+            <p className="copro-panel-note">The selected transition is saved to the clip's project history. Live two-source shader playback remains a separate renderer integration.</p>
           </div>
         ) : tool === "export" ? (
           <div className="copro-tool-control">
@@ -274,8 +330,8 @@ export function CoProToolPanel({
             <p className="copro-panel-note">Original imported files are retained in this browser when device storage permits. Watch for storage warnings and retain backups of irreplaceable footage.</p>
           </div>
         ) : <div className="copro-inspector-guidance">
-          <strong>{tool === "templates" ? "Template catalog not connected" : "Not yet available"}</strong>
-          <p>{tool === "templates" ? "The portable CoPro template contracts exist, but a working catalog hasn't been integrated into this editor." : "This capability isn't enabled in the current local editor."}</p>
+          <strong>{tool === "templates" ? "Browse editable compositions" : "Not yet available"}</strong>
+          <p>{tool === "templates" ? "Open Template Studio from the MovieMode workspace to browse, preview and start an editable composition." : "This capability isn't enabled in the current local editor."}</p>
         </div>}
         {tool === "audio" && !(hasSelectedClip && selectedClipKind === "audio") && <p className="copro-panel-note">Select an audio clip to adjust its volume.</p>}
       </div>

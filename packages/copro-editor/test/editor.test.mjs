@@ -119,3 +119,48 @@ test('GUI transform is a canonical undoable command with exact numeric state', (
   assert.equal(session.project.tracks[0].clips[0].metadata.transform.x,20);
   assert.throws(()=>applyCoProCommand(session.project,{type:'clip.set_transform',payload:{clipId:'clip:1',opacity:1.7}}),/copro_clip_opacity_invalid/);
 });
+
+
+test('motion preset metadata is a canonical undoable clip command', () => {
+  const session = new CoProEditorSession(fixture());
+  session.execute({type:"clip.set_motion",payload:{clipId:"clip:1",motion:"rise-in",durationUs:800_000,amplitude:64}});
+  assert.deepEqual(session.project.tracks[0].clips[0].metadata.motion,{id:"rise-in",durationUs:800_000,delayUs:0,amplitude:64});
+  session.undo();
+  assert.equal(session.project.tracks[0].clips[0].metadata.motion,undefined);
+  session.redo();
+  assert.equal(session.project.tracks[0].clips[0].metadata.motion.id,"rise-in");
+  assert.throws(()=>applyCoProCommand(session.project,{type:"clip.set_motion",payload:{clipId:"clip:1",motion:"rise-in",amplitude:20_000}}),/copro_motion_amplitude_invalid/);
+});
+
+
+test('creative composition parameters are validated and undoable', () => {
+  const project = fixture();
+  const clip = project.tracks[0].clips[0];
+  clip.metadata.creative = {schema:"copro.creative-clip.v1",scene:"chapter-divider",parameters:{title:"Original",subtitle:"A subtitle",accent:"#68dfc0"}};
+  project.metadata = {templateSlots:{title:"Original",accent:"#68dfc0"}};
+  const session = new CoProEditorSession(project);
+  session.execute({type:"clip.set_creative_parameters",payload:{clipId:"clip:1",patch:{title:"New title",accent:"#ff7619"}}});
+  assert.deepEqual(session.project.tracks[0].clips[0].metadata.creative.parameters,{title:"New title",subtitle:"A subtitle",accent:"#ff7619"});
+  assert.deepEqual(session.project.metadata.templateSlots,{title:"New title",accent:"#ff7619"});
+  session.undo();
+  assert.equal(session.project.tracks[0].clips[0].metadata.creative.parameters.title,"Original");
+  session.redo();
+  assert.equal(session.project.tracks[0].clips[0].metadata.creative.parameters.title,"New title");
+  assert.throws(()=>applyCoProCommand(session.project,{type:"clip.set_creative_parameters",payload:{clipId:"clip:1",patch:{accent:"red"}}}),/copro_creative_color_parameter_invalid/);
+});
+
+
+test('typewriter and counter graphics are stored as undoable, validated clip metadata', () => {
+  const session = new CoProEditorSession(fixture());
+  const sequence = {events:[{timeUs:0,text:""},{timeUs:80_000,text:"Hi"}],durationUs:80_000,loop:false};
+  session.execute({type:"clip.set_graphic",payload:{clipId:"clip:1",graphic:{id:"typewriter",text:"Hi",durationUs:80_000,sequence}}});
+  assert.equal(session.project.tracks[0].clips[0].metadata.graphic.id,"typewriter");
+  assert.equal(session.project.tracks[0].clips[0].metadata.graphic.text,"Hi");
+  session.execute({type:"clip.set_graphic",payload:{clipId:"clip:1",graphic:{id:"counter",durationUs:2_000_000,values:[0,100],decimals:0}}});
+  assert.deepEqual(session.project.tracks[0].clips[0].metadata.graphic.values,[0,100]);
+  session.undo();
+  assert.equal(session.project.tracks[0].clips[0].metadata.graphic.id,"typewriter");
+  session.execute({type:"clip.set_graphic",payload:{clipId:"clip:1",graphic:null}});
+  assert.equal(session.project.tracks[0].clips[0].metadata.graphic,undefined);
+  assert.throws(()=>applyCoProCommand(session.project,{type:"clip.set_graphic",payload:{clipId:"clip:1",graphic:{id:"counter",values:[1]}}}),/copro_counter_values_invalid/);
+});

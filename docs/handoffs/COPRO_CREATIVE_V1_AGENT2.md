@@ -1,6 +1,6 @@
 # CoPro creative V1 — Agent 2 integration handoff
 
-Status: prototype / not integrated into MovieMode or CoPro Studio. Source packages and standalone gallery only. Existing shell, CAD and CMS WIP are outside this change.
+Status: integrated into MovieMode project creation, template browsing, clip inspector and editor preview. This is an internal prototype integration, not a production video-export release. Existing shell, CAD and CMS WIP remain outside this workstream.
 
 ## Delivered ownership
 
@@ -18,7 +18,20 @@ Projects remain `copro.project.v1` with integer microseconds and 1,000,000 ticks
 2. `renderCreativeProjectFrame(project,timeUs,{resolveAsset})` samples one active creative clip. It respects visibility, clip offsets, in-points and playback rate. Multiple simultaneous creative layers explicitly require the host compositor. A resolver must return a host-authorized image URL/frame snapshot; the procedural fallback is visibly marked as a preview.
 3. For a transition, pass host-decoded `ImageBitmap`, video/canvas frame inputs into `createCoProTransitionRenderer(canvas).render({transition:clip.metadata.transitionOut,from,to,timeUs})`. `timeUs` is local transition time. Compute that interval in existing timeline code. Dispose GPU resources and decoded frames in their existing lifecycle.
 4. Adapt sampled transforms from `sampleAnimation` into existing compositor clip transforms. Do not run autonomous GSAP clocks or create a second animation timeline. Fractional frame rates use rational numerator/denominator conversion.
-5. Import the creative APIs lazily at the host boundary. This change intentionally adds no imports to either Studio application.
+5. Import the creative APIs lazily at the host boundary. MovieMode now dynamically loads the catalog, template renderer, thumbnail map and motion samplers; CoPro UI remains a consumer of typed props/actions rather than owning package imports.
+
+## MovieMode integration update — 2026-10-30
+
+The merged creative package is now connected to the existing MovieMode application rather than remaining a gallery-only deliverable:
+
+- Template Studio consumes all 18 editable compositions with real SVG thumbnails, category filters, search, a detail preview and a `Use this composition` action. The existing project store/editor path owns the resulting `copro.project.v1` project.
+- The selected composition opens in the existing editor with a rendered SVG preview. Title, subtitle, chapter label and accent color are editable in the clip inspector; updates flow through undoable editor commands and refresh the preview from the same playhead.
+- The editor's Effects browser exposes Looks, Overlays, Motion and Graphics. The 36 motion presets are persisted on clips and sampled from timeline-local microseconds. The typewriter copy is editable in the Graphics tab; typewriter and keyframe-counter graphics use deterministic samplers and render as playhead-sampled preview overlays.
+- The eight overlay presets and four treatments have real preview treatments. All 36 transitions are discoverable with their package thumbnails and persist through the existing `transitionOut` clip metadata path.
+- All 104 catalog preview URLs were resolved in the built MovieMode thumbnail module with zero missing references.
+- Compact editor workspaces now use a dark, scrollable bottom sheet with safe-area spacing, a visible drag affordance and thumbnail grids. The host surface has width-container breakpoints for the home page; Work-pane navigation remains authoritative and duplicate app navigation stays hidden.
+
+**Explicit remaining boundary:** transition cards currently persist the selected transition but do not yet run the two-source WebGL shader compositor against decoded timeline frames. Looks, overlays, motion and graphic presets are editor-preview integrations; encoded-video export/compositor parity is not complete. The optional GSAP plugin remains optional and is not auto-installed. Safari/iOS device verification is still outstanding.
 
 ## Engine/source investigation and decisions
 
@@ -53,4 +66,4 @@ node scripts/creative/verify-gsap.mjs /absolute/path/to/gsap-3.15.0.cjs
 
 The explicit GSAP proof fails if the real provider module is missing; it does not silently skip. Source ports add zero third-party runtime dependencies. GSAP has no runtime dependency closure in its inspected package manifest and remains host supplied. Remotion is not a production dependency. Retain `THIRD_PARTY_NOTICES.md` and per-shader notices in all packaging. Remotion Bits' pinned manifest declares MIT but has no standalone LICENSE text; that provenance gap is recorded without blocking internal development.
 
-Remaining host work: real-media decode/compositing/export, timeline insertion UI and undo/redo, persisted asset resolution, full captions/audio binding, Safari proof, optional-plugin settings UI and a production release decision. Do not claim the Studio integration shipped on the strength of this gallery.
+Remaining host work: real-media decode/compositing/export; two-source transition shader playback; render/export parity for preview treatments, motion and graphics; persisted media resolution; full captions/audio binding; Safari/iOS proof; optional-plugin settings UI; and a production release decision. MovieMode UI integration is now present, but do not call video export production-ready.
