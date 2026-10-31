@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from common import ARTIFACT_DIR, d1_export, ensure_artifact_dir, r2_put
+from common import ARTIFACT_DIR, BACKUP_R2_BUCKET, d1_export, ensure_artifact_dir, r2_put
 
 TABLES = [
     "r2_buckets", "r2_objects", "media_assets", "studio_templates",
@@ -26,9 +26,13 @@ def sha256(path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--upload-to-r2", action="store_true", help="Also copy the backup to private agent-sam R2")
+    parser.add_argument(
+        "--upload-to-r2",
+        action="store_true",
+        help="Also copy the backup to agentsam-sdk worker R2 (WEBSITE_ASSETS → agentsam-os-blueprint-content)",
+    )
     parser.add_argument("--confirm-backup-upload", action="store_true", help="Required with --upload-to-r2")
-    parser.add_argument("--bucket", default="agent-sam")
+    parser.add_argument("--bucket", default=BACKUP_R2_BUCKET)
     args = parser.parse_args()
     if args.upload_to_r2 and not args.confirm_backup_upload:
         parser.error("--upload-to-r2 requires --confirm-backup-upload")
