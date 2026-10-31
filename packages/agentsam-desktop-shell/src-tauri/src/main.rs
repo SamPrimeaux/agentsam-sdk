@@ -6,9 +6,9 @@ mod menu;
 mod tray;
 
 use commands::{
-    agent_sam_pet, agentsamd, cad, cad_engine, chrome_browser, cloudflare_desktop_identity, deep_link,
-    google_desktop_identity, keychain, local_content, local_identity, local_lsp, local_node,
-    local_provider, local_sqlite, native_capabilities, system, updater,
+    agent_sam_pet, agentsamd, cad, cad_engine, chrome_browser, cloudflare_desktop_identity,
+    deep_link, google_desktop_identity, keychain, local_content, local_identity, local_lsp,
+    local_node, local_provider, local_sqlite, native_capabilities, system, updater,
 };
 
 fn main() {
@@ -16,18 +16,33 @@ fn main() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(cloudflare_desktop_identity::PkceState::default())
         .manage(agentsamd::AgentsamdState::default())
         .manage(cad_engine::CadEngineState::default())
         .manage(local_lsp::LocalLspState::default())
         .manage(local_content::LocalContentState::default())
         .manage(deep_link::DeepLinkState::default())
+        .manage(tray::NotificationState::default())
         .manage(keychain::IdentityPendingState::default())
         .manage(keychain::IdentitySessionState::default())
         .setup(|app| {
             let native_menu = menu::build_menu(app.handle())?;
             app.set_menu(native_menu)?;
             tray::setup_tray(app)?;
+            // Tauri notification 2.6+ reports native banner clicks on desktop.
+            // Bring the existing app forward rather than opening a second window.
+            {
+                use tauri::Manager;
+                use tauri_plugin_notification::NotificationExt;
+                let handle = app.handle().clone();
+                app.notification().on_action(move |_action| {
+                    if let Some(window) = handle.get_webview_window("main") {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                });
+            }
             deep_link::register_scheme(app)?;
             Ok(())
         })
@@ -82,6 +97,7 @@ fn main() {
             cad::export_step_file,
             agent_sam_pet::toggle_agent_sam_pet,
             agent_sam_pet::close_agent_sam_pet,
+            tray::sync_native_notifications,
         ])
         .run(tauri::generate_context!())
         .expect("error while running agentsam desktop shell");

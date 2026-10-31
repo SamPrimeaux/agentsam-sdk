@@ -142,7 +142,7 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
   };
   runInNewContext(source, context);
   await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(requested, ['/admin/data/navigation.json']);
+  assert.deepEqual(requested, ['/admin/data/navigation.json','/api/notifications?limit=1']);
   assert.deepEqual(Array.from(context.NAV.apps, (item) => item.id), projection.apps.map((item) => item.id));
   assert.equal(context.NAV.main[0].href, '/admin/home');
   assert.equal(context.NAV.main.some((item) => item.href === '/agentsam'), false);
