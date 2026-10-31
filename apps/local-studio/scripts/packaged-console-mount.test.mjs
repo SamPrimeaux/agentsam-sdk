@@ -375,3 +375,38 @@ test('embedded desktop navigation reaches its parent and API requests use the na
   assert.equal((await (await context.window.fetch('https://native.test/api/admin/products')).json()).ok,true);
   assert.deepEqual(requests,['https://native.test/api/admin/products']);
 });
+
+test('hosted product links update the same-origin containing app while preserving new-tab and external navigation',()=>{
+  const source = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url),'utf8');
+  const listeners=[]; const navigated=[];
+  const parent={location:{origin:'https://studio.test',assign:path=>navigated.push(path)}};
+  const context={
+    NAV:{main:[],channels:[],apps:[]},renderSideNav:()=>'<nav></nav>',
+    localStorage:{getItem:()=>null},CONSOLE_APPEARANCE_KEY:'appearance',
+    window:{parent,location:{origin:'https://studio.test',pathname:'/ecommerce-cms-agentsam/admin/home.html'}},
+    document:{addEventListener:(name,fn)=>{if(name==='click')listeners.push(fn);}},
+    encodeURIComponent,
+  };
+  runInNewContext(source,context);
+  const visit=(path,options={})=>{
+    let prevented=false;
+    const event={target:{closest:selector=>selector==='a[href]'?{
+      getAttribute:key=>key==='href'?path:key==='target'?(options.target||null):null,
+      hasAttribute:()=>false,
+    }:null},button:0,defaultPrevented:false,
+      preventDefault(){prevented=true;this.defaultPrevented=true;},stopImmediatePropagation(){},
+      ...options};
+    for(const listener of listeners)listener(event);
+    return prevented;
+  };
+  assert.equal(visit('/admin/products'),true);
+  assert.deepEqual(navigated,['/admin/products']);
+  assert.equal(visit('/settings/general',{ctrlKey:true}),false);
+  assert.equal(visit('/themes/violet/demo/',{target:'_blank'}),false);
+  assert.equal(visit('//elsewhere.test/'),false);
+  assert.equal(visit('https://elsewhere.test/'),false);
+  assert.equal(visit('#section'),false);
+  parent.location.origin='https://different.test';
+  assert.equal(visit('/admin/content'),false);
+  assert.deepEqual(navigated,['/admin/products']);
+});
