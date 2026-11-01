@@ -228,7 +228,7 @@ An APP definition is not a user-scoped installation. `agentsam app install <id>`
 | `agentsam-content` | `@inneranimalmedia/agentsam-content` | needs-review | Portable content/library peer domain over Asset Core: lifecycle, usage, providers, intelligence, and createContent… |
 | `agentsam-content-studio` | `@inneranimalmedia/agentsam-content-studio` | needs-review | Canonical React UI for AgentSam Content Studio: library, inspectors, assistant rail. Host apps provide a ContentRu… |
 | `agentsam-contracts` | `@inneranimalmedia/agentsam-contracts` | needs-review | Framework-neutral AgentSam contracts for workbench, tools, providers, events, hooks, execution, identity and repos… |
-| `agentsam-database-editor` | `@inneranimalmedia/agentsam-database-editor` | needs-review | Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashbo… |
+| `agentsam-database-editor` | `@inneranimalmedia/agentsam-database-editor` | active | Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashbo… |
 | `agentsam-desktop-shell` | `@inneranimalmedia/agentsam-desktop-shell` | needs-review | Tauri desktop application and downloadable AgentSam Local Studio .app/.dmg packaging, including native bridges, bu… |
 | `agentsam-docs-theme` | `@inneranimalmedia/agentsam-docs-theme` | needs-review | Violet docs skin tokens for AgentSam public guides (Systematic Autonomous Machinery). |
 | `agentsam-errors` | `@inneranimalmedia/agentsam-errors` | needs-review | Canonical AgentSam runtime error normalization, classification, transport, remediation and rendering. |
