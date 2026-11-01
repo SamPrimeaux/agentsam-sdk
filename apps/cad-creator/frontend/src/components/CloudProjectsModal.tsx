@@ -18,7 +18,6 @@ import {
   Eye,
   Edit3,
   Crown,
-  Lock,
   ExternalLink
 } from 'lucide-react';
 import { MultiplayerUser, ProjectState, UserRole } from '@inneranimalmedia/agentsam-cad-shared';
@@ -26,6 +25,8 @@ import { TEMPLATE_METADATA_LIST, TemplateMetadata } from '../lib/templates';
 import { exportToDXF, exportToOBJ, exportToSVG, downloadFile } from '../lib/cad-export';
 import { getPermissions, ROLE_DESCRIPTIONS } from '../lib/permissions';
 import { collaborationClient } from '../lib/socket';
+import { CadResourceCard } from './CadResourceCard';
+import { CadPreview2D } from './CadPreviewTreatments';
 
 interface Props {
   isOpen: boolean;
@@ -433,46 +434,20 @@ export const CloudProjectsModal: React.FC<Props> = ({
                 )}
               </div>
 
-              {/* Grid of Templates */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Grid of Templates — shared CadResourceCard grammar */}
+              <div className="cad-project-gallery__grid">
                 {filteredTemplates.map((tpl) => (
-                  <div
+                  <CadResourceCard
                     key={tpl.id}
-                    className="p-3.5 rounded bg-[#252525] border border-[#333] hover:border-blue-500/50 transition flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[length:var(--text-xs)] font-mono px-1.5 py-0.2 rounded bg-[#1E1E1E] text-blue-400 border border-[#333]">
-                          {tpl.categoryLabel}
-                        </span>
-                        <span className="text-[length:var(--text-xs)] text-gray-400 font-mono">{tpl.dimensions}</span>
-                      </div>
-                      <h3 className="text-xs font-bold text-white mb-1">{tpl.name}</h3>
-                      <p className="text-[length:var(--text-sm)] text-gray-400 mb-3 leading-relaxed">{tpl.description}</p>
-                    </div>
-
-                    <div className="space-y-2 pt-2 border-t border-[#333]">
-                      <div className="flex items-center justify-between text-[length:var(--text-xs)] text-gray-400 font-mono">
-                        <span>{tpl.project.walls.length} Walls • {tpl.project.rooms.length} Rooms • {tpl.project.furniture.length} Fixtures</span>
-                      </div>
-                      {!permissions.canLoadTemplates ? (
-                        <button
-                          disabled
-                          className="w-full py-1.5 bg-[#1E1E1E] text-gray-500 border border-[#333] rounded text-xs font-medium cursor-not-allowed flex items-center justify-center space-x-1"
-                        >
-                          <Lock className="w-3 h-3" />
-                          <span>Viewer Mode (Read-Only)</span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleTemplateSelect(tpl)}
-                          className="w-full py-1.5 bg-[#1E1E1E] hover:bg-blue-600 border border-[#333] text-white rounded text-xs font-medium transition"
-                        >
-                          Load Template & Sync
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                    title={tpl.name}
+                    category={tpl.categoryLabel}
+                    meta={`${tpl.dimensions} · ${tpl.project.walls.length} walls · ${tpl.project.rooms.length} rooms · ${tpl.project.furniture.length} fixtures`}
+                    previewKind="plan-2d"
+                    preview={<CadPreview2D project={tpl.project} />}
+                    openLabel={permissions.canLoadTemplates ? 'Load template' : 'Viewer only'}
+                    disabled={!permissions.canLoadTemplates}
+                    onOpen={() => handleTemplateSelect(tpl)}
+                  />
                 ))}
               </div>
             </div>
@@ -496,32 +471,27 @@ export const CloudProjectsModal: React.FC<Props> = ({
                 )}
               </div>
 
-              <div className="space-y-1.5">
+              <div className="cad-project-gallery__grid">
                 {savedProjects.length === 0 ? (
-                  <div className="p-6 text-center text-xs text-gray-500 bg-[#252525] rounded border border-[#333]">
+                  <div className="p-6 text-center text-xs text-gray-500 bg-[#252525] rounded border border-[#333] md:col-span-2">
                     No cloud snapshots saved yet. Click "Save Revision" to store a restore point.
                   </div>
                 ) : (
                   savedProjects.map((p) => (
-                    <div key={p.id} className="p-2.5 rounded bg-[#252525] border border-[#333] flex items-center justify-between">
-                      <div>
-                        <h4 className="text-xs font-semibold text-white">{p.name}</h4>
-                        <span className="text-[length:var(--text-xs)] text-gray-400 font-mono">{p.date}</span>
-                      </div>
-                      {permissions.canSaveRevisions ? (
-                        <button
-                          onClick={() => {
-                            onLoadProject(p.state);
-                            onClose();
-                          }}
-                          className="px-2.5 py-1 bg-[#1E1E1E] hover:bg-[#333] border border-[#333] text-gray-200 rounded text-xs font-medium transition"
-                        >
-                          Restore
-                        </button>
-                      ) : (
-                        <span className="text-[length:var(--text-xs)] text-gray-500 font-mono">Restricted</span>
-                      )}
-                    </div>
+                    <CadResourceCard
+                      key={p.id}
+                      title={p.name}
+                      category="Local revision"
+                      meta={p.date}
+                      previewKind="plan-2d"
+                      preview={<CadPreview2D project={p.state} />}
+                      openLabel="Restore"
+                      disabled={!permissions.canSaveRevisions}
+                      onOpen={() => {
+                        onLoadProject(p.state);
+                        onClose();
+                      }}
+                    />
                   ))
                 )}
               </div>
