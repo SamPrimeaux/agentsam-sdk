@@ -74,13 +74,14 @@ export function mountProgressiveStudio(options: MountOptions) {
       const preview = entry.preview
         ? `<img loading="lazy" src="${safe(assetUrl(entry.preview))}" alt="" />`
         : `<span class="model-placeholder">${icon("cube", 27)}<small>STL source</small></span>`;
+      const typeLabel = entry.kind === "composition" ? entry.category : "Source part";
       const detail = entry.kind === "composition"
-        ? `${entry.sourceCount} source mesh${entry.sourceCount === 1 ? "" : "es"} · ${safe(entry.category)}`
-        : "Source STL · editable scene instance";
-      return `<button type="button" class="template-card model-inventory-card" data-template-insert="${safe(ref)}" data-model-kind="${entry.kind}" aria-label="Add ${safe(entry.name)} (${entry.sku}) to the scene" title="Add ${safe(entry.name)} to the scene">
-        <span class="template-picture">${preview}<span class="model-sku">${entry.sku}</span></span>
+        ? `${entry.sourceCount} source mesh${entry.sourceCount === 1 ? "" : "es"} · ${safe(entry.sku)}`
+        : `Source STL · ${safe(entry.sku)}`;
+      return `<button type="button" class="template-card model-inventory-card ss-inventory-card" data-template-insert="${safe(ref)}" data-model-kind="${entry.kind}" aria-label="Add ${safe(entry.name)} (${entry.sku}) to the scene" title="Add ${safe(entry.name)} to the scene">
+        <span class="template-picture">${preview}<span class="model-sku">${entry.sku}</span><span class="ss-inventory-badge">SamSketch</span><span class="ss-inventory-type">${safe(typeLabel)}</span><span class="ss-inventory-cta">${icon("plus", 13)} Add</span></span>
         <span class="template-details"><strong>${safe(entry.name)}</strong><small>${detail}</small></span>
-        <span class="template-add">${icon("plus", 15)}</span>
+        <span class="template-add" aria-hidden="true">${icon("plus", 15)}</span>
       </button>`;
     }).join("") || '<p class="template-empty">No matching models. Try another name, SKU or source type.</p>';
 
