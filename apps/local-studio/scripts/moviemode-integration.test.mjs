@@ -5,14 +5,12 @@ import { fileURLToPath } from "node:url";
 
 const read = (file) => readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8");
 
-test("Media Library owns /media; MovieMode mounts only under /admin/moviemode", () => {
+test("MovieMode mounts only under /admin/moviemode; Media Library owns /media", () => {
+  assert.match(read("../frontend/src/routes/(apps)/admin/moviemode.tsx"), /MovieModeSurface/);
   assert.match(read("../frontend/src/routes/(apps)/media.tsx"), /MediaLibraryPage/);
   assert.doesNotMatch(read("../frontend/src/routes/(apps)/media.tsx"), /MovieModeSurface/);
-  assert.match(read("../frontend/src/routes/(apps)/admin/moviemode.tsx"), /MovieModeSurface/);
-  assert.match(read("../frontend/src/routes/(apps)/admin/moviemode.edit.tsx"), /MovieModeSurface/);
-  assert.match(read("../frontend/src/routes/(apps)/media.edit.tsx"), /\/admin\/moviemode\/edit/);
+  assert.match(read("../frontend/src/routes/(apps)/media.edit.tsx"), /createFileRoute\("\/\(apps\)\/media\/edit"\)/);
   assert.match(read("../frontend/src/routeTree.gen.ts"), /'\/media\/edit'/);
-  assert.match(read("../frontend/src/routeTree.gen.ts"), /'\/media\/images'/);
 });
 
 test("MovieMode remains one runnable application with a reusable Work host", () => {
@@ -22,11 +20,9 @@ test("MovieMode remains one runnable application with a reusable Work host", () 
   assert.doesNotMatch(read("../frontend/src/components/media/MovieModeSurface.tsx"), /iframe|127\.0\.0\.1/);
 });
 
-test("Media is primary nav; MovieMode stays under Apps without claiming /media", () => {
+test("Media replaces Content while Work can still focus MovieMode", () => {
   const shell = read("../frontend/agentsam/AgentSamShell.tsx");
-  assert.match(read('../scripts/studio-navigation.mjs'), /id:'media',label:'Media',href:'\/media'/);
-  assert.match(read('../scripts/studio-navigation.mjs'), /'agentsam-copro-studio': \{ href: '\/admin\/moviemode'/);
-  assert.match(read('../scripts/studio-navigation.mjs'), /aliases: \[\]/);
+  assert.match(read("../scripts/studio-navigation.mjs"), /id:'media',label:'Media',href:'\/media'/);
   assert.doesNotMatch(shell, /id: 'utilities'/);
   assert.match(read("../frontend/agentsam/side-stage-actions.ts"), /tab: 'media'/);
   assert.match(read("../frontend/src/components/workbench/side-stage.tsx"), /MovieModeSurface workPane/);
@@ -59,4 +55,11 @@ test("Embedded MovieMode does not render desktop home columns at narrow panel wi
   assert.match(host, /mm-home-quick-grid \{ grid-template-columns:minmax\(0,1fr\)/);
   assert.match(editor, /data-handset=\{isHandset\}/);
   assert.match(editor, /setHandsetPanel\("browser"\)/);
+});
+
+test("MovieMode project browser no longer advertises browser-local CoPro prototype footers", () => {
+  const projects = read("../../../packages/copro-ui/src/projects.tsx");
+  assert.doesNotMatch(projects, /Browser-local editing/);
+  assert.doesNotMatch(projects, /Open an existing prototype/);
+  assert.match(projects, /Apps · independent from Media Library/);
 });

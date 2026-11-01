@@ -248,3 +248,8 @@ export function buildAuthorizeUrl({ clientId, redirectUri, state, codeChallenge,
 }
 
 export { discoverBasinResources } from './families/basin.js';
+export {
+  discoverCloudflareMedia,
+  listCloudflareR2Buckets,
+  listCloudflareR2Objects,
+} from './families/media.js';

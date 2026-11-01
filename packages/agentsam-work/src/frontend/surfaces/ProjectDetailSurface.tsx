@@ -222,13 +222,28 @@ export function ProjectDetailSurface({
         </div>
       ) : null}
 
-      {tab === "gallery" ? <ArtifactsSurface
-        artifacts={projectArtifacts}
-        onOpenArtifact={chatHost?.openArtifact}
-        title={project.name + " · Gallery"}
-        heading="Project files"
-        emptyMessage="No registered files are associated with this project yet. The gallery only shows explicit project-linked media, not guessed filename matches."
-      /> : null}
+      {tab === "gallery" ? (
+        <div className="aw-project-gallery">
+          <div className="aw-project-gallery__actions" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+            <button type="button" className="agentsam-work-toolbar-button" onClick={() => onNavigate("/media")}>
+              Browse Media Library
+            </button>
+            <button type="button" className="agentsam-work-toolbar-button" onClick={() => onNavigate("/admin/moviemode")}>
+              Open MovieMode
+            </button>
+            <span className="agentsam-work-artifacts__muted" style={{ alignSelf: "center", fontSize: 12 }}>
+              Associations are explicit project links — removing them never deletes the source asset.
+            </span>
+          </div>
+          <ArtifactsSurface
+            artifacts={projectArtifacts}
+            onOpenArtifact={chatHost?.openArtifact}
+            title={project.name + " · Gallery"}
+            heading="Associated files"
+            emptyMessage="No registered files are associated with this project yet. Attach from Media Library — the gallery only shows explicit project-linked media, not guessed filename matches."
+          />
+        </div>
+      ) : null}
       {tab === "tickets" ? (
         <TicketsSurface
           embedded
