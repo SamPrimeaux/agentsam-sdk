@@ -13,7 +13,8 @@ Agent 1 owns Media gallery UI bodies and MovieMode/CoPro package internals.
 | `/media/models` | Models | Agent 1 gallery body when ready |
 | `/media/files` | All files | Agent 1 gallery body when ready |
 
-Until Agent 1 replaces the bodies, Agent 2 mounts `ContentStudioPage` inside `MediaLibraryPage` so Images/Videos stay authenticated and never open MovieMode.
+Agent 1 has landed an initial `MediaLibraryPage` (+ `media-library.css`) on these routes.
+Keep MovieMode out of `/media/*`. If gallery bodies still need polish, iterate in place — do not re-alias `/media` to MovieMode.
 
 ## MovieMode (Apps only)
 
