@@ -1,4 +1,4 @@
-# AgentSam SDK
+# AgentSam SDK - REPO RULE/LAW -- An unfinished backend is an acceptable development state. An intentionally incomplete interface is not. !!!!!!!!!!!!!!!
 We're not trying to borrow credibility from companies we've worked with. We're trying to earn credibility through the unmistakable quality of what we've built ourselves. Depth communicates capability
 
 The layered interfaces look like physical objects. Their perspective, spacing, lighting, and separation explain a complex software ecosystem without relying on paragraphs of feature descriptions.
