@@ -1,5 +1,7 @@
 import {createThreeViewport} from '@inneranimalmedia/agentsam-3d-viewer';
 import {CadSourceInspector} from './CadSourceInspector';
+import {CadResourceCard} from './CadResourceCard';
+import {CadPreviewImage, CadPreview3DStatic} from './CadPreviewTreatments';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -215,35 +217,44 @@ export function BimStartersWorkspace({ onReturn }: { onReturn: () => void }) {
       {active && <span className="text-slate-400">{active.objectCount} original objects · {active.meshCount} preview meshes</span>}
     </div>
     {error && <div role="alert" className="p-4 text-sm text-amber-300">{error}</div>}
-    {!active&&inspectedSource ? <CadSourceInspector source={inspectedSource} onBack={()=>setSelectedSourceId(null)}/> : !active ? <div className="grid flex-1 content-start gap-4 overflow-y-auto p-5 sm:grid-cols-2">
-      {starters.map((starter) => <button key={starter.id} aria-label={`Open ${starter.title} FreeCAD project`} onClick={() => void open(starter.id)}
-        className="overflow-hidden rounded-lg border border-white/15 bg-slate-900 text-left hover:border-amber-400/60">
-        <span className="sr-only">{`Open ${starter.title} FreeCAD project`}</span>
-        <img alt={starter.title + ' FreeCAD thumbnail'} src={asset(starter.id, 'thumbnail')} className="h-40 w-full object-contain bg-[#25262a]" />
-        <div className="p-3"><div className="font-semibold">{starter.title}</div>
-          <div className="mt-1 text-xs text-slate-400">{starter.objectCount} native FreeCAD objects · {starter.meshCount} selectable 3D parts</div>
-          <div className="mt-2 text-xs text-amber-300">Open project →</div>
+    {!active&&inspectedSource ? <CadSourceInspector source={inspectedSource} onBack={()=>setSelectedSourceId(null)}/> : !active ? <div className="cad-project-gallery flex-1">
+      <header className="cad-project-gallery__head">
+        <div>
+          <p className="cad-project-gallery__eyebrow">CAD Creator</p>
+          <h2>Native BIM starter library</h2>
+          <p>Static thumbnails open into an inspectable mesh derivative. FreeCAD remains the editable source of truth.</p>
         </div>
-      </button>)}
-      {!starters.length && !error && <div className="text-sm text-slate-400">No BIM starters imported into the local CAD library.</div>}
-      {discovered.length>0 && <section className="sm:col-span-2 mt-1 rounded-lg border border-white/15 bg-slate-900/60 p-4" aria-label="Source-backed project assets">
-        <header className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div><h3 className="font-semibold">Discovered project sources · {discovered.length}</h3>
-            <p className="mt-1 text-xs text-slate-400">Verified local file hashes. These are candidates for BIM import, not automatically editable studio objects.</p></div>
-          <span className="rounded border border-amber-500/30 px-2 py-1 text-xs text-amber-200">Local discovery · source preserved</span>
-        </header>
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {discovered.map(source=><button type="button" aria-label={'Inspect '+source.relativePath} onClick={()=>setSelectedSourceId(source.id)}
-            key={source.id} className="min-w-0 rounded border border-white/10 bg-[#141c29] p-3 text-left hover:border-sky-500/60">
-            <div className="flex items-center justify-between gap-2"><b className="text-xs">{source.revision} · {source.format}</b>
-              <span className="text-xs text-slate-400">{source.status==='review-only'?'Scene review':source.status==='source-only'?'Source available':'Evidence'}</span></div>
-            <div className="mt-1 break-all text-xs text-slate-200">{source.relativePath}</div>
-            <div className="mt-2 text-xs text-slate-400">{source.project} · {(source.bytes/1024/1024).toFixed(2)} MB · SHA-256 {source.sha256.slice(0,12)}…</div>
-            <div className="mt-2 text-xs text-sky-400">Inspect source →</div>
-          </button>)}
-        </div>
-        <p className="mt-3 text-xs text-amber-200">A DreamHouse V1.5 review scene is not a synchronized FreeCAD/IFC BIM. Native source promotion must be verified separately.</p>
-      </section>}
+      </header>
+      <div className="cad-project-gallery__grid">
+      {starters.map((starter) => (
+        <CadResourceCard
+          key={starter.id}
+          title={starter.title}
+          category="FreeCAD BIM"
+          meta={`${starter.objectCount} native objects · ${starter.meshCount} selectable 3D parts`}
+          previewKind="image"
+          preview={<CadPreviewImage src={asset(starter.id, 'thumbnail')} alt={starter.title + ' FreeCAD thumbnail'} />}
+          openLabel="Open project"
+          onOpen={() => void open(starter.id)}
+          aria-label={`Open ${starter.title} FreeCAD project`}
+        />
+      ))}
+      {!starters.length && !error && <p className="cad-project-gallery__empty">No BIM starters imported into the local CAD library.</p>}
+      {discovered.map(source=>(
+        <CadResourceCard
+          key={source.id}
+          title={source.relativePath.split('/').pop() || source.relativePath}
+          category={source.status==='review-only'?'Scene review':source.status==='source-only'?'Source available':'Evidence'}
+          meta={`${source.project} · ${source.revision} · ${source.format} · ${(source.bytes/1024/1024).toFixed(2)} MB · ${source.sha256.slice(0,12)}…`}
+          previewKind="model-3d"
+          preview={<CadPreview3DStatic seed={source.sha256} label={source.relativePath} walls={9} rooms={3} />}
+          openLabel="Inspect source"
+          onOpen={()=>setSelectedSourceId(source.id)}
+          aria-label={'Inspect '+source.relativePath}
+        />
+      ))}
+      </div>
+      {discovered.length>0 && <p className="cad-project-gallery__note">Verified local file hashes. Candidates for BIM import are not automatically editable studio objects. DreamHouse V1.5 review scenes are not synchronized FreeCAD/IFC BIMs.</p>}
     </div> : <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       <div className="min-h-[320px] flex-1">
         <BimViewport key={active.id + previewVersion} id={active.id} version={String(previewVersion) + active.sourceSha256}

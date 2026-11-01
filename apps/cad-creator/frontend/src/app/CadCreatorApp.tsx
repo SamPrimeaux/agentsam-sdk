@@ -43,7 +43,7 @@ import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/r
 import { ExportPublishModal } from '../components/ExportPublishModal';
 import { CloudProjectsModal } from '../components/CloudProjectsModal';
 import { TemplateDrawer } from '../components/TemplateDrawer';
-import { TemplateStarterGrid } from '../components/TemplateStarterGrid';
+import { CadProjectGallery } from '../components/CadProjectGallery';
 import { ProjectRuntimePanel } from '../components/ProjectRuntimePanel';
 import { CadStatusStrip } from './CadStatusStrip';
 import { installCadPreviewGuestBridge, type CadOutbound } from '../lib/agentsam-preview-bridge';
@@ -93,9 +93,20 @@ export function CadCreatorApp({
 
   // 1. Core Project State. Public users get an independent starter, never the owner's project ID.
   const [showBimStarters, setShowBimStarters] = useState(false);
+  const [showProjectGallery, setShowProjectGallery] = useState(false);
   const [project, setProject] = useState<ProjectState>(() => accessMode === 'public-demo' && !startNewProject
     ? createPublicExampleProject()
     : createEmptyCadProject());
+  const localSnapshots = useMemo(() => {
+    if (typeof window === 'undefined') return [] as Array<{ id: string; name: string; date: string; state: ProjectState }>;
+    try {
+      const stored = localStorage.getItem('agentsam_saved_projects');
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed.filter((row) => row?.id && row?.state) : [];
+    } catch {
+      return [];
+    }
+  }, [project.id, project.updatedAt]);
   const [sourceStatus,setSourceStatus] = useState<'loading'|'loaded'|'unavailable'>(() => accessMode !== 'owner' || startNewProject ? 'loaded' : 'loading');
   const [sourceError,setSourceError] = useState('');
   const [hostedProjects,setHostedProjects] = useState<Array<{id:string;name:string}>>([]);
@@ -500,11 +511,52 @@ export function CadCreatorApp({
     if (canCollaborate) collaborationClient.sendProjectUpdate(next);
   };
 
+  const galleryPane = (
+    <CadProjectGallery
+      mode={accessMode === 'hosted-project' ? 'hosted' : 'mixed'}
+      hostedProjects={hostedProjects}
+      selectedHostedId={hostedProjectId}
+      onOpenHosted={(id) => {
+        setShowProjectGallery(false);
+        setTemplateCopyName(null);
+        setCurrentUser((prev) => (prev.role === 'Editor' ? { ...prev, role: 'Viewer' } : prev));
+        setHostedProjectId(id);
+        setHostedRevision('');
+        setHostedSelection(null);
+      }}
+      localSnapshots={localSnapshots}
+      onOpenLocal={(next) => {
+        setShowProjectGallery(false);
+        setProject(next);
+        setHistory([]);
+        setRedoStack([]);
+        showToast(`Restored "${next.name}"`);
+      }}
+      onStartTemplate={(next, name) => {
+        setShowProjectGallery(false);
+        startFromTemplate(next, name);
+      }}
+      onOpenBimLibrary={() => {
+        setShowProjectGallery(false);
+        setShowBimStarters(true);
+        handleSelectWorkspace('model');
+      }}
+      emptyHint={accessMode === 'hosted-project'
+        ? 'Choose a registered Work project card, or start an unsaved template copy.'
+        : 'Open a local revision or start from a drafting template.'}
+    />
+  );
+
   // Shown in place of a model while hosted mode has no registered project open. With a project id
   // present (loading or failed) the original status text stays: a failed load is never replaced by a starter.
-  const hostedEmptyPane = (sourceStatus === 'loading' || hostedProjectId)
-    ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">{sourceStatus === 'loading' ? 'Loading registered BIM revision…' : 'Choose a saved CAD project to inspect its registered model.'}</div>
-    : <TemplateStarterGrid onSelect={startFromTemplate} />;
+  const hostedEmptyPane = sourceStatus === 'loading'
+    ? <div className="flex size-full items-center justify-center bg-slate-950 px-6 text-center text-sm text-slate-400">Loading registered BIM revision…</div>
+    : hostedProjectId
+      ? <div className="flex size-full flex-col items-center justify-center gap-3 bg-slate-950 px-6 text-center text-sm text-slate-400">
+          <p>Choose a saved CAD project to inspect its registered model.</p>
+          <button type="button" className="cad-hosted-chrome__browse" onClick={() => setShowProjectGallery(true)}>Browse project gallery</button>
+        </div>
+      : galleryPane;
 
   const currentWorkspaceDescriptor =
     WORKSPACE_REGISTRY.find((w) => w.id === activeWorkspace) || WORKSPACE_REGISTRY[0];
@@ -514,21 +566,21 @@ export function CadCreatorApp({
       style={{'--cad-accent': cadAccent, '--nav-accent': appearance.accent} as React.CSSProperties}
       className={`as-nav-scope cad-workspace-ui relative flex flex-col h-full w-full min-w-0 min-h-0 font-sans overflow-hidden select-none ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {accessMode === 'hosted-project' && (
-        <div className="flex min-h-11 shrink-0 flex-wrap items-center gap-2 border-b border-white/10 bg-slate-900/95 px-3 py-1.5 text-xs" aria-label="Registered CAD project and revision">
-          <label htmlFor="cad-hosted-project" className="text-slate-400">Project</label>
+        <div className="cad-hosted-chrome" aria-label="Registered CAD project and revision">
+          <label htmlFor="cad-hosted-project" className="text-slate-400 text-xs">Project</label>
           <select id="cad-hosted-project" aria-label="Open registered CAD project" value={hostedProjectId}
-            onChange={event=>{setTemplateCopyName(null);setCurrentUser(prev=>prev.role==='Editor'?{...prev,role:'Viewer'}:prev);setHostedProjectId(event.target.value);setHostedRevision('');setHostedSelection(null);setProject(createEmptyCadProject());}}
-            className="min-w-0 max-w-[260px] rounded-md border border-white/15 bg-slate-800 px-2 py-1.5 text-slate-100">
+            onChange={event=>{setShowProjectGallery(false);setTemplateCopyName(null);setCurrentUser(prev=>prev.role==='Editor'?{...prev,role:'Viewer'}:prev);setHostedProjectId(event.target.value);setHostedRevision('');setHostedSelection(null);setProject(createEmptyCadProject());}}>
             <option value="">Select a saved project</option>
             {hostedProjects.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
             {hostedProjectId&&!hostedProjects.some(item=>item.id===hostedProjectId)&&<option value={hostedProjectId}>{hostedProjectId}</option>}
           </select>
-          {hostedSelection&&<><label htmlFor="cad-hosted-revision" className="text-slate-400">Revision</label>
+          {hostedSelection&&<><label htmlFor="cad-hosted-revision" className="text-slate-400 text-xs">Revision</label>
           <select id="cad-hosted-revision" aria-label="Select registered BIM revision" value={hostedSelection.revision.revision}
-            onChange={event=>setHostedRevision(event.target.value)} className="max-w-[210px] rounded-md border border-white/15 bg-slate-800 px-2 py-1.5 text-slate-100">
+            onChange={event=>setHostedRevision(event.target.value)}>
             {hostedSelection.registry.revisions.filter(row=>row.models.length&&(row.documents.length||row.revision==='current')).map(row=><option key={row.revision} value={row.revision}>{row.label || row.revision} · {row.status}</option>)}
           </select></>}
-          <span className="ml-auto text-xs text-slate-400">{hostedSelection ? (hostedSelection.revision.revision==='current' ? `${hostedSelection.revision.sceneRevision || 'Latest'} scene · ${hostedSelection.revision.bimRevision || 'BIM'} source · 3D visual review` : `${hostedSelection.revision.status} · registered source and geometry · viewing only`) : templateCopyName ? `Unsaved copy of "${templateCopyName}" · not a registered project` : 'Registered projects · no template fallback'}</span>
+          <button type="button" className="cad-hosted-chrome__browse" onClick={() => setShowProjectGallery(true)} aria-label="Browse CAD project gallery">Gallery</button>
+          <span className="cad-hosted-chrome__meta">{hostedSelection ? (hostedSelection.revision.revision==='current' ? `${hostedSelection.revision.sceneRevision || 'Latest'} scene · ${hostedSelection.revision.bimRevision || 'BIM'} source · 3D visual review` : `${hostedSelection.revision.status} · registered source and geometry · viewing only`) : templateCopyName ? `Unsaved copy of "${templateCopyName}" · not a registered project` : 'Registered projects · open from gallery'}</span>
         </div>
       )}
       {/* The host Nav.Topbar owns application chrome. CAD owns only its contextual tools. */}
@@ -546,7 +598,7 @@ export function CadCreatorApp({
           canUndo={history.length > 0 && !isViewer} canRedo={redoStack.length > 0 && !isViewer}
           workspace={activeWorkspace} onWorkspace={handleSelectWorkspace}
           planLayout={planLayout} onPlanLayout={setPlanLayout} readOnly={isViewer}
-          onNew={startBlankProject} onTemplates={() => {setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(true)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('stock')}}
+          onNew={startBlankProject} onTemplates={() => {setShowProjectGallery(true);setIsTemplateLibraryOpen(false)}} onStock={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('stock')}}
           onParametric={()=>{setExplorerOpen(true);setLeftPanelTab('libraries');setIsTemplateLibraryOpen(false);setLibraryPreferredSection('parametric')}}
           onExport={() => setIsExportPublishOpen(true)}
           onSave={()=>{if(accessMode==='hosted-project'){void saveHostedRevision()}else window.dispatchEvent(new Event('agentsam:cad-save-revision'))}}
@@ -660,8 +712,17 @@ export function CadCreatorApp({
           )}
           {/* A registered project BIM is resolved through its D1/R2 revision records.
               The visual GLB is never the authoritative editable source. */}
+          {showProjectGallery && (
+            <div className="absolute inset-0 z-30 bg-slate-950">
+              <div className="absolute right-3 top-3 z-40">
+                <button type="button" className="cad-hosted-chrome__browse" onClick={() => setShowProjectGallery(false)}>Back to workspace</button>
+              </div>
+              {galleryPane}
+            </div>
+          )}
+
           {/* WORKSPACE 1: PLAN */}
-          {activeWorkspace === 'plan' && (
+          {activeWorkspace === 'plan' && !showProjectGallery && (
             <>
               {(planLayout === '2d' || planLayout === 'split') && (
                 <div className={`cad-plan-pane h-full relative min-w-0 ${planLayout === 'split' ? 'border-r border-white/10' : 'w-full'}`} style={planLayout==='split'?{width:splitRatio+'%',flex:'none'}:undefined}>
@@ -741,7 +802,7 @@ export function CadCreatorApp({
           )}
 
           {/* WORKSPACE 2: MODEL */}
-          {activeWorkspace === 'model' && (
+          {activeWorkspace === 'model' && !showProjectGallery && (
             <div className="w-full h-full relative">
               {showBimStarters ? <BimStartersWorkspace onReturn={() => setShowBimStarters(false)} />
               : hostedSelection && sourceStatus==='loaded'

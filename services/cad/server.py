@@ -27,7 +27,12 @@ from urllib.parse import unquote, urlsplit
 # Reuse the published Python SDK's portable native host adapter. Keep the
 # existing Linux compatibility path for images not yet carrying SDK >=0.2.
 try:
-    from agentsam_sdk.cad import discover_freecad, discover_occt, probe_freecad, probe_occt
+    from agentsam_sdk.cad import (
+        discover_freecad,
+        discover_occt,
+        probe_freecad,
+        probe_occt,
+    )
 except ImportError:
     discover_freecad = None
     probe_freecad = None
