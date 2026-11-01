@@ -255,7 +255,7 @@
     const profile = user || window.__shellUser || {};
     const toDestination = (item, index) => ({
       id: item.id || item.href || String(index), label: item.label, href: item.href,
-      icon: item.icon ? window.AgentSamNav?.navIcon?.(({agentic:'agentsam',email:'mail',messageSquare:'agentsam',box:'cad',film:'moviemode',globe:'browser'})[item.icon] || item.icon) : undefined,
+      icon: item.icon ? window.AgentSamNav?.navIcon?.(({agentic:'agentsam',email:'mail',messageSquare:'agentsam',box:'cad',layers:'apps',film:'moviemode',globe:'browser'})[item.icon] || item.icon) : undefined,
       children: item.children?.map(toDestination)
     });
     const nav = buildUserNav(profile);
