@@ -263,6 +263,225 @@ async function probeStream(client) {
   }
 }
 
+/**
+ * Upload an image via Cloudflare Images (user OAuth).
+ * @param {import('../api-client.js').CloudflareApiClient} client
+ * @param {Blob|File|ArrayBuffer|Uint8Array} file
+ * @param {{ filename?: string, metadata?: Record<string, unknown>, requireSignedURLs?: boolean }} [opts]
+ */
+export async function uploadCloudflareImage(client, file, opts = {}) {
+  client.requireAccount('cloudflare.images.upload');
+  const form = new FormData();
+  const filename = opts.filename || (file && typeof file === 'object' && 'name' in file ? file.name : 'upload.bin');
+  if (file instanceof Blob || (typeof File !== 'undefined' && file instanceof File)) {
+    form.set('file', file, filename);
+  } else {
+    form.set('file', new Blob([file]), filename);
+  }
+  if (opts.metadata && typeof opts.metadata === 'object') {
+    form.set('metadata', JSON.stringify(opts.metadata));
+  }
+  if (opts.requireSignedURLs != null) {
+    form.set('requireSignedURLs', String(Boolean(opts.requireSignedURLs)));
+  }
+  const res = await client.request(
+    'POST',
+    client.accountPath('/images/v1'),
+    { body: form, operation: 'cloudflare.images.upload', capabilityId: 'cloudflare.images' },
+  );
+  const img = res?.result || {};
+  const variants = Array.isArray(img.variants) ? img.variants : [];
+  return {
+    id: String(img.id || ''),
+    filename: String(img.filename || filename),
+    size: Number(img.size || 0) || 0,
+    uploaded: img.uploaded || null,
+    requireSignedURLs: Boolean(img.requireSignedURLs),
+    variants,
+    variant_url: variants[0] || null,
+    meta: img.meta && typeof img.meta === 'object' ? img.meta : {},
+  };
+}
+
+export async function getCloudflareImage(client, imageId) {
+  const id = String(imageId || '').trim();
+  if (!id) {
+    const err = new Error('cloudflare_image_id_required');
+    err.code = 'cloudflare_image_id_required';
+    throw err;
+  }
+  client.requireAccount('cloudflare.images.get');
+  const res = await client.request(
+    'GET',
+    client.accountPath(`/images/v1/${encodeURIComponent(id)}`),
+    { operation: 'cloudflare.images.get', capabilityId: 'cloudflare.images' },
+  );
+  const img = res?.result || {};
+  const variants = Array.isArray(img.variants) ? img.variants : [];
+  return {
+    id: String(img.id || id),
+    filename: String(img.filename || id),
+    size: Number(img.size || 0) || 0,
+    uploaded: img.uploaded || null,
+    requireSignedURLs: Boolean(img.requireSignedURLs),
+    variants,
+    variant_url: variants[0] || null,
+    meta: img.meta && typeof img.meta === 'object' ? img.meta : {},
+  };
+}
+
+export async function updateCloudflareImage(client, imageId, patch = {}) {
+  const id = String(imageId || '').trim();
+  if (!id) {
+    const err = new Error('cloudflare_image_id_required');
+    err.code = 'cloudflare_image_id_required';
+    throw err;
+  }
+  client.requireAccount('cloudflare.images.update');
+  const body = {};
+  if (patch.metadata != null) body.metadata = patch.metadata;
+  if (patch.requireSignedURLs != null) body.requireSignedURLs = Boolean(patch.requireSignedURLs);
+  const res = await client.request(
+    'PATCH',
+    client.accountPath(`/images/v1/${encodeURIComponent(id)}`),
+    { body, operation: 'cloudflare.images.update', capabilityId: 'cloudflare.images' },
+  );
+  const img = res?.result || {};
+  const variants = Array.isArray(img.variants) ? img.variants : [];
+  return {
+    id: String(img.id || id),
+    filename: String(img.filename || id),
+    size: Number(img.size || 0) || 0,
+    uploaded: img.uploaded || null,
+    requireSignedURLs: Boolean(img.requireSignedURLs),
+    variants,
+    variant_url: variants[0] || null,
+    meta: img.meta && typeof img.meta === 'object' ? img.meta : {},
+  };
+}
+
+export async function deleteCloudflareImage(client, imageId) {
+  const id = String(imageId || '').trim();
+  if (!id) {
+    const err = new Error('cloudflare_image_id_required');
+    err.code = 'cloudflare_image_id_required';
+    throw err;
+  }
+  client.requireAccount('cloudflare.images.delete');
+  await client.request(
+    'DELETE',
+    client.accountPath(`/images/v1/${encodeURIComponent(id)}`),
+    { operation: 'cloudflare.images.delete', capabilityId: 'cloudflare.images' },
+  );
+  return { ok: true, id };
+}
+
+/**
+ * Create a Stream direct-upload URL (client uploads bytes to uploadURL).
+ */
+export async function createCloudflareStreamDirectUpload(client, opts = {}) {
+  client.requireAccount('cloudflare.stream.direct_upload');
+  const body = {
+    maxDurationSeconds: Math.min(Math.max(Number(opts.maxDurationSeconds) || 3600, 1), 21600),
+    requireSignedURLs: Boolean(opts.requireSignedURLs),
+  };
+  if (opts.meta && typeof opts.meta === 'object') body.meta = opts.meta;
+  if (opts.expiry) body.expiry = opts.expiry;
+  const res = await client.request(
+    'POST',
+    client.accountPath('/stream/direct_upload'),
+    { body, operation: 'cloudflare.stream.direct_upload', capabilityId: 'cloudflare.stream' },
+  );
+  const result = res?.result || {};
+  return {
+    uid: String(result.uid || ''),
+    uploadURL: String(result.uploadURL || result.uploadUrl || ''),
+    scheduledDeletion: result.scheduledDeletion || null,
+  };
+}
+
+export async function getCloudflareStream(client, videoUid) {
+  const uid = String(videoUid || '').trim();
+  if (!uid) {
+    const err = new Error('cloudflare_stream_uid_required');
+    err.code = 'cloudflare_stream_uid_required';
+    throw err;
+  }
+  client.requireAccount('cloudflare.stream.get');
+  const res = await client.request(
+    'GET',
+    client.accountPath(`/stream/${encodeURIComponent(uid)}`),
+    { operation: 'cloudflare.stream.get', capabilityId: 'cloudflare.stream' },
+  );
+  return res?.result || {};
+}
+
+export async function deleteCloudflareStream(client, videoUid) {
+  const uid = String(videoUid || '').trim();
+  if (!uid) {
+    const err = new Error('cloudflare_stream_uid_required');
+    err.code = 'cloudflare_stream_uid_required';
+    throw err;
+  }
+  client.requireAccount('cloudflare.stream.delete');
+  await client.request(
+    'DELETE',
+    client.accountPath(`/stream/${encodeURIComponent(uid)}`),
+    { operation: 'cloudflare.stream.delete', capabilityId: 'cloudflare.stream' },
+  );
+  return { ok: true, uid };
+}
+
+/**
+ * Upload object bytes to one R2 bucket/key via Cloudflare API.
+ */
+export async function uploadCloudflareR2Object(client, bucketName, objectKey, body, opts = {}) {
+  const bucket = String(bucketName || '').trim();
+  const key = String(objectKey || '').trim().replace(/^\/+/, '');
+  if (!bucket || !key) {
+    const err = new Error('r2_bucket_and_key_required');
+    err.code = 'r2_bucket_and_key_required';
+    throw err;
+  }
+  client.requireAccount('cloudflare.r2.objects.put');
+  const headers = {};
+  if (opts.contentType) headers['Content-Type'] = String(opts.contentType);
+  await client.request(
+    'PUT',
+    client.accountPath(`/r2/buckets/${encodeURIComponent(bucket)}/objects/${key.split('/').map(encodeURIComponent).join('/')}`),
+    {
+      body,
+      headers,
+      operation: 'cloudflare.r2.objects.put',
+      capabilityId: 'cloudflare.r2',
+      raw: true,
+    },
+  );
+  return {
+    bucket,
+    key,
+    size: Number(opts.size || (body?.byteLength ?? body?.size ?? 0)) || 0,
+    content_type: opts.contentType || null,
+  };
+}
+
+export async function deleteCloudflareR2Object(client, bucketName, objectKey) {
+  const bucket = String(bucketName || '').trim();
+  const key = String(objectKey || '').trim().replace(/^\/+/, '');
+  if (!bucket || !key) {
+    const err = new Error('r2_bucket_and_key_required');
+    err.code = 'r2_bucket_and_key_required';
+    throw err;
+  }
+  client.requireAccount('cloudflare.r2.objects.delete');
+  await client.request(
+    'DELETE',
+    client.accountPath(`/r2/buckets/${encodeURIComponent(bucket)}/objects/${key.split('/').map(encodeURIComponent).join('/')}`),
+    { operation: 'cloudflare.r2.objects.delete', capabilityId: 'cloudflare.r2' },
+  );
+  return { ok: true, bucket, key };
+}
+
 async function probeR2(client, opts = {}) {
   try {
     const page = await listCloudflareR2Buckets(client, {

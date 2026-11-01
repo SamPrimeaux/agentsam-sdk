@@ -6,6 +6,9 @@ import {
   listCloudflareR2Objects,
   listCloudflareImages,
   listCloudflareStream,
+  uploadCloudflareImage,
+  createCloudflareStreamDirectUpload,
+  deleteCloudflareImage,
 } from '../src/families/media.js';
 import { getCloudflareFeaturePack } from '../src/capabilities.js';
 import { isCloudflareConnectionPath } from '../src/routes.js';
@@ -171,5 +174,40 @@ describe('cloudflare media discovery', () => {
     assert.equal(stream.videos[0].uid, 'vid_1');
     assert.equal(stream.customer_code, 'x');
     assert.equal(stream.truncated, true);
+  });
+
+  it('uploads Images and creates Stream direct-upload URLs through OAuth client', async () => {
+    const calls = [];
+    const client = mockClient({
+      scopes: ['images.write', 'stream.write'],
+      responses: {
+        'POST /accounts/acct123/images/v1': () => {
+          calls.push('images');
+          return {
+            result: {
+              id: 'img_new',
+              filename: 'a.png',
+              size: 9,
+              variants: ['https://imagedelivery.net/h/img_new/public'],
+            },
+          };
+        },
+        'POST /accounts/acct123/stream/direct_upload': () => {
+          calls.push('stream');
+          return { result: { uid: 'vid_new', uploadURL: 'https://upload.example/u' } };
+        },
+        'DELETE /accounts/acct123/images/v1/img_new': () => {
+          calls.push('delete');
+          return { result: {} };
+        },
+      },
+    });
+    const uploaded = await uploadCloudflareImage(client, new Blob(['x']), { filename: 'a.png' });
+    assert.equal(uploaded.id, 'img_new');
+    const direct = await createCloudflareStreamDirectUpload(client, { meta: { name: 'a.mp4' } });
+    assert.equal(direct.uid, 'vid_new');
+    assert.equal(direct.uploadURL, 'https://upload.example/u');
+    await deleteCloudflareImage(client, 'img_new');
+    assert.deepEqual(calls, ['images', 'stream', 'delete']);
   });
 });

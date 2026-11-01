@@ -172,48 +172,63 @@ function mediaProviderPreference(url) {
   return "auto";
 }
 
-async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSize, query }) {
+async function resolveOauthMediaClient(env, ownerId, url, capabilityId = "cloudflare.images") {
+  const connectionId = String(url.searchParams.get("connection_id") || url.searchParams.get("account_id") || "").trim();
+  if (env?.__agentsamTestCfClient) {
+    return { ok: true, client: env.__agentsamTestCfClient };
+  }
   const { createCloudflareApiClient } = await import("../../../../packages/connectors/cfoa/src/api-client.js");
+  try {
+    const client = await createCloudflareApiClient({
+      env,
+      ownerId,
+      authMode: "oauth",
+      capabilityId,
+      connectionId: connectionId || undefined,
+      accountId: connectionId || undefined,
+    });
+    if (!client?.accountId) {
+      return {
+        ok: false,
+        error: "cloudflare_account_selection_required",
+        status: 409,
+        connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
+      };
+    }
+    return { ok: true, client };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err?.code || err?.message || "cloudflare_oauth_required",
+      status: err?.code === "cloudflare_account_selection_required" ? 409
+        : err?.code === "cloudflare_reconnect_required" ? 401
+          : 401,
+      accounts: err?.accounts || undefined,
+      connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
+    };
+  }
+}
+
+function parseR2AssetId(id) {
+  const raw = String(id || "");
+  if (!raw.startsWith("r2:")) return null;
+  const rest = raw.slice(3);
+  const slash = rest.indexOf(":");
+  if (slash <= 0) return null;
+  return { bucket: rest.slice(0, slash), key: rest.slice(slash + 1) };
+}
+
+async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSize, query }) {
   const {
     listCloudflareR2Buckets,
     listCloudflareR2Objects,
     listCloudflareImages,
     listCloudflareStream,
   } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
-  const connectionId = String(url.searchParams.get("connection_id") || url.searchParams.get("account_id") || "").trim();
-
-  // Test hook: inject a ready client so gallery regression can run without IAM_API.
-  let client = env?.__agentsamTestCfClient || null;
-  if (!client) {
-    try {
-      client = await createCloudflareApiClient({
-        env,
-        ownerId,
-        authMode: "oauth",
-        capabilityId: source === "stream" ? "cloudflare.stream" : source === "r2" ? "cloudflare.r2" : "cloudflare.images",
-        connectionId: connectionId || undefined,
-        accountId: connectionId || undefined,
-      });
-    } catch (err) {
-      return {
-        ok: false,
-        error: err?.code || err?.message || "cloudflare_oauth_required",
-        status: err?.code === "cloudflare_account_selection_required" ? 409
-          : err?.code === "cloudflare_reconnect_required" ? 401
-            : 401,
-        accounts: err?.accounts || undefined,
-        connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
-      };
-    }
-  }
-  if (!client?.accountId) {
-    return {
-      ok: false,
-      error: "cloudflare_account_selection_required",
-      status: 409,
-      connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
-    };
-  }
+  const capabilityId = source === "stream" ? "cloudflare.stream" : source === "r2" ? "cloudflare.r2" : "cloudflare.images";
+  const resolved = await resolveOauthMediaClient(env, ownerId, url, capabilityId);
+  if (!resolved.ok) return resolved;
+  const client = resolved.client;
 
   const markOauth = (shape, extra = {}) => {
     shape.capabilities = { ...shape.capabilities, provider_api: "cloudflare_oauth", ...extra.capabilities };
@@ -432,7 +447,19 @@ function listResponseShape({ assets, page, pageSize, total, source, r2Buckets = 
   };
 }
 
-async function recoverDrafts(env, request, url) {
+async function recoverDrafts(env, request, url, principal = null) {
+  if (mediaProviderPreference(url) !== "iam") {
+    // Draft recovery is an IAM-only concept; OAuth gallery has no draft queue.
+    return {
+      ok: true,
+      recovered: 0,
+      provider_api: "cloudflare_oauth",
+      message: "draft_recovery_not_applicable_for_cloudflare_oauth",
+    };
+  }
+  if (!env?.IAM_API) {
+    return { ok: false, error: "iam_media_provider_unavailable", status: 503 };
+  }
   const target = addScopeQuery(new URL("/api/images/recover-drafts", IAM_ORIGIN), url);
   const result = await readJson(await callIam(env, request, target.pathname + target.search, {
     method: "POST",
@@ -579,14 +606,137 @@ async function listMedia(env, request, url, principal = null) {
   }));
 }
 
-async function uploadMedia(env, request, url) {
-  let form;
-  try {
-    form = await request.formData();
-  } catch {
-    return json({ ok: false, error: "multipart_form_required" }, 400);
+async function uploadMediaViaOauth(env, ownerId, url, form) {
+  const {
+    uploadCloudflareImage,
+    uploadCloudflareR2Object,
+  } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
+
+  const files = [...form.getAll("files"), ...form.getAll("file")].filter(isFile);
+  if (!files.length) return json({ ok: false, error: "no_files_provided" }, 400);
+  const videoFiles = files.filter((file) => String(file.type || "").startsWith("video/") || /\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(file.name));
+  if (videoFiles.length) {
+    return json({
+      ok: false,
+      error: "video_upload_requires_stream_direct_upload",
+      endpoint: "/api/admin/media/stream/direct-upload",
+    }, 400);
   }
 
+  const role = String(form.get("derivative_role") || "").toLowerCase();
+  const policy = String(form.get("transform_policy") || "").toLowerCase();
+  const preserveOriginal = role === "original" || role === "master" || policy === "preserve";
+  const bucket = String(form.get("r2_bucket") || url.searchParams.get("r2_bucket") || "").trim();
+  const folder = String(form.get("folder") || "").trim();
+  const baseTags = parseArray(form.get("tags"));
+  const sourceMediaAssetId = String(form.get("source_media_asset_id") || "").trim();
+  if (folder && folder !== "images" && folder !== "videos" && !baseTags.includes(folder)) baseTags.push(folder);
+  if (sourceMediaAssetId && !baseTags.includes("derived")) baseTags.push("derived");
+  const altText = String(form.get("alt_text") || "").trim();
+
+  const needsR2 = files.some((file) => {
+    const isModelFile = /\.(glb|gltf|usdz)$/i.test(String(file.name || "")) || String(file.type || "").startsWith("model/");
+    return preserveOriginal || isModelFile || !String(file.type || "").startsWith("image/");
+  });
+  if (needsR2 && !bucket) {
+    return json({
+      ok: false,
+      error: "r2_bucket_required",
+      message: "Select an authorized R2 bucket for non-image / original-preserve uploads. Do not default to an IAM bucket.",
+    }, 400);
+  }
+
+  const imagesClient = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.images");
+  if (!imagesClient.ok) return json(imagesClient, imagesClient.status || 401);
+  let r2Client = null;
+  if (needsR2) {
+    r2Client = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.r2");
+    if (!r2Client.ok) return json(r2Client, r2Client.status || 401);
+  }
+
+  const assets = [];
+  const errors = [];
+  for (const file of files) {
+    const isModelFile = /\.(glb|gltf|usdz)$/i.test(String(file.name || "")) || String(file.type || "").startsWith("model/");
+    const useR2 = preserveOriginal || isModelFile || !String(file.type || "").startsWith("image/");
+    const fileTags = [...baseTags];
+    if (isModelFile && !fileTags.includes("3d")) fileTags.push("3d");
+    try {
+      if (useR2) {
+        const prefix = folder ? `${folder.replace(/^\/+|\/+$/g, "")}/` : "";
+        const key = `${prefix}${file.name || "upload.bin"}`;
+        const body = await file.arrayBuffer();
+        const uploaded = await uploadCloudflareR2Object(r2Client.client, bucket, key, body, {
+          contentType: file.type || "application/octet-stream",
+          size: body.byteLength,
+        });
+        assets.push(normalizeImageAsset({
+          id: `r2:${bucket}:${uploaded.key}`,
+          filename: file.name,
+          mime_type: file.type || "application/octet-stream",
+          size_bytes: uploaded.size,
+          r2_bucket: bucket,
+          r2_key: uploaded.key,
+          source: "r2",
+          tags: fileTags,
+          alt_text: altText,
+          folder: folder || "files",
+          meta: { cloudflare_account_id: r2Client.client.accountId },
+        }));
+      } else {
+        const metadata = {};
+        if (fileTags.length) metadata.tags = fileTags.join(",");
+        if (altText) metadata.alt_text = altText;
+        if (folder) metadata.folder = folder;
+        const uploaded = await uploadCloudflareImage(imagesClient.client, file, {
+          filename: file.name,
+          metadata,
+        });
+        assets.push(normalizeImageAsset({
+          id: uploaded.id,
+          filename: uploaded.filename,
+          mime_type: file.type || "image/jpeg",
+          size_bytes: uploaded.size,
+          url: uploaded.variant_url || "",
+          delivery_url: uploaded.variant_url || "",
+          thumbnail_url: uploaded.variant_url || "",
+          cloudflare_image_id: uploaded.id,
+          source: "cf_images",
+          tags: fileTags,
+          alt_text: altText,
+          created_at: uploaded.uploaded,
+          meta: {
+            ...uploaded.meta,
+            cloudflare_account_id: imagesClient.client.accountId,
+            variants: uploaded.variants,
+          },
+        }));
+      }
+    } catch (err) {
+      errors.push({
+        filename: file.name,
+        error: err?.code || err?.message || "upload_failed",
+        status: err?.httpStatus || 502,
+      });
+    }
+  }
+
+  if (errors.length && !assets.length) {
+    return json({ ok: false, error: errors[0].error, errors, assets: [], provider_api: "cloudflare_oauth" }, errors[0].status || 502);
+  }
+  return json({
+    ok: errors.length === 0,
+    partial: errors.length > 0,
+    assets,
+    errors,
+    uploaded_count: assets.length,
+    failed_count: errors.length,
+    original_preserved: preserveOriginal,
+    provider_api: "cloudflare_oauth",
+  }, errors.length ? 207 : 200);
+}
+
+async function uploadMediaViaIam(env, request, url, form) {
   const files = [...form.getAll("files"), ...form.getAll("file")].filter(isFile);
   if (!files.length) return json({ ok: false, error: "no_files_provided" }, 400);
   const videoFiles = files.filter((file) => String(file.type || "").startsWith("video/") || /\.(mp4|mov|m4v|webm|mkv|avi)$/i.test(file.name));
@@ -650,11 +800,148 @@ async function uploadMedia(env, request, url) {
     uploaded_count: assets.length,
     failed_count: errors.length,
     original_preserved: preserveOriginal,
+    provider_api: "iam",
   }, errors.length ? 207 : 200);
 }
 
-async function batchMedia(env, request, url) {
-  const body = await request.json().catch(() => ({}));
+async function uploadMedia(env, request, url, principal = null) {
+  let form;
+  try {
+    form = await request.formData();
+  } catch {
+    return json({ ok: false, error: "multipart_form_required" }, 400);
+  }
+  if (mediaProviderPreference(url) === "iam") {
+    if (!env?.IAM_API) return json({ ok: false, error: "iam_media_provider_unavailable" }, 503);
+    return uploadMediaViaIam(env, request, url, form);
+  }
+  if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
+  return uploadMediaViaOauth(env, principal.id, url, form);
+}
+
+async function batchMediaViaOauth(env, ownerId, url, body) {
+  const {
+    deleteCloudflareImage,
+    deleteCloudflareStream,
+    deleteCloudflareR2Object,
+    getCloudflareImage,
+    updateCloudflareImage,
+  } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
+
+  const action = String(body.action || body.operation || "").toLowerCase();
+  const ids = Array.isArray(body.ids) ? body.ids.map((id) => String(id)).filter(Boolean) : [];
+  if (!ids.length) return json({ ok: false, error: "ids_required" }, 400);
+
+  const imagesClient = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.images");
+  const streamClient = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.stream");
+  const r2Client = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.r2");
+
+  if (action === "delete") {
+    const results = [];
+    for (const id of ids) {
+      try {
+        const r2 = parseR2AssetId(id);
+        if (r2) {
+          if (!r2Client.ok) throw Object.assign(new Error(r2Client.error), { code: r2Client.error });
+          await deleteCloudflareR2Object(r2Client.client, r2.bucket, r2.key);
+        } else if (id.startsWith("stream_")) {
+          if (!streamClient.ok) throw Object.assign(new Error(streamClient.error), { code: streamClient.error });
+          await deleteCloudflareStream(streamClient.client, id.slice("stream_".length));
+        } else {
+          if (!imagesClient.ok) throw Object.assign(new Error(imagesClient.error), { code: imagesClient.error });
+          await deleteCloudflareImage(imagesClient.client, id);
+        }
+        results.push({ id, ok: true, error: null });
+      } catch (err) {
+        results.push({ id, ok: false, error: err?.code || err?.message || "delete_failed" });
+      }
+    }
+    const failed = results.filter((item) => !item.ok);
+    return json({
+      ok: failed.length === 0,
+      deleted_count: results.length - failed.length,
+      failed_count: failed.length,
+      results,
+      provider_api: "cloudflare_oauth",
+    }, failed.length ? 207 : 200);
+  }
+
+  if (action === "move") {
+    const folder = String(body.folder || body.destination || "").trim().toLowerCase();
+    if (!folder) return json({ ok: false, error: "folder_required" }, 400);
+    if (!imagesClient.ok) return json(imagesClient, imagesClient.status || 401);
+    const results = [];
+    for (const id of ids) {
+      if (id.startsWith("stream_") || parseR2AssetId(id)) {
+        results.push({
+          id,
+          ok: id.startsWith("stream_") ? folder === "videos" : false,
+          error: id.startsWith("stream_")
+            ? (folder === "videos" ? null : "stream_assets_cannot_move_to_image_folders")
+            : "r2_folder_move_not_supported",
+        });
+        continue;
+      }
+      if (folder === "videos") {
+        results.push({ id, ok: false, error: "image_assets_cannot_be_moved_to_stream" });
+        continue;
+      }
+      try {
+        const current = await getCloudflareImage(imagesClient.client, id);
+        const meta = { ...(current.meta || {}), folder };
+        await updateCloudflareImage(imagesClient.client, id, { metadata: meta });
+        results.push({ id, ok: true, error: null });
+      } catch (err) {
+        results.push({ id, ok: false, error: err?.code || err?.message || "move_failed" });
+      }
+    }
+    const failed = results.filter((item) => !item.ok);
+    return json({
+      ok: failed.length === 0,
+      updated_count: results.length - failed.length,
+      failed_count: failed.length,
+      results,
+      provider_api: "cloudflare_oauth",
+    }, failed.length ? 207 : 200);
+  }
+
+  if (action === "tag_add" || action === "tag_remove" || action === "tags") {
+    const tagsToChange = parseArray(body.tags || body.tag);
+    if (!tagsToChange.length) return json({ ok: false, error: "tag_required" }, 400);
+    if (!imagesClient.ok) return json(imagesClient, imagesClient.status || 401);
+    const results = [];
+    for (const id of ids) {
+      if (id.startsWith("stream_") || parseR2AssetId(id)) {
+        results.push({ id, ok: false, error: "tags_only_supported_for_cloudflare_images" });
+        continue;
+      }
+      try {
+        const current = await getCloudflareImage(imagesClient.client, id);
+        const currentTags = parseArray(current.meta?.tags || current.meta?.tag);
+        const nextTags = action === "tag_remove"
+          ? currentTags.filter((tag) => !tagsToChange.includes(tag))
+          : [...new Set([...currentTags, ...tagsToChange])];
+        const meta = { ...(current.meta || {}), tags: nextTags.join(",") };
+        await updateCloudflareImage(imagesClient.client, id, { metadata: meta });
+        results.push({ id, ok: true, error: null });
+      } catch (err) {
+        results.push({ id, ok: false, error: err?.code || err?.message || "tag_update_failed" });
+      }
+    }
+    const failed = results.filter((item) => !item.ok);
+    return json({
+      ok: failed.length === 0,
+      updated_count: results.length - failed.length,
+      failed_count: failed.length,
+      results,
+      provider_api: "cloudflare_oauth",
+    }, failed.length ? 207 : 200);
+  }
+
+  return json({ ok: false, error: "batch_action_not_supported", action, provider_api: "cloudflare_oauth" }, 409);
+}
+
+async function batchMediaViaIam(env, request, url, body) {
   const action = String(body.action || body.operation || "").toLowerCase();
   const ids = Array.isArray(body.ids) ? body.ids.map((id) => String(id)).filter(Boolean) : [];
   if (!ids.length) return json({ ok: false, error: "ids_required" }, 400);
@@ -670,7 +957,7 @@ async function batchMedia(env, request, url) {
       results.push({ id, ok: result.response.ok && result.data?.ok !== false, error: result.data?.error || null });
     }
     const failed = results.filter((item) => !item.ok);
-    return json({ ok: failed.length === 0, deleted_count: results.length - failed.length, failed_count: failed.length, results }, failed.length ? 207 : 200);
+    return json({ ok: failed.length === 0, deleted_count: results.length - failed.length, failed_count: failed.length, results, provider_api: "iam" }, failed.length ? 207 : 200);
   }
 
   if (action === "move") {
@@ -695,7 +982,7 @@ async function batchMedia(env, request, url) {
       results.push({ id, ok: result.response.ok && result.data?.ok !== false, error: result.data?.error || null });
     }
     const failed = results.filter((item) => !item.ok);
-    return json({ ok: failed.length === 0, updated_count: results.length - failed.length, failed_count: failed.length, results }, failed.length ? 207 : 200);
+    return json({ ok: failed.length === 0, updated_count: results.length - failed.length, failed_count: failed.length, results, provider_api: "iam" }, failed.length ? 207 : 200);
   }
 
   if (action === "tag_add" || action === "tag_remove" || action === "tags") {
@@ -725,13 +1012,140 @@ async function batchMedia(env, request, url) {
       results.push({ id, ok: result.response.ok && result.data?.ok !== false, error: result.data?.error || null });
     }
     const failed = results.filter((item) => !item.ok);
-    return json({ ok: failed.length === 0, updated_count: results.length - failed.length, failed_count: failed.length, results }, failed.length ? 207 : 200);
+    return json({ ok: failed.length === 0, updated_count: results.length - failed.length, failed_count: failed.length, results, provider_api: "iam" }, failed.length ? 207 : 200);
   }
 
   return json({ ok: false, error: "batch_action_not_supported_by_iam_provider_adapter", action }, 409);
 }
 
-async function proxyAssetRequest(env, request, url, assetId, suffix = "") {
+async function batchMedia(env, request, url, principal = null) {
+  const body = await request.json().catch(() => ({}));
+  if (mediaProviderPreference(url) === "iam") {
+    if (!env?.IAM_API) return json({ ok: false, error: "iam_media_provider_unavailable" }, 503);
+    return batchMediaViaIam(env, request, url, body);
+  }
+  if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
+  return batchMediaViaOauth(env, principal.id, url, body);
+}
+
+async function proxyAssetViaOauth(env, ownerId, request, url, assetId, suffix = "") {
+  const {
+    getCloudflareImage,
+    updateCloudflareImage,
+    deleteCloudflareImage,
+    getCloudflareStream,
+    deleteCloudflareStream,
+    deleteCloudflareR2Object,
+  } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
+
+  const id = String(assetId || "");
+  const method = request.method.toUpperCase();
+  if (suffix) {
+    return json({
+      ok: false,
+      error: "operation_not_connected_to_cloudflare_oauth_api",
+      operation: suffix,
+      original_asset_preserved: true,
+      provider_api: "cloudflare_oauth",
+    }, 501);
+  }
+
+  try {
+    const r2 = parseR2AssetId(id);
+    if (r2) {
+      const client = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.r2");
+      if (!client.ok) return json(client, client.status || 401);
+      if (method === "DELETE") {
+        await deleteCloudflareR2Object(client.client, r2.bucket, r2.key);
+        return json({ ok: true, deleted: true, id, provider_api: "cloudflare_oauth" });
+      }
+      if (method === "GET") {
+        const asset = normalizeImageAsset({
+          id,
+          filename: r2.key.split("/").pop() || r2.key,
+          r2_bucket: r2.bucket,
+          r2_key: r2.key,
+          source: "r2",
+          mime_type: "application/octet-stream",
+          meta: { cloudflare_account_id: client.client.accountId },
+        });
+        return json({ ok: true, asset, item: asset, provider_api: "cloudflare_oauth" });
+      }
+      return json({ ok: false, error: "r2_mutation_not_supported", method }, 409);
+    }
+
+    if (id.startsWith("stream_")) {
+      const uid = id.slice("stream_".length);
+      const client = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.stream");
+      if (!client.ok) return json(client, client.status || 401);
+      if (method === "DELETE") {
+        await deleteCloudflareStream(client.client, uid);
+        return json({ ok: true, deleted: true, id, provider_api: "cloudflare_oauth" });
+      }
+      if (method === "GET") {
+        const video = await getCloudflareStream(client.client, uid);
+        const asset = normalizeStreamAsset({ ...video, cloudflare_account_id: client.client.accountId });
+        return json({ ok: true, asset, video, provider_api: "cloudflare_oauth" });
+      }
+      return json({ ok: false, error: "stream_patch_not_supported", method }, 409);
+    }
+
+    const client = await resolveOauthMediaClient(env, ownerId, url, "cloudflare.images");
+    if (!client.ok) return json(client, client.status || 401);
+    if (method === "DELETE") {
+      await deleteCloudflareImage(client.client, id);
+      return json({ ok: true, deleted: true, id, provider_api: "cloudflare_oauth" });
+    }
+    if (method === "GET") {
+      const img = await getCloudflareImage(client.client, id);
+      const asset = normalizeImageAsset({
+        id: img.id,
+        filename: img.filename,
+        size_bytes: img.size,
+        url: img.variant_url || "",
+        cloudflare_image_id: img.id,
+        source: "cf_images",
+        created_at: img.uploaded,
+        meta: { ...img.meta, cloudflare_account_id: client.client.accountId, variants: img.variants },
+      });
+      return json({ ok: true, asset, item: asset, provider_api: "cloudflare_oauth" });
+    }
+    if (method === "PATCH" || method === "PUT") {
+      const patch = await request.json().catch(() => ({}));
+      const current = await getCloudflareImage(client.client, id);
+      const meta = { ...(current.meta || {}) };
+      if (patch.metadata && typeof patch.metadata === "object") Object.assign(meta, patch.metadata);
+      if (patch.tags != null) meta.tags = parseArray(patch.tags).join(",");
+      if (patch.alt_text != null) meta.alt_text = String(patch.alt_text);
+      if (patch.folder != null) meta.folder = String(patch.folder);
+      const updated = await updateCloudflareImage(client.client, id, {
+        metadata: meta,
+        requireSignedURLs: patch.requireSignedURLs,
+      });
+      const asset = normalizeImageAsset({
+        id: updated.id,
+        filename: updated.filename,
+        size_bytes: updated.size,
+        url: updated.variant_url || "",
+        cloudflare_image_id: updated.id,
+        source: "cf_images",
+        tags: parseArray(meta.tags),
+        alt_text: meta.alt_text || "",
+        meta: { ...updated.meta, ...meta, cloudflare_account_id: client.client.accountId },
+      });
+      return json({ ok: true, asset, item: asset, provider_api: "cloudflare_oauth" });
+    }
+    return json({ ok: false, error: "method_not_allowed", method }, 405);
+  } catch (err) {
+    return json({
+      ok: false,
+      error: err?.code || err?.message || "asset_request_failed",
+      provider_api: "cloudflare_oauth",
+    }, err?.httpStatus || 502);
+  }
+}
+
+async function proxyAssetViaIam(env, request, url, assetId, suffix = "") {
   const id = String(assetId || "");
   const isStream = id.startsWith("stream_");
   const cleanId = isStream ? id.slice("stream_".length) : id;
@@ -754,12 +1168,59 @@ async function proxyAssetRequest(env, request, url, assetId, suffix = "") {
     const data = result.data || {};
     if (isStream) {
       const video = data.video || data.item || data;
-      return json({ ...data, asset: normalizeStreamAsset(video), video });
+      return json({ ...data, asset: normalizeStreamAsset(video), video, provider_api: "iam" });
     }
     const item = data.item || data.image || data.asset || data;
-    return json({ ...data, asset: normalizeImageAsset(item), item });
+    return json({ ...data, asset: normalizeImageAsset(item), item, provider_api: "iam" });
   }
   return response;
+}
+
+async function proxyAssetRequest(env, request, url, assetId, suffix = "", principal = null) {
+  if (mediaProviderPreference(url) === "iam") {
+    if (!env?.IAM_API) return json({ ok: false, error: "iam_media_provider_unavailable" }, 503);
+    return proxyAssetViaIam(env, request, url, assetId, suffix);
+  }
+  if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
+  return proxyAssetViaOauth(env, principal.id, request, url, assetId, suffix);
+}
+
+async function streamDirectUpload(env, request, url, principal = null) {
+  if (mediaProviderPreference(url) === "iam") {
+    if (!env?.IAM_API) return json({ ok: false, error: "iam_media_provider_unavailable" }, 503);
+    const target = addScopeQuery(new URL("/api/stream/direct-upload", IAM_ORIGIN), url);
+    const response = await callIam(env, request, target.pathname + target.search, { method: "POST" });
+    const result = await readJson(response);
+    return json({ ...result.data, provider_api: "iam" }, result.response.status);
+  }
+  if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
+  const { createCloudflareStreamDirectUpload } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
+  const resolved = await resolveOauthMediaClient(env, principal.id, url, "cloudflare.stream");
+  if (!resolved.ok) return json(resolved, resolved.status || 401);
+  const body = await request.json().catch(() => ({}));
+  try {
+    const created = await createCloudflareStreamDirectUpload(resolved.client, {
+      maxDurationSeconds: body.maxDurationSeconds || body.max_duration_seconds,
+      requireSignedURLs: body.requireSignedURLs,
+      meta: body.meta || (body.name ? { name: body.name } : undefined),
+      expiry: body.expiry,
+    });
+    return json({
+      ok: true,
+      uid: created.uid,
+      uploadURL: created.uploadURL,
+      uploadUrl: created.uploadURL,
+      provider_api: "cloudflare_oauth",
+      account: { id: resolved.client.accountId, connection_id: resolved.client.connectionId || null },
+    }, 201);
+  } catch (err) {
+    return json({
+      ok: false,
+      error: err?.code || err?.message || "stream_direct_upload_failed",
+      provider_api: "cloudflare_oauth",
+      connect_url: "/api/connections/cloudflare/start?packs=media&return_to=/media",
+    }, err?.httpStatus || 502);
+  }
 }
 
 export async function handleStudioContentMediaApi(request, env, principal, url = new URL(request.url)) {
@@ -773,17 +1234,14 @@ export async function handleStudioContentMediaApi(request, env, principal, url =
     return listMedia(env, request, url, principal);
   }
   if (path === "/api/admin/media" && request.method === "POST") {
-    return uploadMedia(env, request, url);
+    return uploadMedia(env, request, url, principal);
   }
   if (path === "/api/admin/media/sync" && request.method === "POST") {
-    const recovery = await recoverDrafts(env, request, url);
-    return json({ ok: !!recovery?.ok, recovery, synced: true });
+    const recovery = await recoverDrafts(env, request, url, principal);
+    return json({ ok: recovery?.ok !== false, recovery, synced: true });
   }
   if (path === "/api/admin/media/stream/direct-upload" && request.method === "POST") {
-    const target = addScopeQuery(new URL("/api/stream/direct-upload", IAM_ORIGIN), url);
-    const response = await callIam(env, request, target.pathname + target.search, { method: "POST" });
-    const result = await readJson(response);
-    return json(result.data, result.response.status);
+    return streamDirectUpload(env, request, url, principal);
   }
   if (path === "/api/admin/media/albums" && request.method === "GET") {
     return json({ ok: true, albums: [], collections_supported: false });
@@ -795,27 +1253,28 @@ export async function handleStudioContentMediaApi(request, env, principal, url =
     return json({ ok: false, error: "manual_reorder_not_supported_for_provider_assets" }, 409);
   }
   if (path === "/api/admin/media/batch" && request.method === "POST") {
-    return batchMedia(env, request, url);
+    return batchMedia(env, request, url, principal);
   }
 
   const resourceTagsMatch = path.match(/^\/api\/admin\/media\/([^/]+)\/resource-tags$/);
   if (resourceTagsMatch) {
-    return proxyAssetRequest(env, request, url, resourceTagsMatch[1], "resource-tags");
+    return proxyAssetRequest(env, request, url, resourceTagsMatch[1], "resource-tags", principal);
   }
 
   const unsupportedMatch = path.match(/^\/api\/admin\/media\/([^/]+)\/(ai-edit|resample|remove-background|comments|gallery)$/);
   if (unsupportedMatch) {
     return json({
       ok: false,
-      error: "operation_not_connected_to_iam_provider_api",
+      error: "operation_not_connected_to_cloudflare_oauth_api",
       operation: unsupportedMatch[2],
       original_asset_preserved: true,
+      provider_api: mediaProviderPreference(url) === "iam" ? "iam" : "cloudflare_oauth",
     }, 501);
   }
 
   const assetMatch = path.match(/^\/api\/admin\/media\/([^/]+)$/);
   if (assetMatch && ["GET", "PATCH", "DELETE", "PUT"].includes(request.method.toUpperCase())) {
-    return proxyAssetRequest(env, request, url, assetMatch[1]);
+    return proxyAssetRequest(env, request, url, assetMatch[1], "", principal);
   }
 
   return null;

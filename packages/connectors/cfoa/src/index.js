@@ -265,4 +265,13 @@ export {
   listCloudflareR2Objects,
   listCloudflareImages,
   listCloudflareStream,
+  uploadCloudflareImage,
+  getCloudflareImage,
+  updateCloudflareImage,
+  deleteCloudflareImage,
+  createCloudflareStreamDirectUpload,
+  getCloudflareStream,
+  deleteCloudflareStream,
+  uploadCloudflareR2Object,
+  deleteCloudflareR2Object,
 } from './families/media.js';

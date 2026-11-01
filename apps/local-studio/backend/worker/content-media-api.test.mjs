@@ -206,7 +206,7 @@ test('#419 default gallery without OAuth does not fall back to IAM_API', async (
   assert.match(String(data.error || ''), /cloudflare_/);
 });
 
-test('original and model uploads retain the source in the canonical R2 bucket', async () => {
+test('explicit IAM provider uploads retain the source in the canonical R2 bucket', async () => {
   const env = provider(async (upstream) => {
     assert.equal(new URL(upstream.url).pathname, '/api/images/upload');
     assert.equal(new URL(upstream.url).searchParams.get('destination'), 'r2');
@@ -224,13 +224,79 @@ test('original and model uploads retain the source in the canonical R2 bucket', 
   form.set('source_media_asset_id', 'source_original_1');
   form.set('tags', JSON.stringify(['project']));
   form.set('alt_text', 'Workshop model');
-  const request = mediaRequest('/api/admin/media', { method: 'POST', body: form, headers: { cookie: 'iam_session=account-session', origin } });
+  const request = mediaRequest('/api/admin/media?provider=iam', { method: 'POST', body: form, headers: { cookie: 'iam_session=account-session', origin } });
   const response = await handleStudioContentMediaApi(request, env, principal);
   const data = await parseJson(response);
   assert.equal(response.status, 200);
   assert.equal(data.original_preserved, true);
   assert.equal(data.uploaded_count, 1);
   assert.equal(data.assets[0].r2_key, 'models/workshop.glb');
+  assert.equal(data.provider_api, 'iam');
+});
+
+test('#419 Cloudflare Images upload never calls IAM_API', async () => {
+  const calls = [];
+  const env = {
+    __agentsamTestCfClient: {
+      accountId: 'acct_user_owned',
+      connectionId: 'conn_user',
+      authSource: 'oauth',
+      requireAccount() {},
+      accountPath(suffix) {
+        return `/accounts/acct_user_owned${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
+      },
+      async request(method, path, opts = {}) {
+        calls.push({ method, path, hasForm: opts.body instanceof FormData });
+        assert.equal(method, 'POST');
+        assert.match(path, /\/images\/v1$/);
+        return {
+          result: {
+            id: 'cfimg_upload_1',
+            filename: 'hero.png',
+            size: 12,
+            variants: ['https://imagedelivery.net/hash/cfimg_upload_1/public'],
+            meta: { tags: 'brand' },
+          },
+        };
+      },
+    },
+  };
+  const form = new FormData();
+  form.set('file', new File(['png-bytes'], 'hero.png', { type: 'image/png' }));
+  form.set('tags', JSON.stringify(['brand']));
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media?provider=cloudflare', { method: 'POST', body: form }),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(data.provider_api, 'cloudflare_oauth');
+  assert.equal(data.assets[0].cloudflare_image_id, 'cfimg_upload_1');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].hasForm, true);
+});
+
+test('#419 R2 upload requires an explicit authorized bucket (no IAM default)', async () => {
+  const env = {
+    __agentsamTestCfClient: {
+      accountId: 'acct_user_owned',
+      requireAccount() {},
+      accountPath(suffix) { return `/accounts/acct_user_owned${suffix}`; },
+      async request() { throw new Error('should_not_upload_without_bucket'); },
+    },
+  };
+  const form = new FormData();
+  form.set('file', new File(['glb'], 'workshop.glb', { type: 'model/gltf-binary' }));
+  form.set('derivative_role', 'original');
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media?provider=cloudflare', { method: 'POST', body: form }),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 400);
+  assert.equal(data.error, 'r2_bucket_required');
 });
 
 test('video upload is routed to the explicit Stream direct-upload flow', async () => {
@@ -244,7 +310,7 @@ test('video upload is routed to the explicit Stream direct-upload flow', async (
   assert.equal(env.calls.length, 0);
 });
 
-test('Stream direct-upload forwards authenticated scope to the IAM API', async () => {
+test('explicit IAM Stream direct-upload still proxies when provider=iam', async () => {
   const env = provider((upstream) => {
     const url = new URL(upstream.url);
     assert.equal(url.pathname, '/api/stream/direct-upload');
@@ -254,12 +320,82 @@ test('Stream direct-upload forwards authenticated scope to the IAM API', async (
     assert.equal(upstream.headers.get('cookie'), 'iam_session=account-session');
     return jsonResponse({ ok: true, uploadURL: 'https://upload.example/stream' }, 201);
   });
-  const response = await handleStudioContentMediaApi(mediaRequest('/api/admin/media/stream/direct-upload?workspace_id=ws_stream_upload&tenant_id=tenant_stream_upload', {
+  const response = await handleStudioContentMediaApi(mediaRequest('/api/admin/media/stream/direct-upload?provider=iam&workspace_id=ws_stream_upload&tenant_id=tenant_stream_upload', {
     method: 'POST', headers: { cookie: 'iam_session=account-session', origin }, body: '{}',
   }), env, principal);
   const data = await parseJson(response);
   assert.equal(response.status, 201);
   assert.equal(data.uploadURL, 'https://upload.example/stream');
+  assert.equal(data.provider_api, 'iam');
+});
+
+test('#419 Stream direct-upload uses Cloudflare OAuth without IAM_API', async () => {
+  const env = {
+    __agentsamTestCfClient: {
+      accountId: 'acct_user_owned',
+      connectionId: 'conn_user',
+      requireAccount() {},
+      accountPath(suffix) {
+        return `/accounts/acct_user_owned${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
+      },
+      async request(method, path) {
+        assert.equal(method, 'POST');
+        assert.match(path, /\/stream\/direct_upload$/);
+        return { result: { uid: 'stream_new', uploadURL: 'https://upload.cloudflarestream.com/xyz' } };
+      },
+    },
+  };
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media/stream/direct-upload?provider=cloudflare', {
+      method: 'POST',
+      body: JSON.stringify({ meta: { name: 'walkthrough.mp4' } }),
+      headers: { 'content-type': 'application/json' },
+    }),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 201);
+  assert.equal(data.provider_api, 'cloudflare_oauth');
+  assert.equal(data.uid, 'stream_new');
+  assert.equal(data.uploadURL, 'https://upload.cloudflarestream.com/xyz');
+});
+
+test('#419 batch delete uses Cloudflare OAuth and never IAM_API', async () => {
+  const deleted = [];
+  const env = {
+    IAM_API: {
+      async fetch() {
+        throw new Error('IAM must not be called');
+      },
+    },
+    __agentsamTestCfClient: {
+      accountId: 'acct_user_owned',
+      requireAccount() {},
+      accountPath(suffix) {
+        return `/accounts/acct_user_owned${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
+      },
+      async request(method, path) {
+        deleted.push({ method, path });
+        return { result: {} };
+      },
+    },
+  };
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media/batch?provider=cloudflare', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', ids: ['cfimg_1', 'stream_abc'] }),
+    }),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(data.provider_api, 'cloudflare_oauth');
+  assert.equal(data.deleted_count, 2);
+  assert.equal(deleted.length, 2);
+  assert.equal(deleted[0].method, 'DELETE');
 });
 
 test('unsupported media editing returns an explicit non-destructive response', async () => {
