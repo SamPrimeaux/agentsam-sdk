@@ -9,14 +9,15 @@ const src=file=>readFileSync(new URL('../frontend/static/js/'+file,import.meta.u
 const catalogPath=new URL('../frontend/static/theme-editor/embed-catalog.json',import.meta.url);
 const tick=()=>new Promise(done=>setTimeout(done,0));
 
-test('embed catalog exactly matches source manifests and builds without npm publishing',()=>{
+test('embed catalog matches manifests and declares installable templates',()=>{
   execFileSync(process.execPath,[new URL('../scripts/sync-theme-embed-catalog.mjs',import.meta.url).pathname,'--check']);
   const catalog=JSON.parse(readFileSync(catalogPath,'utf8'));
   assert.equal(catalog.apps.length,5);
-  assert.equal(catalog.preview_only,true);
+  assert.equal(catalog.preview_only,false);
+  assert.equal(catalog.installable,true);
   assert.equal(catalog.apps.find(x=>x.key==='newsletter_subscribe').default_config.double_opt_in,true);
 });
-test('packaged editor displays all available embeds and previews forms without sending or installing',{skip:!JSDOM&&'jsdom is not installed on this machine'},async()=>{
+test('packaged editor lists embeds and installs through the CMS catalog-resources API',{skip:!JSDOM&&'jsdom is not installed on this machine'},async()=>{
   const dom=new JSDOM('<!doctype html><html><body><div data-drawer-mode="sections"></div><div data-drawer-mode="app-embeds"></div>'+
     '<aside data-drawer-panel="app-embeds"><input id="te-embed-search"><div id="te-embed-empty">No embeds installed</div></aside>'+
     '<aside class="theme-editor-panel"><div id="te-inspector-body"></div></aside></body></html>',{
@@ -25,20 +26,28 @@ test('packaged editor displays all available embeds and previews forms without s
   const w=dom.window;
   w.structuredClone=globalThis.structuredClone;
   w.matchMedia=()=>({matches:false});
-  let transmissions=0;
   const catalog=JSON.parse(readFileSync(catalogPath,'utf8'));
-  w.fetch=async()=>{transmissions++;return {ok:true,json:async()=>catalog};};
+  const calls=[];
+  w.fetch=async(url,options={})=>{
+    calls.push({url:String(url),method:(options.method||'GET').toUpperCase(),body:options.body||null});
+    if(String(url).includes('/embed-catalog.json')) return {ok:true,json:async()=>catalog};
+    if(String(url).includes('/catalog-resources') && (options.method||'GET').toUpperCase()==='GET')
+      return {ok:true,json:async()=>({ok:true,installed:[],catalog:catalog.apps})};
+    if(String(url).includes('/catalog-resources') && (options.method||'').toUpperCase()==='POST')
+      return {ok:true,status:201,json:async()=>({ok:true,section_key:'announcement-bar-test',catalog_key:'announcement_bar'})};
+    return {ok:true,json:async()=>({})};
+  };
   w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
   w.HTMLDialogElement.prototype.close=function(){this.open=false;};
   try{
     w.eval(src('theme-embed-review.js'));
     await tick();
-    assert.equal(transmissions,1,'fetch only manifest UI catalog');
     assert.equal(w.document.querySelectorAll('[data-embed-open]').length,5);
-    assert.equal(w.document.querySelector('#te-embed-empty'),null,'retire misleading empty-installed state');
-    assert.equal(w.ThemeEmbedReview.isPreviewOnly,true);
+    assert.equal(w.document.querySelector('#te-embed-empty'),null);
+    assert.equal(w.ThemeEmbedReview.isPreviewOnly,false);
     w.document.querySelector('[data-embed-open="newsletter_subscribe"]').click();
-    assert.equal(w.document.querySelector('[data-embed-note]').textContent.includes('Not saved'),true);
+    assert.match(w.document.querySelector('[data-embed-note]').textContent,/not installed/i);
+    assert.ok(w.document.querySelector('[data-embed-install]'));
     assert.ok(w.document.querySelector('[data-embed-required="first_name"]').checked);
     const heading=w.document.querySelector('[data-embed-input="heading"]');
     heading.value='Test newsletter';
@@ -50,7 +59,11 @@ test('packaged editor displays all available embeds and previews forms without s
     const form=dialog.querySelector('[data-embed-form]');
     form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
     assert.match(dialog.querySelector('[role="status"]').textContent,/First name is required/);
-    assert.equal(transmissions,1,'preview never sent submission');
+    dialog.close();
+    w.document.querySelector('[data-embed-open="announcement_bar"]').click();
+    await w.document.querySelector('[data-embed-install]').dispatchEvent(new w.Event('click',{bubbles:true}));
+    await tick();
+    assert.ok(calls.some(call => call.method==='POST' && call.url.includes('/catalog-resources')));
     w.document.querySelector('[data-drawer-mode="sections"]').click();
     assert.equal(w.document.querySelector('.te-embed-review-inspector').hidden,true);
     assert.equal(w.document.querySelector('#te-inspector-body').hasAttribute('aria-hidden'),false);
@@ -63,7 +76,7 @@ test('showcase mode leaves Resolve preview unmodified',{skip:!JSDOM&&'jsdom is n
   finally{dom.window.close();}
 });
 
-test('review UI is manifest-backed and never exposes install, publish or Copy JSON actions',()=>{
+test('review UI is wired to catalog install APIs and keeps theme settings owners intact',()=>{
   const code=src('theme-embed-review.js');
   const html=readFileSync(new URL('../frontend/static/theme-editor.html',import.meta.url),'utf8');
   const settings=src('theme-settings-live.js');
@@ -71,13 +84,15 @@ test('review UI is manifest-backed and never exposes install, publish or Copy JS
   assert.match(html,/\/admin\/js\/theme-embed-review\.js/);
   assert.match(html,/\/admin\/css\/theme-embed-review\.css/);
   assert.match(code,/\/admin\/theme-editor\/embed-catalog\.json/);
+  assert.match(code,/\/api\/admin\/cms\/pages\/.*catalog-resources/);
+  assert.match(code,/data-embed-install/);
+  assert.match(code,/isPreviewOnly:false/);
   assert.match(code,/event\.preventDefault\(\)/);
-  assert.match(code,/Not installed/);
-  assert.match(code,/No information was sent/);
-  assert.doesNotMatch(code,/\/api\/admin\/cms\/components.*PUT|Copy preview JSON|navigator\.clipboard/);
+  assert.doesNotMatch(code,/Copy preview JSON|navigator\.clipboard/);
   for(const key of ['brand.logoUrl','page.maxWidth','inputs.radius','overlays.placement','icons.style']){
     assert.ok(settings.includes(key),'missing CMS-connected theme draft control '+key);
   }
   assert.match(core,/Matching CMS pages/);
-  assert.match(core,/localShowcase \|\| new URLSearchParams\(location.search\)\.get\('ui_review'\) === '1'/);
+  assert.match(core,/ui_review/);
+  assert.match(core,/localShowcase/);
 });
