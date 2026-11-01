@@ -153,10 +153,28 @@ def _cmd_repository_inspect(args: argparse.Namespace) -> int:
     return repo_inspect.main_cli(argv)
 
 
+def _cmd_cad_doctor(args: argparse.Namespace) -> int:
+    from agentsam_sdk.cad import discover_freecad, discover_occt, probe_freecad, probe_occt
+
+    results = {}
+    if args.engine in ("all", "freecad"):
+        results["freecad"] = probe_freecad(discover_freecad(), timeout=args.timeout)
+    if args.engine in ("all", "occt"):
+        results["occt"] = probe_occt(discover_occt(), timeout=args.timeout)
+    print(json.dumps({"engines": results}, indent=2))
+    return 0 if all(result.get("ready") for result in results.values()) else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="agentsam", description="agentsam_sdk CLI")
     sub = ap.add_subparsers(dest="group", required=True)
 
+    cad = sub.add_parser("cad", help="discover and validate native CAD engines")
+    cad_sub = cad.add_subparsers(dest="cad_command", required=True)
+    doctor = cad_sub.add_parser("doctor", help="verify FreeCAD/OCCT with a real solid operation")
+    doctor.add_argument("--engine", choices=("all", "freecad", "occt"), default="all")
+    doctor.add_argument("--timeout", type=int, default=15, help="probe timeout in seconds (1-60)")
+    doctor.set_defaults(func=_cmd_cad_doctor)
 
     data = sub.add_parser("data", help="D1 data audits")
     data_sub = data.add_subparsers(dest="cmd", required=True)

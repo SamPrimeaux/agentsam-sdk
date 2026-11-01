@@ -78,6 +78,27 @@ PYTHONPATH=. python -m agentsam_sdk.tui --scene dashboard --check
 `agentsam_sdk.tui` is presentation-only. It does not define tools, execution policy, or public CLI vocabulary.
 
 
+## Portable CAD host adapter (macOS, Windows, Linux)
+
+The Python SDK owns FreeCAD host discovery, native execution
+environment and kernel-proof receipts, **not geometry modeling**. The native
+FreeCAD/OpenCascade kernel remains authoritative. A located executable does
+not count as a ready engine until the real B-Rep solid validity/volume probe
+succeeds.
+
+```bash
+python -m agentsam_sdk.cli cad doctor --engine all
+```
+
+For nonstandard installations set `AGENTSAM_FREECAD_HOME` or
+`AGENTSAM_FREECAD_PYTHON`; optionally `AGENTSAM_FREECAD_LIB`.
+The SDK exposes `discover_freecad()`, `FreeCADHost.environment()` and
+`probe_freecad()` to CAD service hosts. It also exposes `discover_occt()` and
+`probe_occt()`, which execute the published C++ OCCT binary through real
+STEP export and reopen. Override with `AGENTSAM_OCCT_BIN` if needed. Windows PowerShell is a supported
+invocation shell, not a geometry runtime. Host-specific execution must
+remain argv-based and never concatenate untrusted shell commands.
+
 ## Native runtime and PrimeTech procedures
 
 The Python client now dispatches shared workspace file operations and bounded argv process execution natively. These operations do not require Node or the JavaScript bridge. Writes require the explicit write flag and a trusted host approval callback; the workspace root and receipt directory come from host configuration, never tool input.
