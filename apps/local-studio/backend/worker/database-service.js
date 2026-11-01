@@ -3,10 +3,10 @@ import {
   createD1Adapter,
   createD1BindingAdapter,
   createHyperdriveAdapter,
+  createDatabaseRequestHandler,
   readD1Metrics,
   readPostgresMetrics,
 } from '../../../../packages/agentsam-database-editor/backend/index.js';
-import { buildCreateTableSql } from '../../../../packages/agentsam-database-editor/src/ui/create-table-sql.js';
 import { resolveCloudflareCredential as resolveCloudflareConnectorCredential } from '../../../../packages/connectors/cfoa/src/credential.js';
 import { scheduleStudioErrorLog } from './studio-error-log.js';
 
@@ -19,16 +19,6 @@ const RANGE_SECONDS = Object.freeze({
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
-}
-
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store',
-    },
-  });
 }
 
 function parseJson(value) {
@@ -532,53 +522,6 @@ async function withResolvedSource(env, accountId, sourceId, fn) {
   return fn(resolved);
 }
 
-function quoteSqliteIdent(value) {
-  return `"${clean(value).replace(/"/g, '""')}"`;
-}
-
-function quotePgIdent(value) {
-  return `"${clean(value).replace(/"/g, '""')}"`;
-}
-
-function sqlKind(sql) {
-  const normalized = clean(sql)
-    .replace(/^\s*(?:--[^\n]*\n|\/\*[\s\S]*?\*\/\s*)*/g, '')
-    .trim();
-  const first = normalized.split(/\s+/, 1)[0]?.toLowerCase() || '';
-  const mutationVerb =
-    /\b(insert|update|delete|replace|merge|upsert|create|alter|drop|truncate|vacuum|reindex|attach|detach|grant|revoke)\b/i.test(
-      normalized,
-    );
-  const destructive =
-    /\b(drop|truncate|alter|vacuum|reindex|attach|detach|grant|revoke)\b/i.test(
-      normalized,
-    );
-  const read =
-    !mutationVerb &&
-    ['select', 'pragma', 'with', 'explain', 'show'].includes(first);
-  const mutating = !read;
-  return { first, read, mutating, destructive };
-}
-
-function assertSqlAllowed(source, sql, body = {}) {
-  const kind = sqlKind(sql);
-  if (!kind.first) throw new Error('sql_required');
-  if (kind.mutating && source.writable === false) throw new Error('database_read_only');
-  if (kind.mutating && body.studio_approved !== true) {
-    const error = new Error('database_write_requires_approval');
-    error.status = 409;
-    error.requiresApproval = true;
-    throw error;
-  }
-  if (kind.destructive && body.destructive_confirmed !== true) {
-    const error = new Error('destructive_sql_requires_confirmation');
-    error.status = 409;
-    error.requiresDestructiveConfirmation = true;
-    throw error;
-  }
-  return kind;
-}
-
 async function ensureMetricsTable(env) {
   if (!env?.DB?.prepare) return;
   await env.DB.prepare(
@@ -788,264 +731,42 @@ async function readMetrics(env, accountId, sourceId, range) {
   });
 }
 
-async function readTableRows(adapter, source, params) {
-  const table = clean(params.get('table'));
-  const schema = clean(params.get('schema')) || undefined;
-  if (!table) throw new Error('table_required');
-  const page = Math.max(1, Number(params.get('page') || 1) || 1);
-  const limit = Math.min(200, Math.max(1, Number(params.get('limit') || 50) || 50));
-  const offset = (page - 1) * limit;
-  const schemaInfo = await adapter.describeTable({ name: table, schema });
-  const columns = Array.isArray(schemaInfo.columns) ? schemaInfo.columns : [];
-  const sort = clean(params.get('sort'));
-  const dir = clean(params.get('dir')).toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-  if (sort && !columns.some((column) => column.name === sort)) {
-    throw new Error('invalid_sort_column');
-  }
-
-  if (source.engine === 'postgres') {
-    const qualified = `${quotePgIdent(schema || 'public')}.${quotePgIdent(table)}`;
-    const order = sort ? ` ORDER BY ${quotePgIdent(sort)} ${dir}` : '';
-    const [data, count] = await Promise.all([
-      adapter.query({
-        sql: `SELECT * FROM ${qualified}${order} LIMIT $1 OFFSET $2`,
-        params: [limit, offset],
-      }),
-      adapter.query({ sql: `SELECT COUNT(*)::bigint AS count FROM ${qualified}` }),
-    ]);
-    const total = Number(count.objects?.[0]?.count || 0) || 0;
-    return {
-      rows: data.objects || [],
-      columns,
-      page,
-      limit,
-      total,
-      total_pages: Math.max(1, Math.ceil(total / limit)),
-    };
-  }
-
-  const qualified = quoteSqliteIdent(table);
-  const order = sort ? ` ORDER BY ${quoteSqliteIdent(sort)} ${dir}` : '';
-  const [data, count] = await Promise.all([
-    adapter.query({
-      sql: `SELECT * FROM ${qualified}${order} LIMIT ? OFFSET ?`,
-      params: [limit, offset],
-    }),
-    adapter.query({ sql: `SELECT COUNT(*) AS count FROM ${qualified}` }),
-  ]);
-  const total = Number(count.objects?.[0]?.count || 0) || 0;
-  return {
-    rows: data.objects || [],
-    columns,
-    page,
-    limit,
-    total,
-    total_pages: Math.max(1, Math.ceil(total / limit)),
-  };
-}
-
-export function isDatabaseRequest(pathname) {
-  return pathname === '/api/database/sources' ||
-    pathname === '/api/database/metrics' ||
-    pathname === '/api/database/tables' ||
-    pathname === '/api/database/schema' ||
-    pathname === '/api/database/rows' ||
-    pathname === '/api/database/query' ||
-    pathname === '/api/database/ddl';
-}
-
-export async function handleDatabaseRequest(request, env, accountId, ctx = null) {
-  if (!accountId) return json({ ok: false, error: 'unauthorized' }, 401);
-  const url = new URL(request.url);
-
-  try {
-    if (url.pathname === '/api/database/sources' && request.method === 'GET') {
-      return json({ ok: true, ...(await listSources(env, accountId)) });
-    }
-
-    const sourceId =
-      clean(url.searchParams.get('source_id')) ||
-      clean((request.method !== 'GET' ? (await request.clone().json().catch(() => ({}))).source_id : ''));
-
-    if (url.pathname === '/api/database/metrics' && request.method === 'GET') {
-      return json(await readMetrics(env, accountId, sourceId, clean(url.searchParams.get('range')) || '24h'));
-    }
-
-    if (url.pathname === '/api/database/tables' && request.method === 'GET') {
-      const payload = await withResolvedSource(env, accountId, sourceId, async ({ source, adapter }) => ({
-        ok: true,
-        source,
-        tables: await adapter.listTables(),
-      }));
-      return json(payload);
-    }
-
-    if (url.pathname === '/api/database/schema' && request.method === 'GET') {
-      const table = clean(url.searchParams.get('table'));
-      const schema = clean(url.searchParams.get('schema')) || undefined;
-      const payload = await withResolvedSource(env, accountId, sourceId, async ({ source, adapter }) => ({
-        ok: true,
-        source,
-        schema: await adapter.describeTable({ name: table, schema }),
-      }));
-      return json(payload);
-    }
-
-    if (url.pathname === '/api/database/rows' && request.method === 'GET') {
-      const payload = await withResolvedSource(env, accountId, sourceId, async ({ source, adapter }) => ({
-        ok: true,
-        source,
-        ...(await readTableRows(adapter, source, url.searchParams)),
-      }));
-      return json(payload);
-    }
-
-    if (url.pathname === '/api/database/query' && request.method === 'POST') {
-      const body = await request.json().catch(() => ({}));
-      const id = clean(body.source_id);
-      const payload = await withResolvedSource(env, accountId, id, async ({ source, adapter }) => {
-        const kind = assertSqlAllowed(source, body.sql, body);
-        const result = await adapter.query({
-          sql: body.sql,
-          params: Array.isArray(body.params) ? body.params : [],
-        });
-        return {
-          ok: true,
-          source,
-          receipt: {
-            kind: kind.first,
-            mutating: kind.mutating,
-            destructive: kind.destructive,
-            sql_hash: await sha256Hex(clean(body.sql)),
-            source_id: source.id,
-            account_id: accountId,
-          },
-          ...result,
-        };
-      });
-      return json(payload);
-    }
-
-    if (url.pathname === '/api/database/ddl' && request.method === 'POST') {
-      const body = await request.json().catch(() => ({}));
-      const id = clean(body.source_id);
-      const action = clean(body.action || 'create_table').toLowerCase();
-      if (action !== 'create_table') {
-        return json({ ok: false, error: 'ddl_action_unsupported' }, 400);
-      }
-      const payload = await withResolvedSource(env, accountId, id, async ({ source, adapter }) => {
-        if (source.writable === false) throw new Error('database_read_only');
-        const built = buildCreateTableSql({
-          tableName: body.table_name || body.tableName || body.name,
-          schema: body.schema,
-          columns: body.columns,
-          engine: source.engine || source.provider,
-        });
-        if (body.preview_only === true || body.dry_run === true) {
-          return {
-            ok: true,
-            preview: true,
-            source,
-            sql: built.sql,
-            table_name: built.tableName,
-            schema: built.schema,
-          };
-        }
-        const kind = assertSqlAllowed(source, built.sql, {
-          studio_approved: body.studio_approved === true,
-          destructive_confirmed: body.destructive_confirmed === true,
-        });
-        const result = await adapter.query({ sql: built.sql, params: [] });
-        return {
-          ok: true,
-          source,
-          sql: built.sql,
-          table_name: built.tableName,
-          schema: built.schema,
-          receipt: {
-            kind: 'create',
-            action: 'create_table',
-            mutating: kind.mutating,
-            destructive: kind.destructive,
-            sql_hash: await sha256Hex(built.sql),
-            source_id: source.id,
-            account_id: accountId,
-            table_name: built.tableName,
-          },
-          ...result,
-        };
-      });
-      return json(payload);
-    }
-
-    if (url.pathname === '/api/database/rows' && request.method === 'POST') {
-      const body = await request.json().catch(() => ({}));
-      const payload = await withResolvedSource(env, accountId, body.source_id, async ({ source, adapter }) => {
-        if (source.writable === false || typeof adapter.insert !== 'function') throw new Error('database_read_only');
-        const result = await adapter.insert({
-          table: body.table,
-          schema: body.schema,
-          values: body.values,
-        });
-        return { ok: true, source, result };
-      });
-      return json(payload);
-    }
-
-    if (url.pathname === '/api/database/rows' && request.method === 'PATCH') {
-      const body = await request.json().catch(() => ({}));
-      const payload = await withResolvedSource(env, accountId, body.source_id, async ({ source, adapter }) => {
-        if (source.writable === false || typeof adapter.update !== 'function') throw new Error('database_read_only');
-        const result = await adapter.update({
-          table: body.table,
-          schema: body.schema,
-          values: body.values,
-          where: body.where,
-        });
-        return { ok: true, source, result };
-      });
-      return json(payload);
-    }
-
-    if (url.pathname === '/api/database/rows' && request.method === 'DELETE') {
-      const body = await request.json().catch(() => ({}));
-      const payload = await withResolvedSource(env, accountId, body.source_id, async ({ source, adapter }) => {
-        if (source.writable === false || typeof adapter.delete !== 'function') throw new Error('database_read_only');
-        const result = await adapter.delete({
-          table: body.table,
-          schema: body.schema,
-          where: body.where,
-        });
-        return { ok: true, source, result };
-      });
-      return json(payload);
-    }
-
-    return json({ ok: false, error: 'not_found' }, 404);
-  } catch (error) {
+/**
+ * Package-owned HTTP surface. Local Studio only injects:
+ * identity (accountId), OAuth/credential resolution, source catalog, metrics.
+ */
+const packageDatabaseHandler = createDatabaseRequestHandler({
+  pathPrefix: '/api/database',
+  listSources: (ctx) => listSources(ctx.env, ctx.accountId),
+  resolveSource: async (ctx, sourceId) =>
+    withResolvedSource(ctx.env, ctx.accountId, sourceId, async (resolved) => resolved),
+  readMetrics: (ctx, sourceId, range) => readMetrics(ctx.env, ctx.accountId, sourceId, range),
+  sha256Hex,
+  onError: async (error, ctx) => {
     console.error('database_service_error', String(error?.stack || error));
-    scheduleStudioErrorLog(env, ctx, {
-      accountId,
+    scheduleStudioErrorLog(ctx.env, ctx.executionCtx || null, {
+      accountId: ctx.accountId,
       errorCode: error?.code || error?.message || 'database_request_failed',
       errorType: 'database_studio',
       errorMessage: String(error?.message || error || 'database_request_failed'),
       source: 'local-studio.database-service',
       stackTrace: error?.stack || null,
       contextJson: {
-        path: url.pathname,
-        method: request.method,
+        path: ctx.url?.pathname,
+        method: ctx.request?.method,
       },
     });
-    return json(
-      {
-        ok: false,
-        error: error?.message || 'database_request_failed',
-        requires_approval: error?.requiresApproval === true,
-        requires_destructive_confirmation: error?.requiresDestructiveConfirmation === true,
-        accounts: Array.isArray(error?.accounts) ? error.accounts : undefined,
-        connect_url: error?.connect_url || undefined,
-      },
-      Number(error?.status || 400),
-    );
-  }
+  },
+});
+
+export function isDatabaseRequest(pathname) {
+  return packageDatabaseHandler.isDatabaseRequest(pathname);
+}
+
+export async function handleDatabaseRequest(request, env, accountId, ctx = null) {
+  return packageDatabaseHandler.handle(request, {
+    env,
+    accountId,
+    executionCtx: ctx,
+  });
 }

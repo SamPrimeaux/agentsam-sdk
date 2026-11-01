@@ -31,3 +31,7 @@ export {
   cssVarsForTheme,
 } from "../src/ui/provider-theme";
 export type { DatabaseProviderTheme } from "../src/ui/provider-theme";
+export {
+  buildCreateTableSql,
+  assertSafeIdent,
+} from "../src/ui/create-table-sql.js";

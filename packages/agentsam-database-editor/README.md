@@ -8,14 +8,12 @@ Cloudflare D1, Supabase/Postgres, Hyperdrive and local SQLite are **adapters**. 
 
 ```
 @inneranimalmedia/agentsam-database-editor
-├── frontend/
-│   └── DatabaseEditorApp + browser client
-├── backend/
-│   ├── D1 REST / D1 binding
-│   ├── Postgres / Hyperdrive / Supabase
-│   └── provider metrics
+├── frontend/     DatabaseEditorApp + REST client
+├── contracts/    DatabaseAdapter + connection model (exported)
+├── runtime/      request handler, DDL, registry, capability honesty
+├── backend/      D1 / Postgres / Hyperdrive / Supabase + metrics
 └── backend/sqlite
-    └── Node-only local SQLite
+                  Node-only local SQLite
 ```
 
 Browser apps import:
@@ -27,18 +25,25 @@ import {
 } from "@inneranimalmedia/agentsam-database-editor/frontend";
 ```
 
-Worker/server apps import:
+Worker/server apps import adapters **and** the reusable request handler:
 
 ```js
 import {
   createD1Adapter,
-  createD1BindingAdapter,
-  createPostgresAdapter,
-  createHyperdriveAdapter,
-  createSupabaseAdapter,
-  readD1Metrics,
-  readPostgresMetrics,
+  createDatabaseRequestHandler,
+  buildDdlSql,
 } from "@inneranimalmedia/agentsam-database-editor/backend";
+```
+
+A second host only injects identity + source resolution — it does not copy CRUD/DDL handlers:
+
+```js
+const handler = createDatabaseRequestHandler({
+  listSources: (ctx) => hostListSources(ctx),
+  resolveSource: (ctx, sourceId) => hostResolveAdapter(ctx, sourceId),
+  // optional: readMetrics, onError
+});
+// mount handler.isDatabaseRequest / handler.handle in your Worker
 ```
 
 Local Node runtimes import SQLite explicitly so `node:sqlite` never enters a Worker/browser graph:
@@ -46,6 +51,8 @@ Local Node runtimes import SQLite explicitly so `node:sqlite` never enters a Wor
 ```js
 import { createSqliteAdapter } from "@inneranimalmedia/agentsam-database-editor/backend/sqlite";
 ```
+
+IAM, OAuth, and credential vaults stay host-owned. This package accepts resolved adapters and authorized account context only.
 
 ## Local Studio
 

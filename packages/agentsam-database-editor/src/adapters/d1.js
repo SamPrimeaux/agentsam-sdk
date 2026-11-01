@@ -98,10 +98,11 @@ export function createD1Adapter(options = {}) {
         schemaIntrospection: true,
         sqlQuery: true,
         rowMutations: writable,
-        export: true,
+        export: false,
         transactions: false,
         multiStatement: true,
         migrationApply: writable ? 'statement' : 'none',
+        ddl: writable,
       };
     },
 
@@ -263,6 +264,24 @@ export function createD1Adapter(options = {}) {
         return { status: 'down', detail: error?.message || String(error) };
       }
     },
+
+    async applyMigration(sqlBatch) {
+      if (!writable) throw new Error('database_read_only');
+      const statements = String(sqlBatch || '')
+        .split(';')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const results = [];
+      for (const sql of statements) {
+        try {
+          await remoteQuery(sql);
+          results.push({ sql, ok: true });
+        } catch (error) {
+          results.push({ sql, ok: false, error: error?.message || String(error) });
+        }
+      }
+      return { ok: results.every((r) => r.ok), results };
+    },
   };
 }
 
@@ -289,10 +308,11 @@ export function createD1BindingAdapter(options = {}) {
         schemaIntrospection: true,
         sqlQuery: true,
         rowMutations: writable,
-        export: true,
+        export: false,
         transactions: false,
         multiStatement: false,
         migrationApply: writable ? 'statement' : 'none',
+        ddl: writable,
       };
     },
     async introspect() {
@@ -425,6 +445,23 @@ export function createD1BindingAdapter(options = {}) {
       } catch (error) {
         return { status: 'down', detail: error?.message || String(error) };
       }
+    },
+    async applyMigration(sqlBatch) {
+      if (!writable) throw new Error('database_read_only');
+      const statements = String(sqlBatch || '')
+        .split(';')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const results = [];
+      for (const sql of statements) {
+        try {
+          await execute(sql, [], 'run');
+          results.push({ sql, ok: true });
+        } catch (error) {
+          results.push({ sql, ok: false, error: error?.message || String(error) });
+        }
+      }
+      return { ok: results.every((r) => r.ok), results };
     },
   };
   return adapter;

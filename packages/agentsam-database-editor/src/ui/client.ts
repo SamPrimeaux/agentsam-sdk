@@ -286,6 +286,60 @@ export function createDatabaseStudioClient(
       });
     },
 
+    ddl(sourceId: string, input: {
+      action:
+        | "create_table"
+        | "drop_table"
+        | "alter_table_add_column"
+        | "create_index"
+        | "drop_index"
+        | string;
+      table_name?: string;
+      schema?: string;
+      columns?: Array<{
+        name: string;
+        type?: string;
+        nullable?: boolean;
+        primaryKey?: boolean;
+        unique?: boolean;
+        defaultValue?: string | null;
+      }>;
+      column?: {
+        name: string;
+        type?: string;
+        nullable?: boolean;
+        defaultValue?: string | null;
+      };
+      index_name?: string;
+      index_columns?: string[];
+      unique?: boolean;
+      if_exists?: boolean;
+      if_not_exists?: boolean;
+      preview_only?: boolean;
+      studio_approved?: boolean;
+      destructive_confirmed?: boolean;
+    }) {
+      return fetchJson<{
+        ok: boolean;
+        preview?: boolean;
+        sql?: string;
+        action?: string;
+        table_name?: string;
+        schema?: string | null;
+        source?: DatabaseSource;
+        receipt?: Record<string, unknown>;
+        error?: string;
+        requires_approval?: boolean;
+        requires_destructive_confirmation?: boolean;
+      }>("/ddl", {
+        method: "POST",
+        body: JSON.stringify({
+          source_id: sourceId,
+          ...input,
+        }),
+      });
+    },
+
     createTable(sourceId: string, input: {
       table_name: string;
       schema?: string;
@@ -301,25 +355,18 @@ export function createDatabaseStudioClient(
       studio_approved?: boolean;
       destructive_confirmed?: boolean;
     }) {
-      return fetchJson<{
-        ok: boolean;
-        preview?: boolean;
-        sql?: string;
-        table_name?: string;
-        schema?: string | null;
-        source?: DatabaseSource;
-        receipt?: Record<string, unknown>;
-        error?: string;
-        requires_approval?: boolean;
-        requires_destructive_confirmation?: boolean;
-      }>("/ddl", {
-        method: "POST",
-        body: JSON.stringify({
-          source_id: sourceId,
-          action: "create_table",
-          ...input,
-        }),
-      });
+      return this.ddl(sourceId, { action: "create_table", ...input });
+    },
+
+    dropTable(sourceId: string, input: {
+      table_name: string;
+      schema?: string;
+      if_exists?: boolean;
+      preview_only?: boolean;
+      studio_approved?: boolean;
+      destructive_confirmed?: boolean;
+    }) {
+      return this.ddl(sourceId, { action: "drop_table", ...input });
     },
 
     insert(sourceId: string, table: DatabaseTableInfo, values: Record<string, unknown>) {

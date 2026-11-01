@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/ui", "frontend"]
+  "include": ["src/ui", "src/contracts", "frontend"]
 }

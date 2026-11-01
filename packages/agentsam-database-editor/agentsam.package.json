@@ -1,6 +1,6 @@
 {
   "avoid_when": [],
-  "catalog_status": "needs-review",
+  "catalog_status": "active",
   "class": "package",
   "commands": [],
   "evidence": {
@@ -36,8 +36,18 @@
     "use_when"
   ],
   "schema": "agentsam.package.v1",
-  "status": "unknown",
-  "topics": [],
-  "use_when": [],
-  "version": "2.6.12"
+  "status": "active",
+  "topics": [
+    "database",
+    "adapters",
+    "d1",
+    "sqlite",
+    "postgres"
+  ],
+  "use_when": [
+    "portable database studio",
+    "multi-provider SQL adapters",
+    "reusable database request handler"
+  ],
+  "version": "2.6.14"
 }

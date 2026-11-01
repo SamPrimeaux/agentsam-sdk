@@ -1,11 +1,11 @@
 import {
+  buildCreateTableSql,
   createDatabaseStudioClient,
   type DatabaseHttpFetch,
   type DatabaseSource,
   type DatabaseStudioClient,
   type DatabaseTableInfo,
 } from "@inneranimalmedia/agentsam-database-editor/frontend";
-import { buildCreateTableSql } from "../../../../../../packages/agentsam-database-editor/src/ui/create-table-sql.js";
 import { createLocalStudioLocalHost, localBridgeDispatch, type LocalStudioLocalHostOptions } from "./localHost";
 import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
 

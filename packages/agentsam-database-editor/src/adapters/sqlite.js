@@ -25,20 +25,23 @@ export function createSqliteAdapter(opts) {
   // opened for inspection must not have its on-disk journal format changed.
   if (!opts.readOnly && opts.managedWal) db.exec('PRAGMA journal_mode=WAL;');
 
-  /** @type {import('../contracts/adapter.js').DatabaseCapabilities} */
+  /** Declared intents — runtime/capabilities derives honest flags from methods. */
   const caps = {
     schemaIntrospection: true,
     sqlQuery: true,
     rowMutations: !opts.readOnly,
-    export: true,
+    export: false,
     transactions: true,
     multiStatement: false,
     migrationApply: 'statement',
+    ddl: true,
   };
 
-  return {
+  /** @type {import('../contracts/adapter.js').DatabaseAdapter} */
+  const adapter = {
     id,
     dialect: 'sqlite',
+    provider: 'local',
     capabilities: () => caps,
 
     async introspect() {
@@ -175,11 +178,29 @@ export function createSqliteAdapter(opts) {
       return { ok: results.every((r) => r.ok), results };
     },
 
+    async transaction(fn) {
+      if (typeof fn !== 'function') throw new Error('transaction_fn_required');
+      db.exec('BEGIN');
+      try {
+        const result = await fn(adapter);
+        db.exec('COMMIT');
+        return result;
+      } catch (error) {
+        try {
+          db.exec('ROLLBACK');
+        } catch {
+          /* ignore rollback failure */
+        }
+        throw error;
+      }
+    },
+
     /** @internal */
     close() {
       db.close();
     },
   };
+  return adapter;
 }
 
 function quoteIdent(name) {

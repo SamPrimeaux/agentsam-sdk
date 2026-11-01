@@ -1,6 +1,14 @@
 export {
   EMBEDDING_PROVIDER_POLICY,
-} from './contracts/embeddings-policy.js';
+  createLocalSqliteConnection,
+  isVectorsNone,
+  METRICS_ADAPTER_IDS,
+  metricsCacheKey,
+  DATABASE_CAPABILITY_KEYS,
+  DATABASE_ENGINES,
+  DATABASE_PROVIDERS,
+} from './contracts/index.js';
+
 export {
   AGENTSAM_ICON_KEYS,
   ICON_ALIASES,
@@ -13,14 +21,6 @@ export {
   createIconRenderer,
   resolveTerminalIcon,
 } from './contracts/icon-vocabulary.js';
-export {
-  createLocalSqliteConnection,
-  isVectorsNone,
-} from './contracts/connection.js';
-export {
-  METRICS_ADAPTER_IDS,
-  metricsCacheKey,
-} from './contracts/metrics-adapter.js';
 
 export { createSqliteAdapter } from './adapters/sqlite.js';
 export {
@@ -35,5 +35,25 @@ export { createSupabaseAdapter } from './adapters/supabase.js';
 
 export { readD1Metrics } from './metrics/d1.js';
 export { readPostgresMetrics } from './metrics/postgres.js';
+
+export {
+  deriveCapabilities,
+  withHonestCapabilities,
+  toStudioCapabilities,
+  sqlKind,
+  assertSqlAllowed,
+  readTableRows,
+  DDL_ACTIONS,
+  buildDdlSql,
+  applyDdl,
+  buildCreateTableSql,
+  assertSafeIdent,
+  registerAdapterFactory,
+  registerSqliteAdapterFactory,
+  listRegisteredAdapterKinds,
+  createAdapter,
+  createAdapterFromConnection,
+  createDatabaseRequestHandler,
+} from './runtime/index.js';
 
 export { DATABASE_EDITOR_APP } from './manifest.js';

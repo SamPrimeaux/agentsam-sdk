@@ -46,10 +46,12 @@ export function createPostgresAdapter(options = {}) {
         schemaIntrospection: true,
         sqlQuery: true,
         rowMutations: writable,
-        export: true,
-        transactions: true,
+        // No export() / transaction() yet — do not advertise.
+        export: false,
+        transactions: false,
         multiStatement: true,
         migrationApply: writable ? 'statement' : 'none',
+        ddl: writable,
       };
     },
 
@@ -232,6 +234,24 @@ export function createPostgresAdapter(options = {}) {
           latencyMs: Date.now() - started,
         };
       }
+    },
+
+    async applyMigration(sqlBatch) {
+      if (!writable) throw new Error('database_read_only');
+      const statements = String(sqlBatch || '')
+        .split(';')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const results = [];
+      for (const sql of statements) {
+        try {
+          await query(sql, []);
+          results.push({ sql, ok: true });
+        } catch (error) {
+          results.push({ sql, ok: false, error: error?.message || String(error) });
+        }
+      }
+      return { ok: results.every((r) => r.ok), results };
     },
   };
 }
