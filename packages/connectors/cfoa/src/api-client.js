@@ -53,6 +53,20 @@ export class CloudflareApiError extends Error {
   }
 }
 
+/**
+ * Workers' native fetch throws "Illegal invocation" when called as a method on
+ * another object (wrong `this`). Keep the global execution context by default.
+ */
+export function bindFetchImpl(fetchImpl = globalThis.fetch) {
+  if (typeof fetchImpl !== 'function') {
+    throw new TypeError('cloudflare_fetch_required');
+  }
+  if (fetchImpl === globalThis.fetch && typeof globalThis.fetch?.bind === 'function') {
+    return globalThis.fetch.bind(globalThis);
+  }
+  return fetchImpl;
+}
+
 export class CloudflareApiClient {
   constructor({
     apiToken = '',
@@ -71,7 +85,7 @@ export class CloudflareApiClient {
     this.connectionId = connectionId;
     this.grantedScopes = Array.isArray(grantedScopes) ? grantedScopes : [];
     this.capabilityId = capabilityId;
-    this.fetchImpl = fetchImpl;
+    this.fetchImpl = bindFetchImpl(fetchImpl);
   }
 
   authMeta() {
@@ -155,7 +169,10 @@ export class CloudflareApiClient {
     let res;
     let json = null;
     try {
-      res = await this.fetchImpl(url.toString(), { method, headers, body });
+      // Call through a free binding — never `this.fetchImpl(...)` — so Workers
+      // native fetch (and bound defaults) keep the correct execution context.
+      const fetchImpl = this.fetchImpl;
+      res = await fetchImpl(url.toString(), { method, headers, body });
       const ct = String(res.headers.get('content-type') || '');
       if (opts.raw || ct.includes('image/') || ct.includes('octet-stream') || ct.includes('text/html')) {
         const buf = Buffer.from(await res.arrayBuffer());

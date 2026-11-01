@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  cloudflareMediaConnectUrl,
   discoverCloudflareMedia,
   listCloudflareR2Buckets,
   listCloudflareR2Objects,
   listCloudflareImages,
   listCloudflareStream,
+  normalizeCloudflareReturnTo,
   uploadCloudflareImage,
   createCloudflareStreamDirectUpload,
   deleteCloudflareImage,
@@ -35,6 +37,27 @@ function mockClient({ accountId = 'acct123', scopes = [], responses = {} } = {})
 }
 
 describe('cloudflare media discovery', () => {
+  it('preserves originating return_to on connect URLs', () => {
+    assert.equal(
+      normalizeCloudflareReturnTo('https://studio.example/media'),
+      '/media',
+    );
+    assert.equal(
+      cloudflareMediaConnectUrl({ returnTo: '/media' }),
+      '/api/connections/cloudflare/start?packs=media%2Cdata&return_to=%2Fmedia',
+    );
+  });
+
+  it('uses caller returnTo when account is required', async () => {
+    const discovery = await discoverCloudflareMedia(
+      { accountId: '', grantedScopes: [] },
+      { returnTo: '/media' },
+    );
+    assert.equal(discovery.status, 'account_required');
+    assert.match(discovery.connect_url, /return_to=%2Fmedia/);
+    assert.doesNotMatch(discovery.connect_url, /settings%2Fintegrations/);
+  });
+
   it('exposes a media feature pack with Images, Stream, and R2', () => {
     const pack = getCloudflareFeaturePack('media');
     assert.ok(pack);

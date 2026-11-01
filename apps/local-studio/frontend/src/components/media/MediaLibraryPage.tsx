@@ -74,6 +74,19 @@ function resolveMediaSurface(pathname: string) {
   return KIND_FROM_PATH.find((entry) => entry.match.test(pathname)) || KIND_FROM_PATH[KIND_FROM_PATH.length - 1];
 }
 
+/** Keep OAuth return on Media Library even if discovery supplies Settings. */
+function mediaConnectUrl(raw?: string | null, returnTo = "/media") {
+  const fallback = `/api/connections/cloudflare/start?packs=media,data&return_to=${encodeURIComponent(returnTo)}`;
+  if (!raw) return fallback;
+  try {
+    const url = new URL(raw, typeof window !== "undefined" ? window.location.origin : "https://agentsam.local");
+    url.searchParams.set("return_to", returnTo);
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return fallback;
+  }
+}
+
 function classifyAsset(asset: MediaAsset): MediaKind {
   const mime = String(asset.mime_type || asset.content_type || "").toLowerCase();
   const name = String(asset.filename || "").toLowerCase();
@@ -190,7 +203,7 @@ function MediaLibraryBody({
           credentials: "same-origin",
           headers: { accept: "application/json" },
         }),
-        fetch("/api/connections/cloudflare/resources?per_page=50", {
+        fetch("/api/connections/cloudflare/resources?per_page=50&return_to=%2Fmedia", {
           credentials: "same-origin",
           headers: { accept: "application/json" },
         }),
@@ -281,8 +294,7 @@ function MediaLibraryBody({
   const selectedIndex = visible.findIndex((a) => a.id === selectedId);
   const selected = selectedIndex >= 0 ? visible[selectedIndex] : null;
 
-  const connectUrl = resources?.connect_url || resources?.reconnect_url
-    || "/api/connections/cloudflare/start?packs=media,data&return_to=/media";
+  const connectUrl = mediaConnectUrl(resources?.connect_url || resources?.reconnect_url, "/media");
 
   return (
     <div className="agentsam-media-library" data-agentsam-media-library={surface.kind}>

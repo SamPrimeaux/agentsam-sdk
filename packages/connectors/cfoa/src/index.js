@@ -41,6 +41,7 @@ export {
 export {
   CloudflareApiClient,
   CloudflareApiError,
+  bindFetchImpl,
   resolveCloudflareApiAuth,
   createCloudflareApiClient,
   receipt as cloudflareReceipt,
@@ -260,6 +261,8 @@ export function buildAuthorizeUrl({ clientId, redirectUri, state, codeChallenge,
 
 export { discoverBasinResources } from './families/basin.js';
 export {
+  cloudflareMediaConnectUrl,
+  normalizeCloudflareReturnTo,
   discoverCloudflareMedia,
   listCloudflareR2Buckets,
   listCloudflareR2Objects,
