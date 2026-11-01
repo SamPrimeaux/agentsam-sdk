@@ -29,6 +29,8 @@ const chapters=[
   ["The machinery","Complexity made understandable"],
   ["The ecosystem","Built to work together"]
 ] as const;
+// WIP: hardcoded founding brands only. Preserve presentation bindings; generalize to BrandContract
+// (see docs/architecture/brand-presentation-context-discovery-2026-11-01.md). Not app chrome.
 const brandInfo={
   agentsam:{name:"AgentSam",accent:"#4268f4",primary:"#293d88",background:"#eef2ff",sub:"Powerful systems. Native experiences."},
   inneranimalmedia:{name:"InnerAnimalMedia",accent:"#31886c",primary:"#182a45",background:"#eaf5f3",sub:"Systematically strategic software."}

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { coproAppManifest } from "./app-manifest";
 import { MOVIEMODE_SYSTEM_ICONS } from "./system-icons";
 import creativeCatalog from "@inneranimalmedia/copro-templates/catalog";
+import { listProjectTemplates } from "@inneranimalmedia/copro-templates/creative";
 import { importEvidencePackage } from "./evidence-import";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
 import { createCoProProject, createTrack, createClip, serializeCoProProject } from "@inneranimalmedia/copro-project";
@@ -37,16 +38,25 @@ const FIXTURE_PROJECTS: CoProProjectSummary[] = [
 ];
 /* Batch 1: gallery cards synthesize lightweight SVG covers from tone/title — no live decode in the grid. */
 
-const CREATIVE_ASSET_SEED: CoProCreativeAsset[] = (creativeCatalog as any).items.map((entry: any) => ({
-  id: entry.id,
-  category: entry.category as CoProCreativeAsset["category"],
-  name: entry.name,
-  durationUs: entry.durationUs,
-  previewUrl: "",
-  previewFile: entry.preview,
-  source: entry.source,
-  aspectRatio: "16:9",
-}));
+/** Discover from catalog previews + authoritative CREATIVE_TEMPLATES metadata (no UI-owned ID list). */
+const PROJECT_TEMPLATE_INDEX = new Map(listProjectTemplates().map((template) => [template.id, template]));
+const CREATIVE_ASSET_SEED: CoProCreativeAsset[] = (creativeCatalog as any).items.map((entry: any) => {
+  const template = PROJECT_TEMPLATE_INDEX.get(entry.id);
+  return {
+    id: entry.id,
+    category: entry.category as CoProCreativeAsset["category"],
+    name: template?.name ?? entry.name,
+    description: template?.description ?? entry.description,
+    durationUs: template?.durationUs ?? entry.durationUs,
+    previewUrl: "",
+    previewFile: entry.preview,
+    source: entry.source,
+    aspectRatio: template?.aspectRatio ?? entry.aspectRatio ?? "16:9",
+    group: template?.category ?? entry.group,
+    featured: Boolean(template?.featured ?? entry.featured),
+    resourceKind: template ? "project_template" as const : undefined,
+  };
+});
 
 function installCoProBrandIcons() {
   if (typeof document === "undefined") return;
@@ -198,11 +208,17 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     const summaries: CoProProjectSummary[] = saved.map((entry:any) => {
       const durationUs = Math.max(0, ...entry.tracks.flatMap((track:any) =>
         track.clips.map((clip:any) => clip.startUs + clip.durationUs)));
+      const fromTemplate = entry.metadata?.provenance?.kind === "project_template";
+      const clipCount = entry.tracks.reduce((n:number, track:any) => n + (track.clips?.length || 0), 0);
       return {
         id:entry.id, title:entry.title, kind:"video" as const, status:"draft" as const,
-        subtitle:"Saved in this browser", durationMs:Math.round(durationUs/1000),
-        aspectRatio:"9:16", updatedAt:String(entry.updatedAt || entry.createdAt || new Date().toISOString()),
-        thumbnailTone:"cyan" as const,
+        subtitle: fromTemplate
+          ? `From template · ${clipCount} clips · browser storage`
+          : `${clipCount} clips · saved in this browser`,
+        durationMs:Math.round(durationUs/1000),
+        aspectRatio: entry.canvas?.width > entry.canvas?.height ? "16:9" : "9:16",
+        updatedAt:String(entry.updatedAt || entry.createdAt || new Date().toISOString()),
+        thumbnailTone: fromTemplate ? "violet" as const : "cyan" as const,
       };
     });
     setSavedProjects(summaries.sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)));
@@ -304,10 +320,13 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }, []);
 
   useEffect(() => {
-    if (previewSrc || !restored || mediaItems.length === 0) return;
+    // Only wire a media URL when the selected clip actually references that asset.
+    // Never fall back to "any imported image" — that leaked house photos into empty
+    // / template projects and lied about timeline state.
+    if (previewSrc || !restored || mediaItems.length === 0 || !selectedClipId) return;
     const selected = project.tracks.flatMap((track) => track.clips).find((clip) => clip.id === selectedClipId);
-    const matching = mediaItems.find((item) => item.id === selected?.assetId)
-      ?? mediaItems.find((item) => item.kind === "video" || item.kind === "image");
+    if (!selected?.assetId) return;
+    const matching = mediaItems.find((item) => item.id === selected.assetId);
     if (matching && (matching.kind === "video" || matching.kind === "image")) {
       setPreviewSrc(matching.url);
       setPreviewKind(matching.kind);
@@ -394,21 +413,32 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
 
   async function openCreativeTemplate(id: string) {
     const creative = await import("@inneranimalmedia/copro-templates/creative");
-    const next = creative.createCreativeProject(id,{
-      projectId:"project:creative:" + Date.now(),
-      now:new Date(),
+    // Discover → Select → Instantiate → Persist → Open. Never overwrite the open project.
+    const next = creative.createCreativeProject(id, {
+      projectId: "project:from-template:" + id.replace(/^creative:/, "") + ":" + Date.now(),
+      now: new Date(),
     });
+    if (next.metadata?.provenance && typeof next.metadata.provenance === "object") {
+      next.metadata.provenance = {
+        ...next.metadata.provenance,
+        createdFrom: "moviemode.templates.create_project",
+      };
+    }
+    // Clear any previous session preview before installing so foreign media cannot leak in.
+    setCreativeRenderer(() => creative.renderCreativeProjectFrame);
+    setPreviewSrc(null);
+    setPreviewKind(null);
     await store.save(next);
     await refreshSavedProjects();
-    const creativeClip = next.tracks.flatMap((track:any) => track.clips).find((clip:any) => clip.metadata?.creative);
-    const previewTimeUs = Math.min(1_200_000,Math.max(0,(creativeClip?.durationUs ?? 1) - 1));
-    const svg = creative.renderCreativeProjectFrame(next,previewTimeUs);
-    setCreativeRenderer(() => creative.renderCreativeProjectFrame);
-    installProject(next,creativeClip?.id ?? null);
+    const creativeClip = next.tracks.flatMap((track: any) => track.clips).find((clip: any) => clip.metadata?.creative);
+    const previewTimeUs = Math.min(1_200_000, Math.max(0, (creativeClip?.durationUs ?? 1) - 1));
+    const svg = creative.renderCreativeProjectFrame(next, previewTimeUs);
+    installProject(next, creativeClip?.id ?? null);
     setPlayheadUs(previewTimeUs);
     setPreviewSrc(svg ? "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg) : null);
     setPreviewKind(svg ? "image" : null);
     setInitialTool(null);
+    setHomeSection("home");
     showScreen("editor");
   }
 
@@ -427,9 +457,9 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     setCreativeRenderer(null);
     const next = createCoProProject({ id:"project:new:" + Date.now(), title:"Untitled project" });
     next.tracks.push(createTrack({ id:"track:video", kind:"video", name:"Video" }));
-    installProject(next, null);
     setPreviewSrc(null);
     setPreviewKind(null);
+    installProject(next, null);
     setInitialTool(tool);
     await store.save(next);
     showScreen("editor");

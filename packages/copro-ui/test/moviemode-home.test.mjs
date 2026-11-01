@@ -7,14 +7,18 @@ import {CoProToolPanel} from '../dist/tool-sheet.js';
 
 const actions = {onCreate:()=>{},onImport:()=>{},onOpenProject:()=>{},onRecord:()=>{},onOpenTool:()=>{},onRenameProject:()=>{},onDeleteProject:()=>{},onDuplicateProject:()=>{}};
 
-test('MovieMode home has direct create, media, recording, timeline, project library without creation modal', () => {
+test('MovieMode home prioritizes saved projects with one create action and no promo landing', () => {
   const html = renderToStaticMarkup(React.createElement(CoProProjectsScreen,{
     ...actions, projects:[{id:'project:1',title:'Dashboard Walkthrough',kind:'video',status:'draft',updatedAt:'2026-10-16T12:00:00Z',durationMs:25000}],
   }));
-  for(const label of ['MovieMode','Create project','Video Studio','Record screen','Your projects','Dashboard Walkthrough','Import media','Search projects','Grid view','List view']) assert.ok(html.includes(label),label);
+  for(const label of ['MovieMode','Create project','Your projects','Dashboard Walkthrough','Import','Templates','Search projects','Grid view','List view']) assert.ok(html.includes(label),label);
+  assert.doesNotMatch(html,/Create project<\/strong><small>Open the full timeline editor/);
+  assert.doesNotMatch(html,/Video Studio|More tools|Template Studio/);
   assert.doesNotMatch(html,/copro-sheet-backdrop|aria-modal="true"/);
   assert.match(html,/aria-label="MovieMode navigation"/);
   assert.match(html,/aria-label="Project actions for Dashboard Walkthrough"/);
+  const createButtons = html.split('Create project').length - 1;
+  assert.ok(createButtons <= 3, 'home must not spam redundant create CTAs');
 });
 
 test('selected video transform inspector exposes precise working scale/XY/rotation/opacity fields', () => {
@@ -35,7 +39,7 @@ test('stickers are editable timeline overlays with explicit creation controls',(
   assert.doesNotMatch(html,/not yet available/i);
 });
 
-test('Template Studio combines the real composition catalog with retained editable sample timelines', () => {
+test('Templates page uses honest project-template language and keeps samples separate', () => {
   const html = renderToStaticMarkup(React.createElement(CoProProjectsScreen,{
     ...actions,
     projects:[
@@ -45,19 +49,24 @@ test('Template Studio combines the real composition catalog with retained editab
     initialSection:'templates',
     creativeAssets:[
       {id:'creative:chapter-divider',category:'template',name:'Chapter Divider',group:'editorial',durationUs:4_000_000,aspectRatio:'16:9',previewUrl:'https://assets.test/chapter.svg'},
-      {id:'creative:product-launch',category:'template',name:'Product Launch',group:'product',durationUs:6_000_000,aspectRatio:'9:16',previewUrl:'https://assets.test/product.svg'},
-      {id:'creative:documentary-opener',category:'template',name:'Documentary opener',group:'documentary',durationUs:7_000_000,aspectRatio:'16:9',previewUrl:'https://assets.test/documentary.svg'},
-      {id:'creative:social-story',category:'template',name:'Social story',group:'social',durationUs:6_000_000,aspectRatio:'9:16',previewUrl:'https://assets.test/social.svg'},
+      {id:'creative:product-launch',category:'template',name:'Product launch',group:'product',durationUs:6_000_000,aspectRatio:'9:16',previewUrl:'https://assets.test/product.svg',featured:true,description:'Project template (product). Instantiates a distinct editable CoPro project.'},
+      {id:'creative:documentary-opener',category:'template',name:'Documentary opener',group:'documentary',durationUs:7_000_000,aspectRatio:'16:9',previewUrl:'https://assets.test/documentary.svg',featured:true,description:'Project template (documentary). Instantiates a distinct editable CoPro project.'},
+      {id:'creative:social-story',category:'template',name:'Social story',group:'social',durationUs:6_000_000,aspectRatio:'9:16',previewUrl:'https://assets.test/social.svg',featured:true,description:'Project template (social). Instantiates a distinct editable CoPro project.'},
       {id:'creative:caption-story',category:'template',name:'Word focus captions',group:'captions',durationUs:6_000_000,aspectRatio:'9:16',previewUrl:'https://assets.test/captions.svg'},
     ],
     onOpenCreativeTemplate:()=>{},
   }));
-  for (const label of ['Template studio','Chapter Divider','Product Launch','For you','editorial','product','Search compositions','5 compositions']) assert.ok(html.includes(label),label);
+  for (const label of ['Templates','Chapter Divider','Product launch','All templates','editorial','product','Search templates','5 templates']) assert.ok(html.includes(label),label);
   assert.match(html,/src="https:\/\/assets\.test\/chapter\.svg"/);
   assert.match(html,/src="https:\/\/assets\.test\/product\.svg"/);
-  for (const label of ['Featured productions','Documentary Opener','Product Showcase','Social Video','Batch 1 presentation','Sample timelines','Weekend cut','Caption layout','Sample timeline · no video supplied','Caption layout','EXAMPLE','Open sample']) assert.ok(html.includes(label),label);
-  assert.match(html,/aria-label="Featured production directions"/);
+  // Featured cards must render catalog-owned names — not a UI-invented parallel label registry.
+  for (const label of ['Featured templates','Documentary opener','Product launch','Social story','Sample timelines','Weekend cut','Caption layout','SAMPLE']) assert.ok(html.includes(label),label);
+  assert.doesNotMatch(html,/FEATURED_PROJECT_TEMPLATES|BATCH1_SHOWCASE|Documentary Opener|Product Showcase|Social Video/);
+  assert.doesNotMatch(html,/Batch 1 presentation|editable starter projects arrive in Batch 2|EDITABLE COMPOSITION|Use this composition/);
+  assert.match(html,/aria-label="Featured project templates"/);
   assert.match(html,/aria-label="Sample timelines"/);
+  assert.match(html,/PROJECT TEMPLATES/);
+  assert.match(html,/Each card creates a new project from the packaged creative catalog/);
 });
 
 test('MovieMode project cards meet the creative resource-card standard', () => {

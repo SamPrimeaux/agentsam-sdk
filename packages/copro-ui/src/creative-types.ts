@@ -11,6 +11,9 @@ export type CoProCreativeAsset = {
   group?: string;
   aspectRatio?: string;
   description?: string;
+  /** Owned by CREATIVE_TEMPLATES metadata — UI must not invent a parallel featured ID list. */
+  featured?: boolean;
+  resourceKind?: "project_template";
 };
 
 export type CoProMotionSample = {

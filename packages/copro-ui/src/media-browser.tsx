@@ -384,14 +384,19 @@ export function CoProMediaBrowser({
                 {selectedAsset.group && <span>{selectedAsset.group}</span>}
               </div>
               {selectedAsset.category === "template" ? (
-                <button
-                  type="button"
-                  className="mm-creative-use"
-                  onClick={() => onOpenCreativeTemplate?.(selectedAsset.id)}
-                  disabled={!onOpenCreativeTemplate}
-                >
-                  Start with this composition
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="mm-creative-use"
+                    onClick={() => onOpenCreativeTemplate?.(selectedAsset.id)}
+                    disabled={!onOpenCreativeTemplate}
+                  >
+                    Create new project from template
+                  </button>
+                  <p className="mm-creative-selection-hint">
+                    Project templates open a distinct project. They do not replace this edit or apply as clip effects.
+                  </p>
+                </>
               ) : (
                 <>
                   <button
