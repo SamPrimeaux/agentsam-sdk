@@ -16,6 +16,16 @@ test("SamSketch uses the host-owned AgentSam shell and conversation", () => {
   assert.doesNotMatch(main, /__samsketchAssistant|__samsketchMiniAgentSam/);
 });
 
+test("SamSketch Batch 1 ships a gallery entry surface without a competing registry", () => {
+  const gallery = readFileSync(path.join(root, "src/gallery.ts"), "utf8");
+  assert.match(gallery, /ss-resource-card/);
+  assert.match(gallery, /SamSketch/);
+  assert.match(main, /mountSketchGallery/);
+  assert.match(main, /gallery-home/);
+  assert.doesNotMatch(gallery, /createSketchRegistry|new SketchPackage/);
+  assert.ok(existsSync(path.join(root, "src/gallery.css")));
+});
+
 test("source geometry is delivered losslessly in compressed form", () => {
   const inventory = JSON.parse(readFileSync(path.join(root, "public/source-assets-manifest.json"), "utf8"));
   assert.equal(inventory.sourceParts, 47);

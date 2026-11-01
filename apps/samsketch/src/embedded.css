@@ -141,9 +141,11 @@ html,body,#app{width:100%;height:100%;min-width:0;min-height:0;margin:0;overflow
 .studio-shell .sam-shell-topbar-host .as-nav-topbar-leading:after{content:"SamSketch · Studio";font-size:11px;letter-spacing:-.01em;font-weight:650;color:#e8ebf1}
 .studio-shell .studio-project-chip{font-size:12px;letter-spacing:-.01em;border-color:#454a53;background:#202329}
 .studio-shell .studio-project-chip:focus-visible{outline:2px solid #91afff;outline-offset:2px}
-/* Six existing, functioning viewport operations, centered and explicitly named. */
-.studio-shell .canvas-tools{top:12px;left:50%;right:auto;transform:translateX(-50%);display:flex;gap:2px;padding:5px 6px;max-width:calc(100% - 24px);background:rgba(22,26,33,.9);border:1px solid rgba(170,191,222,.2);border-radius:12px;box-shadow:0 10px 26px rgba(15,24,43,.14);backdrop-filter:blur(18px)}
-.studio-shell .canvas-tools .icon-control{display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;min-width:53px;min-height:47px;padding:6px 6px 5px;border:1px solid transparent;border-radius:8px;background:transparent;color:#bbc6d7;line-height:1;cursor:pointer;transition:background .14s,border-color .14s,color .14s}
+/* Drawing toolbar: clustered navigate + canvas tools with readable labels. */
+.studio-shell .canvas-tools{top:12px;left:50%;right:auto;transform:translateX(-50%);display:flex;align-items:stretch;gap:4px;padding:6px 7px;max-width:calc(100% - 24px);background:rgba(22,26,33,.92);border:1px solid rgba(170,191,222,.22);border-radius:14px;box-shadow:0 12px 28px rgba(15,24,43,.16);backdrop-filter:blur(18px)}
+.studio-shell .canvas-tools .tool-cluster{display:flex;gap:2px;align-items:stretch;position:relative}
+.studio-shell .canvas-tools .tool-cluster::before{content:attr(data-cluster);position:absolute;left:6px;top:-9px;padding:0 5px;border-radius:999px;background:rgba(22,26,33,.95);color:#8fa0b8;font-size:7px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;line-height:1.4}
+.studio-shell .canvas-tools .icon-control{display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;min-width:54px;min-height:48px;padding:8px 6px 6px;border:1px solid transparent;border-radius:9px;background:transparent;color:#bbc6d7;line-height:1;cursor:pointer;transition:background .14s,border-color .14s,color .14s}
 .studio-shell .canvas-tools .icon-control svg{width:17px;height:17px}
 .studio-shell .canvas-tools .icon-control::after{font-size:9px;font-weight:650;letter-spacing:.01em;line-height:1.15}
 .studio-shell .canvas-tools #mode-select::after{content:"Select"}
@@ -155,7 +157,17 @@ html,body,#app{width:100%;height:100%;min-width:0;min-height:0;margin:0;overflow
 .studio-shell .canvas-tools .icon-control:hover{background:rgba(132,164,215,.13);border-color:rgba(154,185,231,.24);color:#fff}
 .studio-shell .canvas-tools .icon-control.active,.studio-shell .canvas-tools .icon-control[aria-pressed="true"]{background:#284878;border-color:#527dbd;color:#f7fbff}
 .studio-shell .canvas-tools .icon-control:focus-visible{outline:2px solid #9bbaff;outline-offset:2px}
-.studio-shell .canvas-tools .toolbar-separator{width:1px;height:27px;margin:10px 4px;background:rgba(184,199,222,.2)}
+.studio-shell .canvas-tools .toolbar-separator{width:1px;height:34px;margin:8px 5px;background:rgba(184,199,222,.22);align-self:center}
+.studio-shell .top-left{display:flex;align-items:center;gap:8px;min-width:0}
+.studio-shell .top-left #gallery-home{flex:none;width:34px;min-width:34px;height:34px;border-radius:9px;border:1px solid #343840;background:#1b1d21;color:#a9b0bc}
+.studio-shell .top-left #gallery-home:hover{background:#262a30;color:#fff;border-color:#515967}
+.studio-shell .top-left .studio-app-mark{font-size:12px;font-weight:750;letter-spacing:-.02em;color:#e8ebf1;white-space:nowrap}
+.studio-shell .view-gizmo{border-color:#3b4351;background:#171d26ee}
+.studio-shell .view-gizmo-orientation{background:linear-gradient(160deg,#243044,#1a2230);border-color:#3a4558}
+.studio-shell .view-gizmo-label{color:#8fa0b8}
+.studio-shell .ss-inventory-badge{background:rgba(15,20,30,.82)}
+.studio-shell .ss-inventory-type{background:rgba(32,37,45,.92);border-color:#3a4352;color:#c5d0e0}
+.studio-shell .ss-inventory-cta{background:rgba(70,110,190,.95)}
 /* Bibliographic icon catalog stays distinct from live tool actions. */
 .studio-shell .icon-library-selection{font-size:11px;line-height:1.45;border-radius:10px}
 .studio-shell .icon-family{margin-bottom:15px}
