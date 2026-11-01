@@ -358,7 +358,7 @@ function MediaLibraryBody({
           <div className="agentsam-media-empty">
             <strong>{catalog.length ? "No matching assets" : activeBucket ? "Bucket is empty" : "No registered media yet"}</strong>
             <p>
-              Empty results are not proof a provider is disconnected. Connect Cloudflare under Settings → Integrations when Images, R2, or Stream need authorization.
+              Empty results are not proof a provider is disconnected. Connect Cloudflare OAuth under Settings → Integrations for Images, R2, or Stream — IAM is only used when you explicitly select it.
             </p>
             <a className="agentsam-media-btn" href={connectUrl}>Manage Cloudflare connection</a>
           </div>

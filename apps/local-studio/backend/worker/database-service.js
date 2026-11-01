@@ -254,7 +254,7 @@ async function getBoundD1Source(env, accountId) {
   if (!owner || owner !== accountId || !env?.DB?.prepare) return null;
 
   let tableCount = 0;
-  let fileSize = 0;
+  let fileSize = null;
 
   try {
     const tableRow = await env.DB.prepare(
@@ -266,39 +266,87 @@ async function getBoundD1Source(env, accountId) {
   }
 
   // D1 does not guarantee every SQLite page pragma on every runtime. Size is
-  // observability-only: failure here must never hide an otherwise valid bound DB.
+  // observability-only: failure / zero must never be reported as "0 B".
   try {
     const [pageCount, pageSize] = await Promise.all([
       env.DB.prepare("PRAGMA page_count").first(),
       env.DB.prepare("PRAGMA page_size").first(),
     ]);
-    fileSize =
-      Number(pageCount?.page_count || 0) *
-      Number(pageSize?.page_size || 0);
+    const pages = Number(pageCount?.page_count || 0);
+    const size = Number(pageSize?.page_size || 0);
+    const computed = pages * size;
+    fileSize = computed > 0 ? computed : null;
   } catch {
-    fileSize = 0;
+    fileSize = null;
+  }
+
+  // Prefer wrangler-declared UUID when present; otherwise opaque binding:DB.
+  const configuredUuid = clean(env?.AGENTSAM_D1_DATABASE_UUID || env?.D1_DATABASE_UUID);
+  let databaseId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(configuredUuid)
+    ? configuredUuid
+    : 'binding:DB';
+  let metricsReady = !isOpaqueBindingDatabaseId(databaseId);
+  let oauthAccountId = null;
+
+  // Map deployment binding → OAuth D1 UUID when the same DB appears in the grant.
+  try {
+    const credential = await resolveCloudflareCredential(env, accountId);
+    if (credential?.token) {
+      const cloudflareAccountId = await resolveCloudflareAccountId(credential);
+      oauthAccountId = cloudflareAccountId || null;
+      if (cloudflareAccountId && isOpaqueBindingDatabaseId(databaseId)) {
+        const body = await cloudflareJson(
+          `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(cloudflareAccountId)}/d1/database?per_page=100`,
+          credential.token,
+        );
+        const wranglerName = clean(env?.AGENTSAM_D1_DATABASE_NAME || 'inneranimalmedia-business');
+        // UUID from apps/local-studio/backend/wrangler.jsonc d1_databases[DB].
+        const platformUuid = 'cf87b717-d4e2-4cf8-bab0-a81268e32d49';
+        const match = (Array.isArray(body?.result) ? body.result : []).find((row) => {
+          const name = clean(row?.name);
+          const uuid = clean(row?.uuid || row?.id);
+          return uuid === platformUuid
+            || name === wranglerName
+            || name === 'inneranimalmedia-business'
+            || name === 'DB';
+        });
+        const uuid = clean(match?.uuid || match?.id);
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+          databaseId = uuid;
+          metricsReady = true;
+          if (match?.file_size != null && Number(match.file_size) > 0) {
+            fileSize = Number(match.file_size);
+          }
+        }
+      }
+    }
+  } catch {
+    /* OAuth reconciliation is best-effort; binding CRUD still works. */
   }
 
   // Deployment-owned Worker binding — only for explicitly authorized deployment owner.
   // Never treat env.DB as a generic user's Cloudflare catalog entry.
+  // Never use CLOUDFLARE_ACCOUNT_ID as a silent user-ops substitute.
   return withSourceProvenance({
     id: 'binding-d1:primary',
     provider: 'cloudflare-d1',
     engine: 'sqlite',
     label: 'AgentSam platform D1 (env.DB)',
     database_name: 'DB',
-    // Opaque binding ref — real UUID lives only in wrangler d1_databases binding.
-    database_id: 'binding:DB',
-    account_id: clean(env.CLOUDFLARE_ACCOUNT_ID) || null,
+    database_id: databaseId,
+    account_id: oauthAccountId || null,
     file_size: fileSize,
     num_tables: tableCount,
     writable: true,
-    metrics: false,
+    metrics: metricsReady,
     connection: 'worker_binding',
+    binding_ref: 'binding:DB',
   }, {
     source_kind: 'deployment_binding',
     owner_scope: 'deployment',
-    capabilities: DEPLOYMENT_D1_CAPABILITIES,
+    capabilities: metricsReady
+      ? [...DEPLOYMENT_D1_CAPABILITIES, 'metrics']
+      : DEPLOYMENT_D1_CAPABILITIES,
   });
 }
 
@@ -637,9 +685,7 @@ async function readMetrics(env, accountId, sourceId, range) {
       const metricsAccountId =
         source.account_id ||
         (cfCredential ? await resolveCloudflareAccountId(cfCredential) : null);
-      const opaqueBinding = isOpaqueBindingDatabaseId(source.database_id)
-        || source.source_kind === 'deployment_binding'
-        || source.connection === 'worker_binding';
+      const opaqueBinding = isOpaqueBindingDatabaseId(source.database_id);
       if (!cfCredential?.token || !metricsAccountId || opaqueBinding) {
         return {
           ok: true,
@@ -665,8 +711,8 @@ async function readMetrics(env, accountId, sourceId, range) {
           health: await adapter.health(),
           wired: false,
           warning: opaqueBinding
-            ? 'Provider analytics unavailable for deployment-bound D1 (opaque binding:DB). Schema/rows still work via the Worker binding.'
-            : 'Connect Cloudflare OAuth with the data pack for D1 GraphQL metrics.',
+            ? 'Analytics are not reported for this deployment database yet. Browse tables and run SQL as usual.'
+            : 'Connect Cloudflare OAuth (data pack) to load analytics for this database.',
         };
       }
       const metrics = await readD1Metrics({
@@ -693,7 +739,7 @@ async function readMetrics(env, accountId, sourceId, range) {
           rowsRead: metrics.totals.rowsRead,
           rowsWritten: metrics.totals.rowsWritten,
           tables: Number(source.num_tables || 0),
-          storage: Number(source.file_size || 0),
+          storage: source.file_size > 0 ? Number(source.file_size) : null,
         },
         series: metrics.series,
         health: await adapter.health(),

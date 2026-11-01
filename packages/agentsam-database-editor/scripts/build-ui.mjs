@@ -20,6 +20,16 @@ await build({
   jsx: 'automatic',
   loader: { '.css': 'copy' },
   assetNames: '[dir]/[name]',
-  external: ['react', 'react/*', 'react-dom', 'react-dom/*', 'lucide-react', 'recharts'],
+  external: [
+    'react',
+    'react/*',
+    'react-dom',
+    'react-dom/*',
+    'lucide-react',
+    'recharts',
+    '@monaco-editor/react',
+    'monaco-editor',
+    'monaco-editor/*',
+  ],
 });
 execFileSync('tsc', ['-p', 'tsconfig.build.json'], { cwd, stdio: 'inherit' });

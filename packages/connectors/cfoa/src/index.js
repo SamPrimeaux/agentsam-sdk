@@ -52,6 +52,8 @@ export {
   loadCloudflareFromUserOauthTokens,
   loadCloudflareFromLegacyConnections,
   loadCloudflareConnectionRecord,
+  listCloudflareConnectionRecords,
+  refreshCloudflareUserOauthToken,
   mapCloudflareOauthRowToConnection,
 } from './credential.js';
 
@@ -138,22 +140,31 @@ export function resolveCloudflareOAuthClient(env = {}) {
 
 export function cloudflareConnectionSafeStatus(env = {}, connection = null, ownerId = '') {
   const client = resolveCloudflareOAuthClient(env);
-  const record = connection && connection.ownerId === ownerId && connection.status === 'connected' ? connection : null;
+  const oauthValid = Boolean(
+    connection &&
+      connection.ownerId === ownerId &&
+      (connection.status === 'connected' || connection.status === 'account_selection_required'),
+  );
+  const record = oauthValid ? connection : null;
   return {
     provider: 'cloudflare',
+    // Valid user_oauth_tokens row ⇒ connected for Settings/MCP — never "Need connection".
     status: record ? 'connected' : client.status === 'ready' ? 'ready' : client.status,
     configured: client.configured && client.productionReady,
     fixture: client.fixture,
     clientId: client.clientIdConfigured ? 'configured' : 'missing',
     token_auth_method: client.tokenAuthMethod,
     callbackPath: CLOUDFLARE_CALLBACK_PATH,
+    account_selection_required: Boolean(record?.account_selection_required),
+    accounts: Array.isArray(record?.accounts) ? record.accounts : undefined,
     connection: record
       ? {
           connection_id: record.connectionId,
           owner: record.ownerId,
           cloudflare_account_id: record.cloudflareAccountId || null,
+          account_label: record.accountLabel || null,
           scopes: record.scopes || [],
-          status: record.status,
+          status: 'connected',
           created_at: record.createdAt,
           updated_at: record.updatedAt,
           expires_at: record.expiresAt || null,

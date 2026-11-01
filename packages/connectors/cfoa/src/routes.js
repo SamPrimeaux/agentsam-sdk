@@ -523,7 +523,7 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       ? requestedCapabilities.slice()
       : hostDefaultCapabilities.slice();
 
-    // SSOT: user_oauth_tokens only (scope union + client_id provenance + vault seal).
+    // SSOT: user_oauth_tokens only (granted scopes from this token + client_id provenance + vault seal).
     let spine = null;
     try {
       spine = await upsertCloudflareUserOauthToken(env, {

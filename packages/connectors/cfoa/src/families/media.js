@@ -53,7 +53,12 @@ export async function listCloudflareR2Buckets(client, opts = {}) {
       storage_class: row.storage_class || null,
     })).filter((b) => b.name),
     cursor: info.cursor || info.cursors?.after || null,
-    truncated: Boolean(info.truncated || info.cursors?.after),
+    truncated: Boolean(
+      info.truncated
+      ?? info.is_truncated
+      ?? info.cursors?.after
+      ?? false,
+    ),
     count: Number(info.count ?? buckets.length) || buckets.length,
   };
 }
@@ -94,8 +99,14 @@ export async function listCloudflareR2Objects(client, bucketName, opts = {}) {
       uploaded: row.uploaded || row.last_modified || null,
       storage_class: row.storage_class || null,
     })).filter((o) => o.key),
-    cursor: info.cursor || null,
-    truncated: Boolean(info.truncated || info.cursor),
+    cursor: info.cursor || info.cursors?.after || null,
+    truncated: Boolean(
+      info.truncated
+      ?? info.is_truncated
+      ?? info.cursor
+      ?? info.cursors?.after
+      ?? false,
+    ),
   };
 }
 

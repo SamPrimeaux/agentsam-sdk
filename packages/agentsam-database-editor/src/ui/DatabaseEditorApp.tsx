@@ -1,10 +1,12 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   ChevronLeft,
   ChevronRight,
   Cloud,
   Code2,
+  Copy,
+  Filter,
   Play,
   Database,
   Loader2,
@@ -16,6 +18,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { SqlMonacoEditor, formatSqlFallback } from "./SqlMonacoEditor";
 import {
   Bar,
   BarChart,
@@ -86,13 +89,27 @@ function formatCompact(value?: number | null) {
   return String(Math.round(n));
 }
 
-function formatBytes(value?: number | null) {
-  if (value == null || Number.isNaN(Number(value))) return "—";
+function formatBytes(value?: number | null, opts?: { unknownLabel?: string }) {
+  if (value == null || Number.isNaN(Number(value))) return opts?.unknownLabel || "Not reported";
   const bytes = Number(value);
+  if (bytes < 0) return opts?.unknownLabel || "Not reported";
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
   if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
   if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${Math.round(bytes)} B`;
+}
+
+function storageDisplay(metrics: DatabaseMetricsResponse | null, source: DatabaseSource | null) {
+  const fromMetrics = metrics?.kpis?.storage;
+  if (fromMetrics != null && Number(fromMetrics) > 0) return formatBytes(fromMetrics);
+  // Never treat unknown / failed size probes as 0 B.
+  if (metrics?.wired === false || fromMetrics == null) {
+    const file = source?.file_size;
+    if (file != null && Number(file) > 0) return formatBytes(file);
+    return "Not reported";
+  }
+  if (Number(fromMetrics) === 0) return "Not reported";
+  return formatBytes(fromMetrics);
 }
 
 function tableKey(table: DatabaseTableInfo) {
@@ -191,11 +208,17 @@ function MetricChart({
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="db-chart-empty">Waiting for provider metrics.</div>
+          <div className="db-chart-empty">No series for this range.</div>
         )}
       </div>
     </section>
   );
+}
+
+type QueryTab = { id: string; title: string; sql: string };
+
+function newQueryTab(index: number, sql = "SELECT 1 AS ok;"): QueryTab {
+  return { id: `q-${Date.now()}-${index}`, title: `Query ${index}`, sql };
 }
 
 function EditorModal({
@@ -308,7 +331,23 @@ export function DatabaseEditorApp({
   const [rows, setRows] = useState<DatabaseRowsResponse | null>(null);
   const [page, setPage] = useState(1);
   const [selectedRow, setSelectedRow] = useState<Record<string, unknown> | null>(null);
-  const [sql, setSql] = useState("SELECT 1 AS ok;");
+  const [queryTabs, setQueryTabs] = useState<QueryTab[]>(() => {
+    const first = newQueryTab(1);
+    return [first];
+  });
+  const [activeQueryTabId, setActiveQueryTabId] = useState(() => queryTabs[0]?.id || "");
+  const activeQueryTab = queryTabs.find((tab) => tab.id === activeQueryTabId) || queryTabs[0] || null;
+  const sql = activeQueryTab?.sql ?? "SELECT 1 AS ok;";
+  const setSql = useCallback((next: string | ((prev: string) => string)) => {
+    setQueryTabs((tabs) => {
+      const targetId = activeQueryTabId || tabs[0]?.id;
+      return tabs.map((tab) => {
+        if (tab.id !== targetId) return tab;
+        const value = typeof next === "function" ? next(tab.sql) : next;
+        return { ...tab, sql: value };
+      });
+    });
+  }, [activeQueryTabId]);
   const [queryResult, setQueryResult] = useState<DatabaseQueryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMain, setLoadingMain] = useState(false);
@@ -319,6 +358,14 @@ export function DatabaseEditorApp({
   const [localCapability, setLocalCapability] = useState<ProviderCapability>("attachable");
   const [attachOpen, setAttachOpen] = useState(false);
   const [lastSourceByFamily, setLastSourceByFamily] = useState<Record<string, string>>({});
+  const [railWidth, setRailWidth] = useState(compact ? 200 : 250);
+  const [sqlSplitPct, setSqlSplitPct] = useState(48);
+  const [paneCompact, setPaneCompact] = useState(Boolean(compact));
+  const [tableFilterKind, setTableFilterKind] = useState<"all" | "table" | "view">("all");
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; table: DatabaseTableInfo } | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const resizingRail = useRef(false);
+  const resizingSql = useRef(false);
 
   const source = useMemo(
     () => catalog?.sources.find((item) => item.id === sourceId) || null,
@@ -372,6 +419,63 @@ export function DatabaseEditorApp({
   useEffect(() => {
     void loadSources();
   }, [loadSources]);
+
+  useEffect(() => {
+    if (!activeQueryTabId && queryTabs[0]?.id) setActiveQueryTabId(queryTabs[0].id);
+  }, [activeQueryTabId, queryTabs]);
+
+  useEffect(() => {
+    const node = rootRef.current;
+    if (!node || typeof ResizeObserver === "undefined") {
+      setPaneCompact(Boolean(compact));
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect?.width || 0;
+      setPaneCompact(Boolean(compact) || width > 0 && width < 760);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [compact]);
+
+  useEffect(() => {
+    const onMove = (event: MouseEvent) => {
+      if (resizingRail.current && rootRef.current) {
+        const rect = rootRef.current.getBoundingClientRect();
+        const next = Math.min(420, Math.max(160, event.clientX - rect.left));
+        setRailWidth(next);
+      }
+      if (resizingSql.current && rootRef.current) {
+        const sqlView = rootRef.current.querySelector(".db-sql-split") as HTMLElement | null;
+        if (sqlView) {
+          const rect = sqlView.getBoundingClientRect();
+          const pct = ((event.clientY - rect.top) / Math.max(rect.height, 1)) * 100;
+          setSqlSplitPct(Math.min(75, Math.max(25, pct)));
+        }
+      }
+    };
+    const onUp = () => {
+      resizingRail.current = false;
+      resizingSql.current = false;
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    window.addEventListener("click", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [ctxMenu]);
 
   useEffect(() => {
     if (source) {
@@ -534,9 +638,16 @@ export function DatabaseEditorApp({
 
   const filteredTables = useMemo(() => {
     const needle = tableSearch.trim().toLowerCase();
-    if (!needle) return tables;
-    return tables.filter((table) => tableKey(table).toLowerCase().includes(needle));
-  }, [tableSearch, tables]);
+    return tables.filter((table) => {
+      if (tableFilterKind !== "all") {
+        const kind = String(table.kind || "table").toLowerCase();
+        if (tableFilterKind === "view" && !kind.includes("view")) return false;
+        if (tableFilterKind === "table" && kind.includes("view")) return false;
+      }
+      if (!needle) return true;
+      return tableKey(table).toLowerCase().includes(needle);
+    });
+  }, [tableFilterKind, tableSearch, tables]);
 
   const chartData = useMemo(
     () =>
@@ -556,6 +667,44 @@ export function DatabaseEditorApp({
       }),
     [metrics],
   );
+
+  const hasMetricSeries = useMemo(
+    () =>
+      chartData.some(
+        (point) =>
+          point.queries != null ||
+          point.readQueries != null ||
+          point.writeQueries != null ||
+          point.rowsRead != null ||
+          point.rowsWritten != null,
+      ),
+    [chartData],
+  );
+
+  const metricsUnavailable =
+    Boolean(metrics && metrics.wired === false) || (!hasMetricSeries && Boolean(metrics));
+
+  const addQueryTab = useCallback(() => {
+    setQueryTabs((tabs) => {
+      const next = newQueryTab(tabs.length + 1);
+      setActiveQueryTabId(next.id);
+      return [...tabs, next];
+    });
+    setView("sql");
+    setQueryResult(null);
+  }, []);
+
+  const formatActiveSql = useCallback(() => {
+    setSql((prev) => formatSqlFallback(prev));
+  }, [setSql]);
+
+  const copyText = useCallback(async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      setError("Clipboard unavailable in this context.");
+    }
+  }, []);
 
   const pkColumns = schema?.columns.filter((column) => column.primaryKey) || [];
   const hasRowIdentity = Boolean(selectedRow && pkColumns.length && pkColumns.every((column) => selectedRow[column.name] !== undefined));
@@ -762,10 +911,15 @@ export function DatabaseEditorApp({
 
   return (
     <div
+      ref={rootRef}
       className="db-editor"
       data-provider={providerFamily(source)}
-      data-compact={compact || undefined}
-      style={themeVars as React.CSSProperties}
+      data-compact={paneCompact || undefined}
+      style={{
+        ...(themeVars as React.CSSProperties),
+        ["--db-rail-width" as string]: `${railWidth}px`,
+        ["--db-sql-editor-frac" as string]: `minmax(160px, ${sqlSplitPct}%)`,
+      }}
     >
       <header className="db-toolbar">
         <div className="db-provider-tabs" aria-label="Database providers">
@@ -807,7 +961,7 @@ export function DatabaseEditorApp({
           </button>
         </div>
 
-        {!compact ? (
+        {!paneCompact ? (
           <div className="db-range-tabs">
             {(["1h", "24h", "7d", "30d"] as const).map((item) => (
               <button
@@ -883,13 +1037,21 @@ export function DatabaseEditorApp({
       </header>
 
       {source ? (
-        <div className="db-source-meta">
+        <div className="db-source-meta" data-quiet="true">
           <span>{source.label}</span>
-          {source.path_hint ? <code className="db-source-path" title={source.path_hint}>{source.path_hint}</code> : null}
-          <span className="db-chip">{source.database_id ? `${source.database_id.slice(0, 8)}…` : source.engine}</span>
           <span>· {providerLabel(source)}</span>
           {metrics?.health?.latencyMs != null ? <span>· {metrics.health.latencyMs}ms</span> : null}
           <span className={source.writable ? "db-write-status write" : "db-write-status"}>{source.writable ? "CRUD" : "read only"}</span>
+          {source.source_kind === "deployment_binding" || source.database_id?.startsWith("binding:") ? (
+            <details style={{ marginLeft: 8 }}>
+              <summary style={{ cursor: "pointer" }}>Binding details</summary>
+              <code className="db-source-path" title={source.database_id || ""}>
+                {source.database_id || source.path_hint || "deployment binding"}
+              </code>
+            </details>
+          ) : source.database_id ? (
+            <span className="db-chip">{`${source.database_id.slice(0, 8)}…`}</span>
+          ) : null}
         </div>
       ) : null}
 
@@ -905,7 +1067,7 @@ export function DatabaseEditorApp({
           <div className="db-kpis">
             <KpiCard
               label="Storage"
-              value={formatBytes(metrics?.kpis?.storage ?? source?.file_size)}
+              value={storageDisplay(metrics, source)}
               sub={source?.engine || ""}
             />
             <KpiCard label="Total queries" value={formatCompact(metrics?.kpis?.queries)} sub={range} />
@@ -929,33 +1091,25 @@ export function DatabaseEditorApp({
             ) : null}
           </div>
 
-          {metrics && metrics.wired === false ? (
-            <div className="db-alert" role="status" data-metrics-wired="false">
+          {metricsUnavailable ? (
+            <div className="db-metrics-empty" role="status" data-metrics-wired="false">
               <span>
-                {metrics.warning ||
-                  "Provider metrics are unavailable for this source. Null KPIs are not zeros."}
+                {metrics?.warning ||
+                  "Analytics are not reported for this database yet. Table browsing and SQL still work."}
               </span>
+              <button type="button" className="db-button primary" onClick={() => void exploreData()}>
+                <Table2 size={14} /> Browse Tables
+              </button>
             </div>
-          ) : null}
-          {metrics?.warning && metrics.wired !== false ? (
-            <div className="db-alert" role="status" data-metrics-warning="true">
-              <span>{metrics.warning}</span>
-            </div>
-          ) : null}
-          {source?.source_kind === "deployment_binding" ? (
-            <div className="db-alert" role="note" data-source-kind="deployment_binding">
-              <span>
-                Deployment binding ({source.owner_scope || "deployment"}) — not from your Cloudflare
-                OAuth catalog. Platform resources stay owner-gated.
-              </span>
-            </div>
-          ) : null}
-
-          <MetricChart title="Total queries" data={chartData} first="queries" />
-          <div className="db-chart-grid">
-            <MetricChart title="Read / write queries" data={chartData} first="readQueries" second="writeQueries" />
-            <MetricChart title="Rows read / written" data={chartData} first="rowsRead" second="rowsWritten" />
-          </div>
+          ) : (
+            <>
+              <MetricChart title="Total queries" data={chartData} first="queries" />
+              <div className="db-chart-grid">
+                <MetricChart title="Read / write queries" data={chartData} first="readQueries" second="writeQueries" />
+                <MetricChart title="Rows read / written" data={chartData} first="rowsRead" second="rowsWritten" />
+              </div>
+            </>
+          )}
 
           <section className="db-provider-health">
             <div>
@@ -985,12 +1139,47 @@ export function DatabaseEditorApp({
       ) : (
         <main className="db-workspace">
           <aside className="db-table-rail">
-            <div className="db-table-search">
-              <input
-                value={tableSearch}
-                onChange={(event) => setTableSearch(event.target.value)}
-                placeholder="Search tables"
-              />
+            <div className="db-rail-toolbar">
+              <div className="db-table-search">
+                <input
+                  value={tableSearch}
+                  onChange={(event) => setTableSearch(event.target.value)}
+                  placeholder="Search…"
+                  aria-label="Search tables"
+                />
+              </div>
+              <button
+                type="button"
+                className="db-icon-button"
+                title={tableFilterKind === "all" ? "Filter tables" : `Filter: ${tableFilterKind}`}
+                aria-label="Filter tables"
+                onClick={() =>
+                  setTableFilterKind((current) =>
+                    current === "all" ? "table" : current === "table" ? "view" : "all",
+                  )
+                }
+              >
+                <Filter size={14} />
+                {tableFilterKind !== "all" ? <span style={{ fontSize: 10 }}>{tableFilterKind === "table" ? "1" : "2"}</span> : null}
+              </button>
+              <button
+                type="button"
+                className="db-icon-button"
+                title="Refresh tables"
+                aria-label="Refresh tables"
+                onClick={() => void loadTables()}
+              >
+                <RefreshCw className={loadingMain ? "spin" : ""} size={14} />
+              </button>
+              <button
+                type="button"
+                className="db-button secondary"
+                title="Create table requires an authorized DDL migration flow"
+                disabled
+                onClick={() => setError("Create table is unavailable until an authorized DDL flow is wired for this source.")}
+              >
+                <Plus size={13} /> New
+              </button>
             </div>
             <div className="db-table-list">
               {filteredTables.map((table) => (
@@ -1003,14 +1192,28 @@ export function DatabaseEditorApp({
                     setPage(1);
                     setView("data");
                   }}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    setCtxMenu({ x: event.clientX, y: event.clientY, table });
+                  }}
                 >
                   <Rows3 size={13} />
-                  <span>{tableKey(table)}</span>
+                  <span title={tableKey(table)}>{tableKey(table)}</span>
                   <small>{table.kind || ""}</small>
                 </button>
               ))}
             </div>
           </aside>
+          <div
+            className="db-resize-handle"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize table explorer"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              resizingRail.current = true;
+            }}
+          />
 
           <section className="db-editor-main">
             <nav className="db-editor-tabs">
@@ -1052,74 +1255,120 @@ export function DatabaseEditorApp({
 
             {view === "sql" ? (
               <div className="db-sql-view" data-sql-workspace="true">
-                <div className="db-sql-header">
-                  <div><strong>SQL Workspace</strong><span>Source: {source?.label || "Choose database"}</span></div>
-                  <button type="button" className="db-button secondary"
+                <nav className="db-query-tabs" aria-label="Query tabs">
+                  {queryTabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      data-active={tab.id === activeQueryTabId || undefined}
+                      onClick={() => {
+                        setActiveQueryTabId(tab.id);
+                        setQueryResult(null);
+                      }}
+                    >
+                      <Database size={12} /> {tab.title}
+                    </button>
+                  ))}
+                  <button type="button" onClick={addQueryTab} title="New query tab">
+                    <Plus size={13} /> New
+                  </button>
+                  <span className="db-tab-spacer" />
+                  <button
+                    type="button"
                     disabled={!selectedTable}
                     onClick={() => {
                       if (!selectedTable) return;
-                      setSql("SELECT * FROM " + (selectedTable.schema ? '"' + selectedTable.schema.replace(/"/g, '""') + '".' : "") + '"' + selectedTable.name.replace(/"/g, '""') + '" LIMIT 100;');
+                      setSql(
+                        "SELECT * FROM " +
+                          (selectedTable.schema ? '"' + selectedTable.schema.replace(/"/g, '""') + '".' : "") +
+                          '"' +
+                          selectedTable.name.replace(/"/g, '""') +
+                          '" LIMIT 100;',
+                      );
                       setQueryResult(null);
-                    }}>Query selected table</button>
-                </div>
-                <textarea
-                  value={sql}
-                  onChange={(event) => setSql(event.target.value)}
-                  spellCheck={false}
-                  aria-label="SQL query"
-                  aria-describedby="db-sql-help"
-                  placeholder="SELECT * FROM your_table LIMIT 100;"
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                      event.preventDefault();
-                      if (sql.trim() && !loadingMain) void runSql();
-                    }
-                  }}
-                />
-                <div className="db-sql-actions">
-                  <span id="db-sql-help">
-                    {source?.writable
-                      ? "Writes require confirmation. Destructive schema changes require a second confirmation."
-                      : "Read-only source."}
-                  </span>
-                  <button
-                    type="button"
-                    className="db-button primary"
-                    disabled={!sql.trim() || loadingMain}
-                    onClick={() => void runSql()}
+                    }}
                   >
-                    {loadingMain ? <Loader2 className="spin" size={14} /> : <Play size={13} />}
-                    Run SQL · ⌘ Enter
+                    Query selected table
                   </button>
-                </div>
-                {queryResult ? (
-                  <div className="db-query-result">
-                    <div className="db-result-meta">
-                      {queryResult.rowCount ?? queryResult.objects?.length ?? 0} rows
-                      {queryResult.durationMs != null ? ` · ${queryResult.durationMs}ms` : ""}
-                      {queryResult.rowsRead != null ? ` · ${queryResult.rowsRead} read` : ""}
-                      {queryResult.rowsWritten != null ? ` · ${queryResult.rowsWritten} written` : ""}
+                </nav>
+                <div className="db-sql-split">
+                  <div className="db-sql-editor-pane">
+                    <div className="db-sql-monaco">
+                      <SqlMonacoEditor
+                        value={sql}
+                        onChange={setSql}
+                        onRun={() => {
+                          if (sql.trim() && !loadingMain) void runSql();
+                        }}
+                        theme={providerFamily(source) === "cloudflare" ? "light" : "vs-dark"}
+                        height="100%"
+                      />
                     </div>
-                    <div className="db-grid-scroll">
-                      <table className="db-data-grid">
-                        <thead>
-                          <tr>{(queryResult.columns || []).map((column) => <th key={column}>{column}</th>)}</tr>
-                        </thead>
-                        <tbody>
-                          {(queryResult.objects || []).map((row, rowIndex) => (
-                            <tr key={rowIndex}>
-                              {(queryResult.columns || []).map((column) => (
-                                <td key={column}>
-                                  {row[column] == null ? <em>NULL</em> : typeof row[column] === "object" ? JSON.stringify(row[column]) : String(row[column])}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="db-sql-actions">
+                      <span id="db-sql-help">
+                        {source?.writable
+                          ? "Writes require confirmation. Destructive schema changes require a second confirmation."
+                          : "Read-only source."}
+                      </span>
+                      <button type="button" className="db-button secondary" onClick={formatActiveSql}>
+                        Format ⌥F
+                      </button>
+                      <button
+                        type="button"
+                        className="db-button primary"
+                        disabled={!sql.trim() || loadingMain}
+                        onClick={() => void runSql()}
+                      >
+                        {loadingMain ? <Loader2 className="spin" size={14} /> : <Play size={13} />}
+                        Run · ⌘ Enter
+                      </button>
                     </div>
                   </div>
-                ) : null}
+                  <div
+                    className="db-sql-resize"
+                    role="separator"
+                    aria-orientation="horizontal"
+                    aria-label="Resize SQL results"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      resizingSql.current = true;
+                    }}
+                  />
+                  <div className="db-query-result">
+                    {queryResult ? (
+                      <>
+                        <div className="db-result-meta">
+                          <span>
+                            {queryResult.rowCount ?? queryResult.objects?.length ?? 0} rows
+                            {queryResult.durationMs != null ? ` · ${queryResult.durationMs}ms` : ""}
+                            {queryResult.rowsRead != null ? ` · ${queryResult.rowsRead} read` : ""}
+                            {queryResult.rowsWritten != null ? ` · ${queryResult.rowsWritten} written` : ""}
+                          </span>
+                        </div>
+                        <div className="db-grid-scroll">
+                          <table className="db-data-grid">
+                            <thead>
+                              <tr>{(queryResult.columns || []).map((column) => <th key={column}>{column}</th>)}</tr>
+                            </thead>
+                            <tbody>
+                              {(queryResult.objects || []).map((row, rowIndex) => (
+                                <tr key={rowIndex}>
+                                  {(queryResult.columns || []).map((column) => (
+                                    <td key={column}>
+                                      {row[column] == null ? <em>NULL</em> : typeof row[column] === "object" ? JSON.stringify(row[column]) : String(row[column])}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="db-editor-empty">Run a query to see results</div>
+                    )}
+                  </div>
+                </div>
               </div>
             ) : null}
 
@@ -1279,6 +1528,57 @@ export function DatabaseEditorApp({
               </button>
             </footer>
           </div>
+        </div>
+      ) : null}
+
+      {ctxMenu ? (
+        <div
+          className="db-ctx-menu"
+          style={{ left: ctxMenu.x, top: ctxMenu.y }}
+          role="menu"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setSelectedTable(ctxMenu.table);
+              setPage(1);
+              setView("data");
+              setCtxMenu(null);
+            }}
+          >
+            <Table2 size={13} /> Explore Data
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              void copyText(tableKey(ctxMenu.table));
+              setCtxMenu(null);
+            }}
+          >
+            <Copy size={13} /> Copy table name
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              void (async () => {
+                try {
+                  const payload = await client.schema(sourceId, ctxMenu.table);
+                  const createSql = payload.schema?.createSql || JSON.stringify(payload.schema?.columns || [], null, 2);
+                  await copyText(createSql);
+                } catch (caught) {
+                  setError(errorText(caught));
+                } finally {
+                  setCtxMenu(null);
+                }
+              })();
+            }}
+          >
+            <Copy size={13} /> Copy table schema
+          </button>
         </div>
       ) : null}
     </div>

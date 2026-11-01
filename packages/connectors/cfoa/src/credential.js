@@ -62,6 +62,7 @@ export function mapCloudflareOauthRowToConnection(row, ownerId) {
     connectionId: accountKey,
     ownerId,
     cloudflareAccountId: accountIdFromRow(row),
+    accountLabel: row.account_display || row.account_email || accountIdFromRow(row) || accountKey,
     scopes: scopesFromRow(row),
     status: active ? 'connected' : (metaStatus === 'superseded' ? 'superseded' : 'revoked'),
     createdAt: row.created_at,
@@ -71,13 +72,13 @@ export function mapCloudflareOauthRowToConnection(row, ownerId) {
 }
 
 /**
- * Load active Cloudflare connection metadata from user_oauth_tokens (no token decrypt).
+ * List active Cloudflare OAuth connections for an owner (no token decrypt).
+ * Multi-account: caller must pick explicitly — never silently substitute env account id.
  */
-export async function loadCloudflareConnectionRecord(env, ownerId) {
-  if (!env?.DB || !ownerId) return null;
-  let row;
+export async function listCloudflareConnectionRecords(env, ownerId) {
+  if (!env?.DB || !ownerId) return [];
   try {
-    row = await env.DB.prepare(`
+    const out = await env.DB.prepare(`
       SELECT user_id, provider, account_identifier, account_display, account_email,
              scope, scopes, expires_at, metadata_json, is_active, revoked_at,
              created_at, updated_at
@@ -86,8 +87,52 @@ export async function loadCloudflareConnectionRecord(env, ownerId) {
         AND COALESCE(is_active, 1) = 1
         AND (revoked_at IS NULL OR revoked_at = 0)
       ORDER BY updated_at DESC
-      LIMIT 1
-    `).bind(ownerId).first();
+    `).bind(ownerId).all();
+    return (out?.results || [])
+      .map((row) => mapCloudflareOauthRowToConnection(row, ownerId))
+      .filter(Boolean);
+  } catch (err) {
+    console.error('listCloudflareConnectionRecords_failed', String(err?.message || err));
+    return [];
+  }
+}
+
+/**
+ * Load active Cloudflare connection metadata from user_oauth_tokens (no token decrypt).
+ * Pass connectionId / accountId to select explicitly when multiple accounts exist.
+ */
+export async function loadCloudflareConnectionRecord(env, ownerId, options = {}) {
+  if (!env?.DB || !ownerId) return null;
+  const preferred = clean(options.connectionId || options.accountId || options.cloudflareAccountId);
+  let row;
+  try {
+    if (preferred) {
+      row = await env.DB.prepare(`
+        SELECT user_id, provider, account_identifier, account_display, account_email,
+               scope, scopes, expires_at, metadata_json, is_active, revoked_at,
+               created_at, updated_at
+        FROM user_oauth_tokens
+        WHERE user_id = ? AND LOWER(provider) = 'cloudflare'
+          AND account_identifier = ?
+          AND COALESCE(is_active, 1) = 1
+          AND (revoked_at IS NULL OR revoked_at = 0)
+        LIMIT 1
+      `).bind(ownerId, preferred).first();
+    } else {
+      // Status SSOT: any valid OAuth row means connected (MCP/Settings must not
+      // show "Need connection"). Multi-account pickers use listCloudflareConnectionRecords.
+      const connections = await listCloudflareConnectionRecords(env, ownerId);
+      const selected = connections[0] || null;
+      if (selected && connections.length > 1) {
+        selected.accounts = connections.map((c) => ({
+          connectionId: c.connectionId,
+          cloudflareAccountId: c.cloudflareAccountId,
+          accountLabel: c.accountLabel || c.cloudflareAccountId,
+        }));
+        selected.account_selection_required = true;
+      }
+      return selected;
+    }
   } catch (err) {
     console.error('loadCloudflareConnectionRecord_failed', String(err?.message || err));
     return null;
@@ -95,26 +140,184 @@ export async function loadCloudflareConnectionRecord(env, ownerId) {
   return mapCloudflareOauthRowToConnection(row, ownerId);
 }
 
+const TOKEN_URL = 'https://dash.cloudflare.com/oauth2/token';
+const REFRESH_SKEW_SECONDS = 120;
+
+async function decryptRefreshToken(env, row, ownerId, accountId, options = {}) {
+  let refreshToken = clean(row.refresh_token);
+  const material = oauthVaultMaterial(env);
+  if (!refreshToken && row.refresh_token_encrypted && material && accountId) {
+    try {
+      refreshToken = clean(await unsealOauthToken(
+        material,
+        row.refresh_token_encrypted,
+        oauthAad('cloudflare', ownerId, accountId),
+      ));
+    } catch {
+      /* fall through */
+    }
+  }
+  if (!refreshToken && row.refresh_token_encrypted && options.decryptUserOauthToken) {
+    try {
+      refreshToken = clean(await options.decryptUserOauthToken(env, row.refresh_token_encrypted));
+    } catch {
+      /* ignore */
+    }
+  }
+  if (!refreshToken && row.refresh_token_encrypted && vaultConfigured(env) && material) {
+    try {
+      refreshToken = clean(await decryptSecret(env, row.refresh_token_encrypted, `cloudflare-connection:${ownerId}`));
+    } catch {
+      /* ignore */
+    }
+  }
+  return refreshToken || null;
+}
+
+/**
+ * Refresh Cloudflare OAuth access token (public PKCE client — no client_secret).
+ * Persists rotated tokens back to user_oauth_tokens; never returns refresh token.
+ */
+export async function refreshCloudflareUserOauthToken(env, ownerId, row, options = {}) {
+  const accountId = accountIdFromRow(row);
+  if (!accountId) return { ok: false, error: 'cloudflare_account_identifier_required' };
+  const refreshToken = await decryptRefreshToken(env, row, ownerId, accountId, options);
+  if (!refreshToken) return { ok: false, error: 'cloudflare_refresh_token_missing' };
+  const clientId = clean(env?.CLOUDFLARE_OAUTH_CLIENT_ID);
+  if (!clientId) return { ok: false, error: 'cloudflare_oauth_client_missing' };
+
+  const tokenRes = await (options.fetchImpl || fetch)(TOKEN_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: clientId,
+    }),
+  });
+  if (!tokenRes.ok) {
+    const detail = await tokenRes.text().catch(() => '');
+    try {
+      await env.DB.prepare(`
+        UPDATE user_oauth_tokens
+        SET last_refresh_error_code = ?,
+            refresh_failure_count = COALESCE(refresh_failure_count, 0) + 1,
+            updated_at = unixepoch()
+        WHERE user_id = ? AND LOWER(provider) = 'cloudflare' AND account_identifier = ?
+      `).bind(`http_${tokenRes.status}`, ownerId, accountId).run();
+    } catch {
+      /* best effort */
+    }
+    return {
+      ok: false,
+      error: tokenRes.status === 401 || tokenRes.status === 403
+        ? 'cloudflare_reconnect_required'
+        : 'cloudflare_token_refresh_failed',
+      detail: detail.slice(0, 240),
+    };
+  }
+  const tokens = await tokenRes.json().catch(() => null);
+  if (!tokens?.access_token) {
+    return { ok: false, error: 'cloudflare_token_refresh_invalid' };
+  }
+
+  const { upsertCloudflareUserOauthToken } = await import('./oauth-persist.js');
+  const spine = await upsertCloudflareUserOauthToken(env, {
+    userId: ownerId,
+    accessToken: tokens.access_token,
+    refreshToken: tokens.refresh_token || refreshToken,
+    scopes: tokens.scope || row.scopes || row.scope || '',
+    accountId,
+    accountDisplay: row.account_display || null,
+    expiresAt: tokens.expires_in
+      ? Math.floor(Date.now() / 1000) + Number(tokens.expires_in)
+      : null,
+    clientId,
+  });
+  if (!spine?.ok) return { ok: false, error: spine?.error || 'cloudflare_token_persist_failed' };
+
+  try {
+    await env.DB.prepare(`
+      UPDATE user_oauth_tokens
+      SET last_refresh_at = unixepoch(),
+          last_refresh_error_code = NULL,
+          refresh_failure_count = 0,
+          updated_at = unixepoch()
+      WHERE user_id = ? AND LOWER(provider) = 'cloudflare' AND account_identifier = ?
+    `).bind(ownerId, accountId).run();
+  } catch {
+    /* optional columns */
+  }
+
+  return {
+    ok: true,
+    accessToken: tokens.access_token,
+    accountId,
+    expiresAt: spine.expiresAt || (tokens.expires_in
+      ? Math.floor(Date.now() / 1000) + Number(tokens.expires_in)
+      : null),
+    grantedScopes: Array.isArray(spine.scopes) ? spine.scopes : scopesFromRow({ scopes: tokens.scope }),
+  };
+}
+
 /**
  * Load Cloudflare credential from user_oauth_tokens (SSOT).
  * Decrypt order: plaintext → host decryptUserOauthToken → connector vault AAD.
+ * Pass connectionId / accountId for explicit multi-account selection.
  */
 export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = {}) {
   if (!env?.DB || !ownerId) return null;
+  const preferred = clean(options.connectionId || options.accountId || options.cloudflareAccountId);
   let row;
   try {
-    row = await env.DB.prepare(`
-      SELECT user_id, provider, account_identifier, account_display, account_email,
-             access_token, refresh_token, access_token_encrypted, refresh_token_encrypted,
-             scope, scopes, expires_at, metadata_json, is_active
-      FROM user_oauth_tokens
-      WHERE user_id = ? AND LOWER(provider) = 'cloudflare'
-        AND COALESCE(is_active, 1) = 1
-        AND (revoked_at IS NULL OR revoked_at = 0)
-      ORDER BY updated_at DESC
-      LIMIT 1
-    `).bind(ownerId).first();
+    if (preferred) {
+      row = await env.DB.prepare(`
+        SELECT user_id, provider, account_identifier, account_display, account_email,
+               access_token, refresh_token, access_token_encrypted, refresh_token_encrypted,
+               scope, scopes, expires_at, metadata_json, is_active
+        FROM user_oauth_tokens
+        WHERE user_id = ? AND LOWER(provider) = 'cloudflare'
+          AND account_identifier = ?
+          AND COALESCE(is_active, 1) = 1
+          AND (revoked_at IS NULL OR revoked_at = 0)
+        LIMIT 1
+      `).bind(ownerId, preferred).first();
+    } else {
+      const listSql = `
+        SELECT user_id, provider, account_identifier, account_display, account_email,
+               access_token, refresh_token, access_token_encrypted, refresh_token_encrypted,
+               scope, scopes, expires_at, metadata_json, is_active
+        FROM user_oauth_tokens
+        WHERE user_id = ? AND LOWER(provider) = 'cloudflare'
+          AND COALESCE(is_active, 1) = 1
+          AND (revoked_at IS NULL OR revoked_at = 0)
+        ORDER BY updated_at DESC`;
+      let rows = [];
+      try {
+        const listed = await env.DB.prepare(listSql).bind(ownerId).all();
+        rows = listed?.results || [];
+      } catch {
+        rows = [];
+      }
+      // Fixtures / older D1 shims may only implement first().
+      if (!rows.length) {
+        const single = await env.DB.prepare(`${listSql} LIMIT 1`).bind(ownerId).first();
+        if (single) rows = [single];
+      }
+      if (rows.length > 1 && !options.allowLatestFallback) {
+        const err = new Error('cloudflare_account_selection_required');
+        err.code = 'cloudflare_account_selection_required';
+        err.accounts = rows.map((r) => ({
+          connectionId: clean(r.account_identifier),
+          cloudflareAccountId: accountIdFromRow(r),
+          accountLabel: r.account_display || r.account_email || r.account_identifier,
+        }));
+        throw err;
+      }
+      row = rows[0] || null;
+    }
   } catch (err) {
+    if (err?.code === 'cloudflare_account_selection_required') throw err;
     // Table may not exist on SDK-only D1 fixtures
     console.error('loadCloudflareFromUserOauthTokens_failed', String(err?.message || err));
     return null;
@@ -175,13 +378,28 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
 
   if (!accessToken) return null;
 
+  let expiresAt = row.expires_at ? Number(row.expires_at) : null;
+  const now = Math.floor(Date.now() / 1000);
+  if (expiresAt && expiresAt <= now + REFRESH_SKEW_SECONDS) {
+    const refreshed = await refreshCloudflareUserOauthToken(env, ownerId, row, options);
+    if (refreshed?.ok && refreshed.accessToken) {
+      accessToken = refreshed.accessToken;
+      expiresAt = refreshed.expiresAt || expiresAt;
+    } else if (refreshed?.error === 'cloudflare_reconnect_required') {
+      const err = new Error('cloudflare_reconnect_required');
+      err.code = 'cloudflare_reconnect_required';
+      err.detail = refreshed.detail || null;
+      throw err;
+    }
+  }
+
   return {
     bearerToken: accessToken,
     accountId,
     source: 'oauth_connection',
-    connectionId: row.id != null ? String(row.id) : null,
+    connectionId: accountId || (row.id != null ? String(row.id) : null),
     grantedScopes: scopesFromRow(row),
-    expiresAt: row.expires_at ? Number(row.expires_at) : null,
+    expiresAt,
     accountLabel: row.account_display || row.account_email || accountId || null,
     provider: 'cloudflare',
   };
@@ -219,7 +437,11 @@ export async function resolveCloudflareCredential(opts = {}) {
     decryptUserOauthToken = null,
   } = opts;
 
-  const accountFallback = clean(explicitAccountId || env.CLOUDFLARE_ACCOUNT_ID);
+  // User OAuth path: never substitute CLOUDFLARE_ACCOUNT_ID for the selected connection.
+  // Env account id is only for explicit service/token identities (CLI/CI).
+  const explicitAccount = clean(explicitAccountId || opts.connectionId || opts.cloudflareAccountId);
+  const envAccountFallback = authMode === 'oauth' ? '' : clean(env.CLOUDFLARE_ACCOUNT_ID);
+  const accountFallback = clean(explicitAccount || envAccountFallback);
   const cap = capabilityId ? getCloudflareCapability(capabilityId) : null;
 
   const pack = (partial) => ({
@@ -250,13 +472,40 @@ export async function resolveCloudflareCredential(opts = {}) {
 
   // 2. Connected OAuth — user_oauth_tokens only
   if (wantOauth && ownerId) {
-    const canonical = await loadCloudflareFromUserOauthTokens(env, ownerId, { decryptUserOauthToken });
-    if (canonical?.bearerToken) {
-      return pack({
-        ...canonical,
-        accountId: canonical.accountId || accountFallback || null,
-        status: 'ready',
+    try {
+      const canonical = await loadCloudflareFromUserOauthTokens(env, ownerId, {
+        decryptUserOauthToken,
+        connectionId: explicitAccount || undefined,
+        accountId: explicitAccount || undefined,
+        // Product OAuth must pick when multi-account; auto/CLI may use latest once.
+        allowLatestFallback: authMode !== 'oauth',
+        fetchImpl: opts.fetchImpl,
       });
+      if (canonical?.bearerToken) {
+        return pack({
+          ...canonical,
+          // Prefer the OAuth row account — never fill from CLOUDFLARE_ACCOUNT_ID on oauth mode.
+          accountId: canonical.accountId || (authMode === 'oauth' ? null : accountFallback) || null,
+          status: 'ready',
+        });
+      }
+    } catch (err) {
+      if (err?.code === 'cloudflare_account_selection_required') {
+        return pack({
+          source: 'oauth_connection',
+          status: 'configuration_required',
+          error: 'cloudflare_account_selection_required',
+          accounts: err.accounts || [],
+        });
+      }
+      if (err?.code === 'cloudflare_reconnect_required') {
+        return pack({
+          source: 'oauth_connection',
+          status: 'authorization_required',
+          error: 'cloudflare_reconnect_required',
+        });
+      }
+      throw err;
     }
     if (authMode === 'oauth') {
       return pack({
@@ -266,8 +515,8 @@ export async function resolveCloudflareCredential(opts = {}) {
     }
   }
 
-  // 3. Generic API token
-  if (wantToken) {
+  // 3. Generic API token — CLI/CI / explicit service identity only (not user CF ops).
+  if (wantToken && authMode !== 'oauth') {
     const apiToken = clean(env.CLOUDFLARE_API_TOKEN);
     if (apiToken) {
       return pack({
@@ -279,8 +528,8 @@ export async function resolveCloudflareCredential(opts = {}) {
     }
   }
 
-  // 4. Capability-specific Images token ONLY for Images family
-  if (wantToken && capabilityId === 'cloudflare.images') {
+  // 4. Capability-specific Images token ONLY for Images family (service identity)
+  if (wantToken && authMode !== 'oauth' && capabilityId === 'cloudflare.images') {
     const imagesToken = clean(env.CLOUDFLARE_IMAGES_API_TOKEN || env.CLOUDFLARE_IMAGES_TOKEN);
     if (imagesToken) {
       return pack({

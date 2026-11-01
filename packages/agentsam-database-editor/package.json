@@ -36,10 +36,16 @@
     "./dist/src/ui/database-editor.css"
   ],
   "peerDependencies": {
+    "@monaco-editor/react": ">=4.6.0",
     "lucide-react": ">=0.400.0",
+    "monaco-editor": ">=0.50.0",
     "react": ">=18",
     "react-dom": ">=18",
     "recharts": ">=3.0.0 <4"
+  },
+  "peerDependenciesMeta": {
+    "@monaco-editor/react": { "optional": true },
+    "monaco-editor": { "optional": true }
   },
   "publishConfig": {
     "access": "public"
@@ -66,10 +72,12 @@
     "prepack": "npm run build"
   },
   "devDependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "esbuild": "^0.28.1",
     "lucide-react": "^0.510.0",
+    "monaco-editor": "^0.52.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.10.1",

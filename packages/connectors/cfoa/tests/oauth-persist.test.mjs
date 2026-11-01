@@ -41,7 +41,7 @@ describe('oauth-persist spine', () => {
     assert.equal(result.error, 'cloudflare_account_identifier_required');
   });
 
-  it('upserts with client_id provenance and scope union (no connected_via_app)', async () => {
+  it('upserts with client_id provenance and granted scopes only (no historical union)', async () => {
     const rows = new Map();
     const sqlSeen = [];
     const env = {
@@ -116,8 +116,10 @@ describe('oauth-persist spine', () => {
       capabilitySet: ['cloudflare.workers'],
     });
     assert.equal(r2.ok, true);
-    assert.ok(r2.scopes.includes('d1.read'));
-    assert.ok(r2.scopes.includes('workers-scripts.write'));
+    assert.equal(r2.granted_scopes_only, true);
+    assert.equal(r2.scope_union, false);
+    assert.deepEqual(r2.scopes, ['workers-scripts.write']);
+    assert.ok(!r2.scopes.includes('d1.read'));
     const upsertSql = sqlSeen.find((sql) => sql.includes('ON CONFLICT(user_id, provider, account_identifier)'));
     assert.match(upsertSql || '', /last_refresh_error_code = NULL/);
     assert.match(upsertSql || '', /refresh_failure_count = 0/);

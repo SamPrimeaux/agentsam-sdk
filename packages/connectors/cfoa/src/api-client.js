@@ -105,12 +105,15 @@ export class CloudflareApiClient {
   requireAccount(operation = 'cloudflare.api') {
     this.requireToken(operation);
     if (!this.accountId) {
-      throw new CloudflareApiError('CLOUDFLARE_ACCOUNT_ID / connected account required', {
+      throw new CloudflareApiError('Select a Cloudflare account for this OAuth connection', {
         code: 'cloudflare_account_id_required',
         operation,
         remediation: {
-          actions: ['Set CLOUDFLARE_ACCOUNT_ID', 'Or reconnect Cloudflare OAuth so account_identifier is stored'],
-          authorize_hint: 'export CLOUDFLARE_ACCOUNT_ID=…',
+          actions: [
+            'Pick an account in the Cloudflare connection picker',
+            'Or reconnect Cloudflare OAuth so account_identifier is stored',
+          ],
+          authorize_hint: 'Connect Cloudflare → select account',
         },
       });
     }
@@ -234,14 +237,38 @@ export class CloudflareApiClient {
 /** Async factory — OAuth or API token without sync DB work in constructor. */
 export async function createCloudflareApiClient(opts = {}) {
   const cred = await resolveCloudflareCredential(opts);
+  if (cred?.error === 'cloudflare_account_selection_required' || cred?.status === 'configuration_required') {
+    const err = new CloudflareApiError('Select a Cloudflare account for this OAuth connection', {
+      code: 'cloudflare_account_selection_required',
+      capabilityId: opts.capabilityId || null,
+      remediation: {
+        actions: ['Pick an account in Settings → Integrations → Cloudflare'],
+        authorize_hint: '/settings/integrations',
+        auth_status: cred.status,
+      },
+    });
+    err.accounts = cred.accounts || [];
+    throw err;
+  }
+  if (cred?.error === 'cloudflare_reconnect_required') {
+    throw new CloudflareApiError('Cloudflare OAuth expired — reconnect required', {
+      code: 'cloudflare_reconnect_required',
+      capabilityId: opts.capabilityId || null,
+      remediation: {
+        actions: ['Reconnect Cloudflare OAuth'],
+        authorize_hint: '/api/connections/cloudflare/start?packs=media,data',
+        auth_status: cred.status,
+      },
+    });
+  }
   if (!cred.bearerToken) {
     throw new CloudflareApiError('Cloudflare credential required', {
       code: cred.status === 'token_required' ? 'cloudflare_token_required' : 'cloudflare_authorization_required',
       capabilityId: opts.capabilityId || null,
       remediation: {
         actions: cred.status === 'token_required'
-          ? ['Set CLOUDFLARE_API_TOKEN']
-          : ['Authorize Cloudflare capability', 'Or set CLOUDFLARE_API_TOKEN'],
+          ? ['Set CLOUDFLARE_API_TOKEN for CLI/CI service identity']
+          : ['Authorize Cloudflare capability via OAuth'],
         authorize_hint: opts.capabilityId
           ? `/api/connections/cloudflare/start?capabilities=${encodeURIComponent(opts.capabilityId)}`
           : 'agentsam cloudflare status',

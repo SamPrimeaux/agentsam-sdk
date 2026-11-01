@@ -2,8 +2,8 @@
  * Canonical Cloudflare connection writer → user_oauth_tokens (SSOT).
  *
  * One row per (user_id, provider=cloudflare, account_identifier).
- * Scopes are merged as a union on every write so concurrent grants from
- * different Cloudflare OAuth clients cannot silently downgrade each other.
+ * Scopes are the granted set from the current OAuth token response only —
+ * never a historical union of prior grants (stale scopes must not inflate auth).
  * Provenance is the real OAuth client_id only — no invented app-name enum.
  *
  * Status / account / scopes (legacy agentsam_cloudflare_connections fields):
@@ -147,9 +147,12 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
     return { ok: false, error: 'user_oauth_tokens_unavailable', detail: String(err?.message || err) };
   }
 
-  const priorScopes = splitScopes(existing?.scopes || existing?.scope);
-  const mergedScopes = unionScopes(priorScopes, incomingScopes);
-  const scopesStr = mergedScopes.join(' ') || null;
+  // Granted scopes only — token response (or this write's explicit scopes).
+  // Do not union with historical rows; that invents capabilities the user did not grant.
+  const grantedScopes = incomingScopes.length
+    ? [...new Set(incomingScopes)]
+    : splitScopes(existing?.scopes || existing?.scope);
+  const scopesStr = grantedScopes.join(' ') || null;
 
   const priorMeta = parseMeta(existing?.metadata_json);
   const clientId = clean(input.clientId) || clean(priorMeta.connected_via_client_id) || null;
@@ -274,8 +277,9 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
   return {
     ok: true,
     accountId,
-    scopes: mergedScopes,
-    scope_union: true,
+    scopes: grantedScopes,
+    scope_union: false,
+    granted_scopes_only: true,
     connectionId: accountId,
     status: 'connected',
     provenance: {
