@@ -1,4 +1,5 @@
 import { CountdownWidget } from './CountdownWidget';
+import { QueueDepthWidget } from './QueueDepthWidget';
 
 export interface BuiltinWidgetProps {
   widgetId: string;
@@ -11,6 +12,7 @@ export function BuiltinWidget({
   compact = false,
   configuration = {},
 }: BuiltinWidgetProps) {
+  if (widgetId === 'queues') return <QueueDepthWidget compact={compact} />;
   if (widgetId === 'countdown') {
     const requested = Number(configuration.durationMs);
     const durationMs = Number.isFinite(requested) && requested > 0

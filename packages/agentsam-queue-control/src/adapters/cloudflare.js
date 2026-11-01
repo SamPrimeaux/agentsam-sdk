@@ -93,9 +93,45 @@ export class CloudflareQueueApiAdapter {
   }
 
   async listQueues() {
-    const path = `/accounts/${encodeURIComponent(this.cloudflareAccountId)}/queues`;
-    const result = await this.request(path, { method: 'GET' });
-    return Array.isArray(result) ? result : [];
+    const base = `/accounts/${encodeURIComponent(this.cloudflareAccountId)}/queues`;
+    const queues = [];
+    // Pagination is required for account-wide inventories: Cloudflare defaults
+    // to a small page size, so one request silently misses additional queues.
+    for (let page = 1; page <= 100; page++) {
+      const result = await this.request(`${base}?page=${page}&per_page=100`, { method: 'GET' });
+      if (!Array.isArray(result)) throw new Error('cloudflare_queue_inventory_invalid');
+      queues.push(...result);
+      if (result.length < 100) return queues;
+    }
+    throw new Error('cloudflare_queue_inventory_pagination_limit');
+  }
+
+  async getQueue(queueId) {
+    if (!queueId) throw new TypeError('queueId is required');
+    return this.request(`/accounts/${encodeURIComponent(this.cloudflareAccountId)}/queues/${encodeURIComponent(queueId)}`, { method: 'GET' });
+  }
+
+  async listConsumers(queueId) {
+    if (!queueId) throw new TypeError('queueId is required');
+    const result = await this.request(
+      `/accounts/${encodeURIComponent(this.cloudflareAccountId)}/queues/${encodeURIComponent(queueId)}/consumers`,
+      { method: 'GET' },
+    );
+    if (!Array.isArray(result)) throw new Error('cloudflare_queue_consumers_invalid');
+    return result;
+  }
+
+  async getMetrics(queueId) {
+    if (!queueId) throw new TypeError('queueId is required');
+    const metrics = await this.request(
+      `/accounts/${encodeURIComponent(this.cloudflareAccountId)}/queues/${encodeURIComponent(queueId)}/metrics`,
+      { method: 'GET' },
+    );
+    if (!metrics || !Number.isFinite(metrics.backlog_count) || !Number.isFinite(metrics.backlog_bytes)
+      || !Number.isFinite(metrics.oldest_message_timestamp_ms)) {
+      throw new Error('cloudflare_queue_metrics_invalid');
+    }
+    return metrics;
   }
 
   async createQueue(queueName) {

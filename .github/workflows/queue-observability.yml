@@ -1,0 +1,37 @@
+name: Cloudflare Queue Observability
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/queue-observability.yml'
+      - 'packages/agentsam-queue-control/**'
+      - 'packages/agentsam-workbench/**'
+      - 'packages/agentsam-settings/**'
+      - 'apps/local-studio/backend/worker/studio-queue-observability.js'
+      - 'apps/local-studio/scripts/studio-queue-observability.test.mjs'
+      - 'apps/local-studio/backend/worker/index.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  queue-observability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test Cloudflare QueueControl and Studio API
+        run: |
+          node --test packages/agentsam-queue-control/test/*.test.mjs
+          node --test apps/local-studio/scripts/studio-queue-observability.test.mjs
+      - name: Compile shared widget and Settings integration
+        run: |
+          npm --prefix packages/agentsam-contracts run build
+          npm --prefix packages/agentsam-workbench run build
+          npm --prefix packages/agentsam-settings run build
