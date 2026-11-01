@@ -23,6 +23,41 @@ function classifyHttpError(error) {
 }
 
 /**
+ * Normalize an OAuth return target to a same-origin path (or desktop deep link).
+ * Absolute same-origin URLs are reduced to pathname+search so Media / Settings /
+ * Database Studio each keep their originating surface.
+ * @param {string} [returnTo]
+ * @param {string} [fallback]
+ */
+export function normalizeCloudflareReturnTo(returnTo = '', fallback = '/settings/integrations') {
+  const raw = String(returnTo || '').trim();
+  if (!raw) return fallback;
+  if (raw.startsWith('agentsamstudio:')) return raw;
+  if (raw.startsWith('/') && !raw.startsWith('//')) return raw;
+  try {
+    const dest = new URL(raw);
+    if (dest.protocol === 'http:' || dest.protocol === 'https:') {
+      return `${dest.pathname}${dest.search}${dest.hash}` || fallback;
+    }
+  } catch {
+    /* fall through */
+  }
+  return fallback;
+}
+
+/**
+ * Build a Cloudflare OAuth start URL that returns to the originating product surface.
+ * @param {{ packs?: string, returnTo?: string }} [opts]
+ */
+export function cloudflareMediaConnectUrl({ packs = 'media,data', returnTo = '/settings/integrations' } = {}) {
+  const params = new URLSearchParams({
+    packs: String(packs || 'media,data'),
+    return_to: normalizeCloudflareReturnTo(returnTo),
+  });
+  return `/api/connections/cloudflare/start?${params.toString()}`;
+}
+
+/**
  * List R2 buckets for one account. Pagination only — does not scan objects.
  * @param {import('../api-client.js').CloudflareApiClient} client
  * @param {{ cursor?: string, perPage?: number, nameContains?: string }} [opts]
@@ -511,12 +546,14 @@ async function probeR2(client, opts = {}) {
 /**
  * Account-wide media discovery for Settings → Connections and Media Library.
  * @param {import('../api-client.js').CloudflareApiClient} client
- * @param {{ cursor?: string, perPage?: number, nameContains?: string }} [opts]
+ * @param {{ cursor?: string, perPage?: number, nameContains?: string, returnTo?: string }} [opts]
  */
 export async function discoverCloudflareMedia(client, opts = {}) {
   const scopes = Array.isArray(client?.grantedScopes) ? client.grantedScopes : [];
   const auth = MEDIA_CAPS.map((id) => assessCapabilityAuthorization(id, scopes));
   const missingScopes = [...new Set(auth.flatMap((row) => row.missing_scopes || []))];
+  const returnTo = opts.returnTo || '/settings/integrations';
+  const connectUrl = cloudflareMediaConnectUrl({ packs: 'media,data', returnTo });
 
   if (!client?.accountId) {
     return {
@@ -528,7 +565,7 @@ export async function discoverCloudflareMedia(client, opts = {}) {
       stream: emptyFamily('account_required'),
       capabilities: auth,
       missing_scopes: missingScopes,
-      connect_url: '/api/connections/cloudflare/start?packs=media,data&return_to=/settings/integrations',
+      connect_url: connectUrl,
       checked_at: new Date().toISOString(),
     };
   }
@@ -559,7 +596,7 @@ export async function discoverCloudflareMedia(client, opts = {}) {
     stream,
     capabilities: auth,
     missing_scopes: missingScopes,
-    reconnect_url: '/api/connections/cloudflare/start?packs=media,data&return_to=/settings/integrations',
+    reconnect_url: connectUrl,
     checked_at: new Date().toISOString(),
   };
 }

@@ -13,7 +13,7 @@ import {
   loadCloudflareFromUserOauthTokens,
   createCloudflareApiClient,
 } from './index.js';
-import { discoverCloudflareMedia, listCloudflareR2Objects } from './families/media.js';
+import { cloudflareMediaConnectUrl, discoverCloudflareMedia, listCloudflareR2Objects } from './families/media.js';
 import { resolveAuthenticatedOwner } from './owner.js';
 import { decryptSecret, sealToken, vaultConfigured } from './vault.js';
 
@@ -588,6 +588,8 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
   }
 
   if (url.pathname === '/api/connections/cloudflare/resources' && request.method === 'GET') {
+    const returnTo = resolveReturnTo(url) || '/settings/integrations';
+    const connectUrl = cloudflareMediaConnectUrl({ packs: 'media,data', returnTo });
     try {
       const api = await createCloudflareApiClient({
         env,
@@ -599,6 +601,7 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
         cursor: url.searchParams.get('cursor') || undefined,
         perPage: Number(url.searchParams.get('per_page') || 50) || 50,
         nameContains: url.searchParams.get('name_contains') || undefined,
+        returnTo,
       });
       return json({ ok: true, ...discovery });
     } catch (error) {
@@ -612,7 +615,7 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
           images: { status: 'not_connected', available: false, count: 0 },
           stream: { status: 'not_connected', available: false, count: 0 },
           missing_scopes: [],
-          connect_url: '/api/connections/cloudflare/start?packs=media,data&return_to=/settings/integrations',
+          connect_url: connectUrl,
           error: code,
           checked_at: new Date().toISOString(),
         });
@@ -622,7 +625,7 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
         status: 'error',
         error: code,
         message: String(error?.message || error).slice(0, 240),
-        reconnect_url: '/api/connections/cloudflare/start?packs=media,data&return_to=/settings/integrations',
+        reconnect_url: connectUrl,
       }, 502);
     }
   }
@@ -653,7 +656,10 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
         error: code,
         message: String(error?.message || error).slice(0, 240),
         bucket: bucketName,
-        reconnect_url: '/api/connections/cloudflare/start?packs=data&return_to=/settings/integrations',
+        reconnect_url: cloudflareMediaConnectUrl({
+          packs: 'data',
+          returnTo: resolveReturnTo(url) || '/settings/integrations',
+        }),
       }, status);
     }
   }

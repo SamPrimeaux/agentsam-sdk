@@ -23,15 +23,29 @@ const installed = [
   { to: "/sites" as Destination, name: "Sites", label: "Website CMS", icon: Globe },
 ];
 
+function trailPreview(trail: { messages: Array<{ role: string; content: string }> }) {
+  const last = [...trail.messages].reverse().find((msg) => msg.role !== "system");
+  return (last?.content || "Ready for your first message").replace(/\s+/g, " ").slice(0, 120);
+}
+
 export function LocalStudioHome() {
   const navigate = useNavigate();
   const state = useWorkStore();
-  const active = state.trails.find((thread) => thread.id === state.activeTrailId);
   const recentProjects = state.hydrated ? state.projects.slice(0, 3) : [];
+  const recentChats = state.hydrated
+    ? [...state.trails]
+        .filter((trail) => trail.messages.some((msg) => msg.role === "user") || trail.title !== "New chat")
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, 5)
+    : [];
 
   const newConversation = () => {
-    state.startTrail();
-    void navigate({ to: "/agentsam" });
+    const id = state.startTrail();
+    void navigate({ to: "/chats/$chatId", params: { chatId: id } });
+  };
+  const resumeConversation = (id: string) => {
+    state.setActiveTrail(id);
+    void navigate({ to: "/chats/$chatId", params: { chatId: id } });
   };
   const newProject = () => {
     state.createProject();
@@ -43,20 +57,36 @@ export function LocalStudioHome() {
       <section className="platform-home-welcome" aria-labelledby="platform-home-title">
         <div className="platform-home-eyebrow"><span className="platform-home-live" /> AgentSam Studio <span className="platform-home-separator">/</span> Workspace</div>
         <h1 id="platform-home-title">What should we build next?</h1>
-        <p>Everything you are creating, connected in one place. Start with AgentSam or open an installed workspace.</p>
+        <p>Your workspace is restored. Start a new chat, or resume a recent conversation — you are not forced into an old failed thread.</p>
         <div className="platform-home-composer">
           <button type="button" className="platform-home-composer-entry" onClick={newConversation} aria-label="Start a new AgentSam conversation">
-            <span>Work with AgentSam</span><span className="platform-home-composer-prompt">Ask, plan, build, or refine anything…</span>
+            <span>New Chat</span><span className="platform-home-composer-prompt">Ask, plan, build, or refine anything…</span>
           </button>
           <div className="platform-home-composer-actions">
             <span className="platform-home-signature">AgentSam</span>
             <span className="platform-home-composer-links">
-              <Link to="/projects">Projects <ChevronRight size={14}/></Link>
-              <button type="button" onClick={newConversation} className="platform-home-go" aria-label="Open AgentSam"><ArrowUpRight size={18}/><span className="sr-only">Open AgentSam</span></button>
+              <Link to="/chats">All chats <ChevronRight size={14}/></Link>
+              <button type="button" onClick={newConversation} className="platform-home-go" aria-label="New Chat"><ArrowUpRight size={18}/><span className="sr-only">New Chat</span></button>
             </span>
           </div>
         </div>
-        {active && <Link className="platform-home-continue" to="/agentsam">Continue: {active.title} <ArrowRight size={14}/></Link>}
+        {recentChats.length ? (
+          <div className="platform-home-recent-chats" aria-label="Recent conversations">
+            {recentChats.map((chat) => (
+              <button
+                key={chat.id}
+                type="button"
+                className="platform-home-resume"
+                onClick={() => resumeConversation(chat.id)}
+              >
+                <span className="platform-home-resume-label">Resume</span>
+                <span className="platform-home-resume-title">{chat.title}</span>
+                <span className="platform-home-resume-preview">{trailPreview(chat)}</span>
+                <ArrowRight size={14} aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <section className="platform-home-section" aria-labelledby="platform-quick-heading">

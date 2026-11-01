@@ -17,6 +17,7 @@ import {
   studioServerBindings,
   vaultCredentialsForAccount,
 } from "@inneranimalmedia/agentsam-local-shared/studio-vault";
+import { translateStudioChatUpstreamBody } from "./chat-upstream";
 
 const Body = z.object({
   messages: z
@@ -53,13 +54,20 @@ type ChatMessage = { role: string; content: string };
 function upstreamFor(provider: string, modelId: string, apiKey: string, body: unknown) {
   const id = provider.toLowerCase();
   if (id === "openai") {
+    const openaiBody = translateStudioChatUpstreamBody("openai", body as {
+      model: string;
+      stream?: boolean;
+      temperature?: number;
+      max_tokens?: number;
+      messages: unknown;
+    });
     return fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(openaiBody),
     });
   }
   if (id === "grok" || id === "xai") {
