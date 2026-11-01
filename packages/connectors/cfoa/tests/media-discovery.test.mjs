@@ -233,4 +233,28 @@ describe('cloudflare media discovery', () => {
     await deleteCloudflareImage(client, 'img_new');
     assert.deepEqual(calls, ['images', 'stream', 'delete']);
   });
+
+  it('classifies provider failures independently and never reports them as empty', async () => {
+    const mk = (httpStatus, message, code) => {
+      const err = new Error(message);
+      err.httpStatus = httpStatus;
+      err.providerErrors = code ? [{ code, message }] : [];
+      return err;
+    };
+    const client = mockClient({
+      scopes: [],
+      responses: {
+        'GET /accounts/acct123/r2/buckets': () => { throw mk(404, 'No route for that URI', 7003); },
+        'GET /accounts/acct123/images/v2': () => { throw mk(403, 'Authentication error', 10000); },
+        'GET /accounts/acct123/stream': () => ({ result: [], result_info: {} }),
+      },
+    });
+    const out = await discoverCloudflareMedia(client, { returnTo: '/media' });
+    assert.equal(out.r2.status, 'error');
+    assert.equal(out.r2.http_status, 404);
+    assert.match(out.r2.error, /No route/);
+    assert.equal(out.images.status, 'needs_scope');
+    assert.equal(out.stream.status, 'connected');
+    assert.equal(out.status, 'partial');
+  });
 });

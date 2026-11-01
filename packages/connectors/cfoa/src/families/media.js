@@ -6,20 +6,40 @@ import { assessCapabilityAuthorization } from '../capabilities.js';
 
 const MEDIA_CAPS = ['cloudflare.r2', 'cloudflare.images', 'cloudflare.stream'];
 
-function emptyFamily(status = 'unavailable', error = null) {
+function emptyFamily(status = 'unavailable', error = null, detail = {}) {
   return {
     status,
     available: false,
     error,
+    error_code: detail.error_code || null,
+    http_status: detail.http_status || null,
     count: 0,
   };
 }
 
+/**
+ * Failure taxonomy (never "empty"):
+ * - needs_scope: 401/403 (OAuth lacks product permission)
+ * - unavailable: provider says product not enabled on this account
+ * - error: everything else, INCLUDING 404 / "No route for that URI" (7003), which means
+ *   the connector built a wrong Cloudflare URL — a route/provider failure, not an empty library.
+ */
 function classifyHttpError(error) {
   const status = Number(error?.httpStatus || error?.status || 0);
   if (status === 401 || status === 403) return 'needs_scope';
-  if (status === 404) return 'unavailable';
+  const providerCode = Number(error?.providerErrors?.[0]?.code || 0);
+  const message = String(error?.message || '').toLowerCase();
+  if (status === 404 && providerCode !== 7003 && !message.includes('no route') && /not (enabled|found)|subscri/.test(message)) {
+    return 'unavailable';
+  }
   return 'error';
+}
+
+function familyFailure(error) {
+  return emptyFamily(classifyHttpError(error), String(error?.message || error).slice(0, 240), {
+    error_code: error?.code || null,
+    http_status: error?.httpStatus || null,
+  });
 }
 
 /**
@@ -265,7 +285,7 @@ async function probeImages(client) {
     };
   } catch (error) {
     return {
-      ...emptyFamily(classifyHttpError(error), String(error?.message || error).slice(0, 240)),
+      ...familyFailure(error),
       delivery_hash: null,
       continuation_token: null,
       sample_image_id: null,
@@ -289,7 +309,7 @@ async function probeStream(client) {
     };
   } catch (error) {
     return {
-      ...emptyFamily(classifyHttpError(error), String(error?.message || error).slice(0, 240)),
+      ...familyFailure(error),
       customer_code: null,
       sample_uid: null,
       sample_thumbnail: null,
@@ -535,7 +555,7 @@ async function probeR2(client, opts = {}) {
     };
   } catch (error) {
     return {
-      ...emptyFamily(classifyHttpError(error), String(error?.message || error).slice(0, 240)),
+      ...familyFailure(error),
       buckets: [],
       cursor: null,
       truncated: false,

@@ -518,12 +518,26 @@ async function listMedia(env, request, url, principal = null) {
         connect_url: oauth.connect_url || "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
       }, oauth.status || 502);
     } catch (err) {
+      // Never collapse provider failures into an empty library: say which layer failed.
+      const code = err?.code || "cloudflare_media_list_failed";
+      const providerHttp = Number(err?.httpStatus || 0) || null;
+      const layer = code === "cloudflare_permission_denied" ? "authorization"
+        : (code === "cloudflare_account_selection_required" ? "account_resolution"
+          : (code === "cloudflare_network_error" ? "network" : "provider_api"));
       return json({
         ok: false,
-        error: err?.code || err?.message || "cloudflare_media_list_failed",
+        error: code,
+        layer,
+        message: String(err?.message || code).slice(0, 240),
+        http_status: providerHttp,
+        provider_errors: Array.isArray(err?.providerErrors) ? err.providerErrors.slice(0, 3) : undefined,
+        operation: err?.operation || undefined,
+        capability_id: err?.capabilityId || undefined,
+        remediation: err?.remediation || undefined,
         accounts: err?.accounts,
         connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
-      }, err?.code === "cloudflare_account_selection_required" ? 409 : 502);
+      }, code === "cloudflare_account_selection_required" ? 409
+        : (code === "cloudflare_permission_denied" ? 403 : 502));
     }
   }
 

@@ -493,6 +493,22 @@ function MediaLibraryBody({
   );
 }
 
+/** Failure states are labelled explicitly — a failed probe is never shown as "0 buckets". */
+function familyLabel(
+  name: string,
+  fam?: { status?: string; count?: number | null } | null,
+  connectedDetail?: string,
+) {
+  const status = fam?.status || "unknown";
+  if (status === "connected") return `${name}: ${connectedDetail || "connected"}`;
+  if (status === "empty") return `${name}: empty`;
+  if (status === "needs_scope") return `${name}: permission required`;
+  if (status === "unavailable") return `${name}: not enabled`;
+  if (status === "error") return `${name}: provider error`;
+  if (status === "not_connected") return `${name}: not connected`;
+  return `${name}: ${status}`;
+}
+
 function ConnectionStrip({
   resources,
   connectUrl,
@@ -523,10 +539,15 @@ function ConnectionStrip({
                     : `Connected · account ${resources.account?.id || "—"}`}
         </span>
         <span>
-          R2 buckets: {buckets}
-          {" · "}Images: {resources.images?.status || "—"}
-          {" · "}Stream: {resources.stream?.status || "—"}
+          {familyLabel("R2", resources.r2, `${buckets} bucket${buckets === 1 ? "" : "s"}`)}
+          {" · "}{familyLabel("Images", resources.images)}
+          {" · "}{familyLabel("Stream", resources.stream)}
         </span>
+        {(["r2", "images", "stream"] as const).map((key) => {
+          const fam = resources[key] as { status?: string; error?: string | null } | undefined;
+          if (!fam?.error || !["error", "unavailable", "needs_scope"].includes(String(fam.status))) return null;
+          return <span key={key} role="alert">{key.toUpperCase()} · {fam.error}</span>;
+        })}
         {missing.length ? <span>Missing scopes: {missing.slice(0, 6).join(", ")}</span> : null}
       </div>
       <a className="agentsam-media-btn" href={connectUrl}>

@@ -142,7 +142,9 @@ export class CloudflareApiClient {
     if (/^https?:\/\//i.test(path)) {
       url = new URL(path);
     } else {
-      url = new URL(path.startsWith('/') ? path : `/${path}`, `${API_BASE}/`);
+      // Never use new URL('/accounts/..', base): a leading slash replaces the
+      // base path and drops `/client/v4` → api.cloudflare.com 404 "No route for that URI" (7003).
+      url = new URL(`${API_BASE}${path.startsWith('/') ? path : `/${path}`}`);
     }
     if (opts.query) {
       for (const [k, v] of Object.entries(opts.query)) {
