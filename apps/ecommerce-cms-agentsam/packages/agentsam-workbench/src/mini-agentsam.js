@@ -1,11 +1,13 @@
 import { attachCapabilityMenu } from './composer.js';
 
-// #NOTDONE: DUPLICATE SOURCE. This app-local copy is the one that SHIPS (bin/build-assets.mjs copies
-// packages/agentsam-workbench/src to /admin/workbench so a release never depends on the monorepo).
-// A second copy lives at packages/agentsam-workbench/src/mini-agentsam.js (used by repo tests).
-// Real fix: publish @inneranimalmedia/agentsam-workbench and consume it via installed(), like
-// revise-theme in build-assets. Until then keep both feature-aligned (tests/workbench-parity.test.mjs).
-// See docs/AGENTSAM_MERCH_AND_TOOLS_AUDIT_20261015.md (F9).
+// #SSOT: ecommerce-vanilla miniAgentSam (Batch 1 decision).
+// This app-local vanilla JS module SHIPS via bin/build-assets.mjs → /admin/workbench.
+// Canonical React/TS workbench lives at packages/agentsam-workbench (MiniAgentSam.tsx +
+// ResourceCard). Do NOT invent a third copy. Convergence path: publish
+// @inneranimalmedia/agentsam-workbench with a browser build (or installed() package like
+// revise-theme), then point build-assets at node_modules and retire this file.
+// Until that consumer swap lands, keep this ship copy; never delete it first.
+// Status: Decide=packages React SSOT for Studio; this file remains Ecommerce release SSOT.
 export const miniAgentSamTokens = {
   accent: '#8b5cf6',
   icon: 'https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ac515729-af6b-4ea5-8b10-e581a4d02100/thumbnail',

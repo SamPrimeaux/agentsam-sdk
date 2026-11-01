@@ -15,7 +15,7 @@ export const STUDIO_ADMIN_MOUNTS = Object.freeze([
   Object.freeze({ id: 'commerce.home', flat: '/admin/home', canonical: '/admin/home', exactOnly: true }),
   Object.freeze({ id: 'agent.chat', flat: '/agentsam', canonical: '/admin/agentsam', exactOnly: true }),
   Object.freeze({ id: 'cad.studio', flat: '/cad', canonical: '/admin/cad' }),
-  Object.freeze({ id: 'cad.samsketch-compat', flat: '/samsketch', canonical: '/admin/cad' }),
+  // SamSketch owns /samsketch as an included app route — do not redirect it into CAD.
   Object.freeze({ id: 'creative.moviemode', flat: '/admin/moviemode', canonical: '/admin/moviemode' }),
 ]);
 

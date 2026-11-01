@@ -206,8 +206,9 @@ test('Studio-owned admin URLs reuse existing apps and preserve flat compatibilit
   for (const [oldPath, currentPath] of [
     ['/agentsam', '/admin/agentsam'],
     ['/cad', '/admin/cad'],
-    ['/samsketch', '/admin/cad'],
   ]) assert.equal(canonicalStudioPath(oldPath), currentPath);
+  assert.equal(canonicalStudioPath('/samsketch'), null, 'SamSketch owns /samsketch; never redirect into CAD');
+  assert.equal(canonicalStudioPath('/samsculpt'), null, 'SamSculpt owns /samsculpt when installed');
   assert.equal(canonicalStudioPath('/media'), null, '/media is Media Library, not MovieMode');
   assert.equal(canonicalStudioPath('/admin/moviemode'), null);
   for (const path of ['/admin/agentsam', '/admin/cad', '/admin/moviemode', '/admin/projects']) {
