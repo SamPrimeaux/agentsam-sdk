@@ -2122,7 +2122,7 @@
     },
     {
       "avoid_when": [],
-      "catalog_status": "needs-review",
+      "catalog_status": "active",
       "class": "package",
       "commands": [],
       "evidence": {
@@ -2157,12 +2157,20 @@
         "topics"
       ],
       "schema": "agentsam.package.v1",
-      "status": "unknown",
-      "topics": [],
-      "use_when": [
-        "Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database. Independent project; not affiliated with Supabase."
+      "status": "active",
+      "topics": [
+        "database",
+        "adapters",
+        "d1",
+        "sqlite",
+        "postgres"
       ],
-      "version": "2.6.12",
+      "use_when": [
+        "portable database studio",
+        "multi-provider SQL adapters",
+        "reusable database request handler"
+      ],
+      "version": "2.6.14",
       "readiness": "unverified"
     },
     {

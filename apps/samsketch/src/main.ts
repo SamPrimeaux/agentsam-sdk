@@ -11,6 +11,7 @@ import { findInventoryEntry, modelLabel } from "./model-inventory";
 import { icon, iconButton } from "./icons";
 import { mountSettingsDrawer } from "./settings-drawer";
 import { mountProgressiveStudio } from "./progressive";
+import { mountSketchGallery, type SketchProjectCategory } from "./gallery";
 import "./style.css";
 import "./polish.css";
 import "./studio-shell.css";
@@ -46,6 +47,13 @@ function freshDoc(brand:Brand):Document {
  ]};
 }
 const storageKey="iam-showcase-studio-draft-v1";
+const projectsKey="iam-samsketch-projects-v1";
+type SavedSketchProject={id:string;name:string;category:SketchProjectCategory;itemCount:number;updatedAt:string;preview?:string|null;document:Document};
+function readSavedProjects():SavedSketchProject[]{
+ try{const raw=JSON.parse(localStorage.getItem(projectsKey)||"[]");return Array.isArray(raw)?raw.filter((entry)=>entry?.document?.version===1&&Array.isArray(entry.document.items)):[] }
+ catch{return[];}
+}
+function writeSavedProjects(projects:SavedSketchProject[]){localStorage.setItem(projectsKey,JSON.stringify(projects.slice(0,24)));}
 let doc:Document;
 try {
  const saved=JSON.parse(localStorage.getItem(storageKey)||"null");
@@ -55,9 +63,13 @@ let selectedId=doc.items[0]?.id||"";
 let showGrid=false,wireframe=false,inspectorOpen=false,layersOpen=false,mode:"orbit"|"select"|"story"="select";
 let autoPlay:number|null=null;
 let progressive:ReturnType<typeof mountProgressiveStudio>|null=null;
+let gallery:ReturnType<typeof mountSketchGallery>|null=null;
 const history:string[]=[],future:string[]=[];
 function snapshot(){history.push(JSON.stringify(doc)); if(history.length>40)history.shift(); future.length=0;}
-function store(){localStorage.setItem(storageKey,JSON.stringify(doc));}
+function store(){
+ localStorage.setItem(storageKey,JSON.stringify(doc));
+ localStorage.setItem(storageKey+":meta",JSON.stringify({updatedAt:new Date().toISOString(),name:doc.name,brand:doc.brand,itemCount:doc.items.length}));
+}
 function sel(){return doc.items.find(x=>x.id===selectedId);}
 function esc(s:string){return String(s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]||ch));}
 function num(n:number){return Math.round(n*100)/100;}
@@ -65,16 +77,16 @@ function download(blob:Blob,name:string){const a=document.createElement("a");a.h
 function announce(t:string){const target=document.getElementById("notice");if(target)target.textContent=t;}
 const app=document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML='<div class="app">'+
-  '<header class="top"><div class="top-left"><span class="studio-app-mark">SamSketch</span><button class="project" id="project-name">AgentSam Product World ▾</button></div>'+
-  '<div class="top-right">'+iconButton("layers-toggle","layers","Toggle model library")+iconButton("inspector-toggle","sliders","Toggle properties inspector")+iconButton("undo","undo","Undo")+iconButton("redo","redo","Redo")+iconButton("snapshot","capture","Capture PNG")+iconButton("export-json","export","Export scene JSON")+iconButton("settings-toggle","sliders","Scene settings")+'</div></header>'+
+  '<header class="top"><div class="top-left">'+iconButton("gallery-home","house","Back to SamSketch gallery")+'<span class="studio-app-mark">SamSketch</span><button class="project" id="project-name">AgentSam Product World ▾</button></div>'+
+  '<div class="top-right">'+iconButton("layers-toggle","layers","Toggle model library")+iconButton("inspector-toggle","sliders","Toggle properties inspector")+iconButton("undo","undo","Undo")+iconButton("redo","redo","Redo")+iconButton("snapshot","capture","Capture PNG")+iconButton("export-json","export","Export scene JSON")+iconButton("save-project","folder","Save scene to gallery")+iconButton("settings-toggle","sliders","Scene settings")+'</div></header>'+
   '<aside class="left" id="left"><div class="section"><div class="section-title">Product identity</div><div class="brand-choice"><button id="brand-agentsam">AgentSam</button><button id="brand-inneranimalmedia">InnerAnimalMedia</button></div><p class="hint">Brand styling and story assets change together; geometry and authoring behavior remain shared.</p></div>'+
   '<div class="library-tabs" role="tablist" aria-label="Scene library"><button type="button" data-library="templates" role="tab">Models</button><button type="button" data-library="objects" role="tab">Objects</button><button type="button" data-library="shapes" role="tab">Shapes</button><button type="button" data-library="icons" role="tab">Icons</button></div>'+
   '<div id="templates-section" class="library-pane"><div class="library-intro"><div><strong>Model inventory</strong><span id="model-inventory-count">Reading source library…</span></div><button class="library-build-button" id="start-build" type="button">'+icon("sparkles",14)+' Let’s build</button></div><div class="build-starter"><strong>Start with a skill</strong><div class="skill-chips"><button type="button" data-build-skill="Sculpt">Sculpt</button><button type="button" data-build-skill="Draft">Draft</button><button type="button" data-build-skill="Model">Model</button><button type="button" data-build-skill="Animate">Animate</button><button type="button" data-build-skill="Vector">Vector</button><button type="button" data-build-skill="Scene">Scene</button></div></div><label class="search-shell">'+icon("search",15)+'<input id="template-search" type="search" placeholder="Search model, part, SKU…" aria-label="Search models and source parts"></label><div class="model-filters" role="group" aria-label="Filter model inventory"><button type="button" data-model-filter="all" class="active">All</button><button type="button" data-model-filter="composition">Compositions</button><button type="button" data-model-filter="source-part">Source parts</button></div><div class="inventory-summary" id="model-inventory-summary"></div><div class="template-catalog" id="template-catalog"></div><p class="library-footnote">Source geometry is read-only. Add an instance to the scene to transform, recolor, hide, duplicate or remove it without altering the source file.</p></div>'+
   '<div id="objects-section" class="library-pane" hidden><div class="section"><div class="section-title">Scene objects <button id="add-panel" aria-label="Add panel">'+icon("plus",14)+'</button></div><div id="layers"></div></div></div>'+
   '<div id="shapes-section" class="library-pane" hidden><div class="section"><div class="section-title">Create shape</div><div id="primitives"></div></div></div><div id="icons-section" class="library-pane" hidden><div class="library-intro"><div><strong>2D iconography</strong><span id="icon-count">85 semantic tools</span></div><button class="library-build-button" id="export-icon-pack" type="button">'+icon("download",14)+' Export SVG</button></div><label class="search-shell">'+icon("search",15)+'<input id="icon-search" type="search" placeholder="Search icon names…" aria-label="Search iconography"></label><div class="icon-library-selection" id="icon-selection">Icon reference · choose a glyph to inspect. Only tools wired into the editor perform modeling actions.</div><div class="icon-library" id="icon-catalog"></div></div></aside>'+
   '<main class="canvas-wrap"><div class="canvas-header"><div class="tag" id="chapter-label">Product World / 01</div><h1 id="stage-title">Products with presence</h1><p id="stage-subtitle">Examine every layer of the experience.</p></div>'+
-  '<div class="canvas-tools" role="toolbar" aria-label="Scene tools">'+iconButton("mode-select","select","Select object")+iconButton("mode-orbit","orbit","Orbit camera")+iconButton("mode-story","story","Story navigation")+'<span class="toolbar-separator"></span>'+iconButton("frame","frame","Frame scene")+iconButton("grid","grid","Toggle grid")+iconButton("wireframe","cube","Toggle wireframe")+'</div>'+
-  '<div class="canvas-status"><span class="dot"></span><span id="notice">Scene ready · edits saved in this browser</span></div><div class="view-gizmo" role="group" aria-label="Camera orientation and navigation"><div class="view-gizmo-orientation" aria-hidden="true"><svg viewBox="0 0 72 66" width="72" height="66"><path d="M36 5 58 17 36 29 14 17 36 5Z" fill="#eef3ff" stroke="#9aaed4" stroke-width="1.3"/><path d="M14 17v25l22 13V29L14 17Z" fill="#dfe8fa" stroke="#9aaed4" stroke-width="1.3"/><path d="M58 17v25L36 55V29l22-12Z" fill="#c8d8f3" stroke="#9aaed4" stroke-width="1.3"/><path d="M36 29v26" stroke="#9aaed4" stroke-width="1.3"/><circle cx="36" cy="29" r="3" fill="#5277d9"/></svg></div><div class="view-gizmo-presets"><button type="button" data-view="top" aria-pressed="false">Top</button><button type="button" data-view="front" aria-pressed="false">Front</button><button type="button" data-view="right" aria-pressed="false">Right</button><button type="button" data-view="iso" class="is-active" aria-pressed="true">Iso</button></div><div class="view-gizmo-zoom"><button type="button" data-camera-action="zoom-in" aria-label="Zoom in" title="Zoom in">+</button><button type="button" data-camera-action="zoom-out" aria-label="Zoom out" title="Zoom out">−</button><button type="button" data-camera-action="focus" aria-label="Focus selected object" title="Focus selection">Focus</button></div></div></main>'+
+  '<div class="canvas-tools" role="toolbar" aria-label="Drawing and scene tools"><span class="tool-cluster" data-cluster="Navigate">'+iconButton("mode-select","select","Select object")+iconButton("mode-orbit","orbit","Orbit camera")+iconButton("mode-story","story","Story navigation")+'</span><span class="toolbar-separator" aria-hidden="true"></span><span class="tool-cluster" data-cluster="Canvas">'+iconButton("frame","frame","Frame scene")+iconButton("grid","grid","Toggle grid")+iconButton("wireframe","cube","Toggle wireframe")+'</span></div>'+
+  '<div class="canvas-status"><span class="dot"></span><span id="notice">Scene ready · edits saved in this browser</span></div><div class="view-gizmo" role="group" aria-label="Camera orientation and navigation"><div class="view-gizmo-orientation" aria-hidden="true"><svg viewBox="0 0 72 66" width="72" height="66"><path d="M36 5 58 17 36 29 14 17 36 5Z" fill="#eef3ff" stroke="#9aaed4" stroke-width="1.3"/><path d="M14 17v25l22 13V29L14 17Z" fill="#dfe8fa" stroke="#9aaed4" stroke-width="1.3"/><path d="M58 17v25L36 55V29l22-12Z" fill="#c8d8f3" stroke="#9aaed4" stroke-width="1.3"/><path d="M36 29v26" stroke="#9aaed4" stroke-width="1.3"/><circle cx="36" cy="29" r="3" fill="#5277d9"/></svg></div><div class="view-gizmo-copy"><span class="view-gizmo-label">View</span><div class="view-gizmo-presets"><button type="button" data-view="top" aria-pressed="false">Top</button><button type="button" data-view="front" aria-pressed="false">Front</button><button type="button" data-view="right" aria-pressed="false">Right</button><button type="button" data-view="iso" class="is-active" aria-pressed="true">Iso</button></div><div class="view-gizmo-zoom"><button type="button" data-camera-action="zoom-in" aria-label="Zoom in" title="Zoom in">+</button><button type="button" data-camera-action="zoom-out" aria-label="Zoom out" title="Zoom out">−</button><button type="button" data-camera-action="focus" aria-label="Focus selected object" title="Focus selection">Focus</button></div></div></div></main>'+
   '<section class="timeline" id="timeline-dock"><div class="studio-timeline-resize" id="timeline-resize" role="separator" aria-orientation="horizontal" aria-label="Resize scene timeline" tabindex="0"></div><div class="timeline-top"><span class="tag">Story chapters / scroll scenes</span><div class="btn-group"><button class="pill" id="timeline-collapse" type="button" aria-label="Collapse timeline" title="Collapse timeline">'+icon("chevron",13)+'</button><button class="pill" id="stop-story">Stop</button><button class="pill" id="play-story">Play story ▶</button></div></div><div class="timeline-strip" id="chapters"></div></section>'+
   '<aside class="right" id="right"><div class="inspector-heading">Properties</div><div id="inspector"></div></aside></div>';
 const appFrame=app.querySelector<HTMLElement>(".app")!;
@@ -90,7 +102,55 @@ const settingsHost=document.createElement("div");
 settingsHost.id="settings-root";
 app.append(settingsHost);
 const settingsApi=mountSettingsDrawer(settingsHost);
-if(new URLSearchParams(location.search).get("presentation")==="embedded") appFrame.classList.add("is-embedded");
+const bootParams=new URLSearchParams(location.search);
+if(bootParams.get("presentation")==="embedded") appFrame.classList.add("is-embedded");
+function enterStudio(){gallery?.hide();shell.dataset.ssSurface="studio";announce("Editing · "+doc.name);sendHostMessage("selection",{selection:studioContext()});}
+function showGallery(){settingsApi.close();gallery?.show();announce("SamSketch gallery");}
+function loadDocument(next:Document){
+ snapshot();
+ doc=next;
+ selectedId=doc.items[0]?.id||"";
+ history.length=0;future.length=0;
+ store();renderAll();frame();
+}
+function saveCurrentToGallery(){
+ const id="saved-"+crypto.randomUUID().slice(0,8);
+ const entry:SavedSketchProject={id,name:doc.name,category:"Scene",itemCount:doc.items.length,updatedAt:new Date().toISOString(),preview:"web/stack.webp",document:structuredClone(doc)};
+ writeSavedProjects([entry,...readSavedProjects().filter((project)=>project.name!==doc.name)]);
+ gallery?.refresh();
+ announce("Saved “"+doc.name+"” to SamSketch gallery");
+}
+gallery=mountSketchGallery({
+ host:shell,
+ getActiveDraft:()=>{
+  let updatedAt:string|undefined;
+  try{updatedAt=JSON.parse(localStorage.getItem(storageKey+":meta")||"null")?.updatedAt;}catch{/* ignore */}
+  return {name:doc.name,brand:doc.brand,itemCount:doc.items.length,updatedAt};
+ },
+ listSaved:()=>readSavedProjects().map(({id,name,category,itemCount,updatedAt,preview})=>({id,name,category,itemCount,updatedAt,preview})),
+ onOpenDraft:()=>{enterStudio();},
+ onOpenBlank:()=>{loadDocument(freshDoc(doc.brand));doc.name="Untitled canvas";store();enterStudio();announce("Blank canvas ready");},
+ onOpenSaved:(id)=>{
+  const match=readSavedProjects().find((project)=>project.id===id);
+  if(!match)return;
+  loadDocument(structuredClone(match.document));
+  enterStudio();
+  announce("Opened saved scene · "+match.name);
+ },
+ onOpenStarter:(starterId,name)=>{
+  loadDocument(freshDoc(doc.brand));
+  doc.name=name;
+  store();
+  enterStudio();
+  addTemplate(starterId);
+  announce("Opened starter canvas · "+name);
+ },
+ onDeleteSaved:(id)=>{
+  writeSavedProjects(readSavedProjects().filter((project)=>project.id!==id));
+  gallery?.refresh();
+  announce("Removed saved scene");
+ },
+});
 function studioContext(){
  const item=sel();
  return {id:item?.id||"studio-scene",label:item?item.name+" · "+item.kind:"Entire scene",page:"/samsketch",surface:"samsketch-studio",brand:doc.brand,chapter:doc.chapter,selectedItem:item?{id:item.id,name:item.name,kind:item.kind,position:item.position,rotation:item.rotation,scale:item.scale,color:item.color}:null};
@@ -574,6 +634,8 @@ document.addEventListener("click",e=>{
  if(id==="generate-cad"){void generateCAD();return;}
  if(id==="inspector-toggle"){toggleInspectorPanel();return;}
  if(id==="layers-toggle"){toggleLibraryPanel();return;}
+ if(id==="gallery-home"){showGallery();return;}
+ if(id==="save-project"){saveCurrentToGallery();return;}
  if(id==="play-story"){
   if(autoPlay!==null)window.clearInterval(autoPlay);
   setChapter(0);const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -631,7 +693,9 @@ progressive=mountProgressiveStudio({
  }
 });
 renderAll();
-announce("SamSketch ready · 20 compositions · 47 source parts · CAD kernel on demand");
+const preferWorkspace=bootParams.get("workspace")==="1"||bootParams.get("surface")==="studio";
+if(preferWorkspace){enterStudio();announce("SamSketch ready · 20 compositions · 47 source parts · CAD kernel on demand");}
+else{showGallery();announce("SamSketch gallery · open a canvas to begin");}
 sendHostMessage("ready",{context:studioContext()});
 
 observeShellAppearance(({theme,accent})=>{applyWorkspaceTheme(theme);document.documentElement.style.setProperty('--nav-accent',accent);});

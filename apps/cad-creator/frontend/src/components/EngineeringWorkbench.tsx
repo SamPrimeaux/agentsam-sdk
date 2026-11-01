@@ -37,37 +37,45 @@ export function CadProjectExplorer({project,selection,onSelect,onClose,sceneInve
  sceneInventory?:Array<{category:string;count:number}>;
 }) {
  const [filter,setFilter]=useState('');
- const [closed,setClosed]=useState<Record<string,boolean>>({sceneElements:true});
+ const [closed,setClosed]=useState<Record<string,boolean>>({sceneElements:true,furniture:true});
  React.useEffect(()=>{if(selection)setClosed(previous=>({...previous,[selection.group]:false}))},[selection?.group]);
  const data=useMemo(()=>groups(project),[project]);
+ const totals=useMemo(()=>({
+  objects:project.walls.length+project.doors.length+project.windows.length+project.rooms.length+project.furniture.length+(project.parametricObjects?.length||0)+(project.sceneElements?.length||0),
+  groups:data.filter(g=>g.entries.length).length,
+ }),[project,data]);
  return <aside className="cad-work-pane" aria-label="CAD project explorer">
-  <header className="cad-pane-head"><span><Layers3 size={16}/> Project explorer</span>
+  <header className="cad-pane-head"><span><Layers3 size={16}/> Objects</span>
    <button aria-label="Hide project explorer" title="Hide project explorer" onClick={onClose}><PanelLeftClose size={17}/><span className="cad-focus-help">Hide project explorer</span></button></header>
   <label className="cad-tree-search"><Search size={15}/><input aria-label="Filter project objects" value={filter}
-   onChange={e=>setFilter(e.target.value)} placeholder="Filter objects…"/></label>
-  <button className="cad-tree-project" onClick={()=>onSelect(null)}><Box size={15}/><span>{project.name}</span><small>{sceneInventory ? '3D scene' : `v${project.version}`}</small></button>
+   onChange={e=>setFilter(e.target.value)} placeholder="Filter walls, doors, spaces…"/></label>
+  <button className="cad-tree-project" onClick={()=>onSelect(null)} type="button">
+   <Box size={15}/><span>{project.name||'Untitled project'}</span>
+   <small>{sceneInventory ? '3D scene' : `${totals.objects} · v${project.version}`}</small>
+  </button>
   <div className="cad-tree-contents">
   {sceneInventory ? <>
-    <p className="cad-pane-note">Imported GLB geometry · categories from actual scene metadata, not an editable BIM document.</p>
+    <p className="cad-pane-note cad-pane-note--flush">Imported GLB categories · not an editable BIM document.</p>
     {sceneInventory.filter(item=>item.category.toLowerCase().includes(filter.toLowerCase())).map(item=><div className="cad-tree-heading" key={item.category}>
       <Layers3 size={14}/><span>{item.category.replace(/[-_]/g,' ')}</span><small>{item.count}</small>
     </div>)}
-    {sceneInventory.length===0&&<p className="cad-pane-note">Reading scene geometry…</p>}
+    {sceneInventory.length===0&&<p className="cad-pane-note cad-pane-note--flush">Reading scene geometry…</p>}
   </> : data.map(g=>{
    const entries=g.entries.filter(e=>(e.id+' '+e.label).toLowerCase().includes(filter.toLowerCase()));
    if(filter&&!entries.length)return null;
+   if(!filter&&!entries.length)return null;
    const isClosed=!filter&&closed[g.id];
    const GroupIcon=GROUP_ICONS[g.id];
    return <section className="cad-tree-group" key={g.id}>
-    <button className="cad-tree-heading" aria-expanded={!isClosed} onClick={()=>setClosed(c=>({...c,[g.id]:!c[g.id]}))}>
+    <button className="cad-tree-heading" type="button" aria-expanded={!isClosed} onClick={()=>setClosed(c=>({...c,[g.id]:!c[g.id]}))}>
      {isClosed?<ChevronRight size={14}/>:<ChevronDown size={14}/>}<GroupIcon size={14}/><span>{g.title}</span><small>{g.entries.length}</small></button>
-    {!isClosed&&entries.map(e=><button title={e.id} key={e.id} onClick={()=>onSelect({group:g.id,id:e.id})}
+    {!isClosed&&entries.map(e=><button type="button" title={e.id} key={e.id} onClick={()=>onSelect({group:g.id,id:e.id})}
      aria-pressed={selection?.group===g.id&&selection.id===e.id} className={'cad-tree-item'+(selection?.group===g.id&&selection.id===e.id?' active':'')}>
      <GroupIcon size={13}/><span>{e.label}</span></button>)}
    </section>;
   })}
   </div>
-  <footer className="cad-pane-note">{sceneInventory ? 'Scene inspection only. Editing requires the reconciled FreeCAD/IFC document.' : 'Select an element to edit its real document properties.'}</footer>
+  <footer className="cad-pane-note">{sceneInventory ? 'Scene inspection only. Editing requires the reconciled FreeCAD/IFC document.' : `${totals.groups} groups · select an element to edit document properties.`}</footer>
  </aside>;
 }
 

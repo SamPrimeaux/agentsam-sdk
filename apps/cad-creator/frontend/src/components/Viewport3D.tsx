@@ -3,6 +3,7 @@ import {trackCadRenderer} from '../lib/cad/scene-performance';
 import {nativePlanLayer,disposeNativeLayer} from '../lib/native-mesh-three';
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ViewCube } from './ViewCube';
+import { CadViewportOverlay } from './CadViewportOverlay';
 import { publishWorldView, registerWorldView, type WorldViewCommands } from '../lib/world-view-store';
 import * as THREE from 'three';
 import { DoorElement, FurnitureElement, ProjectState, WallElement, WindowElement, ParametricObject } from '@inneranimalmedia/agentsam-cad-shared';
@@ -741,19 +742,18 @@ export const Viewport3D: React.FC<Props> = ({
         </div>
       )}
 
-      <div className="absolute bottom-12 right-2.5 z-10"><ViewCube/></div>
+      <CadViewportOverlay
+        mode="3d"
+        projectName={project.name}
+        walls={project.walls.length}
+        openings={project.doors.length + project.windows.length}
+        rooms={project.rooms.length}
+        fixtures={project.furniture.length}
+        cameraLabel={cameraMode === 'firstperson' ? 'Walkthrough' : cameraMode === 'topdown' ? 'Top' : cameraMode === 'isometric' ? 'Isometric' : 'Orbit'}
+        hint={cameraMode === 'orbit' ? 'Drag to orbit · scroll to zoom' : undefined}
+      />
 
-      {/* Bottom Status Bar */}
-      <div className="absolute bottom-2.5 right-2.5 z-10 pointer-events-none flex items-center space-x-2">
-        <div className="bg-[#252525] border border-[#333] px-2.5 py-1 rounded text-[length:var(--text-sm)] text-gray-400 flex items-center space-x-2 shadow font-mono">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-          <span>{project.walls.length} Walls</span>
-          <span>•</span>
-          <span>{project.doors.length + project.windows.length} Openings</span>
-          <span>•</span>
-          <span>{project.furniture.length} Fixtures</span>
-        </div>
-      </div>
+      <div className="absolute bottom-12 right-2.5 z-10"><ViewCube/></div>
     </div>
   );
 };

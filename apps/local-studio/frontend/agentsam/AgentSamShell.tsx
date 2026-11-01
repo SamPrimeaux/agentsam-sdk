@@ -50,7 +50,7 @@ async function accountAvatarRequest(options: RequestInit = {}) {
 
 type StudioNavigationNode = {id:string;label:string;href?:string;icon?:string;children?:StudioNavigationNode[]};
 type StudioNavigationProjection = {primary?:StudioNavigationNode[];channels?:StudioNavigationNode[];apps?:StudioNavigationNode[];utilities?:StudioNavigationNode[]};
-const navigationIcons = {home:Home,products:Package,orders:ShoppingBag,discounts:Tag,content:Files,analytics:BarChart3,projects:Folder,library:BookOpen,tickets:Ticket,store:Store,'online-store':Store,customers:Users,audience:Users,help:CircleHelp,settings:Settings,messageSquare:MessageSquareIcon,box:Box,film:Film,globe:Globe,growth:TrendingUp,apps:Layers3,mail:Mail,database:Database};
+const navigationIcons = {home:Home,products:Package,orders:ShoppingBag,discounts:Tag,content:Files,analytics:BarChart3,projects:Folder,library:BookOpen,tickets:Ticket,store:Store,'online-store':Store,customers:Users,audience:Users,help:CircleHelp,settings:Settings,messageSquare:MessageSquareIcon,box:Box,film:Film,globe:Globe,growth:TrendingUp,apps:Layers3,layers:Layers3,mail:Mail,database:Database};
 function destination(item:StudioNavigationNode):NavDestination {
   const Icon = navigationIcons[item.icon as keyof typeof navigationIcons];
   return {...item,icon:Icon ? <Icon /> : undefined,children:item.children?.map(destination)};
@@ -141,6 +141,8 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   },[historyRevision,user?.id]);
   const isConversation = pathname === '/agentsam' || pathname === '/admin/agentsam' || pathname.startsWith('/chats');
   const isCadRoute = pathname === '/cad' || pathname.startsWith('/cad/') || pathname === '/admin/cad' || pathname.startsWith('/admin/cad/');
+  const isSamSketchRoute = pathname === '/samsketch' || pathname.startsWith('/samsketch/');
+  const isSamSculptRoute = pathname === '/samsculpt' || pathname.startsWith('/samsculpt/');
   const isSettings = pathname === '/settings' || pathname.startsWith('/settings/');
   const [navigation, setNavigation] = useState<StudioNavigationProjection>({});
   useEffect(() => {
@@ -158,13 +160,16 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   // When a SideStage preview becomes the dedicated editor, close only its
   // duplicate pane. Keep tabs and terminal/browser sessions for later reopening.
   useEffect(() => {
-    if (!isCadRoute && !isMovieModeRoute) return;
+    if (!isCadRoute && !isMovieModeRoute && !isSamSketchRoute && !isSamSculptRoute) return;
     const workspace = useWorkStore.getState();
     const active = workspace.sideTabs.find(tab => tab.id === workspace.activeSideTabId);
-    if ((isCadRoute && active?.kind === 'app') || (isMovieModeRoute && active?.kind === 'media')) {
+    if (
+      ((isCadRoute || isSamSketchRoute || isSamSculptRoute) && active?.kind === 'app')
+      || (isMovieModeRoute && active?.kind === 'media')
+    ) {
       workspace.setSideOpen(false);
     }
-  }, [pathname, isCadRoute, isMovieModeRoute]);
+  }, [pathname, isCadRoute, isMovieModeRoute, isSamSketchRoute, isSamSculptRoute]);
   // Keep first-party Media and Studio mounts in the SPA. Product /admin pages
   // stay readable: navigate the installed Ecommerce host, then mirror the
   // canonical /admin/... URL in history so refresh/session stay coherent.

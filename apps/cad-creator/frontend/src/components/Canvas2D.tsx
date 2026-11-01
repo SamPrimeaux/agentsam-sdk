@@ -33,6 +33,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { collaborationClient } from '../lib/socket';
+import { CadViewportOverlay } from './CadViewportOverlay';
 
 interface Props {
   project: ProjectState;
@@ -1007,6 +1008,17 @@ export const Canvas2D: React.FC<Props> = ({
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
         className="w-full h-full cursor-crosshair"
+      />
+
+      <CadViewportOverlay
+        mode="2d"
+        projectName={project.name}
+        walls={project.walls.length}
+        openings={project.doors.length + project.windows.length}
+        rooms={project.rooms.length}
+        fixtures={project.furniture.length}
+        unit={unit}
+        hint={`${activeTool} · ${Math.round(zoom * 100)}%`}
       />
 
       {/* Zoom / Grid Controls Bottom Right */}
