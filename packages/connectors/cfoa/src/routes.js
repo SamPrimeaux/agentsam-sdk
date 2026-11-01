@@ -11,7 +11,9 @@ import {
   revokeCloudflareUserOauthTokens,
   loadCloudflareConnectionRecord,
   loadCloudflareFromUserOauthTokens,
+  createCloudflareApiClient,
 } from './index.js';
+import { discoverCloudflareMedia, listCloudflareR2Objects } from './families/media.js';
 import { resolveAuthenticatedOwner } from './owner.js';
 import { decryptSecret, sealToken, vaultConfigured } from './vault.js';
 
@@ -80,10 +82,17 @@ async function deleteOAuthState(env, state) {
   }
 }
 
-async function saveOAuthState(env, { state, ownerId, verifier, returnTo }) {
+async function saveOAuthState(env, { state, ownerId, verifier, returnTo, metadata = null }) {
+  const metadataJson = JSON.stringify(metadata && typeof metadata === 'object' ? metadata : {});
   // In-memory fixture path (tests / local without vault).
   if (env.oauthState instanceof Map && (!env.DB || !vaultConfigured(env))) {
-    env.oauthState.set(state, { ownerId, verifier, returnTo, createdAt: Math.floor(Date.now() / 1000) });
+    env.oauthState.set(state, {
+      ownerId,
+      verifier,
+      returnTo,
+      metadata: metadata && typeof metadata === 'object' ? metadata : {},
+      createdAt: Math.floor(Date.now() / 1000),
+    });
     return { ok: true };
   }
   if (!env.DB) return { ok: false, error: 'db_unavailable' };
@@ -101,8 +110,8 @@ async function saveOAuthState(env, { state, ownerId, verifier, returnTo }) {
     `INSERT INTO oauth_state_nonces (
        id, tenant_id, user_id, provider, state_hash, code_verifier_encrypted,
        redirect_after, metadata_json, expires_at, consumed_at, created_at
-     ) VALUES (?, NULL, ?, ?, ?, ?, ?, '{}', ?, NULL, ?)`,
-  ).bind(id, ownerId, OAUTH_STATE_PROVIDER, stateHash, encrypted, returnTo || null, expiresAt, now).run();
+     ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, NULL, ?)`,
+  ).bind(id, ownerId, OAUTH_STATE_PROVIDER, stateHash, encrypted, returnTo || null, metadataJson, expiresAt, now).run();
   return { ok: true };
 }
 
@@ -118,13 +127,14 @@ async function consumeOAuthState(env, state) {
         code_verifier: stored.verifier,
         return_to: stored.returnTo || '',
         created_at: stored.createdAt || 0,
+        metadata: stored.metadata && typeof stored.metadata === 'object' ? stored.metadata : {},
       };
     }
   }
   if (!env.DB) return null;
   const stateHash = await hashOAuthState(state);
   const row = await env.DB.prepare(
-    `SELECT id, user_id, code_verifier_encrypted, redirect_after, expires_at, created_at, consumed_at
+    `SELECT id, user_id, code_verifier_encrypted, redirect_after, metadata_json, expires_at, created_at, consumed_at
      FROM oauth_state_nonces
      WHERE state_hash = ? AND provider = ?
      LIMIT 1`,
@@ -137,11 +147,18 @@ async function consumeOAuthState(env, state) {
   if (Number(row.expires_at) <= now) return null;
   if (!vaultConfigured(env) || !row.code_verifier_encrypted) return null;
   const verifier = await decryptSecret(env, row.code_verifier_encrypted, oauthStateAad(row.user_id));
+  let metadata = {};
+  try {
+    metadata = row.metadata_json ? JSON.parse(row.metadata_json) : {};
+  } catch {
+    metadata = {};
+  }
   return {
     owner_id: row.user_id,
     code_verifier: verifier,
     return_to: row.redirect_after || '',
     created_at: row.created_at,
+    metadata: metadata && typeof metadata === 'object' ? metadata : {},
   };
 }
 
@@ -149,7 +166,9 @@ export function isCloudflareConnectionPath(pathname) {
   return pathname === '/api/connections/cloudflare'
     || pathname === '/api/connections/cloudflare/start'
     || pathname === CLOUDFLARE_CALLBACK_PATH
-    || pathname === '/api/connections/cloudflare/disconnect';
+    || pathname === '/api/connections/cloudflare/disconnect'
+    || pathname === '/api/connections/cloudflare/resources'
+    || /^\/api\/connections\/cloudflare\/r2\/buckets\/[^/]+\/objects$/.test(pathname);
 }
 
 async function ensureTables(env) {
@@ -370,16 +389,6 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
     const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     const returnTo = resolveReturnTo(url);
-    const saved = await saveOAuthState(env, { state, ownerId, verifier, returnTo });
-    if (!saved.ok) {
-      return json({
-        ok: false,
-        error: saved.error || 'oauth_state_unavailable',
-        message: saved.error === 'vault_unavailable'
-          ? 'VAULT_MASTER_KEY required to encrypt OAuth PKCE verifier'
-          : 'oauth state store unavailable',
-      }, 503);
-    }
     const redirectUri = `${url.origin}${CLOUDFLARE_CALLBACK_PATH}`;
     const capabilityParam = url.searchParams.get('capabilities') || url.searchParams.get('capability') || '';
     const packsParam = url.searchParams.get('packs') || url.searchParams.get('pack') || '';
@@ -399,6 +408,26 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       capabilities: capabilitySet,
       packs: requestedPacks,
     });
+    const saved = await saveOAuthState(env, {
+      state,
+      ownerId,
+      verifier,
+      returnTo,
+      metadata: {
+        requested_scopes: scopes,
+        requested_capabilities: capabilitySet,
+        requested_packs: requestedPacks,
+      },
+    });
+    if (!saved.ok) {
+      return json({
+        ok: false,
+        error: saved.error || 'oauth_state_unavailable',
+        message: saved.error === 'vault_unavailable'
+          ? 'VAULT_MASTER_KEY required to encrypt OAuth PKCE verifier'
+          : 'oauth state store unavailable',
+      }, 503);
+    }
     const authorize = buildAuthorizeUrl({
       clientId: String(env.CLOUDFLARE_OAUTH_CLIENT_ID),
       redirectUri,
@@ -476,8 +505,23 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       return settingsRedirect(url, 'error', 'token_exchange_failed', stored.return_to || '');
     }
     const tokens = await tokenRes.json();
-    const grantedScopeStr = tokens.scope || requestedCloudflareScopes({ capabilities: hostDefaultCapabilities }).join(' ');
-    const capabilitySet = hostDefaultCapabilities.slice();
+    const requestedMeta = stored.metadata && typeof stored.metadata === 'object' ? stored.metadata : {};
+    const requestedScopes = Array.isArray(requestedMeta.requested_scopes)
+      ? requestedMeta.requested_scopes.filter(Boolean)
+      : [];
+    const requestedCapabilities = Array.isArray(requestedMeta.requested_capabilities)
+      ? requestedMeta.requested_capabilities.filter(Boolean)
+      : [];
+    // Prefer token response scopes; otherwise the scopes this start actually requested.
+    // Never invent host-default scopes for a narrower packs= connect.
+    const grantedScopeStr = tokens.scope
+      || (requestedScopes.length ? requestedScopes.join(' ') : requestedCloudflareScopes({
+        capabilities: requestedCapabilities.length ? requestedCapabilities : hostDefaultCapabilities,
+        packs: Array.isArray(requestedMeta.requested_packs) ? requestedMeta.requested_packs : [],
+      }).join(' '));
+    const capabilitySet = requestedCapabilities.length
+      ? requestedCapabilities.slice()
+      : hostDefaultCapabilities.slice();
 
     // SSOT: user_oauth_tokens only (scope union + client_id provenance + vault seal).
     let spine = null;
@@ -541,6 +585,77 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       await revokeCloudflareUserOauthTokens(env, ownerId);
     }
     return json({ ok: true, status: 'not_configured', provider_revoked: providerRevoked });
+  }
+
+  if (url.pathname === '/api/connections/cloudflare/resources' && request.method === 'GET') {
+    try {
+      const api = await createCloudflareApiClient({
+        env,
+        ownerId,
+        authMode: 'oauth',
+        capabilityId: 'cloudflare.r2',
+      });
+      const discovery = await discoverCloudflareMedia(api, {
+        cursor: url.searchParams.get('cursor') || undefined,
+        perPage: Number(url.searchParams.get('per_page') || 50) || 50,
+        nameContains: url.searchParams.get('name_contains') || undefined,
+      });
+      return json({ ok: true, ...discovery });
+    } catch (error) {
+      const code = error?.code || 'cloudflare_resources_unavailable';
+      if (code === 'cloudflare_authorization_required' || code === 'cloudflare_credential_required' || code === 'cloudflare_token_required') {
+        return json({
+          ok: true,
+          status: 'not_connected',
+          account: null,
+          r2: { status: 'not_connected', available: false, buckets: [], count: 0 },
+          images: { status: 'not_connected', available: false, count: 0 },
+          stream: { status: 'not_connected', available: false, count: 0 },
+          missing_scopes: [],
+          connect_url: '/api/connections/cloudflare/start?packs=media,data&return_to=/settings/integrations',
+          error: code,
+          checked_at: new Date().toISOString(),
+        });
+      }
+      return json({
+        ok: false,
+        status: 'error',
+        error: code,
+        message: String(error?.message || error).slice(0, 240),
+        reconnect_url: '/api/connections/cloudflare/start?packs=media,data&return_to=/settings/integrations',
+      }, 502);
+    }
+  }
+
+  const r2ObjectsMatch = /^\/api\/connections\/cloudflare\/r2\/buckets\/([^/]+)\/objects$/.exec(url.pathname);
+  if (r2ObjectsMatch && request.method === 'GET') {
+    const bucketName = decodeURIComponent(r2ObjectsMatch[1] || '');
+    try {
+      const api = await createCloudflareApiClient({
+        env,
+        ownerId,
+        authMode: 'oauth',
+        capabilityId: 'cloudflare.r2',
+      });
+      const page = await listCloudflareR2Objects(api, bucketName, {
+        cursor: url.searchParams.get('cursor') || undefined,
+        perPage: Number(url.searchParams.get('per_page') || 100) || 100,
+        prefix: url.searchParams.get('prefix') || undefined,
+      });
+      return json({ ok: true, ...page });
+    } catch (error) {
+      const code = error?.code || 'r2_objects_unavailable';
+      const status = code === 'r2_bucket_required' ? 400
+        : (code === 'cloudflare_permission_denied' ? 403
+          : (code === 'cloudflare_authorization_required' || code === 'cloudflare_credential_required' ? 401 : 502));
+      return json({
+        ok: false,
+        error: code,
+        message: String(error?.message || error).slice(0, 240),
+        bucket: bucketName,
+        reconnect_url: '/api/connections/cloudflare/start?packs=data&return_to=/settings/integrations',
+      }, status);
+    }
   }
 
   return json({ ok: false, error: 'not_found' }, 404);

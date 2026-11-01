@@ -360,6 +360,16 @@ const CLOUDFLARE_FEATURE_PACKS_CURATED = {
       'cloudflare.pipelines',
     ],
   },
+  media: {
+    id: 'media',
+    label: 'Media plane',
+    description: 'Cloudflare Images, Stream, and R2 object storage for galleries',
+    capabilities: [
+      'cloudflare.images',
+      'cloudflare.stream',
+      'cloudflare.r2',
+    ],
+  },
   compute: {
     id: 'compute',
     label: 'Compute',
@@ -415,8 +425,11 @@ const CLOUDFLARE_FEATURE_PACKS_CURATED = {
 };
 
 export const CLOUDFLARE_FEATURE_PACKS = Object.freeze({
-  ...CLOUDFLARE_FEATURE_PACKS_CURATED,
   ...permissionCategoryFeaturePacks(),
+  ...CLOUDFLARE_FEATURE_PACKS_CURATED,
+  // Curated Media Library pack must win over the permission-category "media"
+  // pack (Images/Stream/Calls/MoQ only) so R2 gallery discovery is included.
+  media: CLOUDFLARE_FEATURE_PACKS_CURATED.media,
 });
 
 export {

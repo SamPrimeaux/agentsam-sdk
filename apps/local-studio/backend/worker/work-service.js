@@ -146,6 +146,15 @@ function kindFromName(name, mime) {
   if (/\.(png|jpe?g|gif|webp|svg|avif)(\?|$)/.test(lower) || lower.includes('image/')) {
     return 'image';
   }
+  if (/\.(mp4|webm|mov|m4v|mkv)(\?|$)/.test(lower) || lower.includes('video/')) {
+    return 'video';
+  }
+  if (/\.(mp3|wav|flac|aac|ogg|m4a)(\?|$)/.test(lower) || lower.includes('audio/')) {
+    return 'audio';
+  }
+  if (/\.(glb|gltf|obj|fbx|stl|3mf|usd|usda|usdc)(\?|$)/.test(lower) || lower.includes('model/')) {
+    return 'model';
+  }
   if (/\.(zip|tar|gz|tgz|7z|rar)(\?|$)/.test(lower) || lower.includes('zip') || lower.includes('archive')) {
     return 'archive';
   }

@@ -1,10 +1,13 @@
-import { FileArchive, FileCode2, FileImage, FileText, Grid2X2, List } from "lucide-react";
+import { Box, FileArchive, FileAudio2, FileCode2, FileImage, FileText, FileVideo2, Grid2X2, List } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { WorkArtifact } from "../../contracts/index";
 import { WorkSearch } from "../WorkShell";
 
 function iconFor(kind: WorkArtifact["kind"]) {
   if (kind === "image") return FileImage;
+  if (kind === "video") return FileVideo2;
+  if (kind === "audio") return FileAudio2;
+  if (kind === "model") return Box;
   if (kind === "code") return FileCode2;
   if (kind === "archive") return FileArchive;
   return FileText;
@@ -27,8 +30,11 @@ export function ArtifactsSurface({ artifacts, title = "All sources", heading = "
   useEffect(() => setView(initialView), [initialView]);
   // Show storage choices even before their adapter has supplied any data.
   // Empty != disconnected: connection health requires a separate verified provider read.
-  const sources: WorkArtifact["source"][] = ["artifacts", "r2", "google-drive", "shared-drives", "local"];
-  const kinds = [...new Set(artifacts.map((artifact) => artifact.kind))].sort();
+  const sources: WorkArtifact["source"][] = ["artifacts", "r2", "cf_images", "stream", "google-drive", "shared-drives", "local"];
+  const kinds = [...new Set([
+    ...artifacts.map((artifact) => artifact.kind),
+    "image", "video", "audio", "model", "document", "code", "archive", "other",
+  ] as WorkArtifact["kind"][])].sort();
   const visible = useMemo(
     () => artifacts.filter((artifact) =>
       artifact.name.toLowerCase().includes(query.toLowerCase()) &&
@@ -104,9 +110,21 @@ export function ArtifactsSurface({ artifacts, title = "All sources", heading = "
 
                   {grid ? (
                     <div className="agentsam-work-artifacts__preview">
-                      {artifact.kind === "image" && artifact.preview ? (
-                        <img src={artifact.preview} alt={artifact.name} loading="lazy" decoding="async" />
-                      ) : <div className="agentsam-work-artifacts__no-preview"><Icon size={32} aria-hidden="true" /><span>{artifact.preview ? "Preview unavailable" : "No preview"}</span></div>}
+                      {(artifact.kind === "image" || artifact.kind === "video") && artifact.preview ? (
+                        <>
+                          <img src={artifact.preview} alt={artifact.name} loading="lazy" decoding="async" />
+                          {artifact.kind === "video" && artifact.durationMs ? (
+                            <span className="agentsam-work-artifacts__duration">
+                              {Math.floor(artifact.durationMs / 60000)}:{String(Math.floor((artifact.durationMs % 60000) / 1000)).padStart(2, "0")}
+                            </span>
+                          ) : null}
+                        </>
+                      ) : (
+                        <div className="agentsam-work-artifacts__no-preview">
+                          <Icon size={32} aria-hidden="true" />
+                          <span>{artifact.kind === "image" || artifact.kind === "video" ? "No preview" : artifact.kind}</span>
+                        </div>
+                      )}
                     </div>
                   ) : null}
 

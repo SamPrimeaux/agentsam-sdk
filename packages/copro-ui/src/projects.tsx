@@ -119,7 +119,7 @@ export function CoProProjectsScreen({
       <button onClick={recording ? onStopRecording : onRecord} disabled={!recording && !onRecord} title={recording ? "Stop and import the screen recording" : "Capture your screen and import the recording"}><CoProSystemIcon name="display" icons={systemIcons} size={18} fallback={<ScreenShare size={18}/>} /> {recording ? "Stop recording" : "Record screen"}</button>
       <button onClick={() => onOpenTool?.("text")} disabled={!onOpenTool}><CoProSystemIcon name="document" icons={systemIcons} size={18} fallback={<Type size={18}/>} /> Title studio</button>
       <button onClick={() => onOpenTool?.("captions")} disabled={!onOpenTool}><CoProSystemIcon name="message" icons={systemIcons} size={18} fallback={<Captions size={18}/>} /> Captions</button>
-      <div className="mm-sidebar-footer"><span className="mm-connection-dot"/> Browser-local editing <small>CoPro / EditPilot assistance in editor</small></div>
+      <div className="mm-sidebar-footer"><span className="mm-connection-dot"/> MovieMode <small>Projects save in this Studio session</small></div>
     </aside>
 
     <main className="mm-home-main">
@@ -162,7 +162,7 @@ export function CoProProjectsScreen({
           {!visibleTemplates.length && <div className="mm-template-empty"><CoProSystemIcon name="search" icons={systemIcons} size={22} fallback={<Search size={22}/>} /><strong>No compositions found</strong><span>Try another search or category.</span></div>}
           {examples.length > 0 && <section className="mm-template-examples" aria-label="Sample timelines">
             <div className="mm-heading">
-              <div><span>EXPLORATION WORKSPACES</span><h2>Sample timelines</h2><p>Open an existing prototype to inspect its tracks and editing structure. Each opens as a separate editable copy.</p></div>
+              <div><span>STARTER WORKSPACES</span><h2>Sample timelines</h2><p>Open a sample timeline to inspect tracks and editing structure. Each opens as a separate editable copy.</p></div>
               <span className="mm-template-count">{examples.length} samples</span>
             </div>
             <div className="mm-template-grid">
@@ -217,7 +217,7 @@ export function CoProProjectsScreen({
           </div> : <div className="mm-project-empty"><CoProSystemIcon name="document" icons={systemIcons} size={29} fallback={<FolderOpen size={29}/>} /><strong>{query || filter !== "All" ? "No projects match" : "Your projects will appear here"}</strong><p>{query || filter !== "All" ? "Try a different search or filter." : "Create a timeline or import a real recording to start."}</p><button onClick={onCreate}>Create project <CoProSystemIcon name="next" icons={systemIcons} size={17} fallback={<ChevronRight size={17}/>} /></button></div>}
         </section>
       </>}
-      <footer className="mm-home-bottom"><span>MovieMode — visual creation and editing</span><span>CoPro / EditPilot · contextual collaboration inside the editor</span></footer>
+      <footer className="mm-home-bottom"><span>MovieMode — visual creation and editing</span><span>Apps · independent from Media Library</span></footer>
     </main>
     <nav className="mm-home-mobile-nav" aria-label="Mobile navigation"><button aria-label="Home" onClick={() => navigate("home")}><CoProSystemIcon name="home" icons={systemIcons} size={20} fallback={<Home size={20}/>} />Home</button><button onClick={() => navigate("projects")}><CoProSystemIcon name="document" icons={systemIcons} size={20} fallback={<FolderOpen size={20}/>} />Projects</button><button className="is-create" onClick={onCreate}><CoProSystemIcon name="add" icons={systemIcons} size={23} fallback={<Plus size={23}/>} />Create</button><button onClick={onImport}><CoProSystemIcon name="attachment" icons={systemIcons} size={20} fallback={<Import size={20}/>} />Import</button></nav>
   </section>;

@@ -104,8 +104,8 @@ export type WorkTicketInput = Partial<Omit<WorkTicket, "id" | "updatedAt" | "cre
 export type WorkArtifact = {
   id: string;
   name: string;
-  kind: "image" | "document" | "code" | "archive" | "other";
-  source: "artifacts" | "r2" | "google-drive" | "shared-drives" | "local";
+  kind: "image" | "video" | "audio" | "model" | "document" | "code" | "archive" | "other";
+  source: "artifacts" | "r2" | "google-drive" | "shared-drives" | "local" | "cf_images" | "stream";
   /** Only an explicit, account-owned project association; never guessed from filenames. */
   projectId?: string | null;
   /** Storage view flags are provider-derived; absent flags must not imply availability. */
@@ -117,6 +117,13 @@ export type WorkArtifact = {
   mime?: string | null;
   sizeLabel?: string | null;
   updatedLabel?: string | null;
+  /** Provider-stable identity — never conflate assets by filename alone. */
+  providerId?: string | null;
+  durationMs?: number | null;
+  r2Bucket?: string | null;
+  r2Key?: string | null;
+  cloudflareImageId?: string | null;
+  cloudflareStreamUid?: string | null;
 };
 
 export type WorkProjectStatus =
