@@ -4,6 +4,7 @@
  */
 import { adminRouteForPath } from "../../../ecommerce-cms-agentsam/backend/lib/route-manifest.js";
 import { isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
+import { FIRST_PAINT_BOOTSTRAP_SCRIPT } from "../../shared/shell-appearance.mjs";
 
 const prefix = "/ecommerce-cms-agentsam/admin/";
 const filePattern = /^\/admin\/(?:css|js|partials|brand|assets|dock|profile-popup|media-kit|workbench|theme-previews|_spa|analytics)\/[\w./-]+$/;
@@ -43,7 +44,9 @@ export async function servePackagedConsole(request, assets, { allowStudioHome = 
   headers.set("content-type", "text/html; charset=utf-8");
   headers.set("cache-control", "private, no-store");
   headers.delete("content-length");
+  const bootstrap = `<script>${FIRST_PAINT_BOOTSTRAP_SCRIPT}</script>`;
   const html = (await result.text())
+    .replace(/<head([^>]*)>/i, `<head$1>${bootstrap}`)
     .replace(/<script src="\/admin\/js\/shell\.js"><\/script>(?:<script src="\/admin\/host-config\.js"><\/script>)?/,
       '<script src="/admin/js/shell.js"></script><script src="/admin/host-config.js"></script>' +
       (file === "theme-editor.html" ? '<link rel="stylesheet" href="/studio-cms-source-host.css"><script src="/studio-cms-source-host.js"></script>' : ''))

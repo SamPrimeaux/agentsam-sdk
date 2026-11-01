@@ -1,4 +1,8 @@
 import { useEffect, useState } from 'react';
+/** @deprecated Legacy light/dark/accent preference. Theme Studio
+ * (`cms_themes` + `cms_theme_preferences`) is the account shell authority.
+ * Keep this key readable as a last-resort fallback for standalone apps that
+ * have not received a host appearance projection yet. */
 export const SHELL_APPEARANCE_STORAGE_ID = "agentsam-shell-appearance-v1";
 export type ShellAppearancePreference = {
   theme: "dark" | "light" | "system";

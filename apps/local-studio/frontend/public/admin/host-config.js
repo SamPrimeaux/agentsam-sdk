@@ -130,10 +130,13 @@
   let appearanceRevision = 0;
   let accountTheme = null;
   let navigationMountRevision = 0;
-  function acceptShellAppearance(appearance) {
+  function acceptShellAppearance(appearance, { persist = false, accountId = null } = {}) {
     if (!appearance?.tokens || !['light','dark'].includes(appearance.theme)) return;
     sharedAppearance = appearance;
     appearanceModule?.applyStudioShellAppearance(appearance, document.documentElement);
+    if (persist && accountId && appearanceModule?.writeStudioAppearanceCache) {
+      appearanceModule.writeStudioAppearanceCache(accountId, appearance);
+    }
     sharedNavigation?.update(appearance);
   }
   async function refreshAccountAppearance(user) {
@@ -145,9 +148,16 @@
     appearanceAccount = account;
     accountTheme = null;
     const revision = ++appearanceRevision;
+    // Cache paints first. Legacy agentsam-shell-appearance-v1 is fallback only
+    // when no Theme Studio cache/registry result exists.
+    const cached = appearanceModule.readStudioAppearanceCache?.(account || undefined) || null;
     const preference = preferredDashboardAppearance();
-    const fallback = { theme:preference?.mode || document.documentElement.dataset.theme, accentColor:preference?.accent };
-    acceptShellAppearance(appearanceModule.projectStudioShellAppearance(null, fallback));
+    const fallback = {
+      theme: cached?.theme || preference?.mode || document.documentElement.dataset.theme,
+      accentColor: cached?.accentColor || preference?.accent,
+    };
+    if (cached) acceptShellAppearance(cached);
+    else acceptShellAppearance(appearanceModule.projectStudioShellAppearance(null, fallback));
     if (!account) return;
     try {
       const response = await fetch('/api/studio/themes', {credentials:'same-origin'});
@@ -156,8 +166,15 @@
       if (revision !== appearanceRevision) return;
       const active = data.themes?.find(theme => String(theme.id) === String(data.activeThemeId));
       accountTheme = active || null;
-      acceptShellAppearance(appearanceModule.projectStudioShellAppearance(active, fallback));
-    } catch (error) { console.warn('[navigation/theme]', error); appearanceAccount = null; }
+      acceptShellAppearance(
+        appearanceModule.projectStudioShellAppearance(active, fallback),
+        { persist: true, accountId: account },
+      );
+    } catch (error) {
+      console.warn('[navigation/theme]', error);
+      // Keep last-known-good cache; do not wipe appearanceAccount so retries can skip paint flash.
+      if (!cached) appearanceAccount = null;
+    }
   }
   let sharedNavPath = (window.location?.pathname || '/admin/home') + (window.location?.search || '');
   const originalHydrateNav = typeof hydrateShellNav === 'function' ? hydrateShellNav : null;

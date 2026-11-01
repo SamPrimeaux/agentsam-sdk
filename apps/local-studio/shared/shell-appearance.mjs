@@ -1,44 +1,107 @@
 /** Host projection of cms_themes semantic roles. Used by React and static
- * Console pages; neither consumer owns a second theme registry. */
+ * Console pages; neither consumer owns a second theme registry.
+ *
+ * Account Theme Studio (`cms_themes` + `cms_theme_preferences`) is the
+ * appearance authority. localStorage only caches the last successful apply
+ * for first paint — it never overrides a newer server response. */
+export const STUDIO_APPEARANCE_CACHE_PREFIX = 'agentsam-studio-appearance-v1:';
+export const STUDIO_APPEARANCE_CACHE_LAST = 'agentsam-studio-appearance-v1:last';
+
 const palettes = {
-  dark: { canvas:'#171717', sidebar:'#212121', surface:'#262626', popover:'#292929', text:'#ececec', muted:'#aaaaaa', border:'#ffffff1a', hover:'#ffffff0d', selected:'#ffffff12', danger:'#ff8b8b' },
-  light: { canvas:'#fafafa', sidebar:'#f1f1f1', surface:'#ffffff', popover:'#ffffff', text:'#202020', muted:'#636363', border:'#0000001f', hover:'#00000008', selected:'#0000000d', danger:'#b42323' },
+  dark: {
+    canvas: '#171717', sidebar: '#212121', surface: '#262626', popover: '#292929',
+    text: '#ececec', muted: '#aaaaaa', border: '#ffffff1a', hover: '#ffffff0d',
+    selected: '#ffffff12', danger: '#ff8b8b', topbar: '#111113', search: '#25242a',
+  },
+  light: {
+    canvas: '#fafafa', sidebar: '#f1f1f1', surface: '#ffffff', popover: '#ffffff',
+    text: '#202020', muted: '#636363', border: '#0000001f', hover: '#00000008',
+    selected: '#0000000d', danger: '#b42323', topbar: '#141414', search: '#262626',
+  },
 };
 const roles = {
-  canvas:['--bg-canvas','--bg-app','--bg-primary'],
-  sidebar:['--bg-sidebar','--bg-nav','--bg-shell'],
-  surface:['--bg-surface','--bg-elevated','--bg-secondary','--bg-card'],
-  popover:['--bg-panel','--bg-elevated','--bg-card'],
-  text:['--text-sidebar','--text-nav','--text-main','--text-primary','--color-text'],
-  muted:['--text-sidebar-muted','--text-nav-muted','--text-muted','--text-secondary'],
-  border:['--border-nav','--border','--border-subtle','--color-border'],
-  hover:['--bg-hover','--primary-dim','--bg-secondary'],
-  selected:['--primary-dim','--bg-hover','--bg-secondary'],
-  danger:['--accent-danger','--color-error'],
+  canvas: ['--bg-canvas', '--bg-app', '--bg-primary'],
+  sidebar: ['--bg-sidebar', '--bg-nav', '--bg-shell'],
+  surface: ['--bg-surface', '--bg-elevated', '--bg-secondary', '--bg-card'],
+  popover: ['--bg-panel', '--bg-elevated', '--bg-card'],
+  text: ['--text-sidebar', '--text-nav', '--text-main', '--text-primary', '--color-text'],
+  muted: ['--text-sidebar-muted', '--text-nav-muted', '--text-muted', '--text-secondary'],
+  border: ['--border-nav', '--border', '--border-subtle', '--color-border'],
+  hover: ['--bg-hover', '--primary-dim', '--bg-secondary'],
+  selected: ['--primary-dim', '--bg-hover', '--bg-secondary'],
+  danger: ['--accent-danger', '--color-error'],
+  topbar: ['--bg-topbar', '--c-topbar'],
+  search: ['--bg-search', '--c-search-bg'],
 };
 const consoleRoles = {
-  '--c-bg':'canvas', '--c-surface':'surface', '--c-surface-2':'sidebar',
-  '--c-ink':'text', '--c-ink-2':'muted', '--c-muted':'muted', '--c-soft':'muted',
-  '--c-line':'border', '--c-line-2':'border', '--c-hover':'hover', '--c-active':'selected',
+  '--c-bg': 'canvas',
+  '--c-surface': 'surface',
+  '--c-surface-2': 'sidebar',
+  '--c-topbar': 'topbar',
+  '--c-topbar-hover': 'hover',
+  '--c-search-bg': 'search',
+  '--c-ink': 'text',
+  '--c-ink-2': 'muted',
+  '--c-muted': 'muted',
+  '--c-soft': 'muted',
+  '--c-line': 'border',
+  '--c-line-2': 'border',
+  '--c-hover': 'hover',
+  '--c-active': 'selected',
 };
+const homeRoles = {
+  '--home-line': 'border',
+  '--home-ink': 'text',
+  '--home-muted': 'muted',
+  '--home-card': 'surface',
+  '--home-field': 'surface',
+  '--home-soft': 'hover',
+  '--home-ink-soft': 'muted',
+};
+
+function accentInk(accent) {
+  if (!/^#[0-9a-f]{6}$/i.test(accent || '')) return '#ffffff';
+  const rgb = [1, 3, 5].map((i) => parseInt(accent.slice(i, i + 2), 16) / 255)
+    .map((value) => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
+  const luminance = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
+  return (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? '#000000' : '#ffffff';
+}
 
 /**
  * @param {{id?:string,themeFamily?:string,cssVars?:Record<string,string>} | null | undefined} record
  * @param {{theme?:string,accentColor?:string|null}} fallback
- * @returns {{theme:'light'|'dark',tokens:Record<string,string>,accentColor:string,themeId:string|null}}
+ * @returns {{theme:'light'|'dark',tokens:Record<string,string>,accentColor:string,themeId:string|null,accentInk:string}}
  */
 export function projectStudioShellAppearance(record, fallback = {}) {
   const family = String(record?.themeFamily || '').toLowerCase();
   const theme = family === 'light' || family === 'dark' ? family : fallback.theme === 'light' ? 'light' : 'dark';
   const vars = record?.cssVars || {};
   /** @param {...string} keys */
-  const pick = (...keys) => keys.map(key => vars[key]).find(value => typeof value === 'string' && value.trim() && value.length <= 120)?.trim();
+  const pick = (...keys) => keys.map((key) => vars[key]).find((value) => typeof value === 'string' && value.trim() && value.length <= 120)?.trim();
   /** @type {Record<string,string>} */
   const tokens = { ...palettes[theme] };
-  for (const [role, aliases] of Object.entries(roles)) tokens[role] = pick('--nav-' + role, ...aliases) || tokens[role];
-  const font = pick('--nav-font','--font-sans');
+  for (const [role, aliases] of Object.entries(roles)) {
+    tokens[role] = pick('--nav-' + role, ...aliases) || tokens[role];
+  }
+  // Topbar/search stay chrome-dark in light themes unless the theme supplies them.
+  if (!pick('--nav-topbar', '--bg-topbar', '--c-topbar')) {
+    tokens.topbar = theme === 'light' ? '#141414' : tokens.sidebar;
+  }
+  if (!pick('--nav-search', '--bg-search', '--c-search-bg')) {
+    tokens.search = theme === 'light' ? '#262626' : tokens.surface;
+  }
+  const font = pick('--nav-font', '--font-sans');
   if (font) tokens.font = font;
-  return { theme, tokens, accentColor:pick('--nav-accent','--accent','--color-primary','--accent-primary') || fallback.accentColor || '#8b5cf6', themeId:record?.id || null };
+  const accentColor = pick('--nav-accent', '--accent', '--color-primary', '--accent-primary')
+    || fallback.accentColor
+    || '#8b5cf6';
+  return {
+    theme,
+    tokens,
+    accentColor,
+    accentInk: accentInk(accentColor),
+    themeId: record?.id || null,
+  };
 }
 
 /**
@@ -46,11 +109,107 @@ export function projectStudioShellAppearance(record, fallback = {}) {
  * @param {HTMLElement} root
  */
 export function applyStudioShellAppearance(appearance, root) {
+  if (!appearance?.tokens || (appearance.theme !== 'light' && appearance.theme !== 'dark')) return;
   root.dataset.theme = appearance.theme;
   root.style.colorScheme = appearance.theme;
-  for (const [role, value] of Object.entries(appearance.tokens)) root.style.setProperty('--nav-' + role, value);
+  root.classList.toggle('dark', appearance.theme === 'dark');
+  root.classList.toggle('light', appearance.theme === 'light');
+  for (const [role, value] of Object.entries(appearance.tokens)) {
+    root.style.setProperty('--nav-' + role, value);
+  }
   root.style.setProperty('--nav-accent', appearance.accentColor);
-  for (const [name, role] of Object.entries(consoleRoles)) root.style.setProperty(name, appearance.tokens[role]);
+  for (const [name, role] of Object.entries(consoleRoles)) {
+    root.style.setProperty(name, appearance.tokens[role]);
+  }
   root.style.setProperty('--c-accent', appearance.accentColor);
   root.style.setProperty('--c-focus', appearance.accentColor);
+  root.style.setProperty('--c-accent-ink', appearance.accentInk || accentInk(appearance.accentColor));
+  for (const [name, role] of Object.entries(homeRoles)) {
+    root.style.setProperty(name, appearance.tokens[role]);
+  }
+  root.style.setProperty('--home-focus', appearance.accentColor);
 }
+
+/** @param {string|null|undefined} accountId */
+export function appearanceCacheKey(accountId) {
+  return STUDIO_APPEARANCE_CACHE_PREFIX + (accountId || 'anonymous');
+}
+
+/** @returns {ReturnType<typeof projectStudioShellAppearance> & {accountId?:string,updatedAt?:number} | null} */
+export function readStudioAppearanceCache(accountId, storage) {
+  const store = storage ?? (typeof localStorage !== 'undefined' ? localStorage : null);
+  if (!store) return null;
+  try {
+    const resolvedKey = accountId
+      ? appearanceCacheKey(accountId)
+      : (store.getItem(STUDIO_APPEARANCE_CACHE_LAST) || appearanceCacheKey('anonymous'));
+    const value = store.getItem(resolvedKey);
+    if (!value) return null;
+    const parsed = JSON.parse(value);
+    if (!parsed || (parsed.theme !== 'light' && parsed.theme !== 'dark') || !parsed.tokens || typeof parsed.tokens !== 'object') {
+      return null;
+    }
+    return {
+      theme: parsed.theme,
+      tokens: parsed.tokens,
+      accentColor: typeof parsed.accentColor === 'string' ? parsed.accentColor : '#8b5cf6',
+      accentInk: typeof parsed.accentInk === 'string' ? parsed.accentInk : accentInk(parsed.accentColor),
+      themeId: parsed.themeId || null,
+      accountId: parsed.accountId || accountId || null,
+      updatedAt: Number(parsed.updatedAt) || 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @param {string|null|undefined} accountId
+ * @param {ReturnType<typeof projectStudioShellAppearance>} appearance
+ */
+export function writeStudioAppearanceCache(accountId, appearance, storage) {
+  const store = storage ?? (typeof localStorage !== 'undefined' ? localStorage : null);
+  if (!store || !appearance?.tokens || !accountId) return;
+  try {
+    const payload = JSON.stringify({
+      theme: appearance.theme,
+      tokens: appearance.tokens,
+      accentColor: appearance.accentColor,
+      accentInk: appearance.accentInk || accentInk(appearance.accentColor),
+      themeId: appearance.themeId,
+      accountId,
+      updatedAt: Date.now(),
+    });
+    store.setItem(appearanceCacheKey(accountId), payload);
+    store.setItem(STUDIO_APPEARANCE_CACHE_LAST, appearanceCacheKey(accountId));
+  } catch {
+    /* Cache is best-effort for first paint. */
+  }
+}
+
+/** @param {string|null|undefined} accountId */
+export function clearStudioAppearanceCache(accountId, storage) {
+  const store = storage ?? (typeof localStorage !== 'undefined' ? localStorage : null);
+  if (!store) return;
+  try {
+    if (accountId) store.removeItem(appearanceCacheKey(accountId));
+    const last = store.getItem(STUDIO_APPEARANCE_CACHE_LAST);
+    if (!accountId || last === appearanceCacheKey(accountId)) store.removeItem(STUDIO_APPEARANCE_CACHE_LAST);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Apply last-known-good appearance synchronously before React/registry fetch.
+ * @returns {ReturnType<typeof projectStudioShellAppearance>|null}
+ */
+export function bootstrapStudioAppearanceFromCache(accountId, root) {
+  const cached = readStudioAppearanceCache(accountId);
+  if (!cached || !root) return null;
+  applyStudioShellAppearance(cached, root);
+  return cached;
+}
+
+/** Inline first-paint bootstrap for document <head> (no module graph). */
+export const FIRST_PAINT_BOOTSTRAP_SCRIPT = `(function(){try{var P=${JSON.stringify(STUDIO_APPEARANCE_CACHE_PREFIX)},L=${JSON.stringify(STUDIO_APPEARANCE_CACHE_LAST)};var key=localStorage.getItem(L)||(P+'anonymous');var raw=localStorage.getItem(key);if(!raw)return;var a=JSON.parse(raw);if(!a||(a.theme!=='light'&&a.theme!=='dark')||!a.tokens)return;var r=document.documentElement;r.dataset.theme=a.theme;r.style.colorScheme=a.theme;r.classList.toggle('dark',a.theme==='dark');r.classList.toggle('light',a.theme==='light');var t=a.tokens;for(var k in t){if(Object.prototype.hasOwnProperty.call(t,k))r.style.setProperty('--nav-'+k,t[k]);}if(a.accentColor){r.style.setProperty('--nav-accent',a.accentColor);r.style.setProperty('--c-accent',a.accentColor);r.style.setProperty('--c-focus',a.accentColor);r.style.setProperty('--home-focus',a.accentColor);}var map={'--c-bg':'canvas','--c-surface':'surface','--c-surface-2':'sidebar','--c-topbar':'topbar','--c-topbar-hover':'hover','--c-search-bg':'search','--c-ink':'text','--c-ink-2':'muted','--c-muted':'muted','--c-soft':'muted','--c-line':'border','--c-line-2':'border','--c-hover':'hover','--c-active':'selected','--home-line':'border','--home-ink':'text','--home-muted':'muted','--home-card':'surface','--home-field':'surface','--home-soft':'hover','--home-ink-soft':'muted'};for(var n in map){if(t[map[n]])r.style.setProperty(n,t[map[n]]);}if(a.accentInk)r.style.setProperty('--c-accent-ink',a.accentInk);}catch(e){}})();`;

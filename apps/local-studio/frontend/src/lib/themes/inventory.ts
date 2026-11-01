@@ -4,6 +4,11 @@ import { THEME_PROJECTS_CHANGED } from './projects';
 // @ts-ignore Public portable JavaScript theme authoring contract.
 import { THEME_PROJECT_SCHEMA, extractThemePage, validateThemeProject, renderThemePage } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project';
 import { getActiveThemeId, setActiveThemeId, themeProjectStore } from './projects';
+import {
+  projectStudioShellAppearance,
+  applyStudioShellAppearance,
+  writeStudioAppearanceCache,
+} from '../../../../shared/shell-appearance.mjs';
 
 const draftPreviews = new Map<string, { stamp: string; url: string }>();
 function draftPreview(project: any) {
@@ -229,8 +234,24 @@ export const themeManagement = {
   },
   async applyTheme(id: string) {
     const payload = await registryRequest('/api/studio/themes/' + encodeURIComponent(id) + '/apply', 'POST', {});
-    applyThemeVariables(apiTheme(payload.theme));
+    const theme = apiTheme(payload.theme);
+    applyThemeVariables(theme);
+    const appearance = projectStudioShellAppearance({
+      id: theme.id,
+      themeFamily: String((payload.theme as { themeFamily?: string })?.themeFamily || theme.category || ''),
+      cssVars: theme.cssVars,
+    }, {
+      theme: document.documentElement.dataset.theme === 'light' ? 'light' : 'dark',
+      accentColor: undefined,
+    });
+    applyStudioShellAppearance(appearance, document.documentElement);
+    const accountId = typeof payload.accountId === 'string'
+      ? payload.accountId
+      : ((window as Window & { __shellUser?: { id?: string } }).__shellUser?.id || null);
+    if (accountId) writeStudioAppearanceCache(accountId, appearance);
+    window.dispatchEvent(new CustomEvent('agentsam:theme-applied', { detail: appearance }));
     window.dispatchEvent(new Event(THEME_PROJECTS_CHANGED));
+    window.dispatchEvent(new Event('agentsam:theme-registry-changed'));
   },
   async editTheme(id: string) {
     const project = await themeProjectStore.get(id) || await installThemeDraft(id);

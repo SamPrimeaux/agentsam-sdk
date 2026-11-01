@@ -2,7 +2,13 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
-import { projectStudioShellAppearance, applyStudioShellAppearance } from '../../shared/shell-appearance.mjs';
+import {
+  projectStudioShellAppearance,
+  applyStudioShellAppearance,
+  bootstrapStudioAppearanceFromCache,
+  writeStudioAppearanceCache,
+  clearStudioAppearanceCache,
+} from '../../shared/shell-appearance.mjs';
 import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, Search, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -51,6 +57,15 @@ function destination(item:StudioNavigationNode):NavDestination {
 
 const accents = ['#8B5CF6', '#2563EB', '#0D9488', '#BE185D'];
 
+let bootstrappedAppearance: ReturnType<typeof bootstrapStudioAppearanceFromCache> | undefined;
+function initialCachedAppearance() {
+  if (typeof window === 'undefined') return null;
+  if (bootstrappedAppearance === undefined) {
+    bootstrappedAppearance = bootstrapStudioAppearanceFromCache(undefined, document.documentElement);
+  }
+  return bootstrappedAppearance;
+}
+
 /** App adapter: routing, persistence and business state stay out of agentsam-nav. */
 export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {}) {
   const navigate = useNavigate();
@@ -60,14 +75,19 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const user = useCurrentUser();
   useEffect(() => {
     const shell = window as Window & {__agentsamSignOut?:() => Promise<void>};
-    const action = async () => { try { await signOut(); } catch { toast.error('Sign out could not be completed. Please try again.'); } };
+    const action = async () => {
+      try {
+        clearStudioAppearanceCache(user?.id || null);
+        await signOut();
+      } catch { toast.error('Sign out could not be completed. Please try again.'); }
+    };
     shell.__agentsamSignOut=action;
     return () => {if(shell.__agentsamSignOut===action) delete shell.__agentsamSignOut;};
-  }, []);
+  }, [user?.id]);
   const [mode, setMode] = useState<NavMode>('work');
-  const [theme, setTheme] = useState<NavTheme>('dark');
-  const [accent, setAccent] = useState(accents[0]);
-  const [navTokens, setNavTokens] = useState<NavTokens>({});
+  const [theme, setTheme] = useState<NavTheme>(() => initialCachedAppearance()?.theme || 'dark');
+  const [accent, setAccent] = useState(() => initialCachedAppearance()?.accentColor || accents[0]);
+  const [navTokens, setNavTokens] = useState<NavTokens>(() => initialCachedAppearance()?.tokens || {});
   const [navigationStore, setNavigationStore] = useState<NavStateStore | undefined>(() =>
     typeof window === 'undefined' ? undefined : (window as Window & { __agentsamNavigationStore?: NavStateStore }).__agentsamNavigationStore);
   useEffect(() => {
@@ -264,31 +284,42 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   useEffect(() => {
     let themeSyncRevision = 0;
     // Registered AgentSam shell theme is the sole appearance authority.
-    // Legacy dark/light/accent prefs no longer paint first and fight the registry.
+    // Cache paints first; registry reconciles and updates the account-scoped cache.
+    const paint = (appearance: ReturnType<typeof projectStudioShellAppearance>, persist: boolean) => {
+      applyStudioShellAppearance(appearance, document.documentElement);
+      setNavTokens(appearance.tokens);
+      setAccent(appearance.accentColor);
+      setTheme(appearance.theme);
+      if (persist && user?.id && !user.isDevFallback) writeStudioAppearanceCache(user.id, appearance);
+      window.dispatchEvent(new CustomEvent('agentsam:theme-applied', { detail: appearance }));
+    };
     const syncRegistryTheme = async () => {
       const revision = ++themeSyncRevision;
-      const fallbackAccent = accents[0];
-      const systemTheme = typeof window.matchMedia === 'function'
-        && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      const cached = bootstrapStudioAppearanceFromCache(user?.id || undefined, document.documentElement);
+      if (cached && revision === themeSyncRevision) {
+        setNavTokens(cached.tokens);
+        setAccent(cached.accentColor);
+        setTheme(cached.theme);
+      }
+      const fallbackAccent = cached?.accentColor || accents[0];
+      const systemTheme = cached?.theme || (typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
       try {
         const activeTheme = (!user?.id || user.isDevFallback) ? null : await applyActiveStudioTheme();
         if (revision !== themeSyncRevision) return;
-        const appearance = projectStudioShellAppearance(activeTheme, {
+        paint(projectStudioShellAppearance(activeTheme, {
           theme: systemTheme,
           accentColor: fallbackAccent,
-        });
-        applyStudioShellAppearance(appearance, document.documentElement);
-        setNavTokens(appearance.tokens);
-        setAccent(appearance.accentColor);
-        setTheme(appearance.theme);
-        window.dispatchEvent(new CustomEvent('agentsam:theme-applied', { detail: appearance }));
+        }), Boolean(user?.id && !user.isDevFallback));
       } catch (error) {
         if (revision !== themeSyncRevision) return;
-        const appearance = projectStudioShellAppearance(null, { theme: systemTheme, accentColor: fallbackAccent });
-        applyStudioShellAppearance(appearance, document.documentElement);
-        setNavTokens(appearance.tokens);
-        setAccent(appearance.accentColor);
-        setTheme(appearance.theme);
+        // Keep last-known-good cache on registry failure — do not flash unrelated defaults.
+        if (cached) {
+          paint(cached, false);
+          console.warn('[agentsam/theme-registry]', error);
+          return;
+        }
+        paint(projectStudioShellAppearance(null, { theme: systemTheme, accentColor: fallbackAccent }), false);
         console.warn('[agentsam/theme-registry]', error);
       }
     };

@@ -14,16 +14,11 @@ import { AnnotationToggle } from './AnnotationHelper';
 import { AgentConversationSurface, AgentRuntimeField } from '@inneranimalmedia/agentsam-workbench/agent';
 import { localStudioRuntimeVisuals } from '@/lib/runtime-visuals/local-studio-runtime';
 
-function looksLikePersistedModelFailure(content: string) {
-  return /Studio model error|unsupported_value|max_tokens|max_completion_tokens|Illegal invocation|cloudflare_network_error/i.test(content);
-}
-
 export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const { data, isMobile } = useNav();
   const navigate = useNavigate();
   const state = useWorkStore();
   const [hostModeSlot, setHostModeSlot] = useState<HTMLElement | null>(null);
-  const [resumeFailedTrail, setResumeFailedTrail] = useState(false);
   useEffect(() => { setHostModeSlot(document.getElementById('agentsam-console-mode-slot')); }, []);
   const [workFocused, setWorkFocused] = useState(false);
   const [panelWidth, setPanelWidth] = useState(() => {
@@ -39,7 +34,6 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   }, [panelWidth]);
   const trail = state.trails.find((item) => item.id === (conversationId ?? state.activeTrailId));
   useEffect(() => { if (conversationId && state.trails.some((item) => item.id === conversationId)) state.setActiveTrail(conversationId); }, [conversationId, state.setActiveTrail, state.trails]);
-  useEffect(() => { setResumeFailedTrail(false); }, [conversationId, state.activeTrailId]);
 
   const startNewChat = () => {
     const id = state.startTrail();
@@ -48,41 +42,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
 
   if (!trail) return <div className="agentsam-welcome"><h1>Conversation unavailable</h1><button type="button" className="as-nav-button" onClick={startNewChat}>New chat</button></div>;
 
-  const lastContent = [...trail.messages].reverse().find((msg) => msg.role !== 'system')?.content || '';
-  const failedRestored = !conversationId && !resumeFailedTrail && looksLikePersistedModelFailure(lastContent);
-  if (failedRestored) {
-    const recent = [...state.trails]
-      .filter((item) => item.id !== trail.id)
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .slice(0, 4);
-    return <div className="agentsam-welcome" data-agentsam-landing="failed-restore">
-      <h1>Pick up where you left off</h1>
-      <p className="agentsam-landing-copy">Your last chat ended with a model error and was saved locally. Start fresh, or resume intentionally.</p>
-      <div className="agentsam-landing-actions">
-        <button type="button" className="as-nav-button agentsam-landing-primary" onClick={startNewChat}>
-          <MessageSquarePlus size={16} /> New Chat
-        </button>
-        <button type="button" className="as-nav-button" onClick={() => setResumeFailedTrail(true)}>
-          Resume “{trail.title}”
-        </button>
-        <Link to="/chats" className="as-nav-button">All chats</Link>
-      </div>
-      {recent.length ? (
-        <ul className="agentsam-landing-recent" aria-label="Recent conversations">
-          {recent.map((item) => (
-            <li key={item.id}>
-              <button type="button" className="as-nav-button" onClick={() => {
-                state.setActiveTrail(item.id);
-                void navigate({ to: '/chats/$chatId', params: { chatId: item.id } });
-              }}>Resume {item.title}</button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>;
-  }
-
-  // The donor's welcome placeholder is not a conversation. Keep persisted user messages intact.
+  // Failed model responses stay inside the conversation transcript — never replace the product.
   const empty = trail.messages.length === 0 || (trail.messages.length === 1 && trail.messages[0].id === 'welcome-msg');
   const streaming = state.streamingIds.includes(trail.id);
   return <div className="agentsam-page-layout" data-composer-mode={data.mode}>

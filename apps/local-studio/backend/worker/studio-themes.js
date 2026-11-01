@@ -207,7 +207,7 @@ async function applyTheme(db, accountId, id) {
        VALUES (?, ?, NULL, NULL, NULL, NULL, ?, ?, 'account', 1, ?, ?, NULL)`,
     ).bind(prefId, accountId, row.id, row.slug, now, now),
   ]);
-  return { theme: publicTheme(row, accountId, row.id), activeThemeId: row.id };
+  return { theme: publicTheme(row, accountId, row.id), activeThemeId: row.id, accountId };
 }
 async function archiveTheme(db, accountId, id) {
   const row = await db.prepare(

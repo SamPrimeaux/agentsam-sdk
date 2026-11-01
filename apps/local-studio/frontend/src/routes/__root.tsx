@@ -6,6 +6,7 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { ConnectionDeepLinkBridge } from "@/components/desktop/ConnectionDeepLinkBridge";
 import appCss from "../styles.css?url";
 import { isStudioAdminPath } from "../../../shared/studio-admin-routes.mjs";
+import { FIRST_PAINT_BOOTSTRAP_SCRIPT } from "../../../shared/shell-appearance.mjs";
 
 const APP_NAME = "AgentSam";
 
@@ -40,6 +41,7 @@ export const Route = createRootRoute({
         href: "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Instrument+Serif:ital@0;1&display=swap",
       },
     ],
+    scripts: [{ children: FIRST_PAINT_BOOTSTRAP_SCRIPT }],
   }),
   component: RootDocument,
 });
