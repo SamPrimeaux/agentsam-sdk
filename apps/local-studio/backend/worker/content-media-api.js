@@ -167,7 +167,8 @@ function forwardHeaders(request, body) {
 
 function mediaProviderPreference(url) {
   const raw = String(url.searchParams.get("provider") || "").toLowerCase();
-  if (raw === "iam" || raw === "inneranimalmedia") return "iam";
+  // Canonical explicit provider id is "inneranimalmedia". Legacy "iam" is accepted as an alias only.
+  if (raw === "inneranimalmedia" || raw === "iam") return "inneranimalmedia";
   if (raw === "cloudflare" || raw === "cf" || raw === "oauth") return "cloudflare";
   return "auto";
 }
@@ -434,7 +435,7 @@ function listResponseShape({ assets, page, pageSize, total, source, r2Buckets = 
     albums: [],
     collections_supported: false,
     capabilities: {
-      provider_api: "iam",
+      provider_api: "inneranimalmedia",
       can_upload_images: true,
       can_upload_videos: true,
       can_edit_metadata: true,
@@ -448,7 +449,7 @@ function listResponseShape({ assets, page, pageSize, total, source, r2Buckets = 
 }
 
 async function recoverDrafts(env, request, url, principal = null) {
-  if (mediaProviderPreference(url) !== "iam") {
+  if (mediaProviderPreference(url) !== "inneranimalmedia") {
     // Draft recovery is an IAM-only concept; OAuth gallery has no draft queue.
     return {
       ok: true,
@@ -486,10 +487,10 @@ async function listMedia(env, request, url, principal = null) {
   const providerPref = mediaProviderPreference(url);
   let recovery = null;
 
-  // User Cloudflare media is the default. IAM is only used when provider=iam (explicit).
+  // User Cloudflare media is the default. InnerAnimalMedia only when provider=inneranimalmedia.
   // Never require IAM_API for user-owned CF Images / Stream / R2 gallery browsing (#419).
   const iamAvailable = Boolean(env?.IAM_API && typeof env.IAM_API.fetch === "function");
-  if (providerPref !== "iam") {
+  if (providerPref !== "inneranimalmedia") {
     if (!principal?.id) {
       return json({ ok: false, error: "authentication_required" }, 401);
     }
@@ -510,7 +511,7 @@ async function listMedia(env, request, url, principal = null) {
       return json({
         ok: false,
         error: oauth.error || "cloudflare_media_list_failed",
-        message: "Connect or re-authorize Cloudflare OAuth to browse your Images, Stream, and R2 media. IAM is optional and only used when provider=iam.",
+        message: "Connect or re-authorize Cloudflare OAuth to browse your Images, Stream, and R2 media. InnerAnimalMedia is optional and only used when provider=inneranimalmedia.",
         accounts: oauth.accounts,
         connect_url: oauth.connect_url || "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
       }, oauth.status || 502);
@@ -800,7 +801,7 @@ async function uploadMediaViaIam(env, request, url, form) {
     uploaded_count: assets.length,
     failed_count: errors.length,
     original_preserved: preserveOriginal,
-    provider_api: "iam",
+    provider_api: "inneranimalmedia",
   }, errors.length ? 207 : 200);
 }
 
@@ -811,7 +812,7 @@ async function uploadMedia(env, request, url, principal = null) {
   } catch {
     return json({ ok: false, error: "multipart_form_required" }, 400);
   }
-  if (mediaProviderPreference(url) === "iam") {
+  if (mediaProviderPreference(url) === "inneranimalmedia") {
     if (!env?.IAM_API) return json({ ok: false, error: "iam_media_provider_unavailable" }, 503);
     return uploadMediaViaIam(env, request, url, form);
   }
@@ -957,7 +958,7 @@ async function batchMediaViaIam(env, request, url, body) {
       results.push({ id, ok: result.response.ok && result.data?.ok !== false, error: result.data?.error || null });
     }
     const failed = results.filter((item) => !item.ok);
-    return json({ ok: failed.length === 0, deleted_count: results.length - failed.length, failed_count: failed.length, results, provider_api: "iam" }, failed.length ? 207 : 200);
+    return json({ ok: failed.length === 0, deleted_count: results.length - failed.length, failed_count: failed.length, results, provider_api: "inneranimalmedia" }, failed.length ? 207 : 200);
   }
 
   if (action === "move") {
@@ -982,7 +983,7 @@ async function batchMediaViaIam(env, request, url, body) {
       results.push({ id, ok: result.response.ok && result.data?.ok !== false, error: result.data?.error || null });
     }
     const failed = results.filter((item) => !item.ok);
-    return json({ ok: failed.length === 0, updated_count: results.length - failed.length, failed_count: failed.length, results, provider_api: "iam" }, failed.length ? 207 : 200);
+    return json({ ok: failed.length === 0, updated_count: results.length - failed.length, failed_count: failed.length, results, provider_api: "inneranimalmedia" }, failed.length ? 207 : 200);
   }
 
   if (action === "tag_add" || action === "tag_remove" || action === "tags") {
@@ -1012,7 +1013,7 @@ async function batchMediaViaIam(env, request, url, body) {
       results.push({ id, ok: result.response.ok && result.data?.ok !== false, error: result.data?.error || null });
     }
     const failed = results.filter((item) => !item.ok);
-    return json({ ok: failed.length === 0, updated_count: results.length - failed.length, failed_count: failed.length, results, provider_api: "iam" }, failed.length ? 207 : 200);
+    return json({ ok: failed.length === 0, updated_count: results.length - failed.length, failed_count: failed.length, results, provider_api: "inneranimalmedia" }, failed.length ? 207 : 200);
   }
 
   return json({ ok: false, error: "batch_action_not_supported_by_iam_provider_adapter", action }, 409);
@@ -1020,7 +1021,7 @@ async function batchMediaViaIam(env, request, url, body) {
 
 async function batchMedia(env, request, url, principal = null) {
   const body = await request.json().catch(() => ({}));
-  if (mediaProviderPreference(url) === "iam") {
+  if (mediaProviderPreference(url) === "inneranimalmedia") {
     if (!env?.IAM_API) return json({ ok: false, error: "iam_media_provider_unavailable" }, 503);
     return batchMediaViaIam(env, request, url, body);
   }
@@ -1168,16 +1169,16 @@ async function proxyAssetViaIam(env, request, url, assetId, suffix = "") {
     const data = result.data || {};
     if (isStream) {
       const video = data.video || data.item || data;
-      return json({ ...data, asset: normalizeStreamAsset(video), video, provider_api: "iam" });
+      return json({ ...data, asset: normalizeStreamAsset(video), video, provider_api: "inneranimalmedia" });
     }
     const item = data.item || data.image || data.asset || data;
-    return json({ ...data, asset: normalizeImageAsset(item), item, provider_api: "iam" });
+    return json({ ...data, asset: normalizeImageAsset(item), item, provider_api: "inneranimalmedia" });
   }
   return response;
 }
 
 async function proxyAssetRequest(env, request, url, assetId, suffix = "", principal = null) {
-  if (mediaProviderPreference(url) === "iam") {
+  if (mediaProviderPreference(url) === "inneranimalmedia") {
     if (!env?.IAM_API) return json({ ok: false, error: "iam_media_provider_unavailable" }, 503);
     return proxyAssetViaIam(env, request, url, assetId, suffix);
   }
@@ -1186,12 +1187,12 @@ async function proxyAssetRequest(env, request, url, assetId, suffix = "", princi
 }
 
 async function streamDirectUpload(env, request, url, principal = null) {
-  if (mediaProviderPreference(url) === "iam") {
+  if (mediaProviderPreference(url) === "inneranimalmedia") {
     if (!env?.IAM_API) return json({ ok: false, error: "iam_media_provider_unavailable" }, 503);
     const target = addScopeQuery(new URL("/api/stream/direct-upload", IAM_ORIGIN), url);
     const response = await callIam(env, request, target.pathname + target.search, { method: "POST" });
     const result = await readJson(response);
-    return json({ ...result.data, provider_api: "iam" }, result.response.status);
+    return json({ ...result.data, provider_api: "inneranimalmedia" }, result.response.status);
   }
   if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
   const { createCloudflareStreamDirectUpload } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
@@ -1268,7 +1269,7 @@ export async function handleStudioContentMediaApi(request, env, principal, url =
       error: "operation_not_connected_to_cloudflare_oauth_api",
       operation: unsupportedMatch[2],
       original_asset_preserved: true,
-      provider_api: mediaProviderPreference(url) === "iam" ? "iam" : "cloudflare_oauth",
+      provider_api: mediaProviderPreference(url) === "inneranimalmedia" ? "inneranimalmedia" : "cloudflare_oauth",
     }, 501);
   }
 

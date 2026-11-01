@@ -40,7 +40,7 @@ test('media requests require the already-authenticated Local Studio principal', 
   assert.equal(env.calls.length, 0);
 });
 
-test('explicit IAM provider still proxies image inventory through IAM_API', async () => {
+test('explicit InnerAnimalMedia provider still proxies image inventory through IAM_API', async () => {
   const env = provider((upstream) => {
     const url = new URL(upstream.url);
     assert.equal(url.origin, 'https://inneranimalmedia.com');
@@ -63,7 +63,7 @@ test('explicit IAM provider still proxies image inventory through IAM_API', asyn
       r2_bucket: 'inneranimalmedia',
     });
   });
-  const request = mediaRequest('/api/admin/media?provider=iam&source=cf_images&page=2&page_size=7&q=hero&workspace_id=ws_media_demo&tenant_id=tenant_media_demo&r2_bucket=inneranimalmedia', {
+  const request = mediaRequest('/api/admin/media?provider=inneranimalmedia&source=cf_images&page=2&page_size=7&q=hero&workspace_id=ws_media_demo&tenant_id=tenant_media_demo&r2_bucket=inneranimalmedia', {
     headers: {
       cookie: 'iam_session=account-session',
       authorization: 'Bearer session-token',
@@ -82,7 +82,7 @@ test('explicit IAM provider still proxies image inventory through IAM_API', asyn
   assert.equal(env.calls.length, 1);
 });
 
-test('explicit IAM provider video inventory uses Stream via IAM_API', async () => {
+test('explicit InnerAnimalMedia provider video inventory uses Stream via IAM_API', async () => {
   const env = provider((upstream) => {
     const url = new URL(upstream.url);
     assert.equal(url.pathname, '/api/stream/videos');
@@ -93,7 +93,7 @@ test('explicit IAM provider video inventory uses Stream via IAM_API', async () =
       total: 1,
     });
   });
-  const response = await handleStudioContentMediaApi(mediaRequest('/api/admin/media?provider=iam&kind=video&workspace_id=ws_video_demo'), env, principal);
+  const response = await handleStudioContentMediaApi(mediaRequest('/api/admin/media?provider=inneranimalmedia&kind=video&workspace_id=ws_video_demo'), env, principal);
   const data = await parseJson(response);
   assert.equal(response.status, 200);
   assert.equal(data.source, 'stream');
@@ -206,7 +206,7 @@ test('#419 default gallery without OAuth does not fall back to IAM_API', async (
   assert.match(String(data.error || ''), /cloudflare_/);
 });
 
-test('explicit IAM provider uploads retain the source in the canonical R2 bucket', async () => {
+test('explicit InnerAnimalMedia provider uploads retain the source in the canonical R2 bucket', async () => {
   const env = provider(async (upstream) => {
     assert.equal(new URL(upstream.url).pathname, '/api/images/upload');
     assert.equal(new URL(upstream.url).searchParams.get('destination'), 'r2');
@@ -224,14 +224,14 @@ test('explicit IAM provider uploads retain the source in the canonical R2 bucket
   form.set('source_media_asset_id', 'source_original_1');
   form.set('tags', JSON.stringify(['project']));
   form.set('alt_text', 'Workshop model');
-  const request = mediaRequest('/api/admin/media?provider=iam', { method: 'POST', body: form, headers: { cookie: 'iam_session=account-session', origin } });
+  const request = mediaRequest('/api/admin/media?provider=inneranimalmedia', { method: 'POST', body: form, headers: { cookie: 'iam_session=account-session', origin } });
   const response = await handleStudioContentMediaApi(request, env, principal);
   const data = await parseJson(response);
   assert.equal(response.status, 200);
   assert.equal(data.original_preserved, true);
   assert.equal(data.uploaded_count, 1);
   assert.equal(data.assets[0].r2_key, 'models/workshop.glb');
-  assert.equal(data.provider_api, 'iam');
+  assert.equal(data.provider_api, 'inneranimalmedia');
 });
 
 test('#419 Cloudflare Images upload never calls IAM_API', async () => {
@@ -310,7 +310,7 @@ test('video upload is routed to the explicit Stream direct-upload flow', async (
   assert.equal(env.calls.length, 0);
 });
 
-test('explicit IAM Stream direct-upload still proxies when provider=iam', async () => {
+test('explicit InnerAnimalMedia Stream direct-upload still proxies when provider=inneranimalmedia', async () => {
   const env = provider((upstream) => {
     const url = new URL(upstream.url);
     assert.equal(url.pathname, '/api/stream/direct-upload');
@@ -320,13 +320,13 @@ test('explicit IAM Stream direct-upload still proxies when provider=iam', async 
     assert.equal(upstream.headers.get('cookie'), 'iam_session=account-session');
     return jsonResponse({ ok: true, uploadURL: 'https://upload.example/stream' }, 201);
   });
-  const response = await handleStudioContentMediaApi(mediaRequest('/api/admin/media/stream/direct-upload?provider=iam&workspace_id=ws_stream_upload&tenant_id=tenant_stream_upload', {
+  const response = await handleStudioContentMediaApi(mediaRequest('/api/admin/media/stream/direct-upload?provider=inneranimalmedia&workspace_id=ws_stream_upload&tenant_id=tenant_stream_upload', {
     method: 'POST', headers: { cookie: 'iam_session=account-session', origin }, body: '{}',
   }), env, principal);
   const data = await parseJson(response);
   assert.equal(response.status, 201);
   assert.equal(data.uploadURL, 'https://upload.example/stream');
-  assert.equal(data.provider_api, 'iam');
+  assert.equal(data.provider_api, 'inneranimalmedia');
 });
 
 test('#419 Stream direct-upload uses Cloudflare OAuth without IAM_API', async () => {
