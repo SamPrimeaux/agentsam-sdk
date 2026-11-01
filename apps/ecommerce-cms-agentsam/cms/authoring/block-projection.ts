@@ -18,9 +18,10 @@ type CanonicalRow = {
   id:string; block_key:string; block_type:string; sort_order:number;
   status:string; content_json:string; metadata_json:string;
   artifact_id:string|null; parent_block_id:string|null; source_path?:string|null;
+  site_id?:string|null;
 };
 export type SqlDb = {
-  prepare(sql:string): {bind(...values:unknown[]): {run():Promise<unknown>; all():Promise<{results?:CanonicalRow[]}>}};
+  prepare(sql:string): {bind(...values:unknown[]): {run():Promise<unknown>; all():Promise<{results?:CanonicalRow[]}>; first?:()=>Promise<CanonicalRow|null>}};
   batch(queries:Array<{run():Promise<unknown>}>):Promise<unknown>;
 };
 const INSTANCE_KEY=/^[a-z0-9][a-z0-9_-]{0,95}$/;
@@ -105,7 +106,7 @@ export function planEditorBlocks(content:unknown):BlockPlan[]|null {
  */
 export async function reconcileCanonicalBlocks(db:SqlDb,input:{
   accountId:string;sectionId:string;content:unknown;dryRun?:boolean;
-  previousContent?:unknown;
+  previousContent?:unknown;siteId?:string|null;
 }):Promise<ProjectionResult> {
   // Existing Revise donor documents have flat aliases over deeply imported
   // canonical source paths. Unchanged aliases are compatibility projections:
@@ -179,14 +180,27 @@ export async function reconcileCanonicalBlocks(db:SqlDb,input:{
   if(input.dryRun)
     return {status:'applied',inserted:insertions.length,updated:updates.length,archived:archives.length};
 
+  // Site-first cms_revisions requires site_id. Prefer the caller-supplied site,
+  // otherwise resolve through the section's owning page — never invent one.
+  let siteId = typeof input.siteId === 'string' && input.siteId ? input.siteId : null;
+  if (!siteId) {
+    const scope = await db.prepare(
+      `SELECT p.site_id AS site_id FROM cms_page_sections s
+         JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+        WHERE s.id=? AND s.account_id=? LIMIT 1`
+    ).bind(input.sectionId, input.accountId).all();
+    siteId = scope.results?.[0]?.site_id || null;
+  }
+  if (!siteId) error('missing_site_scope');
+
   const statements:Array<{run():Promise<unknown>}>=[];
   const receipt=(id:string,operation:string,before:unknown,after:unknown)=>{
     statements.push(db.prepare(
       `INSERT INTO cms_revisions
-       (account_id,entity_type,entity_id,revision_number,revision_kind,snapshot_json,metadata_json)
-       SELECT ?,'block',?,COALESCE(MAX(revision_number),0)+1,'draft',?,?
+       (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,snapshot_json,metadata_json)
+       SELECT ?,?,?,?,COALESCE(MAX(revision_number),0)+1,'draft',?,?
        FROM cms_revisions WHERE account_id=? AND entity_type='block' AND entity_id=?`
-    ).bind(input.accountId,id,JSON.stringify({operation,before,after}),
+    ).bind(input.accountId,siteId,'block',id,JSON.stringify({operation,before,after}),
       JSON.stringify({source:OWNER}),input.accountId,id));
   };
   // Insert parent before child to respect the parent_block_id foreign key.

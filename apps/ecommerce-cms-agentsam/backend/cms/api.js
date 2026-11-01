@@ -5,6 +5,12 @@ import { listThemeProjects, getThemeProject, createThemeProject, installThemeDra
 import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows } from "./page-inventory.mjs";
 import { ensureDefaultCmsSite, listCmsSites, createCmsSite, resolveCmsSite } from "./site-context.mjs";
+import {
+  buildCatalogInstanceContent,
+  isCatalogInstalledContent,
+  resolveCatalogTemplate,
+  loadEmbedCatalog,
+} from "./catalog-resource.mjs";
 import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
 import { reconcileCanonicalBlocks } from "../../cms/authoring/block-projection.ts";
 import { validateThemeSettings, validateThemeCss } from "./theme-style-contract.mjs";
@@ -255,6 +261,7 @@ async function syncCanonicalDraftPointer(env, legacySectionId, content, r2Meta) 
     const blocks=await reconcileCanonicalBlocks(env.DB,{
       accountId:canonical.account_id,sectionId:canonical.id,content,
       previousContent:parseContent(canonical.inline_content_json),
+      siteId:canonical.site_id,
     });
     return {status:'linked',blocks};
   } catch (error) {
@@ -309,13 +316,17 @@ async function persistSectionDraft(
     // or advancing the legacy pointer. A half-saved editor action is not success.
     if (existing && !content?.__editor?.generated) {
       const canonical = await env.DB.prepare(
-        `SELECT id,account_id,inline_content_json FROM cms_page_sections WHERE legacy_section_id=?`
+        `SELECT s.id,s.account_id,s.inline_content_json,p.site_id
+           FROM cms_page_sections s
+           JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
+          WHERE s.legacy_section_id=?`
       ).bind(existing.id).first();
       if (canonical) {
         try {
           await reconcileCanonicalBlocks(env.DB,{
             accountId:canonical.account_id,sectionId:canonical.id,content,dryRun:true,
             previousContent:parseContent(canonical.inline_content_json),
+            siteId:canonical.site_id,
           });
         } catch(error) {
           return {error:String(error?.code || error?.message),status:409,
@@ -1027,6 +1038,154 @@ export async function restoreSectionRevision(env, slug, sectionKey, accountId, b
   await markPageDraft(env,legacy.page_id,slug);
   return {ok:true,section_key:sectionKey,restored_revision:revisionNumber,
     version:saved.version,canonical:saved.canonical};
+}
+
+/**
+ * Ensure the legacy storefront page pointer is linked to the account-owned
+ * cms_pages row so catalog installs can project into cms_section_blocks.
+ */
+async function ensureCanonicalCmsPage(env, accountId, slug, legacyPage) {
+  if (!accountId || !legacyPage?.id) return { error: "Account and page required", status: 403 };
+  const site = await resolveCmsSite(env.DB, { accountId, createDefault: true });
+  let canonical = await env.DB.prepare(
+    `SELECT id, site_id, account_id, legacy_page_id FROM cms_pages
+      WHERE account_id=? AND site_id=? AND slug=? LIMIT 1`
+  ).bind(accountId, site.id, slug).first();
+  if (!canonical) {
+    const route = CMS_STOREFRONT_ROUTES.find((item) => item.page === slug);
+    await env.DB.prepare(
+      `INSERT INTO cms_pages
+        (account_id, site_id, legacy_page_id, slug, route_path, title, status, is_homepage)
+       VALUES (?, ?, ?, ?, ?, ?, 'draft', ?)`
+    ).bind(
+      accountId,
+      site.id,
+      legacyPage.id,
+      slug,
+      route?.path || `/${slug}`,
+      legacyPage.title || slug,
+      slug === "home" || route?.path === "/" ? 1 : 0,
+    ).run();
+    canonical = await env.DB.prepare(
+      `SELECT id, site_id, account_id, legacy_page_id FROM cms_pages
+        WHERE account_id=? AND site_id=? AND slug=? LIMIT 1`
+    ).bind(accountId, site.id, slug).first();
+  } else if (canonical.legacy_page_id == null) {
+    await env.DB.prepare(
+      `UPDATE cms_pages SET legacy_page_id=?, updated_at=datetime('now')
+        WHERE id=? AND account_id=? AND legacy_page_id IS NULL`
+    ).bind(legacyPage.id, canonical.id, accountId).run();
+    canonical.legacy_page_id = legacyPage.id;
+  } else if (Number(canonical.legacy_page_id) !== Number(legacyPage.id)) {
+    return { error: "Canonical page is linked to a different legacy page", status: 409 };
+  }
+  if (!canonical) return { error: "Canonical CMS page could not be created", status: 500 };
+  return { site, canonical };
+}
+
+/**
+ * Catalog → install vertical slice.
+ * Selects a packaged storefront embed template and installs a page-owned
+ * section instance with its own cms_page_sections / cms_section_blocks identity.
+ */
+export async function installCatalogResource(env, slug, accountId, body = {}) {
+  if (!accountId) return { error: "Account required", status: 403 };
+  if (!PAGE_REGISTRY[slug]) return { error: "Unknown page", status: 404 };
+  const template = resolveCatalogTemplate(body.catalogKey || body.catalog_key || body.key);
+  if (!template) return { error: "Unknown or non-installable catalog template", status: 400 };
+
+  const ensured = await ensurePage(env, slug);
+  if (ensured.error) return ensured;
+  const page = ensured.page;
+  const linked = await ensureCanonicalCmsPage(env, accountId, slug, page);
+  if (linked.error) return linked;
+
+  const rows = await orderedSectionRows(env, page.id);
+  const base = sectionKeyBase(template.key);
+  let sectionKey = `${base}-${crypto.randomUUID().slice(0, 8)}`;
+  while (rows.some((row) => row.section_key === sectionKey)) {
+    sectionKey = `${base}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  const sortOrder = rows.length ? Math.max(...rows.map((row) => Number(row.sort_order || 0))) + 10 : 0;
+  const content = buildCatalogInstanceContent(template, body.settings || body.config || {});
+  const meta = await persistSectionDraft(env, slug, page.id, sectionKey, content, sortOrder);
+  if (meta.error) return meta;
+  if (meta.canonical?.status !== "linked") {
+    return {
+      error: "Catalog install did not project into canonical CMS blocks",
+      status: 409,
+      code: "cms_catalog_install_unlinked",
+      canonical: meta.canonical,
+    };
+  }
+
+  const toIndex = Number.isInteger(body.toIndex)
+    ? Math.max(0, Math.min(body.toIndex, rows.filter((row) => row.status !== "removed").length))
+    : undefined;
+  if (toIndex !== undefined) {
+    const activeKeys = (await orderedSectionRows(env, page.id))
+      .filter((row) => row.status !== "removed")
+      .map((row) => row.section_key);
+    const currentIndex = activeKeys.indexOf(sectionKey);
+    if (currentIndex >= 0) activeKeys.splice(currentIndex, 1);
+    activeKeys.splice(toIndex, 0, sectionKey);
+    await rewriteSectionOrder(env, page.id, activeKeys);
+  }
+  await markPageDraft(env, page.id, slug);
+
+  const composition = await readCanonicalComposition(env, accountId, slug, linked.site.id);
+  const installed = composition?.sections?.find((section) => section.key === sectionKey) || null;
+  return {
+    ok: true,
+    section_key: sectionKey,
+    catalog_key: template.key,
+    definition_key: template.key,
+    template_key: content.__editor.templateKey,
+    version: meta.version,
+    canonical: meta.canonical,
+    instance: installed,
+  };
+}
+
+export async function listInstalledCatalogResources(env, slug, accountId) {
+  if (!accountId) return { error: "Account required", status: 403 };
+  const catalog = loadEmbedCatalog().apps.map((app) => ({
+    key: app.key,
+    name: app.name,
+    category: app.category,
+    installable: Array.isArray(app.surfaces) &&
+      (app.surfaces.includes("cms_block") || app.surfaces.includes("storefront_embed")),
+  }));
+  const composition = await readCanonicalComposition(env, accountId, slug);
+  if (!composition) {
+    return { ok: true, slug, catalog, installed: [], authority: null };
+  }
+  const installed = [];
+  for (const section of composition.sections) {
+    const settings = section.settings || {};
+    if (!isCatalogInstalledContent(settings) && section.type !== "storefront_embed") continue;
+    const editor = settings.__editor || {};
+    installed.push({
+      section_id: section.id,
+      section_key: section.key,
+      catalog_key: editor.catalogKey || null,
+      definition_key: editor.definitionKey || editor.catalogKey || null,
+      status: section.status,
+      enabled: editor.visibility?.enabled !== false,
+      version: section.contentVersion,
+      settings: Object.fromEntries(
+        Object.entries(settings).filter(([key]) => key !== "__editor" && key !== "embed-root"),
+      ),
+      blocks: section.blocks || [],
+    });
+  }
+  return {
+    ok: true,
+    slug,
+    authority: composition.authority,
+    catalog,
+    installed,
+  };
 }
 
 export async function insertSection(env, slug, body = {}) {
@@ -1904,6 +2063,26 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     const result = await importLivePageDraft(env, m[1], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
+  }
+
+  m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/catalog-resources$/);
+  if (m && method === "GET") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    const result = await listInstalledCatalogResources(env, m[1], context.accountId);
+    if (result.error) return json({ error: result.error }, { status: result.status || 400 });
+    return json(result);
+  }
+  if (m && method === "POST") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON" }, { status: 400 });
+    }
+    const result = await installCatalogResource(env, m[1], context.accountId, body);
+    if (result.error) return json(result, { status: result.status || 400 });
+    return json(result, { status: 201 });
   }
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections$/);

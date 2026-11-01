@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-// A generated public UI catalog, not a connection/install registry.
+// Generated public UI catalog of installable storefront embed templates.
+// Installation persists through /api/admin/cms/pages/:slug/catalog-resources
+// into cms_page_sections + cms_section_blocks — not a parallel registry.
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const app = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const root = resolve(app, '../..');
 const manifests = [
   resolve(app, 'agentsam.app.json'),
   resolve(app, 'apps/resend/agentsam.app.json'),
@@ -24,7 +25,7 @@ for (const file of manifests) {
 }
 const target = resolve(app, 'frontend/static/theme-editor/embed-catalog.json');
 const output = JSON.stringify({ schema:'agentsam.theme-embed-ui-catalog.v1', source:'package-manifests',
-  preview_only:true, apps }, null, 2) + '\n';
+  preview_only:false, installable:true, apps }, null, 2) + '\n';
 if (process.argv.includes('--check')) {
   if ((await readFile(target, 'utf8')) !== output) {
     console.error('Theme embed UI catalog out of sync with packaged manifests');
