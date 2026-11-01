@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-3d-viewer",
-  "version": "2.6.13",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Framework-agnostic Three.js viewport and model viewer for AgentSam apps and public sites.",
