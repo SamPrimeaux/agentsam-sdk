@@ -438,7 +438,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
 }
 
 export const localStudioSettingsHost: SettingsHost = {
-  documentationHref: "/docs",
+  documentationHref: "/settings/docs",
   ...themeManagement,
   async capabilities() {
     return capabilities;

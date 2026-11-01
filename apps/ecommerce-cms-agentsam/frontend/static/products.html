@@ -17,16 +17,15 @@
 renderShell('/admin/products', `
   <div class="admin-toolbar">
     <div>
-      <h1 class="admin-page-title">Products</h1>
-      <p class="admin-page-sub">Manage catalog items, pricing, and status.</p>
+      <h1 class="admin-page-title">Store Products</h1>
+      <p class="admin-page-sub">One catalog workspace. Filter by product type and collection — software packages stay packages.</p>
     </div>
     <a href="/admin/products/create" class="btn primary">Product Studio</a>
   </div>
 
   <nav class="product-catalog-tabs" aria-label="Product views">
-    <a class="btn ghost" href="/admin/products">Store products</a>
+    <a class="btn ghost" href="/admin/products">Store Products</a>
     <a class="btn ghost" href="/admin/products?view=collections">Collections</a>
-    <a class="btn ghost" href="/admin/products?view=platform">Platform products</a>
   </nav>
   <section id="product-collections" hidden>
     <h2>Collections</h2><p>Organize your created products into collections. Add products from their product details.</p>
@@ -40,9 +39,9 @@ renderShell('/admin/products', `
   <section id="platform-products" class="platform-catalog" hidden>
     <div class="platform-catalog-heading">
       <div>
-        <p class="platform-eyebrow">DIGITAL PRODUCT LIBRARY</p>
-        <h2>Platform products</h2>
-        <p>Manage applications, templates, themes and reusable tools with the same catalog experience as your store products. Release versions remain managed by their release workflow.</p>
+        <p class="platform-eyebrow">STORE CATALOG</p>
+        <h2>Store Products</h2>
+        <p>Browse the populated catalog. Use product type and collection filters — do not treat software packages as merchandise by rename alone.</p>
       </div>
       <span id="platform-product-count" class="platform-count" aria-live="polite"></span>
     </div>
@@ -93,7 +92,7 @@ renderShell('/admin/products', `
       </div>
     </form>
   </section>
-  <div class="admin-card" id="store-products-table">
+  <div class="admin-card" id="store-products-table" hidden>
     <table class="admin-table">
       <thead><tr><th>Title</th><th>Collection</th><th>Price</th><th>Status</th><th>Variants</th><th>Inventory</th><th></th></tr></thead>
       <tbody id="products-body"><tr><td colspan="7" class="admin-empty">Loading…</td></tr></tbody>
@@ -111,9 +110,14 @@ function badgeFor(status) {
   return `<span class="badge">${escapeProduct(status || 'draft')}</span>`;
 }
 
-const productView = new URLSearchParams(location.search).get('view') || 'store';
+// Default Store Products opens the populated catalog (former platform view).
+// ?view=platform remains a compatible alias. Empty merchant landing is retired.
+const rawProductView = new URLSearchParams(location.search).get('view') || 'store';
+const productView = rawProductView === 'collections' ? 'collections' : 'platform';
 document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
-  if ((new URL(link.href).searchParams.get('view') || 'store') === productView) link.setAttribute('aria-current', 'page');
+  const linkView = new URL(link.href).searchParams.get('view') || 'store';
+  const normalized = linkView === 'collections' ? 'collections' : 'platform';
+  if (normalized === productView) link.setAttribute('aria-current', 'page');
 });
 (async function () {
   if (productView === 'collections' || productView === 'platform') {

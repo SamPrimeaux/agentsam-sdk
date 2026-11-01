@@ -5,12 +5,14 @@ import { fileURLToPath } from "node:url";
 
 const read = (file) => readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8");
 
-test("Media routes mount the existing MovieMode app, not the unrelated Content Studio", () => {
-  assert.match(read("../frontend/src/routes/(apps)/media.tsx"), /MovieModeSurface/);
-  assert.match(read("../frontend/src/routes/(apps)/media.tsx"), /media\/edit/);
-  assert.match(read("../frontend/src/routes/(apps)/media.edit.tsx"), /createFileRoute\("\/\(apps\)\/media\/edit"\)/);
+test("Media Library owns /media; MovieMode mounts only under /admin/moviemode", () => {
+  assert.match(read("../frontend/src/routes/(apps)/media.tsx"), /MediaLibraryPage/);
+  assert.doesNotMatch(read("../frontend/src/routes/(apps)/media.tsx"), /MovieModeSurface/);
+  assert.match(read("../frontend/src/routes/(apps)/admin/moviemode.tsx"), /MovieModeSurface/);
+  assert.match(read("../frontend/src/routes/(apps)/admin/moviemode.edit.tsx"), /MovieModeSurface/);
+  assert.match(read("../frontend/src/routes/(apps)/media.edit.tsx"), /\/admin\/moviemode\/edit/);
   assert.match(read("../frontend/src/routeTree.gen.ts"), /'\/media\/edit'/);
-  assert.doesNotMatch(read("../frontend/src/routes/(apps)/media.tsx"), /ContentStudioPage|iframe|localhost/);
+  assert.match(read("../frontend/src/routeTree.gen.ts"), /'\/media\/images'/);
 });
 
 test("MovieMode remains one runnable application with a reusable Work host", () => {
@@ -20,9 +22,11 @@ test("MovieMode remains one runnable application with a reusable Work host", () 
   assert.doesNotMatch(read("../frontend/src/components/media/MovieModeSurface.tsx"), /iframe|127\.0\.0\.1/);
 });
 
-test("Media replaces Utilities while Work exposes a focusable MovieMode tab", () => {
+test("Media is primary nav; MovieMode stays under Apps without claiming /media", () => {
   const shell = read("../frontend/agentsam/AgentSamShell.tsx");
-  assert.match(read('../scripts/studio-navigation.mjs'), /id:'media',label:'Media',href:'\/media',icon:'film'/);
+  assert.match(read('../scripts/studio-navigation.mjs'), /id:'media',label:'Media',href:'\/media'/);
+  assert.match(read('../scripts/studio-navigation.mjs'), /'agentsam-copro-studio': \{ href: '\/admin\/moviemode'/);
+  assert.match(read('../scripts/studio-navigation.mjs'), /aliases: \[\]/);
   assert.doesNotMatch(shell, /id: 'utilities'/);
   assert.match(read("../frontend/agentsam/side-stage-actions.ts"), /tab: 'media'/);
   assert.match(read("../frontend/src/components/workbench/side-stage.tsx"), /MovieModeSurface workPane/);

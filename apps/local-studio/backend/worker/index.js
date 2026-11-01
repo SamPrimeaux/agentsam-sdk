@@ -41,7 +41,7 @@ import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import {handleOpenScadLibraries} from "./cad-openscad-libraries.js";
-import { canonicalStudioPath, isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
+import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
 import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
@@ -771,6 +771,48 @@ export default {
           status: 301,
           headers: { location: target.toString(), 'cache-control': 'private, max-age=300' },
         });
+      }
+      // Legacy Content /admin/content(?kind=) → first-party Media Library.
+      // Prevents packaged-console remounts that bounced valid sessions to login.
+      const mediaPath = resolveLegacyContentMediaPath(url.pathname, url.searchParams);
+      if (mediaPath) {
+        const target = new URL(mediaPath, request.url);
+        return new Response(null, {
+          status: 302,
+          headers: { location: target.toString(), 'cache-control': 'private, no-store' },
+        });
+      }
+      if (url.pathname === '/docs' || url.pathname.startsWith('/docs/')) {
+        const target = new URL('/settings/docs', request.url);
+        target.search = url.search;
+        return Response.redirect(target, 302);
+      }
+      if (url.pathname === '/admin/products/help/artwork' || url.pathname === '/admin/products/help/artwork/') {
+        const target = new URL('/settings/docs', request.url);
+        target.searchParams.set('topic', 'artwork');
+        return Response.redirect(target, 302);
+      }
+    }
+
+    // Serve authenticated Media Library shells with the same React app hydrate path.
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        (url.pathname === '/media' || url.pathname.startsWith('/media/'))) {
+      if (url.pathname === '/media/edit' || url.pathname.startsWith('/media/edit/')) {
+        const target = new URL('/admin/moviemode/edit', request.url);
+        return Response.redirect(target, 302);
+      }
+      const denied = await guardStudioDocument(request, env);
+      if (denied) return denied;
+      const assetUrl = new URL(request.url);
+      assetUrl.pathname = '/studio-app-shell/media/';
+      assetUrl.search = '';
+      const shell = await env.ASSETS.fetch(new Request(assetUrl, { method: 'GET' }));
+      if (shell.ok) {
+        const headers = new Headers(shell.headers);
+        headers.set('content-type', 'text/html; charset=utf-8');
+        headers.set('cache-control', 'private, no-store');
+        headers.delete('content-length');
+        return new Response(request.method === 'HEAD' ? null : shell.body, { status: 200, headers });
       }
     }
 

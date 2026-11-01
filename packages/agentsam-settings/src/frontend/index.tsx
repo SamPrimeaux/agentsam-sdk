@@ -1,4 +1,4 @@
-import { readShellAppearancePreference, SHELL_APPEARANCE_STORAGE_ID, useShellAppearance } from "../appearance";
+import { useShellAppearance } from "../appearance";
 import { SettingsThemeGallery } from "./themes";
 import { WidgetGalleryPreview } from "./WidgetGalleryPreview";
 export { SettingsThemeGallery } from "./themes";
@@ -21,9 +21,11 @@ import {
   Database,
   Eye,
   EyeOff,
+  FolderOpen,
   GitPullRequest,
   Globe2,
   HardDrive,
+  Image as ImageIcon,
   KeyRound,
   Menu,
   Megaphone,
@@ -2238,7 +2240,15 @@ function GeneralView({snapshot,host,onChanged}:{
          <PreferenceRow label="Runtime" description="Current execution host." value={snapshot.general.runtime}/>
        </div>
      </Section>
-     <AppearancePreferences/>
+     <Section title="Appearance" description="Shell appearance is controlled by your active registered theme. Storefront and CMS themes stay under Online Store.">
+       <div className="rounded-lg border border-border/70 px-3 py-3">
+         <p className="text-[11px] text-muted-foreground">
+           Dark/light accents no longer override the AgentSam shell. Open Themes to activate or customize the registered shell theme.
+         </p>
+         {host.openSettingsUnit ? <button type="button" onClick={() => host.openSettingsUnit?.("themes")}
+           className="mt-3 rounded-lg border border-border px-3 py-2 text-[12px] hover:bg-muted">Open Themes →</button> : null}
+       </div>
+     </Section>
      <Section title="Application preferences" description="Saved under your account using the existing user UI preferences registry.">
        {snapshot.general.preferencesError?<p role="alert" className="rounded-xl border border-amber-500/25 p-3 text-[11px] text-[var(--settings-warning-ink)]">
          {snapshot.general.preferencesError}. Changes cannot be saved until the service is available.
@@ -2267,90 +2277,7 @@ function GeneralView({snapshot,host,onChanged}:{
  );
 }
 
-const SHELL_ACCENTS = [
-  { id: "#8B5CF6", label: "Violet" },
-  { id: "#2563EB", label: "Blue" },
-  { id: "#0D9488", label: "Teal" },
-  { id: "#BE185D", label: "Rose" },
-] as const;
-
-
 export { readShellAppearancePreference, type ShellAppearancePreference } from "../appearance";
-
-function AppearancePreferences() {
-  const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
-  const [accent, setAccent] = useState<string>(SHELL_ACCENTS[1].id);
-
-  useEffect(() => {
-    const saved = readShellAppearancePreference();
-    if (!saved) return;
-    setTheme(saved.theme);
-    setAccent(saved.accent);
-  }, []);
-
-  function commit(nextTheme: typeof theme, nextAccent: string) {
-    setTheme(nextTheme);
-    setAccent(nextAccent);
-    localStorage.setItem(SHELL_APPEARANCE_STORAGE_ID, JSON.stringify({ theme: nextTheme, accent: nextAccent }));
-    window.dispatchEvent(
-      new CustomEvent("agentsam:shell-appearance", { detail: { theme: nextTheme, accent: nextAccent } }),
-    );
-  }
-
-  return (
-    <Section
-      title="Appearance"
-      description="Shell theme and accent live here — not in the account overflow menu."
-    >
-      <div className="rounded-lg border border-border/70 px-3 py-3">
-        <div className="mb-3">
-          <div className="text-[11px] font-medium">Color mode</div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {(["dark", "light", "system"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => commit(mode, accent)}
-                className={cx(
-                  "h-8 rounded-md border px-3 text-[10px] font-medium capitalize",
-                  theme === mode
-                    ? "border-foreground/30 bg-muted text-foreground"
-                    : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                )}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div className="text-[11px] font-medium">Accent</div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {SHELL_ACCENTS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                onClick={() => commit(theme, option.id)}
-                className={cx(
-                  "inline-flex h-8 items-center gap-2 rounded-md border px-3 text-[10px] font-medium",
-                  accent === option.id
-                    ? "border-foreground/30 bg-muted text-foreground"
-                    : "border-border text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                )}
-              >
-                <span className="size-3 rounded-full" style={{ background: option.id }} />
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <p className="mt-3 text-[10px] text-muted-foreground">
-          Appearance preferences control the AgentSam dashboard. Storefront themes and installed drafts are managed separately in Online Store.
-        </p>
-      </div>
-    </Section>
-  );
-}
 
 /** Brand identity is not a theme. Themes and editor appearance have separate Settings units. */
 function DesignView({snapshot,host}:{
@@ -2783,9 +2710,37 @@ function NotificationsView({
 }
 
 function DocsView({host}: {host:SettingsHost}) {
-  return <Section title="Documentation" description="Guides for your applications and workflows.">
-    {host.documentationHref ? <a href={host.documentationHref} className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35"><BookOpen className="size-4" /><span>Open help center</span><ChevronRight className="ml-auto size-4" /></a> : <p className="text-sm text-muted-foreground">Documentation is not connected for this installation.</p>}
-  </Section>;
+  const topic = typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("topic")
+    : null;
+  return <>
+    <Section title="Documentation" description="Guides for AgentSam workflows. Contextual help links land here.">
+      <div className="space-y-3">
+        <a href="/help/cms" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
+          <BookOpen className="size-4" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">Sites, themes, and CMS</span><span className="block text-xs text-muted-foreground">Connected websites, content-only records, drafts, and publish checks</span></span><ChevronRight className="size-4" />
+        </a>
+        <a href="/settings/docs?topic=artwork" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
+          <ImageIcon className="size-4" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">Artwork Help</span><span className="block text-xs text-muted-foreground">File formats, print resolution, color, and production guidelines</span></span><ChevronRight className="size-4" />
+        </a>
+        <a href="/media" className="flex items-center gap-3 rounded-lg border border-border px-4 py-3 hover:bg-muted/35">
+          <FolderOpen className="size-4" /><span className="min-w-0 flex-1"><span className="block text-sm font-medium">Media Library</span><span className="block text-xs text-muted-foreground">Images, videos, models, and files</span></span><ChevronRight className="size-4" />
+        </a>
+      </div>
+    </Section>
+    {topic === "artwork" ? (
+      <Section title="Artwork Help" description="Production guidance formerly under Products → Artwork Help.">
+        <div className="space-y-3 rounded-lg border border-border/70 p-4 text-sm leading-6 text-muted-foreground">
+          <p>Use print-ready artwork at the product’s required resolution. Prefer vector or high-resolution PNG/TIFF sources; keep color profiles consistent with the fulfillment partner.</p>
+          <p>Open Product Studio when you need to attach artwork to a catalog item. MovieMode stays under Apps for timeline editing.</p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <a href="/admin/products" className="rounded-lg border border-border px-3 py-2 text-xs text-foreground hover:bg-muted">Store Products</a>
+            <a href="/admin/products/create" className="rounded-lg border border-border px-3 py-2 text-xs text-foreground hover:bg-muted">Product Studio</a>
+            {host.openSettingsUnit ? <button type="button" onClick={() => host.openSettingsUnit?.("docs")} className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted">All docs</button> : null}
+          </div>
+        </div>
+      </Section>
+    ) : null}
+  </>;
 }
 
 function KeysSubView({ view, snapshot }: { view: string; snapshot: SettingsSnapshot }) {

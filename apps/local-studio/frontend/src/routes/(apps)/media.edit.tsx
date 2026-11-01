@@ -1,4 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-// /media owns the persistent MovieMode runtime. This child URL selects editor mode.
-export const Route = createFileRoute("/(apps)/media/edit")({ component: () => null });
+/** Legacy MovieMode editor bookmark — creative editor lives under Apps only. */
+export const Route = createFileRoute("/(apps)/media/edit")({
+  beforeLoad: () => {
+    throw redirect({ to: "/admin/moviemode/edit" });
+  },
+  component: () => null,
+});

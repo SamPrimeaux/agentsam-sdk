@@ -9,8 +9,9 @@ const source = (path) => readFileSync(new URL('../' + path, import.meta.url), 'u
 
 test('canonical Projects owns one host-neutral Work UI; old flat paths redirect without leaks', () => {
   assert.deepEqual(STUDIO_ADMIN_MOUNTS.map((mount) => mount.canonical), [
-    '/admin/projects', '/admin/home', '/admin/agentsam', '/admin/cad', '/admin/cad', '/admin/moviemode'
+    '/admin/projects', '/admin/home', '/admin/agentsam', '/admin/cad', '/admin/cad', '/admin/moviemode',
   ]);
+  assert.equal(canonicalStudioPath('/media'), null, 'Media Library owns /media; MovieMode is Apps-only');
   assert.equal(canonicalStudioPath('/projects'), '/admin/projects');
   assert.equal(canonicalStudioPath('/projects/proj_123'), '/admin/projects/proj_123');
   assert.equal(canonicalStudioPath('/admin/home'), null, 'canonical commerce home must not redirect to itself');
