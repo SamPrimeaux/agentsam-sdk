@@ -12,11 +12,13 @@ const palettes = {
     canvas: '#171717', sidebar: '#212121', surface: '#262626', popover: '#292929',
     text: '#ececec', muted: '#aaaaaa', border: '#ffffff1a', hover: '#ffffff0d',
     selected: '#ffffff12', danger: '#ff8b8b', topbar: '#111113', search: '#25242a',
+    ink: '#ececec', inkMuted: '#aaaaaa',
   },
   light: {
     canvas: '#fafafa', sidebar: '#f1f1f1', surface: '#ffffff', popover: '#ffffff',
     text: '#202020', muted: '#636363', border: '#0000001f', hover: '#00000008',
     selected: '#0000000d', danger: '#b42323', topbar: '#141414', search: '#262626',
+    ink: '#202020', inkMuted: '#636363',
   },
 };
 const roles = {
@@ -26,6 +28,10 @@ const roles = {
   popover: ['--bg-panel', '--bg-elevated', '--bg-card'],
   text: ['--text-sidebar', '--text-nav', '--text-main', '--text-primary', '--color-text'],
   muted: ['--text-sidebar-muted', '--text-nav-muted', '--text-muted', '--text-secondary'],
+  // `text`/`muted` belong to the sidebar chrome (light-on-dark rail in light
+  // themes). `ink`/`inkMuted` are page content text on canvas/surface.
+  ink: ['--text-main', '--text-primary', '--color-text', '--text-heading', '--text-sidebar', '--text-nav'],
+  inkMuted: ['--text-muted', '--text-secondary', '--text-sidebar-muted', '--text-nav-muted'],
   border: ['--border-nav', '--border', '--border-subtle', '--color-border'],
   hover: ['--bg-hover', '--primary-dim', '--bg-secondary'],
   selected: ['--primary-dim', '--bg-hover', '--bg-secondary'],
@@ -40,10 +46,10 @@ const consoleRoles = {
   '--c-topbar': 'topbar',
   '--c-topbar-hover': 'hover',
   '--c-search-bg': 'search',
-  '--c-ink': 'text',
-  '--c-ink-2': 'muted',
-  '--c-muted': 'muted',
-  '--c-soft': 'muted',
+  '--c-ink': 'ink',
+  '--c-ink-2': 'inkMuted',
+  '--c-muted': 'inkMuted',
+  '--c-soft': 'inkMuted',
   '--c-line': 'border',
   '--c-line-2': 'border',
   '--c-hover': 'hover',
@@ -51,12 +57,23 @@ const consoleRoles = {
 };
 const homeRoles = {
   '--home-line': 'border',
-  '--home-ink': 'text',
-  '--home-muted': 'muted',
+  '--home-ink': 'ink',
+  '--home-muted': 'inkMuted',
   '--home-card': 'surface',
   '--home-field': 'surface',
   '--home-soft': 'hover',
-  '--home-ink-soft': 'muted',
+  '--home-ink-soft': 'inkMuted',
+};
+// Tailwind/shadcn semantic tokens used by React routes. Projected from the
+// same roles so html/body never fall back to the static dark defaults.
+const tailwindRoles = {
+  '--color-background': 'canvas',
+  '--color-foreground': 'ink',
+  '--color-card': 'surface',
+  '--color-card-foreground': 'ink',
+  '--color-popover': 'popover',
+  '--color-popover-foreground': 'ink',
+  '--color-muted-foreground': 'inkMuted',
 };
 
 function accentInk(accent) {
@@ -128,6 +145,10 @@ export function applyStudioShellAppearance(appearance, root) {
     root.style.setProperty(name, appearance.tokens[role]);
   }
   root.style.setProperty('--home-focus', appearance.accentColor);
+  for (const [name, role] of Object.entries(tailwindRoles)) {
+    const value = appearance.tokens[role] ?? appearance.tokens[role === 'ink' ? 'text' : role === 'inkMuted' ? 'muted' : role];
+    if (value) root.style.setProperty(name, value);
+  }
 }
 
 /** @param {string|null|undefined} accountId */
@@ -212,4 +233,5 @@ export function bootstrapStudioAppearanceFromCache(accountId, root) {
 }
 
 /** Inline first-paint bootstrap for document <head> (no module graph). */
-export const FIRST_PAINT_BOOTSTRAP_SCRIPT = `(function(){try{var P=${JSON.stringify(STUDIO_APPEARANCE_CACHE_PREFIX)},L=${JSON.stringify(STUDIO_APPEARANCE_CACHE_LAST)};var key=localStorage.getItem(L)||(P+'anonymous');var raw=localStorage.getItem(key);if(!raw)return;var a=JSON.parse(raw);if(!a||(a.theme!=='light'&&a.theme!=='dark')||!a.tokens)return;var r=document.documentElement;r.dataset.theme=a.theme;r.style.colorScheme=a.theme;r.classList.toggle('dark',a.theme==='dark');r.classList.toggle('light',a.theme==='light');var t=a.tokens;for(var k in t){if(Object.prototype.hasOwnProperty.call(t,k))r.style.setProperty('--nav-'+k,t[k]);}if(a.accentColor){r.style.setProperty('--nav-accent',a.accentColor);r.style.setProperty('--c-accent',a.accentColor);r.style.setProperty('--c-focus',a.accentColor);r.style.setProperty('--home-focus',a.accentColor);}var map={'--c-bg':'canvas','--c-surface':'surface','--c-surface-2':'sidebar','--c-topbar':'topbar','--c-topbar-hover':'hover','--c-search-bg':'search','--c-ink':'text','--c-ink-2':'muted','--c-muted':'muted','--c-soft':'muted','--c-line':'border','--c-line-2':'border','--c-hover':'hover','--c-active':'selected','--home-line':'border','--home-ink':'text','--home-muted':'muted','--home-card':'surface','--home-field':'surface','--home-soft':'hover','--home-ink-soft':'muted'};for(var n in map){if(t[map[n]])r.style.setProperty(n,t[map[n]]);}if(a.accentInk)r.style.setProperty('--c-accent-ink',a.accentInk);}catch(e){}})();`;
+const FIRST_PAINT_ROLE_MAP = { ...consoleRoles, ...homeRoles, ...tailwindRoles };
+export const FIRST_PAINT_BOOTSTRAP_SCRIPT = `(function(){try{var P=${JSON.stringify(STUDIO_APPEARANCE_CACHE_PREFIX)},L=${JSON.stringify(STUDIO_APPEARANCE_CACHE_LAST)};var key=localStorage.getItem(L)||(P+'anonymous');var raw=localStorage.getItem(key);if(!raw)return;var a=JSON.parse(raw);if(!a||(a.theme!=='light'&&a.theme!=='dark')||!a.tokens)return;var r=document.documentElement;r.dataset.theme=a.theme;r.style.colorScheme=a.theme;r.classList.toggle('dark',a.theme==='dark');r.classList.toggle('light',a.theme==='light');var t=a.tokens;for(var k in t){if(Object.prototype.hasOwnProperty.call(t,k))r.style.setProperty('--nav-'+k,t[k]);}if(a.accentColor){r.style.setProperty('--nav-accent',a.accentColor);r.style.setProperty('--c-accent',a.accentColor);r.style.setProperty('--c-focus',a.accentColor);r.style.setProperty('--home-focus',a.accentColor);}var map=${JSON.stringify(FIRST_PAINT_ROLE_MAP)};var fb={ink:'text',inkMuted:'muted'};for(var n in map){var v=t[map[n]]||t[fb[map[n]]];if(v)r.style.setProperty(n,v);}if(a.accentInk)r.style.setProperty('--c-accent-ink',a.accentInk);}catch(e){}})();`;

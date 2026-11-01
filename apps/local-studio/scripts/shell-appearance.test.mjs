@@ -81,3 +81,31 @@ test('React shell resolves the hosted account instead of skipping the registry f
     'registry must not be skipped for the dev fallback user');
   assert.ok(hosted.includes('/api/auth/me'), 'hosted account comes from the IAM session contract');
 });
+
+test('light themes with a dark rail keep page ink dark and project tailwind tokens', () => {
+  const appearance = projectStudioShellAppearance({
+    id: 'light-dark-rail',
+    themeFamily: 'light',
+    cssVars: {
+      '--text-sidebar': '#F4F4F5',
+      '--text-main': '#202223',
+      '--text-muted': '#616161',
+      '--bg-canvas': '#F4F4F5',
+      '--bg-surface': '#FFFFFF',
+    },
+  });
+  assert.equal(appearance.tokens.text, '#F4F4F5', 'sidebar text stays light on the dark rail');
+  assert.equal(appearance.tokens.ink, '#202223', 'page ink comes from main text');
+  const props = new Map();
+  const root = {
+    dataset: {},
+    style: { setProperty: (k, v) => props.set(k, v) },
+    classList: { toggle() {} },
+  };
+  applyStudioShellAppearance(appearance, root);
+  assert.equal(props.get('--c-ink'), '#202223');
+  assert.equal(props.get('--home-ink'), '#202223');
+  assert.equal(props.get('--nav-text'), '#F4F4F5');
+  assert.equal(props.get('--color-foreground'), '#202223');
+  assert.equal(props.get('--color-background'), '#F4F4F5');
+});
