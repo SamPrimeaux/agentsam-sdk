@@ -9,6 +9,9 @@ body.agentsam-shared-navigation .console-workspace { min-width:0; flex:1; }
 
 body.agentsam-shared-navigation .console-sidenav.admin-sidebar {height:calc(100dvh - var(--c-topbar-h,56px));min-height:0;}
 
+/* Reserve the rail while agentsam-nav loads; never reveal the legacy shell.js rail. */
+.console-sidenav.admin-sidebar[data-shared-nav-pending] { visibility:hidden; }
+
 /* Hosted chrome follows the same appearance as the navigation and installed apps. */
 body.agentsam-shared-navigation .console-topbar {background:var(--c-surface-2);color:var(--c-ink);border-bottom:1px solid var(--c-line);}
 body.agentsam-shared-navigation .console-topbar .console-icon-btn {color:var(--c-ink-2);}

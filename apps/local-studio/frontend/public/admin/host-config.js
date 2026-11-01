@@ -366,6 +366,7 @@
       ...(sharedAppearance || appearanceModule.projectStudioShellAppearance(null, {theme:document.documentElement.dataset.theme || readConsoleAppearance(), accentColor:preferredDashboardAppearance()?.accent}))
     });
     window.__agentsamNavigationStore = sharedNavigation.stateStore;
+    aside.removeAttribute('data-shared-nav-pending');
     window.dispatchEvent(new Event('agentsam:navigation-ready'));
     updateSharedNavigation();
     if (!window.__agentsamWorkspaceNavigation) void refreshWorkspaceProjects();
@@ -380,7 +381,19 @@
       sharedNavigation?.unmount(); sharedNavigation = null;
       sharedNavPath = (active || window.location.pathname) + (active?.includes('?') ? '' : window.location.search);
       const result = originalRender(active, html, options);
-      mountSharedNavigation().catch(error => console.error('[navigation]', error));
+      // Ecommerce shell.js still paints a legacy rail synchronously. Drop it at once so
+      // agentsam-nav (owner of navigation presentation) is never preceded by a second nav.
+      const legacyRail = document.querySelector('.console-sidenav.admin-sidebar');
+      if (legacyRail && document.body.dataset.shellMode !== 'theme-editor') {
+        legacyRail.replaceChildren();
+        legacyRail.setAttribute('data-shared-nav-pending', 'true');
+      }
+      mountSharedNavigation().catch(error => {
+        console.error('[navigation]', error);
+        // Shared navigation unavailable: restore the packaged rail rather than leave no navigation.
+        document.querySelector('.console-sidenav.admin-sidebar')?.removeAttribute('data-shared-nav-pending');
+        if (!sharedNavigation && originalHydrateNav) originalHydrateNav(window.__shellUser, active);
+      });
       return result;
     };
   }

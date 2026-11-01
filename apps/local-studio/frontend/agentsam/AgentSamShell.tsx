@@ -36,6 +36,7 @@ import { signOut } from '@/lib/auth/client';
 import { hasGateSessionMarker } from '@/lib/auth/gate-session-marker';
 import { applyActiveStudioTheme } from '@/lib/themes/inventory';
 import { THEME_PROJECTS_CHANGED } from '@/lib/themes/projects';
+import { forgetHostedAccountId, knownHostedAccountId, resolveHostedAccountId } from '@/lib/themes/hosted-account';
 
 async function accountAvatarRequest(options: RequestInit = {}) {
   if (!isPackagedDesktop()) return fetch('/api/settings/account-avatar', options);
@@ -77,7 +78,9 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     const shell = window as Window & {__agentsamSignOut?:() => Promise<void>};
     const action = async () => {
       try {
-        clearStudioAppearanceCache(user?.id || null);
+        clearStudioAppearanceCache(user && !user.isDevFallback ? user.id : null);
+        clearStudioAppearanceCache(knownHostedAccountId());
+        forgetHostedAccountId();
         await signOut();
       } catch { toast.error('Sign out could not be completed. Please try again.'); }
     };
@@ -285,17 +288,22 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     let themeSyncRevision = 0;
     // Registered AgentSam shell theme is the sole appearance authority.
     // Cache paints first; registry reconciles and updates the account-scoped cache.
-    const paint = (appearance: ReturnType<typeof projectStudioShellAppearance>, persist: boolean) => {
+    // The hosted Worker already authenticated this document; useCurrentUser() is the
+    // sandbox dev fallback in the shipped bundle, so the account is resolved from IAM.
+    const sessionAccountId = user?.id && !user.isDevFallback ? user.id : null;
+    const paint = (appearance: ReturnType<typeof projectStudioShellAppearance>, accountId: string | null) => {
       applyStudioShellAppearance(appearance, document.documentElement);
       setNavTokens(appearance.tokens);
       setAccent(appearance.accentColor);
       setTheme(appearance.theme);
-      if (persist && user?.id && !user.isDevFallback) writeStudioAppearanceCache(user.id, appearance);
+      if (accountId) writeStudioAppearanceCache(accountId, appearance);
       window.dispatchEvent(new CustomEvent('agentsam:theme-applied', { detail: appearance }));
     };
     const syncRegistryTheme = async () => {
       const revision = ++themeSyncRevision;
-      const cached = bootstrapStudioAppearanceFromCache(user?.id || undefined, document.documentElement);
+      // Cache paints first (account key when known, otherwise the last-account pointer
+      // that the head bootstrap already used).
+      const cached = bootstrapStudioAppearanceFromCache(sessionAccountId || knownHostedAccountId() || undefined, document.documentElement);
       if (cached && revision === themeSyncRevision) {
         setNavTokens(cached.tokens);
         setAccent(cached.accentColor);
@@ -305,21 +313,23 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       const systemTheme = cached?.theme || (typeof window.matchMedia === 'function'
         && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
       try {
-        const activeTheme = (!user?.id || user.isDevFallback) ? null : await applyActiveStudioTheme();
+        const accountId = sessionAccountId || await resolveHostedAccountId();
+        if (revision !== themeSyncRevision) return;
+        const activeTheme = accountId ? await applyActiveStudioTheme() : null;
         if (revision !== themeSyncRevision) return;
         paint(projectStudioShellAppearance(activeTheme, {
           theme: systemTheme,
           accentColor: fallbackAccent,
-        }), Boolean(user?.id && !user.isDevFallback));
+        }), accountId);
       } catch (error) {
         if (revision !== themeSyncRevision) return;
         // Keep last-known-good cache on registry failure — do not flash unrelated defaults.
         if (cached) {
-          paint(cached, false);
+          paint(cached, null);
           console.warn('[agentsam/theme-registry]', error);
           return;
         }
-        paint(projectStudioShellAppearance(null, { theme: systemTheme, accentColor: fallbackAccent }), false);
+        paint(projectStudioShellAppearance(null, { theme: systemTheme, accentColor: fallbackAccent }), null);
         console.warn('[agentsam/theme-registry]', error);
       }
     };

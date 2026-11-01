@@ -69,3 +69,15 @@ test('account-scoped appearance cache is first-paint authority until registry re
   assert.ok(FIRST_PAINT_BOOTSTRAP_SCRIPT.includes('agentsam-studio-appearance-v1'));
   assert.equal(typeof bootstrapStudioAppearanceFromCache, 'function');
 });
+
+test('React shell resolves the hosted account instead of skipping the registry for the dev fallback user', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const shell = await readFile(new URL('../frontend/agentsam/AgentSamShell.tsx', import.meta.url), 'utf8');
+  const hosted = await readFile(new URL('../frontend/src/lib/themes/hosted-account.ts', import.meta.url), 'utf8');
+  // Regression: production ships VITE_AUTH_ENABLED=false → useCurrentUser() is `dev-user`;
+  // gating applyActiveStudioTheme() on it left /media, /themes and AgentSam on the dark palette.
+  assert.ok(shell.includes("resolveHostedAccountId"), 'theme sync resolves the hosted account');
+  assert.ok(!/!user\?\.id\s*\|\|\s*user\.isDevFallback\)\s*\?\s*null\s*:\s*await applyActiveStudioTheme/.test(shell),
+    'registry must not be skipped for the dev fallback user');
+  assert.ok(hosted.includes('/api/auth/me'), 'hosted account comes from the IAM session contract');
+});

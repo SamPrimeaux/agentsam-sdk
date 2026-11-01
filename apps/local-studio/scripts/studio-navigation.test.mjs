@@ -20,17 +20,9 @@ test('navigation exposes configured installations only and preserves product ide
     assert.equal(projection.apps[1].name, 'CAD product');
     assert.equal(projection.apps[1].version, '4.2.1');
     assert.equal(projection.apps[1].href, '/admin/cad');
-    const products = projection.primary.find((item) => item.id === 'products');
-    assert.equal(products.href, '/admin/products');
-    const productLinks = new Map(products.children.map((item) => [item.id, item.href]));
-    assert.equal(productLinks.get('product-studio'), '/admin/products/create');
-    assert.equal(productLinks.get('store-products'), '/admin/products?view=store');
-    assert.equal(productLinks.get('collections'), '/admin/products?view=collections');
-    assert.equal(productLinks.get('platform-products'), '/admin/products?view=platform');
-    assert.equal(productLinks.get('artwork-help'), '/admin/products/help/artwork');
+    assert.deepEqual(projection.primary.map((item) => item.id), ['home', 'projects', 'media', 'analytics', 'tickets']);
     assert.equal(projection.channels.length, 0, 'A host without Ecommerce must not advertise Online Store');
     assert.equal(projection.primary.find((item) => item.id === 'media')?.href, '/media');
-    assert.equal(projection.primary.find((item) => item.id === 'help')?.href, '/docs');
     assert.deepEqual(projection.utilities, [], 'Utilities remain under Settings/account instead of global navigation');
     writeFileSync(host, JSON.stringify({ app_id: 'local-studio', included_apps: ['missing-app'] }));
     assert.throws(() => studioNavigationProjection({ repoRoot: root, manifestPath: host }), /has no manifest: missing-app/);
@@ -46,6 +38,18 @@ test('global React shell renders primary business destinations before sales chan
   assert.ok(channels > primary, 'sales channels must follow primary destinations');
   assert.ok(apps > channels, 'installed apps must follow sales channels');
   const projection = readFileSync(new URL('./studio-navigation.mjs', import.meta.url), 'utf8');
-  assert.match(projection, /id:'media',label:'Media',href:'\/media',icon:'film'/);
-  assert.match(projection, /id:'help',label:'Help & documentation',href:'\/docs',icon:'help'/);
+  assert.match(projection, /id:'media',label:'Media',href:'\/media',icon:'content'/);
+  // Settings owns Documentation; Help is not a global destination.
+  assert.doesNotMatch(projection, /id:'help'/);
+  assert.match(projection, /id:'inventory',label:'Inventory',href:'\/admin\/inventory'/);
+});
+
+test('Ecommerce shell.js legacy rail is replaced by agentsam-nav without a second-nav flash', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const host = await readFile(new URL('../frontend/public/admin/host-config.js', import.meta.url), 'utf8');
+  const css = await readFile(new URL('../frontend/agentsam/shared-nav-host.css', import.meta.url), 'utf8');
+  assert.match(host, /legacyRail\.replaceChildren\(\)/, 'legacy rail is emptied synchronously after renderShell');
+  assert.match(host, /data-shared-nav-pending/, 'rail is reserved while agentsam-nav loads');
+  assert.match(host, /originalHydrateNav\(window\.__shellUser, active\)/, 'packaged rail restores only if shared navigation fails to load');
+  assert.match(css, /\[data-shared-nav-pending\]\s*\{\s*visibility:hidden/);
 });

@@ -275,7 +275,7 @@
 .agentsam-media-skeleton {
   aspect-ratio: 4 / 3;
   border-radius: 0.85rem;
-  background: linear-gradient(90deg, #161b22, #1d2430, #161b22);
+  background: linear-gradient(90deg, var(--card, var(--nav-surface)), color-mix(in oklab, var(--card, var(--nav-surface)) 88%, var(--foreground, var(--nav-text))), var(--card, var(--nav-surface)));
   background-size: 200% 100%;
   animation: agentsam-media-shimmer 1.2s ease-in-out infinite;
 }
