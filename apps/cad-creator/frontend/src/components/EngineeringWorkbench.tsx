@@ -55,11 +55,11 @@ export function CadProjectExplorer({project,selection,onSelect,onClose,sceneInve
   </button>
   <div className="cad-tree-contents">
   {sceneInventory ? <>
-    <p className="cad-pane-note" style={{marginTop:0,borderTop:0}}>Imported GLB categories · not an editable BIM document.</p>
+    <p className="cad-pane-note cad-pane-note--flush">Imported GLB categories · not an editable BIM document.</p>
     {sceneInventory.filter(item=>item.category.toLowerCase().includes(filter.toLowerCase())).map(item=><div className="cad-tree-heading" key={item.category}>
       <Layers3 size={14}/><span>{item.category.replace(/[-_]/g,' ')}</span><small>{item.count}</small>
     </div>)}
-    {sceneInventory.length===0&&<p className="cad-pane-note" style={{marginTop:0,borderTop:0}}>Reading scene geometry…</p>}
+    {sceneInventory.length===0&&<p className="cad-pane-note cad-pane-note--flush">Reading scene geometry…</p>}
   </> : data.map(g=>{
    const entries=g.entries.filter(e=>(e.id+' '+e.label).toLowerCase().includes(filter.toLowerCase()));
    if(filter&&!entries.length)return null;

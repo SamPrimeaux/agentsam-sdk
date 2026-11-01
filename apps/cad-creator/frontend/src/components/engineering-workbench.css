@@ -574,6 +574,7 @@
 }
 .cad-work-pane[aria-label="CAD project explorer"] .cad-tree-item{border-radius:0 8px 8px 0;margin-block:1px}
 .cad-work-pane[aria-label="CAD project explorer"] .cad-pane-note{background:color-mix(in srgb,var(--cad-surface,#151c29) 80%,#000)}
+.cad-pane-note--flush{margin-top:0;border-top:0}
 
 .cad-hosted-chrome{
   display:flex;flex-wrap:wrap;align-items:center;gap:.55rem;min-height:2.75rem;padding:.45rem .75rem;
