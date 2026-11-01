@@ -116,4 +116,18 @@ test('generated composition clips keep their SVG preview and sample motion/graph
   assert.match(html,/src="data:image\/svg\+xml;base64,PHN2Zy8\+"/);
   assert.match(html,/class="copro-preview-graphic copro-preview-graphic-counter"/);
   assert.match(html,/>50<\/span>/);
+  assert.match(html,/mm-playback-hud/);
+  assert.match(html,/mm-safe-frame/);
+  assert.match(html,/aria-label="Playback transport"/);
+  assert.match(html,/MONITOR/);
+});
+
+test('timeline toolbar exposes playhead readout and refined chrome', () => {
+  const html = renderToStaticMarkup(React.createElement(CoProTimeline, {
+    project, playheadUs: 5_800_000, selectedClipId: 'clip-1',
+  }));
+  assert.match(html,/mm-timeline-playhead-readout/);
+  assert.match(html,/mm-playhead-stem/);
+  assert.match(html,/aria-label="Timeline zoom"/);
+  assert.match(html,/>0:05</);
 });

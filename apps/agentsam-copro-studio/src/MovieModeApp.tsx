@@ -35,6 +35,7 @@ const FIXTURE_PROJECTS: CoProProjectSummary[] = [
   { id:"demo:weekend", title:"Weekend cut", subtitle:"Sample timeline · no video supplied", kind:"video", status:"draft", durationMs:11_900, aspectRatio:"9:16", updatedAt:"2026-10-04T17:10:00Z", thumbnailTone:"cyan", example:true },
   { id:"demo:caption", title:"Caption layout", subtitle:"Sample tracks & captions", kind:"video", status:"draft", durationMs:11_900, aspectRatio:"9:16", updatedAt:"2026-10-04T17:10:00Z", thumbnailTone:"violet", example:true },
 ];
+/* Batch 1: gallery cards synthesize lightweight SVG covers from tone/title — no live decode in the grid. */
 
 const CREATIVE_ASSET_SEED: CoProCreativeAsset[] = (creativeCatalog as any).items.map((entry: any) => ({
   id: entry.id,

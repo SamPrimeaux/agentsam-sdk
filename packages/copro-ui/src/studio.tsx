@@ -662,12 +662,24 @@ export function CoProStudio({
               )}
 
               <div className="copro-preview-overlay" aria-hidden="true" />
+              {effectivePreviewSrc && <>
+                <div className="mm-playback-guides" aria-hidden="true">
+                  <span className="mm-safe-frame"/>
+                  <span className="mm-center-cross"/>
+                </div>
+                <div className="mm-playback-hud" aria-hidden="true">
+                  <span className="mm-playback-hud-chip">MovieMode</span>
+                  <span className="mm-playback-hud-chip is-timecode">{formatTime(playheadUs)}</span>
+                  <span className={`mm-playback-hud-chip${playing ? " is-live" : ""}`}>{playing ? "REC PREVIEW" : "MONITOR"}</span>
+                </div>
+              </>}
               {graphicSample?.text && <div className={`copro-preview-graphic copro-preview-graphic-${activeGraphic?.id ?? "default"}`} aria-hidden="true"><span>{graphicSample.text}</span>{graphicSample.cursor && <i/>}</div>}
               {previewDecodeWarning && activeMedia?.kind === "video" && <div className="mm-video-decoding-alert" role="alert">{previewDecodeWarning}</div>}
               <div className="copro-canvas-overlays" aria-live="polite">
                 {activeCanvasText.map((item) => (
                   <button
                     key={item.id}
+                    type="button"
                     className={"copro-canvas-text copro-canvas-text-" + item.kind + (selectedClipId === item.id ? " is-selected" : "")}
                     onClick={() => onSelectClip?.(item.id)}
                   >
@@ -678,12 +690,14 @@ export function CoProStudio({
             </div>
           </section>
 
-          <section className="copro-transport">
+          <section className="copro-transport" aria-label="Playback transport">
             <button className="copro-play-button" aria-label={playing ? "Pause" : "Play"} onClick={() => void togglePlayback()}>
               {playing ? <Pause size={16} fill="currentColor"/> : <Play size={16} fill="currentColor"/>}
             </button>
-            <span>{formatTime(playheadUs)}</span>
-            <div className="copro-transport-line" />
+            <span className="mm-transport-timecode" aria-live="polite">{formatTime(playheadUs)}</span>
+            <div className="copro-transport-line" role="presentation" />
+            <span className="mm-transport-duration" title="Sequence duration">{formatTime(Math.max(0,...project.tracks.flatMap(track=>track.clips.map(clip=>clip.startUs+clip.durationUs))))}</span>
+            <span className={`mm-transport-state${playing ? " is-playing" : ""}`}>{playing ? "Playing" : "Paused"}</span>
             <IconAction className="copro-icon-button" aria-label="Timeline controls" onClick={() => onSelectClip?.(null)}><SlidersHorizontal size={18}/></IconAction>
           </section>
 
