@@ -5,6 +5,25 @@ export interface CadAsset { id: string; name: string; status: string; validation
 export interface CadRevision { revision: string; status: string; updatedAt: number; label?: string; parentRevision?: string; bimRevision?: string | null; sceneRevision?: string | null; models: CadAsset[]; documents: CadAsset[]; native: CadAsset[] }
 export interface CadRegistry { project: { id: string; name: string }; access?: { canWrite: boolean }; revisions: CadRevision[] }
 export interface CadHostedSelection { project: ProjectState | null; registry: CadRegistry; revision: CadRevision; modelUrl: string }
+/**
+ * Editing an owner-owned current GLB scene does not require a pre-existing JSON document:
+ * the initial scene design document is saved with base=current and a verified model hash.
+ * This allows scene transforms, markups and environment changes; it does NOT imply that
+ * the older FCStd/IFC source has been synchronized or that the mesh is native BIM.
+ */
+export function canEditHostedCadSelection(selection: CadHostedSelection | null): boolean {
+  if (!selection?.project || selection.registry.access?.canWrite !== true) return false;
+  if (selection.revision.documents.length > 0) return true;
+  const scene = selection.project.sceneSource;
+  return selection.revision.revision === 'current'
+    && typeof scene?.assetId === 'string'
+    && typeof scene.contentHash === 'string'
+    && scene.contentHash.length === 64
+    && selection.revision.models.some(model =>
+      model.id === scene.assetId
+      && model.contentHash === scene.contentHash
+      && model.validationStatus === 'asset-verified');
+}
 
 export const cadRegistryUrl = (id: string) => `/api/work/projects/${encodeURIComponent(id)}/cad`;
 export const cadAssetUrl = (id: string, assetId: string) => `${cadRegistryUrl(id)}/assets/${encodeURIComponent(assetId)}`;
