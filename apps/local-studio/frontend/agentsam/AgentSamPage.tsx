@@ -6,6 +6,7 @@ import { useWorkStore } from '@/lib/work/store';
 import { MessageList } from '@/components/workbench/thread';
 import { Composer } from '@/components/workbench/composer';
 import { SideStage } from '@/components/workbench/side-stage';
+import { WorkSurfaceBar } from '@/components/workbench/work-surface-bar';
 import { SidePanelToggle } from './AgentSamShell';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { NotificationsMenu } from './NotificationsMenu';
@@ -13,6 +14,10 @@ import { SplitHandle } from '@/components/shell/split-handle';
 import { AnnotationToggle } from './AnnotationHelper';
 import { AgentConversationSurface, AgentRuntimeField } from '@inneranimalmedia/agentsam-workbench/agent';
 import { localStudioRuntimeVisuals } from '@/lib/runtime-visuals/local-studio-runtime';
+import '@/components/workbench/work-layout.css';
+
+const WORK_PANEL_MIN = 380;
+const CHAT_PANEL_MIN = 380;
 
 export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const { data, isMobile } = useNav();
@@ -25,7 +30,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     if (typeof window === 'undefined') return 780;
     try {
       const saved = Number(window.localStorage.getItem('agentsam.studio.agentPanelWidth'));
-      return Number.isFinite(saved) && saved >= 280 && saved <= 1120 ? saved : Math.max(480, Math.min(1060, Math.round(window.innerWidth * 0.54)));
+      return Number.isFinite(saved) && saved >= WORK_PANEL_MIN && saved <= 1120 ? saved : Math.max(480, Math.min(1060, Math.round(window.innerWidth * 0.54)));
     } catch { return 780; }
   });
   useEffect(() => {
@@ -45,7 +50,9 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   // Failed model responses stay inside the conversation transcript — never replace the product.
   const empty = trail.messages.length === 0 || (trail.messages.length === 1 && trail.messages[0].id === 'welcome-msg');
   const streaming = state.streamingIds.includes(trail.id);
-  return <div className="agentsam-page-layout" data-composer-mode={data.mode}>
+  const workSurface = state.workSurface;
+  const mobileWorkOpen = isMobile && workSurface !== 'chat';
+  return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
     {!hostModeSlot ? <Nav.Topbar startup={false} showNavigationTrigger={false} rightSlot={<>
       {conversationId ? <Link to="/chats" aria-label="Back to Chats" title="Back to Chats" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="size-4"/></Link> : null}
       <button type="button" className="as-nav-button" aria-label="New chat" title="New chat (⌘N)" onClick={startNewChat}><MessageSquarePlus size={18}/><span className="sr-only">New chat</span></button>
@@ -59,7 +66,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     </div> : null}
     <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "")}>
       {hostModeSlot ? <div className="agentsam-context-tools" aria-label="Conversation tools"><AnnotationToggle /><SidePanelToggle /></div> : null}
-      <section className="agentsam-conversation" aria-label="Conversation" inert={(isMobile && state.sideOpen) || workFocused} style={workFocused ? { display:"none" } : undefined}>
+      <section className="agentsam-conversation" aria-label="Conversation" inert={mobileWorkOpen || (isMobile && state.sideOpen) || workFocused} style={workFocused || mobileWorkOpen ? { display:"none" } : undefined}>
         <AgentConversationSurface
           empty={empty}
           runtime={
@@ -77,8 +84,9 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           composerClassName="agentsam-conversation-dock"
         />
       </section>
-      {state.sideOpen ? <>{!workFocused && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(320, Math.min(1500, width - delta, window.innerWidth - 320)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused((value) => !value)} /></aside></> : null}
+      {state.sideOpen || mobileWorkOpen ? <>{!workFocused && !isMobile && <SplitHandle label="Resize Work Panel" onDrag={(delta) => setPanelWidth((width) => Math.max(WORK_PANEL_MIN, Math.min(1500, width - delta, window.innerWidth - CHAT_PANEL_MIN)))} onDoubleClick={() => setPanelWidth(Math.max(480, Math.round(window.innerWidth * 0.54)))} />}<aside className="agentsam-side-panel" style={{ "--agentsam-panel-width": panelWidth + "px" } as CSSProperties} aria-label="Work Panel"><SideStage workFocused={workFocused} onFocusToggle={() => setWorkFocused((value) => !value)} /></aside></> : null}
     </div>
+    <WorkSurfaceBar />
   </div>;
 }
 

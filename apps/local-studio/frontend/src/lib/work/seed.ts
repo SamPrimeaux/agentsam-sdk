@@ -47,12 +47,12 @@ export function seedFiles(projectName: string, projectId: string = uid()): Artif
       "README.md",
       `# ${projectName}
 
-Workspace for AgentSam Work.
+Sample tutorial workspace for AgentSam Work (opt-in only).
 
 - Trails are stored chats
 - Side chats stay ephemeral until you keep them
 - Files open in Monaco
-- CLI is a real xterm over this virtual workspace
+- Connect a host runtime for a real PTY — this sample is not your canonical project
 - Ship via GitHub or Cloudflare Pages
 
 ## CLI
@@ -163,12 +163,40 @@ jobs:
   ];
 }
 
-export function newProject(name = "Studio", description = "Default workspace", projectId: string = uid()): Project {
+/**
+ * Empty browser workspace — no synthetic README/web files.
+ * Prefer {@link newFilesystemProject} for real engineering work.
+ */
+export function newEmptyProject(name = "Untitled", projectId: string = uid()): Project {
   const now = Date.now();
   return {
     id: projectId,
     name,
-    description: description.includes("Scratch") ? description : `${description} · Scratch`,
+    description: "Browser workspace · empty",
+    createdAt: now,
+    updatedAt: now,
+    kind: "scratch",
+    workspaceRoot: null,
+    runtimeBaseUrl: null,
+    workspaceId: null,
+    runtimeCapability: null,
+    files: [],
+    dirs: [],
+    git: emptyGit(),
+    deploy: emptyDeploy(),
+    cwd: "/",
+  };
+}
+
+/**
+ * Opt-in sample/tutorial lane with starter files. Never the silent default workspace.
+ */
+export function newSampleProject(name = "Sample tutorial", projectId: string = uid()): Project {
+  const now = Date.now();
+  return {
+    id: projectId,
+    name,
+    description: "Sample tutorial · opt-in starter files",
     createdAt: now,
     updatedAt: now,
     kind: "scratch",
@@ -187,6 +215,12 @@ export function newProject(name = "Studio", description = "Default workspace", p
     },
     cwd: "/",
   };
+}
+
+/** @deprecated Use newSampleProject for tutorials or newEmptyProject for blank lanes. */
+export function newProject(name = "Sample tutorial", description = "Sample tutorial", projectId: string = uid()): Project {
+  void description;
+  return newSampleProject(name, projectId);
 }
 
 /**

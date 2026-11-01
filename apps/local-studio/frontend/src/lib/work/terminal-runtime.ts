@@ -127,7 +127,7 @@ function writeLines(term: { writeln: (s: string) => void }, text: string) {
   for (const line of text.split("\n")) term.writeln(line);
 }
 
-type ProjectGetter = () => Project;
+type ProjectGetter = () => Project | null;
 
 type TerminalRuntime = {
   sessionId: string;
@@ -196,7 +196,7 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   const queued: string[] = [];
 
   const prompt = () => {
-    const cwd = promptPath(getProject().cwd);
+    const cwd = promptPath(getProject()?.cwd || "/");
     term.write(`\x1b[38;2;196;184;168msam\x1b[0m \x1b[38;2;138;127;114m${cwd}\x1b[0m $ `);
   };
 
@@ -368,9 +368,14 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
       queued.push(line);
       return;
     }
+    const project = getProject();
+    if (!project) {
+      term.writeln("Connect an authorized workspace to run a real PTY.");
+      return;
+    }
     busy = true;
     try {
-      const result = runCommand(getProject(), line);
+      const result = runCommand(project, line);
       writeLines(term, result.stdout);
       writeLines(term, result.stderr);
       const next = await applyEffect(result.project, result.effect);
@@ -394,6 +399,29 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   const isLoopbackBrowser = ["localhost", "127.0.0.1", "::1"].includes(browserHost);
   const isHostedWeb = !tauriInvoke && !isLoopbackBrowser;
   const terminalSession = activeTerminalSession();
+
+  if (!project0) {
+    term.writeln("No authorized workspace selected.");
+    term.writeln("Connect a host project (agentsam start-local) before opening Terminal.");
+    useTerminalSessionStore.getState().patchSession(sessionId, {
+      state: "disconnected",
+      runtimeLabel: "No workspace",
+      error: "workspace_required",
+    });
+    return {
+      sessionId,
+      term,
+      fit,
+      run: async () => {
+        term.writeln("Connect an authorized workspace to run a real PTY.");
+      },
+      host: null,
+      park,
+      observer: null,
+      refCount: 0,
+      getProject,
+    };
+  }
 
   type HostedTerminalConnect = {
     ok?: boolean;
@@ -695,98 +723,21 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     }
   }
 
-  term.writeln(
-    "Runtime unavailable — Scratch mode (degraded)  ·  type help",
-  );
-  useTerminalSessionStore.getState().patchSession(sessionId, { state: "degraded", runtimeLabel: "Scratch fallback" });
-  term.writeln(
-    "First time? Type setup  — AgentSam guides you one prompt at a time.",
-  );
-  prompt();
-
-  const flushEnter = () => {
-    term.write("\r\n");
-    const line = buffer;
-    buffer = "";
-    histIndex = -1;
-    if (line.trim()) history.unshift(line);
-    void run(line);
-  };
-
-  term.onData((data) => {
-    let i = 0;
-    while (i < data.length) {
-      if (data.startsWith("\u001b[A", i)) {
-        i += 3;
-        if (!history.length) continue;
-        histIndex = Math.min(history.length - 1, histIndex + 1);
-        const next = history[histIndex] ?? "";
-        term.write("\u001b[2K\r");
-        prompt();
-        buffer = next;
-        term.write(buffer);
-        continue;
-      }
-      if (data.startsWith("\u001b[B", i)) {
-        i += 3;
-        if (histIndex <= 0) {
-          histIndex = -1;
-          term.write("\u001b[2K\r");
-          prompt();
-          buffer = "";
-          continue;
-        }
-        histIndex -= 1;
-        const next = history[histIndex] ?? "";
-        term.write("\u001b[2K\r");
-        prompt();
-        buffer = next;
-        term.write(buffer);
-        continue;
-      }
-      const ch = data[i]!;
-      i += 1;
-      if (ch === "\r" || ch === "\n") {
-        if (ch === "\n" && data[i - 2] === "\r") continue;
-        if (!buffer && data.length <= 2) continue;
-        flushEnter();
-        continue;
-      }
-      if (ch === "\u0003") {
-        term.write("^C\r\n");
-        buffer = "";
-        busy = false;
-        prompt();
-        continue;
-      }
-      if (ch === "\u000c") {
-        term.reset();
-        prompt();
-        term.write(buffer);
-        continue;
-      }
-      if (ch === "\u007f" || ch === "\b") {
-        if (!buffer.length) continue;
-        buffer = buffer.slice(0, -1);
-        term.write("\b \b");
-        continue;
-      }
-      if (ch === "\u001b") {
-        while (i < data.length && data[i] !== "[" && data[i]! < "@") i += 1;
-        if (i < data.length) i += 1;
-        continue;
-      }
-      if (ch < " ") continue;
-      buffer += ch;
-      term.write(ch);
-    }
+  // Never fall back to a simulated shell with fabricated command output.
+  term.writeln("No real PTY connected.");
+  term.writeln("Run `agentsam start-local` from your Git worktree, open Files → Host, then reconnect Terminal.");
+  useTerminalSessionStore.getState().patchSession(sessionId, {
+    state: "disconnected",
+    runtimeLabel: "PTY required",
+    error: "real_pty_required",
   });
-
   return {
     sessionId,
     term,
     fit,
-    run,
+    run: async () => {
+      term.writeln("Real PTY required — simulated Scratch CLI is disabled.");
+    },
     host: null,
     park,
     observer: null,

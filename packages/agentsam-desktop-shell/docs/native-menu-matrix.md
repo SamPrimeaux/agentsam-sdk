@@ -28,7 +28,7 @@ Legend: **Native** = handled in Rust. **Cmd** = forwarded as a command to the fr
 | File | New Window ⇧⌘N | `new_window` | Native | works (`studio-N`) |
 | File | New Chat ⌘N | `chat.new` | Cmd | **was synthetic KeyboardEvent**; now `startTrail()` + navigate |
 | File | New Temporary Chat | `new_temp_chat` | Off | no ephemeral-chat capability |
-| File | New Project… | `project.new` | Cmd | scratch project via `createProject()` |
+| File | New Project… | `project.new` | Cmd | empty browser project via `createProject()` (no silent Scratch seed; host/sample remain explicit) |
 | File | Open Folder in Terminal… ⇧⌘O | `folder.open_in_terminal` | Cmd | native folder picker (`local_sqlite_pick_directory`) → new terminal with that cwd. A full filesystem *workspace* still requires `agentsam start-local` (store rejects arbitrary roots), so the item is named for what it does |
 | File | Close Window ⌘W | (AppKit predefined) | Native | works |
 | Edit | Undo/Redo/Cut/Copy/Paste/Select All | (AppKit predefined) | Native | works |

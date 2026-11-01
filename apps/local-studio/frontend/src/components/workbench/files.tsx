@@ -12,6 +12,8 @@ import { WorkspaceSaveQueue, type SaveStatus } from "@inneranimalmedia/agentsam-
 import { applyLspWorkspaceEdit, workspaceRootFileUri, type LspWorkspaceEdit } from "@inneranimalmedia/agentsam-ide/lsp";
 import { cn } from "@/lib/utils";
 import { LspLanguageSetup } from "@/components/workbench/LspLanguageSetup";
+import { WorkspaceGate } from "@/components/workbench/workspace-gate";
+import { isAuthorizedHostProject, isSampleProject, projectNeedsConnection } from "@/lib/work/workspace-restore";
 
 const MonacoPane = lazy(() =>
   import("@/components/workbench/monaco-pane").then((m) => ({ default: m.MonacoPane })),
@@ -128,8 +130,9 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   const project = useActiveProject();
   const workspaces = useWorkStore((s) => s.projects);
   const selectWorkspace = useWorkStore((s) => s.setActiveProject);
-  const createWorkspace = useWorkStore((s) => s.createProject);
+  const createSample = useWorkStore((s) => s.createSampleProject);
   const connectHostWorkspace = useWorkStore((s) => s.createFilesystemProject);
+  const workSurface = useWorkStore((s) => s.workSurface);
   const [hostLaneOpen, setHostLaneOpen] = useState(false);
   const [hostLaneName, setHostLaneName] = useState("");
   const [hostRuntimeUrl, setHostRuntimeUrl] = useState("http://127.0.0.1:3099");
@@ -142,8 +145,14 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   const selectFile = useWorkStore((s) => s.selectFile);
   const openSideTab = useWorkStore((s) => s.openSideTab);
   const setBrowserSrcdoc = useWorkStore((s) => s.setBrowserSrcdoc);
-  const isFilesystem = project.kind === "filesystem";
-  const selected = project.files.find((f) => f.id === tab.fileId) ?? project.files[0] ?? null;
+  const isFilesystem = project?.kind === "filesystem";
+  const selected = project
+    ? project.files.find((f) => f.id === tab.fileId) ?? project.files[0] ?? null
+    : null;
+  const showGate =
+    !project ||
+    projectNeedsConnection(project) ||
+    (project.kind === "filesystem" && !isAuthorizedHostProject(project) && !project.files.length);
   const [creating, setCreating] = useState(false);
   const [path, setPath] = useState("src/untitled.ts");
   const [mobileList, setMobileList] = useState(!selected);
@@ -162,7 +171,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   const saveQueue = useMemo(() => new WorkspaceSaveQueue({
     debounceMs: 700,
     write: async (filePath, content, expectedVersion, overwrite) => {
-      if (!project.runtimeBaseUrl) return { ok: false as const, error: 'filesystem_runtime_unavailable' };
+      if (!project?.runtimeBaseUrl) return { ok: false as const, error: 'filesystem_runtime_unavailable' };
       const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
       const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl, project.runtimeCapability);
       return adapter.write(filePath, content, expectedVersion, overwrite);
@@ -176,12 +185,12 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     },
     onCommitted: (filePath, content, result, superseded) => {
       setVersions(previous => ({ ...previous, [filePath]: result.version }));
-      if (superseded) return; // Never restore a stale snapshot over newer typing.
+      if (superseded || !project) return; // Never restore a stale snapshot over newer typing.
       const current = useWorkStore.getState().projects.find(p => p.id === project.id)?.files.find(f => f.path === filePath);
       if (current?.content !== content) return;
       upsertFile(project.id, { ...current, updatedAt: result.mtime || Date.now(), origin: 'editor' });
     },
-  }), [project.id, project.runtimeBaseUrl, project.runtimeCapability, upsertFile]);
+  }), [project?.id, project?.runtimeBaseUrl, project?.runtimeCapability, upsertFile]);
 
   useEffect(() => () => { void saveQueue.flushAll(); }, [saveQueue]);
   useEffect(() => {
@@ -196,7 +205,7 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   }, []);
 
   useEffect(() => {
-    if (!isFilesystem || !project.runtimeBaseUrl) return;
+    if (!project || !isFilesystem || !project.runtimeBaseUrl) return;
     let cancelled = false;
     (async () => {
       const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
@@ -231,10 +240,10 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     return () => {
       cancelled = true;
     };
-  }, [isFilesystem, project.id, project.runtimeBaseUrl, project.runtimeCapability, project.workspaceRoot]);
+  }, [isFilesystem, project?.id, project?.runtimeBaseUrl, project?.runtimeCapability, project?.workspaceRoot]);
 
   useEffect(() => {
-    if (!isFilesystem || !selected || !project.runtimeBaseUrl) return;
+    if (!project || !isFilesystem || !selected || !project.runtimeBaseUrl) return;
     if (selected.content) return;
     let cancelled = false;
     (async () => {
@@ -265,11 +274,11 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     return () => {
       cancelled = true;
     };
-  }, [isFilesystem, selected?.id, selected?.path, project.runtimeBaseUrl, project.runtimeCapability]);
+  }, [isFilesystem, selected?.id, selected?.path, project?.runtimeBaseUrl, project?.runtimeCapability]);
 
   // External change detection: re-read version; never silent-overwrite on save.
   useEffect(() => {
-    if (!isFilesystem || !selected || !project.runtimeBaseUrl || !project.runtimeCapability) return;
+    if (!project || !isFilesystem || !selected || !project.runtimeBaseUrl || !project.runtimeCapability) return;
     let cancelled = false;
     const check = async () => {
       const known = versions[selected.path];
@@ -317,14 +326,15 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     selected?.id,
     versions,
     saveState,
-    project.runtimeBaseUrl,
-    project.runtimeCapability,
-    project.id,
+    project?.runtimeBaseUrl,
+    project?.runtimeCapability,
+    project?.id,
   ]);
 
-  const tree = useMemo(() => buildTree(project.files), [project.files]);
+  const tree = useMemo(() => buildTree(project?.files ?? []), [project?.files]);
 
   function previewHtml(file: Artifact) {
+    if (!project) return;
     const id = openSideTab("browser", {
       title: file.path,
       ephemeral: false,
@@ -334,14 +344,14 @@ export function FilesStage({ tab }: { tab: SideTab }) {
   }
 
   async function saveFilesystem(file: Artifact, value: string, overwrite = false) {
-    if (!project.runtimeBaseUrl) return;
+    if (!project?.runtimeBaseUrl) return;
     if (!overwrite && saveQueue.status(file.path) === 'saved' && file.content === value) return;
     saveQueue.edit(file.path, value);
     await saveQueue.flush(file.path, overwrite);
   }
 
   function onEditorChange(value: string) {
-    if (!selected) return;
+    if (!selected || !project) return;
     if (isFilesystem) {
       upsertFile(project.id, {
         ...selected,
@@ -360,21 +370,25 @@ export function FilesStage({ tab }: { tab: SideTab }) {
     });
   }
 
+  if (showGate) {
+    return <WorkspaceGate project={project} force={!project || projectNeedsConnection(project)} />;
+  }
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="work-files-stage flex h-full min-h-0 flex-col" data-surface={workSurface === "code" ? "code" : "files"}>
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-sidebar/60 px-2 py-2" aria-label="Editor workspaces">
         <label className="min-w-0 flex-1 text-[11px] text-muted-foreground">
           Workspace lane
           <select aria-label="Active editor workspace" className="mt-1 block min-h-9 w-full min-w-0 rounded-md border border-border bg-background px-2 text-xs text-foreground"
-            value={project.id} onChange={event=>{selectWorkspace(event.target.value);setMobileList(false);}}>
+            value={project!.id} onChange={event=>{selectWorkspace(event.target.value);setMobileList(false);}}>
             {workspaces.map(workspace=><option key={workspace.id} value={workspace.id}>
-              {workspace.name} · {workspace.kind === "filesystem" ? "host" : "scratch"}
+              {workspace.name} · {workspace.kind === "filesystem" ? "host" : isSampleProject(workspace) ? "sample" : "browser"}
             </option>)}
           </select>
         </label>
         <Button type="button" size="sm" variant="outline" className="self-end"
-          aria-label="New isolated scratch workspace" onClick={()=>setNewWorkspaceOpen(value=>!value)}>
-          <Plus className="size-3.5"/> New
+          aria-label="Open opt-in sample tutorial workspace" onClick={()=>setNewWorkspaceOpen(value=>!value)}>
+          <Plus className="size-3.5"/> Sample
         </Button>
         <Button type="button" size="sm" variant="outline" className="self-end"
           aria-label="Connect an authorized local filesystem lane" onClick={()=>{setHostLaneOpen(value=>!value);setHostLaneError(null);}}>
@@ -401,14 +415,14 @@ export function FilesStage({ tab }: { tab: SideTab }) {
           event.preventDefault();
           const name=newWorkspaceName.trim();
           if (!name) return;
-          createWorkspace(name);
+          createSample(name);
           setNewWorkspaceName("");
           setNewWorkspaceOpen(false);
           setMobileList(false);
         }}>
-          <Input aria-label="New scratch workspace name" autoFocus placeholder="Website · Parametric CAD · Software"
+          <Input aria-label="Sample tutorial workspace name" autoFocus placeholder="Sample tutorial"
             value={newWorkspaceName} onChange={event=>setNewWorkspaceName(event.target.value)} className="min-w-36 flex-1" required maxLength={80}/>
-          <Button type="submit" size="sm">Create scratch lane</Button>
+          <Button type="submit" size="sm">Open sample tutorial</Button>
         </form>}
         <p className="w-full text-[10px] leading-snug text-muted-foreground">
           Monaco files are scoped by workspace. Independent filesystem agents require separate authorized Git worktrees; sharing a root does not isolate writes.
@@ -417,13 +431,13 @@ export function FilesStage({ tab }: { tab: SideTab }) {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
       <div
         className={cn(
-          "flex min-h-0 flex-col border-border bg-sidebar md:w-56 md:shrink-0 md:border-r",
+          "work-files-tree flex min-h-0 flex-col border-border bg-sidebar md:w-56 md:shrink-0 md:border-r",
           mobileList ? "flex-1" : "hidden md:flex",
         )}
       >
         <div className="flex items-center gap-1 border-b border-border px-2 py-2">
           <p className="flex-1 truncate px-1 text-xs text-muted-foreground">
-            {isFilesystem ? "Filesystem" : "Files · Scratch"}
+            {isFilesystem ? "Filesystem" : isSampleProject(project) ? "Files · Sample" : "Files"}
           </p>
           <Button type="button" size="icon-sm" variant="ghost" aria-label="New file" onClick={() => setCreating(true)}>
             <Plus className="size-4" />
@@ -655,7 +669,9 @@ export function FilesStage({ tab }: { tab: SideTab }) {
           <DialogDescription>
             {isFilesystem
               ? "Creates a real file on the authorized host workspace."
-              : "Stored on this Scratch project and opened in Monaco."}
+              : isSampleProject(project)
+                ? "Stored on this sample tutorial workspace and opened in Monaco."
+                : "Stored on this browser workspace and opened in Monaco."}
           </DialogDescription>
           <form
             className="mt-4 flex flex-col gap-3"

@@ -21,7 +21,7 @@ function CliPage() {
         </Button>
         <div className="min-w-0 flex-1 px-1">
           <p className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">CLI</p>
-          <p className="truncate font-mono text-xs text-clay">{project.name} · live wrangler feed</p>
+          <p className="truncate font-mono text-xs text-clay">{project?.name ?? "No workspace"} · live wrangler feed</p>
         </div>
       </header>
       <div className="min-h-0 flex-1">

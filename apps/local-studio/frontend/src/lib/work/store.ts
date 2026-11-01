@@ -5,7 +5,9 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { titleFromText, uid } from "@/lib/utils";
 import { extractArtifacts, mergeArtifacts } from "@/lib/work/files";
 import { DEFAULT_SELECTION, type StudioModelSelection } from "@/lib/work/models";
-import { newProject, newFilesystemProject } from "@/lib/work/seed";
+import { emptyDeploy, newEmptyProject, newFilesystemProject, newSampleProject } from "@/lib/work/seed";
+import { emptyGit } from "@/lib/work/git";
+import { pickRestoredProjectId } from "@/lib/work/workspace-restore";
 import { streamChat } from "@/lib/work/stream";
 import { selectStudioWorkspaceForTurn } from "@inneranimalmedia/agentsam-local-shared/studio-chat-policy";
 import { localStudioRuntimeVisuals } from "@/lib/runtime-visuals/local-studio-runtime";
@@ -22,19 +24,14 @@ import type {
 } from "@inneranimalmedia/agentsam-local-shared";
 
 const WELCOME_ID = "trail-studio";
-const PROJECT_ID = "project-studio";
 
 const WELCOME_MESSAGE: ChatMessage = {
   id: "welcome-msg",
   role: "assistant",
   content:
-    "You are in AgentSam Work — a calm vibecode bench.\n\nThis is the **lead chat** for the project. Open **co-worker** side chats when you want focused help without derailing the main thread. Monaco, the in-app browser, and the CLI (bottom drawer on phones) stay with the project on this device.\n\nWhat are you working on?",
+    "You are in AgentSam Work.\n\nConnect an authorized host workspace (agentsam start-local) to edit real project files in Monaco and run a real PTY. Sample tutorials are available only when you opt in.\n\nWhat are you working on?",
   createdAt: 1_746_000_000_000,
 };
-
-function starterProject(): Project {
-  return newProject("Studio", "InnerAnimalMedia workspace", PROJECT_ID);
-}
 
 const STARTER_TRAIL: Trail = {
   id: WELCOME_ID,
@@ -44,8 +41,35 @@ const STARTER_TRAIL: Trail = {
   pinned: false,
   messages: [WELCOME_MESSAGE],
   files: [],
-  projectId: PROJECT_ID,
+  projectId: "",
 };
+
+export type WorkSurface = "chat" | "files" | "code" | "terminal" | "preview";
+
+function normalizeProject(raw: Project): Project {
+  return {
+    id: raw.id,
+    name: raw.name || "Untitled",
+    description: raw.description || "",
+    createdAt: raw.createdAt || Date.now(),
+    updatedAt: raw.updatedAt || Date.now(),
+    kind: raw.kind === "filesystem" ? "filesystem" : "scratch",
+    workspaceRoot: raw.workspaceRoot ?? null,
+    runtimeBaseUrl: raw.runtimeBaseUrl ?? null,
+    workspaceId: raw.workspaceId ?? null,
+    runtimeCapability: raw.runtimeCapability ?? null,
+    files: (raw.files ?? []).map((f) => ({
+      kind: "code" as const,
+      origin: "editor" as const,
+      ...f,
+    })),
+    dirs: raw.dirs ?? [],
+    git: raw.git ?? emptyGit(),
+    deploy: { ...emptyDeploy(), ...raw.deploy },
+    cwd: raw.cwd || "/",
+    pinned: raw.pinned,
+  };
+}
 
 const aborts = new Map<string, AbortController>();
 
@@ -59,7 +83,7 @@ function newTrail(partial?: Partial<Trail>): Trail {
     pinned: false,
     messages: [],
     files: [],
-    projectId: PROJECT_ID,
+    projectId: "",
     ...partial,
   };
 }
@@ -105,7 +129,8 @@ function excerptOf(trail: Trail | undefined) {
     .join("\n\n");
 }
 
-function workspacePayload(project: Project) {
+function workspacePayload(project: Project | null | undefined) {
+  if (!project) return [];
   return project.files
     .filter((f) => f.origin !== "deploy")
     .slice(0, 24)
@@ -161,6 +186,8 @@ type WorkState = {
   runModes: Record<string, AgentRunMode>;
   sideTabs: SideTab[];
   activeSideTabId: string | null;
+  /** Mobile-first Work surface; desktop side tabs remain authoritative when sideOpen. */
+  workSurface: WorkSurface;
   streamingIds: string[];
   search: string;
   confirmDiscardId: string | null;
@@ -169,6 +196,7 @@ type WorkState = {
   followupQueue: FollowupQueuedSend[];
   pausedQueueTargets: string[];
   goals: Record<string, WorkGoal>;
+  setWorkSurface: (surface: WorkSurface) => void;
   setGoal: (trailId: string, title: string, preview?: string) => void;
   updateGoal: (trailId: string, patch: Pick<WorkGoal, "title" | "preview">) => void;
   clearGoal: (trailId: string) => void;
@@ -196,6 +224,8 @@ type WorkState = {
   pinTrail: (id: string) => void;
   deleteTrail: (id: string) => void;
   setActiveProject: (id: string) => void;
+  createSampleProject: (name?: string) => string;
+  createEmptyProject: (name?: string) => string;
   moveTrailToProject: (trailId: string, projectId: string) => void;
   /** Assign a Local Studio conversation to Work without moving its filesystem workspace. */
   assignChatToWorkProject: (chatId: string, workProjectId: string | null) => void;
@@ -249,24 +279,12 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
   | "runModes"
   | "sideTabs"
   | "activeSideTabId"
+  | "workSurface"
   | "goals"
 > {
-  const seed = starterProject();
-  let projects = Array.isArray(raw?.projects) && raw!.projects!.length ? raw!.projects! : [seed];
-  if (!projects.some((p) => p.id === PROJECT_ID) && (!raw?.projects || raw.projects.length === 0)) {
-    projects = [seed];
-  }
-  projects = projects.map((p) => ({
-    ...seed,
-    ...p,
-    files: (p.files ?? []).map((f) => ({ kind: "code" as const, origin: "seed" as const, ...f })),
-    dirs: p.dirs ?? [],
-    git: p.git ?? seed.git,
-    deploy: { ...seed.deploy, ...p.deploy },
-    cwd: p.cwd || "/",
-  }));
-  const activeProjectId =
-    projects.some((p) => p.id === raw?.activeProjectId) ? raw!.activeProjectId! : projects[0]!.id;
+  // Never invent a hardcoded Scratch project. Restore persisted workspaces only.
+  const projects = (Array.isArray(raw?.projects) ? raw!.projects! : []).map(normalizeProject);
+  const activeProjectId = pickRestoredProjectId(projects, raw?.activeProjectId);
 
   const trails = (raw?.trails?.length ? raw.trails : [STARTER_TRAIL]).map((t) => ({
     ...STARTER_TRAIL,
@@ -275,11 +293,22 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
     projectId: t.projectId || activeProjectId,
   }));
 
-  const project = projects.find((p) => p.id === activeProjectId) ?? projects[0]!;
-  const captured = trails.flatMap((t) => t.files);
-  if (captured.length) {
-    project.files = mergeArtifacts(project.files, captured);
+  const project = projects.find((p) => p.id === activeProjectId);
+  if (project) {
+    const captured = trails.flatMap((t) => t.files);
+    if (captured.length) {
+      project.files = mergeArtifacts(project.files, captured);
+    }
   }
+
+  const workSurface: WorkSurface =
+    raw?.workSurface === "files" ||
+    raw?.workSurface === "code" ||
+    raw?.workSurface === "terminal" ||
+    raw?.workSurface === "preview" ||
+    raw?.workSurface === "chat"
+      ? raw.workSurface
+      : "chat";
 
   return {
     projects,
@@ -313,6 +342,7 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
       };
     }),
     activeSideTabId: raw?.activeSideTabId ?? null,
+    workSurface,
     goals: raw?.goals && typeof raw.goals === "object" ? raw.goals : {},
   };
 }
@@ -332,6 +362,25 @@ export const useWorkStore = create<WorkState>()(
       followupQueue: [],
       pausedQueueTargets: [],
       goals: {},
+      setWorkSurface: (surface) => {
+        const openSideTab = get().openSideTab;
+        if (surface === "chat") {
+          set({ workSurface: "chat", sideOpen: false });
+          return;
+        }
+        if (surface === "files" || surface === "code") {
+          openSideTab("files", { ephemeral: false });
+          set({ workSurface: surface, sideOpen: true, terminalOpen: false });
+          return;
+        }
+        if (surface === "terminal") {
+          openSideTab("terminal", { ephemeral: false });
+          set({ workSurface: "terminal", sideOpen: true });
+          return;
+        }
+        openSideTab("browser", { ephemeral: false });
+        set({ workSurface: "preview", sideOpen: true, terminalOpen: false });
+      },
       setGoal: (trailId, title, preview = "") => {
         const now = Date.now();
         set((s) => ({
@@ -477,7 +526,7 @@ export const useWorkStore = create<WorkState>()(
               ? m.metadata.attachments as ChatImageReference[] : [],
           }));
 
-          const project = after.projects.find((p) => p.id === after.activeProjectId) ?? after.projects[0]!;
+          const project = after.projects.find((p) => p.id === after.activeProjectId) ?? after.projects[0] ?? null;
 
           const write = (content: string, done = false) => {
             if (item.targetKind === "trail") {
@@ -676,8 +725,9 @@ export const useWorkStore = create<WorkState>()(
             : chat),
         }));
       },
-      createProject: (name) => {
-        const project = newProject(name?.trim() || "Untitled");
+      createProject: (name) => get().createEmptyProject(name),
+      createEmptyProject: (name) => {
+        const project = newEmptyProject(name?.trim() || "Untitled");
         const trail = newTrail({ projectId: project.id, title: project.name, pinned: false });
         set((s) => ({
           projects: [project, ...s.projects],
@@ -686,6 +736,21 @@ export const useWorkStore = create<WorkState>()(
           activeTrailId: trail.id,
           navView: "trails",
         }));
+        return project.id;
+      },
+      createSampleProject: (name) => {
+        const project = newSampleProject(name?.trim() || "Sample tutorial");
+        const trail = newTrail({ projectId: project.id, title: project.name, pinned: false });
+        set((s) => ({
+          projects: [project, ...s.projects],
+          trails: [trail, ...s.trails],
+          activeProjectId: project.id,
+          activeTrailId: trail.id,
+          navView: "trails",
+          workSurface: "files",
+          sideOpen: true,
+        }));
+        get().openSideTab("files", { ephemeral: false });
         return project.id;
       },
       createFilesystemProject: async ({ root, name, runtimeBaseUrl }) => {
@@ -745,11 +810,14 @@ export const useWorkStore = create<WorkState>()(
           activeProjectId: project.id,
           activeTrailId: trail.id,
           navView: "trails",
+          workSurface: "files",
+          sideOpen: true,
         }));
+        get().openSideTab("files", { ephemeral: false });
         return project.id;
       },
       createProjectForTrail: (trailId, name) => {
-        const project = newProject(name?.trim() || "Untitled");
+        const project = newEmptyProject(name?.trim() || "Untitled");
         set((s) => ({
           projects: [project, ...s.projects],
           trails: s.trails.map((trail) =>
@@ -775,15 +843,14 @@ export const useWorkStore = create<WorkState>()(
         })),
       deleteProject: (id) =>
         set((s) => {
-          if (s.projects.length <= 1) return s;
           const projects = s.projects.filter((p) => p.id !== id);
           const trails = s.trails.filter((t) => t.projectId !== id);
-          const next = projects[0]!;
-          const fallbackTrail = trails.find((t) => t.projectId === next.id) ?? trails[0];
+          const nextId = pickRestoredProjectId(projects, s.activeProjectId === id ? null : s.activeProjectId);
+          const fallbackTrail = trails.find((t) => t.projectId === nextId) ?? trails[0];
           return {
             projects,
-            trails: trails.length ? trails : [newTrail({ projectId: next.id })],
-            activeProjectId: s.activeProjectId === id ? next.id : s.activeProjectId,
+            trails: trails.length ? trails : [newTrail({ projectId: nextId })],
+            activeProjectId: nextId,
             activeTrailId:
               s.activeTrailId && trails.some((t) => t.id === s.activeTrailId)
                 ? s.activeTrailId
@@ -1158,7 +1225,7 @@ export const useWorkStore = create<WorkState>()(
           }));
 
         const projectId = context?.projectId ?? after.activeProjectId;
-        const project = after.projects.find((p) => p.id === projectId) ?? after.projects[0]!;
+        const project = after.projects.find((p) => p.id === projectId) ?? after.projects[0] ?? null;
 
         const write = (content: string, done = false) => {
           if (targetKind === "trail") {
@@ -1234,7 +1301,7 @@ export const useWorkStore = create<WorkState>()(
             : "Preparing request context",
           1,
           5,
-          visualWorkspace.length > 0 ? project.name : taskSummary || undefined,
+          visualWorkspace.length > 0 ? project?.name : taskSummary || undefined,
           "phase-points",
           targetId,
         );
@@ -1392,6 +1459,7 @@ export const useWorkStore = create<WorkState>()(
         runModes: s.runModes,
         sideTabs: s.sideTabs,
         activeSideTabId: s.activeSideTabId,
+        workSurface: s.workSurface,
         offlineQueue: s.offlineQueue,
         followupQueue: s.followupQueue,
         pausedQueueTargets: s.pausedQueueTargets,
@@ -1413,8 +1481,8 @@ export function useActiveTrail() {
   return useWorkStore((s) => s.trails.find((t) => t.id === s.activeTrailId) ?? s.trails[0]!);
 }
 
-export function useActiveProject() {
-  return useWorkStore((s) => s.projects.find((p) => p.id === s.activeProjectId) ?? s.projects[0]!);
+export function useActiveProject(): Project | null {
+  return useWorkStore((s) => s.projects.find((p) => p.id === s.activeProjectId) ?? s.projects[0] ?? null);
 }
 
 export function useActiveSideTab() {

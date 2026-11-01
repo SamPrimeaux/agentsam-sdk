@@ -20,7 +20,7 @@ export function ArtifactsStage() {
   const selectFile = useWorkStore((s) => s.selectFile);
   const deleteFile = useWorkStore((s) => s.deleteFile);
   const openSideTab = useWorkStore((s) => s.openSideTab);
-  const files = [...project.files].sort((a, b) => b.updatedAt - a.updatedAt);
+  const files = [...(project?.files ?? [])].sort((a, b) => b.updatedAt - a.updatedAt);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -55,7 +55,7 @@ export function ArtifactsStage() {
                       if (kind === "preview") {
                         openSideTab("browser", {
                           title: file.path,
-                          srcdoc: buildWorkspacePreview(file, project.files),
+                          srcdoc: buildWorkspacePreview(file, project?.files ?? []),
                           ephemeral: false,
                         });
                         void navigate({ to: "/browse" });
@@ -94,7 +94,7 @@ export function ArtifactsStage() {
                     variant="ghost"
                     className={cn("opacity-0 group-hover:opacity-100 max-md:opacity-100")}
                     aria-label={`Delete ${file.path}`}
-                    onClick={() => deleteFile(project.id, file.id)}
+                    onClick={() => { if (project) deleteFile(project.id, file.id); }}
                   >
                     <Trash2 className="size-3.5" />
                   </Button>

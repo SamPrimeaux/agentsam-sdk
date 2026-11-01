@@ -72,7 +72,7 @@ export function CliDrawer() {
           <span className="hidden font-mono text-[11px] tracking-wide text-muted-foreground uppercase md:inline">
             CLI
           </span>
-          <span className="hidden truncate font-mono text-[11px] text-clay md:inline">{project.name}</span>
+          <span className="hidden truncate font-mono text-[11px] text-clay md:inline">{project?.name ?? "No workspace"}</span>
           <div className="ml-auto flex items-center gap-0.5">
             <Button
               type="button"

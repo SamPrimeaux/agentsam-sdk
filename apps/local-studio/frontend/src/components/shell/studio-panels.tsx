@@ -236,7 +236,7 @@ export function ProjectsPanel() {
   const projects = useWorkStore((s) => s.projects);
   const trails = useWorkStore((s) => s.trails);
   const activeProjectId = useWorkStore((s) => s.activeProjectId);
-  const createProject = useWorkStore((s) => s.createProject);
+  const createSampleProject = useWorkStore((s) => s.createSampleProject);
   const createFilesystemProject = useWorkStore((s) => s.createFilesystemProject);
   const renameProject = useWorkStore((s) => s.renameProject);
   const deleteProject = useWorkStore((s) => s.deleteProject);
@@ -288,7 +288,7 @@ export function ProjectsPanel() {
             >
               <span className="truncate text-sm">{item.name}</span>
               <span className="text-[11px] text-muted-foreground">
-                {item.kind === "filesystem" ? "Filesystem" : "Scratch"} · {item.files.length} files ·{" "}
+                {item.kind === "filesystem" ? "Filesystem" : item.description?.toLowerCase().includes("sample") ? "Sample" : "Browser"} · {item.files.length} files ·{" "}
                 {trails.filter((t) => t.projectId === item.id).length} chats
               </span>
             </button>
@@ -316,7 +316,6 @@ export function ProjectsPanel() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive"
-                  disabled={projects.length <= 1}
                   onSelect={() => deleteProject(item.id)}
                 >
                   <Trash2 className="size-3.5" />
@@ -331,15 +330,16 @@ export function ProjectsPanel() {
       <Dialog open={newOpen} onOpenChange={setNewOpen}>
         <DialogContent>
           <DialogTitle>New project</DialogTitle>
-          <DialogDescription>Scratch (virtual) or filesystem (real host root via start-local).</DialogDescription>
+          <DialogDescription>
+            Connect an authorized host workspace for real files. Sample tutorials are opt-in only.
+          </DialogDescription>
           <form
             className="mt-4 flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault();
-              const id = createProject(name || "Untitled");
               setNewOpen(false);
-              void navigate({ to: "/chats" });
-              void id;
+              setFsError(null);
+              setFsOpen(true);
             }}
           >
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" autoFocus />
@@ -351,14 +351,15 @@ export function ProjectsPanel() {
                 type="button"
                 variant="outline"
                 onClick={() => {
+                  const id = createSampleProject(name || "Sample tutorial");
                   setNewOpen(false);
-                  setFsError(null);
-                  setFsOpen(true);
+                  void navigate({ to: "/chats" });
+                  void id;
                 }}
               >
-                Open filesystem…
+                Try sample tutorial
               </Button>
-              <Button type="submit">Create Scratch</Button>
+              <Button type="submit">Connect host…</Button>
             </div>
           </form>
         </DialogContent>

@@ -1,0 +1,241 @@
+/* Work remaster layout — owned by workbench, not Agent 1 shell/theme/media. */
+
+.work-surface-bar {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--nav-border, var(--color-border));
+  background: color-mix(in srgb, var(--nav-surface, var(--color-card)) 92%, transparent);
+  flex-shrink: 0;
+}
+
+.work-surface-bar__project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.work-surface-bar__select-wrap {
+  min-width: 0;
+  flex: 1;
+}
+
+.work-surface-bar__select {
+  width: 100%;
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--nav-border, var(--color-border));
+  background: var(--nav-canvas, var(--color-background));
+  color: var(--nav-text, var(--color-foreground));
+  font-size: 13px;
+  padding: 0 10px;
+}
+
+.work-surface-bar__status {
+  flex-shrink: 0;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--nav-muted, var(--color-muted-foreground));
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--nav-selected, var(--color-muted));
+}
+
+.work-surface-bar__status[data-status="host"] {
+  color: #1f7a4c;
+  background: color-mix(in srgb, #58b487 22%, transparent);
+}
+
+.work-surface-bar__status[data-status="sample"] {
+  color: #8a6a1f;
+  background: color-mix(in srgb, #d4ab52 24%, transparent);
+}
+
+.work-surface-bar__surfaces {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.work-surface-bar__tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  border-radius: 12px;
+  font-size: 10px;
+  color: var(--nav-muted, var(--color-muted-foreground));
+}
+
+.work-surface-bar__tab.is-active {
+  color: var(--nav-text, var(--color-foreground));
+  background: var(--nav-selected, var(--color-muted));
+}
+
+.work-workspace-gate {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: stretch;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+}
+
+.work-workspace-gate__card {
+  width: min(100%, 420px);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--nav-border, var(--color-border));
+  background: var(--nav-surface, var(--color-card));
+}
+
+.work-workspace-gate__card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 560;
+  letter-spacing: -0.02em;
+}
+
+.work-workspace-gate__card > p,
+.work-workspace-gate__hint,
+.work-workspace-gate__sample {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--nav-muted, var(--color-muted-foreground));
+}
+
+.work-workspace-gate__label {
+  margin: 0 0 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--nav-muted, var(--color-muted-foreground));
+}
+
+.work-workspace-gate__hosts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.work-workspace-gate__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--nav-muted, var(--color-muted-foreground));
+}
+
+.work-workspace-gate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.work-workspace-gate__error {
+  margin: 0;
+  font-size: 12px;
+  color: #df6670;
+}
+
+.work-workspace-gate__hint code {
+  font-size: 11px;
+}
+
+.work-workspace-gate__sample {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #d4ab52 16%, transparent);
+  color: #8a6a1f;
+}
+
+/* Phone: one Work surface at a time; composer stays in the safe bottom band via conversation dock. */
+@media (max-width: 767px) {
+  .agentsam-page-layout[data-work-remaster="true"] {
+    --work-composer-pad: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .agentsam-page-layout[data-work-remaster="true"] .work-surface-bar {
+    display: flex;
+  }
+
+  .agentsam-page-layout[data-work-remaster="true"] .agentsam-conversation-dock {
+    padding-bottom: var(--work-composer-pad);
+  }
+
+  .agentsam-page-layout[data-work-remaster="true"][data-work-surface="files"] .agentsam-side-panel,
+  .agentsam-page-layout[data-work-remaster="true"][data-work-surface="code"] .agentsam-side-panel,
+  .agentsam-page-layout[data-work-remaster="true"][data-work-surface="terminal"] .agentsam-side-panel,
+  .agentsam-page-layout[data-work-remaster="true"][data-work-surface="preview"] .agentsam-side-panel {
+    inset: 0;
+  }
+}
+
+/* Tablet: keep a usable two-panel stage when width allows. */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .agentsam-page-layout[data-work-remaster="true"] .work-surface-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    border-top: 0;
+    border-bottom: 1px solid var(--nav-border, var(--color-border));
+    padding-bottom: 8px;
+  }
+
+  .agentsam-page-layout[data-work-remaster="true"] .work-surface-bar__project {
+    flex: 0 1 240px;
+  }
+
+  .agentsam-page-layout[data-work-remaster="true"] .work-surface-bar__surfaces {
+    flex: 1;
+  }
+
+  .agentsam-page-layout[data-work-remaster="true"] .agentsam-side-panel {
+    min-width: 360px;
+    max-width: calc(100% - 360px);
+  }
+}
+
+/* Desktop: enforce usable panel floors; focus ring for the active stage. */
+@media (min-width: 1100px) {
+  .agentsam-page-layout[data-work-remaster="true"] .agentsam-side-panel {
+    min-width: 380px;
+    max-width: calc(100% - 380px);
+  }
+
+  .agentsam-page-layout[data-work-remaster="true"] .agentsam-side-panel:focus-within {
+    box-shadow: inset 3px 0 0 color-mix(in srgb, var(--nav-accent, var(--color-accent)) 70%, transparent);
+  }
+
+  .agentsam-page-layout[data-work-remaster="true"] .agentsam-conversation:focus-within {
+    box-shadow: inset -3px 0 0 color-mix(in srgb, var(--nav-accent, var(--color-accent)) 40%, transparent);
+  }
+}
+
+.work-files-stage[data-surface="code"] .work-files-tree {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .work-files-stage[data-surface="code"] .work-files-tree {
+    display: flex;
+    width: 200px;
+  }
+}
+
+.work-files-stage .terminal-host,
+.work-files-stage [data-terminal-viewport] {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
