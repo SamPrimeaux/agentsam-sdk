@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-database-editor",
-  "version": "2.6.14",
+  "version": "2.6.16",
   "type": "module",
   "description": "Portable AgentSam Database Editor — adapters for SQLite/D1/Postgres/Supabase + vectors surface. Donor: IAM /dashboard/database. Independent project; not affiliated with Supabase.",
   "main": "./src/index.js",
@@ -49,8 +49,12 @@
     "recharts": ">=3.0.0 <4"
   },
   "peerDependenciesMeta": {
-    "@monaco-editor/react": { "optional": true },
-    "monaco-editor": { "optional": true }
+    "@monaco-editor/react": {
+      "optional": true
+    },
+    "monaco-editor": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

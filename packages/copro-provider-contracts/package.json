@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/copro-provider-contracts",
-  "version": "2.6.13",
+  "version": "2.6.16",
   "description": "Provider-neutral CoPro capability contracts for media, generation, transcription, embeddings, conversion, and rendering.",
   "type": "module",
   "license": "FSL-1.1-MIT",

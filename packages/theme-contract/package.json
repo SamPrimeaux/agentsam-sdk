@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/theme-contract",
-  "version": "2.6.13",
+  "version": "2.6.16",
   "private": true,
   "type": "module",
   "description": "Portable provider-neutral theme preview registry and composition contracts",

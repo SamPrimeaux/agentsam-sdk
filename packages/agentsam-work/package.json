@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-work",
-  "version": "2.6.13",
+  "version": "2.6.16",
   "type": "module",
   "sideEffects": [
     "./dist/frontend/theme.css"
