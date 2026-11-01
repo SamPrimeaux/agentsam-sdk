@@ -22,7 +22,11 @@ function database({ cloudflare = null, secrets = [] } = {}) {
           return null;
         },
         async all() {
-          return sql.includes("user_secrets") ? { results: secrets } : { results: [] };
+          if (sql.includes("user_secrets")) return { results: secrets };
+          if (sql.includes("user_oauth_tokens") && String(sql).toLowerCase().includes("cloudflare")) {
+            return { results: cloudflare ? [cloudflare] : [] };
+          }
+          return { results: [] };
         },
         async run() {
           return { success: true };

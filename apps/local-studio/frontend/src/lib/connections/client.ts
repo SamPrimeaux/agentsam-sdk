@@ -17,10 +17,25 @@ export type LocalStudioConnectionRecord = {
   scopes?: string[];
   account_name?: string;
   accountName?: string;
+  account_selection_required?: boolean;
+  preferred_connection_id?: string | null;
+  accounts?: Array<{
+    connection_id?: string;
+    connectionId?: string;
+    cloudflare_account_id?: string;
+    cloudflareAccountId?: string;
+    account_label?: string;
+    accountLabel?: string;
+    preferred?: boolean;
+  }>;
   connection?: {
     connectionId?: string;
+    connection_id?: string;
     scopes?: string[];
     cloudflareAccountId?: string;
+    cloudflare_account_id?: string;
+    account_label?: string;
+    preferred?: boolean;
   };
 };
 
@@ -177,15 +192,41 @@ export async function startLocalStudioProviderConnection(
   return payload;
 }
 
-export async function disconnectLocalStudioProvider(provider: string) {
+export async function disconnectLocalStudioProvider(
+  provider: string,
+  options: { accountId?: string; connectionId?: string } = {},
+) {
   const providerId = String(provider || "").trim().toLowerCase();
   if (!/^[a-z0-9_-]+$/.test(providerId)) {
     throw new Error("connection_provider_invalid");
   }
+  const accountId = String(options.accountId || options.connectionId || "").trim();
   return connectionRequest<{ ok?: boolean; error?: string }>(
     "/api/connections/" + encodeURIComponent(providerId) + "/disconnect",
-    { method: "POST", body: {} },
+    {
+      method: "POST",
+      body: accountId
+        ? { account_id: accountId, connection_id: accountId }
+        : {},
+    },
   );
+}
+
+export async function selectLocalStudioCloudflareAccount(accountId: string) {
+  const id = String(accountId || "").trim();
+  if (!/^[a-f0-9]{32}$/i.test(id)) {
+    throw new Error("cloudflare_account_identifier_required");
+  }
+  return connectionRequest<{
+    ok?: boolean;
+    preferred_connection_id?: string;
+    connection?: LocalStudioConnectionRecord["connection"];
+    accounts?: LocalStudioConnectionRecord["accounts"];
+    error?: string;
+  }>("/api/connections/cloudflare/select", {
+    method: "POST",
+    body: { account_id: id, connection_id: id },
+  });
 }
 
 

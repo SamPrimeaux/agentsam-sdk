@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
   resolveCloudflareAccountId,
+  setPreferredCloudflareAccount,
   unionScopes,
+  upsertCloudflareOauthForDiscoveredAccounts,
   upsertCloudflareUserOauthToken,
 } from '../src/oauth-persist.js';
+import { loadCloudflareFromUserOauthTokens } from '../src/credential.js';
 
 describe('oauth-persist spine', () => {
   it('unions scopes without duplicates', () => {
@@ -123,5 +126,105 @@ describe('oauth-persist spine', () => {
     const upsertSql = sqlSeen.find((sql) => sql.includes('ON CONFLICT(user_id, provider, account_identifier)'));
     assert.match(upsertSql || '', /last_refresh_error_code = NULL/);
     assert.match(upsertSql || '', /refresh_failure_count = 0/);
+  });
+
+  it('persists every discovered account then honors preferred selection', async () => {
+    const rows = new Map();
+    const env = {
+      VAULT_MASTER_KEY: 'test-vault-material-preferred',
+      DB: {
+        prepare(sql) {
+          const text = String(sql);
+          return {
+            bind(...args) {
+              return {
+                async first() {
+                  if (text.includes('SELECT') && text.includes('account_identifier = ?')) {
+                    return rows.get(`${args[0]}|${args[2]}`) || null;
+                  }
+                  if (text.includes('SELECT') && text.includes('ORDER BY updated_at DESC')) {
+                    return [...rows.values()][0] || null;
+                  }
+                  return null;
+                },
+                async all() {
+                  if (text.includes('FROM user_oauth_tokens')) {
+                    return { results: [...rows.values()] };
+                  }
+                  return { results: [] };
+                },
+                async run() {
+                  if (text.includes('INSERT')) {
+                    const key = `${args[0]}|${args[2]}`;
+                    const prior = rows.get(key);
+                    rows.set(key, {
+                      user_id: args[0],
+                      provider: 'cloudflare',
+                      account_identifier: args[2],
+                      account_display: args[10],
+                      scopes: args[7],
+                      scope: args[7],
+                      metadata_json: args[11],
+                      access_token: null,
+                      refresh_token: null,
+                      access_token_encrypted: args[5],
+                      refresh_token_encrypted: args[6],
+                      is_active: 1,
+                      revoked_at: null,
+                      created_at: prior?.created_at || args[12],
+                      updated_at: args[13],
+                    });
+                  } else if (text.includes('UPDATE user_oauth_tokens') && text.includes('metadata_json')) {
+                    const key = `${args[2]}|${args[4]}`;
+                    const prior = rows.get(key);
+                    if (prior) {
+                      rows.set(key, { ...prior, metadata_json: args[0], updated_at: args[1] });
+                    }
+                  }
+                  return { success: true };
+                },
+              };
+            },
+          };
+        },
+      },
+    };
+
+    const a = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const b = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    const multi = await upsertCloudflareOauthForDiscoveredAccounts(
+      env,
+      {
+        userId: 'au_1',
+        accessToken: 'tok-multi',
+        scopes: 'd1.read offline_access',
+        clientId: 'c0704bd7a7aab7216b362603e1985499',
+      },
+      [
+        { id: a, name: 'Account A' },
+        { id: b, name: 'Account B' },
+      ],
+    );
+    assert.equal(multi.ok, true);
+    assert.equal(multi.needs_preferred, true);
+    assert.equal(multi.accounts.length, 2);
+    assert.equal(rows.size, 2);
+
+    await assert.rejects(
+      () => loadCloudflareFromUserOauthTokens(env, 'au_1'),
+      (err) => err?.code === 'cloudflare_account_selection_required',
+    );
+
+    const preferred = await setPreferredCloudflareAccount(env, 'au_1', b);
+    assert.equal(preferred.ok, true);
+    assert.equal(preferred.accountId, b);
+    const metaB = JSON.parse(rows.get(`au_1|${b}`).metadata_json);
+    const metaA = JSON.parse(rows.get(`au_1|${a}`).metadata_json);
+    assert.equal(metaB.is_preferred, true);
+    assert.equal(metaA.is_preferred, false);
+
+    const loaded = await loadCloudflareFromUserOauthTokens(env, 'au_1');
+    assert.equal(loaded.accountId, b);
+    assert.equal(loaded.connectionId, b);
   });
 });

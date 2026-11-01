@@ -1,3 +1,5 @@
+import { scheduleStudioErrorLog } from "./studio-error-log.js";
+
 const IAM_ORIGIN = "https://inneranimalmedia.com";
 const MAX_PAGE_SIZE = 100;
 const ALLOWED_FORWARD_HEADERS = [
@@ -1224,59 +1226,72 @@ async function streamDirectUpload(env, request, url, principal = null) {
   }
 }
 
-export async function handleStudioContentMediaApi(request, env, principal, url = new URL(request.url)) {
+export async function handleStudioContentMediaApi(request, env, principal, url = new URL(request.url), ctx = null) {
   const path = url.pathname.replace(/\/+$/, "") || "/";
   if (!path.startsWith("/api/admin/media")) return null;
   if (!principal?.id) return json({ ok: false, error: "authentication_required" }, 401);
 
-  if (path === "/api/admin/media/image-models") return null;
+  try {
+    if (path === "/api/admin/media/image-models") return null;
 
-  if (path === "/api/admin/media" && request.method === "GET") {
-    return listMedia(env, request, url, principal);
-  }
-  if (path === "/api/admin/media" && request.method === "POST") {
-    return uploadMedia(env, request, url, principal);
-  }
-  if (path === "/api/admin/media/sync" && request.method === "POST") {
-    const recovery = await recoverDrafts(env, request, url, principal);
-    return json({ ok: recovery?.ok !== false, recovery, synced: true });
-  }
-  if (path === "/api/admin/media/stream/direct-upload" && request.method === "POST") {
-    return streamDirectUpload(env, request, url, principal);
-  }
-  if (path === "/api/admin/media/albums" && request.method === "GET") {
-    return json({ ok: true, albums: [], collections_supported: false });
-  }
-  if (path === "/api/admin/media/albums" || /^\/api\/admin\/media\/albums\/[^/]+$/.test(path)) {
-    return json({ ok: false, error: "collections_not_yet_connected_to_canonical_media_records" }, 409);
-  }
-  if (path === "/api/admin/media/reorder" && request.method === "POST") {
-    return json({ ok: false, error: "manual_reorder_not_supported_for_provider_assets" }, 409);
-  }
-  if (path === "/api/admin/media/batch" && request.method === "POST") {
-    return batchMedia(env, request, url, principal);
-  }
+    if (path === "/api/admin/media" && request.method === "GET") {
+      return await listMedia(env, request, url, principal);
+    }
+    if (path === "/api/admin/media" && request.method === "POST") {
+      return await uploadMedia(env, request, url, principal);
+    }
+    if (path === "/api/admin/media/sync" && request.method === "POST") {
+      const recovery = await recoverDrafts(env, request, url, principal);
+      return json({ ok: recovery?.ok !== false, recovery, synced: true });
+    }
+    if (path === "/api/admin/media/stream/direct-upload" && request.method === "POST") {
+      return await streamDirectUpload(env, request, url, principal);
+    }
+    if (path === "/api/admin/media/albums" && request.method === "GET") {
+      return json({ ok: true, albums: [], collections_supported: false });
+    }
+    if (path === "/api/admin/media/albums" || /^\/api\/admin\/media\/albums\/[^/]+$/.test(path)) {
+      return json({ ok: false, error: "collections_not_yet_connected_to_canonical_media_records" }, 409);
+    }
+    if (path === "/api/admin/media/reorder" && request.method === "POST") {
+      return json({ ok: false, error: "manual_reorder_not_supported_for_provider_assets" }, 409);
+    }
+    if (path === "/api/admin/media/batch" && request.method === "POST") {
+      return await batchMedia(env, request, url, principal);
+    }
 
-  const resourceTagsMatch = path.match(/^\/api\/admin\/media\/([^/]+)\/resource-tags$/);
-  if (resourceTagsMatch) {
-    return proxyAssetRequest(env, request, url, resourceTagsMatch[1], "resource-tags", principal);
-  }
+    const resourceTagsMatch = path.match(/^\/api\/admin\/media\/([^/]+)\/resource-tags$/);
+    if (resourceTagsMatch) {
+      return await proxyAssetRequest(env, request, url, resourceTagsMatch[1], "resource-tags", principal);
+    }
 
-  const unsupportedMatch = path.match(/^\/api\/admin\/media\/([^/]+)\/(ai-edit|resample|remove-background|comments|gallery)$/);
-  if (unsupportedMatch) {
-    return json({
-      ok: false,
-      error: "operation_not_connected_to_cloudflare_oauth_api",
-      operation: unsupportedMatch[2],
-      original_asset_preserved: true,
-      provider_api: mediaProviderPreference(url) === "inneranimalmedia" ? "inneranimalmedia" : "cloudflare_oauth",
-    }, 501);
-  }
+    const unsupportedMatch = path.match(/^\/api\/admin\/media\/([^/]+)\/(ai-edit|resample|remove-background|comments|gallery)$/);
+    if (unsupportedMatch) {
+      return json({
+        ok: false,
+        error: "operation_not_connected_to_cloudflare_oauth_api",
+        operation: unsupportedMatch[2],
+        original_asset_preserved: true,
+        provider_api: mediaProviderPreference(url) === "inneranimalmedia" ? "inneranimalmedia" : "cloudflare_oauth",
+      }, 501);
+    }
 
-  const assetMatch = path.match(/^\/api\/admin\/media\/([^/]+)$/);
-  if (assetMatch && ["GET", "PATCH", "DELETE", "PUT"].includes(request.method.toUpperCase())) {
-    return proxyAssetRequest(env, request, url, assetMatch[1], "", principal);
-  }
+    const assetMatch = path.match(/^\/api\/admin\/media\/([^/]+)$/);
+    if (assetMatch && ["GET", "PATCH", "DELETE", "PUT"].includes(request.method.toUpperCase())) {
+      return await proxyAssetRequest(env, request, url, assetMatch[1], "", principal);
+    }
 
-  return null;
+    return null;
+  } catch (error) {
+    scheduleStudioErrorLog(env, ctx, {
+      accountId: principal.id,
+      errorCode: error?.code || error?.message || "media_api_failed",
+      errorType: "media_library",
+      errorMessage: String(error?.message || error || "media_api_failed"),
+      source: "local-studio.content-media-api",
+      stackTrace: error?.stack || null,
+      contextJson: { path, method: request.method },
+    });
+    throw error;
+  }
 }

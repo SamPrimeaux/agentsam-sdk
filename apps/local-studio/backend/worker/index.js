@@ -940,7 +940,7 @@ export default {
       const commerceEnv = url.pathname.startsWith("/api/admin/completeful/")
         ? await completefulAccountEnvironment(env, principal.id)
         : env;
-      const providerMediaResponse = await handleStudioContentMediaApi(request, env, studioUser, url);
+      const providerMediaResponse = await handleStudioContentMediaApi(request, env, studioUser, url, context);
       if (providerMediaResponse) return providerMediaResponse;
       return handleEcommerceAdminApi(request, commerceEnv, url, context, studioUser);
     }
@@ -1255,7 +1255,7 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
     if (isDatabaseApi) {
       const userId = await sessionUser();
       if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
-      return handleDatabaseRequest(request, env, userId);
+      return handleDatabaseRequest(request, env, userId, context);
     }
 
     if (isWorkApi) {

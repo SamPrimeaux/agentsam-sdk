@@ -174,6 +174,9 @@ export async function loadConnectionsRegistry(env, userId) {
         client_status: cloudflare.status,
         callback_path: cloudflare.callbackPath,
         connection: cloudflare.connection,
+        account_selection_required: Boolean(cloudflare.account_selection_required),
+        preferred_connection_id: cloudflare.preferred_connection_id || null,
+        accounts: Array.isArray(cloudflare.accounts) ? cloudflare.accounts : [],
         plugin: cloudflarePlugin ? {
           id: cloudflarePlugin.id,
           plugin_key: cloudflarePlugin.plugin_key,

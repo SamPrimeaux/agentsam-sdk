@@ -33,6 +33,8 @@ export {
 
 export {
   upsertCloudflareUserOauthToken,
+  upsertCloudflareOauthForDiscoveredAccounts,
+  setPreferredCloudflareAccount,
   revokeCloudflareUserOauthTokens,
   resolveCloudflareAccountId,
   unionScopes,
@@ -157,6 +159,7 @@ export function cloudflareConnectionSafeStatus(env = {}, connection = null, owne
     token_auth_method: client.tokenAuthMethod,
     callbackPath: CLOUDFLARE_CALLBACK_PATH,
     account_selection_required: Boolean(record?.account_selection_required),
+    preferred_connection_id: record?.preferred_connection_id || (record?.preferred ? record.connectionId : null) || null,
     accounts: Array.isArray(record?.accounts) ? record.accounts : undefined,
     connection: record
       ? {
@@ -164,6 +167,7 @@ export function cloudflareConnectionSafeStatus(env = {}, connection = null, owne
           owner: record.ownerId,
           cloudflare_account_id: record.cloudflareAccountId || null,
           account_label: record.accountLabel || null,
+          preferred: record.preferred === true,
           scopes: record.scopes || [],
           status: 'connected',
           created_at: record.createdAt,

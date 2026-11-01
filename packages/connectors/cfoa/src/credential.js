@@ -24,19 +24,47 @@ function scopesFromRow(row) {
   return [];
 }
 
+function parseRowMeta(row) {
+  if (!row?.metadata_json) return {};
+  try {
+    const meta = typeof row.metadata_json === 'object'
+      ? row.metadata_json
+      : JSON.parse(String(row.metadata_json));
+    return meta && typeof meta === 'object' ? meta : {};
+  } catch {
+    return {};
+  }
+}
+
 function accountIdFromRow(row) {
   const stored = clean(row?.account_identifier);
   if (/^[a-f0-9]{32}$/i.test(stored)) return stored;
-  if (row?.metadata_json) {
-    try {
-      const meta = JSON.parse(row.metadata_json);
-      const fromMeta = clean(meta.cloudflare_account_id || meta.account_id);
-      if (/^[a-f0-9]{32}$/i.test(fromMeta)) return fromMeta;
-    } catch {
-      /* ignore */
-    }
-  }
+  const meta = parseRowMeta(row);
+  const fromMeta = clean(meta.cloudflare_account_id || meta.account_id);
+  if (/^[a-f0-9]{32}$/i.test(fromMeta)) return fromMeta;
   return null;
+}
+
+function isPreferredRow(row) {
+  return parseRowMeta(row).is_preferred === true;
+}
+
+function pickPreferredOauthRow(rows = []) {
+  const list = Array.isArray(rows) ? rows.filter(Boolean) : [];
+  if (!list.length) return { row: null, preferred: false, ambiguous: false };
+  const preferred = list.find((row) => isPreferredRow(row));
+  if (preferred) return { row: preferred, preferred: true, ambiguous: false };
+  if (list.length === 1) return { row: list[0], preferred: false, ambiguous: false };
+  return { row: null, preferred: false, ambiguous: true, rows: list };
+}
+
+function accountChoiceFromRow(row) {
+  return {
+    connectionId: clean(row.account_identifier),
+    cloudflareAccountId: accountIdFromRow(row),
+    accountLabel: row.account_display || row.account_email || row.account_identifier,
+    preferred: isPreferredRow(row),
+  };
 }
 
 function oauthVaultMaterial(env) {
@@ -57,7 +85,9 @@ export function mapCloudflareOauthRowToConnection(row, ownerId) {
     metaStatus = null;
   }
   // user_oauth_tokens PK is (user_id, provider, account_identifier) — no `id` column.
+  // connectionId remains the Cloudflare account id in this SSOT (one grant row per account).
   const accountKey = clean(row.account_identifier) || `cf_oauth_${ownerId}`;
+  const meta = parseRowMeta(row);
   return {
     connectionId: accountKey,
     ownerId,
@@ -65,6 +95,8 @@ export function mapCloudflareOauthRowToConnection(row, ownerId) {
     accountLabel: row.account_display || row.account_email || accountIdFromRow(row) || accountKey,
     scopes: scopesFromRow(row),
     status: active ? 'connected' : (metaStatus === 'superseded' ? 'superseded' : 'revoked'),
+    preferred: meta.is_preferred === true,
+    preferredAt: meta.preferred_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     expiresAt: row.expires_at,
@@ -120,17 +152,19 @@ export async function loadCloudflareConnectionRecord(env, ownerId, options = {})
       `).bind(ownerId, preferred).first();
     } else {
       // Status SSOT: any valid OAuth row means connected (MCP/Settings must not
-      // show "Need connection"). Multi-account pickers use listCloudflareConnectionRecords.
+      // show "Need connection"). Prefer explicit preferred account; otherwise expose picker.
       const connections = await listCloudflareConnectionRecords(env, ownerId);
-      const selected = connections[0] || null;
-      if (selected && connections.length > 1) {
-        selected.accounts = connections.map((c) => ({
-          connectionId: c.connectionId,
-          cloudflareAccountId: c.cloudflareAccountId,
-          accountLabel: c.accountLabel || c.cloudflareAccountId,
-        }));
-        selected.account_selection_required = true;
-      }
+      if (!connections.length) return null;
+      const preferred = connections.find((c) => c.preferred === true);
+      const selected = preferred || connections[0];
+      selected.accounts = connections.map((c) => ({
+        connectionId: c.connectionId,
+        cloudflareAccountId: c.cloudflareAccountId,
+        accountLabel: c.accountLabel || c.cloudflareAccountId,
+        preferred: c.preferred === true,
+      }));
+      selected.account_selection_required = !preferred && connections.length > 1;
+      selected.preferred_connection_id = preferred?.connectionId || null;
       return selected;
     }
   } catch (err) {
@@ -304,17 +338,14 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
         const single = await env.DB.prepare(`${listSql} LIMIT 1`).bind(ownerId).first();
         if (single) rows = [single];
       }
-      if (rows.length > 1 && !options.allowLatestFallback) {
+      const picked = pickPreferredOauthRow(rows);
+      if (picked.ambiguous && !options.allowLatestFallback) {
         const err = new Error('cloudflare_account_selection_required');
         err.code = 'cloudflare_account_selection_required';
-        err.accounts = rows.map((r) => ({
-          connectionId: clean(r.account_identifier),
-          cloudflareAccountId: accountIdFromRow(r),
-          accountLabel: r.account_display || r.account_email || r.account_identifier,
-        }));
+        err.accounts = (picked.rows || rows).map((r) => accountChoiceFromRow(r));
         throw err;
       }
-      row = rows[0] || null;
+      row = picked.row || rows[0] || null;
     }
   } catch (err) {
     if (err?.code === 'cloudflare_account_selection_required') throw err;

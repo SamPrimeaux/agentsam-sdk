@@ -406,3 +406,32 @@ test('unsupported media editing returns an explicit non-destructive response', a
   assert.equal(data.original_asset_preserved, true);
   assert.equal(env.calls.length, 0);
 });
+
+test('explicit InnerAnimalMedia provider with unbound IAM_API returns 503 (no OAuth fallback)', async () => {
+  const env = {};
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media?provider=inneranimalmedia&source=cf_images'),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 503);
+  assert.equal(data.error, 'iam_media_provider_unavailable');
+});
+
+test('default Cloudflare media path with unbound IAM_API never falls back to IAM', async () => {
+  const env = { DB: null };
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media?provider=cloudflare&source=cf_images'),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.notEqual(response.status, 200);
+  assert.notEqual(data.error, 'iam_media_provider_unavailable');
+  assert.ok(!Object.prototype.hasOwnProperty.call(data, 'provider_api') || data.provider_api !== 'inneranimalmedia');
+  assert.match(
+    String(data.error || ''),
+    /cloudflare|oauth|authorization|credential|token|media_list/i,
+  );
+});

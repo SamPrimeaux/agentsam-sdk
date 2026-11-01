@@ -290,51 +290,227 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
 }
 
 /**
- * Revoke Cloudflare grant(s) in user_oauth_tokens for an owner.
- * @returns {{ ok: boolean, row?: object, error?: string }}
+ * Persist the same OAuth grant under every Cloudflare account the token can access.
+ * Used when Cloudflare consent authorizes multiple accounts and no single account_id
+ * was returned on the token response. Does not invent a preferred account — caller
+ * must call setPreferredCloudflareAccount after the user selects one.
+ *
+ * @param {object} env
+ * @param {object} input — same shape as upsertCloudflareUserOauthToken (without accountId)
+ * @param {Array<{ id: string, name?: string|null }>} accounts
  */
-export async function revokeCloudflareUserOauthTokens(env, ownerId) {
+export async function upsertCloudflareOauthForDiscoveredAccounts(env, input = {}, accounts = []) {
+  const list = (Array.isArray(accounts) ? accounts : [])
+    .map((account) => ({
+      id: clean(account?.id || account?.cloudflareAccountId || account?.cloudflare_account_id),
+      name: clean(account?.name || account?.accountLabel || account?.account_label) || null,
+    }))
+    .filter((account) => /^[a-f0-9]{32}$/i.test(account.id));
+  if (!list.length) {
+    return { ok: false, error: 'cloudflare_accounts_required', accounts: [] };
+  }
+
+  const results = [];
+  for (const account of list) {
+    const spine = await upsertCloudflareUserOauthToken(env, {
+      ...input,
+      accountId: account.id,
+      accountDisplay: account.name || input.accountDisplay || null,
+    });
+    if (!spine?.ok) {
+      return {
+        ok: false,
+        error: spine?.error || 'upsert_failed',
+        accounts: list,
+        detail: spine?.detail || null,
+        persisted: results,
+      };
+    }
+    results.push({
+      connectionId: spine.connectionId || account.id,
+      cloudflareAccountId: account.id,
+      accountLabel: account.name || account.id,
+    });
+  }
+
+  return {
+    ok: true,
+    needs_preferred: true,
+    accounts: results,
+    account_selection_required: true,
+  };
+}
+
+/**
+ * Mark one Cloudflare account as the preferred operating context for an owner.
+ * Clears is_preferred on sibling Cloudflare rows. Does not change tokens or scopes.
+ *
+ * @param {object} env
+ * @param {string} ownerId
+ * @param {string} accountId
+ */
+export async function setPreferredCloudflareAccount(env, ownerId, accountId) {
   const userId = clean(ownerId);
+  const preferred = clean(accountId);
   if (!env?.DB?.prepare || !userId) return { ok: false, error: 'db_unavailable' };
+  if (!/^[a-f0-9]{32}$/i.test(preferred)) {
+    return { ok: false, error: 'cloudflare_account_identifier_required' };
+  }
+
   const now = Math.floor(Date.now() / 1000);
-  let row = null;
+  let target = null;
   try {
-    row = await env.DB.prepare(
-      `SELECT user_id, account_identifier, access_token, access_token_encrypted,
-              scopes, scope, expires_at, metadata_json
+    target = await env.DB.prepare(
+      `SELECT account_identifier, account_display, metadata_json
+       FROM user_oauth_tokens
+       WHERE user_id = ? AND LOWER(provider) = ?
+         AND account_identifier = ?
+         AND COALESCE(is_active, 1) = 1
+         AND (revoked_at IS NULL OR revoked_at = 0)
+       LIMIT 1`,
+    ).bind(userId, PROVIDER, preferred).first();
+  } catch (err) {
+    return { ok: false, error: 'user_oauth_tokens_unavailable', detail: String(err?.message || err) };
+  }
+  if (!target) return { ok: false, error: 'cloudflare_account_not_found' };
+
+  let rows = [];
+  try {
+    const listed = await env.DB.prepare(
+      `SELECT account_identifier, metadata_json
        FROM user_oauth_tokens
        WHERE user_id = ? AND LOWER(provider) = ?
          AND COALESCE(is_active, 1) = 1
-         AND (revoked_at IS NULL OR revoked_at = 0)
-       ORDER BY updated_at DESC LIMIT 1`,
-    ).bind(userId, PROVIDER).first();
+         AND (revoked_at IS NULL OR revoked_at = 0)`,
+    ).bind(userId, PROVIDER).all();
+    rows = listed?.results || [];
+  } catch {
+    rows = [{ account_identifier: preferred, metadata_json: target.metadata_json }];
+  }
+
+  for (const row of rows) {
+    const id = clean(row.account_identifier);
+    const meta = parseMeta(row.metadata_json);
+    const next = {
+      ...meta,
+      cloudflare_account_id: id,
+      status: meta.status || 'connected',
+      is_preferred: id === preferred,
+    };
+    if (id === preferred) next.preferred_at = now;
+    else delete next.preferred_at;
+    try {
+      await env.DB.prepare(
+        `UPDATE user_oauth_tokens
+         SET metadata_json = ?, updated_at = ?
+         WHERE user_id = ? AND LOWER(provider) = ? AND account_identifier = ?`,
+      ).bind(JSON.stringify(next), now, userId, PROVIDER, id).run();
+    } catch (err) {
+      return { ok: false, error: 'preferred_update_failed', detail: String(err?.message || err) };
+    }
+  }
+
+  return {
+    ok: true,
+    connectionId: preferred,
+    accountId: preferred,
+    accountLabel: clean(target.account_display) || preferred,
+    preferred: true,
+  };
+}
+
+/**
+ * Revoke Cloudflare grant(s) in user_oauth_tokens for an owner.
+ * Pass accountId / connectionId to revoke a single account; omit to revoke all.
+ * @returns {{ ok: boolean, row?: object, error?: string }}
+ */
+export async function revokeCloudflareUserOauthTokens(env, ownerId, options = {}) {
+  const userId = clean(ownerId);
+  if (!env?.DB?.prepare || !userId) return { ok: false, error: 'db_unavailable' };
+  const accountId = clean(options.accountId || options.connectionId || options.cloudflareAccountId);
+  const now = Math.floor(Date.now() / 1000);
+  let row = null;
+  try {
+    if (accountId) {
+      row = await env.DB.prepare(
+        `SELECT user_id, account_identifier, access_token, access_token_encrypted,
+                scopes, scope, expires_at, metadata_json
+         FROM user_oauth_tokens
+         WHERE user_id = ? AND LOWER(provider) = ?
+           AND account_identifier = ?
+           AND COALESCE(is_active, 1) = 1
+           AND (revoked_at IS NULL OR revoked_at = 0)
+         LIMIT 1`,
+      ).bind(userId, PROVIDER, accountId).first();
+    } else {
+      row = await env.DB.prepare(
+        `SELECT user_id, account_identifier, access_token, access_token_encrypted,
+                scopes, scope, expires_at, metadata_json
+         FROM user_oauth_tokens
+         WHERE user_id = ? AND LOWER(provider) = ?
+           AND COALESCE(is_active, 1) = 1
+           AND (revoked_at IS NULL OR revoked_at = 0)
+         ORDER BY updated_at DESC LIMIT 1`,
+      ).bind(userId, PROVIDER).first();
+    }
   } catch (err) {
     return { ok: false, error: 'user_oauth_tokens_unavailable', detail: String(err?.message || err) };
   }
   try {
-    await env.DB.prepare(
-      `UPDATE user_oauth_tokens
-       SET is_active = 0,
-           revoked_at = ?,
-           access_token = NULL,
-           refresh_token = NULL,
-           access_token_encrypted = NULL,
-           refresh_token_encrypted = NULL,
-           updated_at = ?,
-           metadata_json = json_set(
-             COALESCE(NULLIF(TRIM(metadata_json), ''), '{}'),
-             '$.status', 'revoked'
-           )
-       WHERE user_id = ? AND LOWER(provider) = ?
-         AND COALESCE(is_active, 1) = 1`,
-    ).bind(now, now, userId, PROVIDER).run();
+    if (accountId) {
+      await env.DB.prepare(
+        `UPDATE user_oauth_tokens
+         SET is_active = 0,
+             revoked_at = ?,
+             access_token = NULL,
+             refresh_token = NULL,
+             access_token_encrypted = NULL,
+             refresh_token_encrypted = NULL,
+             updated_at = ?,
+             metadata_json = json_set(
+               COALESCE(NULLIF(TRIM(metadata_json), ''), '{}'),
+               '$.status', 'revoked',
+               '$.is_preferred', json('false')
+             )
+         WHERE user_id = ? AND LOWER(provider) = ?
+           AND account_identifier = ?
+           AND COALESCE(is_active, 1) = 1`,
+      ).bind(now, now, userId, PROVIDER, accountId).run();
+    } else {
+      await env.DB.prepare(
+        `UPDATE user_oauth_tokens
+         SET is_active = 0,
+             revoked_at = ?,
+             access_token = NULL,
+             refresh_token = NULL,
+             access_token_encrypted = NULL,
+             refresh_token_encrypted = NULL,
+             updated_at = ?,
+             metadata_json = json_set(
+               COALESCE(NULLIF(TRIM(metadata_json), ''), '{}'),
+               '$.status', 'revoked',
+               '$.is_preferred', json('false')
+             )
+         WHERE user_id = ? AND LOWER(provider) = ?
+           AND COALESCE(is_active, 1) = 1`,
+      ).bind(now, now, userId, PROVIDER).run();
+    }
   } catch {
-    await env.DB.prepare(
-      `UPDATE user_oauth_tokens
-       SET is_active = 0, revoked_at = ?, updated_at = ?,
-           access_token = NULL, refresh_token = NULL
-       WHERE user_id = ? AND LOWER(provider) = ?`,
-    ).bind(now, now, userId, PROVIDER).run();
+    if (accountId) {
+      await env.DB.prepare(
+        `UPDATE user_oauth_tokens
+         SET is_active = 0, revoked_at = ?, updated_at = ?,
+             access_token = NULL, refresh_token = NULL
+         WHERE user_id = ? AND LOWER(provider) = ? AND account_identifier = ?`,
+      ).bind(now, now, userId, PROVIDER, accountId).run();
+    } else {
+      await env.DB.prepare(
+        `UPDATE user_oauth_tokens
+         SET is_active = 0, revoked_at = ?, updated_at = ?,
+             access_token = NULL, refresh_token = NULL
+         WHERE user_id = ? AND LOWER(provider) = ?`,
+      ).bind(now, now, userId, PROVIDER).run();
+    }
   }
-  return { ok: true, row };
+  return { ok: true, row, accountId: accountId || null };
 }

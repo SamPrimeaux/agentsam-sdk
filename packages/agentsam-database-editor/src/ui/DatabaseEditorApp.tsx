@@ -357,6 +357,15 @@ export function DatabaseEditorApp({
   const [sourceLoadStatus, setSourceLoadStatus] = useState<number | null>(null);
   const [localCapability, setLocalCapability] = useState<ProviderCapability>("attachable");
   const [attachOpen, setAttachOpen] = useState(false);
+  const [createTableOpen, setCreateTableOpen] = useState(false);
+  const [createTableName, setCreateTableName] = useState("");
+  const [createTableColumns, setCreateTableColumns] = useState<Array<{
+    name: string;
+    type: string;
+    nullable: boolean;
+    primaryKey: boolean;
+  }>>([{ name: "id", type: "INTEGER", nullable: false, primaryKey: true }]);
+  const [createTablePreview, setCreateTablePreview] = useState<string>("");
   const [lastSourceByFamily, setLastSourceByFamily] = useState<Record<string, string>>({});
   const [railWidth, setRailWidth] = useState(compact ? 200 : 250);
   const [sqlSplitPct, setSqlSplitPct] = useState(48);
@@ -1174,9 +1183,18 @@ export function DatabaseEditorApp({
               <button
                 type="button"
                 className="db-button secondary"
-                title="Create table requires an authorized DDL migration flow"
-                disabled
-                onClick={() => setError("Create table is unavailable until an authorized DDL flow is wired for this source.")}
+                title={source?.writable ? "Create a new table in the selected database" : "Selected database is read-only"}
+                disabled={!source?.writable}
+                onClick={() => {
+                  if (!source?.writable) {
+                    setError("Create table requires a writable database and an authorized grant (for example d1.write).");
+                    return;
+                  }
+                  setCreateTableName("");
+                  setCreateTableColumns([{ name: "id", type: "INTEGER", nullable: false, primaryKey: true }]);
+                  setCreateTablePreview("");
+                  setCreateTableOpen(true);
+                }}
               >
                 <Plus size={13} /> New
               </button>
@@ -1525,6 +1543,200 @@ export function DatabaseEditorApp({
               >
                 {busyMutation ? <Loader2 className="spin" size={14} /> : null}
                 Open AgentSam local database
+              </button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
+
+      {createTableOpen ? (
+        <div className="db-modal-backdrop" role="dialog" aria-modal="true" aria-label="Create table">
+          <div className="db-modal" style={{ maxWidth: 640 }}>
+            <header className="db-modal-header">
+              <div>
+                <div className="db-eyebrow">AUTHORIZED DDL</div>
+                <strong>Create table</strong>
+              </div>
+              <button type="button" className="db-icon-button" onClick={() => setCreateTableOpen(false)} aria-label="Close">
+                <X size={16} />
+              </button>
+            </header>
+            <div className="db-modal-fields" style={{ display: "grid", gap: 12 }}>
+              <label style={{ display: "grid", gap: 4, fontSize: 12 }}>
+                Table name
+                <input
+                  value={createTableName}
+                  onChange={(event) => setCreateTableName(event.target.value)}
+                  placeholder="studio_ddl_test_notes"
+                  autoFocus
+                />
+              </label>
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <strong style={{ fontSize: 12 }}>Columns</strong>
+                  <button
+                    type="button"
+                    className="db-button secondary"
+                    onClick={() =>
+                      setCreateTableColumns((cols) => [
+                        ...cols,
+                        { name: "", type: "TEXT", nullable: true, primaryKey: false },
+                      ])
+                    }
+                  >
+                    Add column
+                  </button>
+                </div>
+                {createTableColumns.map((column, index) => (
+                  <div
+                    key={`col-${index}`}
+                    style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr auto auto auto", gap: 6, alignItems: "center" }}
+                  >
+                    <input
+                      value={column.name}
+                      placeholder="column"
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setCreateTableColumns((cols) =>
+                          cols.map((item, i) => (i === index ? { ...item, name: value } : item)),
+                        );
+                      }}
+                    />
+                    <select
+                      value={column.type}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setCreateTableColumns((cols) =>
+                          cols.map((item, i) => (i === index ? { ...item, type: value } : item)),
+                        );
+                      }}
+                    >
+                      {["INTEGER", "TEXT", "REAL", "BLOB", "NUMERIC", "BOOLEAN"].map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                    <label style={{ fontSize: 11, display: "flex", gap: 4, alignItems: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={column.primaryKey}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setCreateTableColumns((cols) =>
+                            cols.map((item, i) =>
+                              i === index
+                                ? { ...item, primaryKey: checked, nullable: checked ? false : item.nullable }
+                                : item,
+                            ),
+                          );
+                        }}
+                      />
+                      PK
+                    </label>
+                    <label style={{ fontSize: 11, display: "flex", gap: 4, alignItems: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={column.nullable}
+                        disabled={column.primaryKey}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setCreateTableColumns((cols) =>
+                            cols.map((item, i) => (i === index ? { ...item, nullable: checked } : item)),
+                          );
+                        }}
+                      />
+                      Null
+                    </label>
+                    <button
+                      type="button"
+                      className="db-icon-button"
+                      aria-label="Remove column"
+                      disabled={createTableColumns.length <= 1}
+                      onClick={() => setCreateTableColumns((cols) => cols.filter((_, i) => i !== index))}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {createTablePreview ? (
+                <div style={{ display: "grid", gap: 4 }}>
+                  <strong style={{ fontSize: 12 }}>DDL preview</strong>
+                  <pre style={{ margin: 0, padding: 10, fontSize: 11, overflow: "auto", maxHeight: 180 }}>{createTablePreview}</pre>
+                </div>
+              ) : null}
+              <p style={{ margin: 0, color: "var(--db-muted)", fontSize: 12, lineHeight: 1.45 }}>
+                Executes against the selected source only ({source?.label || sourceId}). Requires confirmation before apply.
+              </p>
+            </div>
+            <footer className="db-modal-actions">
+              <button type="button" className="db-button secondary" onClick={() => setCreateTableOpen(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="db-button secondary"
+                disabled={busyMutation || !createTableName.trim()}
+                onClick={() => {
+                  void (async () => {
+                    if (!sourceId) return;
+                    setBusyMutation(true);
+                    setError(null);
+                    try {
+                      const preview = await client.createTable(sourceId, {
+                        table_name: createTableName.trim(),
+                        columns: createTableColumns,
+                        preview_only: true,
+                      });
+                      setCreateTablePreview(String(preview.sql || ""));
+                    } catch (caught) {
+                      setError(errorText(caught));
+                    } finally {
+                      setBusyMutation(false);
+                    }
+                  })();
+                }}
+              >
+                Preview DDL
+              </button>
+              <button
+                type="button"
+                className="db-button primary"
+                disabled={busyMutation || !createTableName.trim()}
+                onClick={() => {
+                  void (async () => {
+                    if (!sourceId) return;
+                    if (!window.confirm(`Create table "${createTableName.trim()}" on ${source?.label || sourceId}?`)) {
+                      return;
+                    }
+                    setBusyMutation(true);
+                    setError(null);
+                    try {
+                      const result = await client.createTable(sourceId, {
+                        table_name: createTableName.trim(),
+                        columns: createTableColumns,
+                        studio_approved: true,
+                      });
+                      setCreateTableOpen(false);
+                      await loadTables();
+                      const created = {
+                        name: String(result.table_name || createTableName.trim()),
+                        schema: result.schema || undefined,
+                        kind: "table" as const,
+                      };
+                      setSelectedTable(created);
+                      setView("schema");
+                      setPage(1);
+                      await loadTable(created, 1);
+                    } catch (caught) {
+                      setError(errorText(caught));
+                    } finally {
+                      setBusyMutation(false);
+                    }
+                  })();
+                }}
+              >
+                {busyMutation ? <Loader2 className="spin" size={14} /> : null}
+                Create table
               </button>
             </footer>
           </div>

@@ -5,6 +5,7 @@ import {
   type DatabaseStudioClient,
   type DatabaseTableInfo,
 } from "@inneranimalmedia/agentsam-database-editor/frontend";
+import { buildCreateTableSql } from "../../../../../../packages/agentsam-database-editor/src/ui/create-table-sql.js";
 import { createLocalStudioLocalHost, localBridgeDispatch, type LocalStudioLocalHostOptions } from "./localHost";
 import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
 
@@ -260,6 +261,40 @@ export function createLocalStudioDatabaseClient(
         destructive_confirmed: input.destructive_confirmed === true,
       }, localOptions);
       return { ok: true, ...body };
+    },
+
+    async createTable(sourceId: string, input) {
+      if (!isLocalSourceId(sourceId)) return remote.createTable(sourceId, input);
+      const built = buildCreateTableSql({
+        tableName: input.table_name,
+        schema: input.schema,
+        columns: input.columns,
+        engine: "sqlite",
+      });
+      if (input.preview_only) {
+        return {
+          ok: true,
+          preview: true,
+          sql: built.sql,
+          table_name: built.tableName,
+          schema: built.schema,
+        };
+      }
+      const body = await localBridgeDispatch({
+        op: "query",
+        source_id: sourceId,
+        sql: built.sql,
+        params: [],
+        studio_approved: input.studio_approved === true,
+        destructive_confirmed: input.destructive_confirmed === true,
+      }, localOptions);
+      return {
+        ok: true,
+        sql: built.sql,
+        table_name: built.tableName,
+        schema: built.schema,
+        ...body,
+      };
     },
 
     async insert(sourceId: string, table: DatabaseTableInfo, values: Record<string, unknown>) {

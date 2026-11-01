@@ -6,7 +6,9 @@ import {
   readD1Metrics,
   readPostgresMetrics,
 } from '../../../../packages/agentsam-database-editor/backend/index.js';
+import { buildCreateTableSql } from '../../../../packages/agentsam-database-editor/src/ui/create-table-sql.js';
 import { resolveCloudflareCredential as resolveCloudflareConnectorCredential } from '../../../../packages/connectors/cfoa/src/credential.js';
+import { scheduleStudioErrorLog } from './studio-error-log.js';
 
 const RANGE_SECONDS = Object.freeze({
   '1h': 60 * 60,
@@ -848,10 +850,11 @@ export function isDatabaseRequest(pathname) {
     pathname === '/api/database/tables' ||
     pathname === '/api/database/schema' ||
     pathname === '/api/database/rows' ||
-    pathname === '/api/database/query';
+    pathname === '/api/database/query' ||
+    pathname === '/api/database/ddl';
 }
 
-export async function handleDatabaseRequest(request, env, accountId) {
+export async function handleDatabaseRequest(request, env, accountId, ctx = null) {
   if (!accountId) return json({ ok: false, error: 'unauthorized' }, 401);
   const url = new URL(request.url);
 
@@ -901,12 +904,76 @@ export async function handleDatabaseRequest(request, env, accountId) {
       const body = await request.json().catch(() => ({}));
       const id = clean(body.source_id);
       const payload = await withResolvedSource(env, accountId, id, async ({ source, adapter }) => {
-        assertSqlAllowed(source, body.sql, body);
+        const kind = assertSqlAllowed(source, body.sql, body);
         const result = await adapter.query({
           sql: body.sql,
           params: Array.isArray(body.params) ? body.params : [],
         });
-        return { ok: true, source, ...result };
+        return {
+          ok: true,
+          source,
+          receipt: {
+            kind: kind.first,
+            mutating: kind.mutating,
+            destructive: kind.destructive,
+            sql_hash: await sha256Hex(clean(body.sql)),
+            source_id: source.id,
+            account_id: accountId,
+          },
+          ...result,
+        };
+      });
+      return json(payload);
+    }
+
+    if (url.pathname === '/api/database/ddl' && request.method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      const id = clean(body.source_id);
+      const action = clean(body.action || 'create_table').toLowerCase();
+      if (action !== 'create_table') {
+        return json({ ok: false, error: 'ddl_action_unsupported' }, 400);
+      }
+      const payload = await withResolvedSource(env, accountId, id, async ({ source, adapter }) => {
+        if (source.writable === false) throw new Error('database_read_only');
+        const built = buildCreateTableSql({
+          tableName: body.table_name || body.tableName || body.name,
+          schema: body.schema,
+          columns: body.columns,
+          engine: source.engine || source.provider,
+        });
+        if (body.preview_only === true || body.dry_run === true) {
+          return {
+            ok: true,
+            preview: true,
+            source,
+            sql: built.sql,
+            table_name: built.tableName,
+            schema: built.schema,
+          };
+        }
+        const kind = assertSqlAllowed(source, built.sql, {
+          studio_approved: body.studio_approved === true,
+          destructive_confirmed: body.destructive_confirmed === true,
+        });
+        const result = await adapter.query({ sql: built.sql, params: [] });
+        return {
+          ok: true,
+          source,
+          sql: built.sql,
+          table_name: built.tableName,
+          schema: built.schema,
+          receipt: {
+            kind: 'create',
+            action: 'create_table',
+            mutating: kind.mutating,
+            destructive: kind.destructive,
+            sql_hash: await sha256Hex(built.sql),
+            source_id: source.id,
+            account_id: accountId,
+            table_name: built.tableName,
+          },
+          ...result,
+        };
       });
       return json(payload);
     }
@@ -957,12 +1024,26 @@ export async function handleDatabaseRequest(request, env, accountId) {
     return json({ ok: false, error: 'not_found' }, 404);
   } catch (error) {
     console.error('database_service_error', String(error?.stack || error));
+    scheduleStudioErrorLog(env, ctx, {
+      accountId,
+      errorCode: error?.code || error?.message || 'database_request_failed',
+      errorType: 'database_studio',
+      errorMessage: String(error?.message || error || 'database_request_failed'),
+      source: 'local-studio.database-service',
+      stackTrace: error?.stack || null,
+      contextJson: {
+        path: url.pathname,
+        method: request.method,
+      },
+    });
     return json(
       {
         ok: false,
         error: error?.message || 'database_request_failed',
         requires_approval: error?.requiresApproval === true,
         requires_destructive_confirmation: error?.requiresDestructiveConfirmation === true,
+        accounts: Array.isArray(error?.accounts) ? error.accounts : undefined,
+        connect_url: error?.connect_url || undefined,
       },
       Number(error?.status || 400),
     );

@@ -286,6 +286,42 @@ export function createDatabaseStudioClient(
       });
     },
 
+    createTable(sourceId: string, input: {
+      table_name: string;
+      schema?: string;
+      columns: Array<{
+        name: string;
+        type?: string;
+        nullable?: boolean;
+        primaryKey?: boolean;
+        unique?: boolean;
+        defaultValue?: string | null;
+      }>;
+      preview_only?: boolean;
+      studio_approved?: boolean;
+      destructive_confirmed?: boolean;
+    }) {
+      return fetchJson<{
+        ok: boolean;
+        preview?: boolean;
+        sql?: string;
+        table_name?: string;
+        schema?: string | null;
+        source?: DatabaseSource;
+        receipt?: Record<string, unknown>;
+        error?: string;
+        requires_approval?: boolean;
+        requires_destructive_confirmation?: boolean;
+      }>("/ddl", {
+        method: "POST",
+        body: JSON.stringify({
+          source_id: sourceId,
+          action: "create_table",
+          ...input,
+        }),
+      });
+    },
+
     insert(sourceId: string, table: DatabaseTableInfo, values: Record<string, unknown>) {
       return fetchJson<{ ok: boolean; result: { changes?: number; row?: unknown } }>("/rows", {
         method: "POST",

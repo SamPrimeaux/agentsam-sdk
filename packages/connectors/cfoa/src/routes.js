@@ -8,8 +8,11 @@ import {
   requestedCloudflareScopes,
   assertConnectionOwner,
   upsertCloudflareUserOauthToken,
+  upsertCloudflareOauthForDiscoveredAccounts,
+  setPreferredCloudflareAccount,
   revokeCloudflareUserOauthTokens,
   loadCloudflareConnectionRecord,
+  listCloudflareConnectionRecords,
   loadCloudflareFromUserOauthTokens,
   createCloudflareApiClient,
 } from './index.js';
@@ -167,6 +170,8 @@ export function isCloudflareConnectionPath(pathname) {
     || pathname === '/api/connections/cloudflare/start'
     || pathname === CLOUDFLARE_CALLBACK_PATH
     || pathname === '/api/connections/cloudflare/disconnect'
+    || pathname === '/api/connections/cloudflare/select'
+    || pathname === '/api/connections/cloudflare/accounts'
     || pathname === '/api/connections/cloudflare/resources'
     || /^\/api\/connections\/cloudflare\/r2\/buckets\/[^/]+\/objects$/.test(pathname);
 }
@@ -524,24 +529,41 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
       : hostDefaultCapabilities.slice();
 
     // SSOT: user_oauth_tokens only (granted scopes from this token + client_id provenance + vault seal).
+    const grantInput = {
+      userId: ownerId,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token || null,
+      scopes: grantedScopeStr,
+      accountId: tokens.account_id || null,
+      expiresAt: tokens.expires_in
+        ? Math.floor(Date.now() / 1000) + Number(tokens.expires_in)
+        : null,
+      clientId: String(env.CLOUDFLARE_OAUTH_CLIENT_ID || ''),
+      capabilitySet,
+    };
     let spine = null;
     try {
-      spine = await upsertCloudflareUserOauthToken(env, {
-        userId: ownerId,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token || null,
-        scopes: grantedScopeStr,
-        accountId: tokens.account_id || null,
-        expiresAt: tokens.expires_in
-          ? Math.floor(Date.now() / 1000) + Number(tokens.expires_in)
-          : null,
-        clientId: String(env.CLOUDFLARE_OAUTH_CLIENT_ID || ''),
-        capabilitySet,
-      });
+      spine = await upsertCloudflareUserOauthToken(env, grantInput);
+      if (!spine?.ok && spine?.error === 'cloudflare_account_selection_required') {
+        // Persist the grant under every authorized account, then require an
+        // explicit preferred-account selection in Settings. Never drop the token.
+        const multi = await upsertCloudflareOauthForDiscoveredAccounts(
+          env,
+          { ...grantInput, accountId: undefined },
+          spine.accounts || [],
+        );
+        if (!multi?.ok) {
+          console.error('cloudflare_multi_account_persist_failed', multi?.error || 'unknown');
+          return settingsRedirect(url, 'error', multi?.error || 'connection_persist_failed', stored.return_to || '');
+        }
+        return settingsRedirect(url, 'account_selection_required', '', stored.return_to || '');
+      }
       if (!spine?.ok) {
         console.error('cloudflare_user_oauth_tokens_upsert_failed', spine?.error || 'unknown');
         return settingsRedirect(url, 'error', spine?.error || 'connection_persist_failed', stored.return_to || '');
       }
+      // Single-account connect: make that account the preferred operating context.
+      await setPreferredCloudflareAccount(env, ownerId, spine.accountId);
     } catch (err) {
       console.error('cloudflare_user_oauth_tokens_upsert_threw', String(err?.message || err));
       return settingsRedirect(url, 'error', 'connection_persist_failed', stored.return_to || '');
@@ -561,10 +583,87 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
     return settingsRedirect(url, 'connected', '', stored.return_to || '');
   }
 
+  if (url.pathname === '/api/connections/cloudflare/accounts' && request.method === 'GET') {
+    const accounts = await listCloudflareConnectionRecords(env, ownerId);
+    const preferred = accounts.find((account) => account.preferred === true) || null;
+    return json({
+      ok: true,
+      provider: 'cloudflare',
+      account_selection_required: !preferred && accounts.length > 1,
+      preferred_connection_id: preferred?.connectionId || null,
+      accounts: accounts.map((account) => ({
+        connection_id: account.connectionId,
+        cloudflare_account_id: account.cloudflareAccountId,
+        account_label: account.accountLabel,
+        preferred: account.preferred === true,
+        scopes: account.scopes || [],
+        status: account.status,
+      })),
+    });
+  }
+
+  if (url.pathname === '/api/connections/cloudflare/select' && request.method === 'POST') {
+    const body = await request.json().catch(() => ({}));
+    const accountId = String(
+      body.account_id || body.accountId || body.connection_id || body.connectionId || '',
+    ).trim();
+    const selected = await setPreferredCloudflareAccount(env, ownerId, accountId);
+    if (!selected?.ok) {
+      return json({
+        ok: false,
+        error: selected?.error || 'cloudflare_account_selection_failed',
+        accounts: (await listCloudflareConnectionRecords(env, ownerId)).map((account) => ({
+          connection_id: account.connectionId,
+          cloudflare_account_id: account.cloudflareAccountId,
+          account_label: account.accountLabel,
+          preferred: account.preferred === true,
+        })),
+      }, selected?.error === 'cloudflare_account_not_found' ? 404 : 400);
+    }
+    const record = await loadCloudflareConnectionRecord(env, ownerId, { connectionId: accountId });
+    return json({
+      ok: true,
+      provider: 'cloudflare',
+      preferred_connection_id: selected.connectionId,
+      connection: record
+        ? {
+            connection_id: record.connectionId,
+            cloudflare_account_id: record.cloudflareAccountId,
+            account_label: record.accountLabel,
+            preferred: true,
+            scopes: record.scopes || [],
+            status: record.status,
+          }
+        : null,
+      accounts: Array.isArray(record?.accounts) ? record.accounts : undefined,
+    });
+  }
+
   if (url.pathname === '/api/connections/cloudflare/disconnect' && request.method === 'POST') {
     let providerRevoked = false;
+    const body = await request.json().catch(() => ({}));
+    const accountId = String(
+      body.account_id || body.accountId || body.connection_id || body.connectionId || '',
+    ).trim() || undefined;
     if (env.DB) {
-      const cred = await loadCloudflareFromUserOauthTokens(env, ownerId);
+      let cred = null;
+      try {
+        cred = await loadCloudflareFromUserOauthTokens(env, ownerId, {
+          connectionId: accountId,
+          accountId,
+          allowLatestFallback: !accountId,
+        });
+      } catch (error) {
+        if (error?.code === 'cloudflare_account_selection_required' && !accountId) {
+          return json({
+            ok: false,
+            error: 'cloudflare_account_selection_required',
+            message: 'Select which Cloudflare account to disconnect, or omit account_id only after choosing a preferred account.',
+            accounts: error.accounts || [],
+          }, 409);
+        }
+        throw error;
+      }
       if (cred?.bearerToken) {
         assertConnectionOwner({ ownerId, connectionId: cred.connectionId }, ownerId);
         try {
@@ -582,20 +681,31 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
           console.error('cloudflare_token_revoke_failed', String(error?.message || error));
         }
       }
-      await revokeCloudflareUserOauthTokens(env, ownerId);
+      await revokeCloudflareUserOauthTokens(env, ownerId, { accountId });
     }
-    return json({ ok: true, status: 'not_configured', provider_revoked: providerRevoked });
+    const remaining = env.DB ? await listCloudflareConnectionRecords(env, ownerId) : [];
+    return json({
+      ok: true,
+      status: remaining.length ? 'connected' : 'not_configured',
+      provider_revoked: providerRevoked,
+      accounts_remaining: remaining.length,
+    });
   }
 
   if (url.pathname === '/api/connections/cloudflare/resources' && request.method === 'GET') {
     const returnTo = resolveReturnTo(url) || '/settings/integrations';
     const connectUrl = cloudflareMediaConnectUrl({ packs: 'media,data', returnTo });
+    const connectionId = String(
+      url.searchParams.get('connection_id') || url.searchParams.get('account_id') || '',
+    ).trim() || undefined;
     try {
       const api = await createCloudflareApiClient({
         env,
         ownerId,
         authMode: 'oauth',
         capabilityId: 'cloudflare.r2',
+        connectionId,
+        cloudflareAccountId: connectionId,
       });
       const discovery = await discoverCloudflareMedia(api, {
         cursor: url.searchParams.get('cursor') || undefined,
@@ -633,12 +743,17 @@ export async function handleCloudflareConnectionRequest(request, env, options = 
   const r2ObjectsMatch = /^\/api\/connections\/cloudflare\/r2\/buckets\/([^/]+)\/objects$/.exec(url.pathname);
   if (r2ObjectsMatch && request.method === 'GET') {
     const bucketName = decodeURIComponent(r2ObjectsMatch[1] || '');
+    const connectionId = String(
+      url.searchParams.get('connection_id') || url.searchParams.get('account_id') || '',
+    ).trim() || undefined;
     try {
       const api = await createCloudflareApiClient({
         env,
         ownerId,
         authMode: 'oauth',
         capabilityId: 'cloudflare.r2',
+        connectionId,
+        cloudflareAccountId: connectionId,
       });
       const page = await listCloudflareR2Objects(api, bucketName, {
         cursor: url.searchParams.get('cursor') || undefined,

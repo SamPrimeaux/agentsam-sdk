@@ -198,23 +198,40 @@ function MediaLibraryBody({
         provider: "cloudflare",
       });
       if (cfAccountId) mediaQs.set("account_id", cfAccountId);
+      const resourceQs = new URLSearchParams({ per_page: "50", return_to: "/media" });
+      if (cfAccountId) resourceQs.set("connection_id", cfAccountId);
       const [mediaRes, cfRes] = await Promise.all([
         fetch(`/api/admin/media?${mediaQs}`, {
           credentials: "same-origin",
           headers: { accept: "application/json" },
         }),
-        fetch("/api/connections/cloudflare/resources?per_page=50&return_to=%2Fmedia", {
+        fetch(`/api/connections/cloudflare/resources?${resourceQs}`, {
           credentials: "same-origin",
           headers: { accept: "application/json" },
         }),
       ]);
       const mediaBody = await mediaRes.json().catch(() => ({}));
       const cfBody = await cfRes.json().catch(() => ({}));
-      if (Array.isArray(mediaBody?.accounts) && mediaBody.accounts.length) {
-        setAccountChoices(mediaBody.accounts);
-      }
-      if (!mediaRes.ok && mediaRes.status !== 401) {
-        setError(String(mediaBody?.message || mediaBody?.error || `Media API ${mediaRes.status}`));
+      const accounts = Array.isArray(mediaBody?.accounts)
+        ? mediaBody.accounts
+        : Array.isArray(cfBody?.accounts)
+          ? cfBody.accounts
+          : [];
+      if (accounts.length) setAccountChoices(accounts);
+      if (!mediaRes.ok) {
+        const connectUrl = String(mediaBody?.connect_url || cfBody?.connect_url || "").trim();
+        if (mediaRes.status === 401 || mediaBody?.error === "cloudflare_reconnect_required") {
+          setError(
+            connectUrl
+              ? `Cloudflare reconnection required. Open ${connectUrl}`
+              : String(mediaBody?.message || mediaBody?.error || "Cloudflare reconnection required"),
+          );
+        } else if (mediaRes.status === 409 || mediaBody?.error === "cloudflare_account_selection_required") {
+          setError("Select a Cloudflare account to browse media for that grant.");
+        } else {
+          setError(String(mediaBody?.message || mediaBody?.error || `Media API ${mediaRes.status}`));
+        }
+        setAssets([]);
       } else {
         const list = Array.isArray(mediaBody?.assets)
           ? mediaBody.assets
@@ -242,8 +259,10 @@ function MediaLibraryBody({
     setBucketLoading(true);
     setBucketObjects([]);
     try {
+      const objectQs = new URLSearchParams({ per_page: "100" });
+      if (cfAccountId) objectQs.set("connection_id", cfAccountId);
       const res = await fetch(
-        `/api/connections/cloudflare/r2/buckets/${encodeURIComponent(bucket)}/objects?per_page=100`,
+        `/api/connections/cloudflare/r2/buckets/${encodeURIComponent(bucket)}/objects?${objectQs}`,
         { credentials: "same-origin", headers: { accept: "application/json" } },
       );
       const body = await res.json().catch(() => ({}));
@@ -271,7 +290,7 @@ function MediaLibraryBody({
     } finally {
       setBucketLoading(false);
     }
-  }, []);
+  }, [cfAccountId]);
 
   const catalog = activeBucket ? bucketObjects : assets;
 
@@ -327,7 +346,19 @@ function MediaLibraryBody({
             <select
               aria-label="Select Cloudflare account"
               value={cfAccountId}
-              onChange={(e) => setCfAccountId(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setCfAccountId(next);
+                if (!next) return;
+                void fetch("/api/connections/cloudflare/select", {
+                  method: "POST",
+                  credentials: "same-origin",
+                  headers: { accept: "application/json", "content-type": "application/json" },
+                  body: JSON.stringify({ account_id: next, connection_id: next }),
+                }).catch(() => {
+                  /* selection still applies for this session via query param */
+                });
+              }}
             >
               <option value="">Select account…</option>
               {accountChoices.map((row) => {
