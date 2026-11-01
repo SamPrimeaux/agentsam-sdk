@@ -37,7 +37,7 @@ import { Viewport3D } from '../components/Viewport3D';
 import {CadWorldViewport} from '../components/DreamHouseWorldViewport';
 import {CadResourcesPane} from '../components/CadResourcesPane';
 import {cloneAssembly,validateWallAssembly,wallAssemblyTotal} from '../lib/cad/wall-assemblies';
-import { listHostedProjects, loadHostedProject, saveHostedProject, type CadHostedSelection } from '../lib/hosted-project-source';
+import { canEditHostedCadSelection, listHostedProjects, loadHostedProject, saveHostedProject, type CadHostedSelection } from '../lib/hosted-project-source';
 import { BimStartersWorkspace } from '../components/BimStartersWorkspace';
 import { LazyRoboticsWorkspace, preloadRoboticsWorkspace } from '../workspaces/robotics/lazy';
 import { ExportPublishModal } from '../components/ExportPublishModal';
@@ -365,8 +365,9 @@ export function CadCreatorApp({
   }, [canCollaborate, roomId, currentUser.id]);
 
   // Project state updater with History & Socket broadcasting
-  // Hosted projects are writable only for the owner (decided by the server) and only when a native design document is loaded.
-  const hostedWritable = accessMode === 'hosted-project' && !!hostedSelection?.project && !!hostedSelection.revision.documents.length && hostedSelection.registry.access?.canWrite === true;
+  // Scene editing may initialize the first current-revision design document. This is
+  // distinct from editing the synchronized native IFC/FreeCAD engineering source.
+  const hostedWritable = accessMode === 'hosted-project' && canEditHostedCadSelection(hostedSelection);
   useEffect(() => {
     if (accessMode !== 'hosted-project') return;
     setCurrentUser(user => { const role = hostedWritable ? 'Editor' : 'Viewer'; return user.role === role ? user : { ...user, role }; });
@@ -580,7 +581,7 @@ export function CadCreatorApp({
             {hostedSelection.registry.revisions.filter(row=>row.models.length&&(row.documents.length||row.revision==='current')).map(row=><option key={row.revision} value={row.revision}>{row.label || row.revision} · {row.status}</option>)}
           </select></>}
           <button type="button" className="cad-hosted-chrome__browse" onClick={() => setShowProjectGallery(true)} aria-label="Browse CAD project gallery">Gallery</button>
-          <span className="cad-hosted-chrome__meta">{hostedSelection ? (hostedSelection.revision.revision==='current' ? `${hostedSelection.revision.sceneRevision || 'Latest'} scene · ${hostedSelection.revision.bimRevision || 'BIM'} source · 3D visual review` : `${hostedSelection.revision.status} · registered source and geometry · viewing only`) : templateCopyName ? `Unsaved copy of "${templateCopyName}" · not a registered project` : 'Registered projects · open from gallery'}</span>
+          <span className="cad-hosted-chrome__meta">{hostedSelection ? (hostedSelection.revision.revision==='current' ? `${hostedSelection.revision.sceneRevision || 'Latest'} scene · ${hostedSelection.revision.bimRevision || 'BIM'} source · ${hostedWritable ? 'scene edits & saves available; native BIM synchronization pending' : 'visual review only'}` : `${hostedSelection.revision.status} · registered source and geometry · ${hostedWritable ? 'editable revision' : 'viewing only'}`) : templateCopyName ? `Unsaved copy of "${templateCopyName}" · not a registered project` : 'Registered projects · open from gallery'}</span>
         </div>
       )}
       {/* The host Nav.Topbar owns application chrome. CAD owns only its contextual tools. */}
@@ -603,7 +604,7 @@ export function CadCreatorApp({
           onExport={() => setIsExportPublishOpen(true)}
           onSave={()=>{if(accessMode==='hosted-project'){void saveHostedRevision()}else window.dispatchEvent(new Event('agentsam:cad-save-revision'))}}
           saveDisabled={isViewer||hostedSaving}
-          saveLabel={accessMode==='hosted-project'&&!hostedWritable?'No editable registered BIM document':hostedDirty?'Save edited DreamHouse revision':'Save revision'}
+          saveLabel={accessMode==='hosted-project'&&!hostedWritable?'No editable project source available':hostedDirty?'Save edited scene revision':'Save revision'}
           onToggleExplorer={() => {if(window.matchMedia('(max-width: 660px)').matches&&!explorerOpen)setInspectorOpen(false);setExplorerOpen(v => !v);}}
           onToggleInspector={() => {if(window.matchMedia('(max-width: 660px)').matches&&!inspectorOpen)setExplorerOpen(false);setInspectorOpen(v => !v);}}
           explorerOpen={explorerOpen} inspectorOpen={inspectorOpen}
@@ -613,7 +614,7 @@ export function CadCreatorApp({
           onViewportMode={mode=>{setStudioView('edit');if(mode==='3d'){handleSelectWorkspace('model')}else{handleSelectWorkspace('plan');setPlanLayout(mode)}}}
           projectSlot={accessMode === 'hosted-project' ? (hostedWritable
             ? <div className="flex items-center gap-2 text-xs text-slate-300"><span>{hostedDirty ? 'Unsaved changes' : 'All changes saved'} · {hostedSelection?.revision.label || hostedSelection?.revision.revision}</span><button type="button" disabled={!hostedDirty || hostedSaving} onClick={() => void saveHostedRevision()}>{hostedSaving ? 'Saving…' : 'Save revision'}</button></div>
-            : <span className="text-xs text-slate-400">{templateCopyName ? 'Unsaved template copy · use Export to keep it' : 'Registered BIM · this revision has no editable design document'}</span>) : <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
+            : <span className="text-xs text-slate-400">{templateCopyName ? 'Unsaved template copy · use Export to keep it' : 'Registered source · editing unavailable for this revision'}</span>) : <ProjectRuntimePanel project={project} onLoad={setProject} onVerifiedRevision={onVerifiedRevision} readOnly={isViewer}/>}
           runtimeSlot={<CadStatusStrip workspace={currentWorkspaceDescriptor} activeTool={activeTool} unit={unit}
             selectionCount={currentUser.selectedIds.length} jobStatus={cadToolsReport ? `${cadToolsReport.available_tools}/${cadToolsReport.total_tools} Engines Online` : 'Engine Ready'}
             isSynced={isSynced} isDarkMode={isDarkMode} capabilities={liveCapabilities}/>}
