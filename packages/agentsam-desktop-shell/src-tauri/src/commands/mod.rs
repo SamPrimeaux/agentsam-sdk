@@ -6,6 +6,9 @@ pub mod chrome_browser;
 // CAD Engine & Geometry Pipeline
 pub mod cad;
 
+// Terminal appearance: native NSColorPanel relay
+pub mod color_panel;
+
 // Authentication, Security & Identity
 pub mod cloudflare_desktop_identity;
 pub mod google_desktop_identity;

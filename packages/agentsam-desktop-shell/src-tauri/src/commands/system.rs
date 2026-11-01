@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -96,10 +96,7 @@ pub fn open_external_url(url: String) -> Result<(), String> {
 /// Bring the existing Local Studio shell forward for native companion actions.
 #[tauri::command]
 pub fn focus_main_window(app: AppHandle) -> Result<(), String> {
-    let window = app
-        .get_webview_window("main")
-        .ok_or_else(|| "main_window_missing".to_string())?;
-    window.show().map_err(|error| error.to_string())?;
-    window.set_focus().map_err(|error| error.to_string())?;
-    Ok(())
+    crate::menu::focus_or_open_window(&app)
+        .map(|_| ())
+        .ok_or_else(|| "studio_window_unavailable".to_string())
 }

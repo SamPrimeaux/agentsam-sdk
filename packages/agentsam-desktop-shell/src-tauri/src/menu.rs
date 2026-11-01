@@ -1,16 +1,47 @@
 //! Native application menu. The OS owns standard text/window actions; Studio owns
-//! navigation through a single versioned event delivered to the focused webview.
+//! product commands through one versioned event delivered to the focused webview.
+//!
+//! Contract (`agentsam://native-menu`, v1): `{ "v": 1, "command": "<id>", "window": "<label>" }`
+//! where `<id>` is a dotted command id registered by the frontend command registry
+//! (`apps/local-studio/frontend/src/lib/commands/native-commands.ts`). Items with
+//! no real implementation stay disabled; nothing synthesizes keyboard events.
+//!
+//! Delivery: events are broadcast (`emit`) with the target window label in the
+//! payload and each webview ignores events addressed to another window. Tauri's
+//! `emit_to(label)` does not reach listeners registered through the global
+//! `window.__TAURI__.event.listen` bridge that Studio uses.
+//!
+//! History: this menu was introduced in one commit (bc901e56, #333) and has no
+//! earlier revision or worktree variant; every historical item is preserved below
+//! as either an implemented command or a disabled placeholder (see the matrix in
+//! `docs/native-capability-ledger.md`).
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, OnceLock};
 use tauri::{
-    menu::{AboutMetadata, Menu, MenuItem, MenuItemBuilder, SubmenuBuilder},
-    AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, Wry,
+    menu::{AboutMetadata, Menu, MenuItem, MenuItemBuilder, Submenu, SubmenuBuilder},
+    AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, Wry,
 };
 
 pub const EVENT: &str = "agentsam://native-menu";
 static NEXT_WINDOW: AtomicUsize = AtomicUsize::new(1);
 static WINDOW_ZOOMS: OnceLock<Mutex<HashMap<String, f64>>> = OnceLock::new();
+
+#[derive(Serialize, Clone, Debug, PartialEq, Eq)]
+pub struct MenuPayload {
+    pub v: u8,
+    pub command: String,
+    pub window: String,
+}
+
+pub fn menu_payload(command: &str, window: &str) -> MenuPayload {
+    MenuPayload {
+        v: 1,
+        command: command.to_owned(),
+        window: window.to_owned(),
+    }
+}
 
 fn action(
     app: &AppHandle,
@@ -31,6 +62,84 @@ fn unavailable(app: &AppHandle, id: &str, title: &str) -> tauri::Result<MenuItem
         .build(app)
 }
 
+fn shell_menu(app: &AppHandle) -> tauri::Result<Submenu<Wry>> {
+    let profiles = SubmenuBuilder::new(app, "Use Profile")
+        .item(&action(app, "shell.profile.cms", "Theme Default", None)?)
+        .item(&action(app, "shell.profile.local", "Local", None)?)
+        .item(&action(app, "shell.profile.remote", "Remote", None)?)
+        .item(&action(app, "shell.profile.sandbox", "Sandbox", None)?)
+        .build()?;
+    SubmenuBuilder::new(app, "Shell")
+        .item(&action(
+            app,
+            "shell.new_terminal",
+            "New Terminal",
+            Some("CmdOrCtrl+Alt+T"),
+        )?)
+        .item(&action(app, "shell.new_tab", "New Tab", Some("CmdOrCtrl+T"))?)
+        .item(&action(app, "shell.new_command", "New Command…", None)?)
+        .item(&action(
+            app,
+            "shell.new_remote",
+            "New Remote Connection…",
+            None,
+        )?)
+        .separator()
+        .item(&action(
+            app,
+            "shell.close_tab",
+            "Close Tab",
+            Some("CmdOrCtrl+Alt+W"),
+        )?)
+        .item(&action(app, "shell.rename_tab", "Rename Tab…", None)?)
+        .item(&action(
+            app,
+            "shell.prev_tab",
+            "Select Previous Tab",
+            Some("CmdOrCtrl+Alt+Left"),
+        )?)
+        .item(&action(
+            app,
+            "shell.next_tab",
+            "Select Next Tab",
+            Some("CmdOrCtrl+Alt+Right"),
+        )?)
+        .separator()
+        .item(&profiles)
+        .item(&action(
+            app,
+            "shell.use_profile_default",
+            "Use Profile as Default",
+            None,
+        )?)
+        .item(&action(
+            app,
+            "shell.edit_background_color",
+            "Edit Background Color…",
+            None,
+        )?)
+        .item(&action(
+            app,
+            "shell.reset_appearance",
+            "Reset Appearance",
+            None,
+        )?)
+        .separator()
+        .item(&action(
+            app,
+            "shell.clear_scrollback",
+            "Clear Scrollback",
+            Some("CmdOrCtrl+Alt+K"),
+        )?)
+        .item(&action(
+            app,
+            "shell.open_workspace",
+            "Open Terminal Workspace",
+            None,
+        )?)
+        .build()
+}
+
 pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let app_menu = SubmenuBuilder::new(app, "AgentSam Local Studio")
         .about(Some(AboutMetadata {
@@ -39,8 +148,9 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
             authors: Some(vec!["Inner Animal Media".into()]),
             ..Default::default()
         }))
+        .item(&action(app, "app.check_updates", "Check for Updates…", None)?)
         .separator()
-        .item(&action(app, "settings", "Settings…", Some("CmdOrCtrl+,"))?)
+        .item(&action(app, "settings.open", "Settings…", Some("CmdOrCtrl+,"))?)
         .item(&action(
             app,
             "delete_cache",
@@ -63,18 +173,24 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .build()?;
 
     let file_menu = SubmenuBuilder::new(app, "File")
-        .item(&action(app, "new_window", "New Window", None)?)
-        .item(&action(app, "new_chat", "New Chat", Some("CmdOrCtrl+N"))?)
+        .item(&action(app, "new_window", "New Window", Some("CmdOrCtrl+Shift+N"))?)
+        .item(&action(app, "chat.new", "New Chat", Some("CmdOrCtrl+N"))?)
         .item(&unavailable(app, "new_temp_chat", "New Temporary Chat")?)
-        .item(&unavailable(app, "new_project", "New Project…")?)
+        .item(&action(app, "project.new", "New Project…", None)?)
         .separator()
-        .item(&unavailable(app, "open_folder", "Open Folder…")?)
+        .item(&action(
+            app,
+            "folder.open_in_terminal",
+            "Open Folder in Terminal…",
+            Some("CmdOrCtrl+Shift+O"),
+        )?)
         .separator()
         .close_window()
         .build()?;
 
     // Tauri ships native edit responders for these actions. Do not replace them
     // with DOM key dispatch: that breaks accessibility, IME, and focused inputs.
+    // AppKit appends Start Dictation… and Emoji & Symbols itself, so no duplicates.
     let substitutions = SubmenuBuilder::new(app, "Substitutions")
         .enabled(false)
         .build()?;
@@ -102,28 +218,27 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         .separator()
         .item(&writing_tools)
         .item(&autofill)
-        .item(&unavailable(app, "start_dictation", "Start Dictation…")?)
-        .item(&unavailable(app, "emoji_symbols", "Emoji & Symbols")?)
         .build()?;
 
     let browser_menu = SubmenuBuilder::new(app, "Browser")
-        .item(&unavailable(app, "browser_open", "Open Browser Tab")?)
+        .item(&action(app, "view.open_browser", "Open Browser Tab", None)?)
         .item(&unavailable(app, "browser_back", "Back in Browser")?)
         .item(&unavailable(app, "browser_forward", "Forward in Browser")?)
         .build()?;
     let view_menu = SubmenuBuilder::new(app, "View")
         .item(&unavailable(app, "toggle_sidebar", "Toggle Sidebar")?)
-        .item(&unavailable(
+        .item(&action(
             app,
-            "toggle_bottom_panel",
+            "view.toggle_terminal",
             "Toggle Bottom Panel",
+            Some("CmdOrCtrl+J"),
         )?)
         .item(&unavailable(
             app,
             "toggle_pinned_summary",
             "Toggle Pinned Summary",
         )?)
-        .item(&unavailable(app, "open_terminal", "Open Terminal")?)
+        .item(&action(app, "view.open_terminal", "Open Terminal", None)?)
         .item(&unavailable(
             app,
             "toggle_nav_panel",
@@ -177,8 +292,8 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
         )?)
         .item(&action(app, "whats_new", "What's New", None)?)
         .separator()
-        .item(&action(app, "troubleshooting", "Troubleshooting", None)?)
-        .item(&action(app, "system_status", "System Status", None)?)
+        .item(&action(app, "runtime.open", "Troubleshooting", None)?)
+        .item(&action(app, "runtime.open_status", "System Status", None)?)
         .item(&action(app, "send_feedback", "Send Feedback", None)?)
         .separator()
         .item(&unavailable(app, "task_manager", "Task Manager")?)
@@ -195,30 +310,67 @@ pub fn build_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
             &file_menu,
             &edit_menu,
             &view_menu,
+            &shell_menu(app)?,
             &window_menu,
             &help_menu,
         ])
         .build()
 }
 
+/// Window that should receive an app-level action: the focused window, else the
+/// primary `main` window, else any remaining Studio window.
+pub fn target_window(app: &AppHandle) -> Option<WebviewWindow> {
+    let windows = app.webview_windows();
+    windows
+        .values()
+        .find(|window| window.is_focused().unwrap_or(false))
+        .cloned()
+        .or_else(|| windows.get("main").cloned())
+        .or_else(|| {
+            let mut labels: Vec<_> = windows.keys().cloned().collect();
+            labels.sort();
+            labels.first().and_then(|label| windows.get(label).cloned())
+        })
+}
+
+pub fn open_studio_window(app: &AppHandle) -> Result<WebviewWindow, String> {
+    let label = format!("studio-{}", NEXT_WINDOW.fetch_add(1, Ordering::Relaxed));
+    WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
+        .title("AgentSam Local Studio")
+        .inner_size(1200.0, 800.0)
+        .build()
+        .map_err(|e| e.to_string())
+}
+
+/// Bring Studio forward for tray / notification actions. Prefers `main`; falls
+/// back to any `studio-N` window; reopens a window if all were closed so the tray
+/// "Open" item never silently does nothing.
+pub fn focus_or_open_window(app: &AppHandle) -> Option<WebviewWindow> {
+    let window = app
+        .get_webview_window("main")
+        .or_else(|| target_window(app))
+        .or_else(|| open_studio_window(app).map_err(|e| eprintln!("Reopen failed: {e}")).ok())?;
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
+    Some(window)
+}
+
+fn emit_command(app: &AppHandle, label: &str, command: &str) {
+    if let Err(err) = app.emit(EVENT, menu_payload(command, label)) {
+        eprintln!("Studio menu dispatch failed ({command}): {err}");
+    }
+}
+
 pub fn handle_menu_event(app: &AppHandle, id: &str) {
     if id == "new_window" {
-        let label = format!("studio-{}", NEXT_WINDOW.fetch_add(1, Ordering::Relaxed));
-        if let Err(err) =
-            WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
-                .title("AgentSam Local Studio")
-                .inner_size(1200.0, 800.0)
-                .build()
-        {
+        if let Err(err) = open_studio_window(app) {
             eprintln!("New Studio window failed: {err}");
         }
         return;
     }
     // macOS installs one menu for the app, but actions must target the active window.
-    let window = app
-        .webview_windows()
-        .into_values()
-        .find(|window| window.is_focused().unwrap_or(false));
+    let window = target_window(app);
     if id == "delete_cache" {
         let Some(window) = window else {
             return;
@@ -248,12 +400,12 @@ pub fn handle_menu_event(app: &AppHandle, id: &str) {
             if let Err(error) = &outcome {
                 eprintln!("Cache deletion failed: {error}");
             }
-            let message = if outcome.is_ok() {
-                "cache_deleted"
+            let command = if outcome.is_ok() {
+                "app.cache_deleted"
             } else {
-                "cache_delete_failed"
+                "app.cache_delete_failed"
             };
-            let _ = app.emit_to(label, EVENT, message);
+            emit_command(&app, &label, command);
         });
         return;
     }
@@ -286,16 +438,16 @@ pub fn handle_menu_event(app: &AppHandle, id: &str) {
         }
         return;
     }
-    if let Some(window) = &window {
-        if id == "shortcuts" {
-            rfd::MessageDialog::new()
-                .set_title("AgentSam Local Studio · Keyboard Shortcuts")
-                .set_description("⌘N — New Chat\n⌘, — Settings\n⌘[ / ⌘] — Back / Forward\n⌘+ / ⌘- / ⌘0 — Zoom\n⌃⌘F — Full Screen")
-                .set_buttons(rfd::MessageButtons::Ok)
-                .show();
-            return;
-        }
-        if matches!(id, "back" | "forward") {
+    if id == "shortcuts" {
+        rfd::MessageDialog::new()
+            .set_title("AgentSam Local Studio · Keyboard Shortcuts")
+            .set_description(SHORTCUTS_HELP)
+            .set_buttons(rfd::MessageButtons::Ok)
+            .show();
+        return;
+    }
+    if matches!(id, "back" | "forward") {
+        if let Some(window) = &window {
             let js = if id == "back" {
                 "history.back()"
             } else {
@@ -304,40 +456,38 @@ pub fn handle_menu_event(app: &AppHandle, id: &str) {
             if let Err(error) = window.eval(js) {
                 eprintln!("Navigation failed: {error}");
             }
-            return;
         }
-        if id == "new_chat" {
-            // The existing desktop shell listens for Cmd+N; preserve that working path
-            // until the Studio application exposes a dedicated native command handler.
-            let _ = window.eval("window.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', metaKey: true, bubbles: true }))");
-            return;
-        }
-        if let Some(route) = match id {
-            "settings" => Some("/settings/general"),
-            "troubleshooting" | "system_status" => Some("/settings/runtime"),
-            _ => None,
-        } {
-            // The existing desktop frontend already consumes this navigation event.
-            let script = format!("window.dispatchEvent(new CustomEvent('agentsam:navigate', {{ detail: {{ to: '{}' }} }}))", route);
-            if let Err(error) = window.eval(&script) {
-                eprintln!("Native menu navigation failed: {error}");
-            }
-            return;
-        }
+        return;
     }
-    // Studio-specific commands are emitted as a contract, not guessed DOM clicks.
+    // Everything else is a product command owned by the frontend registry.
     if let Some(window) = window {
-        if let Err(err) = app.emit_to(window.label(), EVENT, id) {
-            eprintln!("Studio menu dispatch failed ({id}): {err}");
-        }
+        emit_command(app, window.label(), id);
     }
 }
+
+const SHORTCUTS_HELP: &str = "⌘N — New Chat\n⇧⌘N — New Window\n⇧⌘O — Open Folder in Terminal\n⌘, — Settings\n⌘J — Toggle Bottom Panel\n⌘[ / ⌘] — Back / Forward\n⌘+ / ⌘- / ⌘0 — Zoom\n⌃⌘F — Full Screen\n\nShell\n⌘T — New Tab\n⌥⌘T — New Terminal\n⌥⌘W — Close Tab\n⌥⌘← / ⌥⌘→ — Previous / Next Tab\n⌥⌘K — Clear Scrollback";
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn event_id_is_stable() {
         assert_eq!(EVENT, "agentsam://native-menu");
+    }
+
+    #[test]
+    fn payload_is_versioned_command_contract() {
+        let json = serde_json::to_string(&menu_payload("shell.new_tab", "main")).unwrap();
+        assert_eq!(json, r#"{"v":1,"command":"shell.new_tab","window":"main"}"#);
+    }
+
+    #[test]
+    fn new_chat_never_uses_synthetic_keyboard_events() {
+        let source = include_str!("menu.rs");
+        let forbidden = ["Keyboard", "Event('keydown'"].concat();
+        let occurrences = source.matches(forbidden.as_str()).count();
+        // The only occurrence is the literal built for this assertion above.
+        assert_eq!(occurrences, 0);
     }
 }

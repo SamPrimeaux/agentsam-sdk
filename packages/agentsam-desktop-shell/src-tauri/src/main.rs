@@ -3,6 +3,7 @@
 
 mod commands;
 mod menu;
+mod selftest;
 mod tray;
 
 use commands::{
@@ -10,6 +11,7 @@ use commands::{
     deep_link, google_desktop_identity, keychain, local_content, local_identity, local_lsp,
     local_node, local_provider, local_sqlite, native_capabilities, system, updater,
 };
+use commands::color_panel;
 
 fn main() {
     tauri::Builder::default()
@@ -31,19 +33,17 @@ fn main() {
             app.set_menu(native_menu)?;
             tray::setup_tray(app)?;
             // Tauri notification 2.6+ reports native banner clicks on desktop.
-            // Bring the existing app forward rather than opening a second window.
+            // Bring the existing app forward (main, else any studio-N, else reopen)
+            // rather than silently doing nothing after the main window was closed.
             {
-                use tauri::Manager;
                 use tauri_plugin_notification::NotificationExt;
                 let handle = app.handle().clone();
-                app.notification().on_action(move |_action| {
-                    if let Some(window) = handle.get_webview_window("main") {
-                        let _ = window.show();
-                        let _ = window.set_focus();
-                    }
+                let _ = app.notification().on_action(move |_action| {
+                    menu::focus_or_open_window(&handle);
                 });
             }
             deep_link::register_scheme(app)?;
+            selftest::maybe_run(app.handle());
             Ok(())
         })
         .on_menu_event(|app, event| menu::handle_menu_event(app, event.id().as_ref()))
@@ -61,6 +61,7 @@ fn main() {
             deep_link::handle_callback,
             deep_link::take_pending_deep_links,
             updater::check_for_update,
+            updater::install_update,
             local_node::enroll_as_local_node,
             agentsamd::ensure_agentsamd,
             agentsamd::agentsamd_health,
@@ -98,6 +99,10 @@ fn main() {
             agent_sam_pet::toggle_agent_sam_pet,
             agent_sam_pet::close_agent_sam_pet,
             tray::sync_native_notifications,
+            selftest::native_selftest_ack,
+            color_panel::native_color_panel_supported,
+            color_panel::native_color_panel_open,
+            color_panel::native_color_panel_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running agentsam desktop shell");

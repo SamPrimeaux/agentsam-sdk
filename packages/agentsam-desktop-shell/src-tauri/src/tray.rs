@@ -1,14 +1,52 @@
 // Tray icon + menu: Open, Check for Updates, Quit. "Check for Updates"
 // emits an event rather than calling check_for_update() directly, since
 // menu click handlers aren't async -- the frontend listens for the event
-// and invokes the real command, so the update-check logic lives in one
-// place (commands::updater), not duplicated here.
+// and runs the same `app.check_updates` command as the application menu, so
+// the update-check logic lives in one place (commands::updater), not
+// duplicated here. The event goes to exactly one window: with several Studio
+// windows a broadcast would run (and toast) the check once per window.
 
+use crate::menu::{focus_or_open_window, target_window};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    App, AppHandle, Emitter, Manager, State,
+    App, AppHandle, Emitter, State,
 };
+
+pub const CHECK_UPDATE_EVENT: &str = "agentsam://check-update-requested";
+
+#[derive(serde::Serialize, Clone)]
+struct CheckUpdatePayload {
+    window: String,
+}
+
+fn emit_check_update(app: &AppHandle, label: &str) {
+    // Broadcast with the target label: see menu.rs for why this is not `emit_to`.
+    let _ = app.emit(
+        CHECK_UPDATE_EVENT,
+        CheckUpdatePayload {
+            window: label.to_owned(),
+        },
+    );
+}
+
+fn request_update_check(app: &AppHandle) {
+    let already_open = target_window(app).is_some();
+    let Some(window) = focus_or_open_window(app) else {
+        return;
+    };
+    let label = window.label().to_owned();
+    let app = app.clone();
+    if already_open {
+        emit_check_update(&app, &label);
+        return;
+    }
+    // A reopened window needs time to mount its listener before the request lands.
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(3000));
+        emit_check_update(&app, &label);
+    });
+}
 
 pub fn setup_tray(app: &App) -> tauri::Result<()> {
     let open_item = MenuItem::with_id(app, "open", "Open Dashboard", true, None::<&str>)?;
@@ -22,14 +60,9 @@ pub fn setup_tray(app: &App) -> tauri::Result<()> {
         .show_menu_on_left_click(true)
         .on_menu_event(|app, event| match event.id().as_ref() {
             "open" => {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
+                focus_or_open_window(app);
             }
-            "check_update" => {
-                let _ = app.emit("agentsam://check-update-requested", ());
-            }
+            "check_update" => request_update_check(app),
             "quit" => {
                 app.exit(0);
             }
@@ -119,7 +152,7 @@ pub fn sync_native_notifications(
         #[cfg(target_os = "macos")]
         let _ = tray.set_title(if count > 0 { Some("🔴") } else { None });
     }
-    if let Some(window) = app.get_webview_window("main") {
+    if let Some(window) = target_window(&app) {
         let _ = window.set_badge_count(if count > 0 { Some(count) } else { None });
     }
     if !account_id.is_empty() {
