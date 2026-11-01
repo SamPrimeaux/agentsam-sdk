@@ -177,53 +177,78 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
   const {
     listCloudflareR2Buckets,
     listCloudflareR2Objects,
+    listCloudflareImages,
+    listCloudflareStream,
   } = await import("../../../../packages/connectors/cfoa/src/families/media.js");
   const connectionId = String(url.searchParams.get("connection_id") || url.searchParams.get("account_id") || "").trim();
-  let client;
-  try {
-    client = await createCloudflareApiClient({
-      env,
-      ownerId,
-      authMode: "oauth",
-      capabilityId: source === "stream" ? "cloudflare.stream" : source === "r2" ? "cloudflare.r2" : "cloudflare.images",
-      connectionId: connectionId || undefined,
-      accountId: connectionId || undefined,
-    });
-  } catch (err) {
-    return {
-      ok: false,
-      error: err?.code || err?.message || "cloudflare_oauth_required",
-      status: err?.code === "cloudflare_account_selection_required" ? 409 : 401,
-      accounts: err?.accounts || undefined,
-    };
+
+  // Test hook: inject a ready client so gallery regression can run without IAM_API.
+  let client = env?.__agentsamTestCfClient || null;
+  if (!client) {
+    try {
+      client = await createCloudflareApiClient({
+        env,
+        ownerId,
+        authMode: "oauth",
+        capabilityId: source === "stream" ? "cloudflare.stream" : source === "r2" ? "cloudflare.r2" : "cloudflare.images",
+        connectionId: connectionId || undefined,
+        accountId: connectionId || undefined,
+      });
+    } catch (err) {
+      return {
+        ok: false,
+        error: err?.code || err?.message || "cloudflare_oauth_required",
+        status: err?.code === "cloudflare_account_selection_required" ? 409
+          : err?.code === "cloudflare_reconnect_required" ? 401
+            : 401,
+        accounts: err?.accounts || undefined,
+        connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
+      };
+    }
   }
   if (!client?.accountId) {
-    return { ok: false, error: "cloudflare_account_selection_required", status: 409 };
+    return {
+      ok: false,
+      error: "cloudflare_account_selection_required",
+      status: 409,
+      connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
+    };
   }
 
-  if (source === "r2" || source === "all") {
+  const markOauth = (shape, extra = {}) => {
+    shape.capabilities = { ...shape.capabilities, provider_api: "cloudflare_oauth", ...extra.capabilities };
+    shape.account = {
+      id: client.accountId,
+      connection_id: client.connectionId || null,
+      auth_source: client.authSource || "oauth",
+    };
+    if (extra.pagination) {
+      shape.pagination = { ...shape.pagination, ...extra.pagination };
+    }
+    return { ok: true, shape };
+  };
+
+  if (source === "r2") {
     const bucketName = String(url.searchParams.get("r2_bucket") || "").trim();
     const bucketsPage = await listCloudflareR2Buckets(client, {
       cursor: url.searchParams.get("cursor") || undefined,
       perPage: 50,
     });
     if (!bucketName) {
-      return {
-        ok: true,
-        shape: listResponseShape({
-          assets: [],
-          page,
-          pageSize,
-          total: 0,
-          source: "r2",
-          r2Buckets: bucketsPage.buckets.map((b) => ({ name: b.name, bucket_name: b.name })),
-        }),
-        meta: {
-          provider_api: "cloudflare_oauth",
-          truncated: bucketsPage.truncated,
-          cursor: bucketsPage.cursor,
+      return markOauth(listResponseShape({
+        assets: [],
+        page,
+        pageSize,
+        total: 0,
+        source: "r2",
+        r2Buckets: bucketsPage.buckets.map((b) => ({ name: b.name, bucket_name: b.name })),
+      }), {
+        pagination: {
+          has_next: Boolean(bucketsPage.truncated),
+          cursor: bucketsPage.cursor || null,
+          truncated: Boolean(bucketsPage.truncated),
         },
-      };
+      });
     }
     const objects = await listCloudflareR2Objects(client, bucketName, {
       cursor: url.searchParams.get("cursor") || undefined,
@@ -239,12 +264,13 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
       r2_bucket: bucketName,
       source: "r2",
       updated_at: obj.uploaded,
+      meta: { cloudflare_account_id: client.accountId },
     }));
     if (query) {
       const q = query.toLowerCase();
       assets = assets.filter((asset) => (asset.filename + " " + asset.id).toLowerCase().includes(q));
     }
-    const shape = listResponseShape({
+    return markOauth(listResponseShape({
       assets,
       page,
       pageSize,
@@ -252,86 +278,82 @@ async function listViaCloudflareOauth(env, ownerId, url, { source, page, pageSiz
       source: "r2",
       r2Buckets: bucketsPage.buckets.map((b) => ({ name: b.name, bucket_name: b.name })),
       r2Bucket: bucketName,
+    }), {
+      pagination: {
+        has_next: Boolean(objects.truncated),
+        cursor: objects.cursor || null,
+        truncated: Boolean(objects.truncated),
+      },
     });
-    shape.capabilities = {
-      ...shape.capabilities,
-      provider_api: "cloudflare_oauth",
-    };
-    shape.pagination = {
-      ...shape.pagination,
-      has_next: Boolean(objects.truncated),
-      cursor: objects.cursor || null,
-      truncated: Boolean(objects.truncated),
-    };
-    return { ok: true, shape };
   }
 
   if (source === "stream") {
-    const params = new URLSearchParams({ per_page: String(pageSize) });
-    if (url.searchParams.get("cursor")) params.set("cursor", url.searchParams.get("cursor"));
-    const res = await client.request(
-      "GET",
-      client.accountPath(`/stream?${params}`),
-      { operation: "cloudflare.stream.list", capabilityId: "cloudflare.stream" },
-    );
-    const videos = Array.isArray(res?.result) ? res.result : [];
-    const info = res?.result_info || {};
-    let assets = videos.map(normalizeStreamAsset);
+    const pageData = await listCloudflareStream(client, {
+      perPage: pageSize,
+      after: url.searchParams.get("cursor") || url.searchParams.get("after") || undefined,
+      search: query || undefined,
+    });
+    let assets = pageData.videos.map((video) => normalizeStreamAsset({
+      ...video,
+      cloudflare_account_id: client.accountId,
+    }));
     if (query) {
       const q = query.toLowerCase();
       assets = assets.filter((asset) => (asset.filename + " " + asset.id).toLowerCase().includes(q));
     }
-    const shape = listResponseShape({
+    return markOauth(listResponseShape({
       assets,
       page,
       pageSize,
-      total: Number(info.total ?? assets.length) || assets.length,
+      total: pageData.count,
       source: "stream",
+    }), {
+      pagination: {
+        has_next: Boolean(pageData.truncated),
+        cursor: pageData.cursor || null,
+        truncated: Boolean(pageData.truncated),
+      },
     });
-    shape.capabilities = { ...shape.capabilities, provider_api: "cloudflare_oauth" };
-    shape.pagination = {
-      ...shape.pagination,
-      has_next: Boolean(info.truncated ?? info.is_truncated ?? info.cursor),
-      cursor: info.cursor || null,
-      truncated: Boolean(info.truncated ?? info.is_truncated ?? false),
-    };
-    return { ok: true, shape };
   }
 
-  // Images (default / cf_images)
-  const params = new URLSearchParams({ per_page: String(pageSize), page: String(page) });
-  if (query) params.set("search", query);
-  const res = await client.request(
-    "GET",
-    client.accountPath(`/images/v2?${params}`),
-    { operation: "cloudflare.images.list", capabilityId: "cloudflare.images" },
-  );
-  const images = Array.isArray(res?.result?.images) ? res.result.images : [];
-  const info = res?.result_info || {};
-  const assets = images.map((img) => normalizeImageAsset({
+  // Images default — also used for source=all overview (Images first; R2 via bucket chrome).
+  const pageData = await listCloudflareImages(client, {
+    perPage: pageSize,
+    page,
+    continuationToken: url.searchParams.get("cursor") || url.searchParams.get("continuation_token") || undefined,
+    search: query || undefined,
+  });
+  const assets = pageData.images.map((img) => normalizeImageAsset({
     id: img.id,
-    filename: img.filename || img.id,
+    filename: img.filename,
     mime_type: "image/jpeg",
     size_bytes: img.size || 0,
-    url: Array.isArray(img.variants) ? img.variants[0] : "",
+    url: img.variant_url || "",
+    delivery_url: img.variant_url || "",
+    thumbnail_url: img.variant_url || "",
     cloudflare_image_id: img.id,
     source: "cf_images",
-    created_at: img.uploaded || img.created,
+    created_at: img.uploaded,
+    meta: {
+      ...img.meta,
+      cloudflare_account_id: client.accountId,
+      delivery_hash: pageData.delivery_hash,
+      variants: img.variants,
+    },
   }));
-  const shape = listResponseShape({
+  return markOauth(listResponseShape({
     assets,
-    page,
+    page: pageData.page || page,
     pageSize,
-    total: Number(info.total_count ?? info.count ?? assets.length) || assets.length,
+    total: pageData.count,
     source: "cf_images",
+  }), {
+    pagination: {
+      has_next: Boolean(pageData.truncated),
+      cursor: pageData.continuation_token || null,
+      truncated: Boolean(pageData.truncated),
+    },
   });
-  shape.capabilities = { ...shape.capabilities, provider_api: "cloudflare_oauth" };
-  shape.pagination = {
-    ...shape.pagination,
-    has_next: Boolean(info.truncated ?? info.is_truncated ?? (page * pageSize < Number(info.total_count || 0))),
-    truncated: Boolean(info.truncated ?? info.is_truncated ?? false),
-  };
-  return { ok: true, shape };
 }
 
 async function callIam(env, request, path, options = {}) {
@@ -437,18 +459,19 @@ async function listMedia(env, request, url, principal = null) {
   const providerPref = mediaProviderPreference(url);
   let recovery = null;
 
-  // User Cloudflare media: OAuth connection first. IAM only when explicitly selected.
+  // User Cloudflare media is the default. IAM is only used when provider=iam (explicit).
+  // Never require IAM_API for user-owned CF Images / Stream / R2 gallery browsing (#419).
   const iamAvailable = Boolean(env?.IAM_API && typeof env.IAM_API.fetch === "function");
-  const preferOauth =
-    providerPref === "cloudflare"
-    || (providerPref === "auto" && (!iamAvailable || ["cf_images", "r2", "stream"].includes(source)));
-  if (preferOauth && principal?.id && providerPref !== "iam") {
+  if (providerPref !== "iam") {
+    if (!principal?.id) {
+      return json({ ok: false, error: "authentication_required" }, 401);
+    }
     try {
       const oauthSource = source === "all"
-        ? (kind === "video" || folder === "videos" ? "stream" : "cf_images")
+        ? (kind === "video" || folder === "videos" ? "stream" : source === "r2" ? "r2" : "cf_images")
         : source;
       const oauth = await listViaCloudflareOauth(env, principal.id, url, {
-        source: oauthSource === "drive" ? "cf_images" : oauthSource,
+        source: oauthSource === "drive" ? "cf_images" : (oauthSource === "all" ? "cf_images" : oauthSource),
         page,
         pageSize,
         query,
@@ -457,31 +480,28 @@ async function listMedia(env, request, url, principal = null) {
         if (recovery) oauth.shape.recovery = recovery;
         return json(oauth.shape);
       }
-      if (providerPref === "cloudflare") {
-        return json({
-          ok: false,
-          error: oauth.error || "cloudflare_media_list_failed",
-          accounts: oauth.accounts,
-          connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
-        }, oauth.status || 502);
-      }
-      // auto: fall through to IAM when OAuth fails and IAM exists
+      return json({
+        ok: false,
+        error: oauth.error || "cloudflare_media_list_failed",
+        message: "Connect or re-authorize Cloudflare OAuth to browse your Images, Stream, and R2 media. IAM is optional and only used when provider=iam.",
+        accounts: oauth.accounts,
+        connect_url: oauth.connect_url || "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
+      }, oauth.status || 502);
     } catch (err) {
-      if (providerPref === "cloudflare") {
-        return json({
-          ok: false,
-          error: err?.code || err?.message || "cloudflare_media_list_failed",
-          connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
-        }, 502);
-      }
+      return json({
+        ok: false,
+        error: err?.code || err?.message || "cloudflare_media_list_failed",
+        accounts: err?.accounts,
+        connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
+      }, err?.code === "cloudflare_account_selection_required" ? 409 : 502);
     }
   }
 
-  if (!iamAvailable && providerPref !== "iam") {
+  if (!iamAvailable) {
     return json({
       ok: false,
-      error: "cloudflare_oauth_required",
-      message: "Connect Cloudflare OAuth for R2 / Images / Stream, or select the IAM provider explicitly.",
+      error: "iam_media_provider_unavailable",
+      message: "InnerAnimalMedia (IAM) provider was selected but IAM_API is not bound. Use Cloudflare OAuth (default) instead.",
       connect_url: "/api/connections/cloudflare/start?packs=media,data&return_to=/media",
     }, 503);
   }

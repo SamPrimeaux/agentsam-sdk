@@ -263,4 +263,6 @@ export {
   discoverCloudflareMedia,
   listCloudflareR2Buckets,
   listCloudflareR2Objects,
+  listCloudflareImages,
+  listCloudflareStream,
 } from './families/media.js';

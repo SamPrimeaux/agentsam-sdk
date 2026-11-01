@@ -40,7 +40,7 @@ test('media requests require the already-authenticated Local Studio principal', 
   assert.equal(env.calls.length, 0);
 });
 
-test('image inventory uses the IAM service binding and preserves account session plus workspace scope', async () => {
+test('explicit IAM provider still proxies image inventory through IAM_API', async () => {
   const env = provider((upstream) => {
     const url = new URL(upstream.url);
     assert.equal(url.origin, 'https://inneranimalmedia.com');
@@ -63,7 +63,7 @@ test('image inventory uses the IAM service binding and preserves account session
       r2_bucket: 'inneranimalmedia',
     });
   });
-  const request = mediaRequest('/api/admin/media?source=cf_images&page=2&page_size=7&q=hero&workspace_id=ws_media_demo&tenant_id=tenant_media_demo&r2_bucket=inneranimalmedia', {
+  const request = mediaRequest('/api/admin/media?provider=iam&source=cf_images&page=2&page_size=7&q=hero&workspace_id=ws_media_demo&tenant_id=tenant_media_demo&r2_bucket=inneranimalmedia', {
     headers: {
       cookie: 'iam_session=account-session',
       authorization: 'Bearer session-token',
@@ -82,7 +82,7 @@ test('image inventory uses the IAM service binding and preserves account session
   assert.equal(env.calls.length, 1);
 });
 
-test('video inventory uses Cloudflare Stream and returns normalized video assets', async () => {
+test('explicit IAM provider video inventory uses Stream via IAM_API', async () => {
   const env = provider((upstream) => {
     const url = new URL(upstream.url);
     assert.equal(url.pathname, '/api/stream/videos');
@@ -93,7 +93,7 @@ test('video inventory uses Cloudflare Stream and returns normalized video assets
       total: 1,
     });
   });
-  const response = await handleStudioContentMediaApi(mediaRequest('/api/admin/media?kind=video&workspace_id=ws_video_demo'), env, principal);
+  const response = await handleStudioContentMediaApi(mediaRequest('/api/admin/media?provider=iam&kind=video&workspace_id=ws_video_demo'), env, principal);
   const data = await parseJson(response);
   assert.equal(response.status, 200);
   assert.equal(data.source, 'stream');
@@ -101,6 +101,109 @@ test('video inventory uses Cloudflare Stream and returns normalized video assets
   assert.equal(data.assets[0].source, 'stream');
   assert.equal(data.assets[0].folder, 'videos');
   assert.equal(data.assets[0].duration_ms, 12500);
+});
+
+test('#419 default Cloudflare gallery never calls IAM_API when OAuth client is available', async () => {
+  const env = {
+    // Intentionally no IAM_API binding.
+    __agentsamTestCfClient: {
+      accountId: 'acct_user_owned',
+      connectionId: 'conn_user',
+      authSource: 'oauth',
+      requireAccount() {},
+      accountPath(suffix) {
+        return `/accounts/acct_user_owned${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
+      },
+      async request(method, path) {
+        assert.equal(method, 'GET');
+        assert.match(path, /\/images\/v2/);
+        return {
+          result: {
+            images: [{
+              id: 'cfimg_great_room',
+              filename: 'great-room.png',
+              size: 2048,
+              uploaded: '2026-10-01T00:00:00.000Z',
+              variants: ['https://imagedelivery.net/hash/cfimg_great_room/public'],
+            }],
+          },
+          result_info: { count: 1, page: 1 },
+        };
+      },
+    },
+  };
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media?provider=cloudflare&source=cf_images&per_page=24'),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(data.capabilities.provider_api, 'cloudflare_oauth');
+  assert.equal(data.assets.length, 1);
+  assert.equal(data.assets[0].cloudflare_image_id, 'cfimg_great_room');
+  assert.equal(data.account.id, 'acct_user_owned');
+  assert.equal(data.source, 'cf_images');
+});
+
+test('#419 Stream gallery works without IAM_API via user OAuth client', async () => {
+  const env = {
+    __agentsamTestCfClient: {
+      accountId: 'acct_user_owned',
+      connectionId: 'conn_user',
+      authSource: 'oauth',
+      requireAccount() {},
+      accountPath(suffix) {
+        return `/accounts/acct_user_owned${suffix.startsWith('/') ? suffix : `/${suffix}`}`;
+      },
+      async request(method, path) {
+        assert.equal(method, 'GET');
+        assert.match(path, /\/stream\?/);
+        return {
+          result: [{
+            uid: 'stream_abc',
+            thumbnail: 'https://customer-x.cloudflarestream.com/stream_abc/thumb.jpg',
+            playback: { hls: 'https://customer-x.cloudflarestream.com/stream_abc/manifest/video.m3u8' },
+            duration: 8,
+            readyToStream: true,
+            meta: { name: 'walkthrough.mp4' },
+          }],
+          result_info: {},
+        };
+      },
+    },
+  };
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media?provider=cloudflare&source=stream'),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.equal(response.status, 200);
+  assert.equal(data.capabilities.provider_api, 'cloudflare_oauth');
+  assert.equal(data.assets[0].cloudflare_stream_uid, 'stream_abc');
+  assert.equal(data.assets[0].filename, 'walkthrough.mp4');
+});
+
+test('#419 default gallery without OAuth does not fall back to IAM_API', async () => {
+  let iamCalls = 0;
+  const env = {
+    IAM_API: {
+      async fetch() {
+        iamCalls += 1;
+        return jsonResponse({ ok: true, items: [] });
+      },
+    },
+  };
+  const response = await handleStudioContentMediaApi(
+    mediaRequest('/api/admin/media?source=cf_images'),
+    env,
+    principal,
+  );
+  const data = await parseJson(response);
+  assert.notEqual(response.status, 200);
+  assert.equal(iamCalls, 0);
+  assert.match(String(data.error || ''), /cloudflare_/);
 });
 
 test('original and model uploads retain the source in the canonical R2 bucket', async () => {

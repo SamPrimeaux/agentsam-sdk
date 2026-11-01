@@ -4,6 +4,8 @@ import {
   discoverCloudflareMedia,
   listCloudflareR2Buckets,
   listCloudflareR2Objects,
+  listCloudflareImages,
+  listCloudflareStream,
 } from '../src/families/media.js';
 import { getCloudflareFeaturePack } from '../src/capabilities.js';
 import { isCloudflareConnectionPath } from '../src/routes.js';
@@ -126,5 +128,48 @@ describe('cloudflare media discovery', () => {
     assert.equal(discovery.r2.available, true);
     assert.equal(discovery.images.status, 'connected');
     assert.equal(discovery.stream.status, 'connected');
+    // Probe must not invent an account-wide total from a sample page.
+    assert.equal(discovery.images.count, null);
+    assert.equal(discovery.stream.count, null);
+  });
+
+  it('pages Images and Stream galleries through user OAuth client', async () => {
+    const client = mockClient({
+      scopes: ['images.read', 'stream.read'],
+      responses: {
+        'GET /accounts/acct123/images/v2': {
+          result: {
+            images: [{
+              id: 'img_1',
+              filename: 'great-room.png',
+              size: 100,
+              variants: ['https://imagedelivery.net/hash/img_1/public'],
+            }],
+          },
+          result_info: { continuation_token: 'next-img', total_count: 40 },
+        },
+        'GET /accounts/acct123/stream': {
+          result: [{
+            uid: 'vid_1',
+            thumbnail: 'https://customer-x.cloudflarestream.com/vid_1/thumb.jpg',
+            playback: { hls: 'https://customer-x.cloudflarestream.com/vid_1/manifest/video.m3u8' },
+            duration: 3,
+            readyToStream: true,
+            meta: { name: 'tour.mp4' },
+          }],
+          result_info: { truncated: true },
+        },
+      },
+    });
+    const images = await listCloudflareImages(client, { perPage: 24 });
+    assert.equal(images.images[0].id, 'img_1');
+    assert.equal(images.delivery_hash, 'hash');
+    assert.equal(images.continuation_token, 'next-img');
+    assert.equal(images.count, 40);
+
+    const stream = await listCloudflareStream(client, { perPage: 24 });
+    assert.equal(stream.videos[0].uid, 'vid_1');
+    assert.equal(stream.customer_code, 'x');
+    assert.equal(stream.truncated, true);
   });
 });

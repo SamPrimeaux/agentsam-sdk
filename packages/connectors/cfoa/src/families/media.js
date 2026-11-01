@@ -110,30 +110,123 @@ export async function listCloudflareR2Objects(client, bucketName, opts = {}) {
   };
 }
 
-async function probeImages(client) {
-  try {
-    const res = await client.request(
-      'GET',
-      client.accountPath('/images/v2?per_page=1'),
-      { operation: 'cloudflare.images.list', capabilityId: 'cloudflare.images' },
-    );
-    const images = Array.isArray(res?.result?.images) ? res.result.images : [];
-    const info = res?.result_info || {};
-    let deliveryHash = null;
-    const sample = images[0];
-    const variantUrl = Array.isArray(sample?.variants) ? sample.variants[0] : sample?.variant || null;
-    if (typeof variantUrl === 'string') {
+/**
+ * Paginated Cloudflare Images gallery (user OAuth). Not a probe.
+ * @param {import('../api-client.js').CloudflareApiClient} client
+ * @param {{ perPage?: number, page?: number, continuationToken?: string, search?: string }} [opts]
+ */
+export async function listCloudflareImages(client, opts = {}) {
+  client.requireAccount('cloudflare.images.list');
+  const perPage = Math.min(Math.max(Number(opts.perPage) || 48, 1), 100);
+  const params = new URLSearchParams({ per_page: String(perPage) });
+  if (opts.page) params.set('page', String(opts.page));
+  if (opts.continuationToken) params.set('continuation_token', String(opts.continuationToken));
+  if (opts.search) params.set('search', String(opts.search));
+  const res = await client.request(
+    'GET',
+    client.accountPath(`/images/v2?${params}`),
+    { operation: 'cloudflare.images.list', capabilityId: 'cloudflare.images' },
+  );
+  const images = Array.isArray(res?.result?.images) ? res.result.images : [];
+  const info = res?.result_info || {};
+  let deliveryHash = null;
+  const mapped = images.map((img) => {
+    const variants = Array.isArray(img.variants) ? img.variants : [];
+    const variantUrl = variants[0] || img.variant || null;
+    if (!deliveryHash && typeof variantUrl === 'string') {
       const match = variantUrl.match(/imagedelivery\.net\/([^/]+)\//i);
       if (match) deliveryHash = match[1];
     }
     return {
+      id: String(img.id || ''),
+      filename: String(img.filename || img.id || 'image'),
+      size: Number(img.size || 0) || 0,
+      uploaded: img.uploaded || img.created || null,
+      requireSignedURLs: Boolean(img.requireSignedURLs),
+      variants,
+      variant_url: typeof variantUrl === 'string' ? variantUrl : null,
+      meta: img.meta && typeof img.meta === 'object' ? img.meta : {},
+    };
+  }).filter((row) => row.id);
+  return {
+    images: mapped,
+    delivery_hash: deliveryHash,
+    count: Number(info.total_count ?? info.count ?? mapped.length) || mapped.length,
+    continuation_token: info.continuation_token || null,
+    truncated: Boolean(
+      info.continuation_token
+      ?? info.truncated
+      ?? info.is_truncated
+      ?? false,
+    ),
+    page: Number(info.page || opts.page || 1) || 1,
+    per_page: perPage,
+  };
+}
+
+/**
+ * Paginated Cloudflare Stream gallery (user OAuth). Not a probe.
+ * @param {import('../api-client.js').CloudflareApiClient} client
+ * @param {{ perPage?: number, after?: string, search?: string }} [opts]
+ */
+export async function listCloudflareStream(client, opts = {}) {
+  client.requireAccount('cloudflare.stream.list');
+  const perPage = Math.min(Math.max(Number(opts.perPage) || 48, 1), 1000);
+  const params = new URLSearchParams({ limit: String(perPage) });
+  if (opts.after) params.set('after', String(opts.after));
+  if (opts.search) params.set('search', String(opts.search));
+  const res = await client.request(
+    'GET',
+    client.accountPath(`/stream?${params}`),
+    { operation: 'cloudflare.stream.list', capabilityId: 'cloudflare.stream' },
+  );
+  const videos = Array.isArray(res?.result) ? res.result : [];
+  const info = res?.result_info || {};
+  let customerCode = null;
+  const mapped = videos.map((video) => {
+    const uid = String(video.uid || video.id || '');
+    const hls = video.playback?.hls || video.hls || '';
+    if (!customerCode && typeof hls === 'string') {
+      const match = hls.match(/customer-([a-z0-9]+)\.cloudflarestream\.com/i);
+      if (match) customerCode = match[1];
+    }
+    return {
+      uid,
+      name: String(video.meta?.name || video.meta?.filename || video.name || uid || 'video'),
+      size: Number(video.size || video.size_bytes || 0) || 0,
+      duration: Number(video.duration || 0) || 0,
+      thumbnail: video.thumbnail || null,
+      hls: hls || null,
+      dash: video.playback?.dash || video.dash || null,
+      ready: Boolean(video.readyToStream ?? video.ready),
+      created: video.created || video.created_at || null,
+      requireSignedURLs: Boolean(video.requireSignedURLs),
+      meta: video.meta && typeof video.meta === 'object' ? video.meta : {},
+    };
+  }).filter((row) => row.uid);
+  return {
+    videos: mapped,
+    customer_code: customerCode,
+    count: Number(info.total ?? mapped.length) || mapped.length,
+    cursor: info.cursor || (mapped.length ? mapped[mapped.length - 1].uid : null),
+    truncated: Boolean(info.truncated ?? info.is_truncated ?? (mapped.length >= perPage)),
+    per_page: perPage,
+  };
+}
+
+async function probeImages(client) {
+  try {
+    const page = await listCloudflareImages(client, { perPage: 1 });
+    return {
       status: 'connected',
       available: true,
       error: null,
-      count: Number(info.count ?? images.length) || images.length,
-      delivery_hash: deliveryHash,
-      continuation_token: info.continuation_token || null,
-      sample_image_id: sample?.id ? String(sample.id) : null,
+      // Probe only — do not treat sample length as account-wide total.
+      count: null,
+      sample_count: page.images.length,
+      delivery_hash: page.delivery_hash,
+      continuation_token: page.continuation_token || null,
+      sample_image_id: page.images[0]?.id || null,
     };
   } catch (error) {
     return {
@@ -141,36 +234,23 @@ async function probeImages(client) {
       delivery_hash: null,
       continuation_token: null,
       sample_image_id: null,
+      sample_count: 0,
     };
   }
 }
 
 async function probeStream(client) {
   try {
-    const res = await client.request(
-      'GET',
-      client.accountPath('/stream?limit=1'),
-      { operation: 'cloudflare.stream.list', capabilityId: 'cloudflare.stream' },
-    );
-    const videos = Array.isArray(res?.result) ? res.result : [];
-    let customerCode = null;
-    const sample = videos[0];
-    const hls = sample?.playback?.hls || sample?.hls || '';
-    if (typeof hls === 'string') {
-      const match = hls.match(/customer-([a-z0-9]+)\.cloudflarestream\.com/i);
-      if (match) customerCode = match[1];
-    }
-    const thumbnail = sample?.thumbnail || sample?.thumbnailTimestampPct != null
-      ? sample?.thumbnail
-      : null;
+    const page = await listCloudflareStream(client, { perPage: 1 });
     return {
       status: 'connected',
       available: true,
       error: null,
-      count: videos.length,
-      customer_code: customerCode,
-      sample_uid: sample?.uid ? String(sample.uid) : null,
-      sample_thumbnail: thumbnail || null,
+      count: null,
+      sample_count: page.videos.length,
+      customer_code: page.customer_code,
+      sample_uid: page.videos[0]?.uid || null,
+      sample_thumbnail: page.videos[0]?.thumbnail || null,
     };
   } catch (error) {
     return {
@@ -178,6 +258,7 @@ async function probeStream(client) {
       customer_code: null,
       sample_uid: null,
       sample_thumbnail: null,
+      sample_count: 0,
     };
   }
 }

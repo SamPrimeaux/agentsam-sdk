@@ -165,6 +165,8 @@ function MediaLibraryBody({
   const [activeBucket, setActiveBucket] = useState<string | null>(null);
   const [bucketObjects, setBucketObjects] = useState<MediaAsset[]>([]);
   const [bucketLoading, setBucketLoading] = useState(false);
+  const [cfAccountId, setCfAccountId] = useState<string>("");
+  const [accountChoices, setAccountChoices] = useState<Array<{ connectionId?: string; cloudflareAccountId?: string; accountLabel?: string }>>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -173,9 +175,18 @@ function MediaLibraryBody({
       const mediaSource =
         surface.kind === "video" ? "stream"
           : surface.kind === "image" ? "cf_images"
-            : "all";
+            : surface.kind === "file" || surface.kind === "model" ? "r2"
+              : "cf_images";
+      // provider=cloudflare — never depend on IAM_API for user-owned CF gallery (#419).
+      const mediaQs = new URLSearchParams({
+        page: "1",
+        per_page: "96",
+        source: mediaSource,
+        provider: "cloudflare",
+      });
+      if (cfAccountId) mediaQs.set("account_id", cfAccountId);
       const [mediaRes, cfRes] = await Promise.all([
-        fetch(`/api/admin/media?page=1&per_page=96&source=${encodeURIComponent(mediaSource)}`, {
+        fetch(`/api/admin/media?${mediaQs}`, {
           credentials: "same-origin",
           headers: { accept: "application/json" },
         }),
@@ -186,24 +197,28 @@ function MediaLibraryBody({
       ]);
       const mediaBody = await mediaRes.json().catch(() => ({}));
       const cfBody = await cfRes.json().catch(() => ({}));
-      if (!mediaRes.ok && mediaRes.status !== 401) {
-        setError(String(mediaBody?.error || mediaBody?.message || `Media API ${mediaRes.status}`));
+      if (Array.isArray(mediaBody?.accounts) && mediaBody.accounts.length) {
+        setAccountChoices(mediaBody.accounts);
       }
-      const list = Array.isArray(mediaBody?.assets)
-        ? mediaBody.assets
-        : Array.isArray(mediaBody?.images)
-          ? mediaBody.images
-          : Array.isArray(mediaBody?.data)
-            ? mediaBody.data
-            : [];
-      setAssets(list.map((row: MediaAsset) => ({ ...row, id: String(row.id || row.cloudflare_image_id || row.cloudflare_stream_uid || crypto.randomUUID()) })));
+      if (!mediaRes.ok && mediaRes.status !== 401) {
+        setError(String(mediaBody?.message || mediaBody?.error || `Media API ${mediaRes.status}`));
+      } else {
+        const list = Array.isArray(mediaBody?.assets)
+          ? mediaBody.assets
+          : Array.isArray(mediaBody?.images)
+            ? mediaBody.images
+            : Array.isArray(mediaBody?.data)
+              ? mediaBody.data
+              : [];
+        setAssets(list.map((row: MediaAsset) => ({ ...row, id: String(row.id || row.cloudflare_image_id || row.cloudflare_stream_uid || crypto.randomUUID()) })));
+      }
       setResources(cfBody && typeof cfBody === "object" ? cfBody : null);
     } catch (err) {
       setError(String(err instanceof Error ? err.message : err));
     } finally {
       setLoading(false);
     }
-  }, [surface.kind]);
+  }, [surface.kind, cfAccountId]);
 
   useEffect(() => {
     void load();
@@ -292,6 +307,29 @@ function MediaLibraryBody({
       </header>
 
       <ConnectionStrip resources={resources} connectUrl={connectUrl} />
+
+      {accountChoices.length > 1 ? (
+        <div className="agentsam-media-toolbar" role="group" aria-label="Cloudflare account">
+          <label>
+            Cloudflare account
+            <select
+              aria-label="Select Cloudflare account"
+              value={cfAccountId}
+              onChange={(e) => setCfAccountId(e.target.value)}
+            >
+              <option value="">Select account…</option>
+              {accountChoices.map((row) => {
+                const id = String(row.cloudflareAccountId || row.connectionId || "");
+                return (
+                  <option key={id} value={id}>
+                    {row.accountLabel || id}
+                  </option>
+                );
+              })}
+            </select>
+          </label>
+        </div>
+      ) : null}
 
       {resources?.r2?.buckets?.length ? (
         <div className="agentsam-media-buckets" role="navigation" aria-label="R2 buckets">
