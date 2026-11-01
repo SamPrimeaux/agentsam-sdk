@@ -8,7 +8,7 @@ const MovieModeApp = lazy(() =>
   })),
 );
 
-/** CoPro hosts natively in Local Studio, loaded only when the media surface is opened. */
+/** CoPro MovieMode host. Canonical routes are /admin/moviemode[/edit] only. */
 export function MovieModeSurface({ screen, workPane = false, compactNav = false }: { screen?: MovieModeScreen; workPane?: boolean; compactNav?: boolean }) {
   return <div className={"agentsam-moviemode" + (workPane || compactNav ? " is-work-pane" : "")}>
     <Suspense fallback={<div className="agentsam-moviemode-loading" role="status">Opening MovieMode…</div>}>
@@ -17,9 +17,9 @@ export function MovieModeSurface({ screen, workPane = false, compactNav = false 
         screen={workPane ? undefined : screen}
         onScreenChange={workPane ? undefined : (next) => {
           window.dispatchEvent(new CustomEvent("agentsam:navigate", {
-            detail: { to: window.location.pathname.startsWith('/admin/moviemode')
-              ? (next === 'editor' ? '/admin/moviemode/edit' : '/admin/moviemode')
-              : (next === 'editor' ? '/media/edit' : '/media') },
+            detail: {
+              to: next === "editor" ? "/admin/moviemode/edit" : "/admin/moviemode",
+            },
           }));
         }}
       />

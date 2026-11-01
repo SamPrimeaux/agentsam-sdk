@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MediaRoute } from "../media";
+import { MovieModeSurface } from "@/components/media/MovieModeSurface";
 
-/** MovieMode is the installed CoPro creative editor; content assets remain under Content. */
-export const Route = createFileRoute("/(apps)/admin/moviemode")({ component: MediaRoute });
+/** MovieMode is the installed CoPro creative editor under Apps only. */
+export const Route = createFileRoute("/(apps)/admin/moviemode")({
+  component: () => <MovieModeSurface compactNav screen="projects" />,
+});

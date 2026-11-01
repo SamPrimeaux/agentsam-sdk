@@ -65,6 +65,9 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAssetPath('//outside.test/admin/products'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=collections'), '/admin/products?view=collections');
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=platform'), '/admin/products?view=platform');
+  assert.equal(resolveEcommerceAdminPath('/admin/products?view=store'), '/admin/products?view=store');
+  assert.equal(resolveEcommerceAdminPath('/admin/content?kind=image'), '/admin/content?kind=image');
+  assert.equal(resolveEcommerceAdminPath('/admin/content?kind=video'), '/admin/content?kind=video');
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=made-up'), null);
   for (const href of paths) {
     assert.equal(resolveEcommerceAdminPath(href), href, 'valid route changed: ' + href);

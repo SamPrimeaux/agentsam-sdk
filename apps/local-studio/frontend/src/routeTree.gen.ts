@@ -48,6 +48,10 @@ import { Route as appsChatsIndexRouteImport } from './routes/(apps)/chats/index'
 import { Route as appsChatsChatIdRouteImport } from './routes/(apps)/chats/$chatId'
 import { Route as appsHelpCmsRouteImport } from './routes/(apps)/help/cms'
 import { Route as appsMediaEditRouteImport } from './routes/(apps)/media.edit'
+import { Route as appsMediaFilesRouteImport } from './routes/(apps)/media.files'
+import { Route as appsMediaImagesRouteImport } from './routes/(apps)/media.images'
+import { Route as appsMediaModelsRouteImport } from './routes/(apps)/media.models'
+import { Route as appsMediaVideosRouteImport } from './routes/(apps)/media.videos'
 import { Route as appsProjectsIndexRouteImport } from './routes/(apps)/projects/index'
 import { Route as appsProjectsProjectIdRouteImport } from './routes/(apps)/projects/$projectId'
 import { Route as appsSettingsIndexRouteImport } from './routes/(apps)/settings/index'
@@ -263,6 +267,26 @@ const appsMediaEditRoute = appsMediaEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => appsMediaRoute,
 } as any)
+const appsMediaFilesRoute = appsMediaFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => appsMediaRoute,
+} as any)
+const appsMediaImagesRoute = appsMediaImagesRouteImport.update({
+  id: '/images',
+  path: '/images',
+  getParentRoute: () => appsMediaRoute,
+} as any)
+const appsMediaModelsRoute = appsMediaModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
+  getParentRoute: () => appsMediaRoute,
+} as any)
+const appsMediaVideosRoute = appsMediaVideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
+  getParentRoute: () => appsMediaRoute,
+} as any)
 const appsProjectsIndexRoute = appsProjectsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -396,6 +420,10 @@ export interface FileRoutesByFullPath {
   '/chats/$chatId': typeof appsChatsChatIdRoute
   '/help/cms': typeof appsHelpCmsRoute
   '/media/edit': typeof appsMediaEditRoute
+  '/media/files': typeof appsMediaFilesRoute
+  '/media/images': typeof appsMediaImagesRoute
+  '/media/models': typeof appsMediaModelsRoute
+  '/media/videos': typeof appsMediaVideosRoute
   '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
@@ -450,6 +478,10 @@ export interface FileRoutesByTo {
   '/chats/$chatId': typeof appsChatsChatIdRoute
   '/help/cms': typeof appsHelpCmsRoute
   '/media/edit': typeof appsMediaEditRoute
+  '/media/files': typeof appsMediaFilesRoute
+  '/media/images': typeof appsMediaImagesRoute
+  '/media/models': typeof appsMediaModelsRoute
+  '/media/videos': typeof appsMediaVideosRoute
   '/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/settings/$unit': typeof appsSettingsUnitRoute
   '/settings/integrations': typeof appsSettingsIntegrationsRoute
@@ -510,6 +542,10 @@ export interface FileRoutesById {
   '/(apps)/chats/$chatId': typeof appsChatsChatIdRoute
   '/(apps)/help/cms': typeof appsHelpCmsRoute
   '/(apps)/media/edit': typeof appsMediaEditRoute
+  '/(apps)/media/files': typeof appsMediaFilesRoute
+  '/(apps)/media/images': typeof appsMediaImagesRoute
+  '/(apps)/media/models': typeof appsMediaModelsRoute
+  '/(apps)/media/videos': typeof appsMediaVideosRoute
   '/(apps)/projects/$projectId': typeof appsProjectsProjectIdRoute
   '/(apps)/settings/$unit': typeof appsSettingsUnitRoute
   '/(apps)/settings/integrations': typeof appsSettingsIntegrationsRoute
@@ -571,6 +607,10 @@ export interface FileRouteTypes {
     | '/chats/$chatId'
     | '/help/cms'
     | '/media/edit'
+    | '/media/files'
+    | '/media/images'
+    | '/media/models'
+    | '/media/videos'
     | '/projects/$projectId'
     | '/settings/$unit'
     | '/settings/integrations'
@@ -625,6 +665,10 @@ export interface FileRouteTypes {
     | '/chats/$chatId'
     | '/help/cms'
     | '/media/edit'
+    | '/media/files'
+    | '/media/images'
+    | '/media/models'
+    | '/media/videos'
     | '/projects/$projectId'
     | '/settings/$unit'
     | '/settings/integrations'
@@ -684,6 +728,10 @@ export interface FileRouteTypes {
     | '/(apps)/chats/$chatId'
     | '/(apps)/help/cms'
     | '/(apps)/media/edit'
+    | '/(apps)/media/files'
+    | '/(apps)/media/images'
+    | '/(apps)/media/models'
+    | '/(apps)/media/videos'
     | '/(apps)/projects/$projectId'
     | '/(apps)/settings/$unit'
     | '/(apps)/settings/integrations'
@@ -1024,6 +1072,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof appsMediaEditRouteImport
       parentRoute: typeof appsMediaRoute
     }
+    '/(apps)/media/files': {
+      id: '/(apps)/media/files'
+      path: '/files'
+      fullPath: '/media/files'
+      preLoaderRoute: typeof appsMediaFilesRouteImport
+      parentRoute: typeof appsMediaRoute
+    }
+    '/(apps)/media/images': {
+      id: '/(apps)/media/images'
+      path: '/images'
+      fullPath: '/media/images'
+      preLoaderRoute: typeof appsMediaImagesRouteImport
+      parentRoute: typeof appsMediaRoute
+    }
+    '/(apps)/media/models': {
+      id: '/(apps)/media/models'
+      path: '/models'
+      fullPath: '/media/models'
+      preLoaderRoute: typeof appsMediaModelsRouteImport
+      parentRoute: typeof appsMediaRoute
+    }
+    '/(apps)/media/videos': {
+      id: '/(apps)/media/videos'
+      path: '/videos'
+      fullPath: '/media/videos'
+      preLoaderRoute: typeof appsMediaVideosRouteImport
+      parentRoute: typeof appsMediaRoute
+    }
     '/(apps)/projects/': {
       id: '/(apps)/projects/'
       path: '/'
@@ -1194,10 +1270,18 @@ const appsArtifactsRouteWithChildren = appsArtifactsRoute._addFileChildren(
 
 interface appsMediaRouteChildren {
   appsMediaEditRoute: typeof appsMediaEditRoute
+  appsMediaFilesRoute: typeof appsMediaFilesRoute
+  appsMediaImagesRoute: typeof appsMediaImagesRoute
+  appsMediaModelsRoute: typeof appsMediaModelsRoute
+  appsMediaVideosRoute: typeof appsMediaVideosRoute
 }
 
 const appsMediaRouteChildren: appsMediaRouteChildren = {
   appsMediaEditRoute: appsMediaEditRoute,
+  appsMediaFilesRoute: appsMediaFilesRoute,
+  appsMediaImagesRoute: appsMediaImagesRoute,
+  appsMediaModelsRoute: appsMediaModelsRoute,
+  appsMediaVideosRoute: appsMediaVideosRoute,
 }
 
 const appsMediaRouteWithChildren = appsMediaRoute._addFileChildren(

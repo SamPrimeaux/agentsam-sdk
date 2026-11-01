@@ -34,9 +34,10 @@ for(const unit of units){
 // Keep the REAL React AgentSam/Work, CAD and MovieMode mounts hydrated by
 // their canonical router. These modules fail only when Cloudflare's Nitro SSR
 // runs them at request time, just as Settings previously did.
-const studioApps=['agentsam','cad','moviemode','moviemode/edit','projects','mail','artifacts','artifacts/tickets','tickets','themes'];
+const studioApps=['agentsam','cad','moviemode','moviemode/edit','projects','mail','artifacts','artifacts/tickets','tickets','themes','media','media/images','media/videos','media/models','media/files'];
+const topLevelStudioApps=new Set(['mail','artifacts','artifacts/tickets','tickets','themes','media','media/images','media/videos','media/models','media/files']);
 for(const route of studioApps){
-  const url='https://agentsam.inneranimalmedia.com/'+(['mail','artifacts','artifacts/tickets','tickets','themes'].includes(route) ? route : 'admin/'+route);
+  const url='https://agentsam.inneranimalmedia.com/'+(topLevelStudioApps.has(route) ? route : 'admin/'+route);
   const rendered=await nitro.fetch(new Request(url),{},{
     waitUntil(){},passThroughOnException(){},
   });

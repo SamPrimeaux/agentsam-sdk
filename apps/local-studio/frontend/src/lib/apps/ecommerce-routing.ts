@@ -27,11 +27,15 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     : url.pathname === '/admin/theme-project-editor' ? 'project'
     : url.pathname === '/admin/product-edit' ? 'id'
     : url.pathname === '/admin/products' ? 'view'
+    : url.pathname === '/admin/content' ? 'kind'
     : url.pathname === '/admin/email' ? 'folder' : null;
   if ([...url.searchParams.keys()].some((name) => name !== recognized)) return null;
   if (recognized && url.searchParams.has(recognized)) {
     const value = url.searchParams.get(recognized) || '';
-    if (!idParam.test(value) || (recognized === 'view' && !['collections', 'platform'].includes(value)) || (recognized === 'folder' && !['sent', 'inbox'].includes(value))) return null;
+    if (!idParam.test(value)
+      || (recognized === 'view' && !['store', 'collections', 'platform'].includes(value))
+      || (recognized === 'kind' && !['image', 'video', 'model', 'file'].includes(value))
+      || (recognized === 'folder' && !['sent', 'inbox'].includes(value))) return null;
     safe.set(recognized, value);
   }
   return url.pathname + (safe.size ? '?' + safe.toString() : '');

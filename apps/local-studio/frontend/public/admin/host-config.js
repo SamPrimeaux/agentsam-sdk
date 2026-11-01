@@ -243,11 +243,11 @@
     });
     const nav = buildUserNav(profile);
     return {
-      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/docs' : sharedNavPath, showHistory: true, showSidebarHeader: false, newConversationAfter:'home',
+      pathname: sharedNavPath.startsWith('/admin/products/help/artwork') ? '/settings/docs?topic=artwork' : sharedNavPath, showHistory: true, showSidebarHeader: false, newConversationAfter:'home',
       ...workspaceNavigation(),
       ...(sharedNavPath.startsWith('/settings') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/settings/general'}]} : {}),
-      ...(sharedNavPath.startsWith('/admin/products/help/artwork') ? {breadcrumbs:[{id:'docs',label:'Docs',href:'/docs'},{id:'artwork-guide',label:'Artwork Help'}]} : {}),
-      brand: { name: 'AgentSam', logo: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', home: '/admin/home' },
+      ...(sharedNavPath.startsWith('/admin/products/help/artwork') || sharedNavPath.startsWith('/settings/docs') ? {breadcrumbs:[{id:'settings',label:'Settings',href:'/settings/general'},{id:'docs',label:'Documentation',href:'/settings/docs'},...(sharedNavPath.includes('artwork')?[{id:'artwork-guide',label:'Artwork Help'}]:[])]} : {}),
+      brand: { name: 'AgentSam', logo: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', lightLogo: '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg', home: '/admin/home' },
       destinations: [...nav.main, { id: 'sales-channels', label: 'Sales channels', icon: 'store', children: nav.channels },
         { id: 'installed-apps', label: 'Apps', icon: 'apps', children: nav.apps }, ...(nav.utilities || [])].map(toDestination),
       account: { id: profile.id || 'local', name: profile.id ? profile.display_name || profile.email || 'Account' : 'Local account',
@@ -273,9 +273,22 @@
       return !desktop && parent && parent !== window && parent.location?.origin === window.location?.origin ? parent : null;
     } catch { return null; }
   }
-  function navigateHost(href) {
+  function navigateParentShell(href) {
+    if (!href || !href.startsWith('/') || href.startsWith('//')) return false;
     const parent = hostedParent();
-    if (parent && href.startsWith('/') && !href.startsWith('//')) { parent.location.assign(href); return; }
+    if (!parent) return false;
+    // Stay inside the authenticated React shell. Full document assigns to
+    // /admin/content (and similar) previously remounted the packaged console
+    // without the SPA session boundary and bounced signed-in users to login.
+    try {
+      parent.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: href } }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  function navigateHost(href) {
+    if (navigateParentShell(href)) return;
     if (desktopHost) desktopHost.navigate(href);
     else if (desktop) window.location.hash = '#' + href;
     else if (document.querySelector('#agentsam-host-workspace .agentsam-shell')) window.dispatchEvent(new CustomEvent('agentsam:navigate', {detail:{to:href}}));
@@ -284,7 +297,7 @@
       document.body.appendChild(link); link.click(); link.remove();
     }
   }
-  // Embedded product documents share the host URL, history and reload behavior.
+  // Embedded product documents share host history through the SPA navigator.
   document.addEventListener('click', event => {
     const parent = hostedParent();
     if (!parent || event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey || (event.button != null && event.button !== 0)) return;
@@ -293,7 +306,7 @@
     const href = link.getAttribute('href');
     if (!href || !href.startsWith('/') || href.startsWith('//')) return;
     event.preventDefault(); event.stopImmediatePropagation();
-    parent.location.assign(href);
+    navigateParentShell(href);
   }, true);
   function loadSharedNavigation() {
     if (sharedNavReady) return sharedNavReady;

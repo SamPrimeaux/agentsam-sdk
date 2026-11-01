@@ -20,7 +20,8 @@ export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
 /**
  * Local Studio owns its installed ecommerce routes and data. Embed the
  * packaged console from this origin so its UI and /api/admin requests stay on
- * the Local Studio Worker and its DB binding.
+ * the Local Studio Worker and its DB binding. History mirrors the readable
+ * first-party /admin/... page whenever possible.
  */
 function EcommerceAppHost() {
   const search = Route.useSearch();
@@ -44,6 +45,13 @@ function EcommerceAppHost() {
       return resolved.toString();
     })()
     : null;
+
+  useEffect(() => {
+    if (isPackagedDesktop() || !page || typeof window === 'undefined') return;
+    if (window.location.pathname !== '/apps/ecommerce-cms-agentsam') return;
+    if (window.location.pathname + window.location.search === page) return;
+    window.history.replaceState(window.history.state, '', page);
+  }, [page]);
 
   if (!bridgeReady || authPending) return <p className="p-8 text-muted-foreground">Loading AgentSam account…</p>;
   if (!user && !localPreview) return <RedirectToSignIn />;

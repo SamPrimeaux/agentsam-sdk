@@ -327,26 +327,41 @@ export function NavSidenav() {
   const style = useNavStyle();
   const [hint, setHint] = useState<{label:string; top:number; left:number} | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const hideHint = () => { clearTimeout(hintTimer.current); setHint(null); };
+  const hintRow = useRef<HTMLElement | null>(null);
+  const hideHint = () => { clearTimeout(hintTimer.current); hintTimer.current = undefined; hintRow.current = null; setHint(null); };
   const showHint = (target: EventTarget | null) => {
     clearTimeout(hintTimer.current);
-    if (open || isMobile || !(target instanceof Element)) return;
+    if (open || isMobile || !(target instanceof Element)) { hideHint(); return; }
     const row = target.closest<HTMLElement>('.as-nav-destination, .as-nav-account button');
-    if (!row) return;
+    if (!row) { hideHint(); return; }
     const label = row.getAttribute('aria-label') || row.getAttribute('title');
-    if (!label) return;
+    if (!label) { hideHint(); return; }
+    hintRow.current = row;
     hintTimer.current = setTimeout(() => {
+      if (hintRow.current !== row || !row.isConnected || open) { setHint(null); return; }
       const rect = row.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) { setHint(null); return; }
       setHint({label, top: Math.max(8, Math.min(window.innerHeight - 44, rect.top + (rect.height - 32) / 2)), left: rect.right + 10});
     }, 350);
   };
   useEffect(() => { hideHint(); return () => clearTimeout(hintTimer.current); }, [open, isMobile, menu]);
+  useEffect(() => {
+    const dismiss = () => hideHint();
+    window.addEventListener('agentsam:navigate', dismiss);
+    window.addEventListener('blur', dismiss);
+    document.addEventListener('visibilitychange', dismiss);
+    return () => {
+      window.removeEventListener('agentsam:navigate', dismiss);
+      window.removeEventListener('blur', dismiss);
+      document.removeEventListener('visibilitychange', dismiss);
+    };
+  }, []);
   if (isMobile) return <Dialog.Root open={open} onOpenChange={setOpen}><Dialog.Portal><Dialog.Overlay className="as-nav-dialog-overlay" /><Dialog.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-mobile-drawer"><Dialog.Title className="as-nav-sr-only">Navigation</Dialog.Title><Dialog.Description className="as-nav-sr-only">Projects and conversations</Dialog.Description><SidenavContents /></Dialog.Content></Dialog.Portal></Dialog.Root>;
   return <NavScope className="as-nav-sidenav-reserve" data-open={open}
-    onMouseOver={(event) => showHint(event.target)} onMouseOut={hideHint}
+    onMouseOver={(event) => showHint(event.target)} onMouseLeave={hideHint}
     onFocus={(event) => { showHint(event.target); if (peekable && !open) setPeeking(true); }}
     onBlur={(event) => { hideHint(); if (!event.currentTarget.contains(event.relatedTarget as Node | null) && !menu) setPeeking(false); }}
-    onPointerDown={hideHint} onScrollCapture={hideHint}>
+    onPointerDown={hideHint} onClickCapture={hideHint} onScrollCapture={hideHint}>
     {hint && !open ? createPortal(<NavScope role="tooltip" className="as-nav-rail-tooltip" style={{'--nav-tooltip-top':hint.top+'px', '--nav-tooltip-left':hint.left+'px'} as CSSProperties}>{hint.label}</NavScope>, document.body) : null}
     <aside aria-label="Application navigation" className="as-nav-sidenav" data-expanded={open || isPeeking} onMouseEnter={() => { if (peekable && !open) setPeeking(true); }} onMouseLeave={() => { if (!menu) setPeeking(false); }}><SidenavContents /></aside>
     {open && resizable ? <div className="as-nav-resize" role="separator" aria-label="Resize navigation" aria-orientation="vertical" aria-valuemin={208} aria-valuemax={400} aria-valuenow={width} tabIndex={0}

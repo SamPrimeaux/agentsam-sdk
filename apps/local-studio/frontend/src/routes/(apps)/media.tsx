@@ -1,9 +1,7 @@
-import { createFileRoute, useRouterState } from "@tanstack/react-router";
-import { MovieModeSurface } from "@/components/media/MovieModeSurface";
+import { createFileRoute } from "@tanstack/react-router";
+import { MediaLibraryPage } from "@/components/media/MediaLibraryPage";
 
-export function MediaRoute() {
-  const path = useRouterState({ select: (state) => state.location.pathname });
-  return <MovieModeSurface compactNav={path.startsWith('/admin/moviemode')} screen={(path.startsWith("/media/edit") || path.startsWith("/admin/moviemode/edit")) ? "editor" : "projects"} />;
-}
-
-export const Route = createFileRoute("/(apps)/media")({ component: MediaRoute });
+/** Canonical Media Library. MovieMode lives only at /admin/moviemode. */
+export const Route = createFileRoute("/(apps)/media")({
+  component: MediaLibraryPage,
+});

@@ -148,48 +148,49 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
   assert.equal(context.NAV.main.some((item) => item.href === '/agentsam'), false);
   assert.equal(context.NAV.apps.filter((item) => item.href === '/admin/agentsam').length, 1);
   assert.equal(context.NAV.apps.find((item) => item.href === '/admin/agentsam').label, 'AgentSam');
-  assert.equal(context.NAV.apps.some((item) => item.href === '/browse' || item.href === '/media'), false);
+  assert.equal(context.NAV.apps.some((item) => item.href === '/browse'), false);
+  assert.equal(context.NAV.apps.some((item) => item.href === '/media'), false, 'MovieMode must not claim /media');
   assert.equal(context.NAV.apps.some((item) => item.id === 'samsketch' && item.href === '/samsketch'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/moviemode'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/cad'), true);
   assert.equal(context.NAV.apps.some((item) => item.href === '/cli'), false);
   assert.equal(context.NAV.apps.some((item) => item.id === 'ecommerce-cms-agentsam'), false);
   assert.equal(context.NAV.apps.some((item) => item.href === '/admin/growth'), true);
-  const products = context.NAV.main.find((item) => item.id === 'products');
-  assert.equal(products.href, '/admin/products');
-  assert.deepEqual(Array.from(products.children, (item) => [item.label, item.href]), [
-    ['Product Studio', '/admin/products/create'],
-    ['Store products', '/admin/products?view=store'],
-    ['Collections', '/admin/products?view=collections'],
-    ['Platform products', '/admin/products?view=platform'],
-    ['Artwork Help', '/admin/products/help/artwork'],
-    ['Inventory', '/admin/inventory'], ['Orders', '/admin/orders'],
-    ['Discounts', '/admin/discounts'],
+  assert.equal(context.NAV.main.some((item) => item.id === 'products'), false, 'Products live under Sales channels');
+  assert.equal(context.NAV.main.some((item) => item.id === 'library' || item.id === 'help'), false);
+  const media = context.NAV.main.find((item) => item.id === 'media');
+  assert.equal(media.href, '/media');
+  assert.deepEqual(Array.from(media.children, (entry) => entry.href), [
+    '/media/images', '/media/videos', '/media/models', '/media/files',
   ]);
   const analytics = context.NAV.main.find((item) => item.id === 'analytics');
   assert.equal(analytics.href, '/admin/analytics/overview');
   assert.deepEqual(Array.from(analytics.children, (entry) => entry.href), [
     '/admin/analytics/finance', '/admin/analytics/health'
   ]);
-  const content = context.NAV.main.find((item) => item.id === 'content');
-  assert.equal(content.href, '/admin/content');
-  assert.deepEqual(Array.from(content.children, (entry) => entry.href), [
-    '/admin/content?kind=image', '/admin/content?kind=video',
-  ]);
   const channelPaths = context.NAV.channels.flatMap((section) =>
     [section.href, ...(section.children || []).map((item) => item.href)].filter(Boolean).map((href) => href.split('?')[0]));
   assert.deepEqual(Array.from(context.NAV.channels, (item) => [item.label, item.href]), [
-    ['Online Store', '/admin/store'], ['Audience', '/admin/subscribers']
+    ['Online Store', '/admin/store'], ['Products', '/admin/products'], ['Audience', '/admin/subscribers']
   ]);
-  assert.equal(context.NAV.channels.find((section) => section.id === 'audience').children, undefined);
+  const products = context.NAV.channels.find((item) => item.id === 'products');
+  assert.deepEqual(Array.from(products.children, (item) => [item.label, item.href]), [
+    ['Store Products', '/admin/products'],
+    ['Collections', '/admin/products?view=collections'],
+    ['Product Studio', '/admin/products/create'],
+    ['Inventory', '/admin/inventory'],
+    ['Orders', '/admin/orders'],
+    ['Discounts', '/admin/discounts'],
+  ]);
+  const audience = context.NAV.channels.find((section) => section.id === 'audience');
+  assert.equal(audience.children?.[0]?.href, '/admin/growth');
   assert.deepEqual(Array.from(context.NAV.utilities), []);
   assert.match(source, /id:'account',label:'Account'/);
   assert.doesNotMatch(source, /id: 'appearance'|id: 'integrations'/);
   const docs = readFileSync(new URL('../frontend/src/routes/(apps)/docs.tsx', import.meta.url), 'utf8');
-  assert.match(docs, /href="\/admin\/products\/help\/artwork"/);
-  // Curated discovery does not retire existing product/editor/help URLs.
+  assert.match(docs, /\/settings\/docs/);
+  // Curated discovery does not retire existing product/editor URLs.
   assert.equal(resolveConsoleFile('/admin/products/create'), '_spa/index.html');
-  assert.equal(resolveConsoleFile('/admin/products/help/artwork'), '_spa/index.html');
   assert.equal(context.NAV.apps.some((entry) => entry.id === 'work-mail' || entry.href === '/mail'), false);
   const installedPaths = [
     ...context.NAV.main.flatMap((item) => [item.href, ...(item.children || []).map((entry) => entry.href)]),
@@ -206,9 +207,9 @@ test('Studio-owned admin URLs reuse existing apps and preserve flat compatibilit
     ['/agentsam', '/admin/agentsam'],
     ['/cad', '/admin/cad'],
     ['/samsketch', '/admin/cad'],
-    ['/media', '/admin/moviemode'],
-    ['/media/edit', '/admin/moviemode/edit'],
   ]) assert.equal(canonicalStudioPath(oldPath), currentPath);
+  assert.equal(canonicalStudioPath('/media'), null, '/media is Media Library, not MovieMode');
+  assert.equal(canonicalStudioPath('/admin/moviemode'), null);
   for (const path of ['/admin/agentsam', '/admin/cad', '/admin/moviemode', '/admin/projects']) {
     assert.ok(isStudioAdminPath(path), path);
   }
@@ -216,7 +217,7 @@ test('Studio-owned admin URLs reuse existing apps and preserve flat compatibilit
   assert.equal(isStudioAdminPath('/admin/theme-editor'), false);
   const worker = readFileSync(new URL('../backend/worker/index.js', import.meta.url), 'utf8');
   assert.match(worker, /!isStudioAdminPath\(url\.pathname\)/);
-  assert.match(worker, /import \{ canonicalStudioPath, isStudioAdminPath \} from [^;]+studio-admin-routes\.mjs/);
+  assert.match(worker, /import \{ canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath \} from [^;]+studio-admin-routes\.mjs/);
 });
 
 test('Growth appearance is a host-only, theme-token override', () => {
@@ -379,12 +380,16 @@ test('embedded desktop navigation reaches its parent and API requests use the na
 test('hosted product links update the same-origin containing app while preserving new-tab and external navigation',()=>{
   const source = readFileSync(new URL('../frontend/public/admin/host-config.js', import.meta.url),'utf8');
   const listeners=[]; const navigated=[];
-  const parent={location:{origin:'https://studio.test',assign:path=>navigated.push(path)}};
+  const parent={
+    location:{origin:'https://studio.test',assign:path=>navigated.push(['assign',path])},
+    dispatchEvent:(event)=>{ navigated.push(['navigate', event.detail?.to]); return true; },
+  };
   const context={
     NAV:{main:[],channels:[],apps:[]},renderSideNav:()=>'<nav></nav>',
     localStorage:{getItem:()=>null},CONSOLE_APPEARANCE_KEY:'appearance',
     window:{parent,location:{origin:'https://studio.test',pathname:'/ecommerce-cms-agentsam/admin/home.html'}},
     document:{addEventListener:(name,fn)=>{if(name==='click')listeners.push(fn);}},
+    CustomEvent: class CustomEvent { constructor(type, init = {}) { this.type = type; this.detail = init.detail; } },
     encodeURIComponent,
   };
   runInNewContext(source,context);
@@ -400,7 +405,7 @@ test('hosted product links update the same-origin containing app while preservin
     return prevented;
   };
   assert.equal(visit('/admin/products'),true);
-  assert.deepEqual(navigated,['/admin/products']);
+  assert.deepEqual(navigated,[['navigate','/admin/products']]);
   assert.equal(visit('/settings/general',{ctrlKey:true}),false);
   assert.equal(visit('/themes/violet/demo/',{target:'_blank'}),false);
   assert.equal(visit('//elsewhere.test/'),false);
@@ -408,5 +413,5 @@ test('hosted product links update the same-origin containing app while preservin
   assert.equal(visit('#section'),false);
   parent.location.origin='https://different.test';
   assert.equal(visit('/admin/content'),false);
-  assert.deepEqual(navigated,['/admin/products']);
+  assert.deepEqual(navigated,[['navigate','/admin/products']]);
 });

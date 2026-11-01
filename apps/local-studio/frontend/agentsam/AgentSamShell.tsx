@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { isStudioAdminPath } from "../../shared/studio-admin-routes.mjs";
+import { isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
 import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { Nav, type NavMode, type NavTheme, type NavValue, type NavDestination, type NavTokens, type NavStateStore } from '@inneranimalmedia/agentsam-nav';
 import { projectStudioShellAppearance, applyStudioShellAppearance } from '../../shared/shell-appearance.mjs';
-import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, Search, Bell, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp } from "lucide-react";
+import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, Search, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -19,18 +19,15 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import './shell.css';
 import './platform-console.css';
 import { AnnotationHelper } from './AnnotationHelper';
-import { IconAction } from '@/components/ui/icon-action';
 import { DesktopIdentityPortal } from '@/components/desktop/DesktopIdentityPortal';
 import { DesktopStartupOverlay } from '@/components/desktop/DesktopStartupOverlay';
 import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionProvider';
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
-import { readShellAppearancePreference } from '@inneranimalmedia/agentsam-settings';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { NotificationsMenu } from './NotificationsMenu';
 import { signOut } from '@/lib/auth/client';
 import { hasGateSessionMarker } from '@/lib/auth/gate-session-marker';
-import { applyShellAppearance, applyTheme, readTheme, type ShellAppearancePreference } from '@/lib/work/theme';
 import { applyActiveStudioTheme } from '@/lib/themes/inventory';
 import { THEME_PROJECTS_CHANGED } from '@/lib/themes/projects';
 
@@ -79,7 +76,6 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     window.addEventListener('agentsam:navigation-ready', connect);
     return () => window.removeEventListener('agentsam:navigation-ready', connect);
   }, []);
-  const appearanceRef = useRef<ShellAppearancePreference | null>(null);
   const [sharing, setSharing] = useState(false);
   const [identityOpen, setIdentityOpen] = useState(false);
   const [accountAvatarUrl, setAccountAvatarUrl] = useState<string | null>(null);
@@ -135,8 +131,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     return () => controller.abort();
   }, []);
 
-  const isMovieModeRoute = pathname === '/media' || pathname.startsWith('/media/') ||
-    pathname === '/admin/moviemode' || pathname.startsWith('/admin/moviemode/');
+  const isMovieModeRoute = pathname === '/admin/moviemode' || pathname.startsWith('/admin/moviemode/');
   // When a SideStage preview becomes the dedicated editor, close only its
   // duplicate pane. Keep tabs and terminal/browser sessions for later reopening.
   useEffect(() => {
@@ -147,15 +142,34 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       workspace.setSideOpen(false);
     }
   }, [pathname, isCadRoute, isMovieModeRoute]);
-  // The platform owns its shell; product-owned /admin pages navigate into
-  // the installed Ecommerce application without recreating product routers.
+  // Keep first-party Media and Studio mounts in the SPA. Product /admin pages
+  // stay readable: navigate the installed Ecommerce host, then mirror the
+  // canonical /admin/... URL in history so refresh/session stay coherent.
   const go = (to: string) => {
-    if (to.startsWith('/admin/') && !isStudioAdminPath(to.split('?')[0])) {
+    const [pathOnly, query = ''] = to.split('?');
+    const legacyMedia = resolveLegacyContentMediaPath(pathOnly, new URLSearchParams(query));
+    if (legacyMedia) {
+      go(legacyMedia);
+      return;
+    }
+    if (pathOnly === '/docs' || pathOnly.startsWith('/docs/')) {
+      go('/settings/docs');
+      return;
+    }
+    if (pathOnly === '/admin/products/help/artwork' || pathOnly.startsWith('/admin/products/help/artwork')) {
+      go('/settings/docs?topic=artwork');
+      return;
+    }
+    if (pathOnly.startsWith('/admin/') && !isStudioAdminPath(pathOnly)) {
       if (isPackagedDesktop()) {
         window.location.hash = '#/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(to);
-      } else {
-        void navigate({ to: '/apps/ecommerce-cms-agentsam', search: { page: to } } as never);
+        return;
       }
+      void navigate({ to: '/apps/ecommerce-cms-agentsam', search: { page: to } } as never).then(() => {
+        if (window.location.pathname === '/apps/ecommerce-cms-agentsam') {
+          window.history.replaceState(window.history.state, '', to);
+        }
+      });
       return;
     }
     if (isPackagedDesktop()) {
@@ -249,76 +263,44 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
 
   useEffect(() => {
     let themeSyncRevision = 0;
+    // Registered AgentSam shell theme is the sole appearance authority.
+    // Legacy dark/light/accent prefs no longer paint first and fight the registry.
     const syncRegistryTheme = async () => {
       const revision = ++themeSyncRevision;
-      if (!user?.id || user.isDevFallback) {
-        setNavTokens({});
-        return;
-      }
+      const fallbackAccent = accents[0];
+      const systemTheme = typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       try {
-        const activeTheme = await applyActiveStudioTheme();
+        const activeTheme = (!user?.id || user.isDevFallback) ? null : await applyActiveStudioTheme();
         if (revision !== themeSyncRevision) return;
-        const preference = appearanceRef.current;
-        const stored = readTheme();
-        const fallbackTheme = preference?.theme === 'system'
-          ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
-          : preference?.theme ?? (stored.monacoBase === 'vs' ? 'light' : 'dark');
-        const appearance = projectStudioShellAppearance(activeTheme, { theme:fallbackTheme, accentColor:preference?.accent ?? stored.tokens.accent });
+        const appearance = projectStudioShellAppearance(activeTheme, {
+          theme: systemTheme,
+          accentColor: fallbackAccent,
+        });
         applyStudioShellAppearance(appearance, document.documentElement);
         setNavTokens(appearance.tokens);
         setAccent(appearance.accentColor);
         setTheme(appearance.theme);
-        window.dispatchEvent(new CustomEvent('agentsam:theme-applied', { detail:appearance }));
+        window.dispatchEvent(new CustomEvent('agentsam:theme-applied', { detail: appearance }));
       } catch (error) {
-        if (revision === themeSyncRevision) console.warn('[agentsam/theme-registry]', error);
+        if (revision !== themeSyncRevision) return;
+        const appearance = projectStudioShellAppearance(null, { theme: systemTheme, accentColor: fallbackAccent });
+        applyStudioShellAppearance(appearance, document.documentElement);
+        setNavTokens(appearance.tokens);
+        setAccent(appearance.accentColor);
+        setTheme(appearance.theme);
+        console.warn('[agentsam/theme-registry]', error);
       }
     };
 
-    const applyPreference = (preference: ShellAppearancePreference | null) => {
-      appearanceRef.current = preference;
-      if (preference) {
-        const resolved = applyShellAppearance(preference);
-        setTheme(resolved);
-        setAccent(preference.accent);
-      } else {
-        const storedTheme = readTheme();
-        applyTheme(storedTheme);
-        setTheme(storedTheme.monacoBase === 'vs' ? 'light' : 'dark');
-        setAccent(storedTheme.tokens.accent);
-      }
-      // Base appearance is applied first; the account's active cms_themes record
-      // then supplies the final shared shell and navigation color tokens.
-      void syncRegistryTheme();
-    };
-
-    applyPreference(readShellAppearancePreference());
-
-    const onAppearance = (event: Event) => {
-      const detail = (event as CustomEvent<Partial<ShellAppearancePreference>>).detail;
-      if (!detail) return;
-      if (detail.theme !== 'dark' && detail.theme !== 'light' && detail.theme !== 'system') return;
-      if (typeof detail.accent !== 'string' || !/^#[0-9a-f]{6}$/i.test(detail.accent)) return;
-      applyPreference({ theme: detail.theme, accent: detail.accent });
-    };
-    const media =
-      typeof window.matchMedia === 'function'
-        ? window.matchMedia('(prefers-color-scheme: light)')
-        : null;
-    const onSystemChange = () => {
-      if (appearanceRef.current?.theme === 'system') applyPreference(appearanceRef.current);
-    };
-    const onStorage = () => applyPreference(readShellAppearancePreference());
+    void syncRegistryTheme();
     const onRegistryThemeChanged = () => { void syncRegistryTheme(); };
-    window.addEventListener('storage', onStorage);
-    window.addEventListener('agentsam:shell-appearance', onAppearance);
     window.addEventListener(THEME_PROJECTS_CHANGED, onRegistryThemeChanged);
-    media?.addEventListener('change', onSystemChange);
+    window.addEventListener('agentsam:theme-registry-changed', onRegistryThemeChanged);
     return () => {
       themeSyncRevision += 1;
-      window.removeEventListener('storage', onStorage);
-      window.removeEventListener('agentsam:shell-appearance', onAppearance);
       window.removeEventListener(THEME_PROJECTS_CHANGED, onRegistryThemeChanged);
-      media?.removeEventListener('change', onSystemChange);
+      window.removeEventListener('agentsam:theme-registry-changed', onRegistryThemeChanged);
     };
   }, [user?.id, user?.isDevFallback]);
   useEffect(() => {
