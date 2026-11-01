@@ -507,6 +507,11 @@ export function CadWorldViewport({modelUrl,manifestUrl,sceneLabel,revision,readO
        const step=Math.max(-240,Math.min(240,e.deltaY));
        orbit.current.distance=Math.max(minDistance,Math.min(maxDistance,orbit.current.distance*Math.exp(step*.0015)));
      }}/>
+   <div className="cad-viewport-overlay" aria-label="3D viewport status">
+     <div className="cad-viewport-overlay__chip cad-viewport-overlay__identity"><span>CAD Creator</span><span className="cad-viewport-overlay__sep" aria-hidden="true">·</span><strong title={sceneLabel}>{sceneLabel}</strong></div>
+     <div className="cad-viewport-overlay__chip"><span>Rev {revision}</span><span className="cad-viewport-overlay__sep" aria-hidden="true">·</span><span>{mode==='walk'?'Walk':'Orbit'}</span></div>
+     {progress||error?null:<div className="cad-viewport-overlay__hint">Lightweight HUD · full GLB loads only in this workspace</div>}
+   </div>
    {nativeStatus&&<div className="absolute bottom-3 left-3 text-xs bg-slate-950/80 text-slate-100 px-2 py-1" role="status">{nativeStatus}</div>}
    {mode==='walk'&&<div className="pointer-events-none absolute bottom-14 left-1/2 -translate-x-1/2 rounded-lg bg-[#111b2c]/85 px-3 py-2 text-center text-xs text-white/90">W A S D · drag to look · Shift to move faster</div>}
    {mode==='walk'&&<div className="absolute bottom-16 left-3 z-20 flex gap-1 sm:hidden">
