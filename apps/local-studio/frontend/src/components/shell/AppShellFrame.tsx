@@ -102,11 +102,7 @@ export function AppShellFrame() {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const meta = event.metaKey || event.ctrlKey;
-      if (meta && event.key.toLowerCase() === "n" && !event.shiftKey) {
-        event.preventDefault();
-        const id = useWorkStore.getState().startTrail();
-        void navigate({ to: "/chats/$chatId", params: { chatId: id } });
-      }
+      // New Chat (mod+n) is the shared `chat.new` command: see NativeCommandBridge.
       if (meta && event.key === "`") {
         event.preventDefault();
         useWorkStore.getState().toggleTerminal();

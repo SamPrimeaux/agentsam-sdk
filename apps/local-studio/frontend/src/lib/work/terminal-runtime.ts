@@ -14,6 +14,7 @@ import { slugify } from "@/lib/work/seed";
 import { useWorkStore } from "@/lib/work/store";
 import { getDesktopWorkspaceContext, getTauriInvoke } from "@/lib/desktop/tauri";
 import { activeTerminalSession, useTerminalSessionStore } from "@/lib/work/terminal-sessions";
+import { resolveSessionAppearance, watchSessionAppearance } from "@/lib/work/terminal-appearance";
 import type { Project, ShellEffect } from "@inneranimalmedia/agentsam-local-shared";
 import type { Terminal } from "@xterm/xterm";
 import type { FitAddon } from "@xterm/addon-fit";
@@ -140,6 +141,8 @@ type TerminalRuntime = {
   refCount: number;
   getProject: ProjectGetter;
   resize?: () => void;
+  /** Stops following per-session appearance changes (see terminal-appearance.ts). */
+  stopAppearance?: () => void;
 };
 
 const runtimes = new Map<string, TerminalRuntime>();
@@ -154,29 +157,16 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
   await import("@xterm/xterm/css/xterm.css");
 
   const park = document.createDocumentFragment();
+  // Theme default -> named profile -> this session's override. Never the active session's.
+  const appearance = resolveSessionAppearance(sessionId);
   const term = new Terminal({
     cursorBlink: true,
     convertEol: true,
-    fontSize: 12.5,
+    fontSize: appearance.fontSize,
     fontFamily: "IBM Plex Mono, ui-monospace, SF Mono, Menlo, monospace",
-    lineHeight: 1.35,
-    theme: {
-      background: "#070708",
-      foreground: "#F3F1EC",
-      cursor: "#C4B8A8",
-      cursorAccent: "#070708",
-      selectionBackground: "#C4B8A855",
-      black: "#070708",
-      red: "#c45c4a",
-      green: "#C4B8A8",
-      yellow: "#C4B8A8",
-      blue: "#8A7F72",
-      magenta: "#C4B8A8",
-      cyan: "#8A7F72",
-      white: "#F3F1EC",
-      brightBlack: "#8A7F72",
-      brightWhite: "#F3F1EC",
-    },
+    lineHeight: appearance.lineHeight,
+    minimumContrastRatio: appearance.minimumContrastRatio,
+    theme: appearance.theme,
     scrollback: 2000,
   });
   const fit = new FitAddon();
@@ -815,6 +805,19 @@ async function ensureRuntime(sessionId: string, getProject: ProjectGetter): Prom
   if (!boot) {
     boot = createRuntime(sessionId, getProject).then((runtime) => {
       runtimes.set(sessionId, runtime);
+      runtime.stopAppearance = watchSessionAppearance(sessionId, (next) => {
+        runtime.term.options.theme = next.theme;
+        runtime.term.options.fontSize = next.fontSize;
+        runtime.term.options.lineHeight = next.lineHeight;
+        runtime.term.options.minimumContrastRatio = next.minimumContrastRatio;
+        if (!runtime.host?.isConnected) return;
+        try {
+          runtime.fit.fit();
+          runtime.resize?.();
+        } catch {
+          /* The next ResizeObserver tick refits once the host is measurable. */
+        }
+      });
       bootstraps.delete(sessionId);
       return runtime;
     });
@@ -887,4 +890,12 @@ export function detachSharedTerminal(host: HTMLElement, sessionId = activeTermin
 
 export function getSharedTerminalRun(sessionId = activeTerminalSession().id) {
   return runtimes.get(sessionId)?.run ?? null;
+}
+
+/** Shell ▸ Clear Scrollback: drops history for one session; the live prompt line stays. */
+export function clearTerminalScrollback(sessionId = activeTerminalSession().id): boolean {
+  const runtime = runtimes.get(sessionId);
+  if (!runtime) return false;
+  runtime.term.clear();
+  return true;
 }

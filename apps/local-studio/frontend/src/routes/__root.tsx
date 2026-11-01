@@ -4,6 +4,7 @@ import { PackagedConsoleFrame } from "../../agentsam/PackagedConsoleFrame";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { ConnectionDeepLinkBridge } from "@/components/desktop/ConnectionDeepLinkBridge";
+import { NativeCommandBridge } from "@/components/desktop/NativeCommandBridge";
 import appCss from "../styles.css?url";
 import { isStudioAdminPath } from "../../../shared/studio-admin-routes.mjs";
 import { FIRST_PAINT_BOOTSTRAP_SCRIPT } from "../../../shared/shell-appearance.mjs";
@@ -51,6 +52,7 @@ function RootDocument() {
     <>
       <PreviewHostBridge />
       <ConnectionDeepLinkBridge />
+      <NativeCommandBridge />
       <AuthProvider>
         <ApplicationOutlet />
       </AuthProvider>

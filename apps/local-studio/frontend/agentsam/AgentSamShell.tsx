@@ -355,7 +355,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey)) return;
       if (event.key === '`') { event.preventDefault(); useWorkStore.getState().toggleTerminal(); }
-      if (event.key.toLowerCase() === 'n' && !event.shiftKey) { event.preventDefault(); useWorkStore.getState().startTrail(); void navigate({ to: '/admin/agentsam' }); }
+      // New Chat (mod+n) is the shared `chat.new` command: see NativeCommandBridge.
     };
     const online = () => { void useWorkStore.getState().flushOfflineQueue(); };
     window.addEventListener('agentsam:navigate', onNavigate);

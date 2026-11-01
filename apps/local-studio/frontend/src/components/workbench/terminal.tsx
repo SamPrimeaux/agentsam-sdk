@@ -1,5 +1,5 @@
 import { useEffect, useRef, type PointerEvent, type KeyboardEvent, type CSSProperties } from "react";
-import { Columns2, Copy, Grid2X2, Maximize2, PanelTop, Plus, RotateCw, X } from "lucide-react";
+import { Columns2, Copy, Grid2X2, Maximize2, Palette, PanelTop, Plus, RotateCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconAction } from "@/components/ui/icon-action";
 import { useActiveProject, useWorkStore } from "@/lib/work/store";
@@ -8,6 +8,28 @@ import { queueChatImages } from "@/lib/content/chat-drop-queue";
 import { toast } from "sonner";
 import { attachSharedTerminal, detachSharedTerminal, getSharedTerminalRun } from "@/lib/work/terminal-runtime";
 import { useTerminalSessionStore } from "@/lib/work/terminal-sessions";
+import { useSessionAppearance } from "@/lib/work/terminal-appearance";
+import { useTerminalUiStore } from "@/lib/work/terminal-commands";
+
+/**
+ * Identifies a terminal by text, not color alone: profile name (when not the theme
+ * default) and the working folder, with the color swatch as a redundant cue.
+ */
+function SessionIdentity({ sessionId, cwd }: { sessionId: string; cwd?: string }) {
+  const appearance = useSessionAppearance(sessionId);
+  const folder = cwd && cwd !== "/" ? cwd.split("/").filter(Boolean).pop() : undefined;
+  return (
+    <>
+      <span
+        aria-hidden
+        className="size-2.5 shrink-0 rounded-sm border border-border"
+        style={{ background: appearance.theme.background }}
+      />
+      {appearance.profileId !== "cms" ? <span className="text-[10px] uppercase opacity-80">{appearance.profileLabel}</span> : null}
+      {folder ? <span className="max-w-24 truncate text-[10px] opacity-70">{folder}</span> : null}
+    </>
+  );
+}
 
 export function TerminalPane({
   variant = "dock",
@@ -83,6 +105,7 @@ export function TerminalPane({
             >
               <span className="size-1.5 rounded-full bg-muted-foreground data-[state=connected]:bg-primary" data-state={session.state} />
               <span>{session.title}</span>
+              <SessionIdentity sessionId={session.id} cwd={session.cwd} />
             </button>
             <button type="button" className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" aria-label={'Close ' + session.title} onClick={() => closeSession(session.id)}>
               <X className="size-3" />
@@ -94,6 +117,9 @@ export function TerminalPane({
         </Button>
         <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Duplicate terminal cwd" onClick={() => duplicateSession(resolvedSessionId)}>
           <Copy className="size-3.5" />
+        </Button>
+        <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Terminal appearance" title="Colors, font size, and line height for this terminal" onClick={() => useTerminalUiStore.getState().open({ kind: "appearance", sessionId: resolvedSessionId })}>
+          <Palette className="size-3.5" />
         </Button>
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <IconAction size="icon-sm" variant="ghost" label="Single terminal" hint="Focus on the selected terminal" aria-pressed={!splitView && !gridView} onClick={() => { setGridView(false); setSplitView(false); }}>
@@ -224,6 +250,7 @@ function TerminalViewport({ sessionId }: { sessionId: string }) {
   const project = useActiveProject();
   const projectRef = useRef(project);
   projectRef.current = project;
+  const appearance = useSessionAppearance(sessionId);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -241,6 +268,7 @@ function TerminalViewport({ sessionId }: { sessionId: string }) {
   return <div
     ref={hostRef}
     data-terminal-viewport={sessionId}
+    style={{ backgroundColor: appearance.theme.background }}
     className="terminal-host min-h-0 min-w-0 flex-1 px-1 pb-[env(safe-area-inset-bottom)]"
     onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }}
     onDrop={(event) => {

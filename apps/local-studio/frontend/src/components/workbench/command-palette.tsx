@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Command } from "cmdk";
 import { Box, FileCode, FolderGit2, Globe, MessageSquare, Plus, Search, SquareTerminal } from "lucide-react";
 import { useWorkStore } from "@/lib/work/store";
+import { COMMANDS, runCommand } from "@/lib/commands/native-commands";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -40,9 +41,9 @@ export function CommandPalette() {
         <Command.Group heading="Actions">
           <Command.Item
             onSelect={() => {
-              const id = startTrail();
-              void navigate({ to: "/chats/$chatId", params: { chatId: id } });
+              // Same command as File ▸ New Chat and its shortcut.
               setOpen(false);
+              void runCommand("chat.new");
             }}
           >
             <Plus className="size-4" />
@@ -113,6 +114,22 @@ export function CommandPalette() {
             <Search className="size-4" />
             Chats
           </Command.Item>
+        </Command.Group>
+        <Command.Group heading="Shell">
+          {COMMANDS.filter((command) => command.group === "Shell" && command.palette).map((command) => (
+            <Command.Item
+              key={command.id}
+              value={`shell ${command.title}`}
+              onSelect={() => {
+                setOpen(false);
+                // Defer so the palette dialog releases focus before the terminal/dialog takes it.
+                setTimeout(() => void runCommand(command.id), 0);
+              }}
+            >
+              <SquareTerminal className="size-4" />
+              {command.title}
+            </Command.Item>
+          ))}
         </Command.Group>
         <Command.Group heading="Projects">
           {projects.map((project) => (
