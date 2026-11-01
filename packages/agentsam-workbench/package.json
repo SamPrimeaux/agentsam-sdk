@@ -33,6 +33,11 @@
       "types": "./dist/projects/index.d.ts",
       "import": "./dist/projects/index.js"
     },
+    "./resources": {
+      "types": "./dist/resources/index.d.ts",
+      "import": "./dist/resources/index.js"
+    },
+    "./resources/resource-card.css": "./dist/resources/resource-card.css",
     "./timeline": {
       "types": "./dist/timeline/index.d.ts",
       "import": "./dist/timeline/index.js"

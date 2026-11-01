@@ -94,6 +94,6 @@ function ApplicationOutlet() {
   // Installed pages keep the existing navigation/runtime context even though
   // the product owns its one visible console frame.
   if (pathname === '/apps/ecommerce-cms-agentsam') return <AgentSamShell embedded />;
-  const isApp = pathname === "/" || /^\/(agentsam|chats|cms|sites|store|content|media|cad|samsketch|database|projects|artifacts|mail|tickets|collaborate|files|browse|cli|ship|widgets|settings|docs|help)(\/|$)/.test(pathname);
+  const isApp = pathname === "/" || /^\/(agentsam|chats|cms|sites|store|content|media|cad|samsketch|samsculpt|database|projects|artifacts|mail|tickets|collaborate|files|browse|cli|ship|widgets|settings|docs|help)(\/|$)/.test(pathname);
   return (isApp || isStudioAdminPath(pathname)) ? <PackagedConsoleFrame><AgentSamShell embedded /></PackagedConsoleFrame> : <Outlet />;
 }

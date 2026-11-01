@@ -12,7 +12,10 @@ const mounts = {
   'cad-creator': { href: '/admin/cad', icon: 'box', label: 'CAD Creator', aliases: ['/cad'] },
   // MovieMode is Apps-only. Never alias /media — Media Library owns that tree.
   'agentsam-copro-studio': { href: '/admin/moviemode', icon: 'film', label: 'MovieMode', aliases: [] },
-  'samsketch': { href: '/samsketch', icon: 'box', label: 'SamSketch', aliases: [] },
+  'samsketch': { href: '/samsketch', icon: 'layers', label: 'SamSketch', aliases: [] },
+  // SamSculpt is Creative Department Batch 1+. Include only when apps/samsculpt (or packaged
+  // agentsam-3d-studio) is listed in included_apps — mount stays dormant until then.
+  'samsculpt': { href: '/samsculpt', icon: 'box', label: 'SamSculpt', aliases: [] },
 };
 
 /** Rebuildable navigation projection; included_apps and APP manifests remain authoritative. */
