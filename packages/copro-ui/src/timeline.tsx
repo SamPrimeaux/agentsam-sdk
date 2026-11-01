@@ -120,7 +120,8 @@ export function CoProTimeline({
     <section className="copro-timeline-shell">
       <header className="copro-timeline-toolbar">
         <span className="mm-timeline-heading">Timeline</span>
-        <div className="copro-timeline-tool-group">
+        <span className="mm-timeline-playhead-readout" title="Playhead position">{formatTime(playheadUs / 1_000_000)}</span>
+        <div className="copro-timeline-tool-group" role="group" aria-label="Timeline zoom">
           <button aria-label="Zoom out" onClick={() => zoomBy(.8)}>−</button>
           <span>{Math.round(pixelsPerSecond)} px/s</span>
           <button aria-label="Zoom in" onClick={() => zoomBy(1.25)}>＋</button>
@@ -234,6 +235,7 @@ export function CoProTimeline({
               aria-label="Playhead"
             >
               <b />
+              <i className="mm-playhead-stem" aria-hidden="true" />
             </div>
 
             <div className="copro-track-stack">

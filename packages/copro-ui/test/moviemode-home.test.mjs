@@ -47,15 +47,30 @@ test('Template Studio combines the real composition catalog with retained editab
       {id:'creative:chapter-divider',category:'template',name:'Chapter Divider',group:'editorial',durationUs:4_000_000,aspectRatio:'16:9',previewUrl:'https://assets.test/chapter.svg'},
       {id:'creative:product-launch',category:'template',name:'Product Launch',group:'product',durationUs:6_000_000,aspectRatio:'9:16',previewUrl:'https://assets.test/product.svg'},
       {id:'creative:documentary-opener',category:'template',name:'Documentary opener',group:'documentary',durationUs:7_000_000,aspectRatio:'16:9',previewUrl:'https://assets.test/documentary.svg'},
+      {id:'creative:social-story',category:'template',name:'Social story',group:'social',durationUs:6_000_000,aspectRatio:'9:16',previewUrl:'https://assets.test/social.svg'},
       {id:'creative:caption-story',category:'template',name:'Word focus captions',group:'captions',durationUs:6_000_000,aspectRatio:'9:16',previewUrl:'https://assets.test/captions.svg'},
     ],
     onOpenCreativeTemplate:()=>{},
   }));
-  for (const label of ['Template studio','Chapter Divider','Product Launch','For you','editorial','product','Search compositions','4 compositions']) assert.ok(html.includes(label),label);
+  for (const label of ['Template studio','Chapter Divider','Product Launch','For you','editorial','product','Search compositions','5 compositions']) assert.ok(html.includes(label),label);
   assert.match(html,/src="https:\/\/assets\.test\/chapter\.svg"/);
   assert.match(html,/src="https:\/\/assets\.test\/product\.svg"/);
-  for (const label of ['Sample timelines','Weekend cut','Caption layout','Sample timeline · no video supplied','Caption layout','EXAMPLE','Open sample']) assert.ok(html.includes(label),label);
+  for (const label of ['Featured productions','Documentary Opener','Product Showcase','Social Video','Batch 1 presentation','Sample timelines','Weekend cut','Caption layout','Sample timeline · no video supplied','Caption layout','EXAMPLE','Open sample']) assert.ok(html.includes(label),label);
+  assert.match(html,/aria-label="Featured production directions"/);
   assert.match(html,/aria-label="Sample timelines"/);
+});
+
+test('MovieMode project cards meet the creative resource-card standard', () => {
+  const html = renderToStaticMarkup(React.createElement(CoProProjectsScreen,{
+    ...actions,
+    projects:[{id:'project:1',title:'Dashboard Walkthrough',kind:'video',status:'draft',updatedAt:'2026-10-16T12:00:00Z',durationMs:25000,aspectRatio:'9:16',thumbnailTone:'cyan',subtitle:'Night edit'}],
+  }));
+  assert.match(html,/mm-resource-card/);
+  assert.match(html,/MovieMode · Draft/);
+  assert.match(html,/Open edit/);
+  assert.match(html,/aria-label="Edit Dashboard Walkthrough"/);
+  assert.match(html,/mm-project-cover-art/);
+  assert.match(html,/data:image\/svg\+xml/);
 });
 
 test('creative effects and transition pickers render catalog thumbnails and all four library lanes', () => {
