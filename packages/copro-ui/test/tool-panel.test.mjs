@@ -44,7 +44,7 @@ test("media panel shows a real local file picker and session media", () => {
 test("export panel offers a real portable project action, not simulated render progress", () => {
   const html = render("export", {onProjectExport:()=>{}});
   assert.match(html, /Download editable CoPro project/);
-  assert.match(html, /MP4 encoding is not connected/);
+  assert.match(html, /Video export is unavailable/);
   assert.doesNotMatch(html, /100%|Rendering 68%/);
 });
 

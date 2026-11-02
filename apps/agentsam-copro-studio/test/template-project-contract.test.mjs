@@ -1,3 +1,4 @@
+import {CoProEditorSession} from "../../../packages/copro-editor/src/index.js";
 /**
  * Template lifecycle contract for MovieMode:
  * Discover → Select → Instantiate → Persist → Open → Edit → Reload → Preview
@@ -110,4 +111,23 @@ test('createCreativeProject refuses missing projectId (no silent identity reuse)
     () => createCreativeProject('creative:documentary-opener', { now: '2026-11-01T12:00:00.000Z' }),
     /copro_template_project_id_required/,
   );
+});
+
+test("current-project template application composes layers and preserves project isolation",async()=>{
+ const store=new MemoryProjectStore();
+ const a=createCreativeProject("creative:film-title",{projectId:"acceptance:A"});
+ const b=createCreativeProject("creative:chapter-divider",{projectId:"acceptance:B"});
+ await store.save(a);await store.save(b);
+ const session=new CoProEditorSession(a);
+ const layer=structuredClone(b.tracks[0]);layer.id="applied:"+layer.id;
+ layer.clips=layer.clips.map(clip=>({...clip,id:"applied:"+clip.id}));
+ const applied=session.execute({type:"project.apply_template",payload:{tracks:[layer]}});
+ const svg=renderCreativeProjectFrame(applied,1200000);
+ assert.match(svg,/<svg/);
+ assert.match(svg,/composition-1-/);
+ await store.save(applied);
+ assert.deepEqual(await store.load(b.id),b);
+ assert.deepEqual(session.undo(),a);
+ assert.deepEqual(session.redo(),applied);
+ assert.deepEqual(await store.load(a.id),applied);
 });

@@ -93,15 +93,17 @@ test('creative effects and transition pickers render catalog thumbnails and all 
   const effects=renderToStaticMarkup(React.createElement(CoProToolPanel,{tool:'effects',hasSelectedClip:true,selectedClipId:'clip:1',creativeAssets,onClose:()=>{}}));
   for (const label of ['Looks','Overlays','Motion','Graphics','Warm Film']) assert.ok(effects.includes(label),label);
   assert.match(effects,/src="https:\/\/assets\.test\/warm\.svg"/);
-  const transitions=renderToStaticMarkup(React.createElement(CoProToolPanel,{tool:'transitions',hasSelectedClip:true,selectedClipId:'clip:1',creativeAssets,onClose:()=>{}}));
+  const transitions=renderToStaticMarkup(React.createElement(CoProToolPanel,{tool:'transitions',hasSelectedClip:true,selectedClipId:'clip:1',currentTransition:'gl:cross-warp',creativeAssets,onClose:()=>{}}));
   assert.ok(transitions.includes('Cross Warp'));
-  assert.match(transitions,/src="https:\/\/assets\.test\/warp\.svg"/);
+  assert.ok(transitions.includes("Transition duration"));
+  assert.ok(transitions.includes("Transition direction"));
+  assert.ok(!transitions.includes("copro-transition-grid"));
 });
 
 test('phone workspace keeps player, inline pane, timeline and five-item dock in the agreed order', async () => {
   const {readFile} = await import('node:fs/promises');
   const css = await readFile(new URL('../styles/copro.css',import.meta.url),'utf8');
-  const phone = css.slice(css.lastIndexOf('/* Phone: player'));
+  const phone = css.slice(css.lastIndexOf('/* Phone: player'),css.indexOf('/* Medium workspaces'));
   assert.match(phone,/grid-template-areas:"player" "pane" "timeline" "dock"/);
   assert.match(phone,/grid-area:pane/);
   assert.match(phone,/position:relative!important/);
@@ -133,7 +135,7 @@ test('medium workspace uses a 64px rail, one active pane, persistent player and 
 test('phone tool content remains scrollable inside the persistent workspace pane', async () => {
   const {readFile} = await import('node:fs/promises');
   const css = await readFile(new URL('../styles/copro.css',import.meta.url),'utf8');
-  const phone = css.slice(css.lastIndexOf('/* Phone: player'));
+  const phone = css.slice(css.lastIndexOf('/* Phone: player'),css.indexOf('/* Medium workspaces'));
   assert.match(phone,/\.copro-editing-grid\.is-compact \.copro-tool-panel-body[^}]*overflow-y:auto/);
   assert.match(phone,/\.copro-editing-grid\.is-compact \.mm-more-tools-grid/);
   assert.match(phone,/\.copro-editing-grid\.is-compact>\.copro-context-tools/);

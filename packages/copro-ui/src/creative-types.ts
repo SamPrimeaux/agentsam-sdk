@@ -32,3 +32,8 @@ export type CoProGraphicSampler = (
   graphic: { id: string; durationUs?: number; sequence?: unknown; values?: number[]; decimals?: number },
   timeUs: number,
 ) => CoProGraphicSample | null;
+
+export type CoProTransitionPreviewFactory = (canvas:HTMLCanvasElement)=>{
+ render(options:{transition:{type:string;durationUs:number;parameters?:Record<string,unknown>};from:CanvasImageSource;to:CanvasImageSource;timeUs:number}):unknown;
+ dispose():void;
+};

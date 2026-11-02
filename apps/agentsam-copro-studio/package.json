@@ -13,13 +13,15 @@
     "pretypecheck": "npm --prefix ../../packages/copro-ui run build"
   },
   "dependencies": {
+    "@inneranimalmedia/copro-render": "2.6.13",
     "@inneranimalmedia/copro-editor": "2.6.13",
     "@inneranimalmedia/copro-media": "2.6.13",
     "@inneranimalmedia/copro-project": "2.6.13",
     "@inneranimalmedia/copro-storage": "2.6.13",
     "@inneranimalmedia/copro-ui": "2.6.13",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "@inneranimalmedia/copro-templates": "2.6.13"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",

@@ -1,4 +1,4 @@
-import React, { useId, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import {
   ArrowLeft,
   AudioLines,
@@ -8,9 +8,14 @@ import {
   Search,
   Sparkles,
   UploadCloud,
+  Pause,
+  Play,
+  Pencil,
+  Trash2,
 } from "lucide-react";
-import type { CoProCreativeAsset } from "./creative-types.js";
+import type { CoProMotionSampler, CoProCreativeAsset, CoProTransitionPreviewFactory } from "./creative-types.js";
 import type { CoProMediaShelfItem } from "./tool-sheet.js";
+import { CoProAssetPreview } from "./asset-preview.js";
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
 
 export type CoProMediaBrowserSection = "import" | "media" | "subprojects" | "yours" | "generate" | "spaces" | "library";
@@ -19,14 +24,22 @@ type CreativeCategory = "all" | CoProCreativeAsset["category"];
 
 type CoProMediaBrowserProps = {
   section: CoProMediaBrowserSection;
+  initialCategory?:CreativeCategory;
+  currentAssetId?:string;
+  createTransitionPreview?:CoProTransitionPreviewFactory;
+  renderCreativePreview?:(id:string,timeUs:number)=>string|null;
+  sampleMotion?:CoProMotionSampler;
   mediaItems: CoProMediaShelfItem[];
   projectMediaIds: ReadonlySet<string>;
   creativeAssets: CoProCreativeAsset[];
   selectedClipId?: string | null;
+  previewMediaPair?: { before?:string; after?:string };
   onImportFiles: (files: File[]) => void;
   onAddMedia: (id: string) => void;
   onUseCreativeAsset: (asset: CoProCreativeAsset) => void;
   onOpenCreativeTemplate?: (id: string) => void;
+  onRenameMedia?: (id:string,name:string) => void;
+  onDeleteMedia?: (id:string) => void;
   onNavigate?: (section: CoProMediaBrowserSection) => void;
   systemIcons?: CoProSystemIconMap;
 };
@@ -98,23 +111,35 @@ function CreativePreview({ asset, large = false, systemIcons }: { asset: CoProCr
 
 export function CoProMediaBrowser({
   section,
+  initialCategory="all", currentAssetId, renderCreativePreview, sampleMotion, createTransitionPreview,
   mediaItems,
   projectMediaIds,
   creativeAssets,
   selectedClipId,
+  previewMediaPair,
   onImportFiles,
   onAddMedia,
   onUseCreativeAsset,
   onOpenCreativeTemplate,
+  onRenameMedia,
+  onDeleteMedia,
   onNavigate,
   systemIcons,
 }: CoProMediaBrowserProps) {
   const uploadId = useId();
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<CreativeCategory>("all");
+  const [category, setCategory] = useState<CreativeCategory>(initialCategory);
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
+  const [hoverAssetId,setHoverAssetId]=useState<string|null>(null);
   const [dragging, setDragging] = useState(false);
   const [lastAppliedAssetId, setLastAppliedAssetId] = useState<string | null>(null);
+  const [previewPlaying,setPreviewPlaying] = useState(true);
+  useEffect(()=>{
+    if(!selectedAssetId)return;
+    setPreviewPlaying(true);
+    const timer=window.setTimeout(()=>setPreviewPlaying(false),Math.max(1000,creativeAssets.find(asset=>asset.id===selectedAssetId)?.durationUs??2800000)/1000);
+    return()=>window.clearTimeout(timer);
+  },[selectedAssetId]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const projectMedia = useMemo(
@@ -122,7 +147,7 @@ export function CoProMediaBrowser({
     [mediaItems, projectMediaIds],
   );
   const visibleMedia = useMemo(() => {
-    const source = section === "media" ? projectMedia : mediaItems;
+    const source = section === "yours" ? mediaItems : projectMedia;
     if (!normalizedQuery) return source;
     return source.filter((item) => item.name.toLowerCase().includes(normalizedQuery));
   }, [mediaItems, normalizedQuery, projectMedia, section]);
@@ -141,6 +166,16 @@ export function CoProMediaBrowser({
   const selectedAsset = selectedAssetId
     ? creativeAssets.find((asset) => asset.id === selectedAssetId) ?? null
     : null;
+
+  function renameMedia(item:CoProMediaShelfItem) {
+    const next=window.prompt("Rename media",item.name)?.trim();
+    if(next&&next!==item.name)onRenameMedia?.(item.id,next);
+  }
+
+  function deleteMedia(item:CoProMediaShelfItem) {
+    const message="Delete the original file " + String.fromCharCode(8220) + item.name + String.fromCharCode(8221) + " from Your media? Projects using it will need the source relinked.";
+    if(window.confirm(message))onDeleteMedia?.(item.id);
+  }
 
   function importFiles(fileList: FileList | File[]) {
     const files = Array.from(fileList).filter((file) =>
@@ -168,7 +203,7 @@ export function CoProMediaBrowser({
           <div>
             <span className="mm-media-browser-eyebrow">ADD TO PROJECT</span>
             <h3>Import media</h3>
-            <p>Bring your own footage, images and sound into this edit.</p>
+            <p>Add footage, images and sound to your project.</p>
           </div>
           <span className="mm-media-browser-count">MULTI-FILE</span>
         </header>
@@ -203,10 +238,7 @@ export function CoProMediaBrowser({
             <span className="mm-import-button">Choose files</span>
           </label>
         </div>
-        <div className="mm-media-browser-footnote">
-          <strong>Originals stay intact.</strong>
-          Imported source files are retained in this device&apos;s media store. They are not silently uploaded or recompressed.
-        </div>
+
       </section>
     );
   }
@@ -217,7 +249,7 @@ export function CoProMediaBrowser({
         eyebrow: "PROJECT STRUCTURE",
         title: "Compound clips",
         status: "ENGINE INTEGRATION",
-        description: "The compound-clip browser is part of the CoPro roadmap. The current timeline can already organize clips into tracks; the linked subproject engine still needs to be connected before nested compositions can be browsed here.",
+        description: "Organize related clips into reusable sequences.",
         action: "Browse project media",
         icon: "layers",
       },
@@ -225,7 +257,7 @@ export function CoProMediaBrowser({
         eyebrow: "ASSISTED CREATION",
         title: "Media generation",
         status: "PROVIDER CONNECTION",
-        description: "Generation belongs here, but it must run through an authorized provider and return real, reviewable media. No placeholder generation or pretend results.",
+        description: "Choose a connected provider to generate new media.",
         action: "Use imported media",
         icon: "agent",
       },
@@ -233,7 +265,7 @@ export function CoProMediaBrowser({
         eyebrow: "CONNECTED STORAGE",
         title: "Connected spaces",
         status: "STORAGE CONNECTION",
-        description: "Connect an approved workspace or cloud provider to browse remote media. Local originals remain available in Yours and are not silently moved or uploaded.",
+        description: "Choose a connected space to browse its media.",
         action: "Browse available media",
         icon: "cloud",
       },
@@ -245,7 +277,7 @@ export function CoProMediaBrowser({
           <div>
             <span className="mm-media-browser-eyebrow">{panel.eyebrow}</span>
             <h3>{panel.title}</h3>
-            <p>A retained workspace surface with its integration status made explicit.</p>
+            <p>Choose media and settings for this project.</p>
           </div>
           <span className="mm-media-browser-count">WIP</span>
         </header>
@@ -298,9 +330,13 @@ export function CoProMediaBrowser({
                   <strong title={item.name}>{item.name}</strong>
                   <span>{item.kind === "audio" ? "Audio" : item.kind === "image" ? "Image" : "Video"}</span>
                 </div>
-                <button type="button" onClick={() => onAddMedia(item.id)}>
-                  Add to timeline
-                </button>
+                <div className="mm-media-card-actions">
+                  <button type="button" className="mm-media-add-action" onClick={() => onAddMedia(item.id)}>
+                    Add to timeline
+                  </button>
+                  {!inProject&&<button type="button" className="mm-media-icon-action" aria-label={"Rename "+item.name} title="Rename media" onClick={()=>renameMedia(item)}><Pencil size={14}/></button>}
+                  {!inProject&&<button type="button" className="mm-media-icon-action is-danger" aria-label={"Delete "+item.name} title="Delete original media" onClick={()=>deleteMedia(item)}><Trash2 size={14}/></button>}
+                </div>
               </article>
             ))}
           </div>
@@ -373,11 +409,19 @@ export function CoProMediaBrowser({
             <CoProSystemIcon name="back" icons={systemIcons} size={15} fallback={<ArrowLeft size={15} />} /> Back to library
           </button>
           <div className="mm-creative-detail-layout">
-            <CreativePreview asset={selectedAsset} large systemIcons={systemIcons} />
+            <div className={"mm-creative-preview-player"+(previewPlaying?" is-playing":"")}>
+              <CoProAssetPreview asset={selectedAsset} playing={previewPlaying} renderCreativePreview={renderCreativePreview} sampleMotion={sampleMotion} createTransitionPreview={createTransitionPreview}
+                before={previewMediaPair?.before??creativeAssets.find(asset=>asset.category==="template")?.previewUrl}
+                after={previewMediaPair?.after??creativeAssets.filter(asset=>asset.category==="template")[1]?.previewUrl}/>
+              <button type="button" className="mm-creative-preview-play" aria-label={previewPlaying?"Pause asset preview":"Play asset preview"} onClick={()=>setPreviewPlaying(value=>!value)}>{previewPlaying?<Pause size={16}/>:<Play size={16}/>}</button>
+              <div className="mm-creative-preview-progress"><i/></div>
+              <span className="mm-creative-preview-caption">{selectedAsset.category==="transition"?"Transition demonstration":selectedAsset.category==="animation"?"Motion demonstration":"Asset preview"} · {previewPlaying?"Playing":"Paused"}</span>
+            </div>
             <div className="mm-creative-detail-copy">
               <span className="mm-media-browser-eyebrow">{selectedCategoryLabel.toUpperCase()}</span>
               <h4>{selectedAsset.name}</h4>
               <p>{selectedAsset.description || "Reusable " + selectedCategoryLabel.toLowerCase() + " from the CoPro creative catalog."}</p>
+
               <div className="mm-creative-metadata">
                 {formatDuration(selectedAsset.durationUs) && <span><CoProSystemIcon name="time" icons={systemIcons} size={13} fallback={<Clock3 size={13} />} /> {formatDuration(selectedAsset.durationUs)}</span>}
                 {selectedAsset.aspectRatio && <span>{selectedAsset.aspectRatio}</span>}
@@ -391,11 +435,10 @@ export function CoProMediaBrowser({
                     onClick={() => onOpenCreativeTemplate?.(selectedAsset.id)}
                     disabled={!onOpenCreativeTemplate}
                   >
-                    Create new project from template
+                    Apply to current project
                   </button>
-                  <p className="mm-creative-selection-hint">
-                    Project templates open a distinct project. They do not replace this edit or apply as clip effects.
-                  </p>
+                  <p className="mm-creative-selection-hint">Adds editable composition layers. Undo to revert.</p>
+                  <dl className="mm-creative-metadata"><dt>Included</dt><dd>Animated composition · editable text · accent color · timed layers</dd></dl>
                 </>
               ) : (
                 <>
@@ -419,12 +462,19 @@ export function CoProMediaBrowser({
           {visibleCreativeAssets.map((asset) => (
             <button
               type="button"
-              className="mm-creative-library-card"
+              className={"mm-creative-library-card"+(currentAssetId===asset.id?" is-active":"")}
               key={asset.id}
+              onMouseEnter={()=>setHoverAssetId(asset.id)}
+              onMouseLeave={()=>setHoverAssetId(null)}
+              onFocus={()=>setHoverAssetId(asset.id)}
+              onBlur={()=>setHoverAssetId(null)}
+              aria-pressed={currentAssetId===asset.id}
               onClick={() => setSelectedAssetId(asset.id)}
               aria-label={"Preview " + asset.name}
             >
-              <CreativePreview asset={asset} systemIcons={systemIcons} />
+              {hoverAssetId===asset.id?<CoProAssetPreview asset={asset} playing renderCreativePreview={renderCreativePreview} sampleMotion={sampleMotion} createTransitionPreview={createTransitionPreview}
+                before={previewMediaPair?.before??creativeAssets.find(item=>item.category==="template")?.previewUrl}
+                after={previewMediaPair?.after??creativeAssets.filter(item=>item.category==="template")[1]?.previewUrl}/>:<CreativePreview asset={asset} systemIcons={systemIcons} />}
               <span className="mm-creative-library-card-copy">
                 <strong>{asset.name}</strong>
                 <small>{CATEGORY_LABEL[asset.category]}{formatDuration(asset.durationUs) ? " · " + formatDuration(asset.durationUs) : ""}</small>

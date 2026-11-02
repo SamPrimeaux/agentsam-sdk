@@ -287,19 +287,21 @@ export function CoProTimeline({
                               event.stopPropagation();
                               const originX = event.clientX;
                               const originStart = clip.startUs;
-                              const originIn = clip.inUs;
+                              const originIn = clip.inUs ?? 0;
+                              const rate=clip.playbackRate??1;
                               const originDuration = clip.durationUs;
                               const target = event.currentTarget;
                               target.setPointerCapture(event.pointerId);
                               const move = (next: PointerEvent) => {
                                 const rawDelta = Math.round(((next.clientX - originX) / pixelsPerSecond) * 1_000_000);
-                                let deltaUs = Math.max(-originIn, Math.min(originDuration - MIN_CLIP_US, rawDelta));
+                                const minDelta=Math.max(-Math.floor(originIn/rate),-originStart);
+                                let deltaUs = Math.max(minDelta, Math.min(originDuration - MIN_CLIP_US, rawDelta));
                                 const proposedStart = originStart + deltaUs;
                                 const snappedStart = snap(clip.id, proposedStart);
-                                deltaUs += snappedStart - proposedStart;
+                                deltaUs = Math.max(minDelta,Math.min(originDuration-MIN_CLIP_US,deltaUs+snappedStart-proposedStart));
                                 onTrimClip?.(clip.id, {
                                   startUs: originStart + deltaUs,
-                                  inUs: originIn + deltaUs,
+                                  inUs: originIn + Math.round(deltaUs*rate),
                                   durationUs: originDuration - deltaUs,
                                 });
                               };

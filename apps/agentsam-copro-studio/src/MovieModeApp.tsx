@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { coproAppManifest } from "./app-manifest";
 import { MOVIEMODE_SYSTEM_ICONS } from "./system-icons";
 import creativeCatalog from "@inneranimalmedia/copro-templates/catalog";
-import { listProjectTemplates } from "@inneranimalmedia/copro-templates/creative";
+import { listProjectTemplates, renderCreativeProjectFrame } from "@inneranimalmedia/copro-templates/creative";
 import { importEvidencePackage } from "./evidence-import";
 import { CoProEditorSession } from "@inneranimalmedia/copro-editor";
 import { createCoProProject, createTrack, createClip, serializeCoProProject } from "@inneranimalmedia/copro-project";
@@ -25,11 +25,13 @@ import "@inneranimalmedia/copro-ui/styles.css";
 export type MovieModeScreen = "projects" | "editor";
 type Screen = MovieModeScreen;
 
-export type MovieModeAppProps = { initialScreen?: Screen; screen?: Screen; onScreenChange?: (screen: Screen) => void; standalone?: boolean };
+export type MovieModeAppProps = { initialScreen?: Screen; screen?: Screen; onScreenChange?: (screen: Screen,projectId?:string) => void; standalone?: boolean };
 
 type SessionMediaItem = CoProMediaShelfItem & {
   file: File;
   waveform?: number[];
+  width?: number;
+  height?: number;
 };
 
 const FIXTURE_PROJECTS: CoProProjectSummary[] = [
@@ -126,20 +128,33 @@ function makeDemoProject(id = "project:demo", title = "Weekend cut") {
   return project;
 }
 
-async function probeMediaDurationUs(file: File): Promise<number> {
-  if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) return 3_000_000;
+type ProbedMediaMetadata = { durationUs:number; width?:number; height?:number };
+
+async function probeMediaMetadata(file: File): Promise<ProbedMediaMetadata> {
+  if (file.type.startsWith("image/")) {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const result = {durationUs:3_000_000,width:bitmap.width,height:bitmap.height};
+      bitmap.close();
+      return result;
+    } catch { return {durationUs:3_000_000}; }
+  }
+  if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) return {durationUs:3_000_000};
   const url = URL.createObjectURL(file);
   try {
-    const media = document.createElement(file.type.startsWith("audio/") ? "audio" : "video");
+    const isVideo = file.type.startsWith("video/");
+    const media = document.createElement(isVideo ? "video" : "audio");
     media.preload = "metadata";
     media.src = url;
-    const duration = await new Promise<number>((resolve) => {
-      const done = () => resolve(Number.isFinite(media.duration) && media.duration > 0 ? media.duration : 8);
-      media.addEventListener("loadedmetadata", done, { once:true });
-      media.addEventListener("error", () => resolve(8), { once:true });
-      window.setTimeout(() => resolve(8), 2500);
+    return await new Promise<ProbedMediaMetadata>((resolve) => {
+      const done = () => resolve({
+        durationUs:Math.max(100_000,Math.round((Number.isFinite(media.duration)&&media.duration>0?media.duration:8)*1_000_000)),
+        ...(media instanceof HTMLVideoElement && media.videoWidth>0 && media.videoHeight>0 ? {width:media.videoWidth,height:media.videoHeight} : {}),
+      });
+      media.addEventListener("loadedmetadata",done,{once:true});
+      media.addEventListener("error",()=>resolve({durationUs:8_000_000}),{once:true});
+      window.setTimeout(()=>resolve({durationUs:8_000_000}),2500);
     });
-    return Math.max(100_000, Math.round(duration * 1_000_000));
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -149,20 +164,22 @@ function mediaIdForFile(file: File) {
   return "asset:" + file.name + ":" + file.lastModified + ":" + file.size;
 }
 
-function makeImportedProject(file: File) {
+function makeImportedProject(file: File, media: Pick<SessionMediaItem,"durationUs"|"width"|"height">) {
+  const kind = file.type.startsWith("audio/") ? "audio" : file.type.startsWith("image/") ? "overlay" : "video";
   const project = createCoProProject({
     id:"project:import:" + file.name + ":" + Date.now(),
-    title:file.name.replace(/\.[^.]+$/, ""),
+    title:file.name.replace(/\\.[^.]+$/, ""),
+    width:media.width ?? 1920,
+    height:media.height ?? 1080,
     now:new Date(),
   });
-
-  const kind = file.type.startsWith("audio/") ? "audio" : "video";
-  const track = createTrack({ id:"track:" + kind, kind, name:kind === "audio" ? "Audio" : "Video" });
+  const track = createTrack({ id:"track:" + kind, kind, name:kind === "audio" ? "Audio" : kind === "overlay" ? "Image" : "Video" });
   track.clips.push(createClip({
     id:"clip:imported",
     assetId:mediaIdForFile(file),
     startUs:0,
-    durationUs:8_000_000,
+    durationUs:media.durationUs ?? 8_000_000,
+    metadata:{fileName:file.name,mimeType:file.type,sourceWidth:media.width,sourceHeight:media.height},
   }));
   project.tracks.push(track);
   return project;
@@ -175,50 +192,113 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   const {theme,accent}=useShellAppearance();
   const appearanceStyle={'--nav-accent':accent,'--copro-accent-ink':shellAccentForeground(accent)} as React.CSSProperties;
 
-  const [screen, setScreen] = useState<Screen>(requestedScreen ?? initialScreen);
+  const initialProjectId=useRef(new URLSearchParams(window.location.search).get("project"));
+  const [screen, setScreen] = useState<Screen>(requestedScreen ?? (initialProjectId.current?"editor":initialScreen));
   useEffect(() => { if (requestedScreen) setScreen(requestedScreen); }, [requestedScreen]);
-  function showScreen(next: Screen) { setScreen(next); onScreenChange?.(next); }
+  function showScreen(next: Screen) {
+    setScreen(next);
+    const url=new URL(window.location.href);
+    if(next==="editor")url.searchParams.set("project",sessionRef.current.project.id);
+    else url.searchParams.delete("project");
+    window.history.replaceState(window.history.state,"",url);
+    onScreenChange?.(next,next==="editor"?sessionRef.current.project.id:undefined);
+  }
   const homeFileRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const captureStreamRef = useRef<MediaStream | null>(null);
   const [recording, setRecording] = useState(false);
   const [captureError, setCaptureError] = useState<string | null>(null);
+  const projectOpenGeneration=useRef(0);
+  const autosaveProjectId=useRef<string|null>(null);
   const [projectSeed, setProjectSeed] = useState(0);
-  const sessionRef = useRef(new CoProEditorSession(makeDemoProject()));
+  const sessionRef = useRef(new CoProEditorSession(createCoProProject({id:"project:new:" + Date.now(),title:"Untitled project"})));
   const [project, setProject] = useState(sessionRef.current.project);
-  const [selectedClipId, setSelectedClipId] = useState<string | null>("clip:2");
-  const [playheadUs, setPlayheadUs] = useState(5_800_000);
+  const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+  const [playheadUs, setPlayheadUs] = useState(0);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<"video" | "image" | null>(null);
   const [restored, setRestored] = useState(false);
   const [mediaItems, setMediaItems] = useState<SessionMediaItem[]>([]);
   const mediaUrlsRef = useRef(new Map<string,string>());
+  const thumbnailPreparationRef = useRef(new Set<string>());
   const [mediaPersistenceError, setMediaPersistenceError] = useState<string | null>(null);
 
   const [savedProjects, setSavedProjects] = useState<CoProProjectSummary[]>([]);
   const [homeSection, setHomeSection] = useState<"home" | "templates">("home");
   const [creativeAssets, setCreativeAssets] = useState<CoProCreativeAsset[]>(CREATIVE_ASSET_SEED);
   const [creativeRenderer, setCreativeRenderer] = useState<((project: any, timeUs: number) => string | null) | null>(null);
+  const [creativePreviewRenderer,setCreativePreviewRenderer]=useState<((id:string,timeUs:number)=>string|null)|undefined>();
   const [motionSampler, setMotionSampler] = useState<CoProMotionSampler | null>(null);
   const [graphicSampler, setGraphicSampler] = useState<CoProGraphicSampler | null>(null);
+  const [transitionFactory,setTransitionFactory]=useState<any>();
   const [initialTool, setInitialTool] = useState<"text" | "captions" | null>(null);
 
   async function refreshSavedProjects() {
-    const saved = await store.list();
+    const [saved,mediaRecords,thumbnailModule] = await Promise.all([
+      store.list(),
+      sourceStore ? sourceStore.list().catch(()=>[]) : Promise.resolve([]),
+      import("@inneranimalmedia/copro-templates/preview-thumbnails").catch(()=>({CREATIVE_THUMBNAILS:{}})),
+    ]);
+    const mediaById = new Map(mediaRecords.map((record:any)=>[record.id,record]));
     const summaries: CoProProjectSummary[] = saved.map((entry:any) => {
-      const durationUs = Math.max(0, ...entry.tracks.flatMap((track:any) =>
-        track.clips.map((clip:any) => clip.startUs + clip.durationUs)));
+      const clips = entry.tracks.flatMap((track:any)=>track.clips ?? []);
+      const durationUs = Math.max(0,...clips.map((clip:any)=>clip.startUs+clip.durationUs));
       const fromTemplate = entry.metadata?.provenance?.kind === "project_template";
-      const clipCount = entry.tracks.reduce((n:number, track:any) => n + (track.clips?.length || 0), 0);
+      const clipCount = clips.length;
+      const templateId = entry.metadata?.provenance?.templateId
+        ?? entry.metadata?.creative?.scene
+        ?? clips.find((clip:any)=>clip.metadata?.creative?.scene)?.metadata?.creative?.scene;
+      const templateAsset = CREATIVE_ASSET_SEED.find(asset=>asset.id===templateId);
+      let thumbnailUrl:string|undefined = entry.metadata?.cover?.url;
+      if (!thumbnailUrl && clips.some((clip:any)=>clip.metadata?.creative)) {
+        const svg=renderCreativeProjectFrame(entry,Math.min(1200000,Math.max(0,durationUs-1)));
+        if(svg)thumbnailUrl="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+      }
+      if (!thumbnailUrl && templateAsset?.previewFile) {
+        const key=templateAsset.previewFile.split("/").pop() ?? "";
+        thumbnailUrl=(thumbnailModule.CREATIVE_THUMBNAILS as Record<string,string>)[key] || undefined;
+      }
+      const visualRecord = clips.map((clip:any)=>mediaById.get(clip.assetId) as any).find((record:any)=>record && (record.kind==="video"||record.kind==="image"||record.type?.startsWith("video/")||record.type?.startsWith("image/")));
+      if (!thumbnailUrl && visualRecord) {
+        const kind=visualRecord.kind || (visualRecord.type?.startsWith("image/")?"image":"video");
+        if (kind==="video" && visualRecord.thumbnails?.[0]) thumbnailUrl=visualRecord.thumbnails[0];
+        if (kind==="image" && visualRecord.file instanceof Blob) {
+          const existing=mediaUrlsRef.current.get(visualRecord.id);
+          const file=visualRecord.file instanceof File?visualRecord.file:new File([visualRecord.file],visualRecord.name||visualRecord.id,{type:visualRecord.type||"image/png",lastModified:visualRecord.lastModified||Date.now()});
+          const url=existing??URL.createObjectURL(file);
+          if(!existing)mediaUrlsRef.current.set(visualRecord.id,url);
+          thumbnailUrl=url;
+        }
+        if (kind==="video" && !visualRecord.thumbnails?.length && visualRecord.file instanceof Blob && !thumbnailPreparationRef.current.has(visualRecord.id)) {
+          thumbnailPreparationRef.current.add(visualRecord.id);
+          const file=visualRecord.file instanceof File?visualRecord.file:new File([visualRecord.file],visualRecord.name||visualRecord.id,{type:visualRecord.type||"video/mp4",lastModified:visualRecord.lastModified||Date.now()});
+          const existing=mediaUrlsRef.current.get(visualRecord.id);
+          const url=existing??URL.createObjectURL(file);
+          if(!existing)mediaUrlsRef.current.set(visualRecord.id,url);
+          void createBrowserVideoThumbnails(url,{count:8}).then(async result=>{
+            if(!result.ok||!result.frames.length)return;
+            await sourceStore?.put({...visualRecord,file,thumbnails:result.frames});
+            setMediaItems(current=>current.map(item=>item.id===visualRecord.id?{...item,thumbnails:result.frames}:item));
+            await refreshSavedProjects();
+          }).catch(error=>console.warn("Gallery thumbnail preparation unavailable",error)).finally(()=>thumbnailPreparationRef.current.delete(visualRecord.id));
+        }
+      }
+      const hasUnresolvedVisual = clips.some((clip:any)=>String(clip.assetId).startsWith("asset:")||String(clip.assetId).startsWith("sample:unavailable:"));
       return {
-        id:entry.id, title:entry.title, kind:"video" as const, status:"draft" as const,
+        id:entry.id, title:entry.title, kind:"video" as const, status:(entry.metadata?.status ?? "draft") as CoProProjectSummary["status"],
+        resolution:entry.canvas?.width && entry.canvas?.height ? entry.canvas.width+" × "+entry.canvas.height : undefined,
+        format:entry.canvas?.frameRate ? entry.canvas.frameRate+" fps" : undefined,
         subtitle: fromTemplate
-          ? `From template · ${clipCount} clips · browser storage`
-          : `${clipCount} clips · saved in this browser`,
+          ? "Composition · " + clipCount + " clips"
+          : clipCount + " clips",
         durationMs:Math.round(durationUs/1000),
-        aspectRatio: entry.canvas?.width > entry.canvas?.height ? "16:9" : "9:16",
+        aspectRatio: entry.canvas?.width && entry.canvas?.height
+          ? (Math.abs(entry.canvas.width/entry.canvas.height-16/9)<.03?"16:9":Math.abs(entry.canvas.width/entry.canvas.height-9/16)<.03?"9:16":Math.abs(entry.canvas.width/entry.canvas.height-1)<.03?"1:1":entry.canvas.width+":"+entry.canvas.height)
+          : "Project",
         updatedAt:String(entry.updatedAt || entry.createdAt || new Date().toISOString()),
         thumbnailTone: fromTemplate ? "violet" as const : "cyan" as const,
+        thumbnailUrl,
+        thumbnailState: thumbnailUrl ? undefined : hasUnresolvedVisual ? "missing" as const : "empty" as const,
       };
     });
     setSavedProjects(summaries.sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)));
@@ -233,6 +313,13 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
       import("@inneranimalmedia/copro-templates/preview-thumbnails"),
     ]).then(([creative, thumbnails]) => {
       if (cancelled) return;
+      void import("@inneranimalmedia/copro-render/transitions").then(module=>setTransitionFactory(()=>module.createCoProTransitionRenderer));
+      void import("@inneranimalmedia/copro-templates/motion").then(module=>setMotionSampler(()=>module.sampleAnimation));
+      const previewProjects=new Map(creative.CREATIVE_TEMPLATES.map((template:any)=>[template.id,creative.createCreativeProject(template.id,{projectId:"preview:"+template.id})]));
+      setCreativePreviewRenderer(()=>(id:string,timeUs:number)=>{
+        const template=previewProjects.get(id);
+        return template?creative.renderCreativeProjectFrame(template,Math.floor(timeUs)):null;
+      });
       const byId = new Map(creative.CREATIVE_TEMPLATES.map((template) => [template.id,template]));
       setCreativeAssets(current => current.map(asset => {
         const template = byId.get(asset.id);
@@ -268,11 +355,18 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     return () => { cancelled = true; };
   }, [project,motionSampler,graphicSampler]);
 
+  useEffect(()=>{
+    if(creativeRenderer || !project.tracks.some((track:any)=>track.clips.some((clip:any)=>clip.metadata?.creative)))return;
+    let cancelled=false;
+    void import("@inneranimalmedia/copro-templates/creative").then(module=>{if(!cancelled)setCreativeRenderer(()=>module.renderCreativeProjectFrame);});
+    return()=>{cancelled=true;};
+  },[project.id,creativeRenderer]);
   useEffect(() => {
     if (!creativeRenderer) return;
     const hasCreative = project.tracks.some((track:any) => track.clips.some((clip:any) => Boolean(clip.metadata?.creative)));
     if (!hasCreative) return;
-    const svg = creativeRenderer(project,Math.max(0,playheadUs));
+    const duration=Math.max(1,...project.tracks.flatMap((track:any)=>track.clips.map((clip:any)=>clip.startUs+clip.durationUs)));
+    const svg = creativeRenderer(project,Math.min(duration-1,Math.max(0,playheadUs)));
     if (!svg) { setPreviewSrc(null); setPreviewKind(null); return; }
     setPreviewSrc("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
     setPreviewKind("image");
@@ -303,6 +397,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         return {
           id:record.id, name:record.name || file.name, kind, url,
           durationUs:record.durationUs, file, waveform:record.waveform, thumbnails:record.thumbnails,
+          width:record.width, height:record.height,
         };
       });
       setMediaItems((current) => {
@@ -337,30 +432,42 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     if (standalone) installCoProBrandIcons();
     void refreshSavedProjects();
     let cancelled = false;
-    void store.loadRecent().then((recent) => {
+    void (initialProjectId.current?store.load(initialProjectId.current):store.loadRecent()).then((recent) => {
       if (cancelled || !recent) {
         setRestored(true);
         return;
       }
+      autosaveProjectId.current=recent.id;
       sessionRef.current = new CoProEditorSession(recent);
       setProject(sessionRef.current.project);
       setSelectedClipId(recent.tracks.flatMap((track:any) => track.clips)[0]?.id ?? null);
+      setPlayheadUs(0);
+      setRestored(true);
+    }).catch(()=>{
+      if(cancelled)return;
+      setMediaPersistenceError("Could not open the saved project. Return to Projects and try another edit.");
       setRestored(true);
     });
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (!restored) return;
+    if (!restored || autosaveProjectId.current!==project.id) return;
     const timer = window.setTimeout(() => {
+      if(autosaveProjectId.current!==project.id)return;
       void store.save(project).then(() => refreshSavedProjects()).catch((error) => {
         console.error("CoPro local save failed", error);
+        setMediaPersistenceError("Your latest changes could not be saved. Free storage and try again.");
       });
     }, 180);
     return () => window.clearTimeout(timer);
   }, [project, restored]);
 
   function installProject(next: any, selectedId: string | null = null) {
+    autosaveProjectId.current=next.id;
+    setPreviewSrc(null);
+    setPreviewKind(null);
+    setCreativeRenderer(null);
     sessionRef.current = new CoProEditorSession(next);
     setProject(sessionRef.current.project);
     setSelectedClipId(selectedId ?? next.tracks.flatMap((track:any) => track.clips)[0]?.id ?? null);
@@ -399,9 +506,17 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }, []);
 
   async function openProject(id: string) {
+    const generation=++projectOpenGeneration.current;
+    if(autosaveProjectId.current===sessionRef.current.project.id)await store.save(sessionRef.current.project);
     const summary = projects.find((item) => item.id === id);
     const saved = summary?.example ? null : await store.load(id);
-    if (!summary?.example && !saved) return;
+    if (generation!==projectOpenGeneration.current || (!summary?.example && !saved)) return;
+    if (saved?.tracks.some((track:any)=>track.clips.some((clip:any)=>clip.metadata?.creative))) {
+      const creative=await import("@inneranimalmedia/copro-templates/creative");
+      installProject(saved);
+      setCreativeRenderer(()=>creative.renderCreativeProjectFrame);
+      setInitialTool(null);showScreen("editor");return;
+    }
     const next = saved ?? makeDemoProject("project:example-copy:" + Date.now(), (summary?.title ?? "CoPro") + " (example)");
     await store.save(next);
     installProject(next);
@@ -425,7 +540,6 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
       };
     }
     // Clear any previous session preview before installing so foreign media cannot leak in.
-    setCreativeRenderer(() => creative.renderCreativeProjectFrame);
     setPreviewSrc(null);
     setPreviewKind(null);
     await store.save(next);
@@ -434,6 +548,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     const previewTimeUs = Math.min(1_200_000, Math.max(0, (creativeClip?.durationUs ?? 1) - 1));
     const svg = creative.renderCreativeProjectFrame(next, previewTimeUs);
     installProject(next, creativeClip?.id ?? null);
+    setCreativeRenderer(() => creative.renderCreativeProjectFrame);
     setPlayheadUs(previewTimeUs);
     setPreviewSrc(svg ? "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg) : null);
     setPreviewKind(svg ? "image" : null);
@@ -454,11 +569,14 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }
 
   async function createBlank(tool: "text" | "captions" | null = null) {
+    ++projectOpenGeneration.current;
+    if(autosaveProjectId.current===sessionRef.current.project.id)await store.save(sessionRef.current.project);
     setCreativeRenderer(null);
     const next = createCoProProject({ id:"project:new:" + Date.now(), title:"Untitled project" });
     next.tracks.push(createTrack({ id:"track:video", kind:"video", name:"Video" }));
     setPreviewSrc(null);
     setPreviewKind(null);
+    setPlayheadUs(0);
     installProject(next, null);
     setInitialTool(tool);
     await store.save(next);
@@ -467,15 +585,14 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
 
   async function importFile(file: File) {
     setCreativeRenderer(null);
+    const item = await registerSessionMedia(file);
     const old = previewSrc;
-    if (old) URL.revokeObjectURL(old);
-    const url = URL.createObjectURL(file);
-    const next = makeImportedProject(file);
+    // Source URLs are owned by the media cache and remain valid for other projects.
+    const next = makeImportedProject(file,item);
     installProject(next, "clip:imported");
-    await registerSessionMedia(file);
     await store.save(next);
-    setPreviewSrc(url);
-    setPreviewKind(file.type.startsWith("image/") ? "image" : file.type.startsWith("video/") ? "video" : null);
+    setPreviewSrc(item.url);
+    setPreviewKind(item.kind === "image" ? "image" : item.kind === "video" ? "video" : null);
     setInitialTool(null);
     showScreen("editor");
   }
@@ -533,7 +650,25 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }
 
   async function deleteSavedProject(id: string) {
+    const target = await store.load(id);
+    const allProjects = await store.list();
+    const targetAssetIds = new Set((target?.tracks ?? []).flatMap((track:any)=>(track.clips ?? []).map((clip:any)=>clip.assetId)));
+    const sharedAssetIds = new Set(allProjects.filter((entry:any)=>entry.id!==id).flatMap((entry:any)=>(entry.tracks ?? []).flatMap((track:any)=>(track.clips ?? []).map((clip:any)=>clip.assetId))));
     await store.remove(id);
+    if(sessionRef.current.project.id===id) {
+      autosaveProjectId.current=null;
+      const next=createCoProProject({id:"project:new:"+Date.now(),title:"Untitled project"});
+      sessionRef.current=new CoProEditorSession(next);
+      setPreviewSrc(null);setPreviewKind(null);setCreativeRenderer(null);setSelectedClipId(null);setPlayheadUs(0);
+      // Do not autosave a replacement until a user creates or opens a project.
+    }
+    const exclusiveAssetIds = [...targetAssetIds].filter(assetId=>!sharedAssetIds.has(assetId));
+    for (const assetId of exclusiveAssetIds) {
+      await sourceStore?.remove(assetId);
+      const url=mediaUrlsRef.current.get(assetId);
+      if(url){URL.revokeObjectURL(url);mediaUrlsRef.current.delete(assetId);}
+    }
+    if(exclusiveAssetIds.length)setMediaItems(current=>current.filter(item=>!exclusiveAssetIds.includes(item.id)));
     await refreshSavedProjects();
   }
 
@@ -553,14 +688,20 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     const id = mediaIdForFile(file);
     const existing = mediaItems.find((item) => item.id === id);
     if (existing) {
+      const probed = existing.kind !== "audio" && (!existing.width || !existing.height)
+        ? await probeMediaMetadata(file) : null;
+      const refreshed = probed ? {...existing,...probed} : existing;
+      if (refreshed !== existing) setMediaItems(current=>current.map(item=>item.id===id?refreshed:item));
       if (sourceStore) void sourceStore.put({
-        id:existing.id, name:existing.name, kind:existing.kind, file:existing.file,
-        durationUs:existing.durationUs, waveform:existing.waveform, thumbnails:existing.thumbnails,
+        id:refreshed.id, name:refreshed.name, kind:refreshed.kind, file:refreshed.file,
+        durationUs:refreshed.durationUs, waveform:refreshed.waveform, thumbnails:refreshed.thumbnails,
+        width:refreshed.width, height:refreshed.height,
       }).then(() => setMediaPersistenceError(null)).catch(() => setMediaPersistenceError("Source media could not be saved. Check available device storage."));
-      return existing;
+      return refreshed;
     }
 
-    let durationUs = await probeMediaDurationUs(file);
+    const probed = await probeMediaMetadata(file);
+    let durationUs = probed.durationUs;
     let waveform: number[] | undefined;
 
     if (kind === "audio") {
@@ -577,6 +718,8 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
       kind,
       url:mediaUrlsRef.current.get(id) ?? URL.createObjectURL(file),
       durationUs,
+      width:probed.width,
+      height:probed.height,
       file,
       waveform,
     };
@@ -584,7 +727,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     setMediaItems((current) => current.some((candidate) => candidate.id === id) ? current : [...current, item]);
     if (sourceStore) {
       try {
-        await sourceStore.put({ id, name:item.name, kind, file, durationUs, waveform });
+        await sourceStore.put({ id, name:item.name, kind, file, durationUs, waveform, width:item.width, height:item.height });
         setMediaPersistenceError(null);
       } catch (error) {
         console.error("CoPro media source save failed", error);
@@ -601,9 +744,10 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         const frames=result.frames;
         setMediaItems(current=>current.map(media=>media.id===id?{...media,thumbnails:frames}:media));
         if (sourceStore) {
-          try { await sourceStore.put({id,name:item.name,kind,file,durationUs,waveform,thumbnails:frames}); }
+          try { await sourceStore.put({id,name:item.name,kind,file,durationUs,waveform,width:item.width,height:item.height,thumbnails:frames}); }
           catch(error){console.warn("CoPro thumbnail cache could not persist",error);}
         }
+        void refreshSavedProjects();
       }).catch(error=>console.warn("Video thumbnail preparation unavailable",error));
     }
     return item;
@@ -614,6 +758,10 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     const kind = item.kind === "audio" ? "audio" : item.kind === "image" ? "overlay" : "video";
 
     let currentProject = session.project;
+    const hasVisualSource = currentProject.tracks.some((entry:any)=>entry.clips.some((clip:any)=>clip.metadata?.mimeType?.startsWith("video/")||clip.metadata?.mimeType?.startsWith("image/")));
+    if ((item.kind==="video"||item.kind==="image") && item.width && item.height && !hasVisualSource) {
+      currentProject=session.execute({type:"project.set_canvas",payload:{width:item.width,height:item.height,frameRate:currentProject.canvas?.frameRate??30}});
+    }
     let track = currentProject.tracks.find((entry:any) => entry.kind === kind && !entry.locked);
 
     if (!track) {
@@ -633,7 +781,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     const clip = createClip({
       id:clipId,
       assetId:item.id,
-      startUs:atUs,
+      startUs:currentProject.tracks.every((entry:any)=>entry.clips.length===0)?0:atUs,
       durationUs:item.durationUs ?? 3_000_000,
       metadata:{
         fileName:item.name,
@@ -658,9 +806,42 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
 
   async function commit(action: CoProStudioAction) {
     const session = sessionRef.current;
+    if ("clipId" in action && session.project.tracks.some((track:any)=>track.locked && track.clips.some((clip:any)=>clip.id===action.clipId))) return;
 
-    if (action.type === "back") { setHomeSection("home"); showScreen("projects"); return; }
-    if (action.type === "browse-templates") { setHomeSection("templates"); showScreen("projects"); return; }
+    if (action.type === "back") { if(autosaveProjectId.current===session.project.id)await store.save(session.project); await refreshSavedProjects(); setHomeSection("home"); showScreen("projects"); return; }
+    if (action.type === "apply-template") {
+      const creative = await import("@inneranimalmedia/copro-templates/creative");
+      if (session !== sessionRef.current) return;
+      const template = creative.createCreativeProject(action.id, {projectId:"template:"+Date.now(),now:new Date()});
+      const prefix = "applied:"+Date.now()+":";
+      const tracks = template.tracks.map((track:any)=>({...track,id:prefix+track.id,clips:track.clips.map((clip:any)=>({...clip,id:prefix+clip.id,startUs:clip.startUs+playheadUs}))}));
+      const next = session.execute({type:"project.apply_template",payload:{tracks,canvas:template.canvas}});
+      setProject(next);
+      setSelectedClipId(tracks.flatMap((track:any)=>track.clips).find((clip:any)=>clip.metadata?.creative)?.id ?? null);
+      setCreativeRenderer(()=>creative.renderCreativeProjectFrame);
+      return;
+    }
+    if (action.type === "set-cover") {
+      setProject(session.execute({type:"project.set_cover",payload:{cover:action.cover}}));
+      return;
+    }
+    if (action.type === "rename-media" || action.type === "delete-media") {
+      const item = mediaItems.find(item=>item.id===action.id);
+      if (!item || !sourceStore) return;
+      try {
+        if (action.type === "delete-media") {
+          await sourceStore.remove(item.id);
+          setMediaItems(items=>items.filter(value=>value.id!==item.id));
+          mediaUrlsRef.current.delete(item.id);
+        } else {
+          await sourceStore.put({...item,name:action.name});
+          setMediaItems(items=>items.map(value=>value.id===item.id?{...value,name:action.name}:value));
+        }
+        await refreshSavedProjects();
+      } catch {setMediaPersistenceError("Could not update this file. Try again.");}
+      return;
+    }
+    if (action.type === "browse-templates") return;
     if (action.type === "export-project") {
       const json = serializeCoProProject(session.project);
       const blob = new Blob([json], { type:"application/json" });
@@ -676,6 +857,10 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     }
     if (action.type === "undo") { setProject(session.undo()); return; }
     if (action.type === "redo") { setProject(session.redo()); return; }
+    if (action.type === "set-canvas") {
+      setProject(session.execute({type:"project.set_canvas",payload:action.canvas}));
+      return;
+    }
     if (action.type === "move") { setProject(session.execute({ type:"clip.move", payload:{ clipId:action.clipId, startUs:action.startUs } })); return; }
     if (action.type === "trim") { setProject(session.execute({ type:"clip.trim", payload:{ clipId:action.clipId, ...action.patch } })); return; }
     if (action.type === "speed") { setProject(session.execute({ type:"clip.set_speed", payload:{ clipId:action.clipId, playbackRate:action.playbackRate } })); return; }
@@ -683,7 +868,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     if (action.type === "transform") { setProject(session.execute({ type:"clip.set_transform", payload:{ clipId:action.clipId, ...action.patch } })); return; }
     if (action.type === "text") { setProject(session.execute({ type:"clip.set_text", payload:{ clipId:action.clipId, text:action.text } })); return; }
     if (action.type === "effect") { setProject(session.execute({ type:"clip.set_effect", payload:{ clipId:action.clipId, effect:action.effect } })); return; }
-    if (action.type === "transition") { setProject(session.execute({ type:"clip.set_transition", payload:{ clipId:action.clipId, transition:action.transition, durationUs:action.durationUs } })); return; }
+    if (action.type === "transition") { setProject(session.execute({ type:"clip.set_transition", payload:{ clipId:action.clipId, transition:action.transition, durationUs:action.durationUs, direction:action.direction, easing:action.easing } })); return; }
     if (action.type === "motion") {
       if (action.motion === "none") {
         setProject(session.execute({type:"clip.set_motion",payload:{clipId:action.clipId,motion:"none"}}));
@@ -693,7 +878,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
       const definition = motion.ANIMATIONS.find((item) => item.id === action.motion);
       if (!definition) return;
       setMotionSampler(() => motion.sampleAnimation);
-      setProject(session.execute({type:"clip.set_motion",payload:{clipId:action.clipId,motion:action.motion,durationUs:definition.durationUs}}));
+      setProject(session.execute({type:"clip.set_motion",payload:{clipId:action.clipId,motion:action.motion,durationUs:action.durationUs ?? definition.durationUs}}));
       return;
     }
     if (action.type === "graphic") {
@@ -727,9 +912,10 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     if (action.type === "track-reorder") { setProject(session.execute({ type:"track.reorder", payload:{ trackId:action.trackId, index:action.index } })); return; }
 
     if (action.type === "import-media-batch") {
-      let nextAtUs = action.atUs;
+      let nextAtUs = session.project.tracks.every((track:any)=>!track.clips.length)?0:action.atUs;
       for (const file of action.files) {
         const item = await registerSessionMedia(file);
+        if (session !== sessionRef.current) return;
         addSessionMediaToTimeline(item, nextAtUs);
         nextAtUs += item.durationUs ?? 3_000_000;
       }
@@ -738,6 +924,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
 
     if (action.type === "import-media") {
       const item = await registerSessionMedia(action.file);
+      if (session !== sessionRef.current) return;
       addSessionMediaToTimeline(item, action.atUs);
       return;
     }
@@ -824,8 +1011,8 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
         onRecord={() => void startScreenRecording()}
         onStopRecording={stopScreenRecording}
         onOpenTool={(tool) => void createBlank(tool)}
-        onRenameProject={(id,title) => void renameProject(id,title)}
-        onDeleteProject={(id) => void deleteSavedProject(id)}
+        onRenameProject={renameProject}
+        onDeleteProject={deleteSavedProject}
         onDuplicateProject={(id) => void duplicateSavedProject(id)}
         appIconUrl={coproAppManifest.iconBaseUrl ? coproAppManifest.iconBaseUrl + "/small" : undefined}
         systemIcons={MOVIEMODE_SYSTEM_ICONS}
@@ -858,7 +1045,9 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     mediaItems={mediaItems}
     creativeAssets={creativeAssets}
     systemIcons={MOVIEMODE_SYSTEM_ICONS}
-    onOpenCreativeTemplate={(id) => void openCreativeTemplate(id)}
+    onOpenCreativeTemplate={(id) => void commit({type:"apply-template",id})}
+    createTransitionPreview={transitionFactory}
+    renderCreativePreview={creativePreviewRenderer}
     sampleMotion={motionSampler ?? undefined}
     sampleGraphic={graphicSampler ?? undefined}
     onMediaAdd={(id, atUs) => {

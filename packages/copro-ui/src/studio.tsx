@@ -1,23 +1,28 @@
 import { IconAction } from "./icon-action.js";
-import type { CoProCreativeAsset, CoProMotionSampler, CoProGraphicSampler } from "./creative-types.js";
+import type { CoProCreativeAsset, CoProMotionSampler, CoProGraphicSampler, CoProTransitionPreviewFactory } from "./creative-types.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft, AudioLines, Captions, ChevronRight, Copy, Film,
   Layers, Play, Pause, Redo2, Scissors, SlidersHorizontal, Sparkles,
   Trash2, Type, Undo2, X, Gauge, Volume2, Replace, Clapperboard, PanelLeftClose, PanelRightClose, PanelsTopLeft, RotateCcw,
-  Sticker, Palette, SlidersVertical, Folder, Download, Film as FilmIcon, GripVertical, PanelsTopLeft as DockIcon, ExternalLink,
+  Sticker, Palette, SlidersVertical, Folder, Download, Film as FilmIcon, GripVertical, PanelsTopLeft as DockIcon, ExternalLink, Box, ZoomIn, Maximize2, Ratio, ChevronDown,
 } from "lucide-react";
 import { CoProTimeline, type CoProProjectView } from "./timeline.js";
 import { CoProToolPanel, type CoProMediaShelfItem } from "./tool-sheet.js";
 import { CoProMediaBrowser, type CoProMediaBrowserSection } from "./media-browser.js";
 import { CoProSystemIcon, type CoProSystemIconMap } from "./system-icon.js";
 import { ResizeHandle, useWorkspaceLayout, clampWorkspaceSize } from "./workspace-layout-moviemode.js";
+import { CoProCreativeWorkspace } from "./creative-workspace.js";
 
 
 export type CoProStudioAction =
   | { type: "back" }
   | { type: "export-project" }
   | { type: "browse-templates" }
+  | { type: "apply-template"; id: string }
+  | { type: "set-cover"; cover: {kind:"frame"|"upload";url:string;timeUs?:number}|null }
+  | { type: "rename-media"; id:string; name:string }
+  | { type: "delete-media"; id:string }
   | { type: "undo" }
   | { type: "redo" }
   | { type: "split"; clipId: string; atUs: number }
@@ -30,7 +35,7 @@ export type CoProStudioAction =
   | { type: "transform"; clipId: string; patch: { scale?: number; x?: number; y?: number; rotation?: number; opacity?: number } }
   | { type: "text"; clipId: string; text: string }
   | { type: "effect"; clipId: string; effect: string }
-  | { type: "transition"; clipId: string; transition: string; durationUs?: number }
+  | { type: "transition"; clipId: string; transition: string; durationUs?: number; direction?:string; easing?:string }
   | { type: "motion"; clipId: string; motion: string; durationUs?: number }
   | { type: "graphic"; clipId: string; graphic: string; text?: string }
   | { type: "creative-parameters"; clipId: string; patch: Record<string, unknown> }
@@ -39,7 +44,8 @@ export type CoProStudioAction =
   | { type: "import-media-batch"; files: File[]; atUs: number }
   | { type: "add-track" }
   | { type: "track-state"; trackId: string; patch: { visible?: boolean; muted?: boolean; locked?: boolean } }
-  | { type: "track-reorder"; trackId: string; index: number };
+  | { type: "track-reorder"; trackId: string; index: number }
+  | { type: "set-canvas"; canvas: { width: number; height: number; frameRate?: number } };
 
 export type CoProStudioProps = {
   project: CoProProjectView;
@@ -54,6 +60,8 @@ export type CoProStudioProps = {
   mediaItems?: CoProMediaShelfItem[];
   creativeAssets?: CoProCreativeAsset[];
   systemIcons?: CoProSystemIconMap;
+  createTransitionPreview?:CoProTransitionPreviewFactory;
+  renderCreativePreview?: (id:string,timeUs:number)=>string|null;
   sampleMotion?: CoProMotionSampler;
   sampleGraphic?: CoProGraphicSampler;
   onSeek?: (timeUs: number) => void;
@@ -74,6 +82,7 @@ const PRIMARY_TOOLS = [
   ["adjustments", "Adjustment", "☷"],
   ["transitions", "Transitions", "◇"],
   ["templates", "Templates", "▦"],
+  ["3d", "3D / Scene", "◇"],
 ] as const;
 
 const CLIP_TOOLS = [
@@ -95,6 +104,18 @@ const HANDSET_PRIMARY_TOOLS = [
   ["more", "More"],
 ] as const;
 
+const CANVAS_RATIOS = [
+  { label:"16:9", width:1920, height:1080 },
+  { label:"4:3", width:1440, height:1080 },
+  { label:"2.35:1", width:1920, height:817 },
+  { label:"2:1", width:1920, height:960 },
+  { label:"1.85:1", width:1920, height:1038 },
+  { label:"9:16", width:1080, height:1920 },
+  { label:"3:4", width:1080, height:1440 },
+  { label:"1:1", width:1080, height:1080 },
+  { label:"Phone · 19.5:9", width:1170, height:2532 },
+] as const;
+
 const HANDSET_MORE_TOOLS = [
   ["captions", "Captions", "Timed subtitles and dialogue"],
   ["stickers", "Stickers", "Shapes, arrows and callouts"],
@@ -102,6 +123,7 @@ const HANDSET_MORE_TOOLS = [
   ["filters", "Filters", "Looks and color presets"],
   ["adjustments", "Adjustments", "Color and geometry controls"],
   ["templates", "Templates", "Editable starting compositions"],
+  ["3d", "3D / Scene", "Model, sculpt, animate, light, render and present"],
 ] as const;
 
 function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
@@ -117,6 +139,7 @@ function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
     effects: "aperture",
     transitions: "layers",
     templates: "film",
+    "3d": "layers",
     split: "cut",
     trim: "select",
     speed: "time",
@@ -140,6 +163,7 @@ function renderToolIcon(id: string, systemIcons?: CoProSystemIconMap) {
     case "effects": return <Sparkles size={size}/>;
     case "transitions": return <Layers size={size}/>;
     case "templates": return <Clapperboard size={size}/>;
+    case "3d": return <Box size={size}/>;
     case "split": return <Scissors size={size}/>;
     case "trim": return <Replace size={size}/>;
     case "speed": return <Gauge size={size}/>;
@@ -164,6 +188,8 @@ export function CoProStudio({
   creativeAssets = [],
   systemIcons,
   sampleMotion,
+  renderCreativePreview,
+  createTransitionPreview,
   sampleGraphic,
   onSeek,
   onSelectClip,
@@ -182,6 +208,43 @@ export function CoProStudio({
   const workspaceRef = useRef<HTMLElement>(null);
   const [workspaceWidth, setWorkspaceWidth] = useState(1440);
   const [workspaceHeight, setWorkspaceHeight] = useState(800);
+  const [playbackQuality, setPlaybackQuality] = useState<"Full"|"High"|"Medium"|"Low">("High");
+  const [previewZoom, setPreviewZoom] = useState(100);
+  const [previewControlMenu, setPreviewControlMenu] = useState<"quality"|"zoom"|"ratio"|null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [viewportFullscreen,setViewportFullscreen]=useState(false);
+  const [fullscreenHudVisible, setFullscreenHudVisible] = useState(true);
+  const playerPaneRef = useRef<HTMLElement>(null);
+  const previewStageRef = useRef<HTMLElement>(null);
+  const [stageSize,setStageSize] = useState({width:640,height:360});
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const [coverError,setCoverError] = useState<string|null>(null);
+  useEffect(()=>{
+    const node=previewStageRef.current;
+    if(!node||typeof ResizeObserver==="undefined")return;
+    const observer=new ResizeObserver(([entry])=>setStageSize({width:Math.max(1,entry.contentRect.width-24),height:Math.max(1,entry.contentRect.height-16)}));
+    observer.observe(node);return()=>observer.disconnect();
+  },[]);
+  const canvasRatio=(project.canvas?.width??1920)/(project.canvas?.height??1080);
+  const previewWidth=Math.min(stageSize.width,stageSize.height*canvasRatio);
+  function saveCover(source:CanvasImageSource) {
+    try {
+      const canvas=document.createElement("canvas");canvas.width=640;canvas.height=Math.round(640/canvasRatio);
+      canvas.getContext("2d")!.drawImage(source,0,0,canvas.width,canvas.height);
+      onAction?.({type:"set-cover",cover:{kind:"frame",url:canvas.toDataURL("image/jpeg",.85),timeUs:playheadUs}});
+      setCoverError(null);
+    } catch {setCoverError("Could not capture this frame. Upload a cover instead.");}
+  }
+  async function uploadCover(file:File) {
+    if(!file.type.startsWith("image/")){setCoverError("Choose an image for your cover.");return;}
+    try {
+      const image=await createImageBitmap(file);
+      const canvas=document.createElement("canvas");const scale=Math.min(640/image.width,640/image.height,1);canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));
+      canvas.getContext("2d")!.drawImage(image,0,0,canvas.width,canvas.height);image.close();
+      onAction?.({type:"set-cover",cover:{kind:"upload",url:canvas.toDataURL("image/jpeg",.85)}});
+      setCoverError(null);
+    } catch {setCoverError("Could not open this image. Choose another cover.");}
+  }
 
   useEffect(() => {
     if (!workspaceRef.current || typeof ResizeObserver === "undefined") return;
@@ -196,7 +259,69 @@ export function CoProStudio({
 
   useEffect(() => { if (selectedClipId) setPanePreference("inspector"); }, [selectedClipId]);
 
+  const projectDurationUs = Math.max(0,...project.tracks.flatMap(track=>track.clips.map(clip=>clip.startUs+clip.durationUs)));
   const videoRef = useRef<HTMLVideoElement>(null);
+  const playbackPosition=useRef(playheadUs);playbackPosition.current=playheadUs;
+  const audioPlayers=useRef(new Map<string,HTMLAudioElement>());
+  useEffect(()=>{
+    if(!playing)return;
+    let frame=0,previous=performance.now();
+    const tick=(now:number)=>{
+      const next=Math.min(projectDurationUs,playbackPosition.current+Math.round((now-previous)*1000));
+      previous=now;onSeek?.(next);
+      if(next>=projectDurationUs){setPlaying(false);videoRef.current?.pause();return;}
+      frame=requestAnimationFrame(tick);
+    };
+    frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);
+  },[playing,projectDurationUs,onSeek]);
+  useEffect(()=>{
+    for(const track of project.tracks)for(const clip of track.clips){
+      const audio=audioPlayers.current.get(clip.id);if(!audio)continue;
+      const active=playheadUs>=clip.startUs&&playheadUs<clip.startUs+clip.durationUs&&!track.muted;
+      audio.muted=Boolean(track.muted);
+      audio.volume=Math.max(0,Math.min(1,clip.volume??1));
+      audio.playbackRate=clip.playbackRate??1;
+      const time=((playheadUs-clip.startUs)*(clip.playbackRate??1)+(clip.inUs??0))/1e6;
+      if(active&&Math.abs(audio.currentTime-time)>.15)audio.currentTime=Math.max(0,time);
+      if(active&&playing){if(audio.paused)void audio.play().catch(()=>setPreviewDecodeWarning("Audio playback could not start. Press Play to retry."));}
+      else audio.pause();
+    }
+  },[project,playheadUs,playing]);
+
+  const currentRatioLabel = CANVAS_RATIOS.find(ratio=>ratio.width===project.canvas?.width&&ratio.height===project.canvas?.height)?.label
+    ?? (project.canvas?.width&&project.canvas?.height?`${project.canvas.width}:${project.canvas.height}`:"Original");
+
+  useEffect(()=>{
+    const syncFullscreen=()=>{
+      const active=document.fullscreenElement===playerPaneRef.current;
+      setIsFullscreen(active);
+      if(active)setFullscreenHudVisible(true);
+      setPreviewControlMenu(null);
+    };
+    document.addEventListener("fullscreenchange",syncFullscreen);
+    return()=>document.removeEventListener("fullscreenchange",syncFullscreen);
+  },[]);
+
+  useEffect(()=>{
+    if(!isFullscreen||!fullscreenHudVisible)return;
+    const timer=window.setTimeout(()=>setFullscreenHudVisible(false),4000);
+    return()=>window.clearTimeout(timer);
+  },[isFullscreen,fullscreenHudVisible,playing]);
+
+  async function toggleFullscreen(){
+    const pane=playerPaneRef.current;
+    if(!pane)return;
+    try{
+      if(viewportFullscreen){setViewportFullscreen(false);setIsFullscreen(false);return;}
+      if(document.fullscreenElement===pane)await document.exitFullscreen();
+      else if(!document.fullscreenElement)await pane.requestFullscreen();
+    }catch{setViewportFullscreen(true);setIsFullscreen(true);setFullscreenHudVisible(true);}
+  }
+
+  function chooseCanvasRatio(width:number,height:number){
+    onAction?.({type:"set-canvas",canvas:{width,height,frameRate:project.canvas?.frameRate??30}});
+    setPreviewControlMenu(null);
+  }
   const dragStartRef = useRef<{startX:number;startY:number;x:number;y:number;clipId:string;nextX:number;nextY:number}|null>(null);
 
   const selectedEntry = useMemo(() => {
@@ -207,6 +332,7 @@ export function CoProStudio({
     return null;
   }, [project, selectedClipId]);
 
+  useEffect(()=>{if(selectedClipId&&!selectedEntry)onSelectClip?.(null);},[selectedClipId,selectedEntry,onSelectClip]);
   const selectedClip = selectedEntry?.clip ?? null;
   const selectedTrack = selectedEntry?.track ?? null;
   const projectMediaIds = useMemo(
@@ -216,10 +342,10 @@ export function CoProStudio({
   const isNarrow = workspaceWidth < 900;
   const isCompact = workspaceWidth < 600;
   const isHandset = workspaceWidth < 600;
-  const clipSpecificTools = ["trim", "speed", "volume", "effects", "transitions", "text", "captions", "transform", "filters", "adjustments"];
-  const canonicalTool = (tool: string | null) => tool === "filters" ? "effects" : tool === "adjustments" ? "transform" : tool;
+  const clipSpecificTools = ["trim", "speed", "volume", "effects", "transitions", "text", "captions", "transform", "filters", "adjustments", "video", "animation", "tracking", "adjust", "ai-stylize"];
+  const canonicalTool = (tool: string | null) => tool === "filters" ? "effects" : tool === "adjustments" ? "adjust" : tool === "transform" ? "video" : tool;
   const inspectorTool = activeTool === "export" ? "export" : selectedClip
-    ? (activeTool && clipSpecificTools.includes(activeTool) ? canonicalTool(activeTool) : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" ? "text" : "transform")
+    ? (activeTool && clipSpecificTools.includes(activeTool) ? canonicalTool(activeTool) : selectedTrack?.kind === "audio" ? "volume" : selectedTrack?.kind === "captions" ? "captions" : selectedTrack?.kind === "overlay" ? "text" : "video")
     : "project";
   const inspectorAvailable = Boolean(inspectorTool);
   const showInspector = isHandset ? handsetPanel === "inspector" && inspectorAvailable : inspectorAvailable && layout.inspectorOpen && (!isNarrow || panePreference === "inspector" || !layout.browserOpen);
@@ -230,7 +356,7 @@ export function CoProStudio({
   const dockInspector = showInspector && !inspectorFloating;
   const browserWidth = clampWorkspaceSize(layout.browserWidth, 260, Math.max(260, workspaceWidth - (dockInspector ? layout.inspectorWidth : 0) - 330));
   const inspectorWidth = clampWorkspaceSize(layout.inspectorWidth, 260, Math.max(260, workspaceWidth - (dockBrowser ? browserWidth : 0) - 330));
-  const timelineHeight = clampWorkspaceSize(layout.timelineHeight || Math.round(workspaceHeight * .45), isCompact ? 115 : 150, Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 300 : 225)));
+  const timelineHeight = clampWorkspaceSize(layout.timelineHeight || Math.round(workspaceHeight * .25), isCompact ? 115 : 150, Math.max(isCompact ? 170 : 180, workspaceHeight - (isCompact ? 300 : 225)));
   const gridStyle = {
     "--copro-browser-width": dockBrowser ? `${browserWidth}px` : "0px",
     "--copro-browser-handle": dockBrowser ? "8px" : "0px",
@@ -243,7 +369,7 @@ export function CoProStudio({
     for (const track of project.tracks) {
       if (track.visible === false || (track.kind !== "video" && track.kind !== "overlay")) continue;
       for (const clip of track.clips) {
-        if (playheadUs >= clip.startUs && playheadUs < clip.startUs + clip.durationUs) {
+        if (Math.min(playheadUs,Math.max(0,projectDurationUs-1)) >= clip.startUs && Math.min(playheadUs,Math.max(0,projectDurationUs-1)) < clip.startUs + clip.durationUs) {
           if (track.kind === "video" || clip.metadata?.creative || mediaItems.some((media) => media.id === clip.assetId && media.kind === "image")) {
             return clip;
           }
@@ -309,11 +435,11 @@ export function CoProStudio({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     if (drag.nextX !== drag.x || drag.nextY !== drag.y) onAction?.({type:"transform",clipId:drag.clipId,patch:{x:drag.nextX,y:drag.nextY}});
   }
-  const effectivePreviewSrc = activeMedia ? activeMedia.url : (activeVisualClip && !activeVisualClip.metadata?.creative && mediaItems.length ? null : previewSrc);
+  const effectivePreviewSrc = activeMedia?.url ?? (activeVisualClip?.metadata?.creative ? previewSrc : null);
   useEffect(()=>setPreviewDecodeWarning(null),[effectivePreviewSrc]);
   const effectivePreviewKind = activeMedia?.kind === "image" ? "image"
     : activeMedia?.kind === "video" ? "video"
-    : activeVisualClip && !activeVisualClip.metadata?.creative && mediaItems.length ? null : previewKind;
+    : activeVisualClip?.metadata?.creative ? previewKind : null;
   const hasUnavailableFootage = project.tracks.some((track) =>
     (track.kind === "video" || track.kind === "audio") && track.clips.some((clip) =>
       !mediaItems.some((item) => item.id === clip.assetId)
@@ -338,20 +464,22 @@ export function CoProStudio({
     const video = videoRef.current;
     if (!video) return;
     const seekSeconds = activeVisualClip
-      ? (playheadUs - activeVisualClip.startUs + (activeVisualClip.inUs ?? 0)) / 1_000_000
+      ? ((playheadUs - activeVisualClip.startUs) * (activeVisualClip.playbackRate ?? 1) + (activeVisualClip.inUs ?? 0)) / 1_000_000
       : 0;
     if (Math.abs(video.currentTime - seekSeconds) > .25 && Number.isFinite(video.duration)) {
       video.currentTime = Math.min(seekSeconds, video.duration || seekSeconds);
     }
-    video.playbackRate = Math.max(.25, Math.min(4, selectedClip?.playbackRate ?? 1));
-    video.volume = Math.max(0, Math.min(1, selectedClip?.volume ?? 1));
-  }, [playheadUs, activeVisualClip?.startUs, activeVisualClip?.inUs, selectedClip?.playbackRate, selectedClip?.volume]);
+    video.playbackRate = Math.max(.25, Math.min(4, activeVisualClip?.playbackRate ?? 1));
+    video.volume = Math.max(0, Math.min(1, activeVisualClip?.volume ?? 1));
+    video.muted = project.tracks.some(track=>track.muted && track.clips.some(clip=>clip.id===activeVisualClip?.id));
+  }, [playheadUs, activeVisualClip?.startUs, activeVisualClip?.inUs, activeVisualClip?.playbackRate, activeVisualClip?.volume, project]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, select, [contenteditable=true]")) return;
 
+      if(event.key==="Escape"&&viewportFullscreen){setViewportFullscreen(false);setIsFullscreen(false);return;}
       const meta = event.metaKey || event.ctrlKey;
       if (meta && event.key.toLowerCase() === "z") {
         event.preventDefault();
@@ -365,7 +493,7 @@ export function CoProStudio({
         return;
       }
 
-      if (event.key.toLowerCase() === "s" && selectedClip) {
+      if (((meta && event.key.toLowerCase() === "b") || (!meta && event.key.toLowerCase() === "s")) && selectedClip) {
         event.preventDefault();
         onAction?.({ type: "split", clipId: selectedClip.id, atUs: playheadUs });
         return;
@@ -384,20 +512,19 @@ export function CoProStudio({
   async function togglePlayback() {
     const video = videoRef.current;
     if (!video) {
+      if(playheadUs>=projectDurationUs)onSeek?.(0);
       setPlaying((value) => !value);
       return;
     }
-    if (video.paused) {
-      await video.play();
-      setPlaying(true);
-    } else {
-      video.pause();
-      setPlaying(false);
-    }
+    if (!playing) {
+      if(playheadUs>=projectDurationUs)onSeek?.(0);
+      try {await video.play();setPlaying(true);}
+      catch {setPreviewDecodeWarning("Playback could not start. Try again or relink this source.");}
+    } else {video.pause();setPlaying(false);}
   }
 
   function runTool(id: string) {
-    if (id === "templates") { onAction?.({type:"browse-templates"}); return; }
+    if (id === "templates" || id === "transitions" || id === "animation") { selectCategory(id); return; }
     if (id === "more" && isHandset) {
       setCategoryTool("more");
       setHandsetPanel("browser");
@@ -453,12 +580,11 @@ export function CoProStudio({
   }
 
   function selectCategory(id: string) {
-    if (id === "templates") { onAction?.({type:"browse-templates"}); return; }
     setCategoryTool(id);
     if (isHandset) setHandsetPanel("browser");
     setLayout(value => ({...value,browserOpen:true}));
     setPanePreference("browser");
-    if (selectedClip && ["effects","transitions","filters","adjustments"].includes(id)) setActiveTool(id);
+    if (selectedClip && ["effects","transitions","animation","filters","adjustments"].includes(id)) setActiveTool(id);
   }
 
   function useCreativeAsset(asset: CoProCreativeAsset) {
@@ -468,8 +594,10 @@ export function CoProStudio({
     }
     if (!selectedClip) return;
     if (asset.category === "animation") {
+      setActiveTool("animation");
       onAction?.({type:"motion",clipId:selectedClip.id,motion:asset.id});
     } else if (asset.category === "transition") {
+      setActiveTool("transitions");
       onAction?.({type:"transition",clipId:selectedClip.id,transition:asset.id,durationUs:300_000});
     } else if (asset.category === "overlay") {
       onAction?.({type:"effect",clipId:selectedClip.id,effect:"overlay:" + asset.id});
@@ -501,10 +629,18 @@ export function CoProStudio({
             if (choice === "timeline") setLayout(old=>({...old,browserWidth:390,inspectorWidth:300,timelineHeight:Math.round(workspaceHeight*.55),browserOpen:true,inspectorOpen:true,browserFloating:false,inspectorFloating:false}));
           }}><option value="custom">Custom</option><option value="balanced">Balanced</option><option value="media">Media focus</option><option value="timeline">Timeline focus</option></select></label>
           <IconAction className="copro-icon-button copro-wide-layout-control" type="button" title="Restore default panel widths, docking and timeline height" aria-label="Reset workspace layout" onClick={() => { resetLayout(); setPanePreference("browser"); }}><CoProSystemIcon name="refresh" icons={systemIcons} size={18} fallback={<RotateCcw size={18}/>} /></IconAction>
+          <details className="mm-cover-menu"><summary>Cover</summary><div>
+            <button type="button" onClick={()=>{const source=videoRef.current??previewStageRef.current?.querySelector("img");if(source)saveCover(source);else setCoverError("Add visual media or choose an image.");}}>Use current frame</button>
+            <button type="button" onClick={()=>coverInputRef.current?.click()}>Upload cover</button>
+            <button type="button" onClick={()=>onAction?.({type:"set-cover",cover:null})}>Use automatic cover</button>
+            {coverError&&<span role="alert">{coverError}</span>}
+          </div></details>
+          <input ref={coverInputRef} className="copro-hidden-source-input" type="file" accept="image/*" aria-label="Upload project cover" onChange={event=>{const file=event.currentTarget.files?.[0];if(file)void uploadCover(file);event.currentTarget.value="";}}/>
           <button className="copro-export-button" aria-expanded={activeTool === "export"} aria-controls="copro-tool-inspector" onClick={() => { setActiveTool("export"); if (isHandset) setHandsetPanel("inspector"); setLayout(value => ({ ...value, inspectorOpen: true })); setPanePreference("inspector"); }}>Export</button>
         </div>
       </header>
 
+      {project.tracks.flatMap(track=>track.clips.filter(clip=>mediaItems.some(item=>item.id===clip.assetId&&item.kind==="audio")).map(clip=><audio key={clip.id} ref={element=>{if(element)audioPlayers.current.set(clip.id,element);else audioPlayers.current.delete(clip.id);}} src={mediaItems.find(item=>item.id===clip.assetId)?.url} preload="metadata"/>))}
       <main className="copro-workspace" ref={workspaceRef}>
         <div className={["copro-editing-grid", showBrowser ? "has-browser" : "", showInspector ? "has-inspector" : "", isNarrow ? "is-narrow" : "", isCompact ? "is-compact" : "", layout.reversed ? "is-reversed" : ""].filter(Boolean).join(" ")} style={{
           "--copro-browser-width": dockBrowser ? browserWidth + "px" : "0px",
@@ -530,7 +666,9 @@ export function CoProStudio({
             {categoryTool === "media" && <nav className="mm-media-subnav" aria-label="Media collections">
               {([ ["import","Import"], ["media","Media"], ["subprojects","Subprojects"], ["yours","Yours"], ["generate","Generate"], ["spaces","Spaces"], ["library","Library"] ] as const).map(([id,label]) => <button type="button" key={id} className={browserSection===id?"is-active":""} aria-pressed={browserSection===id} onClick={()=>setBrowserSection(id)}>{label}</button>)}
             </nav>}
-            {categoryTool === "more" ? (
+            {categoryTool === "3d" ? (
+              <CoProCreativeWorkspace />
+            ) : categoryTool === "more" ? (
               <section className="mm-more-tools" aria-label="More editing tools">
                 <div className="mm-more-tools-heading"><span>MORE TOOLS</span><strong>Choose a workspace</strong><p>All editing categories stay available here.</p></div>
                 <div className="mm-more-tools-grid">
@@ -539,6 +677,17 @@ export function CoProStudio({
                   </button>)}
                 </div>
               </section>
+            ) : ["templates","transitions","animation"].includes(categoryTool) ? (
+              <CoProMediaBrowser key={categoryTool} section="library"
+                initialCategory={categoryTool==="templates"?"template":categoryTool==="transitions"?"transition":"animation"}
+                mediaItems={mediaItems} projectMediaIds={projectMediaIds}
+                creativeAssets={creativeAssets} selectedClipId={selectedClipId}
+                currentAssetId={categoryTool==="transitions"?String((selectedClip?.metadata?.transitionOut as any)?.type??""):String((selectedClip?.metadata?.motion as any)?.id??"")}
+                renderCreativePreview={renderCreativePreview} sampleMotion={sampleMotion} createTransitionPreview={createTransitionPreview}
+                previewMediaPair={{before:mediaItems.find(item=>item.id===selectedClip?.assetId)?.thumbnails?.[0]??mediaItems.find(item=>item.kind==="image")?.url,after:mediaItems.find(item=>item.id!==selectedClip?.assetId && item.thumbnails?.length)?.thumbnails?.[0]}}
+                onImportFiles={files=>onAction?.({type:"import-media-batch",files,atUs:playheadUs})}
+                onAddMedia={id=>onMediaAdd?.(id,playheadUs)} onUseCreativeAsset={useCreativeAsset}
+                onOpenCreativeTemplate={onOpenCreativeTemplate} systemIcons={systemIcons}/>
             ) : categoryTool === "media" ? (
               <CoProMediaBrowser
                 section={browserSection}
@@ -550,6 +699,9 @@ export function CoProStudio({
                 onAddMedia={(id) => onMediaAdd?.(id,playheadUs)}
                 onUseCreativeAsset={useCreativeAsset}
                 onOpenCreativeTemplate={onOpenCreativeTemplate}
+                onRenameMedia={(id,name)=>onAction?.({type:"rename-media",id,name})}
+                onDeleteMedia={id=>onAction?.({type:"delete-media",id})}
+                renderCreativePreview={renderCreativePreview} sampleMotion={sampleMotion} createTransitionPreview={createTransitionPreview}
                 onNavigate={setBrowserSection}
                 systemIcons={systemIcons}
               />
@@ -577,23 +729,24 @@ export function CoProStudio({
           </aside>}
           {dockBrowser && !isNarrow && <ResizeHandle axis="x" className="copro-browser-divider" label="Resize tool browser" value={browserWidth} min={240} max={Math.max(260,workspaceWidth - (showInspector ? inspectorWidth : 0) - 410)} direction={layout.reversed ? -1 : 1} onChange={width => setLayout(value => ({ ...value, browserWidth: width }))}/>}
 
-          <section className={`mm-player-pane${layout.playerFloating && !isNarrow?" is-floating":""}`} aria-label="MovieMode player"
+          <section ref={playerPaneRef} className={`mm-player-pane${layout.playerFloating && !isNarrow?" is-floating":""}${viewportFullscreen?" is-viewport-fullscreen":""}`} aria-label="MovieMode player"
             style={{
               "--copro-floating-left": layout.playerX + "px",
               "--copro-floating-top": layout.playerY + "px",
               "--copro-floating-width": layout.playerFloatWidth + "px",
               "--copro-floating-height": layout.playerFloatHeight + "px",
             } as React.CSSProperties}
-            onPointerUp={layout.playerFloating && !isNarrow?event=>saveFloatingSize(event,"player"):undefined}>
+            onPointerUp={layout.playerFloating && !isNarrow?event=>saveFloatingSize(event,"player"):undefined}
+            onPointerMove={()=>{if(isFullscreen)setFullscreenHudVisible(true);}}>
             <div className="mm-player-pane-header" onPointerDown={layout.playerFloating && !isNarrow?event=>moveFloating(event,"player"):undefined}>
               <span>{layout.playerFloating && !isNarrow && <GripVertical size={14}/>}Player · Timeline 01</span>
               <button type="button" aria-label={layout.playerFloating ? "Dock player" : "Undock player"} title={layout.playerFloating ? "Dock player" : "Float and drag player"} onPointerDown={event=>event.stopPropagation()} onClick={()=>setLayout(old=>({...old,playerFloating:!old.playerFloating}))}>{layout.playerFloating?<DockIcon size={16}/>:<ExternalLink size={16}/>}</button>
             </div>
-            <section className="copro-preview-stage">
+            <section ref={previewStageRef} className="copro-preview-stage">
             <div
               className={`copro-preview-device${effectivePreviewSrc?"":" is-empty"}`}
               data-overlay={activeOverlay}
-              style={{aspectRatio:project.canvas?.width && project.canvas?.height ? `${project.canvas.width} / ${project.canvas.height}` : "9 / 16"}}
+              style={{width:previewWidth,height:previewWidth/canvasRatio,aspectRatio:canvasRatio,transform:`scale(${previewZoom/100})`}}
             >
               {effectivePreviewSrc && effectivePreviewKind === "video" ? (
                 <video
@@ -615,11 +768,8 @@ export function CoProStudio({
                   }}
                   onError={() => setPreviewDecodeWarning("The browser could not decode this video. Relink a supported H.264 or WebM source; the original is preserved.")}
                   onPlay={() => setPlaying(true)}
-                  onPause={() => setPlaying(false)}
-                  onTimeUpdate={(event) => {
-                    const base = activeVisualClip?.startUs ?? 0;
-                    onSeek?.(base + Math.round(event.currentTarget.currentTime * 1_000_000));
-                  }}
+                  onPause={() => {if(playbackPosition.current>=projectDurationUs)setPlaying(false);}}
+
                 />
               ) : effectivePreviewSrc && effectivePreviewKind === "image" ? (
                 <img
@@ -649,7 +799,7 @@ export function CoProStudio({
                       <button type="button" className="is-primary" onClick={() => { setBrowserSection("import"); selectCategory("media"); }}>
                         <i>{renderToolIcon("media", systemIcons)}</i><span>Import media</span>
                       </button>
-                      <button type="button" onClick={() => onAction?.({type:"browse-templates"})}>
+                      <button type="button" onClick={() => selectCategory("templates")}>
                         <i>{renderToolIcon("templates", systemIcons)}</i><span>Browse templates</span>
                       </button>
                       <button type="button" onClick={() => selectCategory("text")}>
@@ -698,8 +848,32 @@ export function CoProStudio({
             <div className="copro-transport-line" role="presentation" />
             <span className="mm-transport-duration" title="Sequence duration">{formatTime(Math.max(0,...project.tracks.flatMap(track=>track.clips.map(clip=>clip.startUs+clip.durationUs))))}</span>
             <span className={`mm-transport-state${playing ? " is-playing" : ""}`}>{playing ? "Playing" : "Paused"}</span>
-            <IconAction className="copro-icon-button" aria-label="Timeline controls" onClick={() => onSelectClip?.(null)}><SlidersHorizontal size={18}/></IconAction>
+            <div className="mm-preview-controls" role="group" aria-label="Preview monitor controls">
+              <div className="mm-preview-control-wrap">
+                <button type="button" aria-label="Playback quality" aria-expanded={previewControlMenu==="quality"} title="Playback quality" onClick={()=>setPreviewControlMenu(value=>value==="quality"?null:"quality")}><Gauge size={16}/><span>{playbackQuality}</span><ChevronDown size={11}/></button>
+                {previewControlMenu==="quality"&&<div className="mm-preview-popover"><strong>Playback quality</strong>{(["Full","High","Medium","Low"] as const).map(value=><button type="button" key={value} className={playbackQuality===value?"is-active":""} onClick={()=>{setPlaybackQuality(value);setPreviewControlMenu(null);}}>{value}{playbackQuality===value&&<span>✓</span>}</button>)}<small>Monitor preview setting. Export quality is controlled by render settings.</small></div>}
+              </div>
+              <div className="mm-preview-control-wrap">
+                <button type="button" aria-label="Preview zoom" aria-expanded={previewControlMenu==="zoom"} title="Preview zoom" onClick={()=>setPreviewControlMenu(value=>value==="zoom"?null:"zoom")}><ZoomIn size={16}/><span>{previewZoom}%</span></button>
+                {previewControlMenu==="zoom"&&<div className="mm-preview-popover mm-preview-zoom-popover"><strong>Preview zoom</strong><label><span>{previewZoom}%</span><input type="range" min="50" max="200" step="5" value={previewZoom} onChange={event=>setPreviewZoom(Number(event.currentTarget.value))}/></label><button type="button" onClick={()=>{setPreviewZoom(100);setPreviewControlMenu(null);}}>Fit to view</button></div>}
+              </div>
+              <div className="mm-preview-control-wrap">
+                <button type="button" aria-label="Canvas aspect ratio" aria-expanded={previewControlMenu==="ratio"} title="Canvas ratio" onClick={()=>setPreviewControlMenu(value=>value==="ratio"?null:"ratio")}><Ratio size={16}/><span>{currentRatioLabel}</span><ChevronDown size={11}/></button>
+                {previewControlMenu==="ratio"&&<div className="mm-preview-popover mm-preview-ratio-popover"><strong>Canvas ratio</strong><button type="button" onClick={()=>chooseCanvasRatio(project.canvas?.width??1920,project.canvas?.height??1080)}>Original / Current</button>{CANVAS_RATIOS.map(ratio=><button type="button" key={ratio.label} className={currentRatioLabel===ratio.label?"is-active":""} onClick={()=>chooseCanvasRatio(ratio.width,ratio.height)}>{ratio.label}<small>{ratio.width} × {ratio.height}</small></button>)}</div>}
+              </div>
+              <button type="button" className="mm-preview-fullscreen-button" aria-label={isFullscreen?"Exit fullscreen":"Full screen preview"} title={isFullscreen?"Exit fullscreen":"Full screen preview"} onClick={()=>void toggleFullscreen()}><Maximize2 size={16}/></button>
+            </div>
           </section>
+
+          {isFullscreen&&<div className={`mm-fullscreen-control-dock${fullscreenHudVisible?" is-visible":" is-hidden"}`} onPointerMove={()=>setFullscreenHudVisible(true)}>
+            <button type="button" className="mm-fullscreen-play" aria-label={playing?"Pause":"Play"} onClick={()=>void togglePlayback()}>{playing?<Pause size={17}/>:<Play size={17}/>}</button>
+            <span>{formatTime(playheadUs)}</span>
+            <input aria-label="Scrub preview timeline" type="range" min="0" max={Math.max(1,projectDurationUs)} value={Math.min(playheadUs,Math.max(1,projectDurationUs))} onChange={event=>onSeek?.(Number(event.currentTarget.value))}/>
+            <select aria-label="Playback quality" value={playbackQuality} onChange={event=>setPlaybackQuality(event.currentTarget.value as typeof playbackQuality)}><option>Full</option><option>High</option><option>Medium</option><option>Low</option></select>
+            <label className="mm-fullscreen-zoom"><ZoomIn size={15}/><input aria-label="Preview zoom" type="range" min="50" max="200" step="5" value={previewZoom} onChange={event=>setPreviewZoom(Number(event.currentTarget.value))}/>{previewZoom}%</label>
+            <select aria-label="Canvas ratio" value={currentRatioLabel} onChange={event=>{const ratio=CANVAS_RATIOS.find(item=>item.label===event.currentTarget.value);if(ratio)chooseCanvasRatio(ratio.width,ratio.height);}}>{CANVAS_RATIOS.map(ratio=><option key={ratio.label} value={ratio.label}>{ratio.label}</option>)}</select>
+            <button type="button" aria-label="Exit fullscreen" onClick={()=>void toggleFullscreen()}><Maximize2 size={17}/></button>
+          </div>}
 
           </section>{/* Player and transport remain one resizable, movable unit. */}
 
@@ -721,17 +895,24 @@ export function CoProStudio({
               </div>
               {selectedClip && <nav className="mm-selection-tabs" aria-label="Selected clip property categories">
                 {((selectedTrack?.kind === "audio" ? [
-                  ["volume","Audio",true], ["speed","Speed",true], ["animation","Animation",false]
+                  ["volume","Audio"], ["speed","Speed"], ["animation","Animation"], ["tracking","Tracking"]
                 ] : [
-                  ["transform","Video",true], ["volume","Audio",true], ["speed","Speed",true],
-                  ["animation","Animation",false], ["effects","Effects",true], ["transitions","Transitions",true]
-                ]) as Array<[string,string,boolean]>).map(([tool,label,ready]) => <button type="button" key={tool}
+                  ["video","Video"], ["speed","Speed"], ["animation","Animation"],
+                  ["tracking","Tracking"], ["adjust","Adjust"], ["ai-stylize","AI stylize"]
+                ]) as Array<[string,string]>).map(([tool,label]) => <button type="button" key={tool}
                   className={inspectorTool===tool?"is-active":""} aria-pressed={inspectorTool===tool}
-                  disabled={!ready} title={ready ? `Edit ${label.toLowerCase()} properties of the selected clip` : "Animation keyframes require a verified preview and render implementation"}
-                  onClick={()=>setActiveTool(tool)}>{label}</button>)}
+                  title={"Open "+label+" controls"}
+                  onClick={()=>{setActiveTool(tool);if(tool==="animation")selectCategory(tool);}}>{label}</button>)}
               </nav>}
               <CoProToolPanel
+                key={selectedClipId??"project"}
                 tool={inspectorTool}
+                projectCanvas={project.canvas}
+                transitionSettings={selectedClip?.metadata?.transitionOut as any}
+                motionSettings={selectedClip?.metadata?.motion as any}
+                onBrowsePresets={()=>selectCategory(inspectorTool==="animation"?"animation":"transitions")}
+                onTransitionSettingsChange={patch=>selectedClip&&onAction?.({type:"transition",clipId:selectedClip.id,transition:String((selectedClip.metadata?.transitionOut as any)?.type??"none"),...(selectedClip.metadata?.transitionOut as any),...patch})}
+                onMotionSettingsChange={durationUs=>selectedClip&&onAction?.({type:"motion",clipId:selectedClip.id,motion:String((selectedClip.metadata?.motion as any)?.id??"none"),durationUs})}
                 onClose={() => { if (isHandset) setHandsetPanel(null); else setLayout(value => ({ ...value, inspectorOpen: false })); }}
                 selectedClipId={selectedClipId}
                 projectTitle={projectTitle}

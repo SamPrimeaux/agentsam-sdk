@@ -17,34 +17,26 @@ export type CoProProjectSummary = {
   progress?: number;
   durationMs?: number;
   aspectRatio?: string;
+  resolution?: string;
+  format?: string;
   updatedAt: string;
   starred?: boolean;
   shared?: boolean;
   thumbnailTone?: "cyan" | "violet" | "amber" | "slate";
   /** Lightweight still preview — never a live decode engine in the gallery. */
   thumbnailUrl?: string;
+  thumbnailState?: "empty" | "missing";
   example?: boolean;
 };
 
 /** Presentation-only tone cycle — not a resource registry. Featured IDs come from asset.featured. */
 const SHOWCASE_TONES = ["cyan", "amber", "violet"] as const;
 
-function projectCoverArt(p: CoProProjectSummary): string {
-  if (p.thumbnailUrl) return p.thumbnailUrl;
-  const tones: Record<string, [string, string, string]> = {
-    cyan: ["#0d1c22", "#1a4d55", "#48d0c6"],
-    violet: ["#16121f", "#3a2a5c", "#b59cff"],
-    amber: ["#1c160d", "#5a3d14", "#f0b45a"],
-    slate: ["#121518", "#2a3138", "#8aa0ad"],
-  };
-  const [bg, mid, accent] = tones[p.thumbnailTone ?? "slate"] ?? tones.slate;
-  const label = (p.kind || "video").toUpperCase();
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${bg}"/><stop offset="1" stop-color="${mid}"/></linearGradient></defs><rect width="640" height="360" fill="url(#g)"/><rect x="0" y="0" width="640" height="28" fill="#00000055"/><rect x="0" y="332" width="640" height="28" fill="#00000055"/><circle cx="520" cy="88" r="54" fill="${accent}" opacity=".28"/><path d="M70 250 L190 120 L310 210 L420 96 L570 180 V300 H70 Z" fill="${accent}" opacity=".18"/><text x="36" y="198" fill="${accent}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="18" font-weight="700" letter-spacing="4">${label}</text><text x="36" y="236" fill="#e8f2f6" font-family="ui-sans-serif,system-ui,sans-serif" font-size="28" font-weight="750">${escapeSvg(p.title.slice(0, 28))}</text></svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
+const EMPTY_SEQUENCE_COVER = "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#101820"/><path d="M0 72H640M0 144H640M0 216H640M0 288H640M80 0V360M160 0V360M240 0V360M320 0V360M400 0V360M480 0V360M560 0V360" stroke="#263944" stroke-width="1"/><rect x="24" y="24" width="592" height="312" rx="16" fill="none" stroke="#35505b"/><circle cx="320" cy="154" r="43" fill="#1d3740" stroke="#56cbd0" stroke-width="2"/><path d="M309 132L344 154L309 176Z" fill="#7de2df"/><text x="320" y="238" text-anchor="middle" fill="#e8f3f5" font-family="Arial,sans-serif" font-size="21" font-weight="700" letter-spacing="4">EMPTY SEQUENCE</text><text x="320" y="267" text-anchor="middle" fill="#7f9aa4" font-family="Arial,sans-serif" font-size="11" letter-spacing="3">MOVIEMODE PROJECT</text></svg>');
+const MISSING_SOURCE_COVER = "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#19191b"/><path d="M0 72H640M0 144H640M0 216H640M0 288H640" stroke="#303235"/><rect x="24" y="24" width="592" height="312" rx="16" fill="none" stroke="#55423a"/><path d="M284 112H340L369 141V222H271V112Z" fill="#332b28" stroke="#d28a5e" stroke-width="2"/><path d="M340 112V141H369" fill="none" stroke="#d28a5e" stroke-width="2"/><path d="M320 154V185M320 197V199" stroke="#f0b18b" stroke-width="5" stroke-linecap="round"/><text x="320" y="258" text-anchor="middle" fill="#f3ddd0" font-family="Arial,sans-serif" font-size="18" font-weight="700" letter-spacing="3">SOURCE MEDIA NEEDED</text><text x="320" y="282" text-anchor="middle" fill="#ad8c7d" font-family="Arial,sans-serif" font-size="11" letter-spacing="2">PROJECT EDITS ARE PRESERVED</text></svg>');
 
-function escapeSvg(value: string) {
-  return value.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch] as string));
+function projectCoverArt(p: CoProProjectSummary): string {
+  return p.thumbnailUrl ?? (p.thumbnailState === "missing" ? MISSING_SOURCE_COVER : EMPTY_SEQUENCE_COVER);
 }
 
 function statusLabel(status: CoProProjectSummary["status"]) {
@@ -65,8 +57,8 @@ type ProjectsProps = {
   recording?: boolean;
   onStopRecording?: () => void;
   onOpenTool?: (tool: "text" | "captions") => void;
-  onRenameProject?: (id: string, title: string) => void;
-  onDeleteProject?: (id: string) => void;
+  onRenameProject?: (id: string, title: string) => void | Promise<void>;
+  onDeleteProject?: (id: string) => void | Promise<void>;
   onDuplicateProject?: (id: string) => void;
   appIconUrl?: string;
   systemIcons?: CoProSystemIconMap;
@@ -96,6 +88,10 @@ export function CoProProjectsScreen({
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [sort, setSort] = useState<"recent" | "name">("recent");
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [projectDialog,setProjectDialog]=useState<{kind:"rename"|"delete";project:CoProProjectSummary}|null>(null);
+  const [dialogTitle,setDialogTitle]=useState("");
+  const [dialogBusy,setDialogBusy]=useState(false);
+  const [dialogError,setDialogError]=useState<string|null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [active, setActive] = useState<"home" | "projects" | "templates">(initialSection);
   const [iconFailed, setIconFailed] = useState(false);
@@ -130,15 +126,30 @@ export function CoProProjectsScreen({
     else window.scrollTo({top:0,behavior:"smooth"});
   }
   function rename(p: CoProProjectSummary) {
-    const title = window.prompt("Rename project",p.title)?.trim();
-    if (title && title !== p.title) onRenameProject?.(p.id,title);
-    setOpenMenu(null);
+    setProjectDialog({kind:"rename",project:p});setDialogTitle(p.title);setDialogError(null);setOpenMenu(null);
   }
   function remove(p: CoProProjectSummary) {
-    if (window.confirm(`Delete “${p.title}”? This removes the saved project; imported original files remain available.`)) onDeleteProject?.(p.id);
-    setOpenMenu(null);
+    setProjectDialog({kind:"delete",project:p});setDialogError(null);setOpenMenu(null);
+  }
+  async function confirmProjectDialog(event:React.FormEvent) {
+    event.preventDefault();if(!projectDialog||dialogBusy)return;
+    setDialogBusy(true);setDialogError(null);
+    try {
+      if(projectDialog.kind==="rename")await onRenameProject?.(projectDialog.project.id,dialogTitle.trim());
+      else await onDeleteProject?.(projectDialog.project.id);
+      setProjectDialog(null);
+    } catch {setDialogError("Could not save this change. Try again.");}
+    finally {setDialogBusy(false);}
   }
   return <section className="mm-home" aria-label="MovieMode home">
+    {projectDialog&&<div className="mm-project-dialog-backdrop" onKeyDown={event=>{if(event.key==="Escape"&&!dialogBusy)setProjectDialog(null);}}>
+      <form role="dialog" aria-modal="true" aria-label={projectDialog.kind==="rename"?"Rename project":"Delete project"} onSubmit={confirmProjectDialog}>
+        <h2>{projectDialog.kind==="rename"?"Rename project":"Delete project?"}</h2>
+        {projectDialog.kind==="rename"?<label>Project name<input autoFocus value={dialogTitle} onChange={event=>setDialogTitle(event.currentTarget.value)} maxLength={200}/></label>:<p>Delete “{projectDialog.project.title}” and its unshared media? Files used by other projects will remain. This cannot be undone.</p>}
+        {dialogError&&<p role="alert">{dialogError}</p>}
+        <footer><button type="button" disabled={dialogBusy} onClick={()=>setProjectDialog(null)}>Cancel</button><button type="submit" disabled={dialogBusy||(projectDialog.kind==="rename"&&!dialogTitle.trim())}>{dialogBusy?"Saving…":projectDialog.kind==="rename"?"Save name":"Delete project"}</button></footer>
+      </form>
+    </div>}
     <aside className="mm-home-sidebar" aria-label="MovieMode navigation">
       <div className="mm-brand">
         {appIconUrl && !iconFailed ? <img src={appIconUrl} width="34" height="34" alt="" onError={() => setIconFailed(true)}/> : <CoProSystemIcon name="film" icons={systemIcons} size={28} fallback={<Clapperboard size={28}/>} />}
@@ -154,7 +165,7 @@ export function CoProProjectsScreen({
       <button onClick={recording ? onStopRecording : onRecord} disabled={!recording && !onRecord} title={recording ? "Stop and import the screen recording" : "Capture your screen and import the recording"}><CoProSystemIcon name="display" icons={systemIcons} size={18} fallback={<ScreenShare size={18}/>} /> {recording ? "Stop recording" : "Record screen"}</button>
       <button onClick={() => onOpenTool?.("text")} disabled={!onOpenTool}><CoProSystemIcon name="document" icons={systemIcons} size={18} fallback={<Type size={18}/>} /> Title studio</button>
       <button onClick={() => onOpenTool?.("captions")} disabled={!onOpenTool}><CoProSystemIcon name="message" icons={systemIcons} size={18} fallback={<Captions size={18}/>} /> Captions</button>
-      <div className="mm-sidebar-footer"><span className="mm-connection-dot"/> MovieMode <small>Projects save in this browser · media originals stay local unless a host media library is connected</small></div>
+      <div className="mm-sidebar-footer"><span className="mm-connection-dot"/> MovieMode <small>Your creative workspace</small></div>
     </aside>
 
     <main className="mm-home-main">
@@ -260,7 +271,7 @@ export function CoProProjectsScreen({
                 <span className="mm-project-details mm-resource-meta">
                   <strong>{p.title}</strong>
                   <span className="mm-resource-identity">MovieMode · {statusLabel(p.status)}</span>
-                  <span>{shortDate(p.updatedAt)} · {duration(p.durationMs)} · {p.aspectRatio ?? "Project"}</span>
+                  <span>{shortDate(p.updatedAt)} · {duration(p.durationMs)} · {p.aspectRatio ?? "Project"}{p.resolution ? " · "+p.resolution : ""}{p.format ? " · "+p.format : ""}</span>
                   <small>{p.subtitle ?? "Saved project"}</small>
                 </span>
               </IconAction>

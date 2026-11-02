@@ -1998,6 +1998,79 @@ body:has(.copro-studio) { margin:0; }
 }
 .copro-studio :is(.copro-browser-slot,.copro-inspector-slot,.mm-media-subnav,.mm-media-browser-content,.copro-tool-panel-body,.copro-timeline-shell,.mm-more-tools)::-webkit-scrollbar-thumb:hover { background:var(--copro-accent); background-clip:padding-box; }
 
+/* MovieMode acceptance workspace: independently sized docks and sequence-fit monitor. */
+.copro-studio .mm-player-pane .copro-preview-device,
+.copro-studio .mm-player-pane .copro-preview-device.is-empty {min-width:0;min-height:0;max-width:none;max-height:none;flex:none;border-radius:2px;overflow:hidden;box-shadow:0 4px 24px #0005;}
+.copro-studio .mm-player-pane:fullscreen {position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;display:grid!important;grid-template-rows:0 minmax(0,1fr) 0;background:#080a0c;}
+.copro-studio .mm-player-pane:fullscreen>.mm-player-pane-header,
+.copro-studio .mm-player-pane:fullscreen>.copro-transport {visibility:hidden;height:0;overflow:hidden;}
+.copro-studio .mm-player-pane:fullscreen>.copro-preview-stage {padding:0;background:#080a0c;}
+.mm-cover-menu {position:relative;font-size:12px;}
+.mm-cover-menu summary {cursor:pointer;padding:8px 12px;border:1px solid var(--copro-line);border-radius:5px;list-style:none;}
+.mm-cover-menu>div {position:absolute;right:0;top:38px;width:220px;z-index:60;padding:7px;background:var(--copro-surface);border:1px solid var(--copro-line);border-radius:8px;box-shadow:0 12px 32px #0006;}
+.mm-cover-menu button {display:block;width:100%;border:0;text-align:left;padding:10px;background:transparent;color:var(--copro-text);cursor:pointer;}
+.mm-cover-menu button:hover {background:var(--copro-line);}
+.mm-preview-control-wrap {position:relative;display:inline-flex;}
+.mm-preview-control-wrap>button,.mm-preview-fullscreen-button {display:flex;align-items:center;gap:5px;border:0;background:transparent;color:var(--copro-text);padding:7px;font-size:10px;cursor:pointer;white-space:nowrap;}
+.mm-preview-popover {position:absolute;bottom:36px;right:0;z-index:25;min-width:170px;padding:10px;background:var(--copro-surface);color:var(--copro-text);border:1px solid var(--copro-line);border-radius:7px;box-shadow:0 12px 30px #0007;}
+.mm-preview-popover>strong {display:block;padding:4px 6px 10px;font-size:12px;}
+.mm-preview-popover>button {display:flex;justify-content:space-between;align-items:center;width:100%;padding:9px 6px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;}
+.mm-preview-popover button.is-active {color:var(--copro-accent);}
+.mm-preview-popover small {display:block;font-size:10px;color:var(--copro-muted);line-height:1.5;}
+.mm-preview-popover input[type=range] {width:100%;accent-color:var(--copro-accent);}
+.mm-fullscreen-control-dock {position:absolute;z-index:50;left:50%;bottom:30px;transform:translateX(-50%);display:flex;align-items:center;gap:16px;padding:10px 16px;border:1px solid #ffffff24;border-radius:12px;color:#fff;background:#171c22e8;box-shadow:0 10px 35px #0008;backdrop-filter:blur(18px);transition:opacity .2s;}
+.mm-fullscreen-control-dock.is-hidden {opacity:0;pointer-events:none;}
+.mm-fullscreen-control-dock.is-visible {opacity:1;}
+.mm-fullscreen-control-dock button {border:0;background:transparent;color:#fff;padding:8px;cursor:pointer;}
+.mm-fullscreen-control-dock select {background:#242a32;color:#fff;border:1px solid #fff3;border-radius:4px;padding:5px;}
+.mm-fullscreen-zoom {display:flex;align-items:center;gap:8px;font-size:11px;}
+.mm-fullscreen-zoom input {max-width:110px;}
+.mm-live-asset-preview {display:block;position:relative;overflow:hidden;background:#111820;aspect-ratio:16/9;width:100%;border-radius:6px;}
+.mm-live-asset-preview>canvas,.mm-live-asset-preview>img {width:100%;height:100%;display:block;object-fit:contain;}
+.mm-live-asset-preview>input {position:absolute;bottom:1px;left:5%;width:90%;height:5px;accent-color:var(--copro-accent);z-index:2;opacity:0;transition:opacity .15s;}
+.mm-live-asset-preview:hover>input,.mm-live-asset-preview:focus-within>input {opacity:1;}
+.mm-creative-library-card.is-active {outline:2px solid var(--copro-accent);outline-offset:-2px;}
+.mm-creative-library-card:hover,.mm-creative-library-card:focus-visible {border-color:var(--copro-accent);box-shadow:0 0 0 1px var(--copro-accent);}
+.mm-creative-preview-player {position:relative;background:#111820;border-radius:8px;overflow:hidden;}
+.mm-creative-preview-play {position:absolute;right:10px;bottom:32px;border:1px solid #fff4;background:#111c;color:#fff;border-radius:50%;width:32px;height:32px;display:grid;place-items:center;cursor:pointer;}
+.mm-creative-preview-caption {display:block;padding:7px 10px;font-size:10px;color:#b4c2cc;}
+.mm-preset-properties {display:grid;gap:18px;padding:8px 0;}
+.mm-preset-properties>strong {font-size:16px;font-weight:600;}
+.mm-preset-properties>label {display:grid;grid-template-columns:minmax(0,1fr) 110px;align-items:center;gap:12px;font-size:12px;color:var(--copro-text);}
+.mm-preset-properties input,.mm-preset-properties select {min-width:0;padding:8px;border:1px solid var(--copro-line);border-radius:5px;background:var(--copro-bg);color:var(--copro-text);font-size:12px;}
+.mm-preset-properties button {padding:10px 12px;border:1px solid var(--copro-line);border-radius:5px;background:var(--copro-surface);color:var(--copro-text);font-size:12px;cursor:pointer;text-align:left;}
+.mm-video-subtabs,.mm-capability-tabs,.mm-retouch-modes {display:flex;gap:4px;overflow-x:auto;padding:0 0 14px;border-bottom:1px solid var(--copro-line);margin-bottom:18px;}
+.mm-video-subtabs button,.mm-capability-tabs button,.mm-retouch-modes button {flex:1;white-space:nowrap;padding:8px 7px;font-size:11px;border:0;border-radius:5px;background:transparent;color:var(--copro-muted);cursor:pointer;}
+.mm-video-subtabs button.is-active,.mm-capability-tabs button.is-active,.mm-retouch-modes button.is-active {background:var(--copro-line);color:var(--copro-accent);}
+.mm-video-feature-heading>span,.mm-capability-heading>span {display:block;font-size:9px;letter-spacing:.12em;color:var(--copro-muted);margin-bottom:8px;}
+.mm-video-feature-heading>strong,.mm-capability-heading>strong {font-size:16px;display:block;}
+.mm-video-feature-heading p,.mm-capability-heading p {font-size:12px;line-height:1.6;color:var(--copro-muted);}
+.mm-feature-control {display:block;margin:18px 0;}
+.mm-feature-control>span {display:flex;justify-content:space-between;gap:10px;font-size:12px;}
+.mm-feature-control b {font-weight:500;color:var(--copro-muted);}
+.mm-feature-control input[type=range] {width:100%;margin-top:12px;accent-color:var(--copro-accent);}
+.mm-feature-toggle {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--copro-line);}
+.mm-feature-toggle strong {font-size:12px;font-weight:500;display:block;}
+.mm-feature-toggle small {font-size:11px;line-height:1.5;color:var(--copro-muted);display:block;margin-top:4px;}
+.mm-feature-toggle input {accent-color:var(--copro-accent);}
+.mm-feature-status,.mm-capability-status {display:flex;align-items:center;gap:8px;margin:16px 0;padding:10px;border-radius:5px;background:var(--copro-line);font-size:11px;color:var(--copro-muted);line-height:1.5;}
+.mm-capability-status {display:block;}
+.mm-capability-status>span {display:block;font-size:9px;letter-spacing:.1em;}
+.mm-capability-status p {margin:5px 0;}
+.mm-mask-shapes,.mm-ai-style-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0;}
+.mm-mask-shapes button,.mm-ai-style-grid button {padding:12px 4px;border:1px solid var(--copro-line);border-radius:6px;background:var(--copro-surface);color:var(--copro-text);cursor:pointer;}
+.mm-mask-shapes button.is-active,.mm-ai-style-grid button.is-active {border-color:var(--copro-accent);color:var(--copro-accent);}
+.mm-mask-shapes i {display:block;font-size:25px;font-style:normal;margin-bottom:6px;}
+.mm-mask-shapes span,.mm-ai-style-grid strong {display:block;font-size:10px;}
+.mm-feature-primary,.mm-capability-action {width:100%;padding:10px 12px;margin:6px 0;border:1px solid var(--copro-line);border-radius:5px;color:var(--copro-text);background:var(--copro-surface);cursor:pointer;font-size:12px;}
+.mm-ai-prompt {display:block;font-size:12px;}
+.mm-ai-prompt textarea {display:block;width:100%;margin:10px 0;background:var(--copro-bg);color:var(--copro-text);border:1px solid var(--copro-line);padding:10px;border-radius:6px;}
+/* Existing scene-world workspace remains visible as a reviewable tool surface. */
+.mm-creative-workspace {height:100%;min-height:0;overflow:auto;background:var(--copro-bg);color:var(--copro-text);font-size:11px;}
+.mm-creative-workspace button,.mm-creative-workspace select {border:1px solid var(--copro-line);border-radius:4px;background:var(--copro-surface);color:var(--copro-text);padding:6px;cursor:pointer;font-size:10px;}
+.mm-creative-workspace input[type=range] {accent-color:var(--copro-accent);width:100%;}
+@media (prefers-reduced-motion:reduce){.mm-creative-library-card,.mm-fullscreen-control-dock {transition:none;}}
+
 /* Phone: player → active inline browser/inspector → timeline → five-item destination dock. */
 .copro-studio .copro-editing-grid.is-compact {
   grid-template-columns:minmax(0,1fr);
@@ -2735,3 +2808,29 @@ body:has(.copro-studio) { margin:0; }
   .mm-resource-actions { opacity: 1; }
   .mm-timeline-playhead-readout { display: none; }
 }
+
+
+/* Fit the empty-canvas guidance inside the sequence frame. */
+.copro-studio .mm-player-pane .copro-preview-device.is-empty .copro-preview-placeholder {position:absolute;inset:0;min-height:0;height:100%;padding:12px;overflow:auto;justify-content:center;}
+.copro-studio .copro-preview-empty-content {width:100%;max-width:360px;min-width:0;display:grid;gap:8px;margin:auto;}
+.copro-studio .mm-player-pane .copro-preview-device.is-empty .copro-preview-mark {font-size:18px;line-height:1.25;}
+.copro-studio .mm-player-pane .copro-preview-device.is-empty .copro-preview-empty-content>p {font-size:11px;margin:0;line-height:1.4;}
+.copro-studio .mm-player-pane .copro-preview-device.is-empty .copro-preview-empty-content>small {display:none;}
+.copro-studio .mm-preview-controls {display:flex;align-items:center;flex:none;gap:1px;margin-left:auto;white-space:nowrap;}
+.copro-studio .mm-preview-controls button {min-width:24px;min-height:28px;width:auto;height:auto;display:flex;align-items:center;justify-content:center;gap:3px;padding:4px;border:0;background:transparent;color:var(--copro-text);font-size:10px;}
+.copro-studio .mm-player-pane>.copro-transport {display:flex;gap:7px;align-items:center;padding:0 8px;overflow:visible;position:relative;z-index:20;}
+.copro-studio .copro-transport-line {min-width:0;flex:1;}
+@container (max-width:550px) {.copro-studio .mm-transport-state {display:none;}}
+
+.mm-project-dialog-backdrop {position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:#0009;backdrop-filter:blur(5px);padding:24px;}
+.mm-project-dialog-backdrop form {width:min(100%,420px);padding:26px;background:var(--copro-surface,#242424);color:var(--copro-text,#eee);border:1px solid var(--copro-line,#444);border-radius:12px;box-shadow:0 20px 60px #0008;}
+.mm-project-dialog-backdrop h2 {font-size:20px;margin:0 0 18px;}
+.mm-project-dialog-backdrop p {font-size:13px;line-height:1.7;}
+.mm-project-dialog-backdrop label {display:grid;gap:10px;font-size:12px;}
+.mm-project-dialog-backdrop input {width:100%;padding:12px;border:1px solid #666;border-radius:6px;background:#171a1e;color:#fff;font:inherit;}
+.mm-project-dialog-backdrop footer {display:flex;justify-content:flex-end;gap:10px;margin-top:24px;}
+.mm-project-dialog-backdrop button {padding:10px 14px;border:1px solid #555;border-radius:6px;background:#30363e;color:#fff;cursor:pointer;}
+.mm-project-dialog-backdrop button[type=submit] {background:var(--copro-accent,#167bfc);color:var(--copro-accent-ink,#fff);border-color:transparent;}
+.copro-studio .mm-player-pane.is-viewport-fullscreen {position:fixed!important;inset:0!important;z-index:10000;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;display:grid!important;grid-template-rows:0 minmax(0,1fr) 0;background:#080a0c;}
+.copro-studio .mm-player-pane.is-viewport-fullscreen>.mm-player-pane-header,.copro-studio .mm-player-pane.is-viewport-fullscreen>.copro-transport {visibility:hidden;height:0;overflow:hidden;}
+.copro-studio .mm-player-pane.is-viewport-fullscreen>.copro-preview-stage {padding:0;background:#080a0c;}

@@ -15,10 +15,10 @@ export function MovieModeSurface({ screen, workPane = false, compactNav = false 
       <MovieModeApp
         initialScreen={screen ?? "projects"}
         screen={workPane ? undefined : screen}
-        onScreenChange={workPane ? undefined : (next) => {
+        onScreenChange={workPane ? undefined : (next,projectId) => {
           window.dispatchEvent(new CustomEvent("agentsam:navigate", {
             detail: {
-              to: next === "editor" ? "/admin/moviemode/edit" : "/admin/moviemode",
+              to: next === "editor" ? "/admin/moviemode/edit" + (projectId?"?project="+encodeURIComponent(projectId):"") : "/admin/moviemode",
             },
           }));
         }}

@@ -203,9 +203,19 @@ export function renderCreativeProjectFrame(project,timeUs,options={}) {
  if(project?.schema!=='copro.project.v1')throw new Error('copro_creative_project_invalid');integerUs(timeUs);
  const clips=(project.tracks||[]).filter(t=>t.visible!==false).flatMap(t=>t.clips||[]).filter(c=>c.metadata?.creative&&timeUs>=c.startUs&&timeUs<c.startUs+c.durationUs).sort((a,b)=>a.layer-b.layer);
  if(!clips.length)return null;
- if(clips.length>1)throw new Error('copro_creative_multiple_layers_host_compositor_required');
- const clip=clips[0],localUs=Math.round((timeUs-clip.startUs)*(clip.playbackRate??1)+(clip.inUs??0));
- return renderCreativeSvg(clip.metadata.creative.scene,localUs,clip.metadata.creative.parameters,{...options,canvas:project.canvas});
+ const renderClip=clip=>{
+  const localUs=Math.round((timeUs-clip.startUs)*(clip.playbackRate??1)+(clip.inUs??0));
+  return renderCreativeSvg(clip.metadata.creative.scene,localUs,clip.metadata.creative.parameters,{...options,canvas:project.canvas});
+ };
+ if(clips.length===1)return renderClip(clips[0]);
+ const layers=clips.map((clip,index)=>{
+  const prefix='composition-'+index+'-';
+  const svg=renderClip(clip).replace(/\bid="([^"]+)"/g,(_,id)=>'id="'+prefix+id+'"').replace(/url\(#([^)]+)\)/g,(_,id)=>'url(#'+prefix+id+')');
+  const transform=clip.metadata?.transform??{},w=project.canvas.width,h=project.canvas.height;
+  const x=Number(transform.x??0)*w/100,y=Number(transform.y??0)*h/100,scale=Number(transform.scale??1),rotation=Number(transform.rotation??0),opacity=Number(transform.opacity??1);
+  return '<g opacity="'+opacity+'" transform="translate('+x+' '+y+') translate('+w/2+' '+h/2+') rotate('+rotation+') scale('+scale+') translate('+(-w/2)+' '+(-h/2)+')">'+svg+'</g>';
+ }).join('');
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="'+project.canvas.width+'" height="'+project.canvas.height+'" viewBox="0 0 '+project.canvas.width+' '+project.canvas.height+'">'+layers+'</svg>';
 }
 export function renderCreativeFrameAtIndex(id,frame,frameRate=30,parameters={},options={}) {return renderCreativeSvg(id,frameToUs(frame,frameRate),parameters,options);}
 export function renderTypewriterSvg(textValue,timeUs,{width=1200,height=675,accent='#68dfc0',...timing}={}) {

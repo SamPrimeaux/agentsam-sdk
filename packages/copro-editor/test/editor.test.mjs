@@ -164,3 +164,70 @@ test('typewriter and counter graphics are stored as undoable, validated clip met
   assert.equal(session.project.tracks[0].clips[0].metadata.graphic,undefined);
   assert.throws(()=>applyCoProCommand(session.project,{type:"clip.set_graphic",payload:{clipId:"clip:1",graphic:{id:"counter",values:[1]}}}),/copro_counter_values_invalid/);
 });
+
+test("project canvas ratio is an undoable validated editor command", () => {
+  const session = new CoProEditorSession(fixture());
+  session.execute({type:"project.set_canvas",payload:{width:1080,height:1920,frameRate:30}});
+  assert.deepEqual(session.project.canvas,{width:1080,height:1920,frameRate:30});
+  session.undo();
+  assert.deepEqual(session.project.canvas,{width:1920,height:1080,frameRate:30});
+  session.redo();
+  assert.deepEqual(session.project.canvas,{width:1080,height:1920,frameRate:30});
+  assert.throws(()=>applyCoProCommand(session.project,{type:"project.set_canvas",payload:{width:0,height:1920}}),/copro_canvas_width_invalid/);
+  assert.throws(()=>applyCoProCommand(session.project,{type:"project.set_canvas",payload:{width:1080,height:1920,frameRate:300}}),/copro_canvas_frame_rate_invalid/);
+});
+
+test("splitting a selected fast clip preserves both source portions and every other clip",()=>{
+ const project=fixture();
+ project.tracks[0].clips[0].playbackRate=2;
+ project.tracks[0].clips[0].inUs=1000000;
+ const other=createTrack({id:"track:other",kind:"audio"});
+ other.clips.push(createClip({id:"audio:unselected",assetId:"audio:1",startUs:0,durationUs:10000000}));
+ project.tracks.push(other);
+ const session=new CoProEditorSession(project);
+ const next=session.execute({type:"clip.split",payload:{clipId:"clip:1",atUs:4000000,rightClipId:"clip:right"}});
+ assert.equal(next.tracks[0].clips[1].inUs,9000000);
+ assert.equal(next.tracks[0].clips.reduce((sum,clip)=>sum+clip.durationUs,0),10000000);
+ assert.deepEqual(next.tracks[1],project.tracks[1]);
+ assert.deepEqual(session.undo(),project);
+ assert.deepEqual(session.redo(),next);
+});
+
+test("locked tracks reject clip edits and insertion before history changes",()=>{
+ const project=fixture();project.tracks[0].locked=true;
+ const session=new CoProEditorSession(project);
+ for(const command of [
+  {type:"clip.split",payload:{clipId:"clip:1",atUs:1000000,rightClipId:"right"}},
+  {type:"clip.move",payload:{clipId:"clip:1",startUs:3000000}},
+  {type:"clip.delete",payload:{clipId:"clip:1"}},
+  {type:"clip.insert",payload:{trackId:"track:1",clip:createClip({id:"new",assetId:"new",startUs:0,durationUs:1000000})}},
+ ])assert.throws(()=>session.execute(command),/copro_track_locked/);
+ assert.deepEqual(session.project,project);
+ assert.equal(session.canUndo,false);
+});
+
+test("template layers apply as one undoable edit without replacing existing footage",()=>{
+ const project=fixture(),session=new CoProEditorSession(project);
+ const track=createTrack({id:"template:track",kind:"overlay"});
+ track.clips.push(createClip({id:"template:clip",assetId:"graphic:1",startUs:0,durationUs:4000000}));
+ const next=session.execute({type:"project.apply_template",payload:{tracks:[track],canvas:{width:1080,height:1920,frameRate:30}}});
+ assert.deepEqual(next.tracks[0],project.tracks[0]);
+ assert.deepEqual(next.canvas,project.canvas);
+ assert.deepEqual(session.undo(),project);
+ assert.deepEqual(session.redo(),next);
+ track.clips[0].durationUs=1;
+ assert.equal(session.project.tracks[1].clips[0].durationUs,4000000);
+});
+
+test("project cover is isolated from templates and persists through undo and redo",()=>{
+ const project=fixture(),session=new CoProEditorSession(project);
+ const cover={kind:"frame",url:"data:image/jpeg;base64,aGVsbG8=",timeUs:1000000};
+ session.execute({type:"project.set_cover",payload:{cover}});
+ const track=createTrack({id:"template:track",kind:"overlay"});
+ const next=session.execute({type:"project.apply_template",payload:{tracks:[track]}});
+ assert.deepEqual(next.metadata.cover,cover);
+ assert.deepEqual(session.undo().metadata.cover,cover);
+ assert.equal(session.undo().metadata?.cover,undefined);
+ assert.deepEqual(session.redo().metadata.cover,cover);
+ assert.equal(project.metadata?.cover,undefined);
+});
