@@ -109,3 +109,39 @@ test('light themes with a dark rail keep page ink dark and project tailwind toke
   assert.equal(props.get('--color-foreground'), '#202223');
   assert.equal(props.get('--color-background'), '#F4F4F5');
 });
+
+
+test('MovieMode receives explicit account theme tokens at runtime, without repainting the shell', () => {
+  const themed = projectStudioShellAppearance({
+    id: 'product-theme',
+    themeFamily: 'light',
+    cssVars: {
+      '--accent': '#336699',
+      '--copro-bg': '#0b1015',
+      '--copro-accent': '#29caca',
+      '--copro-accent-ink': '#031011',
+      '--copro-unsafe': 'url(https://example.com/x)',
+    },
+  });
+  assert.deepEqual(themed.productTokens, {
+    '--copro-bg': '#0b1015', '--copro-accent': '#29caca', '--copro-accent-ink': '#031011',
+  });
+  const css = new Map();
+  const root = { dataset: {}, classList: { toggle() {} },
+    style: { setProperty: (k, v) => css.set(k, v), removeProperty: (k) => css.delete(k), colorScheme: '' },
+  };
+  applyStudioShellAppearance(themed, root);
+  assert.equal(css.get('--copro-accent'), '#29caca');
+  assert.equal(css.get('--nav-accent'), '#336699');
+  const store = new Map();
+  const storage = {
+    getItem: key => store.get(key) || null,
+    setItem: (key, value) => store.set(key, value),
+    removeItem: key => store.delete(key),
+  };
+  writeStudioAppearanceCache('account-123', themed, storage);
+  assert.deepEqual(readStudioAppearanceCache('account-123', storage).productTokens, themed.productTokens);
+  applyStudioShellAppearance(projectStudioShellAppearance(null), root);
+  assert.equal(css.has('--copro-accent'), false, 'old product token must be cleared on theme switch');
+  assert.equal(root.dataset.coproAppearanceTokens, '');
+});

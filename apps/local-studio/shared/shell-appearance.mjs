@@ -84,6 +84,19 @@ function accentInk(accent) {
   return (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? '#000000' : '#ffffff';
 }
 
+/** Product-specific tokens supplied by the existing account CMS theme. */
+function movieModeThemeTokens(vars) {
+  if (!vars || typeof vars !== 'object' || Array.isArray(vars)) return {};
+  const safe = {};
+  for (const [name, raw] of Object.entries(vars)) {
+    if (!/^--copro-[a-z0-9-]{1,66}$/.test(name) || typeof raw !== 'string' || raw.length > 120) continue;
+    const value = raw.trim();
+    if (!value || /[;{}<>\u0000-\u001f]/.test(value) || /(?:url\s*\(|expression\s*\(|javascript:|@import)/i.test(value)) continue;
+    safe[name] = value;
+  }
+  return safe;
+}
+
 /**
  * @param {{id?:string,themeFamily?:string,cssVars?:Record<string,string>} | null | undefined} record
  * @param {{theme?:string,accentColor?:string|null}} fallback
@@ -115,6 +128,7 @@ export function projectStudioShellAppearance(record, fallback = {}) {
   return {
     theme,
     tokens,
+    productTokens: movieModeThemeTokens(vars),
     accentColor,
     accentInk: accentInk(accentColor),
     themeId: record?.id || null,
@@ -145,6 +159,13 @@ export function applyStudioShellAppearance(appearance, root) {
     root.style.setProperty(name, appearance.tokens[role]);
   }
   root.style.setProperty('--home-focus', appearance.accentColor);
+  // On account/theme changes remove stale product overrides; stylesheet defaults win.
+  for (const name of (root.dataset.coproAppearanceTokens || '').split(',').filter(Boolean)) {
+    root.style.removeProperty?.(name);
+  }
+  const productTokens = movieModeThemeTokens(appearance.productTokens);
+  for (const [name, value] of Object.entries(productTokens)) root.style.setProperty(name, value);
+  root.dataset.coproAppearanceTokens = Object.keys(productTokens).join(',');
   for (const [name, role] of Object.entries(tailwindRoles)) {
     const value = appearance.tokens[role] ?? appearance.tokens[role === 'ink' ? 'text' : role === 'inkMuted' ? 'muted' : role];
     if (value) root.style.setProperty(name, value);
@@ -173,6 +194,7 @@ export function readStudioAppearanceCache(accountId, storage) {
     return {
       theme: parsed.theme,
       tokens: parsed.tokens,
+      productTokens: movieModeThemeTokens(parsed.productTokens),
       accentColor: typeof parsed.accentColor === 'string' ? parsed.accentColor : '#8b5cf6',
       accentInk: typeof parsed.accentInk === 'string' ? parsed.accentInk : accentInk(parsed.accentColor),
       themeId: parsed.themeId || null,
@@ -195,6 +217,7 @@ export function writeStudioAppearanceCache(accountId, appearance, storage) {
     const payload = JSON.stringify({
       theme: appearance.theme,
       tokens: appearance.tokens,
+      productTokens: movieModeThemeTokens(appearance.productTokens),
       accentColor: appearance.accentColor,
       accentInk: appearance.accentInk || accentInk(appearance.accentColor),
       themeId: appearance.themeId,
