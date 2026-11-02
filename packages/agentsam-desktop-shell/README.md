@@ -58,3 +58,16 @@ npm run build:brand -- cad-creator
 
 <!-- agentsam:trademark-notice -->
 > Independent project. Not affiliated with, endorsed by, or sponsored by any company whose products are named here. Names are trademarks of their respective owners. See [TRADEMARKS](https://github.com/SamPrimeaux/agentsam-sdk/blob/main/TRADEMARKS.md).
+
+### Desktop release source freshness gate
+
+The installable `bundle` and `bundle:app` commands now require
+`build:desktop-assets` to execute `build:included:all` *before* building
+and staging the host. The included applications are discovered dynamically
+from `manifests/local-studio.json` and their own `agentsam.app.json`
+embeddable build contracts. A failing product build must stop the native
+release. The former `bundle:shell-only` bypass intentionally fails closed.
+
+This fixes **stale bundling**, not WIP integration: only after MovieMode and
+Local Studio shell/CMS changes are merged and tested on `main` should a
+new signed desktop installer or update-channel release be published.
