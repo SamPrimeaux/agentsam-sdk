@@ -746,7 +746,7 @@ export function CoProStudio({
             <div
               className={`copro-preview-device${effectivePreviewSrc?"":" is-empty"}`}
               data-overlay={activeOverlay}
-              style={{width:previewWidth,height:previewWidth/canvasRatio,aspectRatio:canvasRatio,transform:`scale(${previewZoom/100})`}}
+              style={{"--mm-monitor-width":previewWidth+"px","--mm-monitor-height":previewWidth/canvasRatio+"px","--mm-monitor-ratio":canvasRatio,"--mm-monitor-zoom":`scale(${previewZoom/100})`} as React.CSSProperties}
             >
               {effectivePreviewSrc && effectivePreviewKind === "video" ? (
                 <video
@@ -861,7 +861,7 @@ export function CoProStudio({
                 <button type="button" aria-label="Canvas aspect ratio" aria-expanded={previewControlMenu==="ratio"} title="Canvas ratio" onClick={()=>setPreviewControlMenu(value=>value==="ratio"?null:"ratio")}><Ratio size={16}/><span>{currentRatioLabel}</span><ChevronDown size={11}/></button>
                 {previewControlMenu==="ratio"&&<div className="mm-preview-popover mm-preview-ratio-popover"><strong>Canvas ratio</strong><button type="button" onClick={()=>chooseCanvasRatio(project.canvas?.width??1920,project.canvas?.height??1080)}>Original / Current</button>{CANVAS_RATIOS.map(ratio=><button type="button" key={ratio.label} className={currentRatioLabel===ratio.label?"is-active":""} onClick={()=>chooseCanvasRatio(ratio.width,ratio.height)}>{ratio.label}<small>{ratio.width} × {ratio.height}</small></button>)}</div>}
               </div>
-              <button type="button" className="mm-preview-fullscreen-button" aria-label={isFullscreen?"Exit fullscreen":"Full screen preview"} title={isFullscreen?"Exit fullscreen":"Full screen preview"} onClick={()=>void toggleFullscreen()}><Maximize2 size={16}/></button>
+              <IconAction type="button" className="mm-preview-fullscreen-button" aria-label={isFullscreen?"Exit fullscreen":"Full screen preview"} title={isFullscreen?"Exit fullscreen":"Full screen preview"} onClick={()=>void toggleFullscreen()}><Maximize2 size={16}/></IconAction>
             </div>
           </section>
 
@@ -872,7 +872,7 @@ export function CoProStudio({
             <select aria-label="Playback quality" value={playbackQuality} onChange={event=>setPlaybackQuality(event.currentTarget.value as typeof playbackQuality)}><option>Full</option><option>High</option><option>Medium</option><option>Low</option></select>
             <label className="mm-fullscreen-zoom"><ZoomIn size={15}/><input aria-label="Preview zoom" type="range" min="50" max="200" step="5" value={previewZoom} onChange={event=>setPreviewZoom(Number(event.currentTarget.value))}/>{previewZoom}%</label>
             <select aria-label="Canvas ratio" value={currentRatioLabel} onChange={event=>{const ratio=CANVAS_RATIOS.find(item=>item.label===event.currentTarget.value);if(ratio)chooseCanvasRatio(ratio.width,ratio.height);}}>{CANVAS_RATIOS.map(ratio=><option key={ratio.label} value={ratio.label}>{ratio.label}</option>)}</select>
-            <button type="button" aria-label="Exit fullscreen" onClick={()=>void toggleFullscreen()}><Maximize2 size={17}/></button>
+            <IconAction type="button" aria-label="Exit fullscreen" onClick={()=>void toggleFullscreen()}><Maximize2 size={17}/></IconAction>
           </div>}
 
           </section>{/* Player and transport remain one resizable, movable unit. */}

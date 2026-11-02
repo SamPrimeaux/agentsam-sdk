@@ -18,7 +18,7 @@ const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8'
 const added = new Map();
 let files = explicit ?? [];
 if (base) {
-  const diff = git('diff', '--unified=0', '--no-ext-diff', base + '...HEAD', '--');
+  const diff = git('diff', '--unified=0', '--no-ext-diff', base + '...HEAD', '--', '*.tsx', '*.jsx', '*.html', '*.htm');
   let file = '';
   for (const line of diff.split('\n')) {
     if (line.startsWith('+++ b/')) file = line.slice(6);

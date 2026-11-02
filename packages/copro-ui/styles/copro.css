@@ -2834,3 +2834,7 @@ body:has(.copro-studio) { margin:0; }
 .copro-studio .mm-player-pane.is-viewport-fullscreen {position:fixed!important;inset:0!important;z-index:10000;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;display:grid!important;grid-template-rows:0 minmax(0,1fr) 0;background:#080a0c;}
 .copro-studio .mm-player-pane.is-viewport-fullscreen>.mm-player-pane-header,.copro-studio .mm-player-pane.is-viewport-fullscreen>.copro-transport {visibility:hidden;height:0;overflow:hidden;}
 .copro-studio .mm-player-pane.is-viewport-fullscreen>.copro-preview-stage {padding:0;background:#080a0c;}
+
+.mm-live-asset-preview>img {transform:var(--mm-motion-transform,none);opacity:var(--mm-motion-opacity,1);filter:var(--mm-motion-filter,none);clip-path:var(--mm-motion-clip,none);}
+.copro-studio .mm-player-pane .copro-preview-device,
+.copro-studio .mm-player-pane .copro-preview-device.is-empty {width:var(--mm-monitor-width);height:var(--mm-monitor-height);aspect-ratio:var(--mm-monitor-ratio);transform:var(--mm-monitor-zoom,none);}

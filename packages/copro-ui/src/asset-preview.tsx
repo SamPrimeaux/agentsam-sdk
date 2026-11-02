@@ -39,7 +39,12 @@ export function CoProAssetPreview({asset,playing,renderCreativePreview,sampleMot
  },[ready,timeUs,asset.id,duration]);
  const svg=asset.category==="template"?renderCreativePreview?.(asset.id,timeUs):null;
  const sample=asset.category==="animation"?sampleMotion?.(asset.id,timeUs,{durationUs:duration}):null;
- const style:React.CSSProperties=sample?{transform:`translate(${sample.x}px,${sample.y}px) scale(${sample.scale}) rotate(${sample.rotation}deg) scaleX(${sample.scaleX})`,opacity:sample.opacity,filter:`blur(${sample.blur}px)`,clipPath:`inset(0 ${sample.clipInset}% 0 0)`}:{};
+ const style = {
+   "--mm-motion-transform":sample?`translate(${sample.x}px,${sample.y}px) scale(${sample.scale}) rotate(${sample.rotation}deg) scaleX(${sample.scaleX})`:"none",
+   "--mm-motion-opacity":sample?.opacity??1,
+   "--mm-motion-filter":sample?`blur(${sample.blur}px)`:"none",
+   "--mm-motion-clip":sample?`inset(0 ${sample.clipInset}% 0 0)`:"none",
+ } as React.CSSProperties;
  return <span className="mm-live-asset-preview">
    {asset.category==="transition"?<><canvas ref={canvasRef} width={640} height={360} aria-label={asset.name+" transition preview"}/>{error&&<span role="status">Preview unavailable</span>}</>:
      <img src={svg?"data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg):before&&sample?before:asset.previewUrl} alt={asset.name+" animated preview"} style={style}/>}

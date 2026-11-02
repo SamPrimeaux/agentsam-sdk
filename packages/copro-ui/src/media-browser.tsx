@@ -1,3 +1,4 @@
+import { IconAction } from "./icon-action.js";
 import React, { useEffect, useId, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -334,8 +335,8 @@ export function CoProMediaBrowser({
                   <button type="button" className="mm-media-add-action" onClick={() => onAddMedia(item.id)}>
                     Add to timeline
                   </button>
-                  {!inProject&&<button type="button" className="mm-media-icon-action" aria-label={"Rename "+item.name} title="Rename media" onClick={()=>renameMedia(item)}><Pencil size={14}/></button>}
-                  {!inProject&&<button type="button" className="mm-media-icon-action is-danger" aria-label={"Delete "+item.name} title="Delete original media" onClick={()=>deleteMedia(item)}><Trash2 size={14}/></button>}
+                  {!inProject&&<IconAction type="button" className="mm-media-icon-action" aria-label={"Rename "+item.name} title="Rename media" onClick={()=>renameMedia(item)}><Pencil size={14}/></IconAction>}
+                  {!inProject&&<IconAction type="button" className="mm-media-icon-action is-danger" aria-label={"Delete "+item.name} title="Delete original media" onClick={()=>deleteMedia(item)}><Trash2 size={14}/></IconAction>}
                 </div>
               </article>
             ))}
