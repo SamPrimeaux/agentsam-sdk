@@ -78,6 +78,19 @@ _Date: 2026-11-02. Source: real iMac checkout, Git local refs/worktrees/stashes.
 6. **Acceptance evidence includes** source SHA, build receipt, test results, relevant route/screenshot proof, rollback revision and responsible release target.
 7. **Use `npm run wip:audit`** at the beginning and end of each consolidation sprint. It is read-only and enumerates actual local branches, dirty worktrees, and stashes. CI cannot see local-only worktrees/stashes from GitHub, so this audit must run on the developer machine.
 
+## Runtime-first presentation and resource contract (Recovery Batches 01–03)
+
+**Acceptance rule:** A theme color, shell navigation item, installed template, approved icon, or presentation asset must not require a MovieMode/SDK rebuild when it can be represented as data. Build/redeploy remains appropriate for changed executable behavior, new editor tools, schema migrations, or newly implemented route components.
+
+- **Brand and appearance:** Account Theme Studio (existing `cms_themes` / active preference) owns semantic CSS tokens. MovieMode owns its separate dark/cyan defaults and applies explicit product-scoped `--copro-*` overrides at runtime. Shell themes must not silently recolor the editor. Tokens must be account-scoped, validated, cached for first paint, reset on account/theme change, and reversible without deployment. Do not introduce a second MovieMode theme database.
+- **Navigation:** The existing installed-app/host navigation projection owns destination IDs, labels, icons and registered hrefs. Stop spreading literal menu paths across components. Update presentation/menu data without rebuilding consumers when the destination is already registered; adding/changing an executable route remains a code release. Verify browser, desktop, embedded app and authenticated navigation equivalence.
+- **Templates and presets:** The existing `studio_templates` / D1 resource authority, R2 source payloads and preview assets must drive MovieMode/CMS installed template listings. Replace static catalog imports as the *discovery authority*, while keeping executable template effects explicitly versioned. Adding a data-only template with a valid schema, cover, and payload must not require a frontend bundle change.
+- **Icons and imagery:** Store approved SVG/icon asset references and versioned preview files in the existing brand/media resource catalog. Consumer UI resolves stable resource IDs/URLs at runtime; do not inject unsanitized SVG, hardcode new asset URLs into view components, or ship generated art without its source.
+- **Scope and precedence:** Platform defaults → tenant/account theme → application product tokens → site/project overrides. Do not let shell/global tokens override a product's intentional visual identity. Respect authentication, cache validators and account/project isolation.
+- **Refresh and rollback:** Resource revisions and cache invalidation should update existing sessions safely. Persist source SHA, schema version and rollback pointer for every change.
+
+**Mandatory no-rebuild acceptance:** Change an account MovieMode accent token, update a registered navigation label/destination, add an eligible template with real cover media, and replace an approved icon asset; prove those data-only changes appear after runtime refresh without rebuilding MovieMode. Demonstrate account and project isolation, save/reopen persistence, cache refresh and rollback. Any remaining compiled catalog, icon or route constant requires a tracked migration disposition, not blanket claims that the application is dynamic.
+
 ## Near-term priority
 
 **P0:** Verify hosted Online Store navigation, restore intentional MovieMode dark/cyan presentation, accept MovieMode source/media workflow, and repair shell continuity before changing the desktop version.
