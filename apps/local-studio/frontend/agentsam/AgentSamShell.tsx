@@ -193,11 +193,10 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         window.location.hash = '#/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(to);
         return;
       }
-      void navigate({ to: '/apps/ecommerce-cms-agentsam', search: { page: to } } as never).then(() => {
-        if (window.location.pathname === '/apps/ecommerce-cms-agentsam') {
-          window.history.replaceState(window.history.state, '', to);
-        }
-      });
+      // Keep the real registered SPA route in the address bar. Replacing it
+      // with an unregistered /admin/* URL makes TanStack render Not Found on
+      // subsequent navigation despite a valid packaged server-side document.
+      void navigate({ to: '/apps/ecommerce-cms-agentsam', search: { page: to } } as never);
       return;
     }
     if (isPackagedDesktop()) {
