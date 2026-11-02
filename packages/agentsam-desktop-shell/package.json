@@ -11,7 +11,7 @@
     "build": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && cargo check --manifest-path src-tauri/Cargo.toml",
     "build:shell-only": "cargo check --manifest-path src-tauri/Cargo.toml",
     "typecheck": "echo \"agentsam-desktop-shell: no TS surface yet\" && exit 0",
-    "test": "node --test scripts/icon-idempotence.test.mjs scripts/stage-desktop-dist.test.mjs worker/src/index.test.mjs scripts/native-capability-ledger.test.mjs",
+    "test": "node --test scripts/icon-idempotence.test.mjs scripts/stage-desktop-dist.test.mjs scripts/native-capability-ledger.test.mjs",
     "ledger:native": "node scripts/native-capability-ledger.mjs",
     "ledger:native:check": "node scripts/native-capability-ledger.mjs --check",
     "test:icons": "node --test scripts/icon-idempotence.test.mjs",

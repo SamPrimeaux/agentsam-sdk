@@ -136,7 +136,7 @@ auth_users → one canonical account
 ### C6. Release truth
 
 - [ ] Receipt distinguishes `dev_unsigned` | `signed` | `notarized`
-- [ ] Use `desktop_shell_releases` / `agentsam-desktop-updates` / R2 — no second release backend
+- [ ] Use canonical `agentsam_product_releases` / `inneranimalmedia-pwa-services` / per-product R2 — no second release backend
 - [ ] If Worker/table not live → **blocked step**, not fake success
 
 ### C7. Acceptance — Operator / newuser123

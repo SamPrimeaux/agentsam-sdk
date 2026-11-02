@@ -80,11 +80,11 @@ test('theme zip release can omit target/arch', () => {
   assert.equal(n, 1);
 });
 
-test('protocol README forbids desktop_shell_releases and plugin overload', () => {
+test('protocol README mandates shared product releases and forbids duplicate release tables', () => {
   const text = readFileSync(readmePath, 'utf8');
   assert.match(text, /agentsam_product_releases/);
   assert.match(text, /agentsam_products/);
-  assert.match(text, /desktop_shell_releases/);
-  assert.match(text, /do \*\*not\*\* apply|Do \*\*not\*\* create `desktop_shell_releases`/i);
+  assert.match(text, /do \*\*not\*\* create a second desktop release table/i);
+  assert.match(text, /updates\.inneranimalmedia\.com/);
   assert.match(text, /agentsam_plugins/);
 });
