@@ -144,4 +144,6 @@ test('MovieMode receives explicit account theme tokens at runtime, without repai
   applyStudioShellAppearance(projectStudioShellAppearance(null), root);
   assert.equal(css.has('--copro-accent'), false, 'old product token must be cleared on theme switch');
   assert.equal(root.dataset.coproAppearanceTokens, '');
+  assert.doesNotThrow(() => new Function(FIRST_PAINT_BOOTSTRAP_SCRIPT), 'first-paint cache script must parse');
+  assert.match(FIRST_PAINT_BOOTSTRAP_SCRIPT, /productTokens/, 'first paint hydrates product colors');
 });
