@@ -19,7 +19,7 @@ Finished contract for **versioned installable artifacts**. Complements the live
 | Table / surface | Why not |
 |---|---|
 | `agentsam_plugins` (+ health / oauth) | Account-scoped integrations, not global releases |
-| `desktop_shell_releases` | Tauri-only stub — **do not apply**; superseded by this contract |
+| Retired desktop-only registry | No second release table; native artifacts use this product release contract |
 | `dashboard_versions` | IAM web asset deploy ledger |
 | `products_catalog` | Commercial billing tiers |
 | `agentsam_artifacts` | Per-user generated artifacts (`tenant_id` / user scope) |
@@ -73,7 +73,7 @@ Required product catalog fields from the 2026-10-28 product decision, mapped:
 - Product slug stays catalog identity (e.g. `agentsam-local-studio`).
 - `artifact_kind = 'desktop_native'` requires `target`, `arch`, `signature`, `artifact_url`.
 - Updater check: latest **published** row for `(desktop_app_id, channel, target, arch)` where `isNewer(version, current)`.
-- Do **not** create `desktop_shell_releases`.
+- Do **not** create a second desktop release table.
 
 ### Channels
 
@@ -93,4 +93,4 @@ Theme Store’s in-worker `ThemeRecord.release` (`status`, `sha256`, `storageKey
 
 ## Relationship to PWA services
 
-`iam-pwa-services` owns boring **resolve / check / publish** HTTP for installable clients. It should query this table (and SW manifests for browser PWAs), not invent a third registry.
+`inneranimalmedia-pwa-services` owns **resolve / check / publish** HTTP at `updates.inneranimalmedia.com`, while preserving the PWA API at `services.inneranimalmedia.com` for installable clients. It should query this table (and SW manifests for browser PWAs), not invent a third registry.

@@ -3,7 +3,7 @@
 > **Contract SSOT (2026-10-31):** `protocol/product-releases/README.md` +
 > `migrations/runtime/0011_agentsam_product_releases.sql`.
 > Product identity = live `agentsam_products`. Versioned artifacts =
-> `agentsam_product_releases`. Do **not** apply `desktop_shell_releases`.
+> `agentsam_product_releases`. Use this canonical release table; do **not** introduce a desktop-only registry.
 
 ## Product lifecycle decision
 

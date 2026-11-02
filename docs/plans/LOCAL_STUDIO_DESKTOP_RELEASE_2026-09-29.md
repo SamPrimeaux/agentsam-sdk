@@ -1,3 +1,5 @@
+> **Superseded release-registry guidance (2026-11-02):** Native release metadata is now owned by `agentsam_product_releases`, served by `inneranimalmedia-pwa-services` at `updates.inneranimalmedia.com`. Never create a separate desktop release table. Historical version numbers below are archival.
+
 # Local Studio desktop release graduation — 2.6.6
 
 **Owner lane:** installed/downloadable Local Studio only
@@ -15,7 +17,7 @@
 - The packaged `2.6.6` Tauri app launches and exposes the real Local Studio UI: navigation, Chat/Work, composer, model picker, and Send.
 - The current `2.6.6` DMG exists, but the app is ad-hoc signed; Gatekeeper rejects it.
 - This machine currently has no valid Apple code-signing identity and no Tauri updater private-key environment configured.
-- `agentsam-desktop-updates` is deployed, but updater checks fail because production D1 lacks `desktop_shell_releases`.
+- The retired desktop-only update Worker was deployed, but updater checks fail because its Worker still queries a retired desktop-only table.
 - `updates.agentsam.dev` does not currently resolve.
 - `apps/local-studio/agentsam.app.json` still advertises an npm install for a private package. That install contract is stale.
 
@@ -67,8 +69,8 @@ For this graduation target, the intended version is `2.6.6`.
 
 ## Release gate 3 — updater/download backend
 
-1. Apply `migrations/d1/0017_desktop_shell_releases.sql` to `inneranimalmedia-business`.
-2. Re-test `agentsam-desktop-updates` updater lookup; missing table must be gone.
+1. Use the deployed `migrations/runtime/0011_agentsam_product_releases.sql` contract in `inneranimalmedia-business`; repair the service Worker to query it.
+2. Re-test `updates.inneranimalmedia.com` on `inneranimalmedia-pwa-services`; missing table must be gone.
 3. Keep one backend: D1 release metadata + R2 artifact bytes.
 4. Decide the canonical public updater hostname and make it resolve. Do not leave Tauri configured to a dead hostname.
 5. Publish immutable release artifacts under:
