@@ -31,6 +31,8 @@ export type CoProStoredMediaItem = {
   durationUs?: number;
   waveform?: number[];
   thumbnails?: string[];
+  width?:number;
+  height?:number;
   savedAt?: string;
   lastModified?: number;
 };

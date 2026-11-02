@@ -1,6 +1,6 @@
 {
   "schema": "copro.creative-catalog.v1",
-  "status": "prototype/not-integrated",
+  "status": "derived-from-creatives",
   "items": [
     {
       "id": "creative:kinetic-stack",
@@ -8,7 +8,12 @@
       "name": "Kinetic word stack",
       "durationUs": 4000000,
       "preview": "thumbnails/creative-kinetic-stack.svg",
-      "source": "RenderComp/free-remotion-templates"
+      "source": "RenderComp/free-remotion-templates",
+      "description": "Project template (typography). Instantiates a distinct editable CoPro project.",
+      "group": "typography",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:chapter-divider",
@@ -16,7 +21,12 @@
       "name": "Chapter divider",
       "durationUs": 5000000,
       "preview": "thumbnails/creative-chapter-divider.svg",
-      "source": "RenderComp/free-remotion-templates"
+      "source": "RenderComp/free-remotion-templates",
+      "description": "Project template (documentary). Instantiates a distinct editable CoPro project.",
+      "group": "documentary",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:product-launch",
@@ -24,7 +34,12 @@
       "name": "Product launch",
       "durationUs": 6000000,
       "preview": "thumbnails/creative-product-launch.svg",
-      "source": "zz41354899/SwiftClip"
+      "source": "zz41354899/SwiftClip",
+      "description": "Project template (product). Instantiates a distinct editable CoPro project.",
+      "group": "product",
+      "aspectRatio": "16:9",
+      "featured": true,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:quote-story",
@@ -32,7 +47,12 @@
       "name": "Quote story",
       "durationUs": 8000000,
       "preview": "thumbnails/creative-quote-story.svg",
-      "source": "zz41354899/SwiftClip"
+      "source": "zz41354899/SwiftClip",
+      "description": "Project template (social). Instantiates a distinct editable CoPro project.",
+      "group": "social",
+      "aspectRatio": "9:16",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:floating-cards",
@@ -40,7 +60,12 @@
       "name": "Floating feature cards",
       "durationUs": 5000000,
       "preview": "thumbnails/creative-floating-cards.svg",
-      "source": "reactvideoeditor/clippkit"
+      "source": "reactvideoeditor/clippkit",
+      "description": "Project template (product). Instantiates a distinct editable CoPro project.",
+      "group": "product",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:flip-showcase",
@@ -48,7 +73,12 @@
       "name": "Flip showcase",
       "durationUs": 5000000,
       "preview": "thumbnails/creative-flip-showcase.svg",
-      "source": "reactvideoeditor/clippkit"
+      "source": "reactvideoeditor/clippkit",
+      "description": "Project template (product). Instantiates a distinct editable CoPro project.",
+      "group": "product",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:documentary-opener",
@@ -56,7 +86,12 @@
       "name": "Documentary opener",
       "durationUs": 7000000,
       "preview": "thumbnails/creative-documentary-opener.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (documentary). Instantiates a distinct editable CoPro project.",
+      "group": "documentary",
+      "aspectRatio": "16:9",
+      "featured": true,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:social-story",
@@ -64,7 +99,12 @@
       "name": "Social story",
       "durationUs": 6000000,
       "preview": "thumbnails/creative-social-story.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (social). Instantiates a distinct editable CoPro project.",
+      "group": "social",
+      "aspectRatio": "9:16",
+      "featured": true,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:product-grid",
@@ -72,7 +112,12 @@
       "name": "Product grid",
       "durationUs": 6000000,
       "preview": "thumbnails/creative-product-grid.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (product). Instantiates a distinct editable CoPro project.",
+      "group": "product",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:technical-explainer",
@@ -80,7 +125,12 @@
       "name": "Technical explainer",
       "durationUs": 7000000,
       "preview": "thumbnails/creative-technical-explainer.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (technical). Instantiates a distinct editable CoPro project.",
+      "group": "technical",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:architectural-review",
@@ -88,7 +138,12 @@
       "name": "Architectural review",
       "durationUs": 7000000,
       "preview": "thumbnails/creative-architectural-review.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (technical). Instantiates a distinct editable CoPro project.",
+      "group": "technical",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:data-brief",
@@ -96,7 +151,12 @@
       "name": "Data brief",
       "durationUs": 6000000,
       "preview": "thumbnails/creative-data-brief.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (graphics). Instantiates a distinct editable CoPro project.",
+      "group": "graphics",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:lower-third",
@@ -104,7 +164,12 @@
       "name": "Editorial lower third",
       "durationUs": 5000000,
       "preview": "thumbnails/creative-lower-third.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (documentary). Instantiates a distinct editable CoPro project.",
+      "group": "documentary",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:caption-story",
@@ -112,7 +177,12 @@
       "name": "Word focus captions",
       "durationUs": 6000000,
       "preview": "thumbnails/creative-caption-story.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (captions). Instantiates a distinct editable CoPro project.",
+      "group": "captions",
+      "aspectRatio": "9:16",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:photo-montage",
@@ -120,7 +190,12 @@
       "name": "Photo montage",
       "durationUs": 6000000,
       "preview": "thumbnails/creative-photo-montage.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (social). Instantiates a distinct editable CoPro project.",
+      "group": "social",
+      "aspectRatio": "9:16",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:film-title",
@@ -128,7 +203,12 @@
       "name": "Film title",
       "durationUs": 6000000,
       "preview": "thumbnails/creative-film-title.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (documentary). Instantiates a distinct editable CoPro project.",
+      "group": "documentary",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:audiogram",
@@ -136,7 +216,12 @@
       "name": "Audio story",
       "durationUs": 6000000,
       "preview": "thumbnails/creative-audiogram.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (graphics). Instantiates a distinct editable CoPro project.",
+      "group": "graphics",
+      "aspectRatio": "16:9",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "creative:end-card",
@@ -144,7 +229,12 @@
       "name": "End card",
       "durationUs": 5000000,
       "preview": "thumbnails/creative-end-card.svg",
-      "source": "original"
+      "source": "original",
+      "description": "Project template (social). Instantiates a distinct editable CoPro project.",
+      "group": "social",
+      "aspectRatio": "9:16",
+      "featured": false,
+      "resourceKind": "project_template"
     },
     {
       "id": "fade-in",

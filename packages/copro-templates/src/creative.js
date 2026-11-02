@@ -3,39 +3,67 @@ import {integerUs, clamp, cubicOut, frameToUs, sampleAnimation, createTypewriter
 
 // CoPro's project and clip metadata remain the authority. This is a frame sampler,
 // not a second timeline, media engine or application renderer.
+// scene, name, category, durationUs, provenance, featuredProjectTemplate
 const rows = [
- ['kinetic-stack','Kinetic word stack','typography',4000000,'RenderComp/free-remotion-templates'],
- ['chapter-divider','Chapter divider','documentary',5000000,'RenderComp/free-remotion-templates'],
- ['product-launch','Product launch','product',6000000,'zz41354899/SwiftClip'],
- ['quote-story','Quote story','social',8000000,'zz41354899/SwiftClip'],
- ['floating-cards','Floating feature cards','product',5000000,'reactvideoeditor/clippkit'],
- ['flip-showcase','Flip showcase','product',5000000,'reactvideoeditor/clippkit'],
- ['documentary-opener','Documentary opener','documentary',7000000,'original'],
- ['social-story','Social story','social',6000000,'original'],
- ['product-grid','Product grid','product',6000000,'original'],
- ['technical-explainer','Technical explainer','technical',7000000,'original'],
- ['architectural-review','Architectural review','technical',7000000,'original'],
- ['data-brief','Data brief','graphics',6000000,'original'],
- ['lower-third','Editorial lower third','documentary',5000000,'original'],
- ['caption-story','Word focus captions','captions',6000000,'original'],
- ['photo-montage','Photo montage','social',6000000,'original'],
- ['film-title','Film title','documentary',6000000,'original'],
- ['audiogram','Audio story','graphics',6000000,'original'],
- ['end-card','End card','social',5000000,'original'],
+ ['kinetic-stack','Kinetic word stack','typography',4000000,'RenderComp/free-remotion-templates',false],
+ ['chapter-divider','Chapter divider','documentary',5000000,'RenderComp/free-remotion-templates',false],
+ ['product-launch','Product launch','product',6000000,'zz41354899/SwiftClip',true],
+ ['quote-story','Quote story','social',8000000,'zz41354899/SwiftClip',false],
+ ['floating-cards','Floating feature cards','product',5000000,'reactvideoeditor/clippkit',false],
+ ['flip-showcase','Flip showcase','product',5000000,'reactvideoeditor/clippkit',false],
+ ['documentary-opener','Documentary opener','documentary',7000000,'original',true],
+ ['social-story','Social story','social',6000000,'original',true],
+ ['product-grid','Product grid','product',6000000,'original',false],
+ ['technical-explainer','Technical explainer','technical',7000000,'original',false],
+ ['architectural-review','Architectural review','technical',7000000,'original',false],
+ ['data-brief','Data brief','graphics',6000000,'original',false],
+ ['lower-third','Editorial lower third','documentary',5000000,'original',false],
+ ['caption-story','Word focus captions','captions',6000000,'original',false],
+ ['photo-montage','Photo montage','social',6000000,'original',false],
+ ['film-title','Film title','documentary',6000000,'original',false],
+ ['audiogram','Audio story','graphics',6000000,'original',false],
+ ['end-card','End card','social',5000000,'original',false],
 ];
 const defaults = {title:'Make room for possibility.',subtitle:'A story worth bringing to life.',label:'CHAPTER 01',author:'Your name',contact:'yourwebsite.com',words:['BUILD','WHAT','MATTERS','NEXT'],items:['Design','Precision','Motion','Possibility'],values:[62,88,47,76],accent:'#68dfc0',background:'#101819',foreground:'#f4f4e9',media:'asset:creative-demo',treatment:'clean',overlay:'none'};
-export const CREATIVE_TEMPLATES = Object.freeze(rows.map(([id,name,category,durationUs,provenance]) => defineCoProTemplate({
- id:`creative:${id}`, name, description:`Editable ${category} composition; deterministic integer-microsecond sampling.`,
+export const CREATIVE_TEMPLATES = Object.freeze(rows.map(([id,name,category,durationUs,provenance,featured]) => defineCoProTemplate({
+ id:`creative:${id}`, name, description:`Project template (${category}). Instantiates a distinct editable CoPro project.`,
  canvas:{width:category==='social'||category==='captions'?1080:1920,height:category==='social'||category==='captions'?1920:1080,frameRate:30},
  slots:[...['title','subtitle','label','author','contact'].map(id=>({id,kind:'text',default:defaults[id]})),{id:'media',kind:'media',required:false,default:defaults.media},{id:'accent',kind:'color',default:defaults.accent},{id:'words',kind:'text-list',default:defaults.words},{id:'items',kind:'text-list',default:defaults.items},{id:'values',kind:'number-list',default:defaults.values}],
  tracks:[{id:'creative-main',kind:'overlay',name,visible:true,muted:false,locked:false,clips:[{id:`clip:${id}`,assetId:`graphic:${id}`,startUs:0,durationUs,inUs:0,layer:0,muted:false,playbackRate:1,volume:1,metadata:{creative:{schema:'copro.creative-clip.v1',scene:id,parameters:{...defaults}},transitionOut:{type:'none',durationUs:0}}}]}],
- metadata:{creative:{schema:'copro.creative-template.v1',scene:id,category,durationUs,provenance,parameters:defaults,upstreamReferenceFps:30}},
+ metadata:{creative:{schema:'copro.creative-template.v1',scene:id,category,durationUs,provenance,parameters:defaults,upstreamReferenceFps:30,resourceKind:'project_template',featured:Boolean(featured)}},
 })));
+/** Authoritative discover API — UI must not invent parallel template registries. */
+export function listProjectTemplates({featuredOnly=false}={}) {
+  return CREATIVE_TEMPLATES
+    .filter((template) => !featuredOnly || template.metadata.creative.featured)
+    .map((template) => ({
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      category: template.metadata.creative.category,
+      durationUs: template.metadata.creative.durationUs,
+      featured: Boolean(template.metadata.creative.featured),
+      resourceKind: 'project_template',
+      aspectRatio: template.canvas.width >= template.canvas.height ? '16:9' : '9:16',
+    }));
+}
 export function findCreativeTemplate(id) { const t=CREATIVE_TEMPLATES.find(x=>x.id===id||x.metadata.creative.scene===id); if(!t) throw new Error('copro_creative_template_unknown'); return structuredClone(t); }
 export function createCreativeProject(id, {projectId,slotValues={},parameters={},canvas,now}={}) {
  const t=findCreativeTemplate(id), p=validateParameters({...defaults,...parameters,...slotValues});
  if(canvas) { if(!Number.isSafeInteger(canvas.width)||canvas.width<1||!Number.isSafeInteger(canvas.height)||canvas.height<1||!Number.isFinite(canvas.frameRate)||canvas.frameRate<=0) throw new RangeError('copro_canvas_invalid'); t.canvas=structuredClone(canvas); }
+ if(!projectId) throw new Error('copro_template_project_id_required');
+ // Instantiation always allocates a caller-owned project id. Never reopen/mutate
+ // an existing session project from a template selection.
  const project=instantiateTemplate(t,{projectId,slotValues:p,now});
+ project.metadata = {
+   ...project.metadata,
+   provenance: {
+     kind: 'project_template',
+     templateId: t.id,
+     scene: t.metadata.creative.scene,
+     category: t.metadata.creative.category,
+   },
+ };
  const clip=project.tracks[0].clips[0]; clip.metadata.creative.parameters=p;
  // Media remains an asset ID; a host-owned resolver supplies a frame/URL later.
  if(p.media && p.media!==defaults.media) {
@@ -175,9 +203,19 @@ export function renderCreativeProjectFrame(project,timeUs,options={}) {
  if(project?.schema!=='copro.project.v1')throw new Error('copro_creative_project_invalid');integerUs(timeUs);
  const clips=(project.tracks||[]).filter(t=>t.visible!==false).flatMap(t=>t.clips||[]).filter(c=>c.metadata?.creative&&timeUs>=c.startUs&&timeUs<c.startUs+c.durationUs).sort((a,b)=>a.layer-b.layer);
  if(!clips.length)return null;
- if(clips.length>1)throw new Error('copro_creative_multiple_layers_host_compositor_required');
- const clip=clips[0],localUs=Math.round((timeUs-clip.startUs)*(clip.playbackRate??1)+(clip.inUs??0));
- return renderCreativeSvg(clip.metadata.creative.scene,localUs,clip.metadata.creative.parameters,{...options,canvas:project.canvas});
+ const renderClip=clip=>{
+  const localUs=Math.round((timeUs-clip.startUs)*(clip.playbackRate??1)+(clip.inUs??0));
+  return renderCreativeSvg(clip.metadata.creative.scene,localUs,clip.metadata.creative.parameters,{...options,canvas:project.canvas});
+ };
+ if(clips.length===1)return renderClip(clips[0]);
+ const layers=clips.map((clip,index)=>{
+  const prefix='composition-'+index+'-';
+  const svg=renderClip(clip).replace(/\bid="([^"]+)"/g,(_,id)=>'id="'+prefix+id+'"').replace(/url\(#([^)]+)\)/g,(_,id)=>'url(#'+prefix+id+')');
+  const transform=clip.metadata?.transform??{},w=project.canvas.width,h=project.canvas.height;
+  const x=Number(transform.x??0)*w/100,y=Number(transform.y??0)*h/100,scale=Number(transform.scale??1),rotation=Number(transform.rotation??0),opacity=Number(transform.opacity??1);
+  return '<g opacity="'+opacity+'" transform="translate('+x+' '+y+') translate('+w/2+' '+h/2+') rotate('+rotation+') scale('+scale+') translate('+(-w/2)+' '+(-h/2)+')">'+svg+'</g>';
+ }).join('');
+ return '<svg xmlns="http://www.w3.org/2000/svg" width="'+project.canvas.width+'" height="'+project.canvas.height+'" viewBox="0 0 '+project.canvas.width+' '+project.canvas.height+'">'+layers+'</svg>';
 }
 export function renderCreativeFrameAtIndex(id,frame,frameRate=30,parameters={},options={}) {return renderCreativeSvg(id,frameToUs(frame,frameRate),parameters,options);}
 export function renderTypewriterSvg(textValue,timeUs,{width=1200,height=675,accent='#68dfc0',...timing}={}) {

@@ -1,6 +1,9 @@
 import type { CoProProject } from "@inneranimalmedia/copro-project";
 
 export type CoProCommand =
+  | { type: "project.set_cover"; payload: { cover: {kind:"frame"|"upload";url:string;timeUs?:number}|null } }
+  | { type: "project.apply_template"; payload: { tracks: any[]; canvas?: any } }
+  | { type: "project.set_canvas"; payload: { width: number; height: number; frameRate?: number } }
   | { type: "clip.insert"; payload: { trackId: string; clip: unknown } }
   | { type: "clip.move"; payload: { clipId: string; startUs: number; trackId?: string } }
   | { type: "clip.trim"; payload: { clipId: string; startUs?: number; inUs?: number; durationUs?: number } }
@@ -14,7 +17,7 @@ export type CoProCommand =
   | { type: "clip.set_motion"; payload: { clipId: string; motion: string; durationUs?: number; delayUs?: number; amplitude?: number } }
   | { type: "clip.set_creative_parameters"; payload: { clipId: string; patch: Record<string, unknown> } }
   | { type: "clip.set_graphic"; payload: { clipId: string; graphic: Record<string, unknown> | null } }
-  | { type: "clip.set_transition"; payload: { clipId: string; transition: string; durationUs?: number } }
+  | { type: "clip.set_transition"; payload: { clipId: string; transition: string; durationUs?: number; direction?: string; easing?: string } }
   | { type: "track.insert"; payload: { track: unknown; index?: number } }
   | { type: "track.reorder"; payload: { trackId: string; index: number } }
   | { type: "track.set_state"; payload: { trackId: string; visible?: boolean; muted?: boolean; locked?: boolean } }

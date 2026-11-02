@@ -68,6 +68,8 @@ export class BrowserLocalStorageProjectStore {
 
   async remove(id) {
     this.storage.removeItem(this.key(id));
+    if (this.storage.getItem(this.prefix + "__recent__") === id)
+      this.storage.removeItem(this.prefix + "__recent__");
   }
 }
 

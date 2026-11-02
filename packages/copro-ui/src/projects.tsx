@@ -6,7 +6,6 @@ import {
   Captions, ChevronDown, ChevronLeft, ChevronRight, Clapperboard,
   Film, FolderOpen, Grid2X2, Home, Import, LayoutList,
   MoreHorizontal, Plus, Search, Scissors, ScreenShare, Type,
-  WandSparkles,
 } from "lucide-react";
 
 export type CoProProjectSummary = {
@@ -18,38 +17,26 @@ export type CoProProjectSummary = {
   progress?: number;
   durationMs?: number;
   aspectRatio?: string;
+  resolution?: string;
+  format?: string;
   updatedAt: string;
   starred?: boolean;
   shared?: boolean;
   thumbnailTone?: "cyan" | "violet" | "amber" | "slate";
   /** Lightweight still preview — never a live decode engine in the gallery. */
   thumbnailUrl?: string;
+  thumbnailState?: "empty" | "missing";
   example?: boolean;
 };
 
-/** Batch 1 visual-direction showcase — presentation only; editable starters ship in Batch 2. */
-const BATCH1_SHOWCASE = [
-  { id: "creative:documentary-opener", label: "Documentary Opener", category: "Cinematic production", tone: "cyan", blurb: "Letterboxed chapter titles with editorial pacing." },
-  { id: "creative:product-launch", label: "Product Showcase", category: "Product", tone: "amber", blurb: "Clean product hero with kinetic product focus." },
-  { id: "creative:social-story", label: "Social Video", category: "Social", tone: "violet", blurb: "Vertical story canvas ready for captions and cuts." },
-] as const;
+/** Presentation-only tone cycle — not a resource registry. Featured IDs come from asset.featured. */
+const SHOWCASE_TONES = ["cyan", "amber", "violet"] as const;
+
+const EMPTY_SEQUENCE_COVER = "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#101820"/><path d="M0 72H640M0 144H640M0 216H640M0 288H640M80 0V360M160 0V360M240 0V360M320 0V360M400 0V360M480 0V360M560 0V360" stroke="#263944" stroke-width="1"/><rect x="24" y="24" width="592" height="312" rx="16" fill="none" stroke="#35505b"/><circle cx="320" cy="154" r="43" fill="#1d3740" stroke="#56cbd0" stroke-width="2"/><path d="M309 132L344 154L309 176Z" fill="#7de2df"/><text x="320" y="238" text-anchor="middle" fill="#e8f3f5" font-family="Arial,sans-serif" font-size="21" font-weight="700" letter-spacing="4">EMPTY SEQUENCE</text><text x="320" y="267" text-anchor="middle" fill="#7f9aa4" font-family="Arial,sans-serif" font-size="11" letter-spacing="3">MOVIEMODE PROJECT</text></svg>');
+const MISSING_SOURCE_COVER = "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360"><rect width="640" height="360" fill="#19191b"/><path d="M0 72H640M0 144H640M0 216H640M0 288H640" stroke="#303235"/><rect x="24" y="24" width="592" height="312" rx="16" fill="none" stroke="#55423a"/><path d="M284 112H340L369 141V222H271V112Z" fill="#332b28" stroke="#d28a5e" stroke-width="2"/><path d="M340 112V141H369" fill="none" stroke="#d28a5e" stroke-width="2"/><path d="M320 154V185M320 197V199" stroke="#f0b18b" stroke-width="5" stroke-linecap="round"/><text x="320" y="258" text-anchor="middle" fill="#f3ddd0" font-family="Arial,sans-serif" font-size="18" font-weight="700" letter-spacing="3">SOURCE MEDIA NEEDED</text><text x="320" y="282" text-anchor="middle" fill="#ad8c7d" font-family="Arial,sans-serif" font-size="11" letter-spacing="2">PROJECT EDITS ARE PRESERVED</text></svg>');
 
 function projectCoverArt(p: CoProProjectSummary): string {
-  if (p.thumbnailUrl) return p.thumbnailUrl;
-  const tones: Record<string, [string, string, string]> = {
-    cyan: ["#0d1c22", "#1a4d55", "#48d0c6"],
-    violet: ["#16121f", "#3a2a5c", "#b59cff"],
-    amber: ["#1c160d", "#5a3d14", "#f0b45a"],
-    slate: ["#121518", "#2a3138", "#8aa0ad"],
-  };
-  const [bg, mid, accent] = tones[p.thumbnailTone ?? "slate"] ?? tones.slate;
-  const label = (p.kind || "video").toUpperCase();
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-hidden="true"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${bg}"/><stop offset="1" stop-color="${mid}"/></linearGradient></defs><rect width="640" height="360" fill="url(#g)"/><rect x="0" y="0" width="640" height="28" fill="#00000055"/><rect x="0" y="332" width="640" height="28" fill="#00000055"/><circle cx="520" cy="88" r="54" fill="${accent}" opacity=".28"/><path d="M70 250 L190 120 L310 210 L420 96 L570 180 V300 H70 Z" fill="${accent}" opacity=".18"/><text x="36" y="198" fill="${accent}" font-family="ui-sans-serif,system-ui,sans-serif" font-size="18" font-weight="700" letter-spacing="4">${label}</text><text x="36" y="236" fill="#e8f2f6" font-family="ui-sans-serif,system-ui,sans-serif" font-size="28" font-weight="750">${escapeSvg(p.title.slice(0, 28))}</text></svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-}
-
-function escapeSvg(value: string) {
-  return value.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch] as string));
+  return p.thumbnailUrl ?? (p.thumbnailState === "missing" ? MISSING_SOURCE_COVER : EMPTY_SEQUENCE_COVER);
 }
 
 function statusLabel(status: CoProProjectSummary["status"]) {
@@ -70,8 +57,8 @@ type ProjectsProps = {
   recording?: boolean;
   onStopRecording?: () => void;
   onOpenTool?: (tool: "text" | "captions") => void;
-  onRenameProject?: (id: string, title: string) => void;
-  onDeleteProject?: (id: string) => void;
+  onRenameProject?: (id: string, title: string) => void | Promise<void>;
+  onDeleteProject?: (id: string) => void | Promise<void>;
   onDuplicateProject?: (id: string) => void;
   appIconUrl?: string;
   systemIcons?: CoProSystemIconMap;
@@ -101,6 +88,10 @@ export function CoProProjectsScreen({
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
   const [sort, setSort] = useState<"recent" | "name">("recent");
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [projectDialog,setProjectDialog]=useState<{kind:"rename"|"delete";project:CoProProjectSummary}|null>(null);
+  const [dialogTitle,setDialogTitle]=useState("");
+  const [dialogBusy,setDialogBusy]=useState(false);
+  const [dialogError,setDialogError]=useState<string|null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [active, setActive] = useState<"home" | "projects" | "templates">(initialSection);
   const [iconFailed, setIconFailed] = useState(false);
@@ -113,6 +104,10 @@ export function CoProProjectsScreen({
   const saved = useMemo(() => projects.filter(p => !p.example), [projects]);
   const examples = useMemo(() => projects.filter(p => p.example), [projects]);
   const creativeTemplates = useMemo(() => creativeAssets.filter(asset => asset.category === "template"), [creativeAssets]);
+  const featuredTemplates = useMemo(
+    () => creativeTemplates.filter((asset) => asset.featured),
+    [creativeTemplates],
+  );
   const templateGroups = useMemo(() => ["All", ...Array.from(new Set(creativeTemplates.map(asset => asset.group).filter((group): group is string => Boolean(group)))).sort()], [creativeTemplates]);
   const visibleTemplates = useMemo(() => creativeTemplates.filter(asset =>
     (templateGroup === "All" || asset.group === templateGroup) &&
@@ -131,15 +126,30 @@ export function CoProProjectsScreen({
     else window.scrollTo({top:0,behavior:"smooth"});
   }
   function rename(p: CoProProjectSummary) {
-    const title = window.prompt("Rename project",p.title)?.trim();
-    if (title && title !== p.title) onRenameProject?.(p.id,title);
-    setOpenMenu(null);
+    setProjectDialog({kind:"rename",project:p});setDialogTitle(p.title);setDialogError(null);setOpenMenu(null);
   }
   function remove(p: CoProProjectSummary) {
-    if (window.confirm(`Delete “${p.title}”? This removes the saved project; imported original files remain available.`)) onDeleteProject?.(p.id);
-    setOpenMenu(null);
+    setProjectDialog({kind:"delete",project:p});setDialogError(null);setOpenMenu(null);
+  }
+  async function confirmProjectDialog(event:React.FormEvent) {
+    event.preventDefault();if(!projectDialog||dialogBusy)return;
+    setDialogBusy(true);setDialogError(null);
+    try {
+      if(projectDialog.kind==="rename")await onRenameProject?.(projectDialog.project.id,dialogTitle.trim());
+      else await onDeleteProject?.(projectDialog.project.id);
+      setProjectDialog(null);
+    } catch {setDialogError("Could not save this change. Try again.");}
+    finally {setDialogBusy(false);}
   }
   return <section className="mm-home" aria-label="MovieMode home">
+    {projectDialog&&<div className="mm-project-dialog-backdrop" onKeyDown={event=>{if(event.key==="Escape"&&!dialogBusy)setProjectDialog(null);}}>
+      <form role="dialog" aria-modal="true" aria-label={projectDialog.kind==="rename"?"Rename project":"Delete project"} onSubmit={confirmProjectDialog}>
+        <h2>{projectDialog.kind==="rename"?"Rename project":"Delete project?"}</h2>
+        {projectDialog.kind==="rename"?<label>Project name<input autoFocus value={dialogTitle} onChange={event=>setDialogTitle(event.currentTarget.value)} maxLength={200}/></label>:<p>Delete “{projectDialog.project.title}” and its unshared media? Files used by other projects will remain. This cannot be undone.</p>}
+        {dialogError&&<p role="alert">{dialogError}</p>}
+        <footer><button type="button" disabled={dialogBusy} onClick={()=>setProjectDialog(null)}>Cancel</button><button type="submit" disabled={dialogBusy||(projectDialog.kind==="rename"&&!dialogTitle.trim())}>{dialogBusy?"Saving…":projectDialog.kind==="rename"?"Save name":"Delete project"}</button></footer>
+      </form>
+    </div>}
     <aside className="mm-home-sidebar" aria-label="MovieMode navigation">
       <div className="mm-brand">
         {appIconUrl && !iconFailed ? <img src={appIconUrl} width="34" height="34" alt="" onError={() => setIconFailed(true)}/> : <CoProSystemIcon name="film" icons={systemIcons} size={28} fallback={<Clapperboard size={28}/>} />}
@@ -155,7 +165,7 @@ export function CoProProjectsScreen({
       <button onClick={recording ? onStopRecording : onRecord} disabled={!recording && !onRecord} title={recording ? "Stop and import the screen recording" : "Capture your screen and import the recording"}><CoProSystemIcon name="display" icons={systemIcons} size={18} fallback={<ScreenShare size={18}/>} /> {recording ? "Stop recording" : "Record screen"}</button>
       <button onClick={() => onOpenTool?.("text")} disabled={!onOpenTool}><CoProSystemIcon name="document" icons={systemIcons} size={18} fallback={<Type size={18}/>} /> Title studio</button>
       <button onClick={() => onOpenTool?.("captions")} disabled={!onOpenTool}><CoProSystemIcon name="message" icons={systemIcons} size={18} fallback={<Captions size={18}/>} /> Captions</button>
-      <div className="mm-sidebar-footer"><span className="mm-connection-dot"/> MovieMode <small>Projects save in this Studio session</small></div>
+      <div className="mm-sidebar-footer"><span className="mm-connection-dot"/> MovieMode <small>Your creative workspace</small></div>
     </aside>
 
     <main className="mm-home-main">
@@ -165,72 +175,69 @@ export function CoProProjectsScreen({
       </header>
       {active === "templates" ? <section className="mm-templates-page">
         {selectedTemplate ? <div className="mm-template-detail">
-          <button type="button" className="mm-template-back" onClick={() => setSelectedTemplateId(null)}><ChevronDown size={16}/> Back to creative library</button>
+          <button type="button" className="mm-template-back" onClick={() => setSelectedTemplateId(null)}><ChevronDown size={16}/> Back to templates</button>
           <div className="mm-template-detail-grid">
-            <div className="mm-template-detail-preview">{selectedTemplate.previewUrl ? <img src={selectedTemplate.previewUrl} alt={`${selectedTemplate.name} composition preview`} /> : <span className="mm-template-thumb-fallback"><CoProSystemIcon name="film" icons={systemIcons} size={34} fallback={<Film size={34}/>} /></span>}</div>
+            <div className="mm-template-detail-preview">{selectedTemplate.previewUrl ? <img src={selectedTemplate.previewUrl} alt={`${selectedTemplate.name} template preview`} /> : <span className="mm-template-thumb-fallback"><CoProSystemIcon name="film" icons={systemIcons} size={34} fallback={<Film size={34}/>} /></span>}</div>
             <div className="mm-template-detail-copy">
-              <span className="mm-template-kicker">EDITABLE COMPOSITION</span>
+              <span className="mm-template-kicker">PROJECT TEMPLATE</span>
               <h1>{selectedTemplate.name}</h1>
-              <p>{selectedTemplate.description ?? "A reusable motion composition with editable project structure."}</p>
-              <div className="mm-template-specs"><span>{selectedTemplate.group?.replaceAll("-", " ") ?? "Composition"}</span><span>{duration((selectedTemplate.durationUs ?? 0) / 1000)}</span><span>{selectedTemplate.aspectRatio ?? "16:9"}</span><span>MovieMode</span></div>
-              <button type="button" className="mm-template-use" onClick={() => onOpenCreativeTemplate?.(selectedTemplate.id)} disabled={!onOpenCreativeTemplate}>Use this composition <CoProSystemIcon name="next" icons={systemIcons} size={17} fallback={<ChevronRight size={17}/>} /></button>
+              <p>{selectedTemplate.description ?? "Creates a new editable project with this motion graphic timeline. Your existing projects stay untouched."}</p>
+              <div className="mm-template-specs"><span>{selectedTemplate.group?.replaceAll("-", " ") ?? "Template"}</span><span>{duration((selectedTemplate.durationUs ?? 0) / 1000)}</span><span>{selectedTemplate.aspectRatio ?? "16:9"}</span><span>New project</span></div>
+              <button type="button" className="mm-template-use" onClick={() => onOpenCreativeTemplate?.(selectedTemplate.id)} disabled={!onOpenCreativeTemplate}>Create project from template <CoProSystemIcon name="next" icons={systemIcons} size={17} fallback={<ChevronRight size={17}/>} /></button>
             </div>
           </div>
         </div> : <>
-          <div className="mm-heading"><div><span>CREATIVE STARTERS</span><h1>Template studio</h1><p>Browse editable compositions. Bring your footage, then make every layer yours.</p></div><span className="mm-template-count">{creativeTemplates.length} compositions</span></div>
-          <section className="mm-showcase" aria-label="Featured production directions">
+          <div className="mm-heading"><div><span>PROJECT TEMPLATES</span><h1>Templates</h1><p>Choose a template to create a distinct project. Effects, transitions and overlays stay in the editor clip tools — they are not project templates.</p></div><span className="mm-template-count">{creativeTemplates.length} templates</span></div>
+          {featuredTemplates.length > 0 && <section className="mm-showcase" aria-label="Featured project templates">
             <div className="mm-showcase-heading">
-              <div><span>VISUAL DIRECTION</span><h2>Featured productions</h2><p>Batch 1 presentation for the three production directions — editable starter projects arrive in Batch 2.</p></div>
+              <div><span>QUICK START</span><h2>Featured templates</h2><p>Each card creates a new project from the packaged creative catalog.</p></div>
             </div>
             <div className="mm-showcase-grid">
-              {BATCH1_SHOWCASE.map((item) => {
-                const asset = creativeTemplates.find((entry) => entry.id === item.id);
-                return <button type="button" key={item.id} className={`mm-showcase-card tone-${item.tone}`} onClick={() => {
-                  if (asset) setSelectedTemplateId(asset.id);
-                  else onCreate();
-                }}>
+              {featuredTemplates.map((asset, index) => {
+                const tone = SHOWCASE_TONES[index % SHOWCASE_TONES.length];
+                return <button type="button" key={asset.id} className={`mm-showcase-card tone-${tone}`} onClick={() => setSelectedTemplateId(asset.id)}>
                   <span className="mm-showcase-preview">
-                    {asset?.previewUrl ? <img src={asset.previewUrl} alt="" loading="lazy"/> : <span className="mm-template-thumb-fallback"><CoProSystemIcon name="film" icons={systemIcons} size={28} fallback={<Film size={28}/>} /></span>}
-                    <span className="mm-showcase-badge">MovieMode · {item.category}</span>
+                    {asset.previewUrl ? <img src={asset.previewUrl} alt="" loading="lazy"/> : <span className="mm-template-thumb-fallback"><CoProSystemIcon name="film" icons={systemIcons} size={28} fallback={<Film size={28}/>} /></span>}
+                    <span className="mm-showcase-badge">MovieMode · {asset.group?.replaceAll("-", " ") ?? "Project template"}</span>
                   </span>
                   <span className="mm-showcase-copy">
-                    <strong>{item.label}</strong>
-                    <small>{item.blurb}</small>
-                    <span className="mm-showcase-cta">{asset ? "Preview composition" : "Coming in Batch 2"} <ChevronRight size={14}/></span>
+                    <strong>{asset.name}</strong>
+                    <small>{asset.description ?? "Creates a distinct editable project."}</small>
+                    <span className="mm-showcase-cta">Open template <ChevronRight size={14}/></span>
                   </span>
                 </button>;
               })}
             </div>
-          </section>
+          </section>}
           <div className="mm-template-toolbar">
-            <label className="mm-template-search"><CoProSystemIcon name="search" icons={systemIcons} size={17} fallback={<Search size={17}/>} /><input value={templateQuery} onChange={event => setTemplateQuery(event.currentTarget.value)} placeholder="Search compositions" aria-label="Search compositions"/></label>
+            <label className="mm-template-search"><CoProSystemIcon name="search" icons={systemIcons} size={17} fallback={<Search size={17}/>} /><input value={templateQuery} onChange={event => setTemplateQuery(event.currentTarget.value)} placeholder="Search templates" aria-label="Search templates"/></label>
             <span>{visibleTemplates.length} results</span>
           </div>
-          <div className="mm-template-categories" role="tablist" aria-label="Composition categories">
-            {templateGroups.map(group => <button type="button" key={group} role="tab" aria-selected={templateGroup === group} className={templateGroup === group ? "is-active" : ""} onClick={() => setTemplateGroup(group)}>{group === "All" ? "For you" : group.replaceAll("-", " ")}</button>)}
+          <div className="mm-template-categories" role="tablist" aria-label="Template categories">
+            {templateGroups.map(group => <button type="button" key={group} role="tab" aria-selected={templateGroup === group} className={templateGroup === group ? "is-active" : ""} onClick={() => setTemplateGroup(group)}>{group === "All" ? "All templates" : group.replaceAll("-", " ")}</button>)}
           </div>
           <div className="mm-template-grid">
             {visibleTemplates.map(asset => <button type="button" key={asset.id} className="mm-template-card" onClick={() => setSelectedTemplateId(asset.id)}>
               <span className="mm-template-card-preview">{asset.previewUrl ? <img src={asset.previewUrl} alt="" loading="lazy"/> : <span className="mm-template-thumb-fallback"><CoProSystemIcon name="film" icons={systemIcons} size={24} fallback={<Film size={24}/>} /></span>}<span className="mm-template-duration">{duration((asset.durationUs ?? 0) / 1000)}</span><span className="mm-template-preview-cta"><CoProSystemIcon name="film" icons={systemIcons} size={14} fallback={<Film size={14}/>} /> Preview</span></span>
-              <span className="mm-template-card-copy"><span><strong>{asset.name}</strong><small>{asset.group?.replaceAll("-", " ") ?? "Composition"} · {asset.aspectRatio ?? "16:9"}</small></span><CoProSystemIcon name="next" icons={systemIcons} size={17} fallback={<ChevronRight size={17}/>} /></span>
+              <span className="mm-template-card-copy"><span><strong>{asset.name}</strong><small>{asset.group?.replaceAll("-", " ") ?? "Template"} · {asset.aspectRatio ?? "16:9"}</small></span><CoProSystemIcon name="next" icons={systemIcons} size={17} fallback={<ChevronRight size={17}/>} /></span>
             </button>)}
             <button type="button" className="mm-template-card mm-template-blank" onClick={onCreate}>
-              <span className="mm-template-blank-art"><CoProSystemIcon name="add" icons={systemIcons} size={34} fallback={<Plus size={34}/>} /><span>Start from scratch</span></span>
-              <span className="mm-template-card-copy"><span><strong>Blank composition</strong><small>Build your own timeline</small></span><CoProSystemIcon name="next" icons={systemIcons} size={17} fallback={<ChevronRight size={17}/>} /></span>
+              <span className="mm-template-blank-art"><CoProSystemIcon name="add" icons={systemIcons} size={34} fallback={<Plus size={34}/>} /><span>Blank project</span></span>
+              <span className="mm-template-card-copy"><span><strong>Blank project</strong><small>Empty timeline — import your own media</small></span><CoProSystemIcon name="next" icons={systemIcons} size={17} fallback={<ChevronRight size={17}/>} /></span>
             </button>
           </div>
-          {!visibleTemplates.length && <div className="mm-template-empty"><CoProSystemIcon name="search" icons={systemIcons} size={22} fallback={<Search size={22}/>} /><strong>No compositions found</strong><span>Try another search or category.</span></div>}
+          {!visibleTemplates.length && <div className="mm-template-empty"><CoProSystemIcon name="search" icons={systemIcons} size={22} fallback={<Search size={22}/>} /><strong>No templates found</strong><span>Try another search or category.</span></div>}
           {examples.length > 0 && <section className="mm-template-examples" aria-label="Sample timelines">
             <div className="mm-heading">
-              <div><span>STARTER WORKSPACES</span><h2>Sample timelines</h2><p>Open a sample timeline to inspect tracks and editing structure. Each opens as a separate editable copy.</p></div>
+              <div><span>SAMPLES</span><h2>Sample timelines</h2><p>Inspect track structure. Each opens as a separate editable copy — not a packaged project template.</p></div>
               <span className="mm-template-count">{examples.length} samples</span>
             </div>
             <div className="mm-template-grid">
               {examples.map(example => <button type="button" key={example.id} className="mm-template-card mm-template-example" onClick={() => onOpenProject(example.id)}>
                 <span className="mm-template-card-preview">
                   <span className="mm-template-example-art"><CoProSystemIcon name="film" icons={systemIcons} size={32} fallback={<Film size={32}/>} /></span>
-                  <span className="mm-template-duration">EXAMPLE</span>
-                  <span className="mm-template-preview-cta">Open sample <CoProSystemIcon name="next" icons={systemIcons} size={14} fallback={<ChevronRight size={14}/>} /></span>
+                  <span className="mm-template-duration">SAMPLE</span>
+                  <span className="mm-template-preview-cta">Open sample copy <CoProSystemIcon name="next" icons={systemIcons} size={14} fallback={<ChevronRight size={14}/>} /></span>
                 </span>
                 <span className="mm-template-card-copy"><span><strong>{example.title}</strong><small>{example.subtitle ?? "Sample timeline with editable tracks"}</small></span><CoProSystemIcon name="next" icons={systemIcons} size={17} fallback={<ChevronRight size={17}/>} /></span>
               </button>)}
@@ -238,27 +245,14 @@ export function CoProProjectsScreen({
           </section>}
         </>}
       </section> : <>
-        <section className="mm-home-quickstart" aria-label="Start creating">
-          <button className="mm-create-banner" onClick={onCreate}><span><CoProSystemIcon name="add" icons={systemIcons} size={23} fallback={<Plus size={23}/>} /></span><strong>Create project</strong><small>Open the full timeline editor</small><CoProSystemIcon name="next" icons={systemIcons} size={21} fallback={<ChevronRight size={21}/>} /></button>
-          <div className="mm-home-quick-grid">
-            <IconAction aria-label="Open Video Studio to import media" onClick={onImport} className="mm-start-card"><span className="mm-start-icon"><CoProSystemIcon name="media" icons={systemIcons} size={28} fallback={<Film size={28}/>} /></span><span><strong>Video Studio</strong><small>Import video, photographs, audio or screen captures</small></span><CoProSystemIcon name="next" icons={systemIcons} size={20} fallback={<ChevronRight size={20}/>} /></IconAction>
-            <IconAction aria-label={recording ? "Stop screen recording" : "Record screen"} onClick={recording ? onStopRecording : onRecord} disabled={!recording && !onRecord} className="mm-start-card"><span className="mm-start-icon"><CoProSystemIcon name="display" icons={systemIcons} size={28} fallback={<ScreenShare size={28}/>} /></span><span><strong>{recording ? "Finish recording" : "Record screen"}</strong><small>{recording ? "Stop capture to add video" : "Capture walkthroughs and bug reports"}</small></span><CoProSystemIcon name="next" icons={systemIcons} size={20} fallback={<ChevronRight size={20}/>} /></IconAction>
-            <IconAction aria-label="Open Template Studio" onClick={() => navigate("templates")} className="mm-start-card mm-start-template"><span className="mm-start-icon"><CoProSystemIcon name="film" icons={systemIcons} size={28} fallback={<Clapperboard size={28}/>} /></span><span><strong>Template Studio</strong><small>Start from an editable composition</small></span><CoProSystemIcon name="next" icons={systemIcons} size={20} fallback={<ChevronRight size={20}/>} /></IconAction>
-          </div>
-        </section>
-        <section className="mm-tools-strip" aria-label="Editing tools">
-          <div className="mm-heading"><div><h2>More tools</h2><p>Open a real editing workspace for every creation.</p></div></div>
-          <div className="mm-tools-grid">
-            <button onClick={onImport}><CoProSystemIcon name="media" icons={systemIcons} size={21} fallback={<Film size={21}/>} /><strong>Import media</strong></button>
-            <button onClick={() => onOpenTool?.("text")}><CoProSystemIcon name="document" icons={systemIcons} size={21} fallback={<Type size={21}/>} /><strong>Text & titles</strong></button>
-            <button onClick={() => onOpenTool?.("captions")}><CoProSystemIcon name="message" icons={systemIcons} size={21} fallback={<Captions size={21}/>} /><strong>Captions</strong></button>
-            <button onClick={recording ? onStopRecording : onRecord}><CoProSystemIcon name="display" icons={systemIcons} size={21} fallback={<ScreenShare size={21}/>} /><strong>Screen capture</strong></button>
-            <button onClick={onCreate}><CoProSystemIcon name="cut" icons={systemIcons} size={21} fallback={<Scissors size={21}/>} /><strong>Timeline</strong></button>
-            <button onClick={() => navigate("templates")}><CoProSystemIcon name="workflow" icons={systemIcons} size={21} fallback={<WandSparkles size={21}/>} /><strong>Templates</strong></button>
-          </div>
-        </section>
         <section className="mm-projects-section" ref={projectRef} aria-label="Projects">
-          <div className="mm-heading mm-projects-heading"><div><h2>Your projects</h2><p>Continue an edit, browse your recordings, or begin a new project.</p></div><button className="mm-projects-add" onClick={onCreate}><CoProSystemIcon name="add" icons={systemIcons} size={16} fallback={<Plus size={16}/>} /> New project</button></div>
+          <div className="mm-heading mm-projects-heading"><div><h2>Your projects</h2><p>{saved.length ? `${saved.length} saved · continue where you left off` : "Create a project or import media to begin."}</p></div>
+            <div className="mm-projects-heading-actions">
+              <button type="button" className="mm-projects-secondary" onClick={onImport}><CoProSystemIcon name="attachment" icons={systemIcons} size={16} fallback={<Import size={16}/>} /> Import</button>
+              <button type="button" className="mm-projects-secondary" onClick={() => navigate("templates")}><CoProSystemIcon name="film" icons={systemIcons} size={16} fallback={<Clapperboard size={16}/>} /> Templates</button>
+              <button className="mm-projects-add" onClick={onCreate}><CoProSystemIcon name="add" icons={systemIcons} size={16} fallback={<Plus size={16}/>} /> Create project</button>
+            </div>
+          </div>
           <div className="mm-project-toolbar">
             <label className="mm-search"><CoProSystemIcon name="search" icons={systemIcons} size={17} fallback={<Search size={17}/>} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search projects" aria-label="Search projects"/></label>
             <div className="mm-filter-group" role="group" aria-label="Filter projects">{FILTERS.map(f => <button key={f} className={filter === f ? "is-active" : ""} onClick={() => setFilter(f)}>{f}</button>)}</div>
@@ -277,7 +271,7 @@ export function CoProProjectsScreen({
                 <span className="mm-project-details mm-resource-meta">
                   <strong>{p.title}</strong>
                   <span className="mm-resource-identity">MovieMode · {statusLabel(p.status)}</span>
-                  <span>{shortDate(p.updatedAt)} · {duration(p.durationMs)} · {p.aspectRatio ?? "Project"}</span>
+                  <span>{shortDate(p.updatedAt)} · {duration(p.durationMs)} · {p.aspectRatio ?? "Project"}{p.resolution ? " · "+p.resolution : ""}{p.format ? " · "+p.format : ""}</span>
                   <small>{p.subtitle ?? "Saved project"}</small>
                 </span>
               </IconAction>

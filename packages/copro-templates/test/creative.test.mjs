@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {CREATIVE_TEMPLATES,createCreativeProject,renderCreativeSvg,renderCreativeProjectFrame,renderCreativeFrameAtIndex,renderAnimationSvg,renderOverlaySvg,validateParameters} from '../src/creative.js';
+import {CREATIVE_TEMPLATES,createCreativeProject,listProjectTemplates,renderCreativeSvg,renderCreativeProjectFrame,renderCreativeFrameAtIndex,renderAnimationSvg,renderOverlaySvg,validateParameters} from '../src/creative.js';
 import {ANIMATIONS,OVERLAYS,TREATMENTS,sampleAnimation,frameToUs,createTypewriterEvents,sampleTypewriter,sampleCounter} from '../src/motion.js';
 import {validateCoProProject} from '../../copro-project/src/index.js';
 
@@ -11,11 +11,21 @@ test('18 compositions round-trip editable slots through existing CoPro projects'
   assert.equal(validateCoProProject(p).ok,true,JSON.stringify(validateCoProProject(p)));
   assert.equal(p.timebase.ticksPerSecond,1000000);assert.equal(p.tracks[0].clips[0].assetId,'asset:mine');
   assert.equal(p.tracks[1].clips[0].metadata.creative.parameters.title,'A custom headline');
+  assert.equal(p.metadata.provenance.kind,'project_template');
+  assert.equal(p.metadata.provenance.templateId,template.id);
   const copy=JSON.parse(JSON.stringify(p));assert.equal(renderCreativeProjectFrame(copy,2200000),renderCreativeSvg(template.id,2200000,copy.tracks[1].clips[0].metadata.creative.parameters));
   assert.notEqual(renderCreativeSvg(template.id,0),renderCreativeSvg(template.id,2200000));
   for(const t of [0,1,1000000,template.metadata.creative.durationUs-1])assert.match(renderCreativeProjectFrame(copy,t),/^<svg/);
   assert.equal(renderCreativeProjectFrame(copy,template.metadata.creative.durationUs),null);
  }
+});
+test('listProjectTemplates is the discover API over CREATIVE_TEMPLATES',()=>{
+  const featured=listProjectTemplates({featuredOnly:true});
+  assert.equal(listProjectTemplates().length,18);
+  assert.equal(featured.length,3);
+  assert.deepEqual(featured.map((item)=>item.id).sort(),[
+    'creative:documentary-opener','creative:product-launch','creative:social-story',
+  ].sort());
 });
 test('project frame respects clip offsets, in-points, rate and hidden tracks',()=>{
  const p=createCreativeProject('film-title',{projectId:'p'}),clip=p.tracks[0].clips[0];clip.startUs=1000000;clip.inUs=500000;clip.playbackRate=2;

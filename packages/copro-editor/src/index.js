@@ -22,8 +22,47 @@ export function applyCoProCommand(inputProject, command) {
   const project = clone(inputProject);
   if (!command?.type) throw new Error("copro_command_type_required");
   const payload = command.payload ?? {};
+  if (command.type.startsWith("clip.") && payload.clipId && locateClip(project, payload.clipId)?.track.locked)
+    throw new Error("copro_track_locked");
+  if ((command.type === "clip.insert" || command.type === "clip.move") && locateTrack(project, payload.trackId)?.locked)
+    throw new Error("copro_track_locked");
 
   switch (command.type) {
+    case "project.set_cover": {
+      const cover = payload.cover;
+      if (cover !== null && (!cover || !["frame","upload"].includes(cover.kind) || typeof cover.url !== "string" || !cover.url.startsWith("data:image/") || cover.url.length > 2_000_000))
+        throw new Error("copro_cover_invalid");
+      project.metadata = {...project.metadata, cover: clone(cover)};
+      break;
+    }
+    case "project.apply_template": {
+      if (!Array.isArray(payload.tracks) || !payload.tracks.length) throw new Error("copro_template_tracks_required");
+      const ids = new Set(project.tracks.map(track => track.id));
+      const clipIds = new Set(project.tracks.flatMap(track => track.clips.map(clip => clip.id)));
+      for (const track of payload.tracks) {
+        if (!track.id || ids.has(track.id) || !Array.isArray(track.clips)) throw new Error("copro_template_track_conflict");
+        ids.add(track.id);
+        for (const clip of track.clips) {
+          if (!clip.id || clipIds.has(clip.id) || !clip.assetId) throw new Error("copro_template_clip_conflict");
+          clipIds.add(clip.id);
+        }
+      }
+      project.tracks.push(...clone(payload.tracks));
+      if (payload.canvas && !inputProject.tracks.some(track => track.clips.length)) project.canvas = clone(payload.canvas);
+      break;
+    }
+
+    case "project.set_canvas": {
+      const width = Number(payload.width);
+      const height = Number(payload.height);
+      const frameRate = Number(payload.frameRate ?? project.canvas?.frameRate ?? 30);
+      if (!Number.isSafeInteger(width) || width < 1 || width > 32768) throw new Error("copro_canvas_width_invalid");
+      if (!Number.isSafeInteger(height) || height < 1 || height > 32768) throw new Error("copro_canvas_height_invalid");
+      if (!Number.isFinite(frameRate) || frameRate <= 0 || frameRate > 240) throw new Error("copro_canvas_frame_rate_invalid");
+      project.canvas = { width, height, frameRate };
+      break;
+    }
+
     case "clip.insert": {
       const track = locateTrack(project, payload.trackId);
       if (!track) throw new Error("copro_track_not_found");
@@ -83,7 +122,7 @@ export function applyCoProCommand(inputProject, command) {
         ...clone(found.clip),
         id: String(payload.rightClipId),
         startUs: payload.atUs,
-        inUs: found.clip.inUs + relativeUs,
+        inUs: (found.clip.inUs ?? 0) + Math.round(relativeUs * (found.clip.playbackRate ?? 1)),
         durationUs: found.clip.durationUs - relativeUs,
       };
       found.clip.durationUs = relativeUs;
@@ -109,7 +148,7 @@ export function applyCoProCommand(inputProject, command) {
       const found = locateClip(project, payload.clipId);
       if (!found) throw new Error("copro_clip_not_found");
       const rate = Number(payload.playbackRate);
-      if (!(rate > 0)) throw new Error("copro_clip_playback_rate_invalid");
+      if (!Number.isFinite(rate) || !(rate > 0)) throw new Error("copro_clip_playback_rate_invalid");
       const previousRate = Number(found.clip.playbackRate) > 0 ? Number(found.clip.playbackRate) : 1;
       const sourceSpanUs = found.clip.durationUs * previousRate;
       found.clip.playbackRate = rate;
@@ -121,7 +160,7 @@ export function applyCoProCommand(inputProject, command) {
       const found = locateClip(project, payload.clipId);
       if (!found) throw new Error("copro_clip_not_found");
       const volume = Number(payload.volume);
-      if (!(volume >= 0)) throw new Error("copro_clip_volume_invalid");
+      if (!Number.isFinite(volume) || !(volume >= 0)) throw new Error("copro_clip_volume_invalid");
       found.clip.volume = volume;
       break;
     }
@@ -233,7 +272,11 @@ export function applyCoProCommand(inputProject, command) {
         : 300_000;
       found.clip.metadata = {
         ...(found.clip.metadata ?? {}),
-        transitionOut: { type: transition, durationUs },
+        transitionOut: {
+          type: transition, durationUs,
+          ...(payload.direction ? {direction: ["left","right","up","down"].includes(payload.direction) ? payload.direction : "left"} : {}),
+          ...(payload.easing ? {easing: ["linear","ease-in","ease-out","ease-in-out"].includes(payload.easing) ? payload.easing : "ease-in-out"} : {}),
+        },
       };
       break;
     }
