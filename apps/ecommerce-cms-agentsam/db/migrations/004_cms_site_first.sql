@@ -206,12 +206,12 @@ CREATE TABLE cms_globals__next (
 
 INSERT INTO cms_globals__next (
   id, account_id, site_id, global_key, global_type, status, inline_content_json,
-  content_object_key, content_version, content_hash, legacy_page_id,
-  legacy_section_id, metadata_json, created_at, updated_at
+  content_object_key, content_version, content_hash,
+  metadata_json, created_at, updated_at
 )
 SELECT g.id, g.account_id, s.id, g.global_key, g.global_type, g.status,
        g.inline_content_json, g.content_object_key, g.content_version, g.content_hash,
-       g.legacy_page_id, g.legacy_section_id, g.metadata_json, g.created_at, g.updated_at
+       g.metadata_json, g.created_at, g.updated_at
 FROM cms_globals g
 JOIN cms_sites s ON s.account_id = g.account_id AND s.is_default = 1;
 
