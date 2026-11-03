@@ -60,10 +60,14 @@ try {
   assert.equal(await merchant.locator('.online-store-title h1').innerText(), 'Online Store');
   assert.equal(await merchant.locator('#store-visibility-label').innerText(), 'Unverified');
   assert.equal(await merchant.locator('.online-store-badge--pending').innerText(), 'Unpublished');
-  assert.equal(await merchant.locator('.online-store-preview-message').count(), 2, 'No unrelated host homepage rendered as a storefront');
+  assert.equal(await merchant.locator('.online-store-starter').count(), 2, 'Unpublished site uses the safe local starter preview');
+  assert.equal(await merchant.locator('.online-store-preview-message').count(), 0, 'Starter preview does not embed an unrelated host homepage');
   assert.equal(await merchant.locator('#import-theme-btn').isDisabled(), true, 'Unimplemented import cannot be clicked');
-  await merchant.locator('#edit-theme-btn').click();
-  assert.equal(await page.evaluate(() => window.__edited), 'home', 'Edit launches the correct existing editor entry');
+  const addTheme = merchant.locator('#edit-theme-btn');
+  assert.equal(await addTheme.innerText(), 'Add your first theme');
+  assert.equal(await addTheme.getAttribute('href'), '#theme-product-marketplace');
+  await addTheme.click();
+  assert.equal(await page.evaluate(() => window.__edited), undefined, 'Starter theme discovery stays inside the Store instead of opening an empty editor');
   await page.setViewportSize({ width: 390, height: 844 });
   const dimensions = await merchant.locator('.online-store').evaluate((node) => ({
     width: node.getBoundingClientRect().width,
