@@ -199,7 +199,9 @@ function updateSeoPreview() {
       }
     } catch { /* Not a verified public hostname. */ }
   }
-  const path = slug === "home" ? "/" : "/" + encodeURIComponent(slug);
+  const route = String(pageData?.route_path || "").trim();
+  const path = /^\/(?!\/)[a-z0-9/_-]*$/i.test(route)
+    ? route : slug === "home" ? "/" : "/" + encodeURIComponent(slug);
   document.getElementById("seo-url").textContent = publicHost
     ? publicHost + path
     : "Site address not verified · " + path;
@@ -219,7 +221,7 @@ function updateSeoPreview() {
 
 function renderAllSections(sections) {
   if (!sections?.length) {
-    return `<p class="pages-empty">No sections on this page yet. Use Publish or run CMS bootstrap.</p>`;
+    return `<p class="pages-empty">This page is a private draft with no sections yet. Choose Edit visually to add content before publishing.</p>`;
   }
   return sections
     .map(
@@ -341,10 +343,14 @@ function navigateSibling(delta) {
 }
 
 async function loadPage() {
-  const liveUrl = PAGE_ROUTES[slug] || "/";
-  const previewUrl = `${liveUrl}${liveUrl.includes("?") ? "&" : "?"}preview=1`;
-  document.getElementById("view-btn").href = liveUrl;
-  document.getElementById("menu-preview").href = previewUrl;
+  // A new CMS draft has no published storefront URL. Avoid routing its
+  // "View live" action to the unrelated site's homepage.
+  const viewButton = document.getElementById("view-btn");
+  const previewLink = document.getElementById("menu-preview");
+  viewButton.removeAttribute("href");
+  viewButton.setAttribute("aria-disabled", "true");
+  previewLink.removeAttribute("href");
+  previewLink.setAttribute("aria-disabled", "true");
 
   try {
     const [pageRes, listRes] = await Promise.all([
@@ -355,6 +361,19 @@ async function loadPage() {
     await loadCmsRegistry();
 
     pageData = pageRes.page;
+    const publishedRoute = String(pageData?.route_path || "").trim();
+    const isPublicPage = pageData.status === "published" &&
+      /^\/(?!\/)[a-z0-9/_-]*$/i.test(publishedRoute);
+    if (isPublicPage) {
+      viewButton.href = publishedRoute;
+      viewButton.removeAttribute("aria-disabled");
+      previewLink.href = publishedRoute +
+        (publishedRoute.includes("?") ? "&" : "?") + "preview=1";
+      previewLink.removeAttribute("aria-disabled");
+    } else {
+      viewButton.title = "This page has no verified published route yet";
+      previewLink.title = "A public preview requires a connected site renderer";
+    }
     allPages = (listRes.pages || []).filter((item) => item.slug !== "site");
     window.cmsActiveSiteId = listRes.site?.id || pageData.site_id || window.cmsActiveSiteId;
     window.cmsActivePageId = pageData.slug === "site" ? null : (pageData.id || null);
