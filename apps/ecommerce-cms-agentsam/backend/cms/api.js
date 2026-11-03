@@ -2,6 +2,7 @@ import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
 import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject } from "./theme-project-store.mjs";
+import { ensureCmsSiteStarter } from "./site-starter.mjs";
 import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows, cmsPageStorageMode } from "./page-inventory.mjs";
 import {
@@ -2775,7 +2776,13 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
 
   if (path === "/api/admin/cms/theme-projects" && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    const result = await listThemeProjects(env, context.accountId, url.searchParams.get("site_id") || null);
+    const selectedSite=url.searchParams.get('site_id') || null;
+    let site;
+    try { site=await resolveCmsSite(env.DB,{accountId:context.accountId,siteId:selectedSite,createDefault:!selectedSite}); }
+    catch (error) {return json({ok:false,error:String(error.message||error)},{status:409});}
+    const seeded=await ensureCmsSiteStarter(env,context.accountId,site.id);
+    if(!seeded.ok) return json(seeded,{status:seeded.status||503});
+    const result = await listThemeProjects(env, context.accountId, site.id);
     return json(result, { status: result.status || (result.ok ? 200 : 503) });
   }
   if (path === "/api/admin/cms/theme-projects" && method === "POST") {
@@ -2900,7 +2907,10 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
     try {
       const site = await createCmsSite(env.DB, context.accountId, body.site || body);
-      return json({ ok: true, site }, { status: 201 });
+      const seeded=await ensureCmsSiteStarter(env,context.accountId,site.id);
+      if(!seeded.ok) return json({ok:false,error:seeded.error||'cms_starter_install_failed',
+        site_id:site.id,retryable:true},{status:seeded.status||503});
+      return json({ ok: true, site, starter: {installed:true, editor_url:seeded.editor_url} }, { status: 201 });
     } catch (error) {
       const message = String(error?.message || error);
       const status = /invalid|required/.test(message) ? 400 : /unique|constraint/i.test(message) ? 409 : 500;

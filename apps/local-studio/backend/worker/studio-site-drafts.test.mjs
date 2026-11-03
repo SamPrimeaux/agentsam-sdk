@@ -32,7 +32,10 @@ function fixture() {
   insert.run('g1','owner-a','a-main',JSON.stringify(summary));
   insert.run('g2','owner-a','a-blog',JSON.stringify(summary));
   insert.run('g3','owner-b','b-blog',JSON.stringify({...summary,name:'Secret Other Site'}));
-  return {sqlite,env:{DB:d1(sqlite)}};
+  return {sqlite,env:{DB:d1(sqlite),WEBSITE_ASSETS:{
+    async put(){throw Error('Existing site drafts must not be replaced');},
+    async get(){return null;},
+  }}};
 }
 test('draft directory lists every owned site exactly once with site-bound editor URLs',async()=>{
   const {sqlite,env}=fixture();

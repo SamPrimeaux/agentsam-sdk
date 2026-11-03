@@ -7,6 +7,7 @@ const frame = document.getElementById('theme-project-editor-frame');
 const parameters = new URLSearchParams(location.search);
 const projectId = parameters.get('project');
 const siteId = parameters.get('site_id');
+const pageSlug = parameters.get('page');
 const API = '/api/admin/cms/theme-projects';
 const scoped = path => siteId ? path + (path.includes('?') ? '&' : '?') +
   'site_id=' + encodeURIComponent(siteId) : path;
@@ -71,6 +72,7 @@ const store = {
 async function boot() {
   if (siteId && !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)) throw new Error('theme_project_site_invalid');
   if (!projectId || !/^[A-Za-z0-9_-]{1,160}$/.test(projectId)) throw new Error('theme_project_id_invalid');
+  if (pageSlug && !/^[a-z][a-z0-9-]{0,63}$/.test(pageSlug)) throw new Error('theme_project_page_invalid');
   const project = (await store.get(projectId));
   if (!project) throw new Error('theme_project_not_found');
   const adapter = createThemeProjectAdapter(project, store, {
@@ -82,7 +84,8 @@ async function boot() {
   frame.addEventListener('load', () => {
     mountThemeEditor(frame, {
       adapter: bridge,
-      page: project.pages.find((page) => page.slug === 'home')?.slug || project.pages[0]?.slug,
+      page: (pageSlug && project.pages.some(page=>page.slug===pageSlug) ? pageSlug : null) ||
+        project.pages.find((page) => page.slug === 'home')?.slug || project.pages[0]?.slug,
     }, { assetsBase: '/theme-editor/' }).catch(showError);
   }, { once: true });
   frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/theme-editor/editor.css"></head><body></body></html>';

@@ -350,6 +350,47 @@ function showThemeUnavailable(state, message) {
     shell.appendChild(message);
   }
 }
+async function showSavedDraftPreview(preview) {
+  // Reuse the SAME renderer as Theme Project Editor, reading the saved R2
+  // revision through the account- and site-scoped CMS API.
+  const origin=window.AgentSamOnlineStoreHost?.baseUrl||window.location.origin;
+  const editor = new URL(preview.edit_href, origin);
+  if (editor.origin !== new URL(origin).origin || editor.pathname !== '/admin/theme-project-editor')
+    throw Error('invalid_theme_project_editor');
+  const projectId=editor.searchParams.get('project');
+  const siteId=editor.searchParams.get('site_id');
+  if(!/^[A-Za-z0-9_-]{1,160}$/.test(projectId||'') ||
+     !/^[A-Za-z0-9_-]{1,160}$/.test(siteId||'')) throw Error('invalid_theme_project_identity');
+  const url='/api/admin/cms/theme-projects/'+encodeURIComponent(projectId)+
+    '?site_id='+encodeURIComponent(siteId);
+  const res=await fetch(url,{credentials:'same-origin',cache:'no-store'});
+  const data=await res.json().catch(()=>null);
+  if(!res.ok||data?.ok!==true||!data.project?.pages?.length)
+    throw Error(data?.error||'theme_project_preview_unavailable');
+  const page=data.project.pages.find(page=>page.slug==='home')||data.project.pages[0];
+  const {renderThemePage}=await import('/theme-editor/project.mjs');
+  const markup=renderThemePage(page,data.project.tokens||{},{
+    baseUrl:page.assetBase||undefined,
+  });
+  const frames=[
+    document.getElementById('theme-preview-desktop'),
+    document.getElementById('theme-preview-mobile'),
+  ];
+  for(const frame of frames){
+    if(!frame)continue;
+    frame.setAttribute('sandbox','allow-scripts');
+    frame.removeAttribute('src');
+    frame.parentElement?.querySelector('.online-store-preview-message')?.remove();
+    frame.parentElement.dataset.previewStatus='loading';
+    frame.onload=()=>{
+      frame.parentElement.dataset.previewStatus='ready';
+    };
+    frame.srcdoc=markup;
+  }
+  document.querySelectorAll('.online-store-preview-caption').forEach((caption,index)=>{
+    caption.textContent=index===0?'Desktop · Saved draft preview':'Mobile · Saved draft preview';
+  });
+}
 function showActiveTheme(theme) {
   const status = document.getElementById("active-theme-status");
   status.className = "online-store-badge online-store-badge--" + (theme.verified === true ? "active" : "pending");
@@ -435,7 +476,12 @@ function showActiveTheme(theme) {
       document.getElementById("active-theme-saved").textContent="Installed CMS project · Customize before publishing.";
       editLink.href=preview.edit_href;
       editLink.textContent="Customize draft";
-      document.querySelector(".online-store-preview-caption").textContent="Desktop · No published preview";
+      try { await showSavedDraftPreview(preview); }
+      catch(error) {
+        console.error('saved_theme_preview_failed',error);
+        document.getElementById('active-theme-saved').textContent=
+          'Starter installed and editable. Preview unavailable; open the editor.';
+      }
     } else {
       showThemeUnavailable(d.site_selection_required?'select':'empty',
         'Select your website or install the starter theme before customizing.');

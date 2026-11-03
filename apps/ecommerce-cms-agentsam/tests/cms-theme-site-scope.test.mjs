@@ -95,7 +95,10 @@ test("theme projects and theme selections are isolated by CMS site", async () =>
       request("/api/admin/cms/theme-projects?site_id=site-a"), env,
       new URL("https://cms.test/api/admin/cms/theme-projects?site_id=site-a"), { accountId: "acct-a" },
     );
-    assert.equal((await primaryList.json()).projects.length, 0);
+    const primaryProjects=(await primaryList.json()).projects;
+    assert.equal(primaryProjects.length,1,'empty second site is provisioned with the default starter');
+    assert.equal(primaryProjects[0].sourceThemeId,'heuristic');
+    assert.equal(primaryProjects[0].id,'theme_heuristic');
 
     const save = await handleAdminCmsApi(
       request("/api/admin/cms/theme-projects/theme_resolve", "PUT", {
@@ -115,7 +118,8 @@ test("theme projects and theme selections are isolated by CMS site", async () =>
     assert.equal(themeRow.site_id, "site-a2");
     assert.equal(JSON.parse(themeRow.inline_content_json).preview, "heuristic");
     const revisions = sqlite.prepare("SELECT DISTINCT site_id FROM cms_revisions ORDER BY site_id").all();
-    assert.deepEqual(revisions.map(row => row.site_id), ["site-a2"]);
+    assert.deepEqual(revisions.map(row => row.site_id), ["site-a", "site-a2"]);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE site_id='site-a2' AND global_type='theme-project'").get().n,1);
 
     const crossAccount = await handleAdminCmsApi(
       request("/api/admin/cms/theme-projects/theme_resolve?site_id=site-a2"), env,
