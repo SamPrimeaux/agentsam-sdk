@@ -16,7 +16,6 @@ test('init project types include presets, CF scaffolds, and ready apps', () => {
   assert.ok(values.includes('scaffold:cms'));
   assert.ok(values.includes('scaffold:worker-api'));
   assert.ok(values.includes('product:agentsam-rapid-rust'));
-  assert.ok(values.includes('app:client-cms-editor'));
   assert.ok(values.some((value) => value.startsWith('app:')));
   assert.equal(parseProjectTypeChoice('scaffold:cms').kind, 'scaffold');
   assert.equal(parseProjectTypeChoice('app:local-studio').id, 'local-studio');

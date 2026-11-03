@@ -1,9 +1,8 @@
 /**
  * Canonical AgentSam Ecommerce CMS composition surface.
  *
- * The packaged client-cms-editor is the reusable engine. This product owns the
- * higher-level ecommerce/theme composition and is the public entry Local Studio
- * should consume.
+ * The editor engine lives in this product (cms-editor/). This is the one public
+ * CMS entry Local Studio consumes.
  */
 export {
   CmsEditor,
@@ -14,7 +13,7 @@ export {
   HttpCmsAdapter,
   useCmsEditor,
   useCmsEditorController,
-} from '@inneranimalmedia/client-cms-editor';
+} from '../../cms-editor/frontend/src/index.ts';
 
 export { createCmsThemeEditorAdapter } from '../theme-editor/cms-adapter.mjs';
 export { createThemeEditorBridge, ThemeEditorCapabilityError } from '../theme-editor/bridge.mjs';

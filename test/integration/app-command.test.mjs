@@ -10,7 +10,6 @@ test('lists agentsam.app.json manifests for product apps', () => {
   const ids = apps.map((row) => row.id).sort();
   assert.ok(ids.includes('cad-creator'));
   assert.ok(ids.includes('local-studio'));
-  assert.ok(ids.includes('client-cms-editor'));
   assert.ok(ids.includes('ecommerce-cms-agentsam'));
 });
 
@@ -21,27 +20,17 @@ test('agentsam app validate passes for all product apps', async () => {
   assert.ok(report.apps.length >= 4);
 });
 
-test('CMS app scaffold source is included in the SDK distribution contract', async () => {
-  const { validateApps } = await import('../../src/commands/app.js');
-  const report = validateApps({ appId: 'client-cms-editor' });
-  assert.equal(report.ok, true, report.errors.join('\n'));
-  assert.deepEqual(report.warnings, []);
-});
-
-test('CAD and CMS workers load APP identity from agentsam.app.json', () => {
+test('CAD worker loads APP identity from agentsam.app.json', () => {
   const cad = fs.readFileSync(path.resolve('apps/cad-creator/backend/worker/index.js'), 'utf8');
-  const cms = fs.readFileSync(path.resolve('apps/client-cms-editor/backend/worker/index.js'), 'utf8');
   assert.match(cad, /import appManifest from ['"]\.\.\/\.\.\/agentsam\.app\.json['"]/);
-  assert.match(cms, /import appManifest from ['"]\.\.\/\.\.\/agentsam\.app\.json['"]/);
   assert.doesNotMatch(cad, /const\s+APP\s*=\s*["']/);
-  assert.doesNotMatch(cms, /const\s+APP\s*=\s*["']/);
 });
 
-test('desktop CMS shell app_id resolves to client-cms-editor', () => {
+test('desktop CMS shell app_id resolves to ecommerce-cms-agentsam', () => {
   const manifest = JSON.parse(
     fs.readFileSync(path.resolve('packages/agentsam-desktop-shell/manifests/cms-editor.json'), 'utf8'),
   );
-  assert.equal(manifest.app_id, 'client-cms-editor');
+  assert.equal(manifest.app_id, 'ecommerce-cms-agentsam');
 });
 
 

@@ -279,8 +279,8 @@ function validateDesktopManifests(root, knownIds, apps = []) {
     }
     // Brand shells (meauxbility, etc.) may not be APP products — only fail when
     // the filename suggests a product APP or when app_id is a known near-miss.
-    const productish = ['cad-creator', 'client-cms-editor', 'local-studio', 'cms-editor'].includes(appId)
-      || ['cad-creator', 'client-cms-editor', 'cms-editor', 'local-studio'].some((n) => name.startsWith(n));
+    const productish = ['cad-creator', 'ecommerce-cms-agentsam', 'local-studio', 'cms-editor'].includes(appId)
+      || ['cad-creator', 'ecommerce-cms-agentsam', 'cms-editor', 'local-studio'].some((n) => name.startsWith(n));
     if (productish && !knownIds.has(appId)) {
       errors.push(`desktop ${name}: app_id "${appId}" does not resolve to a known APP manifest`);
     }

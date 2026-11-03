@@ -7,7 +7,7 @@ export {
   HttpCmsAdapter,
   useCmsEditor,
   useCmsEditorController,
-} from '@inneranimalmedia/client-cms-editor';
+} from '../../cms-editor/frontend/src/index';
 
 export type ThemeEditorCmsAdapter = Record<string, (...args: any[]) => any> & {
   capabilities?: string[];

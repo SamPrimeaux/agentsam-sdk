@@ -63,7 +63,6 @@ import {
 } from "./agentsam-credentials-mint.js";
 import localStudioApp from "../../agentsam.app.json";
 import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
-import clientCmsApp from "../../../client-cms-editor/agentsam.app.json";
 import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
 import { handleStudioPlatformProducts } from "./studio-platform-products.js";
 import { handleStudioSitesOverview } from "./studio-sites-overview.js";
@@ -153,7 +152,6 @@ function buildInstallTargets(manifests) {
 const INSTALL_APP_TARGETS = buildInstallTargets([
   localStudioApp,
   cadCreatorApp,
-  clientCmsApp,
   ecommerceApp,
 ]);
 

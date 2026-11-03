@@ -20,7 +20,6 @@ test('install.sh is a bash npm bootstrap with platform detection', () => {
   assert.doesNotMatch(source, /APP_SELECTOR=\"\\$\\{AGENTSAM_DEFAULT_APP/);
   assert.match(source, /@inneranimalmedia\/agentsam-local-studio/);
   assert.match(source, /@inneranimalmedia\/agentsam-cad-creator/);
-  assert.match(source, /@inneranimalmedia\/client-cms-editor/);
   assert.match(source, /@inneranimalmedia\/ecommerce-cms-agentsam/);
   assert.match(source, /@inneranimalmedia\/agentsam-database-editor/);
   assert.match(source, /agentsam\.install\.v2/);
@@ -40,7 +39,6 @@ test('install.sh installs selected app packages directly instead of manufacturin
     ['cad', 'cad-creator', 'agentsam-cad-creator', '@inneranimalmedia/agentsam-cad-creator'],
     ['cms', 'ecommerce-cms-agentsam', 'agentsam-ecommerce', '@inneranimalmedia/ecommerce-cms-agentsam'],
     ['commerce', 'ecommerce-cms-agentsam', 'agentsam-ecommerce', '@inneranimalmedia/ecommerce-cms-agentsam'],
-    ['client-cms-editor', 'client-cms-editor', 'agentsam-cms', '@inneranimalmedia/client-cms-editor'],
     ['studio', 'local-studio', 'agentsam-studio', '@inneranimalmedia/agentsam-local-studio'],
     ['ecommerce', 'ecommerce-cms-agentsam', 'agentsam-ecommerce', '@inneranimalmedia/ecommerce-cms-agentsam'],
     ['database', 'database-editor', 'agentsam-database-editor', '@inneranimalmedia/agentsam-database-editor'],

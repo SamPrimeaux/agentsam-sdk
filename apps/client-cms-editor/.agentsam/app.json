@@ -1,8 +1,0 @@
-{
-  "schema": "agentsam.host-install.v1",
-  "app_id": "client-cms-editor",
-  "config": {},
-  "mounts": [],
-  "features": [],
-  "notes": "Installation state for this checkout. Product definition lives in ../agentsam.app.json."
-}

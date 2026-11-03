@@ -51,6 +51,7 @@
     "backend/",
     "bin/",
     "cms/",
+    "cms-editor/",
     "db/",
     "dist/",
     "docs/",

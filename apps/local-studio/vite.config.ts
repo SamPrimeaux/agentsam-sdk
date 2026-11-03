@@ -114,15 +114,15 @@ const navRuntimeAliases = [
 const cmsProductSource = resolvePath(
   fileURLToPath(new URL("../ecommerce-cms-agentsam/frontend/cms", import.meta.url)),
 );
-const clientCmsEditorSource = resolvePath(
-  fileURLToPath(new URL("../client-cms-editor/frontend/src", import.meta.url)),
+const cmsEditorSource = resolvePath(
+  fileURLToPath(new URL("../ecommerce-cms-agentsam/cms-editor/frontend/src", import.meta.url)),
 );
-const cmsFrontendSource = clientCmsEditorSource;
+const cmsFrontendSource = cmsEditorSource;
 const cmsBackendSource = resolvePath(
-  fileURLToPath(new URL("../client-cms-editor/backend/src", import.meta.url)),
+  fileURLToPath(new URL("../ecommerce-cms-agentsam/cms-editor/backend/src", import.meta.url)),
 );
 const cmsSharedSource = resolvePath(
-  fileURLToPath(new URL("../client-cms-editor/shared/cms/src", import.meta.url)),
+  fileURLToPath(new URL("../ecommerce-cms-agentsam/cms-editor/shared/cms/src", import.meta.url)),
 );
 
 /** The files `frontend/src/lib/db.ts` globs — same directory, same non-recursive scope. */
@@ -452,10 +452,6 @@ export default defineConfig(({ command, isPreview }) => ({
       {
         find: /^@inneranimalmedia\/ecommerce-cms-agentsam\/theme-editor\/(.*)$/,
         replacement: resolvePath(studioRoot, "../ecommerce-cms-agentsam/frontend/theme-editor") + "/$1.mjs",
-      },
-      {
-        find: /^@inneranimalmedia\/client-cms-editor$/,
-        replacement: resolvePath(clientCmsEditorSource, "index.ts"),
       },
       {
         find: /^@inneranimalmedia\/agentsam-cms-frontend$/,
