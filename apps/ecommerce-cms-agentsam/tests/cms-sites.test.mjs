@@ -65,3 +65,42 @@ test("site creation validates slugs and hostnames and rejects account-local slug
     await assert.rejects(createCmsSite(store, "acct-a", { name: "Duplicate", slug: "campaign" }), /UNIQUE|constraint/i);
   } finally { db.close(); }
 });
+
+test("merchant with two existing sites is prompted to select, never assigned a platform site", async () => {
+  const db = createCmsTestDb();
+  try {
+    db.prepare("INSERT INTO accounts(id) VALUES ('acct-a'),('acct-b')").run();
+    db.prepare(`INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
+      VALUES ('a1','acct-a','Existing A','existing-a','active',0),
+             ('a2','acct-a','Existing B','existing-b','active',0)`).run();
+    const store = d1(db);
+    const listed = await listCmsSites(store, "acct-a");
+    assert.equal(listed.length, 2);
+    assert.equal(listed.filter(site => site.is_default).length, 0);
+    await assert.rejects(ensureDefaultCmsSite(store, "acct-a"), /cms_site_selection_required/);
+    await assert.rejects(
+      resolveCmsSite(store, { accountId: "acct-a", createDefault: true }),
+      /cms_site_selection_required/
+    );
+    assert.equal((await listCmsSites(store, "acct-a")).length, 2);
+    assert.equal(
+      (await resolveCmsSite(store, { accountId: "acct-a", siteId: "a2" })).id, "a2");
+    await assert.rejects(
+      resolveCmsSite(store, { accountId: "acct-b", siteId: "a2" }), /not_found/);
+    assert.equal((await listCmsSites(store, "acct-b")).length, 1);
+    assert.equal((await listCmsSites(store, "acct-b"))[0].status, "draft");
+  } finally { db.close(); }
+});
+
+test("a single pre-existing merchant site is reused without creating another", async () => {
+  const db = createCmsTestDb();
+  try {
+    db.prepare("INSERT INTO accounts(id) VALUES ('acct-a')").run();
+    db.prepare(`INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
+      VALUES ('existing_1','acct-a','My company','my-company','active',0)`).run();
+    const store = d1(db);
+    assert.equal((await ensureDefaultCmsSite(store, "acct-a")).id, "existing_1");
+    assert.equal((await listCmsSites(store, "acct-a")).length, 1);
+    assert.equal((await listCmsSites(store, "acct-a"))[0].is_default, 1);
+  } finally { db.close(); }
+});

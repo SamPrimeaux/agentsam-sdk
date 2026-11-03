@@ -245,20 +245,30 @@ addPageForm?.addEventListener("submit", async (event) => {
     const siteData = await cmsAdminFetch("/api/admin/cms/sites");
     availableSites = Array.isArray(siteData.sites) ? siteData.sites : [];
     const requestedSiteId = new URLSearchParams(location.search).get("site_id");
-    selectedSiteId = requestedSiteId || siteData.default_site_id || availableSites[0]?.id || null;
+    selectedSiteId = requestedSiteId || siteData.default_site_id ||
+      (availableSites.length === 1 ? availableSites[0].id : null);
     if (selectedSiteId && !availableSites.some(site => site.id === selectedSiteId)) {
       throw new Error("The selected site is not available to this account.");
     }
-    if (!selectedSiteId) throw new Error("Create or connect a site before managing its pages.");
+    siteSelect.innerHTML = (selectedSiteId ? "" :
+      '<option value="" selected disabled>Select a website…</option>') +
+      availableSites.map(site =>
+        `<option value="${cmsEscapeAttr(site.id)}">${cmsEscapeHtml(site.name || site.slug)}</option>`
+      ).join("");
+    siteSelect.hidden = availableSites.length < 2;
+    siteSelect.parentElement.hidden = availableSites.length < 2;
+    if (!selectedSiteId) {
+      document.getElementById("pages-body").innerHTML =
+        '<tr><td colspan="4" class="pages-empty">Choose a website above to manage its pages.</td></tr>';
+      document.getElementById("add-page-btn").disabled = true;
+      document.getElementById("edit-site-design").setAttribute("aria-disabled", "true");
+      document.getElementById("edit-site-design").removeAttribute("href");
+      return;
+    }
     window.cmsActiveSiteId = selectedSiteId;
     window.cmsActivePageId = null;
     window.cmsActivePageSlug = null;
-    siteSelect.innerHTML = availableSites.map(site =>
-      `<option value="${cmsEscapeAttr(site.id)}">${cmsEscapeHtml(site.name || site.slug)}</option>`
-    ).join("");
     siteSelect.value = selectedSiteId;
-    siteSelect.hidden = availableSites.length < 2;
-    siteSelect.parentElement.hidden = availableSites.length < 2;
 
     const currentUrl = new URL(location.href);
     if (currentUrl.searchParams.get("site_id") !== selectedSiteId) {
