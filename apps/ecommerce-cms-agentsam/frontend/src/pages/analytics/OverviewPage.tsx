@@ -29,9 +29,9 @@ export default function OverviewPage({ range }: PageProps) {
       </div>
     </div>
     <FinancialMetricDeck model={data} />
-    <section className="card" style={{ marginTop: 14 }}>
+    <section className="card card-spaced">
       <div className="card-head"><div><div className="card-title">Source coverage</div><div className="card-sub">A missing provider is shown as unavailable; empty sources remain distinct from zero-valued data.</div></div></div>
-      <div className="card-body col" style={{ gap: 10 }}>
+      <div className="card-body col">
         {data.sources.map((source) => <div key={source.id} className="row-between text-sm">
           <span>{source.label}</span>
           <span className="mono muted">

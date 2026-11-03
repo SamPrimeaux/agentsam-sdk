@@ -29,11 +29,11 @@ export default function FinancePage({ range }: PageProps) {
       </div>
     </div>
     <FinancialMetricDeck model={data} />
-    <section className="card" style={{ marginTop: 14 }}>
+    <section className="card card-spaced">
       <div className="card-head">
         <div><div className="card-title">Connected financial sources</div><div className="card-sub">Only tenant-scoped, source-backed data contributes to metrics.</div></div>
       </div>
-      <div className="card-body col" style={{ gap: 10 }}>
+      <div className="card-body col">
         {data.sources.map((source) => <div key={source.id} className="row-between text-sm">
           <span>{source.label}</span>
           <span className="mono muted">
