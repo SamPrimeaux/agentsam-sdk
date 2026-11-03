@@ -218,6 +218,9 @@ JOIN cms_sites s ON s.account_id = g.account_id AND s.is_default = 1;
 DROP TABLE cms_globals;
 ALTER TABLE cms_globals__next RENAME TO cms_globals;
 CREATE INDEX idx_cms_globals_site ON cms_globals(site_id, global_type, status);
+-- A site has at most one live (published) theme; installing creates a draft, publishing swaps which row is published.
+CREATE UNIQUE INDEX idx_cms_globals_one_published_theme ON cms_globals(site_id)
+  WHERE global_type = 'theme-project' AND status = 'published';
 
 -- Revisions retain entity-level history while acquiring an explicit site scope.
 CREATE TABLE cms_revisions__next (
