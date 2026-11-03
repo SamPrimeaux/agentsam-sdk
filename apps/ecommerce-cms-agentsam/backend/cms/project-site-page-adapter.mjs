@@ -38,10 +38,43 @@ export async function getProjectSitePage(env, accountId, slug, siteId, pageId = 
   if (!page) return null;
   const { results = [] } = await env.DB.prepare(`
     SELECT id, section_key, section_type, section_name, section_data,
-      sort_order, is_visible
+      sort_order, is_visible, r2_bucket, draft_r2_key, published_r2_key, updated_at
     FROM cms_page_sections WHERE page_id=?
     ORDER BY sort_order ASC, id ASC
   `).bind(page.id).all();
+  const versions=await env.DB.prepare(`
+    SELECT entity_id,MAX(revision_number) AS n FROM cms_revisions
+    WHERE account_id=? AND site_id=? AND entity_type='section'
+    GROUP BY entity_id
+  `).bind(accountId,site.id).all();
+  const versionBySection=new Map((versions.results||[]).map(row=>[row.entity_id,Number(row.n||0)]));
+  const sections=await Promise.all(results.map(async section=>{
+    let content=parse(section.section_data);
+    const pointer=section.draft_r2_key||section.published_r2_key;
+    if(pointer){
+      const storage=section.r2_bucket==='cms'?env.CMS_CONTENT
+        :section.r2_bucket==='agentsam-os-blueprint-content'?env.WEBSITE_ASSETS
+        :null;
+      if(!storage)throw new Error('cms_project_section_bucket_unavailable');
+      const object=await storage.get(pointer);
+      if(!object)throw new Error('cms_project_section_object_missing');
+      try {
+        const saved=JSON.parse(await object.text());
+        if(!saved||typeof saved!=='object'||Array.isArray(saved))
+          throw new Error('invalid_section');
+        content=saved;
+      } catch { throw new Error('cms_project_section_content_invalid'); }
+    }
+    return {
+      id:section.id,key:section.section_key||section.id,
+      name:section.section_name||section.section_type,
+      content,sort_order:section.sort_order,
+      status:section.is_visible?'active':'hidden',
+      source:pointer?'cms-r2':'cms-d1',
+      version:versionBySection.get(section.id)||0,
+      updated_at:section.updated_at,
+    };
+  }));
   return {
     ok: true,
     source: "cms-project-site",
@@ -53,15 +86,7 @@ export async function getProjectSitePage(env, accountId, slug, siteId, pageId = 
       status: page.status, updated_at: new Date(Number(page.updated_at) * 1000).toISOString(),
       is_homepage: Boolean(page.is_homepage),
       metadata: parse(page.metadata_json), site,
-      sections: results.map(section => ({
-        id: section.id,
-        key: section.section_key || section.id,
-        name: section.section_name || section.section_type,
-        content: parse(section.section_data),
-        sort_order: section.sort_order,
-        status: section.is_visible ? "active" : "hidden",
-        source: "cms-d1",
-      })),
+      sections,
       missing_source_sections: [],
       // Never imply an existing published page is safe to mutate in place.
       content_authority: page.status === "published" ? "cms-published" : "cms-draft-only",
@@ -161,4 +186,58 @@ export async function updateProjectSitePage(env, accountId, slug, siteId, pageId
   if (!updated.meta?.changes) return problem("Page changed during edit", 409);
   const result = await getProjectSitePage(env, accountId, nextSlug, site.id, existing.id);
   return { ok: true, site, page: result.page };
+}
+
+/**
+ * Write only a private R2 draft for an established project-owned page.
+ * The published object and the published page status remain unchanged.
+ * The section ID and site/account ownership are resolved on the server.
+ */
+export async function saveProjectSiteSectionDraft(env,accountId,slug,siteId,pageId,sectionKey,body={}) {
+  if(!accountId||!siteId)return problem('cms_site_required',400);
+  if(!env?.CMS_CONTENT)return problem('cms_project_section_bucket_unavailable',503);
+  let site;
+  try{site=await selectedSite(env,accountId,siteId);}
+  catch{return problem('site_not_found_or_unauthorized',404);}
+  const page=await findPage(env,site,slug,pageId);
+  if(!page)return problem('cms_page_not_found',404);
+  const section=await env.DB.prepare(`
+    SELECT id,section_key,draft_r2_key,r2_bucket FROM cms_page_sections
+    WHERE page_id=? AND (section_key=? OR id=?) LIMIT 1
+  `).bind(page.id,sectionKey,sectionKey).first();
+  if(!section)return problem('cms_section_not_found',404);
+  if(section.r2_bucket!=='cms')return problem('cms_section_bucket_not_supported',409);
+  const content=body.content;
+  if(!content||typeof content!=='object'||Array.isArray(content))
+    return problem('cms_section_content_invalid',400);
+  const serialized=JSON.stringify(content);
+  if(new TextEncoder().encode(serialized).length>524288)
+    return problem('cms_section_content_too_large',413);
+  const current=await env.DB.prepare(`
+    SELECT COALESCE(MAX(revision_number),0) AS version FROM cms_revisions
+    WHERE account_id=? AND site_id=? AND entity_type='section' AND entity_id=?
+  `).bind(accountId,site.id,section.id).first();
+  const version=Number(current?.version||0);
+  if(body.expected_version!=null&&Number(body.expected_version)!==version)
+    return problem('cms_section_revision_conflict',409);
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(serialized));
+  const hash=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+  const revision=version+1;
+  const key='cms/sections/drafts/'+encodeURIComponent(page.id)+'/'+
+    encodeURIComponent(section.id)+'/revision-'+String(revision).padStart(6,'0')+
+    '-'+hash.slice(0,16)+'.json';
+  await env.CMS_CONTENT.put(key,serialized,{httpMetadata:{contentType:'application/json'}});
+  const changed=await env.DB.prepare(`
+    UPDATE cms_page_sections SET draft_r2_key=?,content_hash=?,updated_at=datetime('now')
+    WHERE id=? AND page_id=? AND draft_r2_key IS ?
+  `).bind(key,hash,section.id,page.id,section.draft_r2_key).run();
+  if(Number(changed.meta?.changes||0)!==1)return problem('cms_section_revision_conflict',409);
+  await env.DB.prepare(`
+    INSERT INTO cms_revisions(account_id,site_id,entity_type,entity_id,revision_number,
+      revision_kind,content_object_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,?,'section',?,?,'draft',?,?,?,?)
+  `).bind(accountId,site.id,section.id,revision,key,hash,
+    JSON.stringify({content}),JSON.stringify({source:'cms-project-site',published:false})).run();
+  return {ok:true,version:revision,section_key:section.section_key||section.id,
+    content_object_key:key,published:false,updated_at:new Date().toISOString()};
 }

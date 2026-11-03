@@ -49,7 +49,12 @@ function fixture() {
     CREATE TABLE cms_page_sections (
       id TEXT PRIMARY KEY, page_id TEXT NOT NULL, section_key TEXT,
       section_type TEXT, section_name TEXT, section_data TEXT, sort_order INTEGER,
-      is_visible INTEGER
+      is_visible INTEGER, r2_bucket TEXT DEFAULT 'cms',
+      draft_r2_key TEXT, published_r2_key TEXT, updated_at TEXT
+    );
+    CREATE TABLE cms_revisions (
+      account_id TEXT, site_id TEXT, entity_type TEXT, entity_id TEXT,
+      revision_number INTEGER, revision_kind TEXT, content_object_key TEXT
     );
   `);
   return db;

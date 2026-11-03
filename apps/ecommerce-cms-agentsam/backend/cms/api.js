@@ -7,6 +7,7 @@ import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows, cmsPageStorageMode } from "./page-inventory.mjs";
 import {
   getProjectSitePage, createProjectSitePage, updateProjectSitePage,
+  saveProjectSiteSectionDraft,
 } from "./project-site-page-adapter.mjs";
 import { ensureDefaultCmsSite, listCmsSites, createCmsSite, resolveCmsSite } from "./site-context.mjs";
 import {
@@ -3171,6 +3172,10 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     }
     const generatedGate = await guardSectionWrite(body);
     if (!generatedGate.ok) return json({ error: generatedGate.error }, { status: generatedGate.status });
+    if(await cmsPageStorageMode(env.DB)==='project-site') {
+      const saved=await saveProjectSiteSectionDraft(env,context.accountId,m[1],siteId,pageId,m[2],body);
+      return json(saved,{status:saved.status||(saved.ok?200:400)});
+    }
     const mode = await pageMode(m[1]);
     if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
     const result = mode.canonical
