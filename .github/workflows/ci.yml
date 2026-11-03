@@ -212,3 +212,11 @@ jobs:
         run: npm run cf:verify-output --prefix apps/local-studio
       - name: Smoke-test hosted Worker routes
         run: npm run cf:smoke:worker --prefix apps/local-studio
+      - name: Preserve verified Local Studio deploy bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-studio-worker-${{ github.sha }}
+          path: apps/local-studio/.output/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
