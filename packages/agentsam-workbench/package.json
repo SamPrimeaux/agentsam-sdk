@@ -51,7 +51,8 @@
     "typecheck": "node scripts/ensure-local-deps.mjs && tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node --test test/*.test.mjs",
     "build": "node scripts/build.mjs",
-    "prepack": "npm run build"
+    "prepack": "npm run verify:donor-quarantine && npm run build",
+    "verify:donor-quarantine": "node ../../scripts/verify-widget-donor-quarantine.mjs"
   },
   "dependencies": {
     "@inneranimalmedia/agentsam-contracts": "2.6.12",
