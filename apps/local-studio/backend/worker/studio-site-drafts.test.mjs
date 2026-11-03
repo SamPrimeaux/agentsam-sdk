@@ -62,14 +62,14 @@ test('Store overview cannot promote another site draft into current preview and 
     assert.equal(automatic.preview_theme.installed,true);
     assert.equal(automatic.draft_themes.length,1);
     assert.deepEqual(automatic.available_sites.map(s=>s.id).sort(),['a-blog','a-main']);
-    // This account has no designated default: show a real picker, not an
-    // arbitrary customer website or somebody else's draft.
+    // A legacy multi-site account with no default opens a deterministic,
+    // owned, established site rather than a blocking selector.
     sqlite.prepare("UPDATE cms_sites SET is_default=0 WHERE account_id='owner-a'").run();
-    const unresolved=await (await handleStudioSitesOverview(new Request(base),env,'owner-a')).json();
-    assert.equal(unresolved.site_selection_required,true);
-    assert.equal(unresolved.selected_site_id,null);
-    assert.equal(unresolved.preview_theme,null);
-    assert.equal(unresolved.draft_themes.length,2);
+    const recovered=await (await handleStudioSitesOverview(new Request(base),env,'owner-a')).json();
+    assert.equal(recovered.site_selection_required,false);
+    assert.equal(recovered.selected_site_id,'a-blog');
+    assert.equal(recovered.preview_theme.installed,true);
+    assert.equal(recovered.draft_themes.length,1);
     const selected=await handleStudioSitesOverview(new Request(base+'?site_id=a-blog'),env,'owner-a');
     assert.equal(selected.status,200);
     const payload=await selected.json();

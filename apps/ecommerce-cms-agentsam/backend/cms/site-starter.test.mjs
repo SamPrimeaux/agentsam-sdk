@@ -66,9 +66,11 @@ test('site recovery is idempotent and never overwrites merchant edits or another
       VALUES ('shop','merchant','My Shop','shop','active',0),
              ('blog','merchant','My Blog','blog','active',0),
              ('foreign','other','Another Company','foreign','active',1)`);
-    const unselected=await (await handleStudioSitesOverview(storeRequest(),env,'merchant')).json();
-    assert.equal(unselected.site_selection_required,true);
-    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='merchant'").get().n,0);
+    const automaticallySelected=await (await handleStudioSitesOverview(storeRequest(),env,'merchant')).json();
+    assert.equal(automaticallySelected.site_selection_required,false);
+    assert.equal(automaticallySelected.selected_site_id,'blog');
+    assert.equal(automaticallySelected.preview_theme.installed,true);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='merchant'").get().n,1);
     const first=await (await handleStudioSitesOverview(storeRequest('blog'),env,'merchant')).json();
     assert.equal(first.preview_theme.installed,true);
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='merchant'").get().n,1);
@@ -109,5 +111,38 @@ test('another installed preset is respected; generic preset materializer accepts
     assert.equal(fallback.unchanged,true);
     assert.equal(fallback.projects[0].sourceThemeId,'custom');
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='merchant'").get().n,1);
+  } finally {db.close();}
+});
+
+test('primary website opens existing authored homepage, not generic starter content',async()=>{
+  const db=createCmsTestDb();
+  const {env}=environment(db);
+  try {
+    db.exec(`
+      INSERT INTO accounts(id) VALUES ('studio');
+      INSERT INTO cms_sites(id,account_id,name,slug,status,is_default,primary_domain)
+      VALUES ('inneranimalmedia','studio','Inner Animal Media','inneranimalmedia','active',1,'inneranimalmedia.com'),
+             ('agentsam','studio','AgentSam Studio','agentsam','active',0,'agentsam.inneranimalmedia.com');
+      INSERT INTO cms_pages(id,account_id,site_id,slug,route_path,title,status,is_homepage)
+      VALUES ('page_home','studio','inneranimalmedia','home','/','Inner Animal Media','published',1),
+             ('page_studio','studio','agentsam','home','/','AgentSam Studio','published',1);
+    `);
+    const automatic=await (await handleStudioSitesOverview(storeRequest(),env,'studio')).json();
+    assert.equal(automatic.selected_site_id,'inneranimalmedia');
+    assert.equal(automatic.site_selection_required,false);
+    assert.equal(automatic.site_preview.url,'https://inneranimalmedia.com/');
+    assert.match(automatic.site_preview.edit_href,/site_id=inneranimalmedia/);
+    assert.match(automatic.site_preview.edit_href,/page_id=page_home/);
+    assert.equal(automatic.preview_theme.installed,true,'starter remains available as a separate draft');
+    assert.equal(automatic.draft_themes.length,1);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_pages WHERE account_id='studio'").get().n,2,
+      'existing pages are never overwritten by starter provisioning');
+    const switched=await (await handleStudioSitesOverview(storeRequest('agentsam'),env,'studio')).json();
+    assert.equal(switched.selected_site_id,'agentsam');
+    assert.equal(switched.site_preview.url,'https://agentsam.inneranimalmedia.com/');
+    assert.match(switched.site_preview.edit_href,/page_id=page_studio/);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='studio' AND global_type='theme-project'").get().n,2);
+    const again=await (await handleStudioSitesOverview(storeRequest(),env,'studio')).json();
+    assert.equal(again.selected_site_id,'inneranimalmedia','switching does not change the primary site');
   } finally {db.close();}
 });

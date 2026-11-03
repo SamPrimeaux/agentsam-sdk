@@ -6,11 +6,12 @@ import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
 import { resolveEcommerceAdminPath, resolveEcommerceAssetPath } from '@/lib/apps/ecommerce-routing';
 
-type Search = { site?: string; page?: string; preview?: 'local' };
+type Search = { site?: string; site_id?: string; page?: string; preview?: 'local' };
 
 export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
   validateSearch: (search: Record<string, unknown>): Search => ({
     site: typeof search.site === 'string' ? search.site : undefined,
+    site_id: typeof search.site_id === 'string' ? search.site_id : undefined,
     page: typeof search.page === 'string' ? search.page : undefined,
     preview: search.preview === 'local' ? 'local' : undefined,
   }),
@@ -42,6 +43,9 @@ function EcommerceAppHost() {
     ? (() => {
       const resolved = new URL(assetPath, window.location.origin);
       if (!isPackagedDesktop() && page === '/admin/home') resolved.searchParams.set('__agentsamEmbedded', '1');
+      if (search.site_id && /^[A-Za-z0-9_-]{1,120}$/.test(search.site_id) && page?.startsWith('/admin/')) {
+        resolved.searchParams.set('site_id', search.site_id);
+      }
       return resolved.toString();
     })()
     : null;

@@ -391,6 +391,53 @@ async function showSavedDraftPreview(preview) {
     caption.textContent=index===0?'Desktop · Saved draft preview':'Mobile · Saved draft preview';
   });
 }
+function showExistingWebsitePreview(href){
+  // A real site's published homepage is not the newly installed theme draft.
+  // Use the account-owned public domain as the preview source, without
+  // impersonating it with an unrelated Heuristic template.
+  const url=new URL(href);
+  if(url.protocol!=='https:')throw Error('website_preview_url_invalid');
+  storefrontPreviewObserver?.disconnect();
+  const frames=[
+    ['desktop',document.getElementById('theme-preview-desktop'),1440],
+    ['mobile',document.getElementById('theme-preview-mobile'),390],
+  ];
+  const fit=(iframe,width)=>{
+    const shell=iframe.parentElement;
+    const size=shell.clientWidth;
+    if(!size)return;
+    const scale=size/width;
+    iframe.style.width=width+'px';
+    iframe.style.height=Math.max(844,Math.ceil(shell.clientHeight/scale))+'px';
+    iframe.style.transformOrigin='top left';
+    iframe.style.transform='scale('+scale+')';
+  };
+  storefrontPreviewObserver=typeof ResizeObserver==='function'
+    ? new ResizeObserver(()=>frames.forEach(([,frame,width])=>fit(frame,width)))
+    : null;
+  for(const [device,frame,width] of frames){
+    if(!frame)continue;
+    const shell=frame.parentElement;
+    shell.querySelector('.online-store-preview-message')?.remove();
+    shell.dataset.previewStatus='loading';
+    frame.setAttribute('sandbox','allow-scripts allow-forms');
+    frame.setAttribute('referrerpolicy','no-referrer');
+    fit(frame,width);
+    storefrontPreviewObserver?.observe(shell);
+    frame.onload=()=>{shell.dataset.previewStatus='ready';};
+    frame.onerror=()=>{
+      shell.dataset.previewStatus='failed';
+      const link=document.createElement('a');
+      link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
+      link.textContent='Open your website';
+      link.className='online-store-preview-message';
+      shell.append(link);
+    };
+    frame.src=url.href;
+    const caption=shell.querySelector('.online-store-preview-caption');
+    if(caption)caption.textContent=device==='desktop'?'Desktop · Existing website':'Mobile · Existing website';
+  }
+}
 function showActiveTheme(theme) {
   const status = document.getElementById("active-theme-status");
   status.className = "online-store-badge online-store-badge--" + (theme.verified === true ? "active" : "pending");
@@ -408,33 +455,129 @@ function showActiveTheme(theme) {
     const siteId = route.get('site_id');
     const d = await adminFetch('/api/admin/store/online'+(siteId?'?site_id='+encodeURIComponent(siteId):''));
     const sites = Array.isArray(d.available_sites) ? d.available_sites : [];
-    if(sites.length){
-      const label=document.createElement('label');
-      label.id='store-site-selector';
-      label.style.cssText='display:inline-flex;align-items:center;gap:8px;font-size:13px;';
-      const title=document.createElement('span');
-      title.textContent='Website';
-      const select=document.createElement('select');
-      select.setAttribute('aria-label','Current CMS website');
-      select.style.cssText='max-width:220px;min-width:150px;padding:8px;border:1px solid currentColor;border-radius:8px;background:inherit;color:inherit;';
-      if(d.site_selection_required)select.add(new Option('Select website…',''));
-      for(const site of sites)select.add(new Option(site.name+' · '+site.slug,site.id));
-      select.value=d.selected_site_id||'';
-      select.addEventListener('change',()=>{
-        if(!sites.some(site=>site.id===select.value))return;
+    if(sites.length && !window.AgentSamOnlineStoreHost){
+      const current=sites.find(site=>site.id===d.selected_site_id)||sites[0];
+      const root=document.createElement('details');
+      root.id='store-site-switcher';
+      root.className='cms-site-switcher';
+      const trigger=document.createElement('summary');
+      trigger.className='cms-site-switcher-trigger';
+      trigger.setAttribute('aria-label','Switch current website');
+      const triggerCopy=document.createElement('span');
+      triggerCopy.className='cms-site-switcher-label';
+      const primary=document.createElement('strong');
+      primary.textContent=current.name||current.slug;
+      const subtitle=document.createElement('small');
+      subtitle.textContent=current.primary_domain||(current.is_default?'Primary website':'Current website');
+      const chevron=document.createElement('span');
+      chevron.className='cms-site-switcher-chevron';
+      chevron.setAttribute('aria-hidden','true');
+      chevron.textContent='⌄';
+      triggerCopy.append(primary,subtitle);
+      trigger.append(triggerCopy,chevron);
+      root.append(trigger);
+      const menu=document.createElement('div');
+      menu.className='cms-site-switcher-menu';
+      const heading=document.createElement('div');
+      heading.className='cms-site-switcher-heading';
+      heading.textContent='Switch website';
+      const search=document.createElement('input');
+      search.type='search';
+      search.className='cms-site-switcher-search';
+      search.placeholder='Search websites';
+      search.setAttribute('aria-label','Search owned websites');
+      const list=document.createElement('div');
+      list.className='cms-site-switcher-results';
+      const footer=document.createElement('div');
+      footer.className='cms-site-switcher-footer';
+      const ranked=[...sites].sort((a,b)=>
+        Number(b.id===current.id)-Number(a.id===current.id) ||
+        Number(b.is_default===1)-Number(a.is_default===1) ||
+        Number(b.status==='active')-Number(a.status==='active') ||
+        Number(b.page_count||0)-Number(a.page_count||0) ||
+        String(a.name).localeCompare(String(b.name)));
+      function chooseSite(selected){
         const url=new URL(window.location.href);
-        url.searchParams.set('site_id',select.value);
+        url.searchParams.set('site_id',selected.id);
+        try {
+          const parent=window.parent;
+          if(parent!==window && parent.location.origin===window.location.origin &&
+             parent.location.pathname==='/apps/ecommerce-cms-agentsam'){
+            const outer=new URL(parent.location.href);
+            outer.searchParams.set('site_id',selected.id);
+            parent.location.assign(outer.href);
+            return;
+          }
+        } catch { /* Standalone or cross-origin frame: navigate the current CMS document. */ }
         window.location.assign(url.href);
+      }
+      function renderMatches(){
+        const q=search.value.trim().toLowerCase();
+        const matched=ranked.filter(site=>
+          !q || [site.name,site.slug,site.primary_domain].some(value=>
+            String(value||'').toLowerCase().includes(q)));
+        const visible=q?matched.slice(0,30):matched.slice(0,6);
+        list.replaceChildren();
+        for(const site of visible){
+          const item=document.createElement('button');
+          item.type='button';
+          item.className='cms-site-switcher-item';
+          if(site.id===current.id)item.setAttribute('aria-current','true');
+          const names=document.createElement('span');
+          names.className='cms-site-switcher-item-copy';
+          const name=document.createElement('strong');
+          name.textContent=site.name||site.slug;
+          const detail=document.createElement('small');
+          detail.textContent=site.primary_domain||site.slug;
+          names.append(name,detail);
+          const meta=document.createElement('span');
+          meta.className='cms-site-switcher-item-meta';
+          meta.textContent=site.id===current.id?'Current':site.is_default?'Primary':'';
+          item.append(names,meta);
+          item.onclick=()=>chooseSite(site);
+          list.append(item);
+        }
+        if(!visible.length){
+          const none=document.createElement('p');
+          none.className='cms-site-switcher-empty';
+          none.textContent='No matching websites';
+          list.append(none);
+        }
+        footer.textContent=q
+          ? matched.length+' matching websites'
+          : (sites.length>visible.length?'Showing main sites · Search all '+sites.length:'All your websites');
+      }
+      search.addEventListener('input',renderMatches);
+      root.addEventListener('toggle',()=>{if(root.open){renderMatches();search.focus();}});
+      root.addEventListener('keydown',event=>{
+        if(event.key==='Escape'){root.open=false;trigger.focus();}
       });
-      label.append(title,select);
-      document.querySelector('.online-store-title')?.append(label);
+      document.addEventListener('pointerdown',event=>{
+        if(root.open&&!root.contains(event.target))root.open=false;
+      });
+      menu.append(heading,search,list,footer);
+      root.append(menu);
+      document.querySelector('.online-store-title')?.append(root);
+      renderMatches();
     }
 
     document.getElementById("store-visibility-label").textContent =
+      d.site_preview?.url ? "Website live" :
       d.store.visibility === "public" ? "Public" :
-      d.store.visibility === "password" ? "Password protected" : "Not published";
+      d.store.visibility === "password" ? "Password protected" : "Theme not published";
 
     const perf = d.performance || {};
+    const hasRealMetrics=[perf.lcp_ms,perf.inp_ms,perf.cls,
+      perf.sessions_desktop,perf.sessions_mobile].some(value=>
+      value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value)));
+    const performancePanel=document.querySelector('.online-store-perf');
+    if(performancePanel)performancePanel.hidden=!hasRealMetrics;
+    // Remove unconnected action affordances until transactions exist.
+    document.querySelectorAll('.online-store-icon-btn').forEach(button=>{button.hidden=true;});
+    const importButton=document.getElementById('import-theme-btn');
+    if(importButton)importButton.hidden=true;
+    const visibilityButton=document.getElementById('store-visibility-btn');
+    if(visibilityButton){visibilityButton.disabled=true;visibilityButton.style.cursor='default';}
     const lcp = document.getElementById("perf-lcp");
     const inp = document.getElementById("perf-inp");
     const cls = document.getElementById("perf-cls");
@@ -456,14 +599,33 @@ function showActiveTheme(theme) {
     }
     sessions.title = "Storefront sessions are not measured yet when shown as —";
 
-    setStoreViewButton(d.store?.visibility==="public" ? d.store?.url : null);
+    setStoreViewButton(d.site_preview?.url ||
+      (d.store?.visibility==="public" ? d.store?.url : null));
     const theme = d.active_theme;
     document.getElementById("active-theme-name").textContent = theme?.name || "No active theme";
     document.getElementById("active-theme-saved").textContent =
       "Last saved: " + fmtStoreDate(theme?.last_saved);
     const editLink = document.getElementById("edit-theme-btn");
     editLink.href = theme?.edit_href || "/admin/theme-editor?slug=home";
-    if (theme?.preview_href && theme?.name) {
+    if (d.site_preview?.edit_href) {
+      // Existing authored pages take priority over a newly provisioned
+      // starter template. The project remains accessible in Draft themes.
+      const site=d.site_preview;
+      document.getElementById("active-theme-name").textContent=d.selected_site_name||site.title;
+      document.getElementById("active-theme-status").textContent=
+        site.status==='published'?'Existing website':'Editable website';
+      document.getElementById("active-theme-status").className=
+        "online-store-badge online-store-badge--"+(site.url?'active':'pending');
+      document.getElementById("active-theme-saved").textContent=
+        "Your existing CMS homepage · Theme drafts remain separate";
+      editLink.href=site.edit_href;
+      editLink.textContent="Edit website";
+      if(site.url)showExistingWebsitePreview(site.url);
+      else if(d.preview_theme?.installed) {
+        try { await showSavedDraftPreview(d.preview_theme); }
+        catch(error){ console.error('saved_theme_preview_failed',error); }
+      }
+    } else if (theme?.preview_href && theme?.name) {
       showActiveTheme(theme);
       setPreviewFrames(theme.preview_href);
     } else if (d.preview_theme?.installed && d.preview_theme?.edit_href) {

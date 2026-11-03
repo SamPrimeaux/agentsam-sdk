@@ -17,16 +17,22 @@ export async function handleStudioSitesOverview(request, env, accountId) {
     await env.DB.prepare("SELECT id FROM cms_sites LIMIT 1").first();
     cmsConnected = true;
   } catch {}
-  const siteId=new URL(request.url).searchParams.get('site_id');
-  // A merchant chooses their website explicitly. A single site (or an
-  // explicitly designated default) can open without another selection step.
-  // Never guess the first site in a multi-site account.
+  const requestUrl=new URL(request.url);
+  const siteId=requestUrl.searchParams.get('site_id');
+  const hostname=requestUrl.hostname.toLowerCase();
+  // A storefront always opens with a real, account-owned site. Explicit
+  // selection wins, then this origin's owned domain, then account default,
+  // then an established site with actual authored pages. The switcher
+  // changes context; it is never a prerequisite for seeing an editor.
   let sites=[];
   try {
     const rows=await env.DB.prepare(`
-      SELECT id,name,slug,primary_domain,is_default FROM cms_sites
-      WHERE account_id=? AND status!='archived'
-      ORDER BY is_default DESC,created_at ASC,name ASC
+      SELECT s.id,s.name,s.slug,s.primary_domain,s.domain_aliases_json,
+        s.is_default,s.status,s.updated_at,
+        (SELECT COUNT(*) FROM cms_pages p WHERE p.site_id=s.id) AS page_count
+      FROM cms_sites s
+      WHERE s.account_id=? AND s.status!='archived'
+      ORDER BY s.is_default DESC,s.updated_at DESC,s.name ASC
     `).bind(accountId).all();
     sites=rows.results||[];
   } catch { /* Site directory stays unavailable until the CMS schema exists. */ }
@@ -38,15 +44,29 @@ export async function handleStudioSitesOverview(request, env, accountId) {
   if(siteId) {
     try {selectedSite=await resolveCmsSite(env.DB,{accountId,siteId});}
     catch {return Response.json({ok:false,error:'site_not_found_or_unauthorized'},{status:404});}
-  } else if(sites.length===1 || sites.filter(site=>site.is_default===1).length===1) {
-    selectedSite=sites.find(site=>site.is_default===1)||sites[0];
+  } else if(sites.length) {
+    // The account's designated primary website wins inside Local Studio.
+    // Hostnames are useful only if the account has no selected default.
+    const hostnameMatch=site=>String(site.primary_domain||'').toLowerCase()===hostname ||
+      (()=>{try{return JSON.parse(site.domain_aliases_json||'[]').some(
+        domain=>String(domain).toLowerCase()===hostname);}
+      catch{return false;}})();
+    const atOrigin=sites.find(hostnameMatch);
+    const designated=sites.find(site=>Number(site.is_default)===1);
+    const established=[...sites].sort((a,b)=>
+      Number(b.status==='active')-Number(a.status==='active') ||
+      Number(b.page_count||0)-Number(a.page_count||0) ||
+      String(b.updated_at||'').localeCompare(String(a.updated_at||'')) ||
+      String(a.name).localeCompare(String(b.name)));
+    selectedSite=designated||atOrigin||established[0];
   }
+  let provisioned=null;
   if(selectedSite) {
     // The first visit is also the recovery path for older blank sites.
     // Idempotent: an existing theme or edited draft is never replaced.
-    const seeded=await ensureCmsSiteStarter(env,accountId,selectedSite.id);
-    if(!seeded.ok) return Response.json({ok:false,error:seeded.error||'cms_starter_install_failed',
-      site_id:selectedSite.id},{status:seeded.status||503});
+    provisioned=await ensureCmsSiteStarter(env,accountId,selectedSite.id);
+    if(!provisioned.ok) return Response.json({ok:false,error:provisioned.error||'cms_starter_install_failed',
+      site_id:selectedSite.id},{status:provisioned.status||503});
   }
   let drafts=[];
   try { drafts=await listStudioThemeDrafts(env,accountId); }
@@ -55,20 +75,57 @@ export async function handleStudioSitesOverview(request, env, accountId) {
   const installed=selectedSite
     ? drafts.find(theme=>theme.installed===true&&theme.site_id===selectedSite.id&&theme.edit_href)
     : null;
+  // Provisioning has already verified the saved CMS project. A legacy draft
+  // list failure must not turn a usable installed site back into an empty UI.
+  const saved=provisioned?.projects?.[0]||null;
+  const currentTheme=installed || (saved&&provisioned?.editor_url ? {
+    id:saved.id,name:saved.name,preview_url:saved.sourcePreviewUrl||null,
+    edit_href:provisioned.editor_url,
+  }:null);
+  // Existing sites already own authored CMS pages. Never make a newly
+  // provisioned template the only way to edit a real published homepage.
+  let homePage=null;
+  if(selectedSite) {
+    try {
+      homePage=await env.DB.prepare(`
+        SELECT id,slug,title,status,route_path FROM cms_pages
+        WHERE site_id=? AND (is_homepage=1 OR slug='home')
+          AND status NOT IN ('archived','removed')
+        ORDER BY is_homepage DESC,(status='published') DESC LIMIT 1
+      `).bind(selectedSite.id).first();
+    } catch { /* Theme projects remain available for new websites. */ }
+  }
+  const domain=String(selectedSite?.primary_domain||'').trim().toLowerCase();
+  const externalPreview=homePage?.status==='published' &&
+    selectedSite?.status==='active' &&
+    /^(?:[a-z0-9-]+\.)+[a-z]{2,63}$/.test(domain)
+      ? 'https://'+domain+(homePage.route_path||'/') : null;
+  const siteEditHref=homePage
+    ? '/admin/theme-editor?'+new URLSearchParams({
+      site_id:selectedSite.id,slug:homePage.slug,page_id:homePage.id,
+    }).toString()
+    : null;
   return response({
     ok:true,source:'studio_cms_site_read_model',
     store:{visibility:'unpublished',url:null,domain:null,company_name:null},
+    site_preview:homePage?{
+      title:homePage.title,site_id:selectedSite.id,
+      page_id:homePage.id,status:homePage.status,
+      url:externalPreview,edit_href:siteEditHref,
+    }:null,
     performance:emptyPerformance,active_theme:null,
-    draft_themes:selectedSite?drafts.filter(draft=>!draft.installed||draft.site_id===selectedSite.id):drafts,
+    draft_themes:selectedSite?drafts.filter(draft=>draft.installed&&draft.site_id===selectedSite.id):[],
     // A project preview is never proof that its site is published.
-    preview_theme:installed?{
-      id:installed.id,name:installed.name,preview_href:null,
-      source_preview_href:installed.preview_url,
-      edit_href:installed.edit_href,verified:false,installed:true
+    preview_theme:currentTheme?{
+      id:currentTheme.id,name:currentTheme.name,preview_href:null,
+      source_preview_href:currentTheme.preview_url,
+      edit_href:currentTheme.edit_href,verified:false,installed:true
     }:null,
     pages:[],cms_connected:cmsConnected,setup_required:!selectedSite,
-    available_sites:sites.map(({id,name,slug})=>({id,name,slug})),
-    site_selection_required:!selectedSite&&sites.length>1,
+    available_sites:sites.map(({id,name,slug,primary_domain,is_default,status,page_count})=>({
+      id,name,slug,primary_domain,is_default,status,page_count,
+    })),
+    site_selection_required:false,
     selected_site_id:selectedSite?.id||null,
     selected_site_name:selectedSite?.name||null,
   });
