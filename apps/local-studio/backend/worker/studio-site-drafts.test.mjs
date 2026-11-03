@@ -53,9 +53,20 @@ test('Store overview cannot promote another site draft into current preview and 
     const base='https://agentsam.example/api/admin/store/online';
     const overview=await handleStudioSitesOverview(new Request(base),env,'owner-a');
     assert.equal(overview.status,200);
-    const anonymous=await overview.json();
-    assert.equal(anonymous.preview_theme,null);
-    assert.equal(anonymous.draft_themes.length,2);
+    const automatic=await overview.json();
+    assert.equal(automatic.selected_site_id,'a-main');
+    assert.equal(automatic.site_selection_required,false);
+    assert.equal(automatic.preview_theme.installed,true);
+    assert.equal(automatic.draft_themes.length,1);
+    assert.deepEqual(automatic.available_sites.map(s=>s.id).sort(),['a-blog','a-main']);
+    // This account has no designated default: show a real picker, not an
+    // arbitrary customer website or somebody else's draft.
+    sqlite.prepare("UPDATE cms_sites SET is_default=0 WHERE account_id='owner-a'").run();
+    const unresolved=await (await handleStudioSitesOverview(new Request(base),env,'owner-a')).json();
+    assert.equal(unresolved.site_selection_required,true);
+    assert.equal(unresolved.selected_site_id,null);
+    assert.equal(unresolved.preview_theme,null);
+    assert.equal(unresolved.draft_themes.length,2);
     const selected=await handleStudioSitesOverview(new Request(base+'?site_id=a-blog'),env,'owner-a');
     assert.equal(selected.status,200);
     const payload=await selected.json();
@@ -66,5 +77,11 @@ test('Store overview cannot promote another site draft into current preview and 
       '/admin/theme-project-editor?project=theme_plain-jane&site_id=a-blog');
     const forbidden=await handleStudioSitesOverview(new Request(base+'?site_id=b-blog'),env,'owner-a');
     assert.equal(forbidden.status,404);
+    // A merchant with exactly one site does not need to choose it every time.
+    const single=await (await handleStudioSitesOverview(new Request(base),env,'owner-b')).json();
+    assert.equal(single.selected_site_id,'b-blog');
+    assert.equal(single.site_selection_required,false);
+    assert.deepEqual(single.available_sites.map(site=>site.id),['b-blog']);
+    assert.equal(single.preview_theme.name,'Secret Other Site');
   }finally{sqlite.close();}
 });

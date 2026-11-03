@@ -315,11 +315,14 @@ function showThemeUnavailable(state, message) {
     status.className="online-store-badge online-store-badge--pending";
     status.textContent="Unpublished";
   }
-  if(name)name.textContent="No website theme installed";
+  if(name)name.textContent=state==="select" ? "Choose a website" : "No website theme installed";
   if(saved)saved.textContent=state==="error"
     ? "Store service is unavailable. No installed website can be verified."
-    : "Browse an original website theme below. A downloaded package is not an installed site.";
-  if(edit){edit.href="#theme-product-marketplace";edit.textContent="Browse website themes";}
+    : state==="select"
+      ? "Select an existing website above to open its own theme library."
+      : "Browse an original website theme below. A downloaded package is not an installed site.";
+  if(edit){edit.href=state==="select"?"#store-site-selector":"#theme-product-marketplace";
+    edit.textContent=state==="select"?"Choose website":"Browse website themes";}
   document.getElementById("active-theme-version").hidden=true;
   if (typeof storefrontPreviewObserver !== "undefined" && storefrontPreviewObserver) storefrontPreviewObserver.disconnect();
   for (const id of ["theme-preview-desktop", "theme-preview-mobile"]) {
@@ -334,13 +337,15 @@ function showThemeUnavailable(state, message) {
     const message = document.createElement("div");
     message.className = "online-store-preview-message online-store-preview-message--empty";
     const title = document.createElement("strong");
-    title.textContent = "No site theme installed";
+    title.textContent = state==="select" ? "Choose a website" : "No site theme installed";
     const description = document.createElement("p");
-    description.textContent = "Your website preview will appear here after a real installation.";
+    description.textContent = state==="select"
+      ? "Theme projects and previews belong to individual websites. Select yours above."
+      : "Your website preview will appear here after a real installation.";
     const browse = document.createElement("a");
     browse.className = "btn ghost small";
-    browse.href = "#theme-product-marketplace";
-    browse.textContent = "Explore website themes";
+    browse.href = state==="select" ? "#store-site-selector" : "#theme-product-marketplace";
+    browse.textContent = state==="select" ? "Choose website" : "Explore website themes";
     message.append(title,description,browse);
     shell.appendChild(message);
   }
@@ -356,7 +361,33 @@ function showActiveTheme(theme) {
 
 (async function () {
   try {
-    const d = await adminFetch("/api/admin/store/online");
+    // Site choice travels in the URL; never silently bind a merchant to the
+    // first account-owned website when multiple sites exist.
+    const route = new URLSearchParams(window.location.search);
+    const siteId = route.get('site_id');
+    const d = await adminFetch('/api/admin/store/online'+(siteId?'?site_id='+encodeURIComponent(siteId):''));
+    const sites = Array.isArray(d.available_sites) ? d.available_sites : [];
+    if(sites.length){
+      const label=document.createElement('label');
+      label.id='store-site-selector';
+      label.style.cssText='display:inline-flex;align-items:center;gap:8px;font-size:13px;';
+      const title=document.createElement('span');
+      title.textContent='Website';
+      const select=document.createElement('select');
+      select.setAttribute('aria-label','Current CMS website');
+      select.style.cssText='max-width:220px;min-width:150px;padding:8px;border:1px solid currentColor;border-radius:8px;background:inherit;color:inherit;';
+      if(d.site_selection_required)select.add(new Option('Select website…',''));
+      for(const site of sites)select.add(new Option(site.name+' · '+site.slug,site.id));
+      select.value=d.selected_site_id||'';
+      select.addEventListener('change',()=>{
+        if(!sites.some(site=>site.id===select.value))return;
+        const url=new URL(window.location.href);
+        url.searchParams.set('site_id',select.value);
+        window.location.assign(url.href);
+      });
+      label.append(title,select);
+      document.querySelector('.online-store-title')?.append(label);
+    }
 
     document.getElementById("store-visibility-label").textContent =
       d.store.visibility === "public" ? "Public" :
@@ -406,7 +437,8 @@ function showActiveTheme(theme) {
       editLink.textContent="Customize draft";
       document.querySelector(".online-store-preview-caption").textContent="Desktop · No published preview";
     } else {
-      showThemeUnavailable("empty", "No installed CMS theme is available. Finish installation in the Theme Store to customize.");
+      showThemeUnavailable(d.site_selection_required?'select':'empty',
+        'Select your website or install the starter theme before customizing.');
     }
 
     if (theme?.version_available) {
@@ -420,7 +452,7 @@ function showActiveTheme(theme) {
     // An owner with a draft on another site must not see "nothing installed".
     // Do not treat that draft as published or switch sites implicitly.
     const siteDrafts=(d.draft_themes||[]).filter(draft=>draft.installed && draft.site_id);
-    if(siteDrafts.length && !theme?.preview_href && !d.preview_theme?.installed) {
+    if(siteDrafts.length && !d.site_selection_required && !theme?.preview_href && !d.preview_theme?.installed) {
       document.getElementById("active-theme-name").textContent=
         siteDrafts.length===1 ? "Editable site draft available" : siteDrafts.length+" editable site drafts";
       document.getElementById("active-theme-saved").textContent=

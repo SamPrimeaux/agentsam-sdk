@@ -17,10 +17,24 @@ export async function handleStudioSitesOverview(request, env, accountId) {
     cmsConnected = true;
   } catch {}
   const siteId=new URL(request.url).searchParams.get('site_id');
+  // A merchant chooses their website explicitly. A single site (or an
+  // explicitly designated default) can open without another selection step.
+  // Never guess the first site in a multi-site account.
+  let sites=[];
+  try {
+    const rows=await env.DB.prepare(`
+      SELECT id,name,slug,primary_domain,is_default FROM cms_sites
+      WHERE account_id=? AND status!='archived'
+      ORDER BY is_default DESC,created_at ASC,name ASC
+    `).bind(accountId).all();
+    sites=rows.results||[];
+  } catch { /* Site directory stays unavailable until the CMS schema exists. */ }
   let selectedSite=null;
   if(siteId) {
     try {selectedSite=await resolveCmsSite(env.DB,{accountId,siteId});}
     catch {return Response.json({ok:false,error:'site_not_found_or_unauthorized'},{status:404});}
+  } else if(sites.length===1 || sites.filter(site=>site.is_default===1).length===1) {
+    selectedSite=sites.find(site=>site.is_default===1)||sites[0];
   }
   let drafts=[];
   try { drafts=await listStudioThemeDrafts(env,accountId); }
@@ -32,7 +46,8 @@ export async function handleStudioSitesOverview(request, env, accountId) {
   return response({
     ok:true,source:'studio_cms_site_read_model',
     store:{visibility:'unpublished',url:null,domain:null,company_name:null},
-    performance:emptyPerformance,active_theme:null,draft_themes:drafts,
+    performance:emptyPerformance,active_theme:null,
+    draft_themes:selectedSite?drafts.filter(draft=>!draft.installed||draft.site_id===selectedSite.id):drafts,
     // A project preview is never proof that its site is published.
     preview_theme:installed?{
       id:installed.id,name:installed.name,preview_href:null,
@@ -40,6 +55,8 @@ export async function handleStudioSitesOverview(request, env, accountId) {
       edit_href:installed.edit_href,verified:false,installed:true
     }:null,
     pages:[],cms_connected:cmsConnected,setup_required:true,
+    available_sites:sites.map(({id,name,slug})=>({id,name,slug})),
+    site_selection_required:!selectedSite&&sites.length>1,
     selected_site_id:selectedSite?.id||null,
     selected_site_name:selectedSite?.name||null,
   });
