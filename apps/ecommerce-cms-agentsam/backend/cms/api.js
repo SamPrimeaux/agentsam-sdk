@@ -3,7 +3,10 @@ import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
 import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject } from "./theme-project-store.mjs";
 import { readCanonicalComposition } from "./canonical-composition.mjs";
-import { listCanonicalPageRows } from "./page-inventory.mjs";
+import { listCanonicalPageRows, cmsPageStorageMode } from "./page-inventory.mjs";
+import {
+  getProjectSitePage, createProjectSitePage, updateProjectSitePage,
+} from "./project-site-page-adapter.mjs";
 import { ensureDefaultCmsSite, listCmsSites, createCmsSite, resolveCmsSite } from "./site-context.mjs";
 import {
   buildCatalogInstanceContent,
@@ -584,24 +587,9 @@ export async function listPagesAdmin(env, accountId, siteId = null) {
     });
   }
 
-  // The route catalog may expose a live page that has not been imported yet.
-  // Clearly distinguish that discovery-only entry from a real CMS document.
-  const existing = new Set(pages.map((page) => page.slug));
-  for (const registryPage of (site.is_default ? listRegistryPages() : [])) {
-    if (existing.has(registryPage.slug)) continue;
-    pages.push({
-      id: null,
-      slug: registryPage.slug,
-      title: registryPage.title,
-      status: "draft",
-      updated_at: null,
-      section_count: registryPage.section_count,
-      preview: "Live storefront exists; CMS has not imported this page",
-      source: "registry",
-      ...resolvePageAuthority(registryPage.slug, CMS_STOREFRONT_ROUTES),
-    });
-  }
-
+  // Only show persisted pages belonging to the selected site.
+  // PAGE_REGISTRY fixtures are not customer pages and must never appear just
+  // because an account's site has is_default=1.
   pages.sort((a, b) => String(a.title || a.slug).localeCompare(String(b.title || b.slug)));
   return { ok: true, source: "cms_pages+cms_page_sections", site, pages };
 }
@@ -691,6 +679,9 @@ async function readCanonicalPageSections(env, page) {
 }
 
 export async function createPageAdmin(env, accountId, siteId, body = {}) {
+  if (await cmsPageStorageMode(env.DB) === "project-site") {
+    return createProjectSitePage(env, accountId, siteId, body);
+  }
   if (!accountId) return { error: "Account required", status: 403 };
   const title = String(body.title || "").trim();
   if (!title || title.length > 200) return { error: "Page title is required and must be 200 characters or fewer", status: 400 };
@@ -772,6 +763,9 @@ async function legacyPageLinkMatches(env, page) {
 }
 
 export async function getPageAdminForSite(env, accountId, slug, siteId = null, pageId = null) {
+  if (await cmsPageStorageMode(env.DB) === "project-site") {
+    return getProjectSitePage(env, accountId, slug, siteId, pageId);
+  }
   const scope = await resolveCmsPageScope(env, accountId, { siteId, slug, pageId });
   if (scope.error) {
     if (scope.site?.is_default && !pageId) return getPageAdmin(env, slug);
@@ -827,6 +821,9 @@ export async function getPageAdminForSite(env, accountId, slug, siteId = null, p
 }
 
 export async function updatePageMetaForSite(env, accountId, slug, siteId, pageId, body = {}) {
+  if (await cmsPageStorageMode(env.DB) === "project-site") {
+    return updateProjectSitePage(env, accountId, slug, siteId, pageId, body);
+  }
   const scope = await resolveCmsPageScope(env, accountId, { siteId, slug, pageId });
   if (scope.error) {
     if (scope.site?.is_default && !pageId) return updatePageMeta(env, slug, body);
