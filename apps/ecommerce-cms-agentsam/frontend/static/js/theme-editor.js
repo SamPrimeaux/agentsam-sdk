@@ -1,4 +1,11 @@
-(() => {
+(async () => {
+  // The source-backed Local Studio adapter resolves site authorization
+  // asynchronously. Never fall back to unrelated legacy CMS APIs while that
+  // handshake is pending or has failed.
+  if (window.__agentsamCmsSourceHostReady) {
+    await window.__agentsamCmsSourceHostReady;
+    if (!window.AgentSamThemeEditorHost) return;
+  }
   const params = new URLSearchParams(location.search);
   const showcaseTheme = ['violet','resolve','plain-jane'].includes(params.get('showcase')) ? params.get('showcase') : '';
   // Packaged showcases stay preview-only unless the host explicitly provides
