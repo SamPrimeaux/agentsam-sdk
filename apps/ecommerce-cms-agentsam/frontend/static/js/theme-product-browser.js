@@ -1,6 +1,8 @@
 /* Package catalog previews + authenticated, source-backed draft creation. */
 (() => {
  'use strict';
+ // Website packages belong to the real Theme Store, not the color-theme UI.
+ if (window.__AGENTSAM_WEBSITE_THEMES_ENDPOINT) return;
  const root=document.getElementById('theme-marketplace-grid');
  if(!root)return;
  const search=document.getElementById('theme-marketplace-search');

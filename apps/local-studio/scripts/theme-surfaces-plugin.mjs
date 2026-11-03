@@ -81,6 +81,8 @@ export function themeSurfacesPlugin() {
       ['admin.css', 'css/admin.css'],
       ['console.css', 'css/console.css'],
       ['online-store.css', '../store/online-store.css'],
+      ['marketplace.css', 'css/theme-product-browser.css'],
+      ['website-themes.js', 'js/website-theme-browser.js'],
     ]) inventory.assets.set('commerce-store/' + name, join(editor, source));
     return inventory;
   };

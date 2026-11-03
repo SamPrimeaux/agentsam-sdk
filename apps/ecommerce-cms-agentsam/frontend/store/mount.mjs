@@ -15,6 +15,8 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
   }
 
   win.AgentSamOnlineStoreHost = host;
+  // The hosted app uses the same product release catalog as /admin/store.
+  win.__AGENTSAM_WEBSITE_THEMES_ENDPOINT = '/api/admin/website-themes';
   doc.documentElement.dataset.cmsEmbeddedStore = 'true';
   const applyInstalledAppearance = (appearance) => {
     const tokens = appearance?.tokens?.color;
@@ -81,7 +83,7 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
   // Preserve the FNF product classes and CSS in a self-contained viewport.
   doc.body.style.margin = '0';
   doc.body.style.background = 'var(--cms-store-canvas, var(--color-background, #13151b))';
-  for (const name of ['admin.css', 'console.css', 'online-store.css']) {
+  for (const name of ['admin.css', 'console.css', 'online-store.css', 'marketplace.css']) {
     const css = doc.createElement('link');
     css.rel = 'stylesheet';
     css.href = assetsBase + name;
@@ -91,13 +93,14 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
   const intercept = (event) => {
     const anchor = event.target?.closest?.('a');
     if (!anchor) return;
-    // This embedded merchant Store does not mount the standalone catalog.
-    // Route discovery to the real, CMS-backed Theme Store in Local Studio.
+    // Website discovery belongs to the embedded Store's actual release catalog,
+    // not /themes, which changes the AgentSam workbench's color appearance.
     if (anchor.id === 'browse-themes-shortcut' ||
-        (anchor.id === 'edit-theme-btn' && anchor.getAttribute('href') === '/themes')) {
-      if (typeof host.onBrowseThemes !== 'function') return;
+        (anchor.id === 'edit-theme-btn' && anchor.getAttribute('href') === '#theme-product-marketplace')) {
+      const gallery = doc.getElementById('theme-product-marketplace');
+      if (!gallery) return;
       event.preventDefault();
-      host.onBrowseThemes();
+      gallery.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     if (anchor.id !== 'edit-theme-btn' && !anchor.closest('.online-store-draft-actions')) return;
@@ -120,6 +123,13 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
   if (!doc.querySelector('.online-store')) {
     throw new Error('store_product_markup_missing');
   }
+  const galleryScript = doc.createElement('script');
+  galleryScript.src = assetsBase + 'website-themes.js';
+  await new Promise((resolve, reject) => {
+    galleryScript.onload = resolve;
+    galleryScript.onerror = () => reject(new Error('website_theme_catalog_asset_unavailable'));
+    doc.head.appendChild(galleryScript);
+  });
 
   const viewStore = doc.querySelector('.online-store-actions a[href="/"]');
   if (viewStore && !viewStore.dataset.storeLink) {

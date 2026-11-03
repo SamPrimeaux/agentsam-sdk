@@ -15,6 +15,18 @@ const mime = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'tex
 const server = createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
   if (pathname === '/') return res.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><title>Commerce Store Smoke</title><body style="margin:0"></body>');
+  if (pathname === '/api/admin/website-themes') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
+    ok: true, source: 'themes.inneranimalmedia.com', products: [{
+      slug: 'plain-jane', sku: 'iam.theme.plain-jane', version: '0.1.0',
+      name: 'Plain Jane Journal', description: 'Real editorial website package',
+      category: 'Editorial', pages: ['Journal', 'Article', 'About'],
+      release_status: 'published',
+      preview_url: 'https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/',
+      detail_url: 'https://themes.inneranimalmedia.com/themes/plain-jane/',
+      download_url: 'https://themes.inneranimalmedia.com/api/themes/plain-jane/0.1.0/download',
+      thumbnail_url: null,
+    }]
+  }));
   const file = pathname === '/mount.mjs' ? source :
     pathname.startsWith('/commerce-store/') ? resolve(assets, pathname.slice('/commerce-store/'.length)) : null;
   if (!file || !file.startsWith(pathname === '/mount.mjs' ? source : assets + '/') || !existsSync(file) || !statSync(file).isFile()) return res.writeHead(404).end();
@@ -62,17 +74,20 @@ try {
   const merchant = page.frameLocator('#merchant-frame');
   await merchant.locator('.online-store').waitFor();
   assert.equal(await merchant.locator('.online-store-title h1').innerText(), 'Online Store');
-  assert.equal(await merchant.locator('#store-visibility-label').innerText(), 'Unverified');
+  assert.equal(await merchant.locator('#store-visibility-label').innerText(), 'Not published');
   assert.equal(await merchant.locator('.online-store-badge--pending').innerText(), 'Unpublished');
-  assert.equal(await merchant.locator('.online-store-starter').count(), 2, 'Unpublished site uses the safe local starter preview');
-  assert.equal(await merchant.locator('.online-store-preview-message').count(), 0, 'Starter preview does not embed an unrelated host homepage');
+  assert.equal(await merchant.locator('.online-store-starter').count(), 0, 'No fake storefront is presented as installed');
+  assert.equal(await merchant.locator('.online-store-preview-message--empty').count(), 2, 'Uninstalled storefront state is explicit');
   assert.equal(await merchant.locator('#import-theme-btn').isDisabled(), true, 'Unimplemented import cannot be clicked');
   const addTheme = merchant.locator('#edit-theme-btn');
-  assert.equal(await addTheme.innerText(), 'Add your first theme');
-  assert.equal(await addTheme.getAttribute('href'), '/themes');
+  assert.equal(await addTheme.innerText(), 'Browse website themes');
+  assert.equal(await addTheme.getAttribute('href'), '#theme-product-marketplace');
+  await merchant.locator('#theme-marketplace-grid .theme-marketplace-item').first().waitFor();
+  assert.equal(await merchant.locator('#theme-marketplace-grid .theme-marketplace-item').count(), 1);
+  assert.equal(await merchant.locator('.theme-marketplace-item h3').first().innerText(), 'Plain Jane Journal');
   await addTheme.click();
   await merchant.locator('#browse-themes-shortcut').click();
-  assert.equal(await page.evaluate(() => window.__browseThemes), 2, 'Starter and Browse Templates open the real host Theme Store');
+  assert.equal(await page.evaluate(() => window.__browseThemes), undefined, 'Website browsing never opens the appearance-theme route');
   assert.equal(await page.evaluate(() => window.__edited), undefined, 'Unpublished starter does not request an empty theme editor');
   await page.setViewportSize({ width: 390, height: 844 });
   const dimensions = await merchant.locator('.online-store').evaluate((node) => ({
@@ -81,7 +96,7 @@ try {
   }));
   assert.ok(dimensions.width <= dimensions.viewport + 1, 'Online Store layout fits mobile viewport');
   assert.deepEqual(errors, [], 'No browser runtime errors');
-  console.log('Packaged Online Store smoke PASS: exact merchant DOM, adapter data, safe preview, edit action, mobile width');
+  console.log('Packaged Store smoke PASS: original website catalog, no fake theme, in-app route, mobile width');
 } finally {
   await browser.close();
   await new Promise((done) => server.close(done));

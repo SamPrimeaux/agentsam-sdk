@@ -6,7 +6,7 @@ renderShell("/admin/store", `
         <h1>Online Store</h1>
       </div>
       <div class="online-store-actions">
-        <a href="#theme-product-marketplace" class="btn ghost small" id="browse-themes-shortcut">Browse templates</a>
+        <a href="#theme-product-marketplace" class="btn ghost small" id="browse-themes-shortcut">Browse website themes</a>
         <button type="button" class="online-store-pill" id="store-visibility-btn" aria-haspopup="true">
           <span class="online-store-pill-dot" aria-hidden="true"></span>
           <span id="store-visibility-label">Checking…</span>
@@ -57,10 +57,10 @@ renderShell("/admin/store", `
       <div class="online-store-theme-meta">
         <div>
           <div class="online-store-theme-name">
-            <span id="active-theme-name">Loading site…</span>
+            <span id="active-theme-name">No active theme</span>
             <span class="online-store-badge online-store-badge--pending" id="active-theme-status">Checking…</span>
           </div>
-          <div class="online-store-theme-sub" id="active-theme-saved">Last saved: —</div>
+          <div class="online-store-theme-sub" id="active-theme-saved">Choose a site and install a website package to begin editing.</div>
           <div class="online-store-version" id="active-theme-version" hidden>
             <span class="online-store-version-dot" aria-hidden="true"></span>
             <span id="active-version-text"></span>
@@ -70,7 +70,7 @@ renderShell("/admin/store", `
           <button type="button" class="online-store-icon-btn" aria-label="Theme options">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>
           </button>
-          <a href="/admin/theme-editor?slug=shop" class="btn primary" id="edit-theme-btn">Edit theme</a>
+          <a href="#theme-product-marketplace" class="btn primary" id="edit-theme-btn">Browse website themes</a>
         </div>
       </div>
     </section>
@@ -84,6 +84,22 @@ renderShell("/admin/store", `
     </header>
 
     <section class="online-store-card online-store-drafts" id="draft-themes" aria-label="Draft themes"></section>
+    <section class="online-store-card theme-marketplace" id="theme-product-marketplace" aria-label="Browse reusable theme templates">
+      <header class="theme-marketplace-heading">
+        <div><span class="theme-marketplace-eyebrow">InnerAnimalMedia · Website Theme Store</span>
+          <h2>Website themes &amp; blog templates</h2>
+          <p>Discover actual website packages from themes.inneranimalmedia.com. Preview their original design, then obtain a verified release. A package download is not a CMS installation.</p>
+        </div>
+        <span class="theme-marketplace-count" id="theme-marketplace-count">Loading catalog…</span>
+      </header>
+      <div class="theme-marketplace-controls">
+        <label>Find a template<input type="search" id="theme-marketplace-search" placeholder="Search by name or category…" aria-label="Search theme templates"></label>
+        <label>Category<select id="theme-marketplace-filter" aria-label="Filter themes by category"><option value="all">All categories</option></select></label>
+      </div>
+      <div class="theme-marketplace-grid" id="theme-marketplace-grid" aria-live="polite">
+        <p class="theme-marketplace-empty">Connecting to the website Theme Store…</p>
+      </div>
+    </section>
   </div>
 `);
 
@@ -132,6 +148,10 @@ function labelMetricAvailability(node, metric) {
     ? "Not measured yet — no storefront analytics data available" : "";
 }
 
+function themeVersion(theme) {
+  return theme.package_version || theme.version || null;
+}
+
 function escapeThemeText(value) {
   return String(value ?? "").replace(/[&<>"']/g, char => ({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -143,17 +163,23 @@ function renderDraftRow(theme) {
   const version=escapeThemeText(theme.version||"");
   const preview=typeof theme.preview_url==="string" && /^\/(?!\/)[a-zA-Z0-9_./-]+$/.test(theme.preview_url)
     ? theme.preview_url : "";
+  const sourceSlug=/^[a-z][a-z0-9-]{0,63}$/.test(String(theme.slug||''))?theme.slug:null;
+  const installHref=sourceSlug
+    ? "https://themes.inneranimalmedia.com/themes/"+encodeURIComponent(sourceSlug)+"/"
+    : "#theme-product-marketplace";
   return `
     <div class="online-store-draft-row" data-draft-id="${escapeThemeText(theme.id)}">
       <div class="online-store-draft-thumb" aria-hidden="true"><span>Draft</span></div>
       <div class="online-store-draft-copy">
         <div class="online-store-draft-name">${name}</div>
         <div class="online-store-draft-meta">${meta}${version?' · v'+version:''}</div>
-        <div class="online-store-version">Private draft · Not published</div>
+        <div class="online-store-version">${theme.installed?'Installed CMS draft · Not published':'Legacy selection · Not installed on a website'}</div>
       </div>
       <div class="online-store-draft-actions">
-        ${preview?'<button type="button" class="btn ghost small" data-theme-draft-preview="'+escapeThemeText(preview)+'">Preview</button>':''}
-        <button type="button" class="btn ghost small" disabled title="Connect this draft to a CMS site before editing">Connect site to edit</button>
+         ${preview?'<a class="btn ghost small" href="'+escapeThemeText(preview)+'" target="_blank" rel="noopener noreferrer" data-theme-draft-preview="'+escapeThemeText(preview)+'">Explore preview</a>':''}
+        ${theme.installed && theme.edit_href
+          ? '<a class="btn ghost small" href="'+escapeThemeText(theme.edit_href)+'">Customize draft</a>'
+          : '<a class="btn ghost small" href="'+escapeThemeText(installHref)+'">View original package</a>'}
       </div>
     </div>`;
 }
@@ -161,29 +187,7 @@ function paintStoreDrafts(drafts) {
   const container=document.getElementById("draft-themes");
   if(!container)return;
   container.innerHTML=(drafts||[]).map(renderDraftRow).join("");
-  container.querySelectorAll("[data-theme-draft-preview]").forEach(button=>{
-    button.addEventListener("click",()=>{
-      const url=button.dataset.themeDraftPreview;
-      const dialog=document.createElement("dialog");
-      dialog.className="theme-marketplace-dialog";
-      const header=document.createElement("div");
-      header.className="theme-marketplace-dialog-head";
-      const title=document.createElement("strong");
-      title.textContent="Draft preview · Not published";
-      const close=document.createElement("button");
-      close.className="btn ghost small";close.type="button";close.textContent="Close";
-      close.addEventListener("click",()=>dialog.close());
-      header.append(title,close);
-      const iframe=document.createElement("iframe");
-      iframe.className="theme-marketplace-dialog-frame";
-      iframe.title="Unpublished theme draft preview";
-      iframe.setAttribute("sandbox","allow-scripts");
-      iframe.src=url;
-      dialog.append(header,iframe);
-      dialog.addEventListener("close",()=>dialog.remove(),{once:true});
-      document.body.append(dialog);dialog.showModal();
-    });
-  });
+
 }
 document.addEventListener("agentsam:theme-draft-added",event=>{
   const draft=event.detail;
@@ -197,7 +201,9 @@ document.addEventListener("agentsam:theme-draft-added",event=>{
   const drafts=cards.map(card=>({
     id:card.dataset.draftId,name:card.querySelector(".online-store-draft-name")?.textContent,
     meta:card.querySelector(".online-store-draft-meta")?.textContent,
-    preview_url:card.querySelector("[data-theme-draft-preview]")?.dataset.themeDraftPreview
+    preview_url:card.querySelector("[data-theme-draft-preview]")?.dataset.themeDraftPreview,
+    installed:Boolean(card.querySelector('a[href*="/admin/theme-project-editor?project="]')),
+    edit_href:card.querySelector('a[href*="/admin/theme-project-editor?project="]')?.getAttribute('href')
   }));
   paintStoreDrafts(drafts);
   container?.scrollIntoView({behavior:"smooth",block:"center"});
@@ -205,32 +211,40 @@ document.addEventListener("agentsam:theme-draft-added",event=>{
 
 // Render the actual *published* storefront. The old ?preview=1 selected an
 // authenticated CMS draft and did not represent the active live theme.
-const embeddedHost = window.AgentSamOnlineStoreHost || null;
 const STOREFRONT_PREVIEW_WIDTHS = { desktop: 1440, mobile: 390 };
 let storefrontPreviewObserver = null;
 
 function setPreviewFrames(href) {
-  const base = embeddedHost?.baseUrl || location.origin;
-  if (embeddedHost && !href) {
-    for (const device of ["desktop", "mobile"]) {
-      const shell = document.getElementById("theme-preview-" + device).parentElement;
-      shell.dataset.previewStatus = "failed";
-      const message = document.createElement("div");
-      message.className = "online-store-preview-message";
-      message.textContent = "No verified storefront URL — preview unavailable";
-      shell.appendChild(message);
+  let url;
+  try { url = new URL(href || "/", location.origin); }
+  catch { url = new URL("/", location.origin); }
+  if (url.origin !== location.origin) {
+    // An external live storefront cannot be assumed embeddable. Never replace
+    // it with the AgentSam homepage and claim that it is the customer's theme.
+    for (const id of ["theme-preview-desktop","theme-preview-mobile"]) {
+      const frame = document.getElementById(id);
+      const shell = frame.parentElement;
+      frame.removeAttribute("src");
+      shell.dataset.previewStatus = "external";
+      shell.querySelector(".online-store-preview-message")?.remove();
+      const msg = document.createElement("div");
+      msg.className = "online-store-preview-message";
+      const label = document.createElement("p");
+      label.textContent = "This storefront opens on a separate domain.";
+      const open = document.createElement("a");
+      open.className = "btn ghost small";
+      open.href = url.href;
+      open.target = "_blank";
+      open.rel = "noopener noreferrer";
+      open.textContent = "Open live storefront";
+      msg.append(label,open);
+      shell.appendChild(msg);
     }
     return;
   }
-  let url;
-  try { url = new URL(href || "/", base); }
-  catch { url = new URL("/", base); }
-  // Standalone FNF must preview its own origin; an authenticated Studio host
-  // may provide a verified external site's public URL instead.
-  if (!embeddedHost && url.origin !== location.origin) url = new URL("/", location.origin);
   url.searchParams.delete("preview");
   url.searchParams.delete("_");
-  const route = embeddedHost ? url.href : url.pathname + url.search + url.hash;
+  const route = url.pathname + url.search + url.hash;
 
   if (storefrontPreviewObserver) storefrontPreviewObserver.disconnect();
   const frames = [
@@ -262,12 +276,6 @@ function setPreviewFrames(href) {
     iframe.onload = () => {
       try {
         const doc = iframe.contentDocument;
-        if (embeddedHost && url.origin !== new URL(base).origin) {
-          // Cross-origin published content cannot be inspected by Studio.
-          // Its public URL is real, but load does not prove pixel parity.
-          shell.dataset.previewStatus = "ready";
-          return;
-        }
         if (!doc || !doc.body || !doc.body.children.length) throw new Error("empty preview");
         shell.dataset.previewStatus = "ready";
       } catch {
@@ -306,64 +314,35 @@ function showThemeUnavailable(state, message) {
     status.className="online-store-badge online-store-badge--pending";
     status.textContent="Unpublished";
   }
-  if(name)name.textContent="Your starter storefront";
+  if(name)name.textContent="No website theme installed";
   if(saved)saved.textContent=state==="error"
-    ? "Store data is unavailable. This is a safe, local starter preview — nothing is published."
-    : "Start from a template or connect a site. This preview is not published.";
-  // An installed Local Studio host has a real, CMS-backed theme installer.
-  // Do not point its first-install action at the standalone catalog iframe.
-  const installedThemeStore = window.__AGENTSAM_THEME_STORE_URL;
-  const themeStoreHref = typeof installedThemeStore === "string" &&
-    /^\/[a-zA-Z0-9/_-]+$/.test(installedThemeStore)
-      ? installedThemeStore
-      : window.AgentSamOnlineStoreHost?.onBrowseThemes ? "/themes" : "#theme-product-marketplace";
-  if(edit){edit.href=themeStoreHref;edit.textContent="Add your first theme";}
+    ? "Store service is unavailable. No installed website can be verified."
+    : "Browse an original website theme below. A downloaded package is not an installed site.";
+  if(edit){edit.href="#theme-product-marketplace";edit.textContent="Browse website themes";}
   document.getElementById("active-theme-version").hidden=true;
   if (typeof storefrontPreviewObserver !== "undefined" && storefrontPreviewObserver) storefrontPreviewObserver.disconnect();
-  const frames=[
-    ["theme-preview-desktop",1100],
-    ["theme-preview-mobile",390],
-  ];
-  const sizeStarter=()=>{
-    frames.forEach(([id,virtualWidth])=>{
-      const shell=document.getElementById(id)?.parentElement;
-      const page=shell?.querySelector(".online-store-starter");
-      if(!page)return;
-      const scale=(shell.clientWidth||virtualWidth)/virtualWidth;
-      page.style.width=virtualWidth+"px";
-      page.style.height="840px";
-      page.style.transform="scale("+scale+")";
-    });
-  };
-  for(const [id,virtualWidth] of frames){
-    const frame=document.getElementById(id);
-    if(!frame)continue;
+  for (const id of ["theme-preview-desktop", "theme-preview-mobile"]) {
+    const frame = document.getElementById(id);
+    if (!frame) continue;
     frame.removeAttribute("src");
-    frame.onload=frame.onerror=null;
-    const shell=frame.parentElement;
-    shell.dataset.previewStatus="starter";
-    shell.querySelector(".online-store-preview-message")?.remove();
+    frame.onload = frame.onerror = null;
+    const shell = frame.parentElement;
+    shell.dataset.previewStatus = "uninstalled";
     shell.querySelector(".online-store-starter")?.remove();
-    const page=document.createElement("div");
-    page.className="online-store-starter";
-    page.setAttribute("aria-label","Unpublished starter store visual preview");
-    page.innerHTML='<div class="starter-announcement">A new store starts here · Preview only</div>'+
-      '<div class="starter-navbar"><strong>YOUR STORE</strong><span>Shop &nbsp; Collections &nbsp; About</span><span>⌕ &nbsp; ♡ &nbsp; ▢</span></div>'+
-      '<section class="starter-hero"><div class="starter-hero-copy"><small>YOUR NEXT CHAPTER</small>'+
-      '<h2>A storefront with room to grow.</h2><p>Connect a theme, add your products, and make this space your own.</p>'+
-      '<span class="starter-faux-cta">Explore the collection&nbsp; →</span></div>'+
-      '<div class="starter-art" aria-hidden="true"><span></span><span></span><span></span></div></section>'+
-      '<div class="starter-collection-heading"><strong>Featured collections</strong><span>Curated for your brand</span></div>'+
-      '<div class="starter-product-grid"><div><i></i><b>Collection One</b></div><div><i></i><b>Collection Two</b></div><div><i></i><b>Collection Three</b></div></div>'+
-      '<div class="starter-bottom">Your store · Unpublished preview</div>';
-    shell.append(page);
-    if("ResizeObserver" in window){
-      if(typeof storefrontPreviewObserver==="undefined")continue;
-      if(!storefrontPreviewObserver)storefrontPreviewObserver=new ResizeObserver(sizeStarter);
-      storefrontPreviewObserver.observe(shell);
-    }
+    shell.querySelector(".online-store-preview-message")?.remove();
+    const message = document.createElement("div");
+    message.className = "online-store-preview-message online-store-preview-message--empty";
+    const title = document.createElement("strong");
+    title.textContent = "No site theme installed";
+    const description = document.createElement("p");
+    description.textContent = "Your website preview will appear here after a real installation.";
+    const browse = document.createElement("a");
+    browse.className = "btn ghost small";
+    browse.href = "#theme-product-marketplace";
+    browse.textContent = "Explore website themes";
+    message.append(title,description,browse);
+    shell.appendChild(message);
   }
-  sizeStarter();
 }
 function showActiveTheme(theme) {
   const status = document.getElementById("active-theme-status");
@@ -380,8 +359,7 @@ function showActiveTheme(theme) {
 
     document.getElementById("store-visibility-label").textContent =
       d.store.visibility === "public" ? "Public" :
-      d.store.visibility === "password" ? "Password protected" :
-      d.store.visibility === "unknown" ? "Unverified" : "Not published";
+      d.store.visibility === "password" ? "Password protected" : "Not published";
 
     const perf = d.performance || {};
     const lcp = document.getElementById("perf-lcp");
@@ -415,8 +393,19 @@ function showActiveTheme(theme) {
     if (theme?.preview_href && theme?.name) {
       showActiveTheme(theme);
       setPreviewFrames(theme.preview_href);
+    } else if (d.preview_theme?.installed && d.preview_theme?.preview_href) {
+      // Installed draft, not an active or published storefront.
+      const preview=d.preview_theme;
+      setPreviewFrames(preview.preview_href);
+      document.getElementById("active-theme-name").textContent=preview.name+" · Draft preview";
+      document.getElementById("active-theme-status").textContent="Unpublished";
+      document.getElementById("active-theme-status").className="online-store-badge online-store-badge--pending";
+      document.getElementById("active-theme-saved").textContent="Installed CMS project · Customize before publishing.";
+      editLink.href=preview.edit_href;
+      editLink.textContent="Customize draft";
+      document.querySelector(".online-store-preview-caption").textContent="Desktop · Draft preview";
     } else {
-      showThemeUnavailable("empty", "No published theme has been confirmed. Preview a package or create your first theme draft.");
+      showThemeUnavailable("empty", "No installed CMS theme is available. Finish installation in the Theme Store to customize.");
     }
 
     if (theme?.version_available) {
@@ -431,9 +420,23 @@ function showActiveTheme(theme) {
     // Do not pretend that publishing the Shop CMS page publishes a theme.
     // Keep draft rows read-only until a real theme publish transaction exists.
     document.querySelectorAll(".draft-publish").forEach((btn) => {
-      btn.disabled = true;
-      btn.textContent = "Publish unavailable";
-      btn.title = "Theme publishing requires a saved, versioned theme draft.";
+      if (btn.disabled) {
+        btn.title = "Theme publishing remains blocked until review and runtime readiness are both verified.";
+        return;
+      }
+      btn.addEventListener("click", async () => {
+        try {
+          if (!confirm("Publish this theme? The current live theme will move to Drafts and can be restored later.")) return;
+          btn.disabled = true;
+          btn.textContent = "Publishing…";
+          await adminFetch(`/api/admin/store/themes/${encodeURIComponent(btn.dataset.themeId)}/publish`, { method: "POST" });
+          location.reload();
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = "Publish";
+          alert(err.message || "Could not publish theme.");
+        }
+      });
     });
   } catch (err) {
     console.error(err);

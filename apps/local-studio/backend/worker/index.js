@@ -68,6 +68,7 @@ import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
 import { handleStudioPlatformProducts } from "./studio-platform-products.js";
 import { handleStudioSitesOverview } from "./studio-sites-overview.js";
 import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
+import { handleStudioWebsiteThemeCatalog } from "./studio-website-theme-catalog.js";
 import { handleStudioThemes } from "./studio-themes.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
@@ -912,6 +913,12 @@ export default {
 
     // Read-only packaged theme catalog for the authenticated Sites dashboard.
     // No writes, entitlements, or theme activation may flow through this reader.
+    // Real website products come from the separately hosted Theme Store,
+    // never from cms_themes (dashboard appearance presets).
+    if (url.pathname === '/api/admin/website-themes') {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioWebsiteThemeCatalog(request, principal?.id || null);
+    }
     if (url.pathname === '/api/admin/theme-products/drafts') {
       const principal=await resolveSessionUser(request,env);
       return handleStudioThemeDrafts(request,env,principal?.id||null);
