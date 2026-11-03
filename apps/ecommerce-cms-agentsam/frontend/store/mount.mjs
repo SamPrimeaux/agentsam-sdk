@@ -91,11 +91,14 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
   const intercept = (event) => {
     const anchor = event.target?.closest?.('a');
     if (!anchor) return;
-    if (anchor.id === 'edit-theme-btn' || anchor.closest('.online-store-draft-actions')) {
-      event.preventDefault();
-      const url = new URL(anchor.getAttribute('href') || '/admin/theme-editor?slug=home', host.baseUrl);
-      host.onEdit(url.searchParams.get('slug') || 'home');
-    }
+    if (anchor.id !== 'edit-theme-btn' && !anchor.closest('.online-store-draft-actions')) return;
+    const href = anchor.getAttribute('href') || '/admin/theme-editor?slug=home';
+    const url = new URL(href, host.baseUrl);
+    // The no-theme fallback uses a hash link to Browse Templates. Keep that
+    // local navigation inside the product; only real editor routes cross hosts.
+    if (url.pathname !== '/admin/theme-editor') return;
+    event.preventDefault();
+    host.onEdit(url.searchParams.get('slug') || 'home');
   };
   doc.addEventListener('click', intercept);
   const script = doc.createElement('script');
