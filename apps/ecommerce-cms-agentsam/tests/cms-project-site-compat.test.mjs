@@ -36,6 +36,7 @@ function fixture() {
     INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
       VALUES ('s-a','alice','A Store','store-a','active',1),
              ('s-a2','alice','A Second Store','store-2','active',0),
+             ('s-empty','alice','New Store','new-store','active',0),
              ('s-b','bob','B Store','store-b','active',1);
     CREATE TABLE cms_pages (
       id TEXT PRIMARY KEY, project_id TEXT NOT NULL, project_slug TEXT NOT NULL,
@@ -50,8 +51,8 @@ function fixture() {
       UNIQUE(project_id, slug), UNIQUE(project_id, route_path)
     );
     INSERT INTO cms_pages(id,project_id,project_slug,site_id,slug,path,route_path,title,page_type,status,updated_at,created_at)
-      VALUES ('pa','s-a','store-a','s-a','home','/','/','Alice Home','home','published',1700000000,1700000000),
-             ('p2','s-a2','store-2','s-a2','about','/about','/about','Alice About','about','draft',1700000000,1700000000),
+      VALUES ('pa','proj_alice_store','store-a','s-a','home','/','/','Alice Home','home','published',1700000000,1700000000),
+             ('p2','proj_alice_second','store-2','s-a2','about','/about','/about','Alice About','about','draft',1700000000,1700000000),
              ('pb','s-b','store-b','s-b','home','/','/','Bob Home','home','published',1700000000,1700000000);
     CREATE TABLE cms_page_sections (
       id TEXT PRIMARY KEY, page_id TEXT NOT NULL REFERENCES cms_pages(id),
@@ -95,6 +96,11 @@ test("new page creation and draft updates operate on the existing table without 
     assert.equal(created.ok,true,JSON.stringify(created));
     assert.equal(created.page.status,"draft");
     assert.equal(created.page.site_id,"s-a");
+    const inserted = sql.prepare("SELECT project_id, project_slug, site_id, status FROM cms_pages WHERE id=?")
+      .get(created.page.id);
+    assert.deepEqual({ ...inserted }, {
+      project_id: "proj_alice_store", project_slug: "store-a", site_id: "s-a", status: "draft"
+    }, "new site-owned pages must retain the source project's identity");
     const updated=await updatePageMetaForSite(env,"alice","journal","s-a",created.page.id,{
       title:"Journal and Stories"
     });

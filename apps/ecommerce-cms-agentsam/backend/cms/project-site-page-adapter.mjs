@@ -89,6 +89,25 @@ export async function createProjectSitePage(env, accountId, siteId, body = {}) {
   ).bind(site.id, slug, routePath).first();
   if (conflict) return problem("A page with this URL already exists on this site", 409);
 
+  // On the deployed project-site schema, project_id is a real historical
+  // identity and differs from cms_sites.id (for example, proj_agentsam_sdk).
+  // New pages must join their site's established project rather than silently
+  // creating a parallel project namespace that other project-owned APIs miss.
+  const { results: mappings = [] } = await env.DB.prepare(`
+    SELECT project_id, project_slug, COUNT(*) AS page_count,
+      SUM(CASE WHEN is_homepage=1 THEN 1 ELSE 0 END) AS homepage_count
+    FROM cms_pages WHERE site_id=?
+    GROUP BY project_id, project_slug
+    ORDER BY page_count DESC, homepage_count DESC, project_id ASC LIMIT 2
+  `).bind(site.id).all();
+  const project = mappings[0] || null;
+  if (mappings.length > 1 &&
+      mappings[0].page_count === mappings[1].page_count &&
+      mappings[0].homepage_count === mappings[1].homepage_count) {
+    return problem("This website has conflicting source projects; reconcile ownership before adding a page", 409);
+  }
+  const projectId = project?.project_id || site.id;
+  const projectSlug = project?.project_slug || site.slug;
   const id = "cmsp_" + crypto.randomUUID().replaceAll("-", "").slice(0, 20);
   const now = Math.floor(Date.now() / 1000);
   try {
@@ -97,7 +116,7 @@ export async function createProjectSitePage(env, accountId, siteId, body = {}) {
         route_path,page_type,title,status,created_at,updated_at,nav_visible,
         is_homepage,metadata_json)
       VALUES (?,?,?,?,?,?,?,? ,?,'draft',?,?,?,?,'{}')
-    `).bind(id, site.id, site.slug, site.id, slug, routePath, routePath,
+    `).bind(id, projectId, projectSlug, site.id, slug, routePath, routePath,
       "custom", title, now, now, body.nav_visible === false ? 0 : 1,
       routePath === "/" ? 1 : 0).run();
   } catch (error) {
