@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS cms_globals (
   FOREIGN KEY(site_id,account_id) REFERENCES cms_sites(id,account_id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_cms_globals_site ON cms_globals(site_id,global_type,status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cms_globals_one_published_theme ON cms_globals(site_id) WHERE global_type='theme-project' AND status='published';
 CREATE TABLE IF NOT EXISTS cms_revisions (
   id TEXT PRIMARY KEY DEFAULT ('cmsr_' || lower(hex(randomblob(8)))),
   account_id TEXT NOT NULL REFERENCES accounts(id),
