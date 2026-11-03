@@ -159,7 +159,8 @@ function escapeThemeText(value) {
 }
 function renderDraftRow(theme) {
   const name=escapeThemeText(theme.name||"Untitled theme");
-  const meta=escapeThemeText(theme.meta||theme.package||"Packaged theme");
+  const siteLabel=theme.site_name ? theme.site_name+' ('+(theme.site_slug||theme.site_id)+') · ' : '';
+  const meta=escapeThemeText(siteLabel+(theme.meta||theme.package||"Packaged theme"));
   const version=escapeThemeText(theme.version||"");
   const preview=typeof theme.preview_url==="string" && /^\/(?!\/)[a-zA-Z0-9_./-]+$/.test(theme.preview_url)
     ? theme.preview_url : "";
@@ -393,17 +394,17 @@ function showActiveTheme(theme) {
     if (theme?.preview_href && theme?.name) {
       showActiveTheme(theme);
       setPreviewFrames(theme.preview_href);
-    } else if (d.preview_theme?.installed && d.preview_theme?.preview_href) {
-      // Installed draft, not an active or published storefront.
+    } else if (d.preview_theme?.installed && d.preview_theme?.edit_href) {
+      // An editable CMS draft is not itself a published storefront preview.
       const preview=d.preview_theme;
-      setPreviewFrames(preview.preview_href);
-      document.getElementById("active-theme-name").textContent=preview.name+" · Draft preview";
+      showThemeUnavailable("empty", "This site's draft is ready in the editor but not published.");
+      document.getElementById("active-theme-name").textContent=preview.name+" · Editable draft";
       document.getElementById("active-theme-status").textContent="Unpublished";
       document.getElementById("active-theme-status").className="online-store-badge online-store-badge--pending";
       document.getElementById("active-theme-saved").textContent="Installed CMS project · Customize before publishing.";
       editLink.href=preview.edit_href;
       editLink.textContent="Customize draft";
-      document.querySelector(".online-store-preview-caption").textContent="Desktop · Draft preview";
+      document.querySelector(".online-store-preview-caption").textContent="Desktop · No published preview";
     } else {
       showThemeUnavailable("empty", "No installed CMS theme is available. Finish installation in the Theme Store to customize.");
     }
@@ -416,6 +417,15 @@ function showActiveTheme(theme) {
     }
 
     paintStoreDrafts(d.draft_themes || []);
+    // An owner with a draft on another site must not see "nothing installed".
+    // Do not treat that draft as published or switch sites implicitly.
+    const siteDrafts=(d.draft_themes||[]).filter(draft=>draft.installed && draft.site_id);
+    if(siteDrafts.length && !theme?.preview_href && !d.preview_theme?.installed) {
+      document.getElementById("active-theme-name").textContent=
+        siteDrafts.length===1 ? "Editable site draft available" : siteDrafts.length+" editable site drafts";
+      document.getElementById("active-theme-saved").textContent=
+        "See Draft themes below to customize the correct website. None is published yet.";
+    }
 
     // Do not pretend that publishing the Shop CMS page publishes a theme.
     // Keep draft rows read-only until a real theme publish transaction exists.
