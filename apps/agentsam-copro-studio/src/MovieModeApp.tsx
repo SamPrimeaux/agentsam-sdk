@@ -190,7 +190,7 @@ let evidenceImportStarted = false;
 export function MovieModeApp({ initialScreen = "projects", screen: requestedScreen, onScreenChange, standalone = false }: MovieModeAppProps) {
   // Creative workspace owns its brand palette; account shell appearance must
   // not silently turn a media editing product white/blue on the web.
-  const appearanceStyle={'--nav-accent':'#32c6ca','--copro-accent-ink':'#062128'} as React.CSSProperties;
+  const appearanceStyle={'--nav-accent':'var(--copro-theme-accent,#32c6ca)'} as React.CSSProperties;
 
   const initialProjectId=useRef(new URLSearchParams(window.location.search).get("project"));
   const [screen, setScreen] = useState<Screen>(requestedScreen ?? (initialProjectId.current?"editor":initialScreen));

@@ -957,21 +957,21 @@ body:has(.copro-studio) { margin:0; }
    Keep this immediately after legacy nav-to-CoPro token projection. */
 .copro-app-root .copro-studio,
 .copro-app-root .mm-home {
- --copro-bg:#0b1015;
- --copro-surface:#142029;
- --copro-line:rgba(145,222,226,.16);
- --copro-text:#f1f7f8;
- --copro-muted:#a0b4bd;
- --copro-surface-0:#0b1015;
- --copro-surface-1:#142029;
- --copro-surface-2:#1a2c35;
- --copro-text-1:#f1f7f8;
- --copro-text-2:#b3c6cc;
- --copro-text-3:#8ca7b0;
- --copro-accent:#32c6ca;
- --copro-accent-readable:#5bdbde;
- --copro-accent-ink:#062128;
- --copro-hover:rgba(50,198,202,.12);
+ --copro-bg:var(--copro-theme-bg,#0b1015);
+ --copro-surface:var(--copro-theme-surface,#142029);
+ --copro-line:var(--copro-theme-line,rgba(145,222,226,.16));
+ --copro-text:var(--copro-theme-text,#f1f7f8);
+ --copro-muted:var(--copro-theme-muted,#a0b4bd);
+ --copro-surface-0:var(--copro-theme-surface-0,var(--copro-bg));
+ --copro-surface-1:var(--copro-theme-surface-1,var(--copro-surface));
+ --copro-surface-2:var(--copro-theme-surface-2,#1a2c35);
+ --copro-text-1:var(--copro-theme-text-1,var(--copro-text));
+ --copro-text-2:var(--copro-theme-text-2,#b3c6cc);
+ --copro-text-3:var(--copro-theme-text-3,#8ca7b0);
+ --copro-accent:var(--copro-theme-accent,#32c6ca);
+ --copro-accent-readable:var(--copro-theme-accent-readable,color-mix(in srgb,var(--copro-accent) 75%,white));
+ --copro-accent-ink:var(--copro-theme-accent-ink,#062128);
+ --copro-hover:var(--copro-theme-hover,color-mix(in srgb,var(--copro-accent) 12%,transparent));
 }
 .copro-topbar,.copro-toolbar,.copro-transport{background:var(--copro-surface);color:var(--copro-text);}
 .mm-home button:disabled,.copro-icon-button:disabled{opacity:.6;}
