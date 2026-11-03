@@ -7,6 +7,27 @@ window.cmsAdminNavigate = function cmsAdminNavigate(destination) {
   window.location.assign(destination);
 };
 
+// Page routes retain their stable D1 page id and selected site. The slug stays
+// in the URL as the editable public handle, never as a cross-site identifier.
+const cmsInitialParams = new URLSearchParams(window.location.search);
+window.cmsActiveSiteId = cmsInitialParams.get("site_id") || null;
+window.cmsActivePageId = cmsInitialParams.get("page_id") || null;
+window.cmsActivePageSlug = cmsInitialParams.get("slug") || null;
+window.cmsAdminFetch = function cmsAdminFetch(path, options) {
+  const url = new URL(path, window.location.origin);
+  if (!url.pathname.startsWith("/api/admin/cms/")) return window.adminFetch(path, options);
+  if (window.cmsActiveSiteId && !url.searchParams.has("site_id")) {
+    url.searchParams.set("site_id", window.cmsActiveSiteId);
+  }
+  const pageMatch = url.pathname.match(/^\/api\/admin\/cms\/pages\/([^/]+)/);
+  const routeSlug = pageMatch ? decodeURIComponent(pageMatch[1]) : null;
+  if (routeSlug && routeSlug !== "site" && window.cmsActivePageId &&
+      window.cmsActivePageSlug === routeSlug && !url.searchParams.has("page_id")) {
+    url.searchParams.set("page_id", window.cmsActivePageId);
+  }
+  return window.adminFetch(url.pathname + url.search, options);
+};
+
 window.PAGE_ROUTES = window.AgentSamThemeEditorHost ? (window.AgentSamThemeEditorHost.pageRoutes || {}) : {
   home: "/",
   shop: "/shop",

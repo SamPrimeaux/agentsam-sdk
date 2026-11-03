@@ -94,6 +94,7 @@ test("signed remote CMS account resolver refuses ambiguous D1 scope", async () =
   try {
     await assert.rejects(resolveSingleCmsAccount(env), /account_scope_ambiguous/);
     sqlite.exec("DELETE FROM cms_pages WHERE account_id = 'account-b'");
+    sqlite.exec("DELETE FROM cms_sites WHERE account_id = 'account-b'");
     assert.equal(await resolveSingleCmsAccount(env), "account-a");
   } finally { sqlite.close(); }
 });

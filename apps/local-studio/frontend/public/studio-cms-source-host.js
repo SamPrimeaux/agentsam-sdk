@@ -7,7 +7,10 @@
  * invents fake cms records when the account has no site access.
  */
 (() => {
-  if (location.pathname !== '/admin/theme-editor') return;
+  // The source editor remains available for R2-backed legacy HTML documents,
+  // but normal Theme Editor navigation now uses canonical site-first CMS pages.
+  if (location.pathname !== '/admin/theme-editor' ||
+      new URLSearchParams(location.search).get('source') !== 'html') return;
 
   async function resolveAuthorizedSite() {
     const requested = new URLSearchParams(location.search).get('site');

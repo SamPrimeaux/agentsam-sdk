@@ -310,7 +310,14 @@ function showThemeUnavailable(state, message) {
   if(saved)saved.textContent=state==="error"
     ? "Store data is unavailable. This is a safe, local starter preview — nothing is published."
     : "Start from a template or connect a site. This preview is not published.";
-  if(edit){edit.href="#theme-product-marketplace";edit.textContent="Add your first theme";}
+  // An installed Local Studio host has a real, CMS-backed theme installer.
+  // Do not point its first-install action at the standalone catalog iframe.
+  const installedThemeStore = window.__AGENTSAM_THEME_STORE_URL;
+  const themeStoreHref = typeof installedThemeStore === "string" &&
+    /^\/[a-zA-Z0-9/_-]+$/.test(installedThemeStore)
+      ? installedThemeStore
+      : window.AgentSamOnlineStoreHost?.onBrowseThemes ? "/themes" : "#theme-product-marketplace";
+  if(edit){edit.href=themeStoreHref;edit.textContent="Add your first theme";}
   document.getElementById("active-theme-version").hidden=true;
   if (typeof storefrontPreviewObserver !== "undefined" && storefrontPreviewObserver) storefrontPreviewObserver.disconnect();
   const frames=[

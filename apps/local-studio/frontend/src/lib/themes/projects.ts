@@ -2,6 +2,7 @@
 // IndexedDB remains only for active-view preference and one-time migration of older local drafts.
 // @ts-ignore Public portable JavaScript theme project contract has no bundled TS declaration.
 import { validateThemeProject } from '@inneranimalmedia/ecommerce-cms-agentsam/theme-editor/project';
+import { invokeStudioService, isPackagedDesktop } from '../desktop/tauri';
 export const THEME_PROJECTS_CHANGED = 'agentsam:theme-projects-changed';
 const API = '/api/admin/cms/theme-projects';
 let database: Promise<IDBDatabase> | undefined;
@@ -29,16 +30,31 @@ async function operation<T>(mode: IDBTransactionMode, run: (store: IDBObjectStor
   });
 }
 async function jsonRequest(path: string, init: RequestInit = {}) {
-  const response = await fetch(path, { credentials: 'include', ...init });
+  // A Tauri webview cannot fetch CMS JSON from its local static asset origin.
+  // Reuse the authenticated commerce service bridge, not an untrusted URL.
+  if (!path.startsWith('/api/admin/cms/') || path.startsWith('//')) throw new Error('theme_project_route_denied');
+  let httpStatus: number;
   let data: any = null;
-  try { data = await response.json(); } catch {}
-  if (!response.ok) {
-    const error = new Error(data?.error || `Request failed (${response.status})`) as Error & { status?: number; code?: string };
-    error.status = response.status;
+  if (isPackagedDesktop()) {
+    const method = String(init.method || 'GET').toUpperCase() as 'GET'|'POST'|'PUT'|'PATCH'|'DELETE';
+    const body = init.body ? JSON.parse(String(init.body)) : undefined;
+    const result = await invokeStudioService({
+      operation: 'commerce', path, method, ...(body === undefined ? {} : { body }),
+    });
+    httpStatus = result.status;
+    try { data = JSON.parse(result.body); } catch { data = null; }
+  } else {
+    const response = await fetch(path, { credentials: 'include', ...init });
+    httpStatus = response.status;
+    try { data = await response.json(); } catch { data = null; }
+  }
+  if (httpStatus >= 400 || data?.ok === false || !data) {
+    const error = new Error(data?.error || 'Theme project request failed (' + httpStatus + ')') as Error & { status?: number; code?: string };
+    error.status = httpStatus;
     error.code = data?.code;
     throw error;
   }
-  return data || {};
+  return data;
 }
 function summaryOf(project: any) {
   return {

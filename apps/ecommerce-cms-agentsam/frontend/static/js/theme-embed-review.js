@@ -55,8 +55,18 @@
     '</select></label>';
   const installedFor = key => installed.filter(item => item.catalog_key === key);
 
+  function withPageIdentity(path) {
+    const url = new URL(path, location.origin);
+    const current = new URLSearchParams(location.search);
+    for (const key of ['site_id', 'page_id']) {
+      const value = current.get(key);
+      if (value && !url.searchParams.has(key)) url.searchParams.set(key, value);
+    }
+    return url.pathname + url.search;
+  }
+
   async function api(path, options = {}) {
-    const response = await fetch(path, {
+    const response = await fetch(withPageIdentity(path), {
       credentials: 'same-origin',
       headers: { 'content-type': 'application/json', ...(options.headers || {}) },
       ...options,

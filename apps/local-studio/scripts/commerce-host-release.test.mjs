@@ -34,9 +34,18 @@ test('installed site/editor entrypoints and programmatic page changes stay in Lo
   const shared = read('../../ecommerce-cms-agentsam/frontend/static/js/pages-shared.js');
   assert.match(shared, /window\.cmsAdminNavigate/);
   assert.match(pages, /cmsAdminNavigate\(row\.dataset\.href\)/);
+  assert.match(pages, /id="add-page-btn"/);
+  assert.match(pages, /id="add-page-dialog"/);
+  assert.match(pages, /method: "POST"/);
+  assert.match(pages, /cmsAdminFetch\("\/api\/admin\/cms\/pages"/);
+  assert.match(pages, /site_id/);
+  assert.match(shared, /window\.cmsAdminFetch/);
+  assert.match(shared, /page_id/);
   assert.match(editor, /cmsAdminNavigate\(`\/admin\/page-edit/);
+  assert.match(editor, /cmsAdminFetch\(/);
   assert.match(visual, /cmsAdminNavigate\('\/admin\/theme-editor\?'/);
   assert.match(visual, /cmsAdminNavigate\(dest\)/);
+  assert.match(visual, /cmsActivePageId/);
 });
 
 test('dock derives its actual tabs from ecommerce app manifest and avoids a competing shell', () => {

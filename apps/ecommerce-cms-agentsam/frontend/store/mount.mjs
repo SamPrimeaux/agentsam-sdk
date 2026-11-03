@@ -91,6 +91,15 @@ export async function mountOnlineStore(frame, host, { assetsBase = '/commerce-st
   const intercept = (event) => {
     const anchor = event.target?.closest?.('a');
     if (!anchor) return;
+    // This embedded merchant Store does not mount the standalone catalog.
+    // Route discovery to the real, CMS-backed Theme Store in Local Studio.
+    if (anchor.id === 'browse-themes-shortcut' ||
+        (anchor.id === 'edit-theme-btn' && anchor.getAttribute('href') === '/themes')) {
+      if (typeof host.onBrowseThemes !== 'function') return;
+      event.preventDefault();
+      host.onBrowseThemes();
+      return;
+    }
     if (anchor.id !== 'edit-theme-btn' && !anchor.closest('.online-store-draft-actions')) return;
     const href = anchor.getAttribute('href') || '/admin/theme-editor?slug=home';
     const url = new URL(href, host.baseUrl);

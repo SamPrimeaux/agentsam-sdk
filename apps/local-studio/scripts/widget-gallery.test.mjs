@@ -12,11 +12,11 @@ test('Local Studio exposes the donor concept gallery without installing concept 
   assert.equal(new Set(widgets.map((widget) => widget.id)).size, 22);
 
   const ready = widgets.filter((widget) => widget.availability === 'ready');
-  assert.deepEqual(ready.map((widget) => widget.id), ['countdown']);
+  assert.deepEqual(ready.map((widget) => widget.id), ['queues', 'countdown']);
   assert.equal(ready[0].visible, true);
 
   const concepts = widgets.filter((widget) => widget.availability === 'demo');
-  assert.equal(concepts.length, 21);
+  assert.equal(concepts.length, 20);
   assert.ok(concepts.every((widget) =>
     !widget.visible &&
     !widget.deeplink &&

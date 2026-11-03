@@ -10,15 +10,31 @@ import { verifyCmsBridgeRequest, isAllowedStudioCmsBridgeRoute } from './studio-
 
 const PREFIX='/api/internal/studio-cms/';
 const WRITE_METHODS=new Set(['POST','PUT','PATCH','DELETE']);
-// A store Worker owns one ecommerce CMS account. Resolve it from the installed
-// canonical pages rather than taking an account ID from a signed remote actor.
-// Multi-account deployments must provide a project-to-account mapping instead.
+// A store Worker owns one ecommerce CMS account. Resolve it from the
+// account-owned site authority, not from cms_pages: page creation must work
+// before the first page exists. The accounts fallback also permits first-site
+// provisioning after the site-first migration has been applied.
 export async function resolveSingleCmsAccount(env) {
-  const {results=[]}=await env.DB.prepare(
-    'SELECT account_id FROM cms_pages GROUP BY account_id LIMIT 2'
+  const sites = await env.DB.prepare(
+    "SELECT account_id FROM cms_sites GROUP BY account_id LIMIT 2"
   ).all();
-  if(results.length!==1) throw new Error('cms_bridge_account_scope_ambiguous');
-  return results[0].account_id;
+  if (sites.results?.length === 1) return sites.results[0].account_id;
+  if ((sites.results?.length || 0) > 1) throw new Error("cms_bridge_account_scope_ambiguous");
+
+  // Existing pre-site-first installs may not have populated cms_sites yet.
+  // Retain the old page-owner resolution before falling back to a truly new
+  // account with no pages, so multiple legacy accounts still fail closed.
+  const legacyPages = await env.DB.prepare(
+    "SELECT account_id FROM cms_pages GROUP BY account_id LIMIT 2"
+  ).all();
+  if (legacyPages.results?.length === 1) return legacyPages.results[0].account_id;
+  if ((legacyPages.results?.length || 0) > 1) throw new Error("cms_bridge_account_scope_ambiguous");
+
+  const accounts = await env.DB.prepare(
+    "SELECT id FROM accounts ORDER BY id LIMIT 2"
+  ).all();
+  if (accounts.results?.length !== 1) throw new Error("cms_bridge_account_scope_ambiguous");
+  return accounts.results[0].id;
 }
 function error(code,status){return Response.json({ok:false,error:code},{status,headers:{'cache-control':'no-store'}});}
 

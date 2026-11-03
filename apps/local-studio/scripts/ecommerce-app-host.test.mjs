@@ -76,6 +76,10 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAdminPath('/admin/content?kind=video'), '/admin/content?kind=video');
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=made-up'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/page-edit?slug=about&site=other-merchant'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/pages?site_id=site-a'), '/admin/pages?site_id=site-a');
+  assert.equal(resolveEcommerceAdminPath('/admin/page-edit?slug=about&site_id=site-a&page_id=cmsp_123'), '/admin/page-edit?slug=about&site_id=site-a&page_id=cmsp_123');
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=about&site_id=site-a&page_id=cmsp_123'), '/admin/theme-editor?slug=about&site_id=site-a&page_id=cmsp_123');
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html'), '/admin/theme-editor?slug=sam-docs&site=agentsam-sdk&source=html');
   assert.equal(resolveEcommerceAdminPath('/admin/page-edit?slug=about&slug=shop'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?catalog=unknown&slug=home'), null);
   for (const href of paths) {

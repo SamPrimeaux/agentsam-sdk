@@ -28,8 +28,9 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
   // ?slug=...&showcase=... (the catalog's generated preview link) and
   // ?slug=...&catalog=revise (its section-library entry).
   const recognized: Record<string, readonly string[]> = {
-    '/admin/theme-editor': ['slug', 'showcase', 'catalog'],
-    '/admin/page-edit': ['slug'],
+    '/admin/pages': ['site_id'],
+    '/admin/theme-editor': ['slug', 'site', 'site_id', 'page_id', 'showcase', 'catalog', 'source'],
+    '/admin/page-edit': ['slug', 'site_id', 'page_id'],
     '/admin/theme-project-editor': ['project'],
     '/admin/product-edit': ['id'],
     '/admin/products': ['view'],

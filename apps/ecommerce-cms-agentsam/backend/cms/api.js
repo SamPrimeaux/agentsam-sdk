@@ -606,6 +606,630 @@ export async function listPagesAdmin(env, accountId, siteId = null) {
   return { ok: true, source: "cms_pages+cms_page_sections", site, pages };
 }
 
+function cmsSlug(value) {
+  return String(value || "").trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function cmsObjectJson(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
+async function ensureSiteGlobalPage(env, accountId, site) {
+  const existing = await env.DB.prepare(
+    "SELECT id FROM cms_pages WHERE account_id=? AND site_id=? AND slug='site' LIMIT 1"
+  ).bind(accountId, site.id).first();
+  if (existing) return existing;
+  const id = "cmsp_" + crypto.randomUUID().replaceAll("-", "").slice(0, 20);
+  await env.DB.prepare(`INSERT INTO cms_pages
+    (id,account_id,site_id,slug,route_path,title,page_type,status,template_key,
+     is_homepage,nav_visible,sort_order,seo_json,metadata_json,created_at,updated_at)
+    VALUES (?,?,?,'site',NULL,'Global settings','global','draft','global',0,0,-100,'{}','{}',datetime('now'),datetime('now'))
+    ON CONFLICT(site_id,slug) DO NOTHING`)
+    .bind(id, accountId, site.id).run();
+  return env.DB.prepare(
+    "SELECT id FROM cms_pages WHERE account_id=? AND site_id=? AND slug='site' LIMIT 1"
+  ).bind(accountId, site.id).first();
+}
+
+async function resolveCmsPageScope(env, accountId, { siteId = null, slug = null, pageId = null } = {}) {
+  if (!accountId) return { error: "cms_page_account_required", status: 403 };
+  let site;
+  try {
+    site = siteId
+      ? await resolveCmsSite(env.DB, { accountId, siteId })
+      : await resolveCmsSite(env.DB, { accountId, createDefault: true });
+  } catch (error) {
+    const message = String(error?.message || error);
+    return { error: message, status: /not_found|required/.test(message) ? 404 : 400 };
+  }
+  const select = `SELECT id,account_id,site_id,legacy_page_id,slug,route_path,title,
+      page_type,status,template_key,is_homepage,nav_visible,sort_order,
+      seo_json,metadata_json,created_at,updated_at
+    FROM cms_pages WHERE account_id=? AND site_id=? AND `;
+  let page = pageId
+    ? await env.DB.prepare(select + "id=? LIMIT 1").bind(accountId, site.id, pageId).first()
+    : slug
+      ? await env.DB.prepare(select + "slug=? LIMIT 1").bind(accountId, site.id, slug).first()
+      : null;
+  // Global theme settings are a real site-owned CMS document, not one
+  // account-wide legacy slug shared by every site.
+  if (!page && !pageId && slug === "site") {
+    await ensureSiteGlobalPage(env, accountId, site);
+    page = await env.DB.prepare(select + "slug=? LIMIT 1").bind(accountId, site.id, slug).first();
+  }
+  if (!page) return { error: "cms_page_not_found", status: 404, site };
+  // page_id is the stable identity. The slug in the URL is only a route handle
+  // and may be stale after a legitimate slug change.
+  return { site, page };
+}
+
+async function readCanonicalPageSections(env, page) {
+  const composition = await readCanonicalComposition(env, page.account_id, page.slug, page.site_id);
+  if (!composition) return [];
+  return Promise.all(composition.sections.map(async (section) => {
+    let content = section.settings || {};
+    if (section.contentObjectKey) {
+      const document = await readR2Json(env, section.contentObjectKey);
+      if (!document || !document.content || typeof document.content !== "object") {
+        throw new Error("cms_section_content_unavailable");
+      }
+      content = document.content;
+    }
+    return {
+      id: section.id,
+      key: section.key,
+      name: section.type,
+      sort_order: section.order,
+      status: section.status,
+      version: Number(section.contentVersion || 0),
+      content,
+      source: section.contentObjectKey ? "r2" : "cms-d1",
+      __ownerSlug: page.slug,
+    };
+  }));
+}
+
+export async function createPageAdmin(env, accountId, siteId, body = {}) {
+  if (!accountId) return { error: "Account required", status: 403 };
+  const title = String(body.title || "").trim();
+  if (!title || title.length > 200) return { error: "Page title is required and must be 200 characters or fewer", status: 400 };
+  const slug = cmsSlug(body.slug || title);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 80) {
+    return { error: "Page URL handle must contain lowercase letters, numbers, and hyphens", status: 400 };
+  }
+  const pageType = String(body.page_type || body.pageType || "standard");
+  if (!["standard", "scene", "global"].includes(pageType)) {
+    return { error: "Unsupported page type", status: 400 };
+  }
+  if (slug === "site" && pageType !== "global") {
+    return { error: "The 'site' handle is reserved for site-wide Theme Editor settings", status: 409 };
+  }
+  if (pageType === "global" && slug !== "site") {
+    return { error: "Global settings must use the reserved 'site' identity", status: 400 };
+  }
+  let site;
+  try {
+    site = siteId
+      ? await resolveCmsSite(env.DB, { accountId, siteId })
+      : await resolveCmsSite(env.DB, { accountId, createDefault: true });
+  } catch (error) {
+    const message = String(error?.message || error);
+    return { error: message, status: /not_found|required/.test(message) ? 404 : 400 };
+  }
+  const routePath = pageType === "global"
+    ? null
+    : String(body.route_path || body.routePath || `/${slug}`).trim();
+  if (routePath !== null && (!/^\/(?:[a-z0-9][a-z0-9-]*(?:\/[a-z0-9][a-z0-9-]*)*)?\/?$/.test(routePath) || routePath.startsWith("//"))) {
+    return { error: "Page route must be a local path such as /about or /journal/first-post", status: 400 };
+  }
+  const homepage = routePath === "/";
+  if (homepage) {
+    const existingHome = await env.DB.prepare(
+      "SELECT id FROM cms_pages WHERE account_id=? AND site_id=? AND is_homepage=1 LIMIT 1"
+    ).bind(accountId, site.id).first();
+    if (existingHome) return { error: "This site already has a homepage", status: 409 };
+  }
+  const maxOrder = await env.DB.prepare(
+    "SELECT COALESCE(MAX(sort_order),-10) AS max_sort_order FROM cms_pages WHERE account_id=? AND site_id=?"
+  ).bind(accountId, site.id).first();
+  const id = "cmsp_" + crypto.randomUUID().replaceAll("-", "").slice(0, 20);
+  const now = new Date().toISOString();
+  const seo = cmsObjectJson(body.seo);
+  const metadata = cmsObjectJson(body.metadata);
+  try {
+    await env.DB.prepare(`INSERT INTO cms_pages
+      (id,account_id,site_id,slug,route_path,title,page_type,status,template_key,
+       is_homepage,nav_visible,sort_order,seo_json,metadata_json,created_at,updated_at)
+      VALUES (?,?,?,?,?,?,?,'draft',?,?,?,?,?,?,?,?)`)
+      .bind(
+        id, accountId, site.id, slug, routePath, title, pageType,
+        body.template_key || body.templateKey || null, homepage ? 1 : 0,
+        body.nav_visible === false ? 0 : 1, Number(maxOrder?.max_sort_order || 0) + 10,
+        JSON.stringify(seo), JSON.stringify(metadata), now, now,
+      ).run();
+  } catch (error) {
+    const message = String(error?.message || error);
+    return { error: /unique|constraint/i.test(message) ? "A page with that URL already exists on this site" : message,
+      status: /unique|constraint/i.test(message) ? 409 : 500 };
+  }
+  const page = await env.DB.prepare(
+    "SELECT id,account_id,site_id,slug,route_path,title,page_type,status,template_key,is_homepage,nav_visible,sort_order,seo_json,metadata_json,created_at,updated_at FROM cms_pages WHERE id=? AND account_id=? AND site_id=?"
+  ).bind(id, accountId, site.id).first();
+  if (!page) return { error: "Page creation could not be verified", status: 500 };
+  return { ok: true, site, page };
+}
+
+async function legacyPageLinkMatches(env, page) {
+  if (page?.legacy_page_id == null) return false;
+  try {
+    const legacy = await env.DB.prepare("SELECT id,slug FROM pages WHERE id=? LIMIT 1")
+      .bind(page.legacy_page_id).first();
+    return Boolean(legacy && legacy.slug === page.slug);
+  } catch {
+    return false;
+  }
+}
+
+export async function getPageAdminForSite(env, accountId, slug, siteId = null, pageId = null) {
+  const scope = await resolveCmsPageScope(env, accountId, { siteId, slug, pageId });
+  if (scope.error) {
+    if (scope.site?.is_default && !pageId) return getPageAdmin(env, slug);
+    return null;
+  }
+  const { page, site } = scope;
+  if (await legacyPageLinkMatches(env, page)) {
+    try {
+      const legacyData = await getPageAdmin(env, page.slug);
+      if (legacyData?.page) {
+        return {
+          ...legacyData,
+          page: {
+            ...legacyData.page,
+            id: page.id,
+            site_id: site.id,
+            route_path: page.route_path,
+            page_type: page.page_type,
+            template_key: page.template_key,
+            title: page.title,
+            status: page.status,
+          },
+        };
+      }
+    } catch {
+      // Canonical content remains readable if an old compatibility table is absent.
+    }
+  }
+  const sections = await readCanonicalPageSections(env, page);
+  return {
+    ok: true,
+    seeded: true,
+    source: "cms-d1",
+    page: {
+      id: page.id,
+      site_id: site.id,
+      slug: page.slug,
+      route_path: page.route_path,
+      title: page.title,
+      page_type: page.page_type,
+      template_key: page.template_key,
+      status: page.status,
+      updated_at: page.updated_at,
+      is_homepage: Boolean(page.is_homepage),
+      sections,
+      missing_source_sections: [],
+      ...resolvePageAuthority(page.slug, CMS_STOREFRONT_ROUTES, {
+        seeded: true,
+        cmsPublished: page.status === "published",
+      }),
+    },
+  };
+}
+
+export async function updatePageMetaForSite(env, accountId, slug, siteId, pageId, body = {}) {
+  const scope = await resolveCmsPageScope(env, accountId, { siteId, slug, pageId });
+  if (scope.error) {
+    if (scope.site?.is_default && !pageId) return updatePageMeta(env, slug, body);
+    return scope;
+  }
+  const { page, site } = scope;
+  const title = body.title == null ? page.title : String(body.title).trim();
+  if (!title || title.length > 200) return { error: "Page title is required and must be 200 characters or fewer", status: 400 };
+  if (body.status && body.status !== "draft") {
+    return { error: "Publishing must use the verified CMS release workflow", status: 409 };
+  }
+  let nextSlug = page.slug;
+  if (body.slug != null) {
+    nextSlug = cmsSlug(body.slug);
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(nextSlug) || nextSlug.length > 80) {
+      return { error: "Page URL handle is invalid", status: 400 };
+    }
+    if (page.page_type === "global" && nextSlug !== "site") {
+      return { error: "The site-wide Theme Editor identity cannot be renamed", status: 409 };
+    }
+    if (nextSlug !== page.slug && page.legacy_page_id != null) {
+      return { error: "This legacy-backed page must be re-keyed through the site migration before its URL can change", status: 409 };
+    }
+  }
+  let routePath = page.route_path;
+  if (page.page_type === "global" && (body.route_path != null || body.routePath != null)) {
+    return { error: "Site-wide Theme Editor settings do not have a public route", status: 409 };
+  }
+  if (body.route_path != null || body.routePath != null) {
+    routePath = String(body.route_path || body.routePath).trim();
+    if (!/^\/(?:[a-z0-9][a-z0-9-]*(?:\/[a-z0-9][a-z0-9-]*)*)?\/?$/.test(routePath) || routePath.startsWith("//")) {
+      return { error: "Page route path is invalid", status: 400 };
+    }
+  } else if (nextSlug !== page.slug && routePath === `/${page.slug}`) {
+    routePath = `/${nextSlug}`;
+  }
+  try {
+    await env.DB.prepare(`UPDATE cms_pages
+      SET title=?,slug=?,route_path=?,status='draft',updated_at=datetime('now')
+      WHERE id=? AND account_id=? AND site_id=?`)
+      .bind(title, nextSlug, routePath, page.id, accountId, site.id).run();
+  } catch (error) {
+    const message = String(error?.message || error);
+    return { error: /unique|constraint/i.test(message) ? "A page with that URL already exists on this site" : message,
+      status: /unique|constraint/i.test(message) ? 409 : 500 };
+  }
+  const updated = await env.DB.prepare(
+    "SELECT id,site_id,slug,route_path,title,page_type,status,template_key,updated_at FROM cms_pages WHERE id=? AND account_id=? AND site_id=?"
+  ).bind(page.id, accountId, site.id).first();
+  return { ok: true, page: updated };
+}
+
+async function canonicalSectionContent(env, row) {
+  if (row.content_object_key) {
+    const document = await readR2Json(env, row.content_object_key);
+    if (!document || !document.content || typeof document.content !== "object") {
+      throw new Error("cms_section_content_unavailable");
+    }
+    return document.content;
+  }
+  try {
+    const parsed = JSON.parse(row.inline_content_json || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    throw new Error("cms_section_content_invalid");
+  }
+}
+
+async function insertCanonicalPageSection(env, scope, body = {}) {
+  const templateKey = String(body.templateKey || body.template_key || "").trim();
+  const themePreset = String(body.themePreset || body.theme_preset || "").trim();
+  const portable = PORTABLE.get(themePreset);
+  if (templateKey === "portable" && !portable) {
+    return { error: "Section preset is not implemented", status: 400 };
+  }
+  if (portable && templateKey !== "portable") {
+    return { error: "Section preset/template mismatch", status: 400 };
+  }
+  const nativeTemplate = portable ? null : PAGE_REGISTRY[scope.page.slug]?.sections?.[templateKey];
+  const template = portable ? { defaultContent: PORTABLE.defaults(themePreset) } : nativeTemplate;
+  if (!template) return { error: "Section template is not registered for this page", status: 400 };
+  if (!env.WEBSITE_ASSETS) return { error: "CMS R2 storage is not available", status: 503 };
+
+  const supplied = body.content !== undefined && body.content !== null;
+  if (supplied) {
+    if (!portable) return { error: "Content import requires a portable renderer", status: 400 };
+    const validation = PORTABLE.validate(themePreset, body.content);
+    if (!validation.ok) return { error: validation.error || "Section content is invalid", status: 400 };
+  }
+  const content = structuredClone(supplied ? body.content : (template.defaultContent || {}));
+  content.__editor = {
+    ...(content.__editor || {}),
+    templateKey,
+    ...(themePreset ? { themePreset } : {}),
+    visibility: { ...(content.__editor?.visibility || {}), enabled: true },
+  };
+  if (portable) {
+    const validation = PORTABLE.validate(themePreset, content);
+    if (!validation.ok) return { error: validation.error || "Section content is invalid", status: 400 };
+  }
+
+  const allRows = await env.DB.prepare(
+    "SELECT id,section_key,sort_order,status,content_version FROM cms_page_sections WHERE account_id=? AND page_id=? ORDER BY sort_order,id"
+  ).bind(scope.page.account_id, scope.page.id).all();
+  const rows = allRows.results || [];
+  const removed = rows.find(row => row.section_key === templateKey && row.status === "removed");
+  const activeExists = rows.some(row => row.section_key === templateKey && !["removed", "archived"].includes(row.status));
+  const sectionKey = removed?.section_key || (templateKey === "portable"
+    ? `${sectionKeyBase(themePreset.split("/").pop())}-${crypto.randomUUID().slice(0, 8)}`
+    : activeExists ? `${sectionKeyBase(templateKey)}-${crypto.randomUUID().slice(0, 8)}` : templateKey);
+  const existing = rows.find(row => row.section_key === sectionKey);
+  const sectionId = existing?.id || ("cmss_" + crypto.randomUUID().replaceAll("-", "").slice(0, 20));
+  const currentVersion = Number(existing?.content_version || 0);
+
+  const ordered = rows.filter(row => !["removed", "archived"].includes(row.status) && row.id !== sectionId)
+    .map(row => ({ id: row.id }));
+  const requestedIndex = Number(body.toIndex);
+  const toIndex = Number.isInteger(requestedIndex)
+    ? Math.max(0, Math.min(requestedIndex, ordered.length))
+    : ordered.length;
+  ordered.splice(toIndex, 0, { id: sectionId });
+  const sortOrder = ordered.findIndex(row => row.id === sectionId) * 10;
+
+  const saved = await writeSectionDraft(env, scope.page.id, sectionKey, content, { version: currentVersion });
+  for (let index = 0; index < ordered.length; index += 1) {
+    if (ordered[index].id === sectionId) continue;
+    await env.DB.prepare("UPDATE cms_page_sections SET sort_order=?,updated_at=datetime('now') WHERE id=? AND account_id=? AND page_id=?")
+      .bind(index * 10, ordered[index].id, scope.page.account_id, scope.page.id).run();
+  }
+  const sectionType = portable?.type || templateKey;
+  const metadata = JSON.stringify({ source: portable ? "portable-section" : "native-section", themePreset: themePreset || null });
+  if (existing) {
+    const changed = await env.DB.prepare(`UPDATE cms_page_sections
+      SET section_type=?,sort_order=?,status='draft',inline_content_json='{}',content_object_key=?,
+          content_version=?,content_hash=?,metadata_json=?,updated_at=datetime('now')
+      WHERE id=? AND account_id=? AND page_id=? AND content_version=?`)
+      .bind(sectionType, sortOrder, saved.key, saved.version, saved.content_hash, metadata,
+        sectionId, scope.page.account_id, scope.page.id, currentVersion).run();
+    if (d1Changes(changed) !== 1) return { error: "Section changed while it was being added. Reload and try again.", status: 409 };
+  } else {
+    await env.DB.prepare(`INSERT INTO cms_page_sections
+      (id,account_id,page_id,section_key,section_type,sort_order,status,inline_content_json,
+       content_object_key,content_version,content_hash,metadata_json)
+      VALUES (?,?,?,?,?,?,'draft','{}',?,?,?,?)`)
+      .bind(sectionId, scope.page.account_id, scope.page.id, sectionKey, sectionType, sortOrder,
+        saved.key, saved.version, saved.content_hash, metadata).run();
+  }
+  const latest = await env.DB.prepare(
+    "SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions WHERE account_id=? AND site_id=? AND entity_type='section' AND entity_id=?"
+  ).bind(scope.page.account_id, scope.site.id, sectionId).first();
+  const revisionNumber = Number(latest?.n || 0) + 1;
+  await env.DB.prepare(`INSERT INTO cms_revisions
+    (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,
+     content_object_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,?,'section',?,?,'draft',?,?,?,?)`)
+    .bind(scope.page.account_id, scope.site.id, sectionId, revisionNumber, saved.key, saved.content_hash,
+      JSON.stringify({ content }), JSON.stringify({ source: "cms-editor-save", r2_authoritative: true })).run();
+  await env.DB.prepare("UPDATE cms_pages SET status='draft',updated_at=datetime('now') WHERE id=? AND account_id=? AND site_id=?")
+    .bind(scope.page.id, scope.page.account_id, scope.site.id).run();
+  return { ok: true, section_key: sectionKey, version: saved.version, section: {
+    id: sectionId, key: sectionKey, name: sectionType, sort_order: sortOrder,
+    status: "draft", version: saved.version, content, source: "r2",
+  } };
+}
+
+async function updateCanonicalPageSection(env, scope, sectionKey, body = {}) {
+  if (!env.WEBSITE_ASSETS) return { error: "CMS R2 storage is not available", status: 503 };
+  const row = await env.DB.prepare(
+    "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
+  ).bind(scope.page.account_id, scope.page.id, sectionKey).first();
+  if (!row) return { error: "Section not found", status: 404 };
+  const content = body?.content;
+  if (!content || typeof content !== "object" || Array.isArray(content)) {
+    return { error: "content object required", status: 400 };
+  }
+  const currentVersion = Number(row.content_version || 0);
+  const expectedVersion = Number(body.expected_version ?? body.expectedVersion ?? currentVersion);
+  if (!Number.isInteger(expectedVersion) || expectedVersion !== currentVersion) {
+    return { error: "This section changed in another tab. Reload before saving.", status: 409,
+      code: "cms_version_conflict", current_version: currentVersion, expected_version: expectedVersion };
+  }
+  const themePreset = String(content.__editor?.themePreset || "");
+  if (themePreset && PORTABLE.get(themePreset)) {
+    const validation = PORTABLE.validate(themePreset, content);
+    if (!validation.ok) return { error: validation.error || "Section content is invalid", status: 400 };
+  }
+  const saved = await writeSectionDraft(env, scope.page.id, sectionKey, content, { version: currentVersion });
+  const result = await env.DB.prepare(`UPDATE cms_page_sections
+    SET content_object_key=?,content_version=?,content_hash=?,status='draft',updated_at=datetime('now')
+    WHERE id=? AND account_id=? AND page_id=? AND content_version=?`)
+    .bind(saved.key, saved.version, saved.content_hash, row.id, scope.page.account_id, scope.page.id, currentVersion).run();
+  if (d1Changes(result) !== 1) {
+    return { error: "This section changed in another tab. Reload before saving.", status: 409,
+      code: "cms_version_conflict" };
+  }
+  await env.DB.prepare(`INSERT INTO cms_revisions
+    (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,
+     content_object_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,?,'section',?,?,'draft',?,?, '{}',?)
+    ON CONFLICT DO NOTHING`)
+    .bind(scope.page.account_id, scope.site.id, row.id, saved.version, saved.key,
+      saved.content_hash, JSON.stringify({ source: "cms-editor-save", r2_authoritative: true })).run();
+  await env.DB.prepare("UPDATE cms_pages SET status='draft',updated_at=datetime('now') WHERE id=? AND account_id=? AND site_id=?")
+    .bind(scope.page.id, scope.page.account_id, scope.site.id).run();
+  return { ok: true, section_key: sectionKey, version: saved.version, content_hash: saved.content_hash,
+    canonical: { status: "linked" } };
+}
+
+async function duplicateCanonicalPageSection(env, scope, sectionKey) {
+  if (!env.WEBSITE_ASSETS) return { error: "CMS R2 storage is not available", status: 503 };
+  const row = await env.DB.prepare(
+    "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
+  ).bind(scope.page.account_id, scope.page.id, sectionKey).first();
+  if (!row) return { error: "Section not found", status: 404 };
+  const content = await canonicalSectionContent(env, row);
+  const newKey = `${sectionKeyBase(sectionKey)}-${crypto.randomUUID().slice(0, 8)}`;
+  const rows = await env.DB.prepare(
+    "SELECT id,sort_order FROM cms_page_sections WHERE account_id=? AND page_id=? AND status NOT IN ('archived','removed') ORDER BY sort_order,id"
+  ).bind(scope.page.account_id, scope.page.id).all();
+  const ordered = [...(rows.results || [])];
+  const sourceIndex = ordered.findIndex(item => item.id === row.id);
+  const id = "cmss_" + crypto.randomUUID().replaceAll("-", "").slice(0, 20);
+  ordered.splice(sourceIndex < 0 ? ordered.length : sourceIndex + 1, 0, { id });
+  const sortOrder = ordered.findIndex(item => item.id === id) * 10;
+  const saved = await writeSectionDraft(env, scope.page.id, newKey, content, { version: 0 });
+  for (let index = 0; index < ordered.length; index += 1) {
+    if (ordered[index].id === id) continue;
+    await env.DB.prepare("UPDATE cms_page_sections SET sort_order=?,updated_at=datetime('now') WHERE id=? AND account_id=? AND page_id=?")
+      .bind(index * 10, ordered[index].id, scope.page.account_id, scope.page.id).run();
+  }
+  await env.DB.prepare(`INSERT INTO cms_page_sections
+    (id,account_id,page_id,section_key,section_type,sort_order,status,inline_content_json,
+     content_object_key,content_version,content_hash,metadata_json)
+    VALUES (?,?,?,?,?,?,'draft','{}',?,?,?,?)`)
+    .bind(id, scope.page.account_id, scope.page.id, newKey, row.section_type, sortOrder,
+      saved.key, saved.version, saved.content_hash, row.metadata_json || "{}").run();
+  await env.DB.prepare("UPDATE cms_pages SET status='draft',updated_at=datetime('now') WHERE id=? AND account_id=? AND site_id=?")
+    .bind(scope.page.id, scope.page.account_id, scope.site.id).run();
+  return { ok: true, section_key: newKey };
+}
+
+async function moveCanonicalPageSection(env, scope, sectionKey, body = {}) {
+  const rows = await env.DB.prepare(
+    "SELECT id,section_key FROM cms_page_sections WHERE account_id=? AND page_id=? AND status NOT IN ('archived','removed') ORDER BY sort_order,id"
+  ).bind(scope.page.account_id, scope.page.id).all();
+  const ordered = [...(rows.results || [])];
+  const from = ordered.findIndex(row => row.section_key === sectionKey);
+  if (from < 0) return { error: "Section not found", status: 404 };
+  const to = Number(body.toIndex);
+  if (!Number.isInteger(to)) return { error: "toIndex integer required", status: 400 };
+  const [moved] = ordered.splice(from, 1);
+  ordered.splice(Math.max(0, Math.min(to, ordered.length)), 0, moved);
+  for (let index = 0; index < ordered.length; index += 1) {
+    await env.DB.prepare("UPDATE cms_page_sections SET sort_order=?,updated_at=datetime('now') WHERE id=? AND account_id=? AND page_id=?")
+      .bind(index * 10, ordered[index].id, scope.page.account_id, scope.page.id).run();
+  }
+  await env.DB.prepare("UPDATE cms_pages SET status='draft',updated_at=datetime('now') WHERE id=? AND account_id=? AND site_id=?")
+    .bind(scope.page.id, scope.page.account_id, scope.site.id).run();
+  return { ok: true, section_key: sectionKey, to_index: to };
+}
+
+async function setCanonicalPageSectionVisibility(env, scope, sectionKey, body = {}) {
+  const row = await env.DB.prepare(
+    "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
+  ).bind(scope.page.account_id, scope.page.id, sectionKey).first();
+  if (!row) return { error: "Section not found", status: 404 };
+  const content = await canonicalSectionContent(env, row);
+  content.__editor = {
+    ...(content.__editor || {}),
+    visibility: { ...(content.__editor?.visibility || {}), enabled: body.enabled !== false },
+  };
+  const saved = await updateCanonicalPageSection(env, scope, sectionKey, {
+    content, expected_version: Number(row.content_version || 0),
+  });
+  if (saved.error) return saved;
+  const status = body.enabled === false ? "hidden" : "draft";
+  await env.DB.prepare("UPDATE cms_page_sections SET status=?,updated_at=datetime('now') WHERE id=? AND account_id=? AND page_id=?")
+    .bind(status, row.id, scope.page.account_id, scope.page.id).run();
+  return { ok: true, section_key: sectionKey, enabled: status !== "hidden", version: saved.version };
+}
+
+async function removeCanonicalPageSection(env, scope, sectionKey) {
+  const row = await env.DB.prepare(
+    "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
+  ).bind(scope.page.account_id, scope.page.id, sectionKey).first();
+  if (!row) return { error: "Section not found", status: 404 };
+  const content = await canonicalSectionContent(env, row);
+  content.__editor = {
+    ...(content.__editor || {}),
+    removed: true,
+    visibility: { ...(content.__editor?.visibility || {}), enabled: false },
+  };
+  const saved = await updateCanonicalPageSection(env, scope, sectionKey, {
+    content, expected_version: Number(row.content_version || 0),
+  });
+  if (saved.error) return saved;
+  await env.DB.prepare("UPDATE cms_page_sections SET status='removed',updated_at=datetime('now') WHERE id=? AND account_id=? AND page_id=?")
+    .bind(row.id, scope.page.account_id, scope.page.id).run();
+  return { ok: true, section_key: sectionKey, removed: true, version: saved.version };
+}
+
+async function canonicalEditableSection(env, scope, sectionKey) {
+  const row = await env.DB.prepare(
+    "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
+  ).bind(scope.page.account_id, scope.page.id, sectionKey).first();
+  if (!row) return { error: "Section not found", status: 404 };
+  const content = await canonicalSectionContent(env, row);
+  const themePreset = String(content.__editor?.themePreset || "");
+  const templateKey = String(content.__editor?.templateKey || "");
+  const definition = templateKey === "portable"
+    ? PORTABLE.get(themePreset)
+    : PAGE_REGISTRY[scope.page.slug]?.sections?.[templateKey];
+  if (!definition) return { error: "Section does not have a registered block implementation", status: 409 };
+  if (!content.__editor || typeof content.__editor !== "object") content.__editor = {};
+  if (!Array.isArray(content.__editor.blocks)) {
+    content.__editor.blocks = structuredClone(definition.defaultContent?.__editor?.blocks || []);
+  }
+  return { row, content, definition };
+}
+
+async function insertCanonicalPageBlock(env, scope, sectionKey, body = {}) {
+  const editable = await canonicalEditableSection(env, scope, sectionKey);
+  if (editable.error) return editable;
+  const templateKey = String(body.templateKey || body.template_key || "").trim();
+  const definition = editable.definition.blocks?.find(block => block.key === templateKey);
+  if (!definition) return { error: "Block template is not registered", status: 409 };
+  const existing = editable.content.__editor.blocks;
+  const sameType = existing.filter(block => block.templateKey === templateKey);
+  if (Number.isFinite(definition.max) && sameType.length >= Number(definition.max)) {
+    return { error: "Block limit reached", status: 409 };
+  }
+  const blockId = `${sectionKeyBase(templateKey)}-${crypto.randomUUID().slice(0, 8)}`;
+  editable.content[blockId] = structuredClone(definition.defaultContent || {});
+  const parsedIndex = Number(body.toIndex);
+  const toIndex = Number.isInteger(parsedIndex) ? Math.max(0, Math.min(parsedIndex, existing.length)) : existing.length;
+  existing.splice(toIndex, 0, { id: blockId, templateKey, enabled: true });
+  const saved = await updateCanonicalPageSection(env, scope, sectionKey, {
+    content: editable.content, expected_version: Number(editable.row.content_version || 0),
+  });
+  if (saved.error) return saved;
+  return { ok: true, section_key: sectionKey, block_id: blockId, template_key: templateKey, version: saved.version };
+}
+
+async function duplicateCanonicalPageBlock(env, scope, sectionKey, blockId) {
+  const editable = await canonicalEditableSection(env, scope, sectionKey);
+  if (editable.error) return editable;
+  const index = editable.content.__editor.blocks.findIndex(block => block.id === blockId);
+  if (index < 0) return { error: "Block not found", status: 404 };
+  const source = editable.content.__editor.blocks[index];
+  const definition = editable.definition.blocks?.find(block => block.key === source.templateKey);
+  if (!definition) return { error: "Block template is not registered", status: 409 };
+  const sameType = editable.content.__editor.blocks.filter(block => block.templateKey === source.templateKey);
+  if (Number.isFinite(definition.max) && sameType.length >= Number(definition.max)) {
+    return { error: "Block limit reached", status: 409 };
+  }
+  const newId = `${sectionKeyBase(source.templateKey)}-${crypto.randomUUID().slice(0, 8)}`;
+  editable.content[newId] = structuredClone(editable.content[blockId] || definition.defaultContent || {});
+  editable.content.__editor.blocks.splice(index + 1, 0, { id: newId, templateKey: source.templateKey, enabled: true });
+  const saved = await updateCanonicalPageSection(env, scope, sectionKey, {
+    content: editable.content, expected_version: Number(editable.row.content_version || 0),
+  });
+  if (saved.error) return saved;
+  return { ok: true, section_key: sectionKey, block_id: newId, version: saved.version };
+}
+
+async function moveCanonicalPageBlock(env, scope, sectionKey, blockId, body = {}) {
+  const editable = await canonicalEditableSection(env, scope, sectionKey);
+  if (editable.error) return editable;
+  const blocks = editable.content.__editor.blocks;
+  const from = blocks.findIndex(block => block.id === blockId);
+  if (from < 0) return { error: "Block not found", status: 404 };
+  const to = Number(body.toIndex);
+  if (!Number.isInteger(to)) return { error: "toIndex integer required", status: 400 };
+  const [moved] = blocks.splice(from, 1);
+  blocks.splice(Math.max(0, Math.min(to, blocks.length)), 0, moved);
+  const saved = await updateCanonicalPageSection(env, scope, sectionKey, {
+    content: editable.content, expected_version: Number(editable.row.content_version || 0),
+  });
+  if (saved.error) return saved;
+  return { ok: true, section_key: sectionKey, block_id: blockId, to_index: to, version: saved.version };
+}
+
+async function removeCanonicalPageBlock(env, scope, sectionKey, blockId) {
+  const editable = await canonicalEditableSection(env, scope, sectionKey);
+  if (editable.error) return editable;
+  const blocks = editable.content.__editor.blocks;
+  const index = blocks.findIndex(block => block.id === blockId);
+  if (index < 0) return { error: "Block not found", status: 404 };
+  const meta = blocks[index];
+  const definition = editable.definition.blocks?.find(block => block.key === meta.templateKey);
+  const sameType = blocks.filter(block => block.templateKey === meta.templateKey);
+  if (definition && Number.isFinite(definition.min) && sameType.length <= Number(definition.min)) {
+    return { error: "At least one block of this type is required", status: 409 };
+  }
+  blocks.splice(index, 1);
+  delete editable.content[blockId];
+  const saved = await updateCanonicalPageSection(env, scope, sectionKey, {
+    content: editable.content, expected_version: Number(editable.row.content_version || 0),
+  });
+  if (saved.error) return saved;
+  return { ok: true, section_key: sectionKey, block_id: blockId, removed: true, version: saved.version };
+}
+
 export async function getPageAdmin(env, slug) {
   const page = await loadPageRow(env, slug);
   if (!page) {
@@ -801,51 +1425,97 @@ async function syncGeneratedRevision(env, slug, key, content, meta, metadata = {
   return next;
 }
 
-export async function listGeneratedRevisions(env,slug,key,accountId) {
-  if (!accountId) return {error:"Account required",status:403};
-  const legacyPage=await env.DB.prepare("SELECT id FROM pages WHERE slug=? LIMIT 1").bind(slug).first();
-  const instance=legacyPage ? await env.DB.prepare(`SELECT s.id,p.site_id FROM cms_page_sections s JOIN cms_pages p ON p.id=s.page_id
-    WHERE s.account_id=? AND p.account_id=? AND p.legacy_page_id=? AND s.section_key=?`)
-    .bind(accountId,accountId,legacyPage.id,key).first() : null;
-  if (!instance) return {error:"Generated section not found",status:404};
-  const response=await env.DB.prepare(`SELECT revision_number,content_hash,created_at,metadata_json FROM cms_revisions
-    WHERE account_id=? AND entity_type='section' AND entity_id=? ORDER BY revision_number DESC LIMIT 50`)
-    .bind(accountId,instance.id).all();
-  return {ok:true,revisions:(response.results||[]).map((revision)=>({
-    number:revision.revision_number,createdAt:revision.created_at,hash:revision.content_hash,
-    metadata:JSON.parse(revision.metadata_json||"{}"),
-  }))};
+export async function listGeneratedRevisions(env, slug, key, accountId, siteId = null, pageId = null) {
+  if (!accountId) return { error: "Account required", status: 403 };
+  const scope = await resolveCmsPageScope(env, accountId, { siteId, pageId, slug });
+  if (scope.error) return scope;
+  const section = await env.DB.prepare(
+    "SELECT id FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
+  ).bind(accountId, scope.page.id, key).first();
+  if (!section) return { error: "Generated section not found", status: 404 };
+  const response = await env.DB.prepare(`SELECT revision_number,content_hash,created_at,metadata_json,snapshot_json
+    FROM cms_revisions WHERE account_id=? AND site_id=? AND entity_type='section' AND entity_id=?
+    ORDER BY revision_number DESC LIMIT 50`)
+    .bind(accountId, scope.site.id, section.id).all();
+  const revisions = (response.results || []).flatMap((revision) => {
+    let metadata = {};
+    let snapshot = {};
+    try { metadata = JSON.parse(revision.metadata_json || "{}"); } catch {}
+    try { snapshot = JSON.parse(revision.snapshot_json || "{}"); } catch {}
+    if (metadata.source !== "agentsam" && !snapshot.artifactId && !snapshot.content?.__editor?.generated) return [];
+    return [{
+      number: revision.revision_number, createdAt: revision.created_at, hash: revision.content_hash,
+      metadata,
+    }];
+  });
+  return { ok: true, revisions };
 }
 
-export async function restoreGeneratedRevision(env,slug,key,accountId,body={}) {
-  if (!accountId) return {error:"Account required",status:403};
-  const number=Number(body.revisionNumber);
-  if (!Number.isInteger(number)||number<1) return {error:"Invalid revision number",status:422};
-  const target=await env.DB.prepare(`SELECT s.id,s.legacy_section_id FROM cms_page_sections s
-    JOIN cms_pages p ON p.id=s.page_id AND p.account_id=s.account_id
-    WHERE s.account_id=? AND p.slug=? AND s.section_key=?`)
-    .bind(accountId,slug,key).first();
-  if (!target) return {error:"Generated section not found",status:404};
-  const row=await env.DB.prepare(`SELECT ps.content_version,ps.sort_order,ps.status,ps.page_id FROM page_sections ps
-    JOIN pages p ON p.id=ps.page_id WHERE ps.id=? AND p.slug=?`)
-    .bind(target.legacy_section_id,slug).first();
-  if (!row||row.status==="removed") return {error:"Section not editable",status:409};
-  if (Number(body.expectedVersion)!==Number(row.content_version)) return {error:"Draft changed since revision load",status:409};
-  const old=await env.DB.prepare(`SELECT snapshot_json FROM cms_revisions WHERE account_id=?
+export async function restoreGeneratedRevision(env, slug, key, accountId, body = {}, siteId = null, pageId = null) {
+  if (!accountId) return { error: "Account required", status: 403 };
+  const number = Number(body.revisionNumber);
+  if (!Number.isInteger(number) || number < 1) return { error: "Invalid revision number", status: 422 };
+  const scope = await resolveCmsPageScope(env, accountId, { siteId, pageId, slug });
+  if (scope.error) return scope;
+  const section = await env.DB.prepare(
+    "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed') LIMIT 1"
+  ).bind(accountId, scope.page.id, key).first();
+  if (!section) return { error: "Generated section not found", status: 404 };
+  const old = await env.DB.prepare(`SELECT snapshot_json FROM cms_revisions WHERE account_id=? AND site_id=?
     AND entity_type='section' AND entity_id=? AND revision_number=? LIMIT 1`)
-    .bind(accountId,target.id,number).first();
-  if (!old) return {error:"Revision not found",status:404};
+    .bind(accountId, scope.site.id, section.id, number).first();
+  if (!old) return { error: "Revision not found", status: 404 };
   let saved;
-  try {saved=JSON.parse(old.snapshot_json);} catch {return {error:"Invalid revision snapshot",status:409};}
-  if (!saved.content?.__editor?.generated || !saved.artifactId) return {error:"Not a generated revision",status:409};
-  const artifact=await env.DB.prepare("SELECT id FROM cms_artifacts WHERE account_id=? AND id=? AND status='ready'")
-    .bind(accountId,saved.artifactId).first();
-  if (!artifact) return {error:"Revision artifact unavailable",status:409};
-  const meta=await persistSectionDraft(env,slug,row.page_id,key,saved.content,row.sort_order,{expectedVersion:row.content_version});
-  if (meta.error) return meta;
-  const revision=await syncGeneratedRevision(env,slug,key,saved.content,meta,{restoredFrom:number});
-  await markPageDraft(env,row.page_id,slug);
-  return {ok:true,published:false,section_key:key,version:meta.version,revision_number:revision};
+  try { saved = JSON.parse(old.snapshot_json); }
+  catch { return { error: "Invalid revision snapshot", status: 409 }; }
+  if (!saved.content?.__editor?.generated || !saved.artifactId) {
+    return { error: "Not a generated revision", status: 409 };
+  }
+  const artifact = await env.DB.prepare(
+    "SELECT id FROM cms_artifacts WHERE account_id=? AND id=? AND status='ready'"
+  ).bind(accountId, saved.artifactId).first();
+  if (!artifact) return { error: "Revision artifact unavailable", status: 409 };
+
+  if (await legacyPageLinkMatches(env, scope.page)) {
+    const row = await env.DB.prepare(`SELECT ps.content_version,ps.sort_order,ps.status,ps.page_id
+      FROM page_sections ps JOIN pages p ON p.id=ps.page_id
+      WHERE ps.id=? AND p.id=?`)
+      .bind(section.legacy_section_id, scope.page.legacy_page_id).first();
+    if (!row || row.status === "removed") return { error: "Section not editable", status: 409 };
+    if (Number(body.expectedVersion) !== Number(row.content_version)) {
+      return { error: "Draft changed since revision load", status: 409 };
+    }
+    const meta = await persistSectionDraft(env, scope.page.slug, row.page_id, key, saved.content, row.sort_order,
+      { expectedVersion: row.content_version });
+    if (meta.error) return meta;
+    const revision = await syncGeneratedRevision(env, scope.page.slug, key, saved.content, meta, { restoredFrom: number });
+    await markPageDraft(env, row.page_id, scope.page.slug);
+    return { ok: true, published: false, section_key: key, version: meta.version, revision_number: revision };
+  }
+
+  const currentVersion = Number(section.content_version || 0);
+  if (Number(body.expectedVersion) !== currentVersion) {
+    return { error: "Draft changed since revision load", status: 409, code: "cms_version_conflict" };
+  }
+  const savedDraft = await writeSectionDraft(env, scope.page.id, key, saved.content, { version: currentVersion });
+  const changed = await env.DB.prepare(`UPDATE cms_page_sections
+    SET content_object_key=?,content_version=?,content_hash=?,status='draft',updated_at=datetime('now')
+    WHERE id=? AND account_id=? AND page_id=? AND content_version=?`)
+    .bind(savedDraft.key, savedDraft.version, savedDraft.content_hash, section.id, accountId, scope.page.id, currentVersion).run();
+  if (d1Changes(changed) !== 1) return { error: "Draft changed since revision load", status: 409, code: "cms_version_conflict" };
+  const latest = await env.DB.prepare(
+    "SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions WHERE account_id=? AND site_id=? AND entity_type='section' AND entity_id=?"
+  ).bind(accountId, scope.site.id, section.id).first();
+  const revisionNumber = Number(latest?.n || 0) + 1;
+  await env.DB.prepare(`INSERT INTO cms_revisions
+    (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,content_object_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,?,'section',?,?,'draft',?,?,?,?)`)
+    .bind(accountId, scope.site.id, section.id, revisionNumber, savedDraft.key, savedDraft.content_hash,
+      JSON.stringify({ content: saved.content, artifactId: saved.artifactId, definitionKey: saved.content.__editor.definitionKey }),
+      JSON.stringify({ source: "agentsam", restoredFrom: number })).run();
+  await env.DB.prepare("UPDATE cms_pages SET status='draft',updated_at=datetime('now') WHERE id=? AND account_id=? AND site_id=?")
+    .bind(scope.page.id, accountId, scope.site.id).run();
+  return { ok: true, published: false, section_key: key, version: savedDraft.version, revision_number: revisionNumber };
 }
 
 export async function updateSection(env, slug, sectionKey, body) {
@@ -996,48 +1666,110 @@ async function sectionContentForRow(env, slug, row) {
  * The normal save path updates canonical block IDs and revision receipts;
  * the source revision object is never mutated or promoted to live content.
  */
-export async function restoreSectionRevision(env, slug, sectionKey, accountId, body = {}) {
-  if (!accountId) return {error:'Account required',status:403};
-  const revisionNumber=Number(body.revision_number);
-  if (!Number.isSafeInteger(revisionNumber) || revisionNumber < 1)
-    return {error:'Valid revision_number required',status:400};
-  const canonical=await env.DB.prepare(
+export async function restoreSectionRevision(env, slug, sectionKey, accountId, body = {}, siteId = null, pageId = null) {
+  if (!accountId) return { error: "Account required", status: 403 };
+  const revisionNumber = Number(body.revision_number ?? body.revisionNumber);
+  if (!Number.isSafeInteger(revisionNumber) || revisionNumber < 1) {
+    return { error: "Valid revision_number required", status: 400 };
+  }
+  const scope = await resolveCmsPageScope(env, accountId, { siteId, pageId, slug });
+  if (scope.error) return scope;
+  if (!(await legacyPageLinkMatches(env, scope.page))) {
+    return { error: "This section uses the site-first revision store", status: 409 };
+  }
+  const canonical = await env.DB.prepare(
     `SELECT s.id,s.legacy_section_id,s.account_id
-      FROM cms_page_sections s JOIN cms_pages p
-        ON p.id=s.page_id AND p.account_id=s.account_id
-      WHERE p.account_id=? AND p.slug=? AND s.section_key=? AND s.status!='removed'
+      FROM cms_page_sections s
+      WHERE s.account_id=? AND s.page_id=? AND s.section_key=? AND s.status NOT IN ('removed','archived')
       LIMIT 1`
-  ).bind(accountId,slug,sectionKey).first();
-  if(!canonical?.legacy_section_id)return {error:'Canonical section not found',status:404};
-  const legacy=await env.DB.prepare(
-    `SELECT id,page_id,sort_order,content_version,status FROM page_sections WHERE id=?`
+  ).bind(accountId, scope.page.id, sectionKey).first();
+  if (!canonical?.legacy_section_id) return { error: "Canonical section not found", status: 404 };
+  const legacy = await env.DB.prepare(
+    "SELECT id,page_id,sort_order,content_version,status FROM page_sections WHERE id=?"
   ).bind(canonical.legacy_section_id).first();
-  if(!legacy||legacy.status==='removed')return {error:'Source section unavailable',status:409};
-  if(body.expected_version!==undefined&&Number(body.expected_version)!==Number(legacy.content_version))
-    return {error:'Draft changed since the requested restore',status:409,code:'cms_version_conflict'};
-  const revision=await env.DB.prepare(
-    `SELECT content_object_key FROM cms_revisions
-       WHERE account_id=? AND entity_type='section' AND entity_id=?
-         AND revision_number=? AND content_object_key IS NOT NULL
-       ORDER BY CASE revision_kind WHEN 'draft' THEN 0 WHEN 'history' THEN 1 ELSE 2 END
-       LIMIT 1`
-  ).bind(accountId,canonical.id,revisionNumber).first();
-  if(!revision?.content_object_key)return {error:'Revision not found',status:404};
-  const snapshot=await readR2Json(env,revision.content_object_key);
-  if(snapshot?.section_key!==sectionKey || !snapshot.content ||
-     typeof snapshot.content!=='object' || Array.isArray(snapshot.content))
-    return {error:'Revision content unavailable or corrupt',status:409};
-  if(snapshot.content.__editor?.generated)
-    return {error:'Use generated-restore for generated sections',status:409};
-  const saved=await persistSectionDraft(env,slug,legacy.page_id,sectionKey,
-    structuredClone(snapshot.content),legacy.sort_order,
-    {expectedVersion:legacy.content_version});
-  if(saved.error)return saved;
-  if(saved.canonical?.status!=='linked')
-    return {error:'Canonical restore synchronization incomplete',status:409};
-  await markPageDraft(env,legacy.page_id,slug);
-  return {ok:true,section_key:sectionKey,restored_revision:revisionNumber,
-    version:saved.version,canonical:saved.canonical};
+  if (!legacy || legacy.status === "removed") return { error: "Source section unavailable", status: 409 };
+  if (body.expected_version !== undefined && Number(body.expected_version) !== Number(legacy.content_version)) {
+    return { error: "Draft changed since the requested restore", status: 409, code: "cms_version_conflict" };
+  }
+  const revision = await env.DB.prepare(`SELECT content_object_key FROM cms_revisions
+    WHERE account_id=? AND site_id=? AND entity_type='section' AND entity_id=?
+      AND revision_number=? AND content_object_key IS NOT NULL
+    ORDER BY CASE revision_kind WHEN 'draft' THEN 0 WHEN 'history' THEN 1 ELSE 2 END LIMIT 1`)
+    .bind(accountId, scope.site.id, canonical.id, revisionNumber).first();
+  if (!revision?.content_object_key) return { error: "Revision not found", status: 404 };
+  const snapshot = await readR2Json(env, revision.content_object_key);
+  if (snapshot?.section_key !== sectionKey || !snapshot.content ||
+      typeof snapshot.content !== "object" || Array.isArray(snapshot.content)) {
+    return { error: "Revision content unavailable or corrupt", status: 409 };
+  }
+  if (snapshot.content.__editor?.generated) {
+    return { error: "Use generated-restore for generated sections", status: 409 };
+  }
+  const saved = await persistSectionDraft(env, scope.page.slug, legacy.page_id, sectionKey,
+    structuredClone(snapshot.content), legacy.sort_order, { expectedVersion: legacy.content_version });
+  if (saved.error) return saved;
+  if (saved.canonical?.status !== "linked") {
+    return { error: "Canonical restore synchronization incomplete", status: 409 };
+  }
+  await markPageDraft(env, legacy.page_id, scope.page.slug);
+  return { ok: true, section_key: sectionKey, restored_revision: revisionNumber,
+    version: saved.version, canonical: saved.canonical };
+}
+
+async function restoreCanonicalPageSectionRevision(env, scope, sectionKey, body = {}) {
+  if (!env.WEBSITE_ASSETS) return { error: "CMS R2 storage is not available", status: 503 };
+  const revisionNumber = Number(body.revision_number ?? body.revisionNumber);
+  if (!Number.isSafeInteger(revisionNumber) || revisionNumber < 1) {
+    return { error: "Valid revision_number required", status: 400 };
+  }
+  const section = await env.DB.prepare(
+    "SELECT * FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('removed','archived') LIMIT 1"
+  ).bind(scope.page.account_id, scope.page.id, sectionKey).first();
+  if (!section) return { error: "Section not found", status: 404 };
+  const revision = await env.DB.prepare(`SELECT content_object_key FROM cms_revisions
+    WHERE account_id=? AND site_id=? AND entity_type='section' AND entity_id=?
+      AND revision_number=? AND content_object_key IS NOT NULL
+    ORDER BY CASE revision_kind WHEN 'draft' THEN 0 WHEN 'history' THEN 1 ELSE 2 END LIMIT 1`)
+    .bind(scope.page.account_id, scope.site.id, section.id, revisionNumber).first();
+  if (!revision?.content_object_key) return { error: "Revision not found", status: 404 };
+  const snapshot = await readR2Json(env, revision.content_object_key);
+  if (snapshot?.section_key !== sectionKey || !snapshot.content ||
+      typeof snapshot.content !== "object" || Array.isArray(snapshot.content)) {
+    return { error: "Revision content unavailable or corrupt", status: 409 };
+  }
+  if (snapshot.content.__editor?.generated) {
+    return { error: "Use generated-restore for generated sections", status: 409 };
+  }
+  const currentVersion = Number(section.content_version || 0);
+  const expectedVersion = Number(body.expected_version ?? body.expectedVersion ?? currentVersion);
+  if (!Number.isInteger(expectedVersion) || expectedVersion !== currentVersion) {
+    return { error: "Draft changed since the requested restore", status: 409, code: "cms_version_conflict" };
+  }
+  const saved = await writeSectionDraft(env, scope.page.id, sectionKey, structuredClone(snapshot.content), {
+    version: currentVersion,
+  });
+  const changed = await env.DB.prepare(`UPDATE cms_page_sections
+    SET content_object_key=?,content_version=?,content_hash=?,status='draft',updated_at=datetime('now')
+    WHERE id=? AND account_id=? AND page_id=? AND content_version=?`)
+    .bind(saved.key, saved.version, saved.content_hash, section.id,
+      scope.page.account_id, scope.page.id, currentVersion).run();
+  if (d1Changes(changed) !== 1) {
+    return { error: "Draft changed since the requested restore", status: 409, code: "cms_version_conflict" };
+  }
+  const latest = await env.DB.prepare(
+    "SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions WHERE account_id=? AND site_id=? AND entity_type='section' AND entity_id=?"
+  ).bind(scope.page.account_id, scope.site.id, section.id).first();
+  const nextRevision = Number(latest?.n || 0) + 1;
+  await env.DB.prepare(`INSERT INTO cms_revisions
+    (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,
+     content_object_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,?,'section',?,?,'draft',?,?,?,?)`)
+    .bind(scope.page.account_id, scope.site.id, section.id, nextRevision, saved.key, saved.content_hash,
+      JSON.stringify({ section_key: sectionKey, content: snapshot.content }),
+      JSON.stringify({ source: "cms-editor-restore", restoredFrom: revisionNumber })).run();
+  await env.DB.prepare("UPDATE cms_pages SET status='draft',updated_at=datetime('now') WHERE id=? AND account_id=? AND site_id=?")
+    .bind(scope.page.id, scope.page.account_id, scope.site.id).run();
+  return { ok: true, section_key: sectionKey, restored_revision: revisionNumber, version: saved.version };
 }
 
 /**
@@ -1147,7 +1879,80 @@ export async function installCatalogResource(env, slug, accountId, body = {}) {
   };
 }
 
-export async function listInstalledCatalogResources(env, slug, accountId) {
+async function installCanonicalCatalogResource(env, scope, body = {}) {
+  if (!env.WEBSITE_ASSETS) return { error: "CMS R2 storage is not available", status: 503 };
+  const template = resolveCatalogTemplate(body.catalogKey || body.catalog_key || body.key);
+  if (!template) return { error: "Unknown or non-installable catalog template", status: 400 };
+  const rows = await env.DB.prepare(
+    "SELECT id,section_key,sort_order FROM cms_page_sections WHERE account_id=? AND page_id=? AND status NOT IN ('archived','removed') ORDER BY sort_order,id"
+  ).bind(scope.page.account_id, scope.page.id).all();
+  const base = sectionKeyBase(template.key);
+  let sectionKey = `${base}-${crypto.randomUUID().slice(0, 8)}`;
+  while ((rows.results || []).some(row => row.section_key === sectionKey)) {
+    sectionKey = `${base}-${crypto.randomUUID().slice(0, 8)}`;
+  }
+  const content = buildCatalogInstanceContent(template, body.settings || body.config || {});
+  const id = "cmss_" + crypto.randomUUID().replaceAll("-", "").slice(0, 20);
+  const ordered = [...(rows.results || []).map(row => ({ id: row.id }))];
+  const requestedIndex = Number(body.toIndex);
+  const toIndex = Number.isInteger(requestedIndex)
+    ? Math.max(0, Math.min(requestedIndex, ordered.length))
+    : ordered.length;
+  ordered.splice(toIndex, 0, { id });
+  const sortOrder = ordered.findIndex(row => row.id === id) * 10;
+  const saved = await writeSectionDraft(env, scope.page.id, sectionKey, content, { version: 0 });
+  for (let index = 0; index < ordered.length; index += 1) {
+    if (ordered[index].id === id) continue;
+    await env.DB.prepare("UPDATE cms_page_sections SET sort_order=?,updated_at=datetime('now') WHERE id=? AND account_id=? AND page_id=?")
+      .bind(index * 10, ordered[index].id, scope.page.account_id, scope.page.id).run();
+  }
+  await env.DB.prepare(`INSERT INTO cms_page_sections
+    (id,account_id,page_id,section_key,section_type,sort_order,status,inline_content_json,
+     content_object_key,content_version,content_hash,metadata_json)
+    VALUES (?,?,?,?,?,?,'draft','{}',?,?,?,?)`)
+    .bind(id, scope.page.account_id, scope.page.id, sectionKey, "storefront_embed", sortOrder,
+      saved.key, saved.version, saved.content_hash,
+      JSON.stringify({ source: "catalog-install", catalogKey: template.key, artifactBacked: true })).run();
+  try {
+    await reconcileCanonicalBlocks(env.DB, {
+      accountId: scope.page.account_id,
+      sectionId: id,
+      content,
+      previousContent: {},
+      siteId: scope.site.id,
+    });
+  } catch (error) {
+    await env.DB.prepare("UPDATE cms_page_sections SET status='removed',updated_at=datetime('now') WHERE id=? AND account_id=? AND page_id=?")
+      .bind(id, scope.page.account_id, scope.page.id).run();
+    return { error: "Catalog install could not be projected into canonical CMS blocks: " + String(error?.code || error?.message || error),
+      status: 409, code: "cms_catalog_install_unlinked" };
+  }
+  await env.DB.prepare(`INSERT INTO cms_revisions
+    (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,
+     content_object_key,content_hash,snapshot_json,metadata_json)
+    VALUES (?,?,'section',?,1,'draft',?,?,?,?)`)
+    .bind(scope.page.account_id, scope.site.id, id, saved.key, saved.content_hash,
+      JSON.stringify({ content, catalogKey: template.key }),
+      JSON.stringify({ source: "catalog-install", catalogKey: template.key })).run();
+  await env.DB.prepare("UPDATE cms_pages SET status='draft',updated_at=datetime('now') WHERE id=? AND account_id=? AND site_id=?")
+    .bind(scope.page.id, scope.page.account_id, scope.site.id).run();
+  const composition = await readCanonicalComposition(env, scope.page.account_id, scope.page.slug, scope.site.id);
+  const projected = composition?.sections?.find(section => section.key === sectionKey) || null;
+  const installed = projected ? {
+    ...projected,
+    settings: await canonicalSectionContent(env, {
+      content_object_key: projected.contentObjectKey,
+      inline_content_json: JSON.stringify(projected.settings || {}),
+    }),
+  } : null;
+  return {
+    ok: true, section_key: sectionKey, catalog_key: template.key,
+    definition_key: template.key, template_key: content.__editor.templateKey,
+    version: saved.version, canonical: { status: "linked" }, instance: installed,
+  };
+}
+
+export async function listInstalledCatalogResources(env, slug, accountId, siteId = null, pageId = null) {
   if (!accountId) return { error: "Account required", status: 403 };
   const catalog = loadEmbedCatalog().apps.map((app) => ({
     key: app.key,
@@ -1156,20 +1961,32 @@ export async function listInstalledCatalogResources(env, slug, accountId) {
     installable: Array.isArray(app.surfaces) &&
       (app.surfaces.includes("cms_block") || app.surfaces.includes("storefront_embed")),
   }));
-  const composition = await readCanonicalComposition(env, accountId, slug);
+  const scope = await resolveCmsPageScope(env, accountId, { siteId, pageId, slug });
+  if (scope.error) {
+    if (pageId) return scope;
+    return { ok: true, slug, catalog, installed: [], authority: null };
+  }
+  const composition = await readCanonicalComposition(env, accountId, scope.page.slug, scope.site.id);
   if (!composition) {
     return { ok: true, slug, catalog, installed: [], authority: null };
   }
   const installed = [];
   for (const section of composition.sections) {
-    const settings = section.settings || {};
+    // Canonical section bodies live in R2; the D1 inline JSON is deliberately
+    // only a pointer placeholder on site-first pages.
+    const settings = await canonicalSectionContent(env, {
+      content_object_key: section.contentObjectKey,
+      inline_content_json: JSON.stringify(section.settings || {}),
+    });
     if (!isCatalogInstalledContent(settings) && section.type !== "storefront_embed") continue;
     const editor = settings.__editor || {};
+    const metadata = section.metadata || {};
+    const catalogKey = editor.catalogKey || metadata.catalogKey || null;
     installed.push({
       section_id: section.id,
       section_key: section.key,
-      catalog_key: editor.catalogKey || null,
-      definition_key: editor.definitionKey || editor.catalogKey || null,
+      catalog_key: catalogKey,
+      definition_key: editor.definitionKey || catalogKey,
       status: section.status,
       enabled: editor.visibility?.enabled !== false,
       version: section.contentVersion,
@@ -1782,38 +2599,52 @@ export async function handlePublicCmsApi(request, env, url) {
  * Install or revise a semantic section in the existing private draft.
  * The generator stream itself never writes D1 or publishes anything.
  */
-export async function acceptGeneratedSection(env, slug, accountId, body = {}) {
-  if (!accountId) return { error:"Account required",status:403 };
-  const page = await loadPageRow(env,slug);
-  if (!page) return { error:"Open a private working draft before installing generated sections",status:409 };
-  const site = await resolveCmsSite(env.DB, { accountId, createDefault: true });
-  const canonical = await env.DB.prepare("SELECT id,site_id FROM cms_pages WHERE account_id = ? AND site_id = ? AND slug = ?").bind(accountId,site.id,slug).first();
-  if (!canonical) return {error:"Canonical CMS page is not available for this account",status:409};
+export async function acceptGeneratedSection(env, slug, accountId, body = {}, siteId = null, pageId = null) {
+  if (!accountId) return { error: "Account required", status: 403 };
+  const scope = await resolveCmsPageScope(env, accountId, { siteId, pageId, slug });
+  if (scope.error) return scope;
+  const pageSlug = scope.page.slug;
+  const legacyBacked = await legacyPageLinkMatches(env, scope.page);
+  const legacyPage = legacyBacked ? await loadPageRow(env, pageSlug) : null;
+  if (legacyBacked && (!legacyPage || Number(legacyPage.id) !== Number(scope.page.legacy_page_id))) {
+    return { error: "The legacy page identity no longer matches this site", status: 409 };
+  }
 
   const existingKey = String(body.sectionKey || "");
   const replacing = Boolean(existingKey);
   let current = null;
   if (replacing) {
-    if (!/^[a-z][a-z0-9-]{1,63}$/.test(existingKey)) return {error:"Invalid section key",status:422};
-    const row = await env.DB.prepare("SELECT id,content_version,sort_order FROM page_sections WHERE page_id = ? AND section_key = ? AND status != 'removed'")
-      .bind(page.id,existingKey).first();
-    if (!row) return {error:"Generated section not found",status:404};
-    const draft = await readSectionContent(env,slug,existingKey);
-    if (!draft?.content?.__editor?.generated) return {error:"Cannot replace a built-in section with generated code",status:409};
-    if (Number(body.expectedVersion) !== Number(row.content_version)) return {error:"Draft changed since last edit",status:409};
-    if (draft.content.__editor.definitionKey !== body.record?.definition?.type) return {error:"Changing the semantic section type is not supported",status:422};
+    if (!/^[a-z][a-z0-9-]{1,63}$/.test(existingKey)) return { error: "Invalid section key", status: 422 };
+    const row = legacyBacked
+      ? await env.DB.prepare("SELECT id,content_version,sort_order FROM page_sections WHERE page_id=? AND section_key=? AND status!='removed'")
+        .bind(legacyPage.id, existingKey).first()
+      : await env.DB.prepare("SELECT id,content_version,sort_order FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=? AND status NOT IN ('archived','removed')")
+        .bind(accountId, scope.page.id, existingKey).first();
+    if (!row) return { error: "Generated section not found", status: 404 };
+    const draft = legacyBacked
+      ? await readSectionContent(env, pageSlug, existingKey)
+      : { content: await canonicalSectionContent(env, await env.DB.prepare(
+          "SELECT * FROM cms_page_sections WHERE id=? AND account_id=? AND page_id=?"
+        ).bind(row.id, accountId, scope.page.id).first()) };
+    if (!draft?.content?.__editor?.generated) return { error: "Cannot replace a built-in section with generated code", status: 409 };
+    if (Number(body.expectedVersion) !== Number(row.content_version)) return { error: "Draft changed since last edit", status: 409 };
+    if (draft.content.__editor.definitionKey !== body.record?.definition?.type) {
+      return { error: "Changing the semantic section type is not supported", status: 422 };
+    }
     current = { row, draft };
   }
+
   const type = String(body.record?.definition?.type || "");
-  const sectionKey = existingKey || (type.slice(0,28) + "-" + crypto.randomUUID().slice(0,8));
+  const sectionKey = existingKey || (type.slice(0, 28) + "-" + crypto.randomUUID().slice(0, 8));
   let written;
   try {
-    written = await persistGeneratedImplementation(env,accountId,body.record,sectionKey,body.provenance || {});
-  } catch(error) {
-    return {error:"Unable to persist generated artifact: " + error.message,status:500};
+    written = await persistGeneratedImplementation(env, accountId, body.record, sectionKey, body.provenance || {});
+  } catch (error) {
+    return { error: "Unable to persist generated artifact: " + error.message, status: 500 };
   }
   if (!written.ok) return written;
-  const content = { ...written.settings,
+  const content = {
+    ...written.settings,
     __editor: {
       ...(current?.draft?.content?.__editor || {}),
       templateKey: written.type,
@@ -1822,47 +2653,101 @@ export async function acceptGeneratedSection(env, slug, accountId, body = {}) {
       artifactId: written.artifactId,
       generatedSettingsSchema: written.fields,
       generatedSettings: written.settings,
-      implementationClass: 'artifact_static',
+      implementationClass: "artifact_static",
       generated: true,
-      source:"agentsam",
-      visibility: current?.draft?.content?.__editor?.visibility || {enabled:true},
+      source: "agentsam",
+      visibility: current?.draft?.content?.__editor?.visibility || { enabled: true },
     },
   };
-  const position = current?.row?.sort_order ??
-    (Number((await env.DB.prepare("SELECT MAX(sort_order) AS n FROM page_sections WHERE page_id = ?").bind(page.id).first())?.n || 0) + 10);
-  const meta = await persistSectionDraft(env,slug,page.id,sectionKey,content,position,
-    {expectedVersion: replacing ? body.expectedVersion : 0});
-  if (meta.error) return meta;
+  const position = current?.row?.sort_order ?? Number((await env.DB.prepare(
+    legacyBacked
+      ? "SELECT MAX(sort_order) AS n FROM page_sections WHERE page_id=?"
+      : "SELECT MAX(sort_order) AS n FROM cms_page_sections WHERE account_id=? AND page_id=?"
+  ).bind(...(legacyBacked ? [legacyPage.id] : [accountId, scope.page.id])).first())?.n || 0) + 10;
 
-  const legacy = await env.DB.prepare("SELECT id FROM page_sections WHERE page_id = ? AND section_key = ?")
-    .bind(page.id,sectionKey).first();
-  await env.DB.prepare(`INSERT INTO cms_page_sections
-    (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_object_key,content_version,content_hash,metadata_json)
-    VALUES (?,?,?,?,?,?,'draft',?,?,?,?)
-    ON CONFLICT(page_id,section_key) DO UPDATE SET section_type=excluded.section_type,
-      sort_order=excluded.sort_order,status='draft',content_object_key=excluded.content_object_key,
-      content_version=excluded.content_version,content_hash=excluded.content_hash,
-      metadata_json=excluded.metadata_json,updated_at=datetime('now')`)
-    .bind(accountId,canonical.id,legacy?.id ?? null,sectionKey,written.type,position,
-      meta.key,meta.version,meta.content_hash,JSON.stringify({definitionKey:written.type,artifactId:written.artifactId})).run();
-  const section = await env.DB.prepare("SELECT id FROM cms_page_sections WHERE account_id = ? AND page_id = ? AND section_key = ?")
-    .bind(accountId,canonical.id,sectionKey).first();
-  const latest = await env.DB.prepare("SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions WHERE account_id = ? AND entity_type = 'section' AND entity_id = ?")
-    .bind(accountId,section.id).first();
+  if (legacyBacked) {
+    const meta = await persistSectionDraft(env, pageSlug, legacyPage.id, sectionKey, content, position,
+      { expectedVersion: replacing ? body.expectedVersion : 0 });
+    if (meta.error) return meta;
+    const legacy = await env.DB.prepare("SELECT id FROM page_sections WHERE page_id=? AND section_key=?")
+      .bind(legacyPage.id, sectionKey).first();
+    await env.DB.prepare(`INSERT INTO cms_page_sections
+      (account_id,page_id,legacy_section_id,section_key,section_type,sort_order,status,content_object_key,content_version,content_hash,metadata_json)
+      VALUES (?,?,?,?,?,?,'draft',?,?,?,?)
+      ON CONFLICT(page_id,section_key) DO UPDATE SET section_type=excluded.section_type,
+        sort_order=excluded.sort_order,status='draft',content_object_key=excluded.content_object_key,
+        content_version=excluded.content_version,content_hash=excluded.content_hash,
+        metadata_json=excluded.metadata_json,updated_at=datetime('now')`)
+      .bind(accountId, scope.page.id, legacy?.id ?? null, sectionKey, written.type, position,
+        meta.key, meta.version, meta.content_hash, JSON.stringify({ definitionKey: written.type, artifactId: written.artifactId })).run();
+    const section = await env.DB.prepare(
+      "SELECT id FROM cms_page_sections WHERE account_id=? AND page_id=? AND section_key=?"
+    ).bind(accountId, scope.page.id, sectionKey).first();
+    const latest = await env.DB.prepare(
+      "SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions WHERE account_id=? AND entity_type='section' AND entity_id=?"
+    ).bind(accountId, section.id).first();
+    const revisionNumber = Number(latest?.n || 0) + 1;
+    await env.DB.prepare(`INSERT INTO cms_revisions
+      (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,content_object_key,content_hash,snapshot_json,metadata_json)
+      VALUES (?,?,'section',?,?,'draft',?,?,?,?)`)
+      .bind(accountId, scope.site.id, section.id, revisionNumber, meta.key, meta.content_hash,
+        JSON.stringify({ content, artifactId: written.artifactId, definitionKey: written.type }),
+        JSON.stringify({ source: "agentsam", version: written.version })).run();
+    await markPageDraft(env, legacyPage.id, pageSlug);
+    return { ok: true, published: false, section_key: sectionKey, artifact_id: written.artifactId,
+      definition_key: written.type, version: meta.version, revision_number: revisionNumber };
+  }
+
+  const currentVersion = Number(current?.row?.content_version || 0);
+  const saved = await writeSectionDraft(env, scope.page.id, sectionKey, content, { version: currentVersion });
+  let sectionId = current?.row?.id || ("cmss_" + crypto.randomUUID().replaceAll("-", "").slice(0, 20));
+  if (current) {
+    const changed = await env.DB.prepare(`UPDATE cms_page_sections
+      SET section_type=?,sort_order=?,status='draft',content_object_key=?,content_version=?,content_hash=?,
+          metadata_json=?,updated_at=datetime('now')
+      WHERE id=? AND account_id=? AND page_id=? AND content_version=?`)
+      .bind(written.type, position, saved.key, saved.version, saved.content_hash,
+        JSON.stringify({ definitionKey: written.type, artifactId: written.artifactId }),
+        sectionId, accountId, scope.page.id, currentVersion).run();
+    if (d1Changes(changed) !== 1) return { error: "Draft changed since last edit", status: 409, code: "cms_version_conflict" };
+  } else {
+    await env.DB.prepare(`INSERT INTO cms_page_sections
+      (id,account_id,page_id,section_key,section_type,sort_order,status,inline_content_json,
+       content_object_key,content_version,content_hash,metadata_json)
+      VALUES (?,?,?,?,?,?,'draft','{}',?,?,?,?)`)
+      .bind(sectionId, accountId, scope.page.id, sectionKey, written.type, position,
+        saved.key, saved.version, saved.content_hash,
+        JSON.stringify({ definitionKey: written.type, artifactId: written.artifactId })).run();
+  }
+  const latest = await env.DB.prepare(
+    "SELECT COALESCE(MAX(revision_number),0) AS n FROM cms_revisions WHERE account_id=? AND site_id=? AND entity_type='section' AND entity_id=?"
+  ).bind(accountId, scope.site.id, sectionId).first();
+  const revisionNumber = Number(latest?.n || 0) + 1;
   await env.DB.prepare(`INSERT INTO cms_revisions
     (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,content_object_key,content_hash,snapshot_json,metadata_json)
-    VALUES (?,?, 'section',?,?,'draft',?,?,?,?)`)
-    .bind(accountId,canonical.site_id,section.id,Number(latest?.n||0)+1,meta.key,meta.content_hash,
-      JSON.stringify({content,artifactId:written.artifactId,definitionKey:written.type}),
-      JSON.stringify({source:"agentsam",version:written.version})).run();
-  await markPageDraft(env,page.id,slug);
-  return {ok:true,published:false,section_key:sectionKey,artifact_id:written.artifactId,
-    definition_key:written.type,version:meta.version,revision_number:Number(latest?.n||0)+1};
+    VALUES (?,?,'section',?,?,'draft',?,?,?,?)`)
+    .bind(accountId, scope.site.id, sectionId, revisionNumber, saved.key, saved.content_hash,
+      JSON.stringify({ content, artifactId: written.artifactId, definitionKey: written.type }),
+      JSON.stringify({ source: "agentsam", version: written.version })).run();
+  await env.DB.prepare("UPDATE cms_pages SET status='draft',updated_at=datetime('now') WHERE id=? AND account_id=? AND site_id=?")
+    .bind(scope.page.id, accountId, scope.site.id).run();
+  return { ok: true, published: false, section_key: sectionKey, artifact_id: written.artifactId,
+    definition_key: written.type, version: saved.version, revision_number: revisionNumber };
 }
 
 export async function handleAdminCmsApi(request, env, url, context = {}) {
   const path = url.pathname;
   const method = request.method;
+  const siteId = url.searchParams.get("site_id") || null;
+  const pageId = url.searchParams.get("page_id") || null;
+  const pageMode = async (slug) => {
+    const scope = await resolveCmsPageScope(env, context.accountId, { siteId, pageId, slug });
+    if (scope.error) {
+      if (scope.site?.is_default && !pageId) return { legacy: true, fallback: true };
+      return scope;
+    }
+    return { scope, canonical: !(await legacyPageLinkMatches(env, scope.page)) };
+  };
 
   if (path === "/api/admin/cms/warm" && method === "POST") {
     const { warmAllCmsPages } = await import("./deploy.js");
@@ -1871,14 +2756,14 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
 
   const historyMatch = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/generated-revisions$/);
   if (historyMatch && method === "GET") {
-    const result=await listGeneratedRevisions(env,historyMatch[1],historyMatch[2],context.accountId);
+    const result = await listGeneratedRevisions(env, historyMatch[1], historyMatch[2], context.accountId, siteId, pageId);
     return json(result,{status:result.status||200});
   }
   const restoreMatch = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/generated-restore$/);
   if (restoreMatch && method === "POST") {
     let body;
     try {body=await request.json();} catch {return json({error:"Invalid JSON"},{status:400});}
-    const result=await restoreGeneratedRevision(env,restoreMatch[1],restoreMatch[2],context.accountId,body);
+    const result = await restoreGeneratedRevision(env, restoreMatch[1], restoreMatch[2], context.accountId, body, siteId, pageId);
     return json(result,{status:result.status||200});
   }
 
@@ -1887,7 +2772,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     let body;
     try { body = await request.json(); }
     catch { return json({error:"Invalid JSON"}, {status:400}); }
-    const result = await acceptGeneratedSection(env,generatedMatch[1],context.accountId,body);
+    const result = await acceptGeneratedSection(env, generatedMatch[1], context.accountId, body, siteId, pageId);
     return json(result,{status:result.status || 200});
   }
 
@@ -2016,17 +2901,26 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   if (path === "/api/admin/cms/pages" && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     try {
-      return json(await listPagesAdmin(env, context.accountId, url.searchParams.get("site_id") || null));
+      return json(await listPagesAdmin(env, context.accountId, siteId));
     } catch (error) {
       const message = String(error?.message || error);
       return json({ error: message }, { status: /not_found|required/.test(message) ? 404 : 400 });
     }
   }
+  if (path === "/api/admin/cms/pages" && method === "POST") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const result = await createPageAdmin(env, context.accountId, siteId, body);
+    if (result.error) return json({ error: result.error }, { status: result.status || 400 });
+    return json(result, { status: 201 });
+  }
 
   let m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)$/);
   if (m && method === "GET") {
-    const data = await getPageAdmin(env, m[1]);
-    if (!data) return json({ error: "Page not found" }, { status: 404 });
+    const data = await getPageAdminForSite(env, context.accountId, m[1], siteId, pageId);
+    if (!data) return json({ error: "Page not found in the selected site" }, { status: 404 });
     return json(data);
   }
   if (m && method === "PUT") {
@@ -2036,13 +2930,18 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
-    const result = await updatePageMeta(env, m[1], body);
-    if (result.error) return json({ error: result.error }, { status: result.status });
+    const result = await updatePageMetaForSite(env, context.accountId, m[1], siteId, pageId, body);
+    if (result.error) return json({ error: result.error }, { status: result.status || 400 });
     return json(result);
   }
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/publish$/);
   if (m && method === "POST") {
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    if (mode.canonical) {
+      return json({ error: "This page needs an installed, verified theme renderer before it can be published", code: "cms_page_renderer_required" }, { status: 409 });
+    }
     const result = await publishPage(env, m[1]);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
@@ -2050,7 +2949,12 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/seed$/);
   if (m && method === "POST") {
-    const result = await seedPageFromRegistry(env, m[1]);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    if (mode.canonical) {
+      return json({ error: "Registry seeding is only available for legacy-backed pages; use the site-scoped section catalog instead", status: 409 }, { status: 409 });
+    }
+    const result = await seedPageFromRegistry(env, mode.scope.page.slug);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
@@ -2060,7 +2964,12 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     let body;
     try { body = await request.json(); }
     catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
-    const result = await importLivePageDraft(env, m[1], body);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    if (mode.canonical) {
+      return json({ error: "Live-source reconciliation is not yet supported for site-first pages. Existing content remains unchanged.", code: "cms_live_import_legacy_only" }, { status: 409 });
+    }
+    const result = await importLivePageDraft(env, mode.scope.page.slug, body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
@@ -2068,7 +2977,9 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/catalog-resources$/);
   if (m && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    const result = await listInstalledCatalogResources(env, m[1], context.accountId);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = await listInstalledCatalogResources(env, m[1], context.accountId, siteId, pageId);
     if (result.error) return json({ error: result.error }, { status: result.status || 400 });
     return json(result);
   }
@@ -2080,7 +2991,11 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
-    const result = await installCatalogResource(env, m[1], context.accountId, body);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await installCanonicalCatalogResource(env, mode.scope, body)
+      : await installCatalogResource(env, mode.scope.page.slug, context.accountId, body);
     if (result.error) return json(result, { status: result.status || 400 });
     return json(result, { status: 201 });
   }
@@ -2095,9 +3010,13 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     }
     const generatedGate = await guardSectionWrite(body);
     if (!generatedGate.ok) return json({ error: generatedGate.error }, { status: generatedGate.status });
-    const result = await insertSection(env, m[1], body);
-    if (result.error) return json({ error: result.error }, { status: result.status });
-    return json(result);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await insertCanonicalPageSection(env, mode.scope, body)
+      : await insertSection(env, m[1], body);
+    if (result.error) return json({ error: result.error }, { status: result.status || 400 });
+    return json(result, { status: 201 });
   }
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/duplicate$/);
@@ -2108,7 +3027,11 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       /* optional body */
     }
-    const result = await duplicateSection(env, m[1], m[2], body);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await duplicateCanonicalPageSection(env, mode.scope, m[2])
+      : await duplicateSection(env, m[1], m[2], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
@@ -2121,7 +3044,11 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
-    const result = await moveSection(env, m[1], m[2], body);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await moveCanonicalPageSection(env, mode.scope, m[2], body)
+      : await moveSection(env, m[1], m[2], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
@@ -2134,7 +3061,11 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
-    const result = await setSectionVisibility(env, m[1], m[2], body);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await setCanonicalPageSectionVisibility(env, mode.scope, m[2], body)
+      : await setSectionVisibility(env, m[1], m[2], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
@@ -2144,7 +3075,11 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   if(m && method === 'POST'){
     let body;
     try{body=await request.json();}catch{return json({error:'Invalid JSON'},{status:400});}
-    const result=await restoreSectionRevision(env,m[1],m[2],context.accountId,body);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await restoreCanonicalPageSectionRevision(env, mode.scope, m[2], body)
+      : await restoreSectionRevision(env, m[1], m[2], context.accountId, body, siteId, pageId);
     return json(result,{status:result.status||200});
   }
 
@@ -2158,14 +3093,22 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     }
     const generatedGate = await guardSectionWrite(body);
     if (!generatedGate.ok) return json({ error: generatedGate.error }, { status: generatedGate.status });
-    const result = await insertBlock(env, m[1], m[2], body);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await insertCanonicalPageBlock(env, mode.scope, m[2], body)
+      : await insertBlock(env, m[1], m[2], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/blocks\/([a-z0-9-]+)\/duplicate$/);
   if (m && method === "POST") {
-    const result = await duplicateBlock(env, m[1], m[2], m[3]);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await duplicateCanonicalPageBlock(env, mode.scope, m[2], m[3])
+      : await duplicateBlock(env, m[1], m[2], m[3]);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
@@ -2178,14 +3121,22 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
-    const result = await moveBlock(env, m[1], m[2], m[3], body);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await moveCanonicalPageBlock(env, mode.scope, m[2], m[3], body)
+      : await moveBlock(env, m[1], m[2], m[3], body);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
 
   m = path.match(/^\/api\/admin\/cms\/pages\/([a-z0-9-]+)\/sections\/([a-z0-9-]+)\/blocks\/([a-z0-9-]+)$/);
   if (m && method === "DELETE") {
-    const result = await removeBlock(env, m[1], m[2], m[3]);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await removeCanonicalPageBlock(env, mode.scope, m[2], m[3])
+      : await removeBlock(env, m[1], m[2], m[3]);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }
@@ -2200,12 +3151,20 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     }
     const generatedGate = await guardSectionWrite(body);
     if (!generatedGate.ok) return json({ error: generatedGate.error }, { status: generatedGate.status });
-    const result = await updateSection(env, m[1], m[2], body);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await updateCanonicalPageSection(env, mode.scope, m[2], body)
+      : await updateSection(env, m[1], m[2], body);
     if (result.error) return json(result, { status: result.status });
     return json(result);
   }
   if (m && method === "DELETE") {
-    const result = await removeSection(env, m[1], m[2]);
+    const mode = await pageMode(m[1]);
+    if (mode.error) return json({ error: mode.error }, { status: mode.status || 404 });
+    const result = mode.canonical
+      ? await removeCanonicalPageSection(env, mode.scope, m[2])
+      : await removeSection(env, m[1], m[2]);
     if (result.error) return json({ error: result.error }, { status: result.status });
     return json(result);
   }

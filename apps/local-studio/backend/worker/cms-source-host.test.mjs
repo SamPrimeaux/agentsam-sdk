@@ -11,13 +11,20 @@ test('Theme Studio uses the registered CMS page list, R2 HTML source, and D1 ver
   const html = '<!doctype html><html><body>Real R2 docs</body></html>';
   const fakeWindow = {};
   const context = {
-    location: { pathname: '/admin/theme-editor', search: '?slug=sam-docs' },
+    location: {
+      pathname: '/admin/theme-editor',
+      search: '?slug=sam-docs&source=html&site=agentsam-sdk',
+      href: 'https://studio.test/admin/theme-editor?slug=sam-docs&source=html&site=agentsam-sdk',
+    },
     window: fakeWindow,
     URLSearchParams,
     history: { replaceState() {} },
-    URL: class {},
+    URL,
     fetch: async (url, options = {}) => {
       calls.push({ url, options });
+      if (url === '/api/cms/sites') return {
+        ok: true, json: async () => ({ ok: true, sites: [{ id: 'site-sdk', slug: 'agentsam-sdk', name: 'AgentSam SDK' }] })
+      };
       if (url.includes('/draft?')) return { ok: true, json: async () => ({ ok: true, version: 4 }) };
       if (url.includes('/sam-docs?')) return { ok: true, json: async () => ({ ok: true, page, html, source: 'published' }) };
       return { ok: true, json: async () => ({ ok: true, pages: [page] }) };
@@ -25,6 +32,7 @@ test('Theme Studio uses the registered CMS page list, R2 HTML source, and D1 ver
     Error, JSON, Date, Object
   };
   runInNewContext(script, context);
+  await new Promise(resolve => setImmediate(resolve));
   const host = fakeWindow.AgentSamThemeEditorHost;
   assert.equal(host.page, 'sam-docs');
   assert.equal(host.adapter.capabilities.publish, false);
@@ -47,4 +55,16 @@ test('Theme Studio uses the registered CMS page list, R2 HTML source, and D1 ver
   assert.equal(draftRequest.options.method, 'PUT');
   assert.equal(JSON.parse(draftRequest.options.body).expected_version, 3);
   assert.equal(draftRequest.url.includes('site=agentsam-sdk'), true);
+});
+
+
+test('legacy source adapter stays out of the canonical site-first Theme Editor', () => {
+  const fakeWindow = {};
+  runInNewContext(script, {
+    location: { pathname: '/admin/theme-editor', search: '?slug=about&site_id=site-a&page_id=cmsp_123' },
+    window: fakeWindow,
+    URLSearchParams,
+  });
+  assert.equal(fakeWindow.AgentSamThemeEditorHost, undefined);
+  assert.equal(fakeWindow.__agentsamCmsSourceHost, undefined);
 });

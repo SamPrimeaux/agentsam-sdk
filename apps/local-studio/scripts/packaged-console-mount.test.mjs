@@ -416,3 +416,27 @@ test('hosted product links update the same-origin containing app while preservin
   assert.equal(visit('/admin/content'),false);
   assert.deepEqual(navigated,[['navigate','/admin/products']]);
 });
+
+
+test('legacy R2 HTML source editor mounts only when explicitly selected', async () => {
+  const env = {
+    fetch() {
+      return Promise.resolve(new Response('<html><head></head><body><script src="/admin/js/shell.js"></script>theme editor</body></html>', {
+        headers: { 'content-type': 'text/html' },
+      }));
+    },
+  };
+  const canonical = await servePackagedConsole(
+    new Request('https://agentsam.inneranimalmedia.com/admin/theme-editor?slug=home'),
+    env,
+  );
+  assert.equal(canonical.status, 200);
+  assert.doesNotMatch(await canonical.text(), /studio-cms-source-host/);
+
+  const source = await servePackagedConsole(
+    new Request('https://agentsam.inneranimalmedia.com/admin/theme-editor?slug=sam-docs&source=html&site=agentsam-sdk'),
+    env,
+  );
+  assert.equal(source.status, 200);
+  assert.match(await source.text(), /studio-cms-source-host\.js/);
+});

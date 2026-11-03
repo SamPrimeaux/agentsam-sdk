@@ -215,10 +215,17 @@ export async function createThemeDraft(id: string | null, name: string) {
 }
 
 export function openThemeProject(id: string) {
-  // Open the existing CMS editor directly. The app-shell wrapper was a second
-  // navigation layer and obscured the canonical installed-project URL.
-  const params = new URLSearchParams({ project: id });
-  window.location.assign('/admin/theme-project-editor?' + params.toString());
+  // The real editor belongs to the installed Ecommerce CMS application.
+  // Keep its canonical /admin/theme-project-editor URL inside the app host;
+  // direct /admin navigation bypasses routing in native Tauri Local Studio.
+  if (!/^[A-Za-z0-9_-]{1,160}$/.test(id)) throw new Error('theme_project_id_invalid');
+  const page = '/admin/theme-project-editor?' + new URLSearchParams({ project: id });
+  const destination = '/apps/ecommerce-cms-agentsam?' + new URLSearchParams({ page });
+  if (window.location.hash.startsWith('#/')) {
+    window.location.hash = '#' + destination;
+  } else {
+    window.location.assign(destination);
+  }
 }
 
 export const themeManagement = {

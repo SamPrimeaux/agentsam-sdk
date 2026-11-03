@@ -10,16 +10,28 @@ const te = new TextEncoder();
 
 const SEG=/^[a-z0-9-]+$/i;
 export function isAllowedStudioCmsBridgeRoute(tail,method) {
-  if(tail==='registry'||tail==='pages'||tail==='store/online')return method==='GET';
+  if(tail==='registry'||tail==='store/online')return method==='GET';
+  if(tail==='pages'||tail==='theme-projects')return ['GET','POST'].includes(method);
+  if(tail==='themes')return method==='GET';
+  if(tail==='theme-selection')return method==='PUT';
   const s=tail.split('/');
+  // Private Theme Studio project reads/saves and installations only.
+  if(s[0]==='theme-projects'&&s.length===2&&/^[A-Za-z0-9_-]{1,160}$/.test(s[1]))
+    return ['GET','PUT'].includes(method);
+  if(s[0]==='themes'&&s.length===3&&SEG.test(s[1])&&s[2]==='install')
+    return method==='POST';
   if(s[0]!=='pages'||!SEG.test(s[1]||''))return false;
   const rest=s.slice(2);
   if(rest.length===0)return ['GET','PUT'].includes(method);
-  if(rest.length===1&&rest[0]==='publish')return method==='POST';
+  if(rest.length===1&&['publish','generated-accept','seed','import-live'].includes(rest[0]))return method==='POST';
+  if(rest.length===1&&rest[0]==='catalog-resources')return ['GET','POST'].includes(method);
   if(rest[0]!=='sections')return false;
   if(rest.length===1)return method==='POST';
   if(!SEG.test(rest[1]||''))return false;
   if(rest.length===2)return ['PUT','DELETE'].includes(method);
+  if(rest.length===3&&rest[2]==='generated-revisions')return method==='GET';
+  if(rest.length===3&&rest[2]==='generated-restore')return method==='POST';
+  if(rest.length===3&&rest[2]==='restore')return method==='POST';
   if(rest.length===3&&['duplicate','move'].includes(rest[2]))return method==='POST';
   if(rest.length===3&&rest[2]==='visibility')return method==='PUT';
   if(rest[2]!=='blocks')return false;
@@ -39,7 +51,7 @@ export function cmsBridgeCanonical({ timestamp, nonce, actor, project, method, p
 }
 async function bodyDigest(request) {
   const bytes = await request.clone().arrayBuffer();
-  if (bytes.byteLength > 2_000_000) throw new Error('cms_bridge_payload_too_large');
+  if (bytes.byteLength > 9 * 1024 * 1024) throw new Error('cms_bridge_payload_too_large');
   return digestHex(await crypto.subtle.digest('SHA-256', bytes));
 }
 async function mac(secret, canonical) {

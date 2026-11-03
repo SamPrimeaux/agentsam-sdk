@@ -7,7 +7,10 @@ import { chromium } from 'playwright';
 
 const root = resolve(import.meta.dirname, '..');
 const source = resolve(root, '../ecommerce-cms-agentsam/frontend/store/mount.mjs');
-const assets = resolve(root, '.output/public/commerce-store');
+// Accept the just-built native desktop payload, rather than a stale web build.
+const nativeAssets = resolve(root, 'desktop-dist/commerce-store');
+const assets = existsSync(resolve(nativeAssets, 'runtime.js'))
+  ? nativeAssets : resolve(root, '.output/public/commerce-store');
 const mime = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css' };
 const server = createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
@@ -44,6 +47,7 @@ try {
             draft_themes: [] };
         },
         onEdit(slug) { window.__edited = slug; },
+        onBrowseThemes() { window.__browseThemes = (window.__browseThemes || 0) + 1; },
       });
     }, { once: true });
     frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body></body></html>';
@@ -65,7 +69,10 @@ try {
   assert.equal(await merchant.locator('#import-theme-btn').isDisabled(), true, 'Unimplemented import cannot be clicked');
   const addTheme = merchant.locator('#edit-theme-btn');
   assert.equal(await addTheme.innerText(), 'Add your first theme');
-  assert.equal(await addTheme.getAttribute('href'), '#theme-product-marketplace');
+  assert.equal(await addTheme.getAttribute('href'), '/themes');
+  await addTheme.click();
+  await merchant.locator('#browse-themes-shortcut').click();
+  assert.equal(await page.evaluate(() => window.__browseThemes), 2, 'Starter and Browse Templates open the real host Theme Store');
   assert.equal(await page.evaluate(() => window.__edited), undefined, 'Unpublished starter does not request an empty theme editor');
   await page.setViewportSize({ width: 390, height: 844 });
   const dimensions = await merchant.locator('.online-store').evaluate((node) => ({
