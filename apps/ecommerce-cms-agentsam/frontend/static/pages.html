@@ -230,7 +230,7 @@ addPageForm?.addEventListener("submit", async (event) => {
       site_id: result.page.site_id || selectedSiteId,
       page_id: result.page.id,
     });
-    window.cmsAdminNavigate("/admin/theme-editor?" + query.toString());
+    window.cmsAdminNavigate("/admin/page-edit?" + query.toString());
   } catch (error) {
     addPageError.textContent = error.message || "Page creation failed.";
     addPageError.hidden = false;

@@ -11,9 +11,9 @@ function mountPageController(host) {
     __agentsamAdminNavigate: host
       ? (path) => { navigations.push(['host', path]); return true; }
       : undefined,
-    location: { assign(path) { navigations.push(['document', path]); } },
+    location: { search: '', assign(path) { navigations.push(['document', path]); } },
   };
-  runInNewContext(source, { window });
+  runInNewContext(source, { window, URLSearchParams, URL });
   return { window, navigations };
 }
 
@@ -35,10 +35,12 @@ test('standalone Ecommerce Page Editor retains normal document navigation', () =
 
 test('Pages leads to content editor and exposes the visual editor without unsafe bulk controls', () => {
   const pages = readFileSync(new URL('../frontend/static/pages.html', import.meta.url), 'utf8');
-  assert.ok(pages.includes('const editHref = `/admin/page-edit?slug='));
-  assert.ok(pages.includes('const designHref = `/admin/theme-editor?slug='));
+  assert.ok(pages.includes('const editHref = `/admin/page-edit?${query}`'));
+  assert.ok(pages.includes('const designHref = `/admin/theme-editor?${query}`'));
   assert.ok(!pages.includes('id="cms-bootstrap-btn"'));
-  assert.ok(!pages.includes('id="add-page-btn"'));
+  assert.ok(pages.includes('id="add-page-btn"'), 'the real Add Page API now has a matching control');
+  assert.ok(pages.includes('window.cmsAdminNavigate("/admin/page-edit?" + query.toString())'),
+    'new pages should open their own Page Editor');
   assert.ok(!pages.includes('id="pages-select-all"'));
 });
 
@@ -47,4 +49,8 @@ test('portable Page Editor never hardcodes a specific merchant brand or domain',
   assert.ok(!editor.includes('fuelnfreetime.com') && !editor.includes('Fuel & Free Time'));
   assert.ok(editor.includes('Site address not verified'));
   assert.ok(editor.includes('window.cmsAdminNavigate'));
+  assert.ok(editor.includes('viewButton.removeAttribute("href")'));
+  assert.ok(editor.includes('const isPublicPage = pageData.status === "published"'));
+  assert.ok(!editor.includes('const liveUrl = PAGE_ROUTES[slug] || "/"'));
+  assert.ok(!editor.includes('Use Publish or run CMS bootstrap'));
 });

@@ -37,7 +37,7 @@ as proof that its CMS content is in the platform database.
 ## First acceptance slice
 
 - Site: AgentSam SDK in the platform's existing D1. Use a safe disposable **draft** page.
-- Prove site selection, page creation, correct project identity, reload and title change; preserve all currently published pages.
+- Prove site selection, page creation, correct project identity, reload and title change; preserve all currently published pages. New drafts open the actual Page Editor, and "View live" remains disabled until a valid published route exists.
 - Prove existing page sections render by reading the owning site, and a false/foreign `site_id` is rejected.
 - Use local and deployed Worker build/test gates before releasing.
 - A full public-site publish and cross-merchant editing is **not** certified by this first slice: renderer/rollback, authoring authentication and remote Worker bridge tests remain required.
