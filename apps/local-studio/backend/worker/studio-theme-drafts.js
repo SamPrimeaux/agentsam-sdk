@@ -7,6 +7,14 @@ const answer=(payload,status=200)=>Response.json(payload,{status,headers:{'cache
 // Only historical cms_themes selections are restricted to this legacy catalog.
 // Canonical CMS v2 projects are listed from the account-scoped project store.
 const legacyCatalogSlug=/^(resolve|violet|plain-jane)$/;
+const STORE_ORIGIN='https://themes.inneranimalmedia.com';
+// Theme previews live on the Theme Store, never on this site. Any stored local
+// /themes/<slug>/demo/ link (historical rows, baked catalog) resolves to the store.
+function storePreview(slug,version,stored){
+ if(typeof stored==='string'&&stored.startsWith(STORE_ORIGIN+'/theme-packages/'))return stored;
+ if(!slug||!version)return null;
+ return STORE_ORIGIN+'/theme-packages/'+encodeURIComponent(slug)+'/'+encodeURIComponent(version)+'/preview/';
+}
 async function slugFor(accountId,sourceSlug) {
  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(accountId));
  const owner=Array.from(new Uint8Array(digest)).slice(0,10).map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -27,7 +35,8 @@ function draft(row) {
   name:row.name,theme_slug:row.slug,
   package:config.package||null,version:config.version||null,
   status:'draft',created_at:row.created_at,installed:false,
-  site_linked:false,meta:config.package||'Packaged theme',preview_url:config.preview_url||null,
+  site_linked:false,meta:config.package||'Packaged theme',
+  preview_url:storePreview(config.source_slug,config.version,config.preview_url),
   // Editing is enabled ONLY after a site / CMS installation transaction.
   edit_href:null
  };
@@ -58,7 +67,8 @@ export async function listStudioThemeDrafts(env,userId) {
       version:project.sourcePackageVersion,status:'draft',
       created_at:project.createdAt,installed:true,site_linked:true,
       site_id:row.site_id,site_name:row.site_name,site_slug:row.site_slug,
-      meta:project.packageName,preview_url:project.sourcePreviewUrl,
+      meta:project.packageName,
+      preview_url:storePreview(project.sourceThemeId,project.sourcePackageVersion,project.sourcePreviewUrl),
       edit_href:'/admin/theme-project-editor?project='+encodeURIComponent(project.id)+
         '&site_id='+encodeURIComponent(row.site_id),
     };
@@ -98,7 +108,7 @@ export async function handleStudioThemeDrafts(request,env,userId) {
  const id='thmd_'+crypto.randomUUID().replaceAll('-','');
  const config=JSON.stringify({source_slug:body.slug,package:product.package,version:product.version,
   template_sku:product.sku,source:'source_backed_template_catalog',
-  preview_url:product.preview_url,installation_state:'draft_unlinked'});
+  preview_url:storePreview(body.slug,product.version,product.preview_url),installation_state:'draft_unlinked'});
  try{
   await env.DB.prepare(
    "INSERT INTO cms_themes (id,name,slug,config,workspace_id,status,visibility,theme_family) VALUES (?,?,?,?,?,'draft','private',?) ON CONFLICT(slug) DO NOTHING"
