@@ -28,5 +28,5 @@ jobs:
           node --check apps/ecommerce-cms-agentsam/backend/cms/studio-bridge.js
           node --check apps/ecommerce-cms-agentsam/backend/cms/studio-bridge-protocol.js
           node --check apps/ecommerce-cms-agentsam/frontend/theme-editor/remote-worker-adapter.mjs
-      - name: Authorization, signature and optimistic version tests
-        run: node --test test/integration/cms-multisite-security.test.mjs
+      - name: Authorization, source-site discovery, signature and optimistic version tests
+        run: node --test test/integration/cms-multisite-security.test.mjs apps/local-studio/backend/worker/cms-owned-sites.test.mjs apps/local-studio/backend/worker/cms-source.test.mjs apps/local-studio/backend/worker/cms-source-host.test.mjs

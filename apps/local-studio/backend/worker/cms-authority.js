@@ -86,7 +86,7 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
     ORDER BY p.name ASC
   `).bind(actor, actor, actor, actor, actor, actor, actor).all();
 
-  return (result.results || []).map((row) => {
+  const projects = (result.results || []).map((row) => {
     const meta = asJson(row.metadata_json);
     const workerId = typeof row.worker_id === 'string' ? row.worker_id.trim() : '';
     const slug = row.cms_slug || meta.cms_slug || meta.site_slug || workerId;
@@ -113,6 +113,59 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
       can_publish: PUBLISHERS.has(row.role),
     };
   }).filter(Boolean);
+
+  // The platform also registers sites directly in cms_sites. Its public SDK
+  // pages have real site_id + project_slug records even when no corresponding
+  // row exists in the older projects/tenants catalog. The /api/admin/cms/sites
+  // endpoint already recognizes them; /api/cms/sites must not silently hide
+  // an account's own website from its installed HTML-source editor.
+  //
+  // The exact authenticated account is the ownership authority here. Do not
+  // discover sites by hostname, global D1 visibility, or Cloudflare access.
+  // Worker-owned sites with no locally owned pages remain remote-only and
+  // still require an explicitly configured, signed CMS bridge.
+  let ownedRows = [];
+  try {
+    ({ results: ownedRows = [] } = await db.prepare(`
+      SELECT s.id, s.account_id, s.slug, s.name, s.primary_domain,
+        s.worker_id, s.status, p.project_id, p.project_slug
+      FROM cms_sites s
+      LEFT JOIN cms_pages p ON p.id = (
+        SELECT cp.id FROM cms_pages cp
+        WHERE cp.site_id = s.id AND cp.is_active = 1
+        ORDER BY cp.is_homepage DESC, cp.created_at ASC LIMIT 1
+      )
+      WHERE s.account_id = ? AND s.status != 'archived'
+        AND (s.worker_id IS NULL OR p.id IS NOT NULL)
+      ORDER BY s.name ASC
+    `).bind(actor).all());
+  } catch (error) {
+    // A standalone legacy project CMS may not yet have cms_sites. It can
+    // still list its signed Worker projects; other query failures must surface.
+    if (!/no such table:\s*cms_sites/i.test(String(error))) throw error;
+  }
+  const bySlug = new Map(projects.map(site => [site.slug, site]));
+  for (const row of ownedRows) {
+    if (!SLUG.test(String(row.slug || ''))) continue;
+    const existing = bySlug.get(row.slug);
+    if (existing?.source === 'worker') continue;
+    bySlug.set(row.slug, {
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      domain: row.primary_domain || null,
+      project_id: row.project_id || row.id,
+      tenant_id: null,
+      workspace_id: null,
+      worker_id: row.worker_id || null,
+      source: 'shared-d1',
+      role: 'owner',
+      can_edit: true,
+      can_publish: true,
+    });
+  }
+  return [...bySlug.values()].sort((a, b) =>
+    String(a.name || a.slug).localeCompare(String(b.name || b.slug)));
 }
 
 export function configuredCmsWorkers(env) {
