@@ -11,6 +11,23 @@
   if (!root || !search || !filter || !count) return;
   const ORIGIN = 'https://themes.inneranimalmedia.com';
   let products = [];
+  // The public Theme Store hands the selected SKU/version to this authenticated
+  // Sites surface. This is a selection hint, not installation authorization.
+  const queryParams = (() => {
+    const local = new URLSearchParams(window.location.search);
+    try {
+      if (!local.has('theme_sku') && window.parent && window.parent !== window) {
+        return new URLSearchParams(window.parent.location.search);
+      }
+    } catch { /* embedded cross-origin frame: only honor our own URL */ }
+    return local;
+  })();
+  const selectedSku = queryParams.get('theme_sku') || '';
+  const selectedSlug = /^iam\.theme\.[a-z][a-z0-9-]{0,63}$/.test(selectedSku)
+    ? selectedSku.slice('iam.theme.'.length) : null;
+  const selectedVersion = /^\d+\.\d+\.\d+$/.test(queryParams.get('theme_version') || '')
+    ? queryParams.get('theme_version') : null;
+  let selectedTheme = null;
   const node = (tag, className, text) => {
     const el = document.createElement(tag);
     if (className) el.className = className;
@@ -79,7 +96,56 @@
     if(!sites.length){
       button.disabled=false;
       button.textContent='Install & edit';
-      showError(container,new Error('Create an authorized CMS website under Pages before installing a theme.'));
+      const dialog=node('dialog','website-theme-install-dialog');
+      const form=node('form','website-theme-install-form');
+      form.method='dialog';
+      const heading=node('h3','','Create a website for '+theme.name);
+      const explanation=node('p','','A new private website gives this theme an editable home without changing any published site.');
+      const nameLabel=node('label','','Website name');
+      const name=node('input','website-theme-new-site-name');
+      name.type='text';
+      name.required=true;
+      name.maxLength=120;
+      name.placeholder='My website';
+      name.setAttribute('aria-label','New website name');
+      nameLabel.append(name);
+      const actions=node('div','website-theme-install-actions');
+      const cancel=node('button','btn ghost small','Cancel');
+      cancel.type='button';
+      const create=node('button','btn small','Create website & install');
+      create.type='button';
+      cancel.addEventListener('click',()=>dialog.close());
+      create.addEventListener('click',async()=>{
+        const title=name.value.trim();
+        const slug=title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
+          .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60);
+        if(!title || !slug){
+          showError(form,new Error('Enter a valid website name.'));
+          return;
+        }
+        create.disabled=true;
+        create.textContent='Creating…';
+        try {
+          const data=await requestJSON('/api/admin/cms/sites',{
+            method:'POST',headers:{'content-type':'application/json'},
+            body:JSON.stringify({name:title,slug,status:'draft'}),
+          });
+          if(typeof data.site?.id!=='string') throw Error('Site creation did not return a valid site');
+          dialog.close();
+          await installToSite(theme,data.site.id,button,container);
+        }catch(error){
+          create.disabled=false;
+          create.textContent='Create website & install';
+          showError(form,error);
+        }
+      });
+      actions.append(cancel,create);
+      form.append(heading,explanation,nameLabel,actions);
+      dialog.append(form);
+      dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+      document.body.append(dialog);
+      dialog.showModal();
+      name.focus();
       return;
     }
     if(sites.length===1){
@@ -130,15 +196,36 @@
     const current = filter.value;
     const visible = products.filter(p =>
       (current === 'all' || p.category === current) &&
-      (!query || [p.name, p.description, p.category, ...(p.pages || [])].join(' ').toLowerCase().includes(query)));
+      (!query || [p.name, p.description, p.category, ...(p.pages || [])].join(' ').toLowerCase().includes(query)))
+      .sort((a,b) => Number(b.slug === selectedTheme?.slug) - Number(a.slug === selectedTheme?.slug));
     count.textContent = visible.length + ' website packages';
     root.replaceChildren();
+    if (selectedSlug) {
+      const notice = node('div','theme-marketplace-selection');
+      notice.setAttribute('role', 'status');
+      if (!selectedTheme) {
+        notice.textContent = 'The selected Theme Store package is not in this catalog. Browse available releases below.';
+      } else if (selectedVersion && selectedTheme.version !== selectedVersion) {
+        notice.textContent = selectedTheme.name + ' has changed from v' + selectedVersion +
+          ' to v' + selectedTheme.version + '. Review the new version before installing.';
+      } else {
+        notice.textContent = selectedTheme.can_install
+          ? selectedTheme.name + ' is ready to install into your site. Choose Install & edit.'
+          : selectedTheme.name + ' is available for preview. Editable installation is not verified yet.';
+      }
+      root.append(notice);
+    }
     if (!visible.length) {
       root.append(node('p', 'theme-marketplace-empty', 'No matching website themes. Change your filters to browse the releases.'));
       return;
     }
     for (const theme of visible) {
       const item = node('article', 'theme-marketplace-item');
+      if (theme.slug === selectedTheme?.slug) {
+        item.dataset.themeStoreSelection = 'true';
+        item.style.outline = '2px solid var(--c-accent, #5a7df7)';
+        item.style.outlineOffset = '3px';
+      }
       const visual = node('div', 'theme-marketplace-visual');
       const cover = trusted(theme.thumbnail_url, '/previews/');
       if (cover) {
@@ -190,9 +277,16 @@
       const data=await requestJSON(API);
       if(!Array.isArray(data.products))throw Error('Website Theme Store unavailable');
       products=data.products.filter(p=>p&&p.slug&&p.name);
+      selectedTheme = selectedSlug ? products.find(p=>p.slug===selectedSlug) || null : null;
+      // Keep the requested theme visible rather than making the user search for
+      // the exact package they already selected in the public marketplace.
+      if (selectedTheme) { search.value=''; filter.value='all'; }
       filter.replaceChildren(new Option('All categories','all'));
       [...new Set(products.map(p=>p.category))].sort().forEach(c=>filter.add(new Option(c,c)));
       render();
+      if (selectedTheme) {
+        root.querySelector('[data-theme-store-selection]')?.scrollIntoView({block:'center',behavior:'instant'});
+      }
     }catch(error){
       count.textContent='Catalog unavailable';
       const message=node('div','theme-marketplace-empty');

@@ -7,22 +7,38 @@ import { chromium } from 'playwright';
 
 const root = resolve(import.meta.dirname, '..');
 const source = resolve(root, '../ecommerce-cms-agentsam/frontend/store/mount.mjs');
+const editorStatic = resolve(root, '../ecommerce-cms-agentsam/frontend/static');
+const websiteThemesSource = resolve(editorStatic, 'js/website-theme-browser.js');
+const liveRuntimeSource = resolve(editorStatic,'js/store.js');
 // Accept the just-built native desktop payload, rather than a stale web build.
 const nativeAssets = resolve(root, 'desktop-dist/commerce-store');
 const assets = existsSync(resolve(nativeAssets, 'runtime.js'))
   ? nativeAssets : resolve(root, '.output/public/commerce-store');
 const mime = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css' };
 let receivedInstall = null;
+const emptySiteScenario = process.env.SMOKE_EMPTY_SITE === '1';
+let createdSite = null;
 const server = createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
   if (pathname === '/') return res.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><title>Commerce Store Smoke</title><body style="margin:0"></body>');
-  if (pathname === '/api/admin/cms/sites') return res.writeHead(200, {
+  if (pathname === '/api/admin/cms/sites' && req.method==='POST') {
+    let body='';
+    req.on('data',chunk=>body+=chunk);
+    req.on('end',()=>{
+      const site=JSON.parse(body);
+      createdSite={id:'site-created',name:site.name,slug:site.slug,status:site.status};
+      res.writeHead(201,{'content-type':'application/json'}).end(JSON.stringify({ok:true,site:createdSite}));
+    });
+    return;
+  }
+  if (pathname === '/api/admin/cms/sites' && req.method==='GET') return res.writeHead(200, {
     'content-type': 'application/json',
   }).end(JSON.stringify({
-    ok:true, sites:[
+    ok:true,
+    sites:emptySiteScenario?[]:[
       {id:'site-store',name:'Store',slug:'store',page_count:4},
       {id:'site-blog',name:'Personal Blog',slug:'blog',page_count:0},
-    ], default_site_id:'site-store',
+    ],default_site_id:emptySiteScenario?null:'site-store',
   }));
   if (pathname === '/api/admin/website-themes/plain-jane/install' && req.method==='POST') {
     let body='';
@@ -52,8 +68,13 @@ const server = createServer((req, res) => {
     }]
   }));
   const file = pathname === '/mount.mjs' ? source :
+    pathname === '/commerce-store/website-themes.js' ? websiteThemesSource :
+    pathname === '/commerce-store/runtime.js' ? liveRuntimeSource :
     pathname.startsWith('/commerce-store/') ? resolve(assets, pathname.slice('/commerce-store/'.length)) : null;
-  if (!file || !file.startsWith(pathname === '/mount.mjs' ? source : assets + '/') || !existsSync(file) || !statSync(file).isFile()) return res.writeHead(404).end();
+  const allowed = pathname === '/mount.mjs' ? source :
+    pathname === '/commerce-store/website-themes.js' ? websiteThemesSource :
+    pathname === '/commerce-store/runtime.js' ? liveRuntimeSource : assets + '/';
+  if (!file || (file !== allowed && !file.startsWith(allowed)) || !existsSync(file) || !statSync(file).isFile()) return res.writeHead(404).end();
   res.writeHead(200, { 'content-type': mime[extname(file)] || 'application/octet-stream' });
   res.end(readFileSync(file));
 });
@@ -65,7 +86,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const errors = [];
 page.on('pageerror', (cause) => errors.push(String(cause)));
 try {
-  await page.goto(baseUrl);
+  await page.goto(baseUrl+'/?theme_sku=iam.theme.plain-jane&theme_version=0.1.0');
   await page.evaluate(async () => {
     const { mountOnlineStore } = await import('/mount.mjs');
     const frame = document.createElement('iframe');
@@ -109,6 +130,8 @@ try {
   await merchant.locator('#theme-marketplace-grid .theme-marketplace-item').first().waitFor();
   assert.equal(await merchant.locator('#theme-marketplace-grid .theme-marketplace-item').count(), 1);
   assert.equal(await merchant.locator('.theme-marketplace-item h3').first().innerText(), 'Plain Jane Journal');
+  assert.match(await merchant.locator('.theme-marketplace-selection').innerText(), /ready to install into your site/);
+  assert.equal(await merchant.locator('[data-theme-store-selection]').count(),1,'Theme Store deep link selects the actual released theme');
   await addTheme.click();
   await merchant.locator('#browse-themes-shortcut').click();
   assert.equal(await page.evaluate(() => window.__browseThemes), undefined, 'Website browsing never opens the appearance-theme route');
@@ -123,13 +146,23 @@ try {
   await merchant.locator('[data-install-theme="plain-jane"]').click();
   const picker = merchant.locator('dialog.website-theme-install-dialog');
   await picker.waitFor();
-  assert.equal(await picker.locator('option').count(),3);
-  await picker.locator('select').selectOption('site-blog');
-  await Promise.all([
-    page.waitForURL(/\/admin\/theme-project-editor\?project=theme_plain-jane&site_id=site-blog/),
-    picker.getByRole('button',{name:'Install & open editor'}).click(),
-  ]);
-  assert.deepEqual(receivedInstall,{site_id:'site-blog',version:'0.1.0'});
+  if (emptySiteScenario) {
+    await picker.locator('.website-theme-new-site-name').fill('My First Website');
+    await Promise.all([
+      page.waitForURL(/\/admin\/theme-project-editor\?project=theme_plain-jane&site_id=site-created/),
+      picker.getByRole('button',{name:'Create website & install'}).click(),
+    ]);
+    assert.deepEqual(createdSite,{id:'site-created',name:'My First Website',slug:'my-first-website',status:'draft'});
+    assert.deepEqual(receivedInstall,{site_id:'site-created',version:'0.1.0'});
+  } else {
+    assert.equal(await picker.locator('option').count(),3);
+    await picker.locator('select').selectOption('site-blog');
+    await Promise.all([
+      page.waitForURL(/\/admin\/theme-project-editor\?project=theme_plain-jane&site_id=site-blog/),
+      picker.getByRole('button',{name:'Install & open editor'}).click(),
+    ]);
+    assert.deepEqual(receivedInstall,{site_id:'site-blog',version:'0.1.0'});
+  }
   assert.equal(await page.title(),'Installed CMS Theme Editor');
   assert.deepEqual(errors, [], 'No browser runtime errors');
   console.log('Packaged Store smoke PASS: original theme, account-owned site picker, install POST, editor navigation and mobile width');
