@@ -2878,7 +2878,20 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   if (path === "/api/admin/cms/sites" && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     const sites = await listCmsSites(env.DB, context.accountId);
-    return json({ ok: true, sites, default_site_id: sites.find(site => site.is_default)?.id || null });
+    // Site names are not unique. Show actual page counts so two similarly
+    // named client sites cannot be mistaken for the same editable website.
+    // Ownership comes from cms_sites, never from a client-provided site ID.
+    const { results = [] } = await env.DB.prepare(`
+      SELECT p.site_id, COUNT(*) AS pages FROM cms_pages p
+      INNER JOIN cms_sites owner ON owner.id=p.site_id
+      WHERE owner.account_id=? GROUP BY p.site_id
+    `).bind(context.accountId).all();
+    const counts = new Map(results.map(row => [row.site_id, Number(row.pages || 0)]));
+    const sitesWithCounts = sites.map(site => ({ ...site, page_count: counts.get(site.id) || 0 }));
+    return json({
+      ok: true, sites: sitesWithCounts,
+      default_site_id: sitesWithCounts.find(site => site.is_default)?.id || null,
+    });
   }
   if (path === "/api/admin/cms/sites" && method === "POST") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });

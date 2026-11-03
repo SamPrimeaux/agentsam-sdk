@@ -68,6 +68,7 @@ test("admin API exposes account-owned sites and scopes page inventory by site", 
     assert.equal(response.status, 200);
     const payload = await response.json();
     assert.equal(payload.sites.length, 2);
+    assert.deepEqual(payload.sites.map(site => site.page_count), [1, 1]);
     assert.equal(payload.default_site_id, "site-a");
 
     const pageResponse = await handleAdminCmsApi(
@@ -433,5 +434,34 @@ test("catalog embed installs and lists against the selected site-first page iden
       request(crossSiteUrl, "GET"), env, new URL("https://cms.test" + crossSiteUrl), { accountId: "acct-a" },
     );
     assert.equal(crossSite.status, 404);
+  } finally { sqlite.close(); }
+});
+
+test("same-name sites return distinct real page counts without exposing another merchant", async () => {
+  const sqlite = createCmsTestDb();
+  const env = { DB: d1(sqlite) };
+  try {
+    sqlite.exec(`
+      INSERT INTO accounts(id) VALUES ('acct-a'),('acct-b');
+      INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
+        VALUES ('s1','acct-a','Inner Animal Media','inneranimalmedia','active',0),
+               ('s2','acct-a','Inner Animal Media','inneranimal','active',0),
+               ('s3','acct-b','Inner Animal Media','other','active',1);
+      INSERT INTO cms_pages(id,account_id,site_id,slug,route_path,title,status)
+        VALUES ('p1','acct-a','s1','home','/','Home','draft'),
+               ('p2','acct-a','s1','about','/about','About','draft'),
+               ('p3','acct-b','s3','secret','/secret','Private','draft');
+    `);
+    const url = new URL("https://cms.test/api/admin/cms/sites");
+    const response = await handleAdminCmsApi(request(url.pathname), env, url, { accountId: "acct-a" });
+    assert.equal(response.status, 200);
+    const data = await response.json();
+    assert.equal(data.default_site_id, null);
+    assert.deepEqual(data.sites.map(site => ({
+      id: site.id, name: site.name, slug: site.slug, pages: site.page_count,
+    })).sort((a, b) => a.id.localeCompare(b.id)), [
+      { id: "s1", name: "Inner Animal Media", slug: "inneranimalmedia", pages: 2 },
+      { id: "s2", name: "Inner Animal Media", slug: "inneranimal", pages: 0 },
+    ]);
   } finally { sqlite.close(); }
 });

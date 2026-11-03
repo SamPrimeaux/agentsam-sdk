@@ -252,9 +252,10 @@ addPageForm?.addEventListener("submit", async (event) => {
     }
     siteSelect.innerHTML = (selectedSiteId ? "" :
       '<option value="" selected disabled>Select a website…</option>') +
-      availableSites.map(site =>
-        `<option value="${cmsEscapeAttr(site.id)}">${cmsEscapeHtml(site.name || site.slug)}</option>`
-      ).join("");
+      availableSites.map(site => {
+        const label = `${site.name || site.slug} · ${site.slug} (${Number(site.page_count || 0)} pages)`;
+        return `<option value="${cmsEscapeAttr(site.id)}">${cmsEscapeHtml(label)}</option>`;
+      }).join("");
     siteSelect.hidden = availableSites.length < 2;
     siteSelect.parentElement.hidden = availableSites.length < 2;
     if (!selectedSiteId) {
@@ -287,9 +288,21 @@ addPageForm?.addEventListener("submit", async (event) => {
     if (home.id) editSiteQuery.set("page_id", home.id);
     document.getElementById("edit-site-design").href = "/admin/theme-editor?" + editSiteQuery.toString();
     document.querySelector(".pages-hub-heading p").textContent =
-      `Manage pages for ${site?.name || site?.slug || "this site"}.`;
+      `Manage ${allPages.length} pages for ${site?.name || site?.slug || "this site"} (${site?.slug || selectedSiteId}).`;
     document.getElementById("add-page-btn").disabled = false;
     renderRows(allPages);
+    if (!allPages.length) {
+      const twin = availableSites
+        .filter(item => item.id !== selectedSiteId &&
+          item.name === site?.name && Number(item.page_count || 0) > 0)
+        .sort((a, b) => Number(b.page_count || 0) - Number(a.page_count || 0))[0];
+      if (twin) {
+        document.getElementById("pages-body").innerHTML =
+          `<tr><td colspan="4" class="pages-empty">This selected site has no pages. ` +
+          `Another website named ${cmsEscapeHtml(twin.name)} (${cmsEscapeHtml(twin.slug)}) ` +
+          `has ${Number(twin.page_count)} pages. Choose that website using the Site selector above.</td></tr>`;
+      }
+    }
   } catch (error) {
     document.getElementById("pages-body").innerHTML =
       `<tr><td colspan="4" class="pages-empty">${cmsEscapeHtml(error.message)}</td></tr>`;
