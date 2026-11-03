@@ -235,7 +235,7 @@ Export suffixes such as `/identity` mean imports from
 ## AgentSam apps
 
 Reusable, independently runnable products live under `apps/` — currently
-`cad-creator` (CAD/robotics engineering station) and `client-cms-editor`
+`cad-creator` (CAD/robotics engineering station) and `ecommerce-cms-agentsam`
 (CMS authoring), with `local-studio` as the hosting Worker. Each declares an
 `agentsam.app.json` manifest (id, package name, surfaces, runtime readiness,
 and its own `preview`/`info`/`doctor`/`scaffold` commands) and ships its

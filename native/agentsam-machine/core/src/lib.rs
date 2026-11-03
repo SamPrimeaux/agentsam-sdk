@@ -880,7 +880,7 @@ mod tests {
     #[test]
     fn church_site_fixture_produces_semantic_perception() {
         let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../apps/client-cms-editor/fixtures/donor-themes/cypress");
+            .join("../../../apps/ecommerce-cms-agentsam/cms-editor/fixtures/donor-themes/cypress");
         assert!(
             fixture.join("site/index.html").exists(),
             "cypress fixture missing at {}",
@@ -973,7 +973,7 @@ mod tests {
     #[test]
     fn single_file_inspect_externalizes_under_parent_not_file() {
         let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join(
-            "../../../apps/client-cms-editor/fixtures/frontend-perception/page.tsx",
+            "../../../apps/ecommerce-cms-agentsam/cms-editor/fixtures/frontend-perception/page.tsx",
         );
         assert!(fixture.exists(), "missing fixture {}", fixture.display());
 
@@ -1011,7 +1011,7 @@ mod tests {
     #[test]
     fn frontend_perception_page_tsx_emits_generic_candidates() {
         let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join(
-            "../../../apps/client-cms-editor/fixtures/frontend-perception/page.tsx",
+            "../../../apps/ecommerce-cms-agentsam/cms-editor/fixtures/frontend-perception/page.tsx",
         );
         let mut opts = InspectOptions::new();
         opts.run_id = Some("run_frontend_perception".into());

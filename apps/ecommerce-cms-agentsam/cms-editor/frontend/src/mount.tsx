@@ -75,7 +75,7 @@ function HeuristicMount({
 /**
  * Imperative mount helper for hosts.
  * Import styles separately:
- *   import '@inneranimalmedia/client-cms-editor/styles/studio.css'
+ *   import '../styles/studio.css'
  *
  * Hosts should prefer passing their own CmsEditorAdapter + installStarterPack.
  */

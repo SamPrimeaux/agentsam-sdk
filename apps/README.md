@@ -36,7 +36,7 @@ Rules:
 - `shared/<domain>/` is app-local shared code. Promote code to `packages/*` only when it is genuinely SDK-wide/reusable.
 - The SDK root owns package/tooling release concerns; app workspace dependencies stay inside each app.
 
-Current product apps governed by the architecture test are `local-studio/`, `cad-creator/`, and `client-cms-editor/`. `frontend/` remains a public-site seed lane rather than a self-contained product workspace, and `_incoming/` is an import drop zone.
+Current product apps governed by the architecture test are `local-studio/` and `cad-creator/`. `frontend/` remains a public-site seed lane rather than a self-contained product workspace, and `_incoming/` is an import drop zone.
 
 ## Portable packaging checklist
 

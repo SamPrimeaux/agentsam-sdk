@@ -19,13 +19,13 @@ SKIP = {"node_modules", ".git", ".output", "dist", "target", "desktop-dist", ".a
 PRIVATE_GLOBS = ["packages/theme-*-site", "apps/*-site", "apps/project-control", "apps/*/frontend", "apps/*/backend", "apps/*/shared/*"]
 # Consumed by ANOTHER app (ecommerce depends on these), so they must be installable from the registry.
 # Promote them to packages/* when you can; until then they publish with a warning.
-PUBLISH_EXTRA = {"apps/client-cms-editor/shared/cms", "apps/client-cms-editor/frontend", "apps/client-cms-editor/backend"}
+PUBLISH_EXTRA = set()
 ALWAYS_OK = {"node_modules", "package.json", "package-lock.json", "README.md", "LICENSE", "CHANGELOG.md",
              "tests", "test", "__tests__", "docs", "examples", "fixtures", "coverage", "reference"}
 # Dev/provenance files that are never part of an installable (matched on top-level names).
 DEV_ONLY = ["tsconfig*.json", "vitest.config.*", "vite.config.*", "eslint.config.*", "index.html", "*.md", "*.tgz", "startup.sh",
             "*IMPORT_PROVENANCE.json", "screenshots"]
-NAME_OK = re.compile(r"^@inneranimalmedia/(agentsam-[a-z0-9-]+|theme-[a-z0-9-]+|client-cms-editor|ecommerce-cms-agentsam|cms-runtime)$")
+NAME_OK = re.compile(r"^@inneranimalmedia/(agentsam-[a-z0-9-]+|theme-[a-z0-9-]+|ecommerce-cms-agentsam|cms-runtime)$")
 RENAMES = {  # unpublished/pre-publication names that break the grammar -> canonical public names
     "@inneranimalmedia/agentsam-sdk-brand": "@inneranimalmedia/agentsam-brand",
     "@inneranimalmedia/agentsam-sdk-identity": "@inneranimalmedia/agentsam-identity",

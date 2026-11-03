@@ -55,7 +55,6 @@ assert.ok(pkg.files?.includes('packages/agentsam-workbench/package.json'), 'publ
 assert.ok(pkg.files?.includes('packages/agentsam-workbench/src'), 'published files must include workbench source');
 assert.ok(!pkg.files?.includes('packages/agentsam-brand'), 'root package must not publish the entire brand workspace');
 assert.ok(!pkg.files?.includes('packages/agentsam-workbench'), 'root package must not publish the entire workbench workspace');
-assert.ok(!pkg.files?.includes('apps/client-cms-editor'), 'root package must not publish the entire CMS editor workspace');
 assert.ok(pkg.files?.includes('packages/agentsam-contracts'), 'published files must include framework-neutral contracts');
 assert.ok(pkg.files?.includes('packages/agentsam-cms'), 'root SDK package must ship the portable CMS runtime it imports');
 assert.ok(existsSync(join(root, 'packages/agentsam-cms/src/index.js')), 'portable CMS runtime entry missing');
