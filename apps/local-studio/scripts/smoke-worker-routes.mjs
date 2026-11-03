@@ -82,6 +82,8 @@ try {
     { pathname: '/media/images', allowed: [200, 302] },
     { pathname: '/media/videos', allowed: [200, 302] },
     { pathname: '/admin/moviemode', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/moviemode' },
+    { pathname: '/admin/moviemode/edit', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/moviemode/edit' },
+    { pathname: '/admin/moviemode/edit?project=smoke', allowed: [200, 302], redirectTo: '/auth/login', redirectNext: '/admin/moviemode/edit?project=smoke' },
     { pathname: '/admin/store', allowed: [200] },
     { pathname: '/admin/pages', allowed: [200] },
     { pathname: '/admin/theme-editor?slug=home', allowed: [200] },

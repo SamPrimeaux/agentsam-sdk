@@ -42,7 +42,11 @@ export function canonicalStudioPath(pathname) {
       return mount.canonical;
     }
     if (!exactOnly && pathname.startsWith(mount.flat + '/')) {
-      return mount.canonical + pathname.slice(mount.flat.length);
+      const target = mount.canonical + pathname.slice(mount.flat.length);
+      // Descendant URLs of an already canonical mount are real app routes,
+      // not legacy aliases. Redirecting them to themselves loops on Cloudflare.
+      if (target === pathname) return pathname.endsWith('/') ? pathname.slice(0, -1) : null;
+      return target;
     }
   }
   return null;

@@ -16,6 +16,10 @@ test('canonical Projects owns one host-neutral Work UI; old flat paths redirect 
   assert.equal(canonicalStudioPath('/projects'), '/admin/projects');
   assert.equal(canonicalStudioPath('/projects/proj_123'), '/admin/projects/proj_123');
   assert.equal(canonicalStudioPath('/admin/home'), null, 'canonical commerce home must not redirect to itself');
+  assert.equal(canonicalStudioPath('/admin/moviemode/edit'), null, 'canonical MovieMode editor deep link must never self-redirect');
+  assert.equal(canonicalStudioPath('/admin/moviemode/edit/'), '/admin/moviemode/edit', 'editor deep-link slash normalized once');
+  assert.equal(canonicalStudioPath('/admin/moviemode/'), '/admin/moviemode', 'canonical app slash normalized once');
+  assert.equal(canonicalStudioPath('/admin/cad/edit'), null, 'canonical CAD child must never self-redirect');
   assert.equal(canonicalStudioPath('/admin/home/'), '/admin/home', 'canonical commerce home tolerates a trailing slash');
   assert.equal(canonicalStudioPath('/projects-other'), null);
   assert.equal(canonicalStudioPath('/public/projects'), null);
