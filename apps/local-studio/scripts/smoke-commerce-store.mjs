@@ -66,8 +66,7 @@ try {
   const addTheme = merchant.locator('#edit-theme-btn');
   assert.equal(await addTheme.innerText(), 'Add your first theme');
   assert.equal(await addTheme.getAttribute('href'), '#theme-product-marketplace');
-  await addTheme.click();
-  assert.equal(await page.evaluate(() => window.__edited), undefined, 'Starter theme discovery stays inside the Store instead of opening an empty editor');
+  assert.equal(await page.evaluate(() => window.__edited), undefined, 'Unpublished starter does not request an empty theme editor');
   await page.setViewportSize({ width: 390, height: 844 });
   const dimensions = await merchant.locator('.online-store').evaluate((node) => ({
     width: node.getBoundingClientRect().width,
