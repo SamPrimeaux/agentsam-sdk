@@ -190,8 +190,6 @@ CREATE TABLE IF NOT EXISTS cms_globals (
   content_r2_key        TEXT,
   content_version       INTEGER NOT NULL DEFAULT 0,
   content_hash          TEXT,
-  legacy_page_id        INTEGER,
-  legacy_section_id     INTEGER UNIQUE,
   metadata_json         TEXT NOT NULL DEFAULT '{}',
   created_at            TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at            TEXT NOT NULL DEFAULT (datetime('now')),
