@@ -4,6 +4,8 @@
  * The Theme Store package/release manifest is the only product authority.
  * This adapter never accepts user-provided URLs or writes tenant data.
  */
+import { getWebsiteThemeInstallIndex } from './studio-website-theme-install.js';
+
 const CATALOG_URL = 'https://themes.inneranimalmedia.com/api/catalog';
 const STORE_ORIGIN = 'https://themes.inneranimalmedia.com';
 const SLUG = /^[a-z][a-z0-9-]{0,63}$/;
@@ -44,11 +46,12 @@ function normalizeTheme(p) {
     detail_url: STORE_ORIGIN + '/themes/' + slug + '/',
     download_url: verified ? STORE_ORIGIN + '/api/themes/' + slug + '/' + version + '/download' : null,
     release_status: verified ? 'published' : 'preview',
-    // Package exists and may be downloaded; this is NOT a CMS installation receipt.
+    release_sha256: verified ? p.release.sha256 : null,
+    // A downloadable ZIP is not proof of installation or editability.
     cms_installed: false,
   };
 }
-export async function handleStudioWebsiteThemeCatalog(request, accountId) {
+export async function handleStudioWebsiteThemeCatalog(request, accountId, env) {
   if (!accountId) return json({ ok: false, error: 'unauthorized' }, 401);
   if (request.method !== 'GET') return json({ ok: false, error: 'method_not_allowed' }, 405);
   try {
@@ -60,7 +63,16 @@ export async function handleStudioWebsiteThemeCatalog(request, accountId) {
     if (!response.ok) throw new Error('store_catalog_upstream_unavailable');
     const data = await response.json();
     if (data?.ok !== true || !Array.isArray(data.products)) throw new Error('store_catalog_invalid');
-    const products = data.products.map(normalizeTheme).filter(Boolean);
+    const releaseIndex = await getWebsiteThemeInstallIndex(request,env).catch(()=>[]);
+    const products = data.products.map(normalizeTheme).filter(Boolean).map(product=>{
+      const release = releaseIndex.find(r=>r.slug===product.slug &&
+        r.version===product.version && r.sha256===product.release_sha256);
+      return {
+        ...product, can_install: Boolean(release),
+        editable_page_count:release?.page_count || 0,
+        manifest_page_count:release?.manifest_page_count || 0,
+      };
+    });
     if (products.length === 0) throw new Error('store_catalog_empty');
     return json({
       ok: true, source: 'themes.inneranimalmedia.com',

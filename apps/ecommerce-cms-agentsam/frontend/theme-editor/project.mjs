@@ -22,15 +22,21 @@ export function validateThemeProject(value) {
 export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl = '' } = {}) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   if (baseUrl) { const base = doc.createElement('base'); base.href = baseUrl; doc.head.prepend(base); }
-  let nodes = [...doc.querySelectorAll('main > section, main > header, main > footer')];
+  let nodes = [...doc.querySelectorAll('main > section, main > header, main > footer, main > article')];
+  // A source-rendered website may group its editable content inside a single
+  // main container rather than using direct section children. Keep that
+  // original markup intact and expose its text/media as editable fields.
+  if (!nodes.length) nodes = [...doc.querySelectorAll('main > div, main > figure')];
+  if (!nodes.length) nodes = [...doc.querySelectorAll('main')];
   if (!nodes.length) nodes = [...doc.body.children].filter((el) => !['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName));
   const sections = nodes.map((node, index) => {
     const key = `section_${index + 1}`;
     const content = { __editor: { templateKey: key, visibility: { enabled: true }, blocks: [] } };
     const bind = (node, content) => {
     const fields = [];
-    const candidates = [...node.querySelectorAll('h1,h2,h3,h4,p,img,a,button,label')];
-    if (node.matches('h1,h2,h3,h4,p,img,a,button,label')) candidates.unshift(node);
+    const editableSelector = 'h1,h2,h3,h4,h1 span,h2 span,h3 span,h4 span,p,img,a,button,label';
+    const candidates = [...node.querySelectorAll(editableSelector)];
+    if (node.matches(editableSelector)) candidates.unshift(node);
     candidates.filter((el) => el.tagName === 'IMG' || !el.children.length).forEach((el, i) => {
       const field = `field_${i + 1}`;
       el.setAttribute('data-theme-project-field', field);

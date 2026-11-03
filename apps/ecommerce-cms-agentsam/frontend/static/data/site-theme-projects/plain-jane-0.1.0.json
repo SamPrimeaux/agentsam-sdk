@@ -1,0 +1,1225 @@
+{
+  "schema": "agentsam.theme-project.v1",
+  "id": "theme_plain-jane",
+  "name": "Plain Jane Journal",
+  "pages": [
+    {
+      "slug": "home",
+      "title": "Notes on a quieter life",
+      "assetBase": "https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/",
+      "status": "draft",
+      "template": "<!DOCTYPE html><html lang=\"en\" style=\"--bg: #F9F8F6; --text: #1A1A1A; --text-muted: #4A4A4A; --accent: #D96C4A; --border-subtle: rgba(26, 26, 26, 0.05); --border-divider: rgba(26, 26, 26, 0.10); --border-input: rgba(26, 26, 26, 0.20); --overlay-scrim: rgba(26, 26, 26, 0.60); --hero-gradient: rgba(26, 26, 26, 0.80); --lightbox-bg: rgba(26, 26, 26, 0.95); --selection-bg: rgba(217, 108, 74, 0.20);\"><head><base href=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/\">\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Plain Jane Journal — Notes on a quieter life</title>\n    <meta name=\"description\" content=\"Essays, photography, and reflections on finding meaning in the spaces between the noise.\">\n    <meta property=\"og:title\" content=\"Plain Jane Journal — Notes on a quieter life\">\n    <meta property=\"og:description\" content=\"Essays, photography, and reflections on finding meaning in the spaces between the noise.\">\n    \n    <link rel=\"stylesheet\" crossorigin=\"\" href=\"/theme-packages/plain-jane/0.1.0/preview/assets/index-DoaQ4-Dq.css\">\n  <meta property=\"og:image\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/images/og-journal.svg\"><meta property=\"og:url\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/\"><meta property=\"og:type\" content=\"website\"><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:title\" content=\"Plain Jane Journal — Notes on a quieter life\"><meta name=\"twitter:description\" content=\"Essays, photography, and reflections on finding meaning in the spaces between the noise.\"><meta name=\"twitter:image\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/images/og-journal.svg\"></head>\n  <body style=\"overflow: unset;\">\n    <div id=\"root\"><div class=\"flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)]\"><header data-section-id=\"sec-header-nav\" data-definition-key=\"journal-header\" data-template-sku=\"tpl-journal-header-default\" class=\"sticky top-0 z-50 w-full border-b border-[var(--border-subtle)] bg-[var(--bg)]/80 backdrop-blur-md\" style=\"opacity: 1; transform: none;\"><div class=\"mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8\"><div class=\"flex items-center gap-4\"><button class=\"p-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer\" aria-label=\"Toggle menu\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-menu h-5 w-5\" aria-hidden=\"true\"><path d=\"M4 5h16\"></path><path d=\"M4 12h16\"></path><path d=\"M4 19h16\"></path></svg></button><div class=\"inline-flex items-center gap-2.5 select-none \"><img alt=\"Plain Jane Journal\" width=\"26\" height=\"26\" class=\"shrink-0 transition-transform duration-300 hover:rotate-3\" src=\"/theme-packages/plain-jane/0.1.0/preview/icons/app-logo.svg\"></div></div><a class=\"absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\"><span class=\"font-serif text-xl font-semibold tracking-wide text-[var(--text)]\">JANE DOE</span></a><div class=\"flex items-center gap-4\"><button class=\"p-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer\" aria-label=\"Open search\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-search h-5 w-5\" aria-hidden=\"true\"><path d=\"m21 21-4.34-4.34\"></path><circle cx=\"11\" cy=\"11\" r=\"8\"></circle></svg></button><a class=\"hidden text-sm font-medium uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text)] sm:block transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/about\" data-discover=\"true\">About</a></div></div></header><main class=\"flex-1\"><!--theme-section:section_1--><!--theme-section:section_2--></main><footer data-section-id=\"sec-footer-nav\" data-definition-key=\"journal-footer\" data-template-sku=\"tpl-journal-footer-default\" class=\"border-t border-[var(--border-divider)] bg-[var(--bg)] py-12 mt-24\"><div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\"><div class=\"grid grid-cols-1 gap-8 md:grid-cols-3\"><div class=\"flex flex-col gap-4\"><div class=\"flex items-center gap-2\"><div class=\"inline-flex items-center gap-2.5 select-none \"><img alt=\"Plain Jane Journal\" width=\"24\" height=\"24\" class=\"shrink-0 transition-transform duration-300 hover:rotate-3\" src=\"/theme-packages/plain-jane/0.1.0/preview/icons/app-logo.svg\"></div><span class=\"font-serif text-xl font-semibold tracking-wide text-[var(--text)]\">JANE DOE</span></div><p class=\"text-sm text-[var(--text-muted)] max-w-xs\">Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.</p></div><div class=\"flex flex-col gap-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]\">Explore</h4><nav class=\"flex flex-col gap-2\"><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\">Essays</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/photography\" data-discover=\"true\">Photography</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\">Travel</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/about\" data-discover=\"true\">About</a></nav></div><div class=\"flex flex-col gap-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]\">Connect</h4><nav class=\"flex flex-col gap-2\"><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Twitter</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Instagram</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Substack</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Email</a></nav></div></div><div class=\"mt-12 flex flex-col items-center justify-between gap-4 border-t border-[var(--border-subtle)] pt-8 sm:flex-row text-center sm:text-left\"><p class=\"text-xs text-[var(--text-muted)]\">© 2026 Jane Doe. All rights reserved.</p><div class=\"flex gap-4 text-xs text-[var(--text-muted)]\"><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/privacy\" data-discover=\"true\">Privacy</a><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/terms\" data-discover=\"true\">Terms</a><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/contact\" data-discover=\"true\">Contact</a></div></div></div></footer></div></div>\n  \n\n\n</body></html>",
+      "sections": [
+        {
+          "key": "section_1",
+          "name": "Notes on a quieter life.",
+          "html": "<section data-section-id=\"sec-home-hero\" data-definition-key=\"journal-home-hero\" data-template-sku=\"tpl-journal-home-hero-default\" class=\"mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24\" data-theme-section=\"section_1\" data-theme-project-field=\"__section\"><div class=\"mb-16 max-w-3xl\" style=\"opacity: 1; transform: none;\"><h1 class=\"font-serif text-5xl font-medium leading-tight tracking-tight text-[var(--text)] sm:text-6xl md:text-7xl\">Notes on a <span class=\"italic text-[var(--accent)]\" data-theme-project-field=\"field_1\">quieter</span> life.</h1><p class=\"mt-6 text-lg leading-relaxed text-[var(--text-muted)] sm:text-xl\" data-theme-project-field=\"field_2\">Essays, photography, and reflections on finding meaning in the spaces between the noise.</p></div><div class=\"w-full\"><!--theme-block:block_1--></div></section>",
+          "content": {
+            "__editor": {
+              "templateKey": "section_1",
+              "visibility": {
+                "enabled": true
+              },
+              "blocks": [
+                {
+                  "id": "block_1",
+                  "templateKey": "block_1"
+                }
+              ]
+            },
+            "block_1": {
+              "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/cover-slow-travel.svg",
+              "field_2": "The Art of Slow Travel: Finding Meaning in the In-Between",
+              "field_3": "Why rushing from landmark to landmark is ruining our ability to truly experience the world around us.",
+              "field_4": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg"
+            },
+            "field_1": "quieter",
+            "field_2": "Essays, photography, and reflections on finding meaning in the spaces between the noise.",
+            "layout_padding": "",
+            "layout_background": ""
+          },
+          "version": 0,
+          "status": "draft",
+          "sort_order": 0,
+          "schema": {
+            "key": "section_1",
+            "label": "Notes on a quieter life.",
+            "fields": [
+              {
+                "key": "field_1",
+                "label": "quieter",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_2",
+                "label": "Essays, photography, and reflections on finding meaning in t",
+                "type": "text",
+                "binding": {}
+              }
+            ],
+            "settings": [
+              {
+                "key": "layout_padding",
+                "label": "Padding",
+                "type": "text",
+                "group": "Spacing",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "padding"
+                }
+              },
+              {
+                "key": "layout_background",
+                "label": "Background",
+                "type": "text",
+                "group": "Surface",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "background"
+                }
+              }
+            ],
+            "blocks": [
+              {
+                "key": "block_1",
+                "label": "The Art of Slow Travel: Finding Meaning in the In-Between",
+                "fields": [
+                  {
+                    "key": "field_1",
+                    "label": "The Art of Slow Travel cover study",
+                    "type": "media",
+                    "binding": {
+                      "attribute": "src"
+                    }
+                  },
+                  {
+                    "key": "field_2",
+                    "label": "The Art of Slow Travel: Finding Meaning in the In-Between",
+                    "type": "text",
+                    "binding": {}
+                  },
+                  {
+                    "key": "field_3",
+                    "label": "Why rushing from landmark to landmark is ruining our ability",
+                    "type": "text",
+                    "binding": {}
+                  },
+                  {
+                    "key": "field_4",
+                    "label": "Jane Doe avatar silhouette",
+                    "type": "media",
+                    "binding": {
+                      "attribute": "src"
+                    }
+                  }
+                ],
+                "settings": [],
+                "html": "<article data-block-id=\"blk-home-hero-card\" data-block-key=\"journal-article-card\" data-definition-key=\"journal-article-card\" data-template-sku=\"tpl-journal-article-card-featured\" class=\"group flex flex-col gap-6 md:flex-row md:items-center md:gap-12\" style=\"opacity: 1; transform: none;\"><a class=\"block overflow-hidden rounded-sm bg-[var(--border-subtle)] aspect-[16/9] md:aspect-[4/3] md:w-3/5\" href=\"/theme-packages/plain-jane/0.1.0/preview/post/the-art-of-slow-travel\" data-discover=\"true\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md h-full w-full object-cover group-hover:scale-105\" alt=\"The Art of Slow Travel cover study\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/cover-slow-travel.svg\" data-theme-project-field=\"field_1\"></a><div class=\"flex flex-col md:w-2/5\"><div class=\"mb-3 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]\"><span>October 12, 2023</span><span class=\"h-1 w-1 rounded-full bg-[var(--border-input)]\"></span><span>Travel</span></div><a class=\"group-hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/post/the-art-of-slow-travel\" data-discover=\"true\"><h2 class=\"font-serif leading-tight text-[var(--text)] text-3xl md:text-5xl mb-4\" data-theme-project-field=\"field_2\">The Art of Slow Travel: Finding Meaning in the In-Between</h2></a><p class=\"text-[var(--text-muted)] leading-relaxed text-lg mb-6\" data-theme-project-field=\"field_3\">Why rushing from landmark to landmark is ruining our ability to truly experience the world around us.</p><div class=\"mt-auto flex items-center gap-3\"><img class=\"transition-all duration-700 ease-out opacity-100 blur-0 h-8 w-8 rounded-full object-cover grayscale\" alt=\"Jane Doe avatar silhouette\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg\" data-theme-project-field=\"field_4\"><div class=\"flex flex-col\"><span class=\"text-xs font-medium text-[var(--text)]\">Jane Doe</span><span class=\"text-xs text-[var(--text-muted)]\">8 min read</span></div></div></div></article>",
+                "defaults": {
+                  "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/cover-slow-travel.svg",
+                  "field_2": "The Art of Slow Travel: Finding Meaning in the In-Between",
+                  "field_3": "Why rushing from landmark to landmark is ruining our ability to truly experience the world around us.",
+                  "field_4": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg"
+                }
+              }
+            ],
+            "capabilities": {
+              "reorder": true
+            }
+          }
+        },
+        {
+          "key": "section_2",
+          "name": "Latest Entries",
+          "html": "<section data-section-id=\"sec-home-entries\" data-definition-key=\"journal-latest-entries\" data-template-sku=\"tpl-journal-latest-entries-default\" class=\"mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8\" data-theme-section=\"section_2\" data-theme-project-field=\"__section\"><div class=\"mb-12 flex items-center justify-between border-b border-[var(--border-divider)] pb-4\"><h2 class=\"text-sm font-semibold uppercase tracking-wider text-[var(--text)]\" data-theme-project-field=\"field_1\">Latest Entries</h2><a href=\"#\" class=\"text-sm font-medium uppercase tracking-wider text-[var(--accent)] hover:text-[var(--text)] transition-colors\" data-theme-project-field=\"field_2\">View All</a></div><div class=\"grid grid-cols-1 gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-2\"><!--theme-block:block_1--><!--theme-block:block_2--><!--theme-block:block_3--><!--theme-block:block_4--></div></section>",
+          "content": {
+            "__editor": {
+              "templateKey": "section_2",
+              "visibility": {
+                "enabled": true
+              },
+              "blocks": [
+                {
+                  "id": "block_1",
+                  "templateKey": "block_1"
+                },
+                {
+                  "id": "block_2",
+                  "templateKey": "block_2"
+                },
+                {
+                  "id": "block_3",
+                  "templateKey": "block_3"
+                },
+                {
+                  "id": "block_4",
+                  "templateKey": "block_4"
+                }
+              ]
+            },
+            "block_1": {
+              "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/cover-analog.svg",
+              "field_2": "Embracing Analog in a Hyper-Digital Age",
+              "field_3": "There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film.",
+              "field_4": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg"
+            },
+            "block_2": {
+              "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/cover-morning.svg",
+              "field_2": "Morning Rituals That Actually Work",
+              "field_3": "Beyond the 5 AM club: finding a morning routine that respects your natural rhythms rather than fighting them.",
+              "field_4": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg"
+            },
+            "block_3": {
+              "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/cover-silence.svg",
+              "field_2": "The Architecture of Silence",
+              "field_3": "Exploring spaces designed specifically to cultivate quiet and reflection in modern cities.",
+              "field_4": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg"
+            },
+            "block_4": {
+              "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/cover-memory.svg",
+              "field_2": "The Taste of Memory",
+              "field_3": "How a simple bowl of broth transported me back to a rainy afternoon in Kyoto.",
+              "field_4": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg"
+            },
+            "field_1": "Latest Entries",
+            "field_2": "View All",
+            "field_2_href": "#",
+            "layout_padding": "",
+            "layout_background": ""
+          },
+          "version": 0,
+          "status": "draft",
+          "sort_order": 1,
+          "schema": {
+            "key": "section_2",
+            "label": "Latest Entries",
+            "fields": [
+              {
+                "key": "field_1",
+                "label": "Latest Entries",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_2",
+                "label": "View All",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_2_href",
+                "label": "Link destination",
+                "type": "link",
+                "binding": {
+                  "field": "field_2",
+                  "attribute": "href"
+                }
+              }
+            ],
+            "settings": [
+              {
+                "key": "layout_padding",
+                "label": "Padding",
+                "type": "text",
+                "group": "Spacing",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "padding"
+                }
+              },
+              {
+                "key": "layout_background",
+                "label": "Background",
+                "type": "text",
+                "group": "Surface",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "background"
+                }
+              }
+            ],
+            "blocks": [
+              {
+                "key": "block_1",
+                "label": "Embracing Analog in a Hyper-Digital Age",
+                "fields": [
+                  {
+                    "key": "field_1",
+                    "label": "Analog shutter and mechanical precision study",
+                    "type": "media",
+                    "binding": {
+                      "attribute": "src"
+                    }
+                  },
+                  {
+                    "key": "field_2",
+                    "label": "Embracing Analog in a Hyper-Digital Age",
+                    "type": "text",
+                    "binding": {}
+                  },
+                  {
+                    "key": "field_3",
+                    "label": "There is something profoundly grounding about the mechanical",
+                    "type": "text",
+                    "binding": {}
+                  },
+                  {
+                    "key": "field_4",
+                    "label": "Jane Doe avatar silhouette",
+                    "type": "media",
+                    "binding": {
+                      "attribute": "src"
+                    }
+                  }
+                ],
+                "settings": [],
+                "html": "<article data-block-id=\"blk-home-entry-1\" data-block-key=\"journal-article-card\" data-definition-key=\"journal-article-card\" data-template-sku=\"tpl-journal-article-card-standard\" class=\"group flex flex-col gap-6 \" style=\"opacity: 1; transform: none;\"><a class=\"block overflow-hidden rounded-sm bg-[var(--border-subtle)] aspect-[4/3] w-full\" href=\"/theme-packages/plain-jane/0.1.0/preview/post/analog-photography-digital-age\" data-discover=\"true\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md h-full w-full object-cover group-hover:scale-105\" alt=\"Analog shutter and mechanical precision study\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/cover-analog.svg\" data-theme-project-field=\"field_1\"></a><div class=\"flex flex-col \"><div class=\"mb-3 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]\"><span>September 28, 2023</span><span class=\"h-1 w-1 rounded-full bg-[var(--border-input)]\"></span><span>Photography</span></div><a class=\"group-hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/post/analog-photography-digital-age\" data-discover=\"true\"><h2 class=\"font-serif leading-tight text-[var(--text)] text-2xl mb-3\" data-theme-project-field=\"field_2\">Embracing Analog in a Hyper-Digital Age</h2></a><p class=\"text-[var(--text-muted)] leading-relaxed text-sm mb-4 line-clamp-3\" data-theme-project-field=\"field_3\">There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film.</p><div class=\"mt-auto flex items-center gap-3\"><img class=\"transition-all duration-700 ease-out opacity-100 blur-0 h-8 w-8 rounded-full object-cover grayscale\" alt=\"Jane Doe avatar silhouette\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg\" data-theme-project-field=\"field_4\"><div class=\"flex flex-col\"><span class=\"text-xs font-medium text-[var(--text)]\">Jane Doe</span><span class=\"text-xs text-[var(--text-muted)]\">5 min read</span></div></div></div></article>",
+                "defaults": {
+                  "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/cover-analog.svg",
+                  "field_2": "Embracing Analog in a Hyper-Digital Age",
+                  "field_3": "There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film.",
+                  "field_4": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg"
+                }
+              },
+              {
+                "key": "block_2",
+                "label": "Morning Rituals That Actually Work",
+                "fields": [
+                  {
+                    "key": "field_1",
+                    "label": "Morning rituals and morning light geometry",
+                    "type": "media",
+                    "binding": {
+                      "attribute": "src"
+                    }
+                  },
+                  {
+                    "key": "field_2",
+                    "label": "Morning Rituals That Actually Work",
+                    "type": "text",
+                    "binding": {}
+                  },
+                  {
+                    "key": "field_3",
+                    "label": "Beyond the 5 AM club: finding a morning routine that respect",
+                    "type": "text",
+                    "binding": {}
+                  },
+                  {
+                    "key": "field_4",
+                    "label": "Jane Doe avatar silhouette",
+                    "type": "media",
+                    "binding": {
+                      "attribute": "src"
+                    }
+                  }
+                ],
+                "settings": [],
+                "html": "<article data-block-id=\"blk-home-entry-2\" data-block-key=\"journal-article-card\" data-definition-key=\"journal-article-card\" data-template-sku=\"tpl-journal-article-card-standard\" class=\"group flex flex-col gap-6 \" style=\"opacity: 1; transform: none;\"><a class=\"block overflow-hidden rounded-sm bg-[var(--border-subtle)] aspect-[4/3] w-full\" href=\"/theme-packages/plain-jane/0.1.0/preview/post/morning-rituals\" data-discover=\"true\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md h-full w-full object-cover group-hover:scale-105\" alt=\"Morning rituals and morning light geometry\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/cover-morning.svg\" data-theme-project-field=\"field_1\"></a><div class=\"flex flex-col \"><div class=\"mb-3 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]\"><span>September 15, 2023</span><span class=\"h-1 w-1 rounded-full bg-[var(--border-input)]\"></span><span>Lifestyle</span></div><a class=\"group-hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/post/morning-rituals\" data-discover=\"true\"><h2 class=\"font-serif leading-tight text-[var(--text)] text-2xl mb-3\" data-theme-project-field=\"field_2\">Morning Rituals That Actually Work</h2></a><p class=\"text-[var(--text-muted)] leading-relaxed text-sm mb-4 line-clamp-3\" data-theme-project-field=\"field_3\">Beyond the 5 AM club: finding a morning routine that respects your natural rhythms rather than fighting them.</p><div class=\"mt-auto flex items-center gap-3\"><img class=\"transition-all duration-700 ease-out opacity-100 blur-0 h-8 w-8 rounded-full object-cover grayscale\" alt=\"Jane Doe avatar silhouette\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg\" data-theme-project-field=\"field_4\"><div class=\"flex flex-col\"><span class=\"text-xs font-medium text-[var(--text)]\">Jane Doe</span><span class=\"text-xs text-[var(--text-muted)]\">6 min read</span></div></div></div></article>",
+                "defaults": {
+                  "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/cover-morning.svg",
+                  "field_2": "Morning Rituals That Actually Work",
+                  "field_3": "Beyond the 5 AM club: finding a morning routine that respects your natural rhythms rather than fighting them.",
+                  "field_4": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg"
+                }
+              },
+              {
+                "key": "block_3",
+                "label": "The Architecture of Silence",
+                "fields": [
+                  {
+                    "key": "field_1",
+                    "label": "Architecture of silence concrete geometry",
+                    "type": "media",
+                    "binding": {
+                      "attribute": "src"
+                    }
+                  },
+                  {
+                    "key": "field_2",
+                    "label": "The Architecture of Silence",
+                    "type": "text",
+                    "binding": {}
+                  },
+                  {
+                    "key": "field_3",
+                    "label": "Exploring spaces designed specifically to cultivate quiet an",
+                    "type": "text",
+                    "binding": {}
+                  },
+                  {
+                    "key": "field_4",
+                    "label": "Jane Doe avatar silhouette",
+                    "type": "media",
+                    "binding": {
+                      "attribute": "src"
+                    }
+                  }
+                ],
+                "settings": [],
+                "html": "<article data-block-id=\"blk-home-entry-3\" data-block-key=\"journal-article-card\" data-definition-key=\"journal-article-card\" data-template-sku=\"tpl-journal-article-card-standard\" class=\"group flex flex-col gap-6 \" style=\"opacity: 0; transform: translateY(0.0002051px);\"><a class=\"block overflow-hidden rounded-sm bg-[var(--border-subtle)] aspect-[4/3] w-full\" href=\"/theme-packages/plain-jane/0.1.0/preview/post/architecture-of-silence\" data-discover=\"true\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md h-full w-full object-cover group-hover:scale-105\" alt=\"Architecture of silence concrete geometry\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/cover-silence.svg\" data-theme-project-field=\"field_1\"></a><div class=\"flex flex-col \"><div class=\"mb-3 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]\"><span>August 30, 2023</span><span class=\"h-1 w-1 rounded-full bg-[var(--border-input)]\"></span><span>Design</span></div><a class=\"group-hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/post/architecture-of-silence\" data-discover=\"true\"><h2 class=\"font-serif leading-tight text-[var(--text)] text-2xl mb-3\" data-theme-project-field=\"field_2\">The Architecture of Silence</h2></a><p class=\"text-[var(--text-muted)] leading-relaxed text-sm mb-4 line-clamp-3\" data-theme-project-field=\"field_3\">Exploring spaces designed specifically to cultivate quiet and reflection in modern cities.</p><div class=\"mt-auto flex items-center gap-3\"><img class=\"transition-all duration-700 ease-out opacity-100 blur-0 h-8 w-8 rounded-full object-cover grayscale\" alt=\"Jane Doe avatar silhouette\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg\" data-theme-project-field=\"field_4\"><div class=\"flex flex-col\"><span class=\"text-xs font-medium text-[var(--text)]\">Jane Doe</span><span class=\"text-xs text-[var(--text-muted)]\">10 min read</span></div></div></div></article>",
+                "defaults": {
+                  "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/cover-silence.svg",
+                  "field_2": "The Architecture of Silence",
+                  "field_3": "Exploring spaces designed specifically to cultivate quiet and reflection in modern cities.",
+                  "field_4": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg"
+                }
+              },
+              {
+                "key": "block_4",
+                "label": "The Taste of Memory",
+                "fields": [
+                  {
+                    "key": "field_1",
+                    "label": "The taste of memory vessel study",
+                    "type": "media",
+                    "binding": {
+                      "attribute": "src"
+                    }
+                  },
+                  {
+                    "key": "field_2",
+                    "label": "The Taste of Memory",
+                    "type": "text",
+                    "binding": {}
+                  },
+                  {
+                    "key": "field_3",
+                    "label": "How a simple bowl of broth transported me back to a rainy af",
+                    "type": "text",
+                    "binding": {}
+                  },
+                  {
+                    "key": "field_4",
+                    "label": "Jane Doe avatar silhouette",
+                    "type": "media",
+                    "binding": {
+                      "attribute": "src"
+                    }
+                  }
+                ],
+                "settings": [],
+                "html": "<article data-block-id=\"blk-home-entry-4\" data-block-key=\"journal-article-card\" data-definition-key=\"journal-article-card\" data-template-sku=\"tpl-journal-article-card-standard\" class=\"group flex flex-col gap-6 \" style=\"opacity: 0; transform: translateY(0.0153477px);\"><a class=\"block overflow-hidden rounded-sm bg-[var(--border-subtle)] aspect-[4/3] w-full\" href=\"/theme-packages/plain-jane/0.1.0/preview/post/taste-of-memory\" data-discover=\"true\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md h-full w-full object-cover group-hover:scale-105\" alt=\"The taste of memory vessel study\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/cover-memory.svg\" data-theme-project-field=\"field_1\"></a><div class=\"flex flex-col \"><div class=\"mb-3 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]\"><span>August 12, 2023</span><span class=\"h-1 w-1 rounded-full bg-[var(--border-input)]\"></span><span>Food</span></div><a class=\"group-hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/post/taste-of-memory\" data-discover=\"true\"><h2 class=\"font-serif leading-tight text-[var(--text)] text-2xl mb-3\" data-theme-project-field=\"field_2\">The Taste of Memory</h2></a><p class=\"text-[var(--text-muted)] leading-relaxed text-sm mb-4 line-clamp-3\" data-theme-project-field=\"field_3\">How a simple bowl of broth transported me back to a rainy afternoon in Kyoto.</p><div class=\"mt-auto flex items-center gap-3\"><img class=\"transition-all duration-700 ease-out opacity-100 blur-0 h-8 w-8 rounded-full object-cover grayscale\" alt=\"Jane Doe avatar silhouette\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg\" data-theme-project-field=\"field_4\"><div class=\"flex flex-col\"><span class=\"text-xs font-medium text-[var(--text)]\">Jane Doe</span><span class=\"text-xs text-[var(--text-muted)]\">4 min read</span></div></div></div></article>",
+                "defaults": {
+                  "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/cover-memory.svg",
+                  "field_2": "The Taste of Memory",
+                  "field_3": "How a simple bowl of broth transported me back to a rainy afternoon in Kyoto.",
+                  "field_4": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg"
+                }
+              }
+            ],
+            "capabilities": {
+              "reorder": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slug": "the-art-of-slow-travel",
+      "title": "The Art of Slow Travel: Finding Meaning in the In-Between",
+      "assetBase": "https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/",
+      "status": "draft",
+      "template": "<!DOCTYPE html><html lang=\"en\" style=\"--bg: #F9F8F6; --text: #1A1A1A; --text-muted: #4A4A4A; --accent: #D96C4A; --border-subtle: rgba(26, 26, 26, 0.05); --border-divider: rgba(26, 26, 26, 0.10); --border-input: rgba(26, 26, 26, 0.20); --overlay-scrim: rgba(26, 26, 26, 0.60); --hero-gradient: rgba(26, 26, 26, 0.80); --lightbox-bg: rgba(26, 26, 26, 0.95); --selection-bg: rgba(217, 108, 74, 0.20);\"><head><base href=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/\">\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>The Art of Slow Travel — Plain Jane Journal</title>\n    <meta name=\"description\" content=\"Why rushing from landmark to landmark is ruining our ability to truly experience the world around us.\">\n    <meta property=\"og:title\" content=\"The Art of Slow Travel — Plain Jane Journal\">\n    <meta property=\"og:description\" content=\"Why rushing from landmark to landmark is ruining our ability to truly experience the world around us.\">\n    \n    <link rel=\"stylesheet\" crossorigin=\"\" href=\"/theme-packages/plain-jane/0.1.0/preview/assets/index-DoaQ4-Dq.css\">\n  <meta property=\"og:image\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/images/cover-slow-travel.svg\"><meta property=\"og:url\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/post/the-art-of-slow-travel\"><meta property=\"og:type\" content=\"article\"><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:title\" content=\"The Art of Slow Travel — Plain Jane Journal\"><meta name=\"twitter:description\" content=\"Why rushing from landmark to landmark is ruining our ability to truly experience the world around us.\"><meta name=\"twitter:image\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/images/cover-slow-travel.svg\"></head>\n  <body style=\"overflow: unset;\">\n    <div id=\"root\"><div class=\"flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)]\"><header data-section-id=\"sec-header-nav\" data-definition-key=\"journal-header\" data-template-sku=\"tpl-journal-header-default\" class=\"sticky top-0 z-50 w-full border-b border-[var(--border-subtle)] bg-[var(--bg)]/80 backdrop-blur-md\" style=\"opacity: 0; transform: translateY(-0.0060526px);\"><div class=\"mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8\"><div class=\"flex items-center gap-4\"><button class=\"p-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer\" aria-label=\"Toggle menu\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-menu h-5 w-5\" aria-hidden=\"true\"><path d=\"M4 5h16\"></path><path d=\"M4 12h16\"></path><path d=\"M4 19h16\"></path></svg></button><div class=\"inline-flex items-center gap-2.5 select-none \"><img alt=\"Plain Jane Journal\" width=\"26\" height=\"26\" class=\"shrink-0 transition-transform duration-300 hover:rotate-3\" src=\"/theme-packages/plain-jane/0.1.0/preview/icons/app-logo.svg\"></div></div><a class=\"absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\"><span class=\"font-serif text-xl font-semibold tracking-wide text-[var(--text)]\">JANE DOE</span></a><div class=\"flex items-center gap-4\"><button class=\"p-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer\" aria-label=\"Open search\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-search h-5 w-5\" aria-hidden=\"true\"><path d=\"m21 21-4.34-4.34\"></path><circle cx=\"11\" cy=\"11\" r=\"8\"></circle></svg></button><a class=\"hidden text-sm font-medium uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text)] sm:block transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/about\" data-discover=\"true\">About</a></div></div></header><main class=\"flex-1\"><div data-section-id=\"sec-post-1-hero\" data-definition-key=\"journal-post-hero\" data-template-sku=\"tpl-journal-post-hero-default\" class=\"relative h-[70vh] min-h-[500px] w-full overflow-hidden bg-[var(--text)]\"><div class=\"absolute inset-0\" style=\"opacity: 1; transform: none;\"><img class=\"transition-all duration-700 ease-out blur-md h-full w-full object-cover opacity-60\" alt=\"The Art of Slow Travel cover study\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/cover-slow-travel.svg\"></div><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--hero-gradient)] via-transparent to-transparent\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 sm:p-12 md:p-24\"><div class=\"mx-auto max-w-4xl\" style=\"opacity: 0; transform: translateY(0.310882px);\"><div class=\"mb-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-[var(--bg)]/80\"><span>October 12, 2023</span><span class=\"h-1 w-1 rounded-full bg-[var(--bg)]/40\"></span><span>Travel</span><span class=\"h-1 w-1 rounded-full bg-[var(--bg)]/40\"></span><span>8 min read</span></div><h1 class=\"font-serif text-4xl font-medium leading-tight tracking-tight text-[var(--bg)] sm:text-5xl md:text-6xl lg:text-7xl\">The Art of Slow Travel: Finding Meaning in the In-Between</h1></div></div></div><!--theme-section:section_1--></main><footer data-section-id=\"sec-footer-nav\" data-definition-key=\"journal-footer\" data-template-sku=\"tpl-journal-footer-default\" class=\"border-t border-[var(--border-divider)] bg-[var(--bg)] py-12 mt-24\"><div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\"><div class=\"grid grid-cols-1 gap-8 md:grid-cols-3\"><div class=\"flex flex-col gap-4\"><div class=\"flex items-center gap-2\"><div class=\"inline-flex items-center gap-2.5 select-none \"><img alt=\"Plain Jane Journal\" width=\"24\" height=\"24\" class=\"shrink-0 transition-transform duration-300 hover:rotate-3\" src=\"/theme-packages/plain-jane/0.1.0/preview/icons/app-logo.svg\"></div><span class=\"font-serif text-xl font-semibold tracking-wide text-[var(--text)]\">JANE DOE</span></div><p class=\"text-sm text-[var(--text-muted)] max-w-xs\">Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.</p></div><div class=\"flex flex-col gap-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]\">Explore</h4><nav class=\"flex flex-col gap-2\"><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\">Essays</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/photography\" data-discover=\"true\">Photography</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\">Travel</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/about\" data-discover=\"true\">About</a></nav></div><div class=\"flex flex-col gap-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]\">Connect</h4><nav class=\"flex flex-col gap-2\"><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Twitter</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Instagram</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Substack</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Email</a></nav></div></div><div class=\"mt-12 flex flex-col items-center justify-between gap-4 border-t border-[var(--border-subtle)] pt-8 sm:flex-row text-center sm:text-left\"><p class=\"text-xs text-[var(--text-muted)]\">© 2026 Jane Doe. All rights reserved.</p><div class=\"flex gap-4 text-xs text-[var(--text-muted)]\"><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/privacy\" data-discover=\"true\">Privacy</a><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/terms\" data-discover=\"true\">Terms</a><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/contact\" data-discover=\"true\">Contact</a></div></div></div></footer></div></div>\n  \n\n\n</body></html>",
+      "sections": [
+        {
+          "key": "section_1",
+          "name": "The Architecture of Quiet Spaces",
+          "html": "<article data-section-id=\"sec-post-1-body\" data-definition-key=\"journal-post-body\" data-template-sku=\"tpl-journal-post-body-default\" class=\"mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24\" data-theme-section=\"section_1\" data-theme-project-field=\"__section\"><div class=\"prose prose-lg prose-stone max-w-none prose-headings:font-serif prose-headings:font-medium prose-headings:tracking-tight prose-p:leading-relaxed prose-p:text-[var(--text-muted)] prose-a:text-[var(--accent)] prose-a:no-underline hover:prose-a:underline\" style=\"opacity: 0; transform: translateY(1.53584px);\"><p data-block-id=\"blk-p1-lead\" data-block-key=\"journal-lead-paragraph\" data-definition-key=\"journal-lead-paragraph\" data-template-sku=\"tpl-journal-lead-paragraph-default\" class=\"lead text-2xl font-serif italic text-[var(--text)] mb-12\" data-theme-project-field=\"field_1\">Why rushing from landmark to landmark is ruining our ability to truly experience the world around us.</p><div data-block-id=\"blk-p1-text-1\" data-block-key=\"journal-text-block\" data-definition-key=\"journal-text-block\" data-template-sku=\"tpl-journal-text-block-default\"><p data-theme-project-field=\"field_2\">The modern world demands our constant attention. We are bombarded with notifications, emails, and the endless scroll of social media. In this cacophony, silence has become a luxury, a rare commodity that we must actively seek out and cultivate.</p></div><div data-block-id=\"blk-p1-text-2\" data-block-key=\"journal-text-block\" data-definition-key=\"journal-text-block\" data-template-sku=\"tpl-journal-text-block-default\"><p data-theme-project-field=\"field_3\">But what does it mean to truly embrace silence? It is not merely the absence of noise, but a state of being—a profound stillness that allows us to connect with our inner selves and the world around us in a more meaningful way.</p></div><blockquote data-block-id=\"blk-p1-quote\" data-block-key=\"journal-quote-embed\" data-definition-key=\"journal-quote-embed\" data-template-sku=\"tpl-journal-quote-embed-default\" class=\"my-16 mx-auto max-w-3xl border-l-2 border-[var(--accent)] pl-6 sm:pl-8 pr-4 sm:pr-0 py-4 not-italic\" style=\"opacity: 0; transform: scale(0.95);\"><p class=\"font-serif text-2xl italic leading-relaxed text-[var(--text)] md:text-3xl\" data-theme-project-field=\"field_4\">“In the attitude of silence the soul finds the path in a clearer light, and what is elusive and deceptive resolves itself into crystal clearness.”</p><footer class=\"mt-6 flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-[var(--text-muted)]\"><span>Mahatma Gandhi</span></footer></blockquote><h2 data-block-id=\"blk-p1-head-1\" data-block-key=\"journal-heading-block\" data-definition-key=\"journal-heading-block\" data-template-sku=\"tpl-journal-heading-block-default\" class=\"text-3xl mt-16 mb-8 text-[var(--text)] font-serif font-medium tracking-tight\" data-theme-project-field=\"field_5\">The Architecture of Quiet Spaces</h2><div data-block-id=\"blk-p1-text-3\" data-block-key=\"journal-text-block\" data-definition-key=\"journal-text-block\" data-template-sku=\"tpl-journal-text-block-default\"><p data-theme-project-field=\"field_6\">Throughout history, humans have designed spaces specifically to foster contemplation and peace. From the soaring arches of Gothic cathedrals to the minimalist serenity of Japanese Zen gardens, these environments share a common purpose: to quiet the mind and elevate the spirit.</p></div><figure data-block-id=\"blk-p1-img\" data-block-key=\"journal-image-embed\" data-definition-key=\"journal-image-embed\" data-template-sku=\"tpl-journal-image-embed-wide\" class=\"my-16 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8\" style=\"opacity: 0; transform: translateY(20px);\"><button class=\"w-full overflow-hidden rounded-sm bg-[var(--border-subtle)] cursor-zoom-in group text-left\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-[1.02]\" alt=\"Minimalist architecture\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/embed-architecture.svg\" data-theme-project-field=\"field_7\"></button><figcaption class=\"mt-4 text-center text-sm italic text-[var(--text-muted)] max-w-2xl mx-auto px-4\">The interplay of light and shadow creates a natural rhythm that encourages reflection.</figcaption></figure><div data-block-id=\"blk-p1-text-4\" data-block-key=\"journal-text-block\" data-definition-key=\"journal-text-block\" data-template-sku=\"tpl-journal-text-block-default\"><p data-theme-project-field=\"field_8\">When we enter these spaces, we instinctively lower our voices. Our breathing slows. We become acutely aware of the subtle details—the texture of stone, the play of light on water, the gentle rustle of leaves. This heightened awareness is the gift of silence.</p></div><h2 data-block-id=\"blk-p1-head-2\" data-block-key=\"journal-heading-block\" data-definition-key=\"journal-heading-block\" data-template-sku=\"tpl-journal-heading-block-default\" class=\"text-3xl mt-16 mb-8 text-[var(--text)] font-serif font-medium tracking-tight\" data-theme-project-field=\"field_9\">Cultivating Your Own Sanctuary</h2><figure data-block-id=\"blk-p1-gallery\" data-block-key=\"journal-gallery-embed\" data-definition-key=\"journal-gallery-embed\" data-template-sku=\"tpl-journal-gallery-embed-default\" class=\"my-16 w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8\"><div class=\"grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3\"><button class=\"overflow-hidden rounded-sm bg-[var(--border-subtle)] cursor-zoom-in group sm:col-span-2 sm:row-span-2\" style=\"opacity: 0; transform: translateY(20px);\"><img class=\"transition-all duration-700 ease-out opacity-100 blur-0 h-full w-full object-cover group-hover:scale-105\" alt=\"Morning light\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/gallery-1.svg\" style=\"min-height: 100%;\" data-theme-project-field=\"field_10\"></button><button class=\"overflow-hidden rounded-sm bg-[var(--border-subtle)] cursor-zoom-in group \" style=\"opacity: 0; transform: translateY(20px);\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md h-full w-full object-cover group-hover:scale-105\" alt=\"Coffee cup\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/gallery-2.svg\" style=\"min-height: 300px;\" data-theme-project-field=\"field_11\"></button><button class=\"overflow-hidden rounded-sm bg-[var(--border-subtle)] cursor-zoom-in group \" style=\"opacity: 0; transform: translateY(20px);\"><img class=\"transition-all duration-700 ease-out opacity-100 blur-0 h-full w-full object-cover group-hover:scale-105\" alt=\"Open book\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/gallery-3.svg\" style=\"min-height: 300px;\" data-theme-project-field=\"field_12\"></button></div><figcaption class=\"mt-4 text-center text-sm italic text-[var(--text-muted)]\">Morning light</figcaption></figure><div data-block-id=\"blk-p1-text-5\" data-block-key=\"journal-text-block\" data-definition-key=\"journal-text-block\" data-template-sku=\"tpl-journal-text-block-default\"><p data-theme-project-field=\"field_13\">Start small. Turn off your phone for an hour. Sit by a window and watch the clouds drift by. Take a walk without headphones. Notice the sounds that emerge when the artificial noise fades away—the hum of the refrigerator, the distant chirp of a bird, the rhythm of your own breath.</p></div><div data-block-id=\"blk-p1-author\" data-block-key=\"journal-author-bio\" data-definition-key=\"journal-author-bio\" data-template-sku=\"tpl-journal-author-bio-default\" class=\"mt-24 border-t border-[var(--border-divider)] pt-12\"><div class=\"flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:gap-8\"><img alt=\"Jane Doe\" referrerpolicy=\"no-referrer\" class=\"h-24 w-24 rounded-full object-cover grayscale shrink-0\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg\" data-theme-project-field=\"field_14\"><div class=\"flex flex-col items-center text-center sm:items-start sm:text-left\"><h3 class=\"font-serif text-2xl font-medium tracking-tight text-[var(--text)]\" data-theme-project-field=\"field_15\">Written by Jane Doe</h3><p class=\"mt-3 max-w-md text-[var(--text-muted)] leading-relaxed\" data-theme-project-field=\"field_16\">Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.</p><div class=\"mt-4 flex gap-4 text-sm font-medium uppercase tracking-wider text-[var(--text-muted)]\"><a href=\"#\" class=\"hover:text-[var(--accent)] transition-colors\" data-theme-project-field=\"field_17\">Twitter</a><a href=\"#\" class=\"hover:text-[var(--accent)] transition-colors\" data-theme-project-field=\"field_18\">Instagram</a></div></div></div></div></div></article>",
+          "content": {
+            "__editor": {
+              "templateKey": "section_1",
+              "visibility": {
+                "enabled": true
+              },
+              "blocks": []
+            },
+            "field_1": "Why rushing from landmark to landmark is ruining our ability to truly experience the world around us.",
+            "field_2": "The modern world demands our constant attention. We are bombarded with notifications, emails, and the endless scroll of social media. In this cacophony, silence has become a luxury, a rare commodity that we must actively seek out and cultivate.",
+            "field_3": "But what does it mean to truly embrace silence? It is not merely the absence of noise, but a state of being—a profound stillness that allows us to connect with our inner selves and the world around us in a more meaningful way.",
+            "field_4": "“In the attitude of silence the soul finds the path in a clearer light, and what is elusive and deceptive resolves itself into crystal clearness.”",
+            "field_5": "The Architecture of Quiet Spaces",
+            "field_6": "Throughout history, humans have designed spaces specifically to foster contemplation and peace. From the soaring arches of Gothic cathedrals to the minimalist serenity of Japanese Zen gardens, these environments share a common purpose: to quiet the mind and elevate the spirit.",
+            "field_7": "/theme-packages/plain-jane/0.1.0/preview/images/embed-architecture.svg",
+            "field_8": "When we enter these spaces, we instinctively lower our voices. Our breathing slows. We become acutely aware of the subtle details—the texture of stone, the play of light on water, the gentle rustle of leaves. This heightened awareness is the gift of silence.",
+            "field_9": "Cultivating Your Own Sanctuary",
+            "field_10": "/theme-packages/plain-jane/0.1.0/preview/images/gallery-1.svg",
+            "field_11": "/theme-packages/plain-jane/0.1.0/preview/images/gallery-2.svg",
+            "field_12": "/theme-packages/plain-jane/0.1.0/preview/images/gallery-3.svg",
+            "field_13": "Start small. Turn off your phone for an hour. Sit by a window and watch the clouds drift by. Take a walk without headphones. Notice the sounds that emerge when the artificial noise fades away—the hum of the refrigerator, the distant chirp of a bird, the rhythm of your own breath.",
+            "field_14": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg",
+            "field_15": "Written by Jane Doe",
+            "field_16": "Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.",
+            "field_17": "Twitter",
+            "field_17_href": "#",
+            "field_18": "Instagram",
+            "field_18_href": "#",
+            "layout_padding": "",
+            "layout_background": ""
+          },
+          "version": 0,
+          "status": "draft",
+          "sort_order": 0,
+          "schema": {
+            "key": "section_1",
+            "label": "The Architecture of Quiet Spaces",
+            "fields": [
+              {
+                "key": "field_1",
+                "label": "Why rushing from landmark to landmark is ruining our ability",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_2",
+                "label": "The modern world demands our constant attention. We are bomb",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_3",
+                "label": "But what does it mean to truly embrace silence? It is not me",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_4",
+                "label": "“In the attitude of silence the soul finds the path in a cle",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_5",
+                "label": "The Architecture of Quiet Spaces",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_6",
+                "label": "Throughout history, humans have designed spaces specifically",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_7",
+                "label": "Minimalist architecture",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_8",
+                "label": "When we enter these spaces, we instinctively lower our voice",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_9",
+                "label": "Cultivating Your Own Sanctuary",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_10",
+                "label": "Morning light",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_11",
+                "label": "Coffee cup",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_12",
+                "label": "Open book",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_13",
+                "label": "Start small. Turn off your phone for an hour. Sit by a windo",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_14",
+                "label": "Jane Doe",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_15",
+                "label": "Written by Jane Doe",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_16",
+                "label": "Documenting the quiet moments between the noise. A journal o",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_17",
+                "label": "Twitter",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_17_href",
+                "label": "Link destination",
+                "type": "link",
+                "binding": {
+                  "field": "field_17",
+                  "attribute": "href"
+                }
+              },
+              {
+                "key": "field_18",
+                "label": "Instagram",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_18_href",
+                "label": "Link destination",
+                "type": "link",
+                "binding": {
+                  "field": "field_18",
+                  "attribute": "href"
+                }
+              }
+            ],
+            "settings": [
+              {
+                "key": "layout_padding",
+                "label": "Padding",
+                "type": "text",
+                "group": "Spacing",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "padding"
+                }
+              },
+              {
+                "key": "layout_background",
+                "label": "Background",
+                "type": "text",
+                "group": "Surface",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "background"
+                }
+              }
+            ],
+            "blocks": [],
+            "capabilities": {
+              "reorder": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slug": "analog-photography-digital-age",
+      "title": "Embracing Analog in a Hyper-Digital Age",
+      "assetBase": "https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/",
+      "status": "draft",
+      "template": "<!DOCTYPE html><html lang=\"en\" style=\"--bg: #F9F8F6; --text: #1A1A1A; --text-muted: #4A4A4A; --accent: #D96C4A; --border-subtle: rgba(26, 26, 26, 0.05); --border-divider: rgba(26, 26, 26, 0.10); --border-input: rgba(26, 26, 26, 0.20); --overlay-scrim: rgba(26, 26, 26, 0.60); --hero-gradient: rgba(26, 26, 26, 0.80); --lightbox-bg: rgba(26, 26, 26, 0.95); --selection-bg: rgba(217, 108, 74, 0.20);\"><head><base href=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/\">\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Embracing Analog — Plain Jane Journal</title>\n    <meta name=\"description\" content=\"There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film.\">\n    <meta property=\"og:title\" content=\"Embracing Analog — Plain Jane Journal\">\n    <meta property=\"og:description\" content=\"There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film.\">\n    \n    <link rel=\"stylesheet\" crossorigin=\"\" href=\"/theme-packages/plain-jane/0.1.0/preview/assets/index-DoaQ4-Dq.css\">\n  <meta property=\"og:image\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/images/cover-analog.svg\"><meta property=\"og:url\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/post/analog-photography-digital-age\"><meta property=\"og:type\" content=\"article\"><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:title\" content=\"Embracing Analog — Plain Jane Journal\"><meta name=\"twitter:description\" content=\"There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film.\"><meta name=\"twitter:image\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/images/cover-analog.svg\"></head>\n  <body style=\"overflow: unset;\">\n    <div id=\"root\"><div class=\"flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)]\"><header data-section-id=\"sec-header-nav\" data-definition-key=\"journal-header\" data-template-sku=\"tpl-journal-header-default\" class=\"sticky top-0 z-50 w-full border-b border-[var(--border-subtle)] bg-[var(--bg)]/80 backdrop-blur-md\" style=\"opacity: 0; transform: translateY(-0.0134658px);\"><div class=\"mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8\"><div class=\"flex items-center gap-4\"><button class=\"p-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer\" aria-label=\"Toggle menu\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-menu h-5 w-5\" aria-hidden=\"true\"><path d=\"M4 5h16\"></path><path d=\"M4 12h16\"></path><path d=\"M4 19h16\"></path></svg></button><div class=\"inline-flex items-center gap-2.5 select-none \"><img alt=\"Plain Jane Journal\" width=\"26\" height=\"26\" class=\"shrink-0 transition-transform duration-300 hover:rotate-3\" src=\"/theme-packages/plain-jane/0.1.0/preview/icons/app-logo.svg\"></div></div><a class=\"absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\"><span class=\"font-serif text-xl font-semibold tracking-wide text-[var(--text)]\">JANE DOE</span></a><div class=\"flex items-center gap-4\"><button class=\"p-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer\" aria-label=\"Open search\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-search h-5 w-5\" aria-hidden=\"true\"><path d=\"m21 21-4.34-4.34\"></path><circle cx=\"11\" cy=\"11\" r=\"8\"></circle></svg></button><a class=\"hidden text-sm font-medium uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text)] sm:block transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/about\" data-discover=\"true\">About</a></div></div></header><main class=\"flex-1\"><div data-section-id=\"sec-post-2-hero\" data-definition-key=\"journal-post-hero\" data-template-sku=\"tpl-journal-post-hero-default\" class=\"relative h-[70vh] min-h-[500px] w-full overflow-hidden bg-[var(--text)]\"><div class=\"absolute inset-0\" style=\"opacity: 1; transform: none;\"><img class=\"transition-all duration-700 ease-out blur-md h-full w-full object-cover opacity-60\" alt=\"Analog shutter and mechanical precision study\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/cover-analog.svg\"></div><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--hero-gradient)] via-transparent to-transparent\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 sm:p-12 md:p-24\"><div class=\"mx-auto max-w-4xl\" style=\"opacity: 0; transform: translateY(0.437868px);\"><div class=\"mb-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wider text-[var(--bg)]/80\"><span>September 28, 2023</span><span class=\"h-1 w-1 rounded-full bg-[var(--bg)]/40\"></span><span>Photography</span><span class=\"h-1 w-1 rounded-full bg-[var(--bg)]/40\"></span><span>5 min read</span></div><h1 class=\"font-serif text-4xl font-medium leading-tight tracking-tight text-[var(--bg)] sm:text-5xl md:text-6xl lg:text-7xl\">Embracing Analog in a Hyper-Digital Age</h1></div></div></div><!--theme-section:section_1--></main><footer data-section-id=\"sec-footer-nav\" data-definition-key=\"journal-footer\" data-template-sku=\"tpl-journal-footer-default\" class=\"border-t border-[var(--border-divider)] bg-[var(--bg)] py-12 mt-24\"><div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\"><div class=\"grid grid-cols-1 gap-8 md:grid-cols-3\"><div class=\"flex flex-col gap-4\"><div class=\"flex items-center gap-2\"><div class=\"inline-flex items-center gap-2.5 select-none \"><img alt=\"Plain Jane Journal\" width=\"24\" height=\"24\" class=\"shrink-0 transition-transform duration-300 hover:rotate-3\" src=\"/theme-packages/plain-jane/0.1.0/preview/icons/app-logo.svg\"></div><span class=\"font-serif text-xl font-semibold tracking-wide text-[var(--text)]\">JANE DOE</span></div><p class=\"text-sm text-[var(--text-muted)] max-w-xs\">Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.</p></div><div class=\"flex flex-col gap-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]\">Explore</h4><nav class=\"flex flex-col gap-2\"><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\">Essays</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/photography\" data-discover=\"true\">Photography</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\">Travel</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/about\" data-discover=\"true\">About</a></nav></div><div class=\"flex flex-col gap-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]\">Connect</h4><nav class=\"flex flex-col gap-2\"><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Twitter</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Instagram</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Substack</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Email</a></nav></div></div><div class=\"mt-12 flex flex-col items-center justify-between gap-4 border-t border-[var(--border-subtle)] pt-8 sm:flex-row text-center sm:text-left\"><p class=\"text-xs text-[var(--text-muted)]\">© 2026 Jane Doe. All rights reserved.</p><div class=\"flex gap-4 text-xs text-[var(--text-muted)]\"><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/privacy\" data-discover=\"true\">Privacy</a><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/terms\" data-discover=\"true\">Terms</a><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/contact\" data-discover=\"true\">Contact</a></div></div></div></footer></div></div>\n  \n\n\n</body></html>",
+      "sections": [
+        {
+          "key": "section_1",
+          "name": "Written by Jane Doe",
+          "html": "<article data-section-id=\"sec-post-2-body\" data-definition-key=\"journal-post-body\" data-template-sku=\"tpl-journal-post-body-default\" class=\"mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24\" data-theme-section=\"section_1\" data-theme-project-field=\"__section\"><div class=\"prose prose-lg prose-stone max-w-none prose-headings:font-serif prose-headings:font-medium prose-headings:tracking-tight prose-p:leading-relaxed prose-p:text-[var(--text-muted)] prose-a:text-[var(--accent)] prose-a:no-underline hover:prose-a:underline\" style=\"opacity: 0; transform: translateY(2.0057px);\"><p data-block-id=\"blk-p2-lead\" data-block-key=\"journal-lead-paragraph\" data-definition-key=\"journal-lead-paragraph\" data-template-sku=\"tpl-journal-lead-paragraph-default\" class=\"lead text-2xl font-serif italic text-[var(--text)] mb-12\" data-theme-project-field=\"field_1\">There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film.</p><div data-block-id=\"blk-p2-text-1\" data-block-key=\"journal-text-block\" data-definition-key=\"journal-text-block\" data-template-sku=\"tpl-journal-text-block-default\"><p data-theme-project-field=\"field_2\">In an era where we capture thousands of images on smartphones only to never look at them again, working with a roll of 36 exposures imposes a deliberate slowness. Each press of the shutter button is a financial and temporal commitment.</p></div><blockquote data-block-id=\"blk-p2-quote\" data-block-key=\"journal-quote-embed\" data-definition-key=\"journal-quote-embed\" data-template-sku=\"tpl-journal-quote-embed-default\" class=\"my-16 mx-auto max-w-3xl border-l-2 border-[var(--accent)] pl-6 sm:pl-8 pr-4 sm:pr-0 py-4 not-italic\" style=\"opacity: 0; transform: scale(0.95);\"><p class=\"font-serif text-2xl italic leading-relaxed text-[var(--text)] md:text-3xl\" data-theme-project-field=\"field_3\">“Limitations produce focus. When you only have thirty-six frames, you learn to look twice before looking through the glass.”</p><footer class=\"mt-6 flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-[var(--text-muted)]\"><span>Anonymous Printmaker</span></footer></blockquote><div data-block-id=\"blk-p2-text-2\" data-block-key=\"journal-text-block\" data-definition-key=\"journal-text-block\" data-template-sku=\"tpl-journal-text-block-default\"><p data-theme-project-field=\"field_4\">The tactile sensation of advancing film by thumb, setting manual aperture rings, and looking through an optical prism reconnects the image-maker with physical physics and patience.</p></div><div data-block-id=\"blk-p2-author\" data-block-key=\"journal-author-bio\" data-definition-key=\"journal-author-bio\" data-template-sku=\"tpl-journal-author-bio-default\" class=\"mt-24 border-t border-[var(--border-divider)] pt-12\"><div class=\"flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:gap-8\"><img alt=\"Jane Doe\" referrerpolicy=\"no-referrer\" class=\"h-24 w-24 rounded-full object-cover grayscale shrink-0\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg\" data-theme-project-field=\"field_5\"><div class=\"flex flex-col items-center text-center sm:items-start sm:text-left\"><h3 class=\"font-serif text-2xl font-medium tracking-tight text-[var(--text)]\" data-theme-project-field=\"field_6\">Written by Jane Doe</h3><p class=\"mt-3 max-w-md text-[var(--text-muted)] leading-relaxed\" data-theme-project-field=\"field_7\">Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.</p><div class=\"mt-4 flex gap-4 text-sm font-medium uppercase tracking-wider text-[var(--text-muted)]\"><a href=\"#\" class=\"hover:text-[var(--accent)] transition-colors\" data-theme-project-field=\"field_8\">Twitter</a><a href=\"#\" class=\"hover:text-[var(--accent)] transition-colors\" data-theme-project-field=\"field_9\">Instagram</a></div></div></div></div></div></article>",
+          "content": {
+            "__editor": {
+              "templateKey": "section_1",
+              "visibility": {
+                "enabled": true
+              },
+              "blocks": []
+            },
+            "field_1": "There is something profoundly grounding about the mechanical click of a shutter and the anticipation of developing film.",
+            "field_2": "In an era where we capture thousands of images on smartphones only to never look at them again, working with a roll of 36 exposures imposes a deliberate slowness. Each press of the shutter button is a financial and temporal commitment.",
+            "field_3": "“Limitations produce focus. When you only have thirty-six frames, you learn to look twice before looking through the glass.”",
+            "field_4": "The tactile sensation of advancing film by thumb, setting manual aperture rings, and looking through an optical prism reconnects the image-maker with physical physics and patience.",
+            "field_5": "/theme-packages/plain-jane/0.1.0/preview/images/author-avatar.svg",
+            "field_6": "Written by Jane Doe",
+            "field_7": "Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.",
+            "field_8": "Twitter",
+            "field_8_href": "#",
+            "field_9": "Instagram",
+            "field_9_href": "#",
+            "layout_padding": "",
+            "layout_background": ""
+          },
+          "version": 0,
+          "status": "draft",
+          "sort_order": 0,
+          "schema": {
+            "key": "section_1",
+            "label": "Written by Jane Doe",
+            "fields": [
+              {
+                "key": "field_1",
+                "label": "There is something profoundly grounding about the mechanical",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_2",
+                "label": "In an era where we capture thousands of images on smartphone",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_3",
+                "label": "“Limitations produce focus. When you only have thirty-six fr",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_4",
+                "label": "The tactile sensation of advancing film by thumb, setting ma",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_5",
+                "label": "Jane Doe",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_6",
+                "label": "Written by Jane Doe",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_7",
+                "label": "Documenting the quiet moments between the noise. A journal o",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_8",
+                "label": "Twitter",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_8_href",
+                "label": "Link destination",
+                "type": "link",
+                "binding": {
+                  "field": "field_8",
+                  "attribute": "href"
+                }
+              },
+              {
+                "key": "field_9",
+                "label": "Instagram",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_9_href",
+                "label": "Link destination",
+                "type": "link",
+                "binding": {
+                  "field": "field_9",
+                  "attribute": "href"
+                }
+              }
+            ],
+            "settings": [
+              {
+                "key": "layout_padding",
+                "label": "Padding",
+                "type": "text",
+                "group": "Spacing",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "padding"
+                }
+              },
+              {
+                "key": "layout_background",
+                "label": "Background",
+                "type": "text",
+                "group": "Surface",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "background"
+                }
+              }
+            ],
+            "blocks": [],
+            "capabilities": {
+              "reorder": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slug": "about",
+      "title": "About Jane",
+      "assetBase": "https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/",
+      "status": "draft",
+      "template": "<!DOCTYPE html><html lang=\"en\" style=\"--bg: #F9F8F6; --text: #1A1A1A; --text-muted: #4A4A4A; --accent: #D96C4A; --border-subtle: rgba(26, 26, 26, 0.05); --border-divider: rgba(26, 26, 26, 0.10); --border-input: rgba(26, 26, 26, 0.20); --overlay-scrim: rgba(26, 26, 26, 0.60); --hero-gradient: rgba(26, 26, 26, 0.80); --lightbox-bg: rgba(26, 26, 26, 0.95); --selection-bg: rgba(217, 108, 74, 0.20);\"><head><base href=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/\">\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>About Jane — Plain Jane Journal</title>\n    <meta name=\"description\" content=\"Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.\">\n    <meta property=\"og:title\" content=\"About Jane — Plain Jane Journal\">\n    <meta property=\"og:description\" content=\"Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.\">\n    \n    <link rel=\"stylesheet\" crossorigin=\"\" href=\"/theme-packages/plain-jane/0.1.0/preview/assets/index-DoaQ4-Dq.css\">\n  <meta property=\"og:image\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/images/author-portrait.svg\"><meta property=\"og:url\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/about\"><meta property=\"og:type\" content=\"website\"><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:title\" content=\"About Jane — Plain Jane Journal\"><meta name=\"twitter:description\" content=\"Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.\"><meta name=\"twitter:image\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/images/author-portrait.svg\"></head>\n  <body style=\"overflow: unset;\">\n    <div id=\"root\"><div class=\"flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)]\"><header data-section-id=\"sec-header-nav\" data-definition-key=\"journal-header\" data-template-sku=\"tpl-journal-header-default\" class=\"sticky top-0 z-50 w-full border-b border-[var(--border-subtle)] bg-[var(--bg)]/80 backdrop-blur-md\" style=\"opacity: 0; transform: translateY(-0.0087544px);\"><div class=\"mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8\"><div class=\"flex items-center gap-4\"><button class=\"p-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer\" aria-label=\"Toggle menu\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-menu h-5 w-5\" aria-hidden=\"true\"><path d=\"M4 5h16\"></path><path d=\"M4 12h16\"></path><path d=\"M4 19h16\"></path></svg></button><div class=\"inline-flex items-center gap-2.5 select-none \"><img alt=\"Plain Jane Journal\" width=\"26\" height=\"26\" class=\"shrink-0 transition-transform duration-300 hover:rotate-3\" src=\"/theme-packages/plain-jane/0.1.0/preview/icons/app-logo.svg\"></div></div><a class=\"absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\"><span class=\"font-serif text-xl font-semibold tracking-wide text-[var(--text)]\">JANE DOE</span></a><div class=\"flex items-center gap-4\"><button class=\"p-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer\" aria-label=\"Open search\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-search h-5 w-5\" aria-hidden=\"true\"><path d=\"m21 21-4.34-4.34\"></path><circle cx=\"11\" cy=\"11\" r=\"8\"></circle></svg></button><a class=\"hidden text-sm font-medium uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text)] sm:block transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/about\" data-discover=\"true\">About</a></div></div></header><main class=\"flex-1\"><!--theme-section:section_1--></main><footer data-section-id=\"sec-footer-nav\" data-definition-key=\"journal-footer\" data-template-sku=\"tpl-journal-footer-default\" class=\"border-t border-[var(--border-divider)] bg-[var(--bg)] py-12 mt-24\"><div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\"><div class=\"grid grid-cols-1 gap-8 md:grid-cols-3\"><div class=\"flex flex-col gap-4\"><div class=\"flex items-center gap-2\"><div class=\"inline-flex items-center gap-2.5 select-none \"><img alt=\"Plain Jane Journal\" width=\"24\" height=\"24\" class=\"shrink-0 transition-transform duration-300 hover:rotate-3\" src=\"/theme-packages/plain-jane/0.1.0/preview/icons/app-logo.svg\"></div><span class=\"font-serif text-xl font-semibold tracking-wide text-[var(--text)]\">JANE DOE</span></div><p class=\"text-sm text-[var(--text-muted)] max-w-xs\">Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.</p></div><div class=\"flex flex-col gap-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]\">Explore</h4><nav class=\"flex flex-col gap-2\"><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\">Essays</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/photography\" data-discover=\"true\">Photography</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\">Travel</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/about\" data-discover=\"true\">About</a></nav></div><div class=\"flex flex-col gap-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]\">Connect</h4><nav class=\"flex flex-col gap-2\"><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Twitter</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Instagram</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Substack</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Email</a></nav></div></div><div class=\"mt-12 flex flex-col items-center justify-between gap-4 border-t border-[var(--border-subtle)] pt-8 sm:flex-row text-center sm:text-left\"><p class=\"text-xs text-[var(--text-muted)]\">© 2026 Jane Doe. All rights reserved.</p><div class=\"flex gap-4 text-xs text-[var(--text-muted)]\"><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/privacy\" data-discover=\"true\">Privacy</a><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/terms\" data-discover=\"true\">Terms</a><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/contact\" data-discover=\"true\">Contact</a></div></div></div></footer></div></div>\n  \n\n\n</body></html>",
+      "sections": [
+        {
+          "key": "section_1",
+          "name": "About Jane",
+          "html": "<article data-section-id=\"sec-about-profile\" data-definition-key=\"journal-about-profile\" data-template-sku=\"tpl-journal-about-profile-default\" class=\"mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24\" data-theme-section=\"section_1\" data-theme-project-field=\"__section\"><div class=\"flex flex-col md:flex-row gap-12 lg:gap-20 items-start\" style=\"opacity: 0; transform: translateY(0.0087544px);\"><div class=\"w-full md:w-1/2\"><div class=\"aspect-[4/5] overflow-hidden rounded-sm bg-[var(--border-subtle)] sticky top-24\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-full object-cover\" alt=\"Jane Doe profile portrait study\" referrerpolicy=\"no-referrer\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/author-portrait.svg\" data-theme-project-field=\"field_1\"></div></div><div class=\"w-full md:w-1/2 flex flex-col justify-center pt-8 md:pt-0\"><h1 class=\"font-serif text-5xl md:text-6xl lg:text-7xl font-medium text-[var(--text)] mb-8 tracking-tight\" data-theme-project-field=\"field_2\">About Jane</h1><div class=\"prose prose-stone prose-lg prose-p:leading-relaxed prose-p:text-[var(--text-muted)]\"><p class=\"text-2xl font-serif italic text-[var(--text)] mb-8 leading-snug\" data-theme-project-field=\"field_3\">Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.</p><div data-block-id=\"blk-about-p1\" data-block-key=\"journal-text-block\" data-definition-key=\"journal-text-block\" data-template-sku=\"tpl-journal-text-block-default\"><p data-theme-project-field=\"field_4\">I started this space as a way to document the quiet moments that often go unnoticed. In a world that constantly demands our attention and pushes us to move faster, I found myself craving stillness.</p></div><div data-block-id=\"blk-about-p2\" data-block-key=\"journal-text-block\" data-definition-key=\"journal-text-block\" data-template-sku=\"tpl-journal-text-block-default\"><p data-theme-project-field=\"field_5\">Through my photography and essays, I explore the intersection of travel, mindfulness, and the art of paying attention. Whether I'm wandering through the bustling streets of Tokyo or sitting in a quiet cafe in Paris, my goal is always to capture the essence of a place and the feeling of being fully present in it.</p></div><div data-block-id=\"blk-about-p3\" data-block-key=\"journal-text-block\" data-definition-key=\"journal-text-block\" data-template-sku=\"tpl-journal-text-block-default\"><p data-theme-project-field=\"field_6\">Thank you for being here. I hope these stories inspire you to slow down, look closer, and find your own moments of quiet amidst the noise.</p></div></div><div class=\"mt-16 pt-12 border-t border-[var(--border-divider)]\"><h3 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text)] mb-6\" data-theme-project-field=\"field_7\">Connect &amp; Inquiries</h3><div class=\"flex flex-col gap-4\"><a href=\"mailto:hello@janedoe.com\" class=\"text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors font-medium\" data-theme-project-field=\"field_8\">hello@janedoe.com</a><a href=\"#\" class=\"text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors font-medium\" data-theme-project-field=\"field_9\">Twitter: @janedoe</a><a href=\"#\" class=\"text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors font-medium\" data-theme-project-field=\"field_10\">Instagram: @jane.captures</a></div></div></div></div></article>",
+          "content": {
+            "__editor": {
+              "templateKey": "section_1",
+              "visibility": {
+                "enabled": true
+              },
+              "blocks": []
+            },
+            "field_1": "/theme-packages/plain-jane/0.1.0/preview/images/author-portrait.svg",
+            "field_2": "About Jane",
+            "field_3": "Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.",
+            "field_4": "I started this space as a way to document the quiet moments that often go unnoticed. In a world that constantly demands our attention and pushes us to move faster, I found myself craving stillness.",
+            "field_5": "Through my photography and essays, I explore the intersection of travel, mindfulness, and the art of paying attention. Whether I'm wandering through the bustling streets of Tokyo or sitting in a quiet cafe in Paris, my goal is always to capture the essence of a place and the feeling of being fully present in it.",
+            "field_6": "Thank you for being here. I hope these stories inspire you to slow down, look closer, and find your own moments of quiet amidst the noise.",
+            "field_7": "Connect & Inquiries",
+            "field_8": "hello@janedoe.com",
+            "field_8_href": "mailto:hello@janedoe.com",
+            "field_9": "Twitter: @janedoe",
+            "field_9_href": "#",
+            "field_10": "Instagram: @jane.captures",
+            "field_10_href": "#",
+            "layout_padding": "",
+            "layout_background": ""
+          },
+          "version": 0,
+          "status": "draft",
+          "sort_order": 0,
+          "schema": {
+            "key": "section_1",
+            "label": "About Jane",
+            "fields": [
+              {
+                "key": "field_1",
+                "label": "Jane Doe profile portrait study",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_2",
+                "label": "About Jane",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_3",
+                "label": "Documenting the quiet moments between the noise. A journal o",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_4",
+                "label": "I started this space as a way to document the quiet moments ",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_5",
+                "label": "Through my photography and essays, I explore the intersectio",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_6",
+                "label": "Thank you for being here. I hope these stories inspire you t",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_7",
+                "label": "Connect & Inquiries",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_8",
+                "label": "hello@janedoe.com",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_8_href",
+                "label": "Link destination",
+                "type": "link",
+                "binding": {
+                  "field": "field_8",
+                  "attribute": "href"
+                }
+              },
+              {
+                "key": "field_9",
+                "label": "Twitter: @janedoe",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_9_href",
+                "label": "Link destination",
+                "type": "link",
+                "binding": {
+                  "field": "field_9",
+                  "attribute": "href"
+                }
+              },
+              {
+                "key": "field_10",
+                "label": "Instagram: @jane.captures",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_10_href",
+                "label": "Link destination",
+                "type": "link",
+                "binding": {
+                  "field": "field_10",
+                  "attribute": "href"
+                }
+              }
+            ],
+            "settings": [
+              {
+                "key": "layout_padding",
+                "label": "Padding",
+                "type": "text",
+                "group": "Spacing",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "padding"
+                }
+              },
+              {
+                "key": "layout_background",
+                "label": "Background",
+                "type": "text",
+                "group": "Surface",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "background"
+                }
+              }
+            ],
+            "blocks": [],
+            "capabilities": {
+              "reorder": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slug": "photography",
+      "title": "Selected Works",
+      "assetBase": "https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/",
+      "status": "draft",
+      "template": "<!DOCTYPE html><html lang=\"en\" style=\"--bg: #F9F8F6; --text: #1A1A1A; --text-muted: #4A4A4A; --accent: #D96C4A; --border-subtle: rgba(26, 26, 26, 0.05); --border-divider: rgba(26, 26, 26, 0.10); --border-input: rgba(26, 26, 26, 0.20); --overlay-scrim: rgba(26, 26, 26, 0.60); --hero-gradient: rgba(26, 26, 26, 0.80); --lightbox-bg: rgba(26, 26, 26, 0.95); --selection-bg: rgba(217, 108, 74, 0.20);\"><head><base href=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/\">\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Selected Works — Plain Jane Journal</title>\n    <meta name=\"description\" content=\"A collection of moments captured across different cities and landscapes.\">\n    <meta property=\"og:title\" content=\"Selected Works — Plain Jane Journal\">\n    <meta property=\"og:description\" content=\"A collection of moments captured across different cities and landscapes.\">\n    \n    <link rel=\"stylesheet\" crossorigin=\"\" href=\"/theme-packages/plain-jane/0.1.0/preview/assets/index-DoaQ4-Dq.css\">\n  <meta property=\"og:image\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/images/photo-1.svg\"><meta property=\"og:url\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/photography\"><meta property=\"og:type\" content=\"website\"><meta name=\"twitter:card\" content=\"summary_large_image\"><meta name=\"twitter:title\" content=\"Selected Works — Plain Jane Journal\"><meta name=\"twitter:description\" content=\"A collection of moments captured across different cities and landscapes.\"><meta name=\"twitter:image\" content=\"https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/images/photo-1.svg\"></head>\n  <body style=\"overflow: unset;\">\n    <div id=\"root\"><div class=\"flex min-h-screen flex-col bg-[var(--bg)] text-[var(--text)]\"><header data-section-id=\"sec-header-nav\" data-definition-key=\"journal-header\" data-template-sku=\"tpl-journal-header-default\" class=\"sticky top-0 z-50 w-full border-b border-[var(--border-subtle)] bg-[var(--bg)]/80 backdrop-blur-md\" style=\"opacity: 0; transform: translateY(-0.0005415px);\"><div class=\"mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8\"><div class=\"flex items-center gap-4\"><button class=\"p-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer\" aria-label=\"Toggle menu\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-menu h-5 w-5\" aria-hidden=\"true\"><path d=\"M4 5h16\"></path><path d=\"M4 12h16\"></path><path d=\"M4 19h16\"></path></svg></button><div class=\"inline-flex items-center gap-2.5 select-none \"><img alt=\"Plain Jane Journal\" width=\"26\" height=\"26\" class=\"shrink-0 transition-transform duration-300 hover:rotate-3\" src=\"/theme-packages/plain-jane/0.1.0/preview/icons/app-logo.svg\"></div></div><a class=\"absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\"><span class=\"font-serif text-xl font-semibold tracking-wide text-[var(--text)]\">JANE DOE</span></a><div class=\"flex items-center gap-4\"><button class=\"p-2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors cursor-pointer\" aria-label=\"Open search\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-search h-5 w-5\" aria-hidden=\"true\"><path d=\"m21 21-4.34-4.34\"></path><circle cx=\"11\" cy=\"11\" r=\"8\"></circle></svg></button><a class=\"hidden text-sm font-medium uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text)] sm:block transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/about\" data-discover=\"true\">About</a></div></div></header><main class=\"flex-1\"><!--theme-section:section_1--></main><footer data-section-id=\"sec-footer-nav\" data-definition-key=\"journal-footer\" data-template-sku=\"tpl-journal-footer-default\" class=\"border-t border-[var(--border-divider)] bg-[var(--bg)] py-12 mt-24\"><div class=\"mx-auto max-w-7xl px-4 sm:px-6 lg:px-8\"><div class=\"grid grid-cols-1 gap-8 md:grid-cols-3\"><div class=\"flex flex-col gap-4\"><div class=\"flex items-center gap-2\"><div class=\"inline-flex items-center gap-2.5 select-none \"><img alt=\"Plain Jane Journal\" width=\"24\" height=\"24\" class=\"shrink-0 transition-transform duration-300 hover:rotate-3\" src=\"/theme-packages/plain-jane/0.1.0/preview/icons/app-logo.svg\"></div><span class=\"font-serif text-xl font-semibold tracking-wide text-[var(--text)]\">JANE DOE</span></div><p class=\"text-sm text-[var(--text-muted)] max-w-xs\">Documenting the quiet moments between the noise. A journal of travel, photography, and finding meaning in the everyday.</p></div><div class=\"flex flex-col gap-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]\">Explore</h4><nav class=\"flex flex-col gap-2\"><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\">Essays</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/photography\" data-discover=\"true\">Photography</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview\" data-discover=\"true\">Travel</a><a class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/about\" data-discover=\"true\">About</a></nav></div><div class=\"flex flex-col gap-4\"><h4 class=\"text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]\">Connect</h4><nav class=\"flex flex-col gap-2\"><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Twitter</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Instagram</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Substack</a><a href=\"#\" class=\"text-sm text-[var(--text)] hover:text-[var(--accent)] transition-colors\">Email</a></nav></div></div><div class=\"mt-12 flex flex-col items-center justify-between gap-4 border-t border-[var(--border-subtle)] pt-8 sm:flex-row text-center sm:text-left\"><p class=\"text-xs text-[var(--text-muted)]\">© 2026 Jane Doe. All rights reserved.</p><div class=\"flex gap-4 text-xs text-[var(--text-muted)]\"><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/privacy\" data-discover=\"true\">Privacy</a><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/terms\" data-discover=\"true\">Terms</a><a class=\"hover:text-[var(--accent)] transition-colors\" href=\"/theme-packages/plain-jane/0.1.0/preview/contact\" data-discover=\"true\">Contact</a></div></div></div></footer></div></div>\n  \n\n\n</body></html>",
+      "sections": [
+        {
+          "key": "section_1",
+          "name": "Selected Works",
+          "html": "<div data-section-id=\"sec-photo-gallery\" data-definition-key=\"journal-photo-gallery\" data-template-sku=\"tpl-journal-photo-gallery-default\" data-theme-section=\"section_1\" data-theme-project-field=\"__section\"><div class=\"mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8\"><div class=\"mb-12\" style=\"opacity: 0; transform: translateY(0.0005415px);\"><h1 class=\"font-serif text-5xl font-medium tracking-tight text-[var(--text)] md:text-6xl\" data-theme-project-field=\"field_1\">Selected Works</h1><p class=\"mt-4 text-lg text-[var(--text-muted)] max-w-2xl\" data-theme-project-field=\"field_2\">A collection of moments captured across different cities and landscapes. Focusing on light, shadow, and the quiet spaces in between.</p></div></div><div class=\"w-full px-1 pb-1\"><div class=\"columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-1 space-y-1\"><button data-block-id=\"blk-ph-1\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 1; transform: none;\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Urban landscape\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-1.svg\" data-theme-project-field=\"field_3\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_4\">Tokyo, 2023</p></div></button><button data-block-id=\"blk-ph-2\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 0; transform: translateY(0.277009px);\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Mountain range\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-2.svg\" data-theme-project-field=\"field_5\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_6\">Swiss Alps</p></div></button><button data-block-id=\"blk-ph-3\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 0; transform: translateY(1.95867px);\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Coffee shop\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-3.svg\" data-theme-project-field=\"field_7\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_8\">Morning rituals</p></div></button><button data-block-id=\"blk-ph-4\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 1; transform: none;\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Street photography\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-4.svg\" data-theme-project-field=\"field_9\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_10\">Shadows and light</p></div></button><button data-block-id=\"blk-ph-5\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 1; transform: none;\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Portrait\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-5.svg\" data-theme-project-field=\"field_11\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_12\">Strangers</p></div></button><button data-block-id=\"blk-ph-6\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 0; transform: translateY(0.277009px);\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Ocean waves\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-6.svg\" data-theme-project-field=\"field_13\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_14\">Pacific coast</p></div></button><button data-block-id=\"blk-ph-7\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 0; transform: translateY(1.95867px);\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Architecture\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-7.svg\" data-theme-project-field=\"field_15\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_16\">Concrete geometry</p></div></button><button data-block-id=\"blk-ph-8\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 1; transform: none;\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Forest path\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-8.svg\" data-theme-project-field=\"field_17\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_18\">Into the woods</p></div></button><button data-block-id=\"blk-ph-9\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 1; transform: none;\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Desert dunes\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-9.svg\" data-theme-project-field=\"field_19\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_20\">Golden hour</p></div></button><button data-block-id=\"blk-ph-10\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 0; transform: translateY(0.277009px);\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"City lights\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-10.svg\" data-theme-project-field=\"field_21\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_22\">Midnight</p></div></button><button data-block-id=\"blk-ph-11\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 0; transform: translateY(1.95867px);\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Still life\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-11.svg\" data-theme-project-field=\"field_23\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_24\">Details</p></div></button><button data-block-id=\"blk-ph-12\" data-block-key=\"journal-photo-item\" data-definition-key=\"journal-photo-item\" data-template-sku=\"tpl-journal-photo-item-default\" class=\"group relative block w-full break-inside-avoid overflow-hidden bg-[var(--border-subtle)] cursor-zoom-in text-left\" style=\"opacity: 1; transform: none;\"><img class=\"transition-all duration-700 ease-out opacity-0 blur-md w-full h-auto object-cover group-hover:scale-105\" alt=\"Canyon\" width=\"1200\" height=\"800\" referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"/theme-packages/plain-jane/0.1.0/preview/images/photo-12.svg\" data-theme-project-field=\"field_25\"><div class=\"absolute inset-0 bg-gradient-to-t from-[var(--overlay-scrim)] via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100\"></div><div class=\"absolute bottom-0 left-0 w-full p-6 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100\"><p class=\"text-[var(--bg)] font-serif text-lg tracking-wide\" data-theme-project-field=\"field_26\">Vastness</p></div></button></div></div></div>",
+          "content": {
+            "__editor": {
+              "templateKey": "section_1",
+              "visibility": {
+                "enabled": true
+              },
+              "blocks": []
+            },
+            "field_1": "Selected Works",
+            "field_2": "A collection of moments captured across different cities and landscapes. Focusing on light, shadow, and the quiet spaces in between.",
+            "field_3": "/theme-packages/plain-jane/0.1.0/preview/images/photo-1.svg",
+            "field_4": "Tokyo, 2023",
+            "field_5": "/theme-packages/plain-jane/0.1.0/preview/images/photo-2.svg",
+            "field_6": "Swiss Alps",
+            "field_7": "/theme-packages/plain-jane/0.1.0/preview/images/photo-3.svg",
+            "field_8": "Morning rituals",
+            "field_9": "/theme-packages/plain-jane/0.1.0/preview/images/photo-4.svg",
+            "field_10": "Shadows and light",
+            "field_11": "/theme-packages/plain-jane/0.1.0/preview/images/photo-5.svg",
+            "field_12": "Strangers",
+            "field_13": "/theme-packages/plain-jane/0.1.0/preview/images/photo-6.svg",
+            "field_14": "Pacific coast",
+            "field_15": "/theme-packages/plain-jane/0.1.0/preview/images/photo-7.svg",
+            "field_16": "Concrete geometry",
+            "field_17": "/theme-packages/plain-jane/0.1.0/preview/images/photo-8.svg",
+            "field_18": "Into the woods",
+            "field_19": "/theme-packages/plain-jane/0.1.0/preview/images/photo-9.svg",
+            "field_20": "Golden hour",
+            "field_21": "/theme-packages/plain-jane/0.1.0/preview/images/photo-10.svg",
+            "field_22": "Midnight",
+            "field_23": "/theme-packages/plain-jane/0.1.0/preview/images/photo-11.svg",
+            "field_24": "Details",
+            "field_25": "/theme-packages/plain-jane/0.1.0/preview/images/photo-12.svg",
+            "field_26": "Vastness",
+            "layout_padding": "",
+            "layout_background": ""
+          },
+          "version": 0,
+          "status": "draft",
+          "sort_order": 0,
+          "schema": {
+            "key": "section_1",
+            "label": "Selected Works",
+            "fields": [
+              {
+                "key": "field_1",
+                "label": "Selected Works",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_2",
+                "label": "A collection of moments captured across different cities and",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_3",
+                "label": "Urban landscape",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_4",
+                "label": "Tokyo, 2023",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_5",
+                "label": "Mountain range",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_6",
+                "label": "Swiss Alps",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_7",
+                "label": "Coffee shop",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_8",
+                "label": "Morning rituals",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_9",
+                "label": "Street photography",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_10",
+                "label": "Shadows and light",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_11",
+                "label": "Portrait",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_12",
+                "label": "Strangers",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_13",
+                "label": "Ocean waves",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_14",
+                "label": "Pacific coast",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_15",
+                "label": "Architecture",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_16",
+                "label": "Concrete geometry",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_17",
+                "label": "Forest path",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_18",
+                "label": "Into the woods",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_19",
+                "label": "Desert dunes",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_20",
+                "label": "Golden hour",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_21",
+                "label": "City lights",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_22",
+                "label": "Midnight",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_23",
+                "label": "Still life",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_24",
+                "label": "Details",
+                "type": "text",
+                "binding": {}
+              },
+              {
+                "key": "field_25",
+                "label": "Canyon",
+                "type": "media",
+                "binding": {
+                  "attribute": "src"
+                }
+              },
+              {
+                "key": "field_26",
+                "label": "Vastness",
+                "type": "text",
+                "binding": {}
+              }
+            ],
+            "settings": [
+              {
+                "key": "layout_padding",
+                "label": "Padding",
+                "type": "text",
+                "group": "Spacing",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "padding"
+                }
+              },
+              {
+                "key": "layout_background",
+                "label": "Background",
+                "type": "text",
+                "group": "Surface",
+                "binding": {
+                  "field": "__section",
+                  "styleProperty": "background"
+                }
+              }
+            ],
+            "blocks": [],
+            "capabilities": {
+              "reorder": true
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "tokens": {},
+  "sourceThemeId": "plain-jane",
+  "sourcePackage": "@inneranimalmedia/theme-plain-jane",
+  "sourcePackageVersion": "0.1.0",
+  "sourcePreviewUrl": "https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/",
+  "sourceReleaseSha256": "c5a1c9c26050c706652d6aad2d1aa184c5b91350975dfc9fa3fe717c1ae90203",
+  "sourceCmsManifestSchema": "agentsam.cms-source-manifest.v1",
+  "sourceManifestPageCount": 9,
+  "sourceRoutesNotRendered": [
+    "contact",
+    "404",
+    "privacy",
+    "terms"
+  ],
+  "revision": 0,
+  "version": "0.1.0"
+}

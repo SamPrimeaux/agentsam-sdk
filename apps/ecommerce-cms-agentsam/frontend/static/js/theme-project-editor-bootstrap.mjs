@@ -4,8 +4,12 @@ import { mountThemeEditor } from '/theme-editor/mount.mjs';
 
 const errorNode = document.getElementById('theme-project-error');
 const frame = document.getElementById('theme-project-editor-frame');
-const projectId = new URLSearchParams(location.search).get('project');
+const parameters = new URLSearchParams(location.search);
+const projectId = parameters.get('project');
+const siteId = parameters.get('site_id');
 const API = '/api/admin/cms/theme-projects';
+const scoped = path => siteId ? path + (path.includes('?') ? '&' : '?') +
+  'site_id=' + encodeURIComponent(siteId) : path;
 
 function showError(error) {
   errorNode.hidden = false;
@@ -47,22 +51,25 @@ async function uploadMedia(files) {
 
 const store = {
   async get(id) {
-    const data = await jsonRequest(`${API}/${encodeURIComponent(id)}`);
+    const data = await jsonRequest(scoped(`${API}/${encodeURIComponent(id)}`));
     return data.project;
   },
   async save(project, options = {}) {
     const expectedVersion = Number(options.expectedVersion || 0);
     const updating = expectedVersion > 0;
-    const data = await jsonRequest(updating ? `${API}/${encodeURIComponent(project.id)}` : API, {
+    const data = await jsonRequest(scoped(updating ? `${API}/${encodeURIComponent(project.id)}` : API), {
       method: updating ? 'PUT' : 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(updating ? { project, expected_version: expectedVersion } : { project }),
+      body: JSON.stringify(updating ?
+        { project, expected_version: expectedVersion, site_id:siteId } :
+        { project, site_id:siteId }),
     });
     return data.project;
   },
 };
 
 async function boot() {
+  if (siteId && !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)) throw new Error('theme_project_site_invalid');
   if (!projectId || !/^[A-Za-z0-9_-]{1,160}$/.test(projectId)) throw new Error('theme_project_id_invalid');
   const project = (await store.get(projectId));
   if (!project) throw new Error('theme_project_not_found');

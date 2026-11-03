@@ -56,3 +56,29 @@ test('catalog endpoint requires an authenticated account and is read-only', asyn
   assert.equal((await handleStudioWebsiteThemeCatalog(request, null)).status, 401);
   assert.equal((await handleStudioWebsiteThemeCatalog(new Request(request.url, { method: 'POST' }), 'account-one')).status, 405);
 });
+
+test('catalog marks a release install-ready only when its packaged editable project and release checksum match', async () => {
+  const previous=globalThis.fetch;
+  globalThis.fetch=async()=>Response.json({ok:true,products:[product]});
+  const env={ASSETS:{async fetch(request){
+    assert.equal(new URL(request.url).pathname,
+      '/ecommerce-cms-agentsam/admin/data/site-theme-projects/index.json');
+    return Response.json({
+      schema:'agentsam.website-theme-install-index.v1',
+      packages:[{
+        slug:'plain-jane',version:'0.1.0',sha256:sha,
+        project_asset:'/ecommerce-cms-agentsam/admin/data/site-theme-projects/plain-jane-0.1.0.json',
+        page_count:5,manifest_page_count:9,
+      }],
+    });
+  }}};
+  try {
+    const response=await handleStudioWebsiteThemeCatalog(
+      new Request('https://agentsam.test/api/admin/website-themes'),'account-one',env);
+    assert.equal(response.status,200);
+    const result=await response.json();
+    assert.equal(result.products[0].can_install,true);
+    assert.equal(result.products[0].editable_page_count,5);
+    assert.equal(result.products[0].manifest_page_count,9);
+  }finally{globalThis.fetch=previous;}
+});

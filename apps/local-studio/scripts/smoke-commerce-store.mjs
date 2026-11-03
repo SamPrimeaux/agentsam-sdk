@@ -12,15 +12,39 @@ const nativeAssets = resolve(root, 'desktop-dist/commerce-store');
 const assets = existsSync(resolve(nativeAssets, 'runtime.js'))
   ? nativeAssets : resolve(root, '.output/public/commerce-store');
 const mime = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css' };
+let receivedInstall = null;
 const server = createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
   if (pathname === '/') return res.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><title>Commerce Store Smoke</title><body style="margin:0"></body>');
+  if (pathname === '/api/admin/cms/sites') return res.writeHead(200, {
+    'content-type': 'application/json',
+  }).end(JSON.stringify({
+    ok:true, sites:[
+      {id:'site-store',name:'Store',slug:'store',page_count:4},
+      {id:'site-blog',name:'Personal Blog',slug:'blog',page_count:0},
+    ], default_site_id:'site-store',
+  }));
+  if (pathname === '/api/admin/website-themes/plain-jane/install' && req.method==='POST') {
+    let body='';
+    req.on('data',chunk=>body+=chunk);
+    req.on('end',()=>{
+      receivedInstall=JSON.parse(body);
+      res.writeHead(201,{'content-type':'application/json'}).end(JSON.stringify({
+        ok:true, installed:true,
+        editor_url:'/admin/theme-project-editor?project=theme_plain-jane&site_id='+receivedInstall.site_id,
+      }));
+    });
+    return;
+  }
+  if (pathname === '/admin/theme-project-editor') return res.writeHead(200,{
+    'content-type':'text/html',
+  }).end('<!doctype html><title>Installed CMS Theme Editor</title><h1>Editable theme project</h1>');
   if (pathname === '/api/admin/website-themes') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
     ok: true, source: 'themes.inneranimalmedia.com', products: [{
       slug: 'plain-jane', sku: 'iam.theme.plain-jane', version: '0.1.0',
       name: 'Plain Jane Journal', description: 'Real editorial website package',
       category: 'Editorial', pages: ['Journal', 'Article', 'About'],
-      release_status: 'published',
+      release_status: 'published', can_install:true, editable_page_count:5, manifest_page_count:9,
       preview_url: 'https://themes.inneranimalmedia.com/theme-packages/plain-jane/0.1.0/preview/',
       detail_url: 'https://themes.inneranimalmedia.com/themes/plain-jane/',
       download_url: 'https://themes.inneranimalmedia.com/api/themes/plain-jane/0.1.0/download',
@@ -95,8 +119,20 @@ try {
     viewport: node.ownerDocument.defaultView.innerWidth,
   }));
   assert.ok(dimensions.width <= dimensions.viewport + 1, 'Online Store layout fits mobile viewport');
+  await page.setViewportSize({width:1440,height:900});
+  await merchant.locator('[data-install-theme="plain-jane"]').click();
+  const picker = merchant.locator('dialog.website-theme-install-dialog');
+  await picker.waitFor();
+  assert.equal(await picker.locator('option').count(),3);
+  await picker.locator('select').selectOption('site-blog');
+  await Promise.all([
+    page.waitForURL(/\/admin\/theme-project-editor\?project=theme_plain-jane&site_id=site-blog/),
+    picker.getByRole('button',{name:'Install & open editor'}).click(),
+  ]);
+  assert.deepEqual(receivedInstall,{site_id:'site-blog',version:'0.1.0'});
+  assert.equal(await page.title(),'Installed CMS Theme Editor');
   assert.deepEqual(errors, [], 'No browser runtime errors');
-  console.log('Packaged Store smoke PASS: original website catalog, no fake theme, in-app route, mobile width');
+  console.log('Packaged Store smoke PASS: original theme, account-owned site picker, install POST, editor navigation and mobile width');
 } finally {
   await browser.close();
   await new Promise((done) => server.close(done));

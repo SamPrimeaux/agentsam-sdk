@@ -69,6 +69,7 @@ import { handleStudioPlatformProducts } from "./studio-platform-products.js";
 import { handleStudioSitesOverview } from "./studio-sites-overview.js";
 import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
 import { handleStudioWebsiteThemeCatalog } from "./studio-website-theme-catalog.js";
+import { handleStudioWebsiteThemeInstall } from "./studio-website-theme-install.js";
 import { handleStudioThemes } from "./studio-themes.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
@@ -917,7 +918,12 @@ export default {
     // never from cms_themes (dashboard appearance presets).
     if (url.pathname === '/api/admin/website-themes') {
       const principal = await resolveSessionUser(request, env);
-      return handleStudioWebsiteThemeCatalog(request, principal?.id || null);
+      return handleStudioWebsiteThemeCatalog(request, principal?.id || null, env);
+    }
+    const websiteThemeInstall = url.pathname.match(/^\/api\/admin\/website-themes\/([a-z][a-z0-9-]{0,63})\/install$/);
+    if (websiteThemeInstall) {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioWebsiteThemeInstall(request, env, principal?.id || null, websiteThemeInstall[1]);
     }
     if (url.pathname === '/api/admin/theme-products/drafts') {
       const principal=await resolveSessionUser(request,env);
