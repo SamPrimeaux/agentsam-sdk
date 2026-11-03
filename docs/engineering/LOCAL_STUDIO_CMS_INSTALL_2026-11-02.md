@@ -2,11 +2,12 @@
 
 ## Delivered in SDK branch `feat/localstudio-cms-installed-20261102`
 
-- Recovered existing PR #426 (`9de57d34`) as cherry-pick `96e46f5f`: catalog resources install to CMS-owned page sections and blocks, support edit/save/reload/remove, account-scoped persistence and tests.
+- Recovered existing PR #426 (`9de57d34`) as cherry-pick `96e46f5f`: catalog resources install to CMS-owned page sections and blocks, support edit/save/reload/remove, account-scoped persistence and tests. Fixed its Node-only filesystem catalog loader so the Worker can start with a compile-time JSON catalog.
 - Preserved the canonical Ecommerce CMS application; no replacement CMS, schema or Worker.
 - Fixed Tauri's `/sites` route so it opens the installed Ecommerce Store, not a non-SPA `/admin/store` address.
 - Fixed Page Editor `?slug`, Theme Editor showcase/catalog query handling while rejecting unrelated and duplicate parameters.
 - Programmatic route changes in Pages, Page Editor and Theme Editor now forward through Local Studio's installed app host; standalone Ecommerce retains normal document navigation.
+- The Pages list now opens the real Page Editor for content and provides a separate Edit design link to Theme Editor. Removed the unsupported customer-facing Add page button and broad Sync CMS to live control; the underlying admin functionality was not deleted.
 - Removed Fuel N Free Time-specific branding, domain and assistant prompts from the reusable Page Editor; unverified site URLs remain explicitly unverified.
 - Updated misleading browser acceptance test that expected a `fuelnfreetime.com` iframe; acceptance now checks the actual same-origin packaged desktop Store, Pages, Page Editor, and Theme Editor.
 - Desktop smoke server correctly serves JS modules and SPA fallback routes; no visual golden baselines were rewritten.

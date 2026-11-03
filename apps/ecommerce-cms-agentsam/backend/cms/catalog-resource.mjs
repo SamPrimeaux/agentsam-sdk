@@ -3,14 +3,10 @@
  * Definitions come from the packaged embed catalog; installed instances are
  * normal cms_page_sections + cms_section_blocks rows — not a parallel registry.
  */
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
-
-const CATALOG_PATH = resolve(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../frontend/static/theme-editor/embed-catalog.json",
-);
+// Compile the exact packaged catalog into both the Worker and Node builds.
+// A Cloudflare Worker has no local filesystem and cannot fileURLToPath()
+// an import.meta.url issued by its bundled runtime.
+import packagedEmbedCatalog from "../../frontend/static/theme-editor/embed-catalog.json" with { type: "json" };
 
 const TEMPLATE_KEY = "storefront_embed";
 const BLOCK_ID = "embed-root";
@@ -20,7 +16,7 @@ let cachedCatalog = null;
 
 export function loadEmbedCatalog() {
   if (cachedCatalog) return cachedCatalog;
-  const raw = JSON.parse(readFileSync(CATALOG_PATH, "utf8"));
+  const raw = structuredClone(packagedEmbedCatalog);
   if (raw?.schema !== "agentsam.theme-embed-ui-catalog.v1" || !Array.isArray(raw.apps)) {
     throw new Error("cms_catalog_invalid");
   }

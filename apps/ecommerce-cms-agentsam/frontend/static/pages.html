@@ -16,10 +16,7 @@ renderShell("/admin/pages", `
   <div class="pages-hub">
     <header class="pages-hub-head">
       <h1>Pages</h1>
-      <a class="btn ghost" href="/admin/theme-editor?slug=home&amp;catalog=revise">Browse section library</a>
-      <a class="btn ghost" href="/admin/scene-lab">Aviation scene lab</a>
-      <button type="button" class="btn ghost" id="cms-bootstrap-btn">Sync CMS to live</button>
-      <button type="button" class="btn primary" id="add-page-btn">Add page</button>
+      <a class="btn ghost" href="/admin/theme-editor?slug=home">Edit site design</a>
     </header>
 
     <div class="pages-card">
@@ -32,7 +29,6 @@ renderShell("/admin/pages", `
       <table class="pages-table">
         <thead>
           <tr>
-            <th><input type="checkbox" id="pages-select-all" aria-label="Select all pages"></th>
             <th>Title</th>
             <th>Visibility</th>
             <th>Content</th>
@@ -40,7 +36,7 @@ renderShell("/admin/pages", `
           </tr>
         </thead>
         <tbody id="pages-body">
-          <tr><td colspan="5" class="pages-empty">Loading…</td></tr>
+          <tr><td colspan="4" class="pages-empty">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -52,7 +48,7 @@ let allPages = [];
 function renderRows(pages) {
   const body = document.getElementById("pages-body");
   if (!pages.length) {
-    body.innerHTML = '<tr><td colspan="5" class="pages-empty">No pages match your search.</td></tr>';
+    body.innerHTML = '<tr><td colspan="4" class="pages-empty">No pages match your search.</td></tr>';
     return;
   }
 
@@ -63,11 +59,12 @@ function renderRows(pages) {
         : p.content_authority === "storefront-html"
           ? { label: "Live site · sync required", cls: "pages-badge pages-badge--visible" }
           : visibilityBadge(p.status || "draft");
-      const editHref = `/admin/theme-editor?slug=${encodeURIComponent(p.slug)}`;
+      const editHref = `/admin/page-edit?slug=${encodeURIComponent(p.slug)}`;
+      const designHref = `/admin/theme-editor?slug=${encodeURIComponent(p.slug)}`;
       return `
         <tr data-href="${editHref}" data-slug="${p.slug}">
-          <td><input type="checkbox" aria-label="Select ${cmsEscapeHtml(p.title)}" onclick="event.stopPropagation()"></td>
-          <td><a href="${editHref}" class="pages-title-link" onclick="event.stopPropagation()">${cmsEscapeHtml(p.title)}</a></td>
+          <td><a href="${editHref}" class="pages-title-link" onclick="event.stopPropagation()">${cmsEscapeHtml(p.title)}</a>
+              <a href="${designHref}" class="btn ghost small" onclick="event.stopPropagation()" aria-label="Edit design for ${cmsEscapeAttr(p.title)}">Edit design</a></td>
           <td><span class="${badge.cls}">${badge.label}</span></td>
           <td><span class="pages-preview">${cmsEscapeHtml(p.preview || "—")}</span></td>
           <td class="pages-updated">${fmtPageDate(p.updated_at)}</td>
@@ -97,34 +94,9 @@ document.getElementById("pages-search")?.addEventListener("input", (e) => {
   renderRows(filterPages(e.target.value));
 });
 
-document.getElementById("pages-select-all")?.addEventListener("change", (e) => {
-  document.querySelectorAll("#pages-body input[type=checkbox]").forEach((cb) => {
-    cb.checked = e.target.checked;
-  });
-});
-
-document.getElementById("add-page-btn")?.addEventListener("click", () => {
-  const draftOnly = allPages.filter((page) => page.has_live_storefront && !page.draft_exists);
-  if (draftOnly.length) {
-    window.cmsAdminNavigate(`/admin/theme-editor?slug=${encodeURIComponent(draftOnly[0].slug)}`);
-    return;
-  }
-  alert("All current storefront routes are represented. New routes require the CMS route/publishing adapter; no placeholder page was created.");
-});
-
-document.getElementById("cms-bootstrap-btn")?.addEventListener("click", async () => {
-  const btn = document.getElementById("cms-bootstrap-btn");
-  btn.disabled = true;
-  try {
-    await adminFetch("/api/admin/cms/bootstrap", { method: "POST" });
-    alert("CMS synced — all pages published to live cache.");
-    location.reload();
-  } catch (err) {
-    alert(err.message || "Bootstrap failed");
-  } finally {
-    btn.disabled = false;
-  }
-});
+// No customer-facing "Add page" or bulk CMS bootstrap until the site-first
+// page-create and publishing contracts can safely complete those actions.
+// The installed visual editor remains available for every existing page.
 
 (async function () {
   try {
@@ -133,7 +105,7 @@ document.getElementById("cms-bootstrap-btn")?.addEventListener("click", async ()
     renderRows(allPages);
   } catch (err) {
     document.getElementById("pages-body").innerHTML =
-      `<tr><td colspan="5" class="pages-empty">${cmsEscapeHtml(err.message)}</td></tr>`;
+      `<tr><td colspan="4" class="pages-empty">${cmsEscapeHtml(err.message)}</td></tr>`;
   }
 })();
 </script>

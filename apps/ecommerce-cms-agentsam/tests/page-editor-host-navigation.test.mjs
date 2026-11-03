@@ -33,6 +33,15 @@ test('standalone Ecommerce Page Editor retains normal document navigation', () =
   assert.deepEqual(navigations, [['document', '/admin/page-edit?slug=home']]);
 });
 
+test('Pages leads to content editor and exposes the visual editor without unsafe bulk controls', () => {
+  const pages = readFileSync(new URL('../frontend/static/pages.html', import.meta.url), 'utf8');
+  assert.ok(pages.includes('const editHref = `/admin/page-edit?slug='));
+  assert.ok(pages.includes('const designHref = `/admin/theme-editor?slug='));
+  assert.ok(!pages.includes('id="cms-bootstrap-btn"'));
+  assert.ok(!pages.includes('id="add-page-btn"'));
+  assert.ok(!pages.includes('id="pages-select-all"'));
+});
+
 test('portable Page Editor never hardcodes a specific merchant brand or domain', () => {
   const editor = readFileSync(new URL('../frontend/static/page-edit.html', import.meta.url), 'utf8');
   assert.ok(!editor.includes('fuelnfreetime.com') && !editor.includes('Fuel & Free Time'));
