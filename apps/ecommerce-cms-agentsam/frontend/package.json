@@ -13,7 +13,9 @@
     "@inneranimalmedia/commerce-analytics": "file:../packages/commerce-analytics",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "@inneranimalmedia/analytics-ui": "file:../../../packages/analytics-ui",
+    "@inneranimalmedia/financial-analytics": "file:../../../packages/financial-analytics"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
