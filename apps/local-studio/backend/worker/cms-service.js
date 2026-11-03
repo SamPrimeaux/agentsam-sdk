@@ -137,8 +137,6 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
   try {
     // ── BOOTSTRAP ──
     if (method === 'GET' && url.pathname === '/api/cms/bootstrap') {
-      await dbClient.ensureSeeded();
-
       const [pages, allSections, allBlocks, project, theme, templates, liquidImports] = await Promise.all([
         dbClient.getPages(),
         dbClient.getAllSectionsForSite(),
@@ -222,7 +220,6 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
         const status = 'draft';
         const page = await dbClient.createPage({
           title, slug, routePath, pageType, status,
-          tenantId: ownedSite.tenant_id,
           projectId: ownedSite.project_id,
         });
         return json({ ok: true, page, id: page.id, route_path: page.route_path }, 201);
@@ -404,6 +401,7 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
         const block = await dbClient.updateBlock(blockId, {
           component_data: body.block_data || body.component_data || body.data,
           component_type: body.block_type || body.component_type || body.type,
+          settings_json: body.settings_json ?? body.settings,
         });
         return json({ ok: true, block });
       }
@@ -415,7 +413,7 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
 
     // ── THEME VARS ──
     if (url.pathname === '/api/cms/theme-vars' && (method === 'PATCH' || method === 'PUT')) {
-      const theme = await dbClient.saveThemeOverrides(body.vars || {});
+      const theme = await dbClient.saveThemeOverrides(body.vars || {}, actorUserId);
       return json({ ok: true, theme });
     }
 

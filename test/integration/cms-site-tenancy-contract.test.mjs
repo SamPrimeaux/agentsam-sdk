@@ -180,6 +180,21 @@ test('homepage.html is decomposed into reusable site partials with relative link
   assert.doesNotMatch(homepage, /<nav class="iam-sidenav" id="iamSidenav"/, 'inline sidenav should be in partials');
 });
 
+test('Local Studio CMS writes target canonical site-owned tables, not retired component storage', () => {
+  const cmsDb = read('apps', 'local-studio', 'backend', 'worker', 'cms-db.js');
+
+  assert.ok(cmsDb.includes('SELECT p.site_id, p.project_id, p.workspace_id, st.account_id'));
+  assert.ok(cmsDb.includes('id, project_id, project_slug, site_id, slug, path, route_path'));
+  assert.ok(cmsDb.includes('INSERT INTO cms_section_blocks'));
+  assert.ok(cmsDb.includes('UPDATE cms_section_blocks'));
+  assert.ok(cmsDb.includes('DELETE FROM cms_section_blocks'));
+  assert.ok(cmsDb.includes('INSERT INTO cms_site_theme_overrides'));
+  assert.ok(cmsDb.includes('ON CONFLICT(site_id, workspace_id, project_slug)'));
+  assert.ok(!cmsDb.includes('cms_section_components'));
+  assert.ok(!cmsDb.includes('tenant_sam_primeaux') && !cmsDb.includes('usr_sam_primeaux'));
+  assert.ok(!cmsDb.includes('ensureSeeded'));
+});
+
 function r2Stub(store = new Map()) {
   return {
     async get(key) {

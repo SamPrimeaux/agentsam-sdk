@@ -13,8 +13,58 @@ export function assertProjectSlug(slug) {
   return slug.trim();
 }
 
+const BLOCK_SELECT = `SELECT b.*, b.block_type AS component_type, b.content_json AS component_data,
+  CASE WHEN b.status = 'active' THEN 1 ELSE 0 END AS is_visible
+  FROM cms_section_blocks b
+  JOIN cms_page_sections s ON b.section_id = s.id
+  JOIN cms_pages p ON s.page_id = p.id`;
+
+// cms_section_blocks.content_json / settings_json are CHECKed to be JSON objects.
+function toJsonObjectString(value, field) {
+  let parsed = value ?? {};
+  if (typeof parsed === 'string') {
+    try { parsed = JSON.parse(parsed); }
+    catch { throw new Error(`${field}_must_be_valid_json`); }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`${field}_must_be_a_json_object`);
+  }
+  return JSON.stringify(parsed);
+}
+
+function toBlockKey(value, type) {
+  const clean = (v) => String(v).toLowerCase().replace(/[^a-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
+  if (value) return clean(value) || 'block';
+  return `${clean(type) || 'block'}_${crypto.randomUUID().slice(0, 8)}`;
+}
+
 export function createCmsDbClient(db, rawProjectSlug) {
   const projectSlug = assertProjectSlug(rawProjectSlug);
+
+  // The site is the ownership boundary: account_id lives on cms_sites, and
+  // cms_pages.site_id is NOT NULL. Resolved from data, never hardcoded.
+  let siteCache = null;
+  async function resolveSite() {
+    if (siteCache) return siteCache;
+    let row = await db
+      .prepare(
+        `SELECT p.site_id, p.project_id, p.workspace_id, st.account_id
+           FROM cms_pages p JOIN cms_sites st ON st.id = p.site_id
+          WHERE p.project_slug = ? LIMIT 1`
+      )
+      .bind(projectSlug)
+      .first();
+    if (!row) {
+      const sites = await db
+        .prepare(`SELECT id AS site_id, NULL AS project_id, NULL AS workspace_id, account_id FROM cms_sites WHERE slug = ? LIMIT 2`)
+        .bind(projectSlug)
+        .all();
+      if ((sites.results || []).length === 1) row = sites.results[0];
+    }
+    if (!row?.site_id || !row?.account_id) throw new Error(`cms_site_not_found_for_project:${projectSlug}`);
+    siteCache = row;
+    return row;
+  }
 
   return {
     projectSlug,
@@ -101,32 +151,21 @@ export function createCmsDbClient(db, rawProjectSlug) {
       return res.results || [];
     },
 
-    async createPage({ id, title, slug, routePath, pageType, status = 'draft', tenantId, projectId }) {
-      if (!tenantId || !projectId) throw new Error('cms_page_authorized_project_and_tenant_required');
+    async createPage({ id, title, slug, routePath, pageType, status = 'draft', projectId }) {
       if (status !== 'draft') throw new Error('cms_page_must_start_as_draft');
+      const site = await resolveSite();
+      const resolvedProjectId = projectId || site.project_id;
+      if (!resolvedProjectId) throw new Error('cms_page_authorized_project_required');
       const pageId = id || `page_${projectSlug}_${slug}_${Date.now().toString(36)}`;
       const now = Math.floor(Date.now() / 1000);
       await db
         .prepare(
           `INSERT INTO cms_pages (
-            id, project_id, project_slug, tenant_id, slug, path, route_path,
+            id, project_id, project_slug, site_id, slug, path, route_path,
             page_type, title, status, created_at, updated_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .bind(
-          pageId,
-          projectId,
-          projectSlug,
-          tenantId,
-          slug,
-          routePath,
-          routePath,
-          pageType,
-          title,
-          status,
-          now,
-          now
-        )
+        .bind(pageId, resolvedProjectId, projectSlug, site.site_id, slug, routePath, routePath, pageType, title, status, now, now)
         .run();
       return this.getPageById(pageId);
     },
@@ -163,7 +202,7 @@ export function createCmsDbClient(db, rawProjectSlug) {
 
       await db
         .prepare(
-          `DELETE FROM cms_section_components
+          `DELETE FROM cms_section_blocks
            WHERE section_id IN (
              SELECT s.id FROM cms_page_sections s
              JOIN cms_pages p ON s.page_id = p.id
@@ -271,7 +310,7 @@ export function createCmsDbClient(db, rawProjectSlug) {
         throw new Error(`Section ${sectionId} not found for project ${projectSlug}`);
       }
 
-      await db.prepare('DELETE FROM cms_section_components WHERE section_id = ?').bind(sectionId).run();
+      await db.prepare('DELETE FROM cms_section_blocks WHERE section_id = ?').bind(sectionId).run();
       await db
         .prepare(
           `DELETE FROM cms_page_sections
@@ -313,85 +352,79 @@ export function createCmsDbClient(db, rawProjectSlug) {
       return this.getSectionsForPage(pageId);
     },
 
-    async createBlock({ sectionId, componentType, componentData = {}, sortOrder = 0, tenantId = 'tenant_sam_primeaux' }) {
-      const sectionCheck = await db
+    async getBlockById(blockId) {
+      if (!blockId) return null;
+      return (await db
+        .prepare(`${BLOCK_SELECT} WHERE b.id = ? AND p.project_slug = ? LIMIT 1`)
+        .bind(blockId, projectSlug)
+        .first()) || null;
+    },
+
+    async createBlock({ sectionId, componentType, componentData = {}, sortOrder = 0, blockKey }) {
+      const owned = await db
         .prepare(
           `SELECT s.id FROM cms_page_sections s
            JOIN cms_pages p ON s.page_id = p.id
-           WHERE s.id = ? AND p.project_slug = ?`
+           WHERE s.id = ? AND p.project_slug = ? LIMIT 1`
         )
         .bind(sectionId, projectSlug)
-        .all();
+        .first();
+      if (!owned) throw new Error(`Section ${sectionId} does not belong to project ${projectSlug}`);
 
-      if (!sectionCheck.results?.length) {
-        throw new Error(`Section ${sectionId} does not belong to project ${projectSlug}`);
-      }
-
-      const blockId = `blk_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
-      const dataStr = typeof componentData === 'string' ? componentData : JSON.stringify(componentData);
+      const type = String(componentType || '').trim();
+      if (!type) throw new Error('cms_block_type_required');
+      const { account_id: accountId } = await resolveSite();
+      const blockId = `cmsb_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
 
       await db
         .prepare(
-          `INSERT INTO cms_section_components (
-            id, section_id, component_type, component_data, sort_order, is_visible, tenant_id, project_id
-          ) VALUES (?, ?, ?, ?, ?, 1, ?, ?)`
+          `INSERT INTO cms_section_blocks (
+            id, account_id, section_id, block_key, block_type, sort_order, status, content_json
+          ) VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`
         )
-        .bind(blockId, sectionId, componentType, dataStr, sortOrder, tenantId, `proj_${projectSlug}`)
+        .bind(blockId, accountId, sectionId, toBlockKey(blockKey, type), type, sortOrder, toJsonObjectString(componentData, 'component_data'))
         .run();
 
-      const res = await db.prepare('SELECT * FROM cms_section_components WHERE id = ?').bind(blockId).all();
-      return res.results?.[0] || null;
+      return this.getBlockById(blockId);
     },
 
-    async updateBlock(blockId, updates) {
-      const blockCheck = await db
-        .prepare(
-          `SELECT b.* FROM cms_section_components b
-           JOIN cms_page_sections s ON b.section_id = s.id
-           JOIN cms_pages p ON s.page_id = p.id
-           WHERE b.id = ? AND p.project_slug = ?`
-        )
-        .bind(blockId, projectSlug)
-        .all();
-
-      const existing = blockCheck.results?.[0];
+    async updateBlock(blockId, updates = {}) {
+      const existing = await this.getBlockById(blockId);
       if (!existing) throw new Error(`Block ${blockId} does not belong to project ${projectSlug}`);
 
-      const componentData = updates.component_data !== undefined
-        ? (typeof updates.component_data === 'string' ? updates.component_data : JSON.stringify(updates.component_data))
-        : existing.component_data;
-      const componentType = updates.component_type !== undefined ? updates.component_type : existing.component_type;
+      const type = updates.component_type !== undefined ? String(updates.component_type).trim() : existing.block_type;
+      if (!type) throw new Error('cms_block_type_required');
+      const content = updates.component_data !== undefined
+        ? toJsonObjectString(updates.component_data, 'component_data')
+        : existing.content_json;
+      const settings = updates.settings_json !== undefined
+        ? toJsonObjectString(updates.settings_json, 'settings_json')
+        : existing.settings_json;
 
       await db
         .prepare(
-          `UPDATE cms_section_components
-           SET component_type = ?, component_data = ?, updated_at = datetime('now')
-           WHERE id = ?`
+          `UPDATE cms_section_blocks
+           SET block_type = ?, content_json = ?, settings_json = ?, updated_at = datetime('now')
+           WHERE id = ? AND section_id IN (
+             SELECT s.id FROM cms_page_sections s
+             JOIN cms_pages p ON s.page_id = p.id
+             WHERE p.project_slug = ?
+           )`
         )
-        .bind(componentType, componentData, blockId)
+        .bind(type, content, settings, blockId, projectSlug)
         .run();
 
-      const updated = await db.prepare('SELECT * FROM cms_section_components WHERE id = ?').bind(blockId).all();
-      return updated.results?.[0] || null;
+      return this.getBlockById(blockId);
     },
 
     async deleteBlock(blockId) {
-      const owned = await db
-        .prepare(
-          `SELECT b.id FROM cms_section_components b
-           JOIN cms_page_sections s ON b.section_id = s.id
-           JOIN cms_pages p ON s.page_id = p.id
-           WHERE b.id = ? AND p.project_slug = ? LIMIT 1`
-        )
-        .bind(blockId, projectSlug)
-        .all();
-      if (!owned.results?.length) {
-        throw new Error(`Block ${blockId} not found for project ${projectSlug}`);
-      }
+      const existing = await this.getBlockById(blockId);
+      if (!existing) throw new Error(`Block ${blockId} not found for project ${projectSlug}`);
 
+      // Child blocks go with it via parent_block_id ON DELETE CASCADE.
       await db
         .prepare(
-          `DELETE FROM cms_section_components
+          `DELETE FROM cms_section_blocks
            WHERE id = ? AND section_id IN (
              SELECT s.id FROM cms_page_sections s
              JOIN cms_pages p ON s.page_id = p.id
@@ -405,60 +438,65 @@ export function createCmsDbClient(db, rawProjectSlug) {
     async setBlockVisibility(blockId, isVisible) {
       await db
         .prepare(
-          `UPDATE cms_section_components
-           SET is_visible = ?, updated_at = datetime('now')
-           WHERE id = ? AND section_id IN (
+          `UPDATE cms_section_blocks
+           SET status = ?, updated_at = datetime('now')
+           WHERE id = ? AND status <> 'archived' AND section_id IN (
              SELECT s.id FROM cms_page_sections s
              JOIN cms_pages p ON s.page_id = p.id
              WHERE p.project_slug = ?
            )`
         )
-        .bind(isVisible ? 1 : 0, blockId, projectSlug)
+        .bind(isVisible ? 'active' : 'hidden', blockId, projectSlug)
         .run();
 
-      const updated = await db.prepare('SELECT * FROM cms_section_components WHERE id = ?').bind(blockId).all();
-      return updated.results?.[0] || null;
+      return this.getBlockById(blockId);
     },
 
     async reorderBlocks(orderList) {
-      for (const item of orderList) {
+      const statements = [];
+      for (const item of orderList || []) {
         if (!item?.id) continue;
-        await db
-          .prepare(
-            `UPDATE cms_section_components
-             SET sort_order = ?, updated_at = datetime('now')
-             WHERE id = ? AND section_id IN (
-               SELECT s.id FROM cms_page_sections s
-               JOIN cms_pages p ON s.page_id = p.id
-               WHERE p.project_slug = ?
-             )`
-          )
-          .bind(Number(item.sort_order || 0), item.id, projectSlug)
-          .run();
+        statements.push(
+          db
+            .prepare(
+              `UPDATE cms_section_blocks
+               SET sort_order = ?, updated_at = datetime('now')
+               WHERE id = ? AND section_id IN (
+                 SELECT s.id FROM cms_page_sections s
+                 JOIN cms_pages p ON s.page_id = p.id
+                 WHERE p.project_slug = ?
+               )`
+            )
+            .bind(Number(item.sort_order || 0), item.id, projectSlug)
+        );
       }
+      if (statements.length) await db.batch(statements);
     },
 
     async getThemeOverrides() {
       const res = await db
-        .prepare('SELECT * FROM cms_site_theme_overrides WHERE project_slug = ? LIMIT 1')
+        .prepare('SELECT * FROM cms_site_theme_overrides WHERE project_slug = ? ORDER BY updated_at DESC LIMIT 1')
         .bind(projectSlug)
         .all();
       return res.results?.[0] || null;
     },
 
-    async saveThemeOverrides(vars, userId = 'usr_sam_primeaux') {
-      const varsJson = typeof vars === 'string' ? vars : JSON.stringify(vars);
+    async saveThemeOverrides(vars, actorUserId = null) {
+      const varsJson = toJsonObjectString(vars, 'vars');
       const now = Math.floor(Date.now() / 1000);
+      const site = await resolveSite();
 
+      // workspace_id is NOT NULL and part of the current PK; '' means "no workspace"
+      // until the overrides table is re-keyed on site_id alone.
       await db
         .prepare(
           `INSERT INTO cms_site_theme_overrides (
-            tenant_id, workspace_id, project_slug, vars_json, updated_by, updated_at
+            site_id, workspace_id, project_slug, vars_json, updated_by, updated_at
           ) VALUES (?, ?, ?, ?, ?, ?)
-          ON CONFLICT(tenant_id, workspace_id, project_slug)
+          ON CONFLICT(site_id, workspace_id, project_slug)
           DO UPDATE SET vars_json = excluded.vars_json, updated_by = excluded.updated_by, updated_at = excluded.updated_at`
         )
-        .bind('tenant_sam_primeaux', 'ws_inneranimalmedia', projectSlug, varsJson, userId, now)
+        .bind(site.site_id, site.workspace_id || '', projectSlug, varsJson, actorUserId, now)
         .run();
 
       return this.getThemeOverrides();
@@ -496,159 +534,6 @@ export function createCmsDbClient(db, rawProjectSlug) {
         .bind(projectSlug)
         .all();
       return res.results || [];
-    },
-
-    /**
-     * Seeds initial pages and sections if none exist for agentsam-sdk.
-     */
-    async ensureSeeded() {
-      if (projectSlug !== 'agentsam-sdk') return;
-      const existing = await this.getPages();
-      if (existing.length > 0) return;
-
-      const pageId = 'page_agentsam_sdk_home';
-      const now = Math.floor(Date.now() / 1000);
-
-      await db
-        .prepare(
-          `INSERT INTO cms_pages (
-            id, project_id, project_slug, tenant_id, slug, path, route_path,
-            page_type, title, status, is_homepage, is_active, sort_order, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0, ?, ?)`
-        )
-        .bind(
-          pageId,
-          'proj_agentsam_sdk',
-          'agentsam-sdk',
-          'tenant_sam_primeaux',
-          'home',
-          '/',
-          '/',
-          'home',
-          'Agent Sam SDK',
-          'published',
-          now,
-          now
-        )
-        .run();
-
-      const sections = [
-        {
-          id: 'sec_as_header',
-          type: 'header',
-          name: 'SiteHeader',
-          sort: 10,
-          data: {
-            shell: 'asbd',
-            title: 'AgentSam',
-            cta_text: 'Open Workbench',
-            cta_href: '/auth/login?next=/agentsam',
-            nav_links: [
-              { label: 'Home', href: '/', key: 'home' },
-              { label: 'Work', href: '/work', key: 'work' },
-              { label: 'About', href: '/about', key: 'about' },
-              { label: 'Services', href: '/services', key: 'services' },
-              { label: 'Contact', href: '/contact', key: 'contact' },
-            ],
-            partial: 'apps/frontend/public/site/global/asbd-header.html',
-          },
-        },
-        {
-          id: 'sec_as_hero',
-          type: 'hero',
-          name: 'Hero',
-          sort: 20,
-          data: {
-            eyebrow: '@INNERANIMALMEDIA/AGENTSAM-SDK',
-            headline: 'Ship Agent Sam with a real SDK computer',
-            subline: 'npm i @inneranimalmedia/agentsam-sdk — ephemeral sandboxes, terminals, previews, and promote-only paths on Cloudflare.',
-            cta_primary_text: 'Install the SDK',
-            cta_primary_href: '#install',
-            cta_secondary_text: 'See sandbox sessions',
-            cta_secondary_href: '#state',
-            source_path: 'apps/frontend/public/site/home/index.html#hero',
-          },
-        },
-        {
-          id: 'sec_as_secure',
-          type: 'secure',
-          name: 'Secure',
-          sort: 30,
-          data: {
-            headline: 'Run untrusted code safely',
-            description: 'Explore packages and run commands without touching core infrastructure.',
-            source_path: 'apps/frontend/public/site/home/index.html#secure',
-          },
-        },
-        {
-          id: 'sec_as_scale',
-          type: 'scalable',
-          name: 'Scalable',
-          sort: 40,
-          data: {
-            headline: 'From npm install to an agent fleet',
-            description: 'One package, many agent workers — bring your own stack.',
-            source_path: 'apps/frontend/public/site/home/index.html#scale',
-          },
-        },
-        {
-          id: 'sec_as_state',
-          type: 'stateful',
-          name: 'Stateful',
-          sort: 50,
-          data: {
-            headline: 'Sessions the SDK can actually resume',
-            description: 'TTLs, snapshots, forks, and preview tunnels over the control plane.',
-            source_path: 'apps/frontend/public/site/home/index.html#state',
-          },
-        },
-        {
-          id: 'sec_as_observe',
-          type: 'observable',
-          name: 'Observable',
-          sort: 60,
-          data: {
-            headline: 'Observe every agent run before it ships',
-            description: 'Traces, approvals, cost controls, logs, and artifacts.',
-            source_path: 'apps/frontend/public/site/home/index.html#observe',
-          },
-        },
-        {
-          id: 'sec_as_cta',
-          type: 'operating_layer',
-          name: 'OperatingLayer',
-          sort: 70,
-          data: {
-            eyebrow: 'AGENTSAM OPERATING LAYER',
-            headline: 'Let the agent work hard without giving it your whole system.',
-            steps: ['Plan', 'Contain', 'Execute', 'Promote'],
-            source_path: 'apps/frontend/public/site/home/index.html#cta',
-          },
-        },
-        {
-          id: 'sec_as_footer',
-          type: 'footer',
-          name: 'SiteFooter',
-          sort: 80,
-          data: {
-            shell: 'asbd',
-            theme: 'dark',
-            copyright: '© 2026 AgentSam',
-            partial: 'apps/frontend/public/site/global/asbd-footer.html',
-          },
-        },
-      ];
-
-      for (const s of sections) {
-        await db
-          .prepare(
-            `INSERT INTO cms_page_sections (
-              id, page_id, section_type, section_name, section_data, sort_order, is_visible
-            ) VALUES (?, ?, ?, ?, ?, ?, 1)`
-          )
-          .bind(s.id, pageId, s.type, s.name, JSON.stringify(s.data), s.sort)
-          .run();
-      }
     },
   };
 }
