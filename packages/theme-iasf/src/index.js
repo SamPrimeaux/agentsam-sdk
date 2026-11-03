@@ -100,7 +100,7 @@ export function createProductRow({ repositoryId = null, status = 'wired' } = {})
 
 /**
  * Portable CmsStarterPack-shaped seed (no React / Next deps).
- * Consumed by apps/client-cms-editor/starter-packs/iasf.
+ * Consumed by apps/ecommerce-cms-agentsam/cms-editor/starter-packs/iasf.
  */
 export function createIasfStarterPackSeed() {
   const cssVars = themeToCssVars();

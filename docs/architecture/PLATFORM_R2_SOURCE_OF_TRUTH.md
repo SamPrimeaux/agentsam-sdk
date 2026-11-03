@@ -15,7 +15,7 @@
 | `theme-store` | Installable themes, style packs, design systems and prebuild packages | Private; authorized installer/download route |
 | `cms` | Published CMS media and public site assets | Public custom domain `cms.inneranimalmedia.com`; private drafts must not be placed in publicly readable paths |
 | `agentsam-os-blueprint-content` (`WEBSITE_ASSETS` on the `agentsam-sdk` worker) | Website/blueprint content **and** durable D1 resource-rebuild backups under `backups/d1/...` | Bound on the Cloudflare Builds worker for `apps/local-studio` |
-| `agent-sam` | Private desktop-update / release artifacts (`RELEASES` on `agentsam-desktop-updates`) | Private; not the rebuild backup target |
+| `agent-sam` | Legacy private desktop-update artifacts; canonical Local Studio releases now use `agentsam-os-blueprint-content` via `inneranimalmedia-pwa-services` | Private; not the rebuild backup target |
 
 Do not create a bucket for every app or every asset family. Use app/resource/version prefixes inside the appropriate existing bucket. The existing `cad-assets` and `3d-assets` resources are not merged or deleted by this plan; they remain separate until a distinct purpose is established.
 

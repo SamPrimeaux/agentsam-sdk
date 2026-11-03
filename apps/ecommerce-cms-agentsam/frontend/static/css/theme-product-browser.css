@@ -47,3 +47,25 @@
 .theme-marketplace-thumb{display:block;width:100%;height:100%;object-fit:cover;object-position:center;filter:none}
 .theme-marketplace-visual{isolation:isolate}
 .theme-marketplace-visual img{background:#ebe6df}
+
+/* No installed theme means no fake storefront preview. */
+.online-store-preview-message--empty {
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;text-align:center;background:#f5f3f0;
+  color:#2c2930;max-width:none;padding:24px;
+}
+.online-store-preview-message--empty strong{font-size:20px}
+.online-store-preview-message--empty p{color:#68616e;max-width:260px;line-height:1.5}
+
+/* CMS site selection is a native, keyboard-accessible modal; the package stays
+   in Online Store and never redirects into /themes appearance preferences. */
+.website-theme-install-dialog{position:fixed;inset:0;margin:auto;width:min(480px,calc(100vw - 32px));max-height:min(82vh,680px);padding:0;border:1px solid #d6d2d9;border-radius:14px;box-shadow:0 14px 75px rgba(0,0,0,.25);background:#fff;color:#201c24}
+.website-theme-install-dialog::backdrop{background:rgba(10,12,17,.72)}
+.website-theme-install-form{display:grid;gap:16px;padding:24px}
+.website-theme-install-form h3{font-size:20px;margin:0}
+.website-theme-install-form p{font-size:13px;color:#5a5460;line-height:1.55;margin:0}
+.website-theme-install-form label{display:grid;gap:8px;font-size:13px;font-weight:650}
+.website-theme-site-select{height:44px;max-width:100%;padding:8px 12px;border:1px solid #bfb8c7;border-radius:8px;background:#fff;color:#17131c;font:13px system-ui}
+.website-theme-install-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:5px}
+.website-theme-install-actions button{min-height:40px}
+.website-theme-install-actions button:disabled{opacity:.5;cursor:not-allowed}

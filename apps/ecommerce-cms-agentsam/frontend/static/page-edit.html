@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Page Editor — Fuel & Free Time Admin</title>
+<title>Page Editor — AgentSam Ecommerce</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/pages.css">
@@ -14,6 +14,13 @@
 <script>
 const params = new URLSearchParams(location.search);
 const slug = params.get("slug") || "shop";
+const visualEditorParams = new URLSearchParams({ slug });
+if (params.get("site_id")) visualEditorParams.set("site_id", params.get("site_id"));
+if (params.get("page_id")) visualEditorParams.set("page_id", params.get("page_id"));
+const initialPagesHref = params.get("site_id")
+  ? "/admin/pages?site_id=" + encodeURIComponent(params.get("site_id"))
+  : "/admin/pages";
+window.cmsActivePageSlug = slug;
 
 let pageData = null;
 let mediaLibrary = [];
@@ -26,12 +33,12 @@ renderShell("/admin/pages", `
     <header class="page-editor-top">
       <div class="page-editor-crumb">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h7l4 4v12H7z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13 4v5h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        <a href="/admin/pages">Pages</a>
+        <a href="${initialPagesHref}">Pages</a>
         <span aria-hidden="true">›</span>
         <h1 id="page-crumb-title">…</h1>
       </div>
       <div class="page-editor-top-actions">
-        <a href="/admin/theme-editor?slug=${slug}" class="btn primary small" id="visual-edit-btn">Edit visually</a>
+        <a href="/admin/theme-editor?${visualEditorParams.toString()}" class="btn primary small" id="visual-edit-btn">Edit visually</a>
         <a href="#" class="btn ghost small" id="view-btn" target="_blank" rel="noopener">View live</a>
         <div class="page-editor-more">
           <button type="button" class="btn ghost small" id="more-btn">More actions</button>
@@ -87,8 +94,8 @@ renderShell("/admin/pages", `
             </div>
           </div>
           <div class="page-editor-seo-preview">
-            <div class="page-editor-seo-title" id="seo-title">Fuel &amp; Free Time</div>
-            <div class="page-editor-seo-url" id="seo-url">https://fuelnfreetime.com › …</div>
+            <div class="page-editor-seo-title" id="seo-title">Page title</div>
+            <div class="page-editor-seo-url" id="seo-url">Site address not verified</div>
             <div class="page-editor-seo-desc" id="seo-desc">Page description preview</div>
           </div>
         </div>
@@ -176,10 +183,28 @@ function showNote(msg, kind) {
 function updateSeoPreview() {
   const title = document.getElementById("page-title-input")?.value.trim() || pageData?.title || "Page";
   document.getElementById("page-crumb-title").textContent = title;
-  document.getElementById("seo-title").textContent = `${title} – Fuel & Free Time`;
+  const site = pageData?.site || {};
+  const siteName = typeof site.name === "string" && site.name.trim() ? site.name.trim() : "";
+  document.getElementById("seo-title").textContent = siteName ? `${title} – ${siteName}` : title;
 
-  const path = slug === "home" ? "" : slug;
-  document.getElementById("seo-url").textContent = `https://fuelnfreetime.com › ${path || "home"}`;
+  // A Local Studio origin is not the customer's public site. Never substitute
+  // a development/desktop URL or a merchant-specific domain into SEO previews.
+  const domain = typeof site.domain === "string" ? site.domain.trim() : "";
+  let publicHost = null;
+  if (domain) {
+    try {
+      const candidate = new URL(/^https?:\/\//i.test(domain) ? domain : "https://" + domain);
+      if (candidate.protocol === "https:" && !candidate.username && !candidate.password && candidate.pathname === "/" && !candidate.search && !candidate.hash) {
+        publicHost = candidate.origin;
+      }
+    } catch { /* Not a verified public hostname. */ }
+  }
+  const route = String(pageData?.route_path || "").trim();
+  const path = /^\/(?!\/)[a-z0-9/_-]*$/i.test(route)
+    ? route : slug === "home" ? "/" : "/" + encodeURIComponent(slug);
+  document.getElementById("seo-url").textContent = publicHost
+    ? publicHost + path
+    : "Site address not verified · " + path;
 
   const section = pageData?.sections?.[0];
   const schema = SECTION_FIELDS[slug]?.[section?.key] || [];
@@ -196,7 +221,7 @@ function updateSeoPreview() {
 
 function renderAllSections(sections) {
   if (!sections?.length) {
-    return `<p class="pages-empty">No sections on this page yet. Use Publish or run CMS bootstrap.</p>`;
+    return `<p class="pages-empty">This page is a private draft with no sections yet. Choose Edit visually to add content before publishing.</p>`;
   }
   return sections
     .map(
@@ -309,25 +334,60 @@ function navigateSibling(delta) {
   const idx = slugs.indexOf(slug);
   if (idx < 0) return;
   const next = slugs[idx + delta];
-  if (next) window.location.href = `/admin/page-edit?slug=${encodeURIComponent(next)}`;
+  if (!next) return;
+  const page = allPages.find((item) => item.slug === next);
+  const query = new URLSearchParams({ slug: next });
+  if (window.cmsActiveSiteId) query.set("site_id", window.cmsActiveSiteId);
+  if (page?.id) query.set("page_id", page.id);
+  window.cmsAdminNavigate(`/admin/page-edit?${query.toString()}`);
 }
 
 async function loadPage() {
-  const liveUrl = PAGE_ROUTES[slug] || "/";
-  const previewUrl = `${liveUrl}${liveUrl.includes("?") ? "&" : "?"}preview=1`;
-  document.getElementById("view-btn").href = liveUrl;
-  document.getElementById("menu-preview").href = previewUrl;
+  // A new CMS draft has no published storefront URL. Avoid routing its
+  // "View live" action to the unrelated site's homepage.
+  const viewButton = document.getElementById("view-btn");
+  const previewLink = document.getElementById("menu-preview");
+  viewButton.removeAttribute("href");
+  viewButton.setAttribute("aria-disabled", "true");
+  previewLink.removeAttribute("href");
+  previewLink.setAttribute("aria-disabled", "true");
 
   try {
     const [pageRes, listRes] = await Promise.all([
-      adminFetch(`/api/admin/cms/pages/${slug}`),
-      adminFetch("/api/admin/cms/pages").catch(() => ({ pages: [] })),
+      cmsAdminFetch(`/api/admin/cms/pages/${slug}`),
+      cmsAdminFetch("/api/admin/cms/pages").catch(() => ({ pages: [] })),
     ]);
 
     await loadCmsRegistry();
 
     pageData = pageRes.page;
-    allPages = listRes.pages || [];
+    const publishedRoute = String(pageData?.route_path || "").trim();
+    const isPublicPage = pageData.status === "published" &&
+      /^\/(?!\/)[a-z0-9/_-]*$/i.test(publishedRoute);
+    if (isPublicPage) {
+      viewButton.href = publishedRoute;
+      viewButton.removeAttribute("aria-disabled");
+      previewLink.href = publishedRoute +
+        (publishedRoute.includes("?") ? "&" : "?") + "preview=1";
+      previewLink.removeAttribute("aria-disabled");
+    } else {
+      viewButton.title = "This page has no verified published route yet";
+      previewLink.title = "A public preview requires a connected site renderer";
+    }
+    allPages = (listRes.pages || []).filter((item) => item.slug !== "site");
+    window.cmsActiveSiteId = listRes.site?.id || pageData.site_id || window.cmsActiveSiteId;
+    window.cmsActivePageId = pageData.slug === "site" ? null : (pageData.id || null);
+    window.cmsActivePageSlug = pageData.slug || slug;
+    const identityUrl = new URL(location.href);
+    if (window.cmsActiveSiteId) identityUrl.searchParams.set("site_id", window.cmsActiveSiteId);
+    if (window.cmsActivePageId) identityUrl.searchParams.set("page_id", window.cmsActivePageId);
+    else identityUrl.searchParams.delete("page_id");
+    history.replaceState(null, "", identityUrl);
+    const pagesHref = window.cmsActiveSiteId
+      ? `/admin/pages?site_id=${encodeURIComponent(window.cmsActiveSiteId)}`
+      : "/admin/pages";
+    const pagesCrumb = document.querySelector(".page-editor-crumb a");
+    if (pagesCrumb) pagesCrumb.href = pagesHref;
 
     const slugs = allPages.map((p) => p.slug);
     const idx = slugs.indexOf(slug);
@@ -336,7 +396,10 @@ async function loadPage() {
 
     document.getElementById("page-title-input").value = pageData.title || "";
     document.getElementById("page-template-name").textContent = slug;
-    document.getElementById("visual-edit-btn").href = `/admin/theme-editor?slug=${encodeURIComponent(slug)}`;
+    const visualQuery = new URLSearchParams({ slug: pageData.slug || slug });
+    if (window.cmsActiveSiteId) visualQuery.set("site_id", window.cmsActiveSiteId);
+    if (window.cmsActivePageId) visualQuery.set("page_id", window.cmsActivePageId);
+    document.getElementById("visual-edit-btn").href = `/admin/theme-editor?${visualQuery.toString()}`;
 
     document.getElementById("sections-root").innerHTML = renderAllSections(pageData.sections);
 
@@ -458,23 +521,23 @@ async function savePage() {
     const title = document.getElementById("page-title-input").value.trim();
     const status = document.querySelector('input[name="visibility"]:checked')?.value || "draft";
 
-    await adminFetch(`/api/admin/cms/pages/${slug}`, {
+    await cmsAdminFetch(`/api/admin/cms/pages/${slug}`, {
       method: "PUT",
       body: JSON.stringify({ title }),
     });
 
     for (const { key, content, expectedVersion } of collectAllSectionContent()) {
-      await adminFetch(`/api/admin/cms/pages/${slug}/sections/${encodeURIComponent(key)}`, {
+      await cmsAdminFetch(`/api/admin/cms/pages/${slug}/sections/${encodeURIComponent(key)}`, {
         method: "PUT",
         body: JSON.stringify({ content, expected_version: expectedVersion }),
       });
     }
 
     if (status === "published") {
-      await adminFetch(`/api/admin/cms/pages/${slug}/publish`, { method: "POST" });
+      await cmsAdminFetch(`/api/admin/cms/pages/${slug}/publish`, { method: "POST" });
       showNote("Page saved and published.", "success");
     } else {
-      await adminFetch(`/api/admin/cms/pages/${slug}`, {
+      await cmsAdminFetch(`/api/admin/cms/pages/${slug}`, {
         method: "PUT",
         body: JSON.stringify({ status: "draft" }),
       });
@@ -495,7 +558,7 @@ async function savePage() {
 
 async function publishPage() {
   try {
-    await adminFetch(`/api/admin/cms/pages/${slug}/publish`, { method: "POST" });
+    await cmsAdminFetch(`/api/admin/cms/pages/${slug}/publish`, { method: "POST" });
     showNote("Published to live site.", "success");
     await loadPage();
   } catch (err) {
@@ -518,12 +581,12 @@ document.addEventListener("click", () => {
 
 document.getElementById("title-ai-btn")?.addEventListener("click", () => {
   window.openAgentsamDrawer?.();
-  window.sendAgentsamMessage?.(`Suggest a stronger page title for the ${slug} page on Fuel & Free Time.`);
+  window.sendAgentsamMessage?.(`Suggest a stronger page title for the ${slug} page of the website I am editing.`);
 });
 
 document.getElementById("content-ai-btn")?.addEventListener("click", () => {
   window.openAgentsamDrawer?.();
-  window.sendAgentsamMessage?.(`Draft hero copy for the ${slug} page on Fuel & Free Time.`);
+  window.sendAgentsamMessage?.(`Draft hero copy for the ${slug} page of the website I am editing.`);
 });
 
 async function initPageEditor() {

@@ -1,17 +1,25 @@
-(() => {
+(async () => {
+  // The source-backed Local Studio adapter resolves site authorization
+  // asynchronously. Never fall back to unrelated legacy CMS APIs while that
+  // handshake is pending or has failed.
+  if (window.__agentsamCmsSourceHostReady) {
+    await window.__agentsamCmsSourceHostReady;
+    if (!window.AgentSamThemeEditorHost) return;
+  }
   const params = new URLSearchParams(location.search);
   const showcaseTheme = ['violet','resolve','plain-jane'].includes(params.get('showcase')) ? params.get('showcase') : '';
   // Packaged showcases stay preview-only unless the host explicitly provides
   // a site-scoped CMS adapter. Resolve's local proof uses the same editor API
   // contract without connecting to a customer or production database.
   const host = window.AgentSamThemeEditorHost || null;
-  const editorRequest = host ? host.adapter.request.bind(host.adapter) : window.adminFetch;
+  const editorRequest = host ? host.adapter.request.bind(host.adapter) : (window.cmsAdminFetch || window.adminFetch);
   const violetShowcase = showcaseTheme === 'violet';
   const resolveShowcase = showcaseTheme === 'resolve';
   const journalShowcase = showcaseTheme === 'plain-jane';
   const localShowcase = Boolean(showcaseTheme);
   const showcaseDisplayName = journalShowcase ? 'Plain Jane Journal' : resolveShowcase ? 'Resolve' : 'Violet';
   let slug = host?.page || params.get('slug') || (localShowcase ? 'home' : 'shop');
+  if (!host) window.cmsActivePageSlug = slug;
   let pageData = null;
   let siteData = null;
   let pages = [];
@@ -934,7 +942,7 @@
         slug:journal?(template==='article'?'journal-the-art-of-slow-travel':'journal-home')
           :(['product','products'].includes(template)?'resolve-product':'resolve-collection')
       });
-      window.location.assign('/admin/theme-editor?'+params.toString());
+      window.cmsAdminNavigate('/admin/theme-editor?'+params.toString());
       return;
     }
     showcaseTemplate = { template, title, subtitle: 'Customize this ' + (resolveShowcase ? 'Resolve' : 'Violet') + ' template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
@@ -1142,7 +1150,7 @@
       const preset=button.dataset.pickerPreset;
       const page=button.dataset.presetPage;
       if(!['resolve','plain-jane','violet'].includes(preset)||!page)return;
-      window.location.assign('/admin/theme-editor?'+new URLSearchParams({showcase:preset,slug:page}).toString());
+      window.cmsAdminNavigate('/admin/theme-editor?'+new URLSearchParams({showcase:preset,slug:page}).toString());
     }));
     root.querySelectorAll('[data-picker-page]').forEach(button => button.addEventListener('click', () => {
       switchPage(button.dataset.pickerPage);
@@ -2572,7 +2580,7 @@
         .map(function(item) { return item[0]; });
       for (const key of names) {
         if (!Object.prototype.hasOwnProperty.call(schema, key)) throw new Error('Unregistered section: ' + key);
-        await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
+        await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/sections', {
           method: 'POST',
           body: JSON.stringify({ templateKey: key, toIndex: ordering.indexOf(key) })
         });
@@ -2606,7 +2614,7 @@
     button.disabled = true;
     setSaveState('Importing');
     try {
-      await adminFetch('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/import-live', {
+      await editorRequest('/api/admin/cms/pages/' + encodeURIComponent(slug) + '/import-live', {
         method: 'POST',
         body: JSON.stringify({ mode: liveExistingDraft ? 'reconcile' : 'create', sections: liveCapturedSections.map(function(section) {
           return { key: section.key, content: section.content, expected_version: Number(section.version ?? 0) };
@@ -3235,6 +3243,19 @@
         })
       ]);
       pageData = results[0].page;
+      if (!host && pageData) {
+        const resolvedSiteId = results[1]?.site?.id || pageData.site_id || window.cmsActiveSiteId;
+        if (resolvedSiteId) window.cmsActiveSiteId = resolvedSiteId;
+        window.cmsActivePageSlug = pageData.slug || slug;
+        window.cmsActivePageId = pageData.slug === 'site' ? null : (pageData.id || null);
+        const identityUrl = new URL(location.href);
+        if (resolvedSiteId) identityUrl.searchParams.set('site_id', resolvedSiteId);
+        if (window.cmsActivePageId) identityUrl.searchParams.set('page_id', window.cmsActivePageId);
+        else identityUrl.searchParams.delete('page_id');
+        if (pageData.slug) identityUrl.searchParams.set('slug', pageData.slug);
+        history.replaceState(null, '', identityUrl);
+        slug = pageData.slug || slug;
+      }
       if (resolveShowcase) window.AgentSamResolveStudio?.setPage?.(pageData);
       liveUnimported = pageData.content_authority === 'storefront-html';
       missingSourceSections = Array.isArray(pageData.missing_source_sections)
@@ -3291,7 +3312,10 @@
             if (!dirty || await saveDraft()) host.onPageSettings(slug);
           } : null;
         } else {
-          link.href = '/admin/page-edit?slug=' + encodeURIComponent(slug);
+          const pageQuery = new URLSearchParams({ slug });
+          if (window.cmsActiveSiteId) pageQuery.set('site_id', window.cmsActiveSiteId);
+          if (window.cmsActivePageId) pageQuery.set('page_id', window.cmsActivePageId);
+          link.href = '/admin/page-edit?' + pageQuery.toString();
         }
       }
       syncPublishCapability();
@@ -3453,7 +3477,7 @@
       if (dirty) throw new Error('New edits are still pending; publish again after they are saved.');
       let siteResult = null;
       if (!host && siteDraftTouched) {
-        siteResult = await adminFetch('/api/admin/cms/pages/site/publish', { method: 'POST' });
+        siteResult = await editorRequest('/api/admin/cms/pages/site/publish', { method: 'POST' });
         siteData.status = 'published';
         (siteData.sections || []).forEach(function(section) { section.status = 'published'; });
         siteDraftTouched = false;
@@ -3721,6 +3745,16 @@
     activeFieldKey = null;
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('slug', slug);
+    const nextPage = pages.find(function(page) { return page.slug === slug; });
+    if (window.cmsActiveSiteId) nextUrl.searchParams.set('site_id', window.cmsActiveSiteId);
+    if (nextPage?.id) {
+      nextUrl.searchParams.set('page_id', nextPage.id);
+      window.cmsActivePageId = nextPage.id;
+    } else {
+      nextUrl.searchParams.delete('page_id');
+      window.cmsActivePageId = null;
+    }
+    window.cmsActivePageSlug = slug;
     history.replaceState(null, '', nextUrl.pathname + nextUrl.search + nextUrl.hash);
     if (host) host.onPageChange?.(slug);
     closePageMenu();
@@ -3865,7 +3899,7 @@
     editorLeaving = true;
     if (window.AgentSamShell && AgentSamShell.unbindShellShortcuts) AgentSamShell.unbindShellShortcuts();
     const dest = window.AgentSamShell && AgentSamShell.resolveExitTarget ? AgentSamShell.resolveExitTarget() : '/admin/store';
-    location.assign(dest);
+    window.cmsAdminNavigate(dest);
   }
 
   function closeThemeMenu() {
@@ -4276,9 +4310,10 @@
   byId('theme-preview').addEventListener('load', function() {
     bindPreviewSelection();
     // Reposting draft data is only needed for the live Heuristic iframe.
-    // Alternate previews use srcdoc. Reassigning srcdoc on every iframe
-    // load triggers an infinite navigation loop and leaves a blank canvas.
-    if (selectedTheme === 'heuristic') {
+    // Alternate previews and the site-owned HTML source adapter use srcdoc.
+    // Reassigning srcdoc during its own iframe load causes a navigation loop
+    // and a blank canvas. Only the legacy live Heuristic iframe needs this.
+    if (!host && selectedTheme === 'heuristic') {
       if (liveUnimported) {
         if (!dirty) captureLiveSource();
         else pushLocalPreview();

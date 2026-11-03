@@ -122,6 +122,20 @@ const resolveDest = path.join(previewRoot,'resolve/demo');
 if (!existsSync(path.join(resolveSrc,'index.html'))) throw new Error('Resolve canonical compiled preview unavailable');
 rmSync(resolveDest,{recursive:true,force:true});
 cpSync(resolveSrc,resolveDest,{recursive:true});
+
+// The published SDK package owns the generated media manifest and social-card
+// files consumed by both compiled previews. The source demo trees intentionally
+// keep generated binaries out of Git, so stage those package-owned assets here.
+const packagedThemes = path.join(localStudio,'backend/node_modules/@inneranimalmedia/agentsam-sdk/packages');
+for (const slug of ['resolve','violet']) {
+  const generatedSource = path.join(packagedThemes,'theme-'+slug,'site/assets/generated');
+  const generatedTarget = path.join(previewRoot,slug,'demo/assets/generated');
+  if (!existsSync(path.join(generatedSource,'social-card.webp'))) {
+    throw new Error('Packaged '+slug+' generated preview assets unavailable');
+  }
+  mkdirSync(generatedTarget,{recursive:true});
+  cpSync(generatedSource,generatedTarget,{recursive:true,force:true});
+}
 const previewCatalog=await listLocalThemeProducts();
 if(previewCatalog.length!==3 || previewCatalog.some(entry=>!entry.preview_ready))
  throw new Error('Theme preview catalog incomplete; refuse to stage stale product listing');

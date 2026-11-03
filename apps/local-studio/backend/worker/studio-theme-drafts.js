@@ -1,9 +1,8 @@
 /**
- * Theme drafts use the existing hosted cms_themes table.
- * This is a private, account-scoped selection/config draft; the CMS renderer
- * must be connected and verified separately before publishing.
+ * Installed website drafts are site-scoped cms_globals theme projects.
+ * Legacy cms_themes rows represent old appearance/selection drafts only,
+ * and must not determine whether installed websites are visible.
  */
-import { listThemeProjects } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
 const answer=(payload,status=200)=>Response.json(payload,{status,headers:{'cache-control':'private, no-store'}});
 // Only historical cms_themes selections are restricted to this legacy catalog.
 // Canonical CMS v2 projects are listed from the account-scoped project store.
@@ -38,21 +37,42 @@ export async function listStudioThemeDrafts(env,userId) {
  // cms_themes is retained read-only for historical unlinked selections.
  let installed=[];
  try {
-  const response=await listThemeProjects(env,userId);
-  if(response.ok)installed=response.projects.map(project=>({
-      id:project.id,slug:project.sourceThemeId,name:project.name,
+  // Read all authorized website projects, not just the account's default
+  // site. Otherwise installing into any of an owner's other sites appears
+  // to vanish from the Online Store draft list.
+  const {results=[]}=await env.DB.prepare(`
+    SELECT g.site_id,g.inline_content_json,s.name AS site_name,s.slug AS site_slug
+    FROM cms_globals g
+    JOIN cms_sites s ON s.id=g.site_id AND s.account_id=g.account_id
+    WHERE g.account_id=? AND g.global_type='theme-project'
+      AND g.status!='archived'
+    ORDER BY g.updated_at DESC LIMIT 150
+  `).bind(userId).all();
+  installed=results.map(row=>{
+    let project;
+    try{project=JSON.parse(row.inline_content_json||'{}')}catch{return null}
+    if(!project||!project.id||!project.name)return null;
+    return {
+      id:'site-'+row.site_id+'-'+project.id,slug:project.sourceThemeId,name:project.name,
       theme_slug:project.sourceThemeId,package:project.packageName,
       version:project.sourcePackageVersion,status:'draft',
-      created_at:project.createdAt,installed:true,site_linked:false,
+      created_at:project.createdAt,installed:true,site_linked:true,
+      site_id:row.site_id,site_name:row.site_name,site_slug:row.site_slug,
       meta:project.packageName,preview_url:project.sourcePreviewUrl,
-      edit_href:'/admin/theme-project-editor?project='+encodeURIComponent(project.id)
-    }));
- }catch{/* A missing v2 table does not erase historical selections. */}
- const rows=await env.DB.prepare(
-  "SELECT id,name,slug,config,created_at FROM cms_themes WHERE workspace_id=? AND status='draft' AND slug LIKE 'draft-%' ORDER BY created_at DESC LIMIT 60"
- ).bind(userId).all();
+      edit_href:'/admin/theme-project-editor?project='+encodeURIComponent(project.id)+
+        '&site_id='+encodeURIComponent(row.site_id),
+    };
+  }).filter(Boolean);
+ }catch{/* Missing v2 table must not hide historical selections. */}
+ let legacyRows=[];
+ try {
+  const legacy=await env.DB.prepare(
+   "SELECT id,name,slug,config,created_at FROM cms_themes WHERE workspace_id=? AND status='draft' AND slug LIKE 'draft-%' ORDER BY created_at DESC LIMIT 60"
+  ).bind(userId).all();
+  legacyRows=legacy.results||[];
+ } catch { /* Legacy appearance selections are optional; never erase canonical website drafts. */ }
  const installedSlugs=new Set(installed.map(row=>row.slug));
- return [...installed,...(rows.results||[]).map(draft)
+ return [...installed,...legacyRows.map(draft)
    .filter(row=>legacyCatalogSlug.test(row.slug||'')&&!installedSlugs.has(row.slug))];
 }
 export async function handleStudioThemeDrafts(request,env,userId) {

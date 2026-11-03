@@ -24,18 +24,9 @@
   if (desktop && !desktopHost && typeof loadShellUser === 'function') {
     loadShellUser = async function () { return window.__shellUser || null; };
   }
-  // Hosted AgentSam uses the real CMS project installer in Theme Store.
-  // Standalone Ecommerce customers keep their own install adapters.
-  window.__AGENTSAM_THEME_STORE_URL = "/themes";
-  if (window.location?.pathname === "/sites") {
-    const updateThemeEntry = () => {
-      const browse = document.getElementById("browse-themes-shortcut");
-      if (browse) browse.href = "/themes";
-    };
-    if (document.readyState === "loading")
-      document.addEventListener("DOMContentLoaded", updateThemeEntry, { once: true });
-    else updateThemeEntry();
-  }
+  // Ecommerce website packages are discovered inside Online Store using the
+  // Theme Store's release catalog. /themes is reserved for Studio appearance.
+  window.__AGENTSAM_WEBSITE_THEMES_ENDPOINT = "/api/admin/website-themes";
   // This host consumes the curated navigation projection, not the route catalog.
   const main = [], channels = [], apps = [];
   // Growth is an installed product view. Its platform appearance is an
@@ -325,6 +316,14 @@
     event.preventDefault(); event.stopImmediatePropagation();
     navigateParentShell(href);
   }, true);
+  // Static Ecommerce page controllers also navigate programmatically when
+  // switching pages or selecting a template. Forward those transitions through
+  // the same installed-app router used by actual anchor clicks.
+  window.__agentsamAdminNavigate = function (href) {
+    if (typeof href !== 'string' || !href.startsWith('/admin/') || href.startsWith('//')) return false;
+    if (desktopHost || hostedParent()) { navigateHost(href); return true; }
+    return false;
+  };
   function loadSharedNavigation() {
     if (sharedNavReady) return sharedNavReady;
     sharedNavReady = new Promise((resolve, reject) => {

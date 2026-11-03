@@ -194,13 +194,17 @@ export async function createThemeProject(env, accountId, value, siteId = null) {
   return { ok: true, project };
 }
 
-function safePreviewUrl(value, slug) {
-  if (typeof value !== "string" || !value.startsWith("/")) return null;
+function safePreviewUrl(value, slug, version) {
+  if (typeof value !== "string") return null;
   try {
     const url = new URL(value, "https://theme.invalid");
-    if (url.origin !== "https://theme.invalid" || !url.pathname.startsWith(`/themes/${slug}/`) ||
-        url.pathname.split("/").includes("..")) return null;
-    return url.pathname + url.search;
+    const local = url.origin === "https://theme.invalid" &&
+      url.pathname.startsWith(`/themes/${slug}/`);
+    const released = url.origin === "https://themes.inneranimalmedia.com" &&
+      url.pathname.startsWith(`/theme-packages/${slug}/${version}/preview/`);
+    if ((!local && !released) || url.pathname.split("/").includes("..") ||
+        url.username || url.password || url.search || url.hash) return null;
+    return released ? url.href : url.pathname;
   } catch { return null; }
 }
 
@@ -217,7 +221,7 @@ export async function installThemeDraft(env, accountId, slug, payload = {}, site
   const packageVersion = String(payload.package_version || "");
   const packageLeaf = packageName.split("/").pop() || "";
   const packageSlug = packageLeaf.startsWith("theme-") ? packageLeaf.slice(6) : packageLeaf;
-  const previewUrl = safePreviewUrl(payload.preview_url || project.sourcePreviewUrl, slug);
+  const previewUrl = safePreviewUrl(payload.preview_url || project.sourcePreviewUrl, slug, packageVersion);
   if (!PACKAGE_NAME.test(packageName) || packageSlug !== slug || !PACKAGE_VERSION.test(packageVersion)) {
     return { ok: false, status: 400, error: "theme_package_identity_invalid" };
   }
@@ -243,14 +247,14 @@ export async function installThemeDraft(env, accountId, slug, payload = {}, site
 
   const artifactKey = `theme/${slug}`;
   const artifactResult = await env.DB.prepare(
-    "SELECT id,source_ref,metadata_json,version,status FROM cms_artifacts WHERE account_id=? AND artifact_key=? AND version=? LIMIT 1"
+    "SELECT id,source_ref,content_hash,manifest_object_key,metadata_json,version,status FROM cms_artifacts WHERE account_id=? AND artifact_key=? AND version=? LIMIT 1"
   ).bind(accountId, artifactKey, packageVersion).first();
   if (artifactResult && artifactResult.source_ref !== packageName) {
     return { ok: false, status: 409, error: "theme_artifact_source_conflict" };
   }
 
   const prefix = `cms/accounts/${encodeURIComponent(accountId)}/theme-packages/${slug}/${encodeURIComponent(packageVersion)}`;
-  const manifestKey = `${prefix}/manifest.json`;
+  // Content-addressed release record: site edits are saved separately.
   const manifest = {
     schema: "agentsam.theme-install.v1",
     slug,
@@ -259,12 +263,15 @@ export async function installThemeDraft(env, accountId, slug, payload = {}, site
     projectId: project.id,
     previewUrl,
     pages: project.pages.map(({ slug: pageSlug, title }) => ({ slug: pageSlug, title })),
-    delivery: "bundled-package-assets",
-    installedAt: new Date().toISOString(),
+    delivery: project.sourceReleaseSha256 ? "verified-theme-store-release" : "bundled-package-assets",
+    sourceReleaseSha256: project.sourceReleaseSha256 || null,
   };
-  const manifestText = JSON.stringify(manifest);
-  const manifestHash = await hashText(manifestText);
-  if (!await writeR2Json(env, manifestKey, manifest)) {
+  const manifestHash = await hashText(JSON.stringify(manifest));
+  const manifestKey = `${prefix}/manifests/${manifestHash}.json`;
+  if (artifactResult && artifactResult.content_hash !== manifestHash) {
+    return { ok: false, status: 409, error: "theme_release_manifest_conflict" };
+  }
+  if (!artifactResult && !await writeR2Json(env, manifestKey, manifest)) {
     return { ok: false, status: 503, error: "cms_r2_unavailable" };
   }
 

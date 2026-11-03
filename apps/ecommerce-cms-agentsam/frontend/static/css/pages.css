@@ -163,6 +163,167 @@
   font-size: 14px;
 }
 
+.pages-hub-heading p {
+  margin: 5px 0 0;
+  color: #71717a;
+  font-size: 13px;
+}
+
+.pages-hub-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pages-site-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #71717a;
+  font-size: 12px;
+}
+
+.pages-site-control select {
+  min-width: 150px;
+  max-width: 220px;
+  border: 1px solid #d7d7dc;
+  border-radius: 8px;
+  padding: 8px 30px 8px 10px;
+  background: #fff;
+  color: #202024;
+  font: inherit;
+}
+
+.pages-dialog {
+  width: min(460px, calc(100vw - 32px));
+  max-width: none;
+  padding: 0;
+  border: 1px solid #e3e3e8;
+  border-radius: 14px;
+  color: #202024;
+  background: #fff;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, .22);
+}
+
+.pages-dialog::backdrop {
+  background: rgba(15, 23, 42, .38);
+  backdrop-filter: blur(3px);
+}
+
+.pages-dialog form {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.pages-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pages-dialog-head h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+}
+
+.pages-dialog-head p {
+  margin: 5px 0 0;
+  color: #71717a;
+  font-size: 13px;
+}
+
+.pages-dialog-close {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  background: #fff;
+  color: #52525b;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pages-dialog-field {
+  display: grid;
+  gap: 7px;
+  color: #34343a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pages-dialog-field input {
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  border: 1px solid #d7d7dc;
+  border-radius: 8px;
+  padding: 9px 11px;
+  color: #202024;
+  font: inherit;
+  font-weight: 400;
+}
+
+.pages-dialog-field input:focus {
+  border-color: #3978df;
+  outline: 3px solid rgba(57, 120, 223, .13);
+}
+
+.pages-dialog-help {
+  margin: -7px 0 0;
+  color: #71717a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pages-dialog-help strong {
+  color: #3f3f46;
+  font-weight: 650;
+}
+
+.pages-dialog-error {
+  margin: -8px 0 0;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.pages-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+@media (max-width: 680px) {
+  .pages-hub-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pages-hub-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .pages-site-control select {
+    min-width: 120px;
+  }
+
+  .pages-table {
+    min-width: 620px;
+  }
+
+  .pages-card {
+    overflow-x: auto;
+  }
+}
+
 /* Page editor */
 .page-editor {
   max-width: 1040px;

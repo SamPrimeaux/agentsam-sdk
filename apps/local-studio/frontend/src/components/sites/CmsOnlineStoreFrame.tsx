@@ -114,6 +114,7 @@ export function CmsOnlineStoreFrame({
               pages.find(({ slug }) => slug === 'home') || pages[0];
             if (page) onEdit(page.slug);
           },
+          onBrowseThemes: onOpenThemes,
           onReady() { if (!disposed) setLoading(false); },
         });
       } catch (cause) {

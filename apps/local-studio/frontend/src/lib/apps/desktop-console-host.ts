@@ -1,4 +1,4 @@
-import { invokeStudioService } from '@/lib/desktop/tauri';
+import { invokeStudioService, isPackagedDesktop } from '@/lib/desktop/tauri';
 import { resolveEcommerceAdminPath } from './ecommerce-routing';
 import { isStudioAdminPath } from '../../../../shared/studio-admin-routes.mjs';
 
@@ -29,6 +29,9 @@ export function createDesktopConsoleHost(navigate: (path: string) => void) {
     async request(request: Request): Promise<Response> {
       const url = new URL(request.url);
       if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/admin/')) throw new Error('Console request outside installed application');
+      // Browser/local-preview mode already has a same-origin Worker API. The
+      // native service bridge exists only inside the packaged Tauri desktop app.
+      if (!isPackagedDesktop()) return fetch(request);
       const method = request.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
       const contentType = request.headers.get('content-type') || '';
       let body: unknown;

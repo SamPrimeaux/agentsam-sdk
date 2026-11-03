@@ -11,7 +11,7 @@ test('hosted Sites uses packaged Ecommerce UI and truthful missing-theme states'
  const html=read('../ecommerce-cms-agentsam/frontend/static/store.html');
  const js=read('../ecommerce-cms-agentsam/frontend/static/js/store.js');
  const sitesRoute=read('frontend/src/routes/(apps)/sites.tsx');
- assert.match(sitesRoute,/window\.location\.replace\('\/admin\/store'/);
+ assert.match(sitesRoute,/<Navigate to="\/apps\/ecommerce-cms-agentsam" search=\{\{ page: '\/admin\/store' \}\} replace \/>/);
  assert.equal(resolveConsoleFile('/admin/store'),'store.html');
  assert.equal(resolveConsoleFile('/sites'),null);
  for(const content of [html,js]){
@@ -39,10 +39,13 @@ test('staged product catalog and all three original preview entrypoints exist',(
  const base='frontend/public/';
  for(const slug of ['violet','resolve','plain-jane'])
   assert.ok(existsSync(path.join(studio,base,'themes',slug,'demo/index.html')),slug);
+ const compiledRoot=existsSync(path.join(studio,'desktop-dist/themes'))
+  ? 'desktop-dist' : '.output/public';
+ assert.ok(existsSync(path.join(studio,compiledRoot,'themes')),'No compiled theme preview output is available');
  for(const slug of ['violet','resolve','plain-jane'])
-  assert.ok(existsSync(path.join(studio,'.output/public/themes',slug,'demo/index.html')),slug+' compiled demo');
- assert.ok(existsSync(path.join(studio,'.output/public/themes/violet/demo/global/cpas-shell.css')));
- const json=JSON.parse(read('.output/public/ecommerce-cms-agentsam/admin/data/theme-products.json'));
+  assert.ok(existsSync(path.join(studio,compiledRoot,'themes',slug,'demo/index.html')),slug+' compiled demo in '+compiledRoot);
+ assert.ok(existsSync(path.join(studio,compiledRoot,'themes/violet/demo/global/cpas-shell.css')));
+ const json=JSON.parse(read('frontend/public/ecommerce-cms-agentsam/admin/data/theme-products.json'));
  assert.equal(json.ok,true);
  assert.equal(json.products.length,3);
  for(const entry of json.products){
@@ -51,8 +54,10 @@ test('staged product catalog and all three original preview entrypoints exist',(
   assert.equal(entry.state,'preview_only');
   assert.match(entry.preview_url,/^\/themes\/[^/]+\/demo\/$/);
   assert.match(entry.thumbnail_url,/^\/themes\/[^/]+\/demo\//);
-  assert.ok(existsSync(path.join(studio,'.output/public',entry.thumbnail_url.slice(1))),
-    'Missing source-derived image for '+entry.slug);
-
+  const relative=entry.thumbnail_url.slice(1);
+  assert.ok(existsSync(path.join(studio,'frontend/public',relative)),
+    'Missing staged source-derived image for '+entry.slug);
+  assert.ok(existsSync(path.join(studio,compiledRoot,relative)),
+   'Missing compiled source-derived image for '+entry.slug+' in '+compiledRoot);
  }
 });

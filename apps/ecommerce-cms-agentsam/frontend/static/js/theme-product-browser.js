@@ -1,6 +1,8 @@
 /* Package catalog previews + authenticated, source-backed draft creation. */
 (() => {
  'use strict';
+ // Website packages belong to the real Theme Store, not the color-theme UI.
+ if (window.__AGENTSAM_WEBSITE_THEMES_ENDPOINT) return;
  const root=document.getElementById('theme-marketplace-grid');
  if(!root)return;
  const search=document.getElementById('theme-marketplace-search');
@@ -103,6 +105,23 @@
    }
  }
  async function load(){
+   // Local Studio already has a source-backed Theme Store and one CMS v2
+   // installer. Reuse it rather than probing an unrelated static preview API
+   // and showing "Catalog unavailable" beside a functioning theme inventory.
+   const installedStore=window.__AGENTSAM_THEME_STORE_URL;
+   if(typeof installedStore==='string' && /^\/[a-zA-Z0-9/_-]+$/.test(installedStore)){
+     count.textContent='Available in Theme Store';
+     root.replaceChildren();
+     const tile=node('div','theme-marketplace-empty');
+     const heading=node('strong','','Your installable themes are in Theme Store.');
+     const message=node('p','','Browse Heuristic, Resolve and your other packaged themes, then install a private CMS draft. Saving does not publish your site.');
+     const open=node('a','btn primary','Browse themes and create a draft');
+     open.href=installedStore;
+     tile.append(heading,message,open);
+     root.append(tile);
+     search.disabled=true;filter.disabled=true;
+     return;
+   }
    try{
      const res=await fetch('/api/admin/theme-products',{credentials:'same-origin',cache:'no-store'});
      if(!res.ok)throw Error('Catalog unavailable (HTTP '+res.status+')');

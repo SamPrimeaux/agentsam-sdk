@@ -11,15 +11,15 @@
     "build": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && cargo check --manifest-path src-tauri/Cargo.toml",
     "build:shell-only": "cargo check --manifest-path src-tauri/Cargo.toml",
     "typecheck": "echo \"agentsam-desktop-shell: no TS surface yet\" && exit 0",
-    "test": "node --test scripts/icon-idempotence.test.mjs scripts/stage-desktop-dist.test.mjs worker/src/index.test.mjs scripts/native-capability-ledger.test.mjs",
+    "test": "node --test scripts/icon-idempotence.test.mjs scripts/stage-desktop-dist.test.mjs scripts/native-capability-ledger.test.mjs scripts/desktop-release-gate.test.mjs",
     "ledger:native": "node scripts/native-capability-ledger.mjs",
     "ledger:native:check": "node scripts/native-capability-ledger.mjs --check",
     "test:icons": "node --test scripts/icon-idempotence.test.mjs",
     "prepare:sidecars": "node scripts/prepare-sidecars.mjs && npm run prepare:cad",
-    "build:desktop-assets": "npm --prefix ../../apps/local-studio run build:desktop && node scripts/sync-local-studio-dist.mjs && npm --prefix ../../apps/local-studio run smoke:desktop-cad",
+    "build:desktop-assets": "npm --prefix ../../apps/local-studio run build:included:all && npm --prefix ../../apps/local-studio run build:desktop && node scripts/sync-local-studio-dist.mjs && npm --prefix ../../apps/local-studio run smoke:desktop-cad",
     "bundle": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && tauri build --bundles app,dmg --ci",
     "bundle:app": "npm run prepare:sidecars && npm run build:desktop-assets && node scripts/build-brand.mjs local-studio && tauri build --bundles app --ci",
-    "bundle:shell-only": "npm run prepare:cad && node scripts/build-brand.mjs local-studio && tauri build --bundles app,dmg --ci",
+    "bundle:shell-only": "node scripts/deny-stale-desktop-bundle.mjs",
     "prepare:cad": "node scripts/prepare-cad-runtime.mjs"
   },
   "dependencies": {
@@ -53,8 +53,7 @@
     "src-tauri",
     "!src-tauri/target",
     "!src-tauri/binaries",
-    "!src-tauri/generated",
-    "worker"
+    "!src-tauri/generated"
   ],
   "agentsam": {
     "releaseIgnore": [

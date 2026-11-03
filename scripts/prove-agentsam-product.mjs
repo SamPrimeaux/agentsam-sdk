@@ -15,12 +15,12 @@ function value(flag, fallback = '') {
 }
 function has(flag) { return args.includes(flag); }
 if (has('--help') || has('-h')) {
-  console.log(`AgentSam product proof\n\n  node scripts/prove-agentsam-product.mjs [options]\n\n  --world <path>       Repository/directory for WORLD proof (default: current repo)\n  --app <id>           APP proof target (default: client-cms-editor)\n  --out <file>         Receipt path (default: .agentsam/proofs/product-proof.json)\n  --strict-package     Treat npm distribution blockers as a failing proof\n\nRuns locally only. No deploy, publish, login, model, embeddings, or network is required.`);
+  console.log(`AgentSam product proof\n\n  node scripts/prove-agentsam-product.mjs [options]\n\n  --world <path>       Repository/directory for WORLD proof (default: current repo)\n  --app <id>           APP proof target (default: ecommerce-cms-agentsam)\n  --out <file>         Receipt path (default: .agentsam/proofs/product-proof.json)\n  --strict-package     Treat npm distribution blockers as a failing proof\n\nRuns locally only. No deploy, publish, login, model, embeddings, or network is required.`);
   process.exit(0);
 }
 
 const worldRoot = path.resolve(value('--world', ROOT));
-const appId = value('--app', 'client-cms-editor');
+const appId = value('--app', 'ecommerce-cms-agentsam');
 const outFile = path.resolve(value('--out', path.join(ROOT, '.agentsam/proofs/product-proof.json')));
 const strictPackage = has('--strict-package');
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'agentsam-product-proof-'));

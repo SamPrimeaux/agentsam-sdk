@@ -23,20 +23,29 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
   if (url.origin !== 'https://ecommerce-route.invalid' || !adminRoutes.some((route) =>
     !excluded.has(route.id) && isRoute(url.pathname, route.path))) return null;
   const safe = new URLSearchParams();
-  const recognized = url.pathname === '/admin/theme-editor' ? 'slug'
-    : url.pathname === '/admin/theme-project-editor' ? 'project'
-    : url.pathname === '/admin/product-edit' ? 'id'
-    : url.pathname === '/admin/products' ? 'view'
-    : url.pathname === '/admin/content' ? 'kind'
-    : url.pathname === '/admin/email' ? 'folder' : null;
-  if ([...url.searchParams.keys()].some((name) => name !== recognized)) return null;
-  if (recognized && url.searchParams.has(recognized)) {
-    const value = url.searchParams.get(recognized) || '';
+  // Keep query validation on the product-owned routes, not the UI shell.
+  // The actual Page Editor uses ?slug=..., while the Theme Editor accepts
+  // ?slug=...&showcase=... (the catalog's generated preview link) and
+  // ?slug=...&catalog=revise (its section-library entry).
+  const recognized: Record<string, readonly string[]> = {
+    '/admin/pages': ['site_id'],
+    '/admin/theme-editor': ['slug', 'site', 'site_id', 'page_id', 'showcase', 'catalog', 'source'],
+    '/admin/page-edit': ['slug', 'site_id', 'page_id'],
+    '/admin/theme-project-editor': ['project'],
+    '/admin/product-edit': ['id'],
+    '/admin/products': ['view'],
+    '/admin/content': ['kind'],
+    '/admin/email': ['folder'],
+  };
+  const allowed = recognized[url.pathname] || [];
+  if ([...url.searchParams.keys()].some((name) => !allowed.includes(name) || url.searchParams.getAll(name).length !== 1)) return null;
+  for (const [name, value] of url.searchParams) {
     if (!idParam.test(value)
-      || (recognized === 'view' && !['store', 'collections', 'platform'].includes(value))
-      || (recognized === 'kind' && !['image', 'video', 'model', 'file'].includes(value))
-      || (recognized === 'folder' && !['sent', 'inbox'].includes(value))) return null;
-    safe.set(recognized, value);
+      || (name === 'view' && !['store', 'collections', 'platform'].includes(value))
+      || (name === 'kind' && !['image', 'video', 'model', 'file'].includes(value))
+      || (name === 'folder' && !['sent', 'inbox'].includes(value))
+      || (name === 'catalog' && value !== 'revise')) return null;
+    safe.set(name, value);
   }
   return url.pathname + (safe.size ? '?' + safe.toString() : '');
 }

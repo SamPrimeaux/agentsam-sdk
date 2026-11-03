@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pages — Fuel & Free Time Admin</title>
+<title>Pages — AgentSam Ecommerce</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/pages.css">
@@ -15,11 +15,18 @@
 renderShell("/admin/pages", `
   <div class="pages-hub">
     <header class="pages-hub-head">
-      <h1>Pages</h1>
-      <a class="btn ghost" href="/admin/theme-editor?slug=home&amp;catalog=revise">Browse section library</a>
-      <a class="btn ghost" href="/admin/scene-lab">Aviation scene lab</a>
-      <button type="button" class="btn ghost" id="cms-bootstrap-btn">Sync CMS to live</button>
-      <button type="button" class="btn primary" id="add-page-btn">Add page</button>
+      <div class="pages-hub-heading">
+        <h1>Pages</h1>
+        <p>Manage the pages that belong to this site.</p>
+      </div>
+      <div class="pages-hub-actions">
+        <label class="pages-site-control" for="pages-site-select">
+          <span>Site</span>
+          <select id="pages-site-select" aria-label="Select site"></select>
+        </label>
+        <a class="btn ghost" id="edit-site-design" href="/admin/theme-editor?slug=home">Edit site design</a>
+        <button class="btn primary" type="button" id="add-page-btn">+ Add page</button>
+      </div>
     </header>
 
     <div class="pages-card">
@@ -32,7 +39,6 @@ renderShell("/admin/pages", `
       <table class="pages-table">
         <thead>
           <tr>
-            <th><input type="checkbox" id="pages-select-all" aria-label="Select all pages"></th>
             <th>Title</th>
             <th>Visibility</th>
             <th>Content</th>
@@ -40,100 +46,268 @@ renderShell("/admin/pages", `
           </tr>
         </thead>
         <tbody id="pages-body">
-          <tr><td colspan="5" class="pages-empty">Loading…</td></tr>
+          <tr><td colspan="4" class="pages-empty">Loading pages…</td></tr>
         </tbody>
       </table>
     </div>
   </div>
+
+  <dialog class="pages-dialog" id="add-page-dialog" aria-labelledby="add-page-title-heading">
+    <form id="add-page-form" method="dialog">
+      <header class="pages-dialog-head">
+        <div>
+          <h2 id="add-page-title-heading">Add page</h2>
+          <p>Create a draft page on the selected site.</p>
+        </div>
+        <button type="button" class="pages-dialog-close" id="close-add-page" aria-label="Close">×</button>
+      </header>
+      <label class="pages-dialog-field" for="new-page-title">
+        <span>Page title</span>
+        <input id="new-page-title" name="title" type="text" maxlength="200" placeholder="About us" required>
+      </label>
+      <label class="pages-dialog-field" for="new-page-slug">
+        <span>URL handle</span>
+        <input id="new-page-slug" name="slug" type="text" maxlength="80" placeholder="about-us" required>
+      </label>
+      <p class="pages-dialog-help">The page will be created as a draft at <strong id="new-page-route">/about-us</strong>. You can add its sections in Theme Editor.</p>
+      <p class="pages-dialog-error" id="add-page-error" role="alert" hidden></p>
+      <footer class="pages-dialog-actions">
+        <button type="button" class="btn ghost" id="cancel-add-page">Cancel</button>
+        <button type="submit" class="btn primary" id="create-page-submit">Create page</button>
+      </footer>
+    </form>
+  </dialog>
 `);
 
 let allPages = [];
+let availableSites = [];
+let selectedSiteId = null;
+let selectedSiteSlug = null;
+const siteSelect = document.getElementById("pages-site-select");
+const addPageDialog = document.getElementById("add-page-dialog");
+const addPageForm = document.getElementById("add-page-form");
+const newPageTitle = document.getElementById("new-page-title");
+const newPageSlug = document.getElementById("new-page-slug");
+const addPageError = document.getElementById("add-page-error");
+const createPageButton = document.getElementById("create-page-submit");
+
+function identityQuery(page) {
+  const query = new URLSearchParams();
+  if (selectedSiteId) query.set("site_id", selectedSiteId);
+  if (page?.id) query.set("page_id", page.id);
+  query.set("slug", page?.slug || "site");
+  return query.toString();
+}
+
+function sourceEditorQuery(page) {
+  const query = new URLSearchParams({ slug: page.slug, source: "html" });
+  if (selectedSiteSlug) query.set("site", selectedSiteSlug);
+  return query.toString();
+}
+
+function routeForPage(page) {
+  return page?.route_path || (page?.slug === "home" ? "/" : `/${page?.slug || ""}`);
+}
 
 function renderRows(pages) {
   const body = document.getElementById("pages-body");
   if (!pages.length) {
-    body.innerHTML = '<tr><td colspan="5" class="pages-empty">No pages match your search.</td></tr>';
+    body.innerHTML = '<tr><td colspan="4" class="pages-empty">No pages yet. Add your first page to get started.</td></tr>';
     return;
   }
 
-  body.innerHTML = pages
-    .map((p) => {
-      const badge = p.content_authority === "cms-draft-linked"
-        ? { label: "Live site · editable draft", cls: "pages-badge pages-badge--visible" }
-        : p.content_authority === "storefront-html"
-          ? { label: "Live site · sync required", cls: "pages-badge pages-badge--visible" }
-          : visibilityBadge(p.status || "draft");
-      const editHref = `/admin/theme-editor?slug=${encodeURIComponent(p.slug)}`;
-      return `
-        <tr data-href="${editHref}" data-slug="${p.slug}">
-          <td><input type="checkbox" aria-label="Select ${cmsEscapeHtml(p.title)}" onclick="event.stopPropagation()"></td>
-          <td><a href="${editHref}" class="pages-title-link" onclick="event.stopPropagation()">${cmsEscapeHtml(p.title)}</a></td>
-          <td><span class="${badge.cls}">${badge.label}</span></td>
-          <td><span class="pages-preview">${cmsEscapeHtml(p.preview || "—")}</span></td>
-          <td class="pages-updated">${fmtPageDate(p.updated_at)}</td>
-        </tr>`;
-    })
-    .join("");
+  body.innerHTML = pages.map((p) => {
+    const badge = p.content_authority === "cms-draft-linked"
+      ? { label: "Live site · editable draft", cls: "pages-badge pages-badge--visible" }
+      : p.content_authority === "storefront-html"
+        ? { label: "Live site · sync required", cls: "pages-badge pages-badge--visible" }
+        : visibilityBadge(p.status || "draft");
+    const query = identityQuery(p);
+    const editHref = `/admin/page-edit?${query}`;
+    const designHref = `/admin/theme-editor?${query}`;
+    const sourceHref = p.content_authority === "storefront-html"
+      ? `<a href="/admin/theme-editor?${cmsEscapeAttr(sourceEditorQuery(p))}" class="btn ghost small" onclick="event.stopPropagation()">Edit HTML source</a>`
+      : "";
+    return `
+      <tr data-href="${cmsEscapeAttr(editHref)}" data-slug="${cmsEscapeAttr(p.slug)}">
+        <td><a href="${cmsEscapeAttr(editHref)}" class="pages-title-link" onclick="event.stopPropagation()">${cmsEscapeHtml(p.title)}</a>
+            <a href="${cmsEscapeAttr(designHref)}" class="btn ghost small" onclick="event.stopPropagation()" aria-label="Edit design for ${cmsEscapeAttr(p.title)}">Edit design</a>
+            ${sourceHref}</td>
+        <td><span class="${badge.cls}">${badge.label}</span></td>
+        <td><span class="pages-preview">${cmsEscapeHtml(p.preview || routeForPage(p))}</span></td>
+        <td class="pages-updated">${fmtPageDate(p.updated_at)}</td>
+      </tr>`;
+  }).join("");
 
   body.querySelectorAll("tr[data-href]").forEach((row) => {
-    row.addEventListener("click", () => {
-      window.location.href = row.dataset.href;
-    });
+    row.addEventListener("click", () => window.cmsAdminNavigate(row.dataset.href));
   });
 }
 
 function filterPages(query) {
   const q = query.trim().toLowerCase();
   if (!q) return allPages;
-  return allPages.filter(
-    (p) =>
-      p.title.toLowerCase().includes(q) ||
-      p.slug.toLowerCase().includes(q) ||
-      (p.preview || "").toLowerCase().includes(q)
+  return allPages.filter((p) =>
+    String(p.title || "").toLowerCase().includes(q) ||
+    String(p.slug || "").toLowerCase().includes(q) ||
+    String(p.preview || "").toLowerCase().includes(q)
   );
 }
 
-document.getElementById("pages-search")?.addEventListener("input", (e) => {
-  renderRows(filterPages(e.target.value));
-});
+function slugifyPageTitle(value) {
+  return String(value || "").trim().toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
 
-document.getElementById("pages-select-all")?.addEventListener("change", (e) => {
-  document.querySelectorAll("#pages-body input[type=checkbox]").forEach((cb) => {
-    cb.checked = e.target.checked;
-  });
-});
+function updateNewPageRoute() {
+  const slug = slugifyPageTitle(newPageSlug.value || newPageTitle.value) || "new-page";
+  document.getElementById("new-page-route").textContent = `/${slug}`;
+}
 
+function closeAddPageDialog() {
+  addPageDialog.close();
+  addPageError.hidden = true;
+  addPageError.textContent = "";
+}
+
+document.getElementById("pages-search")?.addEventListener("input", (event) => {
+  renderRows(filterPages(event.target.value));
+});
 document.getElementById("add-page-btn")?.addEventListener("click", () => {
-  const draftOnly = allPages.filter((page) => page.has_live_storefront && !page.draft_exists);
-  if (draftOnly.length) {
-    window.location.href = `/admin/theme-editor?slug=${encodeURIComponent(draftOnly[0].slug)}`;
+  addPageForm.reset();
+  newPageSlug.dataset.touched = "";
+  updateNewPageRoute();
+  addPageDialog.showModal();
+  newPageTitle.focus();
+});
+document.getElementById("close-add-page")?.addEventListener("click", closeAddPageDialog);
+document.getElementById("cancel-add-page")?.addEventListener("click", closeAddPageDialog);
+addPageDialog?.addEventListener("click", (event) => {
+  if (event.target === addPageDialog) closeAddPageDialog();
+});
+newPageTitle?.addEventListener("input", () => {
+  if (!newPageSlug.dataset.touched) newPageSlug.value = slugifyPageTitle(newPageTitle.value);
+  updateNewPageRoute();
+});
+newPageSlug?.addEventListener("input", () => {
+  newPageSlug.dataset.touched = "true";
+  updateNewPageRoute();
+});
+
+siteSelect?.addEventListener("change", () => {
+  const url = new URL(location.href);
+  url.searchParams.set("site_id", siteSelect.value);
+  url.searchParams.delete("page_id");
+  url.searchParams.delete("slug");
+  location.assign(url.toString());
+});
+
+addPageForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!selectedSiteId) {
+    addPageError.textContent = "Select a site before creating a page.";
+    addPageError.hidden = false;
     return;
   }
-  alert("All current storefront routes are represented. New routes require the CMS route/publishing adapter; no placeholder page was created.");
-});
-
-document.getElementById("cms-bootstrap-btn")?.addEventListener("click", async () => {
-  const btn = document.getElementById("cms-bootstrap-btn");
-  btn.disabled = true;
+  const title = newPageTitle.value.trim();
+  const slug = slugifyPageTitle(newPageSlug.value);
+  if (!title || !slug) {
+    addPageError.textContent = "Enter a page title and a valid URL handle.";
+    addPageError.hidden = false;
+    return;
+  }
+  createPageButton.disabled = true;
+  createPageButton.textContent = "Creating…";
+  addPageError.hidden = true;
   try {
-    await adminFetch("/api/admin/cms/bootstrap", { method: "POST" });
-    alert("CMS synced — all pages published to live cache.");
-    location.reload();
-  } catch (err) {
-    alert(err.message || "Bootstrap failed");
+    const result = await cmsAdminFetch("/api/admin/cms/pages", {
+      method: "POST",
+      body: JSON.stringify({ title, slug, page_type: "standard" }),
+    });
+    if (!result?.page?.id) throw new Error("The CMS did not return a saved page identity.");
+    const query = new URLSearchParams({
+      slug: result.page.slug,
+      site_id: result.page.site_id || selectedSiteId,
+      page_id: result.page.id,
+    });
+    window.cmsAdminNavigate("/admin/page-edit?" + query.toString());
+  } catch (error) {
+    addPageError.textContent = error.message || "Page creation failed.";
+    addPageError.hidden = false;
   } finally {
-    btn.disabled = false;
+    createPageButton.disabled = false;
+    createPageButton.textContent = "Create page";
   }
 });
 
-(async function () {
+(async function loadSitePages() {
   try {
-    const d = await adminFetch("/api/admin/cms/pages");
-    allPages = d.pages || [];
+    const siteData = await cmsAdminFetch("/api/admin/cms/sites");
+    availableSites = Array.isArray(siteData.sites) ? siteData.sites : [];
+    const requestedSiteId = new URLSearchParams(location.search).get("site_id");
+    selectedSiteId = requestedSiteId || siteData.default_site_id ||
+      (availableSites.length === 1 ? availableSites[0].id : null);
+    if (selectedSiteId && !availableSites.some(site => site.id === selectedSiteId)) {
+      throw new Error("The selected site is not available to this account.");
+    }
+    siteSelect.innerHTML = (selectedSiteId ? "" :
+      '<option value="" selected disabled>Select a website…</option>') +
+      availableSites.map(site => {
+        const label = `${site.name || site.slug} · ${site.slug} (${Number(site.page_count || 0)} pages)`;
+        return `<option value="${cmsEscapeAttr(site.id)}">${cmsEscapeHtml(label)}</option>`;
+      }).join("");
+    siteSelect.hidden = availableSites.length < 2;
+    siteSelect.parentElement.hidden = availableSites.length < 2;
+    if (!selectedSiteId) {
+      document.getElementById("pages-body").innerHTML =
+        '<tr><td colspan="4" class="pages-empty">Choose a website above to manage its pages.</td></tr>';
+      document.getElementById("add-page-btn").disabled = true;
+      document.getElementById("edit-site-design").setAttribute("aria-disabled", "true");
+      document.getElementById("edit-site-design").removeAttribute("href");
+      return;
+    }
+    window.cmsActiveSiteId = selectedSiteId;
+    window.cmsActivePageId = null;
+    window.cmsActivePageSlug = null;
+    siteSelect.value = selectedSiteId;
+
+    const currentUrl = new URL(location.href);
+    if (currentUrl.searchParams.get("site_id") !== selectedSiteId) {
+      currentUrl.searchParams.set("site_id", selectedSiteId);
+      history.replaceState(null, "", currentUrl);
+    }
+
+    const data = await cmsAdminFetch("/api/admin/cms/pages");
+    // Global theme settings are edited in Theme Editor, not listed as a
+    // customer-facing route in the Pages inventory.
+    allPages = (data.pages || []).filter(page => page.slug !== "site");
+    const site = data.site || availableSites.find(item => item.id === selectedSiteId);
+    selectedSiteSlug = site?.slug || availableSites.find(item => item.id === selectedSiteId)?.slug || null;
+    const home = allPages.find(page => page.slug === "home") || allPages[0] || { slug: "site" };
+    const editSiteQuery = new URLSearchParams({ slug: home.slug, site_id: selectedSiteId });
+    if (home.id) editSiteQuery.set("page_id", home.id);
+    document.getElementById("edit-site-design").href = "/admin/theme-editor?" + editSiteQuery.toString();
+    document.querySelector(".pages-hub-heading p").textContent =
+      `Manage ${allPages.length} pages for ${site?.name || site?.slug || "this site"} (${site?.slug || selectedSiteId}).`;
+    document.getElementById("add-page-btn").disabled = false;
     renderRows(allPages);
-  } catch (err) {
+    if (!allPages.length) {
+      const twin = availableSites
+        .filter(item => item.id !== selectedSiteId &&
+          item.name === site?.name && Number(item.page_count || 0) > 0)
+        .sort((a, b) => Number(b.page_count || 0) - Number(a.page_count || 0))[0];
+      if (twin) {
+        document.getElementById("pages-body").innerHTML =
+          `<tr><td colspan="4" class="pages-empty">This selected site has no pages. ` +
+          `Another website named ${cmsEscapeHtml(twin.name)} (${cmsEscapeHtml(twin.slug)}) ` +
+          `has ${Number(twin.page_count)} pages. Choose that website using the Site selector above.</td></tr>`;
+      }
+    }
+  } catch (error) {
     document.getElementById("pages-body").innerHTML =
-      `<tr><td colspan="5" class="pages-empty">${cmsEscapeHtml(err.message)}</td></tr>`;
+      `<tr><td colspan="4" class="pages-empty">${cmsEscapeHtml(error.message)}</td></tr>`;
+    document.getElementById("add-page-btn").disabled = true;
+    siteSelect.parentElement.hidden = true;
   }
 })();
 </script>

@@ -70,6 +70,7 @@ if (!browser) {
 const mime = new Map([
   [".html", "text/html; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
+  [".mjs", "text/javascript; charset=utf-8"],
   [".css", "text/css; charset=utf-8"],
   [".svg", "image/svg+xml"],
   [".png", "image/png"],
@@ -78,7 +79,10 @@ const mime = new Map([
 
 const server = createServer((req, res) => {
   const pathname = decodeURIComponent(new URL(req.url ?? "/", "http://127.0.0.1").pathname);
-  const relative = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+  // Desktop uses SPA navigation for these paths. The smoke server must
+  // implement that route fallback instead of giving the offline shell a 404.
+  const spaRoutes = new Set(["/", "/chats", "/agentsam", "/projects", "/artifacts", "/files", "/ship"]);
+  const relative = spaRoutes.has(pathname) ? "index.html" : pathname.replace(/^\/+/, "");
   const file = resolve(root, relative);
   if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) {
     res.writeHead(404).end("not found");

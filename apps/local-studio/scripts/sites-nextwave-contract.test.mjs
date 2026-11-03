@@ -21,7 +21,9 @@ function fixture(){
      calls.push({sql,args});
      return {
       all:async()=>({results:sql.includes('FROM cms_themes')?[...rows.values()].filter(row=>row.workspace_id===args[0]):sql.includes('FROM cms_globals')?(projects.get(args[0])||[]):[]}),
-      first:async()=>[...rows.values()].find(row=>row.workspace_id===args[0]&&row.slug===args[1])||null,
+      first:async()=>sql.includes('FROM cms_sites')
+        ? {id:'site_mock',account_id:args[0],is_default:1}
+        : [...rows.values()].find(row=>row.workspace_id===args[0]&&row.slug===args[1])||null,
       run:async()=>{
        if(sql.startsWith('INSERT INTO cms_themes')){
         const [id,name,slug,config,workspace_id]=args;
@@ -96,7 +98,7 @@ test('installed CMS v2 projects supersede legacy selections and expose only an a
    new Request(base+'/api/admin/store/online'),env,account)).json());
  const mine=await read('user-1');
  assert.equal(mine.draft_themes.length,1,'an installed project replaces its placeholder');
- assert.equal(mine.draft_themes[0].installed,true);
+ assert.equal(mine.draft_themes[0].installed,true,JSON.stringify(mine));
  assert.equal(mine.draft_themes[0].edit_href,'/admin/theme-project-editor?project=theme_resolve');
  assert.equal(mine.preview_theme.preview_href,'/themes/resolve/demo/');
  assert.equal(mine.active_theme,null,'draft preview never becomes published');
@@ -124,7 +126,7 @@ test('retired Atlas route is absent, redirects to the single Theme Studio, and S
  assert.doesNotMatch(browser,/theme-marketplace-dialog/);
  const editor=read('../ecommerce-cms-agentsam/frontend/static/js/theme-editor.js');
  assert.match(editor,/const host = window\.AgentSamThemeEditorHost \|\| null/);
- assert.match(editor,/const editorRequest = host \? host\.adapter\.request\.bind\(host\.adapter\) : window\.adminFetch/);
+ assert.match(editor,/const editorRequest = host \? host\.adapter\.request\.bind\(host\.adapter\) : \(window\.cmsAdminFetch \|\| window\.adminFetch\)/);
  assert.match(editor,/data-picker-preset/);
  assert.match(editor,/journal-the-art-of-slow-travel/);
  assert.match(editor,/resolve-product/);

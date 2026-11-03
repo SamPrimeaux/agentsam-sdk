@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { cadAssetUrl, cadRegistryUrl, listHostedProjects, loadHostedProject } from './hosted-project-source';
+import { cadAssetUrl, cadRegistryUrl, canEditHostedCadSelection, listHostedProjects, loadHostedProject } from './hosted-project-source';
 const id = 'proj_123';
 const rev = { revision: 'v1.2', status: 'draft', updatedAt: 123, models: [{id:'model',name:'sample.glb',validationStatus:'asset-verified',status:'draft',contentHash:null}], documents:[{id:'document',name:'sample.design.json',validationStatus:'asset-verified',status:'draft',contentHash:null}],native:[] };
 const project = { id:'sample-design', name:'Sample design', walls:[], rooms:[] };
@@ -11,6 +11,16 @@ describe('hosted CAD representation resolution', () => {
    expect(result.project?.id).toBe(id);expect(result.project?.walls).toEqual([]);
    expect(result.project?.sceneSource).toMatchObject({assetId:'model',contentHash:'a'.repeat(64),revision:'V1.5'});
    expect(fetcher).toHaveBeenCalledTimes(1);
+   expect(canEditHostedCadSelection(result)).toBe(true);
+ });
+ it('does not unlock an unverified scene or grant writes to a viewer',async()=>{
+   const current={...rev,revision:'current',documents:[],models:[{...rev.models[0],contentHash:'b'.repeat(64),validationStatus:'untested'}]};
+   const fetcher=vi.fn(async()=>({ok:true,json:async()=>({project:{id,name:'Sample'},access:{canWrite:false},revisions:[current]})}));
+   const selection=await loadHostedProject(id,undefined,fetcher as never);
+   expect(canEditHostedCadSelection(selection)).toBe(false);
+   expect(canEditHostedCadSelection({...selection,registry:{...selection.registry,access:{canWrite:true}}})).toBe(false);
+   const verified={...selection,registry:{...selection.registry,access:{canWrite:true}},revision:{...current,models:[{...current.models[0],validationStatus:'asset-verified'}]}};
+   expect(canEditHostedCadSelection(verified)).toBe(true);
  });
  it('uses only the authenticated project and artifact endpoints', async () => {
    const fetcher=vi.fn(async (url:string)=>({ ok:true, json:async()=>url===cadRegistryUrl(id)?{project:{id,name:'Sample'},revisions:[rev]}:project }));

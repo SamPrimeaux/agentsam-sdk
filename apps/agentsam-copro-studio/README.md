@@ -1,4 +1,4 @@
-# AgentSam CoPro Studio
+# AgentSam CoPro Studio ## HARD RULE -- An unfinished backend is an acceptable development state. An intentionally incomplete interface is not. !!!!!!! 
 
 Composition app for the CoPro package family.
 

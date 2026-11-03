@@ -33,7 +33,10 @@ test('Sites distinguishes content-only records from connected storefronts and lo
 });
 
 test('global and contextual help icons lead to real documentation routes', () => {
-  assert.match(navigationProjection, /id:'help',label:'Help & documentation',href:'\/docs',icon:'help'/);
+  // Documentation was consolidated under Settings; the removed global /docs
+  // utility must not be reintroduced just to satisfy an obsolete test.
+  assert.match(navigationProjection, /Settings owns Documentation at \/settings\/docs/);
+  assert.match(navigationProjection, /utilities: \[\]/);
   assert.match(globalShell, /help:CircleHelp/);
   assert.match(globalShell, /onNavigate: go/);
   assert.match(cmsRoute, /<Navigate[\s\S]*to="\/apps\/ecommerce-cms-agentsam"[\s\S]*search=\{\{ page: '\/admin\/store' \}\}/);

@@ -63,15 +63,17 @@ import {
 } from "./agentsam-credentials-mint.js";
 import localStudioApp from "../../agentsam.app.json";
 import cadCreatorApp from "../../../cad-creator/agentsam.app.json";
-import clientCmsApp from "../../../client-cms-editor/agentsam.app.json";
 import ecommerceApp from "../../../ecommerce-cms-agentsam/agentsam.app.json";
 import { handleStudioPlatformProducts } from "./studio-platform-products.js";
 import { handleStudioSitesOverview } from "./studio-sites-overview.js";
 import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
+import { handleStudioWebsiteThemeCatalog } from "./studio-website-theme-catalog.js";
+import { handleStudioWebsiteThemeInstall } from "./studio-website-theme-install.js";
 import { handleStudioThemes } from "./studio-themes.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
 import { handleStudioContentMediaApi } from "./content-media-api.js";
+import { handlePlatformMediaRead } from "./platform-media-library.js";
 import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
 
 const APP = localStudioApp;
@@ -150,7 +152,6 @@ function buildInstallTargets(manifests) {
 const INSTALL_APP_TARGETS = buildInstallTargets([
   localStudioApp,
   cadCreatorApp,
-  clientCmsApp,
   ecommerceApp,
 ]);
 
@@ -911,6 +912,17 @@ export default {
 
     // Read-only packaged theme catalog for the authenticated Sites dashboard.
     // No writes, entitlements, or theme activation may flow through this reader.
+    // Real website products come from the separately hosted Theme Store,
+    // never from cms_themes (dashboard appearance presets).
+    if (url.pathname === '/api/admin/website-themes') {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioWebsiteThemeCatalog(request, principal?.id || null, env);
+    }
+    const websiteThemeInstall = url.pathname.match(/^\/api\/admin\/website-themes\/([a-z][a-z0-9-]{0,63})\/install$/);
+    if (websiteThemeInstall) {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioWebsiteThemeInstall(request, env, principal?.id || null, websiteThemeInstall[1]);
+    }
     if (url.pathname === '/api/admin/theme-products/drafts') {
       const principal=await resolveSessionUser(request,env);
       return handleStudioThemeDrafts(request,env,principal?.id||null);
@@ -940,6 +952,12 @@ export default {
       if (!env.DB) return json({ ok: false, error: "commerce_database_unavailable" }, 503);
       const principal = await resolveSessionUser(request, env);
       if (!principal) return json({ ok: false, error: "unauthorized" }, 401);
+      // IAM's registry has opaque asset IDs and a different schema from merchant D1.
+      // Read-only opt-in: keep all mutations owned by the existing media handler.
+      if (env.AGENTSAM_PLATFORM_MEDIA_REGISTRY === "preview" && request.method === "GET" &&
+          (url.pathname === "/api/admin/media" || /^\/api\/admin\/media\/[^/]+$/.test(url.pathname))) {
+        return handlePlatformMediaRead(request, env, url, principal);
+      }
       const studioUser = { ...principal, id: principal.id, account_id: principal.id, role: "owner" };
       if (url.pathname === "/api/admin/me") {
         try {

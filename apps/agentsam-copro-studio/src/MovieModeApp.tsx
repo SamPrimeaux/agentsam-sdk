@@ -1,4 +1,3 @@
-import {useShellAppearance,shellAccentForeground} from '../../../packages/agentsam-settings/src/appearance';
 import '../../../packages/agentsam-nav/src/shell.css';
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { coproAppManifest } from "./app-manifest";
@@ -189,8 +188,9 @@ function makeImportedProject(file: File, media: Pick<SessionMediaItem,"durationU
 let evidenceImportStarted = false;
 
 export function MovieModeApp({ initialScreen = "projects", screen: requestedScreen, onScreenChange, standalone = false }: MovieModeAppProps) {
-  const {theme,accent}=useShellAppearance();
-  const appearanceStyle={'--nav-accent':accent,'--copro-accent-ink':shellAccentForeground(accent)} as React.CSSProperties;
+  // Creative workspace owns its brand palette; account shell appearance must
+  // not silently turn a media editing product white/blue on the web.
+  const appearanceStyle={'--nav-accent':'var(--copro-theme-accent,#32c6ca)'} as React.CSSProperties;
 
   const initialProjectId=useRef(new URLSearchParams(window.location.search).get("project"));
   const [screen, setScreen] = useState<Screen>(requestedScreen ?? (initialProjectId.current?"editor":initialScreen));
@@ -994,11 +994,11 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
   }
 
   if (!restored) {
-    return <div data-nav-theme={theme} style={appearanceStyle} className="as-nav-scope copro-boot"><span>MovieMode</span><small>Restoring your projects…</small></div>;
+    return <div data-nav-theme="dark" style={appearanceStyle} className="as-nav-scope copro-boot"><span>MovieMode</span><small>Restoring your projects…</small></div>;
   }
 
   if (screen === "projects") {
-    return <div data-nav-theme={theme} style={appearanceStyle} className="as-nav-scope copro-app-root">
+    return <div data-nav-theme="dark" style={appearanceStyle} className="as-nav-scope copro-app-root">
       <CoProProjectsScreen
         projects={projects}
         creativeAssets={creativeAssets}
@@ -1026,7 +1026,7 @@ export function MovieModeApp({ initialScreen = "projects", screen: requestedScre
     </div>;
   }
 
-  return <div data-nav-theme={theme} style={appearanceStyle} className="as-nav-scope copro-app-root">
+  return <div data-nav-theme="dark" style={appearanceStyle} className="as-nav-scope copro-app-root">
     {mediaPersistenceError && <div role="alert" className="copro-source-storage-warning">
       <strong>Source storage needs attention. </strong>{mediaPersistenceError}
       <button type="button" onClick={() => setMediaPersistenceError(null)} aria-label="Dismiss storage warning" className="copro-storage-warning-dismiss">Dismiss</button>

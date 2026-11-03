@@ -15,6 +15,12 @@ const site = Object.freeze({ id: PROJECT, slug: 'fuelnfreetime', project_id: PRO
 
 function fakeDb(rows) {
   return { prepare(sql) {
+    if (/FROM cms_sites s/.test(sql)) {
+      return { bind(accountId) {
+        assert.equal(accountId, ACCOUNT);
+        return { all: async () => ({ results: [] }) };
+      } };
+    }
     assert.match(sql, /JOIN tenants/);
     assert.match(sql, /account_id = \?/);
     assert.match(sql, /project_permissions/);
@@ -69,11 +75,11 @@ test('HMAC binds site, account, path, body, timestamp, and nonce; rejects tamper
 
 test('operation allowlist cannot route orders, settings, warm, or arbitrary paths', () => {
   for (const [tail,method] of [
-    ['registry','GET'],['pages','GET'],['pages/shop','GET'],['pages/shop/sections/hero','PUT'],
+    ['registry','GET'],['pages','GET'],['pages','POST'],['pages/shop','GET'],['pages/shop/sections/hero','PUT'],
     ['pages/shop/sections/hero/blocks','POST'],['pages/site/publish','POST'],
   ]) assert.equal(isAllowedStudioCmsBridgeRoute(tail,method),true,tail);
   for (const [tail,method] of [
-    ['warm','POST'],['backfill-r2','POST'],['pages/shop','DELETE'],['pages','POST'],
+    ['warm','POST'],['backfill-r2','POST'],['pages/shop','DELETE'],['pages','DELETE'],
     ['pages/shop/sections/hero','GET'],['pages/shop/sections/hero/blocks/nav-1','PUT'],
     ['pages/shop/../../orders','GET'],['orders','GET'],['pages/shop/publish','GET'],
   ]) assert.equal(isAllowedStudioCmsBridgeRoute(tail,method),false,tail);

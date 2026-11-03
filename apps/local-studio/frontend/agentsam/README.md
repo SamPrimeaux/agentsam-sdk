@@ -2,7 +2,7 @@
 
 This directory owns the composed AgentSam application UI. `AgentSamShell.tsx` adapts application data/routing to `@inneranimalmedia/agentsam-nav`; `AgentSamPage.tsx` composes the conversation, existing composer, and Side Panel. `brand.ts` owns replaceable identity. `shell.css` maps navigation tokens to the existing app controls.
 
-Routes in `frontend/src/routes/(apps)` are thin application adapters. `/cms` consumes `apps/client-cms-editor`; `/cad` loads the actual `apps/cad-creator` frontend built into generated public assets. CAD remains independently owned. Its runtime/API integration is outside this UI change.
+Routes in `frontend/src/routes/(apps)` are thin application adapters. `/cms` consumes `apps/ecommerce-cms-agentsam`; `/cad` loads the actual `apps/cad-creator` frontend built into generated public assets. CAD remains independently owned. Its runtime/API integration is outside this UI change.
 
 The donor `agentsam.html`, `agentsam-page.js`, and `agentsam-page.css` are retained as reference material. Their commerce-specific shell and backend calls are not the reusable package contract.
 

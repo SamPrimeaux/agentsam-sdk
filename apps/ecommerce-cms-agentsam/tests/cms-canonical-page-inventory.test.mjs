@@ -4,6 +4,21 @@ import { DatabaseSync } from "node:sqlite";
 import { listCanonicalPageRows } from "../backend/cms/page-inventory.mjs";
 import { resolveSingleCmsAccount } from "../backend/cms/studio-bridge.js";
 
+function wrap(sqlite) {
+  return {
+    prepare(sql) {
+      return {
+        bind(...params) {
+          return {
+            async all() { return { results: sqlite.prepare(sql).all(...params) }; },
+            async first() { return sqlite.prepare(sql).get(...params) || null; },
+          };
+        },
+      };
+    },
+  };
+}
+
 function fixture() {
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec(`
@@ -39,18 +54,7 @@ function fixture() {
       ('second-hero','account-a','cms-second-home','hero','draft',0,'{"headline":"Second"}'),
       ('private-hero','account-b','cms-private','hero','draft',0,'{}');
   `);
-  const db = {
-    prepare(sql) {
-      return {
-        bind(...params) {
-          return {
-            async all() { return { results: sqlite.prepare(sql).all(...params) }; },
-            async first() { return sqlite.prepare(sql).get(...params) || null; },
-          };
-        },
-      };
-    },
-  };
+  const db = wrap(sqlite);
   return { db, sqlite };
 }
 
@@ -94,6 +98,46 @@ test("signed remote CMS account resolver refuses ambiguous D1 scope", async () =
   try {
     await assert.rejects(resolveSingleCmsAccount(env), /account_scope_ambiguous/);
     sqlite.exec("DELETE FROM cms_pages WHERE account_id = 'account-b'");
+    sqlite.exec("DELETE FROM cms_sites WHERE account_id = 'account-b'");
     assert.equal(await resolveSingleCmsAccount(env), "account-a");
   } finally { sqlite.close(); }
+});
+
+test("platform-v1 schema (no account_id/legacy_page_id/inline_content_json) lists the site's pages", async () => {
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.exec(`
+    CREATE TABLE cms_sites (
+      id TEXT PRIMARY KEY, account_id TEXT NOT NULL, name TEXT NOT NULL,
+      slug TEXT NOT NULL, primary_domain TEXT, domain_aliases_json TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL, is_default INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT '2026-10-01'
+    );
+    CREATE TABLE cms_pages (
+      id TEXT PRIMARY KEY, site_id TEXT, slug TEXT NOT NULL, route_path TEXT, title TEXT NOT NULL,
+      status TEXT NOT NULL, updated_at INTEGER NOT NULL, is_homepage INTEGER NOT NULL DEFAULT 0,
+      nav_visible INTEGER NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0, archived_at TEXT
+    );
+    CREATE TABLE cms_page_sections (
+      id TEXT PRIMARY KEY, page_id TEXT NOT NULL, section_key TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
+      is_visible INTEGER NOT NULL DEFAULT 1, section_data TEXT
+    );
+    INSERT INTO cms_sites(id,account_id,name,slug,status,is_default) VALUES
+      ('site-a','account-a','A','a','active',1), ('site-b','account-b','B','b','active',1);
+    INSERT INTO cms_pages(id,site_id,slug,route_path,title,status,updated_at,is_homepage,sort_order,archived_at) VALUES
+      ('p-home','site-a','home','/','Home','published',1787286727,1,0,NULL),
+      ('p-old','site-a','old','/old','Old','draft','2026-10-20',0,1,'2026-10-21'),
+      ('p-b','site-b','b-home','/','B Home','draft','2026-10-25',1,0,NULL);
+    INSERT INTO cms_page_sections(id,page_id,section_key,sort_order,is_visible,section_data) VALUES
+      ('s1','p-home','hero',0,1,'{"headline":"Hi"}'), ('s2','p-home','cta',1,0,'{}'), ('s3','p-b','hero',0,1,'{}');
+  `);
+  try {
+    const rows = await listCanonicalPageRows(wrap(sqlite), "account-a");
+    assert.deepEqual(rows.map((r) => r.id), ["p-home"]);
+    assert.equal(rows[0].section_count, 2);
+    assert.equal(rows[0].legacy_page_id, null);
+    assert.match(rows[0].updated_at, /^\d{4}-\d{2}-\d{2} /); // platform D1 stores unix seconds
+    assert.equal(rows[0].preview_json, '{"headline":"Hi"}');
+    await assert.rejects(() => listCanonicalPageRows(wrap(sqlite), "account-a", "site-b"));
+  } finally {
+    sqlite.close();
+  }
 });

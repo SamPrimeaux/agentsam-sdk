@@ -7,7 +7,10 @@
  * invents fake cms records when the account has no site access.
  */
 (() => {
-  if (location.pathname !== '/admin/theme-editor') return;
+  // The source editor remains available for R2-backed legacy HTML documents,
+  // but normal Theme Editor navigation now uses canonical site-first CMS pages.
+  if (location.pathname !== '/admin/theme-editor' ||
+      new URLSearchParams(location.search).get('source') !== 'html') return;
 
   async function resolveAuthorizedSite() {
     const requested = new URLSearchParams(location.search).get('site');
@@ -61,7 +64,10 @@
     host.prepend(panel);
   }
 
-  resolveAuthorizedSite().then(({ site, sites }) => {
+  // The ecommerce Theme Editor script executes synchronously after this
+  // script. Expose the entire async authorization/adapter bootstrap now so
+  // the editor can await it rather than permanently capturing a null host.
+  window.__agentsamCmsSourceHostReady = resolveAuthorizedSite().then(({ site, sites }) => {
     const siteSlug = site.slug;
     const url = new URL(location.href);
     if (url.searchParams.get('site') !== siteSlug) {
@@ -164,9 +170,12 @@
       },
     };
     window.__agentsamCmsSourceHost = true;
-    if (sites.length > 1) {
-      paintSiteGate('Editing site “' + (site.name || siteSlug) + '”. Choose another authorized site if needed.', sites);
+    // An explicitly selected authorized site should open directly in the
+    // editor, not show a large "authorization required" banner above it.
+    if (sites.length > 1 && !new URLSearchParams(location.search).get('site')) {
+      paintSiteGate('Choose an authorized website to edit.', sites);
     }
+    return window.AgentSamThemeEditorHost;
   }).catch((error) => {
     const message = String(error?.message || error);
     if (message === 'cms_site_not_found_or_not_authorized') {
@@ -175,5 +184,6 @@
       paintSiteGate('Theme Editor could not resolve site access: ' + message, []);
     }
     console.warn('[theme-editor/site]', error);
+    return null;
   });
 })();

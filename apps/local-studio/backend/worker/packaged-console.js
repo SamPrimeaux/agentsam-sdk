@@ -49,7 +49,8 @@ export async function servePackagedConsole(request, assets, { allowStudioHome = 
     .replace(/<head([^>]*)>/i, `<head$1>${bootstrap}`)
     .replace(/<script src="\/admin\/js\/shell\.js"><\/script>(?:<script src="\/admin\/host-config\.js"><\/script>)?/,
       '<script src="/admin/js/shell.js"></script><script src="/admin/host-config.js"></script>' +
-      (file === "theme-editor.html" ? '<link rel="stylesheet" href="/studio-cms-source-host.css"><script src="/studio-cms-source-host.js"></script>' : ''))
+      (file === "theme-editor.html" && new URL(request.url).searchParams.get("source") === "html"
+        ? '<link rel="stylesheet" href="/studio-cms-source-host.css"><script src="/studio-cms-source-host.js"></script>' : ''))
     .replaceAll("Fuel & Free Time Admin", "AgentSam Admin")
     .replaceAll("Fuel & Free Time", "AgentSam")
     .replaceAll("fuelnfreetime.com", "agentsam.inneranimalmedia.com");

@@ -11,13 +11,20 @@ test('Theme Studio uses the registered CMS page list, R2 HTML source, and D1 ver
   const html = '<!doctype html><html><body>Real R2 docs</body></html>';
   const fakeWindow = {};
   const context = {
-    location: { pathname: '/admin/theme-editor', search: '?slug=sam-docs' },
+    location: {
+      pathname: '/admin/theme-editor',
+      search: '?slug=sam-docs&source=html&site=agentsam-sdk',
+      href: 'https://studio.test/admin/theme-editor?slug=sam-docs&source=html&site=agentsam-sdk',
+    },
     window: fakeWindow,
     URLSearchParams,
     history: { replaceState() {} },
-    URL: class {},
+    URL,
     fetch: async (url, options = {}) => {
       calls.push({ url, options });
+      if (url === '/api/cms/sites') return {
+        ok: true, json: async () => ({ ok: true, sites: [{ id: 'site-sdk', slug: 'agentsam-sdk', name: 'AgentSam SDK' }] })
+      };
       if (url.includes('/draft?')) return { ok: true, json: async () => ({ ok: true, version: 4 }) };
       if (url.includes('/sam-docs?')) return { ok: true, json: async () => ({ ok: true, page, html, source: 'published' }) };
       return { ok: true, json: async () => ({ ok: true, pages: [page] }) };
@@ -25,6 +32,9 @@ test('Theme Studio uses the registered CMS page list, R2 HTML source, and D1 ver
     Error, JSON, Date, Object
   };
   runInNewContext(script, context);
+  assert.equal(typeof fakeWindow.__agentsamCmsSourceHostReady?.then, 'function',
+    'source host readiness must be exposed synchronously before theme-editor.js loads');
+  await fakeWindow.__agentsamCmsSourceHostReady;
   const host = fakeWindow.AgentSamThemeEditorHost;
   assert.equal(host.page, 'sam-docs');
   assert.equal(host.adapter.capabilities.publish, false);
@@ -47,4 +57,63 @@ test('Theme Studio uses the registered CMS page list, R2 HTML source, and D1 ver
   assert.equal(draftRequest.options.method, 'PUT');
   assert.equal(JSON.parse(draftRequest.options.body).expected_version, 3);
   assert.equal(draftRequest.url.includes('site=agentsam-sdk'), true);
+});
+
+
+test('legacy source adapter stays out of the canonical site-first Theme Editor', () => {
+  const fakeWindow = {};
+  runInNewContext(script, {
+    location: { pathname: '/admin/theme-editor', search: '?slug=about&site_id=site-a&page_id=cmsp_123' },
+    window: fakeWindow,
+    URLSearchParams,
+  });
+  assert.equal(fakeWindow.AgentSamThemeEditorHost, undefined);
+  assert.equal(fakeWindow.__agentsamCmsSourceHost, undefined);
+  assert.equal(fakeWindow.__agentsamCmsSourceHostReady, undefined);
+});
+
+test('an async site lookup holds editor startup until the scoped source adapter exists', async () => {
+  let completeSiteLookup;
+  const pending = new Promise(resolve => { completeSiteLookup = resolve; });
+  const fakeWindow = {};
+  const context = {
+    location: {
+      pathname: '/admin/theme-editor',
+      search: '?slug=sdk-help&source=html&site=agentsam-sdk',
+      href: 'https://agentsam.inneranimalmedia.com/admin/theme-editor?slug=sdk-help&source=html&site=agentsam-sdk',
+    },
+    window: fakeWindow,
+    URLSearchParams,
+    history: { replaceState() {} },
+    URL,
+    fetch: async () => pending,
+    Error, JSON, Date, Object
+  };
+  runInNewContext(script, context);
+  assert.equal(typeof fakeWindow.__agentsamCmsSourceHostReady?.then, 'function');
+  assert.equal(fakeWindow.AgentSamThemeEditorHost, undefined,
+    'host must not be installed until authenticated site selection completes');
+  completeSiteLookup({
+    ok: true,
+    json: async () => ({ ok: true, sites: [
+      { id: 'site_882ac8075543f0d4', slug: 'agentsam-sdk',
+        name: 'AgentSam SDK (Local Studio)' }
+    ] }),
+  });
+  const ready = await fakeWindow.__agentsamCmsSourceHostReady;
+  assert.equal(ready, fakeWindow.AgentSamThemeEditorHost);
+  assert.equal(ready.page, 'sdk-help');
+  assert.equal(ready.site, 'agentsam-sdk');
+  assert.equal(ready.adapter.capabilities.publish, false);
+});
+
+test('the existing Theme Editor waits for source adapter before selecting its CMS request transport', () => {
+  const src = readFileSync(new URL('../../../ecommerce-cms-agentsam/frontend/static/js/theme-editor.js', import.meta.url), 'utf8');
+  assert.ok(src.includes('await window.__agentsamCmsSourceHostReady'));
+  assert.ok(src.includes('if (!window.AgentSamThemeEditorHost) return;'));
+  assert.ok(src.includes("if (!host && selectedTheme === 'heuristic')"),
+    'srcdoc previews must not be reloaded from the legacy iframe load handler');
+  assert.ok(src.indexOf('await window.__agentsamCmsSourceHostReady') <
+    src.indexOf('const host = window.AgentSamThemeEditorHost'),
+    'site authorization must complete before the transport is captured');
 });
