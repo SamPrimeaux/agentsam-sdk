@@ -22,6 +22,23 @@ test('host routes authenticated Ecommerce CMS and AgentSam APIs rather than retu
   assert.match(worker, /resolveSessionUserId\(request, env\)/);
   assert.match(worker, /handleEcommerceAdminApi\(request, commerceEnv, url, context, studioUser\)/);
 });
+test('installed site/editor entrypoints and programmatic page changes stay in Local Studio', () => {
+  const sites = read('../frontend/src/routes/(apps)/sites.tsx');
+  assert.match(sites, /<Navigate to="\/apps\/ecommerce-cms-agentsam"/);
+  assert.doesNotMatch(sites, /window\.location\.replace/);
+  const adapter = read('../frontend/public/admin/host-config.js');
+  assert.match(adapter, /window\.__agentsamAdminNavigate/);
+  const pages = read('../../ecommerce-cms-agentsam/frontend/static/pages.html');
+  const editor = read('../../ecommerce-cms-agentsam/frontend/static/page-edit.html');
+  const visual = read('../../ecommerce-cms-agentsam/frontend/static/js/theme-editor.js');
+  const shared = read('../../ecommerce-cms-agentsam/frontend/static/js/pages-shared.js');
+  assert.match(shared, /window\.cmsAdminNavigate/);
+  assert.match(pages, /cmsAdminNavigate\(row\.dataset\.href\)/);
+  assert.match(editor, /cmsAdminNavigate\(`\/admin\/page-edit/);
+  assert.match(visual, /cmsAdminNavigate\('\/admin\/theme-editor\?'/);
+  assert.match(visual, /cmsAdminNavigate\(dest\)/);
+});
+
 test('dock derives its actual tabs from ecommerce app manifest and avoids a competing shell', () => {
   const product=JSON.parse(read('../../ecommerce-cms-agentsam/agentsam.app.json'));
   assert.ok(product.dock.tabs.length >= 5);

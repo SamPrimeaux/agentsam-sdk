@@ -1,5 +1,12 @@
 /** Shared CMS page editor config (pages list + page edit) */
 
+// Product pages work standalone and inside the installed Local Studio host.
+// The host may intercept navigation; without one, normal document routing wins.
+window.cmsAdminNavigate = function cmsAdminNavigate(destination) {
+  if (window.__agentsamAdminNavigate?.(destination)) return;
+  window.location.assign(destination);
+};
+
 window.PAGE_ROUTES = window.AgentSamThemeEditorHost ? (window.AgentSamThemeEditorHost.pageRoutes || {}) : {
   home: "/",
   shop: "/shop",

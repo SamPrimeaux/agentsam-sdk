@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pages — Fuel & Free Time Admin</title>
+<title>Pages — AgentSam Ecommerce</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/pages.css">
@@ -77,7 +77,7 @@ function renderRows(pages) {
 
   body.querySelectorAll("tr[data-href]").forEach((row) => {
     row.addEventListener("click", () => {
-      window.location.href = row.dataset.href;
+      window.cmsAdminNavigate(row.dataset.href);
     });
   });
 }
@@ -106,7 +106,7 @@ document.getElementById("pages-select-all")?.addEventListener("change", (e) => {
 document.getElementById("add-page-btn")?.addEventListener("click", () => {
   const draftOnly = allPages.filter((page) => page.has_live_storefront && !page.draft_exists);
   if (draftOnly.length) {
-    window.location.href = `/admin/theme-editor?slug=${encodeURIComponent(draftOnly[0].slug)}`;
+    window.cmsAdminNavigate(`/admin/theme-editor?slug=${encodeURIComponent(draftOnly[0].slug)}`);
     return;
   }
   alert("All current storefront routes are represented. New routes require the CMS route/publishing adapter; no placeholder page was created.");

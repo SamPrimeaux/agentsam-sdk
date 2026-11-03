@@ -1,14 +1,11 @@
-import { useEffect } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Navigate } from '@tanstack/react-router';
 
 /**
- * Compatibility entry only. The ecommerce CMS owns the store experience at
- * /admin/store across browser, local development, and desktop-hosted surfaces.
+ * Compatibility entry only. Route inside Local Studio instead of navigating
+ * the Tauri webview to /admin/store (which is not a desktop SPA route).
+ * Ecommerce CMS owns the actual Online Store, Pages and Theme Editor.
  */
 function CanonicalSitesEntry() {
-  useEffect(() => {
-    window.location.replace('/admin/store' + window.location.search);
-  }, []);
-  return null;
+  return <Navigate to="/apps/ecommerce-cms-agentsam" search={{ page: '/admin/store' }} replace />;
 }
 export const Route = createFileRoute('/(apps)/sites')({ component: CanonicalSitesEntry });

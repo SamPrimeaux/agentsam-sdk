@@ -27,7 +27,10 @@ const paths = [
   '/admin/analytics/finance',
   '/admin/analytics/health',
   '/admin/theme-editor?slug=home',
+  '/admin/theme-editor?showcase=plain-jane&slug=journal-home',
+  '/admin/theme-editor?slug=home&catalog=revise',
   '/admin/pages',
+  '/admin/page-edit?slug=about',
   '/admin/preferences',
 ];
 
@@ -61,6 +64,9 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   const { resolveEcommerceAdminPath, resolveEcommerceAssetPath } = await import('data:text/javascript;base64,' + source);
   assert.equal(resolveEcommerceAssetPath('/admin/products'), '/ecommerce-cms-agentsam/admin/products.html');
   assert.equal(resolveEcommerceAssetPath('/admin/product-edit?id=12'), '/ecommerce-cms-agentsam/admin/product-edit.html?id=12');
+  assert.equal(resolveEcommerceAssetPath('/admin/page-edit?slug=about'), '/ecommerce-cms-agentsam/admin/page-edit.html?slug=about');
+  assert.equal(resolveEcommerceAssetPath('/admin/theme-editor?showcase=plain-jane&slug=journal-home'),
+    '/ecommerce-cms-agentsam/admin/theme-editor.html?showcase=plain-jane&slug=journal-home');
   assert.equal(resolveEcommerceAssetPath('/admin/products/create/blueprint_12'), '/ecommerce-cms-agentsam/admin/_spa/index.html?__route=%2Fproducts%2Fcreate%2Fblueprint_12');
   assert.equal(resolveEcommerceAssetPath('//outside.test/admin/products'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=collections'), '/admin/products?view=collections');
@@ -69,6 +75,9 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAdminPath('/admin/content?kind=image'), '/admin/content?kind=image');
   assert.equal(resolveEcommerceAdminPath('/admin/content?kind=video'), '/admin/content?kind=video');
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=made-up'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/page-edit?slug=about&site=other-merchant'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/page-edit?slug=about&slug=shop'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-editor?catalog=unknown&slug=home'), null);
   for (const href of paths) {
     assert.equal(resolveEcommerceAdminPath(href), href, 'valid route changed: ' + href);
   }

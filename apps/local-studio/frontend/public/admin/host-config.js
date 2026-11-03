@@ -325,6 +325,14 @@
     event.preventDefault(); event.stopImmediatePropagation();
     navigateParentShell(href);
   }, true);
+  // Static Ecommerce page controllers also navigate programmatically when
+  // switching pages or selecting a template. Forward those transitions through
+  // the same installed-app router used by actual anchor clicks.
+  window.__agentsamAdminNavigate = function (href) {
+    if (typeof href !== 'string' || !href.startsWith('/admin/') || href.startsWith('//')) return false;
+    if (desktopHost || hostedParent()) { navigateHost(href); return true; }
+    return false;
+  };
   function loadSharedNavigation() {
     if (sharedNavReady) return sharedNavReady;
     sharedNavReady = new Promise((resolve, reject) => {

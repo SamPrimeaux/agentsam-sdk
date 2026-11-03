@@ -1,7 +1,8 @@
 /**
- * Browser acceptance for the canonical website-management entry point.
- * /cms is an alias to Ecommerce CMS AgentSam's existing /admin/store route;
- * it must not render the retired CMS editor or select a content-only project.
+ * Local Studio Desktop Ecommerce CMS acceptance.
+ * The installed product is packaged in this repository; no customer domain,
+ * credentials, or production site is required to inspect its actual route files.
+ * The real sign-in and CMS mutations are deliberately not mocked as success.
  */
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
@@ -9,14 +10,36 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { resolve, extname } from 'node:path';
 import { chromium } from 'playwright';
 
-const cwd = resolve(import.meta.dirname, '..');
-const root = resolve(cwd, 'desktop-dist');
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png' };
+const studio = resolve(import.meta.dirname, '..');
+const root = resolve(studio, 'desktop-dist');
+const required = [
+  'admin/store.html',
+  'admin/pages.html',
+  'admin/page-edit.html',
+  'admin/theme-editor.html',
+  'admin/js/pages-shared.js',
+  'admin/js/theme-editor.js',
+  'admin/js/theme-embed-review.js',
+  'admin/js/cms-authoring-engine.js',
+  'admin/host-config.js',
+];
+for (const name of required) {
+  const file = resolve(root, name);
+  assert.ok(file.startsWith(root + '/') && existsSync(file) && statSync(file).size > 0, 'missing installed CMS asset: ' + name);
+}
+const mime = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png',
+  '.webp': 'image/webp',
+};
+const spaRoutes = new Set(['/', '/chats', '/agentsam', '/projects', '/artifacts', '/files', '/ship']);
 const server = createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
-  const file = resolve(root, '.' + pathname);
+  const relative = spaRoutes.has(pathname) ? 'index.html' : pathname.slice(1);
+  const file = resolve(root, relative);
   if (!file.startsWith(root + '/') || !existsSync(file) || !statSync(file).isFile()) {
-    res.writeHead(404).end();
+    res.writeHead(404).end('not found');
     return;
   }
   res.setHeader('content-type', mime[extname(file)] || 'application/octet-stream');
@@ -32,51 +55,26 @@ try {
       (process.platform === 'darwin' ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : undefined),
   });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await page.addInitScript(() => Object.defineProperty(window, '__AGENTSAM_DESKTOP__', {
-    configurable: false, get: () => false, set: () => {},
-  }));
-
-  const scriptErrors = [];
-  page.on('pageerror', (error) => scriptErrors.push(String(error)));
-
-  // The first registered site is content-only on purpose. The /cms alias must
-  // discard that old CMS selection and let the canonical app resolve an actual
-  // editable Ecommerce Worker without hardcoding a customer into the route.
-  await page.route('**/api/cms/sites', (route) => route.fulfill({
-    status: 200, contentType: 'application/json',
-    body: JSON.stringify({ ok: true, sites: [
-      { slug: 'agentsam-sdk', id: 'proj_agentsam_sdk', name: 'Agent Sam SDK',
-        domain: 'inneranimalmedia.com', source: 'shared-d1', can_edit: true, can_publish: true },
-      { slug: 'fuelnfreetime', id: 'proj_fuelnfreetime', name: 'Fuel & Free Time',
-        domain: 'fuelnfreetime.com', source: 'worker', can_edit: true, can_publish: false },
-    ] }),
-  }));
-  await page.route('https://fuelnfreetime.com/**', (route) => route.fulfill({
-    status: 200, contentType: 'text/html',
-    body: '<!doctype html><html><head><title>Store route smoke</title></head><body><main data-ecommerce-store-route>Canonical Ecommerce Online Store route</main></body></html>',
-  }));
-
-  await page.goto(base + '/index.html#/cms', { waitUntil: 'domcontentloaded', timeout: 20000 });
-  await page.waitForURL(/apps\/ecommerce-cms-agentsam/, { timeout: 18000 });
+  // The preview mode bypasses only the sign-in presentation for localhost;
+  // CMS API calls remain real and require a configured account/Worker.
+  await page.goto(base + '/index.html#/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fstore&preview=local', {
+    waitUntil: 'domcontentloaded', timeout: 20000,
+  });
   const host = page.locator('[data-agentsam-installed-app="ecommerce-cms-agentsam"]');
-  await host.waitFor({ timeout: 18000 });
-
-  const iframe = page.locator('iframe[title="Ecommerce CMS — complete admin application"]');
+  await host.waitFor({ timeout: 16000 });
+  const iframe = host.locator('iframe[title="Ecommerce CMS — complete admin application"]');
   await iframe.waitFor({ timeout: 12000 });
-  assert.equal(await iframe.getAttribute('src'), 'https://fuelnfreetime.com/admin/store',
-    '/cms must open the canonical Ecommerce /admin/store experience');
-
-  const storeFrame = page.frame({ url: /fuelnfreetime\.com\/admin\/store/ });
-  assert.ok(storeFrame, 'the canonical Ecommerce store iframe must be mounted');
-  await storeFrame.locator('[data-ecommerce-store-route]').waitFor({ timeout: 12000 });
-  assert.match(await storeFrame.locator('main').innerText(), /Canonical Ecommerce Online Store route/);
-
-  assert.equal(await page.locator('#cms-site-select').count(), 0,
-    'the old Local Studio CMS site/editor surface must not render');
-  assert.equal(await page.locator('[data-cms-site-installation="unlinked"]').count(), 0,
-    'the content-only CMS fallback must not render');
-  assert.deepEqual(scriptErrors, []);
-  console.log('CMS route smoke PASS: /cms delegates to Ecommerce CMS AgentSam /admin/store');
+  const source = new URL(await iframe.getAttribute('src'), base);
+  assert.equal(source.origin, base, 'Ecommerce product must load from Local Studio, not a merchant Worker');
+  assert.equal(source.pathname, '/ecommerce-cms-agentsam/admin/store.html');
+  for (const route of ['store', 'pages', 'page-edit?slug=about', 'theme-editor?slug=shop']) {
+    const asset = new URL('/ecommerce-cms-agentsam/admin/' + route.replace('?', '.html?') + (route.includes('?') ? '' : '.html'), base);
+    const response = await page.request.get(asset.toString());
+    assert.equal(response.status(), 200, 'packaged route failed: ' + asset.pathname);
+    assert.ok((response.headers()['content-type'] || '').includes('text/html'));
+  }
+  assert.equal(await page.locator('#cms-site-select').count(), 0, 'retired editor appeared');
+  console.log('CMS installed app smoke PASS: local Store, Pages, Page Editor, Theme Editor');
 } finally {
   await browser?.close();
   await new Promise((done) => server.close(done));

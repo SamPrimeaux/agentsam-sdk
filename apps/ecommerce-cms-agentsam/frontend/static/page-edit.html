@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Page Editor — Fuel & Free Time Admin</title>
+<title>Page Editor — AgentSam Ecommerce</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/pages.css">
@@ -87,8 +87,8 @@ renderShell("/admin/pages", `
             </div>
           </div>
           <div class="page-editor-seo-preview">
-            <div class="page-editor-seo-title" id="seo-title">Fuel &amp; Free Time</div>
-            <div class="page-editor-seo-url" id="seo-url">https://fuelnfreetime.com › …</div>
+            <div class="page-editor-seo-title" id="seo-title">Page title</div>
+            <div class="page-editor-seo-url" id="seo-url">Site address not verified</div>
             <div class="page-editor-seo-desc" id="seo-desc">Page description preview</div>
           </div>
         </div>
@@ -176,10 +176,26 @@ function showNote(msg, kind) {
 function updateSeoPreview() {
   const title = document.getElementById("page-title-input")?.value.trim() || pageData?.title || "Page";
   document.getElementById("page-crumb-title").textContent = title;
-  document.getElementById("seo-title").textContent = `${title} – Fuel & Free Time`;
+  const site = pageData?.site || {};
+  const siteName = typeof site.name === "string" && site.name.trim() ? site.name.trim() : "";
+  document.getElementById("seo-title").textContent = siteName ? `${title} – ${siteName}` : title;
 
-  const path = slug === "home" ? "" : slug;
-  document.getElementById("seo-url").textContent = `https://fuelnfreetime.com › ${path || "home"}`;
+  // A Local Studio origin is not the customer's public site. Never substitute
+  // a development/desktop URL or a merchant-specific domain into SEO previews.
+  const domain = typeof site.domain === "string" ? site.domain.trim() : "";
+  let publicHost = null;
+  if (domain) {
+    try {
+      const candidate = new URL(/^https?:\/\//i.test(domain) ? domain : "https://" + domain);
+      if (candidate.protocol === "https:" && !candidate.username && !candidate.password && candidate.pathname === "/" && !candidate.search && !candidate.hash) {
+        publicHost = candidate.origin;
+      }
+    } catch { /* Not a verified public hostname. */ }
+  }
+  const path = slug === "home" ? "/" : "/" + encodeURIComponent(slug);
+  document.getElementById("seo-url").textContent = publicHost
+    ? publicHost + path
+    : "Site address not verified · " + path;
 
   const section = pageData?.sections?.[0];
   const schema = SECTION_FIELDS[slug]?.[section?.key] || [];
@@ -309,7 +325,7 @@ function navigateSibling(delta) {
   const idx = slugs.indexOf(slug);
   if (idx < 0) return;
   const next = slugs[idx + delta];
-  if (next) window.location.href = `/admin/page-edit?slug=${encodeURIComponent(next)}`;
+  if (next) window.cmsAdminNavigate(`/admin/page-edit?slug=${encodeURIComponent(next)}`);
 }
 
 async function loadPage() {
@@ -518,12 +534,12 @@ document.addEventListener("click", () => {
 
 document.getElementById("title-ai-btn")?.addEventListener("click", () => {
   window.openAgentsamDrawer?.();
-  window.sendAgentsamMessage?.(`Suggest a stronger page title for the ${slug} page on Fuel & Free Time.`);
+  window.sendAgentsamMessage?.(`Suggest a stronger page title for the ${slug} page of the website I am editing.`);
 });
 
 document.getElementById("content-ai-btn")?.addEventListener("click", () => {
   window.openAgentsamDrawer?.();
-  window.sendAgentsamMessage?.(`Draft hero copy for the ${slug} page on Fuel & Free Time.`);
+  window.sendAgentsamMessage?.(`Draft hero copy for the ${slug} page of the website I am editing.`);
 });
 
 async function initPageEditor() {

@@ -934,7 +934,7 @@
         slug:journal?(template==='article'?'journal-the-art-of-slow-travel':'journal-home')
           :(['product','products'].includes(template)?'resolve-product':'resolve-collection')
       });
-      window.location.assign('/admin/theme-editor?'+params.toString());
+      window.cmsAdminNavigate('/admin/theme-editor?'+params.toString());
       return;
     }
     showcaseTemplate = { template, title, subtitle: 'Customize this ' + (resolveShowcase ? 'Resolve' : 'Violet') + ' template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
@@ -1142,7 +1142,7 @@
       const preset=button.dataset.pickerPreset;
       const page=button.dataset.presetPage;
       if(!['resolve','plain-jane','violet'].includes(preset)||!page)return;
-      window.location.assign('/admin/theme-editor?'+new URLSearchParams({showcase:preset,slug:page}).toString());
+      window.cmsAdminNavigate('/admin/theme-editor?'+new URLSearchParams({showcase:preset,slug:page}).toString());
     }));
     root.querySelectorAll('[data-picker-page]').forEach(button => button.addEventListener('click', () => {
       switchPage(button.dataset.pickerPage);
@@ -3865,7 +3865,7 @@
     editorLeaving = true;
     if (window.AgentSamShell && AgentSamShell.unbindShellShortcuts) AgentSamShell.unbindShellShortcuts();
     const dest = window.AgentSamShell && AgentSamShell.resolveExitTarget ? AgentSamShell.resolveExitTarget() : '/admin/store';
-    location.assign(dest);
+    window.cmsAdminNavigate(dest);
   }
 
   function closeThemeMenu() {
