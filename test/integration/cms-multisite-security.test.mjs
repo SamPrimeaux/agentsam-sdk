@@ -15,6 +15,12 @@ const site = Object.freeze({ id: PROJECT, slug: 'fuelnfreetime', project_id: PRO
 
 function fakeDb(rows) {
   return { prepare(sql) {
+    if (/FROM cms_sites s/.test(sql)) {
+      return { bind(accountId) {
+        assert.equal(accountId, ACCOUNT);
+        return { all: async () => ({ results: [] }) };
+      } };
+    }
     assert.match(sql, /JOIN tenants/);
     assert.match(sql, /account_id = \?/);
     assert.match(sql, /project_permissions/);
