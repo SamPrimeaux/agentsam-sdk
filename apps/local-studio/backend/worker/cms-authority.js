@@ -28,9 +28,9 @@ function asJson(value) {
 }
 
 /**
- * Only return concrete, registered projects. CMS source is discovered through
- * project_id, and external Workers through project.worker_id; never infer
- * a site from the current host, fixtures, or a user-supplied hostname.
+ * External Worker sites are discovered from registered projects. Local/shared
+ * CMS sites are discovered from cms_sites. Page rows are never used to infer
+ * site identity; cms_pages.site_id is the sole page ownership boundary.
  */
 export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerNames = [] } = {}) {
   const actor = cmsActorRequired(actorUserId);
@@ -59,16 +59,10 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
                  AND (pp.expires_at IS NULL OR pp.expires_at > unixepoch())
              ) THEN 'editor'
              ELSE 'viewer'
-           END AS role,
-           (
-             SELECT cp.project_slug FROM cms_pages cp
-             WHERE cp.project_id = p.id AND cp.is_active = 1
-             ORDER BY cp.is_homepage DESC, cp.created_at ASC LIMIT 1
-           ) AS cms_slug
+           END AS role
     FROM projects p
     JOIN tenants t ON t.id = p.tenant_id AND t.is_active = 1
-    WHERE (p.worker_id IS NOT NULL
-      OR EXISTS(SELECT 1 FROM cms_pages cp WHERE cp.project_id = p.id AND cp.is_active = 1))
+    WHERE p.worker_id IS NOT NULL
       AND (
         t.owner_account_id = ?
         OR EXISTS(
@@ -89,7 +83,7 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
   const projects = (result.results || []).map((row) => {
     const meta = asJson(row.metadata_json);
     const workerId = typeof row.worker_id === 'string' ? row.worker_id.trim() : '';
-    const slug = row.cms_slug || meta.cms_slug || meta.site_slug || workerId;
+    const slug = meta.cms_slug || meta.site_slug || workerId;
     if (!slug || !SLUG.test(slug)) return null;
     // A remote Worker owns its own D1 and release process. Do not substitute
     // a stale/archived projection from the shared CMS database for that source.
@@ -114,11 +108,9 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
     };
   }).filter(Boolean);
 
-  // The platform also registers sites directly in cms_sites. Its public SDK
-  // pages have real site_id + project_slug records even when no corresponding
-  // row exists in the older projects/tenants catalog. The /api/admin/cms/sites
-  // endpoint already recognizes them; /api/cms/sites must not silently hide
-  // an account's own website from its installed HTML-source editor.
+  // Local/shared-D1 sites are owned directly by cms_sites. Page rows are only
+  // checked by site_id to determine whether a Worker-backed site has local
+  // content; no project_id/project_slug aliases are read from cms_pages.
   //
   // The exact authenticated account is the ownership authority here. Do not
   // discover sites by hostname, global D1 visibility, or Cloudflare access.
@@ -128,15 +120,17 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
   try {
     ({ results: ownedRows = [] } = await db.prepare(`
       SELECT s.id, s.account_id, s.slug, s.name, s.primary_domain,
-        s.worker_id, s.status, p.project_id, p.project_slug
+        s.worker_id, s.status,
+        EXISTS(
+          SELECT 1 FROM cms_pages cp
+          WHERE cp.site_id = s.id AND cp.status <> 'archived'
+        ) AS has_pages
       FROM cms_sites s
-      LEFT JOIN cms_pages p ON p.id = (
-        SELECT cp.id FROM cms_pages cp
-        WHERE cp.site_id = s.id AND cp.is_active = 1
-        ORDER BY cp.is_homepage DESC, cp.created_at ASC LIMIT 1
-      )
       WHERE s.account_id = ? AND s.status != 'archived'
-        AND (s.worker_id IS NULL OR p.id IS NOT NULL)
+        AND (s.worker_id IS NULL OR EXISTS(
+          SELECT 1 FROM cms_pages cp
+          WHERE cp.site_id = s.id AND cp.status <> 'archived'
+        ))
       ORDER BY s.name ASC
     `).bind(actor).all());
   } catch (error) {
@@ -151,12 +145,10 @@ export async function listAuthorizedCmsSites(db, actorUserId, { remoteWorkerName
     if (existing?.source === 'worker') continue;
     bySlug.set(row.slug, {
       id: row.id,
+      account_id: row.account_id,
       slug: row.slug,
       name: row.name,
       domain: row.primary_domain || null,
-      project_id: row.project_id || row.id,
-      tenant_id: null,
-      workspace_id: null,
       worker_id: row.worker_id || null,
       source: 'shared-d1',
       role: 'owner',
@@ -185,7 +177,7 @@ export function configuredCmsWorkers(env) {
 export async function requireCmsSiteAccess(db, actorUserId, siteSlug, access = 'read', opts = {}) {
   const slug = assertCmsSlug(siteSlug);
   const sites = await listAuthorizedCmsSites(db, actorUserId, opts);
-  const site = sites.find((candidate) => candidate.slug === slug);
+  const site = sites.find((candidate) => candidate.slug === slug || candidate.id === slug);
   if (!site) return { ok: false, status: 404, error: 'cms_site_not_found_or_not_authorized' };
   if (access !== 'read' && !site.can_edit) {
     return { ok: false, status: 403, error: 'cms_site_write_forbidden' };

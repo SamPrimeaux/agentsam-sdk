@@ -1,17 +1,24 @@
 import { resolveCmsSite } from "./site-context.mjs";
 
 /**
- * CMS pages share an existing live D1 table. There are currently two schema
- * contracts in use: canonical site-first and the older project-owned layout.
- * Resolve them at the SQL boundary rather than rebuilding production tables
- * or inventing a second page registry. Both modes enforce site ownership.
+ * CMS pages use one page registry with three observed migration states:
+ * canonical site-first, legacy shared-D1 site-owned, and migrated shared-D1
+ * site-owned. Keep the transition explicit at the SQL boundary; all states
+ * resolve ownership through the selected cms_sites record.
  */
 export async function cmsPageStorageMode(db) {
   const schema = await db.prepare("PRAGMA table_info(cms_pages)").bind().all();
   const columns = new Set((schema.results || []).map(column => column.name));
   if (columns.has("account_id") && columns.has("legacy_page_id") &&
       columns.has("site_id")) return "site-first";
-  if (columns.has("site_id") && !columns.has("account_id")) return "project-site";
+  if (columns.has("site_id") && !columns.has("account_id")) {
+    const legacyPageColumns = [
+      "project_id", "project_slug", "workspace_id", "worker_id",
+      "person_uuid", "path", "is_homepage", "is_active",
+    ];
+    return legacyPageColumns.some(column => columns.has(column))
+      ? "site-owned-legacy" : "site-owned";
+  }
   throw new Error("cms_pages_schema_unsupported");
 }
 
@@ -20,18 +27,18 @@ export async function listCanonicalPageRows(db, accountId, siteId = null) {
   const site = await resolveCmsSite(db, { accountId, siteId });
   const mode = await cmsPageStorageMode(db);
 
-  if (mode === "project-site") {
+  if (mode === "site-owned" || mode === "site-owned-legacy") {
     const schema = await db.prepare("PRAGMA table_info(cms_pages)").bind().all();
     const columns = new Set((schema.results || []).map(column => column.name));
-    const notArchived = columns.has("archived_at") ? "AND p.archived_at IS NULL" : "";
-    // The production table already has 79 pages with real site IDs; however,
-    // it doesn't have the separate account_id/legacy_page_id columns or the
-    // section version columns expected by the new CMS v2 test schema.
+    const notArchived = columns.has("status") ? "AND p.status <> 'archived'" : "";
+    // The production table is site-owned through cms_sites.id; account identity
+    // is resolved through the owning site rather than duplicated on every page.
     const { results = [] } = await db.prepare(`
       SELECT p.id, p.site_id, NULL AS legacy_page_id, p.slug, p.route_path,
         p.title, p.status, CASE WHEN typeof(p.updated_at)='integer'
           THEN datetime(p.updated_at, 'unixepoch') ELSE p.updated_at END AS updated_at,
-        p.is_homepage, p.nav_visible, p.sort_order,
+        CASE WHEN p.route_path = '/' THEN 1 ELSE 0 END AS is_homepage,
+        p.nav_visible, p.sort_order,
         (SELECT COUNT(*) FROM cms_page_sections sec
           WHERE sec.page_id=p.id) AS section_count,
         (SELECT sec.section_data FROM cms_page_sections sec

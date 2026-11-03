@@ -36,12 +36,12 @@ export async function handleCmsSourceRequest({ request, url, body, env, siteSlug
   if (ownedSite?.source !== 'shared-d1') return response({ ok: false, error: 'source_editor_requires_local_site' }, 409);
   const pages = await dbClient.getPages();
   if (method === 'GET' && url.pathname === '/api/cms/source/pages') {
-    return response({ ok: true, pages: pages.filter(p => p.is_active !== 0).map(authoredPage) });
+    return response({ ok: true, pages: pages.filter(p => p.status !== 'archived').map(authoredPage) });
   }
   const match = PAGE_SOURCE.exec(url.pathname);
   if (!match) return response({ ok: false, error: 'cms_source_route_not_found' }, 404);
   const [, slug, operation] = match;
-  const page = pages.find(p => p.slug === slug && p.is_active !== 0);
+  const page = pages.find(p => p.slug === slug && p.status !== 'archived');
   if (!page) return response({ ok: false, error: 'cms_source_page_not_registered' }, 404);
   if (!page.r2_key || !page.r2_bucket) return response({ ok: false, error: 'cms_page_source_unbound' }, 409);
   // The source is editable only when an actual CMS section and source block are registered.
@@ -89,9 +89,9 @@ export async function handleCmsSourceRequest({ request, url, body, env, siteSlug
       cms_source_draft_key: draftKey, cms_source_sha256: hash };
     const result = await env.DB.prepare(
       `UPDATE cms_pages SET metadata_json = ?, updated_at = unixepoch()
-       WHERE id = ? AND project_slug = ?
+       WHERE id = ? AND site_id = ?
        AND COALESCE(CAST(json_extract(metadata_json,'$.cms_source_version') AS INTEGER),0) = ?`
-    ).bind(JSON.stringify(nextMetadata), page.id, siteSlug, currentVersion).run();
+    ).bind(JSON.stringify(nextMetadata), page.id, dbClient.siteId, currentVersion).run();
     if ((result.meta?.changes || 0) !== 1) return response({ ok: false, error: 'cms_source_version_conflict' }, 409);
     const previousKey = metadata.cms_source_draft_key;
     // Safe pruning: only the previous private draft, never the published source.

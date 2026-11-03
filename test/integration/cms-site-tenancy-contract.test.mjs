@@ -3,88 +3,79 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { assertProjectSlug, createCmsDbClient } from '../../apps/local-studio/backend/worker/cms-db.js';
+import { assertCmsSiteIdentity, createCmsDbClient } from '../../apps/local-studio/backend/worker/cms-db.js';
 import { injectSitePartials, fetchSitePartial, putSitePartial } from '../../apps/local-studio/backend/worker/site-partials.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const at = (...parts) => path.join(root, ...parts);
 const read = (...parts) => fs.readFileSync(at(...parts), 'utf8');
 
-test('CMS D1 query helper strictly enforces projectSlug tenancy invariant', () => {
-  // Empty or invalid projectSlug must throw immediately
-  assert.throws(() => assertProjectSlug(''), /CMS Tenancy Invariant Violation/);
-  assert.throws(() => assertProjectSlug('   '), /CMS Tenancy Invariant Violation/);
-  assert.throws(() => assertProjectSlug(null), /CMS Tenancy Invariant Violation/);
-  assert.throws(() => assertProjectSlug(undefined), /CMS Tenancy Invariant Violation/);
-  assert.throws(() => createCmsDbClient({}, ''), /CMS Tenancy Invariant Violation/);
-
-  assert.equal(assertProjectSlug('agentsam-sdk'), 'agentsam-sdk');
+test('CMS D1 query helper requires an authorized site identity', () => {
+  assert.throws(() => assertCmsSiteIdentity(null), /site id and account_id are required/);
+  assert.throws(() => assertCmsSiteIdentity({ id: 'site_only' }), /site id and account_id are required/);
+  assert.throws(() => assertCmsSiteIdentity({ account_id: 'account_only' }), /site id and account_id are required/);
+  assert.throws(() => createCmsDbClient({}, null), /site id and account_id are required/);
+  assert.equal(assertCmsSiteIdentity({ id: ' site_sdk ', account_id: ' account_sdk ' }).id, 'site_sdk');
 });
 
-test('CMS D1 queries all enforce project-scoped tenancy without cross-tenant leaks', async () => {
+test('CMS D1 reads and writes are scoped by canonical site_id', async () => {
   const capturedQueries = [];
+  const site = {
+    id: 'site_agentsam_sdk', account_id: 'account_sdk', slug: 'agentsam-sdk',
+    name: 'AgentSam SDK', primary_domain: 'agentsam.inneranimalmedia.com',
+  };
+  const page = {
+    id: 'page_test', site_id: site.id, slug: 'home', route_path: '/',
+    page_type: 'home', title: 'Home', status: 'draft', created_at: 1, updated_at: 1,
+  };
   const mockDb = {
     prepare(query) {
       return {
         bind(...args) {
           capturedQueries.push({ query, args });
           return {
+            async first() {
+              if (query.includes('FROM cms_sites')) return site;
+              if (query.includes('FROM cms_pages')) return page;
+              if (query.includes('FROM cms_site_theme_overrides')) return null;
+              return null;
+            },
             async all() {
-              if (query.includes('FROM cms_pages WHERE project_slug = ?')) {
-                return { results: [{ id: 'page_test', project_slug: 'agentsam-sdk', title: 'Test' }] };
-              }
-              if (query.includes('FROM cms_pages WHERE id = ? AND project_slug = ?')) {
-                return { results: [{ id: args[0], project_slug: 'agentsam-sdk', title: 'Test' }] };
-              }
-              if (query.includes('SELECT s.id FROM cms_page_sections s')) {
-                return { results: [{ id: 'sec_test' }] };
-              }
-              if (query.includes('SELECT b.* FROM cms_section_components b')) {
-                return { results: [{ id: 'blk_test', component_type: 'card', component_data: '{}' }] };
-              }
-              if (query.includes('SELECT s.* FROM cms_page_sections s')) {
-                return { results: [{ id: 'sec_test', section_name: 'Test', section_data: '{}' }] };
-              }
+              if (query.includes('FROM cms_pages')) return { results: [page] };
+              if (query.includes('cms_page_sections')) return { results: [{ id: 'sec_test', page_id: page.id }] };
+              if (query.includes('cms_section_blocks')) return { results: [{ id: 'blk_test', section_id: 'sec_test' }] };
               return { results: [] };
             },
-            async run() {
-              return { success: true };
-            },
+            async run() { return { meta: { changes: 1 } }; },
           };
         },
       };
     },
+    async batch() { return []; },
   };
 
-  const client = createCmsDbClient(mockDb, 'agentsam-sdk');
-
-  await client.getProject();
+  const client = createCmsDbClient(mockDb, site);
+  await client.getSite();
   await client.getPages();
-  await client.getPageById('page_123');
-  await client.getSectionsForPage('page_123');
+  await client.getPageById('page_test');
+  await client.getSectionsForPage('page_test');
   await client.getAllSectionsForSite();
   await client.getAllBlocksForSite();
-  await client.getBlocksForSection('sec_123');
+  await client.getBlocksForSection('sec_test');
   await client.getThemeOverrides();
   await client.getLiquidImports();
   await client.getActivity();
   await client.getTemplates();
 
-  // Audit every captured query
+  assert.ok(capturedQueries.length >= 11);
   for (const { query, args } of capturedQueries) {
-    const hasProjectSlugConstraint =
-      query.includes('project_slug') ||
-      query.includes('iam_project_slug') ||
-      query.includes('project_id') ||
-      query.includes('projects WHERE id = ?');
-    assert.ok(
-      hasProjectSlugConstraint,
-      `Query must enforce project scoping: ${query}`,
-    );
-    assert.ok(
-      args.some((arg) => typeof arg === 'string' && (arg.includes('agentsam-sdk') || arg.includes('agentsam_sdk'))),
-      `Args must bind project slug: ${JSON.stringify(args)} for ${query}`,
-    );
+    if (/cms_pages|cms_page_sections|cms_section_blocks|cms_site_theme_overrides|cms_liquid_imports|cms_activity_log|cms_component_templates/.test(query)) {
+      assert.ok(query.includes('site_id'), `CMS data query must be site-scoped: ${query}`);
+      assert.ok(args.includes(site.id), `Query must bind site id: ${JSON.stringify(args)} for ${query}`);
+    }
+    if (query.includes('FROM cms_pages')) {
+      assert.doesNotMatch(query, /project_id|project_slug|workspace_id|person_uuid|worker_id/);
+    }
   }
 });
 
@@ -135,9 +126,9 @@ test('Local Studio Worker dispatches /api/cms/* with strict tenant isolation', (
 
   const cmsService = read('apps', 'local-studio', 'backend', 'worker', 'cms-service.js');
   // Worker requests must name their tenant explicitly; the UI may choose its own default.
-  assert.match(cmsService, /site_slug_required/);
+  assert.match(cmsService, /site_required/);
   assert.doesNotMatch(cmsService, /['"]agentsam-sdk['"]/);
-  assert.match(cmsService, /createCmsDbClient\(env\.DB,\s*siteSlug\)/);
+  assert.match(cmsService, /createCmsDbClient\(env\.DB,\s*ownedSite\)/);
 });
 
 test('homepage.html is decomposed into reusable site partials with relative links and edge injection markers', () => {
@@ -183,16 +174,18 @@ test('homepage.html is decomposed into reusable site partials with relative link
 test('Local Studio CMS writes target canonical site-owned tables, not retired component storage', () => {
   const cmsDb = read('apps', 'local-studio', 'backend', 'worker', 'cms-db.js');
 
-  assert.ok(cmsDb.includes('SELECT p.site_id, p.project_id, p.workspace_id, st.account_id'));
-  assert.ok(cmsDb.includes('id, project_id, project_slug, site_id, slug, path, route_path'));
+  assert.ok(cmsDb.includes('INSERT INTO cms_pages ('));
+  assert.ok(cmsDb.includes('id, site_id, slug, route_path, page_type, title, status'));
+  assert.ok(cmsDb.includes('WHERE id = ? AND site_id = ?'));
   assert.ok(cmsDb.includes('INSERT INTO cms_section_blocks'));
   assert.ok(cmsDb.includes('UPDATE cms_section_blocks'));
   assert.ok(cmsDb.includes('DELETE FROM cms_section_blocks'));
   assert.ok(cmsDb.includes('INSERT INTO cms_site_theme_overrides'));
   assert.ok(cmsDb.includes('ON CONFLICT(site_id, workspace_id, project_slug)'));
-  assert.ok(!cmsDb.includes('cms_section_components'));
-  assert.ok(!cmsDb.includes('tenant_sam_primeaux') && !cmsDb.includes('usr_sam_primeaux'));
-  assert.ok(!cmsDb.includes('ensureSeeded'));
+  assert.doesNotMatch(cmsDb, /cms_section_components/);
+  assert.doesNotMatch(cmsDb, /FROM cms_pages[^;]*(project_id|project_slug|workspace_id|person_uuid|worker_id)/);
+  assert.doesNotMatch(cmsDb, /tenant_sam_primeaux|usr_sam_primeaux/);
+  assert.doesNotMatch(cmsDb, /ensureSeeded/);
 });
 
 function r2Stub(store = new Map()) {

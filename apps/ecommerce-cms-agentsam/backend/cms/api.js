@@ -5,8 +5,8 @@ import { listThemeProjects, getThemeProject, createThemeProject, installThemeDra
 import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows, cmsPageStorageMode } from "./page-inventory.mjs";
 import {
-  getProjectSitePage, createProjectSitePage, updateProjectSitePage,
-} from "./project-site-page-adapter.mjs";
+  getSiteOwnedPage, createSiteOwnedPage, updateSiteOwnedPage,
+} from "./site-owned-page-adapter.mjs";
 import { ensureDefaultCmsSite, listCmsSites, createCmsSite, resolveCmsSite } from "./site-context.mjs";
 import {
   buildCatalogInstanceContent,
@@ -679,8 +679,12 @@ async function readCanonicalPageSections(env, page) {
 }
 
 export async function createPageAdmin(env, accountId, siteId, body = {}) {
-  if (await cmsPageStorageMode(env.DB) === "project-site") {
-    return createProjectSitePage(env, accountId, siteId, body);
+  const storageMode = await cmsPageStorageMode(env.DB);
+  if (storageMode === "site-owned-legacy") {
+    return { error: "cms_site_identity_migration_required", status: 503 };
+  }
+  if (storageMode === "site-owned") {
+    return createSiteOwnedPage(env, accountId, siteId, body);
   }
   if (!accountId) return { error: "Account required", status: 403 };
   const title = String(body.title || "").trim();
@@ -763,8 +767,9 @@ async function legacyPageLinkMatches(env, page) {
 }
 
 export async function getPageAdminForSite(env, accountId, slug, siteId = null, pageId = null) {
-  if (await cmsPageStorageMode(env.DB) === "project-site") {
-    return getProjectSitePage(env, accountId, slug, siteId, pageId);
+  const storageMode = await cmsPageStorageMode(env.DB);
+  if (storageMode === "site-owned" || storageMode === "site-owned-legacy") {
+    return getSiteOwnedPage(env, accountId, slug, siteId, pageId);
   }
   const scope = await resolveCmsPageScope(env, accountId, { siteId, slug, pageId });
   if (scope.error) {
@@ -821,8 +826,9 @@ export async function getPageAdminForSite(env, accountId, slug, siteId = null, p
 }
 
 export async function updatePageMetaForSite(env, accountId, slug, siteId, pageId, body = {}) {
-  if (await cmsPageStorageMode(env.DB) === "project-site") {
-    return updateProjectSitePage(env, accountId, slug, siteId, pageId, body);
+  const storageMode = await cmsPageStorageMode(env.DB);
+  if (storageMode === "site-owned" || storageMode === "site-owned-legacy") {
+    return updateSiteOwnedPage(env, accountId, slug, siteId, pageId, body);
   }
   const scope = await resolveCmsPageScope(env, accountId, { siteId, slug, pageId });
   if (scope.error) {
