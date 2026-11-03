@@ -193,9 +193,11 @@ CREATE TABLE cms_globals__next (
   content_object_key  TEXT,
   content_version     INTEGER NOT NULL DEFAULT 0,
   content_hash        TEXT,
-  legacy_page_id      INTEGER,
-  legacy_section_id   INTEGER UNIQUE,
-  metadata_json       TEXT NOT NULL DEFAULT '{}',
+  -- Which packaged theme/product + version this global was installed from.
+  -- References the product registry (agentsam_products.id) where one exists.
+  product_id          TEXT,
+  package_version     TEXT,
+  metadata_json       TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(metadata_json)),
   created_at          TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at          TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (site_id, global_key),
