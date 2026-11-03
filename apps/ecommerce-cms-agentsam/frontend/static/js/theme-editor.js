@@ -4310,9 +4310,10 @@
   byId('theme-preview').addEventListener('load', function() {
     bindPreviewSelection();
     // Reposting draft data is only needed for the live Heuristic iframe.
-    // Alternate previews use srcdoc. Reassigning srcdoc on every iframe
-    // load triggers an infinite navigation loop and leaves a blank canvas.
-    if (selectedTheme === 'heuristic') {
+    // Alternate previews and the site-owned HTML source adapter use srcdoc.
+    // Reassigning srcdoc during its own iframe load causes a navigation loop
+    // and a blank canvas. Only the legacy live Heuristic iframe needs this.
+    if (!host && selectedTheme === 'heuristic') {
       if (liveUnimported) {
         if (!dirty) captureLiveSource();
         else pushLocalPreview();
