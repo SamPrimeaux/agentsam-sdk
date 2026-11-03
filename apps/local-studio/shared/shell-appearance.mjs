@@ -84,6 +84,19 @@ function accentInk(accent) {
   return (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? '#000000' : '#ffffff';
 }
 
+/** Product-specific tokens supplied by the existing account CMS theme. */
+function movieModeThemeTokens(vars) {
+  if (!vars || typeof vars !== 'object' || Array.isArray(vars)) return {};
+  const safe = {};
+  for (const [name, raw] of Object.entries(vars)) {
+    if (!/^--copro-[a-z0-9-]{1,66}$/.test(name) || typeof raw !== 'string' || raw.length > 120) continue;
+    const value = raw.trim();
+    if (!value || /[;{}<>\u0000-\u001f]/.test(value) || /(?:url\s*\(|expression\s*\(|javascript:|@import)/i.test(value)) continue;
+    safe[name] = value;
+  }
+  return safe;
+}
+
 /**
  * @param {{id?:string,themeFamily?:string,cssVars?:Record<string,string>} | null | undefined} record
  * @param {{theme?:string,accentColor?:string|null}} fallback
@@ -115,6 +128,7 @@ export function projectStudioShellAppearance(record, fallback = {}) {
   return {
     theme,
     tokens,
+    productTokens: movieModeThemeTokens(vars),
     accentColor,
     accentInk: accentInk(accentColor),
     themeId: record?.id || null,
@@ -145,6 +159,16 @@ export function applyStudioShellAppearance(appearance, root) {
     root.style.setProperty(name, appearance.tokens[role]);
   }
   root.style.setProperty('--home-focus', appearance.accentColor);
+  // On account/theme changes remove stale product overrides; stylesheet defaults win.
+  for (const name of (root.dataset.coproAppearanceTokens || '').split(',').filter(Boolean)) {
+    root.style.removeProperty?.(name);
+  }
+  const productTokens = movieModeThemeTokens(appearance.productTokens);
+  for (const [name, value] of Object.entries(productTokens)) {
+    root.style.setProperty(name.replace(/^--copro-/, '--copro-theme-'), value);
+  }
+  root.dataset.coproAppearanceTokens = Object.keys(productTokens)
+    .map((name) => name.replace(/^--copro-/, '--copro-theme-')).join(',');
   for (const [name, role] of Object.entries(tailwindRoles)) {
     const value = appearance.tokens[role] ?? appearance.tokens[role === 'ink' ? 'text' : role === 'inkMuted' ? 'muted' : role];
     if (value) root.style.setProperty(name, value);
@@ -173,6 +197,7 @@ export function readStudioAppearanceCache(accountId, storage) {
     return {
       theme: parsed.theme,
       tokens: parsed.tokens,
+      productTokens: movieModeThemeTokens(parsed.productTokens),
       accentColor: typeof parsed.accentColor === 'string' ? parsed.accentColor : '#8b5cf6',
       accentInk: typeof parsed.accentInk === 'string' ? parsed.accentInk : accentInk(parsed.accentColor),
       themeId: parsed.themeId || null,
@@ -195,6 +220,7 @@ export function writeStudioAppearanceCache(accountId, appearance, storage) {
     const payload = JSON.stringify({
       theme: appearance.theme,
       tokens: appearance.tokens,
+      productTokens: movieModeThemeTokens(appearance.productTokens),
       accentColor: appearance.accentColor,
       accentInk: appearance.accentInk || accentInk(appearance.accentColor),
       themeId: appearance.themeId,
@@ -234,4 +260,4 @@ export function bootstrapStudioAppearanceFromCache(accountId, root) {
 
 /** Inline first-paint bootstrap for document <head> (no module graph). */
 const FIRST_PAINT_ROLE_MAP = { ...consoleRoles, ...homeRoles, ...tailwindRoles };
-export const FIRST_PAINT_BOOTSTRAP_SCRIPT = `(function(){try{var P=${JSON.stringify(STUDIO_APPEARANCE_CACHE_PREFIX)},L=${JSON.stringify(STUDIO_APPEARANCE_CACHE_LAST)};var key=localStorage.getItem(L)||(P+'anonymous');var raw=localStorage.getItem(key);if(!raw)return;var a=JSON.parse(raw);if(!a||(a.theme!=='light'&&a.theme!=='dark')||!a.tokens)return;var r=document.documentElement;r.dataset.theme=a.theme;r.style.colorScheme=a.theme;r.classList.toggle('dark',a.theme==='dark');r.classList.toggle('light',a.theme==='light');var t=a.tokens;for(var k in t){if(Object.prototype.hasOwnProperty.call(t,k))r.style.setProperty('--nav-'+k,t[k]);}if(a.accentColor){r.style.setProperty('--nav-accent',a.accentColor);r.style.setProperty('--c-accent',a.accentColor);r.style.setProperty('--c-focus',a.accentColor);r.style.setProperty('--home-focus',a.accentColor);}var map=${JSON.stringify(FIRST_PAINT_ROLE_MAP)};var fb={ink:'text',inkMuted:'muted'};for(var n in map){var v=t[map[n]]||t[fb[map[n]]];if(v)r.style.setProperty(n,v);}if(a.accentInk)r.style.setProperty('--c-accent-ink',a.accentInk);}catch(e){}})();`;
+export const FIRST_PAINT_BOOTSTRAP_SCRIPT = `(function(){try{var P=${JSON.stringify(STUDIO_APPEARANCE_CACHE_PREFIX)},L=${JSON.stringify(STUDIO_APPEARANCE_CACHE_LAST)};var key=localStorage.getItem(L)||(P+'anonymous');var raw=localStorage.getItem(key);if(!raw)return;var a=JSON.parse(raw);if(!a||(a.theme!=='light'&&a.theme!=='dark')||!a.tokens)return;var r=document.documentElement;r.dataset.theme=a.theme;r.style.colorScheme=a.theme;r.classList.toggle('dark',a.theme==='dark');r.classList.toggle('light',a.theme==='light');var t=a.tokens;for(var k in t){if(Object.prototype.hasOwnProperty.call(t,k))r.style.setProperty('--nav-'+k,t[k]);}if(a.accentColor){r.style.setProperty('--nav-accent',a.accentColor);r.style.setProperty('--c-accent',a.accentColor);r.style.setProperty('--c-focus',a.accentColor);r.style.setProperty('--home-focus',a.accentColor);}var map=${JSON.stringify(FIRST_PAINT_ROLE_MAP)};var fb={ink:'text',inkMuted:'muted'};for(var n in map){var v=t[map[n]]||t[fb[map[n]]];if(v)r.style.setProperty(n,v);}if(a.accentInk)r.style.setProperty('--c-accent-ink',a.accentInk);var p=a.productTokens||{},keys=[];for(var n in p){var v=p[n];if(/^--copro-[a-z0-9-]{1,66}$/.test(n)&&typeof v==='string'&&v.length<=120&&!/[;{}<>\u0000-\u001f]/.test(v)&&!/(?:url\\s*\\(|expression\\s*\\(|javascript:|@import)/i.test(v)){var k='--copro-theme-'+n.slice(8);r.style.setProperty(k,v);keys.push(k);}}r.dataset.coproAppearanceTokens=keys.join(',');}catch(e){}})();`;
