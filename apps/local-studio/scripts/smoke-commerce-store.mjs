@@ -59,7 +59,7 @@ try {
   await merchant.locator('.online-store').waitFor();
   assert.equal(await merchant.locator('.online-store-title h1').innerText(), 'Online Store');
   assert.equal(await merchant.locator('#store-visibility-label').innerText(), 'Unverified');
-  assert.equal(await merchant.locator('.online-store-badge--pending').innerText(), 'Unverified');
+  assert.equal(await merchant.locator('.online-store-badge--pending').innerText(), 'Unpublished');
   assert.equal(await merchant.locator('.online-store-preview-message').count(), 2, 'No unrelated host homepage rendered as a storefront');
   assert.equal(await merchant.locator('#import-theme-btn').isDisabled(), true, 'Unimplemented import cannot be clicked');
   await merchant.locator('#edit-theme-btn').click();
