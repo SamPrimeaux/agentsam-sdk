@@ -197,6 +197,7 @@ document.getElementById("add-page-btn")?.addEventListener("click", () => {
   addPageForm.reset();
   newPageSlug.dataset.touched = "";
   updateNewPageRoute();
+  syncNewPageTypeHelp();
   addPageDialog.showModal();
   newPageTitle.focus();
 });
