@@ -70,6 +70,18 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAssetPath('/admin/products/create/blueprint_12'), '/ecommerce-cms-agentsam/admin/_spa/index.html?__route=%2Fproducts%2Fcreate%2Fblueprint_12');
   assert.equal(resolveEcommerceAssetPath('//outside.test/admin/products'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=collections'), '/admin/products?view=collections');
+  for(const href of [
+    '/admin/products?view=collections&site_id=site-a&collection_id=cmscol_a',
+    '/admin/product-edit?id=12&site_id=site-a',
+    '/admin/theme-project-editor?project=theme_heuristic&site_id=site-a&page=shop',
+    '/admin/inventory?site_id=site-a',
+    '/admin/store?site_id=site-a',
+    '/admin/products/create?site_id=site-a',
+    '/admin/products/create/12?site_id=site-a',
+  ])assert.equal(resolveEcommerceAdminPath(href),href,'site context must survive the installed host');
+  assert.equal(resolveEcommerceAdminPath('/admin/products?site_id=site-a&site_id=site-b'),null);
+  assert.equal(resolveEcommerceAdminPath('/admin/products?site_id=site-a&unexpected=1'),null);
+
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=platform'), '/admin/products?view=platform');
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=store'), '/admin/products?view=store');
   assert.equal(resolveEcommerceAdminPath('/admin/content?kind=image'), '/admin/content?kind=image');
