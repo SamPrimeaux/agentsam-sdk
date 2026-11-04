@@ -18,7 +18,7 @@ import {
 } from "./catalog-resource.mjs";
 import { createAuthoringEngine } from "../../cms/authoring/engine.ts";
 import { reconcileCanonicalBlocks } from "../../cms/authoring/block-projection.ts";
-import { validateThemeSettings, validateThemeCss } from "./theme-style-contract.mjs";
+import { validateThemeSettings, validateThemeCss, validateSectionStyles } from "./theme-style-contract.mjs";
 import { attachGeneratedImplementations, inspectGeneratedSection, persistGeneratedImplementation } from "./generated-section.mjs";
 import {normalizeSettingFields} from "../../frontend/static/js/generated-settings-schema.mjs";
 import { guardSectionWrite } from "../../frontend/static/js/generation-namespace.mjs";
@@ -3035,6 +3035,8 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
+    const styleGate = validateSectionStyles(body?.content);
+    if (!styleGate.ok) return json({ error: styleGate.error }, { status: 422 });
     const generatedGate = await guardSectionWrite(body);
     if (!generatedGate.ok) return json({ error: generatedGate.error }, { status: generatedGate.status });
     const mode = await pageMode(m[1]);
@@ -3118,6 +3120,8 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
+    const styleGate = validateSectionStyles(body?.content);
+    if (!styleGate.ok) return json({ error: styleGate.error }, { status: 422 });
     const generatedGate = await guardSectionWrite(body);
     if (!generatedGate.ok) return json({ error: generatedGate.error }, { status: generatedGate.status });
     const mode = await pageMode(m[1]);
@@ -3176,6 +3180,8 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     } catch {
       return json({ error: "Invalid JSON" }, { status: 400 });
     }
+    const styleGate = validateSectionStyles(body?.content);
+    if (!styleGate.ok) return json({ error: styleGate.error }, { status: 422 });
     const generatedGate = await guardSectionWrite(body);
     if (!generatedGate.ok) return json({ error: generatedGate.error }, { status: generatedGate.status });
     if(['site-owned','site-owned-legacy'].includes(await cmsPageStorageMode(env.DB))) {

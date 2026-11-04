@@ -20,6 +20,8 @@ execFileSync(process.execPath, [source("scripts/sync-theme-embed-catalog.mjs")],
 await rm(dest, { recursive: true, force: true });
 await mkdir(dest, { recursive: true });
 await copy(source("frontend/static"), path.join(dest, "admin"));
+// Serve the identical app-owned validation/renderer contract to the editor.
+await copy(source("backend/cms/theme-style-contract.mjs"), path.join(dest, "admin/js/theme-style-contract.mjs"));
 // Product-owned mobile dock, sidebar profile menu and manifest-backed config.
 await copy(source("frontend/dock"), path.join(dest, "admin/dock"));
 await copy(source("frontend/profile-popup"), path.join(dest, "admin/profile-popup"));

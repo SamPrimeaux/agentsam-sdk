@@ -34,7 +34,7 @@
   const update = settings => {
     const success = bridge()?.update(settings);
     const notice = host.querySelector('[data-live-settings-status]');
-    if (notice) notice.textContent = success ? "Applied to the working theme. Save to keep your changes." : "Theme settings are not available for this site.";
+    if (notice) notice.textContent = success ? "Applied to the private working theme. Save keeps this draft; Publish is separate." : (bridge()?.error || "Theme settings are not available for this site.");
     return success;
   };
   const themeColor = key => {
@@ -47,9 +47,13 @@
     return "#777777";
   };
   function render() {
+    const previousGroups = host.querySelectorAll('details');
+    const openGroups = new Set([...previousGroups].filter(group => group.open)
+      .map(group => group.querySelector('summary')?.textContent));
     const current = read();
     if (current === null || current === undefined) {
-      host.innerHTML = '<div class="ts-live"><h2>Theme settings</h2><p class="ts-live-wait">Loading installed theme settings…</p></div>';
+      host.innerHTML = '<div class="ts-live"><h2>Theme settings</h2><p class="ts-live-wait" role="status">Theme settings are unavailable for this site.</p><button type="button" data-settings-retry>Retry</button></div>';
+      host.querySelector('[data-settings-retry]')?.addEventListener('click', () => bridge()?.reload?.());
       return;
     }
     host.innerHTML = '<div class="ts-live"><h2>Theme settings</h2>' +
@@ -73,7 +77,7 @@
       '<textarea id="ts-live-css" data-theme-css rows="12" spellcheck="false" placeholder=".your-section {&#10;  border-radius: 12px;&#10;}">'+esc(current.customCss || "")+'</textarea>'+
       '<p class="ts-live-css-error" data-theme-css-error role="status"></p>'+
       '</details>'+
-      '<p class="ts-live-intro">Additional design controls are stored in your existing theme draft. Storefront rendering depends on the installed theme.</p>'+
+      '<p class="ts-live-intro">Connected settings use the existing private theme draft. Controls awaiting theme bindings are marked below.</p>'+
       '<details class="ts-live-group"><summary>Logo and favicon</summary>'+
       '<label for="ts-live-logo">Logo image URL</label><input id="ts-live-logo" data-design-text="brand.logoUrl" type="text" maxlength="500" placeholder="https:// or /media/" value="'+esc(current.designDraft?.["brand.logoUrl"]||"")+'">'+
       '<label for="ts-live-favicon">Favicon URL</label><input id="ts-live-favicon" data-design-text="brand.faviconUrl" type="text" maxlength="500" placeholder="https:// or /media/" value="'+esc(current.designDraft?.["brand.faviconUrl"]||"")+'"></details>'+
@@ -96,6 +100,30 @@
       ['Theme default','Outline','Solid'].map(v=>'<option value="'+esc(v)+'"'+((current.designDraft?.["icons.style"]||'Theme default')===v?' selected':'')+'>'+esc(v)+'</option>').join('')+
       '</select></details>'+
       '<p class="ts-live-status" role="status" data-live-settings-status></p></div>';
+    if (previousGroups.length) host.querySelectorAll('details').forEach(group => {
+      group.open = openGroups.has(group.querySelector('summary')?.textContent);
+    });
+    // These controls require declared theme bindings; never persist inert values.
+    host.querySelectorAll('[data-design-text],[data-design-select]').forEach(input => {
+      input.disabled = true;
+      const note = document.createElement('p');
+      note.className = 'ts-live-intro';
+      note.textContent = 'Theme binding pending. This value is not saved or applied.';
+      input.after(note);
+    });
+    host.querySelectorAll('[data-design-number]').forEach(input => {
+      const reset = document.createElement('button');
+      reset.type = 'button';
+      reset.textContent = 'Reset to theme default';
+      reset.addEventListener('click', () => {
+        const current = read();
+        if (!current) return;
+        delete current.designDraft?.[input.dataset.designNumber];
+        if (current.designDraft && !Object.keys(current.designDraft).length) delete current.designDraft;
+        if (update(current)) render();
+      });
+      input.after(reset);
+    });
     host.querySelectorAll('[data-theme-color]').forEach(input => {
       input.addEventListener('input', () => {
         const settings = read(); if (!settings) return;

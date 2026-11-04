@@ -201,7 +201,7 @@ export async function transformStorefrontHtml(response, env, slug, request) {
       const scope = { stack: [] };
       rewriter = rewriter
         .on("html", new HtmlEdgeHydratedHandler())
-        .on("head", new HeadEdgeHydratedHandler())
+        .on("head", new HeadEdgeHydratedHandler(hydration.sectionsByKey))
         .on("[data-cms-section]", new CmsSectionScopeHandler(scope))
         .on("[data-cms]", new CmsSlotHandler(hydration.sectionsByKey, scope));
     }

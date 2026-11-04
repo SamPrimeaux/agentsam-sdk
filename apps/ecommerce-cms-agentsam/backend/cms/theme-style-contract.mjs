@@ -8,6 +8,48 @@ const COLOR = /^#[0-9a-f]{6}$/i;
 const FONTS = new Set(["theme", "system-ui", "Arial", "Georgia", "Inter"]);
 export const MAX_THEME_CSS = 8000;
 
+/** The same contract protects every section writer, including site-owned drafts. */
+export function validateSectionStyles(content) {
+  const editor = content?.__editor;
+  if (!editor || typeof editor !== "object") return {ok:true};
+  if (editor.themeSettings !== undefined) {
+    const result = validateThemeSettings(editor.themeSettings);
+    if (!result.ok) return result;
+  }
+  return editor.customCss === undefined ? {ok:true} : validateThemeCss(editor.customCss);
+}
+
+/** Pure, browser/Worker-compatible renderer for the supported theme overrides.
+ * No storage, tenant resolution, or editor state lives here.
+ * Container hooks preserve full-bleed sections; overrides never resize editor chrome.
+ */
+export function renderThemeSettings(settings) {
+  if (!settings || !validateThemeSettings(settings).ok) return "";
+  const rules = [];
+  const tokens = Object.entries(settings.colors || {}).map(([key,value]) => {
+    const name = {canvas:"canvas",ink:"ink",accent:"accent",accentSoft:"accent-soft",paper:"paper",muted:"muted"}[key];
+    return "--h-color-" + name + ":" + value;
+  });
+  if (tokens.length) rules.push(":root{" + tokens.join(";") + "}");
+  if (settings.font && settings.font !== "theme")
+    rules.push("body{font-family:" + JSON.stringify(settings.font) + ",sans-serif}");
+  if (settings.buttonRadius !== undefined)
+    rules.push("button,.h-button,.btn,[data-cms-button]{border-radius:" + settings.buttonRadius + "px}");
+  const design = settings.designDraft || {};
+  if (design["page.maxWidth"] !== undefined) {
+    const width = design["page.maxWidth"];
+    rules.push(":root{--cms-page-max-width:" + width + "px}");
+    rules.push(".h-container,.container,[data-cms-page-container]{max-width:min(100%," + width + "px);margin-inline:auto}");
+  }
+  if (design["inputs.radius"] !== undefined)
+    rules.push("input:not([type=checkbox]):not([type=radio]),textarea,select{border-radius:" + design["inputs.radius"] + "px}");
+  if (design["motion.reduced"] === true)
+    rules.push("*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}");
+  if (settings.customCss) rules.push(settings.customCss);
+  return rules.join("\n");
+}
+
+
 export function validateThemeCss(input) {
   if (typeof input !== "string" || input.length > MAX_THEME_CSS)
     return { ok: false, error: "Custom CSS exceeds 8 KB" };
@@ -28,7 +70,7 @@ export function validateThemeCss(input) {
 export function validateThemeSettings(settings) {
   if (!settings || typeof settings !== "object" || Array.isArray(settings))
     return {ok:false,error:"Theme settings must be an object"};
-  const allowed = new Set(["colors","font","buttonRadius","customCss"]);
+  const allowed = new Set(["colors","font","buttonRadius","customCss","designDraft"]);
   if (Object.keys(settings).some(key => !allowed.has(key)))
     return {ok:false,error:"Unknown theme setting"};
   if (settings.colors !== undefined) {
@@ -44,6 +86,22 @@ export function validateThemeSettings(settings) {
   if (settings.buttonRadius !== undefined &&
       (!Number.isFinite(settings.buttonRadius) || settings.buttonRadius < 0 || settings.buttonRadius > 60))
     return {ok:false,error:"Button radius must be between 0 and 60"};
+  if (settings.designDraft !== undefined) {
+    const values = settings.designDraft;
+    if (!values || typeof values !== "object" || Array.isArray(values))
+      return {ok:false,error:"Theme design settings must be an object"};
+    for (const [key, value] of Object.entries(values)) {
+      if (key === "page.maxWidth") {
+        if (!Number.isFinite(value) || value < 720 || value > 1920)
+          return {ok:false,error:"Page width must be between 720 and 1920 pixels"};
+      } else if (key === "inputs.radius") {
+        if (!Number.isFinite(value) || value < 0 || value > 32)
+          return {ok:false,error:"Input radius must be between 0 and 32 pixels"};
+      } else if (key === "motion.reduced") {
+        if (typeof value !== "boolean") return {ok:false,error:"Reduced motion must be true or false"};
+      } else return {ok:false,error:"Theme setting is not connected: " + key};
+    }
+  }
   if (settings.customCss !== undefined) {
     const css = validateThemeCss(settings.customCss);
     if (!css.ok) return css;

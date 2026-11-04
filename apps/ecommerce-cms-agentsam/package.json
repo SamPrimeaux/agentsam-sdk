@@ -19,7 +19,7 @@
     "deploy": "npm run build && wrangler deploy",
     "test:package": "node --test tests/package-boundaries.test.mjs && npm run test:tools",
     "typecheck:cms": "tsc --project tsconfig.cms.json",
-    "verify:cms": "npm run typecheck:cms && node --test tests/cms-setting-contract.test.mjs backend/cms/theme-route-patterns.test.mjs && node --experimental-strip-types --test tests/cms-site-first-migration.test.mjs tests/cms-sites.test.mjs tests/cms-site-api.test.mjs tests/cms-theme-site-scope.test.mjs tests/cms-canonical-page-inventory.test.mjs tests/contracts/cms-data-family.test.mjs tests/contracts/cms-artifacts-block-system.test.mjs tests/generated-block-repository.test.mjs backend/cms/theme-project-store.test.mjs tests/cms-site-page-identity.test.mjs tests/cms-site-owned-page-compat.test.mjs tests/page-editor-host-navigation.test.mjs tests/cms-seo.test.mjs tests/cms-site-owned-r2.test.mjs",
+    "verify:cms": "npm run typecheck:cms && node --test tests/cms-setting-contract.test.mjs backend/cms/theme-route-patterns.test.mjs && node --experimental-strip-types --test tests/cms-site-first-migration.test.mjs tests/cms-sites.test.mjs tests/cms-site-api.test.mjs tests/cms-theme-site-scope.test.mjs tests/cms-canonical-page-inventory.test.mjs tests/contracts/cms-data-family.test.mjs tests/contracts/cms-artifacts-block-system.test.mjs tests/generated-block-repository.test.mjs backend/cms/theme-project-store.test.mjs tests/cms-site-page-identity.test.mjs tests/cms-site-owned-page-compat.test.mjs tests/page-editor-host-navigation.test.mjs tests/cms-seo.test.mjs tests/cms-site-owned-r2.test.mjs tests/theme-settings-roundtrip.test.mjs",
     "typecheck:tools": "tsc --project tsconfig.tools.json",
     "test:tools": "npm run typecheck:tools && node --test tests/typed-tool-registry.test.mjs tests/core-tools-readonly.test.mjs tests/d1-crud.test.mjs && node backend/tools/doctor.mjs",
     "test:release": "node --test tests/release-artifact.test.mjs tests/analytics-hosts.test.mjs tests/side-assistant-portability.test.mjs tests/newsletter-lifecycle.test.mjs",
@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "esbuild": "0.28.2",
+    "jsdom": "30.1.3",
     "json-schema-to-ts": "3.1.1",
     "typescript": "~6.0.2",
     "wrangler": "^4.157.0"

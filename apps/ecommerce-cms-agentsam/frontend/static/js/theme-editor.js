@@ -6,6 +6,13 @@
     await window.__agentsamCmsSourceHostReady;
     if (!window.AgentSamThemeEditorHost) return;
   }
+  let themeStyles = null;
+  import("/admin/js/theme-style-contract.mjs").then(function(contract) {
+    themeStyles = contract;
+    applyThemeSettingsPreview();
+  }).catch(function() {
+    setNote("Theme settings validation is unavailable. Reload to retry; your draft has not been changed.", "error");
+  });
   const params = new URLSearchParams(location.search);
   const showcaseTheme = ['violet','resolve','plain-jane'].includes(params.get('showcase')) ? params.get('showcase') : '';
   // Packaged showcases stay preview-only unless the host explicitly provides
@@ -152,6 +159,7 @@
     const section = findSection(entry.key, entry.owner);
     if (!section) { source.push(entry); return; }
     section.content = structuredClone(entry[direction]);
+    document.dispatchEvent(new CustomEvent("theme-editor:global-settings-ready"));
     destination.push(entry);
     lastHistoryTime = 0;
     markSectionDirty(section);
@@ -2643,7 +2651,25 @@
     }
   }
 
+  function applyThemeSettingsPreview() {
+    let doc;
+    try { doc = byId('theme-preview')?.contentDocument; } catch { return; }
+    if (!doc?.head) return;
+    const brand = ownerSections('site').find(section => section.key === 'brand');
+    if (!themeStyles) return;
+    const css = themeStyles.renderThemeSettings(brand?.content?.__editor?.themeSettings);
+    let style = doc.getElementById('cms-merchant-theme-style');
+    if (!css) { style?.remove(); return; }
+    if (!style) {
+      style = doc.createElement('style');
+      style.id = 'cms-merchant-theme-style';
+      doc.head.appendChild(style);
+    }
+    style.textContent = css;
+  }
+
   function pushLocalPreview() {
+    applyThemeSettingsPreview();
     if (host) { void refreshPreview(); return; }
     const iframe = byId('theme-preview');
     if (!iframe?.contentWindow || !pageData) return;
@@ -2996,6 +3022,7 @@
     let doc;
     try { doc = frame.contentDocument; } catch { return; }
     if (!doc || !doc.documentElement) return;
+    applyThemeSettingsPreview();
 
     let style = doc.getElementById('fnf-theme-editor-preview-style');
     if (!style) {
@@ -4511,13 +4538,19 @@
       const brand = ownerSections('site').find(function(section) { return section.key === 'brand'; });
       return brand ? structuredClone(brand.content?.__editor?.themeSettings || {}) : null;
     },
+    reload: function() { if (!dirty) return loadPage(); },
     update: function(settings) {
+      if (!themeStyles) { window.CmsThemeSettings.error = "Theme settings validation is loading. Try again."; return false; }
+      const checked = themeStyles.validateThemeSettings(settings);
+      window.CmsThemeSettings.error = checked.ok ? null : checked.error;
+      if (!checked.ok) return false;
       const brand = ownerSections('site').find(function(section) { return section.key === 'brand'; });
       if (!brand || !settings || liveUnimported) return false;
       const previous = structuredClone(brand.content || {});
       if (!brand.content.__editor) brand.content.__editor = {};
       brand.content.__editor.themeSettings = structuredClone(settings);
       if (JSON.stringify(previous) === JSON.stringify(brand.content)) return true;
+      recordFieldHistory(brand, "__editor.themeSettings", previous, structuredClone(brand.content));
       markSectionDirty(brand);
       scheduleLocalPreview();
       return true;

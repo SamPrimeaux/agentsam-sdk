@@ -1,5 +1,6 @@
 import { resolveCmsSite } from "./site-context.mjs";
 import { normalizeSeo } from "./seo.mjs";
+import { validateSectionStyles } from "./theme-style-contract.mjs";
 
 /**
  * Adapter for the shared-D1 site-owned cms_pages schema. cms_sites.id is the
@@ -292,6 +293,8 @@ export async function saveSiteOwnedSectionDraft(env, accountId, slug, siteId, pa
   if (!content || typeof content !== "object" || Array.isArray(content)) {
     return problem("cms_section_content_invalid", 400);
   }
+  const styles = validateSectionStyles(content);
+  if (!styles.ok) return problem(styles.error, 422);
   const serialized = JSON.stringify(content);
   if (new TextEncoder().encode(serialized).length > 524288) return problem("cms_section_content_too_large", 413);
   const current = await env.DB.prepare(`
