@@ -10,7 +10,7 @@ function harness() {
   const objects = new Map([[sourceKey, sourceHtml]]);
   const row = {
     id: 'page_sdk_sam_docs', site_id: siteId, slug: 'sam-docs', title: 'SAM Docs',
-    route_path: '/docs/sam/', r2_key: sourceKey, r2_bucket: 'agentsam-os-blueprint-content',
+    route_path: '/docs/sam/', content_object_key: sourceKey,
     status: 'published', metadata_json: '{}',
   };
   let dbWrites = 0;

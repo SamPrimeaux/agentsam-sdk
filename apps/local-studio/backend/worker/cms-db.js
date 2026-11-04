@@ -193,20 +193,22 @@ export function createCmsDbClient(db, rawSite) {
       const slug = updates.slug !== undefined ? updates.slug : page.slug;
       const routePath = updates.route_path !== undefined ? updates.route_path : page.route_path;
       const pageType = updates.page_type !== undefined ? updates.page_type : page.page_type;
-      const seoTitle = updates.seo_title !== undefined ? updates.seo_title : page.seo_title;
-      const metaDescription = updates.meta_description !== undefined ? updates.meta_description : page.meta_description;
-      const canonicalUrl = updates.canonical_url !== undefined ? updates.canonical_url : page.canonical_url;
+      let seo = {};
+      try { seo = JSON.parse(page.seo_json || '{}') || {}; } catch { seo = {}; }
+      if (updates.seo_json && typeof updates.seo_json === 'object') seo = { ...seo, ...updates.seo_json };
+      if (updates.seo_title !== undefined) seo.title = updates.seo_title || undefined;
+      if (updates.meta_description !== undefined) seo.description = updates.meta_description || undefined;
+      if (updates.canonical_url !== undefined) seo.canonical = updates.canonical_url || undefined;
+      const seoJson = JSON.stringify(seo);
       const status = updates.status !== undefined ? updates.status : page.status;
       const now = Math.floor(Date.now() / 1000);
 
       await db.prepare(`
         UPDATE cms_pages
         SET title = ?, slug = ?, route_path = ?, page_type = ?,
-            seo_title = ?, meta_description = ?, canonical_url = ?,
-            status = ?, updated_at = ?
+            seo_json = ?, status = ?, updated_at = ?
         WHERE id = ? AND site_id = ?
-      `).bind(title, slug, routePath, pageType, seoTitle, metaDescription,
-        canonicalUrl, status, now, pageId, siteId).run();
+      `).bind(title, slug, routePath, pageType, seoJson, status, now, pageId, siteId).run();
 
       return this.getPageById(pageId);
     },
@@ -226,9 +228,9 @@ export function createCmsDbClient(db, rawSite) {
       const now = Math.floor(Date.now() / 1000);
       await db.prepare(`
         UPDATE cms_pages
-        SET status = 'published', published_at = ?, published_by = ?, updated_at = ?
+        SET status = 'published', published_at = ?, updated_at = ?
         WHERE id = ? AND site_id = ?
-      `).bind(now, publishedBy, now, pageId, siteId).run();
+      `).bind(now, now, pageId, siteId).run();
       return this.getPageById(pageId);
     },
 

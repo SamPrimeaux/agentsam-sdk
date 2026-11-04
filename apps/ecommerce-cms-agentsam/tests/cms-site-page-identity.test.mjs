@@ -31,27 +31,16 @@ function fixture() {
       ('site_empty','alice','Empty','empty',NULL,'active',0),
       ('site_beta','bob','Beta','beta',NULL,'active',1);
     CREATE TABLE cms_pages (
-      id TEXT PRIMARY KEY,
-      site_id TEXT NOT NULL REFERENCES cms_sites(id),
+      id TEXT PRIMARY KEY, site_id TEXT NOT NULL REFERENCES cms_sites(id),
       slug TEXT NOT NULL, route_path TEXT NOT NULL,
-      page_type TEXT NOT NULL CHECK(page_type IN (
-        'home','about','services','work','case_study','contact','pricing','privacy',
-        'terms','faq','product','collection','blog','post','landing','portal',
-        'dashboard','auth','sitemap','custom'
-      )),
-      title TEXT NOT NULL, description TEXT,
-      status TEXT NOT NULL DEFAULT 'draft'
-        CHECK(status IN ('draft','published','archived','scheduled')),
-      seo_title TEXT, meta_description TEXT, canonical_url TEXT, robots TEXT,
-      og_image_asset_id TEXT, r2_bucket TEXT, r2_key TEXT, r2_url TEXT,
-      content_type TEXT DEFAULT 'text/html', content_size_bytes INTEGER DEFAULT 0,
-      config_json TEXT DEFAULT '{}', seo_json TEXT DEFAULT '{}',
-      analytics_json TEXT DEFAULT '{}', metadata_json TEXT DEFAULT '{}',
-      is_system_page INTEGER DEFAULT 0, requires_auth INTEGER DEFAULT 0,
-      created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
-      published_at INTEGER, archived_at INTEGER,
-      nav_visible INTEGER NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0,
-      published_manifest_r2_key TEXT, template_sku TEXT,
+      page_type TEXT NOT NULL DEFAULT 'page', title TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
+      seo_json TEXT NOT NULL DEFAULT '{}', metadata_json TEXT NOT NULL DEFAULT '{}',
+      definition_id TEXT, template_sku TEXT,
+      requires_auth INTEGER NOT NULL DEFAULT 0, nav_visible INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      content_object_key TEXT, published_manifest_object_key TEXT, published_at INTEGER,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
       UNIQUE(site_id,slug), UNIQUE(site_id,route_path)
     );
     INSERT INTO cms_pages(id,site_id,slug,route_path,page_type,title,status,created_at,updated_at)
@@ -62,7 +51,12 @@ function fixture() {
     CREATE TABLE cms_page_sections (
       id TEXT PRIMARY KEY, page_id TEXT NOT NULL REFERENCES cms_pages(id) ON DELETE CASCADE,
       section_key TEXT, section_type TEXT, section_name TEXT, section_data TEXT,
-      sort_order INTEGER, is_visible INTEGER
+      sort_order INTEGER, is_visible INTEGER,
+      r2_bucket TEXT, draft_r2_key TEXT, published_r2_key TEXT, content_hash TEXT, updated_at TEXT
+    );
+    CREATE TABLE cms_revisions (
+      account_id TEXT, site_id TEXT, entity_type TEXT, entity_id TEXT, revision_number INTEGER,
+      revision_kind TEXT, content_object_key TEXT, content_hash TEXT, snapshot_json TEXT, metadata_json TEXT
     );
   `);
   return db;
@@ -89,20 +83,23 @@ test("page creation is owned by site_id, not a duplicated project identity", asy
       .get(created.page.id);
     assert.deepEqual({ ...row }, {
       site_id: "site_alpha", slug: "journal", route_path: "/journal",
-      page_type: "custom", status: "draft",
+      page_type: "page", status: "draft",
     });
     const updated = await updateSiteOwnedPage(env, "alice", "journal",
       "site_alpha", created.page.id, { title: "Latest Stories", slug: "stories" });
     assert.equal(updated.ok, true, JSON.stringify(updated));
     assert.equal(updated.page.title, "Latest Stories");
     assert.equal(updated.page.route_path, "/stories");
-    assert.equal(created.page.description, "A journal for the community");
     assert.equal(created.page.meta_description, "Community stories and updates");
+    assert.equal(created.page.description, "Community stories and updates");
     assert.equal(created.page.seo_title, "Our Journal | Alpha");
     assert.equal(created.page.nav_visible, false);
     assert.equal(created.page.requires_auth, true);
     assert.equal(created.page.sort_order, 25);
-    assert.deepEqual(created.page.seo, { title: "Our Journal", social: { image: "journal-cover" } });
+    assert.deepEqual(created.page.seo, {
+      title: "Our Journal | Alpha", description: "Community stories and updates",
+      canonical: "https://alpha.example/journal",
+    });
     assert.deepEqual(created.page.metadata, { origin: "admin-create" });
     assert.equal(db.prepare("SELECT route_path FROM cms_pages WHERE id=?").get(created.page.id).route_path,
       "/stories");
@@ -118,7 +115,7 @@ test("the same slug and root route can exist on different sites", async () => {
   const db = fixture();
   try {
     const created = await createSiteOwnedPage({ DB: d1(db) }, "alice", "site_empty",
-      { title:"Welcome", slug:"home", route_path:"/", page_type:"home" });
+      { title:"Welcome", slug:"home", route_path:"/", page_type:"landing" });
     assert.equal(created.ok,true,JSON.stringify(created));
     assert.equal(created.page.site_id,"site_empty");
     assert.equal(created.page.is_homepage,true);
@@ -132,12 +129,15 @@ test("the site-owned schema has no project, duplicate path, or homepage-flag col
   try {
     const columns = db.prepare("PRAGMA table_info(cms_pages)").all().map(row => row.name);
     for (const removed of ["project_id", "project_slug", "workspace_id", "worker_id",
-      "person_uuid", "path", "is_homepage", "is_active"]) {
+      "person_uuid", "path", "is_homepage", "is_active", "account_id", "description",
+      "seo_title", "meta_description", "canonical_url", "robots", "og_image_asset_id",
+      "r2_bucket", "r2_key", "config_json", "is_system_page", "archived_at"]) {
       assert.equal(columns.includes(removed), false, removed + " must not be part of cms_pages");
     }
     assert.ok(columns.includes("site_id"));
     assert.ok(columns.includes("route_path"));
-    assert.ok(columns.includes("is_system_page"), "system-page semantics are retained");
+    assert.ok(columns.includes("content_object_key"), "content pointer is retained");
+    assert.ok(columns.includes("seo_json"), "SEO lives in seo_json");
     assert.ok(columns.includes("requires_auth"), "page access policy is retained");
   } finally { db.close(); }
 });

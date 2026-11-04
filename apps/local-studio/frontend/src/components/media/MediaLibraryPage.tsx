@@ -1,149 +1,58 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import {
-  Box,
-  ChevronLeft,
-  ChevronRight,
-  Film,
-  FileStack,
-  FolderOpen,
-  Grid2X2,
-  Images,
-  List,
-  Loader2,
-  Maximize2,
-  RefreshCw,
-  X,
-} from "lucide-react";
+import { Grid2X2, List, Loader2, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { RedirectToSignIn } from "@/lib/auth/gates";
+import { BucketPicker, loadPinnedBuckets, savePinnedBuckets } from "./BucketPicker";
+import { ConnectionStatus } from "./ConnectionStatus";
+import { MediaItems } from "./MediaGrid";
+import { MediaViewer } from "./MediaViewer";
+import {
+  formatCount,
+  guessMime,
+  matchesSurface,
+  mediaConnectUrl,
+  previewUrl,
+  resolveMediaSurface,
+  sortAssets,
+  toLibraryError,
+  type AccountChoice,
+  type CfResources,
+  type LibraryError,
+  type MediaAsset,
+  type MediaSource,
+  type MediaSurface,
+  type R2Bucket,
+  type SortKey,
+} from "./media-utils";
 import "./media-library.css";
 
-type MediaKind = "all" | "image" | "video" | "model" | "file";
-type ProviderFilter = "all" | "cf_images" | "r2" | "stream" | "drive" | "local";
+const PAGE_SIZE = 100;
 
-type MediaAsset = {
-  id: string;
-  filename: string;
-  content_type?: string;
-  mime_type?: string;
-  size_bytes?: number;
-  url?: string;
-  delivery_url?: string;
-  thumbnail_url?: string;
-  source?: string;
-  r2_bucket?: string | null;
-  r2_key?: string | null;
-  cloudflare_image_id?: string | null;
-  cloudflare_stream_uid?: string | null;
-  duration_ms?: number | null;
-  width?: number | null;
-  height?: number | null;
-  folder?: string;
-};
-
-type CfResources = {
-  ok?: boolean;
-  status?: string;
-  account?: { id?: string } | null;
-  r2?: {
-    status?: string;
-    available?: boolean;
-    buckets?: Array<{ name: string; creation_date?: string | null }>;
-    count?: number;
-    error?: string | null;
-    cursor?: string | null;
-  };
-  images?: { status?: string; available?: boolean; count?: number; delivery_hash?: string | null; error?: string | null };
-  stream?: { status?: string; available?: boolean; count?: number; customer_code?: string | null; error?: string | null };
-  missing_scopes?: string[];
-  connect_url?: string;
-  reconnect_url?: string;
-  error?: string;
-};
-
-const KIND_FROM_PATH: Array<{ match: RegExp; kind: MediaKind; title: string }> = [
-  { match: /^\/media\/images(?:\/|$)/, kind: "image", title: "Images" },
-  { match: /^\/media\/videos(?:\/|$)/, kind: "video", title: "Videos" },
-  { match: /^\/media\/models(?:\/|$)/, kind: "model", title: "Models" },
-  { match: /^\/media\/files(?:\/|$)/, kind: "file", title: "All files" },
-  { match: /^\/media(?:\/|$)/, kind: "all", title: "Media Library" },
-];
-
-function resolveMediaSurface(pathname: string) {
-  return KIND_FROM_PATH.find((entry) => entry.match.test(pathname)) || KIND_FROM_PATH[KIND_FROM_PATH.length - 1];
+async function getJson(url: string) {
+  const res = await fetch(url, { credentials: "same-origin", headers: { accept: "application/json" } });
+  const body = (await res.json().catch(() => ({}))) as Record<string, any>;
+  return { res, body };
 }
 
-/** Keep OAuth return on Media Library even if discovery supplies Settings. */
-function mediaConnectUrl(raw?: string | null, returnTo = "/media") {
-  const fallback = `/api/connections/cloudflare/start?packs=media,data&return_to=${encodeURIComponent(returnTo)}`;
-  if (!raw) return fallback;
-  try {
-    const url = new URL(raw, typeof window !== "undefined" ? window.location.origin : "https://agentsam.local");
-    url.searchParams.set("return_to", returnTo);
-    return `${url.pathname}${url.search}`;
-  } catch {
-    return fallback;
-  }
+function rowsFrom(body: Record<string, any>): MediaAsset[] {
+  const list = Array.isArray(body?.assets) ? body.assets
+    : Array.isArray(body?.images) ? body.images
+      : Array.isArray(body?.data) ? body.data : [];
+  return list.map((row: MediaAsset) => ({
+    ...row,
+    id: String(row.id || row.cloudflare_image_id || row.cloudflare_stream_uid || crypto.randomUUID()),
+  }));
 }
 
-function classifyAsset(asset: MediaAsset): MediaKind {
-  const mime = String(asset.mime_type || asset.content_type || "").toLowerCase();
-  const name = String(asset.filename || "").toLowerCase();
-  if (asset.cloudflare_stream_uid || mime.startsWith("video/") || /\.(mp4|webm|mov|m4v|mkv)$/.test(name)) return "video";
-  if (mime.startsWith("image/") || asset.cloudflare_image_id || /\.(png|jpe?g|gif|webp|svg|avif)$/.test(name)) return "image";
-  if (/\.(glb|gltf|obj|fbx|stl|3mf|usd|usda|usdc)$/.test(name) || asset.folder === "models") return "model";
-  return "file";
-}
-
-function providerOf(asset: MediaAsset): ProviderFilter {
-  const source = String(asset.source || "").toLowerCase();
-  if (source === "cf_images" || asset.cloudflare_image_id) return "cf_images";
-  if (source === "stream" || asset.cloudflare_stream_uid) return "stream";
-  if (source === "r2" || asset.r2_key) return "r2";
-  if (source === "drive" || source === "google-drive") return "drive";
-  if (source === "local") return "local";
-  return "all";
-}
-
-function formatBytes(size?: number) {
-  const n = Number(size || 0);
-  if (!n) return "—";
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDuration(ms?: number | null) {
-  if (!ms || ms <= 0) return null;
-  const total = Math.round(ms / 1000);
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
-function identityLabel(asset: MediaAsset) {
-  if (asset.cloudflare_image_id) return `CF Images · ${asset.cloudflare_image_id}`;
-  if (asset.cloudflare_stream_uid) return `Stream · ${asset.cloudflare_stream_uid}`;
-  if (asset.r2_bucket && asset.r2_key) return `R2 · ${asset.r2_bucket}/${asset.r2_key}`;
-  if (asset.r2_key) return `R2 · ${asset.r2_key}`;
-  return asset.id;
-}
-
-function previewUrl(asset: MediaAsset) {
-  return asset.thumbnail_url || asset.delivery_url || asset.url || "";
-}
-
-function KindIcon({ kind }: { kind: MediaKind }) {
-  if (kind === "video") return <Film size={18} />;
-  if (kind === "model") return <Box size={18} />;
-  if (kind === "file") return <FileStack size={18} />;
-  if (kind === "all") return <FolderOpen size={18} />;
-  return <Images size={18} />;
+function mergeById(prev: MediaAsset[], next: MediaAsset[]) {
+  const seen = new Set(prev.map((a) => a.id));
+  return [...prev, ...next.filter((a) => !seen.has(a.id))];
 }
 
 /**
- * First-party Media Library. MovieMode stays under /admin/moviemode.
+ * First-party Media Library over the user's own Cloudflare account (Images, Stream, R2).
+ * MovieMode stays under /admin/moviemode.
  */
 export function MediaLibraryPage() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -159,192 +68,246 @@ export function MediaLibraryPage() {
   }
   if (!user) return <RedirectToSignIn />;
 
-  return <MediaLibraryBody surface={surface} />;
+  return <MediaLibraryBody key={surface.kind} surface={surface} />;
 }
 
-function MediaLibraryBody({
-  surface,
-}: {
-  surface: { kind: MediaKind; title: string };
-}) {
+function MediaLibraryBody({ surface }: { surface: MediaSurface }) {
+  const [source, setSource] = useState<MediaSource>(surface.source);
   const [assets, setAssets] = useState<MediaAsset[]>([]);
-  const [resources, setResources] = useState<CfResources | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [provider, setProvider] = useState<ProviderFilter>("all");
-  const [grid, setGrid] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<LibraryError | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const [resources, setResources] = useState<CfResources | null>(null);
+  const [buckets, setBuckets] = useState<R2Bucket[]>([]);
   const [activeBucket, setActiveBucket] = useState<string | null>(null);
-  const [bucketObjects, setBucketObjects] = useState<MediaAsset[]>([]);
-  const [bucketLoading, setBucketLoading] = useState(false);
-  const [cfAccountId, setCfAccountId] = useState<string>("");
-  const [accountChoices, setAccountChoices] = useState<Array<{ connectionId?: string; cloudflareAccountId?: string; accountLabel?: string }>>([]);
+  const [pinned, setPinned] = useState<string[]>(() => loadPinnedBuckets());
+  const [cfAccountId, setCfAccountId] = useState("");
+  const [accountChoices, setAccountChoices] = useState<AccountChoice[]>([]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const mediaSource =
-        surface.kind === "video" ? "stream"
-          : surface.kind === "image" ? "cf_images"
-            : surface.kind === "file" || surface.kind === "model" ? "r2"
-              : "cf_images";
-      // provider=cloudflare — never depend on IAM_API for user-owned CF gallery (#419).
-      const mediaQs = new URLSearchParams({
-        page: "1",
-        per_page: "96",
-        source: mediaSource,
-        provider: "cloudflare",
-      });
-      if (cfAccountId) mediaQs.set("account_id", cfAccountId);
-      const resourceQs = new URLSearchParams({ per_page: "50", return_to: "/media" });
-      if (cfAccountId) resourceQs.set("connection_id", cfAccountId);
-      const [mediaRes, cfRes] = await Promise.all([
-        fetch(`/api/admin/media?${mediaQs}`, {
-          credentials: "same-origin",
-          headers: { accept: "application/json" },
-        }),
-        fetch(`/api/connections/cloudflare/resources?${resourceQs}`, {
-          credentials: "same-origin",
-          headers: { accept: "application/json" },
-        }),
-      ]);
-      const mediaBody = await mediaRes.json().catch(() => ({}));
-      const cfBody = await cfRes.json().catch(() => ({}));
-      const accounts = Array.isArray(mediaBody?.accounts)
-        ? mediaBody.accounts
-        : Array.isArray(cfBody?.accounts)
-          ? cfBody.accounts
-          : [];
-      if (accounts.length) setAccountChoices(accounts);
-      if (!mediaRes.ok) {
-        const connectUrl = String(mediaBody?.connect_url || cfBody?.connect_url || "").trim();
-        if (mediaRes.status === 401 || mediaBody?.error === "cloudflare_reconnect_required") {
-          setError(
-            connectUrl
-              ? `Cloudflare reconnection required. Open ${connectUrl}`
-              : String(mediaBody?.message || mediaBody?.error || "Cloudflare reconnection required"),
-          );
-        } else if (mediaRes.status === 409 || mediaBody?.error === "cloudflare_account_selection_required") {
-          setError("Select a Cloudflare account to browse media for that grant.");
-        } else {
-          setError(String(mediaBody?.message || mediaBody?.error || `Media API ${mediaRes.status}`));
-        }
-        setAssets([]);
-      } else {
-        const list = Array.isArray(mediaBody?.assets)
-          ? mediaBody.assets
-          : Array.isArray(mediaBody?.images)
-            ? mediaBody.images
-            : Array.isArray(mediaBody?.data)
-              ? mediaBody.data
-              : [];
-        setAssets(list.map((row: MediaAsset) => ({ ...row, id: String(row.id || row.cloudflare_image_id || row.cloudflare_stream_uid || crypto.randomUUID()) })));
-      }
-      setResources(cfBody && typeof cfBody === "object" ? cfBody : null);
-    } catch (err) {
-      setError(String(err instanceof Error ? err.message : err));
-    } finally {
-      setLoading(false);
-    }
-  }, [surface.kind, cfAccountId]);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("recent");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [viewerId, setViewerId] = useState<string | null>(null);
+  const [confirmBatch, setConfirmBatch] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const requestRef = useRef(0);
+  const pageRef = useRef(1);
+  const cursorRef = useRef<string | null>(null);
 
-  const openBucket = useCallback(async (bucket: string) => {
-    setActiveBucket(bucket);
-    setBucketLoading(true);
-    setBucketObjects([]);
-    try {
-      const objectQs = new URLSearchParams({ per_page: "100" });
-      if (cfAccountId) objectQs.set("connection_id", cfAccountId);
-      const res = await fetch(
-        `/api/connections/cloudflare/r2/buckets/${encodeURIComponent(bucket)}/objects?${objectQs}`,
-        { credentials: "same-origin", headers: { accept: "application/json" } },
-      );
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(String(body?.message || body?.error || `R2 list failed (${res.status})`));
-        return;
-      }
-      const objects = Array.isArray(body?.objects) ? body.objects : [];
-      setBucketObjects(objects.map((row: { key: string; size?: number; uploaded?: string | null }) => {
-        const key = String(row.key || "");
-        const name = key.split("/").pop() || key;
-        return {
-          id: `r2:${bucket}:${key}`,
-          filename: name,
-          size_bytes: Number(row.size || 0) || 0,
-          source: "r2",
-          r2_bucket: bucket,
-          r2_key: key,
-          content_type: guessMime(name),
-          mime_type: guessMime(name),
-        } satisfies MediaAsset;
-      }));
-    } catch (err) {
-      setError(String(err instanceof Error ? err.message : err));
-    } finally {
-      setBucketLoading(false);
-    }
+  const accountQs = useCallback((key: "connection_id" | "account_id", qs: URLSearchParams) => {
+    if (cfAccountId) qs.set(key, cfAccountId);
+    return qs;
   }, [cfAccountId]);
 
-  const catalog = activeBucket ? bucketObjects : assets;
-
-  const visible = useMemo(() => {
-    return catalog.filter((asset) => {
-      const kind = classifyAsset(asset);
-      if (surface.kind === "image" && kind !== "image") return false;
-      if (surface.kind === "video" && kind !== "video") return false;
-      if (surface.kind === "model" && kind !== "model") return false;
-      if (surface.kind === "file" && kind === "image") return true; // files view includes everything
-      const q = query.trim().toLowerCase();
-      if (q && !asset.filename.toLowerCase().includes(q) && !identityLabel(asset).toLowerCase().includes(q)) {
-        return false;
+  /* ---- account + connection resources (also the full R2 bucket list) ---- */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const qs = accountQs("connection_id", new URLSearchParams({ per_page: "200", return_to: "/media" }));
+        const first = await getJson(`/api/connections/cloudflare/resources?${qs}`);
+        if (cancelled) return;
+        const accounts = Array.isArray(first.body?.accounts) ? first.body.accounts : [];
+        if (accounts.length) setAccountChoices(accounts);
+        setResources(first.body as CfResources);
+        let all: R2Bucket[] = Array.isArray(first.body?.r2?.buckets) ? first.body.r2.buckets : [];
+        let cursor: string | null = first.body?.r2?.cursor || null;
+        // Follow cursors so the picker offers every bucket, not just the first page.
+        for (let i = 0; i < 8 && cursor && first.body?.r2?.truncated !== false; i += 1) {
+          const next = accountQs("connection_id", new URLSearchParams({ per_page: "200", return_to: "/media", cursor }));
+          const page = await getJson(`/api/connections/cloudflare/resources?${next}`);
+          if (cancelled) return;
+          const more: R2Bucket[] = Array.isArray(page.body?.r2?.buckets) ? page.body.r2.buckets : [];
+          if (!more.length) break;
+          all = [...all, ...more.filter((b) => !all.some((x) => x.name === b.name))];
+          const after: string | null = page.body?.r2?.cursor || null;
+          cursor = after && after !== cursor ? after : null;
+        }
+        setBuckets(all);
+      } catch {
+        if (!cancelled) setResources(null);
       }
-      if (provider !== "all" && providerOf(asset) !== provider) return false;
-      return true;
+    })();
+    return () => { cancelled = true; };
+  }, [accountQs, refreshTick]);
+
+  /* ---- assets for the current source ---- */
+  const loadAssets = useCallback(async (append: boolean) => {
+    const ticket = ++requestRef.current;
+    if (append) setLoadingMore(true);
+    else { setLoading(true); setError(null); setSelected(new Set()); }
+    try {
+      if (source === "r2") {
+        if (!activeBucket) {
+          setAssets([]); setTotal(null); setHasMore(false);
+          return;
+        }
+        const qs = accountQs("connection_id", new URLSearchParams({ per_page: String(PAGE_SIZE) }));
+        if (append && cursorRef.current) qs.set("cursor", cursorRef.current);
+        const { res, body } = await getJson(`/api/connections/cloudflare/r2/buckets/${encodeURIComponent(activeBucket)}/objects?${qs}`);
+        if (ticket !== requestRef.current) return;
+        if (!res.ok) {
+          setError(toLibraryError(res.status, body));
+          if (!append) setAssets([]);
+          return;
+        }
+        const objects: Array<{ key: string; size?: number; uploaded?: string | null }> = Array.isArray(body?.objects) ? body.objects : [];
+        const rows = objects.map((row) => {
+          const key = String(row.key || "");
+          const name = key.split("/").pop() || key;
+          return {
+            id: `r2:${activeBucket}:${key}`,
+            filename: name,
+            size_bytes: Number(row.size || 0) || 0,
+            source: "r2",
+            r2_bucket: activeBucket,
+            r2_key: key,
+            created_at: row.uploaded || null,
+            content_type: guessMime(name),
+            mime_type: guessMime(name),
+          } satisfies MediaAsset;
+        });
+        setAssets((prev) => (append ? mergeById(prev, rows) : rows));
+        cursorRef.current = body?.cursor || null;
+        setHasMore(Boolean(body?.truncated && body?.cursor));
+        setTotal(null);
+        return;
+      }
+
+      const nextPage = append ? pageRef.current + 1 : 1;
+      const qs = accountQs("account_id", new URLSearchParams({
+        page: String(nextPage),
+        per_page: String(PAGE_SIZE),
+        source,
+        provider: "cloudflare", // user-owned Cloudflare media; never depends on IAM_API
+      }));
+      const { res, body } = await getJson(`/api/admin/media?${qs}`);
+      if (ticket !== requestRef.current) return;
+      if (Array.isArray(body?.accounts) && body.accounts.length) setAccountChoices(body.accounts);
+      if (!res.ok) {
+        setError(toLibraryError(res.status, body));
+        if (!append) setAssets([]);
+        return;
+      }
+      const rows = rowsFrom(body);
+      setAssets((prev) => (append ? mergeById(prev, rows) : rows));
+      pageRef.current = nextPage;
+      setTotal(typeof body?.total === "number" ? body.total : null);
+      setHasMore(Boolean(body?.pagination?.has_next));
+    } catch (err) {
+      if (ticket === requestRef.current) setError({ kind: "generic", message: String(err instanceof Error ? err.message : err) });
+    } finally {
+      if (ticket === requestRef.current) { setLoading(false); setLoadingMore(false); }
+    }
+  }, [source, activeBucket, accountQs]);
+
+  useEffect(() => {
+    pageRef.current = 1;
+    cursorRef.current = null;
+    void loadAssets(false);
+  }, [loadAssets, refreshTick]);
+
+  /* ---- derived ---- */
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = assets.filter((asset) => {
+      if (!matchesSurface(surface.kind, asset)) return false;
+      if (!q) return true;
+      return asset.filename.toLowerCase().includes(q) || (asset.r2_key || "").toLowerCase().includes(q);
     });
-  }, [catalog, surface.kind, query, provider]);
+    return sortAssets(filtered, sort);
+  }, [assets, surface.kind, query, sort]);
 
-  const selectedIndex = visible.findIndex((a) => a.id === selectedId);
-  const selected = selectedIndex >= 0 ? visible[selectedIndex] : null;
-
+  const viewerIndex = visible.findIndex((a) => a.id === viewerId);
+  const viewing = viewerIndex >= 0 ? visible[viewerIndex] : null;
   const connectUrl = mediaConnectUrl(resources?.connect_url || resources?.reconnect_url, "/media");
+  const notConnected = resources?.status === "not_connected" || error?.kind === "reconnect";
+
+  const counts = {
+    cf_images: resources?.images?.count ?? null,
+    stream: resources?.stream?.count ?? null,
+    r2: buckets.length || (resources?.r2?.count ?? null),
+  };
+  const tabs: Array<{ id: MediaSource; label: string; count: number | null }> = [
+    { id: "cf_images", label: "Images", count: counts.cf_images },
+    { id: "stream", label: "Videos", count: counts.stream },
+    { id: "r2", label: "R2 buckets", count: counts.r2 },
+  ];
+
+  /* ---- actions ---- */
+  const toggle = (id: string) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+
+  const togglePin = (name: string) => {
+    setPinned((prev) => {
+      const next = prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name];
+      savePinnedBuckets(next);
+      return next;
+    });
+  };
+
+  const removeAssets = useCallback(async (list: MediaAsset[]) => {
+    const failed: string[] = [];
+    const removed = new Set<string>();
+    for (const asset of list) {
+      try {
+        const qs = accountQs("connection_id", new URLSearchParams());
+        const res = await fetch(`/api/admin/media/${encodeURIComponent(asset.id)}?${qs}`, {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: { accept: "application/json" },
+        });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok && body?.ok !== false) removed.add(asset.id); else failed.push(asset.filename);
+      } catch {
+        failed.push(asset.filename);
+      }
+    }
+    if (removed.size) {
+      setAssets((prev) => prev.filter((a) => !removed.has(a.id)));
+      setSelected((prev) => new Set([...prev].filter((id) => !removed.has(id))));
+      setTotal((prev) => (prev == null ? prev : Math.max(0, prev - removed.size)));
+    }
+    setNotice(failed.length
+      ? `Deleted ${removed.size}. Could not delete ${failed.length}: ${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""}`
+      : `Deleted ${removed.size} item${removed.size === 1 ? "" : "s"}.`);
+    return failed.length === 0;
+  }, [accountQs]);
+
+  const chooseSource = (next: MediaSource) => {
+    if (next === source) return;
+    setSource(next);
+    setQuery("");
+  };
+
+  const selectedAssets = visible.filter((a) => selected.has(a.id));
+  const subtitle = surface.kind === "all"
+    ? "Images, videos and R2 objects from your connected Cloudflare account."
+    : `Your Cloudflare ${surface.title.toLowerCase()}.`;
+  const countLabel = total != null ? `${formatCount(total)} total` : `${formatCount(visible.length) ?? 0} shown`;
 
   return (
     <div className="agentsam-media-library" data-agentsam-media-library={surface.kind}>
-      <header className="agentsam-media-library__header">
-        <span className="agentsam-media-library__mark" aria-hidden="true">
-          <KindIcon kind={surface.kind} />
-        </span>
-        <div className="agentsam-media-library__titles">
+      <header className="agentsam-media-header">
+        <div className="agentsam-media-header__titles">
           <h1>{surface.title}</h1>
-          <p>
-            {surface.kind === "all"
-              ? "Universal gallery across Cloudflare Images, R2, Stream, and connected providers. MovieMode stays under Apps."
-              : `Filtered Media Library · ${surface.title}`}
-          </p>
+          <p>{subtitle}</p>
         </div>
-        <div className="agentsam-media-library__header-actions">
-          <a className="agentsam-media-btn" href="/admin/moviemode">Open MovieMode</a>
-          <button type="button" className="agentsam-media-btn" onClick={() => void load()} aria-label="Refresh">
-            <RefreshCw size={14} /> Refresh
-          </button>
-        </div>
-      </header>
-
-      <ConnectionStrip resources={resources} connectUrl={connectUrl} />
-
-      {accountChoices.length > 1 ? (
-        <div className="agentsam-media-toolbar" role="group" aria-label="Cloudflare account">
-          <label>
-            Cloudflare account
+        <div className="agentsam-media-header__actions">
+          <ConnectionStatus resources={resources} bucketCount={buckets.length} connectUrl={connectUrl} />
+          {accountChoices.length > 1 ? (
             <select
-              aria-label="Select Cloudflare account"
+              className="agentsam-media-select"
+              aria-label="Cloudflare account"
               value={cfAccountId}
               onChange={(e) => {
                 const next = e.target.value;
@@ -355,317 +318,202 @@ function MediaLibraryBody({
                   credentials: "same-origin",
                   headers: { accept: "application/json", "content-type": "application/json" },
                   body: JSON.stringify({ account_id: next, connection_id: next }),
-                }).catch(() => {
-                  /* selection still applies for this session via query param */
-                });
+                }).catch(() => { /* selection still applies this session via the query parameter */ });
               }}
             >
               <option value="">Select account…</option>
               {accountChoices.map((row) => {
                 const id = String(row.cloudflareAccountId || row.connectionId || "");
-                return (
-                  <option key={id} value={id}>
-                    {row.accountLabel || id}
-                  </option>
-                );
+                return <option key={id} value={id}>{row.accountLabel || id}</option>;
               })}
             </select>
-          </label>
+          ) : null}
+          <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)} disabled={loading}>
+            <RefreshCw size={14} className={loading ? "agentsam-media-spin" : undefined} /> Refresh
+          </button>
+          <a className="agentsam-media-btn is-primary" href="/admin/moviemode">Open MovieMode</a>
         </div>
-      ) : null}
+      </header>
 
-      {resources?.r2?.buckets?.length ? (
-        <div className="agentsam-media-buckets" role="navigation" aria-label="R2 buckets">
+      {notConnected ? (
+        <div className="agentsam-media-body">
+          <div className="agentsam-media-state">
+            <strong>{error?.kind === "reconnect" ? "Reconnect Cloudflare" : "Connect Cloudflare"}</strong>
+            <p>
+              {error?.kind === "reconnect"
+                ? error.message
+                : "Authorize Cloudflare to browse your Images, Stream videos and R2 buckets here."}
+            </p>
+            <a className="agentsam-media-btn is-primary" href={error?.connectUrl || connectUrl}>
+              {error?.kind === "reconnect" ? "Reconnect" : "Connect Cloudflare"}
+            </a>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="agentsam-media-toolbar">
+            <label className="agentsam-media-search">
+              <Search size={15} aria-hidden="true" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={source === "r2" ? "Filter loaded objects" : "Search by name"}
+                aria-label="Search media"
+              />
+            </label>
+            {surface.kind === "all" ? (
+            <div className="agentsam-media-tabs" role="tablist" aria-label="Source">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={source === tab.id}
+                  className={source === tab.id ? "is-active" : undefined}
+                  onClick={() => chooseSource(tab.id)}
+                >
+                  {tab.label}
+                  {formatCount(tab.count) ? <small>{formatCount(tab.count)}</small> : null}
+                </button>
+              ))}
+            </div>
+            ) : null}
+            {source === "r2" ? (
+              <BucketPicker
+                buckets={buckets}
+                active={activeBucket}
+                pinned={pinned}
+                onPick={(name) => { setActiveBucket(name); setQuery(""); }}
+                onTogglePin={togglePin}
+              />
+            ) : null}
+            <span className="agentsam-media-toolbar__spacer" />
+            <select className="agentsam-media-select" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort">
+              <option value="recent">Recent</option>
+              <option value="name">Name</option>
+              <option value="size">Size</option>
+            </select>
+            <div className="agentsam-media-segment" role="group" aria-label="Layout">
+              <button type="button" className={view === "list" ? "is-active" : undefined} onClick={() => setView("list")} aria-label="List view"><List size={15} /></button>
+              <button type="button" className={view === "grid" ? "is-active" : undefined} onClick={() => setView("grid")} aria-label="Grid view"><Grid2X2 size={15} /></button>
+            </div>
+          </div>
+
+          {resources?.status === "needs_scope" ? (
+            <div className="agentsam-media-banner" role="status">
+              Some Cloudflare permissions are missing.{" "}
+              <a href={connectUrl}>Reconnect to expand scopes</a>
+            </div>
+          ) : null}
+          {notice ? (
+            <div className="agentsam-media-banner" role="status">
+              {notice}
+              <button type="button" className="agentsam-media-icon" onClick={() => setNotice(null)} aria-label="Dismiss"><X size={14} /></button>
+            </div>
+          ) : null}
+
+          <div className="agentsam-media-body">
+            {loading ? (
+              <div className="agentsam-media-grid" aria-busy="true">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="agentsam-media-skeleton" />
+                ))}
+              </div>
+            ) : error && error.kind !== "reconnect" ? (
+              <div className="agentsam-media-state is-error" role="alert">
+                <strong>{error.kind === "account" ? "Choose an account" : "Couldn’t load media"}</strong>
+                <p>{error.message}</p>
+                <button type="button" className="agentsam-media-btn" onClick={() => setRefreshTick((n) => n + 1)}>Try again</button>
+              </div>
+            ) : source === "r2" && !activeBucket ? (
+              <div className="agentsam-media-state">
+                <strong>Choose a bucket</strong>
+                <p>{buckets.length ? `${formatCount(buckets.length)} R2 buckets are available. Pin the ones you use most.` : "No R2 buckets were found for this account."}</p>
+                {pinned.length ? (
+                  <div className="agentsam-media-chips">
+                    {pinned.filter((name) => buckets.some((b) => b.name === name)).map((name) => (
+                      <button key={name} type="button" className="agentsam-media-btn" onClick={() => setActiveBucket(name)}>{name}</button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : !visible.length ? (
+              <div className="agentsam-media-state">
+                <strong>{assets.length ? "Nothing matches" : source === "r2" ? "This bucket is empty" : "No media yet"}</strong>
+                <p>{assets.length ? "Try a different search." : "Files you add to Cloudflare will appear here."}</p>
+              </div>
+            ) : (
+              <>
+                <div className="agentsam-media-count">{countLabel}</div>
+                <MediaItems
+                  assets={visible}
+                  view={view}
+                  selected={selected}
+                  anySelected={selected.size > 0}
+                  onOpen={setViewerId}
+                  onToggle={toggle}
+                />
+                {hasMore ? (
+                  <div className="agentsam-media-more">
+                    <button type="button" className="agentsam-media-btn" disabled={loadingMore} onClick={() => void loadAssets(true)}>
+                      {loadingMore ? <Loader2 size={14} className="agentsam-media-spin" /> : null}
+                      Load more
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {selected.size > 0 ? (
+        <div className="agentsam-media-batch" role="toolbar" aria-label="Selection">
+          <span>{selected.size} selected</span>
           <button
             type="button"
-            className={!activeBucket ? "is-active" : undefined}
-            onClick={() => { setActiveBucket(null); setBucketObjects([]); }}
+            className="agentsam-media-btn"
+            onClick={() => {
+              const links = selectedAssets.map(previewUrl).filter(Boolean).join("\n");
+              if (links) void navigator.clipboard?.writeText(links);
+              setNotice(links ? `Copied ${links.split("\n").length} link(s).` : "These items have no public link.");
+            }}
           >
-            Library
+            Copy links
           </button>
-          {resources.r2.buckets.map((bucket) => (
-            <button
-              key={bucket.name}
-              type="button"
-              className={activeBucket === bucket.name ? "is-active" : undefined}
-              onClick={() => void openBucket(bucket.name)}
-            >
-              {bucket.name}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      <div className="agentsam-media-toolbar">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by name or provider id"
-          aria-label="Search media"
-        />
-        <label>
-          Provider
-          <select aria-label="Filter by provider" value={provider} onChange={(e) => setProvider(e.target.value as ProviderFilter)}>
-            <option value="all">All</option>
-            <option value="cf_images">Cloudflare Images</option>
-            <option value="r2">R2</option>
-            <option value="stream">Stream</option>
-            <option value="drive">Drive</option>
-            <option value="local">Local</option>
-          </select>
-        </label>
-        <span className="agentsam-media-count" aria-live="polite">{visible.length} items</span>
-        <button type="button" className={!grid ? "is-active" : undefined} onClick={() => setGrid(false)} aria-label="List view">
-          <List size={15} />
-        </button>
-        <button type="button" className={grid ? "is-active" : undefined} onClick={() => setGrid(true)} aria-label="Grid view">
-          <Grid2X2 size={15} />
-        </button>
-      </div>
-
-      <div className="agentsam-media-body">
-        {loading || bucketLoading ? (
-          <div className="agentsam-media-skeleton-grid" aria-busy="true">
-            {Array.from({ length: 12 }).map((_, i) => <div key={i} className="agentsam-media-skeleton" />)}
-          </div>
-        ) : error ? (
-          <div className="agentsam-media-empty is-error" role="alert">
-            <strong>Could not load media</strong>
-            <p>{error}</p>
-            <button type="button" className="agentsam-media-btn" onClick={() => void load()}>Retry</button>
-          </div>
-        ) : !visible.length ? (
-          <div className="agentsam-media-empty">
-            <strong>{catalog.length ? "No matching assets" : activeBucket ? "Bucket is empty" : "No registered media yet"}</strong>
-            <p>
-              Empty results are not proof a provider is disconnected. Connect Cloudflare OAuth under Settings → Integrations for Images, R2, or Stream — InnerAnimalMedia is only used when you explicitly select provider=inneranimalmedia.
-            </p>
-            <a className="agentsam-media-btn" href={connectUrl}>Manage Cloudflare connection</a>
-          </div>
-        ) : (
-          <div className={grid ? "agentsam-media-grid" : "agentsam-media-list"}>
-            {visible.map((asset) => {
-              const kind = classifyAsset(asset);
-              const preview = previewUrl(asset);
-              const duration = formatDuration(asset.duration_ms);
-              return (
-                <button
-                  key={asset.id}
-                  type="button"
-                  className={`agentsam-media-card${selectedId === asset.id ? " is-selected" : ""}`}
-                  onClick={() => setSelectedId(asset.id)}
-                >
-                  <div className={`agentsam-media-thumb is-${kind}`}>
-                    {kind === "image" && preview ? (
-                      <img src={preview} alt="" loading="lazy" decoding="async" />
-                    ) : kind === "video" && preview ? (
-                      <>
-                        <img src={preview} alt="" loading="lazy" decoding="async" />
-                        {duration ? <span className="agentsam-media-duration">{duration}</span> : null}
-                      </>
-                    ) : (
-                      <span className="agentsam-media-file-glyph">
-                        <KindIcon kind={kind} />
-                      </span>
-                    )}
-                  </div>
-                  <div className="agentsam-media-card-meta">
-                    <strong title={asset.filename}>{asset.filename}</strong>
-                    <span>{providerOf(asset)} · {formatBytes(asset.size_bytes)}</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {selected ? (
-        <MediaViewer
-          asset={selected}
-          onClose={() => setSelectedId(null)}
-          onPrev={selectedIndex > 0 ? () => setSelectedId(visible[selectedIndex - 1].id) : undefined}
-          onNext={selectedIndex < visible.length - 1 ? () => setSelectedId(visible[selectedIndex + 1].id) : undefined}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-/** Failure states are labelled explicitly — a failed probe is never shown as "0 buckets". */
-function familyLabel(
-  name: string,
-  fam?: { status?: string; count?: number | null } | null,
-  connectedDetail?: string,
-) {
-  const status = fam?.status || "unknown";
-  if (status === "connected") return `${name}: ${connectedDetail || "connected"}`;
-  if (status === "empty") return `${name}: empty`;
-  if (status === "needs_scope") return `${name}: permission required`;
-  if (status === "unavailable") return `${name}: not enabled`;
-  if (status === "error") return `${name}: provider error`;
-  if (status === "not_connected") return `${name}: not connected`;
-  return `${name}: ${status}`;
-}
-
-function ConnectionStrip({
-  resources,
-  connectUrl,
-}: {
-  resources: CfResources | null;
-  connectUrl: string;
-}) {
-  if (!resources) {
-    return (
-      <div className="agentsam-media-connection is-loading">
-        Checking Cloudflare connection…
-      </div>
-    );
-  }
-  const status = resources.status || "unknown";
-  const buckets = resources.r2?.buckets?.length ?? 0;
-  const missing = resources.missing_scopes || [];
-  return (
-    <div className={`agentsam-media-connection is-${status}`}>
-      <div>
-        <strong>Cloudflare</strong>
-        <span>
-          {status === "not_connected" ? "Not connected"
-            : status === "needs_scope" ? "Connected — additional permissions required"
-              : status === "partial" ? "Connected — some media APIs limited"
-                : status === "empty" ? "Connected — no media resources found"
-                  : status === "error" ? `Error · ${resources.error || resources.r2?.error || "probe failed"}`
-                    : `Connected · account ${resources.account?.id || "—"}`}
-        </span>
-        <span>
-          {familyLabel("R2", resources.r2, `${buckets} bucket${buckets === 1 ? "" : "s"}`)}
-          {" · "}{familyLabel("Images", resources.images)}
-          {" · "}{familyLabel("Stream", resources.stream)}
-        </span>
-        {(["r2", "images", "stream"] as const).map((key) => {
-          const fam = resources[key] as { status?: string; error?: string | null } | undefined;
-          if (!fam?.error || !["error", "unavailable", "needs_scope"].includes(String(fam.status))) return null;
-          return <span key={key} role="alert">{key.toUpperCase()} · {fam.error}</span>;
-        })}
-        {missing.length ? <span>Missing scopes: {missing.slice(0, 6).join(", ")}</span> : null}
-      </div>
-      <a className="agentsam-media-btn" href={connectUrl}>
-        {status === "not_connected" ? "Connect Cloudflare" : "Reconnect / expand scopes"}
-      </a>
-    </div>
-  );
-}
-
-function MediaViewer({
-  asset,
-  onClose,
-  onPrev,
-  onNext,
-}: {
-  asset: MediaAsset;
-  onClose: () => void;
-  onPrev?: () => void;
-  onNext?: () => void;
-}) {
-  const kind = classifyAsset(asset);
-  const preview = previewUrl(asset);
-  const [inspectorOpen, setInspectorOpen] = useState(true);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-      if (event.key === "ArrowLeft" && onPrev) onPrev();
-      if (event.key === "ArrowRight" && onNext) onNext();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, onPrev, onNext]);
-
-  return (
-    <div className="agentsam-media-viewer" role="dialog" aria-modal="true" aria-label={asset.filename}>
-      <div className="agentsam-media-viewer__chrome">
-        <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
-        <strong>{asset.filename}</strong>
-        <div className="agentsam-media-viewer__spacer" />
-        <button type="button" disabled={!onPrev} onClick={onPrev} aria-label="Previous"><ChevronLeft size={16} /></button>
-        <button type="button" disabled={!onNext} onClick={onNext} aria-label="Next"><ChevronRight size={16} /></button>
-        <button type="button" onClick={() => setInspectorOpen((v) => !v)} aria-pressed={inspectorOpen}>
-          Inspector
-        </button>
-        {preview ? (
-          <a className="agentsam-media-btn" href={preview} target="_blank" rel="noopener noreferrer">
-            <Maximize2 size={14} /> Open
-          </a>
-        ) : null}
-      </div>
-      <div className="agentsam-media-viewer__stage">
-        <div className="agentsam-media-viewer__preview">
-          {kind === "image" && preview ? (
-            <img src={preview} alt={asset.filename} />
-          ) : kind === "video" && preview ? (
-            <div className="agentsam-media-viewer__video-poster">
-              <img src={preview} alt="" />
-              <p>Poster only — full Stream playback opens via Open when authorized.</p>
-            </div>
+          {confirmBatch ? (
+            <>
+              <button
+                type="button"
+                className="agentsam-media-btn is-danger"
+                onClick={async () => { await removeAssets(selectedAssets); setConfirmBatch(false); }}
+              >
+                <Trash2 size={14} /> Delete {selected.size} permanently
+              </button>
+              <button type="button" className="agentsam-media-btn" onClick={() => setConfirmBatch(false)}>Cancel</button>
+            </>
           ) : (
-            <div className="agentsam-media-viewer__file">
-              <KindIcon kind={kind} />
-              <p>No inline preview for this type. Provider identity is preserved below.</p>
-            </div>
+            <button type="button" className="agentsam-media-btn is-ghost-danger" onClick={() => setConfirmBatch(true)}>
+              <Trash2 size={14} /> Delete
+            </button>
           )}
+          <button type="button" className="agentsam-media-btn" onClick={() => { setSelected(new Set()); setConfirmBatch(false); }}>Clear</button>
         </div>
-        {inspectorOpen ? (
-          <aside className="agentsam-media-viewer__inspector">
-            <h2>Details</h2>
-            <dl>
-              <div><dt>Identity</dt><dd>{identityLabel(asset)}</dd></div>
-              <div><dt>Provider</dt><dd>{providerOf(asset)}</dd></div>
-              <div><dt>Type</dt><dd>{asset.mime_type || asset.content_type || kind}</dd></div>
-              <div><dt>Size</dt><dd>{formatBytes(asset.size_bytes)}</dd></div>
-              {asset.width || asset.height ? (
-                <div><dt>Dimensions</dt><dd>{asset.width || "—"} × {asset.height || "—"}</dd></div>
-              ) : null}
-              {asset.duration_ms ? (
-                <div><dt>Duration</dt><dd>{formatDuration(asset.duration_ms)}</dd></div>
-              ) : null}
-              {asset.r2_bucket ? <div><dt>Bucket</dt><dd>{asset.r2_bucket}</dd></div> : null}
-              {asset.r2_key ? <div><dt>Key</dt><dd>{asset.r2_key}</dd></div> : null}
-              {asset.cloudflare_image_id ? <div><dt>CF Image ID</dt><dd>{asset.cloudflare_image_id}</dd></div> : null}
-              {asset.cloudflare_stream_uid ? <div><dt>Stream UID</dt><dd>{asset.cloudflare_stream_uid}</dd></div> : null}
-            </dl>
-            <div className="agentsam-media-viewer__actions">
-              {preview ? <a className="agentsam-media-btn" href={preview} target="_blank" rel="noopener noreferrer">Open</a> : null}
-              {preview ? (
-                <button
-                  type="button"
-                  className="agentsam-media-btn"
-                  onClick={() => void navigator.clipboard?.writeText(preview)}
-                >
-                  Copy link
-                </button>
-              ) : null}
-              <a className="agentsam-media-btn" href={`/admin/moviemode?import=${encodeURIComponent(asset.id)}`}>
-                Use in MovieMode
-              </a>
-            </div>
-          </aside>
-        ) : null}
-      </div>
+      ) : null}
+
+      {viewing ? (
+        <MediaViewer
+          asset={viewing}
+          onClose={() => setViewerId(null)}
+          onPrev={viewerIndex > 0 ? () => setViewerId(visible[viewerIndex - 1].id) : undefined}
+          onNext={viewerIndex < visible.length - 1 ? () => setViewerId(visible[viewerIndex + 1].id) : undefined}
+          onDelete={async (asset) => {
+            const ok = await removeAssets([asset]);
+            if (ok) setViewerId(null);
+            return ok;
+          }}
+        />
+      ) : null}
     </div>
   );
-}
-
-function guessMime(name: string) {
-  const lower = name.toLowerCase();
-  if (/\.png$/.test(lower)) return "image/png";
-  if (/\.jpe?g$/.test(lower)) return "image/jpeg";
-  if (/\.gif$/.test(lower)) return "image/gif";
-  if (/\.webp$/.test(lower)) return "image/webp";
-  if (/\.svg$/.test(lower)) return "image/svg+xml";
-  if (/\.mp4$/.test(lower)) return "video/mp4";
-  if (/\.webm$/.test(lower)) return "video/webm";
-  if (/\.pdf$/.test(lower)) return "application/pdf";
-  if (/\.glb$/.test(lower)) return "model/gltf-binary";
-  return "application/octet-stream";
 }

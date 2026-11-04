@@ -35,12 +35,15 @@ test('standalone Ecommerce Page Editor retains normal document navigation', () =
 
 test('Pages leads to content editor and exposes the visual editor without unsafe bulk controls', () => {
   const pages = readFileSync(new URL('../frontend/static/pages.html', import.meta.url), 'utf8');
-  assert.ok(pages.includes('const editHref = `/admin/page-edit?${query}`'));
-  assert.ok(pages.includes('const designHref = `/admin/theme-editor?${query}`'));
+  assert.ok(pages.includes('const editHref = themePage'));
+  assert.ok(pages.includes('`/admin/page-edit?${query}`'));
+  assert.ok(pages.includes("'/admin/theme-project-editor?'"), 'theme layouts open their existing editor');
+  assert.ok(pages.includes('const designHref = themePage ? editHref : `/admin/theme-editor?${query}`'));
   assert.ok(!pages.includes('id="cms-bootstrap-btn"'));
   assert.ok(pages.includes('id="add-page-btn"'), 'the real Add Page API now has a matching control');
   assert.ok(pages.includes('window.cmsAdminNavigate("/admin/page-edit?" + query.toString())'),
     'new pages should open their own Page Editor');
+  assert.ok(pages.includes("cmsAdminFetch('/api/admin/cms/theme-projects')"), 'installed starter layouts must appear in Pages');
   assert.ok(!pages.includes('id="pages-select-all"'));
 });
 

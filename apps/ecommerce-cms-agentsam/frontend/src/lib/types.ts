@@ -1,3 +1,5 @@
+import type { FinancialAnalyticsReadModel } from "@inneranimalmedia/financial-analytics";
+
 export type RangeKey = "24h" | "7d" | "30d" | "90d" | "YTD" | "All";
 
 export type ChartSeries = {
@@ -18,6 +20,7 @@ export type FinanceAnalyticsResponse = {
   refreshed_at: string;
   data_source: string;
   stripe_connected: boolean;
+  financial_analytics: FinancialAnalyticsReadModel;
   kpis: {
     gross_revenue: { value: number; delta: number; spark: number[] };
     orders: { value: number; delta: number; spark: number[] };
@@ -42,7 +45,7 @@ export type FinanceAnalyticsResponse = {
     labels: string[];
     series: ChartSeries[];
     ai_pct_of_revenue: number;
-    cogs_pct_of_revenue: number;
+    cogs_pct_of_revenue?: never;
   };
   recent_orders: Array<{
     id: string;

@@ -51,29 +51,21 @@ function fixture() {
     CREATE TABLE cms_pages(
       id TEXT PRIMARY KEY, site_id TEXT NOT NULL REFERENCES cms_sites(id),
       slug TEXT NOT NULL, route_path TEXT NOT NULL,
-      page_type TEXT NOT NULL CHECK(page_type IN (
-        'home','about','services','work','case_study','contact','pricing','privacy',
-        'terms','faq','product','collection','blog','post','landing','portal',
-        'dashboard','auth','sitemap','custom'
-      )),
-      title TEXT NOT NULL, description TEXT,
-      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived','scheduled')),
-      seo_title TEXT, meta_description TEXT, canonical_url TEXT, robots TEXT,
-      og_image_asset_id TEXT, r2_bucket TEXT, r2_key TEXT, r2_url TEXT,
-      content_type TEXT DEFAULT 'text/html', content_size_bytes INTEGER DEFAULT 0,
-      config_json TEXT DEFAULT '{}', seo_json TEXT DEFAULT '{}',
-      analytics_json TEXT DEFAULT '{}', metadata_json TEXT DEFAULT '{}',
-      is_system_page INTEGER DEFAULT 0, requires_auth INTEGER DEFAULT 0,
-      sort_order INTEGER DEFAULT 0, created_by TEXT, updated_by TEXT, published_by TEXT,
-      created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, published_at INTEGER,
-      archived_at INTEGER, nav_visible INTEGER NOT NULL DEFAULT 1,
-      published_manifest_r2_key TEXT, definition_id TEXT REFERENCES cms_definitions(id),
-      template_sku TEXT REFERENCES cms_component_templates(sku),
+      page_type TEXT NOT NULL DEFAULT 'page' CHECK (length(trim(page_type)) > 0),
+      title TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
+      seo_json TEXT NOT NULL DEFAULT '{}', metadata_json TEXT NOT NULL DEFAULT '{}',
+      definition_id TEXT REFERENCES cms_definitions(id),
+      template_sku TEXT,
+      requires_auth INTEGER NOT NULL DEFAULT 0, nav_visible INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      content_object_key TEXT, published_manifest_object_key TEXT, published_at INTEGER,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
       UNIQUE(site_id,slug), UNIQUE(site_id,route_path)
     );
     INSERT INTO cms_pages(id,site_id,slug,route_path,page_type,title,status,created_at,updated_at)
-      VALUES ('home-a','site-a','home','/','home','Alpha Home','draft',1700000000,1700000000),
-             ('home-b','site-b','home','/','home','Beta Home','draft',1700000000,1700000000);
+      VALUES ('home-a','site-a','home','/','landing','Alpha Home','draft',1700000000,1700000000),
+             ('home-b','site-b','home','/','landing','Beta Home','draft',1700000000,1700000000);
     CREATE TABLE cms_page_sections(
       id TEXT PRIMARY KEY, page_id TEXT NOT NULL REFERENCES cms_pages(id) ON DELETE CASCADE,
       section_type TEXT NOT NULL, section_name TEXT NOT NULL, section_data TEXT NOT NULL DEFAULT '{}',
@@ -141,8 +133,10 @@ test('Local Studio CMS data access is site-scoped after the site-identity migrat
     });
     assert.equal(updated.title,'Stories');
     assert.equal(updated.route_path,'/stories');
-    assert.equal(updated.seo_title,'Stories | Alpha');
-    assert.equal(updated.meta_description,'Community stories');
+    const seo = JSON.parse(updated.seo_json);
+    assert.equal(seo.title,'Stories | Alpha');
+    assert.equal(seo.description,'Community stories');
+    assert.equal(seo.canonical,'https://alpha.example/stories');
     await assert.rejects(a.updatePage('home-b',{title:'Cross-site edit'}),/not found/);
 
     await assert.rejects(a.createSection({

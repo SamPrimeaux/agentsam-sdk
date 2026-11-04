@@ -66,12 +66,16 @@ export function createSqliteAdapter(opts) {
     },
 
     async describeTable(name) {
-      const table = String(name || '').trim();
+      const table = String(typeof name === 'object' ? name.name : name || '').trim();
       if (!table) throw new Error('table_required');
       const cols = db.prepare(`PRAGMA table_info(${quoteIdent(table)})`).all();
       const indexes = db.prepare(`PRAGMA index_list(${quoteIdent(table)})`).all();
+      const foreignKeys = db.prepare(`PRAGMA foreign_key_list(${quoteIdent(table)})`).all();
+      const create = db.prepare("SELECT sql FROM sqlite_master WHERE name = ?").get(table);
       return {
         name: table,
+        createSql: create?.sql || null,
+        foreignKeys: foreignKeys.map(key => ({ columns: [key.from], refTable: key.table, refColumns: [key.to] })),
         columns: cols.map((c) => ({
           name: String(c.name),
           type: String(c.type || ''),
@@ -81,7 +85,7 @@ export function createSqliteAdapter(opts) {
         })),
         indexes: indexes.map((i) => ({
           name: String(i.name),
-          columns: [],
+          columns: db.prepare(`PRAGMA index_info(${quoteIdent(i.name)})`).all().map(column => column.name),
           unique: Boolean(i.unique),
         })),
       };

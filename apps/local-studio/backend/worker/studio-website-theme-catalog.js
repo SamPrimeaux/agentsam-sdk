@@ -21,7 +21,8 @@ function allowPreview(value, slug, version) {
   try {
     const u = new URL(value);
     return u.origin === STORE_ORIGIN &&
-      u.pathname.startsWith('/theme-packages/' + slug + '/' + version + '/preview/') ?
+      (u.pathname.startsWith('/theme-packages/' + slug + '/' + version + '/preview/') ||
+       u.pathname.startsWith('/themes/' + slug + '/presets/' + slug + '/demo/')) ?
       u.href : null;
   } catch { return null; }
 }

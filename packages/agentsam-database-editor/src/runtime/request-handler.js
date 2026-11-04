@@ -50,6 +50,8 @@ const DEFAULT_ROUTES = Object.freeze([
   'rows',
   'query',
   'ddl',
+  'resources',
+  'account-metrics',
 ]);
 
 /**
@@ -58,6 +60,8 @@ const DEFAULT_ROUTES = Object.freeze([
  *   listSources: (ctx: object) => Promise<{ sources: object[], connections?: object }>,
  *   resolveSource: (ctx: object, sourceId: string) => Promise<{ source: object, adapter: object }>,
  *   readMetrics?: (ctx: object, sourceId: string, range: string) => Promise<object>,
+ *   manageResource?: (ctx: object, input: object) => Promise<object>,
+ *   readAccountMetrics?: (ctx: object, accountId: string, range: string) => Promise<object>,
  *   onError?: (error: Error, ctx: object) => void | Promise<void>,
  *   sha256Hex?: (value: string) => Promise<string>,
  *   requireAccount?: boolean,
@@ -84,6 +88,12 @@ export function createDatabaseRequestHandler(options = {}) {
     return fn({ ...resolved, adapter });
   }
 
+  async function requireRowIdentity(adapter, body) {
+    const schema = await adapter.describeTable({ name: body.table, schema: body.schema });
+    const keys = (schema.columns || []).filter(column => column.primaryKey);
+    if (!keys.length || keys.some(key => body.where?.[key.name] == null)) throw new Error("stable_row_identity_required");
+  }
+
   function isDatabaseRequest(pathname) {
     const path = clean(pathname);
     return DEFAULT_ROUTES.some((route) => path === `${pathPrefix}/${route}`);
@@ -104,6 +114,16 @@ export function createDatabaseRequestHandler(options = {}) {
     try {
       if (url.pathname === `${pathPrefix}/sources` && request.method === 'GET') {
         return json({ ok: true, ...(await listSources(requestCtx)) });
+      }
+
+      if (url.pathname === `${pathPrefix}/resources` && request.method === "POST") {
+        if (typeof options.manageResource !== "function") return json({ ok: false, error: "database_management_not_configured" }, 501);
+        const body = await request.json();
+        return json({ ok: true, result: await options.manageResource(requestCtx, body) });
+      }
+      if (url.pathname === `${pathPrefix}/account-metrics` && request.method === "GET") {
+        if (typeof options.readAccountMetrics !== "function") return json({ ok: false, error: "account_metrics_not_configured" }, 501);
+        return json(await options.readAccountMetrics(requestCtx, clean(url.searchParams.get("account_id")), clean(url.searchParams.get("range")) || "24h"));
       }
 
       const sourceId =
@@ -253,6 +273,7 @@ export function createDatabaseRequestHandler(options = {}) {
           if (source.writable === false || typeof adapter.update !== 'function') {
             throw new Error('database_read_only');
           }
+          await requireRowIdentity(adapter, body);
           const result = await adapter.update({
             table: body.table,
             schema: body.schema,
@@ -270,6 +291,7 @@ export function createDatabaseRequestHandler(options = {}) {
           if (source.writable === false || typeof adapter.delete !== 'function') {
             throw new Error('database_read_only');
           }
+          await requireRowIdentity(adapter, body);
           const result = await adapter.delete({
             table: body.table,
             schema: body.schema,

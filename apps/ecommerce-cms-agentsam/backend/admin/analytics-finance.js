@@ -81,6 +81,15 @@ async function safeQuery(env, sql, ...binds) {
   }
 }
 
+async function tableExists(env, name) {
+  const row = await safeFirst(
+    env,
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1`,
+    name
+  );
+  return Boolean(row?.name);
+}
+
 async function safeFirst(env, sql, ...binds) {
   try {
     if (!env.DB) return null;
@@ -122,6 +131,7 @@ async function periodTotals(env, sinceModifier) {
     env,
     `SELECT
        COUNT(*) AS orders,
+       COUNT(CASE WHEN status IN ('paid','fulfilled') THEN 1 END) AS paid_orders,
        COALESCE(SUM(total_cents), 0) AS revenue_cents,
        COALESCE(SUM(CASE WHEN status IN ('pending','awaiting_payment') THEN total_cents ELSE 0 END), 0) AS pending_cents,
        COALESCE(SUM(CASE WHEN status IN ('paid','fulfilled') THEN total_cents ELSE 0 END), 0) AS confirmed_cents
@@ -303,7 +313,12 @@ async function aiCostSeries(env, cfg) {
   const { keys, labels } = buildBucketLabels(cfg.days, cfg.bucket);
   const map = new Map((results || []).map((r) => [r.bucket, Number(r.cost_usd || 0)]));
   const ai = keys.map((k) => map.get(k) ?? 0);
-  return { labels, ai };
+  const count = await safeFirst(
+    env,
+    `SELECT COUNT(*) AS record_count FROM agentsam_analytics WHERE event_name = 'chat_response_completed' AND datetime(created_at) >= datetime('now', ?)`,
+    modifier
+  );
+  return { labels, ai, record_count: Number(count?.record_count || 0) };
 }
 
 async function unitEconomics(env, sinceModifier, current, previous) {
@@ -328,7 +343,7 @@ async function unitEconomics(env, sinceModifier, current, previous) {
 
   const aiCost = await safeFirst(
     env,
-    `SELECT COALESCE(SUM(estimated_cost_usd), 0) AS cost
+    `SELECT COUNT(*) AS event_count, COALESCE(SUM(estimated_cost_usd), 0) AS cost
      FROM agentsam_analytics
      WHERE event_name = 'chat_response_completed'
        AND datetime(created_at) >= datetime('now', ?)`,
@@ -346,16 +361,6 @@ async function unitEconomics(env, sinceModifier, current, previous) {
       ? Number(((current.pending_cents / current.revenue_cents) * 100).toFixed(1))
       : 0;
   const aiCostUsd = Number(aiCost?.cost || 0);
-  const grossMargin =
-    current.revenue_cents > 0
-      ? Number(
-          (
-            ((centsToDollars(current.revenue_cents) - aiCostUsd) /
-              centsToDollars(current.revenue_cents)) *
-            100
-          ).toFixed(1)
-        )
-      : 0;
 
   return [
     {
@@ -396,16 +401,9 @@ async function unitEconomics(env, sinceModifier, current, previous) {
     },
     {
       label: "AgentSam AI cost",
-      value: `$${aiCostUsd.toFixed(2)}`,
+      value: Number(aiCost?.event_count || 0) > 0 ? `$${aiCostUsd.toFixed(2)}` : "Unavailable",
       delta: 0,
       good: false,
-    },
-    {
-      label: "Est. gross margin",
-      value: `${grossMargin}%`,
-      delta: 0,
-      good: grossMargin >= 0,
-      hint: "Revenue minus tracked AI cost only",
     },
   ];
 }
@@ -540,6 +538,7 @@ export async function getFinanceAnalytics(env, range = "30d") {
 
   const previous = previousWindow || {
     orders: 0,
+    paid_orders: 0,
     revenue_cents: 0,
     pending_cents: 0,
     units: 0,
@@ -562,8 +561,36 @@ export async function getFinanceAnalytics(env, range = "30d") {
     .reduce((a, b) => a + b.amount_cents, 0);
   const pendingCount = recent.filter((o) => o.status === "pending" || o.status === "awaiting_payment").length;
 
-  const aiTotal = aiCosts.ai.reduce((a, b) => a + b, 0);
-  const cogsEstimate = revenueSeries.revenue.map((v) => Number((v * 0.35).toFixed(2)));
+
+  const ordersAvailable = await tableExists(env, 'orders');
+  const latestOrder = ordersAvailable
+    ? await safeFirst(
+        env,
+        `SELECT MAX(created_at) AS latest_at FROM orders WHERE datetime(created_at) >= datetime('now', ?)`,
+        sinceModifier
+      )
+    : null;
+  const orderCount = Number(current.orders || 0);
+  const paidOrderCount = Number(current.paid_orders || 0);
+  const collectedRevenue = centsToDollars(current.confirmed_cents || 0);
+  const financialSources = [
+    {
+      id: 'orders',
+      label: 'Sales and orders',
+      state: !ordersAvailable ? 'unavailable' : orderCount > 0 ? 'available' : 'empty',
+      recordCount: ordersAvailable ? orderCount : null,
+      latestAt: latestOrder?.latest_at ?? null,
+      ...(!ordersAvailable ? { reason: 'source_not_installed' } : {}),
+    },
+    { id: 'accounting_transactions', label: 'Accounting transactions', state: 'unavailable', recordCount: null, reason: 'no_scoped_transaction_feed' },
+    { id: 'cloudflare_billing', label: 'Cloudflare billed usage', state: 'unavailable', recordCount: null, reason: 'invoice_aligned_billing_source_not_connected' },
+  ];
+  const financialCapabilities = ordersAvailable ? ['sales'] : [];
+  const financialMetrics = ordersAvailable ? [
+    { id:'revenue', value:paidOrderCount ? collectedRevenue : null, unit:'currency', state:paidOrderCount ? 'available' : 'empty', source:'orders', sampleCount:paidOrderCount },
+    { id:'order_count', value:orderCount || null, unit:'count', state:orderCount ? 'available' : 'empty', source:'orders', sampleCount:orderCount },
+    { id:'average_sale', value:paidOrderCount ? collectedRevenue / paidOrderCount : null, unit:'currency', state:paidOrderCount ? 'available' : 'empty', source:'orders', sampleCount:paidOrderCount, note:'Paid and fulfilled orders only.' },
+  ] : [];
 
   return {
     ok: true,
@@ -571,6 +598,10 @@ export async function getFinanceAnalytics(env, range = "30d") {
     refreshed_at: new Date().toISOString(),
     data_source: "d1",
     stripe_connected: Boolean(env.STRIPE_SECRET_KEY),
+    financial_analytics: {
+      range: cfg.label, currency: "USD", generatedAt: new Date().toISOString(),
+      capabilities: financialCapabilities, sources: financialSources, metrics: financialMetrics,
+    },
     kpis: {
       gross_revenue: {
         value: grossRevenue,
@@ -619,19 +650,13 @@ export async function getFinanceAnalytics(env, range = "30d") {
       labels: aiCosts.labels,
       series: [
         {
-          name: "Est. COGS",
-          data: cogsEstimate,
-          color: "oklch(0.66 0.18 305)",
-        },
-        {
-          name: "AgentSam AI",
+          name: "AgentSam AI estimate",
           data: aiCosts.ai,
           color: "oklch(0.78 0.13 220)",
         },
       ],
       ai_pct_of_revenue:
-        grossRevenue > 0 ? Number(((aiTotal / grossRevenue) * 100).toFixed(1)) : 0,
-      cogs_pct_of_revenue: 35,
+        grossRevenue > 0 && aiCosts.record_count > 0 ? Number(((aiTotal / grossRevenue) * 100).toFixed(1)) : null,
     },
     recent_orders: recent,
     recent_orders_summary: {

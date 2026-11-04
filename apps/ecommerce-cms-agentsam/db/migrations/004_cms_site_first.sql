@@ -193,9 +193,11 @@ CREATE TABLE cms_globals__next (
   content_object_key  TEXT,
   content_version     INTEGER NOT NULL DEFAULT 0,
   content_hash        TEXT,
-  legacy_page_id      INTEGER,
-  legacy_section_id   INTEGER UNIQUE,
-  metadata_json       TEXT NOT NULL DEFAULT '{}',
+  -- Which packaged theme/product + version this global was installed from.
+  -- References the product registry (agentsam_products.id) where one exists.
+  product_id          TEXT,
+  package_version     TEXT,
+  metadata_json       TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(metadata_json)),
   created_at          TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at          TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (site_id, global_key),
@@ -204,18 +206,21 @@ CREATE TABLE cms_globals__next (
 
 INSERT INTO cms_globals__next (
   id, account_id, site_id, global_key, global_type, status, inline_content_json,
-  content_object_key, content_version, content_hash, legacy_page_id,
-  legacy_section_id, metadata_json, created_at, updated_at
+  content_object_key, content_version, content_hash,
+  metadata_json, created_at, updated_at
 )
 SELECT g.id, g.account_id, s.id, g.global_key, g.global_type, g.status,
        g.inline_content_json, g.content_object_key, g.content_version, g.content_hash,
-       g.legacy_page_id, g.legacy_section_id, g.metadata_json, g.created_at, g.updated_at
+       g.metadata_json, g.created_at, g.updated_at
 FROM cms_globals g
 JOIN cms_sites s ON s.account_id = g.account_id AND s.is_default = 1;
 
 DROP TABLE cms_globals;
 ALTER TABLE cms_globals__next RENAME TO cms_globals;
 CREATE INDEX idx_cms_globals_site ON cms_globals(site_id, global_type, status);
+-- A site has at most one live (published) theme; installing creates a draft, publishing swaps which row is published.
+CREATE UNIQUE INDEX idx_cms_globals_one_published_theme ON cms_globals(site_id)
+  WHERE global_type = 'theme-project' AND status = 'published';
 
 -- Revisions retain entity-level history while acquiring an explicit site scope.
 CREATE TABLE cms_revisions__next (

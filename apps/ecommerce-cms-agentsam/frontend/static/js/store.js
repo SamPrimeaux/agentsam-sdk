@@ -6,7 +6,7 @@ renderShell("/admin/store", `
         <h1>Online Store</h1>
       </div>
       <div class="online-store-actions">
-        <a href="#theme-product-marketplace" class="btn ghost small" id="browse-themes-shortcut">Browse website themes</a>
+        <a href="https://themes.inneranimalmedia.com/" class="btn ghost small" id="browse-themes-shortcut">Visit Theme Store</a>
         <button type="button" class="online-store-pill" id="store-visibility-btn" aria-haspopup="true">
           <span class="online-store-pill-dot" aria-hidden="true"></span>
           <span id="store-visibility-label">Checking…</span>
@@ -315,11 +315,14 @@ function showThemeUnavailable(state, message) {
     status.className="online-store-badge online-store-badge--pending";
     status.textContent="Unpublished";
   }
-  if(name)name.textContent="No website theme installed";
+  if(name)name.textContent=state==="select" ? "Choose a website" : "No website theme installed";
   if(saved)saved.textContent=state==="error"
     ? "Store service is unavailable. No installed website can be verified."
-    : "Browse an original website theme below. A downloaded package is not an installed site.";
-  if(edit){edit.href="#theme-product-marketplace";edit.textContent="Browse website themes";}
+    : state==="select"
+      ? "Select an existing website above to open its own theme library."
+      : "Browse an original website theme below. A downloaded package is not an installed site.";
+  if(edit){edit.href=state==="select"?"#store-site-selector":"#theme-product-marketplace";
+    edit.textContent=state==="select"?"Choose website":"Browse website themes";}
   document.getElementById("active-theme-version").hidden=true;
   if (typeof storefrontPreviewObserver !== "undefined" && storefrontPreviewObserver) storefrontPreviewObserver.disconnect();
   for (const id of ["theme-preview-desktop", "theme-preview-mobile"]) {
@@ -334,15 +337,105 @@ function showThemeUnavailable(state, message) {
     const message = document.createElement("div");
     message.className = "online-store-preview-message online-store-preview-message--empty";
     const title = document.createElement("strong");
-    title.textContent = "No site theme installed";
+    title.textContent = state==="select" ? "Choose a website" : "No site theme installed";
     const description = document.createElement("p");
-    description.textContent = "Your website preview will appear here after a real installation.";
+    description.textContent = state==="select"
+      ? "Theme projects and previews belong to individual websites. Select yours above."
+      : "Your website preview will appear here after a real installation.";
     const browse = document.createElement("a");
     browse.className = "btn ghost small";
-    browse.href = "#theme-product-marketplace";
-    browse.textContent = "Explore website themes";
+    browse.href = state==="select" ? "#store-site-selector" : "#theme-product-marketplace";
+    browse.textContent = state==="select" ? "Choose website" : "Explore website themes";
     message.append(title,description,browse);
     shell.appendChild(message);
+  }
+}
+async function showSavedDraftPreview(preview) {
+  // Reuse the SAME renderer as Theme Project Editor, reading the saved R2
+  // revision through the account- and site-scoped CMS API.
+  const origin=window.AgentSamOnlineStoreHost?.baseUrl||window.location.origin;
+  const editor = new URL(preview.edit_href, origin);
+  if (editor.origin !== new URL(origin).origin || editor.pathname !== '/admin/theme-project-editor')
+    throw Error('invalid_theme_project_editor');
+  const projectId=editor.searchParams.get('project');
+  const siteId=editor.searchParams.get('site_id');
+  if(!/^[A-Za-z0-9_-]{1,160}$/.test(projectId||'') ||
+     !/^[A-Za-z0-9_-]{1,160}$/.test(siteId||'')) throw Error('invalid_theme_project_identity');
+  const url='/api/admin/cms/theme-projects/'+encodeURIComponent(projectId)+
+    '?site_id='+encodeURIComponent(siteId);
+  const res=await fetch(url,{credentials:'same-origin',cache:'no-store'});
+  const data=await res.json().catch(()=>null);
+  if(!res.ok||data?.ok!==true||!data.project?.pages?.length)
+    throw Error(data?.error||'theme_project_preview_unavailable');
+  const page=data.project.pages.find(page=>page.slug==='home')||data.project.pages[0];
+  const {renderThemePage}=await import('/theme-editor/project.mjs');
+  const markup=renderThemePage(page,data.project.tokens||{},{
+    baseUrl:page.assetBase||undefined,
+  });
+  const frames=[
+    document.getElementById('theme-preview-desktop'),
+    document.getElementById('theme-preview-mobile'),
+  ];
+  for(const frame of frames){
+    if(!frame)continue;
+    frame.setAttribute('sandbox','allow-scripts');
+    frame.removeAttribute('src');
+    frame.parentElement?.querySelector('.online-store-preview-message')?.remove();
+    frame.parentElement.dataset.previewStatus='loading';
+    frame.onload=()=>{
+      frame.parentElement.dataset.previewStatus='ready';
+    };
+    frame.srcdoc=markup;
+  }
+  document.querySelectorAll('.online-store-preview-caption').forEach((caption,index)=>{
+    caption.textContent=index===0?'Desktop · Saved draft preview':'Mobile · Saved draft preview';
+  });
+}
+function showExistingWebsitePreview(href){
+  // A real site's published homepage is not the newly installed theme draft.
+  // Use the account-owned public domain as the preview source, without
+  // impersonating it with an unrelated Heuristic template.
+  const url=new URL(href);
+  if(url.protocol!=='https:')throw Error('website_preview_url_invalid');
+  storefrontPreviewObserver?.disconnect();
+  const frames=[
+    ['desktop',document.getElementById('theme-preview-desktop'),1440],
+    ['mobile',document.getElementById('theme-preview-mobile'),390],
+  ];
+  const fit=(iframe,width)=>{
+    const shell=iframe.parentElement;
+    const size=shell.clientWidth;
+    if(!size)return;
+    const scale=size/width;
+    iframe.style.width=width+'px';
+    iframe.style.height=Math.max(844,Math.ceil(shell.clientHeight/scale))+'px';
+    iframe.style.transformOrigin='top left';
+    iframe.style.transform='scale('+scale+')';
+  };
+  storefrontPreviewObserver=typeof ResizeObserver==='function'
+    ? new ResizeObserver(()=>frames.forEach(([,frame,width])=>fit(frame,width)))
+    : null;
+  for(const [device,frame,width] of frames){
+    if(!frame)continue;
+    const shell=frame.parentElement;
+    shell.querySelector('.online-store-preview-message')?.remove();
+    shell.dataset.previewStatus='loading';
+    frame.setAttribute('sandbox','allow-scripts allow-forms');
+    frame.setAttribute('referrerpolicy','no-referrer');
+    fit(frame,width);
+    storefrontPreviewObserver?.observe(shell);
+    frame.onload=()=>{shell.dataset.previewStatus='ready';};
+    frame.onerror=()=>{
+      shell.dataset.previewStatus='failed';
+      const link=document.createElement('a');
+      link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';
+      link.textContent='Open your website';
+      link.className='online-store-preview-message';
+      shell.append(link);
+    };
+    frame.src=url.href;
+    const caption=shell.querySelector('.online-store-preview-caption');
+    if(caption)caption.textContent=device==='desktop'?'Desktop · Existing website':'Mobile · Existing website';
   }
 }
 function showActiveTheme(theme) {
@@ -356,13 +449,142 @@ function showActiveTheme(theme) {
 
 (async function () {
   try {
-    const d = await adminFetch("/api/admin/store/online");
+    // Site choice travels in the URL; never silently bind a merchant to the
+    // first account-owned website when multiple sites exist.
+    const route = new URLSearchParams(window.location.search);
+    const siteId = route.get('site_id');
+    const d = await adminFetch('/api/admin/store/online'+(siteId?'?site_id='+encodeURIComponent(siteId):''));
+    const sites = Array.isArray(d.available_sites) ? d.available_sites : [];
+    const externalStore = document.getElementById('browse-themes-shortcut');
+    if (externalStore) {
+      const destination = new URL('https://themes.inneranimalmedia.com/');
+      if (typeof d.selected_site_id === 'string' && /^[A-Za-z0-9_-]{1,160}$/.test(d.selected_site_id))
+        destination.searchParams.set('site_id',d.selected_site_id);
+      externalStore.href = destination.href;
+    }
+    if(sites.length && !window.AgentSamOnlineStoreHost){
+      const current=sites.find(site=>site.id===d.selected_site_id)||sites[0];
+      const root=document.createElement('details');
+      root.id='store-site-switcher';
+      root.className='cms-site-switcher';
+      const trigger=document.createElement('summary');
+      trigger.className='cms-site-switcher-trigger';
+      trigger.setAttribute('aria-label','Switch current website');
+      const triggerCopy=document.createElement('span');
+      triggerCopy.className='cms-site-switcher-label';
+      const primary=document.createElement('strong');
+      primary.textContent=current.name||current.slug;
+      const subtitle=document.createElement('small');
+      subtitle.textContent=current.primary_domain||(current.is_default?'Primary website':'Current website');
+      const chevron=document.createElement('span');
+      chevron.className='cms-site-switcher-chevron';
+      chevron.setAttribute('aria-hidden','true');
+      chevron.textContent='⌄';
+      triggerCopy.append(primary,subtitle);
+      trigger.append(triggerCopy,chevron);
+      root.append(trigger);
+      const menu=document.createElement('div');
+      menu.className='cms-site-switcher-menu';
+      const heading=document.createElement('div');
+      heading.className='cms-site-switcher-heading';
+      heading.textContent='Switch website';
+      const search=document.createElement('input');
+      search.type='search';
+      search.className='cms-site-switcher-search';
+      search.placeholder='Search websites';
+      search.setAttribute('aria-label','Search owned websites');
+      const list=document.createElement('div');
+      list.className='cms-site-switcher-results';
+      const footer=document.createElement('div');
+      footer.className='cms-site-switcher-footer';
+      const ranked=[...sites].sort((a,b)=>
+        Number(b.id===current.id)-Number(a.id===current.id) ||
+        Number(b.is_default===1)-Number(a.is_default===1) ||
+        Number(b.status==='active')-Number(a.status==='active') ||
+        Number(b.page_count||0)-Number(a.page_count||0) ||
+        String(a.name).localeCompare(String(b.name)));
+      function chooseSite(selected){
+        const url=new URL(window.location.href);
+        url.searchParams.set('site_id',selected.id);
+        try {
+          const parent=window.parent;
+          if(parent!==window && parent.location.origin===window.location.origin &&
+             parent.location.pathname==='/apps/ecommerce-cms-agentsam'){
+            const outer=new URL(parent.location.href);
+            outer.searchParams.set('site_id',selected.id);
+            parent.location.assign(outer.href);
+            return;
+          }
+        } catch { /* Standalone or cross-origin frame: navigate the current CMS document. */ }
+        window.location.assign(url.href);
+      }
+      function renderMatches(){
+        const q=search.value.trim().toLowerCase();
+        const matched=ranked.filter(site=>
+          !q || [site.name,site.slug,site.primary_domain].some(value=>
+            String(value||'').toLowerCase().includes(q)));
+        const visible=q?matched.slice(0,30):matched.slice(0,6);
+        list.replaceChildren();
+        for(const site of visible){
+          const item=document.createElement('button');
+          item.type='button';
+          item.className='cms-site-switcher-item';
+          if(site.id===current.id)item.setAttribute('aria-current','true');
+          const names=document.createElement('span');
+          names.className='cms-site-switcher-item-copy';
+          const name=document.createElement('strong');
+          name.textContent=site.name||site.slug;
+          const detail=document.createElement('small');
+          detail.textContent=site.primary_domain||site.slug;
+          names.append(name,detail);
+          const meta=document.createElement('span');
+          meta.className='cms-site-switcher-item-meta';
+          meta.textContent=site.id===current.id?'Current':site.is_default?'Primary':'';
+          item.append(names,meta);
+          item.onclick=()=>chooseSite(site);
+          list.append(item);
+        }
+        if(!visible.length){
+          const none=document.createElement('p');
+          none.className='cms-site-switcher-empty';
+          none.textContent='No matching websites';
+          list.append(none);
+        }
+        footer.textContent=q
+          ? matched.length+' matching websites'
+          : (sites.length>visible.length?'Showing main sites · Search all '+sites.length:'All your websites');
+      }
+      search.addEventListener('input',renderMatches);
+      root.addEventListener('toggle',()=>{if(root.open){renderMatches();search.focus();}});
+      root.addEventListener('keydown',event=>{
+        if(event.key==='Escape'){root.open=false;trigger.focus();}
+      });
+      document.addEventListener('pointerdown',event=>{
+        if(root.open&&!root.contains(event.target))root.open=false;
+      });
+      menu.append(heading,search,list,footer);
+      root.append(menu);
+      document.querySelector('.online-store-title')?.append(root);
+      renderMatches();
+    }
 
     document.getElementById("store-visibility-label").textContent =
+      d.site_preview?.url ? "Website live" :
       d.store.visibility === "public" ? "Public" :
-      d.store.visibility === "password" ? "Password protected" : "Not published";
+      d.store.visibility === "password" ? "Password protected" : "Theme not published";
 
     const perf = d.performance || {};
+    const hasRealMetrics=[perf.lcp_ms,perf.inp_ms,perf.cls,
+      perf.sessions_desktop,perf.sessions_mobile].some(value=>
+      value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value)));
+    const performancePanel=document.querySelector('.online-store-perf');
+    if(performancePanel)performancePanel.hidden=!hasRealMetrics;
+    // Remove unconnected action affordances until transactions exist.
+    document.querySelectorAll('.online-store-icon-btn').forEach(button=>{button.hidden=true;});
+    const importButton=document.getElementById('import-theme-btn');
+    if(importButton)importButton.hidden=true;
+    const visibilityButton=document.getElementById('store-visibility-btn');
+    if(visibilityButton){visibilityButton.disabled=true;visibilityButton.style.cursor='default';}
     const lcp = document.getElementById("perf-lcp");
     const inp = document.getElementById("perf-inp");
     const cls = document.getElementById("perf-cls");
@@ -384,14 +606,33 @@ function showActiveTheme(theme) {
     }
     sessions.title = "Storefront sessions are not measured yet when shown as —";
 
-    setStoreViewButton(d.store?.visibility==="public" ? d.store?.url : null);
+    setStoreViewButton(d.site_preview?.url ||
+      (d.store?.visibility==="public" ? d.store?.url : null));
     const theme = d.active_theme;
     document.getElementById("active-theme-name").textContent = theme?.name || "No active theme";
     document.getElementById("active-theme-saved").textContent =
       "Last saved: " + fmtStoreDate(theme?.last_saved);
     const editLink = document.getElementById("edit-theme-btn");
     editLink.href = theme?.edit_href || "/admin/theme-editor?slug=home";
-    if (theme?.preview_href && theme?.name) {
+    if (d.site_preview?.edit_href) {
+      // Existing authored pages take priority over a newly provisioned
+      // starter template. The project remains accessible in Draft themes.
+      const site=d.site_preview;
+      document.getElementById("active-theme-name").textContent=d.selected_site_name||site.title;
+      document.getElementById("active-theme-status").textContent=
+        site.status==='published'?'Existing website':'Editable website';
+      document.getElementById("active-theme-status").className=
+        "online-store-badge online-store-badge--"+(site.url?'active':'pending');
+      document.getElementById("active-theme-saved").textContent=
+        "Your existing CMS homepage · Theme drafts remain separate";
+      editLink.href=site.edit_href;
+      editLink.textContent="Edit website";
+      if(site.url)showExistingWebsitePreview(site.url);
+      else if(d.preview_theme?.installed) {
+        try { await showSavedDraftPreview(d.preview_theme); }
+        catch(error){ console.error('saved_theme_preview_failed',error); }
+      }
+    } else if (theme?.preview_href && theme?.name) {
       showActiveTheme(theme);
       setPreviewFrames(theme.preview_href);
     } else if (d.preview_theme?.installed && d.preview_theme?.edit_href) {
@@ -404,9 +645,15 @@ function showActiveTheme(theme) {
       document.getElementById("active-theme-saved").textContent="Installed CMS project · Customize before publishing.";
       editLink.href=preview.edit_href;
       editLink.textContent="Customize draft";
-      document.querySelector(".online-store-preview-caption").textContent="Desktop · No published preview";
+      try { await showSavedDraftPreview(preview); }
+      catch(error) {
+        console.error('saved_theme_preview_failed',error);
+        document.getElementById('active-theme-saved').textContent=
+          'Starter installed and editable. Preview unavailable; open the editor.';
+      }
     } else {
-      showThemeUnavailable("empty", "No installed CMS theme is available. Finish installation in the Theme Store to customize.");
+      showThemeUnavailable(d.site_selection_required?'select':'empty',
+        'Select your website or install the starter theme before customizing.');
     }
 
     if (theme?.version_available) {
@@ -420,7 +667,7 @@ function showActiveTheme(theme) {
     // An owner with a draft on another site must not see "nothing installed".
     // Do not treat that draft as published or switch sites implicitly.
     const siteDrafts=(d.draft_themes||[]).filter(draft=>draft.installed && draft.site_id);
-    if(siteDrafts.length && !theme?.preview_href && !d.preview_theme?.installed) {
+    if(siteDrafts.length && !d.site_selection_required && !theme?.preview_href && !d.preview_theme?.installed) {
       document.getElementById("active-theme-name").textContent=
         siteDrafts.length===1 ? "Editable site draft available" : siteDrafts.length+" editable site drafts";
       document.getElementById("active-theme-saved").textContent=

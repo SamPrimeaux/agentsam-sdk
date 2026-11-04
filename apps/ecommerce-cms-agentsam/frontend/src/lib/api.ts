@@ -122,8 +122,8 @@ export async function requireSession() {
 }
 
 export async function fetchFinanceAnalytics(range: string) {
-  return adminFetch<import("./types").FinanceAnalyticsResponse>(
-    `/api/admin/analytics/finance?range=${encodeURIComponent(range)}`,
+  return adminFetch<import("@inneranimalmedia/financial-analytics").FinancialAnalyticsReadModel>(
+    `/api/analytics/financial?range=${encodeURIComponent(range)}`,
   );
 }
 

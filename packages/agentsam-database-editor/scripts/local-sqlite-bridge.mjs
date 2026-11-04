@@ -14,6 +14,8 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteAdapter } from "../src/adapters/sqlite.js";
+import { readTableRows } from "../src/runtime/rows.js";
+import { buildDdlSql } from "../src/runtime/ddl.js";
 
 const REGISTRY_SCHEMA = "agentsam.local-databases.v1";
 
@@ -399,35 +401,15 @@ async function main() {
     }
 
     if (op === "rows") {
-      const table = String(req.table || "").trim();
-      const page = Math.max(1, Number(req.page || 1) || 1);
-      const limit = Math.min(200, Math.max(1, Number(req.limit || 50) || 50));
-      const offset = (page - 1) * limit;
-      const countResult = await adapter.query({
-        sql: `SELECT COUNT(*) AS c FROM "${table.replace(/"/g, '""')}"`,
-      });
-      const total = Number(countResult.rows?.[0]?.[0] || 0) || 0;
-      const described = await adapter.describeTable(table);
-      const result = await adapter.query({
-        sql: `SELECT * FROM "${table.replace(/"/g, '""')}" LIMIT ? OFFSET ?`,
-        params: [limit, offset],
-      });
-      const columns = described.columns || [];
-      const objects = (result.rows || []).map((row) => {
-        const obj = {};
-        columns.forEach((col, i) => {
-          obj[col.name] = row[i];
-        });
-        return obj;
-      });
-      return ok({
-        rows: objects,
-        columns,
-        page,
-        limit,
-        total,
-        total_pages: Math.max(1, Math.ceil(total / limit)),
-      });
+      return ok(await readTableRows(adapter, { engine: "sqlite" }, new URLSearchParams(Object.entries(req).filter(([, value]) => value != null).map(([key, value]) => [key, String(value)]))));
+    }
+
+    if (op === "ddl") {
+      const built = buildDdlSql({ ...req, engine: "sqlite" });
+      if (req.preview_only) return ok({ preview: true, sql: built.sql, table_name: built.tableName, schema: built.schema });
+      assertSqlApproved(built.sql, req);
+      const result = await adapter.query({ sql: built.sql });
+      return ok({ ...result, sql: built.sql, table_name: built.tableName, schema: built.schema });
     }
 
     if (op === "query") {

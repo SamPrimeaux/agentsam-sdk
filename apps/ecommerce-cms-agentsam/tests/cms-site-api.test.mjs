@@ -87,9 +87,13 @@ test("admin API exposes account-owned sites and scopes page inventory by site", 
   } finally { sqlite.close(); }
 });
 
-test("admin API creates a second site without changing the account's default", async () => {
+test("admin API creates a second site with a starter, without changing the account's default", async () => {
   const sqlite = createCmsTestDb();
-  const env = { DB: d1(sqlite) };
+  const objects=new Map();
+  const env = { DB: d1(sqlite), WEBSITE_ASSETS: {
+    async put(key,value){objects.set(key,String(value));},
+    async get(key){return objects.has(key)?{text:async()=>objects.get(key)}:null;},
+  }};
   try {
     sqlite.exec("INSERT INTO accounts(id) VALUES ('acct-a')");
     const response = await handleAdminCmsApi(
@@ -105,7 +109,15 @@ test("admin API creates a second site without changing the account's default", a
       env, new URL("https://cms.test/api/admin/cms/sites"), { accountId: "acct-a" },
     );
     assert.equal(second.status, 201);
-    assert.equal((await second.json()).site.is_default, 0);
+    const result=await second.json();
+    assert.equal(result.site.is_default, 0);
+    assert.equal(result.starter.installed,true);
+    assert.match(result.starter.editor_url,/theme-project-editor\?project=theme_heuristic&site_id=/);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE global_type='theme-project'").get().n,2);
+    // Package manifest can be shared across one merchant's sites; authored
+    // page revisions remain independently content-addressed in R2.
+    assert.ok(objects.size>=3,'shared release manifest plus site-owned revisions');
+    assert.equal(sqlite.prepare("SELECT COUNT(DISTINCT content_object_key) AS n FROM cms_globals WHERE global_type='theme-project'").get().n,2);
   } finally { sqlite.close(); }
 });
 

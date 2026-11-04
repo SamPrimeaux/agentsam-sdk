@@ -34,12 +34,14 @@
     "prepublishOnly": "npm run verify:release"
   },
   "dependencies": {
-    "@cloudflare/containers": "0.3.7",
-    "wrangler": "4.147.0"
+    "@cloudflare/containers": "0.3.7"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SamPrimeaux/agentsam-sdk.git",
     "directory": "apps/agentsam-go-worker"
+  },
+  "devDependencies": {
+    "wrangler": "^4.157.0"
   }
 }

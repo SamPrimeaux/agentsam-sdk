@@ -12,7 +12,8 @@ export {
   createHyperdriveAdapter,
 } from "../src/adapters/postgres.js";
 export { createSupabaseAdapter } from "../src/adapters/supabase.js";
-export { readD1Metrics } from "../src/metrics/d1.js";
+export { readD1Metrics, readD1AccountMetrics } from "../src/metrics/d1.js";
+export { listD1Resources, manageD1Resource } from "../src/runtime/d1-management.js";
 export { readPostgresMetrics } from "../src/metrics/postgres.js";
 
 export {

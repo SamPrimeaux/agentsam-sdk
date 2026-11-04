@@ -60,6 +60,10 @@
       "bucket_name": "agentsam-os-blueprint-content"
     },
     {
+      "binding": "CMS_CONTENT",
+      "bucket_name": "cms"
+    },
+    {
       "binding": "CAD_PROJECT_ASSETS",
       "bucket_name": "cad"
     }

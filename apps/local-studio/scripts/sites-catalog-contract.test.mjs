@@ -11,10 +11,13 @@ test('hosted Sites uses packaged Ecommerce UI and truthful missing-theme states'
  const html=read('../ecommerce-cms-agentsam/frontend/static/store.html');
  const js=read('../ecommerce-cms-agentsam/frontend/static/js/store.js');
  const sitesRoute=read('frontend/src/routes/(apps)/sites.tsx');
- assert.match(sitesRoute,/<Navigate to="\/apps\/ecommerce-cms-agentsam" search=\{\{ page: '\/admin\/store' \}\} replace \/>/);
+ assert.match(sitesRoute, /<Navigate to="\/apps\/ecommerce-cms-agentsam" search=\{\{ page: '\/admin\/store', \.\.\.selected \}\} replace \/>/);
+ assert.match(sitesRoute, /theme_sku/);
+ assert.match(sitesRoute, /theme_version/);
  assert.equal(resolveConsoleFile('/admin/store'),'store.html');
  assert.equal(resolveConsoleFile('/sites'),null);
- for(const content of [html,js]){
+ assert.match(html,/src="\/admin\/js\/store.js"/);
+ for(const content of [js]){
   assert.match(content,/id="browse-themes-shortcut"/);
   assert.match(content,/showThemeUnavailable/);
   assert.match(content,/showActiveTheme/);

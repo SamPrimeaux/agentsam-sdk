@@ -9,11 +9,18 @@ export type DatabaseCapabilityId =
   | "export"
   | "transactions";
 
-export type DatabaseSourceCapabilities = Partial<Record<DatabaseCapabilityId, boolean>>;
+export type DatabaseSourceCapabilities = Partial<
+  Record<DatabaseCapabilityId, boolean>
+>;
 
 export type DatabaseSource = {
   id: string;
-  provider: "cloudflare-d1" | "supabase-postgres" | "postgres" | "local-sqlite" | string;
+  provider:
+    | "cloudflare-d1"
+    | "supabase-postgres"
+    | "postgres"
+    | "local-sqlite"
+    | string;
   engine: "sqlite" | "postgres" | string;
   label: string;
   database_name?: string;
@@ -22,6 +29,9 @@ export type DatabaseSource = {
   path_hint?: string;
   account_id?: string;
   file_size?: number;
+  created_at?: string;
+  region?: string;
+  management?: boolean;
   num_tables?: number;
   writable: boolean;
   metrics: boolean;
@@ -36,25 +46,43 @@ export type DatabaseSource = {
   owner_scope?: string;
 };
 
-
 const DATABASE_CAPABILITY_IDS = new Set<DatabaseCapabilityId>([
-  "read_rows", "query", "schema", "insert", "update", "delete", "metrics", "export", "transactions",
+  "read_rows",
+  "query",
+  "schema",
+  "insert",
+  "update",
+  "delete",
+  "metrics",
+  "export",
+  "transactions",
 ]);
 
 /** Normalize wire/provider capability vocab into the portable UI contract. */
-export function normalizeDatabaseCapabilities(value: unknown): DatabaseSourceCapabilities {
+export function normalizeDatabaseCapabilities(
+  value: unknown,
+): DatabaseSourceCapabilities {
   const out: DatabaseSourceCapabilities = {};
   if (Array.isArray(value)) {
     for (const raw of value) {
-      const id = String(raw || "").trim() === "read" ? "read_rows" : String(raw || "").trim();
-      if (DATABASE_CAPABILITY_IDS.has(id as DatabaseCapabilityId)) out[id as DatabaseCapabilityId] = true;
+      const id =
+        String(raw || "").trim() === "read"
+          ? "read_rows"
+          : String(raw || "").trim();
+      if (DATABASE_CAPABILITY_IDS.has(id as DatabaseCapabilityId))
+        out[id as DatabaseCapabilityId] = true;
     }
     return out;
   }
   if (value && typeof value === "object") {
-    for (const [rawKey, rawValue] of Object.entries(value as Record<string, unknown>)) {
+    for (const [rawKey, rawValue] of Object.entries(
+      value as Record<string, unknown>,
+    )) {
       const key = rawKey === "read" ? "read_rows" : rawKey;
-      if (DATABASE_CAPABILITY_IDS.has(key as DatabaseCapabilityId) && typeof rawValue === "boolean") {
+      if (
+        DATABASE_CAPABILITY_IDS.has(key as DatabaseCapabilityId) &&
+        typeof rawValue === "boolean"
+      ) {
         out[key as DatabaseCapabilityId] = rawValue;
       }
     }
@@ -62,8 +90,13 @@ export function normalizeDatabaseCapabilities(value: unknown): DatabaseSourceCap
   return out;
 }
 
-function normalizeDatabaseSource(source: DatabaseSource & { capabilities?: unknown }): DatabaseSource {
-  return { ...source, capabilities: normalizeDatabaseCapabilities(source.capabilities) };
+function normalizeDatabaseSource(
+  source: DatabaseSource & { capabilities?: unknown },
+): DatabaseSource {
+  return {
+    ...source,
+    capabilities: normalizeDatabaseCapabilities(source.capabilities),
+  };
 }
 
 export type DatabaseConnectionStatus = {
@@ -84,6 +117,12 @@ export type DatabaseConnectionStatus = {
 export type DatabaseSourcesResponse = {
   ok: boolean;
   sources: DatabaseSource[];
+  accounts?: Array<{
+    id: string;
+    name: string;
+    writable?: boolean;
+    error?: string;
+  }>;
   connections?: Record<string, DatabaseConnectionStatus>;
   error?: string;
 };
@@ -96,6 +135,7 @@ export type DatabaseSeriesPoint = {
   rowsRead?: number | null;
   rowsWritten?: number | null;
   sizeBytes?: number | null;
+  latencyMs?: number | null;
   tables?: number | null;
   connections?: number | null;
   maxConnections?: number | null;
@@ -103,6 +143,15 @@ export type DatabaseSeriesPoint = {
 
 export type DatabaseMetricsResponse = {
   ok: boolean;
+  insights?: Array<{
+    count?: number;
+    avg?: { queryDurationMs?: number };
+    sum?: { rowsRead?: number; rowsWritten?: number; rowsReturned?: number };
+    dimensions?: { query?: string };
+  }>;
+  insightsWarning?: string | null;
+  start?: string;
+  end?: string;
   source: DatabaseSource;
   range: string;
   kpis: {
@@ -191,19 +240,27 @@ export type DatabaseQueryResponse = {
   requires_destructive_confirmation?: boolean;
 };
 
-export type DatabaseStudioClient = ReturnType<typeof createDatabaseStudioClient>;
+export type DatabaseStudioClient = ReturnType<
+  typeof createDatabaseStudioClient
+>;
 
-export type DatabaseHttpFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+export type DatabaseHttpFetch = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>;
 
 export type DatabaseStudioClientOptions = {
   fetch?: DatabaseHttpFetch;
 };
 
-
 async function readJson<T>(response: Response): Promise<T> {
-  const body = (await response.json().catch(() => ({}))) as T & { error?: string };
+  const body = (await response.json().catch(() => ({}))) as T & {
+    error?: string;
+  };
   if (!response.ok) {
-    const error = new Error(body?.error || `Database request failed (${response.status})`);
+    const error = new Error(
+      body?.error || `Database request failed (${response.status})`,
+    );
     Object.assign(error, body, { status: response.status });
     throw error;
   }
@@ -233,8 +290,44 @@ export function createDatabaseStudioClient(
       const response = await fetchJson<DatabaseSourcesResponse>("/sources");
       return {
         ...response,
-        sources: (response.sources || []).map((source) => normalizeDatabaseSource(source)),
+        sources: (response.sources || []).map((source) =>
+          normalizeDatabaseSource(source),
+        ),
       };
+    },
+
+    management(action: string, input: Record<string, unknown>) {
+      return fetchJson<{ ok: boolean; result: Record<string, any> }>(
+        "/resources",
+        { method: "POST", body: JSON.stringify({ action, ...input }) },
+      );
+    },
+
+    accountMetrics(accountId: string, range: string) {
+      return fetchJson<{
+        ok: boolean;
+        account_id: string;
+        range: string;
+        totals?: Record<string, number>;
+        databases?: Array<{
+          databaseId: string;
+          queries: number;
+          rowsRead: number;
+          rowsWritten: number;
+        }>;
+        captured_at?: string;
+        start?: string;
+        end?: string;
+        warning?: string;
+        billing?: {
+          status: string;
+          message?: string;
+          info?: unknown;
+          usage?: unknown;
+        };
+      }>(
+        `/account-metrics?${new URLSearchParams({ account_id: accountId, range })}`,
+      );
     },
 
     metrics(sourceId: string, range: string) {
@@ -244,23 +337,36 @@ export function createDatabaseStudioClient(
 
     listTables(sourceId: string) {
       const query = new URLSearchParams({ source_id: sourceId });
-      return fetchJson<{ ok: boolean; source: DatabaseSource; tables: DatabaseTableInfo[] }>(
-        `/tables?${query}`,
-      );
+      return fetchJson<{
+        ok: boolean;
+        source: DatabaseSource;
+        tables: DatabaseTableInfo[];
+      }>(`/tables?${query}`);
     },
 
     schema(sourceId: string, table: DatabaseTableInfo) {
-      const query = new URLSearchParams({ source_id: sourceId, table: table.name });
+      const query = new URLSearchParams({
+        source_id: sourceId,
+        table: table.name,
+      });
       if (table.schema) query.set("schema", table.schema);
-      return fetchJson<{ ok: boolean; source: DatabaseSource; schema: DatabaseSchemaInfo }>(
-        `/schema?${query}`,
-      );
+      return fetchJson<{
+        ok: boolean;
+        source: DatabaseSource;
+        schema: DatabaseSchemaInfo;
+      }>(`/schema?${query}`);
     },
 
     rows(
       sourceId: string,
       table: DatabaseTableInfo,
-      options: { page?: number; limit?: number; sort?: string; dir?: "asc" | "desc" } = {},
+      options: {
+        page?: number;
+        limit?: number;
+        sort?: string;
+        dir?: "asc" | "desc";
+        filter?: string;
+      } = {},
     ) {
       const query = new URLSearchParams({
         source_id: sourceId,
@@ -271,54 +377,70 @@ export function createDatabaseStudioClient(
       if (table.schema) query.set("schema", table.schema);
       if (options.sort) query.set("sort", options.sort);
       if (options.dir) query.set("dir", options.dir);
+      if (options.filter) query.set("filter", options.filter);
       return fetchJson<DatabaseRowsResponse>(`/rows?${query}`);
     },
 
-    query(sourceId: string, input: {
-      sql: string;
-      params?: unknown[];
-      studio_approved?: boolean;
-      destructive_confirmed?: boolean;
-    }) {
+    query(
+      sourceId: string,
+      input: {
+        sql: string;
+        params?: unknown[];
+        studio_approved?: boolean;
+        destructive_confirmed?: boolean;
+      },
+    ) {
       return fetchJson<DatabaseQueryResponse>("/query", {
         method: "POST",
         body: JSON.stringify({ source_id: sourceId, ...input }),
       });
     },
 
-    ddl(sourceId: string, input: {
-      action:
-        | "create_table"
-        | "drop_table"
-        | "alter_table_add_column"
-        | "create_index"
-        | "drop_index"
-        | string;
-      table_name?: string;
-      schema?: string;
-      columns?: Array<{
-        name: string;
-        type?: string;
+    ddl(
+      sourceId: string,
+      input: {
+        action:
+          | "create_table"
+          | "drop_table"
+          | "alter_table_add_column"
+          | "create_index"
+          | "drop_index"
+          | string;
+        table_name?: string;
+        schema?: string;
+        columns?: Array<{
+          name: string;
+          type?: string;
+          nullable?: boolean;
+          primaryKey?: boolean;
+          unique?: boolean;
+          defaultValue?: string | null;
+        }>;
+        column?: {
+          name: string;
+          type?: string;
+          nullable?: boolean;
+          defaultValue?: string | null;
+        };
+        column_name?: string;
+        new_name?: string;
+        column_type?: string;
         nullable?: boolean;
-        primaryKey?: boolean;
+        default_value?: string;
+        constraint_name?: string;
+        ref_table?: string;
+        ref_column?: string;
+        ref_schema?: string;
+        index_name?: string;
+        index_columns?: string[];
         unique?: boolean;
-        defaultValue?: string | null;
-      }>;
-      column?: {
-        name: string;
-        type?: string;
-        nullable?: boolean;
-        defaultValue?: string | null;
-      };
-      index_name?: string;
-      index_columns?: string[];
-      unique?: boolean;
-      if_exists?: boolean;
-      if_not_exists?: boolean;
-      preview_only?: boolean;
-      studio_approved?: boolean;
-      destructive_confirmed?: boolean;
-    }) {
+        if_exists?: boolean;
+        if_not_exists?: boolean;
+        preview_only?: boolean;
+        studio_approved?: boolean;
+        destructive_confirmed?: boolean;
+      },
+    ) {
       return fetchJson<{
         ok: boolean;
         preview?: boolean;
@@ -340,37 +462,51 @@ export function createDatabaseStudioClient(
       });
     },
 
-    createTable(sourceId: string, input: {
-      table_name: string;
-      schema?: string;
-      columns: Array<{
-        name: string;
-        type?: string;
-        nullable?: boolean;
-        primaryKey?: boolean;
-        unique?: boolean;
-        defaultValue?: string | null;
-      }>;
-      preview_only?: boolean;
-      studio_approved?: boolean;
-      destructive_confirmed?: boolean;
-    }) {
+    createTable(
+      sourceId: string,
+      input: {
+        table_name: string;
+        schema?: string;
+        columns: Array<{
+          name: string;
+          type?: string;
+          nullable?: boolean;
+          primaryKey?: boolean;
+          unique?: boolean;
+          defaultValue?: string | null;
+        }>;
+        preview_only?: boolean;
+        studio_approved?: boolean;
+        destructive_confirmed?: boolean;
+      },
+    ) {
       return this.ddl(sourceId, { action: "create_table", ...input });
     },
 
-    dropTable(sourceId: string, input: {
-      table_name: string;
-      schema?: string;
-      if_exists?: boolean;
-      preview_only?: boolean;
-      studio_approved?: boolean;
-      destructive_confirmed?: boolean;
-    }) {
+    dropTable(
+      sourceId: string,
+      input: {
+        table_name: string;
+        schema?: string;
+        if_exists?: boolean;
+        confirm_name?: string;
+        preview_only?: boolean;
+        studio_approved?: boolean;
+        destructive_confirmed?: boolean;
+      },
+    ) {
       return this.ddl(sourceId, { action: "drop_table", ...input });
     },
 
-    insert(sourceId: string, table: DatabaseTableInfo, values: Record<string, unknown>) {
-      return fetchJson<{ ok: boolean; result: { changes?: number; row?: unknown } }>("/rows", {
+    insert(
+      sourceId: string,
+      table: DatabaseTableInfo,
+      values: Record<string, unknown>,
+    ) {
+      return fetchJson<{
+        ok: boolean;
+        result: { changes?: number; row?: unknown };
+      }>("/rows", {
         method: "POST",
         body: JSON.stringify({
           source_id: sourceId,
@@ -387,7 +523,10 @@ export function createDatabaseStudioClient(
       values: Record<string, unknown>,
       where: Record<string, unknown>,
     ) {
-      return fetchJson<{ ok: boolean; result: { changes?: number; rows?: unknown[] } }>("/rows", {
+      return fetchJson<{
+        ok: boolean;
+        result: { changes?: number; rows?: unknown[] };
+      }>("/rows", {
         method: "PATCH",
         body: JSON.stringify({
           source_id: sourceId,
@@ -399,8 +538,15 @@ export function createDatabaseStudioClient(
       });
     },
 
-    delete(sourceId: string, table: DatabaseTableInfo, where: Record<string, unknown>) {
-      return fetchJson<{ ok: boolean; result: { changes?: number; rows?: unknown[] } }>("/rows", {
+    delete(
+      sourceId: string,
+      table: DatabaseTableInfo,
+      where: Record<string, unknown>,
+    ) {
+      return fetchJson<{
+        ok: boolean;
+        result: { changes?: number; rows?: unknown[] };
+      }>("/rows", {
         method: "DELETE",
         body: JSON.stringify({
           source_id: sourceId,

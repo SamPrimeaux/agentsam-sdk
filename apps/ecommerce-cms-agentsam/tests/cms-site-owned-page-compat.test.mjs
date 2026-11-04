@@ -39,21 +39,17 @@ function fixture() {
              ('s-empty','alice','New Store','new-store','active',0),
              ('s-b','bob','B Store','store-b','active',1);
     CREATE TABLE cms_pages (
-      id TEXT PRIMARY KEY,
-      site_id TEXT NOT NULL REFERENCES cms_sites(id), slug TEXT NOT NULL,
-      route_path TEXT NOT NULL, title TEXT NOT NULL,
-      page_type TEXT NOT NULL CHECK(page_type IN ('home','about','custom','post','landing','product')),
-      description TEXT, status TEXT NOT NULL DEFAULT 'draft', updated_at INTEGER NOT NULL,
-      created_at INTEGER NOT NULL, meta_description TEXT, seo_title TEXT,
-      canonical_url TEXT, robots TEXT DEFAULT 'index,follow', og_image_asset_id TEXT,
-      r2_bucket TEXT, r2_key TEXT, r2_url TEXT, content_type TEXT DEFAULT 'text/html',
-      content_size_bytes INTEGER DEFAULT 0, config_json TEXT DEFAULT '{}',
-      seo_json TEXT DEFAULT '{}', analytics_json TEXT DEFAULT '{}',
-      metadata_json TEXT NOT NULL DEFAULT '{}', is_system_page INTEGER DEFAULT 0,
-      requires_auth INTEGER DEFAULT 0, nav_visible INTEGER NOT NULL DEFAULT 1,
-      sort_order INTEGER NOT NULL DEFAULT 0, published_at INTEGER, archived_at INTEGER,
-      published_manifest_r2_key TEXT, template_sku TEXT,
-      UNIQUE(site_id, slug), UNIQUE(site_id, route_path)
+      id TEXT PRIMARY KEY, site_id TEXT NOT NULL REFERENCES cms_sites(id),
+      slug TEXT NOT NULL, route_path TEXT NOT NULL,
+      page_type TEXT NOT NULL DEFAULT 'page', title TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','archived')),
+      seo_json TEXT NOT NULL DEFAULT '{}', metadata_json TEXT NOT NULL DEFAULT '{}',
+      definition_id TEXT, template_sku TEXT,
+      requires_auth INTEGER NOT NULL DEFAULT 0, nav_visible INTEGER NOT NULL DEFAULT 1,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      content_object_key TEXT, published_manifest_object_key TEXT, published_at INTEGER,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()), updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      UNIQUE(site_id,slug), UNIQUE(site_id,route_path)
     );
     INSERT INTO cms_pages(id,site_id,slug,route_path,title,page_type,status,updated_at,created_at)
       VALUES ('pa','s-a','home','/','Alice Home','home','published',1700000000,1700000000),
@@ -62,7 +58,12 @@ function fixture() {
     CREATE TABLE cms_page_sections (
       id TEXT PRIMARY KEY, page_id TEXT NOT NULL REFERENCES cms_pages(id),
       section_key TEXT,section_type TEXT,section_name TEXT,section_data TEXT,
-      sort_order INTEGER DEFAULT 0,is_visible INTEGER DEFAULT 1
+      sort_order INTEGER DEFAULT 0,is_visible INTEGER DEFAULT 1,
+      r2_bucket TEXT, draft_r2_key TEXT, published_r2_key TEXT, content_hash TEXT, updated_at TEXT
+    );
+    CREATE TABLE cms_revisions (
+      account_id TEXT, site_id TEXT, entity_type TEXT, entity_id TEXT, revision_number INTEGER,
+      revision_kind TEXT, content_object_key TEXT, content_hash TEXT, snapshot_json TEXT, metadata_json TEXT
     );
     INSERT INTO cms_page_sections(id,page_id,section_key,section_type,section_name,section_data,is_visible)
       VALUES ('hero-a','pa','hero','hero','Hero','{"headline":"Hello Alice"}',1),
@@ -104,7 +105,7 @@ test("new page creation and draft updates operate on the existing table without 
     const inserted = sql.prepare("SELECT site_id, page_type, status FROM cms_pages WHERE id=?")
       .get(created.page.id);
     assert.deepEqual({ ...inserted }, {
-      site_id: "s-a", page_type: "custom", status: "draft"
+      site_id: "s-a", page_type: "page", status: "draft"
     }, "new pages must be owned by the canonical site id");
     const updated=await updatePageMetaForSite(env,"alice","journal","s-a",created.page.id,{
       title:"Journal and Stories"

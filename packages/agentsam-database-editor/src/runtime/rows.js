@@ -29,16 +29,19 @@ export async function readTableRows(adapter, source, params) {
     throw new Error('invalid_sort_column');
   }
 
+  const filter = clean(get('filter'));
   const engine = String(source?.engine || adapter.dialect || '').toLowerCase();
   if (engine.includes('postgres')) {
     const qualified = `${quoteIdent(schema || 'public')}.${quoteIdent(table)}`;
     const order = sort ? ` ORDER BY ${quoteIdent(sort)} ${dir}` : '';
+    const where = filter && columns.length ? " WHERE (" + columns.map(column => "CAST(" + quoteIdent(column.name) + " AS TEXT) ILIKE $1").join(" OR ") + ")" : "";
+    const values = where ? ["%" + filter + "%"] : [];
     const [data, count] = await Promise.all([
       adapter.query({
-        sql: `SELECT * FROM ${qualified}${order} LIMIT $1 OFFSET $2`,
-        params: [limit, offset],
+        sql: `SELECT * FROM ${qualified}${where}${order} LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+        params: [...values, limit, offset],
       }),
-      adapter.query({ sql: `SELECT COUNT(*)::bigint AS count FROM ${qualified}` }),
+      adapter.query({ sql: `SELECT COUNT(*)::bigint AS count FROM ${qualified}${where}`, params: values }),
     ]);
     const total = Number(count.objects?.[0]?.count || 0) || 0;
     return {
@@ -53,12 +56,14 @@ export async function readTableRows(adapter, source, params) {
 
   const qualified = quoteIdent(table);
   const order = sort ? ` ORDER BY ${quoteIdent(sort)} ${dir}` : '';
+  const where = filter && columns.length ? " WHERE (" + columns.map(column => "CAST(" + quoteIdent(column.name) + " AS TEXT) LIKE ?").join(" OR ") + ")" : "";
+  const values = where ? columns.map(() => "%" + filter + "%") : [];
   const [data, count] = await Promise.all([
     adapter.query({
-      sql: `SELECT * FROM ${qualified}${order} LIMIT ? OFFSET ?`,
-      params: [limit, offset],
+      sql: `SELECT * FROM ${qualified}${where}${order} LIMIT ? OFFSET ?`,
+      params: [...values, limit, offset],
     }),
-    adapter.query({ sql: `SELECT COUNT(*) AS count FROM ${qualified}` }),
+    adapter.query({ sql: `SELECT COUNT(*) AS count FROM ${qualified}${where}`, params: values }),
   ]);
   const total = Number(count.objects?.[0]?.count || 0) || 0;
   return {

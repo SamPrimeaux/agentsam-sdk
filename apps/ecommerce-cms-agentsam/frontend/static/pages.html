@@ -83,6 +83,7 @@ let allPages = [];
 let availableSites = [];
 let selectedSiteId = null;
 let selectedSiteSlug = null;
+let selectedThemeProject = null;
 const siteSelect = document.getElementById("pages-site-select");
 const addPageDialog = document.getElementById("add-page-dialog");
 const addPageForm = document.getElementById("add-page-form");
@@ -117,15 +118,21 @@ function renderRows(pages) {
   }
 
   body.innerHTML = pages.map((p) => {
-    const badge = p.content_authority === "cms-draft-linked"
+    const themePage = p.source === 'theme-project';
+    const badge = themePage
+      ? {label:'Theme draft',cls:'pages-badge pages-badge--hidden'}
+      : p.content_authority === "cms-draft-linked"
       ? { label: "Live site · editable draft", cls: "pages-badge pages-badge--visible" }
       : p.content_authority === "storefront-html"
         ? { label: "Live site · sync required", cls: "pages-badge pages-badge--visible" }
         : visibilityBadge(p.status || "draft");
     const query = identityQuery(p);
-    const editHref = `/admin/page-edit?${query}`;
-    const designHref = `/admin/theme-editor?${query}`;
-    const sourceHref = p.content_authority === "storefront-html"
+    const editHref = themePage
+      ? '/admin/theme-project-editor?'+new URLSearchParams({
+        project:p.project_id,site_id:selectedSiteId,page:p.slug}).toString()
+      : `/admin/page-edit?${query}`;
+    const designHref = themePage ? editHref : `/admin/theme-editor?${query}`;
+    const sourceHref = !themePage && p.content_authority === "storefront-html"
       ? `<a href="/admin/theme-editor?${cmsEscapeAttr(sourceEditorQuery(p))}" class="btn ghost small" onclick="event.stopPropagation()">Edit HTML source</a>`
       : "";
     return `
@@ -220,6 +227,8 @@ addPageForm?.addEventListener("submit", async (event) => {
   createPageButton.textContent = "Creating…";
   addPageError.hidden = true;
   try {
+    // Content pages belong to the site, not the currently selected theme.
+    // Switching templates must never take a merchant's pages away.
     const result = await cmsAdminFetch("/api/admin/cms/pages", {
       method: "POST",
       body: JSON.stringify({ title, slug, page_type: "standard" }),
@@ -277,18 +286,37 @@ addPageForm?.addEventListener("submit", async (event) => {
       history.replaceState(null, "", currentUrl);
     }
 
-    const data = await cmsAdminFetch("/api/admin/cms/pages");
+    const [data,themeData] = await Promise.all([
+      cmsAdminFetch('/api/admin/cms/pages'),
+      cmsAdminFetch('/api/admin/cms/theme-projects'),
+    ]);
+    selectedThemeProject=themeData?.projects?.[0]||null;
     // Global theme settings are edited in Theme Editor, not listed as a
     // customer-facing route in the Pages inventory.
-    allPages = (data.pages || []).filter(page => page.slug !== "site");
+    const canonicalPages=(data.pages||[]).filter(page=>page.slug!=='site');
+    const existingSlugs=new Set(canonicalPages.map(page=>page.slug));
+    const installedPages=(selectedThemeProject?.pages||[])
+      .filter(page=>!existingSlugs.has(page.slug))
+      .map(page=>({
+        slug:page.slug,title:page.title,project_id:selectedThemeProject.id,
+        site_id:selectedSiteId,source:'theme-project',status:'draft',
+        preview:'Editable theme page',route_path:page.slug==='home'?'/':'/'+page.slug,
+      }));
+    allPages=[...canonicalPages,...installedPages];
     const site = data.site || availableSites.find(item => item.id === selectedSiteId);
     selectedSiteSlug = site?.slug || availableSites.find(item => item.id === selectedSiteId)?.slug || null;
     const home = allPages.find(page => page.slug === "home") || allPages[0] || { slug: "site" };
     const editSiteQuery = new URLSearchParams({ slug: home.slug, site_id: selectedSiteId });
     if (home.id) editSiteQuery.set("page_id", home.id);
-    document.getElementById("edit-site-design").href = "/admin/theme-editor?" + editSiteQuery.toString();
+    document.getElementById("edit-site-design").href = selectedThemeProject
+      ? '/admin/theme-project-editor?'+new URLSearchParams({
+        project:selectedThemeProject.id,site_id:selectedSiteId,
+        page:selectedThemeProject.pages?.find(p=>p.slug==='home')?.slug||
+          selectedThemeProject.pages?.[0]?.slug||'home',
+      }).toString()
+      : "/admin/theme-editor?" + editSiteQuery.toString();
     document.querySelector(".pages-hub-heading p").textContent =
-      `Manage ${allPages.length} pages for ${site?.name || site?.slug || "this site"} (${site?.slug || selectedSiteId}).`;
+      `Manage ${allPages.length} editable pages for ${site?.name || site?.slug || "this site"} (${site?.slug || selectedSiteId}).`;
     document.getElementById("add-page-btn").disabled = false;
     renderRows(allPages);
     if (!allPages.length) {
