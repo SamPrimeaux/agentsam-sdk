@@ -52,6 +52,17 @@ test('package chrome remains its own source when already present', () => {
   assert.equal(fillMissingThemeChrome(installed, 'Store').pages[0].sections.length, sections.length);
 });
 
+test('packaged markup with a static shell is not doubled by neutral fallbacks', () => {
+  const packaged = require('../frontend/static/data/site-theme-projects/plain-jane-0.1.0.json');
+  const filled = fillMissingThemeChrome(packaged, 'Merchant Store');
+  for (const page of filled.pages) {
+    assert.equal(page.sections.some(s => s.key === 'site_header'), false);
+    assert.equal(page.sections.some(s => s.key === 'site_footer'), false);
+    assert.equal((page.template.match(/<header\b/gi) || []).length, 1);
+    assert.equal((page.template.match(/<footer\b/gi) || []).length, 1);
+  }
+});
+
 test('announcement, navigation and footer edits persist once for the installed site', async () => withDomParser(async win => {
   let saved = projectFor('My Store');
   const store = { async get() { return structuredClone(saved); }, async save(value) { saved = structuredClone(value); return saved; } };

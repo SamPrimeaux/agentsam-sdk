@@ -95,12 +95,17 @@ export function fillMissingThemeChrome(project, siteName = 'My Store') {
   for (const page of copy.pages || []) {
     const source = page.sections || [];
     const sourceMarkup = source.map(s => s.html).join(' ');
+    const template = String(page.template || '');
     const has = {
       announcement: source.some(s => /announcement|ticker|promo-bar/i.test(s.sourceKind || '') ||
-        /announcement|ticker|promo-bar/i.test(s.html)),
-      header: source.some(s => s.globalKey === 'site-header' || s.sourceKind === 'site-header' || /^\s*<header\b/i.test(s.html)),
-      footer: source.some(s => s.globalKey === 'site-footer' || s.sourceKind === 'site-footer' || /^\s*<footer\b/i.test(s.html)),
-      popup: /popup|modal|newsletter-overlay/i.test(sourceMarkup),
+        /announcement|ticker|promo-bar/i.test(s.html)) ||
+        /class=["'][^"']*(?:announcement|ticker|promo-bar)/i.test(template),
+      header: source.some(s => s.globalKey === 'site-header' || s.sourceKind === 'site-header' || /^\s*<header\b/i.test(s.html)) ||
+        /<header\b/i.test(template),
+      footer: source.some(s => s.globalKey === 'site-footer' || s.sourceKind === 'site-footer' || /^\s*<footer\b/i.test(s.html)) ||
+        /<footer\b/i.test(template),
+      popup: /popup|modal|newsletter-overlay/i.test(sourceMarkup) ||
+        /class=["'][^"']*(?:popup|newsletter-overlay)/i.test(template),
     };
     const head = [];
     if (!has.announcement) head.push(chrome.announcementBar);
