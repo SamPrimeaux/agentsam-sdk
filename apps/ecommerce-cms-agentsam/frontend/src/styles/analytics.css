@@ -923,3 +923,5 @@ input, select, textarea { font: inherit; color: inherit; }
 /* Utility for SVG charts */
 .axis-label { font-family: var(--mono); font-size: 10px; fill: var(--fg-3); }
 .grid-line { stroke: var(--line-soft); stroke-dasharray: 2 3; }
+
+.card-spaced { margin-top: 14px; }

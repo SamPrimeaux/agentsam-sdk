@@ -13,10 +13,10 @@ This package owns reusable visual mechanics only:
 - horizontal bars
 - formatting/type primitives
 
-It does not own commerce semantics, AgentSam runtime semantics, routing,
+It does not own financial data, AgentSam runtime semantics, routing,
 authentication, D1 queries, Basin queries, or tenant policy.
 
 First-class vertical consumers:
 
-- `@inneranimalmedia/commerce-analytics`
+- `@inneranimalmedia/financial-analytics` (universal financial metrics)
 - `@inneranimalmedia/agentsam-analytics`

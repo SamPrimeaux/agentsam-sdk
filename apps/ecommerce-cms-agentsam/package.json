@@ -37,9 +37,9 @@
   },
   "devDependencies": {
     "esbuild": "0.28.2",
-    "wrangler": "4.149.0",
+    "json-schema-to-ts": "3.1.1",
     "typescript": "~6.0.2",
-    "json-schema-to-ts": "3.1.1"
+    "wrangler": "^4.157.0"
   },
   "files": [
     ".agentsam/app.json",
