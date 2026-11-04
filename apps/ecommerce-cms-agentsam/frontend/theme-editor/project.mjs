@@ -76,6 +76,25 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
   return { slug, title, assetBase: baseUrl, status: 'draft', template: '<!DOCTYPE html>' + doc.documentElement.outerHTML, sections };
 }
 
+/**
+ * An iframe srcdoc runs on the AgentSam origin, not the Theme Store origin.
+ * Root-relative paths ignore <base>, so package CSS/images must resolve to
+ * their immutable release host. Restrict rewriting to this release's prefix.
+ */
+export function absolutizeThemePreviewPaths(html, baseUrl) {
+  if (!baseUrl || typeof html !== 'string') return html;
+  let origin, prefix;
+  try {
+    const url = new URL(baseUrl);
+    if (!['https:', 'http:'].includes(url.protocol)) return html;
+    origin = url.origin;
+    prefix = url.pathname.endsWith('/') ? url.pathname : url.pathname + '/';
+  } catch { return html; }
+  if (!/^\/theme-packages\/[a-z0-9-]+\/\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?\/preview\/$/.test(prefix)) return html;
+  return html.replace(/(\b(?:href|src|poster)\s*=\s*)(["'])(\/theme-packages\/[^"'\s<>]*)\2/g, (match, start, quote, value) =>
+    value.startsWith(prefix) ? start + quote + origin + value + quote : match);
+}
+
 export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
   const fragments = page.sections.filter((s) => s.content.__editor?.visibility?.enabled !== false).map((section) => {
     const doc = new DOMParser().parseFromString(section.html, 'text/html');
@@ -118,7 +137,7 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
   const vars = Object.entries(tokens).filter(([k]) => /^--[a-zA-Z0-9-]+$/.test(k)).map(([k, v]) => `${k}:${String(v).replace(/[<>;]/g, '')}`).join(';');
   html = html.replace('</head>', `<style>:root{${vars}}</style></head>`);
   html = html.replace('</body>', `<script>document.addEventListener('click',function(e){const s=e.target.closest('[data-theme-section]');if(!s)return;e.preventDefault();const b=e.target.closest('[data-theme-block-id]');parent.postMessage({type:'agentsam:theme-preview-select',section:s.dataset.themeSection,block:b?b.dataset.themeBlockId:null},'*')});<\/script></body>`);
-  return html;
+  return absolutizeThemePreviewPaths(html, baseUrl);
 }
 
 /** Store is injected: IndexedDB, filesystem, SQLite or HTTP all share the same editing model. */
