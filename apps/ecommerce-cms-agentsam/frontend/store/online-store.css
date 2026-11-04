@@ -605,7 +605,7 @@
 .online-store-draft-thumb{width:170px;height:96px;position:relative;background:#eee}
 .online-store-draft-thumb img{width:100%;height:100%;object-fit:cover;object-position:top}
 .online-store-draft-thumb iframe{border:0;width:1440px;height:813px;transform:scale(.11806);transform-origin:top left;pointer-events:none;position:absolute;inset:0}
-.online-store-drafts:empty,.online-store-drafts-head:has(+.online-store-drafts:empty){display:none}
+.online-store-drafts:empty{display:none}
 @media(max-width:680px){
  .online-store{padding:18px 14px 90px;gap:20px}
  .online-store-theme-meta{padding:32px 14px 14px;gap:8px}

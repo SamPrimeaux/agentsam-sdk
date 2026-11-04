@@ -79,6 +79,17 @@ async function boot() {
     siteId=overview.selected_site_id;
   }
   if (!siteId) { location.replace('/admin/store'); return; }
+  if(parameters.get('new')==='1'){
+    const { prepareNewTheme }=await import('/theme-editor/new-theme.mjs');
+    const created=await prepareNewTheme({request:jsonRequest,save:project=>store.save(project),siteId});
+    projectId=created.id;
+    parameters.delete('new');
+    const createdUrl=new URL(location.href);
+    createdUrl.searchParams.delete('new');
+    createdUrl.searchParams.set('site_id',siteId);
+    createdUrl.searchParams.set('project',projectId);
+    history.replaceState(history.state,'',createdUrl.pathname+createdUrl.search);
+  }
   // List only this site's authorized projects before accepting a URL hint.
   const listing=await jsonRequest(scoped(API));
   const projects=Array.isArray(listing.projects)?listing.projects:[];

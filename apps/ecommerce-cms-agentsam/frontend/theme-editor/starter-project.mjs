@@ -190,3 +190,19 @@ export function inheritDefaultTemplates(project) {
   }
   return {project:result,changed};
 }
+
+
+/** An authored blank draft; no customer page or fixture content is imported. */
+export function blankThemeProject({ name, purpose, audience, siteName }) {
+  return {
+    schema: 'agentsam.theme-project.v1',
+    id: 'theme_' + crypto.randomUUID().replaceAll('-', ''),
+    name: name.trim(),
+    tokens: {},
+    brief: { purpose: purpose.trim(), audience: audience.trim(), siteName },
+    pages: [{
+      slug: 'home', title: 'Home', sections: [],
+      template: '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title></head><body><main></main></body></html>',
+    }],
+  };
+}

@@ -112,6 +112,7 @@ try {
     '/admin/js/theme-project-editor-bootstrap.mjs',
     '/theme-editor/project.mjs', '/theme-editor/bridge.mjs', '/theme-editor/mount.mjs',
     '/theme-editor/starter-project.mjs', '/theme-editor/starter-products.mjs', '/theme-editor/starter-chrome.mjs',
+    '/theme-editor/new-theme.mjs',
   ]) {
     const response = await request(pathname);
     const type = response.headers.get('content-type') || '';

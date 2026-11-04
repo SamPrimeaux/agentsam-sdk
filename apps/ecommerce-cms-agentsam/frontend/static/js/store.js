@@ -60,7 +60,7 @@ renderShell("/admin/store", `
       <div>
         <h2>Draft themes</h2>
       </div>
-      <button type="button" class="btn ghost small" id="import-theme-btn">Import <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="online-store-actions"><a class="btn ghost small" id="new-theme-btn" hidden>+ New</a><button type="button" class="btn ghost small" id="import-theme-btn">Import <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
     </header>
 
     <section class="online-store-card online-store-drafts" id="draft-themes" aria-label="Draft themes"></section>
@@ -399,6 +399,11 @@ function showActiveTheme(theme,siteId) {
     // The editor revalidates ownership against /api/admin/cms/sites.
     if (sites.some(site=>site.id===d.selected_site_id)) {
       try {sessionStorage.setItem('agentsam.cms.selected-site.v1',d.selected_site_id);} catch {}
+    }
+    const createTheme=document.getElementById('new-theme-btn');
+    if(createTheme && d.selected_site_id){
+      createTheme.href='/admin/theme-project-editor?new=1&site_id='+encodeURIComponent(d.selected_site_id);
+      createTheme.hidden=false;
     }
     const externalStore = document.getElementById('browse-themes-shortcut');
     if (externalStore) {
