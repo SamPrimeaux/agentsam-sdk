@@ -41,6 +41,44 @@ window.PAGE_ROUTES = window.AgentSamThemeEditorHost ? (window.AgentSamThemeEdito
 
 window.PAGE_SLUG_ORDER = window.AgentSamThemeEditorHost ? [] : ["home", "shop", "about", "community", "collaborate", "policies", "terms", "site"];
 
+// Single source for the page-type dropdowns (Add page dialog + page editor).
+// Mirrors PAGE_TYPES in backend/cms/site-owned-page-adapter.mjs minus the
+// system-owned types (auth, portal, dashboard, sitemap), which are not
+// user-creatable. The backend remains the validator.
+window.CMS_PAGE_TYPES = [
+  { value: "standard",   label: "Standard page",       help: "A general content page." },
+  { value: "about",      label: "About",               help: "Story, team, mission." },
+  { value: "services",   label: "Services",            help: "What you offer." },
+  { value: "work",       label: "Work / portfolio",    help: "Gallery of projects." },
+  { value: "case_study", label: "Case study",          help: "One project in depth." },
+  { value: "product",    label: "Product display",     help: "Single product or feature profile." },
+  { value: "collection", label: "Collection",          help: "A grouped set of products." },
+  { value: "blog",       label: "Blog (index)",        help: "List of posts." },
+  { value: "post",       label: "Blog post (article)", help: "A single article." },
+  { value: "landing",    label: "Landing page",        help: "Campaign or promo page." },
+  { value: "pricing",    label: "Pricing",             help: "Plans and tiers." },
+  { value: "faq",        label: "FAQ",                 help: "Questions and answers." },
+  { value: "contact",    label: "Contact",             help: "Form and details." },
+  { value: "privacy",    label: "Privacy policy",      help: "Legal." },
+  { value: "terms",      label: "Terms",               help: "Legal." },
+  { value: "custom",     label: "Custom",              help: "Free-form page." },
+];
+
+window.cmsPageTypeOptions = function cmsPageTypeOptions(selected) {
+  const list = window.CMS_PAGE_TYPES.slice();
+  // Keep unknown/system types visible so an existing page never shows blank.
+  if (selected && !list.some((t) => t.value === selected)) {
+    list.push({ value: selected, label: String(selected).replace(/_/g, " "), help: "" });
+  }
+  return list
+    .map((t) => `<option value="${cmsEscapeAttr(t.value)}"${t.value === selected ? " selected" : ""}>${cmsEscapeHtml(t.label)}</option>`)
+    .join("");
+};
+
+window.cmsPageTypeHelp = function cmsPageTypeHelp(value) {
+  return (window.CMS_PAGE_TYPES.find((t) => t.value === value) || {}).help || "";
+};
+
 window.SECTION_FIELDS = {};
 window.SECTION_SCHEMAS = {};
 window.cmsRegistry = null;
