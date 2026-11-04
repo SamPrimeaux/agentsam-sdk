@@ -69,6 +69,11 @@ renderShell("/admin/pages", `
         <span>URL handle</span>
         <input id="new-page-slug" name="slug" type="text" maxlength="80" placeholder="about-us" required>
       </label>
+      <label class="pages-dialog-field" for="new-page-type">
+        <span>Page type</span>
+        <select id="new-page-type" name="page_type"></select>
+      </label>
+      <p class="pages-dialog-help" id="new-page-type-help"></p>
       <p class="pages-dialog-help">The page will be created as a draft at <strong id="new-page-route">/about-us</strong>. You can add its sections in Theme Editor.</p>
       <p class="pages-dialog-error" id="add-page-error" role="alert" hidden></p>
       <footer class="pages-dialog-actions">
