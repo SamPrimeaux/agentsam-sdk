@@ -316,6 +316,10 @@ function wireDirtyTracking() {
   document.querySelectorAll('input[name="visibility"]').forEach((el) => {
     el.addEventListener("change", () => setDirty(true));
   });
+  document.getElementById("page-type-select")?.addEventListener("change", (event) => {
+    document.getElementById("page-type-help").textContent = cmsPageTypeHelp(event.target.value);
+    setDirty(true);
+  });
 }
 
 function setVisibilityUI(status, updatedAt) {
