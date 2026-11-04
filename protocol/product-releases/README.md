@@ -25,6 +25,42 @@ Finished contract for **versioned installable artifacts**. Complements the live
 | `agentsam_artifacts` | Per-user generated artifacts (`tenant_id` / user scope) |
 | `r2_deploy_manifests` | Empty site-deploy ledger; wrong shape |
 
+## Internal catalog SKU convention (2026-10-31)
+
+`agentsam_products.id` is the permanent identity, `slug` is the canonical lookup,
+and `sku` is a stable **internal reference for the catalog**. It is not a
+merchant merchandise SKU, npm/PyPI distribution name, Stripe product, license,
+price tier, or evidence of a published release.
+
+Existing naming already uses `IA-BLK-*` and `IA-COL-*` for CMS resources.
+For the software product inventory we use `IA-{TYPE}-{UPPERCASE-SLUG}`:
+
+- `APP` applications, `SDK` SDK packages, `SVC` services, `INT` integrations.
+- `CMP` UI components, `THM` themes, `SCR` scripts, `PRD` products.
+- `SEC` sections, `BLK` blocks, `SOL` solutions, `COL` collections, `LINE` product lines.
+
+Examples: `IA-APP-ECOMMERCE-CMS-AGENTSAM`,
+`IA-SDK-AGENTSAM-SDK`, `IA-THM-IASF`.
+
+The pure generator is `scripts/registry/catalog-sku.mjs`. The historical,
+**idempotent** SQL backfill lives in
+`scripts/registry/backfill-catalog-skus.sql`. Applied to
+`inneranimalmedia-business` production on 2026-10-31: 63/63 existing
+catalog rows assigned distinct SKUs, while product IDs, slugs,
+descriptions, statuses and the 126 existing product relationships
+were preserved.
+
+For new entries, generate a SKU only at **identity creation**. Never
+silently recompute existing codes when a product is renamed or reclassified;
+record an explicit alias/migration decision. A populated SKU is not
+proof of a production-quality package or installer. Source manifests,
+npm/PyPI publication, service endpoints, immutable
+`agentsam_product_releases`, commercial offers, and customer installations
+must retain their own authority and evidence.
+
+The two historic Ecommerce/CMS product identities currently remain distinct
+until their source ownership and downstream references are reconciled.
+
 ## Roles
 
 1. **`agentsam_products`** — stable product (`slug`, `kind`, `package_name`, maturity `status`, optional `sku`).
@@ -39,7 +75,7 @@ Required product catalog fields from the 2026-10-28 product decision, mapped:
 
 | Spec field | Column |
 |---|---|
-| sku | `sku` (optional; themes often `iam.theme.<slug>`) |
+| sku | `sku` (optional; internal catalog code is `IA-{TYPE}-{SLUG}`; not a sale or release identifier) |
 | kind (product) | via `agentsam_products.kind` + `artifact_kind` |
 | package | `package_name` |
 | version | `version` |
