@@ -3,6 +3,7 @@
  * No theme-specific routing, D1 schema, UI, or installer lives here.
  */
 import { STARTER_PRODUCT_ILLUSTRATIONS } from './starter-products.mjs';
+import { starterChrome, starterChromeStyles, starterChromeScript } from './starter-chrome.mjs';
 const SAFE = /^[a-z][a-z0-9-]{0,63}$/;
 const html = value => String(value ?? '').replaceAll('&','&amp;')
   .replaceAll('<','&lt;').replaceAll('>','&gt;')
@@ -44,6 +45,7 @@ function sectionFromPreset(source, index, site, sampleProducts) {
   </section>`;
   return {
     key, name:source.type==='hero'?'Hero':heading, type:source.type,
+    zone:'BODY', sourceKind:source.type,
     html:markup, status:'draft', version:0, sort_order:index,
     content:{ eyebrow, heading, body, cta_label:ctaLabel, cta_href:ctaHref,
       ...(samples.length?{sample_label:'Sample products · Replace these illustrations with your own catalog.'}:{}),
@@ -67,12 +69,9 @@ function htmlTemplate(title, site, sections, tokens) {
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>${html(title)} · ${html(site.name)}</title>
   <style>
-    :root{--iam-ink:#18191d;--iam-paper:#f9f8f5;--iam-accent:${accent};color-scheme:light}
+    :root{--iam-ink:#18191d;--iam-paper:#f9f8f5;--iam-accent:${accent};--iam-display:${display};color-scheme:light}
     *{box-sizing:border-box}body{margin:0;background:var(--iam-paper);color:var(--iam-ink);font-family:${body}}
-    .iam-starter-header{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,5vw,84px);border-bottom:1px solid #dddcd6;gap:20px}
-    .iam-starter-brand{font-family:${display};font-size:1.4rem;font-weight:700;text-decoration:none;color:inherit}
-    .iam-starter-nav{display:flex;flex-wrap:wrap;gap:24px}
-    .iam-starter-nav a{color:inherit;text-decoration:none;font-size:.85rem}
+    ${starterChromeStyles}
     .iam-starter-section{padding:clamp(65px,9vw,144px) clamp(20px,6vw,96px);border-bottom:1px solid #deded8}
     .iam-starter-section:nth-of-type(even){background:#f0f1ed}
     .iam-starter-wrap{max-width:1200px;margin:auto}
@@ -87,14 +86,12 @@ function htmlTemplate(title, site, sections, tokens) {
     .iam-starter-product h3{font:500 .9rem/1.4 ${body};margin:12px 0 3px;overflow-wrap:anywhere}
     .iam-starter-product p{font-size:.85rem;margin:0}.iam-starter-sample-note{font-size:.8rem;color:#54565b}
     @media(max-width:900px){.iam-starter-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 16px}}
-    .iam-starter-footer{padding:36px clamp(20px,6vw,96px);font-size:.85rem;color:#606166}
-    @media(max-width:680px){.iam-starter-header{align-items:flex-start;flex-direction:column}.iam-starter-nav{gap:17px}.iam-starter-section{padding:68px 20px}}
+    @media(max-width:680px){.iam-starter-section{padding:68px 20px}}
   </style></head><body>
-  <header class="iam-starter-header"><a class="iam-starter-brand" href="/">${html(site.name)}</a>
-    <nav class="iam-starter-nav" aria-label="Main"><a href="/">Home</a><a href="/shop">Shop</a><a href="/about">About</a></nav>
-  </header><main>${sections.map(section=>`<!--theme-section:${section.key}-->`).join('')}
-  </main><footer class="iam-starter-footer">${html(site.name)} · Your website, your story.</footer>
-  </body></html>`;
+  <!--theme-section:announcement_bar--><!--theme-section:site_header-->
+  <main>${sections.filter(section=>section.zone==='BODY').map(section=>`<!--theme-section:${section.key}-->`).join('')}</main>
+  <!--theme-section:site_footer--><!--theme-section:promotion_popup-->
+  ${starterChromeScript}</body></html>`;
 }
 
 export function materializeStarterProject(preset, site) {
@@ -109,7 +106,9 @@ export function materializeStarterProject(preset, site) {
        !Array.isArray(page.sections) || !page.sections.length)
       throw new Error('starter_page_invalid');
     seen.add(page.slug);
-    const sections = page.sections.map((section,i)=>sectionFromPreset(section,i,site,preset.sampleProducts!==false));
+    const bodySections = page.sections.map((section,i)=>sectionFromPreset(section,i,site,preset.sampleProducts!==false));
+    const chrome = starterChrome(site.name.trim() || 'My Store');
+    const sections = [chrome.announcementBar, chrome.header, ...bodySections, chrome.footer, chrome.popup];
     return {slug:page.slug,title:page.title||page.slug,assetBase:'',
       status:'draft',template:htmlTemplate(page.title||page.slug,site,sections,preset.tokens||{}),sections};
   });

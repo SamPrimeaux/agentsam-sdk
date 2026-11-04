@@ -159,7 +159,8 @@ export function absolutizeThemePreviewPaths(html, baseUrl) {
 }
 
 export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
-  const fragments = page.sections.filter((s) => s.content.__editor?.visibility?.enabled !== false).map((section) => {
+  const fragments = page.sections.map((section) => {
+    if (section.content.__editor?.visibility?.enabled === false) return '';
     const doc = new DOMParser().parseFromString(section.html, 'text/html');
     const apply = (doc, fields, content) => {
     for (const field of fields || []) {
@@ -199,7 +200,24 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
   let i = 0;
   const marker = /<!--theme-section:[^>]+-->/g;
   const count = [...page.template.matchAll(marker)].length;
-  let html = page.template.replace(marker, () => ++i === count ? fragments.slice(i - 1).join('') : fragments[i - 1] || '');
+  let html;
+  // The neutral starter has explicit Header / Template / Footer slots.
+  // Inserted body sections stay inside <main>, even after adding blocks to chrome.
+  if (page.template.includes('<!--theme-section:site_header-->') &&
+      page.template.includes('<!--theme-section:site_footer-->')) {
+    const byZone = { HEADER: [], BODY: [], FOOTER: [] };
+    page.sections.forEach((s, index) => byZone[s.zone] ? byZone[s.zone].push(fragments[index]) : byZone.BODY.push(fragments[index]));
+    const zones = new Map(page.sections.map(s => [s.key, s.zone || 'BODY']));
+    const keys = [...page.template.matchAll(/<!--theme-section:([^>]+)-->/g)].map(match => match[1]);
+    const last = Object.fromEntries(['HEADER', 'BODY', 'FOOTER'].map(zone =>
+      [zone, keys.filter(key => zones.get(key) === zone).at(-1)]));
+    html = page.template.replace(/<!--theme-section:([^>]+)-->/g, (_, key) => {
+      const zone = zones.get(key);
+      return zone && last[zone] === key ? byZone[zone].join('') : '';
+    });
+  } else {
+    html = page.template.replace(marker, () => ++i === count ? fragments.slice(i - 1).join('') : fragments[i - 1] || '');
+  }
   if (baseUrl) { const doc = new DOMParser().parseFromString(html, 'text/html'); const base = doc.querySelector('base') || doc.head.prepend(doc.createElement('base')); doc.querySelector('base').href = baseUrl; html = '<!DOCTYPE html>' + doc.documentElement.outerHTML; }
   // Preview tokens live only in the customer document, never the editor chrome.
   const vars = Object.entries(tokens).filter(([k]) => /^--[a-zA-Z0-9-]+$/.test(k)).map(([k, v]) => `${k}:${String(v).replace(/[<>;]/g, '')}`).join(';');
@@ -256,6 +274,20 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
   state.sectionTemplates = installSourceTemplates(state, state.sectionTemplates);
   const get = (slug) => { const p = state.pages.find((p) => p.slug === slug); if (!p) throw new Error('theme_page_not_found'); return p; };
   const section = (slug, key) => { const s = get(slug).sections.find((s) => s.key === key); if (!s) throw new Error('theme_section_not_found'); return s; };
+  const syncGlobal = (slug, s) => {
+    if (!s.globalKey) return;
+    for (const page of state.pages) {
+      if (page.slug === slug) continue;
+      for (const sibling of page.sections.filter(item => item.globalKey === s.globalKey)) {
+        const fieldKeys = item => (item.schema.fields || []).map(field => field.key).join('|');
+        const blockKeys = item => (item.schema.blocks || []).map(block => block.key).join('|');
+        if (fieldKeys(sibling) !== fieldKeys(s) || blockKeys(sibling) !== blockKeys(s)) continue;
+        sibling.content = clone(s.content);
+        sibling.version = Number(sibling.version || 0) + 1;
+        sibling.status = 'draft';
+      }
+    }
+  };
   const persist = async () => {
     const expectedVersion = Number(state.revision || 0);
     const templates = state.sectionTemplates;
@@ -307,19 +339,8 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
       const s = section(slug, key);
       if (s.version !== expectedVersion) { const error = new Error('Draft changed in another editor'); error.status = 409; throw error; }
       s.content = clone(content); s.version += 1; s.status = 'draft';
-      // Shared site chrome: a header/footer edit applies to the installed
-      // site's other pages, not to the immutable marketplace release.
-      if (s.globalKey) for (const p of state.pages) {
-        if (p.slug === slug) continue;
-        for (const sibling of p.sections.filter(item => item.globalKey === s.globalKey)) {
-          const fields = (s.schema.fields || []).map(field => field.key);
-          const siblingFields = (sibling.schema.fields || []).map(field => field.key);
-          if (fields.join('|') !== siblingFields.join('|')) continue;
-          sibling.content = clone(content);
-          sibling.version = Number(sibling.version || 0) + 1;
-          sibling.status = 'draft';
-        }
-      }
+      // Shared site chrome stays synchronized across the installed draft.
+      syncGlobal(slug, s);
       await persist(); return { version: s.version, updated_at: state.updatedAt };
     },
     async addSection(slug, key, toIndex) {
@@ -347,17 +368,17 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
     },
     async removeSection(slug, key) { const p = get(slug); p.sections = p.sections.filter((s) => s.key !== key); await persist(); return {}; },
     async moveSection(slug, key, index) { const p = get(slug); const i = p.sections.findIndex((s) => s.key === key); if (i < 0) throw new Error('theme_section_not_found'); const [s] = p.sections.splice(i, 1); p.sections.splice(index, 0, s); await persist(); return {}; },
-    async setSectionVisibility(slug, key, enabled) { section(slug, key).content.__editor.visibility.enabled = enabled; await persist(); return {}; },
+    async setSectionVisibility(slug, key, enabled) { const s = section(slug, key); s.content.__editor.visibility.enabled = enabled; syncGlobal(slug, s); await persist(); return {}; },
     async addBlock(slug, key, templateKey, toIndex) {
       const s = section(slug, key); const template = s.schema.blocks.find((b) => b.key === templateKey);
       if (!template) throw new Error('theme_block_template_not_found');
       const id = 'block_' + crypto.randomUUID().replaceAll('-', '');
       s.content[id] = clone(template.defaults || {});
-      s.content.__editor.blocks.splice(toIndex, 0, { id, templateKey }); await persist(); return { block_id: id };
+      s.content.__editor.blocks.splice(toIndex, 0, { id, templateKey }); syncGlobal(slug, s); await persist(); return { block_id: id };
     },
-    async duplicateBlock(slug, key, id) { const s = section(slug, key); const blocks = s.content.__editor.blocks; const i = blocks.findIndex((b) => b.id === id); if (i < 0) throw new Error('theme_block_not_found'); const next = 'block_' + crypto.randomUUID().replaceAll('-', ''); s.content[next] = clone(s.content[id]); blocks.splice(i + 1, 0, { ...blocks[i], id: next }); await persist(); return { block_id: next }; },
-    async removeBlock(slug, key, id) { const s = section(slug, key); s.content.__editor.blocks = s.content.__editor.blocks.filter((b) => b.id !== id); delete s.content[id]; await persist(); return {}; },
-    async moveBlock(slug, key, id, index) { const s = section(slug, key); const blocks = s.content.__editor.blocks; const i = blocks.findIndex((b) => b.id === id); if (i < 0) throw new Error('theme_block_not_found'); const [b] = blocks.splice(i, 1); blocks.splice(index, 0, b); await persist(); return {}; },
+    async duplicateBlock(slug, key, id) { const s = section(slug, key); const blocks = s.content.__editor.blocks; const i = blocks.findIndex((b) => b.id === id); if (i < 0) throw new Error('theme_block_not_found'); const next = 'block_' + crypto.randomUUID().replaceAll('-', ''); s.content[next] = clone(s.content[id]); blocks.splice(i + 1, 0, { ...blocks[i], id: next }); syncGlobal(slug, s); await persist(); return { block_id: next }; },
+    async removeBlock(slug, key, id) { const s = section(slug, key); s.content.__editor.blocks = s.content.__editor.blocks.filter((b) => b.id !== id); delete s.content[id]; syncGlobal(slug, s); await persist(); return {}; },
+    async moveBlock(slug, key, id, index) { const s = section(slug, key); const blocks = s.content.__editor.blocks; const i = blocks.findIndex((b) => b.id === id); if (i < 0) throw new Error('theme_block_not_found'); const [b] = blocks.splice(i, 1); blocks.splice(index, 0, b); syncGlobal(slug, s); await persist(); return {}; },
     async publish(slug) { if (!publish) throw new Error('theme_publish_adapter_not_configured'); return publish(clone(state), slug); },
     listMedia: async () => typeof listMedia === 'function' ? clone(await listMedia()) : clone(state.media || []),
     async uploadMedia(files) {

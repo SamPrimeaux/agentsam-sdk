@@ -4,7 +4,7 @@ import { createCmsTestDb } from '../../tests/cms-test-db.mjs';
 import { heuristicStarterPreset } from '../../../../packages/heuristic-theme/src/starter.js';
 import { materializeStarterProject } from '../../frontend/theme-editor/starter-project.mjs';
 import { ensureCmsSiteStarter } from './site-starter.mjs';
-import { getThemeProject, saveThemeProject } from './theme-project-store.mjs';
+import { getThemeProject, saveThemeProject, installThemeDraft } from './theme-project-store.mjs';
 import { handleStudioSitesOverview } from '../../../local-studio/backend/worker/studio-sites-overview.js';
 
 function environment(db) {
@@ -46,7 +46,10 @@ test('first visit provisions a real default site and editable starter without an
     const saved=await getThemeProject(env,'fresh','theme_heuristic',overview.selected_site_id);
     assert.equal(saved.ok,true);
     assert.deepEqual(saved.project.pages.map(p=>p.slug),['home','shop','about']);
-    assert.match(saved.project.pages[0].sections[0].content.heading,/Default site/);
+    assert.match(saved.project.pages[0].sections.find(s=>s.key==='section_1').content.heading,/Default site/);
+    assert.deepEqual(saved.project.pages[0].sections.filter(s=>s.globalKey).map(s=>s.key),
+      ['announcement_bar','site_header','site_footer','promotion_popup']);
+    assert.equal(saved.project.pages[0].sections[0].content.announcement_1.text,'Welcome to our store');
     assert.equal(saved.project.sourcePackage,'@inneranimalmedia/theme-heuristic');
     assert.ok(objects.size>=2,'D1 points at real R2-stored manifest and revision');
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_revisions WHERE account_id='fresh'").get().n,1);
@@ -75,16 +78,16 @@ test('site recovery is idempotent and never overwrites merchant edits or another
     assert.equal(first.preview_theme.installed,true);
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='merchant'").get().n,1);
     const original=(await getThemeProject(env,'merchant','theme_heuristic','blog')).project;
-    original.pages[0].sections[0].content.heading='My real customer copy';
+    original.pages[0].sections.find(s=>s.key==='section_1').content.heading='My real customer copy';
     const saved=await saveThemeProject(env,'merchant',original.id,original,original.revision,'blog');
     assert.equal(saved.ok,true,JSON.stringify(saved));
     const recovered=await ensureCmsSiteStarter(env,'merchant','blog');
     assert.equal(recovered.ok,true);
     assert.equal(recovered.unchanged,true);
-    assert.equal((await getThemeProject(env,'merchant','theme_heuristic','blog')).project.pages[0].sections[0].content.heading,'My real customer copy');
+    assert.equal((await getThemeProject(env,'merchant','theme_heuristic','blog')).project.pages[0].sections.find(s=>s.key==='section_1').content.heading,'My real customer copy');
     const shop=await ensureCmsSiteStarter(env,'merchant','shop');
     assert.equal(shop.ok,true);
-    assert.equal((await getThemeProject(env,'merchant','theme_heuristic','shop')).project.pages[0].sections[0].content.heading,'My Shop');
+    assert.equal((await getThemeProject(env,'merchant','theme_heuristic','shop')).project.pages[0].sections.find(s=>s.key==='section_1').content.heading,'My Shop');
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='merchant'").get().n,2);
     const forbidden=await ensureCmsSiteStarter(env,'merchant','foreign');
     assert.equal(forbidden.status,404);
@@ -111,6 +114,37 @@ test('another installed preset is respected; generic preset materializer accepts
     assert.equal(fallback.unchanged,true);
     assert.equal(fallback.projects[0].sourceThemeId,'custom');
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='merchant'").get().n,1);
+  } finally {db.close();}
+});
+
+test('package install fills missing neutral chrome once without replacing authored content',async()=>{
+  const db=createCmsTestDb();
+  const {env}=environment(db);
+  try {
+    db.exec(`INSERT INTO accounts(id) VALUES ('buyer');
+      INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
+      VALUES ('buyer_site','buyer','Buyer Studio','buyer','active',1)`);
+    const preset=structuredClone(heuristicStarterPreset);
+    preset.theme={...preset.theme,slug:'purchased',name:'Purchased Theme',
+      packageName:'@inneranimalmedia/theme-purchased',packageVersion:'1.0.0'};
+    preset.pages=[preset.pages[0]];
+    const project=materializeStarterProject(preset,{name:'Donor Brand'});
+    project.pages[0].sections=project.pages[0].sections.filter(s=>s.zone==='BODY');
+    project.pages[0].template=project.pages[0].template.replace(/<!--theme-section:(announcement_bar|site_header|site_footer|promotion_popup)-->/g,'');
+    const installed=await installThemeDraft(env,'buyer','purchased',{
+      project,package_name:preset.theme.packageName,package_version:'1.0.0',
+    },'buyer_site');
+    assert.equal(installed.ok,true,JSON.stringify(installed));
+    const page=installed.project.pages[0];
+    assert.equal(page.sections.find(s=>s.key==='site_header').content.logo.text,'Buyer Studio');
+    assert.equal(page.sections.find(s=>s.key==='announcement_bar').content.announcement_1.text,'Welcome to our store');
+    assert.equal(page.sections.find(s=>s.key==='promotion_popup').content.__editor.visibility.enabled,false);
+    assert.equal(page.sections.find(s=>s.key==='section_1').content.heading.includes('Donor Brand'),true);
+    const again=await installThemeDraft(env,'buyer','purchased',{
+      project,package_name:preset.theme.packageName,package_version:'1.0.0',
+    },'buyer_site');
+    assert.equal(again.unchanged,true);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_revisions WHERE account_id='buyer'").get().n,1);
   } finally {db.close();}
 });
 

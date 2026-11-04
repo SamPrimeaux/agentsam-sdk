@@ -200,7 +200,7 @@ test('starter illustrations are editable, reusable, portable and never purchasab
     assert.equal(section.schema.blocks.length,4);
     let document=new JSDOM(renderThemePage(page)).window.document;
     assert.equal(document.querySelectorAll('[data-sample-product]').length,4);
-    assert.equal(document.querySelectorAll('[data-cms-section] [data-cms-block] img[data-cms]').length,4);
+    assert.equal(document.querySelectorAll('[data-sample-product] img[data-cms]').length,4);
 
     assert.equal(document.querySelectorAll('[data-sample-product] button,[data-sample-product] a').length,0);
     assert.match(document.body.textContent,/Sample products/);

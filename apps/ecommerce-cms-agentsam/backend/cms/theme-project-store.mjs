@@ -4,6 +4,7 @@
  * No local-only theme project table or parallel theme database is introduced.
  */
 import { validateThemeProject } from "../../frontend/theme-editor/project.mjs";
+import { fillMissingThemeChrome } from "../../frontend/theme-editor/starter-chrome.mjs";
 import { readR2Json, writeR2Json } from "./r2-store.js";
 import { resolveCmsSite } from "./site-context.mjs";
 
@@ -267,6 +268,13 @@ export async function installThemeDraft(env, accountId, slug, payload = {}, site
       return { ok: false, status: error.status || 503, error: error.message || "theme_project_read_failed" };
     }
   }
+
+  // Fill only chrome absent from the package. Installed projects remain immutable on repeat install.
+  let site;
+  try { site = await resolveCmsSite(env.DB, { accountId, siteId, createDefault: !siteId }); }
+  catch { return { ok: false, status: 404, error: "cms_site_not_found" }; }
+  try { project = validateThemeProjectPayload(fillMissingThemeChrome(project, site.name)); }
+  catch (error) { return { ok: false, status: 400, error: error.message || "theme_project_invalid" }; }
 
   const artifactKey = `theme/${slug}`;
   const artifactResult = await env.DB.prepare(
