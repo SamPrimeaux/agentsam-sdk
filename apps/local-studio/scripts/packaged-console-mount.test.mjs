@@ -176,7 +176,7 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
   const products = context.NAV.channels.find((item) => item.id === 'products');
   assert.deepEqual(Array.from(products.children, (item) => [item.label, item.href]), [
     ['Store Products', '/admin/products'],
-    ['Collections', '/admin/products?view=collections'],
+    ['Collections', '/admin/collections'],
     ['Product Studio', '/admin/products/create'],
     ['Inventory', '/admin/inventory'],
     ['Orders', '/admin/orders'],
