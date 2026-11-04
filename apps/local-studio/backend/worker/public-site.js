@@ -14,6 +14,24 @@ import {
 
 const DEFAULT_SITE = 'agentsam-sdk';
 
+/** The standalone Theme Store (own worker/repo/R2). One constant, used below. */
+const THEME_STORE_HOST = 'themes.inneranimalmedia.com';
+
+/**
+ * The v1 gallery that used to live at /themes/ on the shared AgentSam host is
+ * retired; the store is its own site. Send the gallery root there. Preview and
+ * demo paths under /themes/<slug>/… are left alone, and local development
+ * hosts never redirect to production.
+ */
+function themeStoreRedirect(request, pathname) {
+  if (pathname !== '/themes' && pathname !== '/themes/') return null;
+  const host = new URL(request.url).hostname.toLowerCase();
+  if (host === THEME_STORE_HOST || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost')) {
+    return null;
+  }
+  return Response.redirect(`https://${THEME_STORE_HOST}/`, 301);
+}
+
 const PUBLIC_SITE_HTML = Object.freeze({
   '/': 'home/index.html',
   '/home': 'home/index.html',
@@ -49,7 +67,7 @@ const PUBLIC_SITE_HTML = Object.freeze({
 export function publicSitePathForRequest(request) {
   const url = new URL(request.url);
   const host = url.hostname.toLowerCase();
-  if (host === 'themes.inneranimalmedia.com' && (url.pathname === '/' || url.pathname === '/index.html')) {
+  if (host === THEME_STORE_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
     return '/themes';
   }
   return url.pathname;
@@ -172,6 +190,9 @@ export async function servePublicSitePage(
   pathname = new URL(request.url).pathname,
   opts = {}
 ) {
+  const redirect = themeStoreRedirect(request, pathname);
+  if (redirect) return redirect;
+
   const siteSlug = opts.siteSlug || DEFAULT_SITE;
   const website = resolveWebsiteAssets(env);
   const kv = resolveSiteCacheKv(env)?.binding || null;
