@@ -27,6 +27,23 @@
     ? selectedSku.slice('iam.theme.'.length) : null;
   const selectedVersion = /^\d+\.\d+\.\d+$/.test(queryParams.get('theme_version') || '')
     ? queryParams.get('theme_version') : null;
+  const installIntent = queryParams.get('action') === 'try';
+  const preferredSiteId = /^[A-Za-z0-9_-]{1,160}$/.test(queryParams.get('site_id') || '')
+    ? queryParams.get('site_id') : null;
+  const trustedHandoff = (() => {
+    // In embedded CMS the iframe referrer is AgentSam itself. The outer
+    // authenticated route retains the actual Theme Store navigation referrer.
+    const refs=[document.referrer];
+    try {
+      if (window.parent && window.parent !== window &&
+          window.parent.location.origin === window.location.origin)
+        refs.push(window.parent.document.referrer);
+    } catch { /* Cross-origin parent; never treat it as trusted. */ }
+    return refs.some(ref => {
+      try { return new URL(ref).origin === ORIGIN; }
+      catch { return false; }
+    });
+  })();
   let selectedTheme = null;
   const node = (tag, className, text) => {
     const el = document.createElement(tag);
@@ -70,9 +87,14 @@
       if(typeof result.editor_url!=='string' ||
         !/^\/admin\/theme-project-editor\?project=[A-Za-z0-9_%\-]+&site_id=[A-Za-z0-9_%\-]+$/.test(result.editor_url))
         throw Error('Installer did not return a valid editor destination');
-      // The same editor URL works in a standalone admin and the embedded app.
-      const parent=window.parent&&window.parent!==window?window.parent:window;
-      parent.location.assign(result.editor_url);
+      // Match Shopify: return to Online Store with a private draft, not straight
+      // into the editor. The user can preview or customize it from Draft themes.
+      const embedded = window.parent && window.parent !== window;
+      const target = embedded ? window.parent : window;
+      const route = embedded
+        ? '/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fstore&site_id='+encodeURIComponent(result.site_id)
+        : '/admin/store?site_id='+encodeURIComponent(result.site_id);
+      target.location.assign(route);
     }catch(error){
       button.disabled=false;
       button.textContent='Install & edit';
@@ -93,6 +115,13 @@
       return;
     }
     const sites=data.sites.filter(s=>s&&typeof s.id==='string');
+    if (preferredSiteId) {
+      const preferred = sites.find(s=>s.id===preferredSiteId);
+      if (preferred) {
+        await installToSite(theme,preferred.id,button,container);
+        return;
+      }
+    }
     if(!sites.length){
       button.disabled=false;
       button.textContent='Install & edit';
@@ -191,6 +220,46 @@
     dialog.showModal();
     select.focus();
   }
+  // A Theme Store Try action is an install journey, not another catalog page.
+  // Only auto-start after a navigation originating from our Theme Store.
+  // Missing referrer (login/strict privacy) falls back to a visible confirmation.
+  const showInstallStage = () => {
+    count.textContent = 'Theme installation';
+    const heading=document.querySelector('.theme-marketplace-heading');
+    const controls=document.querySelector('.theme-marketplace-controls');
+    if(heading)heading.hidden=true;
+    if(controls)controls.hidden=true;
+    const stage=node('div','theme-install-stage');
+    stage.setAttribute('role','region');
+    stage.setAttribute('aria-label','Theme installation');
+    const name=selectedTheme?.name || selectedSlug || 'Selected theme';
+    const title=node('h2','', 'Adding '+name);
+    const message=node('p','theme-install-message','Preparing your private theme draft.');
+    message.setAttribute('role','status');
+    const progress=node('div','theme-install-progress');
+    progress.setAttribute('aria-hidden','true');
+    const bar=node('div','theme-install-progress-bar');
+    progress.append(bar);
+    const action=node('button','btn','Continue');
+    action.type='button';
+    stage.append(title,message,progress,action);
+    root.replaceChildren(stage);
+    if (!selectedTheme || !selectedTheme.can_install || (selectedVersion && selectedTheme.version!==selectedVersion)) {
+      message.textContent=selectedTheme
+        ? 'This release is not ready to install. Your current store is unchanged.'
+        : 'The selected theme is unavailable. Your current store is unchanged.';
+      progress.hidden=true;
+      action.textContent='Browse themes';
+      action.onclick=()=>{location.assign(ORIGIN)};
+      return;
+    }
+    action.onclick=()=>void chooseInstallSite(selectedTheme,action,stage);
+    if(trustedHandoff) void chooseInstallSite(selectedTheme,action,stage);
+    else {
+      progress.hidden=true;
+      message.textContent='Continue to add this theme to your store as a private draft.';
+    }
+  };
   const render = () => {
     const query = search.value.trim().toLowerCase();
     const current = filter.value;
@@ -281,6 +350,10 @@
       // Keep the requested theme visible rather than making the user search for
       // the exact package they already selected in the public marketplace.
       if (selectedTheme) { search.value=''; filter.value='all'; }
+      if (installIntent && selectedSlug) {
+        showInstallStage();
+        return;
+      }
       filter.replaceChildren(new Option('All categories','all'));
       [...new Set(products.map(p=>p.category))].sort().forEach(c=>filter.add(new Option(c,c)));
       render();

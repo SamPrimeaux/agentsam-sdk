@@ -6,7 +6,7 @@ import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
 import { resolveEcommerceAdminPath, resolveEcommerceAssetPath } from '@/lib/apps/ecommerce-routing';
 
-type Search = { site?: string; site_id?: string; page?: string; preview?: 'local' };
+type Search = { site?: string; site_id?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try' };
 
 export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
   validateSearch: (search: Record<string, unknown>): Search => ({
@@ -14,6 +14,9 @@ export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
     site_id: typeof search.site_id === 'string' ? search.site_id : undefined,
     page: typeof search.page === 'string' ? search.page : undefined,
     preview: search.preview === 'local' ? 'local' : undefined,
+    theme_sku: typeof search.theme_sku === 'string' ? search.theme_sku : undefined,
+    theme_version: typeof search.theme_version === 'string' ? search.theme_version : undefined,
+    action: search.action === 'try' ? 'try' : undefined,
   }),
   component: EcommerceAppHost,
 });
@@ -45,6 +48,15 @@ function EcommerceAppHost() {
       if (!isPackagedDesktop() && page === '/admin/home') resolved.searchParams.set('__agentsamEmbedded', '1');
       if (search.site_id && /^[A-Za-z0-9_-]{1,120}$/.test(search.site_id) && page?.startsWith('/admin/')) {
         resolved.searchParams.set('site_id', search.site_id);
+      }
+      // Preserve a validated Theme Store Try intent into the authenticated CMS
+      // receiver. This is a selection hint, never authorization for installation.
+      if (page === '/admin/store' && search.action === 'try' &&
+          /^iam\\.theme\\.[a-z][a-z0-9-]{0,63}$/.test(search.theme_sku || '') &&
+          /^\\d+\\.\\d+\\.\\d+$/.test(search.theme_version || '')) {
+        resolved.searchParams.set('theme_sku', search.theme_sku!);
+        resolved.searchParams.set('theme_version', search.theme_version!);
+        resolved.searchParams.set('action', 'try');
       }
       return resolved.toString();
     })()

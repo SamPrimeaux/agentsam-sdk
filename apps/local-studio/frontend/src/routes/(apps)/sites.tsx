@@ -10,10 +10,12 @@ function CanonicalSitesEntry() {
   const params = new URLSearchParams(location.searchStr);
   const sku = params.get('theme_sku') || '';
   const version = params.get('theme_version') || '';
+  const action = params.get('action') === 'try' ? 'try' : '';
+  const siteId = params.get('site_id') || '';
   // Keep the public Theme Store's chosen package when following the Sites
   // compatibility route. The authenticated receiver checks release readiness.
   const selected = /^iam\.theme\.[a-z][a-z0-9-]{0,63}$/.test(sku)
-    ? { theme_sku: sku, ...(/^\d+\.\d+\.\d+$/.test(version) ? { theme_version: version } : {}) }
+    ? { theme_sku: sku, ...(/^\d+\.\d+\.\d+$/.test(version) ? { theme_version: version } : {}), ...(action ? { action } : {}), ...(/^[A-Za-z0-9_-]{1,160}$/.test(siteId) ? { site_id: siteId } : {}) }
     : {};
   return <Navigate to="/apps/ecommerce-cms-agentsam" search={{ page: '/admin/store', ...selected }} replace />;
 }

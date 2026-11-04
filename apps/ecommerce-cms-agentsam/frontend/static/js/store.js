@@ -6,7 +6,7 @@ renderShell("/admin/store", `
         <h1>Online Store</h1>
       </div>
       <div class="online-store-actions">
-        <a href="#theme-product-marketplace" class="btn ghost small" id="browse-themes-shortcut">Browse website themes</a>
+        <a href="https://themes.inneranimalmedia.com/" class="btn ghost small" id="browse-themes-shortcut">Visit Theme Store</a>
         <button type="button" class="online-store-pill" id="store-visibility-btn" aria-haspopup="true">
           <span class="online-store-pill-dot" aria-hidden="true"></span>
           <span id="store-visibility-label">Checking…</span>
@@ -455,6 +455,13 @@ function showActiveTheme(theme) {
     const siteId = route.get('site_id');
     const d = await adminFetch('/api/admin/store/online'+(siteId?'?site_id='+encodeURIComponent(siteId):''));
     const sites = Array.isArray(d.available_sites) ? d.available_sites : [];
+    const externalStore = document.getElementById('browse-themes-shortcut');
+    if (externalStore) {
+      const destination = new URL('https://themes.inneranimalmedia.com/');
+      if (typeof d.selected_site_id === 'string' && /^[A-Za-z0-9_-]{1,160}$/.test(d.selected_site_id))
+        destination.searchParams.set('site_id',d.selected_site_id);
+      externalStore.href = destination.href;
+    }
     if(sites.length && !window.AgentSamOnlineStoreHost){
       const current=sites.find(site=>site.id===d.selected_site_id)||sites[0];
       const root=document.createElement('details');

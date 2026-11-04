@@ -69,3 +69,19 @@
 .website-theme-install-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:5px}
 .website-theme-install-actions button{min-height:40px}
 .website-theme-install-actions button:disabled{opacity:.5;cursor:not-allowed}
+
+/* Theme Store Try -> focused receiver, not a second marketplace. */
+.online-store:has(.theme-install-stage)>:not(.theme-marketplace){display:none}
+.theme-marketplace:has(.theme-install-stage){min-height:65vh;display:grid;place-items:center;margin-top:0;background:transparent;border:0;box-shadow:none}
+.theme-marketplace:has(.theme-install-stage) .theme-marketplace-heading,
+.theme-marketplace:has(.theme-install-stage) .theme-marketplace-controls{display:none!important}
+.theme-marketplace:has(.theme-install-stage) .theme-marketplace-grid{display:block;width:min(440px,100%);margin:auto}
+.theme-install-stage{display:grid;gap:16px;justify-items:center;text-align:center;padding:30px 25px;width:100%;background:#fff;color:#222;border:1px solid #e6e3e8;border-radius:15px;box-shadow:0 16px 40px rgba(10,15,30,.07)}
+.theme-install-stage h2{font-size:22px;line-height:1.2;margin:0;color:#242027}
+.theme-install-stage .theme-install-message{font-size:13px;line-height:1.5;color:#68636d;margin:0}
+.theme-install-progress{width:min(310px,100%);height:5px;overflow:hidden;border-radius:99px;background:#ebe8ed}
+.theme-install-progress-bar{height:100%;width:36%;border-radius:99px;background:#5683e8;animation:theme-install-loading 1.6s ease-in-out infinite alternate}
+.theme-install-stage .btn{min-width:160px}
+.theme-install-stage .theme-marketplace-error{color:#b91c1c;font-size:12px}
+@keyframes theme-install-loading{from{transform:translateX(-100%)}to{transform:translateX(280%)}}
+@media(prefers-reduced-motion:reduce){.theme-install-progress-bar{animation:none;width:100%}}
