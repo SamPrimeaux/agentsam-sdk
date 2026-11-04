@@ -1,4 +1,4 @@
-/* Isolated frontend Theme Settings review: no CMS writes */
+/* Complete platform Theme Settings controls, with the existing CMS settings bridge. */
 (() => {
 "use strict";
 const definitions = [];
@@ -149,7 +149,20 @@ const v=k=>state[k]??defaults[k]??"";
 const localKey=()=> "ia:theme-settings:v1:"+(window.AgentSamThemeEditorHost?.siteId||window.cmsActiveSiteId||"local")+":"+(window.AgentSamThemeEditorHost?.projectId||document.querySelector("#te-theme-name")?.textContent||"installed");
 const reviewNote=()=>root?.querySelector("[data-ts-review-note]");
 function load(){try{const data=JSON.parse(sessionStorage.getItem(localKey())||"null");if(data){Object.keys(defaults).forEach(k=>{if(data.values&&k in data.values)state[k]=data.values[k];});Object.entries(data.values||{}).forEach(([k,value])=>{if(/^palette\.\d+$/.test(k)){state[k]=value;paletteCount=Math.max(paletteCount,Number(k.split(".")[1])+1);}});paletteLinks=data.links||{};brandName=data.brandName||"Store";media=data.media||{};}else{fieldMap.forEach((item,key)=>{if(item.type!=="color")return;const match=[0,1,2,3].find(i=>defaults["palette."+i]===item.initial);if(match!==undefined)paletteLinks[key]=match;});}}catch{}}
-function save(){
+function save(changedKey){
+ const bridge=window.CmsThemeSettings;
+ const current=bridge?.read?.();
+ if(current && changedKey){
+  const colors={"page.bg":"canvas","type.text":"ink","palette.0":"paper","palette.1":"ink","palette.2":"accent"};
+  if(colors[changedKey])current.colors={...(current.colors||{}),[colors[changedKey]]:hex(v(changedKey))};
+  else if(changedKey==="type.font.Body")current.font=v(changedKey)==="System sans-serif"?"system-ui":v(changedKey);
+  else if(changedKey==="buttons.primary.radius")current.buttonRadius=Math.min(60,Number(v(changedKey)));
+  else if(changedKey==="css.source")current.customCss=String(v(changedKey));
+  else if(changedKey==="page.width")current.designDraft={...(current.designDraft||{}),"page.maxWidth":({Narrow:960,Standard:1280,Wide:1600,"Full width":1920})[v(changedKey)]};
+  else if(changedKey==="inputs.radius")current.designDraft={...(current.designDraft||{}),"inputs.radius":Math.min(32,Number(v(changedKey)))};
+  else changedKey=null;
+  if(changedKey)bridge.update(current);
+ }
  try{const retained=Object.fromEntries(Object.entries(media).filter(([,value])=>String(value).length<1000000));sessionStorage.setItem(localKey(),JSON.stringify({values:state,links:paletteLinks,brandName,media:retained}));}
  catch{if(reviewNote())reviewNote().textContent="Preview only · session storage unavailable";}
 }
@@ -161,7 +174,7 @@ function set(k,value){
    value=Math.max(d.min,Math.min(d.max,Math.round(n)));
  }
  if(d.type==="color"&&!validColor(value))return;
- state[k]=value;save();sync(k);updatePreview();applyWhitelistedPreview();
+ state[k]=value;save(k);sync(k);updatePreview();applyWhitelistedPreview();
 }
 function button(label,attributes=""){return `<button type="button" ${attributes}>${esc(label)}</button>`;}
 function inputFor(d){
@@ -342,6 +355,8 @@ function updatePreview(){
  if(place)place.innerHTML=demo(category);
 }
 function applyWhitelistedPreview(){
+ // Merchant previews use the canonical CMS renderer and its validated values.
+ if(window.CmsThemeSettings || window.AgentSamThemeEditorHost)return;
  let doc;try{doc=document.getElementById("theme-preview")?.contentDocument;}catch{}
  if(!doc?.head)return;
  let style=doc.getElementById("ts-review-preview-style");
@@ -429,11 +444,25 @@ function mount(){
  document.getElementById("theme-preview")?.addEventListener("load",applyWhitelistedPreview);
  const previewDevice=document.getElementById("te-preview-device");
  if(previewDevice)new MutationObserver(updatePreview).observe(previewDevice,{attributes:true,attributeFilter:["data-device"]});
+ const hydrateCmsSettings=()=>{
+  const current=window.CmsThemeSettings?.read?.();
+  if(!current)return;
+  for(const [key,value] of Object.entries({
+   "page.bg":current.colors?.canvas,"type.text":current.colors?.ink,"palette.2":current.colors?.accent,
+   "type.font.Body":current.font==="system-ui"?"System sans-serif":current.font,
+   "buttons.primary.radius":current.buttonRadius,"css.source":current.customCss,
+   "inputs.radius":current.designDraft?.["inputs.radius"]
+  }))if(value!==undefined)state[key]=value;
+  if(category)renderFields();
+ };
+ document.addEventListener('theme-editor:global-settings-ready',hydrateCmsSettings);
+ hydrateCmsSettings();
  window.ThemeSettingsPanel={open:openCategory,close:()=>{if(category)openCategory(category);},refresh:updatePreview,getState:()=>({category,values:{...state},links:{...paletteLinks},storage:"sessionStorage",published:false})};
  return true;
 }
 if(!mount()){
- if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount,{once:true});
- else requestAnimationFrame(mount);
+ const observer=new MutationObserver(()=>{if(mount())observer.disconnect();});
+ observer.observe(document.body,{childList:true,subtree:true});
+ window.addEventListener('pagehide',()=>observer.disconnect(),{once:true});
 }
 })();

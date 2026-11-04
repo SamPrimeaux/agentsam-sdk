@@ -215,12 +215,12 @@ test("actual Theme Editor HTML loads the Theme Settings runtime after its editor
  const shell=new JSDOM(html);
  const resources=[...shell.window.document.querySelectorAll("script[src]")].map(el=>el.getAttribute("src"));
  const editor=resources.indexOf("/admin/js/theme-editor.js");
- const settings=resources.indexOf("/admin/js/theme-settings-live.js");
+ const settings=resources.indexOf("/admin/js/theme-settings-panel.js");
  assert.ok(editor>=0,"canonical editor asset must load");
  assert.equal(settings,editor+1,"theme settings must mount immediately after the editor");
- assert.equal(resources.filter(x=>x==="/admin/js/theme-settings-live.js").length,1);
- assert.equal(resources.includes("/admin/js/theme-settings-panel.js"),false,"review fixture must never render for merchants");
- assert.ok(shell.window.document.querySelector('link[href="/admin/css/theme-settings-live.css"]'));
+ assert.equal(resources.filter(x=>x==="/admin/js/theme-settings-panel.js").length,1);
+ assert.equal(resources.includes("/admin/js/theme-settings-live.js"),false,"only one settings renderer may mount");
+ assert.ok(shell.window.document.querySelector('link[href="/admin/css/theme-settings-panel.css"]'));
  assert.doesNotMatch(shell.window.document.body.textContent,/\\n/,"literal slash-n must not appear in editor markup");
  shell.window.close();
 });
