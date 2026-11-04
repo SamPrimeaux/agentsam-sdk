@@ -40,7 +40,7 @@ function normalize(row: CmsRow): Collection {
   return {
     id: row.id, slug: row.slug, title: row.name, description: row.description || "",
     eyebrow: String(metadata.eyebrow || ""), image_url: row.image_url || String(metadata.image_url || "") || null,
-    accent_color: String(metadata.accent_color || "#ff7619"), status: row.status,
+    accent_color: String(metadata.accent_color || "#5a7df7"), status: row.status,
     sort_order: row.sort_order || 0, seo_title: row.seo_title || null, seo_description: row.seo_description || null,
     hero_settings_json: JSON.stringify(object(metadata.merch_hero)),
     product_plan_json: JSON.stringify(Array.isArray(metadata.merch_plan) ? metadata.merch_plan : []),
@@ -111,8 +111,11 @@ export const collectionsApi = {
     const result = accepted(await adminFetch<Ok & { assets?: MediaAsset[]; items?: MediaAsset[] }>(scoped(`/api/admin/media?${params}`)));
     return result.assets || result.items || [];
   },
-  async scaffold(_id: string): Promise<{ created: {catalog_product_id:string;product_id:number;draft_id:string;variant_count:number}[]; reused: {catalog_product_id:string;product_id:number;draft_id:string}[]; unavailable: {catalog_product_id:string;reason:string}[] }> {
-    throw new Error("Manufacturer draft scaffolding is not connected for this site. Use Product Studio to prepare actual products.");
+  async scaffold(id: string): Promise<{ created: {catalog_product_id:string;product_id:number;draft_id:string;variant_count:number}[]; reused: {catalog_product_id:string;product_id:number;draft_id:string}[]; unavailable: {catalog_product_id:string;reason:string}[] }> {
+    return accepted(await adminFetch<Ok & { created: {catalog_product_id:string;product_id:number;draft_id:string;variant_count:number}[]; reused: {catalog_product_id:string;product_id:number;draft_id:string}[]; unavailable: {catalog_product_id:string;reason:string}[] }>(
+      scoped(`/api/admin/product-studio/collections/${encodeURIComponent(id)}/scaffold`),
+      { method: "POST", body: JSON.stringify({}) },
+    ));
   },
   async supplier(search: string): Promise<SupplierBlank[]> {
     const params = new URLSearchParams({ search, limit: "12", offset: "0" });

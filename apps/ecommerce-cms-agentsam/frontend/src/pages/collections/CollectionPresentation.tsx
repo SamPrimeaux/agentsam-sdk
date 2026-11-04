@@ -45,7 +45,7 @@ export default function CollectionPresentation({ form, setForm, openMedia, produ
           setForm({ ...form, accent_color: p.accent, hero: { ...hero, backgroundColor:p.backgroundColor, gradientTo:p.gradientTo, textColor:p.textColor, layout:p.layout, accentColor:p.accent, backgroundMode:p.mode } });
         }} aria-pressed={activePreset?.id===p.id}>
           <div className="cs-preset-thumbnail" style={{ background: `linear-gradient(130deg,${p.backgroundColor},${p.gradientTo})`, color:p.textColor }}>
-            <span>F&FT</span><span className="cs-preset-blocks"><i/><i/><i/></span><b style={{background:p.accent}} />
+            <span className="cs-preset-blocks"><i/><i/><i/></span><b style={{background:p.accent}} />
           </div>
           <strong>{p.name}</strong><small>{p.caption}</small>
         </button>)}

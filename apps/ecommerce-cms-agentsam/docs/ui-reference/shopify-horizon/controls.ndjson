@@ -1,0 +1,401 @@
+{"id":"blocks/announcement#1","g":"General","l":"Text","t":"text-or-rich-text","e":["E019"]}
+{"id":"blocks/announcement#1","g":"General","l":"Link","t":"text-or-rich-text","e":["E019"]}
+{"id":"blocks/announcement#1","g":"Typography","l":"Font","t":"select","o":["Body","Subheading","Heading","Accent"],"v":"Subheading","e":["E019"]}
+{"id":"blocks/announcement#1","g":"Typography","l":"Size","t":"select","o":"S01","v":"12px","e":["E019"]}
+{"id":"blocks/announcement#1","g":"Typography","l":"Weight","t":"select","o":"S02","v":"Default","e":["E019"]}
+{"id":"blocks/announcement#1","g":"Typography","l":"Letter spacing","t":"segmented-control","o":["Tight","Normal","Loose"],"e":["E019"]}
+{"id":"blocks/announcement#1","g":"Typography","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E019"]}
+{"id":"blocks/announcement#1","g":"Appearance","l":"Text color","t":"color-picker","v":"Default","e":["E019"]}
+{"id":"blocks/button#1","g":"General","l":"Label","t":"text-or-rich-text","e":["E020"]}
+{"id":"blocks/button#1","g":"General","l":"Link","t":"text-or-rich-text","e":["E020"]}
+{"id":"blocks/button#1","g":"General","l":"Open link in new tab","t":"toggle","v":false,"e":["E020"]}
+{"id":"blocks/button#1","g":"General","l":"Style","t":"select","o":["Primary","Secondary","Link","Custom"],"v":"Custom","e":["E020"]}
+{"id":"blocks/button#1","g":"Button colors","l":"Background","t":"color-picker","v":"Transparent","e":["E020"]}
+{"id":"blocks/button#1","g":"Button colors","l":"Text","t":"color-picker","v":"Palette color","e":["E020"]}
+{"id":"blocks/button#1","g":"Button colors","l":"Borders","t":"color-picker","v":"Palette color","e":["E020"]}
+{"id":"blocks/button#1","g":"Size","l":"Desktop width","t":"segmented-control","o":["Fit","Custom"],"e":["E020"]}
+{"id":"blocks/button#1","g":"Size","l":"Mobile width","t":"segmented-control","o":["Fit","Custom"],"e":["E020"]}
+{"id":"blocks/collection-title#1","g":"General","l":"Text","t":"text-or-rich-text","e":["E021"]}
+{"id":"blocks/collection-title#1","g":"Layout","l":"Width","t":"segmented-control","o":["Fit","Fill"],"e":["E021"]}
+{"id":"blocks/collection-title#1","g":"Layout","l":"Max width","t":"select","o":["Narrow","Normal","None"],"v":"Normal","e":["E021"]}
+{"id":"blocks/collection-title#1","g":"Typography","l":"Preset","t":"select","o":"S03","v":"Heading 4","e":["E021"]}
+{"id":"blocks/collection-title#1","g":"Appearance","l":"Text color","t":"color-picker","v":"Default","e":["E021"]}
+{"id":"blocks/collection-title#1","g":"Appearance","l":"Background","t":"toggle","v":false,"e":["E021"]}
+{"id":"blocks/collection-title#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"0","u":"px","e":["E021"]}
+{"id":"blocks/collection-title#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"0","u":"px","e":["E021"]}
+{"id":"blocks/collection-title#1","g":"Padding","l":"Left","t":"range-with-numeric-input","v":"0","u":"px","e":["E021"]}
+{"id":"blocks/collection-title#1","g":"Padding","l":"Right","t":"range-with-numeric-input","v":"0","u":"px","e":["E021"]}
+{"id":"blocks/copyright#1","g":"Appearance","l":"Text color","t":"color-picker","v":"Default","e":["E022"]}
+{"id":"blocks/copyright#1","g":"Appearance","l":"Size","t":"select","o":"S04","v":"12px","e":["E022"]}
+{"id":"blocks/copyright#1","g":"Appearance","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E022"]}
+{"id":"blocks/email-signup#1","g":"(unparsed group)","l":"Width","t":"segmented-control","o":["Fill","Custom"],"e":["E023"]}
+{"id":"blocks/email-signup#1","g":"Heading","l":"Text","t":"text-or-rich-text","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"Heading","l":"Color","t":"color-picker","v":"Select","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"Heading","l":"Text preset","t":"select","o":"S05","v":"Heading 3","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"Input","l":"Border","t":"segmented-control","o":["All","Underline","None"],"e":["E023"]}
+{"id":"blocks/email-signup#1","g":"Input","l":"Style","t":"segmented-control","o":["Default","Custom"],"e":["E023"]}
+{"id":"blocks/email-signup#1","g":"(unparsed group)","l":"Border thickness","t":"range-with-numeric-input","v":"1","u":"px","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"(unparsed group)","l":"Corner radius","t":"range-with-numeric-input","v":"100","u":"px","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"(unparsed group)","l":"Background","t":"color-picker","v":"Palette color","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"(unparsed group)","l":"Text","t":"color-picker","v":"Palette color","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"(unparsed group)","l":"Borders","t":"color-picker","v":"Palette color","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"(unparsed group)","l":"Text preset","t":"select","o":"S05","v":"Paragraph","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"Submit button","l":"Style","t":"select","o":["Primary","Secondary","Link","Custom"],"v":"Link","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"(unparsed group)","l":"Link text color","t":"color-picker","v":"Default","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"(unparsed group)","l":"Display","t":"segmented-control","o":["Text","Arrow"],"e":["E023"]}
+{"id":"blocks/email-signup#1","g":"(unparsed group)","l":"Integrated button","t":"toggle","v":true,"e":["E023"]}
+{"id":"blocks/email-signup#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"0","u":"px","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"0","u":"px","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"Padding","l":"Left","t":"range-with-numeric-input","v":"0","u":"px","e":["E023"]}
+{"id":"blocks/email-signup#1","g":"Padding","l":"Right","t":"range-with-numeric-input","v":"0","u":"px","e":["E023"]}
+{"id":"blocks/group#1","g":"Layout","l":"Direction","t":"segmented-control","o":["Vertical","Horizontal"],"e":["E024"]}
+{"id":"blocks/group#1","g":"Layout","l":"Alignment","t":"segmented-control","o":["Left","Center","Right"],"e":["E024"]}
+{"id":"blocks/group#1","g":"Layout","l":"Position","t":"select","o":["Top","Center","Bottom","Space between"],"v":"Center","e":["E024"]}
+{"id":"blocks/group#1","g":"Layout","l":"Gap","t":"range-with-numeric-input","v":"6","u":"px","e":["E024"]}
+{"id":"blocks/group#1","g":"Size","l":"Width","t":"segmented-control","o":["Fit","Fill","Custom"],"e":["E024"]}
+{"id":"blocks/group#1","g":"Size","l":"Mobile width","t":"segmented-control","o":["Fit","Fill","Custom"],"e":["E024"]}
+{"id":"blocks/group#1","g":"Size","l":"Height","t":"segmented-control","o":["Fit","Fill","Custom"],"e":["E024"]}
+{"id":"blocks/group#1","g":"Appearance","l":"Background media","t":"segmented-control","o":["None","Image","Video"],"e":["E024"]}
+{"id":"blocks/group#1","g":"Appearance","l":"Background color","t":"color-picker","v":"Default","e":["E024"]}
+{"id":"blocks/group#1","g":"Appearance","l":"Background overlay","t":"toggle","v":false,"e":["E024"]}
+{"id":"blocks/group#1","g":"Borders","l":"Style","t":"segmented-control","o":["None","Solid"],"e":["E024"]}
+{"id":"blocks/group#1","g":"Borders","l":"Corner radius","t":"range-with-numeric-input","v":"0","u":"px","e":["E024"]}
+{"id":"blocks/group#1","g":"Block link","l":"Link","t":"text-or-rich-text","e":["E024"]}
+{"id":"blocks/group#1","g":"Block link","l":"Open link in new tab","t":"toggle","v":false,"e":["E024"]}
+{"id":"blocks/group#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"0","u":"px","e":["E024"]}
+{"id":"blocks/group#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"0","u":"px","e":["E024"]}
+{"id":"blocks/group#1","g":"Padding","l":"Left","t":"range-with-numeric-input","v":"0","u":"px","e":["E024"]}
+{"id":"blocks/group#1","g":"Padding","l":"Right","t":"range-with-numeric-input","v":"0","u":"px","e":["E024"]}
+{"id":"blocks/heading#1","g":"General","l":"Text","t":"text-or-rich-text","e":["E025"]}
+{"id":"blocks/heading#1","g":"Layout","l":"Width","t":"segmented-control","o":["Fit","Fill"],"e":["E025"]}
+{"id":"blocks/heading#1","g":"Layout","l":"Max width","t":"select","o":["Narrow","Normal","None"],"v":"Normal","e":["E025"]}
+{"id":"blocks/heading#1","g":"Typography","l":"Preset","t":"select","o":"S03","v":"Heading 2","e":["E025"]}
+{"id":"blocks/heading#1","g":"Appearance","l":"Text color","t":"color-picker","v":"Palette color","e":["E025"]}
+{"id":"blocks/heading#1","g":"Appearance","l":"Background","t":"toggle","v":false,"e":["E025"]}
+{"id":"blocks/heading#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"0","u":"px","e":["E025"]}
+{"id":"blocks/heading#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"0","u":"px","e":["E025"]}
+{"id":"blocks/heading#1","g":"Padding","l":"Left","t":"range-with-numeric-input","v":"0","u":"px","e":["E025"]}
+{"id":"blocks/heading#1","g":"Padding","l":"Right","t":"range-with-numeric-input","v":"0","u":"px","e":["E025"]}
+{"id":"blocks/logo#1","g":"Visibility","l":"Hide logo on home page","t":"toggle","v":false,"e":["E026"]}
+{"id":"blocks/logo#1","g":"Desktop padding","l":"Top","t":"range-with-numeric-input","v":"0","u":"px","e":["E026"]}
+{"id":"blocks/logo#1","g":"Desktop padding","l":"Bottom","t":"range-with-numeric-input","v":"0","u":"px","e":["E026"]}
+{"id":"blocks/media#1","g":"Displays media from parent product","l":"Aspect ratio","t":"select","o":["Auto","Portrait","Square","Landscape"],"v":"Auto","e":["E027"]}
+{"id":"blocks/media#1","g":"Borders","l":"Style","t":"segmented-control","o":["None","Solid"],"e":["E027"]}
+{"id":"blocks/media#1","g":"Borders","l":"Corner radius","t":"range-with-numeric-input","v":"0","u":"px","e":["E027"]}
+{"id":"blocks/media#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"0","u":"px","e":["E027"]}
+{"id":"blocks/media#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"0","u":"px","e":["E027"]}
+{"id":"blocks/media#1","g":"Padding","l":"Left","t":"range-with-numeric-input","v":"0","u":"px","e":["E027"]}
+{"id":"blocks/media#1","g":"Padding","l":"Right","t":"range-with-numeric-input","v":"0","u":"px","e":["E027"]}
+{"id":"blocks/media#1","g":"Padding","l":"Ask for changes...","t":"text-or-rich-text","e":["E027"]}
+{"id":"blocks/menu#1","g":"General","l":"Menu","t":"toggle","v":false,"e":["E028"]}
+{"id":"blocks/menu#1","g":"(unparsed group)","l":"Background color","t":"color-picker","v":"Palette color","e":["E028"]}
+{"id":"blocks/menu#1","g":"(unparsed group)","l":"Text color","t":"color-picker","v":"Default","e":["E028"]}
+{"id":"blocks/menu#1","g":"Typography","l":"Top level size","t":"select","o":"S04","v":"14px","e":["E028"]}
+{"id":"blocks/menu#1","g":"Typography","l":"Submenu size","t":"select","o":["Small","Medium","Large"],"v":"Medium","e":["E028"]}
+{"id":"blocks/menu#1","g":"Typography","l":"Font","t":"select","o":["Body","Subheading","Heading","Accent"],"v":"Body","e":["E028"]}
+{"id":"blocks/menu#1","g":"Typography","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E028"]}
+{"id":"blocks/menu#1","g":"Submenu feature","l":"Media type","t":"select","o":["None","Collection images","Featured products","Featured collections"],"v":"Featured products","e":["E028"]}
+{"id":"blocks/menu#1","g":"(unparsed group)","l":"Image ratio","t":"select","o":["Auto","Portrait","Square"],"v":"Portrait","e":["E028"]}
+{"id":"blocks/menu#1","g":"(unparsed group)","l":"Image corner radius","t":"range-with-numeric-input","v":"0","u":"px","e":["E028"]}
+{"id":"blocks/menu#1","g":"Mobile layout","l":"Navigation bar","t":"toggle","v":false,"e":["E028"]}
+{"id":"blocks/menu#1","g":"Mobile layout","l":"Accordion","t":"toggle","v":false,"e":["E028"]}
+{"id":"blocks/menu#1","g":"Mobile layout","l":"Dividers","t":"toggle","v":false,"e":["E028"]}
+{"id":"blocks/policy-links#1","g":"Appearance","l":"Text color","t":"color-picker","v":"Default","e":["E029"]}
+{"id":"blocks/policy-links#1","g":"Appearance","l":"Size","t":"select","o":"S04","v":"12px","e":["E029"]}
+{"id":"blocks/policy-links#1","g":"Appearance","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E029"]}
+{"id":"blocks/price#1","g":"(unparsed group)","l":"Show sale price first","t":"toggle","v":true,"e":["E030"]}
+{"id":"blocks/price#1","g":"(unparsed group)","l":"Show Shop Pay payment options","t":"toggle","v":false,"e":["E030"]}
+{"id":"blocks/price#1","g":"(unparsed group)","l":"Tax information","t":"toggle","v":false,"e":["E030"]}
+{"id":"blocks/price#1","g":"Typography","l":"Preset","t":"select","o":"S03","v":"Heading 6","e":["E030"]}
+{"id":"blocks/price#1","g":"(unparsed group)","l":"Width","t":"segmented-control","o":["Fit","Fill"],"e":["E030"]}
+{"id":"blocks/price#1","g":"Appearance","l":"Text color","t":"color-picker","v":"Default","e":["E030"]}
+{"id":"blocks/price#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"0","u":"px","e":["E030"]}
+{"id":"blocks/price#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"0","u":"px","e":["E030"]}
+{"id":"blocks/price#1","g":"Padding","l":"Left","t":"range-with-numeric-input","v":"0","u":"px","e":["E030"]}
+{"id":"blocks/price#1","g":"Padding","l":"Right","t":"range-with-numeric-input","v":"0","u":"px","e":["E030"]}
+{"id":"blocks/product-card#1","g":"Displays product from parent section","l":"Vertical gap","t":"range-with-numeric-input","v":"4","u":"px","e":["E031"]}
+{"id":"blocks/product-card#1","g":"Appearance","l":"Background color","t":"color-picker","v":"Default","e":["E031"]}
+{"id":"blocks/product-card#1","g":"Borders","l":"Style","t":"segmented-control","o":["None","Solid"],"e":["E031"]}
+{"id":"blocks/product-card#1","g":"Borders","l":"Corner radius","t":"range-with-numeric-input","v":"0","u":"px","e":["E031"]}
+{"id":"blocks/product-card#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"0","u":"px","e":["E031"]}
+{"id":"blocks/product-card#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"0","u":"px","e":["E031"]}
+{"id":"blocks/product-card#1","g":"Padding","l":"Left","t":"range-with-numeric-input","v":"0","u":"px","e":["E031"]}
+{"id":"blocks/product-card#1","g":"Padding","l":"Right","t":"range-with-numeric-input","v":"0","u":"px","e":["E031"]}
+{"id":"blocks/product-title#1","g":"Layout","l":"Width","t":"segmented-control","o":["Fit","Fill"],"e":["E032"]}
+{"id":"blocks/product-title#1","g":"Layout","l":"Max width","t":"select","o":["Narrow","Normal","None"],"v":"Normal","e":["E032"]}
+{"id":"blocks/product-title#1","g":"Typography","l":"Preset","t":"select","o":"S03","v":"Default","e":["E032"]}
+{"id":"blocks/product-title#1","g":"Appearance","l":"Text color","t":"color-picker","v":"Default","e":["E032"]}
+{"id":"blocks/product-title#1","g":"Appearance","l":"Background","t":"toggle","v":false,"e":["E032"]}
+{"id":"blocks/product-title#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"4","u":"px","e":["E032"]}
+{"id":"blocks/product-title#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"0","u":"px","e":["E032"]}
+{"id":"blocks/product-title#1","g":"Padding","l":"Left","t":"range-with-numeric-input","v":"0","u":"px","e":["E032"]}
+{"id":"blocks/product-title#1","g":"Padding","l":"Right","t":"range-with-numeric-input","v":"0","u":"px","e":["E032"]}
+{"id":"blocks/social-media-links#1","g":"Appearance","l":"Color","t":"color-picker","v":"Default","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"Facebook","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"Instagram","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"YouTube","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"TikTok","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"X (Twitter)","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"Threads","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"LinkedIn","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"Bluesky","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"Snapchat","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"Pinterest","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"Tumblr","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"Vimeo","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/social-media-links#1","g":"Links","l":"Custom link","t":"text-or-rich-text","e":["E033"]}
+{"id":"blocks/text#1","g":"General","l":"Text","t":"text-or-rich-text","e":["E034"]}
+{"id":"blocks/text#1","g":"Layout","l":"Width","t":"segmented-control","o":["Fit","Fill"],"e":["E034"]}
+{"id":"blocks/text#1","g":"Layout","l":"Max width","t":"select","o":["Narrow","Normal","None"],"v":"Normal","e":["E034"]}
+{"id":"blocks/text#1","g":"Typography","l":"Preset","t":"select","o":"S03","v":"Heading 4","e":["E034"]}
+{"id":"blocks/text#1","g":"Appearance","l":"Text color","t":"color-picker","v":"Default","e":["E034"]}
+{"id":"blocks/text#1","g":"Appearance","l":"Background","t":"toggle","v":false,"e":["E034"]}
+{"id":"blocks/text#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"0","u":"px","e":["E034"]}
+{"id":"blocks/text#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"0","u":"px","e":["E034"]}
+{"id":"blocks/text#1","g":"Padding","l":"Left","t":"range-with-numeric-input","v":"0","u":"px","e":["E034"]}
+{"id":"blocks/text#1","g":"Padding","l":"Right","t":"range-with-numeric-input","v":"0","u":"px","e":["E034"]}
+{"id":"blocks/view-all-button#1","g":"(unparsed group)","l":"Label","t":"text-or-rich-text","e":["E035"]}
+{"id":"blocks/view-all-button#1","g":"(unparsed group)","l":"Open link in new tab","t":"toggle","v":false,"e":["E035"]}
+{"id":"blocks/view-all-button#1","g":"(unparsed group)","l":"Style","t":"select","o":["Primary","Secondary","Link","Custom"],"v":"Primary","e":["E035"]}
+{"id":"blocks/view-all-button#1","g":"Size","l":"Desktop width","t":"segmented-control","o":["Fit","Custom"],"e":["E035"]}
+{"id":"blocks/view-all-button#1","g":"Size","l":"Mobile width","t":"segmented-control","o":["Fit","Custom"],"e":["E035"]}
+{"id":"sections/announcement-bar#1","g":"General","l":"Time to next announcement","t":"range-with-numeric-input","v":"5","u":"sec","e":["E039"]}
+{"id":"sections/announcement-bar#1","g":"Appearance","l":"Section width","t":"segmented-control","o":["Page","Full"],"e":["E039"]}
+{"id":"sections/announcement-bar#1","g":"Appearance","l":"Background color","t":"color-picker","v":"Palette color","e":["E039"]}
+{"id":"sections/announcement-bar#1","g":"Appearance","l":"Divider thickness","t":"range-with-numeric-input","v":"1","u":"px","e":["E039"]}
+{"id":"sections/announcement-bar#1","g":"Appearance","l":"Divider color","t":"color-picker","v":"Palette color","e":["E039"]}
+{"id":"sections/announcement-bar#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"15","u":"px","e":["E039"]}
+{"id":"sections/announcement-bar#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"15","u":"px","e":["E039"]}
+{"id":"sections/collection#1","g":"General","l":"Type","t":"segmented-control","o":["Grid","Editorial"],"e":["E040"]}
+{"id":"sections/collection#1","g":"General","l":"Card size","t":"select","o":["Small","Medium","Large","Extra large"],"v":"Medium","e":["E040"]}
+{"id":"sections/collection#1","g":"General","l":"Mobile card size","t":"segmented-control","o":["Small","Large"],"e":["E040"]}
+{"id":"sections/collection#1","g":"General","l":"Auto load products on scroll","t":"toggle","v":true,"e":["E040"]}
+{"id":"sections/collection#1","g":"Layout","l":"Width","t":"segmented-control","o":["Page","Full"],"e":["E040"]}
+{"id":"sections/collection#1","g":"Layout","l":"Full width on mobile","t":"toggle","v":true,"e":["E040"]}
+{"id":"sections/collection#1","g":"Layout","l":"Horizontal gap","t":"range-with-numeric-input","v":"16","u":"px","e":["E040"]}
+{"id":"sections/collection#1","g":"Layout","l":"Vertical gap","t":"range-with-numeric-input","v":"24","u":"px","e":["E040"]}
+{"id":"sections/collection#1","g":"Layout","l":"Left padding","t":"range-with-numeric-input","v":"0","u":"px","e":["E040"]}
+{"id":"sections/collection#1","g":"Layout","l":"Right padding","t":"range-with-numeric-input","v":"0","u":"px","e":["E040"]}
+{"id":"sections/collection#1","g":"Section layout","l":"Background color","t":"color-picker","v":"Palette color","e":["E040"]}
+{"id":"sections/collection#1","g":"Section layout","l":"Top padding","t":"range-with-numeric-input","v":"0","u":"px","e":["E040"]}
+{"id":"sections/collection#1","g":"Section layout","l":"Bottom padding","t":"range-with-numeric-input","v":"32","u":"px","e":["E040"]}
+{"id":"sections/collection-heading#1","g":"Layout","l":"Direction","t":"segmented-control","o":["Vertical","Horizontal"],"e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Layout","l":"Alignment","t":"segmented-control","o":["Left","Center","Right"],"e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Layout","l":"Position","t":"select","o":["Top","Center","Bottom","Space between"],"v":"Center","e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Layout","l":"Gap","t":"range-with-numeric-input","v":"12","u":"px","e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Size","l":"Width","t":"segmented-control","o":["Page","Full"],"e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Size","l":"Height","t":"select","o":"S06","v":"Auto","e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Appearance","l":"Background media","t":"segmented-control","o":["None","Image","Video"],"e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Appearance","l":"Background color","t":"color-picker","v":"Palette color","e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Appearance","l":"Background overlay","t":"toggle","v":false,"e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Borders","l":"Style","t":"segmented-control","o":["None","Solid"],"e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Borders","l":"Corner radius","t":"range-with-numeric-input","v":"0","u":"px","e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"48","u":"px","e":["E041"]}
+{"id":"sections/collection-heading#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"48","u":"px","e":["E041"]}
+{"id":"sections/featured-collection#1","g":"General","l":"Collection","t":"toggle","v":false,"e":["E042","E043","E044"]}
+{"id":"sections/featured-collection#1","g":"General","l":"Type","t":"select","o":["Grid","Carousel","Editorial"],"v":"Carousel","e":["E042","E043","E044"]}
+{"id":"sections/featured-collection#1","g":"General","l":"Product count","t":"range-with-numeric-input","v":"8","e":["E042","E043","E044"]}
+{"id":"sections/featured-collection#1","g":"General","l":"Columns","t":"range-with-numeric-input","v":"4","e":["E042","E044"]}
+{"id":"sections/featured-collection#1","g":"General","l":"Mobile columns","t":"segmented-control","o":["1","2"],"e":["E042","E044"]}
+{"id":"sections/featured-collection#1","g":"General","l":"Horizontal gap","t":"range-with-numeric-input","v":"8","u":"px","e":["E042","E044"]}
+{"id":"sections/featured-collection#1","g":"Carousel navigation","l":"Icon","t":"select","o":"S07","v":"Arrows","e":["E042"]}
+{"id":"sections/featured-collection#1","g":"Carousel navigation","l":"Icon background","t":"segmented-control","o":["None","Circle","Square"],"e":["E042"]}
+{"id":"sections/featured-collection#1","g":"Section layout","l":"Width","t":"segmented-control","o":["Page","Full"],"e":["E042","E043","E044"]}
+{"id":"sections/featured-collection#1","g":"Section layout","l":"Alignment","t":"segmented-control","o":["Left","Center","Right"],"e":["E042","E043","E044"]}
+{"id":"sections/featured-collection#1","g":"Section layout","l":"Gap","t":"range-with-numeric-input","v":"28","u":"px","e":["E042","E043","E044"]}
+{"id":"sections/featured-collection#1","g":"Section layout","l":"Background color","t":"color-picker","v":"Palette color","e":["E042","E043","E044"]}
+{"id":"sections/featured-collection#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"48","u":"px","e":["E042","E043","E044"]}
+{"id":"sections/featured-collection#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"48","u":"px","e":["E042","E043","E044"]}
+{"id":"sections/featured-collection#1","g":"General","l":"Carousel on mobile","t":"toggle","v":false,"e":["E043","E044"]}
+{"id":"sections/featured-collection#1","g":"General","l":"Vertical gap","t":"range-with-numeric-input","v":"24","u":"px","e":["E044"]}
+{"id":"sections/footer#1","g":"General","l":"Width","t":"segmented-control","o":["Page","Full"],"e":["E045"]}
+{"id":"sections/footer#1","g":"General","l":"Gap","t":"range-with-numeric-input","v":"20","u":"px","e":["E045"]}
+{"id":"sections/footer#1","g":"General","l":"Background color","t":"color-picker","v":"Palette color","e":["E045"]}
+{"id":"sections/footer#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"30","u":"px","e":["E045"]}
+{"id":"sections/footer#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"30","u":"px","e":["E045"]}
+{"id":"sections/header#1","g":"Logo","l":"Position","t":"segmented-control","o":["Left","Center","Right"],"e":["E046"]}
+{"id":"sections/header#1","g":"Menu","l":"Position","t":"segmented-control","o":["Left","Center","Right"],"e":["E046"]}
+{"id":"sections/header#1","g":"Menu","l":"Row","t":"segmented-control","o":["Top","Bottom"],"e":["E046"]}
+{"id":"sections/header#1","g":"(unparsed group)","l":"Customer account menu","t":"toggle","v":false,"e":["E046"]}
+{"id":"sections/header#1","g":"Search","l":"Search icon","t":"toggle","v":true,"e":["E046"]}
+{"id":"sections/header#1","g":"Search","l":"Position","t":"segmented-control","o":["Left","Right"],"e":["E046"]}
+{"id":"sections/header#1","g":"Search","l":"Row","t":"segmented-control","o":["Top","Bottom"],"e":["E046"]}
+{"id":"sections/header#1","g":"Localization","l":"Country/Region","t":"toggle","v":true,"e":["E046"]}
+{"id":"sections/header#1","g":"(unparsed group)","l":"Flag","t":"toggle","v":false,"e":["E046"]}
+{"id":"sections/header#1","g":"(unparsed group)","l":"Language selector","t":"toggle","v":true,"e":["E046"]}
+{"id":"sections/header#1","g":"(unparsed group)","l":"Font","t":"select","o":["Heading","Subheading","Body","Accent"],"v":"Heading","e":["E046"]}
+{"id":"sections/header#1","g":"(unparsed group)","l":"Size","t":"select","o":"S04","v":"14px","e":["E046"]}
+{"id":"sections/header#1","g":"(unparsed group)","l":"Position","t":"segmented-control","o":["Left","Right"],"e":["E046"]}
+{"id":"sections/header#1","g":"(unparsed group)","l":"Row","t":"segmented-control","o":["Top","Bottom"],"e":["E046"]}
+{"id":"sections/header#1","g":"Appearance","l":"Width","t":"segmented-control","o":["Page","Full"],"e":["E046"]}
+{"id":"sections/header#1","g":"Appearance","l":"Height","t":"segmented-control","o":["Compact","Standard"],"e":["E046"]}
+{"id":"sections/header#1","g":"Appearance","l":"Sticky header","t":"select","o":["Always","On scroll up","Never"],"v":"Always","e":["E046"]}
+{"id":"sections/header#1","g":"Appearance","l":"Border thickness","t":"range-with-numeric-input","v":"0","u":"px","e":["E046"]}
+{"id":"sections/header#1","g":"Utilities","l":"Menu style","t":"segmented-control","o":["Icons","Text"],"e":["E046"]}
+{"id":"sections/header#1","g":"Colors","l":"Top row background","t":"color-picker","v":"Palette color","e":["E046"]}
+{"id":"sections/header#1","g":"Colors","l":"Top row text","t":"color-picker","v":"Default","e":["E046"]}
+{"id":"sections/header#1","g":"Cart bubble","l":"Bubble style","t":"segmented-control","o":["Default","Custom"],"e":["E046"]}
+{"id":"sections/header#1","g":"Home page","l":"Transparent background","t":"toggle","v":false,"e":["E046"]}
+{"id":"sections/header#1","g":"Product page","l":"Transparent background","t":"toggle","v":false,"e":["E046"]}
+{"id":"sections/header#1","g":"Collection page","l":"Transparent background","t":"toggle","v":false,"e":["E046"]}
+{"id":"sections/hero#1","g":"Media 1","l":"Type","t":"segmented-control","o":["Image","Video"],"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Media 1","l":"Upload images","t":"toggle","v":false,"e":["E047","E048","E049","E050","E051","E052","E053"]}
+{"id":"sections/hero#1","g":"Media 2","l":"Type","t":"segmented-control","o":["Image","Video"],"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Media 2","l":"Upload images","t":"toggle","v":false,"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Mobile media","l":"Stack media","t":"toggle","v":false,"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Mobile media","l":"Show different media on mobile","t":"toggle","v":false,"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Section link","l":"Link","t":"text-or-rich-text","e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Section link","l":"Open link in new tab","t":"toggle","v":false,"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Layout","l":"Direction","t":"segmented-control","o":["Vertical","Horizontal"],"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Layout","l":"Align text baseline","t":"toggle","v":true,"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Layout","l":"Alignment","t":"segmented-control","o":["Left","Center","Right"],"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Layout","l":"Position","t":"select","o":["Top","Center","Bottom","Space between"],"v":"Bottom","e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Layout","l":"Gap","t":"range-with-numeric-input","v":"24","u":"px","e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Layout","l":"Width","t":"segmented-control","o":["Page","Full"],"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Layout","l":"Height","t":"select","o":"S06","v":"Medium","e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Appearance","l":"Background color","t":"color-picker","v":"Transparent","e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Appearance","l":"Media overlay","t":"toggle","v":true,"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Appearance","l":"Overlay color","t":"color-picker","v":"#121212","e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Appearance","l":"Overlay style","t":"segmented-control","o":["Solid","Gradient"],"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Appearance","l":"Blurred reflection","t":"toggle","v":false,"e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"100","u":"px","e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"72","u":"px","e":["E047","E048","E049","E050","E051","E052","E053","E054"]}
+{"id":"sections/hero#1","g":"Custom CSS","l":"Ask for changes...","t":"text-or-rich-text","e":["E047","E048","E049","E050","E051","E052","E054"]}
+{"id":"sections/hero#1","g":"Custom CSS","l":"1","t":"text-or-rich-text","e":["E049"]}
+{"id":"sections/hero#1","g":"Layout","l":"Custom height","t":"range-with-numeric-input","v":"50","u":"%","e":["E050"]}
+{"id":"sections/hero#1","g":"Mobile media 1","l":"Type","t":"segmented-control","o":["Image","Video"],"e":["E052"]}
+{"id":"sections/hero#1","g":"Mobile media 1","l":"Upload images","t":"toggle","v":false,"e":["E052"]}
+{"id":"sections/hero#1","g":"Mobile media 2","l":"Type","t":"segmented-control","o":["Image","Video"],"e":["E052"]}
+{"id":"sections/hero#1","g":"Mobile media 2","l":"Upload images","t":"toggle","v":false,"e":["E052"]}
+{"id":"sections/hero#1","g":"Media 1","l":"Video","t":"toggle","v":false,"e":["E054"]}
+{"id":"sections/utilities#1","g":"General","l":"Width","t":"segmented-control","o":["Page","Full"],"e":["E055"]}
+{"id":"sections/utilities#1","g":"General","l":"Gap","t":"range-with-numeric-input","v":"24","u":"px","e":["E055"]}
+{"id":"sections/utilities#1","g":"General","l":"Background color","t":"color-picker","v":"Palette color","e":["E055"]}
+{"id":"sections/utilities#1","g":"General","l":"Divider thickness","t":"range-with-numeric-input","v":"1","u":"px","e":["E055"]}
+{"id":"sections/utilities#1","g":"General","l":"Divider color","t":"color-picker","v":"Palette color","e":["E055"]}
+{"id":"sections/utilities#1","g":"Padding","l":"Top","t":"range-with-numeric-input","v":"20","u":"px","e":["E055"]}
+{"id":"sections/utilities#1","g":"Padding","l":"Bottom","t":"range-with-numeric-input","v":"48","u":"px","e":["E055"]}
+{"id":"theme/Animations#1","g":"Animations","l":"Page transition","t":"toggle","v":false,"e":["E065"]}
+{"id":"theme/Animations#1","g":"Animations","l":"Product card to product page transition","t":"toggle","v":false,"e":["E065"]}
+{"id":"theme/Animations#1","g":"Animations","l":"Add to cart","t":"toggle","v":true,"e":["E065"]}
+{"id":"theme/Animations#1","g":"Animations","l":"Card hover effect","t":"select","o":["None","Lift","Scale","Zoom"],"v":"None","e":["E065"]}
+{"id":"theme/Badges#1","g":"Badges","l":"Position on cards","t":"select","o":["Bottom left","Top left","Top right"],"v":"Top right","e":["E066"]}
+{"id":"theme/Badges#1","g":"Badges","l":"Corner radius","t":"range-with-numeric-input","v":"100","u":"px","e":["E066"]}
+{"id":"theme/Badges#1","g":"Colors","l":"Sale badge background","t":"color-picker","v":"Palette color","e":["E066"]}
+{"id":"theme/Badges#1","g":"Colors","l":"Sale badge text","t":"color-picker","v":"Palette color","e":["E066"]}
+{"id":"theme/Badges#1","g":"Colors","l":"Sold out badge background","t":"color-picker","v":"#EEF1EA","e":["E066"]}
+{"id":"theme/Badges#1","g":"Colors","l":"Sold out badge text","t":"color-picker","v":"Palette color","e":["E066"]}
+{"id":"theme/Badges#1","g":"Typography","l":"Font","t":"select","o":["Body","Subheading","Heading","Accent"],"v":"Body","e":["E066"]}
+{"id":"theme/Badges#1","g":"Typography","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E066"]}
+{"id":"theme/Buttons#1","g":"Primary button","l":"Background","t":"color-picker","v":"Palette color","e":["E067"]}
+{"id":"theme/Buttons#1","g":"Primary button","l":"Text","t":"color-picker","v":"Palette color","e":["E067"]}
+{"id":"theme/Buttons#1","g":"Primary button","l":"Borders","t":"color-picker","v":"Palette color","e":["E067"]}
+{"id":"theme/Buttons#1","g":"Primary button","l":"Border thickness","t":"range-with-numeric-input","v":"0","u":"px","e":["E067"]}
+{"id":"theme/Buttons#1","g":"Primary button","l":"Corner radius","t":"range-with-numeric-input","v":"14","u":"px","e":["E067"]}
+{"id":"theme/Buttons#1","g":"Primary button","l":"Font","t":"segmented-control","o":["Body","Accent"],"e":["E067"]}
+{"id":"theme/Buttons#1","g":"Primary button","l":"Text case","t":"segmented-control","o":["Default","Uppercase"],"e":["E067"]}
+{"id":"theme/Buttons#1","g":"Secondary button","l":"Background","t":"color-picker","v":"Transparent","e":["E067"]}
+{"id":"theme/Buttons#1","g":"Secondary button","l":"Text","t":"color-picker","v":"Palette color","e":["E067"]}
+{"id":"theme/Buttons#1","g":"Secondary button","l":"Borders","t":"color-picker","v":"Palette color","e":["E067"]}
+{"id":"theme/Buttons#1","g":"Secondary button","l":"Border thickness","t":"range-with-numeric-input","v":"1","u":"px","e":["E067"]}
+{"id":"theme/Buttons#1","g":"Secondary button","l":"Corner radius","t":"range-with-numeric-input","v":"14","u":"px","e":["E067"]}
+{"id":"theme/Buttons#1","g":"Secondary button","l":"Font","t":"segmented-control","o":["Body","Accent"],"e":["E067"]}
+{"id":"theme/Buttons#1","g":"Secondary button","l":"Text case","t":"segmented-control","o":["Default","Uppercase"],"e":["E067"]}
+{"id":"theme/Buttons#1","g":"(unparsed group)","l":"Corner radius","t":"range-with-numeric-input","v":"40","u":"px","e":["E067"]}
+{"id":"theme/Cart#1","g":"Cart","l":"Type","t":"segmented-control","o":["Page","Drawer"],"e":["E068"]}
+{"id":"theme/Cart#1","g":"Cart","l":"Product title case","t":"segmented-control","o":["Default","Uppercase"],"e":["E068"]}
+{"id":"theme/Cart#1","g":"Cart","l":"Price font","t":"select","o":["Body","Subheading","Heading","Accent"],"v":"Subheading","e":["E068"]}
+{"id":"theme/Cart#1","g":"Cart features","l":"Allow note to seller","t":"toggle","v":false,"e":["E068"]}
+{"id":"theme/Cart#1","g":"Cart features","l":"Allow discounts in cart","t":"toggle","v":true,"e":["E068"]}
+{"id":"theme/Cart#1","g":"Cart features","l":"Show Shop Pay payment options","t":"toggle","v":true,"e":["E068"]}
+{"id":"theme/Cart#1","g":"(unparsed group)","l":"Accelerated checkout buttons","t":"toggle","v":true,"e":["E068"]}
+{"id":"theme/Cart#1","g":"(unparsed group)","l":"Empty cart button link","t":"text-or-rich-text","e":["E068"]}
+{"id":"theme/Cart#1","g":"Product media","l":"Border style","t":"segmented-control","o":["None","Solid"],"e":["E068"]}
+{"id":"theme/Cart#1","g":"Product media","l":"Corner radius","t":"range-with-numeric-input","v":"0","u":"px","e":["E068"]}
+{"id":"theme/Custom CSS#1","g":"Custom CSS","l":"1","t":"text-or-rich-text","e":["E071"]}
+{"id":"theme/Drawers#1","g":"Drawers","l":"Background color","t":"color-picker","v":"Palette color","e":["E072"]}
+{"id":"theme/Drawers#1","g":"Drawers","l":"Text color","t":"color-picker","v":"Palette color","e":["E072"]}
+{"id":"theme/Drawers#1","g":"Drawers","l":"Border color","t":"color-picker","v":"Palette color","e":["E072"]}
+{"id":"theme/Icons#1","g":"Icons","l":"Stroke","t":"select","o":["Thin","Default","Heavy"],"v":"Default","e":["E073"]}
+{"id":"theme/Input fields#1","g":"Input fields","l":"Background","t":"color-picker","v":"Palette color","e":["E074"]}
+{"id":"theme/Input fields#1","g":"Input fields","l":"Text","t":"color-picker","v":"Palette color","e":["E074"]}
+{"id":"theme/Input fields#1","g":"Input fields","l":"Borders","t":"color-picker","v":"Palette color","e":["E074"]}
+{"id":"theme/Input fields#1","g":"Input fields","l":"Border thickness","t":"range-with-numeric-input","v":"1","u":"px","e":["E074"]}
+{"id":"theme/Input fields#1","g":"Input fields","l":"Corner radius","t":"range-with-numeric-input","v":"4","u":"px","e":["E074"]}
+{"id":"theme/Input fields#1","g":"Input fields","l":"Text preset","t":"select","o":"S05","v":"Paragraph","e":["E074"]}
+{"id":"theme/Logo and favicon#1","g":"(unparsed group)","l":"Upload images","t":"toggle","v":false,"e":["E075"]}
+{"id":"theme/Logo and favicon#2","g":"(unparsed group)","l":"Upload images","t":"toggle","v":false,"e":["E075"]}
+{"id":"theme/Logo and favicon#3","g":"(unparsed group)","l":"Upload images","t":"toggle","v":false,"e":["E075"]}
+{"id":"theme/Page#1","g":"Page","l":"Background","t":"color-picker","v":"Palette color","e":["E078"]}
+{"id":"theme/Page#1","g":"Page","l":"Page width","t":"select","o":["Narrow","Normal","Wide"],"v":"Narrow","e":["E078"]}
+{"id":"theme/Popovers and modals#1","g":"Popovers and modals","l":"Background color","t":"color-picker","v":"Palette color","e":["E079"]}
+{"id":"theme/Popovers and modals#1","g":"Popovers and modals","l":"Text color","t":"color-picker","v":"Palette color","e":["E079"]}
+{"id":"theme/Popovers and modals#1","g":"Popovers and modals","l":"Corner radius","t":"range-with-numeric-input","v":"14","u":"px","e":["E079"]}
+{"id":"theme/Popovers and modals#1","g":"Popovers and modals","l":"Border color","t":"color-picker","v":"Palette color","e":["E079"]}
+{"id":"theme/Popovers and modals#1","g":"Popovers and modals","l":"Border thickness","t":"range-with-numeric-input","v":"1","u":"px","e":["E079"]}
+{"id":"theme/Popovers and modals#1","g":"Popovers and modals","l":"Drop shadow","t":"toggle","v":true,"e":["E079"]}
+{"id":"theme/Popovers and modals#1","g":"Popovers and modals","l":"Shadow","t":"color-picker","v":"Palette color","e":["E079"]}
+{"id":"theme/Prices#1","g":"Currency code","l":"Product pages","t":"toggle","v":false,"e":["E080"]}
+{"id":"theme/Prices#1","g":"Currency code","l":"Product cards","t":"toggle","v":false,"e":["E080"]}
+{"id":"theme/Prices#1","g":"Currency code","l":"Cart items","t":"toggle","v":false,"e":["E080"]}
+{"id":"theme/Prices#1","g":"Currency code","l":"Cart total","t":"toggle","v":true,"e":["E080"]}
+{"id":"theme/Product cards#1","g":"Product cards","l":"Quick add","t":"toggle","v":true,"e":["E081"]}
+{"id":"theme/Product cards#1","g":"Product cards","l":"Mobile quick add","t":"toggle","v":false,"e":["E081"]}
+{"id":"theme/Product cards#1","g":"Product cards","l":"Background","t":"color-picker","v":"Palette color","e":["E081"]}
+{"id":"theme/Product cards#1","g":"Product cards","l":"Text","t":"color-picker","v":"Palette color","e":["E081"]}
+{"id":"theme/Product cards#1","g":"Media","l":"Show second image on hover","t":"toggle","v":true,"e":["E081"]}
+{"id":"theme/Product cards#1","g":"Media","l":"Show carousel","t":"toggle","v":true,"e":["E081"]}
+{"id":"theme/Search#1","g":"Search","l":"Empty state collection","t":"toggle","v":false,"e":["E082"]}
+{"id":"theme/Search#1","g":"Search popover","l":"Product corner radius","t":"range-with-numeric-input","v":"0","u":"px","e":["E082"]}
+{"id":"theme/Search#1","g":"Search popover","l":"Card corner radius","t":"range-with-numeric-input","v":"4","u":"px","e":["E082"]}
+{"id":"theme/Search#1","g":"Search popover","l":"Product and card title case","t":"segmented-control","o":["Default","Uppercase"],"e":["E082"]}
+{"id":"theme/Swatches#1","g":"Swatches","l":"Variant images","t":"toggle","v":false,"e":["E083"]}
+{"id":"theme/Swatches#1","g":"Swatches","l":"Width","t":"range-with-numeric-input","v":"34","u":"px","e":["E083"]}
+{"id":"theme/Swatches#1","g":"Swatches","l":"Height","t":"range-with-numeric-input","v":"34","u":"px","e":["E083"]}
+{"id":"theme/Swatches#1","g":"Swatches","l":"Corner radius","t":"range-with-numeric-input","v":"32","u":"px","e":["E083"]}
+{"id":"theme/Swatches#1","g":"Swatches","l":"Borders","t":"segmented-control","o":["None","Solid"],"e":["E083"]}
+{"id":"theme/Swatches#1","g":"Swatches","l":"Border thickness","t":"range-with-numeric-input","v":"1","u":"px","e":["E083"]}
+{"id":"theme/Swatches#1","g":"Swatches","l":"Border opacity","t":"range-with-numeric-input","v":"10","u":"%","e":["E083"]}
+{"id":"theme/Theme style#1","g":"(unparsed group)","l":"Ask for changes...","t":"text-or-rich-text","e":["E084"]}
+{"id":"theme/Typography#1","g":"Colors","l":"Text","t":"color-picker","v":"Palette color","e":["E085"]}
+{"id":"theme/Typography#1","g":"Paragraph","l":"Size","t":"select","o":"S04","v":"14px","e":["E085"]}
+{"id":"theme/Typography#1","g":"Paragraph","l":"Line height","t":"select","o":["Tight","Normal","Loose"],"v":"Loose","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 1","l":"Font","t":"segmented-control","o":["Heading","Accent"],"e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 1","l":"Size","t":"select","o":"S08","v":"56px","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 1","l":"Line height","t":"select","o":["Tight","Normal","Loose"],"v":"Tight","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 1","l":"Letter spacing","t":"select","o":["Tight","Normal","Loose"],"v":"Normal","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 1","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 2","l":"Font","t":"segmented-control","o":["Heading","Accent"],"e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 2","l":"Size","t":"select","o":"S08","v":"48px","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 2","l":"Line height","t":"select","o":["Tight","Normal","Loose"],"v":"Tight","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 2","l":"Letter spacing","t":"select","o":["Tight","Normal","Loose"],"v":"Normal","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 2","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 3","l":"Font","t":"select","o":["Heading","Accent","Subheading","Body"],"v":"Heading","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 3","l":"Size","t":"select","o":"S08","v":"32px","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 3","l":"Line height","t":"select","o":["Tight","Normal","Loose"],"v":"Normal","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 3","l":"Letter spacing","t":"select","o":["Tight","Normal","Loose"],"v":"Normal","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 3","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 4","l":"Font","t":"select","o":["Heading","Accent","Subheading","Body"],"v":"Heading","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 4","l":"Size","t":"select","o":"S08","v":"24px","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 4","l":"Line height","t":"select","o":["Tight","Normal","Loose"],"v":"Tight","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 4","l":"Letter spacing","t":"select","o":["Tight","Normal","Loose"],"v":"Normal","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 4","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 5","l":"Font","t":"select","o":["Heading","Accent","Subheading","Body"],"v":"Subheading","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 5","l":"Size","t":"select","o":"S08","v":"14px","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 5","l":"Line height","t":"select","o":["Tight","Normal","Loose"],"v":"Loose","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 5","l":"Letter spacing","t":"select","o":["Tight","Normal","Loose"],"v":"Normal","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 5","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 6","l":"Font","t":"select","o":["Heading","Accent","Subheading","Body"],"v":"Subheading","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 6","l":"Size","t":"select","o":"S08","v":"12px","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 6","l":"Line height","t":"select","o":["Tight","Normal","Loose"],"v":"Loose","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 6","l":"Letter spacing","t":"select","o":["Tight","Normal","Loose"],"v":"Normal","e":["E085"]}
+{"id":"theme/Typography#1","g":"Heading 6","l":"Case","t":"segmented-control","o":["Default","Uppercase"],"e":["E085"]}
+{"id":"theme/Variant pickers#1","g":"Variant settings","l":"Background","t":"color-picker","v":"Palette color","e":["E088"]}
+{"id":"theme/Variant pickers#1","g":"Variant settings","l":"Text","t":"color-picker","v":"Palette color","e":["E088"]}
+{"id":"theme/Variant pickers#1","g":"Variant settings","l":"Borders","t":"color-picker","v":"Palette color","e":["E088"]}
+{"id":"theme/Variant pickers#1","g":"Selected variants","l":"Background","t":"color-picker","v":"Palette color","e":["E088"]}
+{"id":"theme/Variant pickers#1","g":"Selected variants","l":"Text","t":"color-picker","v":"Palette color","e":["E088"]}
+{"id":"theme/Variant pickers#1","g":"Selected variants","l":"Borders","t":"color-picker","v":"Palette color","e":["E088"]}
+{"id":"theme/Variant pickers#1","g":"Buttons","l":"Border thickness","t":"range-with-numeric-input","v":"1","u":"px","e":["E088"]}
+{"id":"theme/Variant pickers#1","g":"Buttons","l":"Corner radius","t":"range-with-numeric-input","v":"14","u":"px","e":["E088"]}
+{"id":"theme/Variant pickers#1","g":"Buttons","l":"Width","t":"segmented-control","o":["Fit","Fill"],"e":["E088"]}

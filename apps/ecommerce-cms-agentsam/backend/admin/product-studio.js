@@ -6,6 +6,7 @@ import {
 import {
   planCompletefulMockupMatrix, renderCompletefulMockupMatrix, pollCompletefulMockupRender,
 } from "../completeful/mockup-renderer.js";
+import { getCmsCollection } from "../cms/collection-store.mjs";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -1107,6 +1108,84 @@ async function publishDraft(request, env, id) {
   return json({ ok: true, product_id: draft.product_id, status: "active", draft: await loadDraft(env, id) });
 }
 
+async function scaffoldCollectionProductDrafts(request, env, collectionId) {
+  const id = String(collectionId || "").trim();
+  if (!/^[A-Za-z0-9_-]{1,180}$/.test(id)) return json({ ok: false, error: "Invalid collection ID" }, { status: 400 });
+  const scope = env.CMS_SITE_CONTEXT;
+  const collection = await getCmsCollection(env, scope, id);
+  if (!collection || collection.status !== "draft") {
+    return json({ ok: false, error: "Only draft collections can be scaffolded" }, { status: 409 });
+  }
+  if (collection.kind !== "manual" || !collection.allowed_item_types.includes("product")) {
+    return json({ ok: false, error: "This collection does not accept manually assigned products" }, { status: 422 });
+  }
+  const rawPlan = collection.metadata?.merch_plan || [];
+  if (!Array.isArray(rawPlan) || rawPlan.length > 24) {
+    return json({ ok: false, error: "Invalid assortment plan (maximum 24 blanks)" }, { status: 400 });
+  }
+  const created = [], reused = [], unavailable = [];
+  const occurrence = new Map();
+  for (const slot of rawPlan) {
+    const supplierId = String(slot?.catalog_product_id || "").trim();
+    if (!supplierId) continue;
+    const supplier = await env.DB.prepare(
+      "SELECT * FROM completeful_catalog_products WHERE (catalog_product_id = ? OR completeful_product_id = ?) AND available = 1 ORDER BY CASE WHEN completeful_product_id = ? THEN 0 ELSE 1 END LIMIT 1",
+    ).bind(supplierId, supplierId, supplierId).first();
+    if (!supplier) { unavailable.push({ catalog_product_id: supplierId, reason: "Supplier blank unavailable" }); continue; }
+    const canonicalSupplierId = String(supplier.completeful_product_id);
+    const slotIndex = Number(occurrence.get(canonicalSupplierId) || 0);
+    occurrence.set(canonicalSupplierId, slotIndex + 1);
+    const existing = await env.DB.prepare(
+      `SELECT d.id AS draft_id,p.id AS product_id,p.title FROM cms_collection_items i
+       JOIN products p ON CAST(p.id AS TEXT)=i.item_ref AND p.site_id=i.site_id
+       JOIN product_studio_drafts d ON d.product_id=p.id
+       WHERE i.collection_id=? AND i.site_id=? AND i.account_id=? AND i.item_type='product' AND d.completeful_catalog_product_id=?
+       ORDER BY i.sort_order,p.id LIMIT 1 OFFSET ?`,
+    ).bind(id, scope.id, scope.account_id, supplier.completeful_product_id, slotIndex).first();
+    if (existing) { reused.push({ catalog_product_id: supplierId, ...existing }); continue; }
+    const variants = await env.DB.prepare(
+      "SELECT completeful_variant_id FROM completeful_catalog_variants WHERE completeful_product_id = ?",
+    ).bind(supplier.completeful_product_id).all();
+    const locations = await env.DB.prepare(
+      "SELECT print_location_id FROM completeful_catalog_print_locations WHERE completeful_product_id = ? AND enabled = 1",
+    ).bind(supplier.completeful_product_id).all();
+    const variantIds = (variants.results || []).map(row => row.completeful_variant_id).filter(Boolean).slice(0, 100);
+    const locationIds = (locations.results || []).map(row => row.print_location_id).filter(Boolean).slice(0, 10);
+    if (!variantIds.length || !locationIds.length) {
+      unavailable.push({ catalog_product_id: supplierId, reason: "Missing sellable variants or print locations" });
+      continue;
+    }
+    const title = String(slot?.concept || slot?.title || supplier.default_title || supplier.name || "Untitled product").trim().slice(0, 120);
+    const draftRequest = new Request(request.url, { method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ force_new: true, catalog_product_id: supplier.completeful_product_id,
+        selected_variant_ids: variantIds, print_location_ids: locationIds, title,
+        collection: collection.name,
+        placement: { notes: `Draft from collection ${collection.name}. Review artwork and supplier quality before publishing.` },
+      }),
+    });
+    const response = await saveDraft(draftRequest, env);
+    const data = await response.json();
+    if (!response.ok || !data.ok || !data.draft?.product_id || !data.draft?.id) {
+      unavailable.push({ catalog_product_id: supplierId, reason: data.error || "Draft validation failed" });
+      continue;
+    }
+    const nextOrder = await env.DB.prepare(
+      "SELECT COALESCE(MAX(sort_order), -1) + 1 AS sort_order FROM cms_collection_items WHERE collection_id=? AND site_id=? AND account_id=?",
+    ).bind(id, scope.id, scope.account_id).first();
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO cms_collection_items
+       (id,account_id,site_id,collection_id,item_type,item_ref,sort_order,status,presentation_json)
+       VALUES (?,?,?,?, 'product', ?, ?, 'active', '{}')`,
+    ).bind(`cmscoli_${crypto.randomUUID().replaceAll("-", "")}`, scope.account_id, scope.id, id,
+      String(data.draft.product_id), Number(nextOrder?.sort_order || 0)).run();
+    created.push({ catalog_product_id: supplierId, product_id: data.draft.product_id,
+      draft_id: data.draft.id, variant_count: variantIds.length });
+  }
+  return json({ ok: true, collection_id: id, created, reused, unavailable,
+    note: "Draft product shells only. No provider orders, designs, artwork approvals or storefront publishes." });
+}
+
 export async function handleProductStudioAdminApi(request, env, url) {
   const path = url.pathname;
   const method = request.method;
@@ -1114,6 +1193,8 @@ export async function handleProductStudioAdminApi(request, env, url) {
   if(!env.CMS_SITE_CONTEXT)return json({ok:false,error:"Product site context required"},{status:409});
 
   try {
+    const scaffold = path.match(/^\/api\/admin\/product-studio\/collections\/([^/]+)\/scaffold$/);
+    if (scaffold && method === "POST") return scaffoldCollectionProductDrafts(request, env, decodeURIComponent(scaffold[1]));
     if (path === "/api/admin/product-studio/drafts" && method === "GET") {
       return getDraft(request, env, url);
     }

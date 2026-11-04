@@ -104,7 +104,7 @@ export type PresentationPreset = {
 export const PRESETS: PresentationPreset[] = [
   { id: "editorial", name: "Dark editorial", caption: "Bold campaign / high contrast", backgroundColor: "#101416", gradientTo: "#272b2c", textColor: "#f7f4ec", layout: "split", accent: "#00d9ea", mode: "gradient" },
   { id: "warm", name: "Warm lifestyle", caption: "Natural / premium / relaxed", backgroundColor: "#e9e0d0", gradientTo: "#c9b7a1", textColor: "#28221c", layout: "right", accent: "#ec327d", mode: "gradient" },
-  { id: "minimal", name: "Clean product", caption: "Product-first / restrained", backgroundColor: "#f4f5f2", gradientTo: "#dedfdc", textColor: "#141719", layout: "center", accent: "#ff7619", mode: "solid" },
+  { id: "minimal", name: "Clean product", caption: "Product-first / restrained", backgroundColor: "#f4f5f2", gradientTo: "#dedfdc", textColor: "#141719", layout: "center", accent: "#5a7df7", mode: "solid" },
 ];
 
 export type StarterKit = { id: string; label: string; caption: string; slots: string[]; searches: string[] };
@@ -115,13 +115,13 @@ export const STARTER_KITS: StarterKit[] = MERCH_ASSORTMENT_RECIPES.map(recipe =>
 export const BLANK_HERO = (): MerchHero => ({
   version: 1, layout: "split", height: "standard", backgroundMode: "gradient", focus: "center",
   overlay: 28, artworkScale: 94, eyebrow: "", headline: "", subheadline: "", artworkUrl: "",
-  backgroundImageUrl: "", accentColor: "#ff7619", textColor: "#f7f4ec",
+  backgroundImageUrl: "", accentColor: "#5a7df7", textColor: "#f7f4ec",
   backgroundColor: "#101416", gradientTo: "#272b2c",
   primaryCta: { label: "Shop collection", href: "#collection-products" },
   secondaryCta: { label: "", href: "" },
 });
 export function initialCollection(): CollectionForm {
-  return { title: "", slug: "", description: "", eyebrow: "", image_url: "", accent_color: "#ff7619",
+  return { title: "", slug: "", description: "", eyebrow: "", image_url: "", accent_color: "#5a7df7",
     status: "draft", sort_order: 0, seo_title: "", seo_description: "", hero: BLANK_HERO(), plan: [],
     rules: {mode:"manual",match:"all",conditions:[],excludedIds:[]} };
 }
@@ -146,7 +146,7 @@ export function parseCollection(c: Collection, rules?: MerchCollectionRules): Co
   try { hero = JSON.parse(c.hero_settings_json || "{}") as Partial<MerchHero>; } catch { /* invalid historical JSON becomes defaults */ }
   try { const list = JSON.parse(c.product_plan_json || "[]") as { catalog_product_id: string }[]; plan = Array.isArray(list) ? list.map(p => String(p.catalog_product_id || "")).filter(Boolean) : []; } catch { /* defaults */ }
   return { title: c.title, slug: c.slug, description: c.description || "", eyebrow: c.eyebrow || "",
-    image_url: c.image_url || "", accent_color: c.accent_color || "#ff7619", status: c.status,
+    image_url: c.image_url || "", accent_color: c.accent_color || "#5a7df7", status: c.status,
     sort_order: c.sort_order || 0, seo_title: c.seo_title || "", seo_description: c.seo_description || "",
     plan, rules: rules ? {...rules,conditions:[...rules.conditions],excludedIds:[...rules.excludedIds]} : initial.rules,
     hero: { ...initial.hero, ...hero,
