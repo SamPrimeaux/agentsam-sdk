@@ -62,7 +62,7 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
     channels: commerce ? [
       {id:'online-store',label:'Online Store',href:'/admin/store',icon:'store',children:[
         {id:'pages',label:'Pages',href:'/admin/pages'},
-        {id:'theme-editor',label:'Theme Editor',href:'/admin/theme-editor?slug=home'},
+        {id:'theme-editor',label:'Theme Editor',href:'/admin/theme-editor'},
         {id:'preferences',label:'Preferences',href:'/admin/preferences'},
       ]},
       {id:'products',label:'Products',href:'/admin/products',icon:'products',children:[

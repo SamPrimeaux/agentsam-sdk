@@ -122,7 +122,7 @@ try {
   const merchant = page.frameLocator('#merchant-frame');
   await merchant.locator('.online-store').waitFor();
   assert.equal(await merchant.locator('.online-store-title h1').innerText(), 'Online Store');
-  assert.match(await merchant.locator('#store-visibility-label').innerText(), /(?:Not published|Theme not published)/);
+  assert.match(await merchant.locator('#store-visibility-label').innerText(), /(?:Unverified|Not published|Theme not published)/);
   assert.equal(await merchant.locator('.online-store-badge--pending').innerText(), 'Unpublished');
   assert.equal(await merchant.locator('.online-store-starter').count(), 0, 'No fake storefront is presented as installed');
   assert.equal(await merchant.locator('.online-store-preview-message--empty').count(), 2, 'Uninstalled storefront state is explicit');

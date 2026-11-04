@@ -897,7 +897,7 @@ function renderStudioDesign(draft, fulfillment, source = null, sellingSelection 
     const open = document.createElement("a");
     open.className = "btn ghost small";
     open.href = productKind === "website" || productKind === "theme"
-      ? "/admin/theme-editor?slug=" + encodeURIComponent(productSlug || "home")
+      ? "/admin/theme-editor" + (window.cmsActiveSiteId ? "?site_id=" + encodeURIComponent(window.cmsActiveSiteId) : "")
       : "/admin/pages";
     open.textContent = "Open layout workspace";
     actions.append(open);

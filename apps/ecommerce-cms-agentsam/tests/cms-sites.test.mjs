@@ -18,16 +18,17 @@ function d1(db) {
   };
 }
 
-test("site listing bootstraps a default site for a new account", async () => {
+test("site inventory is read-only; explicit site provisioning remains available", async () => {
   const db = createCmsTestDb();
   try {
     db.prepare("INSERT INTO accounts(id) VALUES ('acct-a')").run();
     const store = d1(db);
     const sites = await listCmsSites(store, "acct-a");
-    assert.equal(sites.length, 1);
-    assert.equal(sites[0].slug, "default");
-    assert.equal(sites[0].is_default, 1);
-    assert.equal((await ensureDefaultCmsSite(store, "acct-a")).id, sites[0].id);
+    assert.equal(sites.length, 0, "a GET inventory must never provision a website");
+    const created = await ensureDefaultCmsSite(store, "acct-a");
+    assert.equal(created.slug, "default");
+    assert.equal(created.is_default, 1);
+    assert.equal((await listCmsSites(store, "acct-a"))[0].id, created.id);
   } finally { db.close(); }
 });
 
@@ -87,8 +88,8 @@ test("merchant with two existing sites is prompted to select, never assigned a p
       (await resolveCmsSite(store, { accountId: "acct-a", siteId: "a2" })).id, "a2");
     await assert.rejects(
       resolveCmsSite(store, { accountId: "acct-b", siteId: "a2" }), /not_found/);
-    assert.equal((await listCmsSites(store, "acct-b")).length, 1);
-    assert.equal((await listCmsSites(store, "acct-b"))[0].status, "draft");
+    assert.equal((await listCmsSites(store, "acct-b")).length, 0,
+      "visiting another account's empty site list must not manufacture a site");
   } finally { db.close(); }
 });
 

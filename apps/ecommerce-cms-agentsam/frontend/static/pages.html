@@ -24,7 +24,7 @@ renderShell("/admin/pages", `
           <span>Site</span>
           <select id="pages-site-select" aria-label="Select site"></select>
         </label>
-        <a class="btn ghost" id="edit-site-design" href="/admin/theme-editor?slug=home">Edit site design</a>
+        <a class="btn ghost" id="edit-site-design" href="/admin/theme-editor">Edit site design</a>
         <button class="btn primary" type="button" id="add-page-btn">+ Add page</button>
       </div>
     </header>
@@ -290,6 +290,7 @@ addPageForm?.addEventListener("submit", async (event) => {
       return;
     }
     window.cmsActiveSiteId = selectedSiteId;
+    try {sessionStorage.setItem('agentsam.cms.selected-site.v1',selectedSiteId);} catch {}
     window.cmsActivePageId = null;
     window.cmsActivePageSlug = null;
     siteSelect.value = selectedSiteId;

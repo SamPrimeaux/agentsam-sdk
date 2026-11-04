@@ -179,7 +179,7 @@ function renderDraftRow(theme) {
       <div class="online-store-draft-actions">
          ${preview?'<a class="btn ghost small" href="'+escapeThemeText(preview)+'" target="_blank" rel="noopener noreferrer" data-theme-draft-preview="'+escapeThemeText(preview)+'">Explore preview</a>':''}
         ${theme.installed && theme.edit_href
-          ? '<a class="btn ghost small" href="'+escapeThemeText(theme.edit_href)+'">Customize draft</a>'
+          ? '<a class="btn ghost small" href="'+escapeThemeText(scopedStoreEditorHref(theme.edit_href,theme.site_id))+'">Customize draft</a>'
           : '<a class="btn ghost small" href="'+escapeThemeText(installHref)+'">View original package</a>'}
       </div>
     </div>`;
@@ -438,12 +438,20 @@ function showExistingWebsitePreview(href){
     if(caption)caption.textContent=device==='desktop'?'Desktop · Existing website':'Mobile · Existing website';
   }
 }
-function showActiveTheme(theme) {
+function scopedStoreEditorHref(raw,siteId) {
+  const url=new URL(raw || '/admin/theme-editor',location.origin);
+  if (url.origin!==location.origin ||
+      !['/admin/theme-editor','/admin/theme-project-editor'].includes(url.pathname))
+    return '/admin/store';
+  if (/^[A-Za-z0-9_-]{1,160}$/.test(siteId||'')) url.searchParams.set('site_id',siteId);
+  return url.pathname+url.search;
+}
+function showActiveTheme(theme,siteId) {
   const status = document.getElementById("active-theme-status");
   status.className = "online-store-badge online-store-badge--" + (theme.verified === true ? "active" : "pending");
   status.textContent = theme.verified === true ? "Active" : "Unverified";
   const edit = document.getElementById("edit-theme-btn");
-  edit.href = theme.edit_href || "/admin/theme-editor?slug=home";
+  edit.href = scopedStoreEditorHref(theme.edit_href,siteId);
   edit.textContent = "Edit theme";
 }
 
@@ -455,6 +463,11 @@ function showActiveTheme(theme) {
     const siteId = route.get('site_id');
     const d = await adminFetch('/api/admin/store/online'+(siteId?'?site_id='+encodeURIComponent(siteId):''));
     const sites = Array.isArray(d.available_sites) ? d.available_sites : [];
+    // Remember an explicit, server-verified selection only for this tab.
+    // The editor revalidates ownership against /api/admin/cms/sites.
+    if (sites.some(site=>site.id===d.selected_site_id)) {
+      try {sessionStorage.setItem('agentsam.cms.selected-site.v1',d.selected_site_id);} catch {}
+    }
     const externalStore = document.getElementById('browse-themes-shortcut');
     if (externalStore) {
       const destination = new URL('https://themes.inneranimalmedia.com/');
@@ -613,7 +626,7 @@ function showActiveTheme(theme) {
     document.getElementById("active-theme-saved").textContent =
       "Last saved: " + fmtStoreDate(theme?.last_saved);
     const editLink = document.getElementById("edit-theme-btn");
-    editLink.href = theme?.edit_href || "/admin/theme-editor?slug=home";
+    editLink.href = scopedStoreEditorHref(theme?.edit_href,d.selected_site_id);
     if (d.site_preview?.edit_href) {
       // Existing authored pages take priority over a newly provisioned
       // starter template. The project remains accessible in Draft themes.
@@ -625,7 +638,7 @@ function showActiveTheme(theme) {
         "online-store-badge online-store-badge--"+(site.url?'active':'pending');
       document.getElementById("active-theme-saved").textContent=
         "Your existing CMS homepage · Theme drafts remain separate";
-      editLink.href=site.edit_href;
+      editLink.href=scopedStoreEditorHref(site.edit_href,d.selected_site_id);
       editLink.textContent="Edit website";
       if(site.url)showExistingWebsitePreview(site.url);
       else if(d.preview_theme?.installed) {
@@ -633,7 +646,7 @@ function showActiveTheme(theme) {
         catch(error){ console.error('saved_theme_preview_failed',error); }
       }
     } else if (theme?.preview_href && theme?.name) {
-      showActiveTheme(theme);
+      showActiveTheme(theme,d.selected_site_id);
       setPreviewFrames(theme.preview_href);
     } else if (d.preview_theme?.installed && d.preview_theme?.edit_href) {
       // An editable CMS draft is not itself a published storefront preview.
@@ -643,7 +656,7 @@ function showActiveTheme(theme) {
       document.getElementById("active-theme-status").textContent="Unpublished";
       document.getElementById("active-theme-status").className="online-store-badge online-store-badge--pending";
       document.getElementById("active-theme-saved").textContent="Installed CMS project · Customize before publishing.";
-      editLink.href=preview.edit_href;
+      editLink.href=scopedStoreEditorHref(preview.edit_href,d.selected_site_id);
       editLink.textContent="Customize draft";
       try { await showSavedDraftPreview(preview); }
       catch(error) {

@@ -2790,8 +2790,9 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     let site;
     try { site=await resolveCmsSite(env.DB,{accountId:context.accountId,siteId:selectedSite,createDefault:!selectedSite}); }
     catch (error) {return json({ok:false,error:String(error.message||error)},{status:409});}
-    const seeded=await ensureCmsSiteStarter(env,context.accountId,site.id);
-    if(!seeded.ok) return json(seeded,{status:seeded.status||503});
+    // Listing installed theme projects must be a pure account/site-scoped
+    // read. The previous starter seeder could inject Heuristic pages and
+    // globals into an otherwise independent marketplace draft on editor open.
     const result = await listThemeProjects(env, context.accountId, site.id);
     return json(result, { status: result.status || (result.ok ? 200 : 503) });
   }

@@ -832,7 +832,7 @@ export default {
     // Retire the duplicate donor Atlas page. Existing deep links lead into
     // the canonical in-app Theme Studio; shared section runtime is retained.
     if (url.pathname === "/admin/revise-atlas" || url.pathname === "/admin/revise-atlas.html") {
-      const target=new URL('/admin/theme-editor?slug=home&catalog=revise',request.url);
+      const target=new URL('/admin/theme-editor?catalog=revise',request.url);
       return Response.redirect(target,302);
     }
 

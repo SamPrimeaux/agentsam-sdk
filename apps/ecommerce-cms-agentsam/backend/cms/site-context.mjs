@@ -37,21 +37,14 @@ export async function ensureDefaultCmsSite(db, accountId, { name = "Default site
 
 export async function listCmsSites(db, accountId) {
   if (!accountId) throw new Error("cms_site_account_required");
-  let { results = [] } = await db.prepare(`
+  // This GET is an inventory, not a setup transaction. In particular, an
+  // account containing only one unlisted private marketplace draft must not
+  // have that draft promoted to the default site merely by opening the editor.
+  const { results = [] } = await db.prepare(`
     SELECT id, account_id, name, slug, primary_domain, domain_aliases_json, status, is_default, created_at, updated_at
     FROM cms_sites WHERE account_id = ?
     ORDER BY is_default DESC, created_at ASC, name ASC
   `).bind(accountId).all();
-  // Existing multi-site accounts must be able to list and choose their sites;
-  // never synthesize a default or a second website during a listing request.
-  if (results.length <= 1 && !results.some(site => site.is_default)) {
-    await ensureDefaultCmsSite(db, accountId);
-    ({ results = [] } = await db.prepare(`
-      SELECT id, account_id, name, slug, primary_domain, domain_aliases_json, status, is_default, created_at, updated_at
-      FROM cms_sites WHERE account_id = ?
-      ORDER BY is_default DESC, created_at ASC, name ASC
-    `).bind(accountId).all());
-  }
   return results;
 }
 

@@ -6,6 +6,12 @@
     await window.__agentsamCmsSourceHostReady;
     if (!window.AgentSamThemeEditorHost) return;
   }
+  // A site/project/page must be verified by the account-owned CMS before
+  // any legacy fallback page or showcase can initialize the editor.
+  if (window.__agentsamThemeEditorEntryReady) {
+    const entry=await window.__agentsamThemeEditorEntryReady;
+    if (!entry?.ready) return;
+  }
   let themeStyles = null;
   import("/admin/js/theme-style-contract.mjs").then(function(contract) {
     themeStyles = contract;
@@ -440,6 +446,12 @@
 
   function pageRoute(pageSlug) {
     if (host) return host.pageRoutes?.[pageSlug] || null;
+    // A site-owned CMS draft must never preview a global SDK/demo route just
+    // because another site happens to use a common slug such as 'home'.
+    if (window.cmsActiveSiteId) {
+      const owned=pages.find(page=>page.slug===pageSlug);
+      return owned?.live_route || null;
+    }
     // Bridge Fly is a real authored R2 scene, not a publishable storefront
     // route. Its authenticated canvas can still be previewed in this editor.
     if (pageSlug === 'bridge-fly') return '/admin/bridge-fly-preview';

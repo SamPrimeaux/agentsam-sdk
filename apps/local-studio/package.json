@@ -44,6 +44,7 @@
     "verify:desktop": "npm run verify:brand-assets && npm run build:desktop && npm run smoke:desktop && npm run smoke:desktop-auth",
     "smoke:themes": "node scripts/smoke-theme-surfaces.mjs",
     "smoke:commerce-store": "node scripts/smoke-commerce-store.mjs",
+    "smoke:theme-editor-entry": "node scripts/smoke-theme-editor-entry.mjs",
     "smoke:cms-site-fidelity": "node scripts/smoke-cms-site-fidelity.mjs",
     "smoke:creator-suite": "node scripts/smoke-creator-suite.mjs",
     "verify:database-honesty": "node --test ../../test/integration/database-hosted-honesty.test.mjs",
