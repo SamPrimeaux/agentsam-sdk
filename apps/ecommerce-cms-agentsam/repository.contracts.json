@@ -149,6 +149,31 @@
       }
     },
     {
+      "contract_key": "schema.cms-site-themes",
+      "contract_version": "1.0.0",
+      "contract_type": "schema",
+      "name": "Site-owned installed themes",
+      "description": "Canonical installed website-theme identity for many account-owned sites, many draft themes and one published theme per site. Theme project snapshots and admin cms_themes colorways are distinct resources.",
+      "manifest_path": "db/migrations/005_cms_site_themes.sql",
+      "status": "active",
+      "metadata": {
+        "owner_application": "ecommerce-cms-agentsam",
+        "migration": "db/migrations/005_cms_site_themes.sql",
+        "table": "cms_site_themes",
+        "dependencies": [
+          "cms_sites",
+          "accounts",
+          "agentsam_products",
+          "agentsam_product_releases"
+        ],
+        "storage": "host-resolved-manifest-pointers",
+        "scope": "account-and-site",
+        "installed_theme_identity": "cms_site_themes",
+        "appearance_theme_identity": "cms_themes",
+        "legacy_project_compatibility": "cms_globals"
+      }
+    },
+    {
       "contract_key": "schema.cms-artifacts-block-system",
       "contract_version": "1.0.0",
       "contract_type": "schema",

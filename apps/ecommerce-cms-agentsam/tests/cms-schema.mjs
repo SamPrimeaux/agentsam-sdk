@@ -14,4 +14,8 @@ export const siteFirstMigration = readFileSync(
   new URL("../db/migrations/004_cms_site_first.sql", import.meta.url), "utf8",
 );
 
-export const schema = [preSiteSchema, siteFirstMigration].join("\n\n");
+export const siteThemesMigration = readFileSync(
+  new URL("../db/migrations/005_cms_site_themes.sql", import.meta.url), "utf8",
+);
+
+export const schema = [preSiteSchema, siteFirstMigration, siteThemesMigration].join("\n\n");
