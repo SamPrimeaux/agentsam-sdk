@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Product — Fuel & Free Time Admin</title>
+<title>Product — Store Admin</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/product-edit.css">
@@ -23,6 +23,17 @@ let saveInFlight = false;
 let saveFailed = false;
 let designContext = null;
 let selectedCollectionIds = new Set();
+const productSiteId = new URLSearchParams(location.search).get("site_id");
+if(productSiteId)document.querySelectorAll('a[href="/admin/products"]').forEach(link=>{
+  link.href="/admin/products?site_id="+encodeURIComponent(productSiteId);
+});
+
+function productAdminFetch(path, options) {
+  const url = new URL(path, location.origin);
+  if (productSiteId) url.searchParams.set("site_id", productSiteId);
+  return window.adminFetch(url.pathname + url.search, options);
+}
+
 let availableCollections = [];
 let variantOriginals = new Map();
 let variantCount = 0;
@@ -124,7 +135,7 @@ function statusBadge(status) {
 function updateHeaderTitle(title) {
   const h1 = document.getElementById("crumb-title");
   if (h1) h1.textContent = title || (isNew ? "New product" : "Product");
-  document.title = (title || "Product") + " — Fuel & Free Time Admin";
+  document.title = (title || "Product") + " — Store Admin";
 }
 
 function updateSeoPreview() {
@@ -337,8 +348,8 @@ renderShell("/admin/products", `
             <input type="text" id="slug" placeholder="auto-from-title">
           </div>
           <div class="product-sidebar-row">
-            <label>Vendor</label>
-            <p class="product-sidebar-static">Fuel &amp; Free Time</p>
+            <label>Store</label>
+            <p class="product-sidebar-static" id="product-store-name">Your store</p>
           </div>
           <div class="product-sidebar-row">
             <label for="product-type">Product type</label>
@@ -434,7 +445,7 @@ function renderStagedGrid() {
 
 async function attachAssetsToProduct(assetIds) {
   for (const id of assetIds) {
-    await adminFetch(`/api/admin/products/${productId}/images`, {
+    await productAdminFetch(`/api/admin/products/${productId}/images`, {
       method: "POST",
       body: JSON.stringify({ media_asset_id: id }),
     });
@@ -520,11 +531,11 @@ function renderMediaGrid(images) {
   grid.querySelectorAll(".product-media-tile").forEach((tile) => {
     const assetId = tile.dataset.assetId;
     tile.querySelector(".set-primary-btn")?.addEventListener("click", async () => {
-      await adminFetch(`/api/admin/products/${productId}/images/${assetId}/primary`, { method: "POST" });
+      await productAdminFetch(`/api/admin/products/${productId}/images/${assetId}/primary`, { method: "POST" });
       loadImages();
     });
     tile.querySelector(".remove-btn")?.addEventListener("click", async () => {
-      await adminFetch(`/api/admin/products/${productId}/images/${assetId}`, { method: "DELETE" });
+      await productAdminFetch(`/api/admin/products/${productId}/images/${assetId}`, { method: "DELETE" });
       loadImages();
     });
   });
@@ -578,7 +589,7 @@ async function loadImages() {
     return;
   }
   try {
-    const d = await adminFetch(`/api/admin/products/${productId}/images`);
+    const d = await productAdminFetch(`/api/admin/products/${productId}/images`);
     renderMediaGrid(d.images);
   } catch (err) {
     document.getElementById("media-grid").innerHTML = `<p class="product-card-hint">${err.message}</p>`;
@@ -810,7 +821,7 @@ function renderVariants(variants, supplierDraft = false, sellingSelection = null
     row.querySelector(".v-delete").addEventListener("click", async () => {
       if (!confirm("Delete this variant?")) return;
       try {
-        await adminFetch(`/api/admin/variants/${id}`, { method: "DELETE" });
+        await productAdminFetch(`/api/admin/variants/${id}`, { method: "DELETE" });
         loadProduct();
       } catch (err) {
         variantNote(err.message, "error");
@@ -836,12 +847,12 @@ function renderCollections() {
     label.className = "product-collection-option";
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    checkbox.checked = selectedCollectionIds.has(Number(collection.id));
+    checkbox.checked = selectedCollectionIds.has(String(collection.id));
     checkbox.disabled = isNew;
     checkbox.value = String(collection.id);
     checkbox.addEventListener("change", () => {
-      if (checkbox.checked) selectedCollectionIds.add(Number(collection.id));
-      else selectedCollectionIds.delete(Number(collection.id));
+      if (checkbox.checked) selectedCollectionIds.add(String(collection.id));
+      else selectedCollectionIds.delete(String(collection.id));
       saveFailed = false;
       setDirty(true);
     });
@@ -857,7 +868,7 @@ function renderCollections() {
 
 async function loadCollections() {
   try {
-    const { collections } = await adminFetch("/api/admin/collections");
+    const { collections } = await productAdminFetch("/api/admin/collections");
     availableCollections = collections || [];
     renderCollections();
   } catch (error) {
@@ -959,7 +970,7 @@ function renderStudioDesign(draft, fulfillment, source = null, sellingSelection 
       create.disabled = true;
       create.textContent = "Creating product…";
       try {
-        const result = await adminFetch(
+        const result = await productAdminFetch(
           "/api/admin/product-studio/drafts/" + encodeURIComponent(draft.id) + "/create-product",
           { method: "POST" }
         );
@@ -987,8 +998,9 @@ async function loadProduct() {
   }
 
   try {
-    const d = await adminFetch(`/api/admin/products/${productId}`);
+    const d = await productAdminFetch(`/api/admin/products/${productId}`);
     const p = d.product;
+    document.getElementById("product-store-name").textContent=d.site?.name||"Your store";
     window.__productKind = p.kind || "physical";
     document.getElementById("title").value = p.title;
     document.getElementById("slug").value = p.slug;
@@ -1004,7 +1016,7 @@ async function loadProduct() {
     syncStatusUi();
     updateSeoPreview();
     renderVariants(d.variants, Boolean(d.design_draft?.completeful_catalog_product_id || d.fulfillment?.completeful_store_product_id), d.selling_selection);
-    selectedCollectionIds = new Set((d.collection_ids || []).map(Number));
+    selectedCollectionIds = new Set((d.collection_ids || []).map(String));
     renderCollections();
     renderStudioDesign(d.design_draft, d.fulfillment, d.source, d.selling_selection);
     loadImages();
@@ -1103,12 +1115,12 @@ async function saveProduct() {
 
   try {
     if (isNew) {
-      const d = await adminFetch("/api/admin/products", { method: "POST", body: JSON.stringify(payload) });
+      const d = await productAdminFetch("/api/admin/products", { method: "POST", body: JSON.stringify(payload) });
       const newId = d.id;
       if (pendingImages.length) {
         const results = await Promise.allSettled(
           pendingImages.map((p) =>
-            adminFetch(`/api/admin/products/${newId}/images`, {
+            productAdminFetch(`/api/admin/products/${newId}/images`, {
               method: "POST",
               body: JSON.stringify({ media_asset_id: p.id }),
             })
@@ -1122,9 +1134,9 @@ async function saveProduct() {
       window.location.href = `/admin/product-edit?id=${newId}`;
       return;
     }
-    await adminFetch("/api/admin/products/" + productId, { method: "PUT", body: JSON.stringify(payload) });
+    await productAdminFetch("/api/admin/products/" + productId, { method: "PUT", body: JSON.stringify(payload) });
     // Do not report success on an optimistic UI update; verify persisted fields.
-    const verified = await adminFetch("/api/admin/products/" + productId);
+    const verified = await productAdminFetch("/api/admin/products/" + productId);
     const stored = verified.product;
     if (!stored ||
       String(stored.title || "") !== payload.title ||
@@ -1133,8 +1145,8 @@ async function saveProduct() {
       String(stored.seo_title || "") !== payload.seo_title ||
       String(stored.seo_description || "") !== payload.seo_description ||
       String(stored.collection || "") !== payload.collection ||
-      JSON.stringify((verified.collection_ids || []).map(Number).sort((a,b)=>a-b)) !==
-        JSON.stringify(payload.collection_ids.slice().sort((a,b)=>a-b)) ||
+      JSON.stringify((verified.collection_ids || []).map(String).sort()) !==
+        JSON.stringify(payload.collection_ids.slice().sort()) ||
       !payload.variants.every((patch) => {
         const row = (verified.variants || []).find((variant) => Number(variant.id) === patch.id);
         return row && Object.entries(patch).every(([field, value]) =>
@@ -1149,7 +1161,7 @@ async function saveProduct() {
     if (publishSupplier) {
       showNote("Details saved. Checking your Completeful product…", "info");
       if (!verified.fulfillment?.completeful_store_product_id) {
-        const result = await adminFetch(
+        const result = await productAdminFetch(
           "/api/admin/product-studio/drafts/" + encodeURIComponent(supplierDraftId) + "/create-product",
           { method: "POST" }
         );
@@ -1159,16 +1171,16 @@ async function saveProduct() {
             " variants, received " + Number(result.mapped_variants || 0) + ".");
         }
       }
-      const refreshed = await adminFetch("/api/admin/products/" + productId);
+      const refreshed = await productAdminFetch("/api/admin/products/" + productId);
       if (!refreshed.fulfillment?.completeful_store_product_id) {
         throw new Error("Completeful did not return a linked supplier product.");
       }
       showNote("Supplier product ready. Checking the storefront listing…", "info");
-      await adminFetch(
+      await productAdminFetch(
         "/api/admin/product-studio/drafts/" + encodeURIComponent(supplierDraftId) + "/publish",
         { method: "POST" }
       );
-      const live = await adminFetch("/api/admin/products/" + productId);
+      const live = await productAdminFetch("/api/admin/products/" + productId);
       if (live.product?.status !== "active") {
         throw new Error("Storefront publication did not persist.");
       }
@@ -1239,7 +1251,7 @@ document.addEventListener("click", () => {
 async function deleteProduct() {
   if (!confirm("Delete this product and all its variants? This cannot be undone.")) return;
   try {
-    await adminFetch(`/api/admin/products/${productId}`, { method: "DELETE" });
+    await productAdminFetch(`/api/admin/products/${productId}`, { method: "DELETE" });
     window.location.href = "/admin/products";
   } catch (err) {
     showNote(err.message, "error");
@@ -1260,7 +1272,7 @@ document.getElementById("add-variant-btn")?.addEventListener("click", async () =
     return;
   }
   try {
-    await adminFetch(`/api/admin/products/${productId}/variants`, {
+    await productAdminFetch(`/api/admin/products/${productId}/variants`, {
       method: "POST",
       body: JSON.stringify({
         sku,
@@ -1295,7 +1307,7 @@ document.getElementById("new-collection-btn")?.addEventListener("click", async (
   const button = document.getElementById("new-collection-btn");
   button.disabled = true;
   try {
-    const { collection } = await adminFetch("/api/admin/collections", {
+    const { collection } = await productAdminFetch("/api/admin/collections", {
       method: "POST",
       body: JSON.stringify({
         title,
@@ -1303,7 +1315,7 @@ document.getElementById("new-collection-btn")?.addEventListener("click", async (
       }),
     });
     availableCollections.push(collection);
-    selectedCollectionIds.add(Number(collection.id));
+    selectedCollectionIds.add(String(collection.id));
     input.value = "";
     saveFailed = false;
     renderCollections();

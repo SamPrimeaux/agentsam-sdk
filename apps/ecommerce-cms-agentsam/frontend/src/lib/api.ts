@@ -80,6 +80,14 @@ async function parseAdminResponse<T>(res: Response): Promise<T> {
   });
 }
 
+function scopedCommercePath(path: string): string {
+  if(typeof window==="undefined"||!/^\/api\/admin\/(?:products|variants|inventory|product-studio)(?:\/|$)/.test(path))return path;
+  const siteId=new URLSearchParams(window.location.search).get("site_id");
+  if(!siteId)return path;
+  const url=new URL(path,window.location.origin);url.searchParams.set("site_id",siteId);
+  return url.pathname+url.search;
+}
+
 export async function adminFetch<T = unknown>(
   path: string,
   opts: RequestInit = {},
@@ -89,7 +97,7 @@ export async function adminFetch<T = unknown>(
     headers.set("content-type", "application/json");
   }
 
-  const res = await fetch(path, {
+  const res = await fetch(scopedCommercePath(path), {
     ...opts,
     headers,
     credentials: opts.credentials || "same-origin",
@@ -106,7 +114,7 @@ export async function adminFormFetch<T = unknown>(
   const headers = new Headers(opts.headers || {});
   headers.delete("content-type");
 
-  const res = await fetch(path, {
+  const res = await fetch(scopedCommercePath(path), {
     ...opts,
     method: opts.method || "POST",
     body: form,

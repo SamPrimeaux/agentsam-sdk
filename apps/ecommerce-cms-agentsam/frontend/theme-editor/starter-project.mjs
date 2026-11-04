@@ -2,6 +2,7 @@
  * Generic starter preset -> the existing editable theme-project contract.
  * No theme-specific routing, D1 schema, UI, or installer lives here.
  */
+import { STARTER_PRODUCT_ILLUSTRATIONS } from './starter-products.mjs';
 const SAFE = /^[a-z][a-z0-9-]{0,63}$/;
 const html = value => String(value ?? '').replaceAll('&','&amp;')
   .replaceAll('<','&lt;').replaceAll('>','&gt;')
@@ -10,18 +11,34 @@ const replace = (value, site) => String(value ?? '')
   .replaceAll('{{site.name}}', site.name);
 const field = (key, label, extra = {}) => ({ key, label, type: 'text', ...extra });
 
-function sectionFromPreset(source, index, site) {
+function sectionFromPreset(source, index, site, sampleProducts) {
   const key = 'section_' + (index + 1);
   const eyebrow = replace(source.eyebrow,site);
   const heading = replace(source.heading,site);
   const body = replace(source.body,site);
   const ctaLabel = replace(source.ctaLabel || 'Learn more',site);
   const ctaHref = source.ctaHref || '/';
+  const samples = source.type === 'products' && sampleProducts ? STARTER_PRODUCT_ILLUSTRATIONS : [];
+  const sampleBlocks = samples.map(product => ({
+    key:'sample_'+product.id.replaceAll('-','_'),label:product.name,
+    fields:[field('title','Product name'),field('price','Display price'),
+      field('image','Illustration',{type:'media',binding:{attribute:'src'}}),
+      field('alt','Image description',{binding:{field:'image',attribute:'alt'}})],
+    settings:[],
+    html:`<article class="iam-starter-product" data-sample-product>
+      <img data-theme-project-field="image" alt="" width="320" height="400" loading="lazy">
+      <h3 data-theme-project-field="title"></h3><p data-theme-project-field="price"></p>
+    </article>`,
+    defaults:{title:product.name,price:product.price,image:product.image_url,alt:product.alt},
+  }));
+  const sampleMarkup = samples.length ? `<p class="iam-starter-sample-note" data-theme-project-field="sample_label">Sample products · Replace these illustrations with your own catalog.</p>
+    <div class="iam-starter-product-grid">${sampleBlocks.map(b=>`<!--theme-block:${b.key}-->`).join('')}</div>` : '';
   const markup = `<section class="iam-starter-section iam-starter--${html(source.type)}" data-theme-section="${key}">
     <div class="iam-starter-wrap">
       <p class="iam-starter-eyebrow" data-theme-project-field="eyebrow">${html(eyebrow)}</p>
       <h${index===0?1:2} data-theme-project-field="heading">${html(heading)}</h${index===0?1:2}>
       <p class="iam-starter-body" data-theme-project-field="body">${html(body)}</p>
+      ${sampleMarkup}
       <a class="iam-starter-cta" data-theme-project-field="cta_label" href="${html(ctaHref)}">${html(ctaLabel)}</a>
     </div>
   </section>`;
@@ -29,12 +46,15 @@ function sectionFromPreset(source, index, site) {
     key, name:source.type==='hero'?'Hero':heading, type:source.type,
     html:markup, status:'draft', version:0, sort_order:index,
     content:{ eyebrow, heading, body, cta_label:ctaLabel, cta_href:ctaHref,
-      __editor:{ templateKey:key, visibility:{enabled:true}, blocks:[] } },
+      ...(samples.length?{sample_label:'Sample products · Replace these illustrations with your own catalog.'}:{}),
+      ...Object.fromEntries(sampleBlocks.map(b=>[b.key,b.defaults])),
+      __editor:{ templateKey:key, visibility:{enabled:true}, blocks:sampleBlocks.map(b=>({id:b.key,templateKey:b.key})) } },
     schema:{key,label:heading,capabilities:{reorder:true},
       fields:[field('eyebrow','Eyebrow'),field('heading','Heading'),field('body','Description'),
+        ...(samples.length?[field('sample_label','Sample product notice')]:[]),
         field('cta_label','Button label'),field('cta_href','Button link',
           {type:'link',binding:{field:'cta_label',attribute:'href'}})],
-      settings:[],blocks:[]},
+      settings:[],blocks:sampleBlocks},
   };
 }
 
@@ -62,6 +82,11 @@ function htmlTemplate(title, site, sections, tokens) {
     .iam-starter-eyebrow{font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;font-weight:650}
     .iam-starter-body{font-size:clamp(1rem,1.5vw,1.25rem);line-height:1.7;color:#54565b;max-width:650px}
     .iam-starter-cta{display:inline-flex;padding:13px 22px;background:var(--iam-accent);color:white;text-decoration:none;margin-top:20px;border-radius:5px;font-size:.9rem}
+    .iam-starter-product-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px;margin:28px 0}
+    .iam-starter-product{min-width:0}.iam-starter-product img{width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;display:block;background:#eef0f3}
+    .iam-starter-product h3{font:500 .9rem/1.4 ${body};margin:12px 0 3px;overflow-wrap:anywhere}
+    .iam-starter-product p{font-size:.85rem;margin:0}.iam-starter-sample-note{font-size:.8rem;color:#54565b}
+    @media(max-width:900px){.iam-starter-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 16px}}
     .iam-starter-footer{padding:36px clamp(20px,6vw,96px);font-size:.85rem;color:#606166}
     @media(max-width:680px){.iam-starter-header{align-items:flex-start;flex-direction:column}.iam-starter-nav{gap:17px}.iam-starter-section{padding:68px 20px}}
   </style></head><body>
@@ -84,7 +109,7 @@ export function materializeStarterProject(preset, site) {
        !Array.isArray(page.sections) || !page.sections.length)
       throw new Error('starter_page_invalid');
     seen.add(page.slug);
-    const sections = page.sections.map((section,i)=>sectionFromPreset(section,i,site));
+    const sections = page.sections.map((section,i)=>sectionFromPreset(section,i,site,preset.sampleProducts!==false));
     return {slug:page.slug,title:page.title||page.slug,assetBase:'',
       status:'draft',template:htmlTemplate(page.title||page.slug,site,sections,preset.tokens||{}),sections};
   });
@@ -98,6 +123,9 @@ export function materializeStarterProject(preset, site) {
     sourcePackageVersion:preset.theme.packageVersion,
     sourcePreviewUrl:null,
     tokens:{},
+    media:preset.sampleProducts===false?[]:STARTER_PRODUCT_ILLUSTRATIONS.map(p=>({
+      id:'starter_'+p.id,filename:p.id+'.svg',content_type:'image/svg+xml',url:p.image_url,alt:p.alt,source:'starter-illustration'
+    })),
     pages,
   };
 }

@@ -1,4 +1,5 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
+import { handleCollectionApi } from "./collection-store.mjs";
 import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
 import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject } from "./theme-project-store.mjs";
@@ -2741,6 +2742,8 @@ export async function acceptGeneratedSection(env, slug, accountId, body = {}, si
 }
 
 export async function handleAdminCmsApi(request, env, url, context = {}) {
+  const collectionResponse=await handleCollectionApi(request,env,url,context);
+  if(collectionResponse)return collectionResponse;
   const path = url.pathname;
   const method = request.method;
   const siteId = url.searchParams.get("site_id") || null;

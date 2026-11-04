@@ -5,6 +5,15 @@
  * No production bindings, credentials, publications or external repositories.
  */
 import http from "node:http";
+import {JSDOM} from "jsdom";
+import {createCmsTestDb,seedCmsAccountAndSite} from "../cms-test-db.mjs";
+import {alignCmsCollections} from "../../db/schema/migrations/cms-collections.mjs";
+import {handleAdminApi} from "../../backend/admin/api.js";
+import {ensureCmsSiteStarter} from "../../backend/cms/site-starter.mjs";
+import {getThemeProject} from "../../backend/cms/theme-project-store.mjs";
+import {renderThemePage} from "../../frontend/theme-editor/project.mjs";
+globalThis.DOMParser=new JSDOM("").window.DOMParser;
+
 import path from "node:path";
 import {readFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
@@ -22,6 +31,23 @@ f.db.exec(`UPDATE cms_pages SET title='Disposable development fixture' WHERE id=
   INSERT INTO cms_page_sections VALUES ('brand','sitepage','brand','brand','Brand','{}',0,1,'cms','brand-draft','brand-live','original','2026-10-01');`);
 f.objects.set("brand-draft",JSON.stringify({__editor:{themeSettings:{}}}));
 f.objects.set("brand-live",JSON.stringify({__editor:{themeSettings:{}}}));
+// Same production services, isolated canonical SQLite and object storage.
+const catalogDb=createCmsTestDb();
+seedCmsAccountAndSite(catalogDb,{accountId:"merchant",siteId:"main",siteName:"Starter sample shop"});
+seedCmsAccountAndSite(catalogDb,{accountId:"merchant",siteId:"second",siteSlug:"second",siteName:"Second sample shop",isDefault:0});
+catalogDb.exec(`CREATE TABLE products(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,title TEXT,description TEXT,collection TEXT,price_cents INTEGER DEFAULT 0,image_url TEXT,status TEXT DEFAULT 'draft',seo_title TEXT,seo_description TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE product_variants(id INTEGER PRIMARY KEY,product_id INTEGER,sku TEXT,size TEXT,color TEXT,price_cents INTEGER,inventory_qty INTEGER DEFAULT 0,updated_at TEXT);
+CREATE TABLE product_studio_drafts(id TEXT,product_id INTEGER,completeful_catalog_product_id TEXT,state TEXT,version INTEGER,selected_variant_ids_json TEXT,original_media_asset_id TEXT,prepared_media_asset_id TEXT,preview_media_asset_id TEXT,completeful_design_id TEXT,completeful_render_status TEXT);
+CREATE TABLE product_slug_redirects(old_slug TEXT UNIQUE,product_id INTEGER);`);
+const catalogObjects=new Map();
+const catalogEnv={DB:{
+  prepare(sql){let args=[];return {bind(...a){args=a;return this;},async first(){return catalogDb.prepare(sql).get(...args)||null;},async all(){return {results:catalogDb.prepare(sql).all(...args)};},async run(){const r=catalogDb.prepare(sql).run(...args);return {meta:{changes:r.changes,last_row_id:Number(r.lastInsertRowid)}};}};},
+  async batch(writes){catalogDb.exec("BEGIN");try{const out=[];for(const w of writes)out.push(await w.run());catalogDb.exec("COMMIT");return out;}catch(error){catalogDb.exec("ROLLBACK");throw error;}},
+},WEBSITE_ASSETS:{async get(key){return catalogObjects.has(key)?{text:async()=>catalogObjects.get(key)}:null;},async put(key,value){catalogObjects.set(key,String(value));}}};
+await alignCmsCollections({all:async(sql,args=[])=>catalogDb.prepare(sql).all(...args),exec:async sql=>catalogDb.exec(sql)});
+await ensureCmsSiteStarter(catalogEnv,"merchant","main");
+await ensureCmsSiteStarter(catalogEnv,"merchant","second");
+catalogDb.exec("INSERT INTO products(id,slug,title,site_id,status,price_cents) VALUES(1,'fixture-product','Disposable fixture product','main','draft',1900)");
 const mime={".html":"text/html",".js":"text/javascript",".mjs":"text/javascript",".css":"text/css",".json":"application/json",".svg":"image/svg+xml",".png":"image/png",".woff2":"font/woff2"};
 const bootstrap=`<script>
 window.AgentSamThemeEditorHost={
@@ -44,6 +70,18 @@ const server=http.createServer(async(req,res)=>{
  try{
   const url=new URL(req.url,"http://127.0.0.1");
   const json=(value,status=200)=>{res.writeHead(status,{"content-type":"application/json","cache-control":"no-store"});res.end(JSON.stringify(value));};
+  if(url.pathname==="/__fixture/starter") {
+    const result=await getThemeProject(catalogEnv,"merchant","theme_heuristic",url.searchParams.get("site_id")||"main");
+    if(!result.ok)return json(result,result.status||500);
+    res.writeHead(200,{"content-type":"text/html","cache-control":"no-store"});
+    res.end(renderThemePage(result.project.pages.find(p=>p.slug==="shop")));return;
+  }
+  if(/^\/api\/admin\/(?:products|collections|cms\/collections|cms\/theme-projects)(?:\/|$)/.test(url.pathname)){
+    let body="";for await(const chunk of req)body+=chunk;
+    const input=new Request(url,{method:req.method,headers:{"content-type":"application/json"},...(body?{body}:{})});
+    const response=await handleAdminApi(input,catalogEnv,url,null,{id:"fixture",account_id:"merchant",role:"owner"});
+    res.writeHead(response.status,Object.fromEntries(response.headers));res.end(await response.text());return;
+  }
   if(url.pathname==="/__fixture/registry")return json(registryForAdmin());
   if(url.pathname==="/__fixture/preview"){
    const site=await getSiteOwnedPage(f.env,"merchant","site","main","sitepage");
@@ -66,7 +104,8 @@ const server=http.createServer(async(req,res)=>{
    res.writeHead(response.status,Object.fromEntries(response.headers));res.end(await response.text());return;
   }
   if(url.pathname.startsWith("/api/"))return json({error:"Explicit development fixture: integration unavailable"},503);
-  let relative=url.pathname==="/admin/theme-editor"?"admin/theme-editor.html":decodeURIComponent(url.pathname).replace(/^\//,"");
+  const documents={"/admin/theme-editor":"admin/theme-editor.html","/admin/theme-project-editor":"admin/theme-project-editor.html","/admin/products":"admin/products.html","/admin/product-edit":"admin/product-edit.html"};
+  let relative=documents[url.pathname]||decodeURIComponent(url.pathname).replace(/^\//,"");
   const target=path.resolve(assets,relative);
   if(!target.startsWith(assets+path.sep))return json({error:"forbidden"},403);
   let bytes=await readFile(target);
@@ -76,6 +115,6 @@ const server=http.createServer(async(req,res)=>{
 });
 // Never inherit PORT: the terminal transport may own it. Request a free local port.
 server.listen(0,"127.0.0.1",()=>{
- console.log("Disposable Theme Studio: http://127.0.0.1:"+server.address().port+"/admin/theme-editor?slug=home");
+ console.log("Disposable Theme Studio: http://127.0.0.1:"+server.address().port+"/admin/theme-project-editor?project=theme_heuristic&site_id=main");
 });
-process.on("SIGTERM",()=>server.close(()=>{f.db.close();process.exit(0);}));
+process.on("SIGTERM",()=>server.close(()=>{f.db.close();catalogDb.close();process.exit(0);}));

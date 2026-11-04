@@ -24,7 +24,7 @@ export const heuristicStarterPreset = {
       slug: 'home', title: 'Home',
       sections: [
         { type: 'hero', eyebrow: 'Welcome', heading: '{{site.name}}', body: 'A starting point for the people, products, and ideas behind your brand.', ctaLabel: 'Explore our shop', ctaHref: '/shop' },
-        { type: 'products', eyebrow: 'Explore', heading: 'Your next collection starts here', body: 'Add products and collections when you are ready. Update this section in your theme editor.', ctaLabel: 'Browse the shop', ctaHref: '/shop' },
+        { type: 'products', eyebrow: 'Explore', heading: 'Your next collection starts here', body: 'A few illustrated samples to help you shape your storefront. Replace them with your own products when you are ready.', ctaLabel: 'Browse the shop', ctaHref: '/shop' },
         { type: 'content', eyebrow: 'Our story', heading: 'Make this space your own', body: 'Introduce your business, share what makes it different, and tell visitors what to expect.', ctaLabel: 'About us', ctaHref: '/about' },
       ],
     },
@@ -32,7 +32,7 @@ export const heuristicStarterPreset = {
       slug: 'shop', title: 'Shop',
       sections: [
         { type: 'hero', eyebrow: 'Collections', heading: 'Shop {{site.name}}', body: 'Your storefront is ready for your catalog. Add products through the existing Products area.', ctaLabel: 'Back home', ctaHref: '/' },
-        { type: 'products', eyebrow: 'Featured', heading: 'Your products belong here', body: 'This starter does not create fake products or a fake checkout. Connect your real catalog when you are ready.', ctaLabel: 'Our story', ctaHref: '/about' },
+        { type: 'products', eyebrow: 'Featured', heading: 'Your products belong here', body: 'Explore the layout with illustrated samples, then add your own catalog through Products.', ctaLabel: 'Our story', ctaHref: '/about' },
       ],
     },
     {

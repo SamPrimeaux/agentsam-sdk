@@ -96,18 +96,19 @@ async function mediaById(env, id) {
 
 async function loadDraft(env, id) {
   return draftFromRow(
-    await env.DB.prepare(`SELECT * FROM product_studio_drafts WHERE id = ?`).bind(id).first(),
+    await env.DB.prepare(`SELECT d.* FROM product_studio_drafts d JOIN products p ON p.id=d.product_id
+      WHERE d.id=? AND p.site_id=?`).bind(id,env.CMS_SITE_CONTEXT.id).first(),
   );
 }
 
 async function loadResumeDraft(env, catalogProductId) {
   return draftFromRow(
     await env.DB.prepare(
-      `SELECT * FROM product_studio_drafts
-        WHERE completeful_catalog_product_id = ? AND state != 'published'
-        ORDER BY updated_at DESC LIMIT 1`,
+      `SELECT d.* FROM product_studio_drafts d JOIN products p ON p.id=d.product_id
+        WHERE d.completeful_catalog_product_id = ? AND d.state != 'published' AND p.site_id=?
+        ORDER BY d.updated_at DESC LIMIT 1`,
     )
-      .bind(catalogProductId)
+      .bind(catalogProductId,env.CMS_SITE_CONTEXT.id)
       .first(),
   );
 }
@@ -262,16 +263,16 @@ async function failOperation(env, operationKey, error) {
 
 async function ensureDraftProduct(env, body, catalogProduct) {
   if (body.product_id) {
-    const existing = await env.DB.prepare(`SELECT * FROM products WHERE id = ?`).bind(Number(body.product_id)).first();
-    if (existing) return existing;
+    const existing = await env.DB.prepare(`SELECT * FROM products WHERE id = ? AND site_id=?`).bind(Number(body.product_id),env.CMS_SITE_CONTEXT.id).first();
+    return existing;
   }
 
   const title = String(body.title || catalogProduct.default_title || catalogProduct.name || "Untitled product").trim();
   const token = crypto.randomUUID().slice(0, 8);
   const slug = `${slugify(title)}-${String(catalogProduct.completeful_product_id).slice(0, 8)}-${token}`;
   const result = await env.DB.prepare(
-    `INSERT INTO products (slug, title, description, collection, price_cents, image_url, status, updated_at)
-     VALUES (?, ?, ?, ?, ?, NULL, 'draft', datetime('now'))`,
+    `INSERT INTO products (slug, title, description, collection, price_cents, image_url, status, site_id, updated_at)
+     VALUES (?, ?, ?, ?, ?, NULL, 'draft', ?, datetime('now'))`,
   )
     .bind(
       slug,
@@ -279,6 +280,7 @@ async function ensureDraftProduct(env, body, catalogProduct) {
       body.description ?? catalogProduct.default_description ?? null,
       body.collection || null,
       Math.max(0, Math.round(Number(body.retail_price_cents || 0))),
+      env.CMS_SITE_CONTEXT.id,
     )
     .run();
   return env.DB.prepare(`SELECT * FROM products WHERE id = ?`).bind(result.meta.last_row_id).first();
@@ -1109,6 +1111,7 @@ export async function handleProductStudioAdminApi(request, env, url) {
   const path = url.pathname;
   const method = request.method;
   if (!path.startsWith("/api/admin/product-studio")) return null;
+  if(!env.CMS_SITE_CONTEXT)return json({ok:false,error:"Product site context required"},{status:409});
 
   try {
     if (path === "/api/admin/product-studio/drafts" && method === "GET") {

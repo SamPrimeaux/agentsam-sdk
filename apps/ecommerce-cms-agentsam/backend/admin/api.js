@@ -54,6 +54,7 @@ import {
 import { planProductAssetOptimization } from "../assets/product-optimize.js";
 import { groupProductInventory, resolveProductSource, validateInventoryAdjustment } from "../../packages/agentsam-merch/src/product-spine.js";
 import { handleAdminCmsApi } from "../cms/api.js";
+import { handleCollectionApi, collectionScope, productCollectionIds, productCollectionWrites } from "../cms/collection-store.mjs";
 import { queryNewsletterSubscribers } from "../storefront/newsletter-admin.js";
 import { getFinanceAnalytics } from "./analytics-finance.js";
 import { getHealthAnalytics } from "./analytics-health.js";
@@ -161,6 +162,8 @@ async function me(request, env, user) {
   } catch (err) {
     console.error("[admin/me] mailboxes", err?.message || err);
   }
+  let site=null;
+  try {site=await collectionScope(env,{accountId:user.account_id,siteId:new URL(request.url).searchParams.get("site_id")});} catch {}
   const displayName = user.display_name || user.name || user.email;
   return json({
     ok: true,
@@ -168,6 +171,7 @@ async function me(request, env, user) {
     email: user.email,
     role: user.role || "member",
     display_name: displayName,
+    site:site?{id:site.id,name:site.name}:null,
     avatar_url: user.avatar_url || null,
     initials: initialsFrom(displayName, user.email),
     mailboxes: mailboxes.map((m) => ({
@@ -241,50 +245,29 @@ async function listProducts(request, env) {
   const { results } = await env.DB.prepare(
     `SELECT p.*,
             COUNT(v.id) AS variant_count,
-            COALESCE(SUM(v.inventory_qty), 0) AS total_inventory
+            COALESCE(SUM(v.inventory_qty), 0) AS total_inventory,
+            (SELECT group_concat(c.name, ', ') FROM cms_collection_items i JOIN cms_collections c ON c.id=i.collection_id
+              WHERE i.item_type='product' AND i.item_ref=CAST(p.id AS TEXT) AND i.site_id=p.site_id
+                AND c.site_id=p.site_id AND c.account_id=i.account_id AND i.status='active') AS collection_names
      FROM products p
      LEFT JOIN product_variants v ON v.product_id = p.id
+     WHERE p.site_id = ?
      GROUP BY p.id
      ORDER BY p.updated_at DESC`
-  ).all();
-  return json({ ok: true, products: results });
+  ).bind(env.CMS_SITE_CONTEXT.id).all();
+  return json({ ok: true, products: results, site_id: env.CMS_SITE_CONTEXT.id });
 }
 
-// Admin merchandising uses the existing storefront collections and membership tables.
-export async function listAdminCollections(request, env) {
-  const { results } = await env.DB.prepare(
-    "SELECT c.*, COUNT(cp.product_id) AS product_count FROM store_collections c " +
-    "LEFT JOIN store_collection_products cp ON cp.collection_id = c.id " +
-    "GROUP BY c.id ORDER BY c.sort_order ASC, lower(c.title) ASC"
-  ).all();
-  return json({ ok: true, collections: results || [] });
+// Compatibility exports delegate to the same site-owned CMS collection service.
+export async function listAdminCollections(request, env, context = {}) {
+  return handleCollectionApi(request, env, new URL(request.url), context);
 }
-
-export async function createAdminCollection(request, env) {
-  const body = await readJson(request);
-  const title = String(body?.title || "").trim();
-  if (!title || title.length > 120) return json({ error: "Collection name is required (maximum 120 characters)" }, { status: 400 });
-  const slug = slugify(body?.slug || title);
-  if (!slug || slug.length > 180) return json({ error: "Invalid collection URL handle" }, { status: 400 });
-  const status = body?.status === "active" ? "active" : "draft";
-  try {
-    const result = await env.DB.prepare(
-      "INSERT INTO store_collections(slug,title,description,image_url,seo_title,seo_description,status,updated_at) " +
-      "VALUES (?,?,?,?,?,?,?,datetime('now'))"
-    ).bind(slug, title, String(body.description || ""), body.image_url || null,
-      body.seo_title || null, body.seo_description || null, status).run();
-    const collection = await env.DB.prepare("SELECT * FROM store_collections WHERE id = ?")
-      .bind(result.meta.last_row_id).first();
-    return json({ ok: true, collection }, { status: 201 });
-  } catch (error) {
-    const message = /unique|constraint/i.test(String(error?.message || error))
-      ? "A collection with that URL handle already exists" : "Could not create collection";
-    return json({ error: message }, { status: 409 });
-  }
+export async function createAdminCollection(request, env, context = {}) {
+  return handleCollectionApi(request, env, new URL(request.url), context);
 }
 
 export async function getProduct(request, env, id) {
-  const product = await env.DB.prepare(`SELECT * FROM products WHERE id = ?`).bind(id).first();
+  const product = await env.DB.prepare(`SELECT * FROM products WHERE id = ? AND site_id = ?`).bind(id, env.CMS_SITE_CONTEXT.id).first();
   if (!product) return json({ error: "Not found" }, { status: 404 });
 
   const { results: variants } = await env.DB.prepare(
@@ -305,15 +288,13 @@ export async function getProduct(request, env, id) {
   } catch {
     // Manual product editing still works without a connected provider table.
   }
-  const { results: memberships } = await env.DB.prepare(
-    "SELECT collection_id FROM store_collection_products WHERE product_id = ? ORDER BY sort_order, collection_id"
-  ).bind(id).all();
-  return json({ ok: true, product, variants, design_draft: designDraft || null,
+  const memberships = await productCollectionIds(env, env.CMS_SITE_CONTEXT, id);
+  return json({ ok: true, site:{id:env.CMS_SITE_CONTEXT.id,name:env.CMS_SITE_CONTEXT.name}, product, variants, design_draft: designDraft || null,
     selling_selection: sellingSelection, fulfillment: fulfillment || null,
     source: resolveProductSource(product, fulfillment || (designDraft?.completeful_catalog_product_id
       ? { completeful_catalog_product_id: designDraft.completeful_catalog_product_id, sync_status: "not_connected" }
       : null)),
-    collection_ids: (memberships || []).map((row) => Number(row.collection_id)) });
+    collection_ids: memberships });
 }
 
 async function createProduct(request, env) {
@@ -327,8 +308,8 @@ async function createProduct(request, env) {
 
   try {
     const result = await env.DB.prepare(
-      `INSERT INTO products (slug, title, description, seo_title, seo_description, collection, price_cents, image_url, status, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+      `INSERT INTO products (slug, title, description, seo_title, seo_description, collection, price_cents, image_url, status, site_id, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
     )
       .bind(
         slug,
@@ -339,7 +320,8 @@ async function createProduct(request, env) {
         body.collection || null,
         priceCents,
         body.image_url || null,
-        body.status || "draft"
+        body.status || "draft",
+        env.CMS_SITE_CONTEXT.id
       )
       .run();
 
@@ -415,7 +397,7 @@ export async function updateProduct(request, env, id) {
   const title = String(body.title || "").trim();
   if (!title) return json({ error: "Title required" }, { status: 400 });
 
-  const previous = await env.DB.prepare("SELECT * FROM products WHERE id = ?").bind(id).first();
+  const previous = await env.DB.prepare("SELECT * FROM products WHERE id = ? AND site_id = ?").bind(id,env.CMS_SITE_CONTEXT.id).first();
   if (!previous) return json({ error: "Product not found" }, { status: 404 });
 
   const priceCents = parsePriceCents(body.price_cents ?? body.price ?? 0);
@@ -456,10 +438,10 @@ export async function updateProduct(request, env, id) {
     const update = env.DB.prepare(
       `UPDATE products SET slug = ?, title = ?, description = ?, seo_title = ?, seo_description = ?,
        collection = ?, price_cents = ?, image_url = COALESCE(?, image_url),
-       status = ?, updated_at = datetime('now') WHERE id = ?`
+       status = ?, updated_at = datetime('now') WHERE id = ? AND site_id = ?`
     ).bind(
       slug, title, body.description || null, seoTitle || null, seoDescription || null,
-      body.collection || null, priceCents, body.image_url || null, status, id
+      body.collection || null, priceCents, body.image_url || null, status, id, env.CMS_SITE_CONTEXT.id
     );
     const changesSlug = previous.status === "active" && previous.slug !== slug;
     const writes = [update];
@@ -472,26 +454,8 @@ export async function updateProduct(request, env, id) {
       ).bind(previous.slug, id);
       writes.push(redirect);
     }
-    if (Array.isArray(body.collection_ids)) {
-      const ids = [...new Set(body.collection_ids.map(Number))];
-      if (ids.length > 100 || ids.some((n) => !Number.isSafeInteger(n) || n <= 0)) {
-        return json({ error: "Invalid collection selection" }, { status: 400 });
-      }
-      if (ids.length) {
-        const placeholders = ids.map(() => "?").join(",");
-        const { results: found } = await env.DB.prepare(
-          "SELECT id FROM store_collections WHERE id IN (" + placeholders + ")"
-        ).bind(...ids).all();
-        if ((found || []).length !== ids.length) {
-          return json({ error: "A selected collection no longer exists" }, { status: 400 });
-        }
-      }
-      writes.push(env.DB.prepare("DELETE FROM store_collection_products WHERE product_id = ?").bind(id));
-      ids.forEach((collectionId, index) => writes.push(
-        env.DB.prepare(
-          "INSERT INTO store_collection_products (collection_id, product_id, sort_order) VALUES (?, ?, ?)"
-        ).bind(collectionId, id, index)
-      ));
+    if (Object.hasOwn(body, "collection_ids")) {
+      writes.push(...await productCollectionWrites(env, env.CMS_SITE_CONTEXT, id, body.collection_ids));
     }
     if (Array.isArray(body.variants)) {
       if (body.variants.length > 100) {
@@ -651,8 +615,9 @@ export async function listInventory(request, env) {
             p.id AS product_id, p.title AS product_title, p.price_cents AS product_price_cents, p.status
      FROM product_variants v
      JOIN products p ON p.id = v.product_id
+     WHERE p.site_id = ?
      ORDER BY p.title ASC, v.id ASC`
-  ).all();
+  ).bind(env.CMS_SITE_CONTEXT.id).all();
   // Existing provider linkage is optional; it never becomes product identity.
   // A local/wholesale product without a connector remains merchant-managed.
   let links = [];
@@ -711,6 +676,24 @@ export async function handleAdminApi(request, env, url, executionCtx = null, tru
   if (path === "/api/admin/account/password" && method === "POST") {
     return changePassword(request, env, user);
   }
+  if (/^\/api\/admin\/(?:products|variants|inventory|product-studio)(?:\/|$)/.test(path)) {
+    let scope;
+    try { scope = await collectionScope(env, {accountId:user.account_id,siteId:url.searchParams.get("site_id")}); }
+    catch (error) {return json({ok:false,error:String(error.message||error)},{status:409});}
+    env = {...env, CMS_SITE_CONTEXT:scope};
+    const productRoute = path.match(/^\/api\/admin\/products\/(\d+)(?:\/|$)/);
+    const variantRoute = path.match(/^\/api\/admin\/variants\/(\d+)(?:\/|$)/);
+    const owned = productRoute ? await env.DB.prepare("SELECT id FROM products WHERE id=? AND site_id=?").bind(productRoute[1],scope.id).first()
+      : variantRoute ? await env.DB.prepare("SELECT v.id FROM product_variants v JOIN products p ON p.id=v.product_id WHERE v.id=? AND p.site_id=?").bind(variantRoute[1],scope.id).first() : true;
+    if (!owned) return json({ok:false,error:"Product not found"},{status:404});
+    const draftRoute=path.match(/^\/api\/admin\/product-studio\/drafts\/([^/]+)(?:\/|$)/);
+    if(draftRoute&&!await env.DB.prepare("SELECT d.id FROM product_studio_drafts d JOIN products p ON p.id=d.product_id WHERE d.id=? AND p.site_id=?")
+      .bind(decodeURIComponent(draftRoute[1]),scope.id).first())
+      return json({ok:false,error:"Design draft not found"},{status:404});
+
+  }
+  const collectionResponse=await handleCollectionApi(request,env,url,{accountId:user.account_id});
+  if(collectionResponse)return collectionResponse;
   if (path === "/api/admin/overview" && method === "GET") return overview(request, env);
   if (path === "/api/admin/store/online" && method === "GET") {
     return onlineStoreOverview(env, user.account_id);
@@ -776,8 +759,6 @@ export async function handleAdminApi(request, env, url, executionCtx = null, tru
     return retryAssetJob(request, env, m[1], url);
   }
 
-  if (path === "/api/admin/collections" && method === "GET") return listAdminCollections(request, env);
-  if (path === "/api/admin/collections" && method === "POST") return createAdminCollection(request, env);
 
   if (path === "/api/admin/products" && method === "GET") return listProducts(request, env);
   if (path === "/api/admin/products" && method === "POST") return createProduct(request, env);

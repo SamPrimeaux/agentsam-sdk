@@ -15,7 +15,7 @@ window.cmsActivePageId = cmsInitialParams.get("page_id") || null;
 window.cmsActivePageSlug = cmsInitialParams.get("slug") || null;
 window.cmsAdminFetch = function cmsAdminFetch(path, options) {
   const url = new URL(path, window.location.origin);
-  if (!url.pathname.startsWith("/api/admin/cms/")) return window.adminFetch(path, options);
+  if (!/^\/api\/admin\/(?:cms\/|collections(?:\/|$)|products(?:\/|$))/.test(url.pathname)) return window.adminFetch(path, options);
   if (window.cmsActiveSiteId && !url.searchParams.has("site_id")) {
     url.searchParams.set("site_id", window.cmsActiveSiteId);
   }

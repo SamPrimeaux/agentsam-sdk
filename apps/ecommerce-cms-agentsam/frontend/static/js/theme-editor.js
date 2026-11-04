@@ -1172,8 +1172,11 @@
       }else showScaffoldTemplate(button.dataset.pickerTemplate, button.querySelector('strong').textContent);
     }));
     root.querySelectorAll('[data-picker-resource]').forEach(button => button.addEventListener('click', () => {
+      const params=new URLSearchParams(window.location.search);
+      const scope=params.get('site_id')?'&site_id='+encodeURIComponent(params.get('site_id')):'';
       const url = button.dataset.pickerResource === 'products'
-        ? '/admin/product-edit?id=' + encodeURIComponent(button.dataset.resourceId) : '/admin/collections';
+        ? '/admin/product-edit?id=' + encodeURIComponent(button.dataset.resourceId)+scope
+        : '/admin/products?view=collections&collection_id='+encodeURIComponent(button.dataset.resourceId)+scope;
       if (localShowcase) showScaffoldTemplate(button.dataset.pickerResource, button.querySelector('strong').textContent);
       else window.location.href = url;
     }));

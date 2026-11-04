@@ -1,7 +1,6 @@
 // Brand asset path for the side-assistant trigger (served from the app's /admin/brand folder).
 const AGENT_TRIGGER_ICON = "/admin/brand/agentsam-gorilla/v1/ui/mini-composer-idle.svg";
-const LOGO_URL =
-  "https://imagedelivery.net/g7wf09fCONpnidkRnR_5vw/ad23b2d9-e2e4-4ad6-eb81-9e4c983df000/thumbnail";
+
 
 const ICONS = {
   home: '<path d="M4 11 12 4l8 7M6 9.5V20h12V9.5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
@@ -39,7 +38,7 @@ const NAV = {
         { href: "/admin/products/create", label: "Create product" },
         { href: "/admin/products/help/artwork", label: "Artwork help" },
         { href: "/admin/products", label: "All products" },
-        { href: "/admin/products", label: "Collections" },
+        { href: "/admin/products?view=collections", label: "Collections" },
         { href: "/admin/inventory", label: "Inventory" },
       ],
     },
@@ -300,7 +299,8 @@ async function adminFetch(path, opts = {}) {
 async function loadShellUser() {
   if (window.__shellUser?.email) return window.__shellUser;
   try {
-    const data = await adminFetch("/api/admin/me");
+    const selectedSite=new URLSearchParams(location.search).get("site_id");
+    const data = await adminFetch("/api/admin/me"+(selectedSite?"?site_id="+encodeURIComponent(selectedSite):""));
     window.__shellUser = data;
     return data;
   } catch (err) {
@@ -529,6 +529,12 @@ function renderConsoleSearchDialog() {
     </div>`;
 }
 
+function scopedAdminHref(href) {
+  const siteId=new URLSearchParams(location.search).get("site_id");
+  if(!siteId||!/^\/admin\/(?:products|product-edit|inventory|store|pages|page-edit|theme)/.test(href))return href;
+  const url=new URL(href,location.origin);url.searchParams.set("site_id",siteId);
+  return url.pathname+url.search;
+}
 function renderNavItem(item, activeHref) {
   if (item.children) {
     const open = groupOpen(item.id, activeHref, item.children, item.href);
@@ -539,7 +545,7 @@ function renderNavItem(item, activeHref) {
     if (item.href) {
       return `
       <div class="console-nav-split${parentActive ? " is-active" : ""}">
-        <a href="${item.href}" class="console-nav-item console-nav-item--split">${icon(item.icon || "store")}<span>${item.label}</span></a>
+        <a href="${scopedAdminHref(item.href)}" class="console-nav-item console-nav-item--split">${icon(item.icon || "store")}<span>${item.label}</span></a>
         <button type="button" class="console-nav-toggle${open ? " is-open" : ""}" data-toggle="${item.id}" aria-label="Toggle ${item.label}" aria-expanded="${open ? "true" : "false"}">
           ${icon("chev", 13, "console-icon chev")}
         </button>
@@ -551,7 +557,7 @@ function renderNavItem(item, activeHref) {
             const analyticsAttr = child.analyticsView
               ? ` data-analytics-view="${child.analyticsView}"`
               : "";
-            return `<a href="${child.href}" class="console-nav-child${active ? " is-active" : ""}"${analyticsAttr}>${active ? '<span class="branch">↳</span>' : ""}${child.label}</a>`;
+            return `<a href="${scopedAdminHref(child.href)}" class="console-nav-child${active ? " is-active" : ""}"${analyticsAttr}>${active ? '<span class="branch">↳</span>' : ""}${child.label}</a>`;
           })
           .join("")}
       </div>`;
@@ -570,7 +576,7 @@ function renderNavItem(item, activeHref) {
             const analyticsAttr = child.analyticsView
               ? ` data-analytics-view="${child.analyticsView}"`
               : "";
-            return `<a href="${child.href}" class="console-nav-child${active ? " is-active" : ""}"${analyticsAttr}>${active ? '<span class="branch">↳</span>' : ""}${child.label}</a>`;
+            return `<a href="${scopedAdminHref(child.href)}" class="console-nav-child${active ? " is-active" : ""}"${analyticsAttr}>${active ? '<span class="branch">↳</span>' : ""}${child.label}</a>`;
           })
           .join("")}
       </div>`;
@@ -579,7 +585,7 @@ function renderNavItem(item, activeHref) {
   if (item.agentsam) {
     return `<a href="#" class="console-nav-item${active ? " is-active" : ""}" data-agentsam-open>${icon(item.icon)}${item.label}</a>`;
   }
-  return `<a href="${item.href}" class="console-nav-item${active ? " is-active" : ""}">${icon(item.icon)}${item.label}</a>`;
+  return `<a href="${scopedAdminHref(item.href)}" class="console-nav-item${active ? " is-active" : ""}">${icon(item.icon)}${item.label}</a>`;
 }
 
 function renderSideNav(activeHref, userNav, options = {}) {
@@ -608,9 +614,9 @@ function renderSideNav(activeHref, userNav, options = {}) {
     <div class="console-sidenav-profile${drawer ? " console-sidenav-profile--drawer" : ""}" data-profile-popup-root>
       <div class="console-sidenav-profile-row">
         <button type="button" class="console-profile-card console-profile-store" data-profile-menu-toggle aria-expanded="false" aria-haspopup="true">
-          <img class="console-profile-store-logo" src="${LOGO_URL}" alt="">
+          ${icon("store", 24, "console-profile-store-logo")}
           <span class="console-profile-meta">
-            <strong>Fuel &amp; Free Time</strong>
+            <strong data-store-name>Store</strong>
             <span data-admin-email>Loading…</span>
           </span>
           ${icon("chev", 15, "console-profile-chevron")}
@@ -677,6 +683,7 @@ function safeAvatarUrl(value) {
 function hydrateShellProfile(user) {
   if (!user) return;
   const name = user.display_name || user.email || "Account";
+  document.querySelectorAll("[data-store-name]").forEach(el=>{el.textContent=user.site?.name||user.company?.name||"Store";});
   const role = (user.role || "member").replace(/^./, (c) => c.toUpperCase());
   document.querySelectorAll("[data-profile-name]").forEach((el) => {
     el.textContent = name;

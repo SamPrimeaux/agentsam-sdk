@@ -83,6 +83,7 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
     for (const field of fields || []) {
       const el = doc.querySelector(`[data-theme-project-field="${field.binding?.field || field.key}"]`);
       if (!el) continue;
+      el.setAttribute('data-cms',field.binding?.field||field.key);
       const value = content[field.key];
       if (value === undefined) continue;
       if (field.binding?.styleProperty) el.style.setProperty(field.binding.styleProperty, String(value));
@@ -92,12 +93,14 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
     };
     apply(doc, [...(section.schema.fields || []), ...(section.schema.settings || [])], section.content);
     doc.body.firstElementChild?.setAttribute('data-theme-section', section.key);
+    doc.body.firstElementChild?.setAttribute('data-cms-section', section.key);
     const blockFragments = (section.content.__editor?.blocks || []).map((block) => {
       const template = section.schema.blocks?.find((b) => b.key === block.templateKey);
       if (!template?.html) return '';
       const blockDoc = new DOMParser().parseFromString(template.html, 'text/html');
       apply(blockDoc, template.fields, section.content[block.id] || {});
       blockDoc.body.firstElementChild?.setAttribute('data-theme-block-id', block.id);
+      blockDoc.body.firstElementChild?.setAttribute('data-cms-block', block.id);
       return blockDoc.body.innerHTML;
     });
     let j = 0;

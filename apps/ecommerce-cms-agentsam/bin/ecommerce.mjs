@@ -250,6 +250,9 @@ try {
       ),
     );
     if (missing.length || !boundary.boundary_ready) process.exitCode = 1;
+  } else if (command === "collections:migrate") {
+    const { runCollectionMigration } = await import("./migrate-collections.mjs");
+    await runCollectionMigration(args);
   } else if (command === "scaffold") scaffold(args[0]);
   else if (command === "preview") {
     if (missing.length) throw new Error("Run doctor first.");
@@ -260,7 +263,7 @@ try {
     if (result.error) throw result.error;
     process.exitCode = result.status ?? 1;
   } else if (["help", "--help", "-h"].includes(command)) {
-    console.log("ecommerce info | doctor | preview | scaffold <empty-directory>");
+    console.log("ecommerce info | doctor | preview | scaffold <empty-directory> | collections:migrate --help");
   } else throw new Error("Unknown ecommerce command: " + command);
 } catch (error) {
   console.error(error.message);

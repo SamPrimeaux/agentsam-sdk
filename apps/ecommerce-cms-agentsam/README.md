@@ -34,3 +34,5 @@ App-local commands:
 The package exposes the top-level ecommerce executable when installed or linked. SDK registration uses agentsam.app.json and its bin. The SDK app already has a separate preview executable; do not blindly replace its host adapter. This workspace-source package must travel with its runtime source to scaffold.
 
 Scaffolds exclude credentials, local state, customer seeds and unrelated scripts. They retain sample storefront branding. Each owner provisions resources and provider accounts. Doctor checks source presence, not deployment readiness. See ecommerce-cms-agentsam.md for release gates.
+
+Collection ownership, explicit migration and reusable starter illustration behavior: [Collections](docs/collections.md).

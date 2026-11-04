@@ -11,6 +11,7 @@ import { checkoutUrls, createCheckoutSession, createCoupon } from "./stripe.js";
 import { availableQty, getVariantAvailability, listProductVariantAvailability, holdInventory, releaseReservations } from "./inventory.js";
 import { handleStripeWebhook } from "./stripe-webhook.js";
 import { getStoreCollection, listStoreCollections } from "./collections.js";
+import { collectionScope } from "../cms/collection-store.mjs";
 
 function json(data, init = {}) {
   return Response.json(data, init);
@@ -50,7 +51,7 @@ function formatProduct(row) {
   };
 }
 
-export async function listStoreProducts(env) {
+export async function listStoreProducts(env, site) {
   const { results } = await env.DB.prepare(
     `SELECT p.*,
             COUNT(v.id) AS variant_count,
@@ -64,10 +65,10 @@ export async function listStoreProducts(env) {
             ) AS primary_image
      FROM products p
      LEFT JOIN product_variants v ON v.product_id = p.id
-     WHERE p.status = 'active'
+     WHERE p.status = 'active' AND p.site_id = ?
      GROUP BY p.id
      ORDER BY p.updated_at DESC`
-  ).all();
+  ).bind(site.id).all();
 
   return json({
     ok: true,
@@ -75,17 +76,17 @@ export async function listStoreProducts(env) {
   });
 }
 
-export async function getStoreProduct(env, slug) {
+export async function getStoreProduct(env, slug, site) {
   const product = await env.DB.prepare(
     `SELECT p.*,
             COUNT(v.id) AS variant_count,
             COALESCE(SUM(v.inventory_qty), 0) AS total_inventory
      FROM products p
      LEFT JOIN product_variants v ON v.product_id = p.id
-     WHERE p.slug = ? AND p.status = 'active'
+     WHERE p.slug = ? AND p.status = 'active' AND p.site_id = ?
      GROUP BY p.id`
   )
-    .bind(slug)
+    .bind(slug,site.id)
     .first();
 
   if (!product) return json({ error: "Product not found" }, { status: 404 });
@@ -495,21 +496,23 @@ export async function handleStoreApi(request, env, url) {
   }
 
   if (path === "/api/store/products" && method === "GET") {
-    return listStoreProducts(env);
+    try {return listStoreProducts(env,await collectionScope(env,{hostname:url.hostname}));}
+    catch {return json({ok:false,error:'Storefront site not found'},{status:404});}
   }
 
   if (path === "/api/store/collections" && method === "GET") {
-    return listStoreCollections(env);
+    return listStoreCollections(env,url);
   }
 
   const collectionMatch = path.match(/^\/api\/store\/collections\/([^/]+)$/);
   if (collectionMatch && method === "GET") {
-    return getStoreCollection(env, decodeURIComponent(collectionMatch[1]));
+    return getStoreCollection(env, decodeURIComponent(collectionMatch[1]),url);
   }
 
   const m = path.match(/^\/api\/store\/products\/([^/]+)$/);
   if (m && method === "GET") {
-    return getStoreProduct(env, decodeURIComponent(m[1]));
+    try {return getStoreProduct(env, decodeURIComponent(m[1]),await collectionScope(env,{hostname:url.hostname}));}
+    catch {return json({ok:false,error:'Storefront site not found'},{status:404});}
   }
 
   if (path === "/api/store/orders/status" && method === "GET") {

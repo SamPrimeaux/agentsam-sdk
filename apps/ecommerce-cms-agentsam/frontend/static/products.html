@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Products — Fuel & Free Time Admin</title>
+<title>Products — Store Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
@@ -18,7 +18,7 @@ renderShell('/admin/products', `
   <div class="admin-toolbar">
     <div>
       <h1 class="admin-page-title">Store Products</h1>
-      <p class="admin-page-sub">One catalog workspace. Filter by product type and collection — software packages stay packages.</p>
+      <p class="admin-page-sub">Manage your store catalog and organize products into collections.</p>
     </div>
     <a href="/admin/products/create" class="btn primary">Product Studio</a>
   </div>
@@ -35,6 +35,23 @@ renderShell('/admin/products', `
       <button class="btn primary" type="submit">Create draft collection</button>
     </form>
     <p id="collections-status" role="status"></p><div id="collections-list" class="admin-card"></div>
+    <form id="collection-editor" class="product-card" hidden>
+      <h2>Edit collection</h2>
+      <div class="product-collection-create-form">
+        <label>Name<input name="name" maxlength="120" required></label>
+        <label>URL handle<input name="slug" maxlength="180" required pattern="[a-z0-9]+(-[a-z0-9]+)*"></label>
+        <label>Description<textarea name="description" rows="3"></textarea></label>
+        <label>Status<select name="status"><option value="draft">Draft</option><option value="active">Published</option><option value="archived">Archived</option></select></label>
+        <label>Visibility<select name="visibility"><option value="public">Public</option><option value="unlisted">Unlisted</option><option value="private">Private</option></select></label>
+        <label>Search title<input name="seo_title" maxlength="180"></label>
+        <label>Search description<textarea name="seo_description" maxlength="320" rows="2"></textarea></label>
+      </div>
+      <h3>Items</h3><p>Add or remove products from their product details.</p>
+      <ul id="collection-members"></ul>
+      <button type="submit" class="btn primary">Save collection</button>
+      <button type="button" id="close-collection-editor" class="btn ghost">Close</button>
+    </form>
+
   </section>
   <section id="platform-products" class="platform-catalog" hidden>
     <div class="platform-catalog-heading">
@@ -100,6 +117,18 @@ renderShell('/admin/products', `
   </div>
 `);
 
+const catalogSiteId=new URLSearchParams(location.search).get('site_id');
+function catalogFetch(path,options) {
+  const url=new URL(path,location.origin);
+  if(catalogSiteId)url.searchParams.set('site_id',catalogSiteId);
+  return window.adminFetch(url.pathname+url.search,options);
+}
+function catalogLink(path) {
+  const url=new URL(path,location.origin);
+  if(catalogSiteId)url.searchParams.set('site_id',catalogSiteId);
+  return url.pathname+url.search;
+}
+document.querySelectorAll('.product-catalog-tabs a,.admin-toolbar a').forEach(a=>a.href=catalogLink(a.getAttribute('href')));
 function escapeProduct(s) { return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
 function productThumb(p) {
   const url=p.thumbnail_url||p.image_url||p.primary_image_url||p.images?.[0]?.url;
@@ -110,13 +139,12 @@ function badgeFor(status) {
   return `<span class="badge">${escapeProduct(status || 'draft')}</span>`;
 }
 
-// Default Store Products opens the populated catalog (former platform view).
-// ?view=platform remains a compatible alias. Empty merchant landing is retired.
+// Merchant products and installable platform packages retain their own authorities.
 const rawProductView = new URLSearchParams(location.search).get('view') || 'store';
-const productView = rawProductView === 'collections' ? 'collections' : 'platform';
+const productView = rawProductView === 'collections' ? 'collections' : rawProductView === 'platform' ? 'platform' : 'store';
 document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
   const linkView = new URL(link.href).searchParams.get('view') || 'store';
-  const normalized = linkView === 'collections' ? 'collections' : 'platform';
+  const normalized = linkView === 'collections' ? 'collections' : linkView === 'platform' ? 'platform' : 'store';
   if (normalized === productView) link.setAttribute('aria-current', 'page');
 });
 (async function () {
@@ -126,7 +154,8 @@ document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
     return;
   }
   try {
-    const d = await adminFetch('/api/admin/products');
+    document.getElementById('store-products-table').hidden = false;
+    const d = await catalogFetch('/api/admin/products');
     const body = document.getElementById('products-body');
     if (!d.products.length) {
       body.innerHTML = '<tr><td colspan="7" class="admin-empty">No products yet — create your first one.</td></tr>';
@@ -134,13 +163,13 @@ document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
     }
     body.innerHTML = d.products.map(p => `
       <tr>
-        <td><div style="display:flex;align-items:center;gap:10px"><span style="display:grid;place-items:center;width:38px;height:38px;flex:none;border:1px solid #e9e9e9;border-radius:5px;background:#f5f5f5;overflow:hidden">${productThumb(p)}</span><a href="/admin/product-edit?id=${encodeURIComponent(p.id)}">${escapeProduct(p.title)}</a></div></td>
-        <td>${escapeProduct(p.collection || '—')}</td>
+        <td><div style="display:flex;align-items:center;gap:10px"><span style="display:grid;place-items:center;width:38px;height:38px;flex:none;border:1px solid #e9e9e9;border-radius:5px;background:#f5f5f5;overflow:hidden">${productThumb(p)}</span><a href="${catalogLink('/admin/product-edit?id='+encodeURIComponent(p.id))}">${escapeProduct(p.title)}</a></div></td>
+        <td>${escapeProduct(p.collection_names || '—')}</td>
         <td>${centsToDollars(p.price_cents)}</td>
         <td>${badgeFor(p.status)}</td>
         <td>${p.variant_count}</td>
         <td>${p.total_inventory}${p.total_inventory <= 3 && p.variant_count > 0 ? ' <span class="badge low">low</span>' : ''}</td>
-        <td><a href="/admin/product-edit?id=${p.id}" class="btn ghost small">Edit</a></td>
+        <td><a href="${catalogLink('/admin/product-edit?id='+encodeURIComponent(p.id))}" class="btn ghost small">Edit</a></td>
       </tr>
     `).join('');
   } catch (err) {
@@ -152,25 +181,66 @@ document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
   }
 })();
 
-async function refreshCollections() {
-  const status = document.getElementById('collections-status');
-  status.textContent = 'Loading collections…';
+let editingCollection=null;
+async function openCollection(id) {
+  const status=document.getElementById('collections-status');
   try {
-    const data = await adminFetch('/api/admin/collections');
-    const list = document.getElementById('collections-list'); list.replaceChildren();
-    for (const item of data.collections || []) {
-      const row = document.createElement('p');
-      row.textContent = item.title + ' · ' + Number(item.product_count || 0) + ' products · ' + item.status;
-      list.appendChild(row);
+    const [data,members,products]=await Promise.all([
+      catalogFetch('/api/admin/collections/'+encodeURIComponent(id)),
+      catalogFetch('/api/admin/collections/'+encodeURIComponent(id)+'/items'),
+      catalogFetch('/api/admin/products'),
+    ]);
+    editingCollection=data.collection;
+    const form=document.getElementById('collection-editor');
+    for(const key of ['name','slug','description','status','visibility','seo_title','seo_description'])
+      form.elements[key].value=editingCollection[key]||'';
+    const list=document.getElementById('collection-members');list.replaceChildren();
+    for(const item of members.items||[]) {
+      const row=document.createElement('li');
+      const product=(products.products||[]).find(p=>String(p.id)===item.item_ref);
+      if(item.item_type==='product'&&product) {
+        const link=document.createElement('a');link.href=catalogLink('/admin/product-edit?id='+encodeURIComponent(product.id));
+        link.textContent=product.title;row.append(link);
+      } else row.textContent=item.item_type+': '+item.item_ref;
+      list.append(row);
     }
-    status.textContent = (data.collections || []).length ? '' : 'No collections yet. Create your first draft collection.';
-  } catch (error) { status.textContent = error.message; }
+    if(!list.children.length){const row=document.createElement('li');row.textContent='No items yet.';list.append(row);}
+    form.hidden=false;form.elements.name.focus();status.textContent='';
+  } catch(error){status.textContent=error.message;}
+}
+document.getElementById('close-collection-editor').addEventListener('click',()=>{document.getElementById('collection-editor').hidden=true;editingCollection=null;});
+document.getElementById('collection-editor').addEventListener('submit',async event=>{
+  event.preventDefault();if(!editingCollection)return;
+  const button=event.submitter;button.disabled=true;
+  try {
+    const input=Object.fromEntries(new FormData(event.currentTarget));
+    input.expected_updated_at=editingCollection.updated_at;
+    const data=await catalogFetch('/api/admin/collections/'+encodeURIComponent(editingCollection.id),{method:'PUT',body:JSON.stringify(input)});
+    editingCollection=data.collection;await refreshCollections();
+    document.getElementById('collections-status').textContent='Collection saved.';
+  }catch(error){document.getElementById('collections-status').textContent=error.message;}
+  finally{button.disabled=false;}
+});
+async function refreshCollections() {
+  const status=document.getElementById('collections-status');status.textContent='Loading collections…';
+  try {
+    const data=await catalogFetch('/api/admin/collections');
+    const list=document.getElementById('collections-list');list.replaceChildren();
+    for(const item of data.collections||[]) {
+      const row=document.createElement('div');row.className='product-collection-option';
+      const edit=document.createElement('button');edit.type='button';edit.className='btn ghost';edit.textContent=item.name;
+      edit.addEventListener('click',()=>openCollection(item.id));
+      const detail=document.createElement('span');detail.textContent=item.product_count+' products · '+item.status;
+      row.append(edit,detail);list.append(row);
+    }
+    status.textContent=(data.collections||[]).length?'':'No collections yet. Create your first draft collection.';
+  }catch(error){status.textContent=error.message;}
 }
 document.getElementById('create-collection').addEventListener('submit', async event => {
   event.preventDefault(); const form = event.currentTarget; const button = form.querySelector('button');
   button.disabled = true;
   try {
-    await adminFetch('/api/admin/collections', { method: 'POST', body: JSON.stringify({ title: form.elements.title.value, description: form.elements.description.value, status: 'draft' }) });
+    await catalogFetch('/api/admin/collections', { method: 'POST', body: JSON.stringify({ title: form.elements.title.value, description: form.elements.description.value, status: 'draft' }) });
     form.reset(); await refreshCollections(); document.getElementById('collections-status').textContent = 'Draft collection saved.';
   } catch (error) { document.getElementById('collections-status').textContent = error.message; }
   finally { button.disabled = false; }
@@ -276,7 +346,7 @@ async function refreshPlatformProducts() {
   const status = document.getElementById('platform-status');
   status.textContent = 'Loading platform products…';
   try {
-    const data = await adminFetch('/api/admin/platform/products');
+    const data = await catalogFetch('/api/admin/platform/products');
     platformItems = Array.isArray(data.products) ? data.products : [];
     const select = document.getElementById('platform-product-kind');
     const previousKind = select.value;
@@ -314,13 +384,18 @@ document.getElementById('platform-product-editor').addEventListener('submit', as
   try {
     const input = { revision: editingPlatformProduct.revision };
     for (const key of ['name', 'description', 'collection', 'thumbnail_url']) input[key] = form.elements[key].value;
-    await adminFetch('/api/admin/platform/products/' + encodeURIComponent(editingPlatformProduct.id), { method: 'PATCH', body: JSON.stringify(input) });
+    await catalogFetch('/api/admin/platform/products/' + encodeURIComponent(editingPlatformProduct.id), { method: 'PATCH', body: JSON.stringify(input) });
     form.hidden = true; editingPlatformProduct = null; await refreshPlatformProducts();
     document.getElementById('platform-status').textContent = 'Product details saved.';
   } catch (error) { document.getElementById('platform-status').textContent = error.message; }
   finally { button.disabled = false; }
 });
-if (productView === 'collections') void refreshCollections();
+if (productView === 'collections') {
+  void refreshCollections().then(()=>{
+    const selected=new URLSearchParams(location.search).get('collection_id');
+    if(selected)void openCollection(selected);
+  });
+}
 if (productView === 'platform') {
   document.title = 'Platform products — AgentSam';
   void refreshPlatformProducts();

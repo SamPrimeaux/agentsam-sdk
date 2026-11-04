@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { build as bundle } from "esbuild";
 import { execFileSync } from "node:child_process";
 
+import { STARTER_PRODUCT_ILLUSTRATIONS } from '../frontend/theme-editor/starter-products.mjs';
 const app = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dest = path.join(app, "dist/assets");
 const source = (name) => path.join(app, name);
@@ -20,6 +21,20 @@ execFileSync(process.execPath, [source("scripts/sync-theme-embed-catalog.mjs")],
 await rm(dest, { recursive: true, force: true });
 await mkdir(dest, { recursive: true });
 await copy(source("frontend/static"), path.join(dest, "admin"));
+// The project bootstrap mounts the same editor through this public namespace.
+await copy(source("frontend/theme-editor"),path.join(dest,"theme-editor"));
+for(const [name,input] of [["runtime.js","js/theme-editor.js"],["shared.js","js/pages-shared.js"],["editor.css","css/theme-editor.css"]])
+  await copy(source("frontend/static/"+input),path.join(dest,"theme-editor",name));
+
+// Original reusable vector assets, available outside the theme draft as well.
+const sampleAssets=path.join(dest,"admin/illustrations/starter-products");
+await mkdir(sampleAssets,{recursive:true});
+for(const product of STARTER_PRODUCT_ILLUSTRATIONS)
+  await writeFile(path.join(sampleAssets,product.id+".svg"),product.svg);
+await writeFile(path.join(sampleAssets,"index.json"),JSON.stringify(STARTER_PRODUCT_ILLUSTRATIONS.map(({svg,image_url,...p})=>({
+  ...p,image_url:"./"+p.id+".svg"
+})),null,2)+"\n");
+
 // Serve the identical app-owned validation/renderer contract to the editor.
 await copy(source("backend/cms/theme-style-contract.mjs"), path.join(dest, "admin/js/theme-style-contract.mjs"));
 // Product-owned mobile dock, sidebar profile menu and manifest-backed config.

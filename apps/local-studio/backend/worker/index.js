@@ -123,6 +123,7 @@ function isLocalStudioCommerceApi(pathname) {
   return pathname === "/api/admin/overview"
     || pathname === "/api/admin/me"
     || pathname === "/api/admin/products"
+    || /^\/api\/admin\/collections(?:\/[A-Za-z0-9_-]+(?:\/items)?)?$/.test(pathname)
     || /^\/api\/admin\/(?:products\/\d+(?:\/variants|\/images(?:\/\d+(?:\/primary)?)?)?|variants\/\d+(?:\/inventory)?|inventory|collections)$/.test(pathname)
     || pathname === "/api/admin/platform/bindings"
     || pathname === "/api/admin/media" || pathname.startsWith("/api/admin/media/")
