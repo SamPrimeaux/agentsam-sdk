@@ -107,10 +107,10 @@ function escapeThemeText(value) {
 function renderDraftRow(theme) {
   const name=escapeThemeText(theme.name||"Untitled theme");
   const meta=escapeThemeText('Added: '+fmtStoreDate(theme.created_at));
-  const preview=typeof theme.preview_url==='string' && /^https:\/\//.test(theme.preview_url) ? theme.preview_url : '';
+  const preview=theme.installed && theme.edit_href;
   return `
     <div class="online-store-draft-row" data-draft-id="${escapeThemeText(theme.id)}">
-      <div class="online-store-draft-thumb" aria-hidden="true">${theme.snapshot_url?'<img src="'+escapeThemeText(theme.snapshot_url)+'" alt="" loading="lazy">':preview?'<iframe src="'+escapeThemeText(preview)+'" title="" tabindex="-1" sandbox="allow-scripts" loading="lazy"></iframe>':''}</div>
+      <div class="online-store-draft-thumb" aria-hidden="true">${theme.snapshot_url?'<img src="'+escapeThemeText(theme.snapshot_url)+'" alt="" loading="lazy">':preview?'<iframe data-saved-draft-preview title="" tabindex="-1" sandbox="allow-scripts" loading="lazy"></iframe>':''}</div>
       <div class="online-store-draft-copy">
         <div class="online-store-draft-name">${name}</div>
         <div class="online-store-draft-meta">${meta}</div>
@@ -128,7 +128,11 @@ function paintStoreDrafts(drafts) {
   const container=document.getElementById("draft-themes");
   if(!container)return;
   container.innerHTML=(drafts||[]).map(renderDraftRow).join("");
-
+  container.querySelectorAll('[data-saved-draft-preview]').forEach(frame=>{
+    const row=frame.closest('[data-draft-id]');
+    const draft=(drafts||[]).find(item=>item.id===row.dataset.draftId);
+    if(draft) savedDraftMarkup(draft).then(markup=>{if(frame.isConnected)frame.srcdoc=markup;}).catch(()=>frame.remove());
+  });
 }
 document.addEventListener("agentsam:theme-draft-added",event=>{
   const draft=event.detail;
@@ -137,16 +141,8 @@ document.addEventListener("agentsam:theme-draft-added",event=>{
   const existing=Array.from(container?.querySelectorAll("[data-draft-id]")||[]).some(node=>node.dataset.draftId===draft.id);
   if(existing)return;
   container?.insertAdjacentHTML("afterbegin",renderDraftRow(draft));
-  const cards=Array.from(container?.querySelectorAll("[data-draft-id]")||[]);
-  // Rebind preview handlers without duplicating previously added rows.
-  const drafts=cards.map(card=>({
-    id:card.dataset.draftId,name:card.querySelector(".online-store-draft-name")?.textContent,
-    meta:card.querySelector(".online-store-draft-meta")?.textContent,
-    preview_url:card.querySelector("[data-theme-draft-preview]")?.dataset.themeDraftPreview,
-    installed:Boolean(card.querySelector('a[href*="/admin/theme-project-editor?project="]')),
-    edit_href:card.querySelector('a[href*="/admin/theme-project-editor?project="]')?.getAttribute('href')
-  }));
-  paintStoreDrafts(drafts);
+  const frame=container?.firstElementChild?.querySelector('[data-saved-draft-preview]');
+  if(frame) savedDraftMarkup(draft).then(markup=>{if(frame.isConnected)frame.srcdoc=markup;}).catch(()=>frame.remove());
   container?.scrollIntoView({behavior:"smooth",block:"center"});
 });
 
@@ -258,7 +254,7 @@ function showThemeUnavailable(state, message) {
     if(grid)grid.innerHTML='<p role="alert">Your store could not be loaded. <button type="button" class="btn ghost small" onclick="location.reload()">Retry</button></p>';
   }
 }
-async function showSavedDraftPreview(preview) {
+async function savedDraftMarkup(preview) {
   // Reuse the SAME renderer as Theme Project Editor, reading the saved R2
   // revision through the account- and site-scoped CMS API.
   const origin=window.AgentSamOnlineStoreHost?.baseUrl||window.location.origin;
@@ -278,9 +274,12 @@ async function showSavedDraftPreview(preview) {
   const page=data.project.pages.find(page=>page.slug==='home')||data.project.pages[0];
   const {renderThemePage}=await import('/theme-editor/project.mjs');
   if(data.project.id!==projectId) throw Error('theme_project_identity_mismatch');
-  const markup=renderThemePage(page,data.project.tokens||{},{
+  return renderThemePage(page,data.project.tokens||{},{
     baseUrl:page.assetBase||undefined,
   });
+}
+async function showSavedDraftPreview(preview) {
+  const markup=await savedDraftMarkup(preview);
   const frames=[
     document.getElementById('theme-preview-desktop'),
     document.getElementById('theme-preview-mobile'),

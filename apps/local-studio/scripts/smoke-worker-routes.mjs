@@ -107,6 +107,18 @@ try {
     console.log('PASS ' + pathname + ': ' + response.status +
       (target ? ' -> ' + target.pathname : ''));
   }
+  // Exercise the complete installed-editor module graph through the asset mount.
+  for (const pathname of [
+    '/admin/js/theme-project-editor-bootstrap.mjs',
+    '/theme-editor/project.mjs', '/theme-editor/bridge.mjs', '/theme-editor/mount.mjs',
+    '/theme-editor/starter-project.mjs', '/theme-editor/starter-products.mjs', '/theme-editor/starter-chrome.mjs',
+  ]) {
+    const response = await request(pathname);
+    const type = response.headers.get('content-type') || '';
+    if (response.status !== 200 || !/javascript/.test(type))
+      throw new Error(`${pathname} expected JavaScript 200, got ${response.status}: ${type}`);
+    console.log(`PASS ${pathname}: executable module`);
+  }
   // Protected Completeful routes must reach the JSON API, never fall through
   // to a static HTML page or an unhandled Worker exception.
   for (const pathname of [

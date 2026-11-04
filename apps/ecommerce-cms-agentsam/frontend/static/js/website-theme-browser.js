@@ -186,9 +186,10 @@
         image.alt = theme.name + ' website theme cover';
         visual.append(image);
       } else visual.append(node('div', 'theme-marketplace-unavailable', theme.name));
-      const preview = trusted(theme.preview_url, '/theme-packages/') || trusted(theme.detail_url, '/themes/');
+      const preview = trusted(theme.preview_url, '/theme-packages/' + theme.slug + '/') ||
+        trusted(theme.preview_url, '/themes/' + theme.slug + '/presets/' + theme.slug + '/demo/');
       if (preview) {
-        const overlay = link('Preview', preview);
+        const overlay = link('', preview);
         overlay.className = 'theme-marketplace-preview';
         overlay.setAttribute('aria-label', 'Preview ' + theme.name);
         visual.append(overlay);

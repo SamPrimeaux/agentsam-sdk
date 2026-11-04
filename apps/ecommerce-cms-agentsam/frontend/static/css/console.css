@@ -2414,12 +2414,13 @@ body.admin-nav-open #admin-menu-toggle .console-nav-morph > span:last-child { tr
 /* Contrast law for light panels nested inside the dark AgentSam shell. */
 .online-store-card,
 .online-store-perf{color:#211f24}
-.online-store-theme-name #active-theme-name,
-.online-store-draft-name,
-.online-store-drafts-head h2{color:#242028!important}
-.online-store-draft-meta,
-.online-store-theme-sub,
-.online-store-drafts-head p{color:#55505b!important}
+.online-store-draft-name{color:#242028}
+.online-store-draft-meta{color:#55505b}
+.online-store .online-store-drafts-head h2{color:var(--c-ink,#242424)}
+.online-store .online-store-drafts-head p{color:var(--c-muted,#666)}
+.online-store .online-store-theme-name #active-theme-name{color:#fff}
+.online-store .online-store-theme-sub{color:#ffffffd9}
+.online-store .online-store-pill{background:var(--c-surface,#f5f5f5);color:var(--c-ink,#242424);border-color:var(--c-line,#ccc)}
 .online-store-perf-stat .label{color:#57515a!important}
 .online-store-perf-stat .value{color:#27242b!important}
 .online-store-starter .starter-hero-copy h2{color:#282822!important}

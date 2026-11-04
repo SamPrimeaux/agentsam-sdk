@@ -146,5 +146,7 @@ test('MovieMode receives explicit account theme tokens at runtime, without repai
   assert.equal(root.dataset.coproAppearanceTokens, '');
   assert.equal(css.has('--copro-theme-accent'), false);
   assert.doesNotThrow(() => new Function(FIRST_PAINT_BOOTSTRAP_SCRIPT), 'first-paint cache script must parse');
+  assert.equal(FIRST_PAINT_BOOTSTRAP_SCRIPT.includes(String.fromCharCode(0)), false, 'HTML must not replace a literal null with a replacement character');
+  assert.doesNotThrow(() => new Function(FIRST_PAINT_BOOTSTRAP_SCRIPT.replaceAll(String.fromCharCode(0), '\uFFFD')), 'script must parse after HTML tokenization');
   assert.match(FIRST_PAINT_BOOTSTRAP_SCRIPT, /productTokens/, 'first paint hydrates product colors');
 });
