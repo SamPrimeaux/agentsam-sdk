@@ -1,6 +1,33 @@
 /* Site-scoped editor entry. Sets its handshake before theme-editor.js runs. */
 (function () {
-  const params=new URLSearchParams(location.search);
+  // Standalone documents get their own query. Embedded Local Studio uses an
+  // about:srcdoc iframe, so the same authoritative route may instead be in
+  // its same-origin parent under ?page=/admin/theme-editor?site_id=...
+  function editorRouteParams() {
+    const local=new URLSearchParams(location.search);
+    try {
+      if(window.parent===window)return local;
+      const parent=window.parent;
+      void parent.document; // Throws for cross-origin hosts.
+      const outer=new URL(parent.location.href);
+      const route=outer.searchParams.get('page');
+      if(route){
+        const inner=new URL(route,outer.origin);
+        if(inner.origin===outer.origin &&
+            (inner.pathname==='/admin/theme-editor' ||
+             inner.pathname==='/ecommerce-cms-agentsam/admin/theme-editor')){
+          for(const [name,value] of inner.searchParams){
+            if(!local.has(name))local.set(name,value);
+          }
+        }
+      }
+      if(outer.pathname==='/apps/ecommerce-cms-agentsam' &&
+          !local.has('site_id') && outer.searchParams.has('site_id'))
+        local.set('site_id',outer.searchParams.get('site_id'));
+    }catch{ /* Parent is a different origin; never read its site selection. */ }
+    return local;
+  }
+  const params=editorRouteParams();
   // Explicit source-code and standalone showcase modes have their own host.
   if(params.has('source')||params.has('showcase'))return;
   const selectedSiteKey='agentsam.cms.selected-site.v1';
@@ -51,15 +78,21 @@
         read('/api/admin/cms/pages?site_id='+siteId),
         read('/api/admin/cms/theme-projects?site_id='+siteId),
       ]);
+      const editorLocation=location.origin==='null'
+        ? '/admin/theme-editor?'+params.toString() : location.href;
       const plan=planThemeEditorEntry({
-        site:scope.site,location:location.href,
+        site:scope.site,location:editorLocation,
         pages:pageData.pages||[],projects:projectData.projects||[],
       });
       if(plan.kind!=='redirect'){
         report('This page is not part of the selected website. Open Online Store to choose the correct page.');
         return {ready:false,reason:plan.reason};
       }
-      const destination=new URL(plan.to,location.origin);
+      // about:srcdoc has a null URL origin even when its parent is a trusted
+      // same-origin Local Studio document. Its baseURI retains that host.
+      const assetOrigin=location.origin==='null'
+        ? new URL(document.baseURI).origin : location.origin;
+      const destination=new URL(plan.to,assetOrigin);
       const current=new URL(location.href);
       if(destination.pathname===current.pathname &&
          destination.searchParams.get('slug')===current.searchParams.get('slug') &&

@@ -33,6 +33,11 @@ const server=http.createServer((req,res)=>{
     res.writeHead(200,{'content-type':'text/html'});
     return res.end('<!doctype html><title>'+path+'</title><main data-landing="'+path+'">'+path+'</main>');
   }
+  if(path==='/apps/ecommerce-cms-agentsam'){
+    res.writeHead(200,{'content-type':'text/html'});
+    const child='<script src="/admin/js/theme-editor-entry.js"></script>';
+    return res.end('<!doctype html><body><iframe id="mounted-editor" srcdoc="'+child.replaceAll('"','&quot;')+'"></iframe></body>');
+  }
   if(path==='/admin/theme-editor'){
     res.writeHead(200,{'content-type':'text/html'});
     return res.end('<!doctype html><body><script src="/admin/js/theme-editor-entry.js"></script><script>window.__agentsamThemeEditorEntryReady?.then(r=>{document.body.dataset.ready=String(!!r.ready);});</script></body>');
@@ -84,6 +89,25 @@ try {
  await scenario('stale cross-site page ID rejected','draft',
    '/admin/theme-editor?site_id=site_b&slug=home&page_id=cmsp_other',
    {error:/not part of the selected website/});
- assert.equal(passed,7);
+ // The parent app's explicit deep link overrides a previously remembered
+ // different website when the editor is mounted inside an about:srcdoc iframe.
+ fixture=cases.draft;
+ const context=await browser.newContext();
+ const page=await context.newPage();
+ try {
+   await page.goto(base+'/admin/store');
+   await page.evaluate(()=>sessionStorage.setItem('agentsam.cms.selected-site.v1','site_a'));
+   const nested='/admin/theme-editor?site_id=site_b&slug=journal';
+   await page.goto(base+'/apps/ecommerce-cms-agentsam?page='+encodeURIComponent(nested));
+   await page.frameLocator('#mounted-editor').locator('[data-landing="/admin/theme-project-editor"]')
+     .waitFor({timeout:12000});
+   const owned=page.frames().find(frame=>frame!==page.mainFrame()&&frame.url().includes('theme_revise'));
+   assert.ok(owned,'embedded editor opened its installed draft');
+   assert.match(owned.url(),/site_id=site_b/);
+   assert.match(owned.url(),/page=journal/);
+   passed++;
+   console.log('PASS embedded parent site deep link overrides stale session selection',owned.url());
+ }finally{await context.close();}
+ assert.equal(passed,8);
  console.log('PASS authenticated-context browser flow',passed,'scenarios');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
