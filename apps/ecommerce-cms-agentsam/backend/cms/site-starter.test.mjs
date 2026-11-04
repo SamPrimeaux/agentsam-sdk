@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createCmsTestDb } from '../../tests/cms-test-db.mjs';
 import { heuristicStarterPreset } from '../../../../packages/heuristic-theme/src/starter.js';
-import { materializeStarterProject } from '../../frontend/theme-editor/starter-project.mjs';
+import { materializeStarterProject, blankThemeProject } from '../../frontend/theme-editor/starter-project.mjs';
 import { ensureCmsSiteStarter } from './site-starter.mjs';
-import { getThemeProject, saveThemeProject, installThemeDraft } from './theme-project-store.mjs';
+import { getThemeProject, saveThemeProject, installThemeDraft, createThemeProject } from './theme-project-store.mjs';
 import { handleStudioSitesOverview } from '../../../local-studio/backend/worker/studio-sites-overview.js';
 
 function environment(db) {
@@ -183,5 +183,29 @@ test('primary website opens existing authored homepage, not generic starter cont
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='studio' AND global_type='theme-project'").get().n,0);
     const again=await (await handleStudioSitesOverview(storeRequest(),env,'studio')).json();
     assert.equal(again.selected_site_id,'inneranimalmedia','switching does not change the primary site');
+  } finally {db.close();}
+});
+
+test('new canvas saves its brief as a private blank theme and stays scoped to its chosen site',async()=>{
+  const db=createCmsTestDb();
+  const {env,objects}=environment(db);
+  try {
+    db.exec(`INSERT INTO accounts(id) VALUES ('maker'),('someone');
+      INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
+      VALUES ('new-shop','maker','New Shop','new-shop','active',1),
+             ('other-shop','maker','Other Shop','other-shop','active',0)`);
+    const draft=blankThemeProject({name:'  New journal  ',purpose:'Stories',audience:'Readers',siteName:'New Shop'});
+    const created=await createThemeProject(env,'maker',draft,'new-shop');
+    assert.equal(created.ok,true);
+    const reopened=await getThemeProject(env,'maker',draft.id,'new-shop');
+    assert.equal(reopened.ok,true);
+    assert.equal(reopened.project.name,'New journal');
+    assert.deepEqual(reopened.project.brief,{purpose:'Stories',audience:'Readers',siteName:'New Shop'});
+    assert.equal(reopened.project.pages[0].sections.length,0);
+    assert.equal(db.prepare("SELECT status FROM cms_globals WHERE site_id='new-shop'").get().status,'draft');
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_revisions WHERE site_id='new-shop'").get().n,1);
+    assert.ok(objects.size>0);
+    assert.equal((await getThemeProject(env,'maker',draft.id,'other-shop')).ok,false);
+    assert.equal((await getThemeProject(env,'someone',draft.id,'new-shop')).ok,false);
   } finally {db.close();}
 });
