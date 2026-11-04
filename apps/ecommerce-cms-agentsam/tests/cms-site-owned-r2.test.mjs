@@ -2,19 +2,19 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {DatabaseSync} from 'node:sqlite';
 import {handleAdminCmsApi} from '../backend/cms/api.js';
-import {getProjectSitePage} from '../backend/cms/project-site-page-adapter.mjs';
+import {getSiteOwnedPage} from '../backend/cms/site-owned-page-adapter.mjs';
 
 function fixture(){
-  // This fixture matches the deployed, historical project-owned page contract
-  // rather than silently substituting the new site-first test schema.
+  // Minimal site-owned fixture: only the columns the adapter touches.
   const db=new DatabaseSync(':memory:');
   db.exec(`
     CREATE TABLE cms_sites(id TEXT PRIMARY KEY,account_id TEXT NOT NULL,name TEXT,
       slug TEXT,primary_domain TEXT,status TEXT,is_default INTEGER);
-    CREATE TABLE cms_pages(id TEXT PRIMARY KEY,project_id TEXT,project_slug TEXT,
-      site_id TEXT NOT NULL,slug TEXT,route_path TEXT,title TEXT,page_type TEXT,
-      template_sku TEXT,status TEXT,updated_at INTEGER,is_homepage INTEGER,
-      nav_visible INTEGER,metadata_json TEXT);
+    CREATE TABLE cms_pages(id TEXT PRIMARY KEY,site_id TEXT NOT NULL,slug TEXT,route_path TEXT,
+      page_type TEXT,title TEXT,status TEXT,template_sku TEXT,nav_visible INTEGER,
+      requires_auth INTEGER,sort_order INTEGER,seo_json TEXT,metadata_json TEXT,
+      content_object_key TEXT,published_manifest_object_key TEXT,
+      created_at INTEGER,updated_at INTEGER,published_at INTEGER);
     CREATE TABLE cms_page_sections(id TEXT PRIMARY KEY,page_id TEXT,section_key TEXT,
       section_type TEXT,section_name TEXT,section_data TEXT,sort_order INTEGER,
       is_visible INTEGER,r2_bucket TEXT,draft_r2_key TEXT,published_r2_key TEXT,
@@ -25,10 +25,10 @@ function fixture(){
     INSERT INTO cms_sites VALUES ('main','merchant','Site','site','example.com','active',1),
       ('foreign','other','Other','other','other.example','active',1);
     INSERT INTO cms_pages VALUES
-      ('home','project','site','main','home','/','Home','home',NULL,
-        'published',1790000000,1,1,'{}'),
-      ('otherhome','project2','other','foreign','home','/','Other','home',NULL,
-        'published',1790000000,1,1,'{}');
+      ('home','main','home','/','landing','Home','published',NULL,1,0,0,'{}','{}',
+        NULL,NULL,1790000000,1790000000,1790000000),
+      ('otherhome','foreign','home','/','landing','Other','published',NULL,1,0,0,'{}','{}',
+        NULL,NULL,1790000000,1790000000,1790000000);
     INSERT INTO cms_page_sections VALUES
       ('hero','home','main-hero','hero','Hero','{}',0,1,'cms',
         'cms/sections/drafts/home/hero.json','cms/sections/publications/home/hero.json',
@@ -60,7 +60,7 @@ function fixture(){
 test('existing published homepage reads authored R2 draft, saves a new private revision and preserves publication',async()=>{
   const {db,env,objects}=fixture();
   try{
-    const original=await getProjectSitePage(env,'merchant','home','main','home');
+    const original=await getSiteOwnedPage(env,'merchant','home','main','home');
     assert.equal(original.page.sections[0].content.headline,'Existing R2 headline');
     assert.equal(original.page.sections[0].version,0);
     const path='https://cms.test/api/admin/cms/pages/home/sections/main-hero?site_id=main&page_id=home';
@@ -79,7 +79,7 @@ test('existing published homepage reads authored R2 draft, saves a new private r
     assert.equal(JSON.parse(objects.get(row.draft_r2_key)).headline,'Edited private draft');
     assert.equal(JSON.parse(objects.get(row.published_r2_key)).headline,'Published headline');
     assert.equal(db.prepare("SELECT status FROM cms_pages WHERE id='home'").get().status,'published');
-    const reopened=await getProjectSitePage(env,'merchant','home','main','home');
+    const reopened=await getSiteOwnedPage(env,'merchant','home','main','home');
     assert.equal(reopened.page.sections[0].content.headline,'Edited private draft');
     assert.equal(reopened.page.sections[0].version,1);
     const stale=await handleAdminCmsApi(new Request(path,{
@@ -87,7 +87,7 @@ test('existing published homepage reads authored R2 draft, saves a new private r
       body:JSON.stringify({content:{headline:'Old tab edit'},expected_version:0}),
     }),env,new URL(path),{accountId:'merchant'});
     assert.equal(stale.status,409);
-    assert.equal((await getProjectSitePage(env,'merchant','home','main','home')).page.sections[0].content.headline,'Edited private draft');
-    assert.equal(await getProjectSitePage(env,'other','home','main','home').catch(()=>null),null);
+    assert.equal((await getSiteOwnedPage(env,'merchant','home','main','home')).page.sections[0].content.headline,'Edited private draft');
+    assert.equal(await getSiteOwnedPage(env,'other','home','main','home').catch(()=>null),null);
   }finally{db.close();}
 });

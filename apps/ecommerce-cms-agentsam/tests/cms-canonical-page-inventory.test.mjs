@@ -113,8 +113,8 @@ test("platform-v1 schema (no account_id/legacy_page_id/inline_content_json) list
     );
     CREATE TABLE cms_pages (
       id TEXT PRIMARY KEY, site_id TEXT, slug TEXT NOT NULL, route_path TEXT, title TEXT NOT NULL,
-      status TEXT NOT NULL, updated_at INTEGER NOT NULL, is_homepage INTEGER NOT NULL DEFAULT 0,
-      nav_visible INTEGER NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0, archived_at TEXT
+      status TEXT NOT NULL, updated_at INTEGER NOT NULL,
+      nav_visible INTEGER NOT NULL DEFAULT 1, sort_order INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE cms_page_sections (
       id TEXT PRIMARY KEY, page_id TEXT NOT NULL, section_key TEXT, sort_order INTEGER NOT NULL DEFAULT 0,
@@ -122,10 +122,10 @@ test("platform-v1 schema (no account_id/legacy_page_id/inline_content_json) list
     );
     INSERT INTO cms_sites(id,account_id,name,slug,status,is_default) VALUES
       ('site-a','account-a','A','a','active',1), ('site-b','account-b','B','b','active',1);
-    INSERT INTO cms_pages(id,site_id,slug,route_path,title,status,updated_at,is_homepage,sort_order,archived_at) VALUES
-      ('p-home','site-a','home','/','Home','published',1787286727,1,0,NULL),
-      ('p-old','site-a','old','/old','Old','draft','2026-10-20',0,1,'2026-10-21'),
-      ('p-b','site-b','b-home','/','B Home','draft','2026-10-25',1,0,NULL);
+    INSERT INTO cms_pages(id,site_id,slug,route_path,title,status,updated_at,sort_order) VALUES
+      ('p-home','site-a','home','/','Home','published',1787286727,0),
+      ('p-old','site-a','old','/old','Old','archived',1787286727,1),
+      ('p-b','site-b','b-home','/','B Home','draft',1787286727,0);
     INSERT INTO cms_page_sections(id,page_id,section_key,sort_order,is_visible,section_data) VALUES
       ('s1','p-home','hero',0,1,'{"headline":"Hi"}'), ('s2','p-home','cta',1,0,'{}'), ('s3','p-b','hero',0,1,'{}');
   `);

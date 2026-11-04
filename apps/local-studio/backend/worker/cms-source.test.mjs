@@ -3,17 +3,19 @@ import assert from 'node:assert/strict';
 import { handleCmsSourceRequest } from './cms-source.js';
 
 const siteSlug = 'agentsam-sdk';
+const siteId = 'site_agentsam_sdk';
 const sourceKey = 'sites/agentsam-sdk/public/docs/sam/index.html';
 const sourceHtml = '<!doctype html><html><body>Existing docs</body></html>';
 function harness() {
   const objects = new Map([[sourceKey, sourceHtml]]);
   const row = {
-    id: 'page_sdk_sam_docs', slug: 'sam-docs', title: 'SAM Docs',
-    route_path: '/docs/sam/', r2_key: sourceKey, r2_bucket: 'agentsam-os-blueprint-content',
-    status: 'published', is_active: 1, metadata_json: '{}',
+    id: 'page_sdk_sam_docs', site_id: siteId, slug: 'sam-docs', title: 'SAM Docs',
+    route_path: '/docs/sam/', content_object_key: sourceKey,
+    status: 'published', metadata_json: '{}',
   };
   let dbWrites = 0;
   const dbClient = {
+    siteId,
     async getPages() { return [row]; },
     async getSectionsForPage(id) {
       assert.equal(id, row.id);
@@ -25,18 +27,20 @@ function harness() {
     },
   };
   const db = {
-    prepare() {
-      return { bind(json, pageId, projectSlug, expected) {
+    prepare(sql) {
+      assert.match(sql, /UPDATE cms_pages SET metadata_json/);
+      assert.match(sql, /WHERE id = \? AND site_id = \?/);
+      return { bind(json, pageId, boundSiteId, expected) {
         return { async run() {
           assert.equal(pageId, row.id);
-          assert.equal(projectSlug, siteSlug);
+          assert.equal(boundSiteId, siteId);
           const current = JSON.parse(row.metadata_json).cms_source_version || 0;
           if (expected !== current) return { meta: { changes: 0 } };
           row.metadata_json = json; dbWrites++;
           return { meta: { changes: 1 } };
         } };
       } };
-    }
+    },
   };
   const env = {
     DB: db,
@@ -46,10 +50,10 @@ function harness() {
         return text === undefined ? null : { text: async () => text };
       },
       async put(key, text) { objects.set(key, text); },
-      async delete(key) { objects.delete(key); }
-    }
+      async delete(key) { objects.delete(key); },
+    },
   };
-  const ownedSite = { source: 'shared-d1', can_edit: true };
+  const ownedSite = { id: siteId, slug: siteSlug, source: 'shared-d1', can_edit: true };
   async function route(path, method = 'GET', body) {
     const request = new Request('https://example.test' + path + '?site=' + siteSlug, { method });
     const url = new URL(request.url);
@@ -58,7 +62,7 @@ function harness() {
   return { route, row, objects, get dbWrites() { return dbWrites; } };
 }
 
-test('enumerates only registered pages, then reads exact R2 source', async () => {
+test('enumerates only registered non-archived pages, then reads exact R2 source', async () => {
   const h = harness();
   const listed = await (await h.route('/api/cms/source/pages')).json();
   assert.equal(listed.pages.length, 1);

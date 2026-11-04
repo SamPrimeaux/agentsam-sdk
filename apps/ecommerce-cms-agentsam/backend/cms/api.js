@@ -6,9 +6,9 @@ import { ensureCmsSiteStarter } from "./site-starter.mjs";
 import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows, cmsPageStorageMode } from "./page-inventory.mjs";
 import {
-  getProjectSitePage, createProjectSitePage, updateProjectSitePage,
-  saveProjectSiteSectionDraft,
-} from "./project-site-page-adapter.mjs";
+  getSiteOwnedPage, createSiteOwnedPage, updateSiteOwnedPage,
+  saveSiteOwnedSectionDraft,
+} from "./site-owned-page-adapter.mjs";
 import { ensureDefaultCmsSite, listCmsSites, createCmsSite, resolveCmsSite } from "./site-context.mjs";
 import {
   buildCatalogInstanceContent,
@@ -681,8 +681,12 @@ async function readCanonicalPageSections(env, page) {
 }
 
 export async function createPageAdmin(env, accountId, siteId, body = {}) {
-  if (await cmsPageStorageMode(env.DB) === "project-site") {
-    return createProjectSitePage(env, accountId, siteId, body);
+  const storageMode = await cmsPageStorageMode(env.DB);
+  if (storageMode === "site-owned-legacy") {
+    return { error: "cms_site_identity_migration_required", status: 503 };
+  }
+  if (storageMode === "site-owned") {
+    return createSiteOwnedPage(env, accountId, siteId, body);
   }
   if (!accountId) return { error: "Account required", status: 403 };
   const title = String(body.title || "").trim();
@@ -765,8 +769,9 @@ async function legacyPageLinkMatches(env, page) {
 }
 
 export async function getPageAdminForSite(env, accountId, slug, siteId = null, pageId = null) {
-  if (await cmsPageStorageMode(env.DB) === "project-site") {
-    return getProjectSitePage(env, accountId, slug, siteId, pageId);
+  const storageMode = await cmsPageStorageMode(env.DB);
+  if (storageMode === "site-owned" || storageMode === "site-owned-legacy") {
+    return getSiteOwnedPage(env, accountId, slug, siteId, pageId);
   }
   const scope = await resolveCmsPageScope(env, accountId, { siteId, slug, pageId });
   if (scope.error) {
@@ -823,8 +828,9 @@ export async function getPageAdminForSite(env, accountId, slug, siteId = null, p
 }
 
 export async function updatePageMetaForSite(env, accountId, slug, siteId, pageId, body = {}) {
-  if (await cmsPageStorageMode(env.DB) === "project-site") {
-    return updateProjectSitePage(env, accountId, slug, siteId, pageId, body);
+  const storageMode = await cmsPageStorageMode(env.DB);
+  if (storageMode === "site-owned" || storageMode === "site-owned-legacy") {
+    return updateSiteOwnedPage(env, accountId, slug, siteId, pageId, body);
   }
   const scope = await resolveCmsPageScope(env, accountId, { siteId, slug, pageId });
   if (scope.error) {
@@ -3172,8 +3178,8 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     }
     const generatedGate = await guardSectionWrite(body);
     if (!generatedGate.ok) return json({ error: generatedGate.error }, { status: generatedGate.status });
-    if(await cmsPageStorageMode(env.DB)==='project-site') {
-      const saved=await saveProjectSiteSectionDraft(env,context.accountId,m[1],siteId,pageId,m[2],body);
+    if(['site-owned','site-owned-legacy'].includes(await cmsPageStorageMode(env.DB))) {
+      const saved=await saveSiteOwnedSectionDraft(env,context.accountId,m[1],siteId,pageId,m[2],body);
       return json(saved,{status:saved.status||(saved.ok?200:400)});
     }
     const mode = await pageMode(m[1]);

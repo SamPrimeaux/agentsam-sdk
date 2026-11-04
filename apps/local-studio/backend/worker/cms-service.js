@@ -54,6 +54,7 @@ function mapR2Asset(url, siteSlug, website, obj) {
 
 function resolveSiteSlug(url, body = {}) {
   const slug =
+    url.searchParams.get('site_id') ||
     url.searchParams.get('site') ||
     url.searchParams.get('project_slug') ||
     url.searchParams.get('project') ||
@@ -99,12 +100,12 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
     }
   }
 
-  const siteSlug = resolveSiteSlug(url, body);
-  if (!siteSlug) {
-    return json({ ok: false, error: 'site_slug_required', detail: 'Pass ?site= or project_slug — no hardcoded default site.' }, 400);
+  const siteSelector = resolveSiteSlug(url, body);
+  if (!siteSelector) {
+    return json({ ok: false, error: 'site_required', detail: 'Pass ?site_id= or ?site= — no hardcoded default site.' }, 400);
   }
   const access = /\/publish$/.test(url.pathname) ? 'publish' : method === 'GET' ? 'read' : 'write';
-  const authorization = await requireCmsSiteAccess(env.DB, actorUserId, siteSlug, access, {
+  const authorization = await requireCmsSiteAccess(env.DB, actorUserId, siteSelector, access, {
     remoteWorkerNames: configuredCmsWorkers(env),
   });
   if (!authorization.ok) return json({ ok: false, error: authorization.error }, authorization.status);
@@ -122,13 +123,16 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
       ok: false,
       error: 'cms_site_uses_remote_adapter',
       source: 'worker',
-      site: siteSlug,
+      site: siteSelector,
     }, 409);
   }
   if (url.pathname.startsWith('/api/cms/remote/')) {
     return json({ ok: false, error: 'cms_site_uses_shared_d1_adapter' }, 400);
   }
-  const dbClient = createCmsDbClient(env.DB, siteSlug);
+  // From this point forward, use the canonical cms_sites slug for R2 paths
+  // and the authorized cms_sites row for every D1 operation.
+  const siteSlug = ownedSite.slug || siteSelector;
+  const dbClient = createCmsDbClient(env.DB, ownedSite);
 
   if (url.pathname.startsWith('/api/cms/source/')) {
     return handleCmsSourceRequest({ request, url, body, env, siteSlug, dbClient, ownedSite });
@@ -137,11 +141,11 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
   try {
     // ── BOOTSTRAP ──
     if (method === 'GET' && url.pathname === '/api/cms/bootstrap') {
-      const [pages, allSections, allBlocks, project, theme, templates, liquidImports] = await Promise.all([
+      const [pages, allSections, allBlocks, site, theme, templates, liquidImports] = await Promise.all([
         dbClient.getPages(),
         dbClient.getAllSectionsForSite(),
         dbClient.getAllBlocksForSite(),
-        dbClient.getProject(),
+        dbClient.getSite(),
         dbClient.getThemeOverrides(),
         dbClient.getTemplates(),
         dbClient.getLiquidImports(),
@@ -169,8 +173,8 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
         } catch {}
       }
 
-      const tenantName = project?.name || siteSlug;
-      const tenantDomain = project?.domain || url.host;
+      const tenantName = site?.name || siteSlug;
+      const tenantDomain = site?.primary_domain || url.host;
 
       return json({
         ok: true,
@@ -191,7 +195,7 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
         },
         component_templates: templates,
         liquid_imports: liquidImports,
-        home_page: pages.find((p) => p.is_homepage || p.slug === 'home') || pages[0] || null,
+        home_page: pages.find((p) => p.route_path === '/' || p.slug === 'home') || pages[0] || null,
         schemas: {
           protocol_version: 1,
           sections: [],
@@ -213,14 +217,14 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
         return json({ ok: true, pages });
       }
       if (method === 'POST') {
-        const title = body?.title || 'Untitled';
-        const slug = (body?.slug || title.toLowerCase().replace(/\s+/g, '-')).replace(/^\/+/, '');
-        const routePath = body?.route_path || `/${slug}`;
-        const pageType = body?.page_type || 'custom';
+        const title = String(body?.title || '').trim();
+        const slug = String(body?.slug || title).trim().toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        const routePath = body?.route_path || body?.routePath || (slug === 'home' ? '/' : `/${slug}`);
+        const pageType = body?.page_type || body?.pageType || (slug === 'home' || routePath === '/' ? 'home' : 'custom');
         const status = 'draft';
         const page = await dbClient.createPage({
           title, slug, routePath, pageType, status,
-          projectId: ownedSite.project_id,
         });
         return json({ ok: true, page, id: page.id, route_path: page.route_path }, 201);
       }
@@ -563,7 +567,11 @@ export async function handleCmsWorkerRequest(request, env, actorUserId) {
 
     return json({ ok: false, error: 'cms_route_not_found', path: url.pathname }, 404);
   } catch (err) {
-    console.error('CMS Worker Handler Error:', String(err));
-    return json({ ok: false, error: String(err?.message || err) }, 500);
+    const message = String(err?.message || err);
+    console.error('CMS Worker Handler Error:', message);
+    const status = /site_identity_migration_required/.test(message) ? 503
+      : /already_exists/.test(message) ? 409
+      : /invalid/.test(message) ? 400 : 500;
+    return json({ ok: false, error: message }, status);
   }
 }
