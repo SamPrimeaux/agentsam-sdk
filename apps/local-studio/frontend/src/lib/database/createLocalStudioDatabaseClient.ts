@@ -6,11 +6,20 @@ import {
   type DatabaseStudioClient,
   type DatabaseTableInfo,
 } from "@inneranimalmedia/agentsam-database-editor/frontend";
-import { createLocalStudioLocalHost, localBridgeDispatch, type LocalStudioLocalHostOptions } from "./localHost";
-import { invokeStudioService, isPackagedDesktop, resolveDesktopStudioAccountId } from "@/lib/desktop/tauri";
+import {
+  createLocalStudioLocalHost,
+  localBridgeDispatch,
+  type LocalStudioLocalHostOptions,
+} from "./localHost";
+import {
+  invokeStudioService,
+  isPackagedDesktop,
+  resolveDesktopStudioAccountId,
+} from "@/lib/desktop/tauri";
 
 const desktopDatabaseFetch: DatabaseHttpFetch = async (input, init) => {
-  const rawUrl = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+  const rawUrl =
+    typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
   const parsed = new URL(rawUrl, "https://local.studio.invalid");
   const path = parsed.pathname + parsed.search;
   const method = String(init?.method || "GET").toUpperCase() as "GET" | "POST" | "PATCH" | "DELETE";
@@ -73,6 +82,7 @@ export function createLocalStudioDatabaseClient(
   const localHost = createLocalStudioLocalHost(localOptions);
 
   return {
+    ...remote,
     localHost,
 
     async listSources() {
@@ -87,7 +97,8 @@ export function createLocalStudioDatabaseClient(
           connections: {
             cloudflare: {
               status: "disconnected",
-              message: error instanceof Error ? error.message : "Remote database catalog unavailable",
+              message:
+                error instanceof Error ? error.message : "Remote database catalog unavailable",
             },
           },
         };
@@ -118,7 +129,8 @@ export function createLocalStudioDatabaseClient(
                 id: ref.id,
                 provider: "local-sqlite",
                 engine: "sqlite",
-                label: ref.label || (isAgentSam ? "AgentSam local database" : "Local SQLite database"),
+                label:
+                  ref.label || (isAgentSam ? "AgentSam local database" : "Local SQLite database"),
                 writable: ref.writable !== false,
                 metrics: false,
                 capabilities: LOCAL_DATABASE_CAPABILITIES,
@@ -150,15 +162,21 @@ export function createLocalStudioDatabaseClient(
 
     async metrics(sourceId: string, range: string) {
       if (!isLocalSourceId(sourceId)) return remote.metrics(sourceId, range);
-      const tables = await localBridgeDispatch({
-        op: "tables",
-        source_id: sourceId,
-      }, localOptions);
+      const tables = await localBridgeDispatch(
+        {
+          op: "tables",
+          source_id: sourceId,
+        },
+        localOptions,
+      );
       const source = (tables.source || {
         id: sourceId,
         provider: "local-sqlite",
         engine: "sqlite",
-        label: sourceId === "local-sqlite:agentsam" ? "AgentSam local database" : "Local SQLite database",
+        label:
+          sourceId === "local-sqlite:agentsam"
+            ? "AgentSam local database"
+            : "Local SQLite database",
         writable: true,
         metrics: false,
         capabilities: LOCAL_DATABASE_CAPABILITIES,
@@ -188,10 +206,13 @@ export function createLocalStudioDatabaseClient(
 
     async listTables(sourceId: string) {
       if (!isLocalSourceId(sourceId)) return remote.listTables(sourceId);
-      const body = await localBridgeDispatch({
-        op: "tables",
-        source_id: sourceId,
-      }, localOptions);
+      const body = await localBridgeDispatch(
+        {
+          op: "tables",
+          source_id: sourceId,
+        },
+        localOptions,
+      );
       return {
         ok: true,
         source: body.source as DatabaseSource,
@@ -201,11 +222,14 @@ export function createLocalStudioDatabaseClient(
 
     async schema(sourceId: string, table: DatabaseTableInfo) {
       if (!isLocalSourceId(sourceId)) return remote.schema(sourceId, table);
-      const body = await localBridgeDispatch({
-        op: "schema",
-        source_id: sourceId,
-        table: table.name,
-      }, localOptions);
+      const body = await localBridgeDispatch(
+        {
+          op: "schema",
+          source_id: sourceId,
+          table: table.name,
+        },
+        localOptions,
+      );
       return {
         ok: true,
         source: {
@@ -223,13 +247,19 @@ export function createLocalStudioDatabaseClient(
 
     async rows(sourceId: string, table: DatabaseTableInfo, options = {}) {
       if (!isLocalSourceId(sourceId)) return remote.rows(sourceId, table, options);
-      const body = await localBridgeDispatch({
-        op: "rows",
-        source_id: sourceId,
-        table: table.name,
-        page: options.page || 1,
-        limit: options.limit || 50,
-      }, localOptions);
+      const body = await localBridgeDispatch(
+        {
+          op: "rows",
+          source_id: sourceId,
+          table: table.name,
+          page: options.page || 1,
+          limit: options.limit || 50,
+          sort: options.sort,
+          dir: options.dir,
+          filter: options.filter,
+        },
+        localOptions,
+      );
       return {
         ok: true,
         source: {
@@ -252,14 +282,17 @@ export function createLocalStudioDatabaseClient(
 
     async query(sourceId: string, input) {
       if (!isLocalSourceId(sourceId)) return remote.query(sourceId, input);
-      const body = await localBridgeDispatch({
-        op: "query",
-        source_id: sourceId,
-        sql: input.sql,
-        params: input.params || [],
-        studio_approved: input.studio_approved === true,
-        destructive_confirmed: input.destructive_confirmed === true,
-      }, localOptions);
+      const body = await localBridgeDispatch(
+        {
+          op: "query",
+          source_id: sourceId,
+          sql: input.sql,
+          params: input.params || [],
+          studio_approved: input.studio_approved === true,
+          destructive_confirmed: input.destructive_confirmed === true,
+        },
+        localOptions,
+      );
       return { ok: true, ...body };
     },
 
@@ -280,14 +313,17 @@ export function createLocalStudioDatabaseClient(
           schema: built.schema,
         };
       }
-      const body = await localBridgeDispatch({
-        op: "query",
-        source_id: sourceId,
-        sql: built.sql,
-        params: [],
-        studio_approved: input.studio_approved === true,
-        destructive_confirmed: input.destructive_confirmed === true,
-      }, localOptions);
+      const body = await localBridgeDispatch(
+        {
+          op: "query",
+          source_id: sourceId,
+          sql: built.sql,
+          params: [],
+          studio_approved: input.studio_approved === true,
+          destructive_confirmed: input.destructive_confirmed === true,
+        },
+        localOptions,
+      );
       return {
         ok: true,
         sql: built.sql,
@@ -297,14 +333,30 @@ export function createLocalStudioDatabaseClient(
       };
     },
 
+    async ddl(sourceId: string, input) {
+      if (!isLocalSourceId(sourceId)) return remote.ddl(sourceId, input);
+      return {
+        ok: true,
+        ...(await localBridgeDispatch({ op: "ddl", source_id: sourceId, ...input }, localOptions)),
+      } as never;
+    },
+
+    async dropTable(sourceId: string, input) {
+      if (!isLocalSourceId(sourceId)) return remote.dropTable(sourceId, input);
+      return this.ddl(sourceId, { action: "drop_table", ...input });
+    },
+
     async insert(sourceId: string, table: DatabaseTableInfo, values: Record<string, unknown>) {
       if (!isLocalSourceId(sourceId)) return remote.insert(sourceId, table, values);
-      const body = await localBridgeDispatch({
-        op: "insert",
-        source_id: sourceId,
-        table: table.name,
-        values,
-      }, localOptions);
+      const body = await localBridgeDispatch(
+        {
+          op: "insert",
+          source_id: sourceId,
+          table: table.name,
+          values,
+        },
+        localOptions,
+      );
       return { ok: true, result: body.result as never };
     },
 
@@ -315,24 +367,30 @@ export function createLocalStudioDatabaseClient(
       where: Record<string, unknown>,
     ) {
       if (!isLocalSourceId(sourceId)) return remote.update(sourceId, table, values, where);
-      const body = await localBridgeDispatch({
-        op: "update",
-        source_id: sourceId,
-        table: table.name,
-        values,
-        where,
-      }, localOptions);
+      const body = await localBridgeDispatch(
+        {
+          op: "update",
+          source_id: sourceId,
+          table: table.name,
+          values,
+          where,
+        },
+        localOptions,
+      );
       return { ok: true, result: body.result as never };
     },
 
     async delete(sourceId: string, table: DatabaseTableInfo, where: Record<string, unknown>) {
       if (!isLocalSourceId(sourceId)) return remote.delete(sourceId, table, where);
-      const body = await localBridgeDispatch({
-        op: "delete",
-        source_id: sourceId,
-        table: table.name,
-        where,
-      }, localOptions);
+      const body = await localBridgeDispatch(
+        {
+          op: "delete",
+          source_id: sourceId,
+          table: table.name,
+          where,
+        },
+        localOptions,
+      );
       return { ok: true, result: body.result as never };
     },
   };

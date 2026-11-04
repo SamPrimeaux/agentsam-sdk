@@ -11,7 +11,7 @@ test("listSources prefers oauth catalog and annotates deployment bindings", () =
     path.join(root, "apps/local-studio/backend/worker/database-service.js"),
     "utf8",
   );
-  assert.match(src, /source_kind: 'oauth_resource'/);
+  assert.match(src, /source_kind: ['"]oauth_resource['"]/);
   assert.match(src, /source_kind: 'deployment_binding'/);
   assert.match(src, /owner_scope: 'deployment'/);
   assert.match(src, /\.\.\.oauthD1,\s*\n\s*\.\.\.deploymentSources/s);
@@ -44,6 +44,6 @@ test("database editor preserves null metrics and uses host font tokens", () => {
   assert.match(app, /data-metrics-wired/);
   assert.match(css, /var\(--font-sans/);
   assert.match(css, /var\(--font-mono/);
-  assert.match(css, /data-provider="cloudflare"/);
-  assert.match(css, /data-provider="supabase"/);
+  assert.match(css, /--db-bg: var\(--bg-content/);
+  assert.doesNotMatch(css, /\.db-editor\[data-provider="(?:cloudflare|supabase|local)"\]\s*\{/);
 });

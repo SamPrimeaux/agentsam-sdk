@@ -1,35 +1,42 @@
 function clean(value) {
-  return value == null ? '' : String(value).trim();
+  return value == null ? "" : String(value).trim();
 }
 
 function rangeWindow(range) {
   const now = new Date();
   const ms =
-    range === '1h' ? 60 * 60 * 1000 :
-    range === '7d' ? 7 * 24 * 60 * 60 * 1000 :
-    range === '30d' ? 30 * 24 * 60 * 60 * 1000 :
-    24 * 60 * 60 * 1000;
+    range === "1h"
+      ? 60 * 60 * 1000
+      : range === "7d"
+        ? 7 * 24 * 60 * 60 * 1000
+        : range === "30d"
+          ? 30 * 24 * 60 * 60 * 1000
+          : 24 * 60 * 60 * 1000;
   return {
     start: new Date(now.getTime() - ms),
     end: now,
-    bucket: range === '7d' || range === '30d' ? 'date' : 'datetimeHour',
+    bucket: range === "7d" || range === "30d" ? "date" : "datetimeHour",
   };
 }
 
 async function postGraphql(fetchImpl, token, query, variables) {
-  const response = await fetchImpl('https://api.cloudflare.com/client/v4/graphql', {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${token}`,
-      accept: 'application/json',
-      'content-type': 'application/json',
+  const response = await fetchImpl(
+    "https://api.cloudflare.com/client/v4/graphql",
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ query, variables }),
     },
-    body: JSON.stringify({ query, variables }),
-  });
+  );
   const body = await response.json().catch(() => ({}));
   if (!response.ok || body?.errors?.length) {
     const error = new Error(
-      body?.errors?.[0]?.message || `Cloudflare GraphQL failed (${response.status})`,
+      body?.errors?.[0]?.message ||
+        `Cloudflare GraphQL failed (${response.status})`,
     );
     error.details = body?.errors || null;
     throw error;
@@ -64,7 +71,7 @@ function normalizeSeries(groups, bucket) {
         group?.dimensions?.[bucket] ||
         group?.dimensions?.date ||
         group?.dimensions?.datetimeHour ||
-        '';
+        "";
       return {
         t,
         readQueries: Number(group?.sum?.readQueries || 0),
@@ -79,96 +86,118 @@ function normalizeSeries(groups, bucket) {
 }
 
 export async function readD1Metrics(options = {}) {
-  const token = clean(options.token);
-  const accountId = clean(options.accountId || options.account_id);
-  const databaseId = clean(options.databaseId || options.database_id);
-  const range = ['1h', '24h', '7d', '30d'].includes(options.range) ? options.range : '24h';
-  const fetchImpl = options.fetchImpl || fetch;
-  if (!token || !accountId || !databaseId) throw new Error('d1_metrics_requires_token_account_database');
-
+  const token = clean(options.token),
+    accountId = clean(options.accountId || options.account_id),
+    databaseId = clean(options.databaseId || options.database_id);
+  if (!token || !accountId || !databaseId)
+    throw new Error("d1_metrics_requires_token_account_database");
+  const range = ["1h", "24h", "7d", "30d"].includes(options.range)
+    ? options.range
+    : "24h";
   const window = rangeWindow(range);
-  const useHourly = window.bucket === 'datetimeHour';
-  const query = useHourly
-    ? `query AgentSamD1Metrics($accountTag: string!, $databaseId: string!, $start: DateTime!, $end: DateTime!) {
-        viewer {
-          accounts(filter: { accountTag: $accountTag }) {
-            d1AnalyticsAdaptiveGroups(
-              limit: 10000
-              filter: { databaseId: $databaseId, datetime_geq: $start, datetime_leq: $end }
-              orderBy: [datetimeHour_ASC]
-            ) {
-              sum { readQueries writeQueries rowsRead rowsWritten }
-              dimensions { datetimeHour databaseId }
-            }
-          }
-        }
-      }`
-    : `query AgentSamD1Metrics($accountTag: string!, $databaseId: string!, $start: Date!, $end: Date!) {
-        viewer {
-          accounts(filter: { accountTag: $accountTag }) {
-            d1AnalyticsAdaptiveGroups(
-              limit: 10000
-              filter: { databaseId: $databaseId, date_geq: $start, date_leq: $end }
-              orderBy: [date_ASC]
-            ) {
-              sum { readQueries writeQueries rowsRead rowsWritten }
-              dimensions { date databaseId }
-            }
-          }
-        }
-      }`;
-
-  const vars = useHourly
-    ? {
-        accountTag: accountId,
-        databaseId,
-        start: window.start.toISOString(),
-        end: window.end.toISOString(),
+  const query = `query DatabaseMetrics($accountTag: string!, $databaseId: string!, $start: DateTime!, $end: DateTime!) {
+    viewer { accounts(filter: { accountTag: $accountTag }) {
+      d1AnalyticsAdaptiveGroups(limit: 10000, filter: { databaseId: $databaseId, datetime_geq: $start, datetime_leq: $end }, orderBy: [${window.bucket}_ASC]) {
+        sum { readQueries writeQueries rowsRead rowsWritten }
+        avg { queryBatchTimeMs }
+        dimensions { ${window.bucket} databaseId }
       }
-    : {
-        accountTag: accountId,
-        databaseId,
-        start: window.start.toISOString().slice(0, 10),
-        end: window.end.toISOString().slice(0, 10),
-      };
-
-  let body;
+    } }
+  }`;
+  const variables = {
+    accountTag: accountId,
+    databaseId,
+    start: window.start.toISOString(),
+    end: window.end.toISOString(),
+  };
+  const body = await postGraphql(
+    options.fetchImpl || fetch,
+    token,
+    query,
+    variables,
+  );
+  const account = body?.data?.viewer?.accounts?.[0];
+  if (!account) throw new Error("cloudflare_analytics_account_not_returned");
+  const groups = account.d1AnalyticsAdaptiveGroups || [];
+  let insights = [],
+    insightsWarning = null;
   try {
-    body = await postGraphql(fetchImpl, token, query, vars);
-  } catch (error) {
-    if (!useHourly) throw error;
-    const fallbackQuery = `query AgentSamD1MetricsFallback($accountTag: string!, $databaseId: string!, $start: Date!, $end: Date!) {
-      viewer {
-        accounts(filter: { accountTag: $accountTag }) {
-          d1AnalyticsAdaptiveGroups(
-            limit: 10000
-            filter: { databaseId: $databaseId, date_geq: $start, date_leq: $end }
-            orderBy: [date_ASC]
-          ) {
-            sum { readQueries writeQueries rowsRead rowsWritten }
-            dimensions { date databaseId }
-          }
+    const result = await postGraphql(
+      options.fetchImpl || fetch,
+      token,
+      `query QueryInsights($accountTag: string!, $databaseId: string!, $start: DateTime!, $end: DateTime!) {
+      viewer { accounts(filter: { accountTag: $accountTag }) {
+        d1QueriesAdaptiveGroups(limit: 10, filter: { databaseId: $databaseId, datetimeHour_geq: $start, datetimeHour_leq: $end }, orderBy: [sum_rowsRead_DESC]) {
+          count avg { queryDurationMs } sum { rowsRead rowsWritten rowsReturned queryDurationMs } dimensions { query databaseId }
         }
-      }
-    }`;
-    body = await postGraphql(fetchImpl, token, fallbackQuery, {
-      accountTag: accountId,
-      databaseId,
-      start: window.start.toISOString().slice(0, 10),
-      end: window.end.toISOString().slice(0, 10),
-    });
+      } }
+    }`,
+      variables,
+    );
+    insights =
+      result?.data?.viewer?.accounts?.[0]?.d1QueriesAdaptiveGroups || [];
+  } catch (error) {
+    insightsWarning = error.message;
   }
-
-  const groups =
-    body?.data?.viewer?.accounts?.[0]?.d1AnalyticsAdaptiveGroups || [];
-  const series = normalizeSeries(groups, useHourly ? 'datetimeHour' : 'date');
-  const totals = summarize(groups);
-
   return {
-    provider: 'cloudflare-d1',
+    provider: "cloudflare-d1",
     range,
-    totals,
-    series,
+    start: variables.start,
+    end: variables.end,
+    totals: summarize(groups),
+    series: normalizeSeries(groups, window.bucket).map((point) => ({
+      ...point,
+      latencyMs:
+        groups.find(
+          (group) => (group.dimensions?.[window.bucket] || "") === point.t,
+        )?.avg?.queryBatchTimeMs ?? null,
+    })),
+    insights,
+    insightsWarning,
     wired: true,
+  };
+}
+
+/** Account scope uses independent totals, database groups and time buckets.
+ * A failed request stays unavailable; an empty authorized dataset is genuine zero.
+ */
+export async function readD1AccountMetrics(options = {}) {
+  const token = clean(options.token),
+    accountId = clean(options.accountId);
+  if (!token || !accountId)
+    throw new Error("d1_metrics_requires_token_account");
+  const range = ["1h", "24h", "7d", "30d"].includes(options.range)
+    ? options.range
+    : "24h";
+  const window = rangeWindow(range);
+  const sum = "sum { readQueries writeQueries rowsRead rowsWritten }";
+  const query = `query AccountD1Usage($accountTag: string!, $start: DateTime!, $end: DateTime!) {
+    viewer { accounts(filter: { accountTag: $accountTag }) {
+      totals: d1AnalyticsAdaptiveGroups(limit: 1, filter: { datetime_geq: $start, datetime_leq: $end }) { ${sum} }
+      databases: d1AnalyticsAdaptiveGroups(limit: 10000, filter: { datetime_geq: $start, datetime_leq: $end }) { ${sum} dimensions { databaseId } }
+    } }
+  }`;
+  const body = await postGraphql(options.fetchImpl || fetch, token, query, {
+    accountTag: accountId,
+    start: window.start.toISOString(),
+    end: window.end.toISOString(),
+  });
+  const account = body?.data?.viewer?.accounts?.[0];
+  if (!account) throw new Error("cloudflare_analytics_account_not_returned");
+  const databases = (account.databases || []).map((group) => ({
+    databaseId: group.dimensions.databaseId,
+    ...summarize([group]),
+  }));
+  return {
+    provider: "cloudflare-d1",
+    range,
+    start: window.start.toISOString(),
+    end: window.end.toISOString(),
+    totals: summarize(account.totals || []),
+    databases,
+    warning:
+      databases.length >= 10000
+        ? "Database analytics group limit reached; account totals remain authoritative."
+        : undefined,
   };
 }

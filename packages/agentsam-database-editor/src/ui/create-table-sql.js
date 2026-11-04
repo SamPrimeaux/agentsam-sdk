@@ -40,7 +40,7 @@ function quoteIdent(name, engine = 'sqlite') {
   return `"${safe.replace(/"/g, '""')}"`;
 }
 
-function normalizeType(raw, engine = 'sqlite') {
+export function normalizeType(raw, engine = 'sqlite') {
   const type = String(raw || 'TEXT').trim().toUpperCase().replace(/\s+/g, ' ');
   const allowed = engine === 'postgres' ? PG_TYPES : SQLITE_TYPES;
   if (allowed.has(type)) return type;
@@ -51,7 +51,7 @@ function normalizeType(raw, engine = 'sqlite') {
   throw err;
 }
 
-function normalizeDefault(value, type) {
+export function normalizeDefault(value, type) {
   if (value == null || value === '') return null;
   const raw = String(value).trim();
   if (!raw) return null;
@@ -63,7 +63,7 @@ function normalizeDefault(value, type) {
   if (/TEXT|VARCHAR|UUID|JSON|DATE|TIME/i.test(type)) {
     return `'${raw.replace(/'/g, "''")}'`;
   }
-  return raw;
+  return `'${raw.replace(/'/g, "''")}'`;
 }
 
 /**

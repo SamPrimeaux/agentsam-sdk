@@ -6,6 +6,8 @@
 import {
   assertSafeIdent,
   buildCreateTableSql,
+  normalizeType,
+  normalizeDefault,
 } from '../ui/create-table-sql.js';
 
 function clean(value) {
@@ -45,6 +47,12 @@ export const DDL_ACTIONS = Object.freeze([
   'alter_table_add_column',
   'create_index',
   'drop_index',
+  'rename_column',
+  'drop_column',
+  'alter_column_type',
+  'alter_column_nullability',
+  'alter_column_default',
+  'add_foreign_key',
 ]);
 
 /**
@@ -112,7 +120,7 @@ export function buildDdlSql(input = {}) {
       throw err;
     }
     const colName = assertSafeIdent(column.name, 'column');
-    const type = clean(column.type || 'TEXT').toUpperCase() || 'TEXT';
+    const type = normalizeType(column.type, engine);
     const parts = [`${quoteIdent(colName, engine)} ${type}`];
     if (column.nullable === false) parts.push('NOT NULL');
     if (column.defaultValue != null && column.defaultValue !== '') {
@@ -131,6 +139,28 @@ export function buildDdlSql(input = {}) {
       engine,
       columnName: colName,
     };
+  }
+
+  if (["rename_column", "drop_column", "alter_column_type", "alter_column_nullability", "alter_column_default", "add_foreign_key"].includes(action)) {
+    const { tableName, schema, qualified } = qualifyTable(input.table_name, input.schema, engine);
+    const column = quoteIdent(input.column_name, engine);
+    let clause;
+    if (action === "rename_column") clause = "RENAME COLUMN " + column + " TO " + quoteIdent(input.new_name, engine);
+    else if (action === "drop_column") clause = "DROP COLUMN " + column;
+    else {
+      if (engine !== "postgres") throw new Error("sqlite_constraint_changes_require_table_rebuild");
+      if (action === "alter_column_type") clause = "ALTER COLUMN " + column + " TYPE " + normalizeType(input.column_type, engine);
+      if (action === "alter_column_nullability") clause = "ALTER COLUMN " + column + (input.nullable === false ? " SET NOT NULL" : " DROP NOT NULL");
+      if (action === "alter_column_default") {
+        const value = normalizeDefault(input.default_value, input.column_type || "TEXT");
+        clause = "ALTER COLUMN " + column + (value == null ? " DROP DEFAULT" : " SET DEFAULT " + value);
+      }
+      if (action === "add_foreign_key") {
+        const reference = qualifyTable(input.ref_table, input.ref_schema, engine);
+        clause = "ADD CONSTRAINT " + quoteIdent(input.constraint_name, engine) + " FOREIGN KEY (" + column + ") REFERENCES " + reference.qualified + " (" + quoteIdent(input.ref_column, engine) + ")";
+      }
+    }
+    return { action, sql: "ALTER TABLE " + qualified + " " + clause + ";", tableName, schema, engine };
   }
 
   if (action === 'create_index') {

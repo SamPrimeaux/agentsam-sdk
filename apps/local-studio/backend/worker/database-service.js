@@ -5,10 +5,14 @@ import {
   createHyperdriveAdapter,
   createDatabaseRequestHandler,
   readD1Metrics,
+  readD1AccountMetrics,
+  listD1Resources,
+  manageD1Resource,
   readPostgresMetrics,
 } from '../../../../packages/agentsam-database-editor/backend/index.js';
 import { resolveCloudflareCredential as resolveCloudflareConnectorCredential } from '../../../../packages/connectors/cfoa/src/credential.js';
 import { scheduleStudioErrorLog } from './studio-error-log.js';
+import { listCloudflareConnectionRecords } from '../../../../packages/connectors/cfoa/src/credential.js';
 
 const RANGE_SECONDS = Object.freeze({
   '1h': 60 * 60,
@@ -94,12 +98,13 @@ async function resolveDeploymentOwnerAccount(env) {
   }
 }
 
-async function resolveCloudflareCredential(env, accountId) {
+async function resolveCloudflareCredential(env, accountId, cloudflareAccountId = '') {
   const resolved = await resolveCloudflareConnectorCredential({
     env,
     ownerId: accountId,
     authMode: 'oauth',
     capabilityId: 'cloudflare.d1',
+    explicitAccountId: cloudflareAccountId || undefined,
   });
   if (!resolved?.bearerToken) return null;
   return {
@@ -152,75 +157,37 @@ async function resolveCloudflareAccountId(credential) {
 }
 
 async function listCloudflareD1Sources(env, accountId) {
-  const credential = await resolveCloudflareCredential(env, accountId);
-  if (!credential?.token) {
-    return {
-      sources: [],
-      connection: {
-        provider: 'cloudflare',
-        status: 'not_connected',
-        connect_url: '/api/connections/cloudflare/start?packs=data&return_to=/database',
-      },
-    };
-  }
-
-  try {
-    const cloudflareAccountId = await resolveCloudflareAccountId(credential);
-    const body = await cloudflareJson(
-      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(cloudflareAccountId)}/d1/database?per_page=100`,
-      credential.token,
-    );
-    const rows = Array.isArray(body?.result) ? body.result : [];
-    const scopeSet = new Set(credential.scopes.map((scope) => scope.toLowerCase()));
-    const writable =
-      scopeSet.has('d1.write') ||
-      scopeSet.has('d1:write') ||
-      scopeSet.has('d1_write') ||
-      scopeSet.has('com.cloudflare.api.account.d1.write');
-
-    return {
-      sources: rows.map((row) => {
+  const records = await listCloudflareConnectionRecords(env, accountId);
+  const sources = [], accounts = [];
+  for (const record of records) {
+    const cfId = record.cloudflareAccountId;
+    if (!cfId) continue;
+    try {
+      const credential = await resolveCloudflareCredential(env, accountId, cfId);
+      if (!credential?.token || credential.cloudflareAccountId !== cfId) throw new Error("cloudflare_connection_unavailable");
+      const writable = credential.scopes.some(scope => /(^|[.:_])d1[.:_]write$/i.test(scope));
+      const rows = await listD1Resources({ token: credential.token, accountId: cfId });
+      accounts.push({ id: cfId, name: record.accountLabel || cfId, writable });
+      for (const row of rows) {
         const databaseId = clean(row.uuid || row.id);
-        return withSourceProvenance({
-          id: `cf-d1:${databaseId}`,
-          provider: 'cloudflare-d1',
-          engine: 'sqlite',
-          label: clean(row.name) || databaseId,
-          account_id: cloudflareAccountId,
-          database_id: databaseId,
-          database_name: clean(row.name) || databaseId,
-          file_size: Number(row.file_size || 0) || 0,
-          num_tables: Number(row.num_tables || 0) || 0,
-          writable,
-          metrics: true,
-          connection: 'oauth',
-        }, {
-          source_kind: 'oauth_resource',
-          owner_scope: 'account',
-          capabilities: writable
-            ? OAUTH_D1_CAPABILITIES
-            : OAUTH_D1_CAPABILITIES.filter((c) => !['insert', 'update', 'delete'].includes(c)),
-        });
-      }),
-      connection: {
-        provider: 'cloudflare',
-        status: 'connected',
-        account_id: cloudflareAccountId,
-        scopes: credential.scopes,
-        reconnect_url: '/api/connections/cloudflare/start?packs=data&return_to=/database',
-      },
-    };
-  } catch (error) {
-    return {
-      sources: [],
-      connection: {
-        provider: 'cloudflare',
-        status: 'error',
-        error: error?.message || String(error),
-        reconnect_url: '/api/connections/cloudflare/start?packs=data&return_to=/database',
-      },
-    };
+        sources.push(withSourceProvenance({
+          id: "cf-d1:" + cfId + ":" + databaseId, provider: "cloudflare-d1", engine: "sqlite",
+          label: clean(row.name) || databaseId, database_name: clean(row.name) || databaseId,
+          database_id: databaseId, account_id: cfId, created_at: row.created_at,
+          file_size: row.file_size == null ? null : Number(row.file_size),
+          region: row.primary_location_hint || null, writable, metrics: true, management: true, connection: "oauth",
+        }, { source_kind: "oauth_resource", owner_scope: "account", capabilities: writable ? OAUTH_D1_CAPABILITIES : OAUTH_D1_CAPABILITIES.filter(c => !["insert","update","delete"].includes(c)) }));
+      }
+    } catch (error) {
+      accounts.push({ id: cfId, name: record.accountLabel || cfId, writable: false, error: error.message });
+    }
   }
+  return { sources, accounts, connection: {
+    provider: "cloudflare", status: !records.length ? "not_connected" : accounts.some(a => !a.error) ? "connected" : "error",
+    error: accounts.filter(a => a.error).map(a => a.name + ": " + a.error).join("; ") || undefined,
+    connect_url: "/api/connections/cloudflare/start?packs=data&return_to=/database",
+    reconnect_url: "/api/connections/cloudflare/start?packs=data&return_to=/database",
+  } };
 }
 
 async function withHyperdriveClient(env, fn) {
@@ -279,42 +246,6 @@ async function getBoundD1Source(env, accountId) {
     : 'binding:DB';
   let metricsReady = !isOpaqueBindingDatabaseId(databaseId);
   let oauthAccountId = null;
-
-  // Map deployment binding → OAuth D1 UUID when the same DB appears in the grant.
-  try {
-    const credential = await resolveCloudflareCredential(env, accountId);
-    if (credential?.token) {
-      const cloudflareAccountId = await resolveCloudflareAccountId(credential);
-      oauthAccountId = cloudflareAccountId || null;
-      if (cloudflareAccountId && isOpaqueBindingDatabaseId(databaseId)) {
-        const body = await cloudflareJson(
-          `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(cloudflareAccountId)}/d1/database?per_page=100`,
-          credential.token,
-        );
-        const wranglerName = clean(env?.AGENTSAM_D1_DATABASE_NAME || 'inneranimalmedia-business');
-        // UUID from apps/local-studio/backend/wrangler.jsonc d1_databases[DB].
-        const platformUuid = 'cf87b717-d4e2-4cf8-bab0-a81268e32d49';
-        const match = (Array.isArray(body?.result) ? body.result : []).find((row) => {
-          const name = clean(row?.name);
-          const uuid = clean(row?.uuid || row?.id);
-          return uuid === platformUuid
-            || name === wranglerName
-            || name === 'inneranimalmedia-business'
-            || name === 'DB';
-        });
-        const uuid = clean(match?.uuid || match?.id);
-        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
-          databaseId = uuid;
-          metricsReady = true;
-          if (match?.file_size != null && Number(match.file_size) > 0) {
-            fileSize = Number(match.file_size);
-          }
-        }
-      }
-    }
-  } catch {
-    /* OAuth reconciliation is best-effort; binding CRUD still works. */
-  }
 
   // Deployment-owned Worker binding — only for explicitly authorized deployment owner.
   // Never treat env.DB as a generic user's Cloudflare catalog entry.
@@ -406,6 +337,7 @@ async function listSources(env, accountId) {
       'Cloudflare OAuth is connected, but no D1 databases were enumerated for this account. This is a connector/catalog gap — do not invent platform D1 rows.';
   }
   return {
+    accounts: cloudflare.accounts || [],
     sources: [
       ...oauthD1,
       ...deploymentSources,
@@ -437,49 +369,29 @@ async function resolveSource(env, accountId, sourceId) {
   if (!id) throw new Error('source_id_required');
 
   if (id.startsWith('cf-d1:')) {
-    const databaseId = clean(id.slice('cf-d1:'.length));
-    const credential = await resolveCloudflareCredential(env, accountId);
-    if (!credential?.token) throw new Error('cloudflare_not_connected');
-    const cloudflareAccountId = await resolveCloudflareAccountId(credential);
+    const parts = id.split(":");
+    let cfId, databaseId;
+    if (parts.length === 3) { cfId = parts[1]; databaseId = parts[2]; }
+    else {
+      // Compatibility with saved source links: resolve only through a single explicit grant.
+      const records = await listCloudflareConnectionRecords(env, accountId);
+      if (records.length !== 1) throw new Error("cloudflare_account_selection_required");
+      cfId = records[0].cloudflareAccountId; databaseId = parts[1];
+    }
+    const credential = await resolveCloudflareCredential(env, accountId, cfId);
+    if (!credential?.token || credential.cloudflareAccountId !== cfId) throw new Error("cloudflare_account_not_authorized");
     const body = await cloudflareJson(
-      `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(cloudflareAccountId)}/d1/database?per_page=100`,
-      credential.token,
-    );
-    const row = (Array.isArray(body?.result) ? body.result : []).find(
-      (candidate) => clean(candidate.uuid || candidate.id) === databaseId,
-    );
-    if (!row) throw new Error('d1_database_not_authorized');
-    const scopeSet = new Set(credential.scopes.map((scope) => scope.toLowerCase()));
-    const writable =
-      scopeSet.has('d1.write') ||
-      scopeSet.has('d1:write') ||
-      scopeSet.has('d1_write') ||
-      scopeSet.has('com.cloudflare.api.account.d1.write');
+      "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(cfId) + "/d1/database/" + encodeURIComponent(databaseId), credential.token);
+    const row = body.result;
+    if (clean(row?.uuid || row?.id) !== databaseId) throw new Error("d1_database_not_authorized");
+    const writable = credential.scopes.some(scope => /(^|[.:_])d1[.:_]write$/i.test(scope));
     const source = {
-      id,
-      provider: 'cloudflare-d1',
-      engine: 'sqlite',
-      label: clean(row.name) || databaseId,
-      account_id: cloudflareAccountId,
-      database_id: databaseId,
-      file_size: Number(row.file_size || 0) || 0,
-      num_tables: Number(row.num_tables || 0) || 0,
-      writable,
-      metrics: true,
-      connection: 'oauth',
+      id, provider: "cloudflare-d1", engine: "sqlite", label: clean(row.name) || databaseId,
+      database_name: clean(row.name), account_id: cfId, database_id: databaseId,
+      created_at: row.created_at, file_size: row.file_size == null ? null : Number(row.file_size),
+      writable, metrics: true, management: true, connection: "oauth", source_kind: "oauth_resource", owner_scope: "account",
     };
-    return {
-      source,
-      adapter: createD1Adapter({
-        id,
-        label: source.label,
-        token: credential.token,
-        accountId: cloudflareAccountId,
-        databaseId,
-        writable,
-      }),
-      credential,
-    };
+    return { source, adapter: createD1Adapter({ id, label: source.label, token: credential.token, accountId: cfId, databaseId, writable }), credential };
   }
 
   throw new Error('database_source_not_found');
@@ -683,10 +595,14 @@ async function readMetrics(env, accountId, sourceId, range) {
           writeQueries: metrics.totals.writeQueries,
           rowsRead: metrics.totals.rowsRead,
           rowsWritten: metrics.totals.rowsWritten,
-          tables: Number(source.num_tables || 0),
+          tables: null,
           storage: source.file_size > 0 ? Number(source.file_size) : null,
         },
         series: metrics.series,
+        insights: metrics.insights,
+        insightsWarning: metrics.insightsWarning,
+        start: metrics.start,
+        end: metrics.end,
         health: await adapter.health(),
         wired: true,
       };
@@ -741,6 +657,32 @@ const packageDatabaseHandler = createDatabaseRequestHandler({
   resolveSource: async (ctx, sourceId) =>
     withResolvedSource(ctx.env, ctx.accountId, sourceId, async (resolved) => resolved),
   readMetrics: (ctx, sourceId, range) => readMetrics(ctx.env, ctx.accountId, sourceId, range),
+  manageResource: async (ctx, body) => {
+    const action = clean(body.action);
+    if (action === "create") {
+      const cfId = clean(body.account_id);
+      const credential = await resolveCloudflareCredential(ctx.env, ctx.accountId, cfId);
+      if (!cfId || !credential?.token || credential.cloudflareAccountId !== cfId) throw new Error("cloudflare_account_not_authorized");
+      return manageD1Resource({ token: credential.token, accountId: cfId, action, input: body, writable: credential.scopes.some(scope => /(^|[.:_])d1[.:_]write$/i.test(scope)) });
+    }
+    const resolved = await resolveSource(ctx.env, ctx.accountId, body.source_id);
+    if (!resolved.source.management) throw new Error("provider_management_unavailable");
+    return manageD1Resource({ token: resolved.credential.token, accountId: resolved.source.account_id, source: resolved.source, writable: resolved.source.writable, action, input: body });
+  },
+  readAccountMetrics: async (ctx, cfId, range) => {
+    const credential = await resolveCloudflareCredential(ctx.env, ctx.accountId, cfId);
+    if (!cfId || !credential?.token || credential.cloudflareAccountId !== cfId) throw new Error("cloudflare_account_not_authorized");
+    let metrics;
+    try { metrics = await readD1AccountMetrics({ token: credential.token, accountId: cfId, range }); }
+    catch (error) { metrics = { warning: error.message, totals: null, databases: [] }; }
+    let billing;
+    try {
+      const info = await cloudflareJson("https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(cfId) + "/billable-usage/info", credential.token);
+      const usage = await cloudflareJson("https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(cfId) + "/billable-usage", credential.token);
+      billing = { status: "available", message: "Provider-reported billing records; billing cycle is defined by the provider.", info: info.result, usage: usage.result };
+    } catch (error) { billing = { status: "unavailable", message: "Billing records unavailable: " + error.message }; }
+    return { ok: true, account_id: cfId, range, ...metrics, billing, captured_at: new Date().toISOString() };
+  },
   sha256Hex,
   onError: async (error, ctx) => {
     console.error('database_service_error', String(error?.stack || error));
