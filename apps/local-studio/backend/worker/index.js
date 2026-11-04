@@ -878,7 +878,15 @@ export default {
     if ((request.method === "GET" || request.method === "HEAD") &&
         (url.pathname.startsWith("/admin/") && (!isStudioAdminPath(url.pathname) || embeddedEcommerceHome))) {
       if (url.pathname === "/admin/host-config.js") return env.ASSETS.fetch(request);
-      const mounted = await servePackagedConsole(request, env.ASSETS);
+      let storeBootstrap=null;
+      if(url.pathname==='/admin/store' && request.method==='GET'){
+        const principal=await resolveSessionUser(request,env);
+        if(principal){
+          const overview=await handleStudioSitesOverview(request,env,principal.id);
+          if(overview.ok)storeBootstrap=await overview.json();
+        }
+      }
+      const mounted = await servePackagedConsole(request, env.ASSETS,{storeBootstrap});
       if (mounted) return mounted;
     }
 

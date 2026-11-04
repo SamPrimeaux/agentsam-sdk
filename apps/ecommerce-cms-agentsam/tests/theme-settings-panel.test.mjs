@@ -11,10 +11,10 @@ function fixture(){
  const w=dom.window;w.eval(script);
  return {dom,w,root:w.document.querySelector("#ts-theme-root")};
 }
-test("18 reference categories and exclusive accordion behavior",()=>{
+test("19 reference categories and exclusive accordion behavior",()=>{
  const {dom,root}=fixture();
  assert.ok(root,"component mounted");
- const expected=["Logo and favicon","Color palette","Typography","Page","Animations","Badges","Buttons","Cart","Drawers","Icons","Input fields","Popovers and modals","Prices","Product cards","Search","Swatches","Variant pickers","Custom CSS"];
+ const expected=["Logo and favicon","Color palette","Typography","Page","Animations","Badges","Buttons","Cart","Drawers","Icons","Input fields","Popovers and modals","Prices","Product cards","Search","Swatches","Variant pickers","Custom CSS","Theme style"];
  const buttons=[...root.querySelectorAll("[data-ts-toggle]")];
  assert.deepEqual(buttons.map(b=>b.textContent.trim()),expected);
  for(const b of buttons){b.click();assert.equal(root.querySelectorAll('[data-ts-toggle][aria-expanded="true"]').length,1,b.textContent);}
@@ -98,7 +98,7 @@ test("numeric slider synchronizes with typed values and survives category switch
  buttons[16].click();buttons[15].click();
  assert.equal(root.querySelector('[data-ts-key="swatches.width"][type=number]').value,"57");
  assert.equal(w.ThemeSettingsPanel.getState().values["swatches.width"],57);
- assert.match(w.sessionStorage.getItem("ia:theme-ui-review:v1:Heuristic:shop"),/"swatches.width":57/);
+ assert.match(w.sessionStorage.getItem("ia:theme-settings:v1:local:Heuristic"),/"swatches.width":57/);
  dom.window.close();
 });
 test("color picker Apply saves selection, Cancel preserves previous value",()=>{

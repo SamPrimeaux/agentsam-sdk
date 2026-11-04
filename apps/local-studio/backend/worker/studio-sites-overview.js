@@ -1,6 +1,6 @@
 import { listStudioThemeDrafts } from './studio-theme-drafts.js';
 import { ensureDefaultCmsSite, resolveCmsSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
-import { ensureCmsSiteStarter } from '../../../ecommerce-cms-agentsam/backend/cms/site-starter.mjs';
+import { listThemeProjects } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
 /**
  * Studio Sites read-model. Hosted Studio D1 is not the legacy Ecommerce
  * customer pages/page_sections schema. Use account-scoped CMS tables.
@@ -62,11 +62,9 @@ export async function handleStudioSitesOverview(request, env, accountId) {
   }
   let provisioned=null;
   if(selectedSite) {
-    // The first visit is also the recovery path for older blank sites.
-    // Idempotent: an existing theme or edited draft is never replaced.
-    provisioned=await ensureCmsSiteStarter(env,accountId,selectedSite.id);
-    if(!provisioned.ok) return Response.json({ok:false,error:provisioned.error||'cms_starter_install_failed',
-      site_id:selectedSite.id},{status:provisioned.status||503});
+    // A library read never installs a different theme into an authored site.
+    // Empty sites go directly to discovery; Add is the installation action.
+    provisioned=await listThemeProjects(env,accountId,selectedSite.id);
   }
   let drafts=[];
   try { drafts=await listStudioThemeDrafts(env,accountId); }
@@ -78,9 +76,9 @@ export async function handleStudioSitesOverview(request, env, accountId) {
   // Provisioning has already verified the saved CMS project. A legacy draft
   // list failure must not turn a usable installed site back into an empty UI.
   const saved=provisioned?.projects?.[0]||null;
-  const currentTheme=installed || (saved&&provisioned?.editor_url ? {
+  const currentTheme=installed || (saved ? {
     id:saved.id,name:saved.name,preview_url:saved.sourcePreviewUrl||null,
-    edit_href:provisioned.editor_url,
+    edit_href:'/admin/theme-project-editor?project='+encodeURIComponent(saved.id)+'&site_id='+encodeURIComponent(selectedSite.id),
   }:null);
   // Existing sites already own authored CMS pages. Never make a newly
   // provisioned template the only way to edit a real published homepage.
@@ -118,6 +116,7 @@ export async function handleStudioSitesOverview(request, env, accountId) {
     // A project preview is never proof that its site is published.
     preview_theme:currentTheme?{
       id:currentTheme.id,name:currentTheme.name,preview_href:null,
+      last_saved:currentTheme.updated_at||saved?.updatedAt||currentTheme.created_at||saved?.createdAt||null,
       source_preview_href:currentTheme.preview_url,
       edit_href:currentTheme.edit_href,verified:false,installed:true
     }:null,

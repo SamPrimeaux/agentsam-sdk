@@ -75,3 +75,27 @@
 .theme-install-stage .theme-marketplace-error{color:#b91c1c;font-size:12px}
 @keyframes theme-install-loading{from{transform:translateX(-100%)}to{transform:translateX(280%)}}
 @media(prefers-reduced-motion:reduce){.theme-install-progress-bar{animation:none;width:100%}}
+/* Compact discovery shelf: five installable themes, image preview and Add. */
+.theme-marketplace{padding:0;margin-top:16px;background:transparent;color:var(--c-ink,#242424);border:0}
+.theme-marketplace-heading{margin-bottom:20px}
+.theme-marketplace-heading h2{font-size:17px;font-weight:600;color:var(--c-ink,#242424)!important}
+.theme-marketplace-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 18px}
+.theme-marketplace-item{border:0;border-radius:0;background:transparent;overflow:visible}
+.theme-marketplace-visual{height:auto;aspect-ratio:1;position:relative;border:1px solid #dedede;border-radius:22px;overflow:hidden;box-shadow:0 2px 5px #00000009}
+.theme-marketplace-thumb{object-position:top;transition:filter .18s ease,transform .18s ease}
+.theme-marketplace-preview{position:absolute;inset:0;display:grid;place-items:center;color:transparent;text-decoration:none;opacity:0;transition:opacity .18s ease}
+.theme-marketplace-preview::after{content:"Preview";padding:10px 18px;border-radius:999px;background:#ffffffed;color:#202020;font:500 14px system-ui;box-shadow:0 3px 20px #0002}
+.theme-marketplace-visual:hover .theme-marketplace-thumb,.theme-marketplace-visual:focus-within .theme-marketplace-thumb{filter:blur(4px) brightness(.78);transform:scale(1.025)}
+.theme-marketplace-visual:hover .theme-marketplace-preview,.theme-marketplace-preview:focus-visible{opacity:1}
+.theme-marketplace-preview:focus-visible{outline:2px solid #3b6fd8;outline-offset:-3px}
+.theme-marketplace-body{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 0 0}
+.theme-marketplace-identity{display:grid;gap:5px;min-width:0}
+.theme-marketplace-body h3{font-size:15px;font-weight:500;color:var(--c-ink,#242424)!important;line-height:1.4}
+.theme-marketplace-developer{font-size:14px;color:var(--c-muted,#666)}
+.theme-marketplace-add{border-radius:999px;min-height:34px;padding:6px 16px;flex:none}
+.theme-marketplace-skeleton{aspect-ratio:1;border-radius:22px;background:linear-gradient(110deg,#e8e8e8 25%,#f5f5f5 45%,#e8e8e8 65%);background-size:220% 100%;animation:theme-shelf-loading 1.4s ease-in-out infinite}
+@keyframes theme-shelf-loading{to{background-position:-220% 0}}
+@media(hover:none){.theme-marketplace-preview{opacity:1;place-items:end center;padding-bottom:16px}}
+@media(max-width:900px){.theme-marketplace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){.theme-marketplace-grid{grid-template-columns:1fr;gap:28px}.theme-marketplace{padding:0}.theme-marketplace-visual{aspect-ratio:1}}
+@media(prefers-reduced-motion:reduce){.theme-marketplace-thumb,.theme-marketplace-preview{transition:none}.theme-marketplace-skeleton{animation:none}}

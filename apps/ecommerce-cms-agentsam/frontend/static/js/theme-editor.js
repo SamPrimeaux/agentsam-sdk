@@ -133,7 +133,7 @@
   let publishInFlight = false;
   let hasEditedThisSession = false;
   let autosaveFailed = false;
-  let device = localStorage.getItem('fnf-theme-editor-device') || 'desktop';
+  let device = ['desktop','mobile'].includes(host?.initialDevice || params.get('previewMode')) ? (host?.initialDevice || params.get('previewMode')) : localStorage.getItem('fnf-theme-editor-device') || 'desktop';
   let inspectionEnabled = true;
   const undoHistory = [];
   const redoHistory = [];
@@ -250,6 +250,7 @@
             '<div class="te-toolbar-more">',
               '<button type="button" class="te-icon-btn" id="te-more" aria-label="More editor actions" aria-haspopup="true" aria-expanded="false" title="More actions">', icon.more, '</button>',
               '<div class="te-toolbar-dropdown" id="te-more-menu" hidden>' +
+                (typeof host?.onEditCode === 'function' ? '<button type="button" id="te-edit-code">Edit code</button>' : '') +
                 '<button type="button" class="te-mobile-more-entry" id="te-more-settings">Theme settings</button>' +
                 '<button type="button" class="te-mobile-more-entry" id="te-more-inspect" aria-pressed="true">Canvas inspection</button>' +
                 '<button type="button" class="te-mobile-more-entry" id="te-more-embeds">App embeds</button>' +
@@ -258,7 +259,9 @@
                     return '<button type="button" class="te-mobile-more-entry" data-theme-preview="' + cmsEscapeAttr(theme.id) + '" aria-pressed="' + String(theme.id === selectedTheme) + '">' + cmsEscapeHtml(theme.name) + '</button>';
                   }).join('') + '</div>' +
                 '<button type="button" class="te-mobile-more-entry" id="te-more-publish">Publish live…</button>' +
-                '<button type="button" id="te-view-draft">View draft in new tab</button><button type="button" id="te-shortcuts">Keyboard shortcuts</button><div id="te-shortcuts-help" class="te-shortcuts-help" hidden>⌘S · Save<br>⌘Z · Undo<br>⌘⇧Z · Redo<br>⌘⌃1 · Sections<br>⌘⌃2 · Theme settings<br>⌘⌃3 · App embeds</div></div>',
+                '<button type="button" id="te-view-draft">View</button><button type="button" id="te-shortcuts">Keyboard shortcuts</button>' +
+                (host?.metadata?.version ? '<div class="te-source-footer" aria-label="Theme version">' + cmsEscapeHtml(host.metadata.name || '') + ' · Version ' + cmsEscapeHtml(host.metadata.version) + (host.metadata.developer ? ' · ' + cmsEscapeHtml(host.metadata.developer) : '') + '</div>' : '') +
+                '<div id="te-shortcuts-help" class="te-shortcuts-help" hidden>⌘S · Save<br>⌘Z · Undo<br>⌘⇧Z · Redo<br>⌘⌃1 · Sections<br>⌘⌃2 · Theme settings<br>⌘⌃3 · App embeds</div></div>',
             '</div>',
             '<div class="te-save-actions"><button type="button" class="te-toolbar-btn is-primary" id="te-save" title="Save private draft (⌘S)">Save</button><button type="button" class="te-save-caret" id="te-save-options" aria-label="Additional save options" title="Additional save options" aria-haspopup="true" aria-expanded="false">⌄</button>',
               '<div class="te-toolbar-dropdown te-save-menu" id="te-save-menu" hidden><button type="button" id="te-publish" title="Publish reviewed revision">Publish live…</button></div>',
@@ -2921,6 +2924,7 @@
   }
 
   function publishGenerationSelection() {
+    host?.onSelectionChange?.(generationSelectionContext());
     document.dispatchEvent(new CustomEvent('theme-editor:selection', {
       detail: generationSelectionContext(),
     }));
@@ -3173,6 +3177,7 @@
 
   function setDevice(next) {
     device = next;
+    host?.onDeviceChange?.(device);
     localStorage.setItem('fnf-theme-editor-device', device);
     byId('te-preview-device').dataset.device = device;
     document.querySelectorAll('.te-device-btn').forEach(function(button) {
@@ -3380,6 +3385,15 @@
       renderPageOptions('');
       renderTree();
       renderInspector();
+      if(!deepSelectionRestored){
+        deepSelectionRestored=true;
+        const target=host?.initialSelection || {section:params.get('section'),block:params.get('block')};
+        if(target.section){
+          if(target.block)selectBlock(target.section,target.block,null,true);
+          else selectSection(target.section,null,true);
+        }
+        setInspectorVisible(Boolean(target.section));
+      }
       dirtySections.clear();
       dirtyVersions.clear();
       autosaveFailed = false;
@@ -3820,7 +3834,8 @@
   }
 
   let editorDrawer = null;
-  let inspectorVisible = true;
+  let inspectorVisible = Boolean(host?.initialSelection?.section || params.get('section'));
+  let deepSelectionRestored = false;
   // Preserve an intentionally closed inspector when returning from full preview.
   let inspectorBeforeFullPreview = true;
   function setInspectorVisible(value) {
@@ -3831,6 +3846,18 @@
     if (inspect) inspect.setAttribute('aria-controls', 'te-inspector-body');
     if (!inspectorVisible && window.matchMedia('(max-width: 900px)').matches) setMobilePane('preview');
   }
+  // Width follows the editor root, including when the Side Assistant opens.
+  const editorLayout = {wide:1440,compact:900};
+  const editorRoot=document.querySelector('.theme-studio');
+  const updateEditorLayout=()=>{
+    if(!editorRoot)return;
+    const width=editorRoot.getBoundingClientRect().width;
+    editorRoot.dataset.editorLayout=width>=editorLayout.wide?'wide':width>editorLayout.compact?'stacked':'compact';
+  };
+  const layoutObserver=typeof ResizeObserver==='function'?new ResizeObserver(updateEditorLayout):null;
+  if(editorRoot)layoutObserver?.observe(editorRoot);
+  updateEditorLayout();
+  window.addEventListener('pagehide',()=>layoutObserver?.disconnect(),{once:true});
   let themeIdentity = { name: '', status: '' };
   const drawerScroll = { sections: 0, 'theme-settings': 0, 'app-embeds': 0 };
 
@@ -4288,6 +4315,10 @@
     }
   }
   byId('te-more').addEventListener('click', function() { toggleToolbarMenu('te-more','te-more-menu'); });
+  byId('te-edit-code')?.addEventListener('click', function() {
+    closeToolbarMore();
+    host.onEditCode();
+  });
   // Mobile keeps the actual editing controls; secondary actions live behind More.
   function closeToolbarMore() {
     const menu = byId('te-more-menu');

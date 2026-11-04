@@ -7,7 +7,7 @@ const categories = [
 ["motion","Animations"],["badges","Badges"],["buttons","Buttons"],["cart","Cart"],
 ["drawers","Drawers"],["icons","Icons"],["inputs","Input fields"],["overlays","Popovers and modals"],
 ["prices","Prices"],["cards","Product cards"],["search","Search"],["swatches","Swatches"],
-["variants","Variant pickers"],["css","Custom CSS"]
+["variants","Variant pickers"],["css","Custom CSS"],["style","Theme style"]
 ];
 const f=(key,label,type,initial,extra={})=>({key,label,type,initial,...extra});
 const sw=(k,l,v=false)=>f(k,l,"switch",v);
@@ -28,6 +28,7 @@ const btn=(prefix,title,bg,fg,border,borderW,radius)=>[
  seg(prefix+".font","Font",["Body","Accent"]),seg(prefix+".case","Text case",cases)
 ];
 const forms={
+style:[se("style.preset","Style",["Default","Minimal","Editorial"]),sw("style.rounded","Rounded corners",true)],
 brand:[
  f("brand.name","Manage store name","name","Store"),
  f("brand.default","Default logo","media",""),
@@ -132,7 +133,7 @@ variants:[
 css:[
  help("Adds custom styles to your entire online store."),
  f("css.source","CSS","code",".card {\n  border-radius: 30px;\n}"),
- help("Custom CSS stays in isolated preview state and is not injected into the editor or storefront.")
+ help("Applies to your theme.")
 ]
 };
 const fieldMap=new Map(Object.values(forms).flat().filter(x=>x.key).map(x=>[x.key,x]));
@@ -145,7 +146,7 @@ const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const validColor=x=>x==="transparent"||/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(x));
 const hex=x=>validColor(x)&&x!=="transparent"?x:"#000000";
 const v=k=>state[k]??defaults[k]??"";
-const localKey=()=> "ia:theme-ui-review:v1:"+(document.querySelector("#te-theme-name")?.textContent||"installed")+":"+(new URLSearchParams(location.search).get("slug")||"page");
+const localKey=()=> "ia:theme-settings:v1:"+(window.AgentSamThemeEditorHost?.siteId||window.cmsActiveSiteId||"local")+":"+(window.AgentSamThemeEditorHost?.projectId||document.querySelector("#te-theme-name")?.textContent||"installed");
 const reviewNote=()=>root?.querySelector("[data-ts-review-note]");
 function load(){try{const data=JSON.parse(sessionStorage.getItem(localKey())||"null");if(data){Object.keys(defaults).forEach(k=>{if(data.values&&k in data.values)state[k]=data.values[k];});Object.entries(data.values||{}).forEach(([k,value])=>{if(/^palette\.\d+$/.test(k)){state[k]=value;paletteCount=Math.max(paletteCount,Number(k.split(".")[1])+1);}});paletteLinks=data.links||{};brandName=data.brandName||"Store";media=data.media||{};}else{fieldMap.forEach((item,key)=>{if(item.type!=="color")return;const match=[0,1,2,3].find(i=>defaults["palette."+i]===item.initial);if(match!==undefined)paletteLinks[key]=match;});}}catch{}}
 function save(){
@@ -352,7 +353,7 @@ function renderFields(){
  if(!root||!category)return;
  const content=root.querySelector(`[data-ts-panel="${category}"]`);
  if(!content)return;
- content.innerHTML=forms[category].map(inputFor).join("")+`<div class="ts-preview" aria-label="${esc(categories.find(x=>x[0]===category)[1])} local preview"><div class="ts-preview-title">Preview <span>Local sample</span></div><div data-ts-demo-content></div></div>`;
+ content.innerHTML=forms[category].map(inputFor).join("")+`<div class="ts-preview" aria-label="${esc(categories.find(x=>x[0]===category)[1])} local preview"><div class="ts-preview-title">Preview</div><div data-ts-demo-content></div></div>`;
  forms[category].filter(x=>x.type==="media").forEach(x=>updateMedia(x.key));
  syntax();updatePreview();
 }
@@ -392,7 +393,7 @@ function mount(){
  if(!drawer)return false;
  load();drawer.innerHTML='<div id="ts-theme-root" class="ts-theme-root"></div>';root=drawer.firstElementChild;
  root.dataset.openCategory="";
- root.innerHTML=`<div class="ts-heading"><h2>Theme settings</h2><span>Preview</span></div><div class="ts-categories"></div><div class="ts-theme-style"><span>Theme style</span><span title="Theme style switching is deferred until backend mapping">ⓘ</span></div><p class="ts-review-note" data-ts-review-note>Preview only · preserved for this browser session · not published</p>`;
+ root.innerHTML=`<div class="ts-heading"><h2>Theme settings</h2></div><div class="ts-categories"></div>`;
  rail=root.querySelector(".ts-categories");
  rail.innerHTML=categories.map(([id,label])=>`<section class="ts-category" data-ts-category="${id}"><h3><button type="button" data-ts-toggle aria-expanded="false" aria-controls="ts-panel-${id}" data-state="closed"><span>${esc(label)}</span><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></button></h3><div id="ts-panel-${id}" data-ts-panel="${id}" class="ts-category-content" aria-hidden="true" inert hidden></div></section>`).join("");
  rail.addEventListener("mouseover",e=>{

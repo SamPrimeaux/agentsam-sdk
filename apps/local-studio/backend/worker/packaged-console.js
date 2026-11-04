@@ -27,7 +27,7 @@ export function shouldServeProductCatalogView(url) {
   return ['store', 'collections', 'platform'].includes(url.searchParams.get('view') || 'store');
 }
 
-export async function servePackagedConsole(request, assets, { allowStudioHome = false } = {}) {
+export async function servePackagedConsole(request, assets, { allowStudioHome = false, storeBootstrap = null } = {}) {
   const uri = new URL(request.url);
   const allowEmbeddedHome = uri.pathname === '/admin/home' && (allowStudioHome || uri.searchParams.get('__agentsamEmbedded') === '1');
   const file = resolveConsoleFile(uri.pathname, { allowEmbeddedHome });
@@ -44,7 +44,9 @@ export async function servePackagedConsole(request, assets, { allowStudioHome = 
   headers.set("content-type", "text/html; charset=utf-8");
   headers.set("cache-control", "private, no-store");
   headers.delete("content-length");
-  const bootstrap = `<script>${FIRST_PAINT_BOOTSTRAP_SCRIPT}</script>`;
+  const storeData=storeBootstrap ? '<script type="application/json" id="agentsam-store-bootstrap">'+
+    JSON.stringify(storeBootstrap).replace(/</g,'\\u003c')+'</script>' : '';
+  const bootstrap = `<script>${FIRST_PAINT_BOOTSTRAP_SCRIPT}</script>`+storeData;
   const html = (await result.text())
     .replace(/<head([^>]*)>/i, `<head$1>${bootstrap}`)
     .replace(/<script src="\/admin\/js\/shell\.js"><\/script>(?:<script src="\/admin\/host-config\.js"><\/script>)?/,

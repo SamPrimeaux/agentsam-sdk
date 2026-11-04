@@ -8,7 +8,7 @@
   const search = document.getElementById('theme-marketplace-search');
   const filter = document.getElementById('theme-marketplace-filter');
   const count = document.getElementById('theme-marketplace-count');
-  if (!root || !search || !filter || !count) return;
+  if (!root) return;
   const ORIGIN = 'https://themes.inneranimalmedia.com';
   let products = [];
   // The public Theme Store hands the selected SKU/version to this authenticated
@@ -28,8 +28,8 @@
   const selectedVersion = /^\d+\.\d+\.\d+$/.test(queryParams.get('theme_version') || '')
     ? queryParams.get('theme_version') : null;
   const installIntent = queryParams.get('action') === 'try';
-  const preferredSiteId = /^[A-Za-z0-9_-]{1,160}$/.test(queryParams.get('site_id') || '')
-    ? queryParams.get('site_id') : null;
+  const selectedSiteId = () => document.querySelector('.online-store')?.dataset.siteId || queryParams.get('site_id');
+  const preferredSiteId = () => /^[A-Za-z0-9_-]{1,160}$/.test(selectedSiteId() || '') ? selectedSiteId() : null;
   const trustedHandoff = (() => {
     // In embedded CMS the iframe referrer is AgentSam itself. The outer
     // authenticated route retains the actual Theme Store navigation referrer.
@@ -93,7 +93,7 @@
         {method:'POST',headers:{'content-type':'application/json'},
           body:JSON.stringify({
             version:theme.version,
-            ...(preferredSiteId ? {site_id:preferredSiteId} : {}),
+            ...(preferredSiteId() ? {site_id:preferredSiteId()} : {}),
           })});
       if(typeof result.editor_url!=='string' ||
         !/^\/admin\/theme-project-editor\?project=[A-Za-z0-9_%\-]+&site_id=[A-Za-z0-9_%\-]+$/.test(result.editor_url) ||
@@ -112,7 +112,7 @@
       target.location.assign(route);
     }catch(error) {
       button.disabled=false;
-      button.textContent=previous||'Try theme';
+      button.textContent=previous||'Add';
       if(message)message.textContent='The draft was not opened. Your existing sites have not been changed.';
       showError(container,error);
     }
@@ -121,7 +121,7 @@
   // Only auto-start after a navigation originating from our Theme Store.
   // Missing referrer (login/strict privacy) falls back to a visible confirmation.
   const showInstallStage = () => {
-    count.textContent = 'Theme installation';
+    if (count) count.textContent = '';
     const heading=document.querySelector('.theme-marketplace-heading');
     const controls=document.querySelector('.theme-marketplace-controls');
     if(heading)heading.hidden=true;
@@ -158,31 +158,16 @@
     }
   };
   const render = () => {
-    const query = search.value.trim().toLowerCase();
-    const current = filter.value;
-    const visible = products.filter(p =>
+    const query = search?.value.trim().toLowerCase() || '';
+    const current = filter?.value || 'all';
+    const visible = products.filter(p => p.can_install &&
       (current === 'all' || p.category === current) &&
       (!query || [p.name, p.description, p.category, ...(p.pages || [])].join(' ').toLowerCase().includes(query)))
-      .sort((a,b) => Number(b.slug === selectedTheme?.slug) - Number(a.slug === selectedTheme?.slug));
-    count.textContent = visible.length + ' website packages';
+      .sort((a,b) => Number(b.slug === selectedTheme?.slug) - Number(a.slug === selectedTheme?.slug)).slice(0,5);
+    if (count) count.textContent = '';
     root.replaceChildren();
-    if (selectedSlug) {
-      const notice = node('div','theme-marketplace-selection');
-      notice.setAttribute('role', 'status');
-      if (!selectedTheme) {
-        notice.textContent = 'The selected Theme Store package is not in this catalog. Browse available releases below.';
-      } else if (selectedVersion && selectedTheme.version !== selectedVersion) {
-        notice.textContent = selectedTheme.name + ' has changed from v' + selectedVersion +
-          ' to v' + selectedTheme.version + '. Review the new version before installing.';
-      } else {
-        notice.textContent = selectedTheme.can_install
-          ? selectedTheme.name + ' is ready as a private editable draft. Choose Try theme.'
-          : selectedTheme.name + ' is available for preview. Editable installation is not verified yet.';
-      }
-      root.append(notice);
-    }
     if (!visible.length) {
-      root.append(node('p', 'theme-marketplace-empty', 'No matching website themes. Change your filters to browse the releases.'));
+      root.append(node('p', 'theme-marketplace-empty', 'Choose a theme from the Theme Store.'));
       return;
     }
     for (const theme of visible) {
@@ -201,44 +186,30 @@
         image.alt = theme.name + ' website theme cover';
         visual.append(image);
       } else visual.append(node('div', 'theme-marketplace-unavailable', theme.name));
-      visual.append(node('span', 'theme-marketplace-state',
-        theme.can_install ? 'Editable installation ready' :
-          theme.release_status === 'published' ? 'Verified package' : 'Preview'));
+      const preview = trusted(theme.preview_url, '/theme-packages/') || trusted(theme.detail_url, '/themes/');
+      if (preview) {
+        const overlay = link('Preview', preview);
+        overlay.className = 'theme-marketplace-preview';
+        overlay.setAttribute('aria-label', 'Preview ' + theme.name);
+        visual.append(overlay);
+      }
       const body = node('div', 'theme-marketplace-body');
-      body.append(node('span', 'theme-marketplace-category', theme.category),
-        node('h3', '', theme.name), node('p', '', theme.description),
-        node('div', 'theme-marketplace-meta', theme.sku + ' · v' + theme.version +
-          ' · '+(theme.can_install ? theme.editable_page_count+' editable pages' : theme.pages.length+' page layouts')));
-      const actions = node('div', 'theme-marketplace-actions');
-      const preview = trusted(theme.preview_url, '/theme-packages/');
-      const detail = trusted(theme.detail_url, '/themes/');
-      const download = trusted(theme.download_url, '/api/themes/');
-      if (preview) actions.append(link('Preview original', preview));
-      if (detail) actions.append(link('Explore theme', detail));
-      if (theme.can_install) {
-        const install = node('button','btn small','Try theme');
-        install.type='button';
-        install.dataset.installTheme=theme.slug;
-        install.addEventListener('click',()=>void createPrivateDraft(theme,install,body));
-        actions.append(install);
-      } else if(theme.release_status==='published'&&download)
-        actions.append(link('Get verified package',download,true));
-      body.append(actions,node('p','theme-marketplace-disclaimer',
-        theme.can_install
-          ? 'Site-owned CMS draft · edits are saved as revisions · publishing is separate.'
-          : theme.release_status==='published'
-            ? 'Compiled package only. This version does not yet have a verified editable installer.'
-            : 'Preview only. No verified downloadable release is published yet.'));
-      if(theme.can_install && theme.manifest_page_count > theme.editable_page_count)
-        body.append(node('p','theme-marketplace-disclaimer',
-          (theme.manifest_page_count-theme.editable_page_count)+' additional source routes have no rendered editor content yet.'));
+      const identity = node('div', 'theme-marketplace-identity');
+      identity.append(node('h3', '', theme.name),
+        node('span', 'theme-marketplace-developer', 'by ' + (theme.developer || theme.author || 'InnerAnimalMedia')));
+      const install = node('button','btn ghost small theme-marketplace-add','Add');
+      install.type='button';
+      install.dataset.installTheme=theme.slug;
+      install.setAttribute('aria-label', 'Add ' + theme.name);
+      install.addEventListener('click',()=>void createPrivateDraft(theme,install,item));
+      body.append(identity,install);
       item.append(visual,body);
       root.append(item);
     }
   };
   const load = async () => {
-    count.textContent = 'Connecting to Theme Store…';
-    root.replaceChildren(node('p', 'theme-marketplace-empty', 'Loading original website packages…'));
+    if (count) count.textContent = '';
+    // Keep the bounded discovery skeleton while the catalog loads.
     try {
       const data=await requestJSON(API);
       if(!Array.isArray(data.products))throw Error('Website Theme Store unavailable');
@@ -246,19 +217,18 @@
       selectedTheme = selectedSlug ? products.find(p=>p.slug===selectedSlug) || null : null;
       // Keep the requested theme visible rather than making the user search for
       // the exact package they already selected in the public marketplace.
-      if (selectedTheme) { search.value=''; filter.value='all'; }
+      if (selectedTheme) { if (search) search.value=''; if (filter) filter.value='all'; }
       if (installIntent && selectedSlug) {
         showInstallStage();
         return;
       }
-      filter.replaceChildren(new Option('All categories','all'));
-      [...new Set(products.map(p=>p.category))].sort().forEach(c=>filter.add(new Option(c,c)));
+
       render();
       if (selectedTheme) {
         root.querySelector('[data-theme-store-selection]')?.scrollIntoView({block:'center',behavior:'instant'});
       }
     }catch(error){
-      count.textContent='Catalog unavailable';
+      if (count) count.textContent='';
       const message=node('div','theme-marketplace-empty');
       message.append(node('strong','','Theme Store unavailable'),node('p','',error.message));
       const retry=node('button','btn ghost small','Retry');
@@ -268,7 +238,7 @@
       root.replaceChildren(message);
     }
   };
-  search.addEventListener('input',render);
-  filter.addEventListener('change',render);
+  search?.addEventListener('input',render);
+  filter?.addEventListener('change',render);
   void load();
 })();

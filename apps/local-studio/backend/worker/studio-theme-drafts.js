@@ -65,7 +65,7 @@ export async function listStudioThemeDrafts(env,userId) {
       id:'site-'+row.site_id+'-'+project.id,slug:project.sourceThemeId,name:project.name,
       theme_slug:project.sourceThemeId,package:project.packageName,
       version:project.sourcePackageVersion,status:'draft',
-      created_at:project.createdAt,installed:true,site_linked:true,
+      created_at:project.createdAt,updated_at:project.updatedAt,installed:true,site_linked:true,
       site_id:row.site_id,site_name:row.site_name,site_slug:row.site_slug,
       meta:project.packageName,
       preview_url:storePreview(project.sourceThemeId,project.sourcePackageVersion,project.sourcePreviewUrl),

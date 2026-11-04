@@ -9,7 +9,7 @@ export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } 
 
   // A srcdoc document does not inherit the product page's styles. Reuse the
   // Console and Side Assistant owners rather than rendering unstyled chrome.
-  for(const name of ['admin','console','agentsam','theme-settings-live','theme-embed-review']) {
+  for(const name of ['admin','console','agentsam','theme-settings-panel','theme-embed-review']) {
     const href='/admin/css/'+name+'.css';
     if(!document.querySelector('link[href="'+href+'"]')) {
       const link=document.createElement('link');link.rel='stylesheet';link.href=href;
@@ -19,7 +19,7 @@ export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } 
 
   const load = (name) => new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = assetsBase + name;
+    script.src = name.startsWith('/') ? name : assetsBase + name;
     script.onload = resolve;
     script.onerror = () => reject(new Error('theme_editor_asset_failed:' + name));
     document.head.append(script);
@@ -35,6 +35,9 @@ export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } 
         window.SECTION_SCHEMAS = schemas;
       }
     }
-    return load('runtime.js');
+    await load('runtime.js');
+    // The platform owns complete panels; every installed theme mounts them.
+    await load('/admin/js/theme-settings-panel.js');
+    await load('/admin/js/theme-embed-review.js');
   });
 }

@@ -6,12 +6,13 @@ import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
 import { resolveEcommerceAdminPath, resolveEcommerceAssetPath } from '@/lib/apps/ecommerce-routing';
 
-type Search = { site?: string; site_id?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try' };
+type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try' };
 
 export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
   validateSearch: (search: Record<string, unknown>): Search => ({
     site: typeof search.site === 'string' ? search.site : undefined,
     site_id: typeof search.site_id === 'string' ? search.site_id : undefined,
+    project: typeof search.project === 'string' ? search.project : undefined,
     page: typeof search.page === 'string' ? search.page : undefined,
     preview: search.preview === 'local' ? 'local' : undefined,
     theme_sku: typeof search.theme_sku === 'string' ? search.theme_sku : undefined,
@@ -48,6 +49,9 @@ function EcommerceAppHost() {
       if (!isPackagedDesktop() && page === '/admin/home') resolved.searchParams.set('__agentsamEmbedded', '1');
       if (search.site_id && /^[A-Za-z0-9_-]{1,120}$/.test(search.site_id) && page?.startsWith('/admin/')) {
         resolved.searchParams.set('site_id', search.site_id);
+      }
+      if (page?.split('?')[0] === '/admin/theme-project-editor' && search.project && /^[A-Za-z0-9_-]{1,160}$/.test(search.project)) {
+        resolved.searchParams.set('project', search.project);
       }
       // Preserve a validated Theme Store Try intent into the authenticated CMS
       // receiver. This is a selection hint, never authorization for installation.

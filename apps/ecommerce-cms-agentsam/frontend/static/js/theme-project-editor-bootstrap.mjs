@@ -5,8 +5,8 @@ import { mountThemeEditor } from '/theme-editor/mount.mjs';
 const errorNode = document.getElementById('theme-project-error');
 const frame = document.getElementById('theme-project-editor-frame');
 const parameters = new URLSearchParams(location.search);
-const projectId = parameters.get('project');
-const siteId = parameters.get('site_id');
+let projectId = parameters.get('project');
+let siteId = parameters.get('site_id');
 const pageSlug = parameters.get('page');
 const API = '/api/admin/cms/theme-projects';
 const scoped = path => siteId ? path + (path.includes('?') ? '&' : '?') +
@@ -14,7 +14,8 @@ const scoped = path => siteId ? path + (path.includes('?') ? '&' : '?') +
 
 function showError(error) {
   errorNode.hidden = false;
-  errorNode.textContent = error instanceof Error ? error.message : String(error);
+  errorNode.textContent = 'Your theme could not be opened. Please return to Online Store and try again.';
+  console.error('theme_project_open_failed',error);
 }
 
 async function jsonRequest(path, init = {}) {
@@ -72,11 +73,23 @@ const store = {
 async function boot() {
   // Private installed drafts cannot be addressed by project ID alone:
   // another site may contain an independent copy with the same project ID.
-  if (!siteId || !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)) throw new Error('theme_project_site_required');
-  if (!projectId || !/^[A-Za-z0-9_-]{1,160}$/.test(projectId)) throw new Error('theme_project_id_invalid');
-  if (pageSlug && !/^[a-z][a-z0-9-]{0,63}$/.test(pageSlug)) throw new Error('theme_project_page_invalid');
-  const project = (await store.get(projectId));
-  if (!project) throw new Error('theme_project_not_found');
+  if (!siteId || !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)) {
+    const overview=await jsonRequest('/api/admin/store/online');
+    siteId=overview.selected_site_id;
+  }
+  if (!siteId) { location.replace('/admin/store'); return; }
+  // List only this site's authorized projects before accepting a URL hint.
+  const listing=await jsonRequest(scoped(API));
+  const projects=Array.isArray(listing.projects)?listing.projects:[];
+  const selected=projects.find(item=>item.id===projectId) || projects[0];
+  if (!selected) { location.replace('/admin/store?site_id='+encodeURIComponent(siteId)); return; }
+  projectId=selected.id;
+  const canonical=new URL(location.href);
+  canonical.searchParams.set('site_id',siteId);
+  canonical.searchParams.set('project',projectId);
+  history.replaceState(history.state,'',canonical.pathname+canonical.search);
+  const project = await store.get(projectId);
+  if (!project || project.id!==projectId) throw new Error('theme_project_identity_mismatch');
   if (pageSlug && !project.pages.some(page=>page.slug===pageSlug))
     throw new Error('theme_project_page_not_in_site');
   const initialPage=pageSlug ||
@@ -92,6 +105,33 @@ async function boot() {
     mountThemeEditor(frame, {
       adapter: bridge,
       page: initialPage,
+      siteId,
+      projectId,
+      initialSelection:{section:parameters.get('section'),block:parameters.get('block')},
+      initialDevice:parameters.get('previewMode'),
+      onSelectionChange(selection) {
+        const next=new URL(location.href);
+        for(const [key,value] of [['section',selection.section_key],['block',selection.block_id]])
+          value?next.searchParams.set(key,value):next.searchParams.delete(key);
+        history.replaceState(history.state,'',next.pathname+next.search);
+      },
+      onDeviceChange(device) {
+        const next=new URL(location.href);
+        next.searchParams.set('previewMode',device);
+        history.replaceState(history.state,'',next.pathname+next.search);
+      },
+      onPageChange(nextPage) {
+        const next=new URL(location.href);
+        next.searchParams.set('page',nextPage);
+        ['section','block'].forEach(key=>next.searchParams.delete(key));
+        history.replaceState(history.state,'',next.pathname+next.search);
+      },
+      metadata: {
+        name: project.name,
+        version: project.sourcePackageVersion || project.version || null,
+        developer: project.sourcePackage?.split('/')?.[0]?.replace(/^@/, '') || null,
+      },
+
     }, { assetsBase: '/theme-editor/' }).catch(showError);
   }, { once: true });
   frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/theme-editor/editor.css"></head><body></body></html>';

@@ -3659,3 +3659,20 @@ dialog.te-section-menu .te-section-catalog-item--visual {
 .te-creation-workflow input{width:100%;border:1px solid #cfcbd5;border-radius:7px;padding:11px;font:12px system-ui}
 .te-creation-hint{background:#f6f3fb;border-radius:7px;font-size:10px;padding:11px;color:#686173;line-height:1.5}
 .te-creation-back{background:none;border:0;color:#6650a0;padding:4px;text-align:left;cursor:pointer;font-size:11px}
+/* Selection details belong in controls, never in developer path labels. */
+#te-selected-path,#te-inspector-subtitle,#te-section-status,.te-preview-head{display:none!important}
+@media(min-width:901px){
+ .theme-studio[data-editor-layout="wide"] .theme-studio-workspace{grid-template-columns:300px minmax(0,1fr) 300px!important;grid-template-rows:minmax(0,1fr);gap:5px;padding:4px}
+ .theme-studio[data-editor-layout="wide"][data-inspector="closed"] .theme-studio-workspace{grid-template-columns:300px minmax(0,1fr)!important}
+ .theme-studio[data-editor-layout="stacked"] .theme-studio-workspace{grid-template-columns:300px minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr);gap:5px;padding:4px}
+ .theme-studio[data-editor-layout="stacked"][data-inspector="open"] .theme-studio-workspace{grid-template-rows:minmax(0,42fr) minmax(0,58fr)}
+ .theme-studio[data-editor-layout="stacked"] .theme-studio-workspace>.theme-studio-tree{grid-column:1;grid-row:1;min-height:0;overflow-y:scroll;border-radius:12px}
+ .theme-studio[data-editor-layout="stacked"] .theme-studio-workspace>.theme-studio-canvas{grid-column:2;grid-row:1/-1;min-height:0}
+ .theme-studio[data-editor-layout="stacked"] .theme-studio-workspace>.theme-editor-panel{grid-column:1;grid-row:2;min-height:0;border-radius:12px;overflow:hidden}
+ .theme-studio[data-editor-layout="stacked"] .te-inspector-body{min-height:0;overflow-y:scroll;scrollbar-width:thin;scrollbar-color:#bcbcbc transparent}
+ .theme-studio[data-editor-layout="stacked"] .theme-studio-tree{scrollbar-width:thin;scrollbar-color:#bcbcbc transparent}
+ .theme-studio[data-editor-layout="wide"] .theme-studio-tree,.theme-studio[data-editor-layout="wide"] .theme-editor-panel{border-radius:12px}
+ .theme-studio[data-inspector="closed"] .theme-editor-panel{display:none!important}
+ .theme-studio[data-editor-drawer="closed"][data-inspector="closed"] .theme-studio-workspace{grid-template-columns:0 minmax(0,1fr)!important}
+ .theme-studio[data-editor-layout="wide"][data-editor-drawer="closed"][data-inspector="open"] .theme-studio-workspace{grid-template-columns:0 minmax(0,1fr) 300px!important}
+}
