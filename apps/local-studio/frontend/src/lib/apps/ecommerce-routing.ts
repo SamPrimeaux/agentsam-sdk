@@ -34,12 +34,14 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     '/admin/theme-project-editor': ['project','site_id','page'],
     '/admin/product-edit': ['id','site_id'],
     '/admin/products': ['view','site_id','collection_id'],
+    '/admin/collections': ['site_id'],
+    '/admin/collections/new': ['site_id'],
     '/admin/inventory': ['site_id'],
     '/admin/store': ['site_id'],
     '/admin/content': ['kind'],
     '/admin/email': ['folder'],
   };
-  const allowed = recognized[url.pathname] || (/^\/admin\/products\/create(?:\/[A-Za-z0-9_-]+)?$/.test(url.pathname) ? ['site_id'] : []);
+  const allowed = recognized[url.pathname] || (/^\/admin\/collections\/[A-Za-z0-9_-]+$/.test(url.pathname) || /^\/admin\/products\/create(?:\/[A-Za-z0-9_-]+)?$/.test(url.pathname) ? ['site_id'] : []);
   if ([...url.searchParams.keys()].some((name) => !allowed.includes(name) || url.searchParams.getAll(name).length !== 1)) return null;
   for (const [name, value] of url.searchParams) {
     if (!idParam.test(value)

@@ -222,3 +222,44 @@ test('D1 migration output accepts upload progress before the JSON receipt',()=>{
   assert.deepEqual(parseD1CommandOutput('├ Checking if file needs uploading\n[\n{"success":true,"results":[{"n":10}]}\n]'),[{n:10}]);
   assert.throws(()=>parseD1CommandOutput('[{"success":false}]'),/query failed/);
 });
+
+test('collection studio fields and manual, automatic, hybrid storefront membership share the site-owned CMS record', async()=>{
+  const {db,sql,env}=setup();
+  try {
+    await alignCmsCollections(sql);
+    db.exec("INSERT INTO products(id,slug,title,site_id,status) VALUES(1,'mug','Everyday Mug','s1','active'),(2,'road-trip','Road Trip','s1','active'),(3,'road-crew','Road Crew','s1','active'),(4,'foreign-road','Road Foreign','s2','active')");
+    const hero={version:1,headline:'Shop the Road',backgroundMode:'gradient'};
+    const auto={mode:'automatic',match:'all',conditions:[{field:'title',operator:'contains',value:'Road'}],excludedIds:[3]};
+    const collection=await saveCmsCollection(env,scope,{
+      title:'Road Essentials',status:'active',allowed_item_types:['product'],
+      eyebrow:'Road Ready',accent_color:'#123456',
+      hero_settings_json:JSON.stringify(hero),
+      product_plan_json:JSON.stringify([{catalog_product_id:'blank-one'}]),
+      merch_rules:auto,
+    });
+    await replaceCmsCollectionItems(env,scope,collection.id,[{item_type:'product',item_ref:'1'}]);
+    const saved=await getCmsCollection(env,scope,collection.id);
+    assert.equal(saved.metadata.eyebrow,'Road Ready');
+    assert.equal(saved.metadata.accent_color,'#123456');
+    assert.equal(saved.metadata.merch_hero.headline,'Shop the Road');
+    assert.equal(saved.metadata.merch_plan[0].catalog_product_id,'blank-one');
+    assert.equal(saved.metadata.merch_rules.mode,'automatic');
+
+    const publicUrl='https://s1.test/shop/collections/road-essentials';
+    const autoBody=await (await getStoreCollection(env,'road-essentials',publicUrl)).json();
+    assert.deepEqual(autoBody.products.map(p=>p.id),[2],'automatic matching must exclude manual-only and explicit exclusion IDs');
+    assert.equal(autoBody.collection.hero_settings_json,JSON.stringify(hero));
+    assert.equal(autoBody.collection.product_count,1);
+    const listed=(await (await listStoreCollections(env,'https://s1.test/shop/collections')).json()).collections;
+    assert.equal(listed.find(c=>c.id===collection.id).product_count,1);
+
+    await saveCmsCollection(env,scope,{merch_rules:{...auto,mode:'hybrid'}},collection.id);
+    const hybrid=await (await getStoreCollection(env,'road-essentials',publicUrl)).json();
+    assert.deepEqual(hybrid.products.map(p=>p.id),[1,2]);
+    await saveCmsCollection(env,scope,{merch_rules:{mode:'manual',match:'all',conditions:[],excludedIds:[]}},collection.id);
+    const manual=await (await getStoreCollection(env,'road-essentials',publicUrl)).json();
+    assert.deepEqual(manual.products.map(p=>p.id),[1]);
+    assert.equal((await getStoreCollection(env,'road-essentials','https://s2.test/')).status,404);
+    await assert.rejects(saveCmsCollection(env,scope,{merch_rules:{mode:'automatic',conditions:[]}},collection.id),/rules_invalid/);
+  } finally {db.close();}
+});

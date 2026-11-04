@@ -67,7 +67,7 @@ export function studioNavigationProjection({ repoRoot = root, manifestPath = pat
       ]},
       {id:'products',label:'Products',href:'/admin/products',icon:'products',children:[
         {id:'store-products',label:'Store Products',href:'/admin/products'},
-        {id:'collections',label:'Collections',href:'/admin/products?view=collections'},
+        {id:'collections',label:'Collections',href:'/admin/collections'},
         {id:'product-studio',label:'Product Studio',href:'/admin/products/create'},
         {id:'inventory',label:'Inventory',href:'/admin/inventory'},
         {id:'orders',label:'Orders',href:'/admin/orders'},

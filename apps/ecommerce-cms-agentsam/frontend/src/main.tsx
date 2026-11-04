@@ -10,7 +10,7 @@ import "./index.css";
 // /admin clean URL. The host supplies its validated product route explicitly.
 const bundledRoute = new URLSearchParams(window.location.search).get('__route');
 const installedRoute = window.parent !== window && bundledRoute &&
-  /^\/(products\/(create(?:\/[a-zA-Z0-9_-]+)?|help\/artwork)|analytics\/(overview|finance|health)|account)$/.test(bundledRoute)
+  /^\/(products\/(create(?:\/[a-zA-Z0-9_-]+)?|help\/artwork)|collections(?:\/(?:new|[a-zA-Z0-9_-]+))?|analytics\/(overview|finance|health)|account)$/.test(bundledRoute.split("?")[0])
   ? bundledRoute : null;
 
 window.renderShell(

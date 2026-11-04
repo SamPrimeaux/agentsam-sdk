@@ -20,6 +20,20 @@
     "./compatibility": "./src/compatibility.js",
     "./derivatives": "./src/derivatives.js",
     "./collection-lab": "./src/collection-lab.js",
+    "./collection-planning": {
+      "types": "./src/collection-planning.d.ts",
+      "import": "./src/collection-planning.js"
+    },
+    "./merch-hero": {
+      "types": "./src/merch-hero.d.ts",
+      "import": "./src/merch-hero.js"
+    },
+    "./merch-hero.css": "./src/merch-hero.css",
+    "./collection-showcase": {
+      "types": "./src/collection-showcase.d.ts",
+      "import": "./src/collection-showcase.js"
+    },
+    "./collection-showcase.css": "./src/collection-showcase.css",
     "./adapters/completeful": "./src/adapters-completeful.js",
     "./profiles/*": "./profiles/*",
     "./transforms": {

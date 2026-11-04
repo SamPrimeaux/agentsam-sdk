@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, type ComponentType } from "react";
 import { Navigate, Route, Routes, useOutletContext, useParams } from "react-router-dom";
 import AdminLayout from "./layout/AdminLayout";
+import "./pages/collections/collections-studio.css";
 import type { RangeKey } from "./lib/types";
 
 const AnalyticsShell = lazy(() => import("./pages/analytics/AnalyticsShell"));
@@ -9,6 +10,8 @@ const FinancePage = lazy(() => import("./pages/analytics/FinancePage"));
 const HealthPage = lazy(() => import("./pages/analytics/HealthPage"));
 const AccountPage = lazy(() => import("./pages/account/AccountPage"));
 const ProductStudioPage = lazy(() => import("./pages/products/ProductStudioPage"));
+const CollectionLibrary = lazy(() => import("./pages/collections/CollectionLibrary"));
+const CollectionEditor = lazy(() => import("./pages/collections/CollectionEditor"));
 const ArtworkHelpPage = lazy(() => import("./pages/products/ArtworkHelpPage"));
 
 export type AnalyticsOutletContext = {
@@ -41,6 +44,9 @@ export default function App() {
             <Route path="health" element={<AnalyticsRoute page={HealthPage} title="Health" />} />
           </Route>
           <Route path="account" element={<AccountRoute />} />
+          <Route path="collections" element={<CollectionLibrary />} />
+          <Route path="collections/new" element={<CollectionEditor />} />
+          <Route path="collections/:id" element={<CollectionEditor />} />
           <Route path="products/create" element={<ProductStudioRoute />} />
           <Route path="products/create/:productId" element={<ProductStudioRoute />} />
           <Route path="products/help/artwork" element={<ArtworkHelpPage />} />

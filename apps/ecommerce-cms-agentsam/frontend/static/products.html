@@ -25,7 +25,7 @@ renderShell('/admin/products', `
 
   <nav class="product-catalog-tabs" aria-label="Product views">
     <a class="btn ghost" href="/admin/products">Store Products</a>
-    <a class="btn ghost" href="/admin/products?view=collections">Collections</a>
+    <a class="btn ghost" href="/admin/collections">Collections</a>
   </nav>
   <section id="product-collections" hidden>
     <h2>Collections</h2><p>Organize your created products into collections. Add products from their product details.</p>
@@ -141,6 +141,12 @@ function badgeFor(status) {
 
 // Merchant products and installable platform packages retain their own authorities.
 const rawProductView = new URLSearchParams(location.search).get('view') || 'store';
+if (rawProductView === 'collections') {
+  const destination = new URL('/admin/collections', location.origin);
+  const siteId = new URLSearchParams(location.search).get('site_id');
+  if (siteId) destination.searchParams.set('site_id', siteId);
+  window.location.replace(destination.pathname + destination.search);
+}
 const productView = rawProductView === 'collections' ? 'collections' : rawProductView === 'platform' ? 'platform' : 'store';
 document.querySelectorAll('.product-catalog-tabs a').forEach(link => {
   const linkView = new URL(link.href).searchParams.get('view') || 'store';

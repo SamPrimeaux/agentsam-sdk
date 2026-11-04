@@ -38,7 +38,7 @@ const NAV = {
         { href: "/admin/products/create", label: "Create product" },
         { href: "/admin/products/help/artwork", label: "Artwork help" },
         { href: "/admin/products", label: "All products" },
-        { href: "/admin/products?view=collections", label: "Collections" },
+        { href: "/admin/collections", label: "Collections" },
         { href: "/admin/inventory", label: "Inventory" },
       ],
     },

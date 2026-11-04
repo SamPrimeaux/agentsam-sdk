@@ -1,4 +1,5 @@
 import { resolveCmsSite } from './site-context.mjs';
+import { normalizeCollectionRules } from '../../../../packages/agentsam-merch/src/collection-planning.js';
 
 const TYPES = new Set(['product','asset','content','page']);
 const fail = (code,status=400) => { const error=new Error(code); error.status=status; throw error; };
@@ -48,6 +49,36 @@ function values(input,previous=null) {
   const sort=input.sort_order??previous?.sort_order??0;
   if(!Number.isSafeInteger(sort))fail('collection_order_invalid');
   const metadata={...(previous?.metadata||{})};
+  // Collections Studio presentation lives with the canonical site-owned
+  // collection, not in a second merchant table or an unscoped global preset.
+  if(Object.hasOwn(input,'eyebrow')) metadata.eyebrow=text(input.eyebrow,120,'collection_eyebrow_invalid');
+  if(Object.hasOwn(input,'accent_color')) {
+    const color=text(input.accent_color,30,'collection_accent_invalid');
+    if(!/^#[0-9a-fA-F]{6}$/.test(color))fail('collection_accent_invalid');
+    metadata.accent_color=color;
+  }
+  if(Object.hasOwn(input,'hero_settings_json')) {
+    const hero=typeof input.hero_settings_json==='string'
+      ?parse(input.hero_settings_json,null):input.hero_settings_json;
+    if(!hero||typeof hero!=='object'||Array.isArray(hero)||JSON.stringify(hero).length>8000)
+      fail('collection_hero_invalid');
+    metadata.merch_hero=hero;
+  }
+  if(Object.hasOwn(input,'product_plan_json')) {
+    const plan=typeof input.product_plan_json==='string'
+      ?parse(input.product_plan_json,null):input.product_plan_json;
+    if(!Array.isArray(plan)||plan.length>100||plan.some(p=>!p||typeof p.catalog_product_id!=='string'||p.catalog_product_id.length>160))
+      fail('collection_plan_invalid');
+    metadata.merch_plan=plan;
+  }
+  if(Object.hasOwn(input,'merch_rules')) {
+    try {
+      metadata.merch_rules=normalizeCollectionRules(input.merch_rules);
+    } catch {
+      fail('collection_membership_rules_invalid',422);
+    }
+  }
+  if(JSON.stringify(metadata).length>16000)fail('collection_metadata_too_large');
   if(Object.hasOwn(input,'image_url')) {
     const image=text(input.image_url,2048,'collection_image_invalid');
     if(image&&!/^https?:\/\//.test(image)&&!/^\/(?!\/)/.test(image))fail('collection_image_invalid');
