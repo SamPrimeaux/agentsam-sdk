@@ -67,7 +67,7 @@ const PUBLIC_SITE_HTML = Object.freeze({
 export function publicSitePathForRequest(request) {
   const url = new URL(request.url);
   const host = url.hostname.toLowerCase();
-  if (host === 'themes.inneranimalmedia.com' && (url.pathname === '/' || url.pathname === '/index.html')) {
+  if (host === THEME_STORE_HOST && (url.pathname === '/' || url.pathname === '/index.html')) {
     return '/themes';
   }
   return url.pathname;
