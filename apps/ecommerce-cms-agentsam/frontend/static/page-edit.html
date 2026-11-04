@@ -116,10 +116,10 @@ renderShell("/admin/pages", `
         </div>
 
         <div class="page-editor-card">
-          <label class="page-editor-template-label">
-            Template
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
-          </label>
+          <label class="page-editor-template-label" for="page-type-select">Page type</label>
+          <select id="page-type-select" disabled></select>
+          <p class="page-editor-card-help" id="page-type-help"></p>
+          <label class="page-editor-template-label" style="margin-top:12px">Template</label>
           <div class="page-editor-readonly" id="page-template-name">Loading…</div>
           <p class="page-editor-card-help">Visual structure is managed in Theme editor.</p>
         </div>
