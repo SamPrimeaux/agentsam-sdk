@@ -3989,6 +3989,10 @@
     if (!confirmLeave()) return;
     editorLeaving = true;
     if (window.AgentSamShell && AgentSamShell.unbindShellShortcuts) AgentSamShell.unbindShellShortcuts();
+    if(host?.siteId){
+      window.top.location.assign('/admin/store?site_id='+encodeURIComponent(host.siteId));
+      return;
+    }
     const dest = window.AgentSamShell && AgentSamShell.resolveExitTarget ? AgentSamShell.resolveExitTarget() : '/admin/store';
     window.cmsAdminNavigate(dest);
   }
