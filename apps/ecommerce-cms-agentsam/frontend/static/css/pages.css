@@ -271,7 +271,14 @@
   font-weight: 400;
 }
 
-.pages-dialog-field input:focus {
+.page-editor-card select:disabled {
+  background: #f7f7f5;
+  color: #777;
+  cursor: not-allowed;
+}
+
+.pages-dialog-field input:focus,
+.pages-dialog-field select:focus {
   border-color: #3978df;
   outline: 3px solid rgba(57, 120, 223, .13);
 }
