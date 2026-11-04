@@ -32,70 +32,65 @@ ALTER TABLE cms_live_edit_sessions RENAME TO cms_live_edit_sessions__legacy_2026
 
 CREATE TABLE cms_pages (
   id TEXT PRIMARY KEY,
+  site_id TEXT NOT NULL REFERENCES cms_sites(id),
   slug TEXT NOT NULL,
   route_path TEXT NOT NULL,
-  page_type TEXT NOT NULL CHECK (page_type IN (
-    'home','about','services','work','case_study','contact','pricing',
-    'privacy','terms','faq','product','collection','blog','post',
-    'landing','portal','dashboard','auth','sitemap','custom'
-  )),
+  page_type TEXT NOT NULL DEFAULT 'page' CHECK (length(trim(page_type)) > 0),
   title TEXT NOT NULL,
-  meta_description TEXT,
-  description TEXT,
   status TEXT NOT NULL DEFAULT 'draft'
-    CHECK (status IN ('draft','published','archived','scheduled')),
-  seo_title TEXT,
-  canonical_url TEXT,
-  robots TEXT DEFAULT 'index,follow',
-  og_image_asset_id TEXT,
-  r2_bucket TEXT,
-  r2_key TEXT,
-  r2_url TEXT,
-  content_type TEXT DEFAULT 'text/html',
-  content_size_bytes INTEGER DEFAULT 0,
-  config_json TEXT DEFAULT '{}',
-  seo_json TEXT DEFAULT '{}',
-  analytics_json TEXT DEFAULT '{}',
-  metadata_json TEXT DEFAULT '{}',
-  is_system_page INTEGER DEFAULT 0,
-  requires_auth INTEGER DEFAULT 0,
-  sort_order INTEGER DEFAULT 0,
-  created_by TEXT,
-  updated_by TEXT,
-  published_by TEXT,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL,
-  published_at INTEGER,
-  archived_at INTEGER,
-  nav_visible INTEGER NOT NULL DEFAULT 1,
-  published_manifest_r2_key TEXT,
+    CHECK (status IN ('draft','published','archived')),
+  -- Authored SEO only: title, description, og_image, canonical (override), noindex.
+  -- Site defaults live in cms_sites.settings_json.seo; backend/cms/seo.mjs resolves both.
+  seo_json TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(seo_json)),
+  metadata_json TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(metadata_json)),
   definition_id TEXT REFERENCES cms_definitions(id),
-  template_sku TEXT REFERENCES cms_component_templates(sku),
-  site_id TEXT NOT NULL REFERENCES cms_sites(id),
+  -- NULL = bespoke page; set = built from a prebuilt company template (platform-owned, no FK).
+  template_sku TEXT,
+  requires_auth INTEGER NOT NULL DEFAULT 0 CHECK (requires_auth IN (0,1)),
+  nav_visible INTEGER NOT NULL DEFAULT 1 CHECK (nav_visible IN (0,1)),
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  content_object_key TEXT,
+  published_manifest_object_key TEXT,
+  published_at INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+  updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
   UNIQUE (site_id, slug),
   UNIQUE (site_id, route_path)
 );
 
 INSERT INTO cms_pages (
-  id, slug, route_path, page_type, title, meta_description, description,
-  status, seo_title, canonical_url, robots, og_image_asset_id,
-  r2_bucket, r2_key, r2_url, content_type, content_size_bytes,
-  config_json, seo_json, analytics_json, metadata_json,
-  is_system_page, requires_auth, sort_order,
-  created_by, updated_by, published_by,
-  created_at, updated_at, published_at, archived_at, nav_visible,
-  published_manifest_r2_key, definition_id, template_sku, site_id
+  id, site_id, slug, route_path, page_type, title, status, seo_json, metadata_json,
+  definition_id, template_sku, requires_auth, nav_visible, sort_order,
+  content_object_key, published_manifest_object_key, published_at, created_at, updated_at
 )
 SELECT
-  id, slug, route_path, page_type, title, meta_description, description,
-  status, seo_title, canonical_url, robots, og_image_asset_id,
-  r2_bucket, r2_key, r2_url, content_type, content_size_bytes,
-  config_json, seo_json, analytics_json, metadata_json,
-  is_system_page, requires_auth, sort_order,
-  created_by, updated_by, published_by,
-  created_at, updated_at, published_at, archived_at, nav_visible,
-  published_manifest_r2_key, definition_id, template_sku, site_id
-FROM cms_pages__legacy_20261103;
+  p.id, p.site_id, p.slug, p.route_path,
+  CASE WHEN p.page_type = 'home' OR p.route_path = '/' THEN 'landing' ELSE p.page_type END,
+  p.title,
+  CASE WHEN p.status = 'archived' OR p.archived_at IS NOT NULL OR p.is_active = 0 THEN 'archived'
+       WHEN p.status = 'scheduled' THEN 'draft' ELSE p.status END,
+  json_patch(
+    json_patch('{}', json_object(
+      'title', p.seo_title,
+      'description', COALESCE(p.meta_description, p.description),
+      'canonical', p.canonical_url,
+      'og_image', p.og_image_asset_id,
+      'noindex', CASE WHEN lower(COALESCE(p.robots, '')) LIKE '%noindex%' THEN json('true') END)),
+    CASE WHEN json_valid(p.seo_json) THEN p.seo_json ELSE '{}' END),
+  json_patch(
+    CASE WHEN json_valid(p.metadata_json)
+         THEN json_remove(p.metadata_json, '$.legacy_site_page_id', '$.legacy_project_id')
+         ELSE '{}' END,
+    json_object('migrated_from', json_object(
+      'project_id', p.project_id, 'project_slug', p.project_slug,
+      'path', CASE WHEN p.path <> p.route_path AND p.path <> COALESCE(p.r2_key, '') THEN p.path END,
+      'config', json(CASE WHEN json_valid(p.config_json) AND p.config_json NOT IN ('', '{}')
+                          THEN p.config_json END)))),
+  p.definition_id, p.template_sku,
+  CASE WHEN p.requires_auth = 1 THEN 1 ELSE 0 END,
+  COALESCE(p.nav_visible, 1), COALESCE(p.sort_order, 0),
+  p.r2_key, p.published_manifest_r2_key, p.published_at, p.created_at, p.updated_at
+FROM cms_pages__legacy_20261103 p;
 
 -- These two tables form a nullable reference cycle: page sections can map to
 -- imported Liquid sections, and imported Liquid sections can map back to a
@@ -237,13 +232,9 @@ DROP TABLE cms_live_edit_sessions__legacy_20261103;
 DROP TABLE cms_pages__legacy_20261103;
 
 -- Recreate the previous indexes and add site-scoped lookup indexes.
-CREATE INDEX cms_pages_site_system_order
-  ON cms_pages(site_id, is_system_page, sort_order, slug);
-CREATE INDEX idx_cms_pages_site_id ON cms_pages(site_id);
 CREATE INDEX idx_cms_pages_definition ON cms_pages(definition_id);
 CREATE INDEX idx_cms_pages_template ON cms_pages(template_sku);
 CREATE INDEX idx_cms_pages_site_status ON cms_pages(site_id, status, sort_order);
-CREATE INDEX idx_cms_pages_site_route ON cms_pages(site_id, route_path);
 
 CREATE UNIQUE INDEX cms_page_sections_page_section_key_unique
   ON cms_page_sections(page_id, section_key);

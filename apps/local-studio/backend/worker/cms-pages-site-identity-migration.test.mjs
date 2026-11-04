@@ -202,12 +202,17 @@ test('D1-safe migration preserves page, section, Liquid, block-tree and live-edi
     const columns = db.prepare('PRAGMA table_info(cms_pages)').all().map(row => row.name);
     for (const removed of [
       'project_id','project_slug','workspace_id','worker_id','person_uuid',
-      'path','is_homepage','is_active',
+      'path','is_homepage','is_active','account_id','seo_title','meta_description',
+      'description','canonical_url','robots','og_image_asset_id','r2_bucket','r2_key',
+      'r2_url','content_type','content_size_bytes','config_json','analytics_json',
+      'is_system_page','created_by','updated_by','published_by','archived_at',
+      'published_manifest_r2_key',
     ]) assert.equal(columns.includes(removed), false, removed + ' must be removed');
     for (const retained of [
-      'id','site_id','slug','route_path','page_type','title','r2_bucket',
-      'r2_key','r2_url','content_size_bytes','analytics_json','is_system_page',
-      'requires_auth','published_manifest_r2_key','nav_visible',
+      'id','site_id','slug','route_path','page_type','title','status','seo_json',
+      'metadata_json','definition_id','template_sku','requires_auth','nav_visible',
+      'sort_order','content_object_key','published_manifest_object_key',
+      'published_at','created_at','updated_at',
     ]) assert.equal(columns.includes(retained), true, retained + ' must remain');
 
     assert.equal(db.prepare('SELECT COUNT(*) n FROM cms_pages').get().n, 3);
@@ -222,11 +227,13 @@ test('D1-safe migration preserves page, section, Liquid, block-tree and live-edi
     assert.equal(db.prepare('SELECT COUNT(*) n FROM cms_mig_backup_cms_live_edit_sessions_20261103').get().n, 1);
 
     const home = db.prepare('SELECT * FROM cms_pages WHERE id=?').get('p1');
-    assert.equal(home.r2_key,'sites/alpha/home.html');
-    assert.equal(home.r2_url,'https://cdn/home');
-    assert.equal(home.published_manifest_r2_key,'manifest/home.json');
-    assert.equal(home.analytics_json,'{"visits":7}');
-    assert.equal(home.is_system_page,1);
+    assert.equal(home.content_object_key,'sites/alpha/home.html');
+    assert.equal(home.published_manifest_object_key,'manifest/home.json');
+    assert.equal(home.page_type,'landing');
+    assert.equal(typeof JSON.parse(home.seo_json), 'object');
+    const meta = JSON.parse(home.metadata_json);
+    assert.ok(meta.migrated_from && 'project_id' in meta.migrated_from);
+    assert.equal(JSON.stringify(meta).includes('legacy_'), false, 'no legacy_* keys survive');
 
     const section = db.prepare('SELECT * FROM cms_page_sections WHERE id=?').get('sec1');
     assert.equal(section.page_id,'p1');
