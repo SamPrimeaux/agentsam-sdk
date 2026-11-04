@@ -14,6 +14,24 @@ import {
 
 const DEFAULT_SITE = 'agentsam-sdk';
 
+/** The standalone Theme Store (own worker/repo/R2). One constant, used below. */
+const THEME_STORE_HOST = 'themes.inneranimalmedia.com';
+
+/**
+ * The v1 gallery that used to live at /themes/ on the shared AgentSam host is
+ * retired; the store is its own site. Send the gallery root there. Preview and
+ * demo paths under /themes/<slug>/… are left alone, and local development
+ * hosts never redirect to production.
+ */
+function themeStoreRedirect(request, pathname) {
+  if (pathname !== '/themes' && pathname !== '/themes/') return null;
+  const host = new URL(request.url).hostname.toLowerCase();
+  if (host === THEME_STORE_HOST || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.localhost')) {
+    return null;
+  }
+  return Response.redirect(`https://${THEME_STORE_HOST}/`, 301);
+}
+
 const PUBLIC_SITE_HTML = Object.freeze({
   '/': 'home/index.html',
   '/home': 'home/index.html',
