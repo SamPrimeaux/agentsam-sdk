@@ -36,6 +36,7 @@ export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } 
       }
     }
     await load('runtime.js');
+    if(document.querySelector('.theme-studio'))frame.ownerDocument.getElementById('theme-project-loading')?.remove();
     // The platform owns complete panels; every installed theme mounts them.
     await load('/admin/js/theme-settings-panel.js');
     await load('/admin/js/theme-embed-review.js');
