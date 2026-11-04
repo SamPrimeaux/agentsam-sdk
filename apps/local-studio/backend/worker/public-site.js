@@ -190,6 +190,9 @@ export async function servePublicSitePage(
   pathname = new URL(request.url).pathname,
   opts = {}
 ) {
+  const redirect = themeStoreRedirect(request, pathname);
+  if (redirect) return redirect;
+
   const siteSlug = opts.siteSlug || DEFAULT_SITE;
   const website = resolveWebsiteAssets(env);
   const kv = resolveSiteCacheKv(env)?.binding || null;
