@@ -395,7 +395,16 @@ async function loadPage() {
     document.getElementById("next-page").disabled = idx < 0 || idx >= slugs.length - 1;
 
     document.getElementById("page-title-input").value = pageData.title || "";
-    document.getElementById("page-template-name").textContent = slug;
+    const typeSelect = document.getElementById("page-type-select");
+    const currentType = pageData.page_type || "standard";
+    typeSelect.innerHTML = cmsPageTypeOptions(currentType);
+    typeSelect.dataset.original = currentType;
+    // Backend only accepts edits on draft pages; don't offer a control that 409s.
+    typeSelect.disabled = pageData.status === "published";
+    typeSelect.title = typeSelect.disabled ? "Set the page to Hidden (draft) to change its type" : "";
+    document.getElementById("page-type-help").textContent = cmsPageTypeHelp(currentType);
+    document.getElementById("page-template-name").textContent =
+      pageData.template_sku || pageData.template_key || "Default for this page type";
     const visualQuery = new URLSearchParams({ slug: pageData.slug || slug });
     if (window.cmsActiveSiteId) visualQuery.set("site_id", window.cmsActiveSiteId);
     if (window.cmsActivePageId) visualQuery.set("page_id", window.cmsActivePageId);
