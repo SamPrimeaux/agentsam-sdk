@@ -96,6 +96,14 @@ const newPageTitle = document.getElementById("new-page-title");
 const newPageSlug = document.getElementById("new-page-slug");
 const addPageError = document.getElementById("add-page-error");
 const createPageButton = document.getElementById("create-page-submit");
+const newPageType = document.getElementById("new-page-type");
+const newPageTypeHelp = document.getElementById("new-page-type-help");
+newPageType.innerHTML = cmsPageTypeOptions("standard");
+function syncNewPageTypeHelp() {
+  newPageTypeHelp.textContent = cmsPageTypeHelp(newPageType.value);
+}
+newPageType.addEventListener("change", syncNewPageTypeHelp);
+syncNewPageTypeHelp();
 
 function identityQuery(page) {
   const query = new URLSearchParams();
