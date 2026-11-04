@@ -20,15 +20,16 @@ CREATE TABLE IF NOT EXISTS cms_globals (
   content_object_key TEXT,
   content_version INTEGER NOT NULL DEFAULT 0,
   content_hash TEXT,
-  legacy_page_id INTEGER,
-  legacy_section_id INTEGER UNIQUE,
-  metadata_json TEXT NOT NULL DEFAULT '{}',
+  product_id TEXT REFERENCES agentsam_products(id),
+  package_version TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(metadata_json)),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE(site_id,global_key),
   FOREIGN KEY(site_id,account_id) REFERENCES cms_sites(id,account_id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_cms_globals_site ON cms_globals(site_id,global_type,status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cms_globals_one_published_theme ON cms_globals(site_id) WHERE global_type='theme-project' AND status='published';
 CREATE TABLE IF NOT EXISTS cms_revisions (
   id TEXT PRIMARY KEY DEFAULT ('cmsr_' || lower(hex(randomblob(8)))),
   account_id TEXT NOT NULL REFERENCES accounts(id),
