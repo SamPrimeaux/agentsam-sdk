@@ -16,9 +16,9 @@
 }
 
 .theme-studio {
-  height: calc(100vh - 56px);
-  height: calc(100dvh - 56px);
-  min-height: 680px;
+  height: calc(100vh - var(--te-host-header-height, 56px));
+  height: calc(100dvh - var(--te-host-header-height, 56px));
+  min-height: var(--te-host-min-height, 680px);
   display: grid;
   grid-template-rows: 54px minmax(0, 1fr);
   overflow: hidden;

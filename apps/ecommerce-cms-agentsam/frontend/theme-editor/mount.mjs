@@ -4,6 +4,19 @@ export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } 
   const window = frame.contentWindow;
   if (!document || !window) throw new Error('theme_editor_frame_unavailable');
   window.AgentSamThemeEditorHost = host;
+  document.documentElement.style.setProperty('--te-host-header-height','0px');
+  document.documentElement.style.setProperty('--te-host-min-height','0px');
+
+  // A srcdoc document does not inherit the product page's styles. Reuse the
+  // Console and Side Assistant owners rather than rendering unstyled chrome.
+  for(const name of ['admin','console','agentsam','theme-settings-live','theme-embed-review']) {
+    const href='/admin/css/'+name+'.css';
+    if(!document.querySelector('link[href="'+href+'"]')) {
+      const link=document.createElement('link');link.rel='stylesheet';link.href=href;
+      document.head.append(link);
+    }
+  }
+
   const load = (name) => new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = assetsBase + name;
