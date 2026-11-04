@@ -236,7 +236,7 @@ addPageForm?.addEventListener("submit", async (event) => {
     // Switching templates must never take a merchant's pages away.
     const result = await cmsAdminFetch("/api/admin/cms/pages", {
       method: "POST",
-      body: JSON.stringify({ title, slug, page_type: "standard" }),
+      body: JSON.stringify({ title, slug, page_type: newPageType.value || "standard" }),
     });
     if (!result?.page?.id) throw new Error("The CMS did not return a saved page identity.");
     const query = new URLSearchParams({
