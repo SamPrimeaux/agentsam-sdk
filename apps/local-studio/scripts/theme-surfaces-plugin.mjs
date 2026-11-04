@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, join, relative, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { build as buildLibrary } from 'vite';
 
 const studioRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(studioRoot, '../..');
@@ -64,6 +65,16 @@ export function discoverThemeSurfaces(root = repoRoot) {
 /** Identical inventory, editor runtime and preview payload for hosted and Tauri. */
 export function themeSurfacesPlugin() {
   let inventory;
+  let newThemeBundle;
+  const bundleNewTheme=()=>newThemeBundle ||= buildLibrary({
+    configFile:false,root:studioRoot,publicDir:false,logLevel:'error',
+    build:{write:false,minify:true,lib:{entry:resolve(repoRoot,'apps/ecommerce-cms-agentsam/frontend/theme-editor/new-theme.mjs'),formats:['es'],fileName:'new-theme'}},
+  }).then(result=>{
+    const output=(Array.isArray(result)?result:[result]).flatMap(item=>item.output||[]);
+    const entry=output.find(item=>item.type==='chunk'&&item.isEntry);
+    if(!entry)throw new Error('cms_new_theme_bundle_missing');
+    return entry.code;
+  });
   const load = () => {
     inventory = discoverThemeSurfaces();
     const editor = resolve(repoRoot, 'apps/ecommerce-cms-agentsam/frontend/static');
@@ -90,11 +101,9 @@ export function themeSurfacesPlugin() {
     name: 'agentsam-theme-surfaces',
     resolveId(id) { if (id === 'virtual:agentsam-theme-inventory') return '\0' + id; },
     load(id) { if (id === '\0virtual:agentsam-theme-inventory') return `export default ${JSON.stringify((inventory || load()).themes)};`; },
-    buildStart() {
-      load();
-      this.emitFile({ type:'chunk', id:resolve(repoRoot,'apps/ecommerce-cms-agentsam/frontend/theme-editor/new-theme.mjs'), fileName:'theme-editor/new-theme.mjs' });
-    },
-    generateBundle() {
+    async buildStart() { load(); await bundleNewTheme(); },
+    async generateBundle() {
+      this.emitFile({type:'asset',fileName:'theme-editor/new-theme.mjs',source:await bundleNewTheme()});
       for (const [fileName, file] of (inventory || load()).assets) this.emitFile({ type: 'asset', fileName, source: readFileSync(file) });
     },
     configureServer(server) {
