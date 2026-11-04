@@ -128,3 +128,65 @@ export function materializeStarterProject(preset, site) {
     pages,
   };
 }
+/** Platform page defaults fill only missing templates. Authored pages and chrome win. */
+export function inheritDefaultTemplates(project) {
+  const result=structuredClone(project);
+  const templates=[
+    ['home','Home page','home'],['product','Product','product'],
+    ['collection','Collection','collection'],['collection-list','Collection list','collection_list'],
+    ['cart','Cart','cart'],['search','Search','search'],['page','Page','page'],
+    ['blog','Blog','blog'],['article','Article','article'],['contact','Contact','contact'],['not-found','404','not_found']
+  ];
+  const authored=new Set(result.pages.flatMap(page=>[page.slug,page.page_type,page.template_key].filter(Boolean)));
+  const first=result.pages.find(page=>page.slug==='home')||result.pages[0];
+  const chrome=(first.sections||[]).filter(section=>section.globalKey||['HEADER','FOOTER'].includes(section.zone));
+  const sourceHead=first.template.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1]?.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')||'';
+  const illustration=STARTER_PRODUCT_ILLUSTRATIONS[0];
+  let changed=false;
+  for(const [slug,title,kind] of templates){
+    if(authored.has(slug)||authored.has(kind)||(slug==='not-found'&&authored.has('404')))continue;
+    changed=true;
+    const key='default_'+kind;
+    const content={
+      title:kind==='product'?'Product title':kind==='collection'?'Collection':title,
+      body:kind==='product'?'Thoughtfully made for everyday use.':'',
+      price:'$19.99',button:kind==='product'?'Add to cart':'Continue shopping',
+      image:illustration.image_url,quantity:'1',__editor:{templateKey:key,visibility:{enabled:true},blocks:[]}
+    };
+    const fields=[field('title','Title'),field('body','Description')];
+    let body='<h1 data-theme-project-field="title"></h1><p data-theme-project-field="body"></p>';
+    if(kind==='product'){
+      fields.push(field('price','Price'),field('image','Product image',{type:'media',binding:{attribute:'src'}}),
+        field('quantity','Quantity',{type:'number',binding:{attribute:'value'}}),field('button','Button label'));
+      body='<div class="cms-default-product"><img data-theme-project-field="image" alt="Product" width="600" height="700"><div>'+body+
+        '<p class="cms-default-price" data-theme-project-field="price"></p><label>Quantity<input type="number" min="1" data-theme-project-field="quantity" value="1"></label>'+
+        '<button type="button" data-theme-project-field="button">Add to cart</button></div></div>';
+    }else if(kind==='collection'||kind==='collection_list'||kind==='blog'){
+      body+='<div class="cms-default-grid">'+STARTER_PRODUCT_ILLUSTRATIONS.map((product,index)=>{
+        const id='item_'+index;
+        const values={title:kind==='blog'?'Article title':kind==='collection_list'?'Collection title':'Product title',price:'$19.99',image:product.image_url};
+        content[id]=values;content.__editor.blocks.push({id,templateKey:id});
+        return '<!--theme-block:'+id+'-->';
+      }).join('')+'</div>';
+    }else if(kind==='cart')body+='<p>Your cart is empty.</p><a href="/collections">Continue shopping</a>';
+    else if(kind==='search')body+='<form method="get" action="/search"><label>Search<input type="search" name="q" placeholder="Search"></label><button>Search</button></form><p>Search products, collections and articles.</p>';
+    else if(kind==='contact')body+='<form><label>Name<input autocomplete="name" name="name"></label><label>Email<input type="email" autocomplete="email" name="email"></label><label>Message<textarea name="message" rows="6"></textarea></label><button type="button">Send message</button></form>';
+    else if(kind==='not_found')body+='<p>We couldn’t find that page.</p><a href="/">Back to home</a>';
+    else if(kind==='article')body+='<p>Share a story worth reading.</p>';
+    const section={key,name:title,type:kind,zone:'BODY',sourceKind:kind,version:0,status:'draft',
+      html:'<section class="cms-default-page" data-theme-section="'+key+'">'+body+'</section>',
+      content,schema:{key,label:title,fields,settings:[],blocks:content.__editor.blocks.map(({id})=>({
+        key:id,label:kind==='blog'?'Article':kind==='collection_list'?'Collection':'Product',
+        fields:[field('title','Title'),field('price','Price'),field('image','Image',{type:'media',binding:{attribute:'src'}})],
+        settings:[],defaults:content[id],
+        html:'<article><img data-theme-project-field="image" alt="" width="320" height="400"><h2 data-theme-project-field="title"></h2>'+(kind==='collection'?'<p data-theme-project-field="price"></p>':'')+'</article>'
+      }))}};
+    const sections=[...chrome.filter(item=>item.zone!=='FOOTER'&&!/footer/i.test(item.globalKey||'')),section,
+      ...chrome.filter(item=>item.zone==='FOOTER'||/footer/i.test(item.globalKey||''))];
+    result.pages.push({slug,title,page_type:kind,template_key:kind,assetBase:first.assetBase||'',status:'draft',sections,
+      template:'<!doctype html><html lang="en"><head>'+sourceHead+
+        '<meta name="viewport" content="width=device-width,initial-scale=1"><style>.cms-default-page{max-width:1200px;margin:auto;padding:64px 24px;min-height:55vh;font-family:inherit}.cms-default-page h1{font-size:clamp(32px,5vw,60px);line-height:1.1;margin:0 0 24px}.cms-default-product{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}.cms-default-page img{max-width:100%;height:auto;object-fit:cover}.cms-default-page p{line-height:1.65}.cms-default-price{font-size:24px}.cms-default-page label{display:grid;gap:8px;margin:20px 0}.cms-default-page input,.cms-default-page textarea{font:inherit;padding:12px;border:1px solid #aaa;border-radius:6px;max-width:100%;box-sizing:border-box}.cms-default-page button{font:inherit;padding:14px 22px;border:0;border-radius:6px;background:#252525;color:#fff;cursor:pointer}.cms-default-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}.cms-default-grid h2{font-size:16px}.cms-default-page form{max-width:600px}@media(max-width:700px){.cms-default-product{grid-template-columns:1fr;gap:24px}.cms-default-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cms-default-page{padding:36px 20px}}</style></head><body>'+
+        sections.map(item=>'<!--theme-section:'+item.key+'-->').join('')+'</body></html>'});
+  }
+  return {project:result,changed};
+}

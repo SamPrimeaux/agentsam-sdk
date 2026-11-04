@@ -164,7 +164,7 @@ function save(changedKey){
   if(changedKey)bridge.update(current);
  }
  try{const retained=Object.fromEntries(Object.entries(media).filter(([,value])=>String(value).length<1000000));sessionStorage.setItem(localKey(),JSON.stringify({values:state,links:paletteLinks,brandName,media:retained}));}
- catch{if(reviewNote())reviewNote().textContent="Preview only · session storage unavailable";}
+ catch{if(reviewNote())reviewNote().textContent="Changes could not be retained. Try again.";}
 }
 function set(k,value){
  const d=fieldMap.get(k);
@@ -343,10 +343,10 @@ function demo(cat){
  case "overlays":return `${previewButton("Preview popover","popover")} ${previewButton("Preview modal","modal")}`;
  case "prices":return `<div class="ts-demo-lines">${[["Product pages","product"],["Product cards","cards"],["Cart items","items"],["Cart total","total"]].map(([l,k])=>`<div>${l}<strong>${price(k)}</strong></div>`).join("")}</div>`;
  case "cards":return product();
- case "search":return `<div class="ts-demo-search"><input type="search" data-ts-search value="${esc(searchQuery)}" placeholder="Search sample products" aria-label="Preview search"><div class="ts-search-result" style="border-radius:${v("search.cardRadius")}px"><span class="ts-search-art" style="border-radius:${v("search.productRadius")}px"></span><strong data-ts-result style="text-transform:${v("search.title")==="Uppercase"?"uppercase":"none"}">${searchQuery&&!/field collection/i.test(searchQuery)?"No fixture matches":"Field Collection"}</strong></div><small>${esc(v("search.empty")||"No collection selected")} · local fixture only</small></div>`;
+ case "search":return `<div class="ts-demo-search"><input type="search" data-ts-search value="${esc(searchQuery)}" placeholder="Search sample products" aria-label="Preview search"><div class="ts-search-result" style="border-radius:${v("search.cardRadius")}px"><span class="ts-search-art" style="border-radius:${v("search.productRadius")}px"></span><strong data-ts-result style="text-transform:${v("search.title")==="Uppercase"?"uppercase":"none"}">${searchQuery&&!/field collection/i.test(searchQuery)?"No results":"Field Collection"}</strong></div><small>${esc(v("search.empty")||"No collection selected")}</small></div>`;
  case "swatches":return `<div class="ts-demo-swatches">${["Graphite","Sand","Stone","Unavailable"].map((l,i)=>button(selectedVariant===i?"✓":"",`data-ts-action="variant" data-ts-choice="${i}" ${i===3?"disabled":""} aria-pressed="${selectedVariant===i}" aria-label="${l}" title="${l}" style="width:${v("swatches.width")}px;height:${v("swatches.height")}px;border-radius:${v("swatches.radius")}px;border:${v("swatches.borders")==="None"?0:v("swatches.thickness")}px solid rgba(0,0,0,${v("swatches.opacity")/100});background:${["#303030","#d2c5ac","#9c9c97","#e9e9e9"][i]};${v("swatches.images")&&i!==3?`background-image:url(${mediaSample(i%3)});background-position:center;background-size:cover;`:""}"`)).join("")}</div>`;
  case "variants":return `<div class="ts-demo-variants ${v("variants.width")==="Fill"?"is-fill":""}">${["Small","Medium","Large"].map((label,i)=>button(label,`data-ts-action="variant" data-ts-choice="${i}" aria-pressed="${selectedVariant===i}" style="background:${hex(v(i===selectedVariant?"variants.selectedBg":"variants.bg"))};color:${hex(v(i===selectedVariant?"variants.selectedText":"variants.text"))};border:${v("variants.thickness")}px solid ${hex(v(i===selectedVariant?"variants.selectedBorder":"variants.border"))};border-radius:${v("variants.radius")}px"`)).join("")}</div>`;
- case "css":return "<p>Custom CSS is saved to isolated session preview state and is not applied to the storefront.</p>";
+ case "css":return "";
  default:return "";
  }
 }
@@ -432,7 +432,7 @@ function mount(){
  });
  rail.addEventListener("input",e=>{
  const t=e.target;
- if(t.matches("[data-ts-search]")){searchQuery=t.value;const result=root.querySelector("[data-ts-result]");if(result)result.textContent=searchQuery&&!/field collection/i.test(searchQuery)?"No fixture matches":"Field Collection";return;}
+ if(t.matches("[data-ts-search]")){searchQuery=t.value;const result=root.querySelector("[data-ts-result]");if(result)result.textContent=searchQuery&&!/field collection/i.test(searchQuery)?"No results":"Field Collection";return;}
  const key=t.dataset.tsKey;if(!key)return;
  if(fieldMap.get(key)?.type==="range"||fieldMap.get(key)?.type==="code"){set(key,t.value);if(key==="css.source")syntax();}
  });

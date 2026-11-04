@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
 import { heuristicStarterPreset } from '../../../packages/heuristic-theme/src/starter.js';
-import { materializeStarterProject } from '../frontend/theme-editor/starter-project.mjs';
+import { materializeStarterProject, inheritDefaultTemplates } from '../frontend/theme-editor/starter-project.mjs';
 import { fillMissingThemeChrome } from '../frontend/theme-editor/starter-chrome.mjs';
 import { createThemeProjectAdapter, renderThemePage, sourceSectionTemplateKey } from '../packages/theme-contract/editor/project.mjs';
 
@@ -96,4 +96,27 @@ test('announcement, navigation and footer edits persist once for the installed s
     home.sections.filter(s=>s.zone==='BODY').length+1, 'new content stays inside the template');
   await adapter.setSectionVisibility('home', 'promotion_popup', true);
   assert.ok(new win.DOMParser().parseFromString(renderThemePage(await adapter.getPage('about')), 'text/html').querySelector('.iam-starter-promo'));
+}));
+
+test('required page inheritance preserves authored pages and saves through the same project adapter',async()=>withDomParser(async win=>{
+  const original=projectFor('Customer Store');
+  original.pages=original.pages.filter(page=>page.slug==='home');
+  const home=structuredClone(original.pages[0]);
+  const inherited=inheritDefaultTemplates(original);
+  assert.deepEqual(inherited.project.pages[0],home);
+  assert.deepEqual(original.pages,[home]);
+  assert.equal(inherited.project.pages.length,11);
+  assert.equal(inheritDefaultTemplates(inherited.project).changed,false);
+  const product=inherited.project.pages.find(page=>page.slug==='product');
+  const doc=new win.DOMParser().parseFromString(renderThemePage(product),'text/html');
+  assert.equal(doc.querySelector('h1').textContent,'Product title');
+  assert.equal(doc.querySelector('input[type=number]').value,'1');
+  assert.equal(doc.querySelector('[data-theme-project-field=button]').textContent,'Add to cart');
+  let saved=structuredClone(inherited.project);
+  const adapter=createThemeProjectAdapter(saved,{get:async()=>saved,save:async next=>(saved=structuredClone(next))});
+  const page=await adapter.getPage('product');
+  const section=page.sections.find(item=>item.key==='default_product');
+  await adapter.saveDraft('product',section.key,{...section.content,title:'Edited product'},0);
+  assert.equal(saved.pages.find(item=>item.slug==='product').sections.find(item=>item.key==='default_product').content.title,'Edited product');
+  assert.deepEqual(saved.pages[0],home);
 }));

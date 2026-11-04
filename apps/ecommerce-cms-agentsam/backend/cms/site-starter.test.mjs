@@ -30,17 +30,21 @@ function environment(db) {
 const storeRequest=(siteId=null)=>new Request('https://cms.test/api/admin/store/online'+
   (siteId?'?site_id='+encodeURIComponent(siteId):''));
 
-test('first visit provisions a real default site and editable starter without an empty editor',async()=>{
+test('first visit resolves a site without silently installing a theme; explicit installation remains editable',async()=>{
   const db=createCmsTestDb();
   const {env,objects}=environment(db);
   try {
     db.prepare("INSERT INTO accounts(id) VALUES ('fresh')").run();
     const first=await handleStudioSitesOverview(storeRequest(),env,'fresh');
     assert.equal(first.status,200);
-    const overview=await first.json();
+    let overview=await first.json();
     assert.equal(overview.setup_required,false);
     assert.equal(overview.site_selection_required,false);
     assert.ok(overview.selected_site_id);
+    assert.equal(overview.preview_theme,null);
+    assert.equal(objects.size,0,'viewing the library must not install a theme');
+    assert.equal((await ensureCmsSiteStarter(env,'fresh',overview.selected_site_id)).ok,true);
+    overview=await (await handleStudioSitesOverview(storeRequest(overview.selected_site_id),env,'fresh')).json();
     assert.equal(overview.preview_theme.installed,true);
     assert.match(overview.preview_theme.edit_href,/theme-project-editor\?project=theme_heuristic&site_id=/);
     const saved=await getThemeProject(env,'fresh','theme_heuristic',overview.selected_site_id);
@@ -72,8 +76,9 @@ test('site recovery is idempotent and never overwrites merchant edits or another
     const automaticallySelected=await (await handleStudioSitesOverview(storeRequest(),env,'merchant')).json();
     assert.equal(automaticallySelected.site_selection_required,false);
     assert.equal(automaticallySelected.selected_site_id,'blog');
-    assert.equal(automaticallySelected.preview_theme.installed,true);
-    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='merchant'").get().n,1);
+    assert.equal(automaticallySelected.preview_theme,null);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='merchant'").get().n,0);
+    assert.equal((await ensureCmsSiteStarter(env,'merchant','blog')).ok,true);
     const first=await (await handleStudioSitesOverview(storeRequest('blog'),env,'merchant')).json();
     assert.equal(first.preview_theme.installed,true);
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='merchant'").get().n,1);
@@ -167,15 +172,15 @@ test('primary website opens existing authored homepage, not generic starter cont
     assert.equal(automatic.site_preview.url,'https://inneranimalmedia.com/');
     assert.match(automatic.site_preview.edit_href,/site_id=inneranimalmedia/);
     assert.match(automatic.site_preview.edit_href,/page_id=page_home/);
-    assert.equal(automatic.preview_theme.installed,true,'starter remains available as a separate draft');
-    assert.equal(automatic.draft_themes.length,1);
+    assert.equal(automatic.preview_theme,null,'authored sites never gain an unsolicited starter');
+    assert.equal(automatic.draft_themes.length,0);
     assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_pages WHERE account_id='studio'").get().n,2,
       'existing pages are never overwritten by starter provisioning');
     const switched=await (await handleStudioSitesOverview(storeRequest('agentsam'),env,'studio')).json();
     assert.equal(switched.selected_site_id,'agentsam');
     assert.equal(switched.site_preview.url,'https://agentsam.inneranimalmedia.com/');
     assert.match(switched.site_preview.edit_href,/page_id=page_studio/);
-    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='studio' AND global_type='theme-project'").get().n,2);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE account_id='studio' AND global_type='theme-project'").get().n,0);
     const again=await (await handleStudioSitesOverview(storeRequest(),env,'studio')).json();
     assert.equal(again.selected_site_id,'inneranimalmedia','switching does not change the primary site');
   } finally {db.close();}

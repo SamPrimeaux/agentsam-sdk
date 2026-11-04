@@ -1,6 +1,7 @@
-import { createThemeProjectAdapter } from '/theme-editor/project.mjs';
+import { createThemeProjectAdapter, repairEmptyThemeBlockControls } from '/theme-editor/project.mjs';
 import { createThemeEditorBridge } from '/theme-editor/bridge.mjs';
 import { mountThemeEditor } from '/theme-editor/mount.mjs';
+import { inheritDefaultTemplates } from '/theme-editor/starter-project.mjs';
 
 const errorNode = document.getElementById('theme-project-error');
 const frame = document.getElementById('theme-project-editor-frame');
@@ -88,8 +89,11 @@ async function boot() {
   canonical.searchParams.set('site_id',siteId);
   canonical.searchParams.set('project',projectId);
   history.replaceState(history.state,'',canonical.pathname+canonical.search);
-  const project = await store.get(projectId);
+  let project = await store.get(projectId);
   if (!project || project.id!==projectId) throw new Error('theme_project_identity_mismatch');
+  const repaired=repairEmptyThemeBlockControls(project);
+  const inherited=inheritDefaultTemplates(repaired.project);
+  if(repaired.changed || inherited.changed)project=await store.save(inherited.project,{expectedVersion:project.revision});
   if (pageSlug && !project.pages.some(page=>page.slug===pageSlug))
     throw new Error('theme_project_page_not_in_site');
   const initialPage=pageSlug ||

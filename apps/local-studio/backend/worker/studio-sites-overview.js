@@ -87,9 +87,9 @@ export async function handleStudioSitesOverview(request, env, accountId) {
     try {
       homePage=await env.DB.prepare(`
         SELECT id,slug,title,status,route_path FROM cms_pages
-        WHERE site_id=? AND (is_homepage=1 OR slug='home')
+        WHERE site_id=? AND (route_path='/' OR slug='home')
           AND status NOT IN ('archived','removed')
-        ORDER BY is_homepage DESC,(status='published') DESC LIMIT 1
+        ORDER BY (route_path='/') DESC,(status='published') DESC LIMIT 1
       `).bind(selectedSite.id).first();
     } catch { /* Theme projects remain available for new websites. */ }
   }

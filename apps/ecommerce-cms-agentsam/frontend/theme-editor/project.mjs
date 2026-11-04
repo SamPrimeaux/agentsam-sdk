@@ -101,7 +101,9 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
     }).map((el, i) => {
       const blockId = `block_${i + 1}`, values = {};
       const fields = bind(el, values);
-      const label = el.querySelector('h2,h3,h4')?.textContent?.trim().slice(0, 60) || `Block ${i + 1}`;
+      const snippet = el.querySelector('h2,h3,h4,dt,strong,p,span')?.textContent?.trim().slice(0, 45);
+      const kind = /stat|metric|counter/i.test(el.className || '') ? 'Stat' : el.tagName === 'LI' ? 'List item' : el.tagName === 'ARTICLE' ? 'Card' : 'Group';
+      const label = snippet ? kind + ' - ' + snippet : kind;
       content[blockId] = values;
       content.__editor.blocks.push({ id: blockId, templateKey: blockId });
       const html = el.outerHTML;
@@ -267,6 +269,30 @@ function installSourceTemplates(state, inherited = {}) {
     }
   }
   return catalog;
+}
+
+/** Recover missing controls from a block's own source markup, without changing its identity. */
+export function repairEmptyThemeBlockControls(project) {
+  const result=clone(project);
+  let changed=false;
+  for(const page of result.pages)for(const section of page.sections)for(const block of section.schema.blocks||[]){
+    if((block.fields||[]).length || (block.settings||[]).length || !block.html)continue;
+    const parsed=importSourcePage('<main><section>'+block.html+'</section></main>',{slug:'controls',title:'Controls'});
+    const source=parsed.sections[0];
+    const recovered=source?.schema.blocks?.[0] || source;
+    if((recovered?.fields||recovered?.schema?.fields||[]).length){
+      block.fields=clone(recovered.fields||recovered.schema.fields);
+      block.html=recovered.html;
+      block.label=/^Block\s+\d+$/i.test(block.label||'') ? (recovered.label||'Group') : block.label;
+      block.defaults={...(recovered.defaults||source.content||{}),...(block.defaults||{})};
+      for(const instance of section.content.__editor?.blocks||[]){
+        if(instance.templateKey===block.key)
+          section.content[instance.id]={...block.defaults,...(section.content[instance.id]||{})};
+      }
+      changed=true;
+    }
+  }
+  return {project:result,changed};
 }
 
 /** Store is injected: IndexedDB, filesystem, SQLite or HTTP all share the same editing model. */
