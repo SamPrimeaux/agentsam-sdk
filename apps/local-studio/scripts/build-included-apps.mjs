@@ -30,7 +30,7 @@
  *   node scripts/build-included-apps.mjs --all           explicit full product release
  *   node scripts/build-included-apps.mjs --manifest <path-to-desktop-manifest.json>
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { constants, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -147,7 +147,7 @@ function build(plan) {
   if (!existsSync(plan.output)) throw new Error(`build produced no output at ${plan.output}`);
   rmSync(plan.publicDir, { recursive: true, force: true });
   mkdirSync(plan.publicDir, { recursive: true });
-  cpSync(plan.output, plan.publicDir, { recursive: true });
+  cpSync(plan.output, plan.publicDir, { recursive: true, mode: constants.COPYFILE_FICLONE });
   if (plan.index) {
     if (!existsSync(plan.index)) throw new Error(`app "${plan.id}" declared missing built index ${plan.index}`);
     let html = readFileSync(plan.index, 'utf8');
@@ -164,7 +164,7 @@ function stage(plan) {
     throw new Error(`${plan.publicDir} is missing — run without --stage first`);
   }
   mkdirSync(path.dirname(plan.stagedDir), { recursive: true });
-  cpSync(plan.publicDir, plan.stagedDir, { recursive: true });
+  cpSync(plan.publicDir, plan.stagedDir, { recursive: true, mode: constants.COPYFILE_FICLONE });
   if (plan.gzipOversizedWasm) {
     const assetDir = path.join(plan.stagedDir, 'assets');
     if (!existsSync(assetDir)) throw new Error(`${plan.id} requested WASM compression without an assets folder`);
