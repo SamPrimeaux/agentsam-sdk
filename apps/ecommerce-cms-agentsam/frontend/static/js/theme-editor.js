@@ -847,25 +847,6 @@
     { id: '404', title: '404 page', icon: 'gift', template: '404' },
     { id: 'metaobject', title: 'Create metaobject template', icon: 'plus', template: 'metaobject', create: true },
   ];
-  const packagedStarterMenu = {
-    id:'starter-kits',title:'Browse packaged templates',icon:'collection',children:[
-      {title:'Plain Jane · Blog starter',preset:'plain-jane',page:'journal-home'},
-      {title:'Plain Jane · Article starter',preset:'plain-jane',page:'journal-the-art-of-slow-travel'},
-      {title:'Resolve · Product page',preset:'resolve',page:'resolve-product'},
-      {title:'Resolve · Collection',preset:'resolve',page:'resolve-collection'},
-      {title:'Violet · Campaign page',preset:'violet',page:'home'}
-    ]
-  };
-  if (!localShowcase) {
-    storefrontMenu.find(item=>item.id==='blogs').children.push(
-      {title:'Plain Jane journal archive',preset:'plain-jane',page:'journal-home'});
-    storefrontMenu.find(item=>item.id==='posts').children.push(
-      {title:'Plain Jane article',preset:'plain-jane',page:'journal-the-art-of-slow-travel'});
-    storefrontMenu.find(item=>item.id==='products').children.push(
-      {title:'Resolve product page',preset:'resolve',page:'resolve-product'});
-    storefrontMenu.find(item=>item.id==='collections').children.push(
-      {title:'Resolve collection page',preset:'resolve',page:'resolve-collection'});
-  }
   if (resolveShowcase) {
     const products = storefrontMenu.find(item => item.id === 'products');
     products.children = [
@@ -923,7 +904,7 @@
       ]}
     );
   }
-  storefrontMenu.unshift(packagedStarterMenu);
+  // Installed package pages are listed from the authorized CMS page inventory below.
 
   const pickerIconPaths = {
     home:'<path d="m3 10 9-7 9 7v10H3zM9 20v-6h6v6"/>',
@@ -959,15 +940,15 @@
 
   function showScaffoldTemplate(template, title) {
     if (!localShowcase) {
-      // Route to a real packaged preview within Theme Studio instead of
-      // presenting an empty, disconnected, ad-hoc page inspector.
-      const journal=['article','blog','page','contact'].includes(template);
-      const params=new URLSearchParams({
-        showcase:journal?'plain-jane':'resolve',
-        slug:journal?(template==='article'?'journal-the-art-of-slow-travel':'journal-home')
-          :(['product','products'].includes(template)?'resolve-product':'resolve-collection')
-      });
-      window.cmsAdminNavigate('/admin/theme-editor?'+params.toString());
+      // Navigate only to pages delivered by this installed package or site.
+      // A generic template choice must never jump into an unrelated showcase.
+      const aliases = { 'products-list': 'product', 'collections-list': 'collection', 'gift-card': 'gift_card', '404': 'not_found' };
+      const kind = aliases[template] || template;
+      const installed = pages.find(page => page.slug === template ||
+        page.page_type === kind || page.template_key === kind ||
+        page.slug?.endsWith('-' + template));
+      if (installed) void switchPage(installed.slug);
+      else setNote('No ' + title.toLowerCase() + ' template is installed for this site yet. Add a page to the installed package before editing it here.', 'error');
       return;
     }
     showcaseTemplate = { template, title, subtitle: 'Customize this ' + (resolveShowcase ? 'Resolve' : 'Violet') + ' template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
@@ -1103,6 +1084,14 @@
       }
       if(resolveShowcase)children.push(...(window.AgentSamResolveStudio?.getDrafts?.()||[])
         .filter(p=>p.kind===parent.id).map(p=>({title:p.title+' · Draft',page:p.slug})));
+      if (host && ['products', 'collections', 'blogs', 'posts'].includes(parent.id)) {
+        const kind = { products: 'product', collections: 'collection', blogs: 'blog', posts: 'article' }[parent.id];
+        children.push(...source.filter(page => page.slug && (
+          page.page_type === kind || page.template_key === kind ||
+          page.slug === kind || page.slug.endsWith('-' + kind)
+        ) && !children.some(child => child.page === page.slug))
+          .map(page => ({ title: page.title || humanize(page.slug), page: page.slug })));
+      }
       if (parent.resource === 'products' || parent.resource === 'collections') {
         children.push(...(catalogResources[parent.resource] || []).slice(0, 25).map(p => ({
           title: p.title || p.name || p.slug || 'Untitled',
@@ -1307,6 +1296,16 @@
     requestAnimationFrame(function() { search.focus(); });
   }
 
+  function currentPageLabel() {
+    const current = pages.find(page => page.slug === slug) || pageData || {};
+    const kind = String(current.page_type || current.template_type || current.template_key || pageData?.page_type || '').toLowerCase();
+    const route = current.live_route || current.route_path || current.route || pageData?.route_path || pageData?.route;
+    if (current.is_homepage || pageData?.is_homepage || slug === 'home' || route === '/' || kind === 'home') return 'Home page';
+    const labels = { product: 'Default product', collection: 'Default collection', cart: 'Cart', search: 'Search', password: 'Password', blog: 'Default blog', article: 'Default article' };
+    if (labels[kind] && (!current.title || current.title === siteData?.title)) return labels[kind];
+    return current.title || pageData?.title || humanize(slug);
+  }
+
   function renderTree() {
     if (resolveShowcase && window.AgentSamResolveStudio?.renderSections) {
       window.AgentSamResolveStudio.renderSections();
@@ -1314,11 +1313,21 @@
     }
     const pageSections = ownerSections(slug);
     const siteSections = ownerSections('site');
-    const header = siteSections.find(function(section) { return section.key === 'header'; });
-    const footer = siteSections.find(function(section) { return section.key === 'footer'; });
+    const zoneFor = section => {
+      const zone = String(section.zone || section.schema?.zone || '').toUpperCase();
+      const kind = String(section.sourceKind || section.schema?.sourceKind || section.globalKey || '').toLowerCase();
+      if (zone === 'HEADER' || kind === 'site-header' || kind === 'announcement-bar') return 'header';
+      if (zone === 'FOOTER' || kind === 'site-footer') return 'footer';
+      return 'template';
+    };
+    const headerSections = [...siteSections.filter(section => section.key === 'header'),
+      ...pageSections.filter(section => zoneFor(section) === 'header')];
+    const footerSections = [...siteSections.filter(section => section.key === 'footer'),
+      ...pageSections.filter(section => zoneFor(section) === 'footer')];
+    const templateSections = pageSections.filter(section => zoneFor(section) === 'template');
     const registrySections = (window.SECTION_SCHEMAS && window.SECTION_SCHEMAS[slug]) || {};
 
-    byId('te-tree-title').textContent = (pageData && pageData.title) || humanize(slug);
+    byId('te-tree-title').textContent = currentPageLabel();
     // The original editor hid ordinary text inside generic section rows because
     // only persisted __editor.blocks could appear in the hierarchy. Expand the
     // current page on first open without undoing subsequent merchant collapses.
@@ -1326,7 +1335,7 @@
       treeExpandedForPage = slug;
       expandedSections.clear();
       expandedMenus.clear();
-      if (header) expandedSections.add('site:header');
+      headerSections.forEach(section => expandedSections.add(sectionOwner(section) + ':' + section.key));
       pageSections.forEach(function(section) { expandedSections.add(sectionOwner(section) + ':' + section.key); });
     }
 
@@ -1339,8 +1348,8 @@
       const visible = !editor.visibility || editor.visibility.enabled !== false;
       const capabilities = schema.capabilities || {};
       const isGlobal = owner === 'site';
-      const label = section.key === 'header' && isGlobal ? 'Header'
-        : section.key === 'footer' && isGlobal ? 'Footer'
+      const label = (section.globalKey === 'site-header' || (section.key === 'header' && isGlobal)) ? 'Header'
+        : (section.globalKey === 'site-footer' || (section.key === 'footer' && isGlobal)) ? 'Footer'
         : (schema.label || humanize(editor.templateKey || section.key));
       const sectionSelected = section.key === activeSectionKey && owner === activeSectionOwner;
       const blockMeta = Array.isArray(editor.blocks) ? editor.blocks : [];
@@ -1418,11 +1427,13 @@
       return '<div class="te-insert-line"><button type="button" data-insert-at="' + index +
         '" aria-label="Add section at position ' + (index + 1) + '" title="Insert section here">+</button></div>';
     };
-    const pageRows = insertLine(0) + pageSections.map(function(section, index) {
+    const firstTemplateIndex = templateSections.length ? pageSections.indexOf(templateSections[0]) : pageSections.length;
+    const pageRows = insertLine(firstTemplateIndex) + templateSections.map(function(section) {
+      const index = pageSections.indexOf(section);
       return sectionNode(section, index, 'template') + insertLine(index + 1);
     }).join('');
-    const headerRow = sectionNode(header, -1, 'header');
-    const footerRow = sectionNode(footer, -1, 'footer');
+    const headerRow = headerSections.map(section => sectionNode(section, pageSections.indexOf(section), 'header')).join('');
+    const footerRow = footerSections.map(section => sectionNode(section, pageSections.indexOf(section), 'footer')).join('');
 
     byId('te-tree').innerHTML =
       '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Header</div>' + headerRow + '</div>' +
@@ -3347,7 +3358,7 @@
         }
       }
 
-      byId('te-page-title').textContent = pageData.title || humanize(slug);
+      byId('te-page-title').textContent = currentPageLabel();
       for (const id of ['te-page-settings', 'te-manage-page']) {
         const link = byId(id);
         if (!link) continue;
@@ -4438,8 +4449,11 @@
   byId('te-media-modal').addEventListener('click', function(event) { if (event.target === byId('te-media-modal')) closeMediaPicker(); });
 
   document.addEventListener('click', function(event) {
-    if (!byId('te-page-popover').hidden && !event.target.closest('.te-page-menu')) closePageMenu();
-      });
+    // Rebuilding a category detaches the clicked row before this listener runs.
+    // The event path still records its original menu ancestors.
+    const insidePageMenu = event.composedPath().some(node => node?.classList?.contains('te-page-menu'));
+    if (!byId('te-page-popover').hidden && !insidePageMenu) closePageMenu();
+  });
 
   document.addEventListener('keydown', function(event) {
     if (event.metaKey && event.ctrlKey && ['1','2','3'].includes(event.key)) {

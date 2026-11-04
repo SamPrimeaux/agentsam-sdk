@@ -10,7 +10,7 @@ const { JSDOM } = require("jsdom");
 const root = new URL("../frontend/static/js/", import.meta.url);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null, hostTheme = null } = {}) {
+async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null, hostTheme = null, packageSections = null } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
     url: "https://editor.test/admin/theme-editor?slug=" + pageSlug,
     runScripts: "outside-only",
@@ -32,8 +32,8 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
   const page = getRegistryPage(pageSlug);
   const site = getRegistryPage("site");
   page.content_authority = "cms-draft-linked";
-  page.sections = page.sections.map(section => ({ ...section, version: 1, status: "draft" }));
-  site.sections = site.sections.map(section => ({ ...section, version: 1, status: "draft" }));
+  page.sections = (packageSections || page.sections).map(section => ({ ...section, version: 1, status: "draft" }));
+  site.sections = (packageSections ? [] : site.sections).map(section => ({ ...section, version: 1, status: "draft" }));
   w.CSS = { escape: value => String(value).replace(/[^a-zA-Z0-9_-]/g, ch => "\\" + ch) };
   w.matchMedia = () => ({ matches: mobile, addEventListener() {}, removeEventListener() {} });
   w.renderShell = (_route, markup) => w.document.body.insertAdjacentHTML("afterbegin", markup);
@@ -134,6 +134,54 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
   }
 });
 
+
+test("home editor identifies the current page in the toolbar and section tree", async () => {
+  const { dom, doc } = await editorFixture({ pageSlug: "home" });
+  try {
+    assert.equal(doc.getElementById("te-page-title").textContent, "Home page");
+    assert.equal(doc.getElementById("te-tree-title").textContent, "Home page");
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("installed package zones place header and footer outside the page template", async () => {
+  const section = (key, zone, globalKey) => ({
+    key, zone, globalKey, name: key, content: { __editor: { blocks: [] } },
+  });
+  const { dom, doc } = await editorFixture({ packageSections: [
+    section("announcement", "HEADER"), section("site_header", "HEADER", "site-header"),
+    section("hero", "BODY"), section("site_footer", "FOOTER", "site-footer"),
+  ] });
+  try {
+    const groups = [...doc.querySelectorAll("#te-tree > .te-tree-group")];
+    assert.deepEqual(groups.map(group => group.querySelector(".te-tree-group__label")?.textContent),
+      ["Header", "Template", "Footer"]);
+    assert.deepEqual(groups.map(group => [...group.querySelectorAll("[data-select-section]")]
+      .map(row => row.dataset.selectSection)),
+      [["announcement", "site_header"], ["hero"], ["site_footer"]]);
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("Products and Collections open their template lists without closing the page picker", async () => {
+  const { dom, doc } = await editorFixture();
+  try {
+    doc.getElementById("te-page-trigger").click();
+    assert.equal(doc.querySelector('[data-picker-category="starter-kits"]'), null,
+      "uninstalled showcase fixtures do not appear in merchant navigation");
+    doc.querySelector('[data-picker-category="products"]').click();
+    assert.equal(doc.getElementById("te-page-popover").hidden, false);
+    assert.ok(doc.querySelector('[data-picker-template="product"]'));
+    doc.querySelector('[data-picker-back]').click();
+    doc.querySelector('[data-picker-category="collections"]').click();
+    assert.equal(doc.getElementById("te-page-popover").hidden, false);
+    assert.ok(doc.querySelector('[data-picker-template="collection"]'));
+  } finally {
+    dom.window.close();
+  }
+});
 
 test("Theme Studio media picker previews R2 delivery_url assets and stages the chosen image without publishing", async () => {
   const delivered = "https://assets.example.test/media/hero-original.png";
