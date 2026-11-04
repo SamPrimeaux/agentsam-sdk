@@ -79,6 +79,24 @@ The future ingestion pipeline converts donor work in stages:
 
 The output of ingestion is never another standalone demo project. The output is a contract artifact that the Theme Studio can list, preview, edit, and compose.
 
+## One code authority
+
+The editable project importer, renderer, bridge, and native CMS adapter are
+authored in this package under `editor/`. Browser-served modules under
+`frontend/theme-editor/` are generated copies by
+`npm run sync:theme-contract`; `npm run check:theme-contract` prevents drift
+during verification. They are not independently maintained implementations.
+
+Source HTML regions become semantic Content, Media, Actions, Forms, and
+Accessibility fields with reusable sections, groups, and nested block presets.
+These project-level source candidates are not a replacement for installed D1
+`cms_definitions` or `cms_section_blocks`, which remain the CMS authorities.
+
+Future release compilation MUST run the shared portability validator before
+registering an installable project. A catalog claim of five pages with only
+one rendered CMS page is rejected instead of invented or silently flattened.
+Immutable earlier releases are never rewritten by this validation.
+
 ## Proof requirement
 
 An artifact is reusable only when it has:

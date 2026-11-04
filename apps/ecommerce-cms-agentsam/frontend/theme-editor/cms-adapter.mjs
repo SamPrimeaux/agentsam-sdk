@@ -1,3 +1,4 @@
+// GENERATED from packages/theme-contract/editor/cms-adapter.mjs. DO NOT EDIT.
 /** Compatibility seam over the existing portable CmsEditorAdapter; UI authority stays in Theme Studio. */
 export function createCmsThemeEditorAdapter(cms, siteId, { resolvePreview, uploadMedia } = {}) {
   let site;
@@ -12,15 +13,20 @@ export function createCmsThemeEditorAdapter(cms, siteId, { resolvePreview, uploa
   });
   const content = (s) => ({ ...structuredClone(s.fields), ...Object.fromEntries(s.blocks.map((b) => [b.id, b.data])), __editor: { templateKey: s.type, visibility: { enabled: s.visible }, blocks: s.blocks.map((b) => ({ id: b.id, templateKey: b.type })) } });
   return {
-    capabilities: { publish: true },
+    capabilities: { publish: typeof cms.publish === "function" },
     listPages: async () => (await load()).pages.map(({ id, slug, title }) => ({ id, slug, title })),
-    async getPage(slug) { const p = await page(slug); return { slug: p.slug, title: p.title, status: p.status, sections: p.sections.map((s, i) => ({ key: s.id, sort_order: i, content: content(s), status: p.status, version: 0 })) }; },
+    async getPage(slug) { const p = await page(slug); return { slug: p.slug, title: p.title, status: p.status, sections: p.sections.map((s, i) => ({ key: s.id, sort_order: i, content: content(s), status: p.status, version: s.version ?? s.content_version ?? null })) }; },
     async getRegistry() {
       await load();
       return { pages: Object.fromEntries(site.pages.map((p) => [p.slug, { sections: Object.fromEntries(p.sections.map((s) => [s.id, { key: s.type, label: s.name, fields: fields(s.fields), blocks: s.blocks.map((b) => ({ key: b.type, label: b.type, fields: fields(b.data) })), capabilities: { reorder: true } }])) }])) };
     },
-    async saveDraft(slug, key, draft) {
+    async saveDraft(slug, key, draft, expectedVersion = null) {
       const { p, s } = await find(slug, key);
+      if (expectedVersion != null) {
+        const revision = s.version ?? s.content_version;
+        if (revision == null) throw new Error("cms_section_revision_unavailable");
+        if (Number(expectedVersion) !== Number(revision)) throw new Error("cms_section_version_conflict");
+      }
       const next = { ...draft }; delete next.__editor;
       for (const block of s.blocks) { if (next[block.id]) { await cms.updateBlock(block.id, { data: next[block.id] }); delete next[block.id]; } }
       await cms.updateSection(s.id, { fields: next });
@@ -36,7 +42,7 @@ export function createCmsThemeEditorAdapter(cms, siteId, { resolvePreview, uploa
     async duplicateBlock(slug, key, id) { const { s } = await find(slug, key); const b = s.blocks.find((b) => b.id === id); if (!b) throw new Error('cms_block_not_found'); const copy = await cms.createBlock(key, { type: b.type, data: b.data }); return { block_id: copy.id }; },
     async moveBlock(slug, key, id, index) { const { s } = await find(slug, key); const ids = s.blocks.map((b) => b.id).filter((b) => b !== id); ids.splice(index, 0, id); await cms.reorderBlocks(key, ids); return {}; },
     async removeBlock(slug, key, id) { await find(slug, key); await cms.deleteBlock(id); return {}; },
-    async publish(slug) { const p = await page(slug); const result = await cms.publish(p.id); return { published_at: result.publishedAt }; },
+    async publish(slug) { if (typeof cms.publish !== 'function') throw new Error('cms_publish_not_supported'); const p = await page(slug); const result = await cms.publish(p.id); return { published_at: result.publishedAt }; },
     async resolvePreview(slug, draft) { const p = await page(slug); if (resolvePreview) return resolvePreview(site, p, draft); const result = await cms.previewDraft(p.id); if (!result.previewUrl) throw new Error('cms_preview_adapter_not_configured'); return { url: result.previewUrl }; },
     listMedia: async () => (await cms.listAssets(siteId)).map((a) => ({ ...a, filename: a.name, content_type: a.mimeType })),
     uploadMedia,

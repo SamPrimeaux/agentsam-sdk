@@ -1,3 +1,4 @@
+// GENERATED from packages/theme-contract/editor/bridge.mjs. DO NOT EDIT.
 export class ThemeEditorCapabilityError extends Error {
   constructor(capability) { super(`Theme editor adapter does not support ${capability}`); this.code = 'theme_editor_capability_unsupported'; this.capability = capability; }
 }

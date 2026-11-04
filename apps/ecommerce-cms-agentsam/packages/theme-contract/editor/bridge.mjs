@@ -19,6 +19,7 @@ export function createThemeEditorBridge(adapter) {
       const body = options.body ? JSON.parse(options.body) : {};
       const parts = path.split('?')[0].split('/').filter(Boolean).map(decodeURIComponent);
       if (path.startsWith('/api/admin/media')) return { assets: await invoke('listMedia') };
+      if (path === '/api/admin/cms/registry') return invoke('getRegistry');
       if (parts.slice(0, 4).join('/') !== 'api/admin/cms/pages') throw new ThemeEditorCapabilityError(path);
       const [, , , , slug, , section, action, block, blockAction] = parts;
       if (!slug) return { pages: await invoke('listPages') };

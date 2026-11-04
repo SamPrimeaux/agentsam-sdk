@@ -20,6 +20,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { auditPortableThemeProject } from '../../ecommerce-cms-agentsam/packages/theme-contract/editor/portability.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const slug=process.argv[2];
@@ -170,6 +171,10 @@ try {
    sourceRoutesNotRendered:missing,sourcePagesDetected:seen.size,sourceAssetErrors:[...failedAssets].slice(0,100),
    revision:0,version:'0.1.0',
  };
+ const portability=auditPortableThemeProject(project,{declaredPages:manifest.pages||[]});
+ console.log('[cms-portability]',slug,JSON.stringify(portability));
+ if(!portability.ok)throw Error('cms_portability_invalid:'+slug+':'+
+   portability.errors.map(x=>x.code+'='+x.detail).join('|'));
  const output=Buffer.from(JSON.stringify(project,null,2)+'\n');
  if(output.length>8*1024*1024)throw Error('theme_project_too_large:'+slug+':'+output.length);
  const destination=join(root,'apps/ecommerce-cms-agentsam/frontend/static/data/site-theme-projects');

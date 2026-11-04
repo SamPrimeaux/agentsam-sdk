@@ -13,6 +13,7 @@
     "./editor/bridge": "./editor/bridge.mjs",
     "./editor/project": "./editor/project.mjs",
     "./editor/cms-adapter": "./editor/cms-adapter.mjs",
-    "./runtime/theme-preview-registry": "./runtime/theme-preview-registry.js"
+    "./runtime/theme-preview-registry": "./runtime/theme-preview-registry.js",
+    "./editor/portability": "./editor/portability.mjs"
   }
 }

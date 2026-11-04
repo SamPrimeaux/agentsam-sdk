@@ -1,3 +1,4 @@
+// GENERATED from packages/theme-contract/editor/project.mjs. DO NOT EDIT.
 export const THEME_PROJECT_SCHEMA = 'agentsam.theme-project.v1';
 const clone = (value) => structuredClone(value);
 const safeKey = (key) => typeof key === 'string' && /^[a-zA-Z0-9_-]+$/.test(key) && !['__proto__', 'constructor', 'prototype'].includes(key);
@@ -38,12 +39,15 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
   const globals = [...doc.querySelectorAll('body header,body footer')]
     .filter((el) => !el.closest('main,section,article') && !nodes.some(node => node.contains(el)));
   nodes = [...new Set([...nodes, ...globals])].sort((a, b) =>
-    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_PRECEDING ? 1 : -1);
+    a.compareDocumentPosition(b) & 2 ? 1 : -1);
   const sections = nodes.map((node, index) => {
     const key = `section_${index + 1}`;
     const content = { __editor: { templateKey: key, visibility: { enabled: true }, blocks: [] } };
     const bind = (node, content) => {
     const fields = [];
+    // Keys and inspector groups describe semantic CMS controls, not the
+    // brand-specific donor copy. Every theme uses the same field families.
+    const counts = {heading: 0, text: 0, media: 0, link: 0, action: 0, input: 0};
     const editableSelector = 'h1,h2,h3,h4,h5,h6,p,span,strong,em,small,dt,dd,img,a,button,label,input,textarea';
     const candidates = [...node.querySelectorAll(editableSelector)];
     if (node.matches(editableSelector)) candidates.unshift(node);
@@ -51,35 +55,49 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
       // Repeated product grids can contain thousands of decorative spans.
       // Keep the inspector usable while retaining the original untouched DOM.
       .slice(0, 350).forEach((el, i) => {
-      const field = `field_${i + 1}`;
       const image = el.tagName === 'IMG';
       const link = el.tagName === 'A';
       const hasChildren = !!el.children.length;
       const input = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
+      const action = el.tagName === 'BUTTON';
+      const heading = /^H[1-6]$/.test(el.tagName) || !!el.closest('h1,h2,h3,h4,h5,h6');
+      const family = image ? 'media' : input ? 'input' : action ? 'action'
+        : link ? 'link' : heading ? 'heading' : 'text';
       const attribute = image ? 'src' : input ? 'placeholder' : link && hasChildren ? 'href' : undefined;
-      // Never replace a composite icon/link subtree with plain text.
-      if (!attribute && hasChildren) return;
+      if (!attribute && hasChildren) return; // Preserve nested visual markup.
+      const field = family + '_' + (++counts[family]);
+      const group = image ? 'Media' : input ? 'Forms' : link || action ? 'Actions' : 'Content';
       el.setAttribute('data-theme-project-field', field);
-      const label = (el.getAttribute('aria-label') || el.getAttribute('alt') || el.textContent || el.tagName).trim().slice(0, 60);
+      const explicitLabel = el.getAttribute('data-cms-label') || el.getAttribute('aria-label') || el.getAttribute('alt');
+      const label = (explicitLabel || (heading ? 'Heading' : family === 'text' ? 'Text' :
+        family === 'link' ? 'Link' : family === 'input' ? 'Placeholder' : 'Action')).trim().slice(0, 60);
       content[field] = attribute ? el.getAttribute(attribute) || '' : el.textContent || '';
-      fields.push({ key: field, label: attribute === 'href' ? 'Link destination: ' + label : label,
-        type: image ? 'media' : attribute === 'href' ? 'link' : 'text', binding: attribute ? { attribute } : {} });
+      fields.push({ key: field, label, group,
+        type: image ? 'media' : attribute === 'href' ? 'link' : 'text',
+        binding: attribute ? { attribute } : {} });
       if (link && !hasChildren) {
         const href = field + '_href';
         content[href] = el.getAttribute('href') || '';
-        fields.push({ key: href, label: 'Link destination', type: 'link', binding: { field, attribute: 'href' } });
+        fields.push({ key: href, label: 'Link destination', group: 'Actions',
+          type: 'link', binding: { field, attribute: 'href' } });
       }
       if (image) {
         const alt = field + '_alt';
         content[alt] = el.getAttribute('alt') || '';
-        fields.push({ key: alt, label: 'Image alternative text', type: 'text', binding: { field, attribute: 'alt' } });
+        fields.push({ key: alt, label: 'Image alternative text',
+          group: 'Accessibility', type: 'text', binding: { field, attribute: 'alt' } });
       }
     });
     return fields;
     };
-    const blockSelector = 'article,li,[data-theme-block],.card';
+    const blockSelector = 'article,li,[data-theme-block],[data-cms-group],.card';
     const blocks = [...node.querySelectorAll(blockSelector)].filter((el) => {
-      const ancestor = el.parentElement?.closest(blockSelector); return !ancestor || !node.contains(ancestor);
+      // Navigation links belong to a shared header/footer, not an accidental
+      // collection of repeatable merchandising cards.
+      if (['HEADER','FOOTER'].includes(node.tagName) &&
+          el.tagName === 'LI' && !el.hasAttribute('data-theme-block')) return false;
+      const ancestor = el.parentElement?.closest(blockSelector);
+      return !ancestor || !node.contains(ancestor);
     }).map((el, i) => {
       const blockId = `block_${i + 1}`, values = {};
       const fields = bind(el, values);
@@ -88,7 +106,12 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
       content.__editor.blocks.push({ id: blockId, templateKey: blockId });
       const html = el.outerHTML;
       el.replaceWith(doc.createComment('theme-block:' + blockId));
-      return { key: blockId, label, fields, settings: [], html, defaults: values };
+      const group = el.hasAttribute('data-cms-group');
+      const blockLabel = el.getAttribute('data-cms-label') ||
+        el.getAttribute('data-cms-group') || label;
+      return { key: blockId, label: blockLabel, kind: group ? 'group' : 'block',
+        fields, settings: [], html, defaults: values,
+        capabilities: { duplicate: true, reorder: true, reusable: true } };
     });
     const fields = bind(node, content);
     node.setAttribute('data-theme-section', key);
@@ -101,9 +124,16 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
     const name = node.querySelector('h1,h2,h3')?.textContent?.trim().slice(0, 60) || node.getAttribute('aria-label') || `Section ${index + 1}`;
     const globalKey = ['HEADER', 'FOOTER'].includes(node.tagName) && !node.closest('main,section,article')
       ? 'site-' + node.tagName.toLowerCase() : null;
-    const section = { key, name: globalKey ? (node.tagName === 'HEADER' ? 'Site header' : 'Site footer') : name, ...(globalKey ? { globalKey } : {}),
-      html: node.outerHTML, content, version: 0, status: 'draft', sort_order: index,
-      schema: { key, label: globalKey ? (node.tagName === 'HEADER' ? 'Site header' : 'Site footer') : name, fields, settings, blocks, capabilities: { reorder: true } } };
+    const zone = globalKey === 'site-header' ? 'HEADER' :
+      globalKey === 'site-footer' ? 'FOOTER' : 'BODY';
+    const sectionLabel = globalKey ? (node.tagName === 'HEADER' ? 'Site header' : 'Site footer') : name;
+    const sourceKind = (node.getAttribute('data-cms-type') || (globalKey ? globalKey : 'content-section'))
+      .replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+    const section = { key, name: sectionLabel, ...(globalKey ? { globalKey } : {}),
+      zone, sourceKind, html: node.outerHTML, content, version: 0,
+      status: 'draft', sort_order: index,
+      schema: { key, label: sectionLabel, zone, sourceKind, fields, settings, blocks,
+        capabilities: { reorder: !globalKey, duplicate: !globalKey, reusable: true } } };
     node.replaceWith(doc.createComment('theme-section:' + key));
     return section;
   });
@@ -179,19 +209,66 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
   return absolutizeThemePreviewPaths(html, baseUrl);
 }
 
+/**
+ * A section instance key belongs to its PAGE; a reusable section definition
+ * belongs to the installed SITE. The old importer reused section_1 on every
+ * page, so a flat sectionTemplates map silently overwrote all but one.
+ *
+ * Stable source identities allow cross-page repurposing without inventing a
+ * new registry or copying domain objects from the customer's CMS.
+ */
+export function sourceSectionTemplateKey(pageSlug, sectionKey) {
+  const normalize = value => String(value || '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const source = normalize(pageSlug) + ':' + normalize(sectionKey);
+  let hash = 2166136261;
+  for (const character of source) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return 'source-' + normalize(pageSlug).slice(0, 32) + '-' +
+    normalize(sectionKey).slice(0, 14) + '-' + (hash >>> 0).toString(36);
+}
+
+function installSourceTemplates(state, inherited = {}) {
+  const catalog = Object.fromEntries(Object.entries(inherited || {}).filter(([key]) =>
+    key.startsWith('source-') || key.startsWith('custom-')));
+  for (const page of state.pages) {
+    for (const section of page.sections) {
+      // A duplicated/inserted instance points back to its source module;
+      // it must not mint another apparent definition on every reuse.
+      if (section.sourceTemplateKey) continue;
+      const id = sourceSectionTemplateKey(page.slug, section.key);
+      if (catalog[id]) continue;
+      const source = clone(section);
+      source.sourcePage = page.slug;
+      source.schema = { ...source.schema, key: id,
+        label: source.name || source.schema.label || id,
+        templateKey: id, sourceKind: source.sourceKind || 'content-section' };
+      catalog[id] = source;
+    }
+  }
+  return catalog;
+}
+
 /** Store is injected: IndexedDB, filesystem, SQLite or HTTP all share the same editing model. */
 export function createThemeProjectAdapter(project, store, { publish, resolveAssetBase = (base) => base, listMedia, uploadMedia } = {}) {
   let state = validateThemeProject(project);
-  state.sectionTemplates ||= Object.fromEntries(state.pages.flatMap((p) => p.sections).map((s) => [s.schema.key, clone(s)]));
+  state.sectionTemplates = installSourceTemplates(state, state.sectionTemplates);
   const get = (slug) => { const p = state.pages.find((p) => p.slug === slug); if (!p) throw new Error('theme_page_not_found'); return p; };
   const section = (slug, key) => { const s = get(slug).sections.find((s) => s.key === key); if (!s) throw new Error('theme_section_not_found'); return s; };
   const persist = async () => {
     const expectedVersion = Number(state.revision || 0);
+    const templates = state.sectionTemplates;
     const candidate = clone(state);
+    // The registry is a *derived view of source sections*, not a second
+    // persisted website or duplicated R2 payload.
+    delete candidate.sectionTemplates;
     candidate.revision = expectedVersion + 1;
     candidate.updatedAt = new Date().toISOString();
     const saved = await store.save(candidate, { expectedVersion });
     state = validateThemeProject(saved || candidate);
+    state.sectionTemplates = installSourceTemplates(state, templates);
     return clone(state);
   };
   return {
@@ -209,17 +286,25 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
       const page = clone(get(slug));
       page.sections = page.sections.map((item, index) => ({
         ...item,
-        type: item.type || item.schema?.key || item.key,
-        preset: item.preset || item.schema?.key || item.key,
+        type: item.type || item.sourceKind || item.schema?.sourceKind || item.key,
+        preset: item.preset || sourceSectionTemplateKey(slug, item.key),
         sort_order: item.sort_order ?? index,
       }));
       return page;
     },
-    getRegistry: async () => ({ pages: Object.fromEntries(state.pages.map((p) => [p.slug, { sections: { ...Object.fromEntries(Object.values(state.sectionTemplates).map((s) => [s.schema.key, s.schema])), ...Object.fromEntries(p.sections.map((s) => [s.key, s.schema])) } }])) }),
+    getRegistry: async () => ({ pages: Object.fromEntries(state.pages.map((p) =>
+      [p.slug, { sections: {
+        ...Object.fromEntries(Object.entries(state.sectionTemplates).map(([id,s]) =>
+          [id, { ...s.schema, key: id, label: s.name, sourcePage: s.sourcePage,
+            sourceKind: s.sourceKind, capabilities: { ...s.schema.capabilities, insert: true } }])),
+        ...Object.fromEntries(p.sections.map((s) => [s.key, s.schema])),
+      } }])) }),
     resolvePreview: async (slug, draft) => { const p = draft || get(slug); return { html: renderThemePage(p, state.tokens, { baseUrl: p.assetBase ? await resolveAssetBase(p.assetBase) : undefined }) }; },
     async saveDraft(slug, key, content, expectedVersion) {
       const latest = await store.get(state.id);
-      if (latest) { const templates = state.sectionTemplates; state = validateThemeProject(latest); state.sectionTemplates ||= templates; }
+      if (latest) { const templates = state.sectionTemplates;
+        state = validateThemeProject(latest);
+        state.sectionTemplates = installSourceTemplates(state, templates); }
       const s = section(slug, key);
       if (s.version !== expectedVersion) { const error = new Error('Draft changed in another editor'); error.status = 409; throw error; }
       s.content = clone(content); s.version += 1; s.status = 'draft';
@@ -241,10 +326,26 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
     async addSection(slug, key, toIndex) {
       const source = state.sectionTemplates[key];
       if (!source) throw new Error('theme_section_template_not_found');
-      const s = clone(source); s.key = 'section_' + crypto.randomUUID().replaceAll('-', ''); s.version = 0;
-      get(slug).sections.splice(toIndex, 0, s); await persist(); return { section_key: s.key };
+      const s = clone(source);
+      s.key = 'section_' + crypto.randomUUID().replaceAll('-', '');
+      s.content.__editor.templateKey = key;
+      s.sourceTemplateKey = key;
+      s.schema.key = key;
+      s.sourceKind = source.sourceKind || 'content-section';
+      s.version = 0;
+      get(slug).sections.splice(toIndex, 0, s);
+      await persist(); return { section_key: s.key };
     },
-    async duplicateSection(slug, key) { const s = clone(section(slug, key)); s.key = 'section_' + crypto.randomUUID().replaceAll('-', ''); s.version = 0; get(slug).sections.splice(get(slug).sections.findIndex((x) => x.key === key) + 1, 0, s); await persist(); return { section_key: s.key }; },
+    async duplicateSection(slug, key) {
+      const original = section(slug, key);
+      const s = clone(original);
+      s.sourceTemplateKey = original.sourceTemplateKey || sourceSectionTemplateKey(slug, key);
+      s.content.__editor.templateKey = s.sourceTemplateKey;
+      s.key = 'section_' + crypto.randomUUID().replaceAll('-', '');
+      s.version = 0;
+      get(slug).sections.splice(get(slug).sections.findIndex((x) => x.key === key) + 1, 0, s);
+      await persist(); return { section_key: s.key };
+    },
     async removeSection(slug, key) { const p = get(slug); p.sections = p.sections.filter((s) => s.key !== key); await persist(); return {}; },
     async moveSection(slug, key, index) { const p = get(slug); const i = p.sections.findIndex((s) => s.key === key); if (i < 0) throw new Error('theme_section_not_found'); const [s] = p.sections.splice(i, 1); p.sections.splice(index, 0, s); await persist(); return {}; },
     async setSectionVisibility(slug, key, enabled) { section(slug, key).content.__editor.visibility.enabled = enabled; await persist(); return {}; },
