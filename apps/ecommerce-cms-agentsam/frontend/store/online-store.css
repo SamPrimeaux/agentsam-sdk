@@ -495,6 +495,90 @@
   .cms-site-switcher-menu { width:100%; }
 }
 
-/* Metrics are meaningful only when measured; keep the website itself primary. */
+/* Store management controls share the current CMS shell's semantic palette.
+   Customer theme tokens affect only storefront previews, not these controls. */
+.online-store {
+  max-width: 950px;
+  gap: 22px;
+  padding: 26px clamp(14px, 3vw, 30px) 72px;
+}
+.online-store-head { min-height: 42px; gap: 12px; }
+.online-store-title h1 { font-size: 18px; font-weight: 650; letter-spacing: -.02em; }
+.online-store-site-context { display: flex; align-items: center; margin-top: -10px; }
+.online-store-site-context:empty { display: none; }
+.online-store-site-context .cms-site-switcher-trigger {
+  background: var(--cms-store-surface, var(--color-card, #fff));
+  color: var(--cms-store-ink, var(--c-ink, #262626));
+  border: 1px solid var(--cms-store-raised, var(--color-border, #d7d7d7));
+  border-radius: 9px;
+  max-width: min(380px, 85vw);
+  min-width: min(280px, 80vw);
+  padding: 9px 12px;
+}
+.online-store-site-context .cms-site-switcher-label small,
+.online-store-site-context .cms-site-switcher-chevron {
+  color: var(--cms-store-muted, var(--c-muted, #777));
+}
+.online-store-site-context .cms-site-switcher-menu {
+  background: var(--cms-store-surface, var(--color-card, #fff));
+  color: var(--cms-store-ink, var(--c-ink, #262626));
+  border-color: var(--cms-store-raised, var(--color-border, #d7d7d7));
+  box-shadow: 0 18px 44px rgba(0,0,0,.22);
+}
+.online-store-site-context .cms-site-switcher-search {
+  background: var(--cms-store-canvas, var(--color-background, #fafafa));
+  color: var(--cms-store-ink, var(--c-ink, #262626));
+  border-color: var(--cms-store-raised, var(--color-border, #ddd));
+}
+.online-store-site-context .cms-site-switcher-search::placeholder,
+.online-store-site-context .cms-site-switcher-item-copy small,
+.online-store-site-context .cms-site-switcher-footer {
+  color: var(--cms-store-muted, var(--c-muted, #777));
+}
+.online-store-site-context .cms-site-switcher-item:hover,
+.online-store-site-context .cms-site-switcher-item[aria-current="true"] {
+  background: var(--cms-store-raised, var(--color-muted, #efefef));
+}
+.online-store-site-context .cms-site-switcher-item-meta {
+  color: var(--cms-store-accent, var(--c-accent, #335ebc));
+}
+.online-store-card {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,.045);
+}
+.online-store-active { padding: 0; }
+.online-store-previews { display: block; }
+.online-store-preview--desktop {
+  width: 100%;
+  min-height: 330px;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 0;
+}
+.online-store-preview--mobile { display: none; }
+.online-store-preview-caption { display: none; }
+.online-store-theme-meta {
+  padding: 18px 20px;
+  border-top: 1px solid var(--cms-store-raised, var(--color-border, #e5e5e5));
+}
+.online-store-drafts-head { margin-top: 4px; }
+.online-store-drafts-head h2 { font-size: 16px; }
+.online-store-draft-row { padding: 14px 16px; gap: 12px; }
+.online-store-draft-thumb { width: 110px; height: 68px; border-radius: 9px; }
+.online-store-draft-name { font-size: 14px; }
+.online-store-draft-meta { font-size: 12px; }
+.online-store-discover-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.online-store-draft-actions .btn,
+.online-store-theme-actions .btn { border-radius: 8px; }
+@media(max-width: 680px) {
+  .online-store-head { align-items: flex-start; }
+  .online-store-site-context .cms-site-switcher,
+  .online-store-site-context .cms-site-switcher-trigger { width:100%; max-width:100%; }
+  .online-store-draft-row { flex-wrap: wrap; }
+  .online-store-draft-actions { width:100%; justify-content:flex-end; }
+  .online-store-preview--desktop { min-height:220px; }
+}
+/* Defensive hidden-state handling for actions that have no connected backend. */
 .online-store-perf[hidden], .online-store-icon-btn[hidden],
 #import-theme-btn[hidden] { display:none !important; }

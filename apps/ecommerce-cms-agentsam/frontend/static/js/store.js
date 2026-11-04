@@ -6,7 +6,6 @@ renderShell("/admin/store", `
         <h1>Online Store</h1>
       </div>
       <div class="online-store-actions">
-        <a href="https://themes.inneranimalmedia.com/" class="btn ghost small" id="browse-themes-shortcut">Visit Theme Store</a>
         <button type="button" class="online-store-pill" id="store-visibility-btn" aria-haspopup="true">
           <span class="online-store-pill-dot" aria-hidden="true"></span>
           <span id="store-visibility-label">Checking…</span>
@@ -18,32 +17,7 @@ renderShell("/admin/store", `
         </button>
       </div>
     </header>
-
-    <section class="online-store-perf" aria-label="Store performance">
-      <div class="online-store-perf-period">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="6" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M4 10h16M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        <span>30 days</span>
-      </div>
-      <div class="online-store-perf-stat">
-        <div class="label">LCP P75</div>
-        <div class="value" id="perf-lcp">—</div>
-      </div>
-      <div class="online-store-perf-stat">
-        <div class="label">INP P75</div>
-        <div class="value" id="perf-inp">—</div>
-      </div>
-      <div class="online-store-perf-stat">
-        <div class="label">Cumulative Layout Shift</div>
-        <div class="value" id="perf-cls">—</div>
-      </div>
-      <div class="online-store-perf-stat online-store-perf-stat--wide">
-        <div class="label">Sessions by Device Type</div>
-        <div class="value online-store-devices" id="perf-sessions">
-          <span class="device desktop">— Desktop</span>
-          <span class="device mobile">— Mobile</span>
-        </div>
-      </div>
-    </section>
+    <div class="online-store-site-context" id="online-store-site-context"></div>
 
     <section class="online-store-card online-store-active" aria-label="Current theme">
       <div class="online-store-previews">
@@ -78,7 +52,6 @@ renderShell("/admin/store", `
     <header class="online-store-drafts-head">
       <div>
         <h2>Draft themes</h2>
-        <p>These themes are only visible to you. Publishing a theme from your library will switch it to your current theme.</p>
       </div>
       <button type="button" class="btn ghost small" id="import-theme-btn">Import <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </header>
@@ -90,7 +63,7 @@ renderShell("/admin/store", `
           <h2>Website themes &amp; blog templates</h2>
           <p>Discover actual website packages from themes.inneranimalmedia.com. Preview their original design, then obtain a verified release. A package download is not a CMS installation.</p>
         </div>
-        <span class="theme-marketplace-count" id="theme-marketplace-count">Loading catalog…</span>
+        <div class="online-store-discover-actions"><span class="theme-marketplace-count" id="theme-marketplace-count">Loading catalog…</span><a href="https://themes.inneranimalmedia.com/" class="btn ghost small" id="browse-themes-shortcut">Visit Theme Store</a></div>
       </header>
       <div class="theme-marketplace-controls">
         <label>Find a template<input type="search" id="theme-marketplace-search" placeholder="Search by name or category…" aria-label="Search theme templates"></label>
@@ -118,34 +91,6 @@ function fmtStoreDate(iso) {
     hour: "numeric",
     minute: "2-digit",
   }).replace(",", " at");
-}
-
-function numericMetric(metric) {
-  const value = metric && typeof metric === "object" ? metric.value : metric;
-  if (value == null || value === "" || typeof value === "boolean") return null;
-  const number = Number(value);
-  return Number.isFinite(number) && number >= 0 ? number : null;
-}
-
-function formatMs(metric) {
-  const ms = numericMetric(metric);
-  if (ms == null) return "—";
-  return ms >= 1000 ? (ms / 1000).toFixed(1) + " s" : Math.round(ms) + " ms";
-}
-
-function formatShift(metric) {
-  const number = numericMetric(metric);
-  return number == null ? "—" : number.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
-}
-
-function formatSessions(metric) {
-  const number = numericMetric(metric);
-  return number == null ? "—" : Math.round(number).toLocaleString();
-}
-
-function labelMetricAvailability(node, metric) {
-  node.title = metric && typeof metric === "object" && metric.status === "unavailable"
-    ? "Not measured yet — no storefront analytics data available" : "";
 }
 
 function themeVersion(theme) {
@@ -179,7 +124,7 @@ function renderDraftRow(theme) {
       <div class="online-store-draft-actions">
          ${preview?'<a class="btn ghost small" href="'+escapeThemeText(preview)+'" target="_blank" rel="noopener noreferrer" data-theme-draft-preview="'+escapeThemeText(preview)+'">Explore preview</a>':''}
         ${theme.installed && theme.edit_href
-          ? '<a class="btn ghost small" href="'+escapeThemeText(scopedStoreEditorHref(theme.edit_href,theme.site_id))+'">Customize draft</a>'
+          ? '<a class="btn ghost small" href="'+escapeThemeText(scopedStoreEditorHref(theme.edit_href,theme.site_id))+'">Edit theme</a>'
           : '<a class="btn ghost small" href="'+escapeThemeText(installHref)+'">View original package</a>'}
       </div>
     </div>`;
@@ -577,7 +522,7 @@ function showActiveTheme(theme,siteId) {
       });
       menu.append(heading,search,list,footer);
       root.append(menu);
-      document.querySelector('.online-store-title')?.append(root);
+      document.getElementById('online-store-site-context')?.append(root);
       renderMatches();
     }
 
@@ -586,38 +531,10 @@ function showActiveTheme(theme,siteId) {
       d.store.visibility === "public" ? "Public" :
       d.store.visibility === "password" ? "Password protected" : "Theme not published";
 
-    const perf = d.performance || {};
-    const hasRealMetrics=[perf.lcp_ms,perf.inp_ms,perf.cls,
-      perf.sessions_desktop,perf.sessions_mobile].some(value=>
-      value!==null&&value!==undefined&&value!==''&&Number.isFinite(Number(value)));
-    const performancePanel=document.querySelector('.online-store-perf');
-    if(performancePanel)performancePanel.hidden=!hasRealMetrics;
-    // Remove unconnected action affordances until transactions exist.
+    // Store metrics belong in Analytics, not theme management.
     document.querySelectorAll('.online-store-icon-btn').forEach(button=>{button.hidden=true;});
-    const importButton=document.getElementById('import-theme-btn');
-    if(importButton)importButton.hidden=true;
     const visibilityButton=document.getElementById('store-visibility-btn');
     if(visibilityButton){visibilityButton.disabled=true;visibilityButton.style.cursor='default';}
-    const lcp = document.getElementById("perf-lcp");
-    const inp = document.getElementById("perf-inp");
-    const cls = document.getElementById("perf-cls");
-    lcp.textContent = formatMs(perf.lcp_ms);
-    inp.textContent = formatMs(perf.inp_ms);
-    cls.textContent = formatShift(perf.cls);
-    labelMetricAvailability(lcp, perf.lcp_ms);
-    labelMetricAvailability(inp, perf.inp_ms);
-    labelMetricAvailability(cls, perf.cls);
-    const desktop = formatSessions(perf.sessions_desktop);
-    const mobile = formatSessions(perf.sessions_mobile);
-    const sessions = document.getElementById("perf-sessions");
-    sessions.replaceChildren();
-    for (const [type, count] of [["desktop", desktop], ["mobile", mobile]]) {
-      const span = document.createElement("span");
-      span.className = "device " + type;
-      span.textContent = count + " " + (type === "desktop" ? "Desktop" : "Mobile");
-      sessions.appendChild(span);
-    }
-    sessions.title = "Storefront sessions are not measured yet when shown as —";
 
     setStoreViewButton(d.site_preview?.url ||
       (d.store?.visibility==="public" ? d.store?.url : null));
