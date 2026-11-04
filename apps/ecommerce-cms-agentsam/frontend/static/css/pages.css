@@ -257,8 +257,10 @@
   font-weight: 600;
 }
 
-.pages-dialog-field input {
+.pages-dialog-field input,
+.pages-dialog-field select {
   width: 100%;
+  background: #fff;
   min-height: 40px;
   box-sizing: border-box;
   border: 1px solid #d7d7dc;
