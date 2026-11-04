@@ -28,22 +28,52 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
   // original markup intact and expose its text/media as editable fields.
   if (!nodes.length) nodes = [...doc.querySelectorAll('main > div, main > figure')];
   if (!nodes.length) nodes = [...doc.querySelectorAll('main')];
+  // No <main> is not a reason to turn an entire website into a single
+  // uneditable lump. Preserve the source hierarchy and extract real sections.
+  if (!nodes.length) nodes = [...doc.querySelectorAll('body section, body article')]
+    .filter((el) => !el.parentElement?.closest('section,article'));
   if (!nodes.length) nodes = [...doc.body.children].filter((el) => !['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName));
+  // Headers/footers belong to the editable website, not the fixed editor
+  // chrome. Capture the existing source elements, including those outside main.
+  const globals = [...doc.querySelectorAll('body header,body footer')]
+    .filter((el) => !el.closest('main,section,article') && !nodes.some(node => node.contains(el)));
+  nodes = [...new Set([...nodes, ...globals])].sort((a, b) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_PRECEDING ? 1 : -1);
   const sections = nodes.map((node, index) => {
     const key = `section_${index + 1}`;
     const content = { __editor: { templateKey: key, visibility: { enabled: true }, blocks: [] } };
     const bind = (node, content) => {
     const fields = [];
-    const editableSelector = 'h1,h2,h3,h4,h1 span,h2 span,h3 span,h4 span,p,img,a,button,label';
+    const editableSelector = 'h1,h2,h3,h4,h5,h6,p,span,strong,em,small,dt,dd,img,a,button,label,input,textarea';
     const candidates = [...node.querySelectorAll(editableSelector)];
     if (node.matches(editableSelector)) candidates.unshift(node);
-    candidates.filter((el) => el.tagName === 'IMG' || !el.children.length).forEach((el, i) => {
+    candidates.filter((el) => ['IMG','A','INPUT','TEXTAREA'].includes(el.tagName) || !el.children.length)
+      // Repeated product grids can contain thousands of decorative spans.
+      // Keep the inspector usable while retaining the original untouched DOM.
+      .slice(0, 350).forEach((el, i) => {
       const field = `field_${i + 1}`;
+      const image = el.tagName === 'IMG';
+      const link = el.tagName === 'A';
+      const hasChildren = !!el.children.length;
+      const input = el.tagName === 'INPUT' || el.tagName === 'TEXTAREA';
+      const attribute = image ? 'src' : input ? 'placeholder' : link && hasChildren ? 'href' : undefined;
+      // Never replace a composite icon/link subtree with plain text.
+      if (!attribute && hasChildren) return;
       el.setAttribute('data-theme-project-field', field);
-      const attribute = el.tagName === 'IMG' ? 'src' : undefined;
+      const label = (el.getAttribute('aria-label') || el.getAttribute('alt') || el.textContent || el.tagName).trim().slice(0, 60);
       content[field] = attribute ? el.getAttribute(attribute) || '' : el.textContent || '';
-      fields.push({ key: field, label: el.getAttribute('alt') || (el.textContent || el.tagName).trim().slice(0, 60), type: attribute ? 'media' : 'text', binding: { attribute } });
-      if (el.tagName === 'A') { const link = field + '_href'; content[link] = el.getAttribute('href') || ''; fields.push({ key: link, label: 'Link destination', type: 'link', binding: { field, attribute: 'href' } }); }
+      fields.push({ key: field, label: attribute === 'href' ? 'Link destination: ' + label : label,
+        type: image ? 'media' : attribute === 'href' ? 'link' : 'text', binding: attribute ? { attribute } : {} });
+      if (link && !hasChildren) {
+        const href = field + '_href';
+        content[href] = el.getAttribute('href') || '';
+        fields.push({ key: href, label: 'Link destination', type: 'link', binding: { field, attribute: 'href' } });
+      }
+      if (image) {
+        const alt = field + '_alt';
+        content[alt] = el.getAttribute('alt') || '';
+        fields.push({ key: alt, label: 'Image alternative text', type: 'text', binding: { field, attribute: 'alt' } });
+      }
     });
     return fields;
     };
@@ -69,7 +99,11 @@ export function extractThemePage(html, { slug = 'home', title = 'Home', baseUrl 
     ];
     content.layout_padding = node.style.padding; content.layout_background = node.style.background;
     const name = node.querySelector('h1,h2,h3')?.textContent?.trim().slice(0, 60) || node.getAttribute('aria-label') || `Section ${index + 1}`;
-    const section = { key, name, html: node.outerHTML, content, version: 0, status: 'draft', sort_order: index, schema: { key, label: name, fields, settings, blocks, capabilities: { reorder: true } } };
+    const globalKey = ['HEADER', 'FOOTER'].includes(node.tagName) && !node.closest('main,section,article')
+      ? 'site-' + node.tagName.toLowerCase() : null;
+    const section = { key, name: globalKey ? (node.tagName === 'HEADER' ? 'Site header' : 'Site footer') : name, ...(globalKey ? { globalKey } : {}),
+      html: node.outerHTML, content, version: 0, status: 'draft', sort_order: index,
+      schema: { key, label: globalKey ? (node.tagName === 'HEADER' ? 'Site header' : 'Site footer') : name, fields, settings, blocks, capabilities: { reorder: true } } };
     node.replaceWith(doc.createComment('theme-section:' + key));
     return section;
   });
@@ -184,6 +218,19 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
       const s = section(slug, key);
       if (s.version !== expectedVersion) { const error = new Error('Draft changed in another editor'); error.status = 409; throw error; }
       s.content = clone(content); s.version += 1; s.status = 'draft';
+      // Shared site chrome: a header/footer edit applies to the installed
+      // site's other pages, not to the immutable marketplace release.
+      if (s.globalKey) for (const p of state.pages) {
+        if (p.slug === slug) continue;
+        for (const sibling of p.sections.filter(item => item.globalKey === s.globalKey)) {
+          const fields = (s.schema.fields || []).map(field => field.key);
+          const siblingFields = (sibling.schema.fields || []).map(field => field.key);
+          if (fields.join('|') !== siblingFields.join('|')) continue;
+          sibling.content = clone(content);
+          sibling.version = Number(sibling.version || 0) + 1;
+          sibling.status = 'draft';
+        }
+      }
       await persist(); return { version: s.version, updated_at: state.updatedAt };
     },
     async addSection(slug, key, toIndex) {

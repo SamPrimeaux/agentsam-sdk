@@ -139,3 +139,30 @@ test('cannot install into another account, without origin, or from a mismatched 
     },{...sample,release:{...sample.release,sha256:'b'.repeat(64)}});
   } finally {sqlite.close();}
 });
+
+test('remote R2 install index and checksum-pinned project work without an SDK-bundled template',async()=>{
+  const {sqlite,env}=fixture();
+  const oldFetch=globalThis.fetch;
+  const {createHash}=await import('node:crypto');
+  const bytes=Buffer.from(JSON.stringify(project));
+  const hash=createHash('sha256').update(bytes).digest('hex');
+  const item={slug,version,sha256:sha,project_sha256:hash,
+    project_key:'install-projects/'+slug+'/'+version+'/'+hash+'.json',
+    project_url:'/api/themes/'+slug+'/'+version+'/project',
+    page_count:project.pages.length,manifest_page_count:project.pages.length};
+  env.ASSETS={fetch:async()=>{throw Error('bundled_assets_must_not_be_used');}};
+  let projectBytes=bytes;
+  globalThis.fetch=async url=>{
+    if(url==='https://themes.inneranimalmedia.com/api/catalog')return Response.json({ok:true,products:[sample]});
+    if(url==='https://themes.inneranimalmedia.com/api/install-index')return Response.json({ok:true,schema:'agentsam.website-theme-install-index.v1',packages:[item]});
+    if(url==='https://themes.inneranimalmedia.com/api/themes/plain-jane/0.1.0/project')return new Response(projectBytes,{headers:{'content-type':'application/json'}});
+    throw Error('unexpected_url:'+url);
+  };
+  try {
+    assert.equal((await handleStudioWebsiteThemeInstall(install(),env,'a',slug)).status,201);
+    projectBytes=Buffer.from(JSON.stringify({...project,name:'Tampered project'}));
+    const denied=await handleStudioWebsiteThemeInstall(install('a-store'),env,'a',slug);
+    assert.equal(denied.status,503);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE site_id='a-store'").get().n,0);
+  }finally{globalThis.fetch=oldFetch;sqlite.close();}
+});

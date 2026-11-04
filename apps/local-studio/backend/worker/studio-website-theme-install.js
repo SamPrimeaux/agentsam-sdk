@@ -27,14 +27,47 @@ const getAsset = async (request, env, path) => {
   if (!response.ok) throw Error('theme_release_assets_unavailable');
   return response.json();
 };
+async function remoteInstallIndex() {
+  const reply = await fetch(STORE+'/api/install-index',{
+    headers:{accept:'application/json'}, signal:AbortSignal.timeout(7000),
+  });
+  if(!reply.ok) throw Error('theme_install_index_unavailable');
+  const data=await reply.json();
+  if(data?.ok!==true || data.schema!=='agentsam.website-theme-install-index.v1' ||
+     !Array.isArray(data.packages))throw Error('theme_install_index_invalid');
+  return data;
+}
 export async function getWebsiteThemeInstallIndex(request, env) {
-  const data = await getAsset(request,env,INDEX);
-  if (data?.schema !== 'agentsam.website-theme-install-index.v1' || !Array.isArray(data.packages))
+  // The immutable theme release owns its project/index. SDK deployment must
+  // never be required every time someone publishes a new website starter.
+  // Bundled index is retained only for backwards-compatible rollouts.
+  let data;
+  try {data=await remoteInstallIndex();}
+  catch {data=await getAsset(request,env,INDEX);}
+  if(data?.schema!=='agentsam.website-theme-install-index.v1' || !Array.isArray(data.packages))
     throw Error('theme_install_index_invalid');
-  return data.packages.filter(p=>SAFE_SLUG.test(p.slug||'') &&
-    /^\d+\.\d+\.\d+$/.test(p.version||'') &&
-    HASH.test(p.sha256||'') &&
-    p.project_asset === '/ecommerce-cms-agentsam/admin/data/site-theme-projects/'+p.slug+'-'+p.version+'.json');
+  return data.packages.filter(p=>{
+    if(!SAFE_SLUG.test(p.slug||'')||!/^\d+\.\d+\.\d+$/.test(p.version||'')||
+      !HASH.test(p.sha256||'')||!Number.isInteger(p.page_count)||p.page_count<1||p.page_count>80)
+      return false;
+    if (p.project_sha256) return HASH.test(p.project_sha256) &&
+      p.project_key === 'install-projects/'+p.slug+'/'+p.version+'/'+p.project_sha256+'.json' &&
+      p.project_url === '/api/themes/'+p.slug+'/'+p.version+'/project';
+    return p.project_asset === '/ecommerce-cms-agentsam/admin/data/site-theme-projects/'+p.slug+'-'+p.version+'.json';
+  });
+}
+async function getVerifiedInstallProject(request,env,release) {
+  if(!release.project_sha256) return getAsset(request,env,release.project_asset);
+  const path=STORE+'/api/themes/'+release.slug+'/'+release.version+'/project';
+  const reply=await fetch(path,{headers:{accept:'application/json'},signal:AbortSignal.timeout(9000)});
+  if(!reply.ok)throw Error('installer_project_unavailable');
+  const length=Number(reply.headers.get('content-length')||0);
+  if(length>8*1024*1024)throw Error('installer_project_oversized');
+  const bytes=new Uint8Array(await reply.arrayBuffer());
+  if(bytes.length>8*1024*1024)throw Error('installer_project_oversized');
+  const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');
+  if(digest!==release.project_sha256)throw Error('installer_project_digest_mismatch');
+  return JSON.parse(new TextDecoder().decode(bytes));
 }
 async function publishedListing(slug,version) {
   const response = await fetch(STORE+'/api/catalog',{
@@ -76,7 +109,7 @@ export async function handleStudioWebsiteThemeInstall(request,env,accountId,slug
       listing.release.sha256!==ready.sha256 ||
       listing.release.storageKey!=='releases/'+slug+'/'+body.version+'/'+ready.sha256+'.zip')
       return json({ok:false,error:'theme_release_does_not_match_verified_package'},409);
-    const project=await getAsset(request,env,ready.project_asset);
+    const project=await getVerifiedInstallProject(request,env,ready);
     const base=STORE+'/theme-packages/'+slug+'/'+body.version+'/preview/';
     if(project?.schema!=='agentsam.theme-project.v1' ||
       project.id!=='theme_'+slug || project.sourceThemeId!==slug ||

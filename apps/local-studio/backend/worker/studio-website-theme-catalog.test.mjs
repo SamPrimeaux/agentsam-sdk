@@ -16,15 +16,16 @@ const product = {
 };
 test('website product adapter does not read cms_themes and preserves verified releases', async () => {
   const previous = globalThis.fetch;
-  let requested = null;
+  const requested = [];
   globalThis.fetch = async url => {
-    requested = url;
+    requested.push(url);
     return Response.json({ ok: true, products: [product, { ...product, slug: '__unsafe' }] });
   };
   try {
     const response = await handleStudioWebsiteThemeCatalog(new Request('https://agentsam.test/api/admin/website-themes'), 'account-one');
     assert.equal(response.status, 200);
-    assert.equal(requested, origin + '/api/catalog');
+    assert.ok(requested.includes(origin + '/api/catalog'));
+    assert.ok(requested.includes(origin + '/api/install-index'));
     const result = await response.json();
     assert.equal(result.source, 'themes.inneranimalmedia.com');
     assert.equal(result.products.length, 1);
