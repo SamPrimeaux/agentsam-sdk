@@ -530,9 +530,14 @@ async function savePage() {
     const title = document.getElementById("page-title-input").value.trim();
     const status = document.querySelector('input[name="visibility"]:checked')?.value || "draft";
 
+    const typeSelect = document.getElementById("page-type-select");
+    const titleBody = { title };
+    if (!typeSelect.disabled && typeSelect.value && typeSelect.value !== typeSelect.dataset.original) {
+      titleBody.page_type = typeSelect.value;
+    }
     await cmsAdminFetch(`/api/admin/cms/pages/${slug}`, {
       method: "PUT",
-      body: JSON.stringify({ title }),
+      body: JSON.stringify(titleBody),
     });
 
     for (const { key, content, expectedVersion } of collectAllSectionContent()) {
