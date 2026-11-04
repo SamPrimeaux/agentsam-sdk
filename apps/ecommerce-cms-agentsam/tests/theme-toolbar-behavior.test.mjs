@@ -10,7 +10,7 @@ const { JSDOM } = require("jsdom");
 const root = new URL("../frontend/static/js/", import.meta.url);
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 
-async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null } = {}) {
+async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = [], themePreviews = [], visualViewportHeight = null, registryOverride = null, linkDestinations = null, hostTheme = null } = {}) {
   const dom = new JSDOM("<!doctype html><html><body></body></html>", {
     url: "https://editor.test/admin/theme-editor?slug=" + pageSlug,
     runScripts: "outside-only",
@@ -56,6 +56,18 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
     }
     throw new Error("Unexpected editor API: " + url);
   };
+  if (hostTheme) {
+    w.AgentSamThemeEditorHost = {
+      page: pageSlug,
+      adapter: {
+        capabilities: { publish: false },
+        getThemeIdentity: async () => ({ name: hostTheme, status: 'draft' }),
+        getRegistry: async () => registryOverride || registryForAdmin(),
+        request: async (url, opts) => w.adminFetch(url, opts),
+        resolvePreview: async () => ({ html: '<!doctype html><html><head></head><body><main>Owned draft</main></body></html>' }),
+      },
+    };
+  }
   for (const file of ["pages-shared.js", "agentsam.js", "theme-editor.js"]) {
     w.eval(readFileSync(new URL(file, root), "utf8"));
   }
@@ -722,4 +734,20 @@ test("Editorial Tile merchant chooses a real Media Library image and another exi
   assert.equal(writes[0].content.tile3.headline,"Clock out. Get gone.");
   assert.equal(writes[0].content.__editor.blocks.length,3);
  }finally{dom.window.close();}
+});
+
+test("installed draft never switches into unrelated Resolve showcase",async()=>{
+  const {dom,doc}=await editorFixture({hostTheme:'Revise',themePreviews:[
+    {id:'heuristic',name:'Heuristic',status:'installed'},
+    {id:'resolve',name:'Resolve',status:'installed'},
+  ]});
+  try {
+    assert.equal(doc.getElementById('te-theme-name')?.textContent,'Revise');
+    assert.equal(doc.querySelector('.te-theme-switcher')?.hidden,true,
+      'the stock demo selector is not offered in a site-owned draft');
+    doc.querySelector('[data-theme-preview="resolve"]')?.click();
+    await tick();
+    assert.equal(doc.getElementById('te-theme-name')?.textContent,'Revise');
+    assert.equal(doc.getElementById('te-theme-trigger-label')?.textContent,'Revise');
+  }finally{dom.window.close();}
 });

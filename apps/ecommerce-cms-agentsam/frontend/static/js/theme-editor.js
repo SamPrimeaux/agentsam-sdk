@@ -507,6 +507,11 @@
   }
 
   async function setTheme(nextTheme) {
+    // An installed, site-owned draft must not switch into a stock/demo theme.
+    if (host) {
+      setNote('Use Online Store to switch website drafts. This editor stays with the selected site.', 'error');
+      return;
+    }
     if (!nextTheme || nextTheme === selectedTheme) return;
     if (!installedThemeSlugs.has(nextTheme)) {
       setNote('This theme is a reference preview, not an installed CMS artifact.', 'error');
@@ -3836,7 +3841,13 @@
   async function loadThemeIdentity() {
     try {
       if (host && host.adapter && typeof host.adapter.getThemeIdentity === 'function') {
+        selectedTheme = 'heuristic';
+        installedThemeSlugs = new Set(['heuristic']);
         applyThemeIdentity(await host.adapter.getThemeIdentity());
+        const switcher = document.querySelector('.te-theme-switcher');
+        if (switcher) switcher.hidden = true;
+        const menu = byId('te-theme-menu');
+        if (menu) menu.hidden = true;
         return;
       }
       if (localShowcase) {

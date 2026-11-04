@@ -140,7 +140,12 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
       const value = content[field.key];
       if (value === undefined) continue;
       if (field.binding?.styleProperty) el.style.setProperty(field.binding.styleProperty, String(value));
-      else if (field.binding?.attribute) el.setAttribute(field.binding.attribute, String(value));
+      else if (field.binding?.attribute) {
+        // Blank media values must not load the preview document as an image.
+        if (field.binding.attribute === 'src' && !String(value).trim())
+          el.removeAttribute('src');
+        else el.setAttribute(field.binding.attribute, String(value));
+      }
       else el.textContent = String(value);
     }
     };

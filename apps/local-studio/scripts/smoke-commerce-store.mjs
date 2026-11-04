@@ -21,6 +21,7 @@ let createdSite = null;
 const server = createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
   if (pathname === '/') return res.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><title>Commerce Store Smoke</title><body style="margin:0"></body>');
+  if (pathname === '/apps/ecommerce-cms-agentsam') return res.writeHead(200, { 'content-type': 'text/html' }).end('<!doctype html><title>Private Theme Library</title><h1>Private theme library</h1>');
   if (pathname === '/api/admin/cms/sites' && req.method==='POST') {
     let body='';
     req.on('data',chunk=>body+=chunk);
@@ -47,7 +48,9 @@ const server = createServer((req, res) => {
       receivedInstall=JSON.parse(body);
       res.writeHead(201,{'content-type':'application/json'}).end(JSON.stringify({
         ok:true, installed:true,
-        editor_url:'/admin/theme-project-editor?project=theme_plain-jane&site_id='+receivedInstall.site_id,
+        site_id:'site-private-draft',
+        site_status:'draft',
+        editor_url:'/admin/theme-project-editor?project=theme_plain-jane&site_id=site-private-draft',
       }));
     });
     return;
@@ -119,7 +122,7 @@ try {
   const merchant = page.frameLocator('#merchant-frame');
   await merchant.locator('.online-store').waitFor();
   assert.equal(await merchant.locator('.online-store-title h1').innerText(), 'Online Store');
-  assert.equal(await merchant.locator('#store-visibility-label').innerText(), 'Not published');
+  assert.match(await merchant.locator('#store-visibility-label').innerText(), /(?:Not published|Theme not published)/);
   assert.equal(await merchant.locator('.online-store-badge--pending').innerText(), 'Unpublished');
   assert.equal(await merchant.locator('.online-store-starter').count(), 0, 'No fake storefront is presented as installed');
   assert.equal(await merchant.locator('.online-store-preview-message--empty').count(), 2, 'Uninstalled storefront state is explicit');
@@ -130,7 +133,7 @@ try {
   await merchant.locator('#theme-marketplace-grid .theme-marketplace-item').first().waitFor();
   assert.equal(await merchant.locator('#theme-marketplace-grid .theme-marketplace-item').count(), 1);
   assert.equal(await merchant.locator('.theme-marketplace-item h3').first().innerText(), 'Plain Jane Journal');
-  assert.match(await merchant.locator('.theme-marketplace-selection').innerText(), /ready to install into your site/);
+  assert.match(await merchant.locator('.theme-marketplace-selection').innerText(), /ready as a private editable draft/);
   assert.equal(await merchant.locator('[data-theme-store-selection]').count(),1,'Theme Store deep link selects the actual released theme');
   await addTheme.click();
   await merchant.locator('#browse-themes-shortcut').click();
@@ -143,29 +146,18 @@ try {
   }));
   assert.ok(dimensions.width <= dimensions.viewport + 1, 'Online Store layout fits mobile viewport');
   await page.setViewportSize({width:1440,height:900});
-  await merchant.locator('[data-install-theme="plain-jane"]').click();
-  const picker = merchant.locator('dialog.website-theme-install-dialog');
-  await picker.waitFor();
-  if (emptySiteScenario) {
-    await picker.locator('.website-theme-new-site-name').fill('My First Website');
-    await Promise.all([
-      page.waitForURL(/\/admin\/theme-project-editor\?project=theme_plain-jane&site_id=site-created/),
-      picker.getByRole('button',{name:'Create website & install'}).click(),
-    ]);
-    assert.deepEqual(createdSite,{id:'site-created',name:'My First Website',slug:'my-first-website',status:'draft'});
-    assert.deepEqual(receivedInstall,{site_id:'site-created',version:'0.1.0'});
-  } else {
-    assert.equal(await picker.locator('option').count(),3);
-    await picker.locator('select').selectOption('site-blog');
-    await Promise.all([
-      page.waitForURL(/\/admin\/theme-project-editor\?project=theme_plain-jane&site_id=site-blog/),
-      picker.getByRole('button',{name:'Install & open editor'}).click(),
-    ]);
-    assert.deepEqual(receivedInstall,{site_id:'site-blog',version:'0.1.0'});
-  }
-  assert.equal(await page.title(),'Installed CMS Theme Editor');
+  assert.equal(await merchant.locator('dialog.website-theme-install-dialog').count(),0,
+    'The nested modal must never be used to pick an arbitrary production site');
+  await Promise.all([
+    page.waitForURL(/\/apps\/ecommerce-cms-agentsam\?page=%2Fadmin%2Fstore&site_id=site-private-draft/),
+    merchant.locator('[data-install-theme="plain-jane"]').click(),
+  ]);
+  assert.deepEqual(receivedInstall,{version:'0.1.0'},
+    'Try creates its own private draft; it does not send a production site ID');
+  assert.equal(createdSite,null,'Try does not create a generic default website starter');
+  assert.equal(await page.title(),'Private Theme Library');
   assert.deepEqual(errors, [], 'No browser runtime errors');
-  console.log('Packaged Store smoke PASS: original theme, account-owned site picker, install POST, editor navigation and mobile width');
+  console.log('Packaged Store smoke PASS: original theme, no modal, site-free Try, private draft return and mobile width');
 } finally {
   await browser.close();
   await new Promise((done) => server.close(done));

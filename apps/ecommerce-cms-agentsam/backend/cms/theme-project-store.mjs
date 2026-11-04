@@ -82,8 +82,10 @@ function projectSummary(project) {
   };
 }
 
-function projectR2Key(accountId, projectId, revision, hash) {
-  return `cms/accounts/${encodeURIComponent(accountId)}/theme-projects/${encodeURIComponent(projectId)}/revisions/${String(revision).padStart(6, "0")}-${hash.slice(0, 16)}.json`;
+function projectR2Key(accountId, siteId, projectId, revision, hash) {
+  // Scope each owned draft's immutable snapshot to its actual website. Older
+  // snapshots remain readable via their existing D1 content_object_key.
+  return `cms/accounts/${encodeURIComponent(accountId)}/sites/${encodeURIComponent(siteId)}/theme-projects/${encodeURIComponent(projectId)}/revisions/${String(revision).padStart(6, '0')}-${hash.slice(0,16)}.json`;
 }
 
 async function projectRow(env, accountId, id, siteId = null) {
@@ -116,7 +118,7 @@ async function writeRevision(env, accountId, row, project, revision, reason, sit
       : await resolveCmsSite(env.DB, { accountId, createDefault: true });
   const serialized = JSON.stringify(project);
   const contentHash = await hashText(serialized);
-  const key = projectR2Key(accountId, project.id, revision, contentHash);
+  const key = projectR2Key(accountId, site.id, project.id, revision, contentHash);
   if (!await writeR2Json(env, key, project)) {
     return { ok: false, status: 503, code: "cms_r2_unavailable" };
   }
@@ -140,7 +142,28 @@ async function writeRevision(env, accountId, row, project, revision, reason, sit
     "INSERT OR IGNORE INTO cms_revisions (account_id,site_id,entity_type,entity_id,revision_number,revision_kind,content_object_key,content_hash,snapshot_json,metadata_json) VALUES (?,?, 'global',?,?,'draft',?,?,?,?)"
   ).bind(accountId, site.id, row.id, revision, key, contentHash,
     JSON.stringify({ project_id: project.id, name: project.name, revision }),
-    JSON.stringify({ source: "theme-store", reason })).run();
+    JSON.stringify({ source: "theme-store", reason,
+      package: project.sourcePackage || null, version: project.sourcePackageVersion || null,
+      release_sha256: project.sourceReleaseSha256 || null })).run();
+  // Record actual ownership/adoption/editing against the existing CMS activity
+  // spine; model-token usage tables are not theme adoption analytics.
+  // Activity logging must not make an already persisted revision appear lost.
+  try {
+    await env.DB.prepare(
+      "INSERT INTO cms_activity_log (id,site_id,actor_account_id,action,resource_type,resource_id,details_json) VALUES (?,?,?,?,?,?,?)"
+    ).bind("cmsact_" + crypto.randomUUID().replaceAll("-", "").slice(0, 16),
+      site.id,accountId,reason === "install" ? "theme.installed" :
+        reason === "save" ? "theme.draft.saved" : "theme.draft.created",
+      "theme-project",project.id,
+      JSON.stringify({
+        sku: project.sourceThemeId ? "iam.theme." + project.sourceThemeId : null,
+        source_release_sha256: project.sourceReleaseSha256 || null,
+        package_version: project.sourcePackageVersion || null,
+        revision,content_hash:contentHash,r2_key:key,
+      })).run();
+  } catch (error) {
+    console.warn("cms_theme_activity_log_unavailable", String(error?.message || error).slice(0, 100));
+  }
   return { ok: true, project, row, content_object_key: key, content_hash: contentHash };
 }
 

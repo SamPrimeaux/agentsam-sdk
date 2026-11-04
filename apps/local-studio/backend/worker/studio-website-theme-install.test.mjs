@@ -166,3 +166,69 @@ test('remote R2 install index and checksum-pinned project work without an SDK-bu
     assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals WHERE site_id='a-store'").get().n,0);
   }finally{globalThis.fetch=oldFetch;sqlite.close();}
 });
+
+test('Try without site picker creates an isolated private draft, never mutates existing websites',async()=>{
+  const {sqlite,env,objects}=fixture();
+  sqlite.exec(`CREATE TABLE cms_activity_log (
+    id TEXT PRIMARY KEY,site_id TEXT NOT NULL,actor_account_id TEXT,
+    action TEXT NOT NULL,resource_type TEXT NOT NULL,resource_id TEXT NOT NULL,
+    details_json TEXT NOT NULL DEFAULT '{}',created_at INTEGER DEFAULT (unixepoch())
+  );`);
+  const tryTheme=()=>new Request('https://cms.test/api/admin/website-themes/plain-jane/install',{
+    method:'POST',headers:{origin:'https://cms.test','content-type':'application/json'},
+    body:JSON.stringify({version}),
+  });
+  try { await withCatalog(async()=>{
+    const response=await handleStudioWebsiteThemeInstall(tryTheme(),env,'a',slug);
+    assert.equal(response.status,201);
+    const data=await response.json();
+    assert.equal(data.ok,true);
+    assert.equal(data.site_status,'draft');
+    assert.notEqual(data.site_id,'a-store');
+    assert.notEqual(data.site_id,'a-blog');
+    const site=sqlite.prepare('SELECT * FROM cms_sites WHERE id=?').get(data.site_id);
+    assert.equal(site.status,'draft');
+    assert.equal(site.is_default,0);
+    assert.equal(site.primary_domain,null);
+    assert.equal(site.slug,'theme-draft-plain-jane-0-1-0');
+    const settings=JSON.parse(site.settings_json);
+    assert.equal(settings.kind,'marketplace-theme-draft');
+    assert.equal(settings.source_theme_slug,'plain-jane');
+    assert.equal(settings.source_release_version,'0.1.0');
+    assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM cms_globals WHERE site_id IN ('a-store','a-blog')").get().n,0);
+    const installed=sqlite.prepare("SELECT * FROM cms_globals WHERE site_id=?").get(data.site_id);
+    assert.ok(installed.content_object_key.includes('/sites/'+data.site_id+'/theme-projects/'));
+    assert.ok(objects.has(installed.content_object_key));
+    assert.equal(sqlite.prepare("SELECT action FROM cms_activity_log LIMIT 1").get().action,'theme.installed');
+    const existing=await getThemeProject(env,'a','theme_plain-jane',data.site_id);
+    const edited=structuredClone(existing.project);
+    edited.pages[0].title='Edited private theme draft';
+    assert.equal((await saveThemeProject(env,'a',edited.id,edited,1,data.site_id)).ok,true);
+    assert.equal(sqlite.prepare("SELECT action FROM cms_activity_log ORDER BY created_at LIMIT 1").get().action,'theme.installed');
+    assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM cms_activity_log WHERE action='theme.draft.saved'").get().n,1);
+    const reopened=await handleStudioWebsiteThemeInstall(tryTheme(),env,'a',slug);
+    assert.equal(reopened.status,200);
+    const resumed=await reopened.json();
+    assert.equal(resumed.unchanged,true);
+    assert.equal(resumed.site_id,data.site_id);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM cms_sites WHERE slug='theme-draft-plain-jane-0-1-0'").get().n,1);
+    assert.equal((await getThemeProject(env,'a','theme_plain-jane',data.site_id)).project.pages[0].title,'Edited private theme draft');
+  }); } finally {sqlite.close();}
+});
+
+test('Try never takes over a user-created site with a conflicting draft slug',async()=>{
+  const {sqlite,env}=fixture();
+  sqlite.exec(`INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
+    VALUES('user-site','a','Different website','theme-draft-plain-jane-0-1-0','active',0)`);
+  const request=new Request('https://cms.test/api/admin/website-themes/plain-jane/install',{
+    method:'POST',headers:{origin:'https://cms.test','content-type':'application/json'},
+    body:JSON.stringify({version}),
+  });
+  try {await withCatalog(async()=>{
+    const response=await handleStudioWebsiteThemeInstall(request,env,'a',slug);
+    assert.equal(response.status,409);
+    assert.equal((await response.json()).error,'theme_draft_site_conflict');
+    assert.equal(sqlite.prepare("SELECT COUNT(*) n FROM cms_globals").get().n,0);
+    assert.equal(sqlite.prepare("SELECT status FROM cms_sites WHERE id='user-site'").get().status,'active');
+  });}finally{sqlite.close();}
+});

@@ -76,149 +76,46 @@
     message.setAttribute('role','alert');
     container.append(message);
   };
-  async function installToSite(theme,siteId,button,container) {
+  // A Try action creates (or resumes) a self-contained draft site. It must
+  // never pick the current/default/live site or interrupt dashboard startup
+  // with a nested modal. Explicit installs into existing sites remain supported
+  // by the authenticated backend for later site management.
+  async function createPrivateDraft(theme,button,container) {
+    if(button.disabled) return;
     button.disabled=true;
-    button.textContent='Installing…';
+    const previous=button.textContent;
+    button.textContent='Preparing draft…';
+    const message=container.querySelector('.theme-install-message');
+    if(message)message.textContent='Creating your private editable draft. Existing websites stay unchanged.';
     try {
       const result=await requestJSON(
         '/api/admin/website-themes/'+encodeURIComponent(theme.slug)+'/install',
         {method:'POST',headers:{'content-type':'application/json'},
-          body:JSON.stringify({site_id:siteId,version:theme.version})});
+          body:JSON.stringify({
+            version:theme.version,
+            ...(preferredSiteId ? {site_id:preferredSiteId} : {}),
+          })});
       if(typeof result.editor_url!=='string' ||
-        !/^\/admin\/theme-project-editor\?project=[A-Za-z0-9_%\-]+&site_id=[A-Za-z0-9_%\-]+$/.test(result.editor_url))
-        throw Error('Installer did not return a valid editor destination');
-      // Match Shopify: return to Online Store with a private draft, not straight
-      // into the editor. The user can preview or customize it from Draft themes.
-      const embedded = window.parent && window.parent !== window;
-      const target = embedded ? window.parent : window;
-      const route = embedded
+        !/^\/admin\/theme-project-editor\?project=[A-Za-z0-9_%\-]+&site_id=[A-Za-z0-9_%\-]+$/.test(result.editor_url) ||
+        !/^[A-Za-z0-9_-]{1,160}$/.test(result.site_id||''))
+        throw Error('The installer did not return an owned draft and editor');
+      if(message)message.textContent=result.unchanged
+        ? 'Opening your previously saved draft…'
+        : 'Your draft is ready. Opening its theme library…';
+      // The site_id belongs to the newly created private draft site. Route to
+      // the actual Online Store library, not a synthetic editor template.
+      const embedded=window.parent&&window.parent!==window;
+      const target=embedded?window.parent:window;
+      const route=embedded
         ? '/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Fstore&site_id='+encodeURIComponent(result.site_id)
         : '/admin/store?site_id='+encodeURIComponent(result.site_id);
       target.location.assign(route);
-    }catch(error){
+    }catch(error) {
       button.disabled=false;
-      button.textContent='Install & edit';
+      button.textContent=previous||'Try theme';
+      if(message)message.textContent='The draft was not opened. Your existing sites have not been changed.';
       showError(container,error);
     }
-  }
-  async function chooseInstallSite(theme,button,container) {
-    button.disabled=true;
-    button.textContent='Checking sites…';
-    let data;
-    try {
-      data=await requestJSON('/api/admin/cms/sites');
-      if(!Array.isArray(data.sites))throw Error('Site directory is unavailable');
-    }catch(error){
-      button.disabled=false;
-      button.textContent='Install & edit';
-      showError(container,error);
-      return;
-    }
-    const sites=data.sites.filter(s=>s&&typeof s.id==='string');
-    if (preferredSiteId) {
-      const preferred = sites.find(s=>s.id===preferredSiteId);
-      if (preferred) {
-        await installToSite(theme,preferred.id,button,container);
-        return;
-      }
-    }
-    if(!sites.length){
-      button.disabled=false;
-      button.textContent='Install & edit';
-      const dialog=node('dialog','website-theme-install-dialog');
-      const form=node('form','website-theme-install-form');
-      form.method='dialog';
-      const heading=node('h3','','Create a website for '+theme.name);
-      const explanation=node('p','','A new private website gives this theme an editable home without changing any published site.');
-      const nameLabel=node('label','','Website name');
-      const name=node('input','website-theme-new-site-name');
-      name.type='text';
-      name.required=true;
-      name.maxLength=120;
-      name.placeholder='My website';
-      name.setAttribute('aria-label','New website name');
-      nameLabel.append(name);
-      const actions=node('div','website-theme-install-actions');
-      const cancel=node('button','btn ghost small','Cancel');
-      cancel.type='button';
-      const create=node('button','btn small','Create website & install');
-      create.type='button';
-      cancel.addEventListener('click',()=>dialog.close());
-      create.addEventListener('click',async()=>{
-        const title=name.value.trim();
-        const slug=title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
-          .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60);
-        if(!title || !slug){
-          showError(form,new Error('Enter a valid website name.'));
-          return;
-        }
-        create.disabled=true;
-        create.textContent='Creating…';
-        try {
-          const data=await requestJSON('/api/admin/cms/sites',{
-            method:'POST',headers:{'content-type':'application/json'},
-            body:JSON.stringify({name:title,slug,status:'draft'}),
-          });
-          if(typeof data.site?.id!=='string') throw Error('Site creation did not return a valid site');
-          dialog.close();
-          await installToSite(theme,data.site.id,button,container);
-        }catch(error){
-          create.disabled=false;
-          create.textContent='Create website & install';
-          showError(form,error);
-        }
-      });
-      actions.append(cancel,create);
-      form.append(heading,explanation,nameLabel,actions);
-      dialog.append(form);
-      dialog.addEventListener('close',()=>dialog.remove(),{once:true});
-      document.body.append(dialog);
-      dialog.showModal();
-      name.focus();
-      return;
-    }
-    if(sites.length===1){
-      await installToSite(theme,sites[0].id,button,container);
-      return;
-    }
-    button.disabled=false;
-    button.textContent='Install & edit';
-    const dialog=node('dialog','website-theme-install-dialog');
-    const form=node('form','website-theme-install-form');
-    form.method='dialog';
-    const h=node('h3','', 'Install '+theme.name);
-    const explanation=node('p','','Choose the website that will own this editable draft. Existing published sites will not be replaced.');
-    const label=node('label','','Install into website');
-    const select=node('select','website-theme-site-select');
-    select.setAttribute('aria-label','Website to install theme into');
-    select.append(new Option('Choose a website…',''));
-    for(const s of sites){
-      select.add(new Option((s.name||s.slug||s.id)+' · '+(s.slug||s.id)+
-        ' ('+Number(s.page_count||0)+' pages)',s.id));
-    }
-    label.append(select);
-    const actions=node('div','website-theme-install-actions');
-    const cancel=node('button','btn ghost small','Cancel');
-    cancel.type='button';
-    const confirm=node('button','btn small','Install & open editor');
-    confirm.type='button';
-    confirm.disabled=true;
-    select.addEventListener('change',()=>{confirm.disabled=!select.value;});
-    cancel.addEventListener('click',()=>dialog.close());
-    confirm.addEventListener('click',async()=>{
-      const siteId=select.value;
-      if(!sites.some(s=>s.id===siteId))return;
-      confirm.disabled=true;
-      dialog.close();
-      await installToSite(theme,siteId,button,container);
-    });
-    actions.append(cancel,confirm);
-    form.append(h,explanation,label,actions);
-    dialog.append(form);
-    dialog.addEventListener('close',()=>dialog.remove(),{once:true});
-    document.body.append(dialog);
-    dialog.showModal();
-    select.focus();
   }
   // A Theme Store Try action is an install journey, not another catalog page.
   // Only auto-start after a navigation originating from our Theme Store.
@@ -233,7 +130,7 @@
     stage.setAttribute('role','region');
     stage.setAttribute('aria-label','Theme installation');
     const name=selectedTheme?.name || selectedSlug || 'Selected theme';
-    const title=node('h2','', 'Adding '+name);
+    const title=node('h2','', 'Preparing '+name);
     const message=node('p','theme-install-message','Preparing your private theme draft.');
     message.setAttribute('role','status');
     const progress=node('div','theme-install-progress');
@@ -253,8 +150,8 @@
       action.onclick=()=>{location.assign(ORIGIN)};
       return;
     }
-    action.onclick=()=>void chooseInstallSite(selectedTheme,action,stage);
-    if(trustedHandoff) void chooseInstallSite(selectedTheme,action,stage);
+    action.onclick=()=>void createPrivateDraft(selectedTheme,action,stage);
+    if(trustedHandoff) void createPrivateDraft(selectedTheme,action,stage);
     else {
       progress.hidden=true;
       message.textContent='Continue to add this theme to your store as a private draft.';
@@ -279,7 +176,7 @@
           ' to v' + selectedTheme.version + '. Review the new version before installing.';
       } else {
         notice.textContent = selectedTheme.can_install
-          ? selectedTheme.name + ' is ready to install into your site. Choose Install & edit.'
+          ? selectedTheme.name + ' is ready as a private editable draft. Choose Try theme.'
           : selectedTheme.name + ' is available for preview. Editable installation is not verified yet.';
       }
       root.append(notice);
@@ -319,10 +216,10 @@
       if (preview) actions.append(link('Preview original', preview));
       if (detail) actions.append(link('Explore theme', detail));
       if (theme.can_install) {
-        const install = node('button','btn small','Install & edit');
+        const install = node('button','btn small','Try theme');
         install.type='button';
         install.dataset.installTheme=theme.slug;
-        install.addEventListener('click',()=>void chooseInstallSite(theme,install,body));
+        install.addEventListener('click',()=>void createPrivateDraft(theme,install,body));
         actions.append(install);
       } else if(theme.release_status==='published'&&download)
         actions.append(link('Get verified package',download,true));
