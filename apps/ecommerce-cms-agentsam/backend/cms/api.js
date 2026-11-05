@@ -2819,7 +2819,9 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   const themeProjectMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})$/);
   if (themeProjectMatch && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    const result = await getThemeProject(env, context.accountId, themeProjectMatch[1], url.searchParams.get("site_id") || null);
+    const selectedSite = url.searchParams.get("site_id") || null;
+    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
+    const result = await getThemeProject(env, context.accountId, themeProjectMatch[1], selectedSite);
     return json(result, { status: result.status || (result.ok ? 200 : 404) });
   }
   if (themeProjectMatch && method === "PUT") {
