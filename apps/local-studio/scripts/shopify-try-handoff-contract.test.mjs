@@ -19,7 +19,11 @@ test('Try theme uses a focused installer and returns to Online Store, not anothe
   assert.match(browser,/if \(installIntent && selectedSlug\)/);
   assert.match(browser,/showInstallStage\(\)/);
   assert.match(browser,/trustedHandoff/);
-  assert.match(browser,/await installToSite\(theme,preferred.id,button,container\)/);
+  assert.match(browser,/async function createPrivateDraft\(theme,button,container\)/);
+  assert.match(browser,/api\/admin\/website-themes\/.*\/install/);
+  assert.match(browser,/version:theme\.version/);
+  assert.match(browser,/preferredSiteId\(\)/);
+  assert.match(browser,/Your existing sites have not been changed/);
   assert.match(browser,/\/admin\/store\?site_id=/);
   assert.match(browser,/target\.location\.assign\(route\)/);
   assert.match(store,/id="browse-themes-shortcut">Visit Theme Store/);

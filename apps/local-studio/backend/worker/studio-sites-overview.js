@@ -1,5 +1,5 @@
 import { listStudioThemeDrafts } from './studio-theme-drafts.js';
-import { ensureDefaultCmsSite, resolveCmsSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
+import { resolveCmsSite } from '../../../ecommerce-cms-agentsam/backend/cms/site-context.mjs';
 import { listThemeProjects } from '../../../ecommerce-cms-agentsam/backend/cms/theme-project-store.mjs';
 /**
  * Studio Sites read-model. Hosted Studio D1 is not the legacy Ecommerce
@@ -36,10 +36,8 @@ export async function handleStudioSitesOverview(request, env, accountId) {
     `).bind(accountId).all();
     sites=rows.results||[];
   } catch { /* Site directory stays unavailable until the CMS schema exists. */ }
-  if(cmsConnected && !sites.length) {
-    try { sites=[await ensureDefaultCmsSite(env.DB,accountId)]; }
-    catch {return Response.json({ok:false,error:'cms_default_site_unavailable'},{status:503});}
-  }
+  // A read-only Online Store visit must not create a merchant site. Site
+  // creation/linking is an explicit action; otherwise keep setup_required true.
   let selectedSite=null;
   if(siteId) {
     try {selectedSite=await resolveCmsSite(env.DB,{accountId,siteId});}
@@ -112,7 +110,7 @@ export async function handleStudioSitesOverview(request, env, accountId) {
       url:externalPreview,edit_href:siteEditHref,
     }:null,
     performance:emptyPerformance,active_theme:null,
-    draft_themes:selectedSite?drafts.filter(draft=>draft.installed&&draft.site_id===selectedSite.id):[],
+    draft_themes:drafts.filter(draft=>draft.site_linked ? draft.site_id===selectedSite?.id : true),
     // A project preview is never proof that its site is published.
     preview_theme:currentTheme?{
       id:currentTheme.id,name:currentTheme.name,preview_href:null,

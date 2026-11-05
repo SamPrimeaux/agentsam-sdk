@@ -19,6 +19,6 @@ test('MovieMode retains a product-scoped dark/cyan palette irrespective of host 
   assert.match(movie, /data-nav-theme="dark"/);
   assert.doesNotMatch(movie, /useShellAppearance\(/);
   assert.match(css, /\.copro-app-root \.mm-home/);
-  assert.match(css, /--copro-bg:#0b1015/);
-  assert.match(css, /--copro-accent:#32c6ca/);
+  assert.match(css, /--copro-bg\s*:\s*var\(--copro-theme-bg,#0b1015\)/);
+  assert.match(css, /--copro-accent\s*:\s*var\(--copro-theme-accent,#32c6ca\)/);
 });

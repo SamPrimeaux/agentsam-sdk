@@ -61,6 +61,9 @@ test('Projects route uses the existing Work product and authenticated HTTP snaps
   assert.match(source('backend/worker/work-service.js'), /listProjects\(env\.DB, accountId, tickets\)/);
   assert.match(source('backend/worker/work-data.js'), /WHERE owner_user_id = \?/);
   const worker = source('backend/worker/index.js');
-  assert.ok(worker.indexOf('canonicalStudioPath(url.pathname)') < worker.indexOf('servePackagedConsole(request, env.ASSETS)'));
+  const canonicalRedirect = worker.indexOf('canonicalStudioPath(url.pathname)');
+  const packagedConsoleRoute = worker.indexOf('servePackagedConsole(');
+  assert.ok(canonicalRedirect >= 0 && packagedConsoleRoute > canonicalRedirect,
+    'legacy route redirects must run before any packaged console response');
   assert.match(worker, /status: 301/);
 });

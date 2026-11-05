@@ -9,6 +9,7 @@ const base='https://agentsam.inneranimalmedia.com';
 function fixture(){
  const rows=new Map();
  const projects=new Map();
+ const sites=new Map();
  const calls=[];
  const env={
   ASSETS:{fetch:async()=>Response.json({products:[
@@ -20,9 +21,9 @@ function fixture(){
     bind(...args){
      calls.push({sql,args});
      return {
-      all:async()=>({results:sql.includes('FROM cms_themes')?[...rows.values()].filter(row=>row.workspace_id===args[0]):sql.includes('FROM cms_globals')?(projects.get(args[0])||[]):[]}),
+      all:async()=>({results:sql.includes('FROM cms_sites')?(sites.get(args[0])||[]):sql.includes('FROM cms_themes')?[...rows.values()].filter(row=>row.workspace_id===args[0]):sql.includes('FROM cms_globals')?(projects.get(args[0])||[]):[]}),
       first:async()=>sql.includes('FROM cms_sites')
-        ? {id:'site_mock',account_id:args[0],is_default:1}
+        ? (sites.get(args[1] || args[0]) || []).find(site=>!args[0] || site.id===args[0]) || null
         : [...rows.values()].find(row=>row.workspace_id===args[0]&&row.slug===args[1])||null,
       run:async()=>{
        if(sql.startsWith('INSERT INTO cms_themes')){
@@ -37,7 +38,7 @@ function fixture(){
    };
   }}
  };
- return {env,rows,calls,projects};
+ return {env,rows,calls,projects,sites};
 }
 test('unlinked studio store uses cms_sites, never unscoped legacy Ecommerce tables',async()=>{
  const {env,calls}=fixture();
@@ -86,10 +87,11 @@ test('online store projects private theme drafts from the same CMS authority',as
  assert.equal((await other.json()).draft_themes.length,0);
 });
 test('installed CMS v2 projects supersede legacy selections and expose only an account-owned editor',async()=>{
- const {env,projects}=fixture();
+ const {env,projects,sites}=fixture();
  const url=base+'/api/admin/theme-products/drafts';
  await handleStudioThemeDrafts(new Request(url,{method:'POST',headers:{origin:base,'content-type':'application/json'},body:JSON.stringify({slug:'resolve'})}),env,'user-1');
- projects.set('user-1',[{inline_content_json:JSON.stringify({
+ sites.set('user-1',[{id:'site_mock',account_id:'user-1',name:'Default site',slug:'default',status:'active',is_default:1,page_count:0}]);
+ projects.set('user-1',[{site_id:'site_mock',site_name:'Default site',site_slug:'default',inline_content_json:JSON.stringify({
    id:'theme_resolve',name:'Resolve',sourceThemeId:'resolve',
    packageName:'@inneranimalmedia/theme-resolve',sourcePackageVersion:'2.6.13',
    sourcePreviewUrl:'/themes/resolve/demo/',createdAt:'2026-10-29T12:00:00Z'
@@ -99,8 +101,9 @@ test('installed CMS v2 projects supersede legacy selections and expose only an a
  const mine=await read('user-1');
  assert.equal(mine.draft_themes.length,1,'an installed project replaces its placeholder');
  assert.equal(mine.draft_themes[0].installed,true,JSON.stringify(mine));
- assert.equal(mine.draft_themes[0].edit_href,'/admin/theme-project-editor?project=theme_resolve');
- assert.equal(mine.preview_theme.preview_href,'/themes/resolve/demo/');
+ assert.equal(mine.draft_themes[0].edit_href,'/admin/theme-project-editor?project=theme_resolve&site_id=site_mock');
+ assert.equal(mine.preview_theme.preview_href,null,'unverified source previews are not presented as local previews');
+ assert.equal(mine.preview_theme.source_preview_href,'https://themes.inneranimalmedia.com/theme-packages/resolve/2.6.13/preview/');
  assert.equal(mine.active_theme,null,'draft preview never becomes published');
  const other=await read('user-2');
  assert.equal(other.preview_theme,null);

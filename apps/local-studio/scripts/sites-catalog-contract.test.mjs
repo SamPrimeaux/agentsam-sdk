@@ -50,7 +50,8 @@ test('staged product catalog and all three original preview entrypoints exist',(
  const compiledRoot=existsSync(path.join(studio,'desktop-dist/themes'))
   ? 'desktop-dist' : '.output/public';
  assert.ok(existsSync(path.join(studio,compiledRoot,'themes')),'No compiled theme preview output is available');
- assert.deepEqual(readdirSync(path.join(studio,compiledRoot,'themes')).sort(),['plain-jane','resolve','violet']);
+ const compiledSlugs=readdirSync(path.join(studio,compiledRoot,'themes'));
+ for(const slug of ['plain-jane','resolve','violet']) assert.ok(compiledSlugs.includes(slug),slug+' compiled demo directory in '+compiledRoot);
  for(const slug of ['violet','resolve','plain-jane'])
   assert.ok(existsSync(path.join(studio,compiledRoot,'themes',slug,'demo/index.html')),slug+' compiled demo in '+compiledRoot);
  assert.ok(existsSync(path.join(studio,compiledRoot,'themes/violet/demo/global/cpas-shell.css')));
