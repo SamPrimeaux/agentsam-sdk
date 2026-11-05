@@ -232,18 +232,11 @@ export async function servePublicSitePage(
   if (!relative) return null;
 
   const r2Key = websitePublicKey(siteSlug, relative);
-  const cacheKey = `site:${siteSlug}:${relative}`;
 
-  // 1) KV refresh cache (optional)
-  const cached = await readCached(kv, cacheKey);
-  if (cached && relative.endsWith('.html')) {
-    return htmlResponse(cached, {
-      'x-public-site-source': 'kv',
-      'x-public-site-key': r2Key,
-    });
-  }
-
-  // 2) SSOT — WEBSITE_ASSETS R2
+  // D1 resolves the tenant; R2 is the existing content authority. Bypass KV
+  // until the site-owned publish path is proven end to end. This avoids an
+  // extra binding and guarantees cold requests read the current site object.
+  // SSOT — WEBSITE_ASSETS R2
   if (website?.binding) {
     try {
       if (relative.endsWith('.html') || relative.endsWith('.css') || relative.endsWith('.js') || relative.endsWith('.json')) {
