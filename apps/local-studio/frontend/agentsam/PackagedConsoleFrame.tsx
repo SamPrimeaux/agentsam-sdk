@@ -4,6 +4,7 @@ import { useRouterState } from '@tanstack/react-router';
 import './packaged-console-frame.css';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { hasGateSessionMarker } from '@/lib/auth/gate-session-marker';
+import { isPackagedDesktop } from '@/lib/desktop/tauri';
 
 type WindowWithConsole = Window & {
   renderShell?: (active: string, html: string, options?: Record<string, unknown>) => void;
