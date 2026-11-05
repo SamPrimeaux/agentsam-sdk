@@ -1,14 +1,13 @@
 /**
  * Store preferences service — portable ecommerce package.
  *
- * Brand → company. Store preferences → cms_sites.settings_json.store (D1 SSOT). KV = cache only.
+ * Brand and domain → selected cms_sites row/settings. KV = cache only.
  * Themes → registry/pages data (never fabricated). Analytics → packaged contract.
  */
 
 import { resolveNavConfig, sanitizeNavItems } from "../lib/site-nav.js";
 import { resolveCmsSite } from "../cms/site-context.mjs";
 import { DEFAULT_SITE_STORE_SETTINGS as PACKAGE_STORE_DEFAULTS } from "../cms/site-settings-contract.mjs";
-import { getCompany, companyDomain } from "../lib/company.js";
 import { hashPassword, verifyPassword } from "../lib/auth.js";
 import { listStoreThemes } from "./themes.js";
 // Theme appearance comes from the installed theme/tenant contract, never
@@ -43,20 +42,6 @@ function publicSettings(settings) {
   };
 }
 
-async function brandOverlay(env) {
-  const company = await getCompany(env);
-  if (!company) return { company: null, overlay: {} };
-  return {
-    company,
-    overlay: {
-      homeTitle: company.name || "",
-      metaDescription: company.tagline || company.meta?.meta_description || "",
-      navLogoUrl: company.logoUrl || "",
-      navBrandAccent: company.primaryColor || "",
-      socialImageUrl: company.meta?.social_image_url || "",
-    },
-  };
-}
 
 /** Resolve one owned CMS site without creating a site or falling back to a singleton. */
 async function resolvePreferenceSite(env, context = {}) {
@@ -70,10 +55,22 @@ async function resolvePreferenceSite(env, context = {}) {
     throw new Error("store_site_not_found");
   }
   const row = await env.DB.prepare(
-    "SELECT id,account_id,settings_json FROM cms_sites WHERE id=? AND account_id=? LIMIT 1"
+    "SELECT id,account_id,name,slug,primary_domain,settings_json FROM cms_sites WHERE id=? AND account_id=? LIMIT 1"
   ).bind(site.id, site.account_id).first();
   if (!row) throw new Error("store_site_not_found");
   return row;
+}
+
+function normalizeSiteDomain(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(raw.includes("://") ? raw : "https://" + raw);
+    const hostname = url.hostname.toLowerCase();
+    return hostname.startsWith("www.") ? hostname.slice(4) : hostname;
+  } catch {
+    return null;
+  }
 }
 
 function parseSiteSettings(value) {
@@ -262,27 +259,47 @@ export async function saveSceneReviewSettings(env, sceneReview, context = {}) {
 export async function getStoreNav(env, context = {}) {
   const loaded = await loadStorePreferences(env, context);
   if (!loaded.ok) return json({ ok: false, error: loaded.error }, { status: 503 });
-  const { overlay } = await brandOverlay(env);
-  const merged = { ...loaded.settings, ...Object.fromEntries(Object.entries(overlay).filter(([, v]) => v)) };
-  // Persisted settings win over brand overlay for explicit nav fields when set.
-  if (loaded.settings.navLogoUrl) merged.navLogoUrl = loaded.settings.navLogoUrl;
-  if (loaded.settings.homeTitle) merged.homeTitle = loaded.settings.homeTitle;
-  if (loaded.settings.navBrandAccent) merged.navBrandAccent = loaded.settings.navBrandAccent;
-  return json({ ok: true, nav: resolveNavConfig(merged) });
+  const merged = {
+    ...loaded.settings,
+    homeTitle: loaded.settings.homeTitle || loaded.site?.name || "",
+  };
+  return json({
+    ok: true,
+    nav: resolveNavConfig(merged),
+    site: {
+      id: loaded.site.id,
+      name: loaded.site.name || null,
+      slug: loaded.site.slug || null,
+      primary_domain: normalizeSiteDomain(loaded.site.primary_domain),
+    },
+  });
 }
 
 export async function getStorePreferences(env, context = {}) {
   const loaded = await loadStorePreferences(env, context);
   if (!loaded.ok) return json({ ok: false, error: loaded.error, detail: loaded.detail }, { status: 503 });
-  const { company } = await brandOverlay(env);
-  const domain = companyDomain(company);
+  const site = loaded.site;
+  const domain = normalizeSiteDomain(site?.primary_domain);
+  const siteName = String(site?.name || "").trim() || "Your store";
   return json({
     ok: true,
-    domain: domain || null,
-    company: company
-      ? { id: company.id, name: company.name, logoUrl: company.logoUrl, primaryColor: company.primaryColor }
-      : null,
-    nav: resolveNavConfig(loaded.settings),
+    domain,
+    site: {
+      id: site.id,
+      name: site.name || null,
+      slug: site.slug || null,
+      primary_domain: domain,
+    },
+    company: {
+      name: siteName,
+      logoUrl: loaded.settings.navLogoUrl || null,
+      primaryColor: loaded.settings.navBrandAccent || null,
+      tagline: loaded.settings.metaDescription || "",
+    },
+    nav: resolveNavConfig({
+      ...loaded.settings,
+      homeTitle: loaded.settings.homeTitle || siteName,
+    }),
     settings: publicSettings(loaded.settings),
     source: loaded.source,
   });
@@ -338,26 +355,38 @@ export async function postStorePreferences(request, env, context = {}) {
 }
 
 export async function onlineStoreOverview(env, accountId = null, siteId = null) {
-  const [pagesResult, sectionsMax, publishedPages, themes, performance, company] = await Promise.all([
-    env.DB.prepare(`SELECT slug, title, status, updated_at FROM pages ORDER BY updated_at DESC`).all(),
-    env.DB.prepare(`SELECT MAX(updated_at) AS last_saved FROM page_sections`).first(),
-    env.DB.prepare(`SELECT COUNT(*) AS n FROM pages WHERE status = 'published'`).first(),
-    resolveThemes(env, accountId),
+  // Resolve and authorize the selected site before reading any storefront data.
+  // The previous implementation queried account-wide legacy tables and used
+  // the company profile domain, which could surface another site's identity.
+  const prefs = await loadStorePreferences(env, { accountId, siteId });
+  if (!prefs.ok) {
+    return json({ ok: false, error: prefs.error || "store_site_not_found" }, { status: 503 });
+  }
+
+  const site = prefs.site;
+  const resolvedAccountId = site.account_id;
+  const [pagesResult, sectionsMax, publishedPages, themes, performance] = await Promise.all([
+    env.DB.prepare("SELECT slug, title, status, updated_at FROM cms_pages WHERE site_id = ? ORDER BY updated_at DESC").bind(site.id).all(),
+    env.DB.prepare("SELECT MAX(s.updated_at) AS last_saved FROM cms_page_sections s INNER JOIN cms_pages p ON p.id = s.page_id WHERE p.site_id = ?").bind(site.id).first(),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM cms_pages WHERE site_id = ? AND status = 'published'").bind(site.id).first(),
+    resolveThemes(env, resolvedAccountId),
     resolveStorePerformance(env),
-    getCompany(env),
   ]);
 
-  const domain = companyDomain(company);
-  const prefs = await loadStorePreferences(env, { accountId, siteId });
-  const passwordOn = prefs.ok && prefs.settings.passwordProtection;
+  const domain = normalizeSiteDomain(site.primary_domain);
+  const publishedCount = Number(publishedPages?.n || 0);
 
   return json({
     ok: true,
     store: {
-      visibility: passwordOn ? "password" : publishedPages.n > 0 ? "public" : "unpublished",
-      url: domain ? `https://${domain}` : null,
-      domain: domain || null,
-      company_name: company?.name || null,
+      site_id: site.id,
+      site_name: site.name || null,
+      visibility: prefs.settings.passwordProtection
+        ? "password"
+        : publishedCount > 0 ? "public" : "unpublished",
+      url: domain ? "https://" + domain : null,
+      domain,
+      company_name: site.name || null,
     },
     performance,
     active_theme: themes.active_theme

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createCmsTestDb } from "./cms-test-db.mjs";
 import { createCmsSite, ensureDefaultCmsSite } from "../backend/cms/site-context.mjs";
-import { loadStorePreferences, postStorePreferences, PACKAGE_STORE_DEFAULTS } from "../backend/admin/store.js";
+import { getStorePreferences, loadStorePreferences, onlineStoreOverview, postStorePreferences, PACKAGE_STORE_DEFAULTS } from "../backend/admin/store.js";
 
 function d1(db) {
   return {
@@ -89,5 +89,48 @@ test("store preferences live in cms_sites.settings_json per site, with isolated 
     const foreign = await loadStorePreferences({ DB }, { accountId: "someone-else", siteId: first.id });
     assert.equal(foreign.ok, false);
     assert.match(foreign.error, /not_found/);
+  } finally { db.close(); }
+});
+
+
+test("store overview uses the selected site's domain and only its CMS pages", async () => {
+  const db = createCmsTestDb();
+  try {
+    db.prepare("INSERT INTO accounts(id) VALUES ('merchant')").run();
+    const DB = d1(db);
+    const first = await ensureDefaultCmsSite(DB, "merchant");
+    const second = await createCmsSite(DB, "merchant", {
+      id: "campaign-site",
+      name: "Campaign Store",
+      slug: "campaign",
+    });
+    db.prepare("UPDATE cms_sites SET name=?, primary_domain=? WHERE id=?")
+      .run("Inner Animal Media", "inneranimalmedia.com", first.id);
+    db.prepare("UPDATE cms_sites SET primary_domain=? WHERE id=?")
+      .run("campaign.example", second.id);
+
+    db.prepare("INSERT INTO cms_pages (id,account_id,site_id,slug,route_path,page_type,title,status) VALUES (?,?,?,?,?,?,?,?)")
+      .run("page-inneranimal", "merchant", first.id, "home", "/", "standard", "Inner Animal Media Home", "published");
+    db.prepare("INSERT INTO cms_pages (id,account_id,site_id,slug,route_path,page_type,title,status) VALUES (?,?,?,?,?,?,?,?)")
+      .run("page-campaign", "merchant", second.id, "home", "/", "standard", "Campaign Home", "draft");
+
+    const prefsResponse = await getStorePreferences({ DB }, { accountId: "merchant", siteId: first.id });
+    const prefs = await prefsResponse.json();
+    assert.equal(prefs.domain, "inneranimalmedia.com");
+    assert.equal(prefs.site.id, first.id);
+    assert.equal(prefs.company.name, "Inner Animal Media");
+
+    const overviewResponse = await onlineStoreOverview({ DB }, "merchant", first.id);
+    const overview = await overviewResponse.json();
+    assert.equal(overview.store.domain, "inneranimalmedia.com");
+    assert.equal(overview.store.company_name, "Inner Animal Media");
+    assert.equal(overview.store.site_id, first.id);
+    assert.deepEqual(overview.pages.map(page => page.slug), ["home"]);
+
+    const campaignResponse = await onlineStoreOverview({ DB }, "merchant", second.id);
+    const campaign = await campaignResponse.json();
+    assert.equal(campaign.store.domain, "campaign.example");
+    assert.equal(campaign.store.site_id, second.id);
+    assert.deepEqual(campaign.pages.map(page => page.slug), ["home"]);
   } finally { db.close(); }
 });
