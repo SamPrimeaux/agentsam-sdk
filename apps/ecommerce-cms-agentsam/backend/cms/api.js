@@ -2787,8 +2787,9 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   if (path === "/api/admin/cms/theme-projects" && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     const selectedSite=url.searchParams.get('site_id') || null;
+    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
     let site;
-    try { site=await resolveCmsSite(env.DB,{accountId:context.accountId,siteId:selectedSite,createDefault:!selectedSite}); }
+    try { site=await resolveCmsSite(env.DB,{accountId:context.accountId,siteId:selectedSite}); }
     catch (error) {return json({ok:false,error:String(error.message||error)},{status:409});}
     // Listing installed theme projects must be a pure account/site-scoped
     // read. The previous starter seeder could inject Heuristic pages and
