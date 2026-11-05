@@ -41,3 +41,15 @@ test("CMS theme project payload validation rejects oversized or unsafe projects"
   oversized.pages[0].template = "x".repeat(8 * 1024 * 1024 + 32);
   assert.throws(() => validateThemeProjectPayload(oversized), /theme_project_too_large/);
 });
+
+
+test("CMS theme project rejects unsafe or ambiguous workspace file paths at the API boundary", () => {
+  for (const path of ["../outside.html", "/absolute.html", "pages\\home\\index.html", "assets//logo.svg", "settings/tokens.json"]) {
+    assert.throws(() => validateThemeProjectPayload(project({ files: [{ path, content: "x" }] })), /theme_project_file_invalid/);
+  }
+  assert.throws(() => validateThemeProjectPayload(project({ files: [{ path: "assets/a.svg", content: "x" }, { path: "assets/a.svg", content: "y" }] })), /theme_project_file_invalid/);
+  assert.throws(() => validateThemeProjectPayload(project({ files: [{ path: "assets/a.svg", content: 1 }] })), /theme_project_file_invalid/);
+  assert.throws(() => validateThemeProjectPayload(project({ directories: ["../outside"] })), /theme_project_directory_invalid/);
+  const valid = validateThemeProjectPayload(project({ files: [{ path: "assets/brand mark.svg", content: "<svg/>" }], directories: ["assets/icons"] }));
+  assert.equal(valid.files[0].path, "assets/brand mark.svg");
+});

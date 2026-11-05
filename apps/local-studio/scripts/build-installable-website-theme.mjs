@@ -164,8 +164,8 @@ try {
  if(!pages.length||!pages.some(p=>p.slug==='home'))throw Error('no_valid_home_page:'+slug);
  if(pages.length>80)throw Error('project_too_many_pages');
  const project={
-   schema:'agentsam.theme-project.v1',id:'theme_'+slug,name:manifest.slug==='plain-jane'?'Plain Jane Journal':slug.replace(/(^|-)(\w)/g,(_,a,b)=>(a?' ':'')+b.toUpperCase()),
-   pages,tokens:{},sourceThemeId:slug,sourcePackage:manifest.sourcePackage,sourcePackageVersion:release.version,
+   schema:'agentsam.theme-project.v1',id:'theme_'+slug,name:manifest.name || (manifest.slug==='plain-jane'?'Plain Jane Journal':slug.replace(/(^|-)(\w)/g,(_,a,b)=>(a?' ':'')+b.toUpperCase())),
+   pages,tokens:manifest.tokens||{},sourceThemeId:slug,sourcePackage:manifest.sourcePackage,sourcePackageVersion:release.version,
    sourcePreviewUrl:base,sourceReleaseSha256:release.sha256,sourceCmsManifestSchema:manifest.schema,
    sourceManifestPageCount:declaredRoutePaths.length||staticRoutes.length,
    sourceRoutesNotRendered:missing,sourcePagesDetected:seen.size,sourceAssetErrors:[...failedAssets].slice(0,100),

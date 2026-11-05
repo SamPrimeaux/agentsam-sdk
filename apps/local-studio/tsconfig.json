@@ -23,7 +23,10 @@
     "paths": {
       "@/*": [
         "./frontend/src/*"
-      ]
+      ],
+      "@inneranimalmedia/agentsam-ide/workspace": ["../../packages/agentsam-ide/src/workspace/index.ts"],
+      "@inneranimalmedia/agentsam-ide/surface": ["../../packages/agentsam-ide/src/surface/index.ts"],
+      "@inneranimalmedia/agentsam-ide/surface/workspace-editor.css": ["../../packages/agentsam-ide/src/surface/workspace-editor.css"]
     },
     "allowImportingTsExtensions": true
   },

@@ -2,7 +2,7 @@ import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { handleCollectionApi } from "./collection-store.mjs";
 import { attachCmsDefinitions, listCmsDefinitions, listCmsComponentCatalog } from "./definition-registry.mjs";
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
-import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject } from "./theme-project-store.mjs";
+import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject, listThemeProjectHistory, getThemeProjectSnapshot } from "./theme-project-store.mjs";
 import { ensureCmsSiteStarter } from "./site-starter.mjs";
 import { readCanonicalComposition } from "./canonical-composition.mjs";
 import { listCanonicalPageRows, cmsPageStorageMode } from "./page-inventory.mjs";
@@ -2802,6 +2802,15 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
     const result = await createThemeProject(env, context.accountId, body.project, body.site_id || url.searchParams.get("site_id") || null);
     return json(result, { status: result.status || (result.ok ? 201 : 400) });
+  }
+  const projectHistoryMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})\/history(?:\/([0-9]{1,10}))?$/);
+  if (projectHistoryMatch && method === "GET") {
+    if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
+    const selected = url.searchParams.get("site_id") || null;
+    const result = projectHistoryMatch[2]
+      ? await getThemeProjectSnapshot(env, context.accountId, projectHistoryMatch[1], projectHistoryMatch[2], selected)
+      : await listThemeProjectHistory(env, context.accountId, projectHistoryMatch[1], selected);
+    return json(result, { status: result.status || (result.ok ? 200 : 404) });
   }
   const themeProjectMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})$/);
   if (themeProjectMatch && method === "GET") {

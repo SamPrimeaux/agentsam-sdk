@@ -60,6 +60,37 @@ export function validateThemeProjectPayload(value) {
       throw new Error("theme_project_sections_invalid");
     }
   }
+  // Extra workspace files are JSON data in the site's immutable project
+  // snapshot, never arbitrary filesystem paths. Enforce this at the API
+  // boundary; the editor's client-side path guard is only UX validation.
+  const files = project.files ?? [];
+  const directories = project.directories ?? [];
+  if (!Array.isArray(files) || files.length > 500 || !Array.isArray(directories) || directories.length > 500) {
+    throw new Error("theme_project_files_invalid");
+  }
+  const seen = new Set();
+  const safeRelativePath = (value, { directory = false } = {}) => {
+    if (typeof value !== "string" || !value || value.length > 500 || value.includes("\\") || value.startsWith("/")) return false;
+    if (directory && value.endsWith("/")) value = value.slice(0, -1);
+    if (!value || value.split("/").some(part => !part || part === "." || part === ".." || /[\u0000-\u001f<>:\"|?*]/.test(part))) return false;
+    return true;
+  };
+  const reserved = new Set(["settings/tokens.json"]);
+  for (const page of project.pages) {
+    reserved.add(`pages/${page.slug}/index.html`);
+    for (const section of page.sections || []) reserved.add(`pages/${page.slug}/sections/${section.key}.html`);
+  }
+  for (const entry of files) {
+    if (!entry || !safeRelativePath(entry.path) || typeof entry.content !== "string" || seen.has(entry.path) || reserved.has(entry.path)) {
+      throw new Error("theme_project_file_invalid");
+    }
+    seen.add(entry.path);
+  }
+  const directorySet = new Set();
+  for (const path of directories) {
+    if (!safeRelativePath(path, { directory: true }) || directorySet.has(path)) throw new Error("theme_project_directory_invalid");
+    directorySet.add(path);
+  }
   const serialized = JSON.stringify(project);
   if (new TextEncoder().encode(serialized).byteLength > MAX_PROJECT_BYTES) {
     throw new Error("theme_project_too_large");
@@ -193,6 +224,45 @@ export async function getThemeProject(env, accountId, id, siteId = null) {
   } catch (error) {
     const message = String(error?.message || error || "theme_project_read_failed");
     return { ok: false, status: error.status || (message.includes("not_found") ? 404 : 503), error: message };
+  }
+}
+
+/** Existing CMS revision pointers are the only history authority. */
+export async function listThemeProjectHistory(env, accountId, id, siteId = null) {
+  if (!accountId) return { ok: false, status: 403, error: 'account_required' };
+  if (!SAFE_ID.test(String(id))) return { ok: false, status: 400, error: 'theme_project_id_invalid' };
+  try {
+    const row = await projectRow(env, accountId, id, siteId);
+    if (!row) return { ok: false, status: 404, error: 'theme_project_not_found' };
+    const result = await env.DB.prepare(
+      "SELECT revision_number,revision_kind,content_hash,created_at,metadata_json FROM cms_revisions WHERE account_id=? AND site_id=? AND entity_type='global' AND entity_id=? ORDER BY revision_number DESC LIMIT 100"
+    ).bind(accountId, row.site_id, row.id).all();
+    return { ok: true, revisions: (result.results || []).map(entry => ({
+      id: String(entry.revision_number), version: String(entry.content_hash || ''),
+      created_at: entry.created_at, kind: entry.revision_kind,
+      metadata: parseObject(entry.metadata_json),
+    })) };
+  } catch (error) {
+    return { ok: false, status: error.status || 503, error: String(error.message || error) };
+  }
+}
+
+export async function getThemeProjectSnapshot(env, accountId, id, revision, siteId = null) {
+  if (!accountId) return { ok: false, status: 403, error: 'account_required' };
+  if (!SAFE_ID.test(String(id)) || !Number.isSafeInteger(Number(revision)) || Number(revision) < 1)
+    return { ok: false, status: 400, error: 'theme_project_revision_invalid' };
+  try {
+    const row = await projectRow(env, accountId, id, siteId);
+    if (!row) return { ok: false, status: 404, error: 'theme_project_not_found' };
+    const prior = await env.DB.prepare(
+      "SELECT content_object_key FROM cms_revisions WHERE account_id=? AND site_id=? AND entity_type='global' AND entity_id=? AND revision_number=? LIMIT 1"
+    ).bind(accountId, row.site_id, row.id, Number(revision)).first();
+    if (!prior?.content_object_key) return { ok: false, status: 404, error: 'theme_project_revision_not_found' };
+    const project = await readR2Json(env, prior.content_object_key);
+    if (!project || project.id !== id) return { ok: false, status: 503, error: 'theme_project_revision_unavailable' };
+    return { ok: true, project };
+  } catch (error) {
+    return { ok: false, status: error.status || 503, error: String(error.message || error) };
   }
 }
 

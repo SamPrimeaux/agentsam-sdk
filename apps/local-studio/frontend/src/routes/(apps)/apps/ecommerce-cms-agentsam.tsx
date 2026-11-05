@@ -5,6 +5,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
 import { resolveEcommerceAdminPath, resolveEcommerceAssetPath } from '@/lib/apps/ecommerce-routing';
+import { CmsThemeCodeEditor } from '@/components/themes/CmsThemeCodeEditor';
 
 type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try' };
 
@@ -41,8 +42,9 @@ function EcommerceAppHost() {
   const { user, isPending: authPending } = useCurrentUserState();
   const localHost = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
   const localPreview = localHost && search.preview === 'local';
-  const page = resolveEcommerceAdminPath(search.page || '/admin/store');
-  const assetPath = page && (isPackagedDesktop() ? resolveEcommerceAssetPath(page) : page);
+  const isCodeEditor = search.page === '/admin/theme-code-editor';
+  const page = isCodeEditor ? '/admin/theme-code-editor' : resolveEcommerceAdminPath(search.page || '/admin/store');
+  const assetPath = page && !isCodeEditor && (isPackagedDesktop() ? resolveEcommerceAssetPath(page) : page);
   const url = typeof window !== 'undefined' && assetPath
     ? (() => {
       const resolved = new URL(assetPath, window.location.origin);
@@ -71,6 +73,7 @@ function EcommerceAppHost() {
 
   return <section className="flex h-full min-h-0 w-full flex-col bg-background" data-agentsam-installed-app="ecommerce-cms-agentsam">
     {!page ? <p role="alert" className="p-8 text-sm text-destructive">That product route is unavailable.</p>
+      : isCodeEditor && search.project && search.site_id ? <CmsThemeCodeEditor projectId={search.project} siteId={search.site_id} />
       : !url ? <p role="alert" className="p-8 text-sm text-destructive">This product route is unavailable.</p>
       : <iframe title="Ecommerce CMS — complete admin application" src={url} className="min-h-0 w-full flex-1 border-0" referrerPolicy="strict-origin-when-cross-origin" allow="fullscreen" />}
   </section>;
