@@ -5,9 +5,8 @@
  *   profile   named palette: "cms" (follow base) or a Local/Remote/Sandbox lane
  *   override  per-session background / foreground / font size / line height
  *
- * Lane palettes are the SDK's `src/ui/theme.js` LOCAL / CLOUD(remote) / SANDBOX
- * xterm palettes — mirrored here as data (terminal-appearance.test.ts asserts they
- * stay equal) so there is no third palette system. Changing one session writes
+ * Lane palettes are the app's published LOCAL / CLOUD(remote) / SANDBOX
+ * xterm palettes. Changing one session writes
  * only that session's override; it never touches the app theme or other sessions.
  */
 import { create } from "zustand";
