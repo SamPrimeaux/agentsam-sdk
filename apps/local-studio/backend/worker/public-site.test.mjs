@@ -106,7 +106,17 @@ test("ambiguous public host registrations fail closed", async () => {
 
 test("cold public HTML reads are site-specific and bypass KV", async () => {
   const keys = [];
-  const db = domainDb({ "alpha.example": [siteA], "beta.example": [siteB] });
+  const db = siteOwnedDb(
+    { "alpha.example": [siteA], "beta.example": [siteB] },
+    {
+      [siteA.id]: [{ id: "page_alpha_home", site_id: siteA.id, slug: "home", route_path: "/", title: "Alpha home", status: "published" }],
+      [siteB.id]: [{ id: "page_beta_home", site_id: siteB.id, slug: "home", route_path: "/", title: "Beta home", status: "published" }],
+    },
+    {
+      page_alpha_home: [{ section_key: "html-document", section_type: "html_source", section_data: JSON.stringify({ source_r2_key: "sites/alpha-site/public/home/index.html" }), is_visible: 1 }],
+      page_beta_home: [{ section_key: "html-document", section_type: "html_source", section_data: JSON.stringify({ source_r2_key: "sites/beta-site/public/home/index.html" }), is_visible: 1 }],
+    },
+  );
   const env = {
     DB: db,
     WEBSITE_ASSETS: {
