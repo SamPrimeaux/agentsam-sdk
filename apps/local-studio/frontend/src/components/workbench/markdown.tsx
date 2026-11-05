@@ -139,7 +139,7 @@ export function MessageMarkdown({
   content,
 }: {
   content: string;
-  trailId?: string;
+  chatId?: string;
 }) {
   const artifacts = useMemo(() => extractArtifacts(content), [content]);
   const openSideTab = useWorkStore((s) => s.openSideTab);

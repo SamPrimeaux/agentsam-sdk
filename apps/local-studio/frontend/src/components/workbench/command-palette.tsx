@@ -8,10 +8,10 @@ import { COMMANDS, runCommand } from "@/lib/commands/native-commands";
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const trails = useWorkStore((s) => s.trails);
+  const chats = useWorkStore((s) => s.chats);
   const projects = useWorkStore((s) => s.projects);
-  const startTrail = useWorkStore((s) => s.startTrail);
-  const setActiveTrail = useWorkStore((s) => s.setActiveTrail);
+  const startChat = useWorkStore((s) => s.startChat);
+  const setActiveChat = useWorkStore((s) => s.setActiveChat);
   const setActiveProject = useWorkStore((s) => s.setActiveProject);
   const openSideTab = useWorkStore((s) => s.openSideTab);
   const createProject = useWorkStore((s) => s.createProject);
@@ -147,17 +147,17 @@ export function CommandPalette() {
           ))}
         </Command.Group>
         <Command.Group heading="Chats">
-          {trails.map((trail) => (
+          {chats.map((chat) => (
             <Command.Item
-              key={trail.id}
-              value={trail.title}
+              key={chat.id}
+              value={chat.title}
               onSelect={() => {
-                setActiveTrail(trail.id);
-                void navigate({ to: "/chats/$chatId", params: { chatId: trail.id } });
+                setActiveChat(chat.id);
+                void navigate({ to: "/chats/$chatId", params: { chatId: chat.id } });
                 setOpen(false);
               }}
             >
-              {trail.title}
+              {chat.title}
             </Command.Item>
           ))}
         </Command.Group>

@@ -19,11 +19,11 @@ import type {
   Project,
   SideKind,
   SideTab,
-  Trail,
+  Chat,
   WorkGoal,
 } from "@inneranimalmedia/agentsam-local-shared";
 
-const WELCOME_ID = "trail-studio";
+const WELCOME_ID = "chat-studio";
 
 const WELCOME_MESSAGE: ChatMessage = {
   id: "welcome-msg",
@@ -33,7 +33,7 @@ const WELCOME_MESSAGE: ChatMessage = {
   createdAt: 1_746_000_000_000,
 };
 
-const STARTER_TRAIL: Trail = {
+const STARTER_CHAT: Chat = {
   id: WELCOME_ID,
   title: "Studio",
   createdAt: 1_746_000_000_000,
@@ -73,7 +73,7 @@ function normalizeProject(raw: Project): Project {
 
 const aborts = new Map<string, AbortController>();
 
-function newTrail(partial?: Partial<Trail>): Trail {
+function newChat(partial?: Partial<Chat>): Chat {
   const now = Date.now();
   return {
     id: uid(),
@@ -108,8 +108,8 @@ function newSideTab(kind: SideKind, extra?: Partial<SideTab>): SideTab {
     title: SIDE_TITLES[kind],
     ephemeral: false,
     messages: [],
-    parentTrailId: null,
-    keptTrailId: null,
+    parentChatId: null,
+    keptChatId: null,
     url: "",
     srcdoc: null,
     fileId: null,
@@ -120,9 +120,9 @@ function newSideTab(kind: SideKind, extra?: Partial<SideTab>): SideTab {
   };
 }
 
-function excerptOf(trail: Trail | undefined) {
-  if (!trail) return null;
-  const slice = trail.messages.filter((m) => m.role !== "system").slice(-8);
+function excerptOf(chat: Chat | undefined) {
+  if (!chat) return null;
+  const slice = chat.messages.filter((m) => m.role !== "system").slice(-8);
   if (!slice.length) return null;
   return slice
     .map((m) => `${m.role === "user" ? "Lead user" : "Lead agent"}: ${m.content.slice(0, 800)}`)
@@ -142,7 +142,7 @@ function workspacePayload(project: Project | null | undefined) {
 
 const RUN_MODES = new Set<AgentRunMode>(["ask", "plan", "agent", "debug", "multitask"]);
 
-export function defaultRunModeForTarget(targetKind: "trail" | "side"): AgentRunMode {
+export function defaultRunModeForTarget(targetKind: "chat" | "side"): AgentRunMode {
   return targetKind === "side" ? "ask" : "agent";
 }
 
@@ -158,7 +158,7 @@ function normalizedRunModes(value: unknown): Record<string, AgentRunMode> {
 type FollowupQueuedSend = {
   id: string;
   targetId: string;
-  targetKind: "trail" | "side";
+  targetKind: "chat" | "side";
   text: string;
   projectId: string;
   modelSelection: StudioModelSelection;
@@ -170,8 +170,8 @@ type WorkState = {
   hydrated: boolean;
   projects: Project[];
   activeProjectId: string;
-  trails: Trail[];
-  activeTrailId: string;
+  chats: Chat[];
+  activeChatId: string;
   drafts: Record<string, string>;
   sidebarOpen: boolean;
   mobileNavOpen: boolean;
@@ -197,10 +197,10 @@ type WorkState = {
   pausedQueueTargets: string[];
   goals: Record<string, WorkGoal>;
   setWorkSurface: (surface: WorkSurface) => void;
-  setGoal: (trailId: string, title: string, preview?: string) => void;
-  updateGoal: (trailId: string, patch: Pick<WorkGoal, "title" | "preview">) => void;
-  clearGoal: (trailId: string) => void;
-  toggleGoalPaused: (trailId: string) => void;
+  setGoal: (chatId: string, title: string, preview?: string) => void;
+  updateGoal: (chatId: string, patch: Pick<WorkGoal, "title" | "preview">) => void;
+  clearGoal: (chatId: string) => void;
+  toggleGoalPaused: (chatId: string) => void;
   setHydrated: (value: boolean) => void;
   setSearch: (value: string) => void;
   setDraft: (id: string, value: string) => void;
@@ -217,21 +217,21 @@ type WorkState = {
   setSettingsOpen: (open: boolean) => void;
   toggleTerminal: () => void;
   reportCoworkerToLead: (sideTabId: string, summary: string) => void;
-  setActiveTrail: (id: string) => void;
-  startTrail: () => string;
+  setActiveChat: (id: string) => void;
+  startChat: () => string;
   flushOfflineQueue: () => Promise<void>;
-  renameTrail: (id: string, title: string) => void;
-  pinTrail: (id: string) => void;
-  deleteTrail: (id: string) => void;
+  renameChat: (id: string, title: string) => void;
+  pinChat: (id: string) => void;
+  deleteChat: (id: string) => void;
   setActiveProject: (id: string) => void;
   createSampleProject: (name?: string) => string;
   createEmptyProject: (name?: string) => string;
-  moveTrailToProject: (trailId: string, projectId: string) => void;
+  moveChatToProject: (chatId: string, projectId: string) => void;
   /** Assign a Local Studio conversation to Work without moving its filesystem workspace. */
   assignChatToWorkProject: (chatId: string, workProjectId: string | null) => void;
   createProject: (name?: string) => string;
   createFilesystemProject: (opts: { root: string; name?: string; runtimeBaseUrl?: string }) => Promise<string>;
-  createProjectForTrail: (trailId: string, name?: string) => string;
+  createProjectForChat: (chatId: string, name?: string) => string;
   renameProject: (id: string, name: string) => void;
   pinProject: (id: string) => void;
   deleteProject: (id: string) => void;
@@ -252,7 +252,7 @@ type WorkState = {
   consumeCommands: () => string[];
   send: (
     targetId: string,
-    targetKind: "trail" | "side",
+    targetKind: "chat" | "side",
     text?: string,
     context?: { projectId?: string; modelSelection?: StudioModelSelection; runMode?: AgentRunMode },
   ) => Promise<void>;
@@ -266,8 +266,8 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
   WorkState,
   | "projects"
   | "activeProjectId"
-  | "trails"
-  | "activeTrailId"
+  | "chats"
+  | "activeChatId"
   | "drafts"
   | "sidebarOpen"
   | "sideOpen"
@@ -286,8 +286,8 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
   const projects = (Array.isArray(raw?.projects) ? raw!.projects! : []).map(normalizeProject);
   const activeProjectId = pickRestoredProjectId(projects, raw?.activeProjectId);
 
-  const trails = (raw?.trails?.length ? raw.trails : [STARTER_TRAIL]).map((t) => ({
-    ...STARTER_TRAIL,
+  const chats = (raw?.chats?.length ? raw.chats : [STARTER_CHAT]).map((t) => ({
+    ...STARTER_CHAT,
     ...t,
     files: t.files ?? [],
     projectId: t.projectId || activeProjectId,
@@ -295,7 +295,7 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
 
   const project = projects.find((p) => p.id === activeProjectId);
   if (project) {
-    const captured = trails.flatMap((t) => t.files);
+    const captured = chats.flatMap((t) => t.files);
     if (captured.length) {
       project.files = mergeArtifacts(project.files, captured);
     }
@@ -313,8 +313,8 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
   return {
     projects,
     activeProjectId,
-    trails,
-    activeTrailId: trails.some((t) => t.id === raw?.activeTrailId) ? raw!.activeTrailId! : trails[0]!.id,
+    chats,
+    activeChatId: chats.some((t) => t.id === raw?.activeChatId) ? raw!.activeChatId! : chats[0]!.id,
     drafts: raw?.drafts ?? {},
     sidebarOpen: raw?.sidebarOpen ?? true,
     sideOpen: raw?.sideOpen ?? false,
@@ -323,7 +323,7 @@ function ensureShape(raw: Partial<WorkState> | undefined): Pick<
       typeof raw?.terminalHeight === "number"
         ? Math.min(0.88, Math.max(0.22, raw.terminalHeight))
         : 0.38,
-    navView: raw?.navView ?? "trails",
+    navView: raw?.navView ?? "chats",
     modelSelection:
       raw?.modelSelection && raw.modelSelection.provider && raw.modelSelection.model_id
         ? raw.modelSelection
@@ -381,35 +381,35 @@ export const useWorkStore = create<WorkState>()(
         openSideTab("browser", { ephemeral: false });
         set({ workSurface: "preview", sideOpen: true, terminalOpen: false });
       },
-      setGoal: (trailId, title, preview = "") => {
+      setGoal: (chatId, title, preview = "") => {
         const now = Date.now();
         set((s) => ({
           goals: {
             ...s.goals,
-            [trailId]: { id: "goal_" + uid(), trailId, title: title.slice(0, 12000), preview: preview.slice(0, 500), status: "active", startedAt: now, updatedAt: now },
+            [chatId]: { id: "goal_" + uid(), chatId, title: title.slice(0, 12000), preview: preview.slice(0, 500), status: "active", startedAt: now, updatedAt: now },
           },
         }));
       },
-      updateGoal: (trailId, patch) => set((s) => {
-        const goal = s.goals[trailId];
+      updateGoal: (chatId, patch) => set((s) => {
+        const goal = s.goals[chatId];
         if (!goal) return s;
-        return { goals: { ...s.goals, [trailId]: { ...goal, title: patch.title.slice(0, 12000), preview: patch.preview.slice(0, 500), updatedAt: Date.now() } } };
+        return { goals: { ...s.goals, [chatId]: { ...goal, title: patch.title.slice(0, 12000), preview: patch.preview.slice(0, 500), updatedAt: Date.now() } } };
       }),
-      clearGoal: (trailId) => set((s) => {
+      clearGoal: (chatId) => set((s) => {
         const goals = { ...s.goals };
-        delete goals[trailId];
+        delete goals[chatId];
         return { goals };
       }),
-      toggleGoalPaused: (trailId) => {
-        const goal = get().goals[trailId];
+      toggleGoalPaused: (chatId) => {
+        const goal = get().goals[chatId];
         if (!goal) return;
-        if (goal.status === "active" && get().streamingIds.includes(trailId)) {
-          aborts.get(trailId)?.abort();
-          aborts.delete(trailId);
+        if (goal.status === "active" && get().streamingIds.includes(chatId)) {
+          aborts.get(chatId)?.abort();
+          aborts.delete(chatId);
         }
         set((s) => ({
-          goals: { ...s.goals, [trailId]: { ...goal, status: goal.status === "active" ? "paused" : "active", updatedAt: Date.now() } },
-          streamingIds: goal.status === "active" ? s.streamingIds.filter((id) => id !== trailId) : s.streamingIds,
+          goals: { ...s.goals, [chatId]: { ...goal, status: goal.status === "active" ? "paused" : "active", updatedAt: Date.now() } },
+          streamingIds: goal.status === "active" ? s.streamingIds.filter((id) => id !== chatId) : s.streamingIds,
         }));
       },
       terminalHeight: 0.38,
@@ -431,7 +431,7 @@ export const useWorkStore = create<WorkState>()(
       toggleTerminal: () => set((s) => ({ terminalOpen: !s.terminalOpen })),
       reportCoworkerToLead: (sideTabId, summary) => {
         const tab = get().sideTabs.find((t) => t.id === sideTabId);
-        const leadId = tab?.parentTrailId ?? get().activeTrailId;
+        const leadId = tab?.parentChatId ?? get().activeChatId;
         if (!leadId || !summary.trim()) return;
         const note: ChatMessage = {
           id: uid(),
@@ -440,26 +440,26 @@ export const useWorkStore = create<WorkState>()(
           createdAt: Date.now(),
         };
         set((s) => ({
-          trails: s.trails.map((t) =>
+          chats: s.chats.map((t) =>
             t.id === leadId
               ? { ...t, updatedAt: Date.now(), messages: [...t.messages, note] }
               : t,
           ),
         }));
       },
-      setActiveTrail: (id) => set({ activeTrailId: id, navView: "trails" }),
-      startTrail: () => {
-        const current = get().trails.find((t) => t.id === get().activeTrailId);
-        if (current && current.messages.length === 0 && (current.title === "New trail" || current.title === "New chat")) {
+      setActiveChat: (id) => set({ activeChatId: id, navView: "chats" }),
+      startChat: () => {
+        const current = get().chats.find((t) => t.id === get().activeChatId);
+        if (current && current.messages.length === 0 && (current.title === "New chat" || current.title === "New chat")) {
           return current.id;
         }
-        const trail = newTrail({ projectId: get().activeProjectId });
+        const chat = newChat({ projectId: get().activeProjectId });
         set((s) => ({
-          trails: [trail, ...s.trails],
-          activeTrailId: trail.id,
-          navView: "trails",
+          chats: [chat, ...s.chats],
+          activeChatId: chat.id,
+          navView: "chats",
         }));
-        return trail.id;
+        return chat.id;
       },
       flushOfflineQueue: async () => {
         if (typeof navigator !== "undefined" && !navigator.onLine) return;
@@ -477,9 +477,9 @@ export const useWorkStore = create<WorkState>()(
             ];
           };
 
-          if (item.targetKind === "trail") {
+          if (item.targetKind === "chat") {
             set((s) => ({
-              trails: s.trails.map((t) =>
+              chats: s.chats.map((t) =>
                 t.id === item.targetId
                   ? { ...t, updatedAt: Date.now(), messages: replaceNote(t.messages) }
                   : t,
@@ -505,12 +505,12 @@ export const useWorkStore = create<WorkState>()(
           let history: ChatMessage[] = [];
           let parentTitle: string | null = null;
           let parentExcerpt: string | null = null;
-          if (item.targetKind === "trail") {
-            history = after.trails.find((t) => t.id === item.targetId)?.messages ?? [];
+          if (item.targetKind === "chat") {
+            history = after.chats.find((t) => t.id === item.targetId)?.messages ?? [];
           } else {
             const tab = after.sideTabs.find((t) => t.id === item.targetId);
             history = tab?.messages ?? [];
-            const parent = after.trails.find((t) => t.id === tab?.parentTrailId);
+            const parent = after.chats.find((t) => t.id === tab?.parentChatId);
             parentTitle = parent?.title ?? null;
             parentExcerpt = excerptOf(parent);
           }
@@ -529,9 +529,9 @@ export const useWorkStore = create<WorkState>()(
           const project = after.projects.find((p) => p.id === after.activeProjectId) ?? after.projects[0] ?? null;
 
           const write = (content: string, done = false) => {
-            if (item.targetKind === "trail") {
+            if (item.targetKind === "chat") {
               set((s) => ({
-                trails: s.trails.map((t) =>
+                chats: s.chats.map((t) =>
                   t.id === item.targetId
                     ? {
                         ...t,
@@ -673,54 +673,54 @@ export const useWorkStore = create<WorkState>()(
           }
         }
       },
-      renameTrail: (id, title) =>
+      renameChat: (id, title) =>
         set((s) => ({
-          trails: s.trails.map((t) =>
+          chats: s.chats.map((t) =>
             t.id === id ? { ...t, title: title.trim() || t.title, updatedAt: Date.now() } : t,
           ),
         })),
-      pinTrail: (id) =>
+      pinChat: (id) =>
         set((s) => ({
-          trails: s.trails.map((t) => (t.id === id ? { ...t, pinned: !t.pinned } : t)),
+          chats: s.chats.map((t) => (t.id === id ? { ...t, pinned: !t.pinned } : t)),
         })),
-      deleteTrail: (id) => {
+      deleteChat: (id) => {
         get().stop(id);
         localStudioRuntimeVisuals.releaseSurface(id);
         set((s) => {
-          const trails = s.trails.filter((t) => t.id !== id);
-          const fallback = trails[0] ?? newTrail({ projectId: s.activeProjectId });
-          const nextTrails = trails.length ? trails : [fallback];
+          const chats = s.chats.filter((t) => t.id !== id);
+          const fallback = chats[0] ?? newChat({ projectId: s.activeProjectId });
+          const nextTrails = chats.length ? chats : [fallback];
           return {
-            trails: nextTrails,
-            activeTrailId: s.activeTrailId === id ? nextTrails[0]!.id : s.activeTrailId,
+            chats: nextTrails,
+            activeChatId: s.activeChatId === id ? nextTrails[0]!.id : s.activeChatId,
           };
         });
       },
       setActiveProject: (id) => {
         const project = get().projects.find((p) => p.id === id);
         if (!project) return;
-        const trail = get().trails.find((t) => t.projectId === id) ?? get().trails[0];
+        const chat = get().chats.find((t) => t.projectId === id) ?? get().chats[0];
         set({
           activeProjectId: id,
-          activeTrailId: trail?.id ?? get().activeTrailId,
-          navView: "trails",
+          activeChatId: chat?.id ?? get().activeChatId,
+          navView: "chats",
         });
       },
-      moveTrailToProject: (trailId, projectId) => {
+      moveChatToProject: (chatId, projectId) => {
         if (!get().projects.some((project) => project.id === projectId)) return;
         set((s) => ({
           activeProjectId: projectId,
-          activeTrailId: trailId,
-          trails: s.trails.map((trail) =>
-            trail.id === trailId ? { ...trail, projectId, updatedAt: Date.now() } : trail,
+          activeChatId: chatId,
+          chats: s.chats.map((chat) =>
+            chat.id === chatId ? { ...chat, projectId, updatedAt: Date.now() } : chat,
           ),
         }));
       },
       assignChatToWorkProject: (chatId, workProjectId) => {
         const id = workProjectId?.trim() || undefined;
-        if (!get().trails.some((chat) => chat.id === chatId)) return;
+        if (!get().chats.some((chat) => chat.id === chatId)) return;
         set((s) => ({
-          trails: s.trails.map((chat) => chat.id === chatId
+          chats: s.chats.map((chat) => chat.id === chatId
             ? { ...chat, workProjectId: id, updatedAt: Date.now() }
             : chat),
         }));
@@ -728,25 +728,25 @@ export const useWorkStore = create<WorkState>()(
       createProject: (name) => get().createEmptyProject(name),
       createEmptyProject: (name) => {
         const project = newEmptyProject(name?.trim() || "Untitled");
-        const trail = newTrail({ projectId: project.id, title: project.name, pinned: false });
+        const chat = newChat({ projectId: project.id, title: project.name, pinned: false });
         set((s) => ({
           projects: [project, ...s.projects],
-          trails: [trail, ...s.trails],
+          chats: [chat, ...s.chats],
           activeProjectId: project.id,
-          activeTrailId: trail.id,
-          navView: "trails",
+          activeChatId: chat.id,
+          navView: "chats",
         }));
         return project.id;
       },
       createSampleProject: (name) => {
         const project = newSampleProject(name?.trim() || "Sample tutorial");
-        const trail = newTrail({ projectId: project.id, title: project.name, pinned: false });
+        const chat = newChat({ projectId: project.id, title: project.name, pinned: false });
         set((s) => ({
           projects: [project, ...s.projects],
-          trails: [trail, ...s.trails],
+          chats: [chat, ...s.chats],
           activeProjectId: project.id,
-          activeTrailId: trail.id,
-          navView: "trails",
+          activeChatId: chat.id,
+          navView: "chats",
           workSurface: "files",
           sideOpen: true,
         }));
@@ -803,29 +803,29 @@ export const useWorkStore = create<WorkState>()(
         if (!project.workspaceRoot) {
           throw new Error("filesystem workspace requires an absolute root path");
         }
-        const trail = newTrail({ projectId: project.id, title: project.name, pinned: false });
+        const chat = newChat({ projectId: project.id, title: project.name, pinned: false });
         set((s) => ({
           projects: [project, ...s.projects],
-          trails: [trail, ...s.trails],
+          chats: [chat, ...s.chats],
           activeProjectId: project.id,
-          activeTrailId: trail.id,
-          navView: "trails",
+          activeChatId: chat.id,
+          navView: "chats",
           workSurface: "files",
           sideOpen: true,
         }));
         get().openSideTab("files", { ephemeral: false });
         return project.id;
       },
-      createProjectForTrail: (trailId, name) => {
+      createProjectForChat: (chatId, name) => {
         const project = newEmptyProject(name?.trim() || "Untitled");
         set((s) => ({
           projects: [project, ...s.projects],
-          trails: s.trails.map((trail) =>
-            trail.id === trailId ? { ...trail, projectId: project.id, updatedAt: Date.now() } : trail,
+          chats: s.chats.map((chat) =>
+            chat.id === chatId ? { ...chat, projectId: project.id, updatedAt: Date.now() } : chat,
           ),
           activeProjectId: project.id,
-          activeTrailId: trailId,
-          navView: "trails",
+          activeChatId: chatId,
+          navView: "chats",
         }));
         return project.id;
       },
@@ -844,17 +844,17 @@ export const useWorkStore = create<WorkState>()(
       deleteProject: (id) =>
         set((s) => {
           const projects = s.projects.filter((p) => p.id !== id);
-          const trails = s.trails.filter((t) => t.projectId !== id);
+          const chats = s.chats.filter((t) => t.projectId !== id);
           const nextId = pickRestoredProjectId(projects, s.activeProjectId === id ? null : s.activeProjectId);
-          const fallbackTrail = trails.find((t) => t.projectId === nextId) ?? trails[0];
+          const fallbackChat = chats.find((t) => t.projectId === nextId) ?? chats[0];
           return {
             projects,
-            trails: trails.length ? trails : [newTrail({ projectId: nextId })],
+            chats: chats.length ? chats : [newChat({ projectId: nextId })],
             activeProjectId: nextId,
-            activeTrailId:
-              s.activeTrailId && trails.some((t) => t.id === s.activeTrailId)
-                ? s.activeTrailId
-                : fallbackTrail?.id ?? s.activeTrailId,
+            activeChatId:
+              s.activeChatId && chats.some((t) => t.id === s.activeChatId)
+                ? s.activeChatId
+                : fallbackChat?.id ?? s.activeChatId,
           };
         }),
       patchProject: (id, patch) =>
@@ -918,11 +918,11 @@ export const useWorkStore = create<WorkState>()(
           return existing.id;
         }
         const tab = newSideTab(kind, {
-          parentTrailId: kind === "chat" ? get().activeTrailId : extra?.parentTrailId ?? null,
+          parentChatId: kind === "chat" ? get().activeChatId : extra?.parentChatId ?? null,
           ...extra,
         });
-        if (kind === "chat" && tab.parentTrailId) {
-          const parent = get().trails.find((t) => t.id === tab.parentTrailId);
+        if (kind === "chat" && tab.parentChatId) {
+          const parent = get().chats.find((t) => t.id === tab.parentChatId);
           if (parent) tab.title = `Co-worker · ${parent.title}`;
         }
         set((s) => ({
@@ -939,7 +939,7 @@ export const useWorkStore = create<WorkState>()(
           !force &&
           tab.kind === "chat" &&
           tab.ephemeral &&
-          !tab.keptTrailId &&
+          !tab.keptChatId &&
           tab.messages.length > 0
         ) {
           set({ confirmDiscardId: id });
@@ -1004,7 +1004,7 @@ export const useWorkStore = create<WorkState>()(
         const tab = get().sideTabs.find((t) => t.id === id);
         if (!tab || tab.kind !== "chat") return null;
         const files = extractArtifacts(tab.messages.map((m) => m.content).join("\n\n"));
-        const trail = newTrail({
+        const chat = newChat({
           title: titleFromText(tab.messages.find((m) => m.role === "user")?.content ?? tab.title),
           messages: tab.messages,
           files,
@@ -1017,12 +1017,12 @@ export const useWorkStore = create<WorkState>()(
           }));
         }
         set((s) => ({
-          trails: [trail, ...s.trails],
+          chats: [chat, ...s.chats],
           sideTabs: s.sideTabs.map((t) =>
-            t.id === id ? { ...t, ephemeral: false, keptTrailId: trail.id, title: trail.title } : t,
+            t.id === id ? { ...t, ephemeral: false, keptChatId: chat.id, title: chat.title } : t,
           ),
         }));
-        return trail.id;
+        return chat.id;
       },
       enqueueCommand: (cmd) =>
         set((s) => {
@@ -1129,11 +1129,11 @@ export const useWorkStore = create<WorkState>()(
               "Saved on this device — you're offline. Open **CLI** from the rail to keep shipping locally. This message will retry when you're back online.",
             createdAt: Date.now(),
           };
-          if (targetKind === "trail") {
+          if (targetKind === "chat") {
             set((s) => ({
               drafts: { ...s.drafts, [targetId]: "" },
               offlineQueue: [...s.offlineQueue, queued],
-              trails: s.trails.map((t) =>
+              chats: s.chats.map((t) =>
                 t.id === targetId
                   ? {
                       ...t,
@@ -1171,10 +1171,10 @@ export const useWorkStore = create<WorkState>()(
           createdAt: Date.now(),
         };
 
-        if (targetKind === "trail") {
+        if (targetKind === "chat") {
           set((s) => ({
             drafts: { ...s.drafts, [targetId]: "" },
-            trails: s.trails.map((t) =>
+            chats: s.chats.map((t) =>
               t.id === targetId
                 ? {
                     ...t,
@@ -1203,12 +1203,12 @@ export const useWorkStore = create<WorkState>()(
         let history: ChatMessage[] = [];
         let parentTitle: string | null = null;
         let parentExcerpt: string | null = null;
-        if (targetKind === "trail") {
-          history = after.trails.find((t) => t.id === targetId)?.messages ?? [];
+        if (targetKind === "chat") {
+          history = after.chats.find((t) => t.id === targetId)?.messages ?? [];
         } else {
           const tab = after.sideTabs.find((t) => t.id === targetId);
           history = tab?.messages ?? [];
-          const parent = after.trails.find((t) => t.id === tab?.parentTrailId);
+          const parent = after.chats.find((t) => t.id === tab?.parentChatId);
           parentTitle = parent?.title ?? null;
           parentExcerpt = excerptOf(parent);
         }
@@ -1228,9 +1228,9 @@ export const useWorkStore = create<WorkState>()(
         const project = after.projects.find((p) => p.id === projectId) ?? after.projects[0] ?? null;
 
         const write = (content: string, done = false) => {
-          if (targetKind === "trail") {
+          if (targetKind === "chat") {
             set((s) => ({
-              trails: s.trails.map((t) =>
+              chats: s.chats.map((t) =>
                 t.id === targetId
                   ? {
                       ...t,
@@ -1424,15 +1424,41 @@ export const useWorkStore = create<WorkState>()(
       skipHydration: true,
       version: 5,
       merge: (persisted, current) => {
-        const raw = (persisted ?? {}) as Partial<WorkState>;
-        const shaped = ensureShape(raw);
+        // Legacy V1 used "trails" for conversations. Read that shape only to
+        // migrate in place; never write the obsolete keys again. Retaining the
+        // storage namespace protects saved messages on existing devices.
+        type LegacyStored = Omit<Partial<WorkState>, "navView" | "sideTabs" | "goals"> & {
+          trails?: Chat[]; activeTrailId?: string; navView?: NavView | "trails";
+          sideTabs?: Array<SideTab & { parentTrailId?: string | null; keptTrailId?: string | null }>;
+          goals?: Record<string, WorkGoal & { trailId?: string }>;
+        };
+        const raw = (persisted ?? {}) as LegacyStored;
+        const normalized = {
+          ...raw,
+          chats: Array.isArray(raw.chats) ? raw.chats : raw.trails,
+          activeChatId: raw.activeChatId ?? raw.activeTrailId,
+          navView: raw.navView === "trails" ? "chats" as const : raw.navView,
+          sideTabs: (raw.sideTabs ?? []).map(tab => ({
+            ...tab,
+            parentChatId: tab.parentChatId ?? tab.parentTrailId ?? null,
+            keptChatId: tab.keptChatId ?? tab.keptTrailId ?? null,
+          })),
+        } as Partial<WorkState>;
+        const shaped = ensureShape(normalized);
         return {
           ...current,
           ...shaped,
-          offlineQueue: Array.isArray(raw.offlineQueue) ? raw.offlineQueue : [],
-          followupQueue: Array.isArray(raw.followupQueue) ? raw.followupQueue : [],
+          offlineQueue: Array.isArray(raw.offlineQueue) ? raw.offlineQueue.map(item => ({
+            ...item, targetKind: (item.targetKind as string) === "trail" ? "chat" as const : item.targetKind,
+          })) : [],
+          followupQueue: Array.isArray(raw.followupQueue) ? raw.followupQueue.map(item => ({
+            ...item, targetKind: (item.targetKind as string) === "trail" ? "chat" as const : item.targetKind,
+          })) : [],
           pausedQueueTargets: Array.isArray(raw.pausedQueueTargets) ? raw.pausedQueueTargets : [],
-          goals: raw.goals && typeof raw.goals === "object" ? raw.goals : {},
+          goals: raw.goals && typeof raw.goals === "object"
+            ? Object.fromEntries(Object.entries(raw.goals).map(([id, goal]) => [id, {
+              ...goal, chatId: goal.chatId ?? goal.trailId ?? id,
+            }])) : {},
         };
       },
       partialize: (s) => ({
@@ -1446,8 +1472,8 @@ export const useWorkStore = create<WorkState>()(
             : p,
         ),
         activeProjectId: s.activeProjectId,
-        trails: s.trails,
-        activeTrailId: s.activeTrailId,
+        chats: s.chats,
+        activeChatId: s.activeChatId,
         drafts: s.drafts,
         sidebarOpen: s.sidebarOpen,
         sideOpen: s.sideOpen,
@@ -1477,8 +1503,8 @@ function hostname(url: string) {
   }
 }
 
-export function useActiveTrail() {
-  return useWorkStore((s) => s.trails.find((t) => t.id === s.activeTrailId) ?? s.trails[0]!);
+export function useActiveChat() {
+  return useWorkStore((s) => s.chats.find((t) => t.id === s.activeChatId) ?? s.chats[0]!);
 }
 
 export function useActiveProject(): Project | null {
@@ -1491,5 +1517,5 @@ export function useActiveSideTab() {
 
 export function useProjectTrails() {
   const projectId = useWorkStore((s) => s.activeProjectId);
-  return useWorkStore((s) => s.trails.filter((t) => t.projectId === projectId));
+  return useWorkStore((s) => s.chats.filter((t) => t.projectId === projectId));
 }

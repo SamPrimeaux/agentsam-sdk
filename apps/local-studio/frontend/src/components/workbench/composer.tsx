@@ -30,7 +30,7 @@ export function Composer({
   placeholder = "Work with AgentSam",
 }: {
   targetId: string;
-  targetKind: "trail" | "side";
+  targetKind: "chat" | "side";
   placeholder?: string;
 }) {
   const value = useWorkStore((s) => s.drafts[targetId] ?? "");
@@ -43,7 +43,7 @@ export function Composer({
   const runMode = useWorkStore((s) => s.runModes[targetId] ?? defaultRunModeForTarget(targetKind));
   const setRunMode = useWorkStore((s) => s.setRunMode);
   const fileRef = useRef<HTMLInputElement>(null);
-  const goal = useWorkStore((s) => targetKind === "trail" ? s.goals[targetId] : undefined);
+  const goal = useWorkStore((s) => targetKind === "chat" ? s.goals[targetId] : undefined);
   const clearGoal = useWorkStore((s) => s.clearGoal);
   const toggleGoalPaused = useWorkStore((s) => s.toggleGoalPaused);
   const openSideTab = useWorkStore((s) => s.openSideTab);
@@ -229,7 +229,7 @@ export function Composer({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button type="button" size="icon-sm" variant="ghost" className="size-7" aria-label="Edit goal" onClick={() => openSideTab("goal", { title: "Edit goal", parentTrailId: targetId, ephemeral: false })}>
+                  <Button type="button" size="icon-sm" variant="ghost" className="size-7" aria-label="Edit goal" onClick={() => openSideTab("goal", { title: "Edit goal", parentChatId: targetId, ephemeral: false })}>
                     <Maximize2 className="size-3.5" />
                   </Button>
                 </TooltipTrigger>
@@ -247,7 +247,7 @@ export function Composer({
         onCancel={() => stop(targetId)}
         streaming={streaming}
         placeholder={targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
-        toolbarStart={<>{trigger}{targetKind === 'trail' ? <ProjectPicker trailId={targetId} /> : null}{attachControl}</>}
+        toolbarStart={<>{trigger}{targetKind === 'chat' ? <ProjectPicker chatId={targetId} /> : null}{attachControl}</>}
         attachmentPreview={attachmentPreview}
         sendControl={sendControl}
         cancelControl={cancelControl}

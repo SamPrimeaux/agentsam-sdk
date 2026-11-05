@@ -7,7 +7,7 @@ import { useWorkStore } from "@/lib/work/store";
  * This local adapter does NOT claim D1 synchronization of unsynced chats.
  */
 function summarize(): Array<WorkProjectChat & { workProjectId?: string }> {
-  return useWorkStore.getState().trails.map((chat) => ({
+  return useWorkStore.getState().chats.map((chat) => ({
     id: chat.id,
     title: chat.title || "Untitled conversation",
     updatedAt: chat.updatedAt,
@@ -28,12 +28,12 @@ export const localStudioProjectChats: Pick<
   },
   async assignProjectChat(chatId, projectId) {
     const store = useWorkStore.getState();
-    if (!store.trails.some((chat) => chat.id === chatId)) throw new Error("studio_chat_not_found");
+    if (!store.chats.some((chat) => chat.id === chatId)) throw new Error("studio_chat_not_found");
     store.assignChatToWorkProject(chatId, projectId);
   },
   async createProjectChat(projectId) {
     const store = useWorkStore.getState();
-    const id = store.startTrail();
+    const id = store.startChat();
     store.assignChatToWorkProject(id, projectId);
     return id;
   },

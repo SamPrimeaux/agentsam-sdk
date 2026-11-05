@@ -70,7 +70,7 @@ export function PluginPicker({ value, onChange, children }: {
   function choose(entry:ComposerCatalogEntry){
     if(entry.action.type==='open-side-stage'&&entry.ready){
       useWorkStore.getState().openSideTab(entry.action.tab as Parameters<ReturnType<typeof useWorkStore.getState>['openSideTab']>[0],
-        entry.action.tab==='goal' ? { title:'Edit goal',parentTrailId:useWorkStore.getState().activeTrailId,ephemeral:false }
+        entry.action.tab==='goal' ? { title:'Edit goal',parentChatId:useWorkStore.getState().activeChatId,ephemeral:false }
           : entry.action.tab==='chat' ? undefined : {ephemeral:false});
       replaceMention(entry,false);
     } else if(entry.action.type==='setup'||!entry.ready){

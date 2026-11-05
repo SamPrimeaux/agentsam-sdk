@@ -2,24 +2,24 @@ import { useEffect, useRef, useState } from 'react';
 import { Copy, Link2, LoaderCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import type { Trail } from '../../shared/agentsam/src/work-types';
+import type { Chat } from '../../shared/agentsam/src/work-types';
 import { shareAttachmentMetadata } from '@/lib/content/share-attachment-metadata';
 
-type ShareTrail = Pick<Trail, 'id' | 'title' | 'messages'>;
+type ShareChat = Pick<Chat, 'id' | 'title' | 'messages'>;
 type ShareLink = { id: string; title: string; url: string; createdAt: string };
 
 /** Shared Work conversation share flow: create, copy, list and revoke public links. */
-export function ChatShareDialog({ open, onOpenChange, trail }: { open: boolean; onOpenChange: (open: boolean) => void; trail: ShareTrail | null }) {
+export function ChatShareDialog({ open, onOpenChange, chat }: { open: boolean; onOpenChange: (open: boolean) => void; chat: ShareChat | null }) {
   const [links, setLinks] = useState<ShareLink[]>([]);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const createdForOpen = useRef(false);
 
   async function loadLinks() {
-    if (!trail) return;
+    if (!chat) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/studio/conversation-shares?conversation_id=' + encodeURIComponent(trail.id), { credentials: 'same-origin' });
+      const response = await fetch('/api/studio/conversation-shares?conversation_id=' + encodeURIComponent(chat.id), { credentials: 'same-origin' });
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error('Unable to load links');
       setLinks(result.links ?? []);
@@ -30,16 +30,16 @@ export function ChatShareDialog({ open, onOpenChange, trail }: { open: boolean; 
   useEffect(() => {
     if (!open) { createdForOpen.current = false; return; }
     void loadLinks();
-    if (!createdForOpen.current && trail) { createdForOpen.current = true; void createLink(); }
-  }, [open, trail?.id]);
+    if (!createdForOpen.current && chat) { createdForOpen.current = true; void createLink(); }
+  }, [open, chat?.id]);
 
   async function createLink() {
-    if (!trail || busy) return;
+    if (!chat || busy) return;
     setBusy(true);
     try {
       const response = await fetch('/api/studio/conversation-shares', {
         method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ conversationId: trail.id, title: trail.title, messages: trail.messages.map(message => ({
+        body: JSON.stringify({ conversationId: chat.id, title: chat.title, messages: chat.messages.map(message => ({
           role: message.role, content: message.content,
           attachments: shareAttachmentMetadata(message),
         })) }),
@@ -67,7 +67,7 @@ export function ChatShareDialog({ open, onOpenChange, trail }: { open: boolean; 
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-lg">
     <DialogTitle>Share conversation</DialogTitle>
     <DialogDescription>Anyone with a public link can view this conversation, including its text and attachment names.</DialogDescription>
-    <button type="button" className="as-nav-button" onClick={() => void createLink()} disabled={!trail || busy}>
+    <button type="button" className="as-nav-button" onClick={() => void createLink()} disabled={!chat || busy}>
       {busy ? <LoaderCircle size={18} className="animate-spin" /> : <Link2 size={18} />}
       {busy ? 'Creating link…' : 'Create a public link'}
     </button>

@@ -143,7 +143,7 @@
 .as-nav-submenu-link[aria-expanded="true"] .as-nav-destination-chevron { transform: rotate(180deg); }
 .as-nav-sidenav-main { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--nav-border) transparent; }
 .as-nav-destinations { flex-shrink: 0; }
-.as-nav-history { flex: 1 0 auto; overflow: visible; }
+.as-nav-history { flex: 1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
 .as-nav-sidenav-reserve, .as-nav-sidenav { transition: width 160ms ease; }
 .as-nav-resize { position: absolute; inset: 0 -3px 0 auto; z-index: 2; width: 6px; cursor: col-resize; touch-action: none; }
 .as-nav-resize:hover, .as-nav-resize:focus-visible { background: color-mix(in srgb, var(--nav-accent) 45%, transparent); }

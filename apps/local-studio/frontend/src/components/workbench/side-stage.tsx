@@ -94,7 +94,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
                 return (
                   <DropdownMenuItem key={item.id} onSelect={() => {
                     const extra = item.tab === "goal"
-                      ? { title: "Edit goal", parentTrailId: useWorkStore.getState().activeTrailId, ephemeral: false }
+                      ? { title: "Edit goal", parentChatId: useWorkStore.getState().activeChatId, ephemeral: false }
                       : item.tab === "chat" ? undefined : { ephemeral: false };
                     openSideTab(item.tab, extra);
                   }}>
@@ -143,7 +143,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
         {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
         {tab?.kind === "terminal" ? <TerminalPane variant="side" /> : null}
-        {tab?.kind === "goal" ? <GoalEditor trailId={tab.parentTrailId ?? undefined} /> : null}
+        {tab?.kind === "goal" ? <GoalEditor chatId={tab.parentChatId ?? undefined} /> : null}
         {!tab ? (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
             <p className="text-sm text-muted-foreground">Open a co-worker, browser, files, or CLI pane.</p>
@@ -213,7 +213,7 @@ function CoworkerChat({ tabId }: { tabId: string }) {
   const tab = useWorkStore((s) => s.sideTabs.find((t) => t.id === tabId));
   const keepSideChat = useWorkStore((s) => s.keepSideChat);
   const setDraft = useWorkStore((s) => s.setDraft);
-  const trails = useWorkStore((s) => s.trails);
+  const chats = useWorkStore((s) => s.chats);
   const streaming = useWorkStore((s) => s.streamingIds.includes(tabId));
   const [databaseContext, setDatabaseContext] = useState<Record<string, unknown> | null>(null);
 
@@ -250,7 +250,7 @@ function CoworkerChat({ tabId }: { tabId: string }) {
   }, [setDraft, tabId]);
 
   if (!tab) return null;
-  const parent = trails.find((t) => t.id === tab.parentTrailId);
+  const parent = chats.find((t) => t.id === tab.parentChatId);
   const empty = tab.messages.length === 0;
 
   return (
@@ -299,7 +299,7 @@ function CoworkerChat({ tabId }: { tabId: string }) {
       ) : null}
       <AgentConversationSurface
         empty={empty}
-        thread={<MessageList messages={tab.messages} trailId={parent?.id} streaming={streaming} />}
+        thread={<MessageList messages={tab.messages} chatId={parent?.id} streaming={streaming} />}
         emptyState={
           <div className="flex flex-col items-center justify-center px-6 text-center">
             <StudioMark className="mb-3 size-10" />
@@ -327,9 +327,9 @@ function CoworkerChat({ tabId }: { tabId: string }) {
 }
 
 
-function GoalEditor({ trailId }: { trailId?: string }) {
-  const activeTrailId = useWorkStore((s) => s.activeTrailId);
-  const id = trailId ?? activeTrailId;
+function GoalEditor({ chatId }: { chatId?: string }) {
+  const activeChatId = useWorkStore((s) => s.activeChatId);
+  const id = chatId ?? activeChatId;
   const goal = useWorkStore((s) => s.goals[id]);
   const updateGoal = useWorkStore((s) => s.updateGoal);
   const clearGoal = useWorkStore((s) => s.clearGoal);

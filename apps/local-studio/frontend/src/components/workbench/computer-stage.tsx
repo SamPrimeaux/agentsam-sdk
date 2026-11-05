@@ -18,7 +18,7 @@ export function ComputerFullscreen({
   onClose: () => void;
 }) {
   const tab = useActiveSideTab();
-  const trailId = useWorkStore((s) => s.activeTrailId);
+  const chatId = useWorkStore((s) => s.activeChatId);
   const [provider, setProvider] = useState<ComputerProvider>("google-gemini-computer-use");
   const [surface, setSurface] = useState<ComputerSurface>("browser");
   const meta = useMemo(
@@ -84,8 +84,8 @@ export function ComputerFullscreen({
 
       <div className="shrink-0 border-t border-border bg-background">
         <Composer
-          targetId={trailId}
-          targetKind="trail"
+          targetId={chatId}
+          targetKind="chat"
           placeholder="Tell the agent to take over this surface…"
         />
       </div>

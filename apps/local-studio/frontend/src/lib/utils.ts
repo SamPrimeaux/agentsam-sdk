@@ -20,7 +20,7 @@ export function shortTime(ts: number) {
 
 export function titleFromText(text: string) {
   const line = text.replace(/\s+/g, " ").trim();
-  if (!line) return "New trail";
+  if (!line) return "New chat";
   return line.length > 42 ? `${line.slice(0, 42).trimEnd()}…` : line;
 }
 

@@ -295,7 +295,7 @@ export function WorkShell({
           { id: "tickets" as const, label: "Tickets", href: "/tickets", icon: CheckSquare },
           { id: "mail" as const, label: "Mail", href: "/mail", icon: Mail },
           { id: "projects" as const, label: "Projects", href: "/projects", icon: FolderKanban },
-          { id: "artifacts" as const, label: "Files", href: "/artifacts", icon: Archive },
+          { id: "artifacts" as const, label: "Library", href: "/artifacts", icon: Archive },
         ].map((item) => (
           <button type="button" key={item.id} data-active={current === item.id} onClick={() => onNavigate(navHref(item, surface))}>
             <item.icon size={17} />

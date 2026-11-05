@@ -189,17 +189,20 @@
     } catch {projectHistoryStatus='error';}
     updateSharedNavigation();
   }
-  function updateStoredTrail(id, transform) {
+  function updateStoredChat(id, transform) {
     try {
       const saved = JSON.parse(window.localStorage.getItem('agentsam-work-v1') || 'null');
-      if (!saved?.state || !Array.isArray(saved.state.trails)) return false;
+      if (!saved?.state) return false;
+      const existing = Array.isArray(saved.state.chats) ? saved.state.chats : saved.state.trails;
+      if (!Array.isArray(existing)) return false;
       let found = false;
-      saved.state.trails = saved.state.trails.map(trail => {
-        if (trail.id !== id) return trail;
+      saved.state.chats = existing.map(chat => {
+        if (chat.id !== id) return chat;
         found = true;
-        return transform(trail);
+        return transform(chat);
       });
       if (!found) return false;
+      delete saved.state.trails;
       window.localStorage.setItem('agentsam-work-v1', JSON.stringify(saved));
       window.dispatchEvent(new CustomEvent('agentsam:workspace-navigation'));
       return true;
@@ -222,21 +225,21 @@
   }
   function workspaceNavigation() {
     if(window.__agentsamWorkspaceNavigation)return window.__agentsamWorkspaceNavigation;
-    let trails=[];
-    try {const saved=JSON.parse(localStorage.getItem('agentsam-work-v1') || 'null');trails=Array.isArray(saved?.state?.trails)?saved.state.trails:[];}catch{/* Unavailable persistence has an honest empty state. */}
+    let chats=[];
+    try {const saved=JSON.parse(localStorage.getItem('agentsam-work-v1') || 'null');chats=Array.isArray(saved?.state?.chats)?saved.state.chats:Array.isArray(saved?.state?.trails)?saved.state.trails:[];}catch{/* Unavailable persistence has an honest empty state. */}
     return {
       projects:registeredProjects.map(item=>{const updatedAt=Date.parse(item.updatedAt || '');return {id:item.id,name:item.name,pinned:item.starred,updatedAt:Number.isFinite(updatedAt)?updatedAt:undefined};}),
-      conversations:trails.filter(item=>item.id!=='trail-studio'||item.messages?.some(message=>message.role==='user')).map(item=>({id:item.id,title:item.title,projectId:item.workProjectId,pinned:item.pinned,updatedAt:item.updatedAt})),
+      conversations:chats.filter(item=>item.id!=='chat-studio'||item.messages?.some(message=>message.role==='user')).map(item=>({id:item.id,title:item.title,projectId:item.workProjectId,pinned:item.pinned,updatedAt:item.updatedAt})),
       historyStatus:projectHistoryStatus,onRetryHistory:refreshWorkspaceProjects,
       onSelectConversation:id=>navigateHost('/chats/'+encodeURIComponent(id)),
       onSelectProject:id=>navigateHost('/admin/projects/'+encodeURIComponent(id)),
       onPinConversation:id=>{
-        if (!updateStoredTrail(id, trail=>({...trail,pinned:!trail.pinned}))) window.alert('Conversation pin could not be saved. Please retry.');
+        if (!updateStoredChat(id, chat=>({...chat,pinned:!chat.pinned}))) window.alert('Conversation pin could not be saved. Please retry.');
       },
       onRenameConversation:(id,title)=>{
         const normalized=String(title || '').trim();
         if (!normalized) return;
-        if (!updateStoredTrail(id, trail=>({...trail,title:normalized,updatedAt:Date.now()}))) window.alert('Conversation name could not be saved. Please retry.');
+        if (!updateStoredChat(id, chat=>({...chat,title:normalized,updatedAt:Date.now()}))) window.alert('Conversation name could not be saved. Please retry.');
       },
       onPinProject:id=>{
         const selected=registeredProjects.find(item=>item.id===id);

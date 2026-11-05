@@ -39,15 +39,7 @@ const EMPTY_LIVE_SNAPSHOT: WorkSnapshot = {
     { id: "tickets", label: "Tickets", href: "/tickets", group: "work" },
     { id: "mail", label: "Mail", href: "/mail", group: "work" },
     { id: "projects", label: "Projects", href: "/projects", group: "work" },
-    { id: "artifacts", label: "My artifacts", href: "/artifacts", group: "files" },
-    { id: "r2", label: "R2 Storage", href: "/artifacts?source=r2", group: "files" },
-    { id: "google-drive", label: "Google Drive", href: "/artifacts?source=google-drive", group: "files" },
-    { id: "shared-drives", label: "Shared drives", href: "/artifacts?source=shared-drives", group: "files" },
-    { id: "local-folder", label: "Local folder", href: "/artifacts?source=local", group: "files" },
-    { id: "shared-with-me", label: "Shared with me", href: "/artifacts?view=shared", group: "files" },
-    { id: "recent", label: "Recent", href: "/artifacts?view=recent", group: "files" },
-    { id: "starred", label: "Starred", href: "/artifacts?view=starred", group: "files" },
-    { id: "trash", label: "Trash", href: "/artifacts?view=trash", group: "files" },
+    { id: "artifacts", label: "Library", href: "/artifacts", group: "files" },
   ],
   tickets: [],
   artifacts: [],
@@ -361,6 +353,7 @@ export function WorkProduct({
       {surface === "artifacts" ? <ArtifactsSurface
         artifacts={snapshot.artifacts}
         onOpenArtifact={host.openArtifact}
+        onRefresh={async () => { await refreshSnapshot(); }}
         initialSource={(() => {
           if (typeof window === "undefined") return "all";
           const value = new URLSearchParams(window.location.search).get("source");

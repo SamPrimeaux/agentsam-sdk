@@ -33,10 +33,10 @@ const Body = z.object({
     )
     .min(1)
     .max(24),
-  surface: z.enum(["trail", "side"]).optional(),
+  surface: z.enum(["chat", "side"]).optional(),
   run_mode: z.enum(["ask", "plan", "agent", "debug", "multitask"]).optional(),
   /** @deprecated legacy surface field; use surface. */
-  mode: z.enum(["trail", "side"]).optional(),
+  mode: z.enum(["chat", "side"]).optional(),
   provider: z.string().min(1).max(40),
   model_id: z.string().min(1).max(160),
   parentTitle: z.string().max(200).optional(),
@@ -256,7 +256,7 @@ export const Route = createFileRoute("/api/chat")({
           return Response.json({ error: message }, { status: 409 });
         }
 
-        const surface: StudioChatSurface = parsed.surface ?? parsed.mode ?? "trail";
+        const surface: StudioChatSurface = parsed.surface ?? parsed.mode ?? "chat";
         const runMode = parsed.run_mode ?? (surface === "side" ? "ask" : "agent");
         const messages: { role: string; content: string }[] = buildStudioSystemMessages({
           surface,

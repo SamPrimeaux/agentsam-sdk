@@ -7,7 +7,7 @@ import { MessageMarkdown } from "@/components/workbench/markdown";
 import { Composer } from "@/components/workbench/composer";
 import { StudioMark } from "@/components/mark";
 import { formatElapsed } from "@/lib/utils";
-import { useWorkStore, useActiveTrail } from "@/lib/work/store";
+import { useWorkStore, useActiveChat } from "@/lib/work/store";
 import type { ChatMessage } from "@inneranimalmedia/agentsam-local-shared";
 import { Button } from "@/components/ui/button";
 import { ImageLightbox } from "@/components/workbench/image-lightbox";
@@ -48,12 +48,12 @@ function ConversationImage({ refInfo }: { refInfo: ChatImageReference }) {
 
 function MessageBubble({
   message,
-  trailId,
+  chatId,
   streaming,
   startedAt,
 }: {
   message: ChatMessage;
-  trailId?: string;
+  chatId?: string;
   streaming?: boolean;
   startedAt?: number;
 }) {
@@ -93,18 +93,18 @@ function MessageBubble({
           Working{startedAt ? ` · ${formatElapsed(now - startedAt)}` : ""}
         </p>
       ) : null}
-      {message.content ? <MessageMarkdown content={message.content} trailId={trailId} /> : null}
+      {message.content ? <MessageMarkdown content={message.content} chatId={chatId} /> : null}
     </div>
   );
 }
 
 export function MessageList({
   messages,
-  trailId,
+  chatId,
   streaming,
 }: {
   messages: ChatMessage[];
-  trailId?: string;
+  chatId?: string;
   streaming: boolean;
 }) {
   return (
@@ -117,7 +117,7 @@ export function MessageList({
         <MessageBubble
           key={message.id}
           message={message as ChatMessage}
-          trailId={trailId}
+          chatId={chatId}
           streaming={streaming && index === messages.length - 1 && message.role === "assistant"}
           startedAt={streaming ? message.createdAt : undefined}
         />
@@ -126,14 +126,14 @@ export function MessageList({
   );
 }
 
-export function TrailThread() {
-  const trail = useActiveTrail();
+export function ChatThread() {
+  const chat = useActiveChat();
   const send = useWorkStore((s) => s.send);
-  const streaming = useWorkStore((s) => s.streamingIds.includes(trail.id));
-  const empty = trail.messages.length === 0;
+  const streaming = useWorkStore((s) => s.streamingIds.includes(chat.id));
+  const empty = chat.messages.length === 0;
 
   const starterStatus =
-    trail.id === "trail-studio" && trail.messages.length === 1 ? (
+    chat.id === "chat-studio" && chat.messages.length === 1 ? (
       <div className="mx-auto mb-2 flex w-full max-w-6xl flex-wrap gap-2 px-4">
         {STARTERS.map((prompt) => (
           <Button
@@ -142,7 +142,7 @@ export function TrailThread() {
             variant="outline"
             size="sm"
             className="h-auto max-w-full rounded-full px-3 py-2 text-left text-xs font-normal text-muted-foreground"
-            onClick={() => void send(trail.id, "trail", prompt)}
+            onClick={() => void send(chat.id, "chat", prompt)}
           >
             {prompt}
           </Button>
@@ -153,15 +153,15 @@ export function TrailThread() {
   return (
     <AgentConversationSurface
       empty={empty}
-      thread={<MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} />}
-      emptyState={<EmptyTrail onPrompt={(text) => void send(trail.id, "trail", text)} />}
+      thread={<MessageList messages={chat.messages} chatId={chat.id} streaming={streaming} />}
+      emptyState={<EmptyChat onPrompt={(text) => void send(chat.id, "chat", text)} />}
       status={starterStatus}
-      composer={<Composer targetId={trail.id} targetKind="trail" />}
+      composer={<Composer targetId={chat.id} targetKind="chat" />}
     />
   );
 }
 
-function EmptyTrail({ onPrompt }: { onPrompt: (text: string) => void }) {
+function EmptyChat({ onPrompt }: { onPrompt: (text: string) => void }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
       <StudioMark className="mb-4 size-12" />

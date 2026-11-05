@@ -23,8 +23,8 @@ const installed = [
   { to: "/sites" as Destination, name: "Sites", label: "Website CMS", icon: Globe },
 ];
 
-function trailPreview(trail: { messages: Array<{ role: string; content: string }> }) {
-  const last = [...trail.messages].reverse().find((msg) => msg.role !== "system");
+function chatPreview(chat: { messages: Array<{ role: string; content: string }> }) {
+  const last = [...chat.messages].reverse().find((msg) => msg.role !== "system");
   return (last?.content || "Ready for your first message").replace(/\s+/g, " ").slice(0, 120);
 }
 
@@ -33,18 +33,18 @@ export function LocalStudioHome() {
   const state = useWorkStore();
   const recentProjects = state.hydrated ? state.projects.slice(0, 3) : [];
   const recentChats = state.hydrated
-    ? [...state.trails]
-        .filter((trail) => trail.messages.some((msg) => msg.role === "user") || trail.title !== "New chat")
+    ? [...state.chats]
+        .filter((chat) => chat.messages.some((msg) => msg.role === "user") || chat.title !== "New chat")
         .sort((a, b) => b.updatedAt - a.updatedAt)
         .slice(0, 5)
     : [];
 
   const newConversation = () => {
-    const id = state.startTrail();
+    const id = state.startChat();
     void navigate({ to: "/chats/$chatId", params: { chatId: id } });
   };
   const resumeConversation = (id: string) => {
-    state.setActiveTrail(id);
+    state.setActiveChat(id);
     void navigate({ to: "/chats/$chatId", params: { chatId: id } });
   };
   const newProject = () => {
@@ -81,7 +81,7 @@ export function LocalStudioHome() {
               >
                 <span className="platform-home-resume-label">Resume</span>
                 <span className="platform-home-resume-title">{chat.title}</span>
-                <span className="platform-home-resume-preview">{trailPreview(chat)}</span>
+                <span className="platform-home-resume-preview">{chatPreview(chat)}</span>
                 <ArrowRight size={14} aria-hidden="true" />
               </button>
             ))}
@@ -128,7 +128,7 @@ export function LocalStudioHome() {
         <div className="platform-home-section-head"><div><h2 id="platform-recent-heading">Your activity</h2><p>Based on saved Local Studio work.</p></div><Link to="/projects">All projects <ArrowRight size={14}/></Link></div>
         <div className="platform-home-activity">
           <div className="platform-home-activity-count"><strong>{state.hydrated ? state.projects.length : "—"}</strong><span>Projects</span></div>
-          <div className="platform-home-activity-count"><strong>{state.hydrated ? state.trails.length : "—"}</strong><span>Conversations</span></div>
+          <div className="platform-home-activity-count"><strong>{state.hydrated ? state.chats.length : "—"}</strong><span>Conversations</span></div>
           <div className="platform-home-activity-list">
             {recentProjects.length ? recentProjects.map((project) => <Link key={project.id} to="/projects"><Folder size={15}/>{project.name}<ArrowUpRight size={14}/></Link>) : <span>No recent projects saved here yet.</span>}
           </div>

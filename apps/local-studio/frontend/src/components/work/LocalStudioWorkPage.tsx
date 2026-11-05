@@ -210,7 +210,7 @@ function createDesktopWorkHost(): WorkHost {
  * This is browser-side only; never upload local paths, contents or capabilities to D1. */
 function withIndexedLocalArtifacts(snapshot: WorkSnapshot): WorkSnapshot {
   const state = useWorkStore.getState();
-  const localFiles = listLocalWorkspaceArtifacts(state.projects, state.trails);
+  const localFiles = listLocalWorkspaceArtifacts(state.projects, state.chats);
   return { ...snapshot, artifacts: [...snapshot.artifacts, ...localFiles] };
 }
 function openIndexedLocalArtifact(artifact: WorkArtifact) {

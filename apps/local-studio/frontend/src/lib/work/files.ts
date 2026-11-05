@@ -41,7 +41,7 @@ function parseFenceInfo(info: string, body: string): { language: string; path: s
   return { language: parts[0] || "plaintext", path: null };
 }
 
-export function extractArtifacts(markdown: string, trailId?: string): Artifact[] {
+export function extractArtifacts(markdown: string, chatId?: string): Artifact[] {
   const out: Artifact[] = [];
   let index = 0;
   for (const match of markdown.matchAll(FENCE_RE)) {
@@ -62,7 +62,7 @@ export function extractArtifacts(markdown: string, trailId?: string): Artifact[]
       updatedAt: Date.now(),
       kind: "code",
       origin: "chat",
-      trailId,
+      chatId,
     });
     index += 1;
   }
@@ -83,7 +83,7 @@ export function mergeArtifacts(existing: Artifact[], incoming: Artifact[]) {
         origin: file.origin ?? next[i]!.origin,
         title: file.title ?? next[i]!.title,
         url: file.url ?? next[i]!.url,
-        trailId: file.trailId ?? next[i]!.trailId,
+        chatId: file.chatId ?? next[i]!.chatId,
       };
     } else {
       next.push(file);

@@ -6,6 +6,7 @@ export type NavTokens = Partial<Record<'canvas' | 'sidebar' | 'surface' | 'popov
 export interface NavBrand { name: string; logo?: string; lightLogo?: string; home?: string }
 export interface NavProject { id: string; name: string; pinned?: boolean; updatedAt?: number }
 export interface NavConversation { id: string; title: string; projectId?: string; pinned?: boolean; updatedAt?: number }
+export interface NavPinnedResource { id: string; title: string; kind: string; open?: string | null }
 export interface NavAccount { id: string; name: string; plan?: string; avatar?: string }
 export interface NavAction { id: string; label: string; icon?: ReactNode; disabled?: boolean; shortcut?: string; destructive?: boolean; separatorBefore?: boolean; children?: NavAction[]; onSelect?: () => void }
 export interface NavDestination { id: string; label: string; icon?: ReactNode; href?: string; onSelect?: () => void; active?: boolean; exact?: boolean; children?: NavDestination[] }
@@ -19,6 +20,8 @@ export interface NavValue {
   conversation?: NavConversation;
   projects?: NavProject[];
   conversations?: NavConversation[];
+  pinnedResources?: NavPinnedResource[];
+  onOpenResource?: (resource: NavPinnedResource) => void;
   account?: NavAccount;
   accounts?: NavAccount[];
   destinations?: NavDestination[];

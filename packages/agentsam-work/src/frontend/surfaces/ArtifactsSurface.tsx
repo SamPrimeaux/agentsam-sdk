@@ -1,147 +1,215 @@
-import { Box, FileArchive, FileAudio2, FileCode2, FileImage, FileText, FileVideo2, Grid2X2, List } from "lucide-react";
+import {
+  Archive, Box, Columns3, Copy, ExternalLink, FileArchive, FileAudio2, FileCode2, FileImage, FileText,
+  FileVideo2, Folder, Grid2X2, LayoutGrid, List, MoreHorizontal, Palette, Pencil,
+  Presentation, RotateCcw, Star, StickyNote, Table2,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { WorkArtifact } from "../../contracts/index";
 import { WorkSearch } from "../WorkShell";
 
+const sourceLabels: Record<WorkArtifact["source"], string> = {
+  artifacts: "Saved work", r2: "R2", cf_images: "Cloudflare Images", stream: "Cloudflare Stream",
+  "google-drive": "Google Drive", "shared-drives": "Shared drives", local: "My computer",
+};
 function iconFor(kind: WorkArtifact["kind"]) {
-  if (kind === "image") return FileImage;
-  if (kind === "video") return FileVideo2;
-  if (kind === "audio") return FileAudio2;
-  if (kind === "model") return Box;
-  if (kind === "code") return FileCode2;
-  if (kind === "archive") return FileArchive;
-  return FileText;
+  switch (kind) {
+    case "image": return FileImage;
+    case "video": return FileVideo2;
+    case "audio": return FileAudio2;
+    case "model": return Box;
+    case "code": return FileCode2;
+    case "archive": return FileArchive;
+    case "design": case "website": case "product": return Palette;
+    case "presentation": return Presentation;
+    case "spreadsheet": return Table2;
+    case "note": return StickyNote;
+    case "folder": return Folder;
+    default: return FileText;
+  }
 }
 
-export function ArtifactsSurface({ artifacts, title = "All sources", heading = "My artifacts",
-  initialSource = "all", initialView = "all", onOpenArtifact,
-  emptyMessage = "No files are registered for this view. Provider connections are not inferred from empty results.",
-}: { artifacts: WorkArtifact[]; title?: string; heading?: string;
+export function ArtifactsSurface({
+  artifacts,
+  title = "Library",
+  initialSource = "all",
+  initialView = "all",
+  onOpenArtifact,
+  onRefresh,
+  emptyMessage = "No saved work is registered yet.",
+}: {
+  artifacts: WorkArtifact[];
+  title?: string;
+  heading?: string;
   initialSource?: WorkArtifact["source"] | "all";
   initialView?: "all" | "recent" | "starred" | "shared" | "trash";
   emptyMessage?: string;
-  onOpenArtifact?: (artifact: WorkArtifact) => void | Promise<void> }) {
+  onOpenArtifact?: (artifact: WorkArtifact) => void | Promise<void>;
+  onRefresh?: () => void | Promise<void>;
+}) {
   const [query, setQuery] = useState("");
-  const [grid, setGrid] = useState(true);
+  const [layout, setLayout] = useState<"grid" | "list" | "masonry">("grid");
   const [source, setSource] = useState<WorkArtifact["source"] | "all">(initialSource);
-  useEffect(() => setSource(initialSource), [initialSource]);
   const [kind, setKind] = useState<WorkArtifact["kind"] | "all">("all");
   const [view, setView] = useState(initialView);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [mutating, setMutating] = useState<string | null>(null);
+  const [error, setError] = useState("");
   useEffect(() => setView(initialView), [initialView]);
-  // Show storage choices even before their adapter has supplied any data.
-  // Empty != disconnected: connection health requires a separate verified provider read.
-  const sources: WorkArtifact["source"][] = ["artifacts", "r2", "cf_images", "stream", "google-drive", "shared-drives", "local"];
-  const kinds = [...new Set([
-    ...artifacts.map((artifact) => artifact.kind),
-    "image", "video", "audio", "model", "document", "code", "archive", "other",
-  ] as WorkArtifact["kind"][])].sort();
-  const visible = useMemo(
-    () => artifacts.filter((artifact) =>
-      artifact.name.toLowerCase().includes(query.toLowerCase()) &&
-      (source === "all" || artifact.source === source) &&
-      (kind === "all" || artifact.kind === kind) &&
-      (view === "trash" ? artifact.deleted === true : artifact.deleted !== true) &&
-      (view !== "starred" || artifact.starred === true) &&
-      (view !== "shared" || artifact.shared === true)
-    ).sort((a, b) => view === "recent" ? (b.updatedAt || 0) - (a.updatedAt || 0) : 0),
-    [artifacts, query, source, kind, view],
+  useEffect(() => setSource(initialSource), [initialSource]);
+  const sources = useMemo(
+    () => [...new Set(artifacts.map(item => item.source))].sort(),
+    [artifacts],
   );
-  const filtered = Boolean(query || source !== "all" || kind !== "all" || view !== "all");
+  const kinds = useMemo(
+    () => [...new Set(artifacts.map(item => item.kind))].sort(),
+    [artifacts],
+  );
+  const visible = useMemo(
+    () => artifacts.filter(item =>
+      item.name.toLowerCase().includes(query.toLowerCase()) &&
+      (source === "all" || item.source === source) &&
+      (kind === "all" || item.kind === kind) &&
+      (view === "trash" ? item.deleted : !item.deleted) &&
+      (view !== "starred" || item.starred === true) &&
+      (view !== "shared" || item.shared === true)
+    ).sort((a,b) => (b.updatedAt || 0)-(a.updatedAt || 0)),
+    [artifacts,query,source,kind,view],
+  );
+  const assetMutation = async (artifact: WorkArtifact, patch: {name?: string; starred?: boolean; archived?: boolean}) => {
+    if (artifact.resourceType !== "artifact" || !artifact.providerId) return;
+    setMutating(artifact.id);
+    setError("");
+    try {
+      const response = await fetch("/api/work/library/artifacts/"+encodeURIComponent(artifact.providerId),{
+        method:"PATCH",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify(patch),
+      });
+      if (!response.ok) throw new Error("We couldn't save that change. Please try again.");
+      await onRefresh?.();
+      setRenaming(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "We couldn't finish that. Please try again.");
+    } finally {setMutating(null);}
+  };
+  const openArtifact = (artifact: WorkArtifact) => {
+    if (artifact.open) {window.open(artifact.open,"_blank","noopener,noreferrer");return;}
+    if (artifact.source === "local" && onOpenArtifact) {void onOpenArtifact(artifact);return;}
+    if (artifact.preview) window.open(artifact.preview,"_blank","noopener,noreferrer");
+  };
 
-  return (
-    <div className="agentsam-work-artifacts">
-      <div className="agentsam-work-artifacts__search">
-        <WorkSearch value={query} onChange={setQuery} placeholder="Search files across sources" />
+  const buttons: Array<{id:string;label:string;filter: WorkArtifact["kind"]|"all";view:"all"|"starred"}> = [
+    {id:"all",label:"All",filter:"all",view:"all"},
+    {id:"starred",label:"Favorites",filter:"all",view:"starred"},
+    {id:"folders",label:"Folders",filter:"folder",view:"all"},
+    {id:"images",label:"Images",filter:"image",view:"all"},
+  ];
+
+  return <div className="agentsam-work-artifacts agentsam-library">
+    <div className="agentsam-work-artifacts__content">
+      <div className="agentsam-work-artifacts__heading">
+        <div><h1>{title}</h1><p className="agentsam-library__description">Everything you create, save, and bring into your workspace.</p></div>
+        <div className="agentsam-work-artifacts__spacer"/>
+        <div className="agentsam-library__layout" role="group" aria-label="Library layout">
+          {([
+            {id:"masonry",icon:Columns3,label:"Masonry view"},
+            {id:"grid",icon:Grid2X2,label:"Grid view"},
+            {id:"list",icon:List,label:"List view"},
+          ] as const).map(option=><button key={option.id} type="button" data-active={layout===option.id}
+            aria-pressed={layout===option.id} aria-label={option.label} title={option.label}
+            onClick={()=>setLayout(option.id)}><option.icon size={15}/></button>)}
+        </div>
       </div>
-
-      <div className="agentsam-work-artifacts__content">
-        <div className="agentsam-work-artifacts__heading">
-          <h1>{view !== "all" ? view === "shared" ? "Shared with me" : view.charAt(0).toUpperCase()+view.slice(1) : title}</h1>
-          <div className="agentsam-work-artifacts__spacer" />
-          <button type="button" className="agentsam-work-toolbar-button" data-primary={!grid} onClick={() => setGrid(false)} aria-label="List view">
-            <List size={15} /><span>List</span>
-          </button>
-          <button type="button" className="agentsam-work-toolbar-button" data-primary={grid} onClick={() => setGrid(true)} aria-label="Grid view">
-            <Grid2X2 size={15} /><span>Grid</span>
-          </button>
+      <div className="agentsam-library__toolbar">
+        <div className="agentsam-library__search"><WorkSearch value={query} onChange={setQuery} placeholder="Search saved work"/></div>
+        <div className="agentsam-library__quickfilters" role="group" aria-label="Quick filters">
+          {buttons.map(button=><button type="button" key={button.id}
+            data-active={view===button.view && kind===button.filter && source==="all"}
+            onClick={()=>{setView(button.view);setKind(button.filter);setSource("all");}}>
+            {button.label}
+          </button>)}
         </div>
-
-        <div className="agentsam-work-artifacts__filters">
-          <span className="agentsam-work-toolbar-button" aria-live="polite">{visible.length} {visible.length === 1 ? "item" : "items"}</span>
-          <label className="agentsam-work-toolbar-button">Source: <select aria-label="Filter by source" value={source} onChange={(event) => setSource(event.target.value as WorkArtifact["source"] | "all")}>
-            <option value="all">All</option>
-            {sources.map((value) => <option key={value} value={value}>{value}</option>)}
-          </select></label>
-          <label className="agentsam-work-toolbar-button">Type: <select aria-label="Filter by type" value={kind} onChange={(event) => setKind(event.target.value as WorkArtifact["kind"] | "all")}>
-            <option value="all">All</option>
-            {kinds.map((value) => <option key={value} value={value}>{value}</option>)}
-          </select></label>
-        </div>
-
-        <section className="agentsam-work-card agentsam-work-artifacts__card">
-          <div className="agentsam-work-artifacts__card-heading">
-            <div>
-              <h2>{heading}</h2>
-              <div className="agentsam-work-artifacts__subtitle">Verified registered files, grouped by storage source</div>
-            </div>
-            <div className="agentsam-work-artifacts__spacer" />
-            <span className="agentsam-work-artifacts__muted">{visible.length} items</span>
-            <span className="agentsam-work-artifacts__muted">Registered sources</span>
-          </div>
-
-          <div className={`agentsam-work-artifacts__items${grid ? " is-grid" : " is-list"}`}>
-            {!visible.length ? (
-              <div className="agentsam-work-empty agentsam-work-artifacts__empty">
-                <strong>{artifacts.length > 0 && filtered ? "No matching artifacts" : "No artifacts yet"}</strong>
-                <p>{view !== "all"
-                  ? "No registered files have verified " + view + " metadata in this provider view. This is not proof the provider is empty."
-                  : source === "all" ? emptyMessage
-                  : "No " + source + " files returned by the active Work storage adapter. An OAuth connection alone does not establish file listing access."}</p>
+      </div>
+      <div className="agentsam-work-artifacts__filters">
+        <label className="agentsam-library__select">Type <select aria-label="Filter by type"
+          value={kind} onChange={event=>setKind(event.target.value as WorkArtifact["kind"]|"all")}>
+          <option value="all">All types</option>
+          {kinds.map(value=><option key={value} value={value}>{value.charAt(0).toUpperCase()+value.slice(1)}</option>)}
+        </select></label>
+        <label className="agentsam-library__select">Source <select aria-label="Filter by source"
+          value={source} onChange={event=>setSource(event.target.value as WorkArtifact["source"]|"all")}>
+          <option value="all">All sources</option>
+          {sources.map(value=><option key={value} value={value}>{sourceLabels[value]}</option>)}
+        </select></label>
+        <div className="agentsam-work-artifacts__spacer"/>
+        <span className="agentsam-work-artifacts__muted">{visible.length} {visible.length===1?"item":"items"}</span>
+        {view==="trash"?<button type="button" className="agentsam-library__quiet-button" onClick={()=>setView("all")}>Back to Library</button>:null}
+      </div>
+      {error?<div role="alert" className="agentsam-library__error"><span>{error}</span><button type="button" onClick={()=>setError("")}>Dismiss</button></div>:null}
+      {!visible.length?<div className="agentsam-library__empty">
+        <Folder size={23} strokeWidth={1.3}/><strong>{query ? "No matching saved work" : view==="trash" ? "Trash is empty" : "Nothing in this view"}</strong>
+        <span>{query ? "Try another search or filter." : artifacts.length ? "Change the filters to see your other resources." : emptyMessage}</span>
+      </div>:null}
+      <div className={"agentsam-work-artifacts__items is-"+layout}>
+        {visible.map(artifact=>{
+          const Icon=iconFor(artifact.kind);
+          const ownerEditable=artifact.resourceType==="artifact" && Boolean(artifact.providerId);
+          const hasDestination=Boolean(artifact.open || artifact.preview || (artifact.source==="local" && onOpenArtifact));
+          const isRenaming=renaming===artifact.id;
+          const isBusy=mutating===artifact.id;
+          const visual=Boolean(artifact.preview && (artifact.kind==="image" || artifact.kind==="video" || artifact.mime==="application/pdf"));
+          return <article key={artifact.id} className="agentsam-work-artifacts__item"
+              data-kind={artifact.kind} data-preview={visual?"image":"symbol"} data-busy={isBusy||undefined}>
+            {layout!=="list"?<div className="agentsam-work-artifacts__preview" aria-label={artifact.kind+" preview"}>
+              {visual && artifact.preview ? (
+                artifact.mime==="application/pdf"
+                  ? <iframe title={artifact.name+" preview"} src={artifact.preview+"#toolbar=0&navpanes=0"} loading="lazy" tabIndex={-1}/>
+                  : <img src={artifact.preview} alt="" loading="lazy" decoding="async"/>
+              ) : <div className="agentsam-library__symbol">
+                <div className="agentsam-library__symbol-icon"><Icon size={34} strokeWidth={1.35}/></div>
+                <span>{artifact.kind==="design"?"Design":artifact.kind==="model"?"3D model":artifact.kind==="note"?"Note":artifact.kind==="spreadsheet"?"Spreadsheet":artifact.kind==="presentation"?"Presentation":artifact.kind==="folder"?"Folder":artifact.kind==="document"?"Document":artifact.kind==="code"?"Code":artifact.kind==="archive"?"Archive":artifact.kind.charAt(0).toUpperCase()+artifact.kind.slice(1)}</span>
+              </div>}
+            </div>:null}
+            <div className="agentsam-library__item-footer">
+              <Icon size={16} className="agentsam-library__type-icon" strokeWidth={1.5}/>
+              <div className="agentsam-library__item-details">
+                {isRenaming?<form className="agentsam-library__rename" onSubmit={event=>{
+                  event.preventDefault();
+                  if(newName.trim())void assetMutation(artifact,{name:newName.trim()});
+                }}>
+                  <input autoFocus aria-label="Rename artifact" value={newName} maxLength={160}
+                    onChange={event=>setNewName(event.target.value)} onKeyDown={event=>{if(event.key==="Escape")setRenaming(null);}}/>
+                  <button type="submit" disabled={!newName.trim()||isBusy}>Save</button>
+                </form>:<button type="button" title={artifact.name} className="agentsam-library__item-name"
+                  disabled={!hasDestination} onClick={()=>openArtifact(artifact)}>{artifact.name}</button>}
+                <div className="agentsam-library__item-meta">{artifact.sourceLabel||sourceLabels[artifact.source]}
+                  {artifact.updatedLabel?" · "+artifact.updatedLabel:""}{artifact.sizeLabel?" · "+artifact.sizeLabel:""}
+                </div>
               </div>
-            ) : null}
-            {visible.map((artifact) => {
-              const Icon = iconFor(artifact.kind);
-              return (
-                <article key={artifact.id} className="agentsam-work-artifacts__item">
-                  <div className="agentsam-work-artifacts__item-heading">
-                    <Icon size={16} aria-hidden="true" />
-                    <span>{artifact.name}</span>
-                  </div>
-
-                  {grid ? (
-                    <div className="agentsam-work-artifacts__preview">
-                      {(artifact.kind === "image" || artifact.kind === "video") && artifact.preview ? (
-                        <>
-                          <img src={artifact.preview} alt={artifact.name} loading="lazy" decoding="async" />
-                          {artifact.kind === "video" && artifact.durationMs ? (
-                            <span className="agentsam-work-artifacts__duration">
-                              {Math.floor(artifact.durationMs / 60000)}:{String(Math.floor((artifact.durationMs % 60000) / 1000)).padStart(2, "0")}
-                            </span>
-                          ) : null}
-                        </>
-                      ) : (
-                        <div className="agentsam-work-artifacts__no-preview">
-                          <Icon size={32} aria-hidden="true" />
-                          <span>{artifact.kind === "image" || artifact.kind === "video" ? "No preview" : artifact.kind}</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : null}
-
-                  <div className="agentsam-work-artifacts__meta">
-                    {artifact.source} · {artifact.sizeLabel || "—"} · {artifact.updatedLabel || "—"}
-                  </div>
-                  {artifact.source === "local" && onOpenArtifact ?
-                    <button type="button" className="agentsam-work-toolbar-button"
-                      onClick={() => void onOpenArtifact(artifact)}>Open in Files editor</button> : null}
-                  {artifact.preview ? <a className="agentsam-work-toolbar-button" href={artifact.preview}
-                    target="_blank" rel="noopener noreferrer">View preview</a> : null}
-                </article>
-              );
-            })}
-          </div>
-        </section>
+              {artifact.starred?<Star className="agentsam-library__star" size={13} fill="currentColor"/>:null}
+              {hasDestination||ownerEditable?<details className="agentsam-library__menu">
+                <summary aria-label={artifact.name+" options"}><MoreHorizontal size={17}/></summary>
+                <div className="agentsam-library__menu-content">
+                  {hasDestination?<button type="button" onClick={event=>{openArtifact(artifact);event.currentTarget.closest("details")?.removeAttribute("open");}}>
+                    <ExternalLink size={14}/> Open
+                  </button>:null}
+                  {artifact.open?<button type="button" onClick={event=>{
+                    void navigator.clipboard.writeText(new URL(artifact.open!,window.location.href).href);
+                    event.currentTarget.closest("details")?.removeAttribute("open");
+                  }}><Copy size={14}/> Copy link</button>:null}
+                  {ownerEditable?<><button type="button" disabled={isBusy} onClick={()=>{setRenaming(artifact.id);setNewName(artifact.name);}}>
+                    <Pencil size={14}/> Rename
+                  </button><button type="button" disabled={isBusy} onClick={()=>void assetMutation(artifact,{starred:!artifact.starred})}>
+                    <Star size={14}/> {artifact.starred?"Remove favorite":"Favorite"}
+                  </button><button type="button" disabled={isBusy} onClick={()=>void assetMutation(artifact,{archived:!artifact.deleted})}>
+                    {artifact.deleted?<RotateCcw size={14}/>:<Archive size={14}/>}
+                    {artifact.deleted?"Restore":"Move to trash"}
+                  </button></>:null}
+                </div>
+              </details>:null}
+            </div>
+          </article>;
+        })}
       </div>
     </div>
-  );
+  </div>;
 }

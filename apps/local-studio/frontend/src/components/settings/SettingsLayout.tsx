@@ -9,7 +9,7 @@ import {
 export function SettingsLayout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const navigate = useNavigate();
-  const activeTrailId = useWorkStore((state) => state.activeTrailId);
+  const activeChatId = useWorkStore((state) => state.activeChatId);
   const segment = pathname.split("/").filter(Boolean)[1];
   const activeUnit = normalizeSettingsUnit(segment);
 
@@ -22,10 +22,10 @@ export function SettingsLayout() {
       }}
       rootLabel="Studio"
       onExit={() => {
-        if (activeTrailId) {
+        if (activeChatId) {
           void navigate({
             to: "/chats/$chatId",
-            params: { chatId: activeTrailId },
+            params: { chatId: activeChatId },
           } as never);
           return;
         }

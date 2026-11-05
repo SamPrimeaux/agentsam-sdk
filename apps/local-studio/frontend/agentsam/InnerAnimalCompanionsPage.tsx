@@ -39,8 +39,8 @@ function openWorkWithBrief(companion: CustomCompanion | CompanionProfile) {
     'Preserve original source art, do not overwrite or silently replace an existing character package, and present the finished character for visual approval before calling it production-ready.',
   ].filter(Boolean).join('\n');
   const store = useWorkStore.getState();
-  const trailId = store.startTrail();
-  store.setDraft(trailId, prompt);
+  const chatId = store.startChat();
+  store.setDraft(chatId, prompt);
   window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/admin/agentsam' } }));
 }
 

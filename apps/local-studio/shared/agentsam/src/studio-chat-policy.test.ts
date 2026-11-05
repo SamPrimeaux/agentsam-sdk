@@ -22,7 +22,7 @@ test("multitask policy never invents ACP child runs", () => {
 
 test("workspace context is additive and bounded by the shared policy builder", () => {
   const messages = buildStudioSystemMessages({
-    surface: "trail",
+    surface: "chat",
     runMode: "debug",
     workspace: [{ path: "src/example.ts", content: "export const ok = true;" }],
   });

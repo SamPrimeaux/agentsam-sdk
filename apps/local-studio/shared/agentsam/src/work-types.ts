@@ -18,7 +18,7 @@ export type Artifact = {
   origin?: ArtifactOrigin;
   title?: string;
   url?: string;
-  trailId?: string;
+  chatId?: string;
 };
 
 export type GitRemote = { name: string; url: string };
@@ -86,7 +86,7 @@ export type WorkspaceFileDocumentMeta = {
   readOnly?: boolean;
 };
 
-export type Trail = {
+export type Chat = {
   id: string;
   title: string;
   createdAt: number;
@@ -103,7 +103,7 @@ export type SideKind = "chat" | "browser" | "files" | "terminal" | "artifacts" |
 
 export type WorkGoal = {
   id: string;
-  trailId: string;
+  chatId: string;
   title: string;
   preview: string;
   status: "active" | "paused";
@@ -117,8 +117,8 @@ export type SideTab = {
   title: string;
   ephemeral: boolean;
   messages: ChatMessage[];
-  parentTrailId: string | null;
-  keptTrailId: string | null;
+  parentChatId: string | null;
+  keptChatId: string | null;
   url: string;
   srcdoc: string | null;
   fileId: string | null;
@@ -129,14 +129,14 @@ export type SideTab = {
   reportToLead: boolean;
 };
 
-export type ChatTarget = { kind: "trail"; id: string } | { kind: "side"; id: string };
+export type ChatTarget = { kind: "chat"; id: string } | { kind: "side"; id: string };
 
-export type NavView = "trails" | "projects" | "artifacts";
+export type NavView = "chats" | "projects" | "artifacts";
 
 export type OfflineQueuedSend = {
   id: string;
   targetId: string;
-  targetKind: "trail" | "side";
+  targetKind: "chat" | "side";
   text: string;
   noteId: string;
   runMode?: AgentRunMode;

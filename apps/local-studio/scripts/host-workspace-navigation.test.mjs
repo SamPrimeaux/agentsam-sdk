@@ -15,7 +15,7 @@ function extractFunction(startMarker, endMarker) {
 
 test('static Console conversation pin and rename preserve the existing Work store', () => {
   const code = extractFunction(
-    '  function updateStoredTrail(id, transform) {',
+    '  function updateStoredChat(id, transform) {',
     '  async function patchRegisteredProject(',
   );
   const persisted = {
@@ -38,21 +38,22 @@ test('static Console conversation pin and rename preserve the existing Work stor
     },
     CustomEvent: class CustomEvent { constructor(type) { this.type = type; } },
   };
-  runInNewContext(code + '\nthis.updateStoredTrail = updateStoredTrail;', context);
+  runInNewContext(code + '\nthis.updateStoredChat = updateStoredChat;', context);
 
-  assert.equal(context.updateStoredTrail('trail-1', trail => ({ ...trail, pinned: !trail.pinned })), true);
+  assert.equal(context.updateStoredChat('trail-1', trail => ({ ...trail, pinned: !trail.pinned })), true);
   let saved = JSON.parse(storage.get('agentsam-work-v1'));
-  assert.equal(saved.state.trails[0].pinned, true);
+  assert.equal(saved.state.chats[0].pinned, true);
+  assert.equal(saved.state.trails, undefined, 'legacy chat field migrated');
   assert.equal(saved.state.drafts['trail-1'], 'keep this draft');
   assert.deepEqual(saved.state.unrelatedPreference, { keep: true });
   assert.equal(saved.version, 5);
   assert.equal(eventName, 'agentsam:workspace-navigation');
 
-  assert.equal(context.updateStoredTrail('trail-1', trail => ({ ...trail, title: 'Renamed', updatedAt: 42 })), true);
+  assert.equal(context.updateStoredChat('trail-1', trail => ({ ...trail, title: 'Renamed', updatedAt: 42 })), true);
   saved = JSON.parse(storage.get('agentsam-work-v1'));
-  assert.equal(saved.state.trails[0].title, 'Renamed');
-  assert.equal(saved.state.trails[0].updatedAt, 42);
-  assert.equal(context.updateStoredTrail('missing', trail => trail), false);
+  assert.equal(saved.state.chats[0].title, 'Renamed');
+  assert.equal(saved.state.chats[0].updatedAt, 42);
+  assert.equal(context.updateStoredChat('missing', trail => trail), false);
 });
 
 test('static Console project pin and rename use the existing authenticated project API', async () => {
@@ -97,7 +98,9 @@ test('both shell hosts expose the same workspace rename and pin actions', () => 
   assert.match(hostConfig, /onRenameProject:\(id,name\)=>/);
   assert.match(reactShell, /onPinProject:/);
   assert.match(reactShell, /onRenameProject:/);
-  assert.match(reactShell, /onPinConversation: state\.pinTrail, onRenameConversation: state\.renameTrail/);
+  assert.match(reactShell, /onPinConversation: \(id\) =>/);
+  assert.match(reactShell, /onRenameConversation: \(id,title\) =>/);
+  assert.match(reactShell, /patchAccountChat/);
 });
 
 

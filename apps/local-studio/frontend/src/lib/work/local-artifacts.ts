@@ -1,12 +1,12 @@
-import type { Project, Trail } from "@inneranimalmedia/agentsam-local-shared";
+import type { Project, Chat } from "@inneranimalmedia/agentsam-local-shared";
 import type { WorkArtifact } from "@inneranimalmedia/agentsam-work/contracts";
 
 /** Only actual, loaded local filesystem workspaces are exposed as local files.
  * Scratch templates aren't storage-provider assets, and credentials/content never leave the host.
  */
-export function listLocalWorkspaceArtifacts(projects: Project[], trails: Trail[]): WorkArtifact[] {
+export function listLocalWorkspaceArtifacts(projects: Project[], chats: Chat[]): WorkArtifact[] {
   return projects.filter(p => p.kind === "filesystem").flatMap(p => {
-    const assignments = [...new Set(trails.filter(t => t.projectId === p.id)
+    const assignments = [...new Set(chats.filter(t => t.projectId === p.id)
       .map(t => t.workProjectId).filter((id): id is string => Boolean(id)))];
     const projectId = assignments.length === 1 ? assignments[0] : null;
     return p.files.slice(0, 300).map(file => ({

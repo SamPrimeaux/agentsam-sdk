@@ -78,7 +78,7 @@ export function NativeCommandBridge() {
     const profile = (id: TerminalProfileId) => () => shell.shellSetProfile(id);
     const unregister = registerCommandHandlers({
       "chat.new": () => {
-        useWorkStore.getState().startTrail();
+        useWorkStore.getState().startChat();
         navigateApp("/admin/agentsam");
       },
       "project.new": () => {

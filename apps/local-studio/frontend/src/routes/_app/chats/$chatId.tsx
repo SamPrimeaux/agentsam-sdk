@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { TrailWorkspace } from "@/components/shell/trail-workspace";
+import { ChatWorkspace } from "@/components/shell/chat-workspace";
 import { Button } from "@/components/ui/button";
 import { useWorkStore } from "@/lib/work/store";
 
@@ -9,9 +9,9 @@ export const Route = createFileRoute("/_app/chats/$chatId")({
 
 function ChatPage() {
   const { chatId } = Route.useParams();
-  const trail = useWorkStore((s) => s.trails.find((t) => t.id === chatId));
+  const chat = useWorkStore((s) => s.chats.find((t) => t.id === chatId));
 
-  if (!trail) {
+  if (!chat) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="text-sm text-muted-foreground">That chat is not on this device.</p>
@@ -22,5 +22,5 @@ function ChatPage() {
     );
   }
 
-  return <TrailWorkspace trail={trail} />;
+  return <ChatWorkspace chat={chat} />;
 }

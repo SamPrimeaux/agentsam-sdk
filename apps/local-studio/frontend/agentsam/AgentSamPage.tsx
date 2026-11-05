@@ -40,19 +40,19 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
     try { window.localStorage.setItem('agentsam.studio.agentPanelWidth', String(panelWidth)); }
     catch { /* Resizing remains available without localStorage. */ }
   }, [panelWidth]);
-  const trail = state.trails.find((item) => item.id === (conversationId ?? state.activeTrailId));
-  useEffect(() => { if (conversationId && state.trails.some((item) => item.id === conversationId)) state.setActiveTrail(conversationId); }, [conversationId, state.setActiveTrail, state.trails]);
+  const chat = state.chats.find((item) => item.id === (conversationId ?? state.activeChatId));
+  useEffect(() => { if (conversationId && state.chats.some((item) => item.id === conversationId)) state.setActiveChat(conversationId); }, [conversationId, state.setActiveChat, state.chats]);
 
   const startNewChat = () => {
-    const id = state.startTrail();
+    const id = state.startChat();
     void navigate({ to: '/chats/$chatId', params: { chatId: id } });
   };
 
-  if (!trail) return <div className="agentsam-welcome"><h1>Conversation unavailable</h1><button type="button" className="as-nav-button" onClick={startNewChat}>New chat</button></div>;
+  if (!chat) return <div className="agentsam-welcome"><h1>Conversation unavailable</h1><button type="button" className="as-nav-button" onClick={startNewChat}>New chat</button></div>;
 
   // Failed model responses stay inside the conversation transcript — never replace the product.
-  const empty = trail.messages.length === 0 || (trail.messages.length === 1 && trail.messages[0].id === 'welcome-msg');
-  const streaming = state.streamingIds.includes(trail.id);
+  const empty = chat.messages.length === 0 || (chat.messages.length === 1 && chat.messages[0].id === 'welcome-msg');
+  const streaming = state.streamingIds.includes(chat.id);
   const companionArt = companionStateAsset(companion, streaming ? 'working' : 'idle');
   const workSurface = state.workSurface;
   const mobileWorkOpen = isMobile && workSurface !== 'chat';
@@ -75,14 +75,14 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           empty={empty}
           runtime={
             <AgentRuntimeField
-              controller={localStudioRuntimeVisuals.controllerFor(trail.id)}
+              controller={localStudioRuntimeVisuals.controllerFor(chat.id)}
               blocking={false}
               passiveOpacity={0.48}
               className="z-[1]"
               narrationStyle={{ bottom: 96 }}
             />
           }
-          thread={<MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} />}
+          thread={<MessageList messages={chat.messages} chatId={chat.id} streaming={streaming} />}
           emptyState={<div className="agentsam-welcome-heading">
             {data.mode === 'work' ? <div className="agentsam-work-welcome" data-companion-id={companion.id}>
               <div className="agentsam-work-welcome-art" aria-hidden="true">
@@ -95,7 +95,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
               </div>
             </div> : <h1>Where should we begin?</h1>}
           </div>}
-          composer={<Composer targetId={trail.id} targetKind="trail" placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'} />}
+          composer={<Composer targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'} />}
           composerClassName="agentsam-conversation-dock"
         />
       </section>

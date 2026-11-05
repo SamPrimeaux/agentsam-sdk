@@ -2,10 +2,10 @@ import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type 
 import { createPortal } from 'react-dom';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { ChevronDown, Files, Folder, MessageSquare, MoreHorizontal, PanelLeft, Pin, Pencil, Plus, Search, Trash2, User, X } from 'lucide-react';
+import { Box, ChevronDown, FileCode2, FileImage, FileText, Files, Film, Folder, MessageSquare, MoreHorizontal, Palette, PanelLeft, Pin, Pencil, Plus, Search, Trash2, User, X } from 'lucide-react';
 import { useNav } from './NavProvider.js';
 import { NavTrigger } from './NavTrigger.js';
-import type { NavAccount, NavAction, NavConversation, NavDestination, NavProject } from './contracts.js';
+import type { NavAccount, NavAction, NavConversation, NavDestination, NavProject, NavPinnedResource } from './contracts.js';
 import { cx, navDestinationActive } from './utils.js';
 
 export function useNavStyle(): CSSProperties {
@@ -207,27 +207,41 @@ function ConversationRow({ item }: { item: NavConversation }) {
   </div>;
 }
 
-function ProjectRow({ item, conversations }: { item: NavProject; conversations: NavConversation[] }) {
+function PinnedResourceRow({ item }: { item: NavPinnedResource }) {
   const { data, close, isMobile } = useNav();
-  const [expanded, setExpanded] = useState(item.id === data.project?.id);
+  const Icon = item.kind === 'image' ? FileImage
+    : item.kind === 'video' ? Film
+    : ['design','website','product'].includes(item.kind) ? Palette
+    : item.kind === 'model' ? Box
+    : item.kind === 'code' ? FileCode2 : FileText;
+  return <div className="as-nav-conversation" data-nav-item-id={item.id}>
+    <button type="button" className="as-nav-conversation-link" title={item.title}
+      onClick={() => {data.onOpenResource?.(item);if(isMobile)close();}}>
+      <Icon /><span>{item.title}</span>
+    </button>
+  </div>;
+}
+
+function ProjectRow({ item }: { item: NavProject }) {
+  const { data, close, isMobile } = useNav();
   const [rename, setRename] = useState(false);
+  const selected = item.id === data.project?.id;
   const actions = data.getProjectActions?.(item) ?? [
-    ...(data.onPinProject ? [{ id: 'pin', label: item.pinned ? 'Unpin project' : 'Pin project', icon: <Pin />, onSelect: () => data.onPinProject?.(item.id) }] : []),
-    ...(data.onDeleteProject ? [{ id: 'delete', label: 'Delete project', icon: <Trash2 />, destructive: true, separatorBefore: true, onSelect: () => data.onDeleteProject?.(item.id) }] : []),
+    ...(data.onPinProject ? [{ id:'pin', label:item.pinned ? 'Unpin project' : 'Pin project', icon:<Pin />, onSelect:()=>data.onPinProject?.(item.id) }] : []),
+    ...(data.onDeleteProject ? [{ id:'delete', label:'Delete project', icon:<Trash2 />, destructive:true, separatorBefore:true, onSelect:()=>data.onDeleteProject?.(item.id) }] : []),
   ];
-  return <div className="as-nav-project" data-active={item.id === data.project?.id || undefined} data-nav-item-id={item.id}>
+  return <div className="as-nav-project" data-active={selected || undefined} data-nav-item-id={item.id}>
     <div className="as-nav-project-row">
-      <button type="button" className="as-nav-project-toggle" title={item.name} aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}><Folder /><span>{item.name}</span><ChevronDown /></button>
+      <button type="button" className="as-nav-project-toggle" title={item.name} aria-current={selected?'page':undefined}
+        onClick={()=>{data.onSelectProject?.(item.id);if(isMobile)close();}}>
+        <Folder /><span>{item.name}</span>
+      </button>
       <div className="as-nav-row-actions">
-        {data.onRenameProject ? <button type="button" className="as-nav-button" aria-label={`Rename ${item.name}`} title="Rename" onClick={() => setRename(true)}><Pencil /></button> : null}
-        {actions.length ? <NavOverflowMenu id={`project-${item.id}`} label={`${item.name} options`} actions={actions} /> : null}
+        {data.onRenameProject ? <button type="button" className="as-nav-button" aria-label={"Rename "+item.name} title="Rename" onClick={()=>setRename(true)}><Pencil /></button> : null}
+        {actions.length ? <NavOverflowMenu id={"project-"+item.id} label={item.name+" options"} actions={actions} /> : null}
       </div>
     </div>
-    {expanded ? <div className="as-nav-project-conversations">
-      {conversations.filter((conversation) => conversation.projectId === item.id && !conversation.pinned).map((conversation) => <ConversationRow key={conversation.id} item={conversation} />)}
-      {data.onSelectProject ? <button className="as-nav-project-home" type="button" onClick={() => { data.onSelectProject?.(item.id); if (isMobile) close(); }}>Open project</button> : null}
-    </div> : null}
-    {data.onRenameProject ? <RenameDialog open={rename} onOpenChange={setRename} title="Rename project" value={item.name} onSave={(name) => data.onRenameProject?.(item.id, name)} /> : null}
+    {data.onRenameProject ? <RenameDialog open={rename} onOpenChange={setRename} title="Rename project" value={item.name} onSave={name=>data.onRenameProject?.(item.id,name)} /> : null}
   </div>;
 }
 
@@ -328,16 +342,12 @@ function SidenavContents() {
       </div>
       {data.showHistory !== false ? <div className="as-nav-expanded-only as-nav-history">
         <label className="as-nav-search"><Search /><input aria-label="Search projects and conversations" placeholder="Search workspace" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-        <HistoryCollection id="projects" title="Projects" searching={Boolean(query)} empty={data.historyStatus === 'loading' ? 'Loading projects…' : data.historyStatus === 'error' ? 'Projects are unavailable.' : 'No projects yet.'}
-          items={projects.filter(item => !item.pinned).map(item => <ProjectRow key={item.id} item={item} conversations={conversations} />)} />
-        {data.historyStatus === 'error' && data.onRetryHistory ? <button type="button" className="as-nav-collection-more" onClick={data.onRetryHistory}>Retry projects</button> : null}
+        {data.historyStatus === 'error' && data.onRetryHistory ? <button type="button" className="as-nav-collection-more" onClick={data.onRetryHistory}>Retry project list</button> : null}
         <HistoryCollection id="pinned" title="Pinned" searching={Boolean(query)} empty={query ? 'No matching pinned items.' : 'Pin projects or conversations from their menus.'}
-          items={[...pinnedProjects.map(item => <ProjectRow key={item.id} item={item} conversations={conversations} />),...pinnedConversations.map(item => <ConversationRow key={item.id} item={item} />)]} />
-        <HistoryCollection id="recent" title="Recent" searching={Boolean(query)} empty={query ? 'No matching activity.' : 'Your conversations will appear here.'}
-          items={[
-            ...recent.map(item => ({id:item.id,at:item.updatedAt || 0,row:<ConversationRow key={item.id} item={item} />})),
-            ...projects.filter(item => !item.pinned && item.updatedAt).map(item => ({id:item.id,at:item.updatedAt || 0,row:<ProjectRow key={item.id} item={item} conversations={[]} />}))
-          ].sort((a,b) => b.at-a.at).map(item => item.row)} />
+          items={[...pinnedProjects.map(item => <ProjectRow key={item.id} item={item} />),...pinnedConversations.map(item => <ConversationRow key={item.id} item={item} />),...(data.pinnedResources||[]).map(item => <PinnedResourceRow key={item.id} item={item} />)]} />
+        <HistoryCollection id="recent" title="Chats and tasks" searching={Boolean(query)} empty={query ? 'No matching conversations.' : 'Your conversations will appear here.'}
+          items={recent.slice(0,20).map(item => <ConversationRow key={item.id} item={item} />)} />
+        {data.onNavigate ? <button type="button" className="as-nav-collection-more" onClick={() => {data.onNavigate?.('/chats'); if (isMobile) close();}}>View all conversations</button> : null}
       </div> : null}
     </div>
     <div className="as-nav-sidenav-foot"><NavAccountSwitcher expanded /></div>
@@ -352,10 +362,11 @@ export function NavSidenav() {
   const hintRow = useRef<HTMLElement | null>(null);
   const hideHint = () => { clearTimeout(hintTimer.current); hintTimer.current = undefined; hintRow.current = null; setHint(null); };
   const showHint = (target: EventTarget | null) => {
-    clearTimeout(hintTimer.current);
     if (open || isMobile || !(target instanceof Element)) { hideHint(); return; }
     const row = target.closest<HTMLElement>('.as-nav-destination, .as-nav-account button');
     if (!row) { hideHint(); return; }
+    if (row === hintRow.current && (hintTimer.current !== undefined || hint !== null)) return;
+    clearTimeout(hintTimer.current);
     const label = row.getAttribute('aria-label') || row.getAttribute('title');
     if (!label) { hideHint(); return; }
     hintRow.current = row;
@@ -364,16 +375,22 @@ export function NavSidenav() {
       const rect = row.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) { setHint(null); return; }
       setHint({label, top: Math.max(8, Math.min(window.innerHeight - 44, rect.top + (rect.height - 32) / 2)), left: rect.right + 10});
-    }, 350);
+    }, 160);
   };
   useEffect(() => { hideHint(); return () => clearTimeout(hintTimer.current); }, [open, isMobile, menu]);
   useEffect(() => {
     const dismiss = () => hideHint();
     window.addEventListener('agentsam:navigate', dismiss);
+    window.addEventListener('popstate', dismiss);
+    window.addEventListener('hashchange', dismiss);
+    window.addEventListener('scroll', dismiss, true);
     window.addEventListener('blur', dismiss);
     document.addEventListener('visibilitychange', dismiss);
     return () => {
       window.removeEventListener('agentsam:navigate', dismiss);
+      window.removeEventListener('popstate', dismiss);
+      window.removeEventListener('hashchange', dismiss);
+      window.removeEventListener('scroll', dismiss, true);
       window.removeEventListener('blur', dismiss);
       document.removeEventListener('visibilitychange', dismiss);
     };

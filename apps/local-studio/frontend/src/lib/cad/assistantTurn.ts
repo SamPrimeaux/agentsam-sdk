@@ -42,7 +42,7 @@ export async function runCadAssistantTurn(
     && !before.pausedQueueTargets.includes(tab.id));
   const tabId = existing?.id ?? before.openSideTab("chat", {
     title: CAD_CHAT_TITLE,
-    parentTrailId: null,
+    parentChatId: null,
     reportToLead: false,
   });
   if (existing) {

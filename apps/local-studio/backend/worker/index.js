@@ -42,6 +42,7 @@ import {
 import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections-registry.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
+import { handleStudioChatHistory } from "./studio-chat-history.js";
 import {handleOpenScadLibraries} from "./cad-openscad-libraries.js";
 import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
 import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
@@ -1315,6 +1316,10 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       const userId = await sessionUser();
       if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
       return handleDatabaseRequest(request, env, userId, context);
+    }
+
+    if (url.pathname === '/api/studio/chats' || /^\/api\/studio\/chats\/[a-zA-Z0-9_-]+(?:\/messages)?$/.test(url.pathname)) {
+      return handleStudioChatHistory(request, env, await sessionUser());
     }
 
     if (isWorkApi) {

@@ -16,7 +16,7 @@ test("only Chats routes are registered, without trails fallbacks or redirects", 
   assert.ok(existsSync(resolve(root, "frontend/src/routes/(apps)/chats/$chatId.tsx")));
   assert.ok(existsSync(resolve(root, "frontend/src/routes/(apps)/chats/index.tsx")));
   assert.match(read("frontend/src/components/shell/nav-rail.tsx"), /to: "\/chats", label: "Chats"/);
-  assert.match(read("frontend/src/components/shell/ChatsIndex.tsx"), /<Link to="\/projects"/);
+  assert.match(read("frontend/src/components/shell/ChatsIndex.tsx"), /listAccountChats/);
   assert.match(read("frontend/agentsam/AgentSamPage.tsx"), /<Link to="\/chats"/);
 });
 
@@ -30,7 +30,7 @@ test("Work project chat association reuses persisted Studio chats, not IAM", () 
   assert.match(store, /\{\s*\.\.\.chat, workProjectId: id, updatedAt: Date\.now\(\)/);
   assert.match(links, /filter\(\(chat\) => chat\.workProjectId === projectId\)/);
   assert.match(links, /assignChatToWorkProject\(chatId, projectId\)/);
-  assert.match(links, /startTrail\(\)/);
+  assert.match(links, /startChat\(\)/);
   assert.match(panel, /localStudioProjectChats/);
   assert.doesNotMatch(links, /\/api\/agent\/sessions|createWorkChats|fetch\(/);
 });

@@ -18,6 +18,9 @@ import { SplitHandle } from '@/components/shell/split-handle';
 import { CliDrawer } from '@/components/shell/cli-drawer';
 import { OfflineBanner } from '@/components/shell/offline-banner';
 import { useWorkStore } from '@/lib/work/store';
+// Legacy browser conversations are intentionally read-only until the
+// canonical platform session migration is verified end to end.
+import { listAccountChats, patchAccountChat, trashAccountChat, type AccountChat } from '@/lib/work/account-chats';
 import { useCurrentUser } from '@/lib/auth/use-current-user';
 import { registerOfflineShell } from '@/lib/offline/register-sw';
 import { brand } from './brand';
@@ -127,16 +130,35 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       .catch(() => { /* Auth image remains a usable fallback when preferences cannot be read. */ });
     return () => controller.abort();
   }, [user?.id]);
-  const trail = state.trails.find((item) => item.id === state.activeTrailId);
+  const chat = state.chats.find((item) => item.id === state.activeChatId);
   const [workProjects,setWorkProjects] = useState<import('@inneranimalmedia/agentsam-work/contracts').WorkProject[]>([]);
+  const [pinnedResources,setPinnedResources] = useState<Array<{id:string;title:string;kind:string;open?:string|null}>>([]);
   const [historyStatus,setHistoryStatus] = useState<'loading'|'error'|'ready'>('loading');
   const [historyRevision,setHistoryRevision] = useState(0);
-  const project = workProjects.find(item => item.id === trail?.workProjectId);
+  const [accountChats, setAccountChats] = useState<AccountChat[]>([]);
+  const [chatRevision, setChatRevision] = useState(0);
+  useEffect(() => {
+    if (!user?.id || user.isDevFallback || isPackagedDesktop()) return;
+    const controller = new AbortController();
+    void listAccountChats({limit:100},controller.signal)
+      .then(result => {if (!controller.signal.aborted) setAccountChats(result.chats);})
+      .catch(() => { /* Local unsynced messages remain accessible. */ });
+    const refresh = () => setChatRevision(revision => revision + 1);
+    window.addEventListener('agentsam:chats-changed',refresh);
+    return () => {controller.abort();window.removeEventListener('agentsam:chats-changed',refresh);};
+  }, [user?.id,chatRevision]);
+  const project = workProjects.find(item => item.id === chat?.workProjectId);
   useEffect(() => {
     let cancelled=false;
     setHistoryStatus('loading');
     import('@/components/work/LocalStudioWorkPage').then(({sharedLiveWorkHost}) => sharedLiveWorkHost().snapshot({surface:'projects'})).then(snapshot => {
-      if (!cancelled) {setWorkProjects(snapshot.projects);setHistoryStatus('ready');}
+      if (!cancelled) {
+        setWorkProjects(snapshot.projects);
+        setPinnedResources(snapshot.artifacts.filter(item=>item.starred && !item.deleted).map(item=>({
+          id:item.id,title:item.name,kind:item.kind,open:item.open||item.preview,
+        })).slice(0,30));
+        setHistoryStatus('ready');
+      }
     }).catch(() => {if(!cancelled)setHistoryStatus('error');});
     const refresh=()=>setHistoryRevision(value=>value+1);
     window.addEventListener('agentsam:projects-changed',refresh);
@@ -215,9 +237,9 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     const store = useWorkStore.getState();
     const shares = pendingChromeShares.current.splice(0);
     if (!shares.length) return;
-    const trailId = store.activeTrailId || store.startTrail();
+    const chatId = store.activeChatId || store.startChat();
     const context = shares.map(formatChromeTabShare).join('\n\n');
-    store.setDraft(trailId, [store.drafts[trailId]?.trimEnd(), context].filter(Boolean).join('\n\n'));
+    store.setDraft(chatId, [store.drafts[chatId]?.trimEnd(), context].filter(Boolean).join('\n\n'));
     window.location.hash = '#/admin/agentsam';
     const first = shares[0];
     toast(`Added ${shares.length > 1 ? `${shares.length} pages` : `“${first.title || new URL(first.url).hostname}”`} to the draft`);
@@ -281,7 +303,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     };
   }, [pathname]);
 
-  const petState = state.activeTrailId && state.streamingIds.includes(state.activeTrailId) ? "working" : "idle";
+  const petState = state.activeChatId && state.streamingIds.includes(state.activeChatId) ? "working" : "idle";
   useEffect(() => {
     if (!isPackagedDesktop()) return;
     void emitTauriEvent("agentsam:pet:state", { state: petState }).catch(() => {});
@@ -390,14 +412,25 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const value: NavValue = {
     brand, mode, onModeChange: setMode, pathname: navPathname,
     project: project ? { id: project.id, name: project.name } : undefined,
-    conversation: trail ? { id: trail.id, title: trail.title } : undefined,
+    conversation: chat ? { id: chat.id, title: chat.title } : undefined,
+    pinnedResources,
+    onOpenResource: item => {
+      if(item.open && (item.open.startsWith('/') && !item.open.startsWith('//') || item.open.startsWith('https://'))) {
+        window.open(item.open,'_blank','noopener,noreferrer');
+      } else go('/artifacts?view=starred');
+    },
     projects: workProjects.map(item => ({id:item.id,name:item.name,pinned:item.starred,updatedAt:item.updatedAt ? Date.parse(item.updatedAt) : undefined})),
     historyStatus,onRetryHistory:()=>setHistoryRevision(value=>value+1),
-    conversations: state.trails.filter(item => item.id !== "trail-studio" || item.messages.some(message => message.role === "user")).map((item) => ({ id: item.id, title: item.title, projectId: item.workProjectId, pinned: item.pinned,updatedAt:item.updatedAt })),
+    conversations: [
+      ...accountChats.map(chat => ({id:chat.id,title:chat.title,projectId:chat.projectId || undefined,pinned:chat.pinned,updatedAt:chat.updatedAt * 1000})),
+      ...state.chats.filter(item => item.id !== 'chat-studio' && item.messages.some(message => message.role === 'user')
+        && !accountChats.some(chat => chat.id === item.id))
+        .map(item => ({id:item.id,title:item.title,projectId:item.workProjectId,pinned:item.pinned,updatedAt:item.updatedAt})),
+    ],
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
     showSidebarHeader: false,
     newConversationAfter: 'home',
-    showHistory: isConversation,
+    showHistory: true,
     destinations: [
       // Render the platform-owned business destinations first. These are the
       // canonical primary entries from the same host projection as installed apps.
@@ -407,8 +440,11 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       ...(navigation.utilities || []),
     ].map(destination),
     onNavigate: go,
-    onCreateConversation: isConversation ? () => { state.startTrail(); go('/admin/agentsam'); } : undefined,
-    onSelectConversation: (id) => { state.setActiveTrail(id); go('/admin/agentsam'); },
+    onCreateConversation: () => { state.startChat(); go('/admin/agentsam'); },
+    onSelectConversation: (id) => {
+      if (state.chats.some(item => item.id === id)) state.setActiveChat(id);
+      go('/chats/' + encodeURIComponent(id));
+    },
     onSelectProject: (id) => go('/admin/projects/'+encodeURIComponent(id)),
     onPinProject: (id) => {
       const selected=workProjects.find(item=>item.id===id);
@@ -428,8 +464,33 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         setWorkProjects(items=>items.map(item=>item.id===id?updated:item));
       }).catch(()=>toast.error('Project name could not be saved.'));
     },
-    onPinConversation: state.pinTrail, onRenameConversation: state.renameTrail,
-    onShare: trail ? () => setSharing(true) : undefined,
+    onPinConversation: (id) => {
+      const chat = accountChats.find(item => item.id === id);
+      if (chat) {
+        void patchAccountChat(id,{pinned:!chat.pinned})
+          .then(() => {if(state.chats.some(item=>item.id===id))state.pinChat(id);setChatRevision(value=>value+1);})
+          .catch(()=>toast.error('Could not update conversation.'));
+      } else state.pinChat(id);
+    },
+    onRenameConversation: (id,title) => {
+      const chat = accountChats.find(item=>item.id===id);
+      if(chat) {
+        void patchAccountChat(id,{title}).then(()=>{
+          if(state.chats.some(item=>item.id===id))state.renameChat(id,title);
+          setChatRevision(value=>value+1);
+        }).catch(()=>toast.error('Could not rename conversation.'));
+      } else state.renameChat(id,title);
+    },
+    onDeleteConversation: (id) => {
+      const chat=accountChats.find(item=>item.id===id);
+      if(chat) {
+        void trashAccountChat(id).then(()=>{
+          if(state.chats.some(item=>item.id===id))state.deleteChat(id);
+          setChatRevision(value=>value+1);
+        }).catch(()=>toast.error('Could not delete conversation.'));
+      } else state.deleteChat(id);
+    },
+    onShare: chat ? () => setSharing(true) : undefined,
     accountActions: [
       {id:'profile-image',label:'Profile image',icon:<PawPrint />,onSelect:() => { setAvatarDraft(accountAvatarUrl || user?.profileImageUrl || ''); setAvatarDialogOpen(true); }},
       {id:'settings',label:'Settings',icon:<Settings />,onSelect:() => go('/settings/general')},
@@ -440,15 +501,15 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'home', label: 'Project home', icon: <Folder />, onSelect: () => go('/admin/projects') },
       { id: 'files', label: 'Project files', icon: <Files />, onSelect: () => state.openSideTab('files') },
     ],
-    conversationActions: trail ? [
+    conversationActions: chat ? [
       { id: 'share', label: 'Create a public link', icon: <NavShareIcon />, onSelect: () => setSharing(true) },
       { id: 'files', label: 'View files in conversation', icon: <Files />, onSelect: () => state.openSideTab('files') },
-      { id: 'pin', label: trail.pinned ? 'Unpin conversation' : 'Pin conversation', icon: <Pin />, onSelect: () => state.pinTrail(trail.id) },
-      { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
+      { id: 'pin', label: chat.pinned ? 'Unpin conversation' : 'Pin conversation', icon: <Pin />, onSelect: () => state.pinChat(chat.id) },
+      { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
     ] : [],
-    pinnedSummary: trail ? {
-      outputs: trail.files.map(file => file.title || file.path),
-      sources: trail.messages.flatMap(message => shareAttachmentMetadata(message).map(file => file.name)),
+    pinnedSummary: chat ? {
+      outputs: chat.files.map(file => file.title || file.path),
+      sources: chat.messages.flatMap(message => shareAttachmentMetadata(message).map(file => file.name)),
     } : undefined,
     resourceActions: [
       { id: 'outputs', label: 'Outputs', icon: <BookOpen />, onSelect: () => state.openSideTab('artifacts') },
@@ -462,7 +523,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     host.__agentsamWorkspaceNavigation=projection;
     window.dispatchEvent(new Event('agentsam:workspace-navigation'));
     return () => {if(host.__agentsamWorkspaceNavigation===projection)delete host.__agentsamWorkspaceNavigation;};
-  },[state.trails,state.activeTrailId,workProjects,historyStatus]);
+  },[state.chats,state.activeChatId,workProjects,historyStatus]);
   return <CompanionProvider accountKey={user?.id || "anonymous"}><ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} tokens={navTokens} defaultOpen resizable stateStore={navigationStore} storageKey={navigationStore ? undefined : "agentsam-nav:" + (user && !user.isDevFallback ? user.id : "local")}>
     <Nav.Scope className="agentsam-shell platform-console" data-agentsam-app-shell="local-studio" data-platform-console="true" data-conversation={isConversation ? "true" : "false"} data-embedded={embedded ? "true" : undefined}>
       {!embedded ? <Nav.Sidenav /> : null}<div className="agentsam-main">
@@ -486,7 +547,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         </div>
 
       </div><CliDrawer /><CommandPalette />
-      <ChatShareDialog open={sharing} onOpenChange={setSharing} trail={trail ?? null} />
+      <ChatShareDialog open={sharing} onOpenChange={setSharing} chat={chat ?? null} />
       <Dialog open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}><DialogContent>
         <DialogTitle>Profile image</DialogTitle>
         <DialogDescription>Select an image from your authorized Brand/Media assets, then paste its image URL here. Saved against your signed-in user, not as an installation default.</DialogDescription>

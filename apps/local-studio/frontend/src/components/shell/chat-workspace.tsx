@@ -4,14 +4,14 @@ import { ArrowLeft, Columns2, Maximize2, Settings, Share, SquareTerminal, Users 
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { TrailThread } from "@/components/workbench/thread";
+import { ChatThread } from "@/components/workbench/thread";
 import { SideStage } from "@/components/workbench/side-stage";
-import { TrailsPanel } from "@/components/shell/studio-panels";
+import { ChatsPanel } from "@/components/shell/studio-panels";
 import { SplitHandle } from "@/components/shell/split-handle";
 import { ComputerFullscreen } from "@/components/workbench/computer-stage";
 import { cn } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
-import type { Trail } from "@inneranimalmedia/agentsam-local-shared";
+import type { Chat } from "@inneranimalmedia/agentsam-local-shared";
 
 function restorePaneWidth(key: string, fallback: number, min: number, max: number) {
   if (typeof window === "undefined") return fallback;
@@ -21,14 +21,14 @@ function restorePaneWidth(key: string, fallback: number, min: number, max: numbe
   } catch { return fallback; }
 }
 
-export function TrailWorkspace({ trail }: { trail: Trail }) {
+export function ChatWorkspace({ chat }: { chat: Chat }) {
   const sideOpen = useWorkStore((s) => s.sideOpen);
   const sideTabs = useWorkStore((s) => s.sideTabs);
   const terminalOpen = useWorkStore((s) => s.terminalOpen);
   const setSideOpen = useWorkStore((s) => s.setSideOpen);
   const openSideTab = useWorkStore((s) => s.openSideTab);
-  const renameTrail = useWorkStore((s) => s.renameTrail);
-  const setActiveTrail = useWorkStore((s) => s.setActiveTrail);
+  const renameChat = useWorkStore((s) => s.renameChat);
+  const setActiveChat = useWorkStore((s) => s.setActiveChat);
   const toggleTerminal = useWorkStore((s) => s.toggleTerminal);
   const setSettingsOpen = useWorkStore((s) => s.setSettingsOpen);
   const [railW, setRailW] = useState(() => restorePaneWidth("agentsam.studio.railWidth", 288, 200, 420));
@@ -36,8 +36,8 @@ export function TrailWorkspace({ trail }: { trail: Trail }) {
   const [stageFull, setStageFull] = useState(false);
 
   useEffect(() => {
-    setActiveTrail(trail.id);
-  }, [trail.id, setActiveTrail]);
+    setActiveChat(chat.id);
+  }, [chat.id, setActiveChat]);
   useEffect(() => {
     try {
       window.localStorage.setItem("agentsam.studio.railWidth", String(railW));
@@ -62,7 +62,7 @@ export function TrailWorkspace({ trail }: { trail: Trail }) {
   }
 
   async function share() {
-    const markdown = [`# ${trail.title}`, "", ...trail.messages.map((m) => `**${m.role}**\n\n${m.content}`)].join(
+    const markdown = [`# ${chat.title}`, "", ...chat.messages.map((m) => `**${m.role}**\n\n${m.content}`)].join(
       "\n\n",
     );
     try {
@@ -81,7 +81,7 @@ export function TrailWorkspace({ trail }: { trail: Trail }) {
         onPointerEnter={(e) => lightPane(e, true)}
         onPointerLeave={(e) => lightPane(e, false)}
       >
-        <TrailsPanel activeId={trail.id} showBrandFooter={false} />
+        <ChatsPanel activeId={chat.id} showBrandFooter={false} />
       </aside>
       <SplitHandle
         axis="x"
@@ -99,8 +99,8 @@ export function TrailWorkspace({ trail }: { trail: Trail }) {
             </Link>
           </Button>
           <input
-            value={trail.title}
-            onChange={(e) => renameTrail(trail.id, e.target.value)}
+            value={chat.title}
+            onChange={(e) => renameChat(chat.id, e.target.value)}
             className="min-w-0 flex-1 bg-transparent px-2 text-sm font-medium tracking-tight outline-none"
             aria-label="Chat title"
           />
@@ -202,7 +202,7 @@ export function TrailWorkspace({ trail }: { trail: Trail }) {
             onPointerEnter={(e) => lightPane(e, true)}
             onPointerLeave={(e) => lightPane(e, false)}
           >
-            <TrailThread />
+            <ChatThread />
           </div>
           {sideOpen ? (
             <>

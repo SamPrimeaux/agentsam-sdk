@@ -53,8 +53,8 @@ function SamSketchPage() {
         if (!prompt) return;
         const context = message.context ?? selection ?? {};
         const store = useWorkStore.getState();
-        const trailId = store.activeTrailId || store.startTrail();
-        store.setActiveTrail(trailId);
+        const chatId = store.activeChatId || store.startChat();
+        store.setActiveChat(chatId);
         const scene = {
           app: "SamSketch",
           label: context.label ?? "Entire scene",
@@ -62,7 +62,7 @@ function SamSketchPage() {
           chapter: context.chapter,
           selectedItem: context.selectedItem ?? null,
         };
-        store.setDraft(trailId, prompt + "\n\nCurrent SamSketch scene context:\n" + JSON.stringify(scene, null, 2));
+        store.setDraft(chatId, prompt + "\n\nCurrent SamSketch scene context:\n" + JSON.stringify(scene, null, 2));
         data.onModeChange?.("chat");
       }
     }

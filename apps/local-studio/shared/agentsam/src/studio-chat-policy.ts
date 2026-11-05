@@ -1,8 +1,8 @@
 import type { AgentRunMode } from "@inneranimalmedia/agentsam-contracts";
 
-export type StudioChatSurface = "trail" | "side";
+export type StudioChatSurface = "chat" | "side";
 
-const TRAIL_SYSTEM = [
+const CHAT_SYSTEM = [
   "You are AgentSam, the lead assistant in AgentSam Local Studio.",
   "Be calm, precise, and useful. Help with software, writing, research, and shipping work.",
   "Match response scope directly to the user's prompt. For casual check-ins or brief questions, reply concisely without unsolicited code dumps or architecture.",
@@ -64,7 +64,7 @@ export function buildStudioSystemMessages(input: {
   workspace?: Array<{ path: string; content: string }>;
 }): Array<{ role: "system"; content: string }> {
   const messages: Array<{ role: "system"; content: string }> = [
-    { role: "system", content: input.surface === "side" ? SIDE_SYSTEM : TRAIL_SYSTEM },
+    { role: "system", content: input.surface === "side" ? SIDE_SYSTEM : CHAT_SYSTEM },
     { role: "system", content: studioRunModeInstruction(input.runMode) },
   ];
 

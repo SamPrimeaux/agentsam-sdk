@@ -1,1 +1,1 @@
-export { TrailThread as ChatAssistant } from "@/components/workbench/thread";
+export { ChatThread as ChatAssistant } from "@/components/workbench/thread";

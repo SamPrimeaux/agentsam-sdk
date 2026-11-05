@@ -3,7 +3,7 @@
  * Never returns populatedWorkFixture sample cards in production.
  */
 
-import { resolveWebsiteAssets } from './bindings.js';
+import { listAccountLibraryResources, serveAccountLibraryFile, mutateAccountLibraryArtifact } from './work-library-resources.js';
 import { handleWorkCadRequest, isWorkCadRequest } from './work-cad-models.js';
 import { readProjectInsights } from './work-project-insights.js';
 import { handleProjectTimer } from './work-project-metrics.js';
@@ -15,15 +15,7 @@ const DEFAULT_NAV = Object.freeze([
   { id: 'tickets', label: 'Tickets', href: '/tickets', group: 'work' },
   { id: 'mail', label: 'Mail', href: '/mail', group: 'work' },
   { id: 'projects', label: 'Projects', href: '/projects', group: 'work' },
-  { id: 'artifacts', label: 'My artifacts', href: '/artifacts', group: 'files' },
-  { id: 'r2', label: 'R2 Storage', href: '/artifacts?source=r2', group: 'files' },
-  { id: 'google-drive', label: 'Google Drive', href: '/artifacts?source=google-drive', group: 'files' },
-  { id: 'shared-drives', label: 'Shared drives', href: '/artifacts?source=shared-drives', group: 'files' },
-  { id: 'local-folder', label: 'Local folder', href: '/artifacts?source=local', group: 'files' },
-  { id: 'shared-with-me', label: 'Shared with me', href: '/artifacts?view=shared', group: 'files' },
-  { id: 'recent', label: 'Recent', href: '/artifacts?view=recent', group: 'files' },
-  { id: 'starred', label: 'Starred', href: '/artifacts?view=starred', group: 'files' },
-  { id: 'trash', label: 'Trash', href: '/artifacts?view=trash', group: 'files' },
+  { id: 'artifacts', label: 'Library', href: '/artifacts', group: 'files' },
 ]);
 
 const WORK_CAPABILITIES = Object.freeze({
@@ -255,96 +247,10 @@ export async function loadProjectDraws(db,owner) {
 
 /** Explicit project media registrations. Project authorization comes from the
  * same owner-scoped projects table as Work, never from a bucket key prefix. */
-export async function loadProjectMedia(db, owner, origin) {
-  if (!db?.prepare || !owner) return [];
-  try {
-    const data = await db.prepare(
-      "SELECT m.id, m.project_id, m.filename, m.object_key, m.source_kind, " +
-      "m.content_type, m.media_kind, m.size_bytes, m.updated_at, m.source_uri, m.status " +
-      "FROM media_assets m INNER JOIN projects p ON p.id = m.project_id " +
-      "WHERE p.owner_user_id = ? " +
-      "ORDER BY m.updated_at DESC LIMIT 150"
-    ).bind(owner).all();
-    return (data.results || []).map(row => {
-      const name = clean(row.filename) || clean(row.object_key).split('/').pop() || clean(row.id);
-      const mime = clean(row.content_type) || null;
-      const source = ['r2', 'local', 'google-drive', 'shared-drives'].includes(row.source_kind) ? row.source_kind : 'artifacts';
-      const publicPrefix = 'sites/agentsam-sdk/public/';
-      const key = clean(row.object_key);
-      // Never turn arbitrary private R2 keys into unauthenticated public URLs.
-      const deleted = ['deleted', 'trashed'].includes(clean(row.status).toLowerCase());
-      const preview = !deleted && source === 'r2' && mime?.startsWith('image/') && key.startsWith(publicPrefix)
-        ? origin + '/site/' + encodeURI(key.slice(publicPrefix.length))
-        : null;
-      const updated = Date.parse(clean(row.updated_at).replace(' ', 'T') + 'Z');
-      return {
-        id: 'media:' + row.id,
-        name,
-        kind: kindFromName(name, mime),
-        source,
-        projectId: clean(row.project_id),
-        deleted,
-        updatedAt: Number.isFinite(updated) ? updated : null,
-        preview,
-        mime,
-        sizeLabel: formatBytes(row.size_bytes),
-        updatedLabel: Number.isFinite(updated) ? relativeLabel(updated / 1000) : null,
-      };
-    });
-  } catch (err) {
-    console.error('work_project_gallery_unavailable', String(err));
-    return [];
-  }
-}
-
-async function loadArtifacts(env, origin) {
-  const website = resolveWebsiteAssets(env);
-  if (!website?.binding?.list) return [];
-
-  const prefixes = ['artifacts/', 'sites/agentsam-sdk/public/artifacts/', 'uploads/'];
-  const out = [];
-  const seen = new Set();
-
-  for (const prefix of prefixes) {
-    try {
-      const listed = await website.binding.list({ prefix, limit: 80 });
-      for (const obj of listed.objects || []) {
-        const key = clean(obj.key);
-        if (!key || seen.has(key)) continue;
-        // Skip partials / html shells — keep file-like artifacts only.
-        if (key.endsWith('/') || key.includes('/partials/')) continue;
-        const name = key.split('/').pop() || key;
-        if (!name || name === 'index.html') continue;
-        seen.add(key);
-        const mime = clean(obj.httpMetadata?.contentType) || null;
-        const uploaded = obj.uploaded
-          ? Math.floor(new Date(obj.uploaded).getTime() / 1000)
-          : null;
-        out.push({
-          id: key,
-          name,
-          kind: kindFromName(name, mime),
-          source: prefix.startsWith('sites/') || prefix.startsWith('artifacts/') ? 'r2' : 'artifacts',
-          preview: mime?.startsWith('image/')
-            ? `${origin}/site/${key.replace(/^sites\/[^/]+\/public\//, '')}`
-            : null,
-          mime,
-          sizeLabel: formatBytes(obj.size),
-          updatedLabel: relativeLabel(uploaded),
-          updatedAt: uploaded ? uploaded * 1000 : null,
-        });
-      }
-    } catch (err) {
-      console.error('work_snapshot_artifacts_error', prefix, String(err));
-    }
-  }
-
-  return out.slice(0, 100);
-}
-
 export function isWorkRequest(pathname) {
   return (
     pathname === '/api/work/snapshot' ||
+    /^\/api\/work\/library\/artifacts\/[A-Za-z0-9_-]+(?:\/file)?$/.test(pathname) ||
     isWorkCadRequest(pathname) ||
     /^\/api\/work\/projects\/[^/]+\/insights$/.test(pathname) ||
     /^\/api\/work\/projects\/[^/]+\/timer\/(start|stop)$/.test(pathname) ||
@@ -365,6 +271,10 @@ export async function handleWorkRequest(request, env, accountId) {
 
   try {
     if (isWorkCadRequest(url.pathname)) return handleWorkCadRequest(request, env, accountId);
+    const privateAsset = /^\/api\/work\/library\/artifacts\/([A-Za-z0-9_-]+)\/file$/.exec(url.pathname);
+    if (privateAsset && method === 'GET') return serveAccountLibraryFile(env, accountId, privateAsset[1], url.searchParams.get('preview') === '1');
+    const artifactPatch = /^\/api\/work\/library\/artifacts\/([A-Za-z0-9_-]+)$/.exec(url.pathname);
+    if (artifactPatch && method === 'PATCH') return mutateAccountLibraryArtifact(request, env, accountId, artifactPatch[1]);
     const dataResponse = await handleWorkData(request, env.DB, accountId, url);
     if (dataResponse) return dataResponse;
     const insightsRoute = /^\/api\/work\/projects\/([^/]+)\/insights$/.exec(url.pathname);
@@ -392,16 +302,15 @@ export async function handleWorkRequest(request, env, accountId) {
       const needsCalendar = !surface || ['calendar', 'project-detail'].includes(surface);
       const needsMail = surface === 'mail';
 
-      const [tickets, publicArtifacts, registeredMedia, projectDraws, gmailConnections, cloudflareMail] = await Promise.all([
+      const [tickets, registeredLibrary, projectDraws, gmailConnections, cloudflareMail] = await Promise.all([
         needsTickets ? listTickets(env.DB, accountId) : Promise.resolve([]),
-        needsArtifacts ? loadArtifacts(env, url.origin) : Promise.resolve([]),
-        needsArtifacts ? loadProjectMedia(env.DB, accountId, url.origin) : Promise.resolve([]),
+        needsArtifacts ? listAccountLibraryResources(env.DB, accountId) : Promise.resolve([]),
         needsArtifacts ? loadProjectDraws(env.DB, accountId) : Promise.resolve([]),
         needsMail ? listGmailConnections(env, accountId) : Promise.resolve([]),
         needsMail ? loadCloudflareMailConnection(env, accountId) : Promise.resolve(null),
       ]);
       // Prefer registered project metadata without losing the existing R2 view.
-      const artifacts = [...registeredMedia, ...projectDraws, ...publicArtifacts];
+      const artifacts = [...registeredLibrary, ...projectDraws];
       const mailConnections = needsMail
         ? [...gmailConnections, ...(cloudflareMail ? [cloudflareMail] : [])]
         : [];

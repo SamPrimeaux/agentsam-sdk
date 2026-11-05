@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import type { Project, Trail } from "@inneranimalmedia/agentsam-local-shared";
+import type { Project, Chat } from "@inneranimalmedia/agentsam-local-shared";
 import { listLocalWorkspaceArtifacts, localArtifactTarget } from "./local-artifacts.ts";
 import { trustedLoopbackRuntimeOrigin } from "./workspace-origin.ts";
 
@@ -10,7 +10,7 @@ const project = (id:string,kind:"scratch"|"filesystem"): Project =>
 
 test("files from different authorized roots have separate editor ids, never sample scratch assets",()=>{
  const projects=[project("web","filesystem"),project("cad","filesystem"),project("scratch","scratch")];
- const files=listLocalWorkspaceArtifacts(projects,[] as Trail[]);
+ const files=listLocalWorkspaceArtifacts(projects,[] as Chat[]);
  assert.equal(files.length,2);
  assert.notEqual(files[0]?.id,files[1]?.id);
  assert.equal(files.every(a=>a.source==="local"),true);
@@ -19,9 +19,9 @@ test("files from different authorized roots have separate editor ids, never samp
 });
 test("only explicit unambiguous Work-project assignment associates Gallery media",()=>{
  const projects=[project("cad","filesystem")];
- const trails=[{id:"t1",projectId:"cad",workProjectId:"proj_dreamhouse"}] as Trail[];
- assert.equal(listLocalWorkspaceArtifacts(projects,trails)[0]?.projectId,"proj_dreamhouse");
- const ambiguous=[...trails,{id:"t2",projectId:"cad",workProjectId:"proj_else"}] as Trail[];
+ const chats=[{id:"t1",projectId:"cad",workProjectId:"proj_dreamhouse"}] as Chat[];
+ assert.equal(listLocalWorkspaceArtifacts(projects,chats)[0]?.projectId,"proj_dreamhouse");
+ const ambiguous=[...chats,{id:"t2",projectId:"cad",workProjectId:"proj_else"}] as Chat[];
  assert.equal(listLocalWorkspaceArtifacts(projects,ambiguous)[0]?.projectId,null);
  assert.equal(localArtifactTarget("local:forged",projects),null);
 });

@@ -104,7 +104,7 @@ export type WorkTicketInput = Partial<Omit<WorkTicket, "id" | "updatedAt" | "cre
 export type WorkArtifact = {
   id: string;
   name: string;
-  kind: "image" | "video" | "audio" | "model" | "document" | "code" | "archive" | "other";
+  kind: "image" | "video" | "audio" | "model" | "document" | "code" | "archive" | "other" | "design" | "website" | "product" | "presentation" | "spreadsheet" | "note" | "folder";
   source: "artifacts" | "r2" | "google-drive" | "shared-drives" | "local" | "cf_images" | "stream";
   /** Only an explicit, account-owned project association; never guessed from filenames. */
   projectId?: string | null;
@@ -114,6 +114,10 @@ export type WorkArtifact = {
   shared?: boolean;
   deleted?: boolean;
   preview?: string | null;
+  /** Authorized open target (or verified public URL); never an unscoped R2 key. */
+  open?: string | null;
+  resourceType?: string | null;
+  sourceLabel?: string | null;
   mime?: string | null;
   sizeLabel?: string | null;
   updatedLabel?: string | null;

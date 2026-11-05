@@ -275,8 +275,8 @@ function TerminalViewport({ sessionId }: { sessionId: string }) {
       if (!event.dataTransfer.files.length) return;
       event.preventDefault();
       event.stopPropagation();
-      const trailId = useWorkStore.getState().activeTrailId;
-      queueChatImages(trailId, Array.from(event.dataTransfer.files));
+      const chatId = useWorkStore.getState().activeChatId;
+      queueChatImages(chatId, Array.from(event.dataTransfer.files));
       navigateApp("/agentsam");
       toast("Opening Chat to attach screenshot — no terminal input sent.");
     }}

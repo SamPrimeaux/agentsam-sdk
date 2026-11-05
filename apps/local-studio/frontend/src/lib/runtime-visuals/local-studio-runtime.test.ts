@@ -15,7 +15,7 @@ test("workspace boot is real state and settles on completion", () => {
 test("agent turns use real request lifecycle without timer-driven progress", () => {
   const visuals = createLocalStudioRuntimeVisuals();
   const id = "agent-turn:test";
-  const surface = "trail:test";
+  const surface = "chat:test";
 
   visuals.startAgentTurn(id, "Understanding your request", undefined, surface);
   let scene = visuals.controllerFor(surface).getScene();
@@ -38,15 +38,15 @@ test("agent turns use real request lifecycle without timer-driven progress", () 
 
 test("lead and co-worker surfaces keep independent runtime state", () => {
   const visuals = createLocalStudioRuntimeVisuals();
-  visuals.startAgentTurn("lead-op", "Lead planning", undefined, "trail:lead");
+  visuals.startAgentTurn("lead-op", "Lead planning", undefined, "chat:lead");
   visuals.startAgentTurn("side-op", "Co-worker researching", undefined, "side:worker");
 
-  assert.equal(visuals.controllerFor("trail:lead").getScene().label, "Lead planning");
+  assert.equal(visuals.controllerFor("chat:lead").getScene().label, "Lead planning");
   assert.equal(visuals.controllerFor("side:worker").getScene().label, "Co-worker researching");
 
   visuals.completeAgentTurn("side-op", "side:worker");
   assert.equal(visuals.controllerFor("side:worker").getScene().status, "success");
-  assert.equal(visuals.controllerFor("trail:lead").getScene().status, "running");
+  assert.equal(visuals.controllerFor("chat:lead").getScene().status, "running");
 });
 
 test("agent failures remain errors for the normal recovery UI to handle", () => {

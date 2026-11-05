@@ -11,12 +11,12 @@ import { IconAction } from '@/components/ui/icon-action';
  * The chat's existing workProjectId stores its association; never replace
  * its local projectId, conversation ID, messages, or draft.
  */
-export function ProjectPicker({ trailId }: { trailId: string }) {
+export function ProjectPicker({ chatId }: { chatId: string }) {
   const {theme,accentColor} = useNav();
-  const chats = useWorkStore(state => state.trails);
+  const chats = useWorkStore(state => state.chats);
   const [revision,setRevision] = useState(0);
   const [position,setPosition] = useState({left:16,bottom:60});
-  const projectId = useWorkStore((state) => state.trails.find((trail) => trail.id === trailId)?.workProjectId);
+  const projectId = useWorkStore((state) => state.chats.find((chat) => chat.id === chatId)?.workProjectId);
   const [projects, setProjects] = useState<WorkProject[]>([]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -63,7 +63,7 @@ export function ProjectPicker({ trailId }: { trailId: string }) {
       const { sharedLiveWorkHost } = await import('@/components/work/LocalStudioWorkPage');
       const host = sharedLiveWorkHost();
       if (!host.assignProjectChat) throw new Error('Project chat linking is unavailable');
-      await host.assignProjectChat(trailId, id);
+      await host.assignProjectChat(chatId, id);
       setOpen(false);
       setQuery('');
       window.dispatchEvent(new Event('agentsam:projects-changed'));
@@ -83,7 +83,7 @@ export function ProjectPicker({ trailId }: { trailId: string }) {
       const host = sharedLiveWorkHost();
       if (!host.createProject || !host.assignProjectChat) throw new Error('Project creation is unavailable');
       const project = await host.createProject({ name: title });
-      await host.assignProjectChat(trailId, project.id);
+      await host.assignProjectChat(chatId, project.id);
       setProjects((current) => [project, ...current.filter((item) => item.id !== project.id)]);
       setOpen(false);
       setQuery('');

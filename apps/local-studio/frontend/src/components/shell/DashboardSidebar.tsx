@@ -1,1 +1,1 @@
-export { TrailsPanel as DashboardSidebar } from "./studio-panels";
+export { ChatsPanel as DashboardSidebar } from "./studio-panels";

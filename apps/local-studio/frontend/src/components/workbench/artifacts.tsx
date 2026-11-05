@@ -36,7 +36,7 @@ export function ArtifactsStage() {
             <Box className="mb-3 size-8 text-stone" />
             <h3 className="text-sm font-medium">Nothing captured yet</h3>
             <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-              Code from trails, HTML previews, and ship receipts land here.
+              Code from chats, HTML previews, and ship receipts land here.
             </p>
           </div>
         ) : (

@@ -66,6 +66,14 @@
     {
       "binding": "CAD_PROJECT_ASSETS",
       "bucket_name": "cad"
+    },
+    {
+      "binding": "AUTORAG_BUCKET",
+      "bucket_name": "inneranimalmedia-autorag"
+    },
+    {
+      "binding": "ARTIFACTS",
+      "bucket_name": "artifacts"
     }
   ],
   "pipelines": [

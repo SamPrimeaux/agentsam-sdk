@@ -19,17 +19,17 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input";
 import { cn, shortTime } from "@/lib/utils";
 import { useWorkStore } from "@/lib/work/store";
-import type { Project, Trail } from "@inneranimalmedia/agentsam-local-shared";
+import type { Project, Chat } from "@inneranimalmedia/agentsam-local-shared";
 
-function groupTrails(trails: Trail[], query: string) {
+function groupTrails(chats: Chat[], query: string) {
   const q = query.trim().toLowerCase();
   const filtered = q
-    ? trails.filter(
+    ? chats.filter(
         (t) =>
           t.title.toLowerCase().includes(q) ||
           t.messages.some((m) => m.content.toLowerCase().includes(q)),
       )
-    : trails;
+    : chats;
   const pinned = filtered.filter((t) => t.pinned);
   const rest = filtered.filter((t) => !t.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
   const now = Date.now();
@@ -42,33 +42,33 @@ function groupTrails(trails: Trail[], query: string) {
   };
 }
 
-function TrailRow({
-  trail,
+function ChatRow({
+  chat,
   activeId,
   onRename,
 }: {
-  trail: Trail;
+  chat: Chat;
   activeId?: string;
-  onRename: (trail: Trail) => void;
+  onRename: (chat: Chat) => void;
 }) {
   const navigate = useNavigate();
-  const setActiveTrail = useWorkStore((s) => s.setActiveTrail);
-  const pinTrail = useWorkStore((s) => s.pinTrail);
-  const deleteTrail = useWorkStore((s) => s.deleteTrail);
-  const active = activeId === trail.id;
+  const setActiveChat = useWorkStore((s) => s.setActiveChat);
+  const pinChat = useWorkStore((s) => s.pinChat);
+  const deleteChat = useWorkStore((s) => s.deleteChat);
+  const active = activeId === chat.id;
 
   return (
     <div className={cn("group flex items-center rounded-lg", active ? "bg-muted" : "hover:bg-muted/60")}>
       <button
         type="button"
         onClick={() => {
-          setActiveTrail(trail.id);
-          void navigate({ to: "/chats/$chatId", params: { chatId: trail.id } });
+          setActiveChat(chat.id);
+          void navigate({ to: "/chats/$chatId", params: { chatId: chat.id } });
         }}
         className="flex min-h-11 min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left md:min-h-0"
       >
-        <span className="min-w-0 flex-1 truncate text-sm">{trail.title}</span>
-        <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{shortTime(trail.updatedAt)}</span>
+        <span className="min-w-0 flex-1 truncate text-sm">{chat.title}</span>
+        <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">{shortTime(chat.updatedAt)}</span>
       </button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -77,22 +77,22 @@ function TrailRow({
             size="icon"
             variant="ghost"
             className="mr-1 size-11 opacity-100 md:size-8 md:opacity-0 md:group-hover:opacity-100 md:data-[state=open]:opacity-100"
-            aria-label={`Chat actions for ${trail.title}`}
+            aria-label={`Chat actions for ${chat.title}`}
           >
             <MoreHorizontal className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => onRename(trail)}>Rename</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => pinTrail(trail.id)}>
+          <DropdownMenuItem onSelect={() => onRename(chat)}>Rename</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => pinChat(chat.id)}>
             <Pin className="size-3.5" />
-            {trail.pinned ? "Unpin" : "Pin"}
+            {chat.pinned ? "Unpin" : "Pin"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive"
             onSelect={() => {
-              deleteTrail(trail.id);
+              deleteChat(chat.id);
               if (active) void navigate({ to: "/chats" });
             }}
           >
@@ -107,29 +107,29 @@ function TrailRow({
 
 function Section({
   label,
-  trails,
+  chats,
   activeId,
   onRename,
 }: {
   label: string;
-  trails: Trail[];
+  chats: Chat[];
   activeId?: string;
-  onRename: (t: Trail) => void;
+  onRename: (t: Chat) => void;
 }) {
-  if (!trails.length) return null;
+  if (!chats.length) return null;
   return (
     <div className="mb-3">
       <p className="px-2.5 pb-1 text-[11px] tracking-[0.12em] text-muted-foreground uppercase">{label}</p>
       <div className="flex flex-col gap-0.5">
-        {trails.map((trail) => (
-          <TrailRow key={trail.id} trail={trail} activeId={activeId} onRename={onRename} />
+        {chats.map((chat) => (
+          <ChatRow key={chat.id} chat={chat} activeId={activeId} onRename={onRename} />
         ))}
       </div>
     </div>
   );
 }
 
-export function TrailsPanel({
+export function ChatsPanel({
   activeId,
   showBrandFooter = true,
 }: {
@@ -137,20 +137,20 @@ export function TrailsPanel({
   showBrandFooter?: boolean;
 }) {
   const navigate = useNavigate();
-  const trails = useWorkStore((s) => s.trails);
+  const chats = useWorkStore((s) => s.chats);
   const activeProjectId = useWorkStore((s) => s.activeProjectId);
   const projects = useWorkStore((s) => s.projects);
   const search = useWorkStore((s) => s.search);
   const setSearch = useWorkStore((s) => s.setSearch);
-  const startTrail = useWorkStore((s) => s.startTrail);
-  const renameTrail = useWorkStore((s) => s.renameTrail);
-  const [editing, setEditing] = useState<Trail | null>(null);
+  const startChat = useWorkStore((s) => s.startChat);
+  const renameChat = useWorkStore((s) => s.renameChat);
+  const [editing, setEditing] = useState<Chat | null>(null);
   const [title, setTitle] = useState("");
 
   const project = projects.find((p) => p.id === activeProjectId) ?? projects[0]!;
   const projectTrails = useMemo(
-    () => trails.filter((t) => t.projectId === activeProjectId),
-    [trails, activeProjectId],
+    () => chats.filter((t) => t.projectId === activeProjectId),
+    [chats, activeProjectId],
   );
   const groups = useMemo(() => groupTrails(projectTrails, search), [projectTrails, search]);
 
@@ -168,7 +168,7 @@ export function TrailsPanel({
           className="size-11 text-foreground md:size-8"
           aria-label="New chat"
           onClick={() => {
-            const id = startTrail();
+            const id = startChat();
             void navigate({ to: "/chats/$chatId", params: { chatId: id } });
           }}
         >
@@ -189,10 +189,10 @@ export function TrailsPanel({
       </div>
 
       <div className="scrollbar-thin flex-1 overflow-y-auto px-2 pb-4">
-        <Section label="Pinned" trails={groups.pinned} activeId={activeId} onRename={(t) => { setEditing(t); setTitle(t.title); }} />
-        <Section label="Today" trails={groups.today} activeId={activeId} onRename={(t) => { setEditing(t); setTitle(t.title); }} />
-        <Section label="Yesterday" trails={groups.yesterday} activeId={activeId} onRename={(t) => { setEditing(t); setTitle(t.title); }} />
-        <Section label="Earlier" trails={groups.earlier} activeId={activeId} onRename={(t) => { setEditing(t); setTitle(t.title); }} />
+        <Section label="Pinned" chats={groups.pinned} activeId={activeId} onRename={(t) => { setEditing(t); setTitle(t.title); }} />
+        <Section label="Today" chats={groups.today} activeId={activeId} onRename={(t) => { setEditing(t); setTitle(t.title); }} />
+        <Section label="Yesterday" chats={groups.yesterday} activeId={activeId} onRename={(t) => { setEditing(t); setTitle(t.title); }} />
+        <Section label="Earlier" chats={groups.earlier} activeId={activeId} onRename={(t) => { setEditing(t); setTitle(t.title); }} />
         {!projectTrails.length ? (
           <p className="px-2.5 py-6 text-sm text-muted-foreground">No chats yet. Start one — it stays with the project on this device.</p>
         ) : null}
@@ -213,7 +213,7 @@ export function TrailsPanel({
             className="mt-4 flex flex-col gap-3"
             onSubmit={(e) => {
               e.preventDefault();
-              if (editing) renameTrail(editing.id, title);
+              if (editing) renameChat(editing.id, title);
               setEditing(null);
             }}
           >
@@ -234,7 +234,7 @@ export function TrailsPanel({
 export function ProjectsPanel() {
   const navigate = useNavigate();
   const projects = useWorkStore((s) => s.projects);
-  const trails = useWorkStore((s) => s.trails);
+  const chats = useWorkStore((s) => s.chats);
   const activeProjectId = useWorkStore((s) => s.activeProjectId);
   const createSampleProject = useWorkStore((s) => s.createSampleProject);
   const createFilesystemProject = useWorkStore((s) => s.createFilesystemProject);
@@ -289,7 +289,7 @@ export function ProjectsPanel() {
               <span className="truncate text-sm">{item.name}</span>
               <span className="text-[11px] text-muted-foreground">
                 {item.kind === "filesystem" ? "Filesystem" : item.description?.toLowerCase().includes("sample") ? "Sample" : "Browser"} · {item.files.length} files ·{" "}
-                {trails.filter((t) => t.projectId === item.id).length} chats
+                {chats.filter((t) => t.projectId === item.id).length} chats
               </span>
             </button>
             <DropdownMenu>
