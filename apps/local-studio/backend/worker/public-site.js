@@ -203,9 +203,20 @@ export async function servePublicSitePage(
   const redirect = themeStoreRedirect(request, pathname);
   if (redirect) return redirect;
 
-  const siteSlug = opts.siteSlug || DEFAULT_SITE;
+  let site;
+  try {
+    site = await resolvePublicSiteIdentity(env.DB, new URL(request.url).hostname);
+  } catch (error) {
+    console.error('Public CMS site resolution failed:', String(error?.message || error));
+    return new Response('Site routing unavailable', {
+      status: 503,
+      headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+    });
+  }
+  if (!site) return null;
+
+  const siteSlug = site.slug;
   const website = resolveWebsiteAssets(env);
-  const kv = resolveSiteCacheKv(env)?.binding || null;
   const workerAssets = resolveWorkerStaticAssets(env);
 
   let relative = PUBLIC_SITE_HTML[pathname];
