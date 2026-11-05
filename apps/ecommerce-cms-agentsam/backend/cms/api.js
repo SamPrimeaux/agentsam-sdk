@@ -2856,8 +2856,10 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     let body;
     try { body = await request.json(); }
     catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
+    const selectedSite = body.site_id || url.searchParams.get("site_id") || null;
+    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
     const result = await selectThemePreview(env, body.slug, context.accountId,
-      body.expected_version ?? null, body.site_id || url.searchParams.get("site_id") || null);
+      body.expected_version ?? null, selectedSite);
     return json(result, { status: result.status || 200 });
   }
 
