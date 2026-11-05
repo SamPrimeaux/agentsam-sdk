@@ -26,8 +26,13 @@ export async function getPlugin(env, pluginKey, opts = {}) {
     const accountId = await resolveApplicationAccountId(env, opts.accountId);
     if (!accountId) return null;
     return await env.DB.prepare(
-      `SELECT * FROM agentsam_plugins
-       WHERE account_id = ? AND plugin_key = ? AND is_enabled = 1
+      `SELECT p.*, i.account_id, i.instance_key AS installation_key, i.enabled AS is_enabled,
+              i.setup_status, i.health_status,
+              json_patch(p.config_json, i.config_json) AS config_json
+       FROM agentsam_plugin_installations i
+       JOIN agentsam_plugins p ON p.id = i.plugin_id
+       WHERE i.account_id = ? AND p.plugin_key = ? AND i.enabled = 1
+       ORDER BY i.instance_key
        LIMIT 1`,
     )
       .bind(accountId, pluginKey)
@@ -44,9 +49,13 @@ export async function listEnabledPlugins(env, opts = {}) {
     const accountId = await resolveApplicationAccountId(env, opts.accountId);
     if (!accountId) return [];
     const { results } = await env.DB.prepare(
-      `SELECT * FROM agentsam_plugins
-       WHERE account_id = ? AND is_enabled = 1
-       ORDER BY display_name ASC, plugin_key ASC`,
+      `SELECT p.*, i.account_id, i.instance_key AS installation_key, i.enabled AS is_enabled,
+              i.setup_status, i.health_status,
+              json_patch(p.config_json, i.config_json) AS config_json
+       FROM agentsam_plugin_installations i
+       JOIN agentsam_plugins p ON p.id = i.plugin_id
+       WHERE i.account_id = ? AND i.enabled = 1
+       ORDER BY p.display_name ASC, p.plugin_key ASC`,
     )
       .bind(accountId)
       .all();

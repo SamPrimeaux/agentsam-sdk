@@ -69,9 +69,10 @@ export async function resolveIamBridgeEndpoints(env, opts = {}) {
   if (env?.DB) {
     try {
       const plugin = await env.DB.prepare(
-        `SELECT endpoint_url, metadata_json, config_json, oauth_connect_url
-         FROM agentsam_plugins
-         WHERE account_id = ? AND plugin_key = ? AND is_enabled = 1
+        `SELECT p.endpoint_url, p.metadata_json, json_patch(p.config_json, i.config_json) AS config_json, p.oauth_connect_url
+         FROM agentsam_plugin_installations i
+         JOIN agentsam_plugins p ON p.id = i.plugin_id
+         WHERE i.account_id = ? AND p.plugin_key = ? AND i.enabled = 1
          LIMIT 1`,
       )
         .bind(accountId, IAM_MCP_PLUGIN_KEY)

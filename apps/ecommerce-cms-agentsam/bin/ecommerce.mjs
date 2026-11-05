@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Portable ecommerce package CLI.
- * Scaffold seeds company + agentsam_plugins + mail settings SQL,
+ * Scaffold seeds company + agentsam_plugins/installations + mail settings SQL,
  * and writes Worker bindings + deployment/security vars only — not customer brand identity in Wrangler.
  */
 import fs from "node:fs";
@@ -120,59 +120,36 @@ ON CONFLICT(id) DO UPDATE SET
   website_url = excluded.website_url,
   updated_at = unixepoch();
 
--- Replace account_id with the customer Cloudflare/account id used by this install.
-INSERT INTO agentsam_plugins (
-  id, account_id, plugin_key, display_name, plugin_kind, endpoint_url,
-  transport, auth_type, is_enabled, setup_status, health_status,
-  metadata_json, config_json, created_at, updated_at
+-- Registry rows are account-free; installations bind them to this install's account.
+-- Replace REPLACE_ACCOUNT_ID with the account id used by this install.
+INSERT OR IGNORE INTO agentsam_plugins (
+  plugin_key, family_key, provider_key, plugin_kind, display_name, endpoint_url,
+  transport, auth_type, metadata_json, config_json
 ) VALUES (
-  'plug_mcp_iam',
-  'REPLACE_ACCOUNT_ID',
-  'inneranimalmedia-mcp-server',
-  'Inner Animal MCP',
-  'mcp',
-  NULL,
-  'remote_jsonrpc',
-  'bridge',
-  1,
-  'pending',
-  'unknown',
+  'inneranimalmedia-mcp-server', 'connections', 'inneranimalmedia-mcp-server', 'mcp', 'Inner Animal MCP', NULL,
+  'remote_jsonrpc', 'bridge',
   json_object(
     'provider_home', 'https://inneranimalmedia.com',
     'authorization_server', 'https://inneranimalmedia.com',
     'docs_url', 'https://mcp.inneranimalmedia.com'
   ),
-  json_object('bridge_only', true),
-  unixepoch(),
-  unixepoch()
-)
-ON CONFLICT(account_id, plugin_key) DO UPDATE SET
-  updated_at = unixepoch();
+  json_object('bridge_only', true)
+);
 
-INSERT INTO agentsam_plugins (
-  id, account_id, plugin_key, display_name, plugin_kind, endpoint_url,
-  transport, auth_type, is_enabled, setup_status, health_status,
-  metadata_json, config_json, created_at, updated_at
+INSERT OR IGNORE INTO agentsam_plugins (
+  plugin_key, family_key, provider_key, plugin_kind, display_name, endpoint_url,
+  transport, auth_type, metadata_json, config_json
 ) VALUES (
-  'plug_completeful',
-  'REPLACE_ACCOUNT_ID',
-  'completeful',
-  'Completeful',
-  'native',
-  'https://vxapi.completeful.com',
-  'native',
-  'api_key_secret',
-  1,
-  'pending',
-  'unknown',
+  'completeful', 'commerce', 'completeful', 'native', 'Completeful', 'https://vxapi.completeful.com',
+  'native', 'api_key_secret',
   json_object('family', 'ecommerce-cms-agentsam'),
-  json_object('credential_ref', 'CAPP_KEY'),
-  unixepoch(),
-  unixepoch()
-)
-ON CONFLICT(account_id, plugin_key) DO UPDATE SET
-  endpoint_url = excluded.endpoint_url,
-  updated_at = unixepoch();
+  json_object('credential_ref', 'CAPP_KEY')
+);
+
+INSERT INTO agentsam_plugin_installations (account_id, plugin_id, enabled, setup_status)
+SELECT 'REPLACE_ACCOUNT_ID', id, 1, 'unconfigured'
+FROM agentsam_plugins WHERE plugin_key IN ('inneranimalmedia-mcp-server', 'completeful')
+ON CONFLICT(account_id, plugin_id, instance_key) DO UPDATE SET updated_at = unixepoch();
 
 INSERT INTO mail_settings (id, settings_json, updated_at)
 VALUES (
