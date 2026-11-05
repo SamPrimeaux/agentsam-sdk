@@ -26,7 +26,7 @@ test("theme deep links retain their existing path", () => {
   assert.equal(publicSitePathForRequest(request), "/themes/resolve/demo/");
 });
 
-import { resolvePublicSiteIdentity, servePublicSitePage } from "./public-site.js";
+import { resolvePublicSiteIdentity, resolvePublishedPageSource, servePublicSitePage } from "./public-site.js";
 
 function domainDb(rowsByHost) {
   return {
