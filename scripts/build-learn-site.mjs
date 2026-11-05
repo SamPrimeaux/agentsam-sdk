@@ -46,8 +46,13 @@ if (!bodyMatch) {
   process.exit(1);
 }
 const body = bodyMatch[1];
-const sideMatch = body.match(/<div class="side"[^>]*>([\s\S]*?)<\/div>\s*<div class="main"/i);
+// The field-manual donor uses semantic <aside>/<main>. Support the older div
+// wrapper too, but never swallow the entire layout into the article body.
+const sideMatch =
+  body.match(/<aside\b[^>]*class="side"[^>]*>([\s\S]*?)<\/aside>\s*<main\b[^>]*class="main"/i) ||
+  body.match(/<div class="side"[^>]*>([\s\S]*?)<\/div>\s*<div class="main"/i);
 const mainMatch =
+  body.match(/<main\b[^>]*class="main"[^>]*>([\s\S]*?)<\/main>/i) ||
   body.match(/<div class="main"[^>]*>([\s\S]*)<\/div>\s*<\/div>\s*$/i) ||
   body.match(/<div class="main"[^>]*>([\s\S]*)<\/div>/i);
 const sideInner = sideMatch ? sideMatch[1] : '';
@@ -74,7 +79,6 @@ function shellHead(title, desc) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
-  <script src="/site/global/asbd-theme.js" defer></script>
 `;
 }
 
@@ -94,19 +98,15 @@ function injectShellScript(headerUrl, footerUrl) {
     Promise.all([
       inject('asbd-header-mount', '${headerUrl}'),
       inject('asbd-footer-mount', '${footerUrl}')
-    ]).then(function () {
-      if (window.AsbdTheme) {
-        AsbdTheme.syncFromDocument();
-        AsbdTheme.bindToggle(document.getElementById('asbdThemeToggle'));
-      }
-    });
+    ]);
   })();
   </script>`;
 }
 
-const toc = sideInner
-  .replace(/<h1[^>]*>[\s\S]*?<\/h1>/i, '')
-  .replace(/<p[^>]*>[\s\S]*?<\/p>/i, '');
+// Proper list semantics, spacing and real anchors: no run-together TOC text.
+const tocItems = [...sideInner.matchAll(/<a\s+href="(#[a-z0-9_-]+)"[^>]*>([\s\S]*?)<\/a>/gi)]
+  .map(([, href, text]) => `<li><a href="${href}">${text}</a></li>`);
+const toc = `<ol class="learn-toc-list">${tocItems.join('\n')}</ol>`;
 
 const indexHtml = `${shellHead('Learn — AgentSam', 'AgentSam learn hub: architecture field manual and package guides.')}
   <style>
@@ -116,8 +116,6 @@ const indexHtml = `${shellHead('Learn — AgentSam', 'AgentSam learn hub: archit
     .asbd-breadcrumb a { color:var(--asbd-text-muted); text-decoration:none; }
     .asbd-breadcrumb a:hover { color:var(--asbd-color-blue); }
     .asbd-breadcrumb [aria-current="page"] { color:var(--asbd-text); }
-    .asbd-doc-toolbar { display:flex; justify-content:flex-end; margin-bottom:18px; }
-    .asbd-theme-toggle { font:inherit; font-size:13px; font-weight:700; border-radius:10px; border:1px solid var(--asbd-border); background:var(--asbd-surface-elevated); color:var(--asbd-text); padding:8px 14px; cursor:pointer; }
     h1 { font-size:clamp(2rem,4vw,2.75rem); letter-spacing:-0.03em; margin:0 0 12px; }
     .lead { color:var(--asbd-text-muted); max-width:62ch; margin:0 0 28px; line-height:1.55; }
     .learn-grid { display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
@@ -131,15 +129,12 @@ const indexHtml = `${shellHead('Learn — AgentSam', 'AgentSam learn hub: archit
 <body data-asbd-theme="dark">
   <div id="asbd-header-mount"></div>
   <main class="asbd-doc">
-    <div class="asbd-doc-toolbar">
-      <button type="button" class="asbd-theme-toggle" id="asbdThemeToggle">Light theme</button>
-    </div>
     <nav class="asbd-breadcrumb" aria-label="Breadcrumb">
       <a href="/">Home</a><span aria-hidden="true">/</span>
       <span aria-current="page">Learn</span>
     </nav>
-    <h1>Learn AgentSam</h1>
-    <p class="lead">Field manuals and package guides for <code>agentsam.inneranimalmedia.com/learn/</code> — shared ASBD shell, CMS-editable body content under WEBSITE_ASSETS.</p>
+    <h1>AgentSam Journal</h1>
+    <p class="lead">Explore practical guides, product releases and field notes across the AgentSam ecosystem.</p>
     <div class="learn-grid">
       <a class="learn-card" href="./architecture-field-manual/">
         <h2>Architecture Field Manual</h2>
@@ -231,23 +226,13 @@ const manualHtml = `${shellHead('Architecture Field Manual — AgentSam Learn', 
       font-weight: 600;
       line-height: 1.35;
     }
+    .learn-toc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+    .learn-toc-list li { margin: 0; padding: 0; }
     .learn-toc a:hover {
       color: #fff;
       background: rgba(22,123,252,0.16);
     }
     .learn-main { padding: 28px 32px 80px; }
-    .asbd-doc-toolbar { display:flex; justify-content:flex-end; gap:10px; margin-bottom:18px; }
-    .asbd-theme-toggle {
-      font: inherit;
-      font-size: 13px;
-      font-weight: 700;
-      border-radius: 10px;
-      border: 1px solid var(--asbd-border);
-      background: var(--asbd-surface-elevated);
-      color: var(--asbd-text);
-      padding: 8px 14px;
-      cursor: pointer;
-    }
     .asbd-breadcrumb {
       display: flex;
       flex-wrap: wrap;
@@ -373,9 +358,6 @@ const manualHtml = `${shellHead('Architecture Field Manual — AgentSam Learn', 
       ${toc}
     </aside>
     <div class="learn-main">
-      <div class="asbd-doc-toolbar">
-        <button type="button" class="asbd-theme-toggle" id="asbdThemeToggle">Light theme</button>
-      </div>
       <nav class="asbd-breadcrumb" aria-label="Breadcrumb">
         <a href="/learn/">Learn</a><span aria-hidden="true">/</span>
         <span aria-current="page">Architecture Field Manual</span>
