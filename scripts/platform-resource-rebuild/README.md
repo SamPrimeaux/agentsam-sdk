@@ -15,7 +15,7 @@ Ordered, staged rebuild for the `inneranimalmedia-business` D1 database. Separat
 
 ## Ordered D1 rebuild
 
-Run from `/Users/samprimeaux/agentsam-sdk`:
+Run from `$HOME/agentsam-sdk`:
 
 ```bash
 # 0. Offline SQL and stock-registration fixtures; no Cloudflare access required.

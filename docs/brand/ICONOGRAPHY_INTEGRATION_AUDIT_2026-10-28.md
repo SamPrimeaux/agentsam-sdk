@@ -2,7 +2,7 @@
 
 ## Authority
 - This integration branch is based on origin/main b6555a46 (#394).
-- Original worktree: /Users/samprimeaux/agent-worktrees/brand-iconography-kit-20261022. Its modifications remain staged for preservation.
+- Original worktree: $HOME/agent-worktrees/brand-iconography-kit-20261022. Its modifications remain staged for preservation.
 - A binary-aware three-way patch from that staged worktree applied without conflicts. Do not merge its old history wholesale.
 - packages/agentsam-brand/assets/iconography/v1/iconography.manifest.json is the versioned source manifest. PWA and desktop app icons are derived from canonical source masters. Lucide ISC vector geometries are attributed separately.
 - packages/agentsam-merch/src/node/vector.js adds dependency-free SVG normalization intended for scoped icon geometry; it is not a full arbitrary SVG sanitizer or font outliner.
@@ -28,7 +28,7 @@
 - Original brand WIP remains staged and intact. No worktree was removed or reset.
 
 ## Promotion commands
-In /Users/samprimeaux/agentsam-sdk-brand-integration, using the normal signed Mac terminal:
+In $HOME/agentsam-sdk-brand-integration, using the normal signed Mac terminal:
     git diff --cached --check
     git diff --cached --stat
     git commit -m "feat(brand): integrate provenance-aware iconography and SVG normalization"

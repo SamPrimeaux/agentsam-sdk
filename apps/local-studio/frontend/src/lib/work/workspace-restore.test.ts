@@ -51,7 +51,7 @@ test("filesystem with authorized root is the real workspace", () => {
     id: "fs-1",
     name: "agentsam-sdk",
     kind: "filesystem",
-    workspaceRoot: "/Users/sam/agentsam-sdk",
+    workspaceRoot: "/tmp/agentsam-sdk-fixture",
     runtimeBaseUrl: "http://127.0.0.1:3099",
     runtimeCapability: "cap",
   });

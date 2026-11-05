@@ -4,7 +4,7 @@ This work belongs in the **AgentSam SDK Brand tooling**, not the DreamHouse Blen
 
 ## Production source / ownership
 
-- Active SDK worktree: /Users/samprimeaux/agent-worktrees/brand-iconography-kit-20261022
+- Active SDK worktree: $HOME/agent-worktrees/brand-iconography-kit-20261022
 - Branch: feat/brand-iconography-kit-20261022
 - Starting HEAD at inspection: 2a80dc51261231869b28df2b9b26443ed517b8fb
 - Core package: packages/agentsam-brand/

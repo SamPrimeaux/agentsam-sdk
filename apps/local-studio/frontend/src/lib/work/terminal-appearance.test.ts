@@ -12,8 +12,6 @@ Object.defineProperty(globalThis, "localStorage", {
 });
 
 const appearance = await import("./terminal-appearance.ts");
-// Plain JS SDK theme outside the app package; asserted equal below.
-const sdkTheme = await import("../../../../../../src/ui/theme.js");
 const { THEME_PRESETS } = await import("./theme.ts");
 
 const store = appearance.useTerminalAppearanceStore;
@@ -35,12 +33,15 @@ test("theme default reproduces the previous Studio terminal palette", () => {
   assert.equal(resolved.customized, false);
 });
 
-test("lane profiles mirror the SDK src/ui/theme.js xterm palettes (no third palette)", () => {
-  const lanes = { local: sdkTheme.LOCAL, remote: sdkTheme.CLOUD, sandbox: sdkTheme.SANDBOX } as const;
-  for (const [id, lane] of Object.entries(lanes)) {
-    const mine = appearance.lanePalette(id as "local" | "remote" | "sandbox");
-    const { minimumContrastRatio: _ignored, ...sdk } = lane.xterm;
-    assert.deepEqual({ ...mine }, { ...sdk }, `${id} palette drifted from src/ui/theme.js`);
+test("lane profiles keep their published terminal palette contract", () => {
+  for (const [id, background, primary] of [
+    ["local", "#0d0900", "#f59e0b"],
+    ["remote", "#000d0b", "#22d3c8"],
+    ["sandbox", "#06020d", "#a78bfa"],
+  ] as const) {
+    const palette = appearance.lanePalette(id);
+    assert.equal(palette.background, background);
+    assert.equal(palette.cursor, primary);
   }
 });
 

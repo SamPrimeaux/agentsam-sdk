@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync,existsSync} from 'node:fs';
+import {readFileSync,existsSync,readdirSync} from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import test from 'node:test';
@@ -21,8 +21,8 @@ test('hosted Sites uses packaged Ecommerce UI and truthful missing-theme states'
   assert.match(content,/id="browse-themes-shortcut"/);
   assert.match(content,/showThemeUnavailable/);
   assert.match(content,/showActiveTheme/);
-  assert.match(content,/theme\?\.preview_href && theme\?\.name/);
-  assert.match(content,/id="active-theme-status">Checking…/);
+  assert.match(content,/theme\.preview_href/);
+  assert.match(content,/Unverified/);
   assert.doesNotMatch(content,/id="active-theme-status">Active/);
  }
 });
@@ -34,8 +34,13 @@ test('hosted theme catalog is authenticated and read-only',()=>{
  assert.match(worker,/error:'unauthorized'/);
  assert.match(worker,/admin\/data\/theme-products.json/);
  assert.match(builder,/listLocalThemeProducts/);
- assert.match(builder,/materializeViolet/);
- assert.match(builder,/materializeJournal/);
+ assert.match(builder,/sync-theme-store-previews/);
+ assert.doesNotMatch(builder,/materializeViolet|materializeJournal|theme-gallery-preview/);
+ assert.match(builder,/rmSync\(compiledThemes/);
+ const sync=read('scripts/sync-theme-store-previews.mjs');
+ assert.match(sync,/iam\.theme-preview-files\.v1/);
+ assert.match(sync,/SHA-256 mismatch/);
+ assert.deepEqual(JSON.parse(read('theme-store-previews.json')),{resolve:'2.6.13',violet:'2.6.13','plain-jane':'0.1.0'});
  assert.match(builder,/installed:false,purchasable:false/);
 });
 test('staged product catalog and all three original preview entrypoints exist',()=>{
@@ -45,6 +50,7 @@ test('staged product catalog and all three original preview entrypoints exist',(
  const compiledRoot=existsSync(path.join(studio,'desktop-dist/themes'))
   ? 'desktop-dist' : '.output/public';
  assert.ok(existsSync(path.join(studio,compiledRoot,'themes')),'No compiled theme preview output is available');
+ assert.deepEqual(readdirSync(path.join(studio,compiledRoot,'themes')).sort(),['plain-jane','resolve','violet']);
  for(const slug of ['violet','resolve','plain-jane'])
   assert.ok(existsSync(path.join(studio,compiledRoot,'themes',slug,'demo/index.html')),slug+' compiled demo in '+compiledRoot);
  assert.ok(existsSync(path.join(studio,compiledRoot,'themes/violet/demo/global/cpas-shell.css')));
