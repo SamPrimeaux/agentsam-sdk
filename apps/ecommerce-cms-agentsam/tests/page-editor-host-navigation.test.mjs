@@ -43,7 +43,7 @@ test('Pages leads to content editor and exposes the visual editor without unsafe
   assert.ok(pages.includes('id="add-page-btn"'), 'the real Add Page API now has a matching control');
   assert.ok(pages.includes('window.cmsAdminNavigate("/admin/page-edit?" + query.toString())'),
     'new pages should open their own Page Editor');
-  assert.ok(pages.includes("cmsAdminFetch('/api/admin/cms/theme-projects')"), 'installed starter layouts must appear in Pages');
+  assert.ok(pages.includes("cmsAdminFetch('/api/admin/cms/theme-projects?site_id='+encodeURIComponent(selectedSiteId))"), 'installed starter layouts must be scoped to the selected site');
   assert.ok(!pages.includes('id="pages-select-all"'));
 });
 
