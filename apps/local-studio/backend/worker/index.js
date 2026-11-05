@@ -76,6 +76,7 @@ import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cm
 import { handleStudioContentMediaApi } from "./content-media-api.js";
 import { handlePlatformMediaRead } from "./platform-media-library.js";
 import { handleCompletefulWebhook } from "../../../ecommerce-cms-agentsam/backend/webhooks/completeful.js";
+import { serveCatalogImage } from "../../../ecommerce-cms-agentsam/backend/completeful/images.js";
 
 const APP = localStudioApp;
 const ROUTE_PROJECTION = projectionFromAppManifest(APP);
@@ -747,6 +748,9 @@ export default {
     if (includedWasm) return includedWasm;
     const chessAsset = await serveCadChessAsset(request);
     if (chessAsset) return chessAsset;
+    // Public, credential-free derivative of Completeful catalog images. The product UI requests
+    // /catalog-image?src=...; the proxy only accepts the allowlisted provider storage host and path.
+    if (request.method === "GET" && url.pathname === "/catalog-image") return serveCatalogImage(request, env, context);
     const isQueueObservability = url.pathname === "/api/queues/observability";
     const isVault = url.pathname.startsWith("/api/vault/");
     const isLlmInventory = url.pathname === "/api/llm/inventory";
