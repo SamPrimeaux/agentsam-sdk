@@ -192,7 +192,7 @@ export function ApiKeysTable({
                     <p className="text-sm text-muted-foreground">{service}</p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">{status}</p>
                   </div>
-                  <p className="font-mono text-sm text-muted-foreground">
+                  <p className=" text-sm text-muted-foreground">
                     {secret.last4 ? `•••• ${secret.last4}` : "Encrypted"}
                   </p>
                   <p className="text-sm text-muted-foreground">{formatUnixDate(secret.updated_at)}</p>

@@ -72,7 +72,14 @@ export function AddKeyModal({
           description: secretName,
         },
       });
-      if (!response.ok) throw new Error(response.data.error || `Could not save secret (${response.status})`);
+      if (!response.ok) {
+        const code = response.data.error || "";
+        const friendly: Record<string, string> = {
+          provider_not_available: "That provider isn't available for your workspace yet.",
+          internal_error: "We couldn't save this key. Nothing was stored. Please try again.",
+        };
+        throw new Error(friendly[code] || (code && !/^[a-z_]+$/.test(code) ? code : "We couldn't save this key. Please try again."));
+      }
       setValue("");
       onSaved();
       onOpenChange(false);
@@ -155,7 +162,7 @@ export function AddKeyModal({
                     value={value}
                     onChange={(event) => setValue(event.target.value)}
                     placeholder="Paste key or token"
-                    className="h-11 pr-12 font-mono"
+                    className="h-11 pr-12"
                     required
                     minLength={8}
                   />

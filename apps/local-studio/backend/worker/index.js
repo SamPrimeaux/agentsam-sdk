@@ -434,6 +434,8 @@ async function handleCreate(env, accountId, body) {
 
   if (!service) return json({ ok: false, error: "service_name required" }, 400);
   if (!value || value.length < 8) return json({ ok: false, error: "value too short" }, 400);
+  const known = await env.DB.prepare("SELECT 1 AS ok FROM agentsam_service_registry WHERE service_name = ?").bind(service).first();
+  if (!known) return json({ ok: false, error: "provider_not_available" }, 400);
 
   // AAD must match decrypt sites exactly: `${accountId}:${service_name}:${secret_name}`.
   const aad = `${accountId}:${service}:${name}`;
