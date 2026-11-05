@@ -15,8 +15,8 @@ function seedBrand(f) {
   const content=JSON.stringify({__editor:{themeSettings:{}}});
   f.objects.set("brand-draft",content);f.objects.set("brand-live",content);
 }
-async function save(f,settings,version=0,account="merchant") {
-  const url=new URL("https://cms.test/api/admin/cms/pages/site/sections/brand?site_id=main&page_id=sitepage");
+async function save(f,settings,version=0,account="merchant",siteId="main",pageId="sitepage") {
+  const url=new URL("https://cms.test/api/admin/cms/pages/site/sections/brand?site_id="+siteId+"&page_id="+pageId);
   const response=await handleAdminCmsApi(new Request(url,{method:"PUT",headers:{"content-type":"application/json"},
     body:JSON.stringify({content:{__editor:{themeSettings:settings}},expected_version:version})}),f.env,url,{accountId:account});
   return {response,body:await response.json()};
@@ -122,4 +122,39 @@ test("reset removes supported overrides; zero values and reduced motion retain e
   assert.match(css,/animation-duration/);
   assert.equal(renderThemeSettings({}),"");
   assert.equal(renderThemeSettings({designDraft:{"page.maxWidth":null}}),"");
+});
+
+
+test("color controls save and reload independently on two CMS sites",async()=>{
+  const f=createSiteOwnedFixture();seedBrand(f);
+  f.db.exec("INSERT INTO cms_sites VALUES ('secondary','merchant','Second site','second','second.example','active',0);\n"+
+    "INSERT INTO cms_pages VALUES ('otherpage','secondary','site','/__site','global','Global','published',NULL,0,0,0,'{}','{}',NULL,NULL,1790000000,1790000000,1790000000);\n"+
+    "INSERT INTO cms_page_sections VALUES ('brand-other','otherpage','brand','brand','Brand','{}',0,1,'cms','brand-other-draft','brand-other-live','original','2026-10-01');");
+  const otherContent=JSON.stringify({__editor:{themeSettings:{}}});
+  f.objects.set("brand-other-draft",otherContent);f.objects.set("brand-other-live",otherContent);
+  const dom=new JSDOM('<section data-drawer-panel="theme-settings"></section><iframe id="theme-preview"></iframe>',{url:"https://editor.test/admin/theme-editor?slug=home",runScripts:"outside-only"});
+  try {
+    let values={};
+    dom.window.CmsThemeSettings={read:()=>structuredClone(values),update:next=>{values=structuredClone(next);return true;}};
+    dom.window.eval(panel);
+    const accent=dom.window.document.querySelector('[data-theme-color="accent"]');
+    accent.value="#123456";
+    accent.dispatchEvent(new dom.window.Event("input",{bubbles:true}));
+    assert.equal(values.colors.accent,"#123456");
+    const firstSave=await save(f,values,0,"merchant","main","sitepage");
+    assert.equal(firstSave.response.status,200,JSON.stringify(firstSave.body));
+    const firstReload=await getSiteOwnedPage(f.env,"merchant","site","main","sitepage");
+    assert.equal(firstReload.page.sections[0].content.__editor.themeSettings.colors.accent,"#123456");
+
+    values={};
+    accent.value="#abcdef";
+    accent.dispatchEvent(new dom.window.Event("input",{bubbles:true}));
+    assert.equal(values.colors.accent,"#abcdef");
+    const secondSave=await save(f,values,0,"merchant","secondary","otherpage");
+    assert.equal(secondSave.response.status,200,JSON.stringify(secondSave.body));
+    const secondReload=await getSiteOwnedPage(f.env,"merchant","site","secondary","otherpage");
+    const firstReloadAgain=await getSiteOwnedPage(f.env,"merchant","site","main","sitepage");
+    assert.equal(secondReload.page.sections[0].content.__editor.themeSettings.colors.accent,"#abcdef");
+    assert.equal(firstReloadAgain.page.sections[0].content.__editor.themeSettings.colors.accent,"#123456");
+  } finally {dom.window.close();f.db.close();}
 });

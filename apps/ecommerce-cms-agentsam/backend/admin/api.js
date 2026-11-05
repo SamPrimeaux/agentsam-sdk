@@ -696,13 +696,21 @@ export async function handleAdminApi(request, env, url, executionCtx = null, tru
   if(collectionResponse)return collectionResponse;
   if (path === "/api/admin/overview" && method === "GET") return overview(request, env);
   if (path === "/api/admin/store/online" && method === "GET") {
-    return onlineStoreOverview(env, user.account_id);
+    let scope;
+    try { scope = await collectionScope(env, { accountId: user.account_id, siteId: url.searchParams.get("site_id") }); }
+    catch (error) { return json({ ok: false, error: String(error.message || error) }, { status: 409 }); }
+    const scopedEnv = { ...env, CMS_SITE_CONTEXT: scope };
+    return onlineStoreOverview(scopedEnv, user.account_id, scope.id);
   }
-  if (path === "/api/admin/store/preferences" && method === "GET") {
-    return getStorePreferences(env);
-  }
-  if (path === "/api/admin/store/preferences" && method === "POST") {
-    return postStorePreferences(request, env);
+  if (path === "/api/admin/store/preferences" && (method === "GET" || method === "POST")) {
+    let scope;
+    try { scope = await collectionScope(env, { accountId: user.account_id, siteId: url.searchParams.get("site_id") }); }
+    catch (error) { return json({ ok: false, error: String(error.message || error) }, { status: 409 }); }
+    const scopedEnv = { ...env, CMS_SITE_CONTEXT: scope };
+    const context = { accountId: user.account_id, siteId: scope.id };
+    return method === "GET"
+      ? getStorePreferences(scopedEnv, context)
+      : postStorePreferences(request, scopedEnv, context);
   }
   if (path === "/api/admin/store/crawler" && method === "GET") {
     return getStoreSearchDiscovery(env);

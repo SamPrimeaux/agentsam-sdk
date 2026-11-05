@@ -480,6 +480,16 @@ function collectNavItemsFromDom() {
   }));
 }
 
+function storePreferencesEndpoint() {
+  const params = new URLSearchParams(location.search);
+  let siteId = params.get("site_id");
+  if (!siteId) {
+    try { siteId = sessionStorage.getItem("agentsam.cms.selected-site.v1"); } catch {}
+  }
+  return "/api/admin/store/preferences" + (siteId && /^[A-Za-z0-9_-]{1,160}$/.test(siteId)
+    ? "?site_id=" + encodeURIComponent(siteId) : "");
+}
+
 function applySettings(data) {
   settings = data.settings || {};
   domain = data.domain || domain;
@@ -583,7 +593,7 @@ document.getElementById("save-prefs-btn").addEventListener("click", async () => 
   btn.disabled = true;
   syncDockEdit(true);
   try {
-    const d = await adminFetch("/api/admin/store/preferences", {
+    const d = await adminFetch(storePreferencesEndpoint(), {
       method: "POST",
       body: JSON.stringify({ settings: collectSettings() }),
     });
@@ -775,7 +785,7 @@ document.getElementById("prefs-assets-upload").addEventListener("change", async 
 });
 (async function () {
   try {
-    const d = await adminFetch("/api/admin/store/preferences");
+    const d = await adminFetch(storePreferencesEndpoint());
     applySettings(d);
   } catch (err) {
     showNote(err.message, "error");

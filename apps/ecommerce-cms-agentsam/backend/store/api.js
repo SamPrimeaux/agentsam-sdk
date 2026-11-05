@@ -478,7 +478,7 @@ export async function handleStoreApi(request, env, url) {
 
   if (path === "/api/store/meta" && method === "GET") {
     const { loadStorePreferences } = await import("../admin/store.js");
-    const loadedPrefs = await loadStorePreferences(env);
+    const loadedPrefs = await loadStorePreferences(env, { hostname: url.hostname });
     const prefs = loadedPrefs?.ok ? loadedPrefs.settings : {};
     return json({
       ok: true,
@@ -492,7 +492,7 @@ export async function handleStoreApi(request, env, url) {
 
   if (path === "/api/store/nav" && method === "GET") {
     const { getStoreNav } = await import("../admin/store.js");
-    return getStoreNav(env);
+    return getStoreNav(env, { hostname: url.hostname });
   }
 
   if (path === "/api/store/products" && method === "GET") {

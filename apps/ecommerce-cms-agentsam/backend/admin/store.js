@@ -1,15 +1,13 @@
 /**
  * Store preferences service — portable ecommerce package.
  *
- * Brand → company. Behavior → store_settings (D1 SSOT). KV = cache only.
+ * Brand → company. Store preferences → cms_sites.settings_json.store (D1 SSOT). KV = cache only.
  * Themes → registry/pages data (never fabricated). Analytics → packaged contract.
  */
 
-import {
-  DEFAULT_NAV_ITEMS,
-  resolveNavConfig,
-  sanitizeNavItems,
-} from "../lib/site-nav.js";
+import { resolveNavConfig, sanitizeNavItems } from "../lib/site-nav.js";
+import { resolveCmsSite } from "../cms/site-context.mjs";
+import { DEFAULT_SITE_STORE_SETTINGS as PACKAGE_STORE_DEFAULTS } from "../cms/site-settings-contract.mjs";
 import { getCompany, companyDomain } from "../lib/company.js";
 import { hashPassword, verifyPassword } from "../lib/auth.js";
 import { listStoreThemes } from "./themes.js";
@@ -25,36 +23,7 @@ function json(data, init = {}) {
   return Response.json(data, init);
 }
 
-/** Neutral behavioral defaults only — no customer identity. */
-const PACKAGE_STORE_DEFAULTS = {
-  passwordProtection: false,
-  b2bOnly: false,
-  geoRedirect: true,
-  languageRedirect: false,
-  hcaptchaContact: true,
-  hcaptchaAccount: true,
-  homeTitle: "",
-  metaDescription: "",
-  socialImageUrl: "",
-  navLogoUrl: "",
-  navLogoHeight: 58,
-  navBrandAccent: "",
-  navBrandAccentLight: "",
-  navItems: DEFAULT_NAV_ITEMS,
-  announcementEnabled: false,
-  announcementText: "",
-  announcementHref: "",
-  announcementStyle: "static",
-  announcementAuthority: "cms",
-  navigationAuthority: "cms",
-  logoAuthority: "cms",
-  announcementBgColor: "#161616",
-  announcementTextColor: "#ffffff",
-  storePasswordHash: null,
-  storePasswordSalt: null,
-};
-
-const KV_PREFS_KEY = "store:preferences";
+const KV_PREFS_KEY = siteId => "store:preferences:" + siteId;
 
 function unavailableMetric(source = "analytics") {
   return { value: null, status: "unavailable", source };
@@ -89,69 +58,78 @@ async function brandOverlay(env) {
   };
 }
 
-/**
- * Read preferences: valid KV cache → else D1 → populate cache.
- * Missing store_settings table → explicit error (no silent KV-as-DB).
- */
-async function loadStorePreferences(env, { allowCache = true } = {}) {
+/** Resolve one owned CMS site without creating a site or falling back to a singleton. */
+async function resolvePreferenceSite(env, context = {}) {
+  const supplied = env?.CMS_SITE_CONTEXT || {};
+  const accountId = context.accountId || context.account_id || supplied.account_id || null;
+  const siteId = context.siteId || context.site_id || supplied.id || null;
+  const hostname = context.hostname || null;
+  if (!env?.DB) throw new Error("store_site_db_unavailable");
+  const site = await resolveCmsSite(env.DB, { accountId, siteId, hostname });
+  if (!site?.id || !site?.account_id || (accountId && site.account_id !== accountId)) {
+    throw new Error("store_site_not_found");
+  }
+  const row = await env.DB.prepare(
+    "SELECT id,account_id,settings_json FROM cms_sites WHERE id=? AND account_id=? LIMIT 1"
+  ).bind(site.id, site.account_id).first();
+  if (!row) throw new Error("store_site_not_found");
+  return row;
+}
+
+function parseSiteSettings(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch { return {}; }
+}
+
+/** Per-site CMS settings are authoritative; KV is only a site-keyed cache. */
+async function loadStorePreferences(env, { allowCache = true, ...context } = {}) {
+  let site;
+  try { site = await resolvePreferenceSite(env, context); }
+  catch (err) {
+    return { ok: false, error: err?.message || "store_site_not_found", settings: null };
+  }
+  const cacheKey = KV_PREFS_KEY(site.id);
   if (allowCache && env.CMS_CACHE) {
     try {
-      const cached = await env.CMS_CACHE.get(KV_PREFS_KEY, "json");
-      if (cached && typeof cached === "object" && cached.__ssot === "store_settings") {
-        return { ok: true, settings: { ...PACKAGE_STORE_DEFAULTS, ...cached.settings }, source: "cache" };
+      const cached = await env.CMS_CACHE.get(cacheKey, "json");
+      if (cached && typeof cached === "object" && cached.__ssot === "cms_sites.settings_json.store" &&
+          cached.siteId === site.id && cached.settings && typeof cached.settings === "object") {
+        return { ok: true, settings: { ...PACKAGE_STORE_DEFAULTS, ...cached.settings }, source: "cache", site };
       }
-    } catch {
-      /* ignore bad cache */
-    }
+    } catch { /* ignore stale or malformed cache */ }
   }
 
-  if (!env?.DB) {
-    return { ok: false, error: "store_settings_db_unavailable", settings: null };
-  }
-
-  let row;
-  try {
-    row = await env.DB.prepare(`SELECT settings_json FROM store_settings WHERE id = 1`).first();
-  } catch (err) {
-    return {
-      ok: false,
-      error: "store_settings_not_configured",
-      detail: err?.message || String(err),
-      settings: null,
-    };
-  }
-
-  const parsed = row?.settings_json ? JSON.parse(row.settings_json) : {};
-  // Strip legacy plaintext if still present in old rows.
-  if (parsed.storePassword) {
-    delete parsed.storePassword;
-  }
+  const root = parseSiteSettings(site.settings_json);
+  const stored = root.store && typeof root.store === "object" && !Array.isArray(root.store) ? root.store : {};
+  const parsed = { ...stored };
+  delete parsed.storePassword;
   const settings = { ...PACKAGE_STORE_DEFAULTS, ...parsed };
 
   if (env.CMS_CACHE) {
-    await env.CMS_CACHE.put(
-      KV_PREFS_KEY,
-      JSON.stringify({ __ssot: "store_settings", settings, cached_at: Date.now() }),
-    ).catch(() => {});
+    await env.CMS_CACHE.put(cacheKey, JSON.stringify({
+      __ssot: "cms_sites.settings_json.store", siteId: site.id, settings, cached_at: Date.now(),
+    })).catch(() => {});
   }
-
-  return { ok: true, settings, source: "d1" };
+  return { ok: true, settings, source: "d1", site };
 }
 
-async function saveStorePreferences(env, incoming) {
-  const loaded = await loadStorePreferences(env, { allowCache: false });
+async function saveStorePreferences(env, incoming, context = {}) {
+  const loaded = await loadStorePreferences(env, { allowCache: false, ...context });
   if (!loaded.ok) {
     return loaded;
   }
   const current = loaded.settings;
   const next = {
     ...current,
-    passwordProtection: !!incoming.passwordProtection,
-    b2bOnly: !!incoming.b2bOnly,
-    geoRedirect: !!incoming.geoRedirect,
-    languageRedirect: !!incoming.languageRedirect,
-    hcaptchaContact: !!incoming.hcaptchaContact,
-    hcaptchaAccount: !!incoming.hcaptchaAccount,
+    passwordProtection: incoming.passwordProtection == null ? current.passwordProtection : incoming.passwordProtection === true,
+    b2bOnly: incoming.b2bOnly == null ? current.b2bOnly : incoming.b2bOnly === true,
+    geoRedirect: incoming.geoRedirect == null ? current.geoRedirect : incoming.geoRedirect === true,
+    languageRedirect: incoming.languageRedirect == null ? current.languageRedirect : incoming.languageRedirect === true,
+    hcaptchaContact: incoming.hcaptchaContact == null ? current.hcaptchaContact : incoming.hcaptchaContact === true,
+    hcaptchaAccount: incoming.hcaptchaAccount == null ? current.hcaptchaAccount : incoming.hcaptchaAccount === true,
     homeTitle: String(incoming.homeTitle ?? current.homeTitle).slice(0, 70),
     metaDescription: String(incoming.metaDescription ?? current.metaDescription).slice(0, 320),
     socialImageUrl: String(incoming.socialImageUrl ?? current.socialImageUrl).slice(0, 2048),
@@ -205,35 +183,26 @@ async function saveStorePreferences(env, incoming) {
   }
   delete next.storePassword;
 
-  const payload = JSON.stringify(next);
   try {
-    await env.DB.prepare(
-      `INSERT INTO store_settings (id, settings_json, updated_at)
-       VALUES (1, ?, datetime('now'))
-       ON CONFLICT(id) DO UPDATE SET settings_json = excluded.settings_json, updated_at = excluded.updated_at`,
-    )
-      .bind(payload)
-      .run();
+    const result = await env.DB.prepare(
+      "UPDATE cms_sites SET settings_json=json_set(COALESCE(settings_json,'{}'),'$.store',json(?)),updated_at=datetime('now') WHERE id=? AND account_id=?"
+    ).bind(JSON.stringify(next), loaded.site.id, loaded.site.account_id).run();
+    if (!(result.meta?.changes > 0)) throw new Error("store_site_write_not_applied");
   } catch (err) {
-    return {
-      ok: false,
-      error: "store_settings_write_failed",
-      detail: err?.message || String(err),
-    };
+    return { ok: false, error: "store_preferences_write_failed", detail: err?.message || String(err) };
   }
 
   if (env.CMS_CACHE) {
-    await env.CMS_CACHE.put(
-      KV_PREFS_KEY,
-      JSON.stringify({ __ssot: "store_settings", settings: next, cached_at: Date.now() }),
-    ).catch(() => {});
+    await env.CMS_CACHE.put(KV_PREFS_KEY(loaded.site.id), JSON.stringify({
+      __ssot: "cms_sites.settings_json.store", siteId: loaded.site.id, settings: next, cached_at: Date.now(),
+    })).catch(() => {});
   }
 
   return { ok: true, settings: next };
 }
 
-export async function verifyStorefrontPassword(env, password) {
-  const loaded = await loadStorePreferences(env);
+export async function verifyStorefrontPassword(env, password, context = {}) {
+  const loaded = await loadStorePreferences(env, context);
   if (!loaded.ok) return false;
   const { storePasswordHash, storePasswordSalt, passwordProtection } = loaded.settings;
   if (!passwordProtection || !storePasswordHash || !storePasswordSalt) return true;
@@ -279,19 +248,19 @@ async function resolveStorePerformance(env) {
 export { loadStorePreferences, resolveNavConfig, PACKAGE_STORE_DEFAULTS };
 
 /** Update only the scene review key without rewriting merchant preferences. */
-export async function saveSceneReviewSettings(env, sceneReview) {
-  if (!env.DB) throw new Error("Store database unavailable");
+export async function saveSceneReviewSettings(env, sceneReview, context = {}) {
+  const site = await resolvePreferenceSite(env, context);
   const result = await env.DB.prepare(
-    "UPDATE store_settings SET settings_json = json_set(COALESCE(settings_json, '{}'), '$.sceneReview', json(?)), updated_at = datetime('now') WHERE id = 1"
-  ).bind(JSON.stringify(sceneReview)).run();
-  if (!(result.meta?.changes > 0)) throw new Error("Store settings not initialized");
-  if (env.CMS_CACHE) await env.CMS_CACHE.delete(KV_PREFS_KEY);
+    "UPDATE cms_sites SET settings_json=json_set(COALESCE(settings_json,'{}'),'$.store.sceneReview',json(?)),updated_at=datetime('now') WHERE id=? AND account_id=?"
+  ).bind(JSON.stringify(sceneReview), site.id, site.account_id).run();
+  if (!(result.meta?.changes > 0)) throw new Error("Store settings could not be saved");
+  if (env.CMS_CACHE) await env.CMS_CACHE.delete(KV_PREFS_KEY(site.id));
   return true;
 }
 
 
-export async function getStoreNav(env) {
-  const loaded = await loadStorePreferences(env);
+export async function getStoreNav(env, context = {}) {
+  const loaded = await loadStorePreferences(env, context);
   if (!loaded.ok) return json({ ok: false, error: loaded.error }, { status: 503 });
   const { overlay } = await brandOverlay(env);
   const merged = { ...loaded.settings, ...Object.fromEntries(Object.entries(overlay).filter(([, v]) => v)) };
@@ -302,8 +271,8 @@ export async function getStoreNav(env) {
   return json({ ok: true, nav: resolveNavConfig(merged) });
 }
 
-export async function getStorePreferences(env) {
-  const loaded = await loadStorePreferences(env);
+export async function getStorePreferences(env, context = {}) {
+  const loaded = await loadStorePreferences(env, context);
   if (!loaded.ok) return json({ ok: false, error: loaded.error, detail: loaded.detail }, { status: 503 });
   const { company } = await brandOverlay(env);
   const domain = companyDomain(company);
@@ -319,7 +288,7 @@ export async function getStorePreferences(env) {
   });
 }
 
-export async function postStorePreferences(request, env) {
+export async function postStorePreferences(request, env, context = {}) {
   let body;
   try {
     body = await request.json();
@@ -357,7 +326,7 @@ export async function postStorePreferences(request, env) {
     }
   }
 
-  const saved = await saveStorePreferences(env, incoming);
+  const saved = await saveStorePreferences(env, incoming, context);
   if (!saved.ok) {
     return json({ ok: false, error: saved.error, detail: saved.detail }, { status: 503 });
   }
@@ -368,7 +337,7 @@ export async function postStorePreferences(request, env) {
   });
 }
 
-export async function onlineStoreOverview(env, accountId = null) {
+export async function onlineStoreOverview(env, accountId = null, siteId = null) {
   const [pagesResult, sectionsMax, publishedPages, themes, performance, company] = await Promise.all([
     env.DB.prepare(`SELECT slug, title, status, updated_at FROM pages ORDER BY updated_at DESC`).all(),
     env.DB.prepare(`SELECT MAX(updated_at) AS last_saved FROM page_sections`).first(),
@@ -379,7 +348,7 @@ export async function onlineStoreOverview(env, accountId = null) {
   ]);
 
   const domain = companyDomain(company);
-  const prefs = await loadStorePreferences(env);
+  const prefs = await loadStorePreferences(env, { accountId, siteId });
   const passwordOn = prefs.ok && prefs.settings.passwordProtection;
 
   return json({

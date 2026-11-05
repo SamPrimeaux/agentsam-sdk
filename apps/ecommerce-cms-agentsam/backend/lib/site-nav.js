@@ -1,6 +1,6 @@
 /**
  * Neutral sitewide navigation defaults for the portable ecommerce package.
- * Customer brand (logo/colors) comes from company + store_settings overlays.
+ * Customer brand (logo/colors) comes from company + per-site CMS settings overlays.
  */
 
 export const DEFAULT_NAV_ITEMS = [
@@ -20,7 +20,7 @@ export const DEFAULT_NAV_ITEMS = [
   },
 ];
 
-/** @deprecated No package logo — resolve from company / store_settings */
+/** @deprecated No package logo — resolve from company / per-site CMS settings */
 export const DEFAULT_LOGO_URL = "";
 
 export const DEFAULT_NAV_CONFIG = {

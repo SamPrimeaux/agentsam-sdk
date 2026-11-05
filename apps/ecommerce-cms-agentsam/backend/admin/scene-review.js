@@ -36,12 +36,10 @@ function reviewer(){
   '<p style="font-size:12px;color:#969aa4">Review prototype · Not linked to live shopping or published as a product</p>';
   return document("FNF · Aviation concept review",body);
 }
-async function loadConfig(env){
-  if (!env.DB) return null;
-  try {
-    const row=await env.DB.prepare("SELECT settings_json FROM store_settings WHERE id = 1").first();
-    return JSON.parse(row?.settings_json||"{}").sceneReview||null;
-  } catch {return null;}
+async function loadConfig(env, context = {}){
+  const { loadStorePreferences } = await import("./store.js");
+  const loaded = await loadStorePreferences(env, context);
+  return loaded?.ok ? loaded.settings.sceneReview || null : null;
 }
 async function signingKey(config) {
   return crypto.subtle.importKey("raw",enc.encode(config.passwordHash+":"+config.updatedAt),{name:"HMAC",hash:"SHA-256"},false,["sign","verify"]);
@@ -72,29 +70,30 @@ async function limitAttempts(env,request) {
 function deny(status=401){
   return secure(new Response("Review password required",{status,headers:{"content-type":"text/plain"}}));
 }
-export async function handleSceneReview(request,env,url) {
+export async function handleSceneReview(request,env,url,context={}) {
+  const siteContext = { ...context, hostname: context.hostname || url.hostname };
   const path=url.pathname;
   if (path==="/api/admin/scene-review") {
     if (request.method==="GET") {
-      const config=await loadConfig(env);
+      const config=await loadConfig(env,siteContext);
       return secure(Response.json({ok:true,enabled:config?.enabled===true,hasPassword:!!config?.passwordHash,reviewUrl:PREFIX,assetPrivacyReady:false,updatedAt:config?.updatedAt||null}));
     }
     if (request.method!=="POST") return deny(405);
     const data=await request.json().catch(()=>null);
     if (!data||typeof data!=="object")return secure(Response.json({error:"Invalid request"},{status:400}));
-    const prior=await loadConfig(env)||{};
+    const prior=await loadConfig(env,siteContext)||{};
     const pwd=typeof data.password==="string"?data.password:"";
     if (pwd&&(pwd.length<12||pwd.length>128))return secure(Response.json({error:"Use a password between 12 and 128 characters"},{status:400}));
     const enabled=data.enabled===true;
     if (enabled&&!pwd&&!prior.passwordHash)return secure(Response.json({error:"Set a review password first"},{status:400}));
     const pair=pwd?await hashPassword(pwd):null;
     const cfg={enabled,passwordHash:pair?.hash||prior.passwordHash||null,passwordSalt:pair?.salt||prior.passwordSalt||null,updatedAt:new Date().toISOString()};
-    try { await saveSceneReviewSettings(env,cfg); }
+    try { await saveSceneReviewSettings(env,cfg,siteContext); }
     catch { return secure(Response.json({error:"Unable to save review settings"},{status:503})); }
     return secure(Response.json({ok:true,enabled,hasPassword:!!cfg.passwordHash,reviewUrl:PREFIX,assetPrivacyReady:false}));
   }
   if (!path.startsWith(PREFIX))return deny(404);
-  const config=await loadConfig(env);
+  const config=await loadConfig(env,siteContext);
   if (!config?.enabled||!config.passwordHash)return document("Not shared yet","<h1>Preview not shared yet</h1><p>The owner has not enabled this concept review.</p>",404);
   if (path===PREFIX&&request.method==="GET")return (await access(request,config))?reviewer():form();
   if (path===PREFIX+"/unlock"&&request.method==="POST"){

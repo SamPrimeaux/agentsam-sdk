@@ -1,3 +1,5 @@
+import { DEFAULT_SITE_STORE_SETTINGS } from "./site-settings-contract.mjs";
+
 /**
  * Resolve a CMS site without exposing or duplicating AgentSam provider registries.
  * Account ownership is enforced at the CMS boundary; site IDs are never trusted alone.
@@ -23,9 +25,9 @@ export async function ensureDefaultCmsSite(db, accountId, { name = "Default site
       .bind(accountId, existingSites[0].id).run();
   } else {
     await db.prepare(`
-      INSERT OR IGNORE INTO cms_sites (account_id, name, slug, status, is_default)
-      VALUES (?, ?, 'default', 'draft', 1)
-    `).bind(accountId, name).run();
+      INSERT OR IGNORE INTO cms_sites (account_id, name, slug, status, is_default, settings_json)
+      VALUES (?, ?, 'default', 'draft', 1, ?)
+    `).bind(accountId, name, JSON.stringify({ store: { ...DEFAULT_SITE_STORE_SETTINGS } })).run();
   }
   const site = await db.prepare(`
     SELECT id, account_id, name, slug, primary_domain, status, is_default
@@ -67,11 +69,16 @@ export async function createCmsSite(db, accountId, input = {}) {
   const existing = await db.prepare("SELECT id FROM cms_sites WHERE account_id = ? LIMIT 1").bind(accountId).first();
   const id = String(input.id || `cmssite_${crypto.randomUUID().replaceAll('-', '').slice(0, 16)}`);
   if (!/^[A-Za-z0-9_-]{1,120}$/.test(id)) throw new Error("cms_site_id_invalid");
+  const inputSettings = input.settings && typeof input.settings === "object" && !Array.isArray(input.settings)
+    ? input.settings : {};
+  const storeSettings = inputSettings.store && typeof inputSettings.store === "object" && !Array.isArray(inputSettings.store)
+    ? inputSettings.store : {};
+  const settings = { ...inputSettings, store: { ...DEFAULT_SITE_STORE_SETTINGS, ...storeSettings } };
   await db.prepare(`
     INSERT INTO cms_sites (id, account_id, name, slug, primary_domain, domain_aliases_json, settings_json, status, is_default)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)
   `).bind(id, accountId, name, slug, primaryDomain, JSON.stringify(aliases),
-    JSON.stringify(input.settings && typeof input.settings === "object" && !Array.isArray(input.settings) ? input.settings : {}),
+    JSON.stringify(settings),
     existing ? 0 : 1).run();
   return db.prepare(`
     SELECT id, account_id, name, slug, primary_domain, domain_aliases_json, status, is_default, created_at, updated_at
@@ -97,6 +104,7 @@ export async function ensureThemePreviewDraftSite(db, accountId, { slug, version
     kind: 'marketplace-theme-draft',
     source_theme_slug: slug,
     source_release_version: version,
+    store: { ...DEFAULT_SITE_STORE_SETTINGS },
   };
   const draftName = (String(name || slug).trim().slice(0, 105) + ' — Draft').slice(0, 120);
   const id = 'cmssite_' + crypto.randomUUID().replaceAll('-', '').slice(0, 16);

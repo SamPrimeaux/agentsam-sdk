@@ -69,9 +69,9 @@ export function isMarketingHtmlRequest(pathname, assetPath) {
   return Boolean(slug);
 }
 
-async function buildHeadContext(env, slug) {
+async function buildHeadContext(env, slug, hostname) {
   const { loadStorePreferences } = await import("../admin/store.js");
-  const loadedPrefs = await loadStorePreferences(env);
+  const loadedPrefs = await loadStorePreferences(env, { hostname });
   const prefs = loadedPrefs?.ok ? loadedPrefs.settings : {};
 
   let pageTitle = null;
@@ -168,7 +168,7 @@ export async function transformStorefrontHtml(response, env, slug, request) {
       });
     }
   }
-  const head = await buildHeadContext(env, slug);
+  const head = await buildHeadContext(env, slug, request ? new URL(request.url).hostname : null);
   head.canonicalUrl = preview ? "" : canonicalUrlFor(request?.url);
   // Open Graph and Twitter require an absolute image URL to reliably fetch
   // the chosen R2-backed image from social crawlers.
