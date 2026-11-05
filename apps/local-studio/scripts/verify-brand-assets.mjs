@@ -30,8 +30,14 @@ assert.equal(
   'desktop manifest must consume canonical AgentSam mark',
 );
 
-assert.match(brandConfig, /agentsam-mark-on-dark\.svg/);
-assert.match(brandConfig, /agentsam-mark-on-light\.svg/);
+// The Local Studio shell intentionally uses the approved Geaux mascot as
+// its live brand mark; the canonical monochrome marks remain the app/PWA
+// identity assets checked above and in the desktop manifest.
+const shellMascotPath = '/brand/agentsam-gorilla/v1/pet/ledge/ledge-idle.svg';
+assert.match(brandConfig, new RegExp(`logo: '${shellMascotPath.replaceAll('/', '\\/')}'`));
+assert.match(brandConfig, new RegExp(`lightLogo: '${shellMascotPath.replaceAll('/', '\\/')}'`));
+const shellMascot = await read('apps/local-studio/frontend/public' + shellMascotPath);
+assert.match(shellMascot, /<svg[\s>]/i, 'AgentSam shell mascot must resolve to a local SVG asset');
 assert.doesNotMatch(brandConfig, /https?:\/\/|imagedelivery/);
 
 const canonicalRaster = await read(

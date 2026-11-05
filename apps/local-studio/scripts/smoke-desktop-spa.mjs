@@ -135,6 +135,59 @@ const rootHtml = rootStart >= 0
   : "";
 
 const failures = [];
+// The desktop installer must carry the real Ecommerce CMS theme editor and
+// the same first-party Companion Studio that the hosted shell exposes.
+const requiredCmsEditorFiles = [
+  "admin/theme-editor.html",
+  "admin/theme-project-editor.html",
+  "admin/js/theme-editor.js",
+  "admin/js/theme-editor-generation-bootstrap.mjs",
+  "admin/js/theme-project-editor-bootstrap.mjs",
+  "theme-editor/project.mjs",
+  "theme-editor/bridge.mjs",
+  "theme-editor/mount.mjs",
+  "theme-editor/starter-project.mjs",
+  "theme-editor/new-theme.mjs",
+];
+for (const relative of requiredCmsEditorFiles) {
+  if (!existsSync(join(root, relative))) failures.push("desktop_cms_editor_missing:" + relative);
+}
+const projectEditorHtml = existsSync(join(root, "admin/theme-project-editor.html"))
+  ? readFileSync(join(root, "admin/theme-project-editor.html"), "utf8") : "";
+if (!projectEditorHtml.includes('src="js/theme-project-editor-bootstrap.mjs"')) {
+  failures.push("desktop_cms_project_editor_bootstrap_unlinked");
+}
+const themeEditorHtml = existsSync(join(root, "admin/theme-editor.html"))
+  ? readFileSync(join(root, "admin/theme-editor.html"), "utf8") : "";
+if (!themeEditorHtml.includes('/admin/js/theme-editor.js') ||
+    !themeEditorHtml.includes('/admin/js/theme-editor-generation-bootstrap.mjs')) {
+  failures.push("desktop_cms_theme_editor_entry_unlinked");
+}
+const companionCatalogPath = join(root, "brand/inneranimal-companions/v1/catalog.json");
+if (!existsSync(companionCatalogPath)) {
+  failures.push("desktop_companion_catalog_missing");
+} else {
+  const catalog = JSON.parse(readFileSync(companionCatalogPath, "utf8"));
+  const ids = ["geaux", "meaux", "coder", "architect", "engineer", "py"];
+  if (catalog.defaultCompanionId !== "geaux" ||
+      JSON.stringify(catalog.companions.map((item) => item.id)) !== JSON.stringify(ids)) {
+    failures.push("desktop_companion_catalog_incomplete");
+  }
+  for (const id of ids) {
+    const manifestPath = join(root, "brand/inneranimal-companions/v1", id, "companion.json");
+    if (!existsSync(manifestPath)) { failures.push("desktop_companion_manifest_missing:" + id); continue; }
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    for (const state of Object.keys(manifest.states || {})) {
+      const asset = join(root, "brand/inneranimal-companions/v1", id, manifest.states[state].src);
+      if (!existsSync(asset)) failures.push("desktop_companion_animation_missing:" + id + ":" + state);
+    }
+  }
+}
+const applicationBundle = readdirSync(assetsDir).filter((name) => name.endsWith(".js"))
+  .map((name) => readFileSync(join(assetsDir, name), "utf8")).join("\n");
+for (const marker of ["Companion Studio", "/settings/customize", "ecommerce-cms-agentsam"]) {
+  if (!applicationBundle.includes(marker)) failures.push("desktop_product_surface_missing:" + marker);
+}
 if (rootStart < 0 || /id="root"><\/div>/.test(rootHtml)) failures.push("desktop_root_empty");
 if (/Something went wrong/.test(rootHtml)) failures.push("desktop_error_boundary");
 if (/Local Studio could not start\./.test(rootHtml)) failures.push("desktop_boot_failed");
