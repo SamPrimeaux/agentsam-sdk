@@ -318,7 +318,7 @@ export async function servePublicSitePage(
           return new Response(text, {
             status: 200,
             headers: {
-              'content-type': guessType(relative),
+              'content-type': guessType(r2Key),
               'cache-control': 'public, max-age=60, must-revalidate',
               'x-public-site-source': `r2:${website.name}`,
               'x-public-site-key': r2Key,
