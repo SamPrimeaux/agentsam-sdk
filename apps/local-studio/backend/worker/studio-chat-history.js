@@ -57,7 +57,7 @@ export async function handleStudioChatHistory(request, env, owner) {
           created_at AS createdAt,message_count AS messageCount,artifact_count AS artifactCount,
           last_turn_status AS lastTurnStatus,state,session_kind AS kind,r2_messages_key AS _archive
         FROM agentsam_chat_sessions WHERE ${where}
-        ORDER BY is_starred DESC,updated_at ${order},conversation_id ${order} LIMIT ? OFFSET ?`)
+        ORDER BY updated_at ${order},conversation_id ${order} LIMIT ? OFFSET ?`)
         .bind(...binds, limit + 1, offset).all();
       const all = rows.results || [];
       const visible = all.slice(0, limit).map(({ _archive, ...row }) => ({

@@ -434,7 +434,15 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     destinations: [
       // Render the platform-owned business destinations first. These are the
       // canonical primary entries from the same host projection as installed apps.
-      ...(navigation.primary || []),
+      ...(navigation.primary || []).map(entry => entry.id === 'projects' ? {
+        ...entry,
+        // Project shortcuts belong under the ONE canonical Projects destination.
+        // Its label opens the Projects workspace; its chevron discloses saved projects.
+        children: [...workProjects]
+          .sort((a,b) => Number(Boolean(b.starred)) - Number(Boolean(a.starred)) || a.name.localeCompare(b.name))
+          .map(project => ({ id: 'project-' + project.id, label: project.name,
+            href: '/admin/projects/' + encodeURIComponent(project.id) })),
+      } : entry),
       ...(navigation.channels?.length ? [{id:'sales-channels',label:'Sales channels',icon:'store',children:navigation.channels}] : []),
       ...(navigation.apps?.length ? [{id:'installed-apps',label:'Apps',icon:'apps',children:navigation.apps}] : []),
       ...(navigation.utilities || []),

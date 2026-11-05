@@ -202,3 +202,11 @@
 .as-nav-icon-action:hover > .as-nav-icon-help,
 .as-nav-icon-action:focus-within > .as-nav-icon-help { visibility:visible; }
 .as-nav-sidenav:not([data-expanded="true"]) .as-nav-parent-row > .as-nav-icon-action { display:none; }
+
+/* Chats V2.1: compact conversation navigation, without icons for every message. */
+.as-nav-chat-dot { flex:0 0 5px; width:5px; height:5px; border:1px solid var(--nav-muted); border-radius:50%; opacity:.72; }
+.as-nav-conversation[data-active] .as-nav-chat-dot { background:var(--nav-accent); border-color:var(--nav-accent); opacity:1; }
+.as-nav-conversation-link:has(.as-nav-chat-dot) { gap:10px; }
+.as-nav-sidenav-view-all { flex:0 0 auto; border-top:1px solid var(--nav-border); padding:7px 10px 2px; }
+.as-nav-sidenav-view-all button { display:block;width:100%;border:0;background:transparent;color:var(--nav-muted);padding:9px 12px;text-align:left;font:inherit;font-size:var(--nav-meta-size);border-radius:6px;cursor:pointer; }
+.as-nav-sidenav-view-all button:hover,.as-nav-sidenav-view-all button:focus-visible { background:var(--nav-selected);color:var(--nav-text);outline-offset:2px; }

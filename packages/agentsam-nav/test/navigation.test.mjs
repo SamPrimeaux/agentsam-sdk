@@ -78,13 +78,19 @@ test('parent destinations navigate directly while a separate button controls the
 });
 
 
-test('workspace collections separate pins and order recent conversations by genuine activity', () => {
-  const value = {projects:[{id:'project-a',name:'Pinned project',pinned:true}],conversations:[{id:'older',title:'Older',updatedAt:10,projectId:'project-a'},{id:'newer',title:'Newer',updatedAt:20},{id:'pinned',title:'Important',pinned:true,updatedAt:30}]};
-  const html=renderToString(React.createElement(Nav.Provider,{value},React.createElement(Nav.Sidenav)));
-  const pinned=html.slice(html.indexOf('aria-label="Pinned"'),html.indexOf('aria-label="Recent"'));
-  const recent=html.slice(html.indexOf('aria-label="Recent"'));
-  assert.match(pinned,/Pinned project/);assert.match(pinned,/Important/);
+test('navigation keeps one Projects disclosure, pinned resources, and recent chats with View all at the bottom', () => {
+  const value = {
+    destinations:[{id:'projects',label:'Projects',href:'/admin/projects',icon:React.createElement('span',null,'Project'),children:[{id:'project-a',label:'Project A',href:'/admin/projects/project-a'}]}],
+    projects:[{id:'project-a',name:'Pinned project',pinned:true}],
+    conversations:[{id:'older',title:'Older',updatedAt:10,projectId:'project-a'},{id:'newer',title:'Newer',updatedAt:20},{id:'pinned',title:'Important',pinned:true,updatedAt:30}],
+    onNavigate:()=>{},showHistory:true,
+  };
+  const html=renderToString(React.createElement(Nav.Provider,{value,defaultOpen:true},React.createElement(Nav.Sidenav)));
+  const recent=html.slice(html.indexOf('aria-label="Chats and tasks"'));
+  assert.match(html,/Expand Projects/);
+  assert.match(html,/aria-label="Pinned"/);
   assert.ok(recent.indexOf('title="Newer"')<recent.indexOf('title="Older"'));
   assert.doesNotMatch(recent,/title="Important"/);
   assert.match(html,/Search projects and conversations/);
+  assert.match(html,/View all/);
 });

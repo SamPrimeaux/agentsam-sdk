@@ -198,7 +198,7 @@ function ConversationRow({ item }: { item: NavConversation }) {
     ...(data.onDeleteConversation ? [{ id: 'delete', label: 'Delete chat', icon: <Trash2 />, destructive: true, separatorBefore: true, onSelect: () => data.onDeleteConversation?.(item.id) }] : []),
   ];
   return <div className="as-nav-conversation" data-active={selected || undefined} data-nav-item-id={item.id}>
-    <button type="button" className="as-nav-conversation-link" title={item.title} aria-current={selected ? 'page' : undefined} onClick={() => { data.onSelectConversation?.(item.id); if (isMobile) close(); }}><MessageSquare /><span>{item.title}</span></button>
+    <button type="button" className="as-nav-conversation-link" title={item.title} aria-current={selected ? 'page' : undefined} onClick={() => { data.onSelectConversation?.(item.id); if (isMobile) close(); }}><span className="as-nav-chat-dot" aria-hidden="true" /><span>{item.title}</span></button>
     <div className="as-nav-row-actions">
       {data.onRenameConversation ? <button type="button" className="as-nav-button" aria-label={`Rename ${item.title}`} title="Rename" onClick={(event) => { event.stopPropagation(); setRename(true); }}><Pencil /></button> : null}
       {actions.length ? <NavOverflowMenu id={`conversation-${item.id}`} label={`${item.title} options`} actions={actions} /> : null}
@@ -304,21 +304,21 @@ function DestinationRow({ item, depth = 0 }: { item: NavDestination; depth?: num
 
 function HistoryCollection({id,title,items,empty,searching=false}:{id:string;title:string;items:ReactNode[];empty:string;searching?:boolean}) {
   const {storageKey} = useNav();
-  const [expanded,setExpanded] = useState(true);
+  const [expanded,setExpanded] = useState(id === "recent");
   const [more,setMore] = useState(false);
   useEffect(() => {
     if (!storageKey) return;
-    try { setExpanded(JSON.parse(localStorage.getItem(storageKey+':collections') || '{}')[id] !== false); } catch { /* Optional UI preferences. */ }
+    try { setExpanded(JSON.parse(localStorage.getItem(storageKey+':collections-v2') || '{}')[id] ?? (id === 'recent')); } catch { /* Optional UI preferences. */ }
   },[storageKey,id]);
   const toggle = () => setExpanded(value => {
     const next = !value;
-    if (storageKey) try { const saved=JSON.parse(localStorage.getItem(storageKey+':collections') || '{}');localStorage.setItem(storageKey+':collections',JSON.stringify({...saved,[id]:next})); } catch { /* Keep usable. */ }
+    if (storageKey) try { const saved=JSON.parse(localStorage.getItem(storageKey+':collections-v2') || '{}');localStorage.setItem(storageKey+':collections-v2',JSON.stringify({...saved,[id]:next})); } catch { /* Keep usable. */ }
     return next;
   });
   const shown = searching || expanded;
   return <section aria-label={title}><h2><button type="button" className="as-nav-collection-toggle" aria-expanded={shown} onClick={toggle}>{title}<ChevronDown data-expanded={shown}/></button></h2>
-    {shown ? <>{items.length ? (more || searching ? items : items.slice(0,6)) : <p className="as-nav-empty">{empty}</p>}
-    {items.length>6 && !searching ? <button type="button" className="as-nav-collection-more" onClick={() => setMore(value => !value)}>{more?'Show less':'Show more'}</button> : null}</> : null}
+    {shown ? <>{items.length ? (more || searching ? items : items.slice(0,id === 'recent' ? 20 : 6)) : <p className="as-nav-empty">{empty}</p>}
+    {items.length>(id === 'recent' ? 20 : 6) && !searching ? <button type="button" className="as-nav-collection-more" onClick={() => setMore(value => !value)}>{more?'Show less':'Show more'}</button> : null}</> : null}
   </section>;
 }
 
@@ -347,9 +347,9 @@ function SidenavContents() {
           items={[...pinnedProjects.map(item => <ProjectRow key={item.id} item={item} />),...pinnedConversations.map(item => <ConversationRow key={item.id} item={item} />),...(data.pinnedResources||[]).map(item => <PinnedResourceRow key={item.id} item={item} />)]} />
         <HistoryCollection id="recent" title="Chats and tasks" searching={Boolean(query)} empty={query ? 'No matching conversations.' : 'Your conversations will appear here.'}
           items={recent.slice(0,20).map(item => <ConversationRow key={item.id} item={item} />)} />
-        {data.onNavigate ? <button type="button" className="as-nav-collection-more" onClick={() => {data.onNavigate?.('/chats'); if (isMobile) close();}}>View all conversations</button> : null}
       </div> : null}
     </div>
+    {data.showHistory !== false && data.onNavigate ? <div className="as-nav-sidenav-view-all as-nav-expanded-only"><button type="button" onClick={() => {data.onNavigate?.('/chats'); if (isMobile) close();}}>View all</button></div> : null}
     <div className="as-nav-sidenav-foot"><NavAccountSwitcher expanded /></div>
   </>;
 }
