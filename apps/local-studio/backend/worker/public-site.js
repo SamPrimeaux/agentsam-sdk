@@ -190,6 +190,55 @@ function guessType(path) {
   return 'application/octet-stream';
 }
 
+function normalizedRoutePath(pathname) {
+  const path = String(pathname || '/').split('?')[0];
+  if (!path.startsWith('/') || path.includes('\\\\') || /%(?:2f|5c)/i.test(path)) return null;
+  const segments = path.split('/').filter(Boolean);
+  if (segments.some(part => part === '.' || part === '..' || /[\\u0000-\\u001f]/.test(part))) return null;
+  return segments.length ? `/${segments.join('/')}/` : '/';
+}
+
+function sitePublicObjectKey(site, key) {
+  if (typeof key !== 'string' || !key || key.startsWith('/') || key.includes('\\\\')) return false;
+  if (key.split('/').some(part => !part || part === '.' || part === '..')) return false;
+  return key.startsWith(`sites/${site.slug}/public/`) || key.startsWith(`sites/${site.id}/public/`);
+}
+
+/** Resolve only a published page owned by this exact cms_sites.id. */
+export async function resolvePublishedPageSource(db, site, pathname) {
+  const route = normalizedRoutePath(pathname);
+  if (!route || !db?.prepare || !site?.id) return null;
+  const withoutTrailingSlash = route === '/' ? '/' : route.slice(0, -1);
+  const pageResult = await db.prepare(`
+    SELECT id, site_id, slug, route_path, title, status, published_manifest_object_key
+    FROM cms_pages
+    WHERE site_id = ? AND status = 'published' AND route_path IN (?, ?)
+    LIMIT 2
+  `).bind(site.id, route, withoutTrailingSlash).all();
+  const pages = pageResult.results || [];
+  if (pages.length > 1) throw new Error('cms_public_page_route_ambiguous');
+  const page = pages[0] || null;
+  if (!page) return null;
+
+  const sectionResult = await db.prepare(`
+    SELECT section_key, section_type, section_data, is_visible, published_r2_key
+    FROM cms_page_sections
+    WHERE page_id = ? AND is_visible = 1
+    ORDER BY sort_order ASC, created_at ASC
+  `).bind(page.id).all();
+  const section = (sectionResult.results || []).find(item =>
+    item.section_key === 'html-document' || item.section_type === 'html_source'
+  );
+  if (!section) return { page, key: null };
+  let data = {};
+  try { data = typeof section.section_data === 'string' ? JSON.parse(section.section_data || '{}') : (section.section_data || {}); }
+  catch { throw new Error('cms_public_page_source_invalid'); }
+  const key = section.published_r2_key || data.source_r2_key || null;
+  if (!key) return { page, key: null };
+  if (!sitePublicObjectKey(site, key)) throw new Error('cms_public_page_source_outside_site');
+  return { page, key };
+}
+
 /**
  * @param {Request} request
  * @param {object} env
