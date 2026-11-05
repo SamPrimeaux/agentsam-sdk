@@ -8,7 +8,6 @@
 import {
   resolveWebsiteAssets,
   resolveWorkerStaticAssets,
-  resolveSiteCacheKv,
   websitePublicKey,
 } from './bindings.js';
 
