@@ -346,6 +346,14 @@
 .agentsam-project-trigger:hover,
 .agentsam-project-trigger[aria-expanded="true"] { background: var(--nav-selected); color: var(--nav-text); }
 .agentsam-project-trigger span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.agentsam-composer-actions .agentsam-project-picker { display: inline-flex; flex: 0 1 auto; min-width: 0; }
+.agentsam-composer-actions .agentsam-project-trigger { max-width: 154px; min-height: 34px; padding: 5px 7px; }
+@media (max-width: 650px) {
+  .agentsam-composer-actions .agentsam-project-trigger { max-width: 34px; width: 34px; padding: 7px; justify-content: center; }
+  .agentsam-composer-actions .agentsam-project-trigger span,
+  .agentsam-composer-actions .agentsam-project-trigger > svg:last-child { display: none; }
+}
+
 .agentsam-project-menu {
   position: fixed; z-index: 95; bottom: var(--project-menu-bottom, 60px); left: var(--project-menu-left, 16px);
   width: min(310px, calc(100vw - 32px)); max-height: min(380px, 55dvh);

@@ -247,7 +247,7 @@ export function Composer({
         onCancel={() => stop(targetId)}
         streaming={streaming}
         placeholder={targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
-        toolbarStart={<>{trigger}{attachControl}</>}
+        toolbarStart={<>{trigger}{targetKind === 'trail' ? <ProjectPicker trailId={targetId} /> : null}{attachControl}</>}
         attachmentPreview={attachmentPreview}
         sendControl={sendControl}
         cancelControl={cancelControl}
@@ -270,7 +270,6 @@ export function Composer({
           },
         }}
       />}</PluginPicker>
-      {targetKind === 'trail' && <div className="agentsam-start-context"><ProjectPicker trailId={targetId} /></div>}
     </div>
   );
 }

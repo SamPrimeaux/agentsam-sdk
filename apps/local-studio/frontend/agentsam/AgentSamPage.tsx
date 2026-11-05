@@ -92,10 +92,6 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
               <div className="agentsam-work-welcome-copy">
                 <h1>What should we work on?</h1>
                 <p className="agentsam-work-welcome-prompt">{companion.id === 'geaux' ? 'Geaux is ready to GEAUX!' : `${companion.name} is ready to work.`}</p>
-                <button type="button" className="agentsam-work-companion-link"
-                  onClick={() => window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/settings/customize?view=companions' } }))}>
-                  Choose a companion <span aria-hidden="true">→</span>
-                </button>
               </div>
             </div> : <h1>Where should we begin?</h1>}
           </div>}
