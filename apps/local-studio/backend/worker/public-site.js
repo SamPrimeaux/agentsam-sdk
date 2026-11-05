@@ -199,7 +199,7 @@ function normalizedRoutePath(pathname) {
 }
 
 function sitePublicObjectKey(site, key) {
-  if (typeof key !== 'string' || !key || key.startsWith('/') || key.includes('\\\\')) return false;
+  if (typeof key !== 'string' || !key || key.startsWith('/') || key.includes('\\')) return false;
   if (key.split('/').some(part => !part || part === '.' || part === '..')) return false;
   return key.startsWith(`sites/${site.slug}/public/`) || key.startsWith(`sites/${site.id}/public/`);
 }
