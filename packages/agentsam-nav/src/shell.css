@@ -47,8 +47,8 @@
 .as-nav-popover { z-index: 100; min-width: 224px; max-width: min(340px, calc(100vw - 24px)); max-height: var(--radix-dropdown-menu-content-available-height); overflow: auto; padding: 6px; background: var(--nav-popover); border: 1px solid var(--nav-border); border-radius: var(--nav-menu-radius); box-shadow: var(--nav-shadow); animation: as-nav-enter 120ms ease-out; }
 .as-nav-menu-heading { padding: 8px 10px; color: var(--nav-muted); font-size: var(--nav-meta-size); }
 .as-nav-summary-popover { min-width: 300px; padding: 14px 16px; }
-.as-nav-summary-heading { padding: 2px 4px 10px; color: var(--nav-text); font-size: 15px; font-weight: 600; }
-.as-nav-summary-row { overflow: hidden; padding: 8px 4px; border-radius: var(--nav-radius); color: var(--nav-text); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.as-nav-summary-heading { padding: 2px 4px 10px; color: var(--nav-text); font-size: var(--nav-label-size); font-weight: var(--fw-heading); }
+.as-nav-summary-row { overflow: hidden; padding: 8px 4px; border-radius: var(--nav-radius); color: var(--nav-text); font-size: var(--nav-label-size); text-overflow: ellipsis; white-space: nowrap; }
 .as-nav-summary-popover .as-nav-empty { padding: 2px 4px 10px; }
 .as-nav-button > svg { width: 18px; height: 18px; flex: none; }
 .as-nav-menu-separator { height: 1px; margin: 6px 4px; background: var(--nav-border); }
