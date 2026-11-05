@@ -152,5 +152,17 @@ test("theme projects and theme selections are isolated by CMS site", async () =>
       new URL("https://cms.test/api/admin/cms/theme-projects/theme_resolve?site_id=site-a2"), { accountId: "acct-other" },
     );
     assert.equal(crossAccount.status, 404);
+
+    sqlite.prepare("UPDATE cms_globals SET status='archived' WHERE site_id='site-a2' AND global_key='theme-project:theme_resolve'").run();
+    const archivedList = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects?site_id=site-a2'), env,
+      new URL('https://cms.test/api/admin/cms/theme-projects?site_id=site-a2'), { accountId: 'acct-a' },
+    );
+    assert.equal((await archivedList.json()).projects.length, 0);
+    const archivedRead = await handleAdminCmsApi(
+      request('/api/admin/cms/theme-projects/theme_resolve?site_id=site-a2'), env,
+      new URL('https://cms.test/api/admin/cms/theme-projects/theme_resolve?site_id=site-a2'), { accountId: 'acct-a' },
+    );
+    assert.equal(archivedRead.status, 404);
   } finally { sqlite.close(); }
 });
