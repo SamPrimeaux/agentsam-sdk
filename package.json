@@ -479,7 +479,8 @@
     "workerd@1.20261019.1": true,
     "sharp@0.34.5": true,
     "sharp@0.35.4": true,
-    "sharp@0.35.5": true
+    "sharp@0.35.5": true,
+    "workerd@1.20261103.1": true
   },
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
