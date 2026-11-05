@@ -291,4 +291,4 @@ export async function servePublicSitePage(
   return null;
 }
 
-export { PUBLIC_SITE_HTML, DEFAULT_SITE };
+export { PUBLIC_SITE_HTML };
