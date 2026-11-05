@@ -148,8 +148,7 @@ test("cold public HTML reads are site-specific and bypass KV", async () => {
 test("published page source cannot point into another site's R2 prefix", async () => {
   const db = siteOwnedDb(
     { "alpha.example": [siteA] },
-    { [siteA.id]: [{ id: "page_alpha_home", site_id: siteA.id, slug: "home", route_path: "/", title: "Alpha", status: "published" }] },
-    { page_alpha_home: [{ section_key: "html-document", section_type: "html_source", section_data: JSON.stringify({ source_r2_key: "sites/beta-site/public/home/index.html" }), is_visible: 1 }] },
+    { [siteA.id]: [{ id: "page_alpha_home", site_id: siteA.id, slug: "home", route_path: "/", title: "Alpha", status: "published", content_object_key: "sites/beta-site/public/home/index.html" }] },
   );
   await assert.rejects(resolvePublishedPageSource(db, siteA, "/"), /cms_public_page_source_outside_site/);
 });
