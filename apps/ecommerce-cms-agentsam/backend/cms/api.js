@@ -2838,7 +2838,9 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
-    const result = await installThemeDraft(env, context.accountId, themeInstallMatch[1], body, body.site_id || url.searchParams.get("site_id") || null);
+    const selectedSite = body.site_id || url.searchParams.get("site_id") || null;
+    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
+    const result = await installThemeDraft(env, context.accountId, themeInstallMatch[1], body, selectedSite);
     return json(result, { status: result.status || (result.ok ? 201 : 400) });
   }
 
