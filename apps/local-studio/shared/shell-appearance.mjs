@@ -76,6 +76,7 @@ const tailwindRoles = {
   '--color-muted-foreground': 'inkMuted',
 };
 
+/** @param {string} accent */
 function accentInk(accent) {
   if (!/^#[0-9a-f]{6}$/i.test(accent || '')) return '#ffffff';
   const rgb = [1, 3, 5].map((i) => parseInt(accent.slice(i, i + 2), 16) / 255)
@@ -85,8 +86,13 @@ function accentInk(accent) {
 }
 
 /** Product-specific tokens supplied by the existing account CMS theme. */
+/**
+ * @param {Record<string, unknown> | null | undefined} vars
+ * @returns {Record<string, string>}
+ */
 function movieModeThemeTokens(vars) {
   if (!vars || typeof vars !== 'object' || Array.isArray(vars)) return {};
+  /** @type {Record<string, string>} */
   const safe = {};
   for (const [name, raw] of Object.entries(vars)) {
     if (!/^--copro-[a-z0-9-]{1,66}$/.test(name) || typeof raw !== 'string' || raw.length > 120) continue;
@@ -100,7 +106,7 @@ function movieModeThemeTokens(vars) {
 /**
  * @param {{id?:string,themeFamily?:string,cssVars?:Record<string,string>} | null | undefined} record
  * @param {{theme?:string,accentColor?:string|null}} fallback
- * @returns {{theme:'light'|'dark',tokens:Record<string,string>,accentColor:string,themeId:string|null,accentInk:string}}
+ * @returns {{theme:'light'|'dark',tokens:Record<string,string>,productTokens:Record<string,string>,accentColor:string,themeId:string|null,accentInk:string}}
  */
 export function projectStudioShellAppearance(record, fallback = {}) {
   const family = String(record?.themeFamily || '').toLowerCase();
@@ -180,7 +186,11 @@ export function appearanceCacheKey(accountId) {
   return STUDIO_APPEARANCE_CACHE_PREFIX + (accountId || 'anonymous');
 }
 
-/** @returns {ReturnType<typeof projectStudioShellAppearance> & {accountId?:string,updatedAt?:number} | null} */
+/**
+ * @param {string|null|undefined} [accountId]
+ * @param {Storage|null} [storage]
+ * @returns {(ReturnType<typeof projectStudioShellAppearance> & {accountId?:string|null,updatedAt?:number}) | null}
+ */
 export function readStudioAppearanceCache(accountId, storage) {
   const store = storage ?? (typeof localStorage !== 'undefined' ? localStorage : null);
   if (!store) return null;
@@ -212,6 +222,7 @@ export function readStudioAppearanceCache(accountId, storage) {
 /**
  * @param {string|null|undefined} accountId
  * @param {ReturnType<typeof projectStudioShellAppearance>} appearance
+ * @param {Storage|null} [storage]
  */
 export function writeStudioAppearanceCache(accountId, appearance, storage) {
   const store = storage ?? (typeof localStorage !== 'undefined' ? localStorage : null);
@@ -234,7 +245,10 @@ export function writeStudioAppearanceCache(accountId, appearance, storage) {
   }
 }
 
-/** @param {string|null|undefined} accountId */
+/**
+ * @param {string|null|undefined} accountId
+ * @param {Storage|null} [storage]
+ */
 export function clearStudioAppearanceCache(accountId, storage) {
   const store = storage ?? (typeof localStorage !== 'undefined' ? localStorage : null);
   if (!store) return;
@@ -249,6 +263,8 @@ export function clearStudioAppearanceCache(accountId, storage) {
 
 /**
  * Apply last-known-good appearance synchronously before React/registry fetch.
+ * @param {string|null|undefined} accountId
+ * @param {HTMLElement} root
  * @returns {ReturnType<typeof projectStudioShellAppearance>|null}
  */
 export function bootstrapStudioAppearanceFromCache(accountId, root) {

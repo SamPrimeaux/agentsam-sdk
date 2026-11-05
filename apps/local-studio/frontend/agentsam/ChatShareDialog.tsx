@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Copy, Link2, LoaderCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import type { Trail } from '../../shared/agentsam/src/work-types';
+import { shareAttachmentMetadata } from '@/lib/content/share-attachment-metadata';
 
-type ShareMessage = { role: string; content: string; attachments?: Array<{ name?: string; mimeType?: string }> };
-type ShareTrail = { id: string; title: string; messages: ShareMessage[] };
+type ShareTrail = Pick<Trail, 'id' | 'title' | 'messages'>;
 type ShareLink = { id: string; title: string; url: string; createdAt: string };
 
 /** Shared Work conversation share flow: create, copy, list and revoke public links. */
@@ -40,7 +41,7 @@ export function ChatShareDialog({ open, onOpenChange, trail }: { open: boolean; 
         method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ conversationId: trail.id, title: trail.title, messages: trail.messages.map(message => ({
           role: message.role, content: message.content,
-          attachments: (message.attachments ?? []).map(file => ({ name: file.name ?? 'Image', mimeType: file.mimeType ?? 'image/*' })),
+          attachments: shareAttachmentMetadata(message),
         })) }),
       });
       const result = await response.json();

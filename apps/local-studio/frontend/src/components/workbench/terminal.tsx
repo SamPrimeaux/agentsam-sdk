@@ -112,7 +112,7 @@ export function TerminalPane({
             </button>
           </div>
         ))}
-        <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="New terminal" onClick={() => createSession({ cwd: project.workspaceRoot || undefined })}>
+        <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="New terminal" onClick={() => createSession({ cwd: project?.workspaceRoot || undefined })}>
           <Plus className="size-3.5" />
         </Button>
         <Button type="button" size="icon-sm" variant="ghost" className="size-7 shrink-0" aria-label="Duplicate terminal cwd" onClick={() => duplicateSession(resolvedSessionId)}>
@@ -136,7 +136,7 @@ export function TerminalPane({
               if (other) setSecondarySession(other.id);
               else {
                 const previous = resolvedSessionId;
-                createSession({ cwd: project.workspaceRoot || undefined });
+                createSession({ cwd: project?.workspaceRoot || undefined });
                 setSecondarySession(previous);
               }
               setSplitView(true);
@@ -160,7 +160,7 @@ export function TerminalPane({
       {variant === "dock" ? (
         <div className="flex h-8 shrink-0 items-center gap-2 border-t border-border px-2">
           <span className="px-1 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">CLI</span>
-          <span className="truncate font-mono text-[11px] text-clay">{project.name}</span>
+          <span className="truncate font-mono text-[11px] text-clay">{project?.name || 'No project selected'}</span>
           <Button type="button" size="icon-sm" variant="ghost" className="ml-auto size-7" aria-label="Close terminal" onClick={() => useWorkStore.getState().setTerminalOpen(false)}>
             <X className="size-3.5" />
           </Button>
@@ -197,7 +197,7 @@ export function TerminalPane({
             })}
             {visibleIds.length < 5 && (
               <div className="terminal-tile-empty">
-                <Button type="button" variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => createSession({ cwd: project.workspaceRoot || undefined })}>
+                <Button type="button" variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => createSession({ cwd: project?.workspaceRoot || undefined })}>
                   <Plus className="size-4" /> New terminal tile
                 </Button>
               </div>

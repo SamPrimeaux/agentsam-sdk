@@ -34,6 +34,7 @@ import { AgentSamPetTrigger } from './AgentSamPetTrigger';
 import { CompanionProvider } from './CompanionContext';
 import { NotificationsMenu } from './NotificationsMenu';
 import { ChatShareDialog } from './ChatShareDialog';
+import { shareAttachmentMetadata } from '@/lib/content/share-attachment-metadata';
 import { signOut } from '@/lib/auth/client';
 import { hasGateSessionMarker } from '@/lib/auth/gate-session-marker';
 import { applyActiveStudioTheme } from '@/lib/themes/inventory';
@@ -445,7 +446,10 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'pin', label: trail.pinned ? 'Unpin conversation' : 'Pin conversation', icon: <Pin />, onSelect: () => state.pinTrail(trail.id) },
       { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(trail.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
     ] : [],
-    pinnedSummary: trail ? { outputs: trail.files.map(file => file.name), sources: trail.messages.flatMap(message => (message.attachments ?? []).map(file => file.name ?? 'Image')) } : undefined,
+    pinnedSummary: trail ? {
+      outputs: trail.files.map(file => file.title || file.path),
+      sources: trail.messages.flatMap(message => shareAttachmentMetadata(message).map(file => file.name)),
+    } : undefined,
     resourceActions: [
       { id: 'outputs', label: 'Outputs', icon: <BookOpen />, onSelect: () => state.openSideTab('artifacts') },
       { id: 'files', label: 'Files & sources', icon: <Files />, onSelect: () => state.openSideTab('files') },
@@ -482,7 +486,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         </div>
 
       </div><CliDrawer /><CommandPalette />
-      <ChatShareDialog open={sharing} onOpenChange={setSharing} trail={trail} />
+      <ChatShareDialog open={sharing} onOpenChange={setSharing} trail={trail ?? null} />
       <Dialog open={avatarDialogOpen} onOpenChange={setAvatarDialogOpen}><DialogContent>
         <DialogTitle>Profile image</DialogTitle>
         <DialogDescription>Select an image from your authorized Brand/Media assets, then paste its image URL here. Saved against your signed-in user, not as an installation default.</DialogDescription>
