@@ -63,6 +63,32 @@ function environment(sqlite) {
   };
 }
 
+test("theme project and theme catalog APIs refuse implicit default-site fallback", async () => {
+  const sqlite = createCmsTestDb();
+  const env = environment(sqlite);
+  try {
+    sqlite.exec(`INSERT INTO accounts(id) VALUES ('acct-a');
+      INSERT INTO cms_sites(id,account_id,name,slug,status,is_default)
+      VALUES ('site-a','acct-a','Primary','default','active',1);`);
+    const cases = [
+      [request('/api/admin/cms/theme-projects'), '/api/admin/cms/theme-projects'],
+      [request('/api/admin/cms/theme-projects', 'POST', { project: project() }), '/api/admin/cms/theme-projects'],
+      [request('/api/admin/cms/theme-projects/theme_resolve'), '/api/admin/cms/theme-projects/theme_resolve'],
+      [request('/api/admin/cms/theme-projects/theme_resolve', 'PUT', { project: project(), expected_version: 1 }), '/api/admin/cms/theme-projects/theme_resolve'],
+      [request('/api/admin/cms/themes'), '/api/admin/cms/themes'],
+      [request('/api/admin/cms/themes/plain-jane/install', 'POST', { version: '0.1.0' }), '/api/admin/cms/themes/plain-jane/install'],
+      [request('/api/admin/cms/theme-selection', 'PUT', { slug: 'plain-jane', expected_version: 0 }), '/api/admin/cms/theme-selection'],
+    ];
+    for (const [req, path] of cases) {
+      const response = await handleAdminCmsApi(req, env, new URL('https://cms.test' + path), { accountId: 'acct-a' });
+      assert.equal(response.status, 400, path + ' must reject an omitted site_id');
+      assert.equal((await response.json()).error, 'site_id_required');
+    }
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM cms_globals").get().n, 0,
+      'implicit theme operations must not write into the default site');
+  } finally { sqlite.close(); }
+});
+
 test("theme projects and theme selections are isolated by CMS site", async () => {
   const sqlite = createCmsTestDb();
   const env = environment(sqlite);
