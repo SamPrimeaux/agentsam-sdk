@@ -162,6 +162,20 @@ test("draft pages are not eligible for public rendering", async () => {
   assert.equal(await resolvePublishedPageSource(db, siteA, "/"), null);
 });
 
+test("valid public CMS routes with letters u and f are not treated as control bytes", async () => {
+  const db = siteOwnedDb(
+    { "alpha.example": [siteA] },
+    { [siteA.id]: [{
+      id: "page_alpha_manual", site_id: siteA.id, slug: "architecture-field-manual",
+      route_path: "/learn/architecture-field-manual/", title: "Manual",
+      status: "published",
+      content_object_key: "sites/alpha-site/public/learn/architecture-field-manual/index.html",
+    }] },
+  );
+  const source = await resolvePublishedPageSource(db, siteA, "/learn/architecture-field-manual/");
+  assert.equal(source?.key, "sites/alpha-site/public/learn/architecture-field-manual/index.html");
+});
+
 test("unknown hostname never falls back to another site's public content", async () => {
   const response = await servePublicSitePage(
     new Request("https://unregistered.example/"),

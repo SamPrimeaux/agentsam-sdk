@@ -194,7 +194,7 @@ function normalizedRoutePath(pathname) {
   const path = String(pathname || '/').split('?')[0];
   if (!path.startsWith('/') || path.includes('\\') || /%(?:2f|5c|0[0-9a-f]|1[0-9a-f])/i.test(path)) return null;
   const segments = path.split('/').filter(Boolean);
-  if (segments.some(part => part === '.' || part === '..' || /[\\u0000-\\u001f]/.test(part))) return null;
+  if (segments.some(part => part === '.' || part === '..' || /[\u0000-\u001f]/.test(part))) return null;
   return segments.length ? `/${segments.join('/')}/` : '/';
 }
 
