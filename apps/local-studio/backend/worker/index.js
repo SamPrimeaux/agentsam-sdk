@@ -994,14 +994,14 @@ export default {
     // Public marketing/docs: WEBSITE_ASSETS R2 SSOT (Worker ASSETS = bootstrap only)
     const publicPath = publicSitePathForRequest(request);
     if (request.method === "GET" && isPublicSitePath(publicPath)) {
-      const page = await servePublicSitePage(request, env, publicPath, {
-        siteSlug: "agentsam-sdk",
-      });
+      const page = await servePublicSitePage(request, env, publicPath);
       if (page) return page;
-      // Only the primary AgentSam hostname falls back to the marketing homepage.
-      if ((url.pathname === "/" || url.pathname === "/index.html") && publicPath === url.pathname) {
-        return serveCanonicalHomepage(request, env);
-      }
+      // Never substitute another site's homepage when the request hostname has
+      // no active cms_sites registration or the site has no published page.
+      return new Response("Published site page not found", {
+        status: 404,
+        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+      });
     }
 
     if (request.method === "GET" && Object.hasOwn(INSTALL_APP_TARGETS, url.pathname)) {
