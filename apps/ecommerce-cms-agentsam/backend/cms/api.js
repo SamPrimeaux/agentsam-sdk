@@ -2810,6 +2810,7 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
   if (projectHistoryMatch && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     const selected = url.searchParams.get("site_id") || null;
+    if (!selected) return json({ok:false,error:'site_id_required'}, {status:400});
     const result = projectHistoryMatch[2]
       ? await getThemeProjectSnapshot(env, context.accountId, projectHistoryMatch[1], projectHistoryMatch[2], selected)
       : await listThemeProjectHistory(env, context.accountId, projectHistoryMatch[1], selected);
