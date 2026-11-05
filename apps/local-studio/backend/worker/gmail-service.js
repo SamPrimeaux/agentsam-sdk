@@ -23,7 +23,7 @@ const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.send",
 ];
 
-function clean(value) {
+export function clean(value) {
   return value == null ? "" : String(value).trim();
 }
 
@@ -71,11 +71,11 @@ function json(data, status = 200) {
   });
 }
 
-function b64url(bytes) {
+export function b64url(bytes) {
   return Buffer.from(bytes).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
-function vaultMaterial(env) {
+export function vaultMaterial(env) {
   return clean(env?.VAULT_MASTER_KEY || env?.VAULT_KEY);
 }
 
@@ -91,8 +91,8 @@ async function hashState(state) {
   return bytesToHex(new Uint8Array(digest));
 }
 
-function stateAad(userId) {
-  return "oauth_state_nonces:" + OAUTH_STATE_PROVIDER + ":" + clean(userId);
+function stateAad(userId, provider = OAUTH_STATE_PROVIDER) {
+  return "oauth_state_nonces:" + provider + ":" + clean(userId);
 }
 
 async function ensureOauthStateTable(db) {
@@ -105,16 +105,16 @@ async function ensureOauthStateTable(db) {
   ).run();
 }
 
-async function saveOauthState(env, { state, userId, verifier, returnTo }) {
+export async function saveOauthState(env, { state, userId, verifier, returnTo, provider = OAUTH_STATE_PROVIDER, resource = "gmail" }) {
   if (!vaultConfigured(env)) throw new Error("vault_required");
   await ensureOauthStateTable(env.DB);
   const now = Math.floor(Date.now() / 1000);
   const stateHash = await hashState(state);
-  const encrypted = await encryptSecret(env, verifier, stateAad(userId));
+  const encrypted = await encryptSecret(env, verifier, stateAad(userId, provider));
   const id = "osn_" + crypto.randomUUID().replace(/-/g, "").slice(0, 20);
   await env.DB.prepare(
     "DELETE FROM oauth_state_nonces WHERE provider = ? AND (expires_at < ? OR consumed_at IS NOT NULL)"
-  ).bind(OAUTH_STATE_PROVIDER, now).run();
+  ).bind(provider, now).run();
   await env.DB.prepare(
     "INSERT INTO oauth_state_nonces (" +
       "id, tenant_id, user_id, provider, state_hash, code_verifier_encrypted, redirect_after, " +
@@ -123,23 +123,23 @@ async function saveOauthState(env, { state, userId, verifier, returnTo }) {
   ).bind(
     id,
     userId,
-    OAUTH_STATE_PROVIDER,
+    provider,
     stateHash,
     encrypted,
     returnTo || null,
-    JSON.stringify({ product: "agentsam-work", resource: "gmail" }),
+    JSON.stringify({ product: "agentsam-work", resource }),
     now + OAUTH_STATE_TTL_SECONDS,
     now,
   ).run();
 }
 
-async function consumeOauthState(env, state) {
+export async function consumeOauthState(env, state, provider = OAUTH_STATE_PROVIDER) {
   await ensureOauthStateTable(env.DB);
   const stateHash = await hashState(state);
   const row = await env.DB.prepare(
     "SELECT id, user_id, code_verifier_encrypted, redirect_after, expires_at, consumed_at " +
       "FROM oauth_state_nonces WHERE state_hash = ? AND provider = ? LIMIT 1"
-  ).bind(stateHash, OAUTH_STATE_PROVIDER).first();
+  ).bind(stateHash, provider).first();
   if (!row || row.consumed_at) return null;
   const now = Math.floor(Date.now() / 1000);
   if (Number(row.expires_at || 0) <= now) return null;
@@ -150,12 +150,12 @@ async function consumeOauthState(env, state) {
   if (!row.code_verifier_encrypted) return null;
   return {
     user_id: clean(row.user_id),
-    code_verifier: await decryptSecret(env, row.code_verifier_encrypted, stateAad(row.user_id)),
+    code_verifier: await decryptSecret(env, row.code_verifier_encrypted, stateAad(row.user_id, provider)),
     return_to: clean(row.redirect_after),
   };
 }
 
-function safeReturnTo(value) {
+export function safeReturnTo(value) {
   const target = clean(value);
   if (target.startsWith("/") && !target.startsWith("//")) return target;
   try {
@@ -221,7 +221,7 @@ export async function listGmailConnections(env, userId) {
   }
 }
 
-async function readStoredOauthToken(material, row, kind, aad) {
+export async function readStoredOauthToken(material, row, kind, aad) {
   const encryptedField = kind === "refresh" ? "refresh_token_encrypted" : "access_token_encrypted";
   const encrypted = clean(row?.[encryptedField]);
   if (encrypted) {

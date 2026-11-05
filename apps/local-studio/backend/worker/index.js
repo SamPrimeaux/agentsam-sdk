@@ -47,6 +47,7 @@ import {handleOpenScadLibraries} from "./cad-openscad-libraries.js";
 import { canonicalStudioPath, isStudioAdminPath, resolveLegacyContentMediaPath } from "../../shared/studio-admin-routes.mjs";
 import { handleKnowledgeNodeApiRequest } from "./knowledge-node-api.js";
 import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service.js";
+import { completeConnectorOAuth, isConnectorOAuthCallbackRequest } from "./connector-oauth.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
@@ -1023,6 +1024,11 @@ export default {
     // Gmail resource OAuth callback is public only long enough to redeem the one-time PKCE state.
     if (isGmailOAuthCallbackRequest(request)) {
       return completeGmailOAuth(request, env);
+    }
+
+    // Drive / Calendar / GitHub connector callbacks share the same one-time-state redemption.
+    if (isConnectorOAuthCallbackRequest(request)) {
+      return completeConnectorOAuth(request, env);
     }
 
     // CLI desktop PKCE token exchange broker (secrets stay on Worker).

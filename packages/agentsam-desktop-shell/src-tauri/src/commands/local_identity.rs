@@ -95,6 +95,19 @@ struct StudioServiceBridgeResponse {
     body: String,
 }
 
+/// `/api/work/connect/<provider>/<start|status|disconnect>` for the OAuth plugins served by Local Studio.
+fn is_work_connect_path(path: &str) -> bool {
+    let Some(rest) = path.strip_prefix("/api/work/connect/") else {
+        return false;
+    };
+    let mut parts = rest.split('/');
+    let (Some(provider), Some(action), None) = (parts.next(), parts.next(), parts.next()) else {
+        return false;
+    };
+    matches!(provider, "google_drive" | "google_calendar" | "github")
+        && matches!(action, "start" | "status" | "disconnect")
+}
+
 fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method, String), String> {
     match request.operation.trim() {
         // Same authenticated account Settings API as the web host.
@@ -274,6 +287,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 || path == "/api/work/gmail/oauth/start"
                 || path == "/api/work/gmail/status"
                 || path == "/api/work/gmail/disconnect"
+                || is_work_connect_path(path)
                 || path == "/api/tickets"
                 || path.starts_with("/api/tickets/")
                 || path == "/api/mail/send"
@@ -905,6 +919,9 @@ mod tests {
             ("/api/work/gmail/oauth/start", "POST"),
             ("/api/work/gmail/status", "GET"),
             ("/api/work/gmail/disconnect", "POST"),
+            ("/api/work/connect/google_drive/start", "POST"),
+            ("/api/work/connect/google_calendar/disconnect", "POST"),
+            ("/api/work/connect/github/status", "GET"),
             ("/api/tickets", "POST"),
             ("/api/tickets/tkt_123", "PATCH"),
             ("/api/tickets/tkt_123", "DELETE"),
