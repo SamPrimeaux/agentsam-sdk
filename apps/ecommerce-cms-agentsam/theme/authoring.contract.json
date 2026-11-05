@@ -6,7 +6,7 @@
     "section_instance": "cms_page_sections",
     "block_instance": "cms_section_blocks",
     "definition": "cms_definitions",
-    "implementation": "cms_artifacts",
+    "implementation": "cms_components",
     "revision": "cms_revisions",
     "global": "cms_globals",
     "media": "media_assets"
@@ -81,10 +81,10 @@
     "generated_is_native": true
   },
   "artifact": {
-    "implementation_storage": "cms_artifacts/R2",
+    "implementation_storage": "cms_components renderer metadata + app-manifest storage_ref aliases",
     "instance_values_storage": "cms_page_sections or cms_section_blocks",
     "shared_values_storage": "cms_globals",
-    "media_storage": "media_assets",
+    "media_storage": "AgentSam shared asset authority",
     "namespace_prefix": "agentsam_gen_",
     "immutable_versions": true,
     "scope_styles_to_instance": true,
@@ -175,7 +175,7 @@
     "package_definition_source": "owning_package_manifest",
     "installed_runtime_projection": "cms_definitions",
     "package_projection_is_not_upstream_authority": true,
-    "artifact_id_nullable": true,
+    "renderer_key_required_for_external_implementation": true,
     "definition_runtime_fields": [
       "implementation_class",
       "artifact_contract_version",
@@ -215,20 +215,20 @@
         "owner": "app_contract"
       }
     },
-    "artifact_id_required_for": [
+    "renderer_required_for": [
       "artifact_static",
       "artifact_interactive"
     ],
-    "artifact_id_nullable_for": [
+    "renderer_not_required_for": [
       "native",
       "app"
     ],
-    "artifact_compatibility": {
-      "version_source": "artifact_manifest.schema",
+    "renderer_compatibility": {
+      "version_source": "renderer_contract.schema",
       "version_required": true,
       "unknown_versions": "reject",
-      "accepted_artifacts_are_immutable": true,
-      "upgrade": "create a new compatible artifact version; never rewrite an accepted artifact in place"
+      "accepted_renderers_are_immutable": true,
+      "upgrade": "create a new compatible renderer version; never rewrite an accepted renderer in place"
     },
     "interactive_capabilities": {
       "declaration_required": true,

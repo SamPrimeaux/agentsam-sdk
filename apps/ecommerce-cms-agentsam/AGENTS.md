@@ -29,7 +29,7 @@ Inspect existing code, schema, renderer, and tests **before adding anything**. E
 | Placed section | `cms_page_sections` |
 | Placed/nested block | `cms_section_blocks` |
 | Reusable section/block definition | `cms_definitions` (roll out through migration; do not assume deployed) |
-| Implementation and versions | `cms_artifacts`, immutable provider-neutral object references resolved by AgentSam storage |
+| Renderer implementation | `cms_components` (current renderer authority); object keys resolve through the app manifest storage aliases |
 | Private work, publish, history | `cms_revisions` + immutable site-level `cms_publications` releases |
 | Site-wide settings | `cms_globals`, scoped to `cms_sites` |
 | Images/video/3D | AgentSam shared asset authority; CMS stores typed references, placement and merchant-facing metadata, never a duplicate object inventory |

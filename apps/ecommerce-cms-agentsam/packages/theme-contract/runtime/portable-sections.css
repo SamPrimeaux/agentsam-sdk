@@ -26,6 +26,10 @@
 .ps-section .ps-kicker { font: 750 .76rem/1.4 Inter, system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
 .ps-section .ps-description { max-width: 58ch; }
 .ps-section .ps-cta { display: inline-flex; align-items: center; gap: 14px; width: fit-content; margin-top: 24px; padding: 14px 22px; background: var(--ps-accent); color: #fff; font: 700 .9rem/1.3 Inter, system-ui, sans-serif; border-radius: 2px; }
+.ps-section .ps-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.ps-section .ps-hero-actions .ps-cta { margin-top: 0; }
+.ps-section .ps-hero-actions .ps-cta--outline { background: transparent; color: var(--ps-ink); border: 1px solid currentColor; }
+.ps-section .ps-hero-actions .ps-cta--text { background: transparent; color: var(--ps-ink); padding-inline: 0; }
 .ps-section .ps-heading { margin-bottom: clamp(25px, 4vw, 54px); }
 .ps-section .ps-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(12px, 2vw, 28px); }
 .ps-section .ps-card { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
@@ -50,13 +54,7 @@
 .ps-section .ps-form-row button { min-height: 48px; border: 0; padding: 12px 24px; font: 700 .9rem/1.3 Inter,system-ui,sans-serif; background: var(--ps-accent); color: #fff; cursor: pointer; }
 
 .ps-section[data-portable-preset^="revise/"] { --ps-paper: #edeae5; --ps-ink: #151515; --ps-accent: #343434; }
-.ps-section[data-portable-preset^="fnf/"] {
-  --ps-paper: #101011; --ps-ink: #f7f4ee; --ps-accent: #fc4c09;
-  font-family: "Inter", system-ui, sans-serif;
-}
-.ps-section[data-portable-preset^="fnf/"] h2 { font-family: "Bebas Neue", Impact, "Arial Narrow",sans-serif; font-weight: 400; letter-spacing: .005em; text-transform: uppercase; }
-.ps-section[data-portable-preset^="fnf/"] .ps-cta { border-radius: 999px; color: #100d0c; text-transform: uppercase; }
-.ps-section[data-portable-preset="revise/sticky-curtain"], .ps-section[data-portable-preset="fnf/scene-hero"] { min-height: min(90svh, 900px); overflow: clip; }
+.ps-section[data-portable-preset="revise/sticky-curtain"] { min-height: min(90svh, 900px); overflow: clip; }
 .ps-section.ps-hero { display: flex; align-items: center; }
 .ps-section.ps-hero .ps-inner { position: relative; z-index: 1; }
 .ps-section.ps-hero .ps-hero-copy { display: grid; align-content: center; justify-items: start; gap: 22px; }
@@ -81,23 +79,11 @@
 .ps-section[data-portable-preset="revise/trust-row"] .ps-detail-grid article { padding: 8px 20px 8px 0; border: 0; border-right: 1px solid #bdbab5; }
 .ps-section[data-portable-preset="revise/trust-row"] h2 { font-size: clamp(2rem,3vw,3.8rem); }
 .ps-section[data-portable-preset="revise/newsletter"] { --ps-paper: #cfc7b8; }
-.ps-section[data-portable-preset="fnf/scene-hero"] .ps-hero-media { inset: 0 0 0 47%; }
-.ps-section[data-portable-preset="fnf/scene-hero"] .ps-hero-media::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,#101011 0%,transparent 70%); }
-.ps-section[data-portable-preset="fnf/scene-hero"] .ps-hero-copy { padding-right: 48%; }
-.ps-section[data-portable-preset="fnf/collection-list"] .ps-cards { gap: 22px; }
-.ps-section[data-portable-preset="fnf/collection-list"] .ps-card img { aspect-ratio: 1; }
-.ps-section[data-portable-preset="fnf/feature-card-grid"] .ps-detail-grid article { background: #1d1c1c; border: 1px solid #363331; border-radius: 12px; }
-.ps-section[data-portable-preset="fnf/manifesto-split"] { --ps-paper: #1c1b1a; }
-.ps-section[data-portable-preset="fnf/manifesto-split"] .ps-story-image { aspect-ratio: 1; }
-.ps-section[data-portable-preset="fnf/newsletter"] { --ps-paper: #f35515; --ps-ink: #0c0c0c; --ps-accent: #101011; }
-.ps-section[data-portable-preset="fnf/newsletter"] .ps-form-row button { color: #fff; }
 @media(max-width:760px) {
   .ps-section .ps-inner { padding-block: 60px; }
   .ps-section .ps-cards { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .ps-section .ps-story-layout, .ps-section .ps-detail-grid { grid-template-columns:1fr; }
   .ps-section .ps-signup { flex-direction:column; align-items:stretch; }
-  .ps-section[data-portable-preset="fnf/scene-hero"] .ps-hero-media { inset:25% 0 0;opacity:.5; }
-  .ps-section[data-portable-preset="fnf/scene-hero"] .ps-hero-copy { padding-right:0; }
   .ps-section.ps-hero { min-height: 650px; }
   .ps-section.ps-hero .ps-hero-copy { padding-block: 100px 60px; }
   .ps-section.ps-hero .ps-display { font-size: clamp(2.5rem,11vw,5rem); }

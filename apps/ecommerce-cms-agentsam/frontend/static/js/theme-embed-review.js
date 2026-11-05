@@ -370,6 +370,10 @@
   dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
   window.ThemeEmbedReview={
     getCatalog:()=>catalog.map(app=>app.key),
+    getCatalogEntries:()=>catalog.map(app=>({
+      key:app.key,name:app.name,category:app.category,tagline:app.tagline,icon:app.icon,
+      surfaces:Array.isArray(app.surfaces)?app.surfaces.slice():[],
+    })),
     getDraft:key=>get(key)?.config||null,
     getInstalled:()=>installed.slice(),
     open,close,preview,install,refreshInstalled,

@@ -1,6 +1,6 @@
 import { ROUTE_MANIFEST } from "../lib/route-manifest.js";
 import { handleCollectionApi } from "./collection-store.mjs";
-import { attachCmsDefinitions, listCmsDefinitions } from "./definition-registry.mjs";
+import { attachCmsDefinitions, listCmsDefinitions, listCmsComponentCatalog } from "./definition-registry.mjs";
 import { listStoreThemes, selectThemePreview } from "./theme-authority.mjs";
 import { listThemeProjects, getThemeProject, createThemeProject, installThemeDraft, saveThemeProject } from "./theme-project-store.mjs";
 import { ensureCmsSiteStarter } from "./site-starter.mjs";
@@ -2845,7 +2845,15 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     // account. In hosted admin, discover only definitions for this session.
     if (!context.accountId) return json(registryForAdmin());
     const definitions = await listCmsDefinitions(env, context.accountId, { status: "active" });
-    return json(attachCmsDefinitions(registryForAdmin(), definitions));
+    const registry = attachCmsDefinitions(registryForAdmin(), definitions);
+    let catalog = [];
+    try {
+      catalog = await listCmsComponentCatalog(env, context.accountId);
+    } catch {
+      // A missing catalog must not take down the editor's native registry.
+      registry.catalogError = "cms_component_catalog_unavailable";
+    }
+    return json({ ...registry, catalog });
   }
 
   if (path === "/api/admin/cms/composition" && method === "GET") {

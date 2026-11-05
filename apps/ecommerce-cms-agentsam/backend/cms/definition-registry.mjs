@@ -1,7 +1,7 @@
 /**
- * Account-scoped D1 definition discovery for the existing FNF Theme Studio.
- * Definitions describe settings and semantics; the source/portable storefront
- * renderer remains the implementation authority until an artifact is verified.
+ * Account-scoped D1 definition discovery for the CMS editor.
+ * Definitions describe settings and semantics; renderer implementations are
+ * resolved independently and never through an AgentSam artifact join.
  */
 import { normalizeSettingContract, overlayRenderableBlockFields } from "./setting-contract.ts";
 import { installedDefinition } from "./composition-contract.ts";
@@ -61,10 +61,6 @@ export function normalizeCmsDefinition(row) {
     metadata,
     composition,
     ...(compositionError ? {compositionError} : {}),
-    artifact: row.artifact_id && row.artifact_status === "ready"
-      ? { id: row.artifact_id, type: row.artifact_type, version: row.artifact_version,
-          manifestObjectKey: row.manifest_object_key, contentHash: row.content_hash }
-      : null,
   };
 }
 
@@ -79,12 +75,9 @@ export async function listCmsDefinitions(env, accountId, filters = {}) {
     throw new Error("invalid_definition_version");
   }
   let query = `SELECT d.id, d.definition_key, d.kind, d.label, d.description,
-    d.category, d.origin, d.version, d.status, d.artifact_id,
-    d.settings_schema_json, d.allowed_blocks_json, d.max_blocks, d.metadata_json,
-    a.status AS artifact_status, a.artifact_type, a.version AS artifact_version,
-    a.manifest_object_key, a.content_hash
+    d.category, d.origin, d.version, d.status,
+    d.settings_schema_json, d.allowed_blocks_json, d.max_blocks, d.metadata_json
     FROM cms_definitions d
-    LEFT JOIN cms_artifacts a ON a.id = d.artifact_id AND a.account_id = d.account_id
     WHERE d.account_id = ?`;
   const binds = [accountId];
   for (const [param, column] of [["kind", "d.kind"], ["status", "d.status"], ["key", "d.definition_key"], ["version", "d.version"]]) {
@@ -96,6 +89,110 @@ export async function listCmsDefinitions(env, accountId, filters = {}) {
   query += " ORDER BY d.kind, d.definition_key, d.version DESC LIMIT 300";
   const result = await env.DB.prepare(query).bind(...binds).all();
   return (result.results || []).map(normalizeCmsDefinition);
+}
+
+export function normalizeCmsCatalogTemplate(row) {
+  const templateData = parseJson(row.template_data, {});
+  const editorSchema = parseJson(row.editor_schema_json, {});
+  const compatibility = parseJson(row.compatibility_json, {});
+  const responsiveSchema = parseJson(row.responsive_schema_json, {});
+  const dataBindings = parseJson(row.data_bindings_json, {});
+  const preview = parseJson(row.preview_json, {});
+  const metadata = parseJson(row.definition_metadata_json, {});
+  const rendererKey = metadata.rendererKey || metadata.renderer_key ||
+    templateData.rendererKey || templateData.renderer_key || null;
+  const implementationStatus = metadata.implementationStatus || metadata.implementation_status ||
+    templateData.implementationStatus || templateData.implementation_status || "unverified";
+  const implementationClass = metadata.implementationClass || metadata.implementation_class ||
+    templateData.implementationClass || templateData.implementation_class || null;
+  const definition = row.resolved_definition_id ? {
+    id: row.resolved_definition_id,
+    key: row.definition_key,
+    kind: row.resolved_definition_kind,
+    version: row.resolved_definition_version,
+    label: row.definition_label || row.label || row.template_name,
+    description: row.definition_description || "",
+    category: row.definition_category || row.category,
+    origin: row.definition_origin,
+    status: row.definition_status,
+    settingsSchema: parseJson(row.definition_settings_schema_json, {}),
+    allowedBlocks: parseJson(row.definition_allowed_blocks_json, []),
+    maxBlocks: row.definition_max_blocks == null ? null : Number(row.definition_max_blocks),
+    metadata,
+  } : null;
+  const installable = row.status === "active" && definition?.status === "active" &&
+    implementationStatus === "implemented" && implementationClass === "native" &&
+    typeof rendererKey === "string" && rendererKey.length > 0;
+  return {
+    id: row.id,
+    sku: row.sku,
+    key: row.sku,
+    name: row.label || row.template_name,
+    label: row.label || row.template_name,
+    description: definition?.description || templateData.description || "",
+    itemType: row.item_type,
+    templateType: row.template_type,
+    category: row.category || "General",
+    status: row.status,
+    tags: parseJson(row.tags, []),
+    templateData,
+    editorSchema,
+    compatibility,
+    responsiveSchema,
+    dataBindings,
+    preview,
+    r2Key: row.r2_key || null,
+    sourceHtmlR2Key: row.source_html_r2_key || null,
+    definitionKey: row.definition_key || null,
+    definitionVersion: row.definition_version || null,
+    definition,
+    rendererKey,
+    implementationStatus,
+    implementationClass,
+    installable,
+    isFeatured: Boolean(row.is_featured),
+    featuredCollection: row.featured_collection || null,
+    usageCount: Number(row.usage_count || 0),
+  };
+}
+
+/**
+ * Read the existing system component catalog. The catalog supplies names,
+ * categories, compatibility and preview metadata; the actual renderer remains
+ * the portable/native implementation registry. Draft or unmapped rows are
+ * returned for diagnostics but are never marked installable.
+ */
+export async function listCmsComponentCatalog(env, accountId, filters = {}) {
+  if (typeof accountId !== "string" || !accountId.trim()) {
+    throw new Error("cms_catalog_account_required");
+  }
+  if (filters.itemType && !KIND.has(filters.itemType)) throw new Error("invalid_catalog_item_type");
+  let query = `SELECT t.id,t.sku,t.template_name,t.template_type,t.category,t.status,t.label,
+    t.tags,t.template_data,t.is_system,t.r2_key,
+    t.source_html_r2_key,t.usage_count,t.is_featured,t.featured_collection,t.item_type,
+    t.definition_key,t.definition_version,t.editor_schema_json,t.compatibility_json,
+    t.responsive_schema_json,t.data_bindings_json,t.preview_json,
+    d.id AS resolved_definition_id,d.kind AS resolved_definition_kind,
+    d.label AS definition_label,d.description AS definition_description,
+    d.category AS definition_category,d.origin AS definition_origin,
+    d.version AS resolved_definition_version,d.status AS definition_status,
+    d.settings_schema_json AS definition_settings_schema_json,
+    d.allowed_blocks_json AS definition_allowed_blocks_json,
+    d.max_blocks AS definition_max_blocks,d.metadata_json AS definition_metadata_json
+    FROM cms_component_templates t
+    LEFT JOIN cms_definitions d
+      ON d.account_id=? AND d.definition_key=t.definition_key
+      AND d.version=t.definition_version AND d.kind=t.item_type
+    WHERE COALESCE(t.is_system,1)=1 AND t.item_type IN ('section','block')
+      AND t.status!='archived'`;
+  const binds = [accountId];
+  if (filters.itemType) {
+    query += " AND t.item_type=?";
+    binds.push(filters.itemType);
+  }
+  query += " ORDER BY CASE WHEN t.item_type='section' THEN 0 ELSE 1 END, t.sort_order, t.template_name LIMIT 300";
+  const result = await env.DB.prepare(query).bind(...binds).all();
+  return (result.results || []).map(normalizeCmsCatalogTemplate);
 }
 
 /**
@@ -120,12 +217,11 @@ export function attachCmsDefinitions(registry, definitions) {
     }
   }
   for (const page of Object.values(pages)) {
-    // Generated definitions are installable only when a validated, ready R2
-    // implementation exists. They share the same typed inspector contract.
-    // The editor's native catalog remains restricted to known insertable
-    // templates; a generated definition is installed via explicit acceptance.
+    // Imported/generated definitions use the same inspector contract as stock
+    // definitions. The renderer is resolved independently; authoring provenance
+    // is not a runtime dependency.
     for (const definition of indexed.values()) {
-      if (definition.origin !== "generated" || !definition.artifact || page.sections?.[definition.key]) continue;
+      if (definition.origin !== "generated" || page.sections?.[definition.key]) continue;
       const normalized = normalizeSettingContract(definition.fields);
       const fields = normalized.fields;
       if (!fields.length) continue;
