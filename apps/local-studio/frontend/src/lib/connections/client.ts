@@ -316,11 +316,12 @@ export type PluginDiscoveryResponse = {
   configuredSources: number;
 };
 
+// The desktop shell allowlists paths per operation: /api/plugins/* -> "plugins", /api/work/* -> "work".
 async function pluginCatalogRequest<T>(method: 'GET' | 'POST' | 'DELETE', path: string, body?: Record<string, unknown>): Promise<T> {
   if (isPackagedDesktop()) {
     const accountId = await resolveDesktopStudioAccountId();
     const response = await invokeStudioService({
-      operation: "plugins",
+      operation: path.startsWith('/api/work/') ? "work" : "plugins",
       account_id: accountId,
       method,
       path,
