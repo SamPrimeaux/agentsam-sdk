@@ -210,7 +210,7 @@ export async function resolvePublishedPageSource(db, site, pathname) {
   if (!route || !db?.prepare || !site?.id) return null;
   const withoutTrailingSlash = route === '/' ? '/' : route.slice(0, -1);
   const pageResult = await db.prepare(`
-    SELECT id, site_id, slug, route_path, title, status, published_manifest_object_key
+    SELECT id, site_id, slug, route_path, title, status, content_object_key, published_manifest_object_key
     FROM cms_pages
     WHERE site_id = ? AND status = 'published' AND route_path IN (?, ?)
     LIMIT 2
