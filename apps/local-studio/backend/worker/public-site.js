@@ -1,9 +1,9 @@
 /**
  * Serve public marketing/docs pages.
  *
- * SSOT: WEBSITE_ASSETS R2 (sites/{slug}/public/…) — code sections for CMS.
- * D1 holds editable field metadata; KV (when bound) can cache rendered HTML.
- * Worker env.ASSETS (.output/public) is bootstrap fallback only, not SSOT.
+ * D1 cms_sites resolves the request hostname; WEBSITE_ASSETS R2 stores the
+ * site's published files. Worker env.ASSETS (.output/public) is bootstrap
+ * fallback only. Public HTML delivery intentionally bypasses KV.
  */
 import {
   resolveWebsiteAssets,
