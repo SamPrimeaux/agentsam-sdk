@@ -4,7 +4,7 @@ import test from 'node:test';
 import {
   AgentSamError,
   createErrorEnvelope,
-} from '../../packages/agentsam-errors/src/index.js';
+} from '../../src/errors/index.js';
 import {
   decodeErrorDetail,
   decodeJob,

@@ -4,7 +4,7 @@ Status: execution roadmap / design + audit briefs, not an implementation receipt
 Baseline: 2026-10-28
 Source implementation: agentsam-sdk, commit 7a9097d4 or later on current local main
 Host application: SamPrimeaux/inneranimalmedia (do not overwrite its dirty branch)
-CMS product source: /Users/samprimeaux/inneranimalmedia-cms, remote editorial-commons
+CMS product source: $HOME/inneranimalmedia-cms, remote editorial-commons
 Existing source snapshots: Resolve, Violet and Plain Jane Journal package roots
 
 ## Outcome

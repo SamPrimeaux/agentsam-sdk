@@ -10,17 +10,17 @@ plan based on evidence, not guesses or green tests in isolated repos.
 
 ## Repositories and working tree protection
 
-1. /Users/samprimeaux/inneranimalmedia-cms
+1. $HOME/inneranimalmedia-cms
    - Remote named editorial-commons (do not assume origin remote).
    - Current feature branch contains uncommitted runtime/schema changes.
    - Separate worktrees of the same Git repository include portable Studio
      features and brand-specific builds. Inventory before consolidation.
-2. /Users/samprimeaux/agentsam-sdk
+2. $HOME/agentsam-sdk
    - Current local main contains source-backed Resolve, Violet, Plain Jane.
    - packages/agentsam-cms has the operation engine and Node adapter.
    - packages/cms-runtime has currently packaged schema v1.
    - apps/ecommerce-cms-agentsam/backend/cms has FNF-side CRUD and R2.
-3. /Users/samprimeaux/inneranimalmedia
+3. $HOME/inneranimalmedia
    - Host dashboard under app/dashboard/pages/cms.
    - API composition root src/api/cms.js and cms-routes modules.
    - Canonical CMS adapters under src/core/agentsam/cms.

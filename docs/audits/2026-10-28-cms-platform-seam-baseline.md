@@ -7,7 +7,7 @@ Classification: PRELIMINARY — not a production database or R2 object audit.
 ## Known issues and source evidence
 
 P0 / Schema divergence:
-  - /Users/samprimeaux/inneranimalmedia-cms/schemas/sqlite/cms-local-runtime.v2.sql
+  - $HOME/inneranimalmedia-cms/schemas/sqlite/cms-local-runtime.v2.sql
     defines 16 cms_* data tables, including cms_page_sections and
     cms_section_blocks. Standalone branch fix/cms-schema-v2-site-contract-20261017
     has uncommitted changes (do NOT overwrite).

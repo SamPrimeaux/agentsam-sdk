@@ -37,16 +37,17 @@ test('desktop CMS shell app_id resolves to ecommerce-cms-agentsam', () => {
 test('Ecommerce CMS app bin exposes truthful doctor state', () => {
   const bin = path.resolve('apps/ecommerce-cms-agentsam/bin/ecommerce.mjs');
   const result = spawnSync(process.execPath, [bin, 'doctor'], { cwd: path.resolve('.'), encoding: 'utf8' });
-  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.status, 1, result.stderr);
   const report = JSON.parse(result.stdout);
   assert.equal(report.app, 'ecommerce-cms-agentsam');
   assert.deepEqual(report.missing, []);
   assert.equal(report.source_ready, true);
-  assert.equal(report.package_boundary_ready, true);
-  assert.deepEqual(report.package_boundary_issues, []);
-  // Truthful by design: these are only true after a real clean install / owner provisioning.
+  // The app currently uses monorepo workspace sources outside its package root.
+  // Doctor must report that honestly instead of claiming standalone readiness.
+  assert.equal(report.package_boundary_ready, false);
+  assert.ok(report.package_boundary_issues.length > 0);
   assert.equal(typeof report.standalone_install_verified, 'boolean');
-  assert.equal(typeof report.deployment_ready, 'boolean');
+  assert.equal(report.deployment_ready, false);
 });
 
 test('Ecommerce CMS app manifest, package and bin agree', () => {
