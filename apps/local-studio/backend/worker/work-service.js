@@ -85,8 +85,8 @@ async function loadCloudflareMailConnection(env, userId) {
   let row = null;
   try {
     row = await env.DB.prepare(
-      "SELECT account_identifier, account_display, scope, scopes, updated_at " +
-        "FROM user_oauth_tokens WHERE user_id = ? AND LOWER(provider) = 'cloudflare' " +
+      "SELECT account_identifier, json_extract(metadata_json, '$.display') AS account_display, scopes, updated_at " +
+        "FROM user_oauth_tokens WHERE account_id = ? AND LOWER(provider) = 'cloudflare' " +
         "AND COALESCE(is_active, 1) = 1 AND (revoked_at IS NULL OR revoked_at = 0) " +
         "ORDER BY updated_at DESC LIMIT 1"
     ).bind(userId).first();

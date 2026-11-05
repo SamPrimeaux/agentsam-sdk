@@ -177,16 +177,16 @@ async function activeRow(env, userId, accountIdentifier = "") {
   try {
     if (clean(accountIdentifier)) {
       return await env.DB.prepare(
-        "SELECT user_id, provider, account_identifier, access_token, refresh_token, access_token_encrypted, refresh_token_encrypted, " +
-          "scope, scopes, expires_at, account_display, metadata_json, created_at, updated_at " +
-          "FROM user_oauth_tokens WHERE user_id = ? AND LOWER(provider) = ? AND account_identifier = ? " +
+        "SELECT account_id, provider, account_identifier, access_token_encrypted, refresh_token_encrypted, " +
+          "scopes, expires_at, json_extract(metadata_json, '$.display') AS account_display, metadata_json, created_at, updated_at " +
+          "FROM user_oauth_tokens WHERE account_id = ? AND LOWER(provider) = ? AND account_identifier = ? " +
           "AND COALESCE(is_active, 1) = 1 AND (revoked_at IS NULL OR revoked_at = 0) LIMIT 1"
       ).bind(userId, PROVIDER, clean(accountIdentifier)).first();
     }
     return await env.DB.prepare(
-      "SELECT user_id, provider, account_identifier, access_token, refresh_token, access_token_encrypted, refresh_token_encrypted, " +
-        "scope, scopes, expires_at, account_display, metadata_json, created_at, updated_at " +
-        "FROM user_oauth_tokens WHERE user_id = ? AND LOWER(provider) = ? " +
+      "SELECT account_id, provider, account_identifier, access_token_encrypted, refresh_token_encrypted, " +
+        "scopes, expires_at, json_extract(metadata_json, '$.display') AS account_display, metadata_json, created_at, updated_at " +
+        "FROM user_oauth_tokens WHERE account_id = ? AND LOWER(provider) = ? " +
         "AND COALESCE(is_active, 1) = 1 AND (revoked_at IS NULL OR revoked_at = 0) " +
         "ORDER BY account_identifier COLLATE NOCASE ASC LIMIT 1"
     ).bind(userId, PROVIDER).first();
@@ -198,13 +198,13 @@ async function activeRow(env, userId, accountIdentifier = "") {
 export async function listGmailConnections(env, userId) {
   try {
     const result = await env.DB.prepare(
-      "SELECT account_identifier, account_display, scope, scopes, updated_at " +
-        "FROM user_oauth_tokens WHERE user_id = ? AND LOWER(provider) = ? " +
+      "SELECT account_identifier, json_extract(metadata_json, '$.display') AS account_display, scopes, updated_at " +
+        "FROM user_oauth_tokens WHERE account_id = ? AND LOWER(provider) = ? " +
         "AND COALESCE(is_active, 1) = 1 AND (revoked_at IS NULL OR revoked_at = 0) " +
         "ORDER BY account_identifier COLLATE NOCASE ASC"
     ).bind(userId, PROVIDER).all();
     return (result?.results || []).map((row) => {
-      const capabilities = gmailCapabilities(row.scope, row.scopes);
+      const capabilities = gmailCapabilities(null, row.scopes);
       return {
         id: PROVIDER + ":" + clean(row.account_identifier),
         provider: PROVIDER,
@@ -223,7 +223,6 @@ export async function listGmailConnections(env, userId) {
 
 async function readStoredOauthToken(material, row, kind, aad) {
   const encryptedField = kind === "refresh" ? "refresh_token_encrypted" : "access_token_encrypted";
-  const plainField = kind === "refresh" ? "refresh_token" : "access_token";
   const encrypted = clean(row?.[encryptedField]);
   if (encrypted) {
     try {
@@ -232,7 +231,7 @@ async function readStoredOauthToken(material, row, kind, aad) {
       // Legacy rows may predate the current OAuth envelope/AAD convention.
     }
   }
-  return clean(row?.[plainField]);
+  return "";
 }
 
 async function persistGrant(env, userId, tokens, email) {
@@ -250,23 +249,22 @@ async function persistGrant(env, userId, tokens, email) {
   const scopes = clean(tokens.scope) || GMAIL_SCOPES.join(" ");
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + Math.max(60, Number(tokens.expires_in || 3600));
-  const metadata = JSON.stringify({ status: "connected", product: "agentsam-work", provider: PROVIDER });
+  const metadata = JSON.stringify({ status: "connected", product: "agentsam-work", provider: PROVIDER, email: account, display: account });
 
   await env.DB.prepare(
     "INSERT INTO user_oauth_tokens (" +
-      "user_id, tenant_id, person_uuid, provider, account_identifier, access_token, refresh_token, " +
-      "access_token_encrypted, refresh_token_encrypted, scope, scopes, expires_at, account_display, " +
-      "metadata_json, is_active, created_at, updated_at, revoked_at, refresh_failure_count" +
-    ") VALUES (?, '', '', ?, ?, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL, 0) " +
-    "ON CONFLICT(user_id, provider, account_identifier) DO UPDATE SET " +
-      "access_token = NULL, refresh_token = NULL, access_token_encrypted = excluded.access_token_encrypted, " +
+      "account_id, provider, account_identifier, access_token_encrypted, refresh_token_encrypted, " +
+      "scopes, expires_at, metadata_json, is_active, created_at, updated_at, revoked_at, refresh_failure_count" +
+    ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL, 0) " +
+    "ON CONFLICT(account_id, provider, account_identifier) DO UPDATE SET " +
+      "access_token_encrypted = excluded.access_token_encrypted, " +
       "refresh_token_encrypted = COALESCE(excluded.refresh_token_encrypted, user_oauth_tokens.refresh_token_encrypted), " +
-      "scope = excluded.scope, scopes = excluded.scopes, expires_at = excluded.expires_at, " +
-      "account_display = excluded.account_display, metadata_json = excluded.metadata_json, is_active = 1, " +
+      "scopes = excluded.scopes, expires_at = excluded.expires_at, " +
+      "metadata_json = excluded.metadata_json, is_active = 1, " +
       "revoked_at = NULL, refresh_failure_count = 0, updated_at = excluded.updated_at"
   ).bind(
-    userId, PROVIDER, account, accessEnc, refreshEnc, scopes, scopes, expiresAt,
-    account, metadata, now, now
+    userId, PROVIDER, account, accessEnc, refreshEnc, scopes, expiresAt,
+    metadata, now, now
   ).run();
 }
 
@@ -356,7 +354,7 @@ async function accessToken(env, userId, accountIdentifier = "") {
   const aad = oauthAad(PROVIDER, userId, account);
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = Number(row.expires_at || 0);
-  if ((!expiresAt || expiresAt > now + 90) && (row.access_token_encrypted || row.access_token)) {
+  if ((!expiresAt || expiresAt > now + 90) && row.access_token_encrypted) {
     const token = await readStoredOauthToken(material, row, "access", aad);
     if (token) return { row, token };
   }
@@ -378,7 +376,7 @@ async function accessToken(env, userId, accountIdentifier = "") {
   const encrypted = await sealOauthToken(material, payload.access_token, aad);
   await env.DB.prepare(
     "UPDATE user_oauth_tokens SET access_token_encrypted = ?, expires_at = ?, updated_at = ?, " +
-      "last_refresh_at = ?, last_refresh_error_code = NULL WHERE user_id = ? AND provider = ? AND account_identifier = ?"
+      "last_refresh_at = ?, last_refresh_error_code = NULL WHERE account_id = ? AND provider = ? AND account_identifier = ?"
   ).bind(
     encrypted,
     now + Math.max(60, Number(payload.expires_in || 3600)),
@@ -514,9 +512,9 @@ export async function disconnectGmail(env, userId, accountIdentifier = "") {
   if (!account) throw new Error("mail_connection_required");
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare(
-    "UPDATE user_oauth_tokens SET is_active = 0, revoked_at = ?, access_token = NULL, refresh_token = NULL, " +
+    "UPDATE user_oauth_tokens SET is_active = 0, revoked_at = ?, " +
       "access_token_encrypted = NULL, refresh_token_encrypted = NULL, updated_at = ? " +
-      "WHERE user_id = ? AND LOWER(provider) = ? AND account_identifier = ?"
+      "WHERE account_id = ? AND LOWER(provider) = ? AND account_identifier = ?"
   ).bind(now, now, userId, PROVIDER, account).run();
   return { ok: true };
 }

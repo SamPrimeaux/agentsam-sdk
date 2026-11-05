@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   BYOK_PROVIDER_DEFINITIONS,
-  loadConnectionsRegistry,
+  loadConnectionsRegistry, applyOauthPluginState,
   safePluginSettingsRecord,
 } from "../backend/worker/connections-registry.js";
 
@@ -124,5 +124,19 @@ describe("connections registry", () => {
     assert.equal("metadata" in safe, false);
     assert.equal(JSON.stringify(safe).includes("secret-authority"), false);
     assert.equal(JSON.stringify(safe).includes("never-send"), false);
+  });
+});
+
+describe("oauth-kind plugin state", () => {
+  const plugin = { id: "plg_g", plugin_kind: "oauth", secret_ref: "oauth:google_gmail:a@b.c", setup_status: "unconfigured" };
+  it("derives connection state from the matching user_oauth_tokens row", () => {
+    const live = applyOauthPluginState(plugin, [{ provider: "google_gmail", account_identifier: "a@b.c", is_active: 1, revoked_at: null, last_refresh_error_code: null }]);
+    assert.equal(live.setup_status, "connected");
+    assert.equal(live.health_status, "healthy");
+    assert.equal(live.connection_ref, "google_gmail:a@b.c");
+    const failing = applyOauthPluginState(plugin, [{ provider: "google_gmail", account_identifier: "a@b.c", is_active: 1, revoked_at: null, last_refresh_error_code: "http_401" }]);
+    assert.equal(failing.health_status, "auth_error");
+    assert.equal(applyOauthPluginState(plugin, []).setup_status, "unconfigured");
+    assert.equal(applyOauthPluginState({ ...plugin, plugin_kind: "mcp" }, []).setup_status, "unconfigured");
   });
 });
