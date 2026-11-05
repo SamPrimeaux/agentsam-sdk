@@ -369,6 +369,19 @@ export function beginLocalStudioGmailConnection(returnTo: string) {
     'POST','/api/work/gmail/oauth/start',{return_to:returnTo},
   );
 }
+export function beginLocalStudioConnectorOAuth(providerKey: string, returnTo: string) {
+  if (!/^(google_drive|google_calendar|github)$/.test(providerKey)) throw new Error('connector_provider_invalid');
+  return pluginCatalogRequest<{ok:boolean;authorize_url:string}>(
+    'POST','/api/work/connect/'+providerKey+'/start',{return_to:returnTo},
+  );
+}
+export function disconnectLocalStudioConnector(connectionRef: string) {
+  const providerKey = connectionRef.split(':')[0] || '';
+  if (!/^(google_drive|google_calendar|github)$/.test(providerKey)) throw new Error('connector_provider_invalid');
+  return pluginCatalogRequest<{ok:boolean}>(
+    'POST','/api/work/connect/'+providerKey+'/disconnect',{connection_id:connectionRef},
+  );
+}
 export function disconnectLocalStudioGmail(connectionRef: string) {
   return pluginCatalogRequest<{ok:boolean}>(
     'POST','/api/work/gmail/disconnect',{connection_id:connectionRef},

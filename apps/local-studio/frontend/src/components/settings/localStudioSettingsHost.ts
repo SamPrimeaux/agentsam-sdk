@@ -34,7 +34,9 @@ import {
   discoverLocalStudioPlugins,
   installLocalStudioPublicPlugin,
   removeLocalStudioPublicPlugin,
+  beginLocalStudioConnectorOAuth,
   beginLocalStudioGmailConnection,
+  disconnectLocalStudioConnector,
   beginLocalStudioPublicPluginOAuth,
   disconnectLocalStudioGmail,
   disconnectLocalStudioPublicPlugin,
@@ -523,8 +525,12 @@ export const localStudioSettingsHost: SettingsHost = {
     if (!plugin) throw new Error("plugin_not_found");
     if (plugin.kind === "oauth") {
       // Provider-connection plugins use the host's existing connect routes; Gmail is the only one this host serves.
-      if (plugin.providerKey !== "google_gmail") throw new Error("plugin_setup_unavailable");
-      const response = await beginLocalStudioGmailConnection("/settings/customize?view=plugins");
+      const returnTo = isPackagedDesktop()
+        ? buildConnectionReturnUrl(plugin.providerKey, "/settings/customize?view=plugins")
+        : "/settings/customize?view=plugins";
+      const response = plugin.providerKey === "google_gmail"
+        ? await beginLocalStudioGmailConnection("/settings/customize?view=plugins")
+        : await beginLocalStudioConnectorOAuth(plugin.providerKey, returnTo);
       if (!response?.authorize_url?.startsWith("https://")) throw new Error("plugin_oauth_url_invalid");
       await openExternalUrl(response.authorize_url);
       return;
@@ -557,8 +563,9 @@ export const localStudioSettingsHost: SettingsHost = {
     if (!plugin) throw new Error("plugin_not_found");
     if (plugin.kind === "oauth") {
       const raw = (registry.plugins || []).find((candidate) => candidate.id === id);
-      if (plugin.providerKey !== "google_gmail" || !raw?.connection_ref) throw new Error("plugin_disconnect_unavailable");
-      await disconnectLocalStudioGmail(raw.connection_ref);
+      if (!raw?.connection_ref) throw new Error("plugin_disconnect_unavailable");
+      if (plugin.providerKey === "google_gmail") await disconnectLocalStudioGmail(raw.connection_ref);
+      else await disconnectLocalStudioConnector(raw.connection_ref);
       return;
     }
     if (plugin.installationKey === "catalog-v1") {

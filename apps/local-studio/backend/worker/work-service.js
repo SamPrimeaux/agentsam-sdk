@@ -8,6 +8,7 @@ import { handleWorkCadRequest, isWorkCadRequest } from './work-cad-models.js';
 import { readProjectInsights } from './work-project-insights.js';
 import { handleProjectTimer } from './work-project-metrics.js';
 import { handleWorkData, isWorkDataRequest, listEvents, listProjects, listTickets, ticketAnalytics } from './work-data.js';
+import { handleConnectorWorkRequest, isConnectorWorkRequest } from './connector-oauth.js';
 import { beginGmailOAuth, disconnectGmail, listGmailConnections, loadGmailMessages, mutateGmailMessage, sendGmailMessage } from './gmail-service.js';
 
 const DEFAULT_NAV = Object.freeze([
@@ -258,6 +259,7 @@ export function isWorkRequest(pathname) {
     pathname === '/api/work/gmail/oauth/start' ||
     pathname === '/api/work/gmail/status' ||
     pathname === '/api/work/gmail/disconnect' ||
+    isConnectorWorkRequest(pathname) ||
     pathname === '/api/mail/send' ||
     isWorkDataRequest(pathname) ||
     /^\/api\/mail\/email\/[^/]+$/.test(pathname)
@@ -347,6 +349,8 @@ export async function handleWorkRequest(request, env, accountId) {
       };
       return json({ ok: true, snapshot });
     }
+
+    if (isConnectorWorkRequest(url.pathname)) return handleConnectorWorkRequest(request, env, accountId);
 
     if (url.pathname === '/api/work/gmail/oauth/start' && method === 'POST') {
       return beginGmailOAuth(request, env, accountId);
