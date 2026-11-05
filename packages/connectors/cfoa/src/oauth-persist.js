@@ -1,7 +1,7 @@
 /**
  * Canonical Cloudflare connection writer → user_oauth_tokens (SSOT).
  *
- * One row per (user_id, provider=cloudflare, account_identifier).
+ * One row per (account_id, provider=cloudflare, account_identifier).
  * Scopes are the granted set from the current OAuth token response only —
  * never a historical union of prior grants (stale scopes must not inflate auth).
  * Provenance is the real OAuth client_id only — no invented app-name enum.
@@ -9,7 +9,7 @@
  * Status / account / scopes (legacy agentsam_cloudflare_connections fields):
  * - status            → is_active + revoked_at (connected | revoked | superseded)
  * - cloudflare_account_id → account_identifier + metadata_json.cloudflare_account_id
- * - scopes            → scopes / scope columns
+ * - scopes            → scopes column
  */
 
 import { oauthAad, sealOauthToken } from '../../../agentsam-vault/src/crypto/oauth-envelope.js';
@@ -137,10 +137,9 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
   let existing = null;
   try {
     existing = await env.DB.prepare(
-      `SELECT scopes, scope, metadata_json, access_token, refresh_token,
-              access_token_encrypted, refresh_token_encrypted, created_at
+      `SELECT scopes, metadata_json, access_token_encrypted, refresh_token_encrypted, created_at
        FROM user_oauth_tokens
-       WHERE user_id = ? AND LOWER(provider) = ? AND account_identifier = ?
+       WHERE account_id = ? AND LOWER(provider) = ? AND account_identifier = ?
        LIMIT 1`,
     ).bind(userId, PROVIDER, accountId).first();
   } catch (err) {
@@ -151,7 +150,7 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
   // Do not union with historical rows; that invents capabilities the user did not grant.
   const grantedScopes = incomingScopes.length
     ? [...new Set(incomingScopes)]
-    : splitScopes(existing?.scopes || existing?.scope);
+    : splitScopes(existing?.scopes);
   const scopesStr = grantedScopes.join(' ') || null;
 
   const priorMeta = parseMeta(existing?.metadata_json);
@@ -168,6 +167,7 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
       status: 'connected',
       last_connected_at: now,
     };
+    if (accountDisplay) next.display = accountDisplay;
     if (clientId) next.connected_via_client_id = clientId;
     if (capabilitySet.length) next.granted_at_capability_set = capabilitySet;
     delete next.connected_via_app;
@@ -181,7 +181,7 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
   }
 
   const expiresAt = input.expiresAt != null ? Number(input.expiresAt) : null;
-  const refreshToken = clean(input.refreshToken) || clean(existing?.refresh_token) || null;
+  const refreshToken = clean(input.refreshToken) || null;
 
   const material = vaultMaterial(env);
   if (!material) return { ok: false, error: 'vault_required' };
@@ -196,31 +196,21 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
     return { ok: false, error: err?.code || 'vault_unavailable', detail: String(err?.message || err) };
   }
 
-  // user_oauth_tokens never stores plaintext provider tokens.
-  const accessPlain = null;
-  const refreshPlain = null;
-
-  // Keep other Cloudflare account rows active. The composite PK already
-  // supports one row per (user, provider, account_identifier).
-
+  // Keep other Cloudflare account rows active. The composite PK supports one
+  // row per (account_id, provider, account_identifier).
   try {
     await env.DB.prepare(
       `INSERT INTO user_oauth_tokens (
-         user_id, tenant_id, person_uuid, provider, account_identifier,
-         access_token, refresh_token, access_token_encrypted, refresh_token_encrypted,
-         scope, scopes, expires_at,
-         account_display, metadata_json, is_active, created_at, updated_at,
+         account_id, provider, account_identifier,
+         access_token_encrypted, refresh_token_encrypted,
+         scopes, expires_at, metadata_json, is_active, created_at, updated_at,
          revoked_at, refresh_failure_count
-       ) VALUES (?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL, 0)
-       ON CONFLICT(user_id, provider, account_identifier) DO UPDATE SET
-         access_token = excluded.access_token,
-         refresh_token = COALESCE(excluded.refresh_token, user_oauth_tokens.refresh_token),
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, NULL, 0)
+       ON CONFLICT(account_id, provider, account_identifier) DO UPDATE SET
          access_token_encrypted = excluded.access_token_encrypted,
          refresh_token_encrypted = COALESCE(excluded.refresh_token_encrypted, user_oauth_tokens.refresh_token_encrypted),
-         scope = excluded.scope,
          scopes = excluded.scopes,
          expires_at = excluded.expires_at,
-         account_display = COALESCE(excluded.account_display, user_oauth_tokens.account_display),
          metadata_json = excluded.metadata_json,
          is_active = 1,
          revoked_at = NULL,
@@ -232,46 +222,16 @@ export async function upsertCloudflareUserOauthToken(env, input = {}) {
       userId,
       PROVIDER,
       accountId,
-      accessPlain,
-      refreshPlain,
       accessEnc,
       refreshEnc,
       scopesStr,
-      scopesStr,
       expiresAt,
-      accountDisplay,
       metadataJson,
-      now,
+      existing ? Number(existing.created_at) || now : now,
       now,
     ).run();
   } catch (err) {
-    try {
-      await env.DB.prepare(
-        `INSERT OR REPLACE INTO user_oauth_tokens (
-           user_id, tenant_id, person_uuid, provider, account_identifier,
-           access_token, refresh_token, access_token_encrypted, refresh_token_encrypted,
-           scope, scopes, expires_at,
-           account_display, metadata_json, is_active, created_at, updated_at
-         ) VALUES (?, '', '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-      ).bind(
-        userId,
-        PROVIDER,
-        accountId,
-        accessPlain,
-        refreshPlain,
-        accessEnc,
-        refreshEnc,
-        scopesStr,
-        scopesStr,
-        expiresAt,
-        accountDisplay,
-        metadataJson,
-        existing ? Number(existing.created_at) || now : now,
-        now,
-      ).run();
-    } catch (err2) {
-      return { ok: false, error: 'upsert_failed', detail: String(err2?.message || err2 || err?.message || err) };
-    }
+    return { ok: false, error: 'upsert_failed', detail: String(err?.message || err) };
   }
 
   return {
@@ -361,9 +321,9 @@ export async function setPreferredCloudflareAccount(env, ownerId, accountId) {
   let target = null;
   try {
     target = await env.DB.prepare(
-      `SELECT account_identifier, account_display, metadata_json
+      `SELECT account_identifier, json_extract(metadata_json, '$.display') AS account_display, metadata_json
        FROM user_oauth_tokens
-       WHERE user_id = ? AND LOWER(provider) = ?
+       WHERE account_id = ? AND LOWER(provider) = ?
          AND account_identifier = ?
          AND COALESCE(is_active, 1) = 1
          AND (revoked_at IS NULL OR revoked_at = 0)
@@ -379,7 +339,7 @@ export async function setPreferredCloudflareAccount(env, ownerId, accountId) {
     const listed = await env.DB.prepare(
       `SELECT account_identifier, metadata_json
        FROM user_oauth_tokens
-       WHERE user_id = ? AND LOWER(provider) = ?
+       WHERE account_id = ? AND LOWER(provider) = ?
          AND COALESCE(is_active, 1) = 1
          AND (revoked_at IS NULL OR revoked_at = 0)`,
     ).bind(userId, PROVIDER).all();
@@ -403,7 +363,7 @@ export async function setPreferredCloudflareAccount(env, ownerId, accountId) {
       await env.DB.prepare(
         `UPDATE user_oauth_tokens
          SET metadata_json = ?, updated_at = ?
-         WHERE user_id = ? AND LOWER(provider) = ? AND account_identifier = ?`,
+         WHERE account_id = ? AND LOWER(provider) = ? AND account_identifier = ?`,
       ).bind(JSON.stringify(next), now, userId, PROVIDER, id).run();
     } catch (err) {
       return { ok: false, error: 'preferred_update_failed', detail: String(err?.message || err) };
@@ -433,10 +393,10 @@ export async function revokeCloudflareUserOauthTokens(env, ownerId, options = {}
   try {
     if (accountId) {
       row = await env.DB.prepare(
-        `SELECT user_id, account_identifier, access_token, access_token_encrypted,
-                scopes, scope, expires_at, metadata_json
+        `SELECT account_id, account_identifier, access_token_encrypted,
+                scopes, expires_at, metadata_json
          FROM user_oauth_tokens
-         WHERE user_id = ? AND LOWER(provider) = ?
+         WHERE account_id = ? AND LOWER(provider) = ?
            AND account_identifier = ?
            AND COALESCE(is_active, 1) = 1
            AND (revoked_at IS NULL OR revoked_at = 0)
@@ -444,10 +404,10 @@ export async function revokeCloudflareUserOauthTokens(env, ownerId, options = {}
       ).bind(userId, PROVIDER, accountId).first();
     } else {
       row = await env.DB.prepare(
-        `SELECT user_id, account_identifier, access_token, access_token_encrypted,
-                scopes, scope, expires_at, metadata_json
+        `SELECT account_id, account_identifier, access_token_encrypted,
+                scopes, expires_at, metadata_json
          FROM user_oauth_tokens
-         WHERE user_id = ? AND LOWER(provider) = ?
+         WHERE account_id = ? AND LOWER(provider) = ?
            AND COALESCE(is_active, 1) = 1
            AND (revoked_at IS NULL OR revoked_at = 0)
          ORDER BY updated_at DESC LIMIT 1`,
@@ -462,8 +422,6 @@ export async function revokeCloudflareUserOauthTokens(env, ownerId, options = {}
         `UPDATE user_oauth_tokens
          SET is_active = 0,
              revoked_at = ?,
-             access_token = NULL,
-             refresh_token = NULL,
              access_token_encrypted = NULL,
              refresh_token_encrypted = NULL,
              updated_at = ?,
@@ -472,7 +430,7 @@ export async function revokeCloudflareUserOauthTokens(env, ownerId, options = {}
                '$.status', 'revoked',
                '$.is_preferred', json('false')
              )
-         WHERE user_id = ? AND LOWER(provider) = ?
+         WHERE account_id = ? AND LOWER(provider) = ?
            AND account_identifier = ?
            AND COALESCE(is_active, 1) = 1`,
       ).bind(now, now, userId, PROVIDER, accountId).run();
@@ -481,8 +439,6 @@ export async function revokeCloudflareUserOauthTokens(env, ownerId, options = {}
         `UPDATE user_oauth_tokens
          SET is_active = 0,
              revoked_at = ?,
-             access_token = NULL,
-             refresh_token = NULL,
              access_token_encrypted = NULL,
              refresh_token_encrypted = NULL,
              updated_at = ?,
@@ -491,7 +447,7 @@ export async function revokeCloudflareUserOauthTokens(env, ownerId, options = {}
                '$.status', 'revoked',
                '$.is_preferred', json('false')
              )
-         WHERE user_id = ? AND LOWER(provider) = ?
+         WHERE account_id = ? AND LOWER(provider) = ?
            AND COALESCE(is_active, 1) = 1`,
       ).bind(now, now, userId, PROVIDER).run();
     }
@@ -500,15 +456,15 @@ export async function revokeCloudflareUserOauthTokens(env, ownerId, options = {}
       await env.DB.prepare(
         `UPDATE user_oauth_tokens
          SET is_active = 0, revoked_at = ?, updated_at = ?,
-             access_token = NULL, refresh_token = NULL
-         WHERE user_id = ? AND LOWER(provider) = ? AND account_identifier = ?`,
+             access_token_encrypted = NULL, refresh_token_encrypted = NULL
+         WHERE account_id = ? AND LOWER(provider) = ? AND account_identifier = ?`,
       ).bind(now, now, userId, PROVIDER, accountId).run();
     } else {
       await env.DB.prepare(
         `UPDATE user_oauth_tokens
          SET is_active = 0, revoked_at = ?, updated_at = ?,
-             access_token = NULL, refresh_token = NULL
-         WHERE user_id = ? AND LOWER(provider) = ?`,
+             access_token_encrypted = NULL, refresh_token_encrypted = NULL
+         WHERE account_id = ? AND LOWER(provider) = ?`,
       ).bind(now, now, userId, PROVIDER).run();
     }
   }

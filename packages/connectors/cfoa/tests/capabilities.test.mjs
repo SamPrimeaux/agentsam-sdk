@@ -119,7 +119,7 @@ describe('credential authority', () => {
     assert.equal(cred.source, 'api_token');
   });
 
-  it('loads oauth from user_oauth_tokens when plaintext access_token present', async () => {
+  it('loads oauth from user_oauth_tokens via encrypted access token', async () => {
     const env = {
       DB: {
         prepare() {
@@ -128,10 +128,10 @@ describe('credential authority', () => {
             async first() {
               return {
                 id: 42,
-                user_id: 'au_test',
+                account_id: 'au_test',
                 provider: 'cloudflare',
                 account_identifier: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-                access_token: 'oauth-bearer',
+                access_token_encrypted: 'sealed-by-host',
                 scopes: 'account-settings.read page.read',
                 is_active: 1,
               };
@@ -144,6 +144,7 @@ describe('credential authority', () => {
       env,
       ownerId: 'au_test',
       authMode: 'oauth',
+      decryptUserOauthToken: async () => 'oauth-bearer',
     });
     assert.equal(cred.source, 'oauth_connection');
     assert.equal(cred.bearerToken, 'oauth-bearer');

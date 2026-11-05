@@ -63,16 +63,15 @@ describe('oauth-persist spine', () => {
                 },
                 async run() {
                   if (String(sql).includes('INSERT')) {
-                    // Encrypted-only path: plaintext [3]/[4] are null; ciphertext [5]/[6].
+                    // Encrypted-only: ciphertext [3]/[4], scopes [5], metadata [7].
                     const key = `${args[0]}|${args[2]}`;
                     const prior = rows.get(key);
                     rows.set(key, {
-                      scopes: args[7],
-                      scope: args[7],
-                      metadata_json: args[11],
-                      access_token: args[3],
-                      refresh_token: args[4],
-                      created_at: prior?.created_at || args[12],
+                      scopes: args[5],
+                      metadata_json: args[7],
+                      access_token_encrypted: args[3],
+                      refresh_token_encrypted: args[4],
+                      created_at: prior?.created_at || args[8],
                     });
                   }
                   return { success: true };
@@ -99,14 +98,13 @@ describe('oauth-persist spine', () => {
 
     rows.set('au_1|abc123abc123abc123abc123abc123ab', {
       scopes: 'd1.read offline_access',
-      scope: 'd1.read offline_access',
       metadata_json: JSON.stringify({
         cloudflare_account_id: 'abc123abc123abc123abc123abc123ab',
         connected_via_client_id: 'c0704bd7a7aab7216b362603e1985499',
         connected_via_app: 'should_be_stripped',
       }),
-      access_token: 'tok1',
-      refresh_token: null,
+      access_token_encrypted: 'enc1',
+      refresh_token_encrypted: null,
       created_at: 1,
     });
 
@@ -123,7 +121,7 @@ describe('oauth-persist spine', () => {
     assert.equal(r2.scope_union, false);
     assert.deepEqual(r2.scopes, ['workers-scripts.write']);
     assert.ok(!r2.scopes.includes('d1.read'));
-    const upsertSql = sqlSeen.find((sql) => sql.includes('ON CONFLICT(user_id, provider, account_identifier)'));
+    const upsertSql = sqlSeen.find((sql) => sql.includes('ON CONFLICT(account_id, provider, account_identifier)'));
     assert.match(upsertSql || '', /last_refresh_error_code = NULL/);
     assert.match(upsertSql || '', /refresh_failure_count = 0/);
   });
@@ -158,21 +156,18 @@ describe('oauth-persist spine', () => {
                     const key = `${args[0]}|${args[2]}`;
                     const prior = rows.get(key);
                     rows.set(key, {
-                      user_id: args[0],
+                      account_id: args[0],
                       provider: 'cloudflare',
                       account_identifier: args[2],
-                      account_display: args[10],
-                      scopes: args[7],
-                      scope: args[7],
-                      metadata_json: args[11],
-                      access_token: null,
-                      refresh_token: null,
-                      access_token_encrypted: args[5],
-                      refresh_token_encrypted: args[6],
+                      account_display: JSON.parse(args[7] || '{}').display ?? null,
+                      scopes: args[5],
+                      metadata_json: args[7],
+                      access_token_encrypted: args[3],
+                      refresh_token_encrypted: args[4],
                       is_active: 1,
                       revoked_at: null,
-                      created_at: prior?.created_at || args[12],
-                      updated_at: args[13],
+                      created_at: prior?.created_at || args[8],
+                      updated_at: args[9],
                     });
                   } else if (text.includes('UPDATE user_oauth_tokens') && text.includes('metadata_json')) {
                     const key = `${args[2]}|${args[4]}`;

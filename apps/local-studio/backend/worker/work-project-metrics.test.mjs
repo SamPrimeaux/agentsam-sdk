@@ -19,7 +19,7 @@ function setup() {
   "INSERT INTO project_costs (project_id,amount,currency,total_tokens,user_id) VALUES ('p1',0.55,'USD',1800,'owner'),('p2',99,'USD',10000,'other')",
   "CREATE TABLE project_storage (id TEXT, project_id TEXT,storage_type TEXT,storage_name TEXT,status TEXT)",
   "INSERT INTO project_storage VALUES ('s1','p1','local','DreamHouse working repo','active'),('s2','p1','github','sam/dreamhouse','active'),('s3','p1','r2','cad','active')",
-  "CREATE TABLE user_oauth_tokens (user_id TEXT,provider TEXT,is_active INTEGER,revoked_at INTEGER)",
+  "CREATE TABLE user_oauth_tokens (account_id TEXT,provider TEXT,is_active INTEGER,revoked_at INTEGER)",
   "INSERT INTO user_oauth_tokens VALUES ('owner','github',1,NULL),('other','cloudflare',1,NULL)"
  ].join(';\n')+';');
  db.exec(migration);

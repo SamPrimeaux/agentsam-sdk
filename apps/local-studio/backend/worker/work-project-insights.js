@@ -53,7 +53,7 @@ export async function readProjectInsights(db, ownerId, projectId) {
     ).bind(id).all();
     const oauth = await db.prepare(
       "SELECT provider, COUNT(*) AS active FROM user_oauth_tokens " +
-      "WHERE user_id=? AND is_active=1 AND (revoked_at IS NULL OR revoked_at=0) " +
+      "WHERE account_id=? AND is_active=1 AND (revoked_at IS NULL OR revoked_at=0) " +
       "AND provider IN ('cloudflare','github','google_drive') GROUP BY provider"
     ).bind(owner).all();
     const active = new Map((oauth.results || []).map(x => [x.provider, num(x.active)]));

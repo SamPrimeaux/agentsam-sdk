@@ -20,7 +20,6 @@ function clean(value) {
 function scopesFromRow(row) {
   if (!row) return [];
   if (row.scopes) return String(row.scopes).split(/[\s,]+/).filter(Boolean);
-  if (row.scope) return String(row.scope).split(/[\s,]+/).filter(Boolean);
   return [];
 }
 
@@ -84,7 +83,7 @@ export function mapCloudflareOauthRowToConnection(row, ownerId) {
   } catch {
     metaStatus = null;
   }
-  // user_oauth_tokens PK is (user_id, provider, account_identifier) — no `id` column.
+  // user_oauth_tokens PK is (account_id, provider, account_identifier) — no `id` column.
   // connectionId remains the Cloudflare account id in this SSOT (one grant row per account).
   const accountKey = clean(row.account_identifier) || `cf_oauth_${ownerId}`;
   const meta = parseRowMeta(row);
@@ -111,11 +110,12 @@ export async function listCloudflareConnectionRecords(env, ownerId) {
   if (!env?.DB || !ownerId) return [];
   try {
     const out = await env.DB.prepare(`
-      SELECT user_id, provider, account_identifier, account_display, account_email,
-             scope, scopes, expires_at, metadata_json, is_active, revoked_at,
+      SELECT account_id, provider, account_identifier, json_extract(metadata_json, '$.display') AS account_display,
+             json_extract(metadata_json, '$.email') AS account_email,
+             scopes, expires_at, metadata_json, is_active, revoked_at,
              created_at, updated_at
       FROM user_oauth_tokens
-      WHERE user_id = ? AND LOWER(provider) = 'cloudflare'
+      WHERE account_id = ? AND LOWER(provider) = 'cloudflare'
         AND COALESCE(is_active, 1) = 1
         AND (revoked_at IS NULL OR revoked_at = 0)
       ORDER BY updated_at DESC
@@ -140,11 +140,12 @@ export async function loadCloudflareConnectionRecord(env, ownerId, options = {})
   try {
     if (preferred) {
       row = await env.DB.prepare(`
-        SELECT user_id, provider, account_identifier, account_display, account_email,
-               scope, scopes, expires_at, metadata_json, is_active, revoked_at,
+        SELECT account_id, provider, account_identifier, json_extract(metadata_json, '$.display') AS account_display,
+             json_extract(metadata_json, '$.email') AS account_email,
+               scopes, expires_at, metadata_json, is_active, revoked_at,
                created_at, updated_at
         FROM user_oauth_tokens
-        WHERE user_id = ? AND LOWER(provider) = 'cloudflare'
+        WHERE account_id = ? AND LOWER(provider) = 'cloudflare'
           AND account_identifier = ?
           AND COALESCE(is_active, 1) = 1
           AND (revoked_at IS NULL OR revoked_at = 0)
@@ -178,7 +179,7 @@ const TOKEN_URL = 'https://dash.cloudflare.com/oauth2/token';
 const REFRESH_SKEW_SECONDS = 120;
 
 async function decryptRefreshToken(env, row, ownerId, accountId, options = {}) {
-  let refreshToken = clean(row.refresh_token);
+  let refreshToken = '';
   const material = oauthVaultMaterial(env);
   if (!refreshToken && row.refresh_token_encrypted && material && accountId) {
     try {
@@ -237,7 +238,7 @@ export async function refreshCloudflareUserOauthToken(env, ownerId, row, options
         SET last_refresh_error_code = ?,
             refresh_failure_count = COALESCE(refresh_failure_count, 0) + 1,
             updated_at = unixepoch()
-        WHERE user_id = ? AND LOWER(provider) = 'cloudflare' AND account_identifier = ?
+        WHERE account_id = ? AND LOWER(provider) = 'cloudflare' AND account_identifier = ?
       `).bind(`http_${tokenRes.status}`, ownerId, accountId).run();
     } catch {
       /* best effort */
@@ -260,7 +261,7 @@ export async function refreshCloudflareUserOauthToken(env, ownerId, row, options
     userId: ownerId,
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token || refreshToken,
-    scopes: tokens.scope || row.scopes || row.scope || '',
+    scopes: tokens.scope || row.scopes || '',
     accountId,
     accountDisplay: row.account_display || null,
     expiresAt: tokens.expires_in
@@ -277,7 +278,7 @@ export async function refreshCloudflareUserOauthToken(env, ownerId, row, options
           last_refresh_error_code = NULL,
           refresh_failure_count = 0,
           updated_at = unixepoch()
-      WHERE user_id = ? AND LOWER(provider) = 'cloudflare' AND account_identifier = ?
+      WHERE account_id = ? AND LOWER(provider) = 'cloudflare' AND account_identifier = ?
     `).bind(ownerId, accountId).run();
   } catch {
     /* optional columns */
@@ -306,11 +307,12 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
   try {
     if (preferred) {
       row = await env.DB.prepare(`
-        SELECT user_id, provider, account_identifier, account_display, account_email,
-               access_token, refresh_token, access_token_encrypted, refresh_token_encrypted,
-               scope, scopes, expires_at, metadata_json, is_active
+        SELECT account_id, provider, account_identifier, json_extract(metadata_json, '$.display') AS account_display,
+             json_extract(metadata_json, '$.email') AS account_email,
+               access_token_encrypted, refresh_token_encrypted,
+               scopes, expires_at, metadata_json, is_active
         FROM user_oauth_tokens
-        WHERE user_id = ? AND LOWER(provider) = 'cloudflare'
+        WHERE account_id = ? AND LOWER(provider) = 'cloudflare'
           AND account_identifier = ?
           AND COALESCE(is_active, 1) = 1
           AND (revoked_at IS NULL OR revoked_at = 0)
@@ -318,11 +320,12 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
       `).bind(ownerId, preferred).first();
     } else {
       const listSql = `
-        SELECT user_id, provider, account_identifier, account_display, account_email,
-               access_token, refresh_token, access_token_encrypted, refresh_token_encrypted,
-               scope, scopes, expires_at, metadata_json, is_active
+        SELECT account_id, provider, account_identifier, json_extract(metadata_json, '$.display') AS account_display,
+             json_extract(metadata_json, '$.email') AS account_email,
+               access_token_encrypted, refresh_token_encrypted,
+               scopes, expires_at, metadata_json, is_active
         FROM user_oauth_tokens
-        WHERE user_id = ? AND LOWER(provider) = 'cloudflare'
+        WHERE account_id = ? AND LOWER(provider) = 'cloudflare'
           AND COALESCE(is_active, 1) = 1
           AND (revoked_at IS NULL OR revoked_at = 0)
         ORDER BY updated_at DESC`;
@@ -356,7 +359,7 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
   if (!row) return null;
 
   const accountId = accountIdFromRow(row);
-  let accessToken = clean(row.access_token);
+  let accessToken = '';
   const material = oauthVaultMaterial(env);
 
   if (!accessToken && row.access_token_encrypted && material && accountId) {
@@ -399,7 +402,7 @@ export async function loadCloudflareFromUserOauthTokens(env, ownerId, options = 
           SET access_token_encrypted = ?, refresh_token_encrypted = ?,
               last_refresh_error_code = NULL, refresh_failure_count = 0,
               is_active = 1, revoked_at = NULL, updated_at = unixepoch()
-          WHERE user_id = ? AND LOWER(provider) = 'cloudflare' AND account_identifier = ?
+          WHERE account_id = ? AND LOWER(provider) = 'cloudflare' AND account_identifier = ?
         `).bind(accessEnc, refreshEnc, ownerId, accountId).run();
       }
     } catch {

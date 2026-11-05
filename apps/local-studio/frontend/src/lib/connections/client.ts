@@ -44,6 +44,7 @@ export type LocalStudioPluginRecord = {
   plugin_key: string;
   provider_key: string;
   installation_key: string;
+  connection_ref?: string | null;
   environment: string;
   plugin_kind: string;
   category: string;
@@ -360,6 +361,16 @@ export function beginLocalStudioPublicPluginOAuth(pluginId:string,allowWrites=fa
   return pluginCatalogRequest<{ok:boolean;authorize_url:string;status:string}>(
     'POST','/api/plugins/'+encodeURIComponent(pluginId)+'/oauth/start',
     {allow_writes:allowWrites,desktop:isPackagedDesktop()},
+  );
+}
+export function beginLocalStudioGmailConnection(returnTo: string) {
+  return pluginCatalogRequest<{ok:boolean;authorize_url:string}>(
+    'POST','/api/work/gmail/oauth/start',{return_to:returnTo},
+  );
+}
+export function disconnectLocalStudioGmail(connectionRef: string) {
+  return pluginCatalogRequest<{ok:boolean}>(
+    'POST','/api/work/gmail/disconnect',{connection_id:connectionRef},
   );
 }
 export function disconnectLocalStudioPublicPlugin(pluginId:string) {

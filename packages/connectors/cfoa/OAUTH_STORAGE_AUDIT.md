@@ -20,6 +20,11 @@ legacy rows into `user_oauth_tokens` (when vault can decrypt), then marks them s
 
 No provider-specific columns added to `user_oauth_tokens` — it stays multi-provider.
 
+Shape (migration 0024): `account_id` (accounts.id, `au_*`), `provider`, `account_identifier`, `access_token_encrypted`,
+`refresh_token_encrypted`, `expires_at`, `scopes`, `metadata_json`, `is_active`, `revoked_at`, `last_refresh_*`,
+`refresh_failure_count`, timestamps. Tokens are encrypted-only; display name / email / label live in `metadata_json`
+(`display`, `email`, `label`). No tenant / workspace / person scoping.
+
 ## Three auth concerns (do not flatten)
 
 | Lane | Tables | Purpose |

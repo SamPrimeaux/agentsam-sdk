@@ -162,11 +162,11 @@ describe('cloudflare connector', () => {
       assert.equal(oauthState.has('state_123'), false);
       const insert = calls.find((call) => call.sql.includes('INSERT INTO user_oauth_tokens'));
       assert.ok(insert, 'expected user_oauth_tokens insert (SSOT)');
-      // With vault: plaintext args are null; ciphertext is not plaintext tokens.
-      assert.equal(insert.args[3], null); // access_token plaintext
-      assert.equal(insert.args[4], null); // refresh_token plaintext
-      assert.notEqual(insert.args[5], 'access-plaintext'); // access_token_encrypted
-      assert.notEqual(insert.args[6], 'refresh-plaintext'); // refresh_token_encrypted
+      // Encrypted-only: the table has no plaintext token columns.
+      assert.ok(!/(^|[^_a-z])(access_token|refresh_token)[^_a-z]|tenant_id|workspace_id|person_uuid/.test(insert.sql.split('VALUES')[0]));
+      assert.notEqual(insert.args[3], 'access-plaintext'); // access_token_encrypted
+      assert.notEqual(insert.args[4], 'refresh-plaintext'); // refresh_token_encrypted
+      assert.ok(insert.args[3] && insert.args[4]);
       assert.equal(calls.some((call) => call.sql.includes('agentsam_cloudflare_connections')), false);
     } finally {
       globalThis.fetch = originalFetch;
