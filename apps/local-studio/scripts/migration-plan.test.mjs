@@ -97,6 +97,16 @@ test("D1-dialect seeds in the globbed directory carry the engine tag", () => {
   }
 });
 
+test("project metrics SQL is D1-owned and cannot run in Postgres preview", () => {
+  const contents = readFileSync(
+    join(projectRoot(), "backend", "migrations", "1349_projects_metrics_time_ssot.sql"),
+    "utf8",
+  );
+  assert.equal(migrationEngine(contents), "d1");
+  assert.equal(isEngineEligible(contents, POSTGRES_ENGINE), false);
+  assert.equal(isEngineEligible(contents, "d1"), true);
+});
+
 test("the auth schema ships outside the globbed directory", () => {
   const migrationsDir = join(projectRoot(), "backend", "migrations");
   const rootMigrations = pendingMigrations(readdirSync(migrationsDir), []);

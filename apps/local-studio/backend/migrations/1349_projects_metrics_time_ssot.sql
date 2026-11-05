@@ -1,3 +1,4 @@
+-- agentsam-engine: d1
 -- Canonical projects.id is TEXT; the historical 8 project_metrics rows
 -- are retained intact for review rather than silently merged with measured time.
 ALTER TABLE project_metrics RENAME TO project_metrics_legacy_20261028;
