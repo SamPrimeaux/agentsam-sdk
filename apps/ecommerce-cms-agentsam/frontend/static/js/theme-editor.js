@@ -4138,7 +4138,9 @@
         byId('te-theme-trigger-label').textContent = showcaseDisplayName;
         return;
       }
-      const catalog = await editorRequest('/api/admin/cms/themes');
+      const siteId = window.cmsActiveSiteId || new URLSearchParams(window.location.search).get('site_id');
+      if (!siteId) throw new Error('Select a website before loading themes');
+      const catalog = await editorRequest('/api/admin/cms/themes?site_id='+encodeURIComponent(siteId));
       if (!catalog.ok) throw new Error(catalog.error || 'Installed theme catalog unavailable');
       installedThemeSlugs = new Set((catalog.themes || []).map(function(theme) { return theme.slug; }));
       persistedThemeVersion = Number(catalog.content_version || 0);
