@@ -1,0 +1,86 @@
+{
+  "id": "architect",
+  "name": "Architect",
+  "animal": "Great horned owl",
+  "version": "0.1.0",
+  "status": "production-review-candidate",
+  "description": "The spatial thinker. Observant and deliberate; studies proportion, tests the composition and sees the whole.",
+  "provenance": "Image-generated character art; deterministic extraction, registration, resizing and packaging.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "states": {
+    "idle": {
+      "src": "animations/architect-idle.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "blinking": {
+      "src": "animations/architect-blinking.png",
+      "fps": 5,
+      "loop": false,
+      "frames": 6
+    },
+    "thinking": {
+      "src": "animations/architect-thinking.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "working": {
+      "src": "animations/architect-working.png",
+      "fps": 7,
+      "loop": true,
+      "frames": 6
+    },
+    "waiting": {
+      "src": "animations/architect-waiting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "attention": {
+      "src": "animations/architect-attention.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "success": {
+      "src": "animations/architect-success.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "error": {
+      "src": "animations/architect-error.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "resting": {
+      "src": "animations/architect-resting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "signature": {
+      "src": "animations/architect-signature.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    }
+  },
+  "avatar": "avatars/architect-avatar-128.png",
+  "icon": "avatars/architect-icon-64.png",
+  "portrait": "avatars/architect-portrait-256.png",
+  "visualApproval": "pending",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": []
+  },
+  "sourcePackage": "InnerAnimal-Architect-v0.1.0.zip",
+  "sourceArchiveSha256": "a5914880a94a4e467f309f7a2ddabbf4b3a6dec128c05f24ee6b867b0c5815c4"
+}

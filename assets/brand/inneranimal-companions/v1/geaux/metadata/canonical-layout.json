@@ -1,0 +1,44 @@
+{
+  "file": "artwork/source/canonical/geaux-downloaded-atlas.png",
+  "size": [
+    1536,
+    2288
+  ],
+  "cell_size": [
+    192,
+    208
+  ],
+  "columns": 8,
+  "row_names": [
+    "idle",
+    "move-right",
+    "move-left",
+    "wave",
+    "jump",
+    "failed",
+    "waiting",
+    "chest-thump",
+    "review",
+    "look-first-half",
+    "look-second-half"
+  ],
+  "row_counts": [
+    6,
+    8,
+    8,
+    4,
+    5,
+    8,
+    6,
+    6,
+    6,
+    8,
+    8
+  ],
+  "sha256": "66c7edd979c9c735778c71609e6d30adf895c6918bb26366623250c9162d2d67",
+  "supplemental_states": [
+    "blinking",
+    "resting"
+  ],
+  "canonical_primary": "artwork/geaux-canonical-primary.png"
+}

@@ -1,0 +1,86 @@
+{
+  "id": "geaux",
+  "name": "Geaux",
+  "animal": "Silverback gorilla",
+  "version": "0.1.0",
+  "status": "production-review-candidate",
+  "description": "The Original. Founder, leadership and resilience; grounded strength, deliberate review and the drive to keep going.",
+  "provenance": "Canonical Geaux artwork and existing pet atlas; deterministic extraction. Only blinking and resting use clearly labeled newly generated supplemental art.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "states": {
+    "idle": {
+      "src": "animations/geaux-idle.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "blinking": {
+      "src": "animations/geaux-blinking.png",
+      "fps": 5,
+      "loop": false,
+      "frames": 6
+    },
+    "thinking": {
+      "src": "animations/geaux-thinking.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "working": {
+      "src": "animations/geaux-working.png",
+      "fps": 7,
+      "loop": true,
+      "frames": 6
+    },
+    "waiting": {
+      "src": "animations/geaux-waiting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "attention": {
+      "src": "animations/geaux-attention.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 4
+    },
+    "success": {
+      "src": "animations/geaux-success.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 5
+    },
+    "error": {
+      "src": "animations/geaux-error.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 8
+    },
+    "resting": {
+      "src": "animations/geaux-resting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 2
+    },
+    "signature": {
+      "src": "animations/geaux-signature.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    }
+  },
+  "avatar": "avatars/geaux-avatar-128.png",
+  "icon": "avatars/geaux-icon-64.png",
+  "portrait": "avatars/geaux-portrait-256.png",
+  "visualApproval": "pending",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": []
+  },
+  "sourcePackage": "InnerAnimal-Geaux-v0.1.0.zip",
+  "sourceArchiveSha256": "6e54ff9ed5e6bed75623cb55c36f336f6caa13e4e18d6038d6c6f2184aca5cb0"
+}

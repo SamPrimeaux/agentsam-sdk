@@ -1,0 +1,9 @@
+{
+  "structural_ok": true,
+  "errors": [],
+  "warnings": [],
+  "decoded_images": 100,
+  "states": 10,
+  "frames": 57,
+  "visual_approval": "Not established by this validator. Review every frame and motion separately."
+}

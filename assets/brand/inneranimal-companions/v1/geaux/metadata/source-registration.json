@@ -1,0 +1,12 @@
+{
+  "source": "geaux-canonical-atlas.png",
+  "rects": [],
+  "method": "Empty alpha gutters; one shared scale per source set; opaque-bounds horizontal centering and foot-baseline registration. Original source retained.",
+  "notes": [
+    "Original illustration and downloaded 1536\u00d72288 atlas are retained unchanged under artwork/source/canonical/.",
+    "Blinking and resting are newly generated supplemental proposals, not recovered canonical frames. They require identity approval before promotion.",
+    "Working and signature both reference the canonical chest-thump sequence; thinking references canonical review. Success preserves the original jump displacement.",
+    "Canonical directional movement, review and all sixteen look poses are additionally exported without inventing new frames.",
+    "The recovered atlas hash differs from the historical hash recorded in the older bundle; both records are retained rather than asserting they are the same revision."
+  ]
+}

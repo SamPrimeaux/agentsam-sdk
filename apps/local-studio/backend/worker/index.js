@@ -51,7 +51,7 @@ import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } 
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
 import { handleStudioSkills } from "./studio-skills.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
-import { handleStudioUserPreferences, handleStudioAccountAvatar } from "./studio-user-preferences.js";
+import { handleStudioUserPreferences, handleStudioAccountAvatar, handleStudioCompanionSettings } from "./studio-user-preferences.js";
 import { handleStudioNotificationSettings } from "./studio-notification-settings.js";
 import { readPluginWorkspace } from "./plugin-workspace.js";
 import { emitAnalyticsFact } from "./analytics-service.js";
@@ -752,6 +752,7 @@ export default {
     const isConnectionsRegistry = url.pathname === "/api/connections";
     const isStudioPreferences=url.pathname==="/api/settings/preferences";
     const isStudioAccountAvatar=url.pathname==="/api/settings/account-avatar";
+    const isStudioCompanions=url.pathname==="/api/settings/companions";
     const isStudioNotifications=url.pathname==="/api/settings/notifications";
     const isStudioAgentSettings=url.pathname==="/api/settings/agents"
       || url.pathname.startsWith("/api/settings/agents/");
@@ -1154,6 +1155,13 @@ export default {
       catch(error){
         console.warn("studio_account_avatar_error",String(error?.message||error).slice(0,120));
         return json({ok:false,error:"account_avatar_unavailable"},503);
+      }
+    }
+    if(isStudioCompanions) {
+      try{return await handleStudioCompanionSettings(request,env,await sessionUser());}
+      catch(error){
+        console.warn("studio_companion_settings_error",String(error?.message||error).slice(0,120));
+        return json({ok:false,error:"companion_settings_unavailable"},503);
       }
     }
     if(isStudioPreferences) {

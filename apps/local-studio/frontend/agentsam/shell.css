@@ -389,3 +389,76 @@
 
 .agentsam-shell .agentsam-composer-actions button[data-agent-mode-trigger]{color:color-mix(in srgb,var(--composer-mode-accent) 60%,var(--nav-text));}
 .agentsam-shell .agentsam-composer-actions button[aria-label^="Select model:"]{color:var(--nav-muted);}
+
+
+/* InnerAnimal companion welcome — a real character presence in Work, not a decorative badge. */
+.agentsam-work-welcome {
+  display: flex;
+  width: min(100%, 620px);
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 3vw, 34px);
+  padding: 8px 14px 24px;
+  text-align: left;
+}
+.agentsam-work-welcome-art {
+  display: grid;
+  width: clamp(112px, 15vw, 164px);
+  height: clamp(112px, 15vw, 164px);
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--nav-accent) 22%, transparent);
+  border-radius: 30px;
+  background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--nav-accent) 13%, transparent), transparent 72%);
+}
+.agentsam-work-welcome-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: auto;
+}
+.agentsam-work-welcome-art > span {
+  color: var(--nav-accent);
+  font: 600 42px/1 var(--nav-font);
+}
+.agentsam-work-welcome-copy { min-width: 0; }
+.agentsam-work-welcome-eyebrow {
+  margin: 0 0 9px;
+  color: var(--nav-muted);
+  font: 600 9px/1.4 var(--nav-font);
+  letter-spacing: .17em;
+}
+.agentsam-work-welcome-copy h1 {
+  margin: 0 !important;
+  color: var(--nav-text);
+  font: 600 clamp(20px, 2.2vw, 27px)/1.16 var(--nav-font) !important;
+  letter-spacing: -.035em;
+  text-align: left !important;
+}
+.agentsam-work-welcome-prompt {
+  margin: 8px 0 0;
+  color: var(--nav-muted);
+  font: 400 12px/1.5 var(--nav-font);
+}
+.agentsam-work-companion-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 13px;
+  color: color-mix(in srgb, var(--nav-accent) 74%, var(--nav-text));
+  font: 500 10px/1.4 var(--nav-font);
+}
+.agentsam-work-companion-link:hover { color: var(--nav-text); }
+.agentsam-work-companion-link:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: 4px; border-radius: 3px; }
+.agentsam-pet-trigger picture { display: block; width: 100%; height: 100%; }
+.agentsam-pet-trigger picture img { display: block; width: 100%; height: 100%; object-fit: contain; }
+@media (max-width: 650px) {
+  .agentsam-work-welcome { gap: 14px; padding-inline: 8px; }
+  .agentsam-work-welcome-art { width: 92px; height: 92px; border-radius: 20px; }
+  .agentsam-work-welcome-copy h1 { font-size: 20px !important; }
+  .agentsam-work-welcome-eyebrow { font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentsam-work-welcome-art img { animation: none !important; }
+}

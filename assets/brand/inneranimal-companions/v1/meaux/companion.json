@@ -1,0 +1,86 @@
+{
+  "id": "meaux",
+  "name": "Meaux",
+  "animal": "Raccoon",
+  "version": "0.1.0",
+  "status": "production-review-candidate",
+  "description": "The creative coworker. Curious, inventive and generous with ideas; turns possibilities into something you can hold.",
+  "provenance": "Image-generated character art; deterministic extraction, registration, resizing and packaging.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "states": {
+    "idle": {
+      "src": "animations/meaux-idle.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "blinking": {
+      "src": "animations/meaux-blinking.png",
+      "fps": 5,
+      "loop": false,
+      "frames": 6
+    },
+    "thinking": {
+      "src": "animations/meaux-thinking.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "working": {
+      "src": "animations/meaux-working.png",
+      "fps": 7,
+      "loop": true,
+      "frames": 6
+    },
+    "waiting": {
+      "src": "animations/meaux-waiting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "attention": {
+      "src": "animations/meaux-attention.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "success": {
+      "src": "animations/meaux-success.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "error": {
+      "src": "animations/meaux-error.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "resting": {
+      "src": "animations/meaux-resting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "signature": {
+      "src": "animations/meaux-signature.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 5
+    }
+  },
+  "avatar": "avatars/meaux-avatar-128.png",
+  "icon": "avatars/meaux-icon-64.png",
+  "portrait": "avatars/meaux-portrait-256.png",
+  "visualApproval": "pending",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": []
+  },
+  "sourcePackage": "InnerAnimal-Meaux-v0.1.0.zip",
+  "sourceArchiveSha256": "89726adddc559c41aa1f59d58f170c062cdcfccf55d4f0975cbfbff7426b559a"
+}

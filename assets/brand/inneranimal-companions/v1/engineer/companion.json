@@ -1,0 +1,86 @@
+{
+  "id": "engineer",
+  "name": "Engineer",
+  "animal": "Beaver",
+  "version": "0.1.0",
+  "status": "production-review-candidate",
+  "description": "The practical inventor. Measures carefully, tests the connection and keeps adjusting until the idea works.",
+  "provenance": "Image-generated character art; deterministic extraction, registration, resizing and packaging.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "states": {
+    "idle": {
+      "src": "animations/engineer-idle.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "blinking": {
+      "src": "animations/engineer-blinking.png",
+      "fps": 5,
+      "loop": false,
+      "frames": 6
+    },
+    "thinking": {
+      "src": "animations/engineer-thinking.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "working": {
+      "src": "animations/engineer-working.png",
+      "fps": 7,
+      "loop": true,
+      "frames": 6
+    },
+    "waiting": {
+      "src": "animations/engineer-waiting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "attention": {
+      "src": "animations/engineer-attention.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "success": {
+      "src": "animations/engineer-success.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "error": {
+      "src": "animations/engineer-error.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "resting": {
+      "src": "animations/engineer-resting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 3
+    },
+    "signature": {
+      "src": "animations/engineer-signature.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    }
+  },
+  "avatar": "avatars/engineer-avatar-128.png",
+  "icon": "avatars/engineer-icon-64.png",
+  "portrait": "avatars/engineer-portrait-256.png",
+  "visualApproval": "pending",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": []
+  },
+  "sourcePackage": "InnerAnimal-Engineer-v0.1.0.zip",
+  "sourceArchiveSha256": "40c322378f46805879a5e9441e43b984d54a0828f3ffa819d95486101d87c6f0"
+}

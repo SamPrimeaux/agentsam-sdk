@@ -125,6 +125,7 @@ try {
   for (const pathname of [
     '/api/admin/completeful/status',
     '/api/admin/completeful/catalog?category=apparel',
+    '/api/settings/companions',
   ]) {
     const response = await request(pathname);
     const contentType = response.headers.get('content-type') || '';

@@ -1,0 +1,86 @@
+{
+  "id": "coder",
+  "name": "Coder",
+  "animal": "Fox",
+  "version": "0.1.0",
+  "status": "production-review-candidate",
+  "description": "A focused problem solver. Quick to notice a detail, patient with a difficult bug, delighted when the pieces click.",
+  "provenance": "Image-generated character art; deterministic extraction, registration, resizing and packaging.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "states": {
+    "idle": {
+      "src": "animations/coder-idle.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "blinking": {
+      "src": "animations/coder-blinking.png",
+      "fps": 5,
+      "loop": false,
+      "frames": 6
+    },
+    "thinking": {
+      "src": "animations/coder-thinking.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "working": {
+      "src": "animations/coder-working.png",
+      "fps": 7,
+      "loop": true,
+      "frames": 6
+    },
+    "waiting": {
+      "src": "animations/coder-waiting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "attention": {
+      "src": "animations/coder-attention.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "success": {
+      "src": "animations/coder-success.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "error": {
+      "src": "animations/coder-error.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "resting": {
+      "src": "animations/coder-resting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 3
+    },
+    "signature": {
+      "src": "animations/coder-signature.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    }
+  },
+  "avatar": "avatars/coder-avatar-128.png",
+  "icon": "avatars/coder-icon-64.png",
+  "portrait": "avatars/coder-portrait-256.png",
+  "visualApproval": "pending",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": []
+  },
+  "sourcePackage": "InnerAnimal-Coder-v0.1.0.zip",
+  "sourceArchiveSha256": "613f586c68b76b8335b1977a0ebf8ac7727a4e4113fc7cde809dd7d53e5c713b"
+}

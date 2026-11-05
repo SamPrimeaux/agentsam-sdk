@@ -1,14 +1,28 @@
 import { useEffect, useState } from "react";
+import { loadCompanionSettings } from '../../../agentsam/companion-client';
+import { companionStateAsset, resolveCompanion } from '../../../agentsam/companions';
+import type { CompanionProfile } from '../../../agentsam/companions';
 import { emitTauriEvent, getTauriInvoke, listenTauriEvent } from "@/lib/desktop/tauri";
 
 type PetState = "idle" | "working";
-const PET_ASSETS: Record<PetState, string> = {
-  idle: "/brand/agentsam-gorilla/v1/pet/animated/ledge-idle.gif",
-  working: "/brand/agentsam-gorilla/v1/pet/animated/ledge-working.gif",
-};
-
 export function AgentSamPetWindow() {
   const [state, setState] = useState<PetState>("idle");
+  const [companion, setCompanion] = useState<CompanionProfile>(() => resolveCompanion('geaux'));
+  useEffect(() => {
+    let active = true;
+    let dispose: (() => void) | undefined;
+    const refresh = () => void loadCompanionSettings().then((settings) => {
+      if (active) setCompanion(resolveCompanion(settings.activeId, settings.customCompanions));
+    }).catch(() => {});
+    refresh();
+    window.addEventListener('agentsam:companions-changed', refresh);
+    void listenTauriEvent('agentsam:companions:changed', refresh).then((unlisten) => {
+      if (!unlisten) return;
+      if (active) dispose = unlisten;
+      else unlisten();
+    }).catch(() => {});
+    return () => { active = false; dispose?.(); window.removeEventListener('agentsam:companions-changed', refresh); };
+  }, []);
   useEffect(() => {
     document.documentElement.classList.add("agentsam-pet-window");
     return () => document.documentElement.classList.remove("agentsam-pet-window");
@@ -37,13 +51,17 @@ export function AgentSamPetWindow() {
     if (!invoke) return;
     try { await invoke("close_agent_sam_pet", {}); } catch {}
   }
+  const image = companionStateAsset(companion, state) || (companion.builtIn
+    ? companion.avatarUrl || "/brand/agentsam-gorilla/v1/pet/animated/ledge-idle.gif"
+    : companion.avatarUrl);
   return <main className="agentsam-desktop-pet" aria-label="AgentSam desktop pet" data-state={state}>
     <div className="agentsam-desktop-pet-handle">
       <span data-tauri-drag-region title="Drag to move AgentSam">AgentSam</span>
       <button type="button" onClick={() => void closePet()} aria-label="Hide desktop pet" title="Hide pet">×</button>
     </div>
     <button type="button" className="agentsam-desktop-pet-sprite" onClick={() => void openAgentSam()} aria-label="Open AgentSam assistant in current workspace" title="Ask AgentSam in current workspace">
-      <img src={PET_ASSETS[state]} alt={state === "working" ? "AgentSam is working" : "AgentSam is idle"} draggable={false} />
+      {image ? <img src={image} alt={`${companion.name} ${state === "working" ? "is working" : "is ready"}`} draggable={false} />
+        : <span className="agentsam-desktop-pet-initial" aria-hidden="true">{companion.name.slice(0, 1).toUpperCase()}</span>}
       <span className="agentsam-desktop-pet-helper">Ask AgentSam</span>
     </button>
   </main>;

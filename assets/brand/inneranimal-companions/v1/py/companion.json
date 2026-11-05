@@ -1,0 +1,86 @@
+{
+  "id": "py",
+  "name": "Py",
+  "animal": "Python snake",
+  "version": "0.1.0",
+  "status": "production-review-candidate",
+  "description": "The automation companion. Fluid, attentive and quietly persistent; follows a pattern and uncoils the next possibility.",
+  "provenance": "Image-generated character art; deterministic extraction, registration, resizing and packaging.",
+  "frameSize": [
+    256,
+    256
+  ],
+  "states": {
+    "idle": {
+      "src": "animations/py-idle.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "blinking": {
+      "src": "animations/py-blinking.png",
+      "fps": 5,
+      "loop": false,
+      "frames": 6
+    },
+    "thinking": {
+      "src": "animations/py-thinking.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "working": {
+      "src": "animations/py-working.png",
+      "fps": 7,
+      "loop": true,
+      "frames": 6
+    },
+    "waiting": {
+      "src": "animations/py-waiting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 6
+    },
+    "attention": {
+      "src": "animations/py-attention.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "success": {
+      "src": "animations/py-success.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "error": {
+      "src": "animations/py-error.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    },
+    "resting": {
+      "src": "animations/py-resting.png",
+      "fps": 5,
+      "loop": true,
+      "frames": 3
+    },
+    "signature": {
+      "src": "animations/py-signature.png",
+      "fps": 7,
+      "loop": false,
+      "frames": 6
+    }
+  },
+  "avatar": "avatars/py-avatar-128.png",
+  "icon": "avatars/py-icon-64.png",
+  "portrait": "avatars/py-portrait-256.png",
+  "visualApproval": "pending",
+  "structuralValidation": {
+    "ok": true,
+    "errors": [],
+    "warnings": []
+  },
+  "sourcePackage": "InnerAnimal-Py-v0.1.0.zip",
+  "sourceArchiveSha256": "5d073899a6b3788ae6ea85902bd54ae92c3315616201cc75972947c4e3a5a270"
+}

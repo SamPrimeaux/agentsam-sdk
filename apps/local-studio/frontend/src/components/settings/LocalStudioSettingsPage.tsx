@@ -10,6 +10,7 @@ import { listStudioThemes } from "@/lib/themes/inventory";
 import { localStudioSettingsManifest } from "./localStudioSettingsManifest";
 import { localStudioSettingsHost } from "./localStudioSettingsHost";
 import { LiveKeysSettingsPage } from "./LiveKeysSettingsPage";
+import { InnerAnimalCompanionsPage } from "../../../agentsam/InnerAnimalCompanionsPage";
 
 export function LocalStudioSettingsPage({
   unitId,
@@ -66,6 +67,9 @@ export function LocalStudioSettingsPage({
         url.searchParams.set("view", view);
         window.history.replaceState(window.history.state, "", url);
       }}
+      renderCustomView={(unit, view) => unit === "customize" && view === "companions"
+        ? <InnerAnimalCompanionsPage />
+        : null}
     />
   );
 }

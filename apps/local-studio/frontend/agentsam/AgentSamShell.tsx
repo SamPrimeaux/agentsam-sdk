@@ -31,6 +31,7 @@ import { ToolPermissionProvider } from '@/components/workbench/ToolPermissionPro
 import { invokeStudioService, isPackagedDesktop, listenDeepLinks, emitTauriEvent, listenTauriEvent, toggleAgentSamPet } from "@/lib/desktop/tauri";
 import { formatChromeTabShare, parseChromeTabShare, type ChromeTabShare } from '@/lib/desktop/chrome-share';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
+import { CompanionProvider } from './CompanionContext';
 import { NotificationsMenu } from './NotificationsMenu';
 import { ChatShareDialog } from './ChatShareDialog';
 import { signOut } from '@/lib/auth/client';
@@ -458,14 +459,14 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     window.dispatchEvent(new Event('agentsam:workspace-navigation'));
     return () => {if(host.__agentsamWorkspaceNavigation===projection)delete host.__agentsamWorkspaceNavigation;};
   },[state.trails,state.activeTrailId,workProjects,historyStatus]);
-  return <ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} tokens={navTokens} defaultOpen resizable stateStore={navigationStore} storageKey={navigationStore ? undefined : "agentsam-nav:" + (user && !user.isDevFallback ? user.id : "local")}>
+  return <CompanionProvider accountKey={user?.id || "anonymous"}><ToolPermissionProvider><TooltipProvider><Nav.Provider value={value} theme={theme} accentColor={accent} tokens={navTokens} defaultOpen resizable stateStore={navigationStore} storageKey={navigationStore ? undefined : "agentsam-nav:" + (user && !user.isDevFallback ? user.id : "local")}>
     <Nav.Scope className="agentsam-shell platform-console" data-agentsam-app-shell="local-studio" data-platform-console="true" data-conversation={isConversation ? "true" : "false"} data-embedded={embedded ? "true" : undefined}>
       {!embedded ? <Nav.Sidenav /> : null}<div className="agentsam-main">
         {!embedded && !isConversation ? <Nav.Topbar className="platform-console-topbar">
           <Nav.Trigger aria-label="Toggle sidebar" />
           <button type="button" className="platform-console-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={17} /><span>Search pages and tools</span><kbd>⌘K</kbd></button>
           <Nav.TopbarSpacer />
-          <AgentSamPetTrigger state={petState} avatarUrl={accountAvatarUrl || user?.profileImageUrl} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
+          <AgentSamPetTrigger state={petState} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
           <NotificationsMenu />
         </Nav.Topbar> : null}
         <OfflineBanner />
@@ -508,7 +509,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       <AnnotationHelper />
       <Toaster theme={theme === 'light' ? 'light' : 'dark'} position="bottom-center" />
     </Nav.Scope>
-  </Nav.Provider></TooltipProvider></ToolPermissionProvider>;
+  </Nav.Provider></TooltipProvider></ToolPermissionProvider></CompanionProvider>;
 }
 
 export function SidePanelToggle() {

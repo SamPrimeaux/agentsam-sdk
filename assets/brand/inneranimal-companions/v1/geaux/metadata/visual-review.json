@@ -1,0 +1,10 @@
+{
+  "status": "production-review-candidate",
+  "review_method": "All frame contact sheets visually inspected; frame dimensions, alpha and atlas correspondence independently checked. Frame sequences and loop endpoints reviewed in ordered strips. User motion and identity approval remains pending.",
+  "findings": [
+    "Original pixels and source illustration retained. Supplemental blink/rest differs in stone width and requires identity approval.",
+    "Working and signature intentionally share canonical chest-thump frames; review remains available separately."
+  ],
+  "blocking_known_defects": [],
+  "approval": "pending"
+}

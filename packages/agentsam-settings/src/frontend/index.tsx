@@ -2835,12 +2835,15 @@ export function SettingsProductPage({
   unitId,
   requestedView,
   onViewChange,
+  renderCustomView,
 }: {
   manifest: SettingsManifest;
   host: SettingsHost;
   unitId: SettingsUnitId;
   requestedView?: string;
   onViewChange?: (view: string) => void;
+  /** Optional host-owned extension surfaces for verified first-party settings views. */
+  renderCustomView?: (unitId: SettingsUnitId, view: string) => ReactNode | null;
 }) {
   const unit = manifest.units.find((candidate) => candidate.id === unitId) ?? manifest.units[0];
   const defaultView = unit?.views?.[0]?.id ?? "";
@@ -2882,6 +2885,27 @@ export function SettingsProductPage({
 
   if (!unit) return null;
 
+  const customView = renderCustomView?.(unit.id, validView) ?? null;
+  if (!snapshot && customView !== null) {
+    // Host-owned first-party views can render independently of the settings
+    // snapshot, so a plugin registry outage cannot blank Companion Studio.
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto w-full max-w-[1180px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+          <SegmentNav
+            unit={unit}
+            activeView={validView}
+            onViewChange={(view) => {
+              setActiveView(view);
+              onViewChange?.(view);
+            }}
+          />
+          {customView}
+        </div>
+      </div>
+    );
+  }
+
   if (!snapshot) {
     return (
       <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-3 px-5 text-center">
@@ -2907,7 +2931,7 @@ export function SettingsProductPage({
           }}
         />
         <div className={unit.views?.length ? "" : "pt-5"}>
-          {renderUnit(unit.id, snapshot, validView, host, async () => {
+          {customView ?? renderUnit(unit.id, snapshot, validView, host, async () => {
             setSnapshot(await host.snapshot());
           })}
         </div>

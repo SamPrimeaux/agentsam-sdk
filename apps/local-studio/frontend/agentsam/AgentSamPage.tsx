@@ -9,6 +9,8 @@ import { SideStage } from '@/components/workbench/side-stage';
 import { WorkSurfaceBar } from '@/components/workbench/work-surface-bar';
 import { SidePanelToggle } from './AgentSamShell';
 import { AgentSamPetTrigger } from './AgentSamPetTrigger';
+import { useActiveCompanion } from './CompanionContext';
+import { companionStateAsset } from './companions';
 import { NotificationsMenu } from './NotificationsMenu';
 import { SplitHandle } from '@/components/shell/split-handle';
 import { AnnotationToggle } from './AnnotationHelper';
@@ -23,6 +25,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const { data, isMobile } = useNav();
   const navigate = useNavigate();
   const state = useWorkStore();
+  const companion = useActiveCompanion();
   const [hostModeSlot, setHostModeSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setHostModeSlot(document.getElementById('agentsam-console-mode-slot')); }, []);
   const [workFocused, setWorkFocused] = useState(false);
@@ -57,7 +60,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       {conversationId ? <Link to="/chats" aria-label="Back to Chats" title="Back to Chats" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="size-4"/></Link> : null}
       <button type="button" className="as-nav-button" aria-label="New chat" title="New chat (⌘N)" onClick={startNewChat}><MessageSquarePlus size={18}/><span className="sr-only">New chat</span></button>
       <button type="button" className="as-nav-button" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={18}/><span className="sr-only">Search Studio</span></button>
-      <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} avatarUrl={data.account?.avatar} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
+      <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
       <NotificationsMenu />
       <AnnotationToggle /><SidePanelToggle />
     </>} /> : null}
@@ -79,7 +82,24 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
             />
           }
           thread={<MessageList messages={trail.messages} trailId={trail.id} streaming={streaming} />}
-          emptyState={<div className="agentsam-welcome-heading"><h1>{data.mode === 'work' ? 'What should we work on?' : 'Where should we begin?'}</h1></div>}
+          emptyState={<div className="agentsam-welcome-heading">
+            {data.mode === 'work' ? <div className="agentsam-work-welcome" data-companion-id={companion.id}>
+              <div className="agentsam-work-welcome-art" aria-hidden="true">
+                {companionStateAsset(companion, streaming ? 'working' : 'idle') ?
+                  <img src={companionStateAsset(companion, streaming ? 'working' : 'idle') || undefined} alt="" draggable={false} /> :
+                  <span>{companion.name.slice(0, 1).toUpperCase()}</span>}
+              </div>
+              <div className="agentsam-work-welcome-copy">
+                <p className="agentsam-work-welcome-eyebrow">INNERANIMAL COMPANION</p>
+                <h1>{companion.id === 'geaux' ? 'Geaux is ready to GEAUX!' : `${companion.name} is ready to work.`}</h1>
+                <p className="agentsam-work-welcome-prompt">What should we work on?</p>
+                <button type="button" className="agentsam-work-companion-link"
+                  onClick={() => window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/settings/customize?view=companions' } }))}>
+                  Choose a companion <span aria-hidden="true">→</span>
+                </button>
+              </div>
+            </div> : <h1>Where should we begin?</h1>}
+          </div>}
           composer={<Composer targetId={trail.id} targetKind="trail" placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'} />}
           composerClassName="agentsam-conversation-dock"
         />

@@ -27,10 +27,11 @@ export const localStudioSettingsManifest = defineSettingsManifest({
     {
       id: "customize",
       label: "Customize",
-      description: "Plugins, widgets, MCPs, skills, subagents, rules, commands and hooks.",
+      description: "Plugins, InnerAnimal companions, widgets, MCPs, skills, subagents, rules, commands and hooks.",
       icon: "sliders",
       views: [
         { id: "plugins", label: "Plugins" },
+        { id: "companions", label: "Companions" },
         { id: "widgets", label: "Widgets" },
         { id: "mcps", label: "MCPs" },
         { id: "skills", label: "Skills" },
