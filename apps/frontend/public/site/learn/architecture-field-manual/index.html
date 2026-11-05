@@ -268,10 +268,6 @@ domain / core
       inject('asbd-header-mount', '/site/global/asbd-header.html'),
       inject('asbd-footer-mount', '/site/global/asbd-footer.html')
     ]).then(function () {
-      if (window.AsbdTheme) {
-        AsbdTheme.syncFromDocument();
-        AsbdTheme.bindToggle(document.getElementById('asbdThemeToggle'));
-      }
     });
   })();
   </script>
