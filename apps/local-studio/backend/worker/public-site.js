@@ -194,13 +194,11 @@ function guessType(path) {
  * @param {Request} request
  * @param {object} env
  * @param {string} [pathname]
- * @param {{ siteSlug?: string }} [opts]
  */
 export async function servePublicSitePage(
   request,
   env,
-  pathname = new URL(request.url).pathname,
-  opts = {}
+  pathname = new URL(request.url).pathname
 ) {
   const redirect = themeStoreRedirect(request, pathname);
   if (redirect) return redirect;
