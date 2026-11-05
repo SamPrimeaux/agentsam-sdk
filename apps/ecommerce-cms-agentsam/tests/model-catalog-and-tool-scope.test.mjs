@@ -42,7 +42,7 @@ function dbFixture({ tools = [], catalog = [], pricing = [], lanes = [] } = {}) 
             },
             async first() {
               if (sql.includes("FROM accounts")) return { id: ACCOUNT };
-              if (sql.includes("FROM agentsam_plugins")) {
+              if (sql.includes("JOIN agentsam_plugins p")) {
                 return { config_json: JSON.stringify({ github_repo: ROOT_REPO }), metadata_json: "{}" };
               }
               return tools.find(tool => tool.tool_key === args[1]) || null;

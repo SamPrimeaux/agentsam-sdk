@@ -134,7 +134,7 @@ async function basin(env) {
   if (env.DB?.prepare) {
     try {
       const plugin=await env.DB.prepare(
-        "SELECT plugin_key, setup_status FROM agentsam_plugins WHERE account_id=? AND is_enabled=1 AND (plugin_key LIKE '%basin%' OR provider_key LIKE '%basin%') LIMIT 1"
+        "SELECT p.plugin_key, i.setup_status FROM agentsam_plugin_installations i JOIN agentsam_plugins p ON p.id=i.plugin_id WHERE i.account_id=? AND i.enabled=1 AND (p.plugin_key LIKE '%basin%' OR p.provider_key LIKE '%basin%') LIMIT 1"
       ).bind(requireApplicationAccountId()).first();
       if (plugin) return {enabled:true,status:"permission_required",source:"AgentSam integration installation",
         warehouses:[],pipelines:[],catalogTables:[],checkedAt:null};

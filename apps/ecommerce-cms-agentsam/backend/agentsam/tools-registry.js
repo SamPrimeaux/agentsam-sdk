@@ -257,12 +257,14 @@ export async function listAgentSamMcpServers(env) {
   if (!env?.DB) return [];
   try {
     const { results: plugins } = await env.DB.prepare(
-      `SELECT id, plugin_key, display_name, description, endpoint_url,
-              transport, auth_type, is_enabled, health_status, metadata_json, config_json
-       FROM agentsam_plugins
-       WHERE account_id = ? AND is_enabled = 1
-         AND (plugin_kind = 'mcp' OR plugin_key LIKE '%mcp%')
-       ORDER BY display_name ASC`,
+      `SELECT p.id, p.plugin_key, p.display_name, p.description, p.endpoint_url,
+              p.transport, p.auth_type, i.enabled AS is_enabled, i.health_status, p.metadata_json,
+              json_patch(p.config_json, i.config_json) AS config_json
+       FROM agentsam_plugin_installations i
+       JOIN agentsam_plugins p ON p.id = i.plugin_id
+       WHERE i.account_id = ? AND i.enabled = 1
+         AND (p.plugin_kind = 'mcp' OR p.plugin_key LIKE '%mcp%')
+       ORDER BY p.display_name ASC`,
     )
       .bind(requireApplicationAccountId())
       .all();

@@ -36,18 +36,20 @@ const metadata={
 };
 function dbFixture() {
   const sqlite=new DatabaseSync(':memory:');
-  sqlite.exec(readFileSync(new URL('../../../migrations/d1/0001_agentsam_plugin_runtime.sql',import.meta.url),'utf8'));
+  for(const file of ['0001_agentsam_plugin_runtime.sql','0022_agentsam_plugin_registry.sql','0023_agentsam_plugin_install_health.sql'])
+    sqlite.exec(readFileSync(new URL('../../../migrations/d1/'+file,import.meta.url),'utf8'));
   sqlite.exec(readFileSync(new URL('../backend/migrations/1348_agentsam_public_plugin_oauth.sql',import.meta.url),'utf8'));
   sqlite.exec('CREATE TABLE accounts(id TEXT PRIMARY KEY,email TEXT,display_name TEXT)');
   sqlite.prepare('INSERT INTO accounts(id,email,display_name) VALUES(?,?,?)').run(
     accountId,'studio-user@example.test','Studio User'
   );
   sqlite.prepare(`INSERT INTO agentsam_plugins(
-    id,account_id,plugin_key,provider_key,installation_key,environment,plugin_kind,display_name,transport,auth_type,
-    endpoint_url,category,is_enabled,settings_visible,composer_visible
-  ) VALUES (?,?,?,?,?,'production','mcp','AgentSam Brand','remote_jsonrpc','oauth',?,'Productivity',0,1,0)`).run(
-    pluginId,accountId,'agentsam-brand','agentsam-brand','catalog-v1',endpoint
+    id,plugin_key,family_key,provider_key,plugin_kind,display_name,transport,auth_type,endpoint_url,category,composer_visible
+  ) VALUES (?,?,'connections',?,'mcp','AgentSam Brand','remote_jsonrpc','oauth',?,'Productivity',0)`).run(
+    pluginId,'agentsam-brand','agentsam-brand',endpoint
   );
+  sqlite.prepare(`INSERT INTO agentsam_plugin_installations(account_id,plugin_id,instance_key,enabled,composer_visible)
+    VALUES (?,?,'catalog-v1',0,0)`).run(accountId,pluginId);
   const DB={
     prepare(sql){
       const stmt=sqlite.prepare(sql);
@@ -143,9 +145,9 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   const request=new Request('https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback?code=samplecode&state='+state);
   const connected=await completePluginOAuth(env,request,fetcher);
   assert.equal(connected.registered_tools,1);
-  const installed=sqlite.prepare('SELECT * FROM agentsam_plugins WHERE id=?').get(pluginId);
+  const installed=sqlite.prepare('SELECT * FROM agentsam_plugin_installations WHERE plugin_id=?').get(pluginId);
   assert.equal(installed.setup_status,'connected');
-  assert.equal(installed.is_enabled,1);
+  assert.equal(installed.enabled,1);
   assert.equal(installed.health_status,'healthy');
   const registered=sqlite.prepare('SELECT * FROM agentsam_tools WHERE plugin_id=?').all(pluginId);
   assert.equal(registered.length,1);
@@ -179,7 +181,7 @@ test('OAuth connects approved tools only after PKCE, owner, scope, and endpoint 
   assert.equal(disconnected.disconnected,true);
   assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_tools WHERE plugin_id=?').get(pluginId).count,0);
   assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_plugin_oauth_grants').get().count,0);
-  assert.equal(sqlite.prepare('SELECT setup_status FROM agentsam_plugins').get().setup_status,'unconfigured');
+  assert.equal(sqlite.prepare('SELECT setup_status FROM agentsam_plugin_installations').get().setup_status,'unconfigured');
   sqlite.close();
 });
 test('OAuth client registration carries only validated catalog publisher branding',async()=>{
@@ -223,7 +225,7 @@ test('OAuth refuses a mismatched resource audience without enabling the plugin',
   const request=new Request('https://agentsam.inneranimalmedia.com/api/plugins/oauth/callback?code=samplecode&state='+state);
   await assert.rejects(completePluginOAuth(env,request,mockFetcher({wrongAudience:true}).fetcher),/plugin_oauth_identity_mismatch/);
   assert.equal(sqlite.prepare('SELECT COUNT(*) AS count FROM agentsam_tools WHERE plugin_id=?').get(pluginId).count,0);
-  assert.equal(sqlite.prepare('SELECT setup_status FROM agentsam_plugins').get().setup_status,'unconfigured');
+  assert.equal(sqlite.prepare('SELECT setup_status FROM agentsam_plugin_installations').get().setup_status,'unconfigured');
   sqlite.close();
 });
 test('Campaign keeps writes unavailable without scopes and requires approval after explicit upgrade',async()=>{

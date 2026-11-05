@@ -76,7 +76,9 @@ async function catalogEntry(env,pluginKey,fetcher){
 export async function getOwnedCatalogPlugin(db,accountId,pluginId){
   if(!/^plg_[a-z0-9]+$/i.test(pluginId))fail('plugin_id_invalid');
   const row=await db.prepare(
-    "SELECT * FROM agentsam_plugins WHERE id = ? AND account_id = ? AND installation_key = 'catalog-v1' LIMIT 1"
+    `SELECT p.*, i.account_id, i.instance_key AS installation_key, i.enabled AS is_enabled, i.setup_status
+     FROM agentsam_plugin_installations i JOIN agentsam_plugins p ON p.id = i.plugin_id
+     WHERE p.id = ? AND i.account_id = ? AND i.instance_key = 'catalog-v1' LIMIT 1`
   ).bind(pluginId,accountId).first();
   if(!row)fail('plugin_installation_not_found');
   return row;
@@ -248,10 +250,10 @@ async function finishAuthorizedConnection(env,pending,payload,fetcher=fetch){
       pending.account_id,pending.plugin_id,pending.client_id,pending.resource_url,(await oauthServer(pending.resource_url,boundFetch(env,fetcher))).issuer,
       ciphertext,JSON.stringify(scopes),until
     ),
-    env.DB.prepare(`UPDATE agentsam_plugins SET setup_status='connected',
+    env.DB.prepare(`UPDATE agentsam_plugin_installations SET setup_status='connected',
       health_status='healthy',last_health_at=unixepoch(),last_healthy_at=unixepoch(),
-      last_error_code=NULL,last_error_message=NULL,is_enabled=1,composer_visible=1,updated_at=unixepoch()
-      WHERE id=? AND account_id=? AND installation_key='catalog-v1'`).bind(pending.plugin_id,pending.account_id),
+      last_error_code=NULL,last_error_message=NULL,enabled=1,composer_visible=1,updated_at=unixepoch()
+      WHERE plugin_id=? AND account_id=? AND instance_key='catalog-v1'`).bind(pending.plugin_id,pending.account_id),
   ];
   await env.DB.batch(statements);
   return {plugin_key:installed.plugin_key,registered_tools:tools.length};
@@ -335,9 +337,9 @@ export async function disconnectPublicPlugin(env,accountId,pluginId){
   await env.DB.batch([
     env.DB.prepare('DELETE FROM agentsam_tools WHERE plugin_id=? AND account_id=?').bind(pluginId,accountId),
     env.DB.prepare('DELETE FROM agentsam_plugin_oauth_grants WHERE plugin_id=? AND account_id=?').bind(pluginId,accountId),
-    env.DB.prepare(`UPDATE agentsam_plugins SET setup_status='unconfigured',health_status='unknown',
-      is_enabled=0,composer_visible=0,updated_at=unixepoch()
-      WHERE id=? AND account_id=? AND installation_key='catalog-v1'`).bind(pluginId,accountId),
+    env.DB.prepare(`UPDATE agentsam_plugin_installations SET setup_status='unconfigured',health_status='unknown',
+      enabled=0,composer_visible=0,updated_at=unixepoch()
+      WHERE plugin_id=? AND account_id=? AND instance_key='catalog-v1'`).bind(pluginId,accountId),
   ]);
   return {disconnected:true,pluginId};
 }

@@ -14,50 +14,78 @@ async function runMutation(db, sql, args = []) {
   throw new TypeError('database_statement_runner_unavailable');
 }
 
+
+// Registry (agentsam_plugins) is account-free; per-account state lives in
+// agentsam_plugin_installations. Every reader goes through this one projection
+// so callers keep seeing {account_id, installation_key, is_enabled, setup_status, health_*}.
+const PLUGIN_VIEW_SQL = `
+  SELECT p.id, p.plugin_key, p.family_key, p.version, p.provider_key, p.plugin_kind, p.category,
+    p.display_name, p.short_name, p.description, p.mention_aliases_json, p.endpoint_url, p.transport,
+    p.auth_type, p.oauth_connect_url, p.capabilities_json, p.tool_lanes_json, p.config_json, p.metadata_json,
+    p.icon_url, p.icon_dark_url, p.icon_alt, p.icon_fit, p.sort_priority, p.health_strategy,
+    i.id AS installation_id, i.account_id, i.instance_key AS installation_key, 'production' AS environment,
+    i.enabled AS is_enabled, i.setup_status, i.secret_ref, i.resource_scope_json, i.config_json AS install_config_json,
+    i.composer_visible, i.settings_visible, i.health_status, i.last_health_at, i.last_healthy_at,
+    i.consecutive_failures, i.avg_latency_ms, i.last_error_code, i.last_error_message, i.created_at, i.updated_at
+  FROM agentsam_plugin_installations i JOIN agentsam_plugins p ON p.id = i.plugin_id`;
+
+function hydratePlugin(row) {
+  return {
+    ...row,
+    mention_aliases: json(row.mention_aliases_json, []), capabilities: json(row.capabilities_json, []),
+    tool_lanes: json(row.tool_lanes_json, []), resource_scope: json(row.resource_scope_json, {}),
+    config: json(row.config_json, {}), install_config: json(row.install_config_json, {}), metadata: json(row.metadata_json, {}),
+  };
+}
+
 export async function installPlugin(db, options = {}) {
   if (!db?.prepare) throw new TypeError('D1-compatible database binding required');
   const accountId = clean(options.accountId);
   const environment = clean(options.environment || 'production');
   if (!accountId) throw new Error('plugin_account_id_required');
   const manifest = normalizePluginManifest(options.manifest);
-  let plugin = await db.prepare(`
-    SELECT id FROM agentsam_plugins
-    WHERE account_id = ? AND environment = ? AND plugin_key = ? AND installation_key = ?
-    LIMIT 1
-  `).bind(accountId, environment, manifest.plugin_key, manifest.installation_key).first();
-  const pluginId = plugin?.id || id('plg');
-  const values = [
-    manifest.provider_key, manifest.plugin_kind, manifest.category, manifest.display_name, manifest.short_name,
-    manifest.description, JSON.stringify(manifest.mention_aliases), manifest.endpoint_url, manifest.transport,
-    manifest.auth_type, manifest.secret_ref, manifest.oauth_connect_url,
+  const registered = await db.prepare('SELECT id FROM agentsam_plugins WHERE plugin_key = ? LIMIT 1').bind(manifest.plugin_key).first();
+  const pluginId = registered?.id || id('plg');
+  const registry = [
+    manifest.family_key, manifest.version, manifest.provider_key, manifest.plugin_kind, manifest.category, manifest.display_name,
+    manifest.short_name, manifest.description, JSON.stringify(manifest.mention_aliases), manifest.endpoint_url, manifest.transport,
+    manifest.auth_type, manifest.oauth_connect_url,
     JSON.stringify(manifest.capabilities.map((row) => row.capability_key)), JSON.stringify(manifest.tool_lanes),
-    JSON.stringify(manifest.resource_scope), JSON.stringify(manifest.config), JSON.stringify(manifest.metadata),
+    JSON.stringify(manifest.config), JSON.stringify(manifest.metadata),
     manifest.icon_url, manifest.icon_dark_url, manifest.icon_alt, manifest.icon_fit,
-    manifest.composer_visible ? 1 : 0, manifest.settings_visible ? 1 : 0, manifest.sort_priority,
-    manifest.health_strategy,
+    manifest.composer_visible ? 1 : 0, manifest.settings_visible ? 1 : 0, manifest.sort_priority, manifest.health_strategy,
   ];
-  if (plugin?.id) {
+  if (registered?.id && options.preserveRegistry === true) {
+    // shared registry row is left untouched; only the account install below is written
+  } else if (registered?.id) {
     await runMutation(db, `
       UPDATE agentsam_plugins SET
-        provider_key=?, plugin_kind=?, category=?, display_name=?, short_name=?, description=?, mention_aliases_json=?,
-        endpoint_url=?, transport=?, auth_type=?, secret_ref=?, oauth_connect_url=?, capabilities_json=?, tool_lanes_json=?,
-        resource_scope_json=?, config_json=?, metadata_json=?, icon_url=?, icon_dark_url=?, icon_alt=?, icon_fit=?,
-        composer_visible=?, settings_visible=?, sort_priority=?, health_strategy=?,
-        is_enabled=CASE WHEN ? THEN is_enabled ELSE 1 END,
-        updated_at=unixepoch()
+        family_key=?, version=?, provider_key=?, plugin_kind=?, category=?, display_name=?, short_name=?, description=?,
+        mention_aliases_json=?, endpoint_url=?, transport=?, auth_type=?, oauth_connect_url=?, capabilities_json=?,
+        tool_lanes_json=?, config_json=?, metadata_json=?, icon_url=?, icon_dark_url=?, icon_alt=?, icon_fit=?,
+        composer_visible=?, settings_visible=?, sort_priority=?, health_strategy=?, updated_at=unixepoch()
       WHERE id=?
-    `, [...values, options.preserveEnabled === true ? 1 : 0, pluginId]);
+    `, [...registry, pluginId]);
   } else {
     await runMutation(db, `
       INSERT INTO agentsam_plugins (
-        id, account_id, plugin_key, provider_key, installation_key, environment, plugin_kind, category,
-        display_name, short_name, description, mention_aliases_json, endpoint_url, transport, auth_type,
-        secret_ref, oauth_connect_url, capabilities_json, tool_lanes_json, resource_scope_json, config_json,
-        metadata_json, icon_url, icon_dark_url, icon_alt, icon_fit, composer_visible, settings_visible,
-        sort_priority, is_enabled, setup_status, health_strategy, health_status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'unconfigured', ?, 'unknown', unixepoch(), unixepoch())
-    `, [pluginId, accountId, manifest.plugin_key, manifest.provider_key, manifest.installation_key, environment, ...values.slice(1)]);
+        family_key, version, provider_key, plugin_kind, category, display_name, short_name, description,
+        mention_aliases_json, endpoint_url, transport, auth_type, oauth_connect_url, capabilities_json,
+        tool_lanes_json, config_json, metadata_json, icon_url, icon_dark_url, icon_alt, icon_fit,
+        composer_visible, settings_visible, sort_priority, health_strategy, plugin_key, id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [...registry, manifest.plugin_key, pluginId]);
   }
+  await runMutation(db, `
+    INSERT INTO agentsam_plugin_installations (
+      account_id, plugin_id, instance_key, enabled, setup_status, secret_ref, resource_scope_json,
+      composer_visible, settings_visible
+    ) VALUES (?, ?, ?, 1, 'unconfigured', ?, ?, ?, ?)
+    ON CONFLICT(account_id, plugin_id, instance_key) DO UPDATE SET
+      secret_ref=excluded.secret_ref, resource_scope_json=excluded.resource_scope_json,
+      enabled=CASE WHEN ? THEN enabled ELSE 1 END, updated_at=unixepoch()
+  `, [accountId, pluginId, manifest.installation_key, manifest.secret_ref, JSON.stringify(manifest.resource_scope),
+      manifest.composer_visible ? 1 : 0, manifest.settings_visible ? 1 : 0, options.preserveEnabled === true ? 1 : 0]);
 
   for (const capability of manifest.capabilities) {
     await runMutation(db, `
@@ -123,20 +151,12 @@ export async function installPlugin(db, options = {}) {
 
 export async function listPlugins(db, options = {}) {
   const accountId = clean(options.accountId);
-  const environment = clean(options.environment || 'production');
   const includeDisabled = options.includeDisabled === true;
-  const result = await db.prepare(`
-    SELECT * FROM agentsam_plugins
-    WHERE account_id = ? AND environment = ?
-      AND (? = 1 OR is_enabled = 1)
-    ORDER BY sort_priority, display_name
-  `).bind(accountId, environment, includeDisabled ? 1 : 0).all();
-  return (result?.results || []).map((row) => ({
-    ...row,
-    mention_aliases: json(row.mention_aliases_json, []), capabilities: json(row.capabilities_json, []),
-    tool_lanes: json(row.tool_lanes_json, []), resource_scope: json(row.resource_scope_json, {}),
-    config: json(row.config_json, {}), metadata: json(row.metadata_json, {}),
-  }));
+  const result = await db.prepare(`${PLUGIN_VIEW_SQL}
+    WHERE i.account_id = ? AND (? = 1 OR i.enabled = 1)
+    ORDER BY p.sort_priority, p.display_name
+  `).bind(accountId, includeDisabled ? 1 : 0).all();
+  return (result?.results || []).map(hydratePlugin);
 }
 
 export async function listPluginTools(db, options = {}) {
@@ -144,9 +164,9 @@ export async function listPluginTools(db, options = {}) {
   const includeDisabledPlugins = options.includeDisabledPlugins === true;
   const result = await db.prepare(`
     SELECT t.* FROM agentsam_tools t
-    JOIN agentsam_plugins p ON p.id = t.plugin_id
+    JOIN agentsam_plugin_installations i ON i.plugin_id = t.plugin_id AND i.account_id = t.account_id
     WHERE t.account_id = ? AND t.is_active = 1
-      AND (? = 1 OR p.is_enabled = 1)
+      AND (? = 1 OR i.enabled = 1)
     ORDER BY t.connector_priority, t.sort_priority, t.tool_name
   `).bind(accountId, includeDisabledPlugins ? 1 : 0).all();
   return (result?.results || []).map((row) => ({
@@ -166,7 +186,7 @@ export async function updatePluginPreferences(db, options = {}) {
   const fields = [];
   const values = [];
   if (typeof options.enabled === 'boolean') {
-    fields.push('is_enabled=?');
+    fields.push('enabled=?');
     values.push(options.enabled ? 1 : 0);
   }
   if (typeof options.composerVisible === 'boolean') {
@@ -180,26 +200,17 @@ export async function updatePluginPreferences(db, options = {}) {
   if (!fields.length) throw new Error('plugin_preferences_empty');
 
   await runMutation(db, `
-    UPDATE agentsam_plugins
+    UPDATE agentsam_plugin_installations
     SET ${fields.join(', ')}, updated_at=unixepoch()
-    WHERE id=? AND account_id=?
+    WHERE plugin_id=? AND account_id=?
   `, [...values, pluginId, accountId]);
 
-  const row = await db.prepare(`
-    SELECT * FROM agentsam_plugins
-    WHERE id=? AND account_id=?
-    LIMIT 1
+  const row = await db.prepare(`${PLUGIN_VIEW_SQL}
+    WHERE p.id=? AND i.account_id=?
+    ORDER BY i.created_at LIMIT 1
   `).bind(pluginId, accountId).first();
   if (!row) throw new Error('plugin_not_found');
-  return {
-    ...row,
-    mention_aliases: json(row.mention_aliases_json, []),
-    capabilities: json(row.capabilities_json, []),
-    tool_lanes: json(row.tool_lanes_json, []),
-    resource_scope: json(row.resource_scope_json, {}),
-    config: json(row.config_json, {}),
-    metadata: json(row.metadata_json, {}),
-  };
+  return hydratePlugin(row);
 }
 
 export async function recordPluginHealthCheck(db, value = {}) {
@@ -218,7 +229,7 @@ export async function recordPluginHealthCheck(db, value = {}) {
   ]);
   const healthy = value.status === 'healthy';
   await runMutation(db, `
-    UPDATE agentsam_plugins SET health_status=?, last_health_at=?,
+    UPDATE agentsam_plugin_installations SET health_status=?, last_health_at=?,
       last_healthy_at=CASE WHEN ? THEN ? ELSE last_healthy_at END,
       consecutive_failures=CASE WHEN ? THEN 0 ELSE consecutive_failures + 1 END,
       avg_latency_ms=CASE
@@ -226,16 +237,11 @@ export async function recordPluginHealthCheck(db, value = {}) {
         WHEN avg_latency_ms IS NULL THEN ?
         ELSE ((avg_latency_ms * 4) + ?) / 5
       END,
-      error_rate_24h=COALESCE((
-        SELECT CAST(SUM(CASE WHEN status = 'healthy' THEN 0 ELSE 1 END) AS REAL) / COUNT(*)
-        FROM agentsam_plugin_health_checks
-        WHERE plugin_id = ? AND created_at >= unixepoch() - 86400
-      ), 0),
       last_error_code=?, last_error_message=?, updated_at=unixepoch()
-    WHERE id=? AND account_id=?
+    WHERE plugin_id=? AND account_id=?
   `, [
     value.status, completedAt, healthy ? 1 : 0, completedAt, healthy ? 1 : 0,
-    value.latencyMs ?? null, value.latencyMs ?? null, value.latencyMs ?? null, value.pluginId,
+    value.latencyMs ?? null, value.latencyMs ?? null, value.latencyMs ?? null,
     value.errorCode || null, value.errorMessage || null,
     value.pluginId, value.accountId,
   ]);
@@ -254,8 +260,9 @@ export async function recordAiPluginModelDiscovery(db, value = {}) {
   if (!pluginId) throw new Error('plugin_id_required');
   if (!accountId) throw new Error('plugin_account_id_required');
   const plugin = await db.prepare(`
-    SELECT id, plugin_key, provider_key, environment, plugin_kind, metadata_json
-    FROM agentsam_plugins WHERE id = ? AND account_id = ? LIMIT 1
+    SELECT p.id, p.plugin_key, p.provider_key, 'production' AS environment, p.plugin_kind, i.config_json AS metadata_json
+    FROM agentsam_plugin_installations i JOIN agentsam_plugins p ON p.id = i.plugin_id
+    WHERE p.id = ? AND i.account_id = ? LIMIT 1
   `).bind(pluginId, accountId).first();
   if (!plugin) throw new Error(`plugin_not_found:${pluginId}`);
   if (clean(plugin.plugin_kind) !== 'ai') throw new Error(`plugin_not_ai:${pluginId}`);
@@ -265,8 +272,8 @@ export async function recordAiPluginModelDiscovery(db, value = {}) {
     fetchedAtUnix: value.completedAt,
   });
   await runMutation(db, `
-    UPDATE agentsam_plugins SET metadata_json = ?, updated_at = unixepoch()
-    WHERE id = ? AND account_id = ?
+    UPDATE agentsam_plugin_installations SET config_json = ?, updated_at = unixepoch()
+    WHERE plugin_id = ? AND account_id = ?
   `, [JSON.stringify(probe.metadata), pluginId, accountId]);
 
   const snapshot = probe.metadata.model_snapshot || null;
@@ -276,7 +283,7 @@ export async function recordAiPluginModelDiscovery(db, value = {}) {
     accountId,
     environment: plugin.environment,
     checkKind: 'model_inventory',
-    checkSource: value.checkSource || 'provider_discovery',
+    checkSource: value.checkSource || 'manual',
     status: probe.health_status,
     startedAt: value.startedAt,
     completedAt: probe.last_health_at,

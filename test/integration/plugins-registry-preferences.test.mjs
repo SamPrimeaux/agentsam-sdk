@@ -42,7 +42,8 @@ test('plugin preferences update is account scoped and returns normalized registr
     enabled: false,
   });
 
-  assert.match(mutation.sql, /WHERE id=\? AND account_id=\?/);
+  assert.match(mutation.sql, /UPDATE agentsam_plugin_installations/);
+  assert.match(mutation.sql, /WHERE plugin_id=\? AND account_id=\?/);
   assert.deepEqual(mutation.args.slice(-2), ['plg_demo', 'acct_1']);
   assert.equal(result.is_enabled, 0);
   assert.deepEqual(result.capabilities, ['demo.read']);
@@ -96,9 +97,15 @@ test('registry refresh can preserve an explicit plugin enable preference', async
     },
   });
 
-  const pluginUpdate = mutations.find((entry) => entry.sql.includes('UPDATE agentsam_plugins SET'));
-  assert.ok(pluginUpdate);
-  assert.match(pluginUpdate.sql, /is_enabled=CASE WHEN \? THEN is_enabled ELSE 1 END/);
-  assert.equal(pluginUpdate.args.at(-2), 1);
-  assert.equal(pluginUpdate.args.at(-1), 'plg_demo');
+  const registryUpdate = mutations.find((entry) => entry.sql.includes('UPDATE agentsam_plugins SET'));
+  assert.ok(registryUpdate);
+  assert.equal(registryUpdate.args.at(-1), 'plg_demo');
+  assert.ok(!registryUpdate.sql.includes('account_id'), 'registry row is account-free');
+
+  const install = mutations.find((entry) => entry.sql.includes('INSERT INTO agentsam_plugin_installations'));
+  assert.ok(install);
+  assert.match(install.sql, /enabled=CASE WHEN \? THEN enabled ELSE 1 END/);
+  assert.equal(install.args[0], 'acct_1');
+  assert.equal(install.args[1], 'plg_demo');
+  assert.equal(install.args.at(-1), 1);
 });
