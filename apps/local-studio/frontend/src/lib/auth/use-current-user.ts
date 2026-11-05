@@ -57,6 +57,7 @@ function normalizeDesktopUser(user: DesktopIdentityMessage["user"]): AppUser | n
 // first application window painted. One restore per webview, never per hook.
 const desktopListeners = new Set<() => void>();
 let desktopRestorationStarted = false;
+let desktopReadyListenerRegistered = false;
 let desktopSnapshot: CurrentUserState = { user: DEV_USER, isPending: false };
 
 function publishDesktopUser(user: AppUser | null) {
@@ -73,19 +74,26 @@ function startDesktopIdentityRestore() {
     if (message?.type !== 'agentsam:desktop-identity') return;
     publishDesktopUser(message.authenticated ? normalizeDesktopUser(message.user) : null);
   });
-  // Render the native Studio shell before requesting secured session state.
-  // The request can trigger a macOS approval dialog on an ad-hoc signed build.
-  window.setTimeout(() => {
-    void invokeIdentity({ op: 'status' }).then((raw) => {
-      const status = raw as DesktopIdentityMessage;
-      publishDesktopUser(status.authenticated ? normalizeDesktopUser(status.user) : null);
-    }).catch(() => publishDesktopUser(null));
-  }, 750);
+  // Restore the session only after the packaged shell is visible. On ad-hoc
+  // signed macOS builds this can request Keychain consent, so it must not race
+  // the initial window paint or interrupt a blank/partial startup surface.
+  void invokeIdentity({ op: 'status' }).then((raw) => {
+    const status = raw as DesktopIdentityMessage;
+    publishDesktopUser(status.authenticated ? normalizeDesktopUser(status.user) : null);
+  }).catch(() => publishDesktopUser(null));
 }
 
 function subscribeDesktopIdentity(listener: () => void): () => void {
   desktopListeners.add(listener);
-  startDesktopIdentityRestore();
+  if (!desktopReadyListenerRegistered && typeof window !== 'undefined') {
+    desktopReadyListenerRegistered = true;
+    const shell = window as Window & { __AGENTSAM_DESKTOP_SHELL_READY__?: boolean };
+    if (shell.__AGENTSAM_DESKTOP_SHELL_READY__) {
+      startDesktopIdentityRestore();
+    } else {
+      window.addEventListener('agentsam:desktop-shell-ready', () => startDesktopIdentityRestore(), { once: true });
+    }
+  }
   return () => { desktopListeners.delete(listener); };
 }
 

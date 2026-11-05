@@ -98,6 +98,24 @@ export function PackagedConsoleFrame({ children }: { children: ReactNode }) {
   // Shell is persistent; routing updates the React Outlet without discarding the workbench.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep the HTML boot mark until the actual packaged console and AgentSam
+  // shell have committed, then release it after two paint opportunities.
+  useEffect(() => {
+    if (!target || !isPackagedDesktop()) return;
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        if (!document.querySelector('[data-agentsam-app-shell="local-studio"]')) return;
+        window.dispatchEvent(new Event('agentsam:desktop-shell-ready'));
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [target]);
+
   return <>
     <div id="console-app" data-agentsam-console-host />
     {target ? createPortal(children, target) : null}

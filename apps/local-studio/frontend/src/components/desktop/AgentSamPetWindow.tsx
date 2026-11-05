@@ -9,6 +9,19 @@ export function AgentSamPetWindow() {
   const [state, setState] = useState<PetState>("idle");
   const [companion, setCompanion] = useState<CompanionProfile>(() => resolveCompanion('geaux'));
   useEffect(() => {
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => {
+        (window as Window & { __AGENTSAM_DESKTOP_SHELL_READY__?: boolean }).__AGENTSAM_DESKTOP_SHELL_READY__ = true;
+        window.dispatchEvent(new Event('agentsam:desktop-shell-ready'));
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, []);
+  useEffect(() => {
     let active = true;
     let dispose: (() => void) | undefined;
     const refresh = () => void loadCompanionSettings().then((settings) => {

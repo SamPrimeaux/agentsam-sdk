@@ -12,17 +12,34 @@ function pathData(svg) {
 }
 
 const canonical = await read('packages/agentsam-desktop-shell/icons/local-studio/AgentSam-Mark.svg');
+const white = await read('assets/brand/AgentSam-Mark-White.svg');
 const dark = await read('apps/local-studio/frontend/public/brand/agentsam-mark-on-dark.svg');
 const light = await read('apps/local-studio/frontend/public/brand/agentsam-mark-on-light.svg');
 const brandConfig = await read('apps/local-studio/frontend/agentsam/brand.ts');
+const desktopIndex = await read('apps/local-studio/frontend/desktop/index.html');
+const desktopHost = await read('apps/local-studio/frontend/agentsam/PackagedConsoleFrame.tsx');
+const desktopIdentity = await read('apps/local-studio/frontend/src/lib/auth/use-current-user.ts');
+const desktopPet = await read('apps/local-studio/frontend/src/components/desktop/AgentSamPetWindow.tsx');
+const desktopEntry = await read('apps/local-studio/frontend/desktop/src/main.tsx');
 const manifest = JSON.parse(
   await read('packages/agentsam-desktop-shell/manifests/local-studio.json'),
 );
 
+assert.equal(pathData(white), pathData(canonical), 'approved white mark geometry drifted');
 assert.equal(pathData(dark), pathData(canonical), 'dark shell mark geometry drifted');
 assert.equal(pathData(light), pathData(canonical), 'light shell mark geometry drifted');
-assert.match(dark, /fill="#e8eaef"/i);
+assert.match(white, /fill="#FFFFFF"/i);
+assert.equal(dark, white, 'packaged dark-surface mark must match the approved white source');
 assert.match(light, /fill="#202020"/i);
+
+assert.ok(desktopIndex.includes('id="agentsam-desktop-boot"'), 'desktop entry must include a pre-React boot surface');
+assert.ok(desktopIndex.includes('src="/brand/agentsam-mark-on-dark.svg"'), 'desktop boot must use the local white mark');
+assert.match(desktopIndex, /prefers-reduced-motion/, 'desktop boot must respect reduced-motion preferences');
+assert.match(desktopIndex, /agentsam:desktop-shell-ready/, 'desktop boot must wait for the shell-ready event');
+assert.match(desktopHost, /agentsam:desktop-shell-ready/, 'packaged console must signal shell readiness');
+assert.match(desktopIdentity, /agentsam:desktop-shell-ready/, 'secure identity restore must wait for shell readiness');
+assert.match(desktopPet, /agentsam:desktop-shell-ready/, 'pet window must release its own identity restore gate');
+assert.ok(!desktopEntry.includes('clearTimeout(window.__AGENTSAM_DESKTOP_BOOT_GUARD__)'), 'React entry must not clear the boot guard before shell readiness');
 
 assert.equal(
   manifest.app_icon?.mark,
@@ -54,4 +71,4 @@ assert.deepEqual(
   'packaged Local Studio app raster must remain byte-identical to its canonical source',
 );
 
-console.log('Local Studio brand assets PASS · one canonical mark · dark/light shell variants · local-only');
+console.log('Local Studio brand assets PASS · canonical white mark · dark/light variants · pre-React desktop boot · shell-ready identity restore');

@@ -9,7 +9,6 @@ import "../../src/styles.css";
 declare global {
   interface Window {
     __AGENTSAM_DESKTOP__?: boolean;
-    __AGENTSAM_DESKTOP_BOOT_GUARD__?: number;
   }
 }
 
@@ -29,6 +28,3 @@ if (isAgentSamPetWindow) {
   createRoot(root).render(<StrictMode><RouterProvider router={router} /></StrictMode>);
 }
 
-if (window.__AGENTSAM_DESKTOP_BOOT_GUARD__) {
-  window.clearTimeout(window.__AGENTSAM_DESKTOP_BOOT_GUARD__);
-}
