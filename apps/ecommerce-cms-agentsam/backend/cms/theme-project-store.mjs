@@ -125,7 +125,7 @@ async function projectRow(env, accountId, id, siteId = null) {
     ? await resolveCmsSite(env.DB, { accountId, siteId })
     : await resolveCmsSite(env.DB, { accountId, createDefault: true });
   return env.DB.prepare(
-    "SELECT id,account_id,site_id,global_key,global_type,status,inline_content_json,content_object_key,content_version,content_hash,created_at,updated_at FROM cms_globals WHERE account_id=? AND site_id=? AND global_key=? AND global_type='theme-project' LIMIT 1"
+    "SELECT id,account_id,site_id,global_key,global_type,status,inline_content_json,content_object_key,content_version,content_hash,created_at,updated_at FROM cms_globals WHERE account_id=? AND site_id=? AND global_key=? AND global_type='theme-project' AND status!='archived' LIMIT 1"
   ).bind(accountId, site.id, themeProjectGlobalKey(id)).first();
 }
 
