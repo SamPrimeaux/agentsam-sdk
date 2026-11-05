@@ -44,6 +44,38 @@ function domainDb(rowsByHost) {
   };
 }
 
+function siteOwnedDb(rowsByHost, pagesBySite = {}, sectionsByPage = {}) {
+  return {
+    prepare(sql) {
+      if (/FROM cms_sites s/.test(sql)) {
+        return {
+          bind(primary, alias, orderedPrimary) {
+            assert.equal(primary, alias);
+            assert.equal(primary, orderedPrimary);
+            return { all: async () => ({ results: rowsByHost[primary] || [] }) };
+          },
+        };
+      }
+      if (/FROM cms_pages/.test(sql)) {
+        assert.match(sql, /site_id = \\?/);
+        assert.match(sql, /status = 'published'/);
+        return {
+          bind(siteId, route, withoutTrailingSlash) {
+            return { all: async () => ({ results: (pagesBySite[siteId] || []).filter(page =>
+              page.status === 'published' && [route, withoutTrailingSlash].includes(page.route_path)
+            ) }) };
+          },
+        };
+      }
+      if (/FROM cms_page_sections/.test(sql)) {
+        assert.match(sql, /page_id = \\?/);
+        return { bind(pageId) { return { all: async () => ({ results: sectionsByPage[pageId] || [] }) }; } };
+      }
+      throw new Error('Unexpected public-site query: ' + sql);
+    },
+  };
+}
+
 const siteA = {
   id: "site_alpha", account_id: "acct_alpha", slug: "alpha-site",
   name: "Alpha", primary_domain: "alpha.example", domain_aliases_json: "[]", status: "active",
