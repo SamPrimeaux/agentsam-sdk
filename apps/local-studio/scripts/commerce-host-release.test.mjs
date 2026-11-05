@@ -28,6 +28,8 @@ test('installed site/editor entrypoints and programmatic page changes stay in Lo
   assert.doesNotMatch(sites, /window\.location\.replace/);
   const adapter = read('../frontend/public/admin/host-config.js');
   assert.match(adapter, /window\.__agentsamAdminNavigate/);
+  assert.match(adapter, /url\.pathname\.startsWith\('\/api\/work\/'\)/);
+  assert.match(adapter, /url\.pathname === '\/api\/projects'/);
   const pages = read('../../ecommerce-cms-agentsam/frontend/static/pages.html');
   const editor = read('../../ecommerce-cms-agentsam/frontend/static/page-edit.html');
   const visual = read('../../ecommerce-cms-agentsam/frontend/static/js/theme-editor.js');

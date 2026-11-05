@@ -15,7 +15,13 @@
     window.fetch = async function (input, init) {
       const request = new Request(input, init);
       const url = new URL(request.url, window.location.href);
-      if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/admin/')) return originalFetch(input, init);
+      const hostedApi = url.origin === window.location.origin && (
+        url.pathname.startsWith('/api/admin/') ||
+        url.pathname.startsWith('/api/work/') ||
+        url.pathname === '/api/projects' ||
+        url.pathname.startsWith('/api/projects/')
+      );
+      if (!hostedApi) return originalFetch(input, init);
       return desktopHost.request(request);
     };
   }

@@ -28,9 +28,14 @@ export function createDesktopConsoleHost(navigate: (path: string) => void) {
     activateAssistant() { navigate('/admin/agentsam'); },
     async request(request: Request): Promise<Response> {
       const url = new URL(request.url);
-      if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/admin/')) throw new Error('Console request outside installed application');
+      if (url.origin !== window.location.origin) throw new Error('Console request outside installed application');
+      const operation = url.pathname.startsWith('/api/admin/') ? 'commerce'
+        : url.pathname.startsWith('/api/work/') || url.pathname === '/api/projects' || url.pathname.startsWith('/api/projects/')
+          ? 'work' : null;
+      if (!operation) throw new Error('Console request route is not installed');
       // Browser/local-preview mode already has a same-origin Worker API. The
-      // native service bridge exists only inside the packaged Tauri desktop app.
+      // native service bridge carries the saved desktop session for Commerce
+      // and Work APIs; the native side validates each route independently.
       if (!isPackagedDesktop()) return fetch(request);
       const method = request.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
       const contentType = request.headers.get('content-type') || '';
@@ -46,7 +51,7 @@ export function createDesktopConsoleHost(navigate: (path: string) => void) {
           body_base64 = btoa(binary);
         }
       }
-      const result = await invokeStudioService({ operation: 'commerce', path: url.pathname + url.search, method, body, body_base64, content_type: contentType });
+      const result = await invokeStudioService({ operation, path: url.pathname + url.search, method, body, body_base64, content_type: contentType });
       if (result.status === 401) throw new Error('Sign in to AgentSam from Account settings, then retry.');
       return new Response(result.body, { status: result.status, headers: { 'content-type': result.content_type || 'application/json' } });
     },

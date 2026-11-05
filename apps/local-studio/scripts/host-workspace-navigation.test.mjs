@@ -99,3 +99,15 @@ test('both shell hosts expose the same workspace rename and pin actions', () => 
   assert.match(reactShell, /onRenameProject:/);
   assert.match(reactShell, /onPinConversation: state\.pinTrail, onRenameConversation: state\.renameTrail/);
 });
+
+
+test('packaged Ecommerce Console routes authenticated Work and project reads through the native session bridge', () => {
+  const adapter = readFileSync(new URL('../frontend/src/lib/apps/desktop-console-host.ts', import.meta.url), 'utf8');
+  assert.match(hostConfig, /url\.pathname\.startsWith\('\/api\/admin\/'\)/);
+  assert.match(hostConfig, /url\.pathname\.startsWith\('\/api\/work\/'\)/);
+  assert.match(hostConfig, /url\.pathname === '\/api\/projects'/);
+  assert.match(hostConfig, /url\.pathname\.startsWith\('\/api\/projects\/'\)/);
+  assert.match(adapter, /url\.pathname\.startsWith\('\/api\/admin\/'\) \? 'commerce'/);
+  assert.match(adapter, /url\.pathname\.startsWith\('\/api\/work\/'\).*'work'/s);
+  assert.match(adapter, /invokeStudioService\(\{ operation,/);
+});
