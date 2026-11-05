@@ -303,7 +303,7 @@ addPageForm?.addEventListener("submit", async (event) => {
 
     const [data,themeData] = await Promise.all([
       cmsAdminFetch('/api/admin/cms/pages'),
-      cmsAdminFetch('/api/admin/cms/theme-projects'),
+      cmsAdminFetch('/api/admin/cms/theme-projects?site_id='+encodeURIComponent(selectedSiteId)),
     ]);
     selectedThemeProject=themeData?.projects?.[0]||null;
     // Global theme settings are edited in Theme Editor, not listed as a
