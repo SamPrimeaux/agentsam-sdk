@@ -2388,7 +2388,7 @@ function GitView({snapshot}:{snapshot:SettingsSnapshot}) {
     <>
       <Section title="GitHub authorization" description="Non-secret evidence from the account's existing OAuth registry. An active grant does not itself prove GitHub API access.">
         {!data?.available ? (
-          <p role="status" className="rounded-xl border border-amber-500/25 p-4 text-[12px] text-[var(--settings-warning-ink)]">
+          <p role="status" className="rounded-xl border border-amber-500/25 p-4 text-[12px] text-foreground">
             OAuth connection status is unavailable. No disconnected state is inferred.
           </p>
         ) : (
