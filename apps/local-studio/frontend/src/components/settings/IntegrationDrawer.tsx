@@ -119,7 +119,7 @@ export function IntegrationDrawer({
                 <dl className="mt-3 divide-y divide-border rounded-2xl bg-muted px-4 shadow-hairline">
                   <div className="flex items-start justify-between gap-4 py-3">
                     <dt className="text-sm text-muted-foreground">Account ID</dt>
-                    <dd className="max-w-56 break-all text-right font-mono text-xs text-foreground">
+                    <dd className="max-w-56 break-all text-right text-xs text-foreground">
                       {details.cloudflare_account_id || "Selected during consent"}
                     </dd>
                   </div>

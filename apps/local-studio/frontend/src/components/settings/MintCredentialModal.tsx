@@ -129,7 +129,7 @@ export function MintCredentialModal({
                     type={showSecret ? "text" : "password"}
                     value={secretOnce}
                     readOnly
-                    className="h-11 pr-24 font-mono text-xs"
+                    className="h-11 pr-24 text-xs"
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center">
                     <button

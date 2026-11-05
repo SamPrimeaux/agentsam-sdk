@@ -129,8 +129,8 @@ export function CredentialsTable({ refreshToken = 0 }: { refreshToken?: number }
                     </div>
                   </div>
                   <p className="text-sm capitalize text-muted-foreground">{row.kind}</p>
-                  <p className="font-mono text-xs text-muted-foreground">{row.env}</p>
-                  <p className="font-mono text-sm text-muted-foreground">{row.secret_preview || row.prefix}</p>
+                  <p className="min-w-0 truncate text-xs text-muted-foreground" title={row.env}>{row.env}</p>
+                  <p className="min-w-0 truncate text-sm text-muted-foreground" title={row.secret_preview || row.prefix}>{row.secret_preview || row.prefix}</p>
                   <p className="text-sm text-muted-foreground">{formatUnixDate(row.created_at_unix)}</p>
                   <div className="flex flex-wrap justify-start gap-1 md:justify-end">
                     {confirming ? (

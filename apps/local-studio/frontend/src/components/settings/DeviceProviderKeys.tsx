@@ -366,7 +366,7 @@ export function DeviceProviderKeys({
                       value={drafts[id]}
                       onChange={(event) => setDrafts((current) => ({ ...current, [id]: event.target.value }))}
                       placeholder={`Paste ${label} key`}
-                      className="h-9 min-w-0 font-mono sm:w-64"
+                      className="h-9 min-w-0 sm:w-64"
                     />
                     <Button
                       type="button"
