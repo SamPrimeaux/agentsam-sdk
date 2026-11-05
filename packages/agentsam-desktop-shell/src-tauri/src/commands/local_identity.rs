@@ -318,7 +318,15 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
             let url = reqwest::Url::parse(&format!("https://console.invalid{path}"))
                 .map_err(|_| "studio_service_commerce_path_invalid")?;
             let route = url.path();
-            let allowed = ["/api/admin/me", "/api/admin/overview", "/api/admin/products", "/api/admin/collections", "/api/admin/inventory", "/api/admin/media", "/api/admin/platform/products", "/api/admin/platform/bindings"].contains(&route)
+            // Theme Store is an installed Commerce capability. The native bridge
+            // permits catalog reads and explicit per-theme installs, not an open
+            // proxy to arbitrary admin routes or cross-account project paths.
+            let theme_install = route.strip_prefix("/api/admin/website-themes/")
+                .and_then(|tail| tail.strip_suffix("/install"))
+                .is_some_and(|slug| !slug.is_empty() && slug.len() <= 96
+                    && slug.bytes().all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == b'-'));
+            let allowed = route == "/api/admin/website-themes" || theme_install
+                || ["/api/admin/me", "/api/admin/overview", "/api/admin/products", "/api/admin/collections", "/api/admin/inventory", "/api/admin/media", "/api/admin/platform/products", "/api/admin/platform/bindings"].contains(&route)
                 || ["/api/admin/platform/products/", "/api/admin/products/", "/api/admin/variants/", "/api/admin/product-studio/", "/api/admin/completeful/", "/api/admin/media/", "/api/admin/assets/", "/api/admin/cms/", "/api/admin/agentsam/", "/api/admin/theme-editor/", "/api/admin/store/"].iter().any(|prefix| route.starts_with(prefix));
             if !allowed || !path.starts_with("/api/admin/") || url.host_str() != Some("console.invalid")
                 || path.contains("..") || path.contains('%') && path.split('?').next().unwrap_or("").contains('%')
@@ -330,7 +338,8 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 "PATCH" => Method::PATCH, "DELETE" => Method::DELETE,
                 _ => return Err("studio_service_commerce_method_invalid".into()),
             };
-            if ["/api/admin/me", "/api/admin/overview", "/api/admin/platform/bindings"].contains(&route) && method != Method::GET {
+            if (["/api/admin/me", "/api/admin/overview", "/api/admin/platform/bindings", "/api/admin/website-themes"].contains(&route) && method != Method::GET)
+                || (theme_install && method != Method::POST) {
                 return Err("studio_service_commerce_method_invalid".into());
             }
             Ok((method, path.to_owned()))
@@ -859,18 +868,32 @@ mod tests {
     fn commerce_bridge_allows_only_installed_product_routes() {
         for (path, method) in [("/api/admin/me", "GET"), ("/api/admin/products/12", "PUT"),
             ("/api/admin/collections", "POST"), ("/api/admin/media", "POST"),
-            ("/api/admin/platform/products/prod_one", "PATCH")] {
+            ("/api/admin/platform/products/prod_one", "PATCH"),
+            ("/api/admin/website-themes", "GET"),
+            ("/api/admin/website-themes/plain-jane/install", "POST")] {
             let request: StudioServiceBridgeRequest = serde_json::from_value(json!({
                 "operation":"commerce","path":path,"method":method
             })).unwrap();
             assert!(studio_service_route(&request).is_ok(), "{path}");
         }
         for path in ["https://evil.invalid/api/admin/products", "/api/admin/login", "/api/admin/me/../login",
-            "/api/admin/media/../../vault", "/api/admin/products/%2e%2e/login", "/api/admin/mediasecrets", "/api/vault/secrets"] {
+            "/api/admin/media/../../vault", "/api/admin/products/%2e%2e/login", "/api/admin/mediasecrets", "/api/vault/secrets",
+            "/api/admin/website-themes/plain-jane/../install", "/api/admin/website-themes/%2e%2e/install",
+            "/api/admin/website-themes/UPPER/install", "/api/admin/website-themes/plain-jane/secrets"] {
             let request: StudioServiceBridgeRequest = serde_json::from_value(json!({
                 "operation":"commerce","path":path,"method":"GET"
             })).unwrap();
             assert!(studio_service_route(&request).is_err(), "{path}");
+        }
+        for (path, method) in [
+            ("/api/admin/website-themes", "POST"),
+            ("/api/admin/website-themes/plain-jane/install", "GET"),
+            ("/api/admin/website-themes/plain-jane/install", "DELETE"),
+        ] {
+            let request: StudioServiceBridgeRequest = serde_json::from_value(json!({
+                "operation":"commerce","path":path,"method":method
+            })).unwrap();
+            assert!(studio_service_route(&request).is_err(), "{method} {path}");
         }
     }
 
@@ -878,6 +901,7 @@ mod tests {
     fn work_bridge_allows_only_bounded_work_routes() {
         for (path, method) in [
             ("/api/work/snapshot?surface=mail", "GET"),
+            ("/api/work/snapshot?surface=projects", "GET"),
             ("/api/work/gmail/oauth/start", "POST"),
             ("/api/work/gmail/status", "GET"),
             ("/api/work/gmail/disconnect", "POST"),
