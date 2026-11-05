@@ -155,24 +155,6 @@ async function readR2Text(r2, key) {
   return text && text.length ? text : null;
 }
 
-async function readCached(kv, cacheKey) {
-  if (!kv) return null;
-  try {
-    return await kv.get(cacheKey);
-  } catch {
-    return null;
-  }
-}
-
-async function writeCached(kv, cacheKey, html) {
-  if (!kv || !html) return;
-  try {
-    await kv.put(cacheKey, html, { expirationTtl: 60 });
-  } catch {
-    // cache is best-effort
-  }
-}
-
 function htmlResponse(html, extraHeaders = {}) {
   return new Response(html, {
     status: 200,
