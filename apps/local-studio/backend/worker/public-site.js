@@ -266,21 +266,39 @@ export async function servePublicSitePage(
 
   const siteSlug = site.slug;
   const website = resolveWebsiteAssets(env);
-  const workerAssets = resolveWorkerStaticAssets(env);
+  // Worker ASSETS is an AgentSam-only bootstrap copy. Never let another
+  // hostname fall back to those files when its own R2 object is missing.
+  const workerAssets = site.slug === 'agentsam-sdk' ? resolveWorkerStaticAssets(env) : null;
 
-  let relative = PUBLIC_SITE_HTML[pathname];
-  if (!relative && isThemesPath(pathname)) {
-    relative = themesRelative(pathname);
-  }
-  if (!relative && isDocsPath(pathname)) {
-    relative = docsRelative(pathname);
-  }
-  if (!relative && isSiteStaticPath(pathname)) {
+  let relative = null;
+  let r2Key = null;
+  if (isSiteStaticPath(pathname)) {
     relative = siteStaticRelative(pathname);
+    r2Key = websitePublicKey(siteSlug, relative);
+  } else {
+    let pageSource;
+    try {
+      pageSource = await resolvePublishedPageSource(env.DB, site, pathname);
+    } catch (error) {
+      console.error('Public CMS page resolution failed:', String(error?.message || error));
+      return new Response('Published page unavailable', {
+        status: 503,
+        headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' },
+      });
+    }
+    if (pageSource) {
+      if (!pageSource.key) return null;
+      r2Key = pageSource.key;
+      relative = r2Key.split('/').pop() || 'index.html';
+    } else if (site.slug === 'agentsam-sdk') {
+      // Compatibility only for AgentSam's unmigrated legal/static routes.
+      relative = PUBLIC_SITE_HTML[pathname];
+      if (!relative && isThemesPath(pathname)) relative = themesRelative(pathname);
+      if (!relative && isDocsPath(pathname)) relative = docsRelative(pathname);
+      if (relative) r2Key = websitePublicKey(siteSlug, relative);
+    }
   }
-  if (!relative) return null;
-
-  const r2Key = websitePublicKey(siteSlug, relative);
+  if (!relative || !r2Key) return null;
 
   // D1 resolves the tenant; R2 is the existing content authority. Bypass KV
   // until the site-owned publish path is proven end to end. This avoids an
