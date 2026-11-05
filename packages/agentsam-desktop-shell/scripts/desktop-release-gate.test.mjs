@@ -37,3 +37,30 @@ test('legacy shell-only installer bypass explicitly refuses to produce an artifa
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /stale.*assets|stale.*CAD/i);
 });
+
+
+test('the native app, desktop manifest, lockfiles and updater share the desktop release version', () => {
+  const json = (relative) => JSON.parse(readFileSync(path.resolve(shellRoot, relative), 'utf8'));
+  const pkg = json('package.json');
+  const app = json('../../apps/local-studio/agentsam.app.json');
+  const tauri = json('src-tauri/tauri.conf.json');
+  const shellLock = json('package-lock.json');
+  const rootLock = json('../../package-lock.json');
+  const version = pkg.version;
+  assert.match(version, /^\d+\.\d+\.\d+$/, 'desktop version must be a release semver');
+  for (const [name, actual] of Object.entries({
+    desktopManifest: manifest.version,
+    appManifest: app.version,
+    tauriConfig: tauri.version,
+    desktopLock: shellLock.version,
+    desktopLockRoot: shellLock.packages[''].version,
+    rootWorkspaceLock: rootLock.packages['packages/agentsam-desktop-shell'].version,
+  })) {
+    assert.equal(actual, version, `${name} must match desktop version ${version}`);
+  }
+  assert.equal(tauri.identifier, manifest.bundle_identifier);
+  assert.ok(manifest.included_apps.includes('ecommerce-cms-agentsam'), 'the CMS editor must be included in the desktop bundle');
+  assert.deepEqual(tauri.plugins.updater.endpoints, [
+    'https://updates.inneranimalmedia.com/updates/local-studio/{{target}}/{{arch}}/{{current_version}}',
+  ]);
+});
