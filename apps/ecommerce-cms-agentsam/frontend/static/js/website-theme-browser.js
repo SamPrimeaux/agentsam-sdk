@@ -28,8 +28,8 @@
   const selectedVersion = /^\d+\.\d+\.\d+$/.test(queryParams.get('theme_version') || '')
     ? queryParams.get('theme_version') : null;
   const installIntent = queryParams.get('action') === 'try';
-  const selectedSiteId = () => document.querySelector('.online-store')?.dataset.siteId || queryParams.get('site_id');
-  const preferredSiteId = () => /^[A-Za-z0-9_-]{1,160}$/.test(selectedSiteId() || '') ? selectedSiteId() : null;
+  // A public Try never binds to a previously selected or live website.
+  // site_id in a public URL is context for browsing, not install authority.
   const trustedHandoff = (() => {
     // In embedded CMS the iframe referrer is AgentSam itself. The outer
     // authenticated route retains the actual Theme Store navigation referrer.
@@ -91,10 +91,7 @@
       const result=await requestJSON(
         '/api/admin/website-themes/'+encodeURIComponent(theme.slug)+'/install',
         {method:'POST',headers:{'content-type':'application/json'},
-          body:JSON.stringify({
-            version:theme.version,
-            ...(preferredSiteId() ? {site_id:preferredSiteId()} : {}),
-          })});
+          body:JSON.stringify({version:theme.version})});
       if(typeof result.editor_url!=='string' ||
         !/^\/admin\/theme-project-editor\?project=[A-Za-z0-9_%\-]+&site_id=[A-Za-z0-9_%\-]+$/.test(result.editor_url) ||
         !/^[A-Za-z0-9_-]{1,160}$/.test(result.site_id||''))

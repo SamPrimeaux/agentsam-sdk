@@ -4549,9 +4549,10 @@
     }
   }
   byId('te-more').addEventListener('click', function() { toggleToolbarMenu('te-more','te-more-menu'); });
-  byId('te-edit-code')?.addEventListener('click', function() {
+  byId('te-edit-code')?.addEventListener('click', async function() {
     closeToolbarMore();
-    host.onEditCode();
+    if (dirty && !(await saveDraft())) return;
+    host?.onEditCode?.();
   });
   // Mobile keeps the actual editing controls; secondary actions live behind More.
   function closeToolbarMore() {

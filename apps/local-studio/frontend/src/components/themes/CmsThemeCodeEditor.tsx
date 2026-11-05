@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { WorkspaceEditor } from '@inneranimalmedia/agentsam-ide/surface';
 import '@inneranimalmedia/agentsam-ide/surface/workspace-editor.css';
 import { createCmsThemeFileWorkspace } from './CmsThemeFileWorkspace';
+import { isPackagedDesktop } from '@/lib/desktop/tauri';
 
 const idPattern=/^[A-Za-z0-9_-]{1,160}$/;
 
@@ -30,7 +31,9 @@ export function CmsThemeCodeEditor({ projectId, siteId }: { projectId:string; si
       project:projectId,
       site_id:siteId,
     });
-    window.location.assign('/apps/ecommerce-cms-agentsam?'+query.toString());
+    const route='/apps/ecommerce-cms-agentsam?'+query.toString();
+    if (isPackagedDesktop()) window.location.hash='#'+route;
+    else window.location.assign(route);
   };
   return <div className="h-full min-h-0 w-full" data-theme-code-editor>
     <WorkspaceEditor workspace={workspace} workspaceId={siteId+':'+projectId} label={name}

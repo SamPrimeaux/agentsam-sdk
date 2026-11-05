@@ -89,7 +89,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const errors = [];
 page.on('pageerror', (cause) => errors.push(String(cause)));
 try {
-  await page.goto(baseUrl+'/?theme_sku=iam.theme.plain-jane&theme_version=0.1.0');
+  await page.goto(baseUrl+'/?theme_sku=iam.theme.plain-jane&theme_version=0.1.0&site_id=site-store');
   await page.evaluate(async () => {
     const { mountOnlineStore } = await import('/mount.mjs');
     const frame = document.createElement('iframe');
@@ -101,9 +101,10 @@ try {
         baseUrl: location.origin,
         storefrontUrl: null,
         async loadStore() {
-          return { store: { visibility: 'unknown' }, performance: {},
-            active_theme: { name: 'Theme details unavailable', verified: false,
-              preview_href: null, edit_href: '/admin/theme-editor?slug=home' },
+          return { store: { visibility: 'unpublished' }, performance: {},
+            active_theme: null, preview_theme: null,
+            selected_site_id:'site-store',
+            available_sites:[{id:'site-store',name:'Existing customer website',status:'active',page_count:4}],
             draft_themes: [] };
         },
         onEdit(slug) { window.__edited = slug; },
@@ -121,21 +122,18 @@ try {
   });
   const merchant = page.frameLocator('#merchant-frame');
   await merchant.locator('.online-store').waitFor();
+  await merchant.locator('#store-visibility-label').filter({hasText:/Unverified|Not published|Theme not published/}).waitFor({timeout:9000});
   assert.equal(await merchant.locator('.online-store-title h1').innerText(), 'Online Store');
   assert.match(await merchant.locator('#store-visibility-label').innerText(), /(?:Unverified|Not published|Theme not published)/);
-  assert.equal(await merchant.locator('.online-store-badge--pending').innerText(), 'Unpublished');
+  assert.equal(await merchant.locator('#store-visibility-label').innerText(), 'Theme not published');
   assert.equal(await merchant.locator('.online-store-starter').count(), 0, 'No fake storefront is presented as installed');
-  assert.equal(await merchant.locator('.online-store-preview-message--empty').count(), 2, 'Uninstalled storefront state is explicit');
+  assert.equal(await merchant.locator('.online-store-active').isHidden(), true, 'Uninstalled storefront must not show a fabricated theme preview');
   assert.equal(await merchant.locator('#import-theme-btn').isDisabled(), true, 'Unimplemented import cannot be clicked');
-  const addTheme = merchant.locator('#edit-theme-btn');
-  assert.equal(await addTheme.innerText(), 'Browse website themes');
-  assert.equal(await addTheme.getAttribute('href'), '#theme-product-marketplace');
+  assert.equal(await merchant.locator('#edit-theme-btn').isHidden(), true, 'Uninstalled theme editor button is unavailable until a real draft exists');
   await merchant.locator('#theme-marketplace-grid .theme-marketplace-item').first().waitFor();
   assert.equal(await merchant.locator('#theme-marketplace-grid .theme-marketplace-item').count(), 1);
   assert.equal(await merchant.locator('.theme-marketplace-item h3').first().innerText(), 'Plain Jane Journal');
-  assert.match(await merchant.locator('.theme-marketplace-selection').innerText(), /ready as a private editable draft/);
   assert.equal(await merchant.locator('[data-theme-store-selection]').count(),1,'Theme Store deep link selects the actual released theme');
-  await addTheme.click();
   await merchant.locator('#browse-themes-shortcut').click();
   assert.equal(await page.evaluate(() => window.__browseThemes), undefined, 'Website browsing never opens the appearance-theme route');
   assert.equal(await page.evaluate(() => window.__edited), undefined, 'Unpublished starter does not request an empty theme editor');

@@ -74,11 +74,10 @@ const store = {
 async function boot() {
   // Private installed drafts cannot be addressed by project ID alone:
   // another site may contain an independent copy with the same project ID.
-  if (!siteId || !/^[A-Za-z0-9_-]{1,160}$/.test(siteId)) {
-    const overview=await jsonRequest('/api/admin/store/online');
-    siteId=overview.selected_site_id;
-  }
-  if (!siteId) { location.replace('/admin/store'); return; }
+  if (!siteId || !/^[A-Za-z0-9_-]{1,160}$/.test(siteId))
+    throw new Error('theme_project_site_required');
+  if (projectId && !/^[A-Za-z0-9_-]{1,160}$/.test(projectId))
+    throw new Error('theme_project_id_invalid');
   if(parameters.get('new')==='1'){
     const { prepareNewTheme }=await import('/theme-editor/new-theme.mjs');
     const created=await prepareNewTheme({request:jsonRequest,save:project=>store.save(project),siteId});
@@ -93,8 +92,14 @@ async function boot() {
   // List only this site's authorized projects before accepting a URL hint.
   const listing=await jsonRequest(scoped(API));
   const projects=Array.isArray(listing.projects)?listing.projects:[];
-  const selected=projects.find(item=>item.id===projectId) || projects[0];
-  if (!selected) { location.replace('/admin/store?site_id='+encodeURIComponent(siteId)); return; }
+  // Never substitute another installed project for an explicit account/site
+  // editor deep link, even when this site has a different installed theme.
+  const selected=projectId
+    ? projects.find(item=>item.id===projectId)
+    : (projects.length===1 ? projects[0] : null);
+  if (!selected) throw new Error(projectId
+    ? 'theme_project_not_found_for_site'
+    : 'theme_project_selection_required');
   projectId=selected.id;
   const canonical=new URL(location.href);
   canonical.searchParams.set('site_id',siteId);
@@ -146,7 +151,15 @@ async function boot() {
         version: project.sourcePackageVersion || project.version || null,
         developer: project.sourcePackage?.split('/')?.[0]?.replace(/^@/, '') || null,
       },
-
+      onEditCode() {
+        const route='/apps/ecommerce-cms-agentsam?'+new URLSearchParams({
+          page:'/admin/theme-code-editor', project:projectId, site_id:siteId,
+        }).toString();
+        const target=window.top||window;
+        if(target.__AGENTSAM_DESKTOP__ || target.__TAURI_INTERNALS__)
+          target.location.hash='#'+route;
+        else target.location.assign(route);
+      },
     }, { assetsBase: '/theme-editor/' }).catch(showError);
   }, { once: true });
   frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/theme-editor/editor.css"></head><body></body></html>';

@@ -5,6 +5,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useCurrentUserState } from '@/lib/auth/use-current-user';
 import { RedirectToSignIn } from '@/lib/auth/gates';
 import { resolveEcommerceAdminPath, resolveEcommerceAssetPath } from '@/lib/apps/ecommerce-routing';
+import { themeStoreTrySelection } from '@/lib/apps/theme-store-selection';
 import { CmsThemeCodeEditor } from '@/components/themes/CmsThemeCodeEditor';
 
 type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try' };
@@ -57,12 +58,11 @@ function EcommerceAppHost() {
       }
       // Preserve a validated Theme Store Try intent into the authenticated CMS
       // receiver. This is a selection hint, never authorization for installation.
-      if (page === '/admin/store' && search.action === 'try' &&
-          /^iam\\.theme\\.[a-z][a-z0-9-]{0,63}$/.test(search.theme_sku || '') &&
-          /^\\d+\\.\\d+\\.\\d+$/.test(search.theme_version || '')) {
-        resolved.searchParams.set('theme_sku', search.theme_sku!);
-        resolved.searchParams.set('theme_version', search.theme_version!);
-        resolved.searchParams.set('action', 'try');
+      const trySelection = page === '/admin/store' ? themeStoreTrySelection(search) : null;
+      if (trySelection) {
+        resolved.searchParams.set('theme_sku', trySelection.theme_sku);
+        resolved.searchParams.set('theme_version', trySelection.theme_version);
+        resolved.searchParams.set('action', trySelection.action);
       }
       return resolved.toString();
     })()

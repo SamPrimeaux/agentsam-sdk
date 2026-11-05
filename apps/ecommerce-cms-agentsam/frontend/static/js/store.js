@@ -360,10 +360,24 @@ function showExistingWebsitePreview(href){
   }
 }
 function scopedStoreEditorHref(raw,siteId) {
-  const url=new URL(raw || '/admin/theme-editor',location.origin);
-  if (url.origin!==location.origin ||
+  // The portable Store also runs in about:srcdoc. That document's origin can
+  // serialize as "null" and is not a usable URL base. The owning authenticated
+  // host provides its origin; never infer it from customer content.
+  let origin;
+  try {
+    origin = new URL(window.AgentSamOnlineStoreHost?.baseUrl || window.location.href).origin;
+    if (origin === 'null') return '/admin/store';
+  } catch { return '/admin/store'; }
+  let url;
+  try { url = new URL(raw || '/admin/theme-editor',origin); }
+  catch { return '/admin/store'; }
+  if (url.origin!==origin ||
       !['/admin/theme-editor','/admin/theme-project-editor'].includes(url.pathname))
     return '/admin/store';
+  // An editor URL from a different site is an invalid read-model record.
+  // Never silently rewrite its site_id and open the wrong project's editor.
+  const linkedSite=url.searchParams.get('site_id');
+  if(linkedSite && linkedSite!==siteId)return '/admin/store';
   if (/^[A-Za-z0-9_-]{1,160}$/.test(siteId||'')) url.searchParams.set('site_id',siteId);
   return url.pathname+url.search;
 }
