@@ -34,6 +34,7 @@ assert.match(light, /fill="#202020"/i);
 
 assert.ok(desktopIndex.includes('id="agentsam-desktop-boot"'), 'desktop entry must include a pre-React boot surface');
 assert.ok(desktopIndex.includes('src="/brand/agentsam-mark-on-dark.svg"'), 'desktop boot must use the local white mark');
+assert.ok(desktopIndex.includes('src="./brand/agentsam-mark-on-dark.svg"'), 'desktop recovery state must use a relative bundled logo URL');
 assert.match(desktopIndex, /prefers-reduced-motion/, 'desktop boot must respect reduced-motion preferences');
 assert.match(desktopIndex, /agentsam:desktop-shell-ready/, 'desktop boot must wait for the shell-ready event');
 assert.match(desktopHost, /agentsam:desktop-shell-ready/, 'packaged console must signal shell readiness');
