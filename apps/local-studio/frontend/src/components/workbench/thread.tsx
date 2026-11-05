@@ -10,6 +10,7 @@ import { formatElapsed } from "@/lib/utils";
 import { useWorkStore, useActiveTrail } from "@/lib/work/store";
 import type { ChatMessage } from "@inneranimalmedia/agentsam-local-shared";
 import { Button } from "@/components/ui/button";
+import { ImageLightbox } from "@/components/workbench/image-lightbox";
 
 const STARTERS = [
   "Sketch a dual-pane React layout with an ephemeral helper chat",
@@ -39,8 +40,10 @@ function ConversationImage({ refInfo }: { refInfo: ChatImageReference }) {
     };
   }, [user?.id, refInfo.source]);
   return url ? (
-    <img src={url} alt={refInfo.name} title={refInfo.name} className="max-h-52 max-w-64 rounded-lg object-contain" />
-  ) : <span className="text-xs opacity-70">{refInfo.name} · image stored locally</span>;
+    <ImageLightbox src={url} alt={refInfo.name} triggerClassName="block aspect-[4/3] w-full overflow-hidden rounded-xl border border-border/50 bg-black/10">
+      <img src={url} alt={refInfo.name} title={refInfo.name} className="size-full object-cover" />
+    </ImageLightbox>
+  ) : <span className="grid aspect-[4/3] place-items-center rounded-xl border border-border/50 bg-muted px-2 text-center text-xs opacity-70">{refInfo.name} · image stored locally</span>;
 }
 
 function MessageBubble({
@@ -66,7 +69,7 @@ function MessageBubble({
       <div className="flex justify-end">
         <div className="max-w-[min(100%,40rem)] rounded-2xl bg-accent px-4 py-3 text-sm leading-relaxed text-accent-foreground">
           {Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length ? (
-            <div className="mb-2 flex flex-wrap gap-2">
+            <div className="mb-3 grid max-w-[min(100%,38rem)] grid-cols-2 gap-2 sm:grid-cols-3">
               {(message.metadata.attachments as ChatImageReference[]).filter((image) => image.kind === "image").map((image) => (
                 <ConversationImage key={image.id} refInfo={image} />
               ))}

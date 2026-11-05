@@ -41,7 +41,7 @@ export async function resolveChatImages(
 ): Promise<ChatImagePayload[]> {
   if (!refs.length) return [];
   if (!accountId) throw new Error("Sign in to reopen this image attachment.");
-  if (refs.length > 4) throw new Error("Send up to four images per message.");
+  if (refs.length > 20) throw new Error("Send up to 20 images per message.");
   const { provider } = createIndexedDbContentStorage(accountId);
   const resolved: ChatImagePayload[] = [];
   for (const ref of refs) {

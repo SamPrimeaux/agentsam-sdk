@@ -41,8 +41,9 @@ export async function streamChat(opts: {
 
   // Rehydrate account-scoped original bytes only at the trusted request boundary.
   // Content-local references, not data URLs, remain in persisted chat history.
-  const imageCount = opts.messages.reduce((n, m) => n + (m.attachments?.length || 0), 0);
-  if (imageCount > 4) throw new Error("This conversation contains more than four image inputs. Start a fresh image turn.");
+  if (opts.messages.some((message) => (message.attachments?.length || 0) > 20)) {
+    throw new Error("Send up to 20 images per message.");
+  }
   const modelMessages = await Promise.all(opts.messages.map(async (m) => ({
     role: m.role,
     content: m.content,

@@ -2,7 +2,7 @@ import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type 
 import { createPortal } from 'react-dom';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { ChevronDown, Files, Folder, MessageSquare, MoreHorizontal, PanelLeft, PanelTop, Pin, Pencil, Plus, Search, Share, Trash2, User, X } from 'lucide-react';
+import { ChevronDown, Files, Folder, MessageSquare, MoreHorizontal, PanelLeft, Pin, Pencil, Plus, Search, Trash2, User, X } from 'lucide-react';
 import { useNav } from './NavProvider.js';
 import { NavTrigger } from './NavTrigger.js';
 import type { NavAccount, NavAction, NavConversation, NavDestination, NavProject } from './contracts.js';
@@ -82,9 +82,31 @@ export function NavFilesResources() {
 }
 
 export function NavPinnedSummary() {
-  const { data } = useNav();
-  if (!data.resourceActions?.length) return null;
-  return <NavOverflowMenu label="Toggle pinned summary" actions={data.resourceActions}><PanelTop /></NavOverflowMenu>;
+  const { data, theme } = useNav();
+  const style = useNavStyle();
+  const outputs = data.pinnedSummary?.outputs ?? [];
+  const sources = data.pinnedSummary?.sources ?? [];
+  return <Menu.Root>
+    <Menu.Trigger asChild><button type="button" className="as-nav-button" aria-label="Toggle pinned summary" title="Toggle pinned summary"><PinnedSummaryIcon /></button></Menu.Trigger>
+    <Menu.Portal><Menu.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover as-nav-summary-popover" align="end" sideOffset={8} collisionPadding={12}>
+      <section><div className="as-nav-summary-heading">Outputs</div>{outputs.length ? outputs.map((item, i) => <div className="as-nav-summary-row" key={'o'+i}>{item}</div>) : <div className="as-nav-empty">No outputs yet</div>}</section>
+      <Menu.Separator className="as-nav-menu-separator" />
+      <section><div className="as-nav-summary-heading">Sources</div>{sources.length ? sources.slice(0, 6).map((item, i) => <div className="as-nav-summary-row" key={'s'+i}>{item}</div>) : <div className="as-nav-empty">No sources yet</div>}{sources.length > 6 ? <div className="as-nav-empty">Show {sources.length - 6} more in Files</div> : null}</section>
+    </Menu.Content></Menu.Portal>
+  </Menu.Root>;
+}
+
+function PinnedSummaryIcon() {
+  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
+    <path d="M14 4h7"/><path d="M14 9h7"/><path d="M14 15h7"/><path d="M14 20h7"/>
+  </svg>;
+}
+
+export function NavShareIcon() {
+  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 2v13"/><path d="m16 6-4-4-4 4"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+  </svg>;
 }
 
 export function NavConversationActions() {
@@ -95,7 +117,7 @@ export function NavConversationActions() {
 export function NavShareButton() {
   const { data } = useNav();
   if (!data.onShare) return null;
-  return <button type="button" className="as-nav-button" onClick={data.onShare} aria-label="Share conversation" title="Share"><Share /><span className="as-nav-share-label">Share</span></button>;
+  return <button type="button" className="as-nav-button" onClick={data.onShare} aria-label="Create a public link" title="Create a public link"><NavShareIcon /><span className="as-nav-share-label">Share</span></button>;
 }
 
 export function NavAccountSwitcher({ accounts, activeAccountId, onAccountChange, expanded = false }: { accounts?: NavAccount[]; activeAccountId?: string; onAccountChange?: (id: string) => void; expanded?: boolean }) {

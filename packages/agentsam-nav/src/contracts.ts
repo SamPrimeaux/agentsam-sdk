@@ -37,6 +37,8 @@ export interface NavValue {
   projectActions?: NavAction[];
   conversationActions?: NavAction[];
   resourceActions?: NavAction[];
+  /** Snapshot shown in the reusable pinned-summary popover. */
+  pinnedSummary?: { outputs?: string[]; sources?: string[] };
   getProjectActions?: (project: NavProject) => NavAction[];
   getConversationActions?: (conversation: NavConversation) => NavAction[];
   onNavigate?: (href: string) => void;

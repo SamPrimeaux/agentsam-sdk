@@ -13,6 +13,7 @@ import { ProjectPicker } from '../../../agentsam/ProjectPicker';
 import { toast } from "sonner";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { stageChatImage, type ChatImageReference } from "@/lib/content/chat-images";
+import { ImageLightbox } from "@/components/workbench/image-lightbox";
 import { CHAT_IMAGE_DROP_EVENT, takeChatImages } from "@/lib/content/chat-drop-queue";
 
 const RUN_MODE_PLACEHOLDERS = {
@@ -63,11 +64,18 @@ export function Composer({
     setStaging(true);
     const next: typeof pendingAttachments = [];
     try {
-      for (const file of Array.from(files).slice(0, 4)) {
+      const capacity = Math.max(0, 20 - pendingAttachments.length);
+      const selected = Array.from(files);
+      if (!capacity) {
+        toast.error("A message can include up to 20 images.");
+        return;
+      }
+      if (selected.length > capacity) toast.message(`Only the first ${capacity} image(s) were added. The limit is 20 per message.`);
+      for (const file of selected.slice(0, capacity)) {
         const image = await stageChatImage(file, user?.id || "");
         next.push({ ...image, previewUrl: URL.createObjectURL(file) });
       }
-      setPendingAttachments((previous) => [...previous, ...next].slice(0, 4));
+      setPendingAttachments((previous) => [...previous, ...next].slice(0, 20));
     } catch (error) {
       for (const image of next) if (image.previewUrl) URL.revokeObjectURL(image.previewUrl);
       toast.error(error instanceof Error ? error.message : "Could not attach this image.");
@@ -120,6 +128,7 @@ export function Composer({
         className="hidden"
         suppressHydrationWarning
         multiple
+        accept="image/png,image/jpeg,image/webp"
         onChange={(event) => {
           void onFiles(event.target.files);
           event.target.value = "";
@@ -128,8 +137,8 @@ export function Composer({
       <IconAction
         size="icon-sm"
         variant="ghost"
-        label="Attach a file"
-        hint="Attach an image (PNG, JPEG, WebP, 5 MB max)"
+        label="Attach images"
+        hint="Attach up to 20 images (PNG, JPEG, WebP, 5 MB each)"
         onClick={() => fileRef.current?.click()}
       >
         <Paperclip className="size-4" />
@@ -138,6 +147,32 @@ export function Composer({
       <ModelSelect compact />
     </>
   );
+
+  const attachmentPreview = pendingAttachments.length ? (
+    <div className="px-1 pt-1">
+      <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <span>{pendingAttachments.length} of 20 images</span>
+        <span>Click a thumbnail to expand</span>
+      </div>
+      <div className="grid max-h-48 grid-cols-4 gap-2 overflow-y-auto pr-1 sm:grid-cols-5 md:grid-cols-8">
+        {pendingAttachments.map((attachment) => (
+          <div key={attachment.id} className="group relative aspect-square min-w-0 overflow-hidden rounded-xl border border-border/70 bg-muted">
+            {attachment.previewUrl ? (
+              <ImageLightbox src={attachment.previewUrl} alt={attachment.name} triggerClassName="size-full cursor-zoom-in">
+                <img src={attachment.previewUrl} alt="" className="size-full object-cover" />
+              </ImageLightbox>
+            ) : (
+              <div className="grid size-full place-items-center text-xs text-muted-foreground">Image</div>
+            )}
+            <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] text-white" title={attachment.name}>{attachment.name}</span>
+            <Button type="button" size="icon-sm" variant="secondary" className="absolute right-1 top-1 size-6 rounded-full opacity-100 shadow sm:opacity-0 sm:group-hover:opacity-100" aria-label={`Remove ${attachment.name}`} onClick={() => removeAttachment(attachment.id)}>
+              <Trash2 className="size-3" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
 
   const sendControl = (
     <Button
@@ -171,33 +206,6 @@ export function Composer({
     <div className="agentsam-composer-shell w-full min-w-0 px-[clamp(.4rem,1.2cqi,1rem)] pb-[max(.75rem,env(safe-area-inset-bottom))]"
       onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }}
       onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); void onFiles(event.dataTransfer.files); } }}>
-      {pendingAttachments.length ? (
-        <div className="mx-auto mb-2 flex w-full max-w-6xl flex-wrap gap-2">
-          {pendingAttachments.map((a) => (
-            <div
-              key={a.id}
-              className="flex items-center gap-2 rounded-xl border border-border/60 bg-card/80 px-2 py-1.5 text-xs shadow-hairline"
-            >
-              {a.previewUrl ? (
-                <img src={a.previewUrl} alt="" className="size-9 rounded-md object-cover" />
-              ) : (
-                <span className="flex size-9 items-center justify-center rounded-md bg-muted font-semibold">
-                  {a.kind === "image" ? "IMG" : "FILE"}
-                </span>
-              )}
-              <div className="min-w-0">
-                <div className="truncate font-medium text-foreground">{a.name}</div>
-                <div className="text-muted-foreground">
-                  {a.mimeType} · {(a.size / 1024).toFixed(a.size >= 10240 ? 0 : 1)} KB
-                </div>
-              </div>
-              <Button type="button" size="icon-sm" variant="ghost" className="size-6" aria-label={`Remove ${a.name}`} onClick={() => removeAttachment(a.id)}>
-                <Trash2 className="size-3" />
-              </Button>
-            </div>
-          ))}
-        </div>
-      ) : null}
       {goal ? (
         <GoalStatusStrip
           className="mx-auto mb-2 w-full max-w-6xl rounded-xl bg-card/70 px-3 py-2 text-foreground shadow-hairline backdrop-blur"
@@ -245,6 +253,7 @@ export function Composer({
         streaming={streaming}
         placeholder={targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
         toolbarStart={<>{trigger}{attachControl}</>}
+        attachmentPreview={attachmentPreview}
         sendControl={sendControl}
         cancelControl={cancelControl}
         containerClassName="agentsam-composer-surface mx-auto flex w-full min-w-0 max-w-6xl flex-col rounded-2xl bg-card p-2 pl-3 shadow-hairline"

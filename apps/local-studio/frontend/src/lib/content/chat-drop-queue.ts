@@ -4,7 +4,7 @@ export const CHAT_IMAGE_DROP_EVENT = "agentsam:pending-chat-images";
 
 export function queueChatImages(targetId: string, files: File[]): void {
   if (!targetId || !files.length) return;
-  queue.set(targetId, [...(queue.get(targetId) ?? []), ...files].slice(0, 4));
+  queue.set(targetId, [...(queue.get(targetId) ?? []), ...files].slice(0, 20));
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(CHAT_IMAGE_DROP_EVENT, { detail: { targetId } }));
   }

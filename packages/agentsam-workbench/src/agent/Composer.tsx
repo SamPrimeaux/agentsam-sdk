@@ -10,6 +10,8 @@ export interface AgentComposerProps {
   disabled?: boolean;
   placeholder?: string;
   toolbarStart?: ReactNode;
+  /** Structured preview area for pending attachments, kept inside the composer surface. */
+  attachmentPreview?: ReactNode;
   toolbarEnd?: ReactNode;
   sendControl?: ReactNode;
   cancelControl?: ReactNode;
@@ -38,6 +40,7 @@ export function AgentComposer({
   disabled = false,
   placeholder = 'Work with AgentSam',
   toolbarStart,
+  attachmentPreview,
   toolbarEnd,
   sendControl,
   cancelControl,
@@ -76,6 +79,7 @@ export function AgentComposer({
       data-agent-mode={runMode}
       aria-busy={streaming || undefined}
     >
+      {attachmentPreview ? <div className="agentsam-composer-attachments">{attachmentPreview}</div> : null}
       <textarea
         {...textareaProps}
         ref={areaRef}
