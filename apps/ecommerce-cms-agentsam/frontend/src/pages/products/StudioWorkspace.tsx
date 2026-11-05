@@ -4,6 +4,7 @@ import { selectStudioSideImage } from "./studio-side-image";
 import { blankGarmentImageSources } from "./studio-blank-image";
 import { updateSellingVariants, toggleSellingGroup } from "./studio-selling-variants";
 import { adminFetch, adminFormFetch } from "../../lib/api";
+import { rememberStudioDraft, navigateHostedStudioRoute } from "../../lib/studio-host-navigation";
 import { evaluateManufacturingCompatibility } from "../../../../packages/agentsam-merch/src/index.js";
 import { studioArtworkQuality, type ArtworkCrop } from "./studio-artwork-quality";
 import { suggestPrintScale } from "./studio-print-fit";
@@ -234,6 +235,9 @@ export default function StudioWorkspace({
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  // A failed request is retried in place; never redirect away from unsaved work.
+  const [retryAction, setRetryAction] = useState<(() => void) | null>(null);
+  const [restoreRetry, setRestoreRetry] = useState(0);
   const [locationId, setLocationId] = useState(
     detail.print_locations.find((l) => l.enabled && /(?:^|[_\s-])front(?:$|[_\s-])/i.test(l.name || l.print_location_id))?.print_location_id ||
     detail.print_locations.find((l) => l.enabled)?.print_location_id || "",
@@ -664,13 +668,16 @@ export default function StudioWorkspace({
         // Restoring an existing draft is normal; no standing success notice.
       })
       .catch((e) => {
-        if (!controller.signal.aborted) setError(e.message);
+        if (!controller.signal.aborted) {
+          setError(e instanceof Error ? e.message : "We couldn't reopen this design.");
+          setRetryAction(() => () => setRestoreRetry((attempt) => attempt + 1));
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) { setBusy(""); setRestoringDraft(false); }
       });
     return () => controller.abort();
-  }, [catalogId, detail.product.default_title, detail.product.name, resumeDraftId]);
+  }, [catalogId, detail.product.default_title, detail.product.name, resumeDraftId, restoreRetry]);
   useEffect(() => {
     const timer = setTimeout(() => {
       setMediaQuery(mediaSearch.trim());
@@ -713,7 +720,10 @@ export default function StudioWorkspace({
         if (d.albums) setAlbums(d.albums);
       })
       .catch((e) => {
-        if (!controller.signal.aborted) setError(e.message);
+        if (!controller.signal.aborted) {
+          setError(e instanceof Error ? e.message : "We couldn't load your artwork.");
+          setRetryAction(() => () => setMediaReload((count) => count + 1));
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setBusy("");
@@ -1089,6 +1099,7 @@ export default function StudioWorkspace({
     }
     setBusy("save");
     setError("");
+    setRetryAction(null);
     try {
       const allSides = { ...sidePlacements, [locationId]: snapshotActiveSide() };
       const persistedSides: Record<string, StoredSidePlacement> = {};
@@ -1129,6 +1140,7 @@ export default function StudioWorkspace({
         }),
       });
       setDraft(result.draft);
+      rememberStudioDraft(result.draft.id);
       setSidePlacements({
         ...allSides,
         [locationId]: {
@@ -1146,7 +1158,8 @@ export default function StudioWorkspace({
       setNotice("");
       return result.draft;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save product draft");
+      setError(e instanceof Error ? e.message : "We couldn't save this design.");
+      setRetryAction(() => () => { void saveDraft(); });
       return null;
     } finally {
       setBusy("");
@@ -1174,7 +1187,10 @@ export default function StudioWorkspace({
       return;
     }
     // Local draft product, NOT a fulfillment-provider product or public listing.
-    window.location.assign("/admin/product-edit?id=" + encodeURIComponent(String(productId)));
+    const productDetailsPath = "/admin/product-edit?id=" + encodeURIComponent(String(productId));
+    if (!navigateHostedStudioRoute(productDetailsPath)) {
+      window.location.assign(productDetailsPath);
+    }
   }
 
   async function buildPreparedArtworkBlob(
@@ -1535,7 +1551,17 @@ export default function StudioWorkspace({
             )}
             <span className="ps-sr-only">{nextLabel}</span>
           </button>
-          {error && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{error}</p>}
+          {error && (
+            <div className="ps-step-feedback ps-step-feedback--error" role="alert">
+              <span>{error}</span>
+              {retryAction && (
+                <button type="button" className="ps-button" disabled={Boolean(busy)}
+                  onClick={() => { const retry = retryAction; setRetryAction(null); retry(); }}>
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
           {cropError && <p className="ps-step-feedback ps-step-feedback--error" role="alert">{cropError}</p>}
           {!error && notice && <p className="ps-step-feedback" role="status">{notice}</p>}
         </div>

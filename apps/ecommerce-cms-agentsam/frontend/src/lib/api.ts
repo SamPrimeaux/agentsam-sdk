@@ -37,8 +37,12 @@ function responseRequestId(res: Response) {
 
 async function parseAdminResponse<T>(res: Response): Promise<T> {
   if (res.status === 401) {
-    window.location.href = "/admin/login";
-    throw new AdminApiError("Sign in again to continue", {
+    // The Ecommerce UI can run inside the authenticated AgentSam app host.
+    // A product-API 401 must not navigate the entire host to a standalone
+    // login page, discarding the selected garment and unsaved canvas edits.
+    // The host identity gate owns sign-in; the caller keeps its working state
+    // and presents a recoverable request error.
+    throw new AdminApiError("We couldn't finish that. Please try again.", {
       status: res.status,
       contentType: res.headers.get("content-type") || "",
       requestId: responseRequestId(res),

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { adminFetch } from "../../lib/api";
+import { navigateHostedStudioRoute, syncHostedStudioRoute } from "../../lib/studio-host-navigation";
 import StudioIcon from "./StudioIcon";
 import ProductImage from "./ProductImage";
 import PlatformProductCatalog from "./PlatformProductCatalog";
@@ -42,6 +43,11 @@ export default function ProductStudioPage() {
   const { productId } = useParams();
   const location = useLocation();
   const resumeDraftId = new URLSearchParams(location.search).get("resume");
+  useEffect(() => {
+    // The standalone Ecommerce router runs inside AgentSam's installed-app
+    // frame. Mirror selected product/deep-link identity to its outer URL.
+    syncHostedStudioRoute("/admin" + location.pathname + location.search);
+  }, [location.pathname, location.search]);
   const surface = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
   const [creationCategory, setCreationCategory] = useState<CreationCategory>("applications");
@@ -492,11 +498,10 @@ export default function ProductStudioPage() {
                       <button
                         className="ps-product-card"
                         key={catalogProductId(p)}
-                        onClick={() =>
-                          navigate(
-                            `/products/create/${encodeURIComponent(catalogProductId(p))}`,
-                          )
-                        }
+                        onClick={() => {
+                          const path = `/products/create/${encodeURIComponent(catalogProductId(p))}`;
+                          if (!navigateHostedStudioRoute("/admin" + path)) navigate(path);
+                        }}
                       >
                         <div className="ps-product-photo">
                           <ProductImage
@@ -568,7 +573,9 @@ export default function ProductStudioPage() {
             <>
               <button
                 className="ps-text-button ps-back"
-                onClick={() => navigate("/products/create")}
+                onClick={() => {
+                  if (!navigateHostedStudioRoute("/admin/products/create")) navigate("/products/create");
+                }}
               >
                 <StudioIcon name="back" size={18} /> Back to catalog
               </button>
