@@ -229,6 +229,11 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
       status: existing.setup_status === 'connected' ? 'connected' : 'requires_connection',
     };
   }
+  const shared = await env.DB.prepare('SELECT endpoint_url FROM agentsam_plugins WHERE plugin_key = ? LIMIT 1').bind(pluginKey).first();
+  if (shared && shared.endpoint_url !== entry.endpointUrl) {
+    // The shared registry row is never rewritten by a catalog install.
+    throw new Error('plugin_endpoint_changed_requires_reconnect');
+  }
   const manifest = {
     plugin_key: entry.pluginKey,
     provider_key: entry.pluginKey,
@@ -254,6 +259,7 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
     environment:'production',
     manifest,
     preserveEnabled:true,
+    preserveRegistry:true,
   });
   await updatePluginPreferences(env.DB,{accountId,pluginId:installed.plugin_id,enabled:false,composerVisible:false});
   return {pluginId:installed.plugin_id,pluginKey:entry.pluginKey,status:'requires_connection'};
@@ -262,7 +268,7 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
 export async function removeCatalogInstallation(env,accountId,pluginId) {
   if (!/^plg_[a-z0-9]+$/i.test(pluginId)) throw new Error('plugin_id_invalid');
   const row = await env.DB.prepare(
-    'SELECT id FROM agentsam_plugins WHERE id = ? AND account_id = ? AND installation_key = ? LIMIT 1'
+    'SELECT id FROM agentsam_plugin_installations WHERE plugin_id = ? AND account_id = ? AND instance_key = ? LIMIT 1'
   ).bind(pluginId,accountId,'catalog-v1').first();
   if (!row) throw new Error('plugin_installation_not_found');
   const tools = await env.DB.prepare(
@@ -270,7 +276,7 @@ export async function removeCatalogInstallation(env,accountId,pluginId) {
   ).bind(pluginId,accountId).first();
   if (Number(tools?.total || 0) > 0) throw new Error('plugin_remove_requires_disconnect');
   await env.DB.prepare(
-    'DELETE FROM agentsam_plugins WHERE id = ? AND account_id = ? AND installation_key = ?'
+    'DELETE FROM agentsam_plugin_installations WHERE plugin_id = ? AND account_id = ? AND instance_key = ?'
   ).bind(pluginId,accountId,'catalog-v1').run();
   return {pluginId,removed:true};
 }

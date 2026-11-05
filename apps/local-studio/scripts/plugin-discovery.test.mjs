@@ -141,7 +141,7 @@ function mockDb() {
         async all(){return {results:[]}},
         async first(){
           if(sql.includes('SELECT id FROM agentsam_plugins') && sql.includes('installation_key'))return null;
-          if(sql.includes('SELECT * FROM agentsam_plugins'))return {id:installedId,account_id:'au_user',is_enabled:0,metadata_json:'{}',capabilities_json:'[]',tool_lanes_json:'[]'};
+          if(sql.includes('JOIN agentsam_plugins p'))return {id:installedId,account_id:'au_user',is_enabled:0,metadata_json:'{}',capabilities_json:'[]',tool_lanes_json:'[]'};
           return null;
         },
         async run(){calls.push({sql,args:this.args});return {success:true}},
@@ -155,12 +155,16 @@ test('installation saves an account-scoped, disabled record without executable t
   const result=await installFromCatalog({...env,DB:db},'au_user','agentsam-example',fetcher);
   assert.equal(result.pluginKey,'agentsam-example');
   assert.equal(result.status,'requires_connection');
-  const insert=calls.find(row=>row.sql.includes('INSERT INTO agentsam_plugins'));
+  const registry=calls.find(row=>row.sql.includes('INSERT INTO agentsam_plugins'));
+  assert.ok(registry);
+  assert.ok(registry.args.includes('agentsam-example'));
+  assert.ok(!registry.args.includes('au_user'),'registry row carries no account');
+  const insert=calls.find(row=>row.sql.includes('INSERT INTO agentsam_plugin_installations'));
   assert.ok(insert);
   assert.ok(insert.args.includes('au_user'));
-  assert.ok(insert.args.includes('agentsam-example'));
+  assert.ok(insert.args.includes('catalog-v1'));
   assert.equal(calls.filter(row=>row.sql.includes('INSERT INTO agentsam_tools')).length,0);
-  assert.ok(calls.some(row=>row.sql.includes('is_enabled=?') && row.args.includes(0)));
+  assert.ok(calls.some(row=>row.sql.includes('enabled=?') && row.args.includes(0)));
 });
 test('adding an already connected plugin preserves its authority and registered tools', async()=>{
   const installed={
@@ -177,7 +181,7 @@ test('adding an already connected plugin preserves its authority and registered 
     prepare(sql){
       return {
         bind(){return this},
-        async all(){return {results:sql.includes('SELECT * FROM agentsam_plugins')?[installed]:[{id:'t1',plugin_key:'agentsam-example',plugin_id:installed.id}]}},
+        async all(){return {results:sql.includes('JOIN agentsam_plugins p')?[installed]:[{id:'t1',plugin_key:'agentsam-example',plugin_id:installed.id}]}},
         async run(){throw new Error('unexpected_mutation_of_existing_installation')},
       }
     }

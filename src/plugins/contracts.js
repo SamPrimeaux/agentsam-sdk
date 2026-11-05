@@ -57,6 +57,8 @@ export function normalizePluginManifest(value) {
     plugin_key: pluginKey,
     provider_key: clean(value.provider_key || pluginKey),
     installation_key: clean(value.installation_key || 'default'),
+    family_key: clean(value.family_key || 'connections'),
+    version: clean(value.version || '1.0.0'),
     plugin_kind: kind,
     category: clean(value.category || 'integration'),
     display_name: clean(value.display_name || pluginKey),

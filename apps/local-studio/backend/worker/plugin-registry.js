@@ -48,12 +48,12 @@ export async function materializeCloudflarePlugin(env, accountId, options = {}) 
     });
   }
   await env.DB.prepare(`
-    UPDATE agentsam_plugins SET setup_status=?,
+    UPDATE agentsam_plugin_installations SET setup_status=?,
       health_status=CASE WHEN ? THEN health_status ELSE 'unknown' END,
       last_error_code=CASE WHEN ? THEN last_error_code ELSE NULL END,
       last_error_message=CASE WHEN ? THEN last_error_message ELSE NULL END,
       updated_at=unixepoch()
-    WHERE id=? AND account_id=?
+    WHERE plugin_id=? AND account_id=?
   `).bind(
     options.connected ? 'connected' : options.available === false ? 'unconfigured' : 'configured',
     options.connected ? 1 : 0,

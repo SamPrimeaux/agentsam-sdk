@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -62,25 +63,14 @@ test('provider discovery snapshots stay compact in the existing AI plugin row an
 
 test('AI plugin discovery persists compact snapshots in the existing plugin row', async () => {
   const sqlite = new DatabaseSync(':memory:');
+  for (const file of ['0001_agentsam_plugin_runtime.sql', '0022_agentsam_plugin_registry.sql', '0023_agentsam_plugin_install_health.sql']) {
+    sqlite.exec(readFileSync(new URL(`../migrations/d1/${file}`, import.meta.url), 'utf8'));
+  }
   sqlite.exec(`
-    CREATE TABLE agentsam_plugins (
-      id TEXT PRIMARY KEY, account_id TEXT NOT NULL, plugin_key TEXT NOT NULL,
-      provider_key TEXT, environment TEXT, plugin_kind TEXT, metadata_json TEXT,
-      health_status TEXT, last_health_at INTEGER, last_healthy_at INTEGER,
-      consecutive_failures INTEGER NOT NULL DEFAULT 0, avg_latency_ms REAL,
-      error_rate_24h REAL NOT NULL DEFAULT 0, last_error_code TEXT,
-      last_error_message TEXT, updated_at INTEGER
-    );
-    CREATE TABLE agentsam_plugin_health_checks (
-      id TEXT PRIMARY KEY, plugin_id TEXT, plugin_key TEXT, account_id TEXT,
-      environment TEXT, check_kind TEXT, check_source TEXT, status TEXT,
-      started_at INTEGER, completed_at INTEGER, latency_ms INTEGER,
-      http_status INTEGER, provider_request_id TEXT, error_code TEXT,
-      error_message TEXT, details_json TEXT, created_at INTEGER
-    );
-    INSERT INTO agentsam_plugins (
-      id, account_id, plugin_key, provider_key, environment, plugin_kind, metadata_json
-    ) VALUES ('plg_ai', 'acct_test', 'ai.xai', 'xai', 'production', 'ai', '{"keep":true}');
+    INSERT INTO agentsam_plugins (id, plugin_key, family_key, provider_key, plugin_kind, display_name, transport)
+      VALUES ('plg_ai', 'ai.xai', 'connections', 'xai', 'ai', 'xAI', 'http_rest');
+    INSERT INTO agentsam_plugin_installations (account_id, plugin_id, config_json)
+      VALUES ('acct_test', 'plg_ai', '{"keep":true}');
   `);
   const db = {
     prepare(sql) {
@@ -102,7 +92,7 @@ test('AI plugin discovery persists compact snapshots in the existing plugin row'
     discovery: { ok: true, models: ['grok-b', 'grok-a'] },
   });
   assert.deepEqual(success.model_snapshot.model_ids, ['grok-a', 'grok-b']);
-  let row = sqlite.prepare("SELECT metadata_json, health_status, consecutive_failures FROM agentsam_plugins WHERE id='plg_ai'").get();
+  let row = sqlite.prepare("SELECT config_json AS metadata_json, health_status, consecutive_failures FROM agentsam_plugin_installations WHERE plugin_id='plg_ai'").get();
   assert.equal(JSON.parse(row.metadata_json).keep, true);
   assert.equal(row.health_status, 'healthy');
 
@@ -110,7 +100,7 @@ test('AI plugin discovery persists compact snapshots in the existing plugin row'
     pluginId: 'plg_ai', accountId: 'acct_test', completedAt: 456,
     discovery: { ok: false, error: '401 secret credential rejected' },
   });
-  row = sqlite.prepare("SELECT metadata_json, health_status, consecutive_failures, last_error_message FROM agentsam_plugins WHERE id='plg_ai'").get();
+  row = sqlite.prepare("SELECT config_json AS metadata_json, health_status, consecutive_failures, last_error_message FROM agentsam_plugin_installations WHERE plugin_id='plg_ai'").get();
   assert.deepEqual(JSON.parse(row.metadata_json).model_snapshot, success.model_snapshot);
   assert.equal(row.health_status, 'auth_error');
   assert.equal(row.consecutive_failures, 1);
