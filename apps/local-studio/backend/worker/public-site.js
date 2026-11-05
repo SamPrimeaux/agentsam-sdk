@@ -306,7 +306,7 @@ export async function servePublicSitePage(
   // SSOT — WEBSITE_ASSETS R2
   if (website?.binding) {
     try {
-      if (/\\.(?:html|css|js|json)$/i.test(r2Key)) {
+      if (/\.(?:html|css|js|json)$/i.test(r2Key)) {
         const text = await readR2Text(website.binding, r2Key);
         if (text) {
           if (relative.endsWith('.html')) {
