@@ -2801,7 +2801,9 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
     let body;
     try { body = await request.json(); } catch { return json({ error: "Invalid JSON" }, { status: 400 }); }
-    const result = await createThemeProject(env, context.accountId, body.project, body.site_id || url.searchParams.get("site_id") || null);
+    const selectedSite = body.site_id || url.searchParams.get("site_id") || null;
+    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
+    const result = await createThemeProject(env, context.accountId, body.project, selectedSite);
     return json(result, { status: result.status || (result.ok ? 201 : 400) });
   }
   const projectHistoryMatch = path.match(/^\/api\/admin\/cms\/theme-projects\/([A-Za-z0-9_-]{1,160})\/history(?:\/([0-9]{1,10}))?$/);
