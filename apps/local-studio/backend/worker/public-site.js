@@ -219,6 +219,17 @@ export async function resolvePublishedPageSource(db, site, pathname) {
   if (pages.length > 1) throw new Error('cms_public_page_route_ambiguous');
   const page = pages[0] || null;
   if (!page) return null;
+  if (page.content_object_key) {
+    if (!sitePublicObjectKey(site, page.content_object_key)) {
+      throw new Error('cms_public_page_source_outside_site');
+    }
+    return { page, key: page.content_object_key };
+  }
+  if (page.published_manifest_object_key) {
+    // Manifest-based theme rendering is handled by the installed theme
+    // runtime; do not guess a static object path from a manifest pointer.
+    return { page, key: null, manifest: page.published_manifest_object_key };
+  }
 
   const sectionResult = await db.prepare(`
     SELECT section_key, section_type, section_data, is_visible, published_r2_key
