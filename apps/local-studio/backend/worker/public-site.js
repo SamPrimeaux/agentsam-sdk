@@ -18,7 +18,7 @@ import {
  * site-owned queries. Ambiguous aliases fail closed.
  */
 export async function resolvePublicSiteIdentity(db, hostname) {
-  const host = String(hostname || '').trim().toLowerCase().replace(/\\.$/, '');
+  const host = String(hostname || '').trim().toLowerCase().replace(/\.$/, '');
   if (!host || !db?.prepare) return null;
   const result = await db.prepare(`
     SELECT id, account_id, slug, name, primary_domain, domain_aliases_json, status
