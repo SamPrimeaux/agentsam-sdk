@@ -8,8 +8,6 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {listLocalThemeProducts} from '../../../packages/catalog/src/theme-products.mjs';
-import {materializePrebuild as materializeViolet} from '../../../packages/theme-violet/src/node.js';
-import {materializePrebuild as materializeJournal} from '../../../packages/theme-plain-jane/src/node.js';
 
 const localStudio = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const app = path.resolve(localStudio, '../ecommerce-cms-agentsam');
@@ -37,7 +35,12 @@ if (process.argv.includes('--stage') || process.argv.includes('--desktop')) {
       throw new Error('Missing generated theme demo for '+slug);
     }
   }
-  cpSync(previewSource, path.join(compiledRoot, 'themes'), {recursive:true, force:true});
+  const compiledThemes = path.join(compiledRoot, 'themes');
+  rmSync(compiledThemes,{recursive:true,force:true});
+  mkdirSync(compiledThemes,{recursive:true});
+  for (const slug of ['resolve','violet','plain-jane']) {
+    cpSync(path.join(previewSource,slug),path.join(compiledThemes,slug),{recursive:true,force:true});
+  }
   console.log('[console-host] root /admin + source-backed theme demos staged to ' + compiledRoot);
   process.exit(0);
 }
@@ -107,35 +110,8 @@ const index = readFileSync(path.join(source, 'admin/_spa/index.html'), 'utf8')
 writeFileSync(path.join(productStage, 'index.html'), index);
 
 
-// Stage source-derived, read-only theme demonstrations for the hosted Sites
-// catalog. This is not a theme installation, purchase, or CMS import.
-const previewRoot = path.join(localStudio, 'frontend/public/themes');
-const demoRoot = path.join(previewRoot, 'violet/demo');
-materializeViolet(demoRoot, {basePath:'/themes/violet/demo/'});
-const journalDemo = path.join(previewRoot, 'plain-jane/demo');
-// Only the generated, bounded preview staging directory is replaceable.
-// The package's customer-facing materializer still refuses to overwrite.
-rmSync(journalDemo,{recursive:true,force:true});
-materializeJournal(journalDemo,{basePath:'/themes/plain-jane/demo/'});
-const resolveSrc = path.resolve(localStudio,'../theme-gallery-preview/themes/resolve/site');
-const resolveDest = path.join(previewRoot,'resolve/demo');
-if (!existsSync(path.join(resolveSrc,'index.html'))) throw new Error('Resolve canonical compiled preview unavailable');
-rmSync(resolveDest,{recursive:true,force:true});
-cpSync(resolveSrc,resolveDest,{recursive:true});
-
-// The published SDK package owns the generated media manifest and social-card
-// files consumed by both compiled previews. The source demo trees intentionally
-// keep generated binaries out of Git, so stage those package-owned assets here.
-const themePackages = path.resolve(localStudio,'../../packages');
-for (const slug of ['resolve','violet']) {
-  const generatedSource = path.join(themePackages,'theme-'+slug,'site/assets/generated');
-  const generatedTarget = path.join(previewRoot,slug,'demo/assets/generated');
-  if (!existsSync(path.join(generatedSource,'social-card.webp'))) {
-    throw new Error('Source '+slug+' generated preview assets unavailable');
-  }
-  mkdirSync(generatedTarget,{recursive:true});
-  cpSync(generatedSource,generatedTarget,{recursive:true,force:true});
-}
+// Fetch exact, digest-verified immutable previews from Theme Store.
+await import('./sync-theme-store-previews.mjs');
 const previewCatalog=await listLocalThemeProducts();
 if(previewCatalog.length!==3 || previewCatalog.some(entry=>!entry.preview_ready))
  throw new Error('Theme preview catalog incomplete; refuse to stage stale product listing');
