@@ -6,7 +6,7 @@
     "section_instance": "cms_page_sections",
     "block_instance": "cms_section_blocks",
     "definition": "cms_definitions",
-    "implementation": "cms_artifacts",
+    "implementation": "agentsam_artifacts",
     "revision": "cms_revisions",
     "global": "cms_globals",
     "media": "media_assets"
@@ -81,10 +81,10 @@
     "generated_is_native": true
   },
   "artifact": {
-    "implementation_storage": "cms_artifacts/R2",
+    "implementation_storage": "agentsam_artifacts + AgentSam-configured object storage",
     "instance_values_storage": "cms_page_sections or cms_section_blocks",
     "shared_values_storage": "cms_globals",
-    "media_storage": "media_assets",
+    "media_storage": "AgentSam shared asset authority",
     "namespace_prefix": "agentsam_gen_",
     "immutable_versions": true,
     "scope_styles_to_instance": true,

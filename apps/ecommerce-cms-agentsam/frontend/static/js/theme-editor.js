@@ -1249,53 +1249,179 @@
     const modal = document.createElement('dialog');
     modal.className = 'te-section-menu te-block-picker';
     modal.setAttribute('aria-label', 'Add block');
-    modal.innerHTML = '<div class="te-section-menu__head"><div><strong>Add a block</strong>' +
-      '<small>' + cmsEscapeHtml(schema.label || humanize(sectionKey)) + ' · compatible blocks</small></div>' +
-      '<button type="button" class="te-tree-mini" data-close-block-catalog aria-label="Close block catalog">×</button></div>' +
-      '<input class="te-section-search" data-block-search placeholder="Search available blocks" aria-label="Search blocks" autocomplete="off">' +
-      '<div class="te-section-catalog" data-block-options></div>';
-    const options = modal.querySelector('[data-block-options]');
+    modal.innerHTML =
+      '<div class="te-section-menu__head"><div><strong>Add a block</strong>' +
+        '<small>' + cmsEscapeHtml(schema.label || humanize(sectionKey)) + ' · compatible blocks</small></div>' +
+        '<button type="button" class="te-tree-mini" data-close-block-catalog aria-label="Close block catalog">×</button></div>' +
+      '<div class="te-catalog-toolbar">' +
+        '<input class="te-section-search" data-block-search placeholder="Search blocks" aria-label="Search blocks" autocomplete="off">' +
+        '<div class="te-catalog-tabs" role="tablist" aria-label="Block source">' +
+          '<button type="button" class="is-active" data-block-tab="blocks" role="tab" aria-selected="true">Blocks</button>' +
+          '<button type="button" data-block-tab="apps" role="tab" aria-selected="false">Apps</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="te-catalog-layout">' +
+        '<div class="te-catalog-list" data-block-list role="listbox" aria-label="Compatible blocks"></div>' +
+        '<section class="te-catalog-preview" data-block-preview aria-live="polite"></section>' +
+      '</div>';
+    const list = modal.querySelector('[data-block-list]');
+    const preview = modal.querySelector('[data-block-preview]');
     const search = modal.querySelector('[data-block-search]');
-    function paint(query) {
-      const needle = String(query || '').toLowerCase().trim();
-      const matching = templates.filter(function(template) {
-        return !needle || (template.label + ' ' + template.key + ' ' + (template.description || '')).toLowerCase().includes(needle);
+    let activeTab = 'blocks';
+    let activeKey = templates[0]?.key || '';
+
+    function catalogInfo(template) {
+      const row = (window.cmsRegistry?.catalog || []).find(function(item) {
+        return item.itemType === 'block' && item.definitionKey && item.definitionKey === template.definitionKey;
       });
-      const totalMax = Number(schema.guardrails?.maxBlocks || 0);
-      options.innerHTML = matching.length ? matching.map(function(template) {
-        const used = existingBlocks.filter(function(block) { return block.templateKey === template.key; }).length;
-        const disabled = (Number.isFinite(Number(template.max)) && used >= Number(template.max)) ||
-          (totalMax > 0 && existingBlocks.length >= totalMax);
-        const fields = (template.fields || []).slice(0, 4);
-        const sketch = '<span class="te-catalog-structure te-block-visual" aria-hidden="true">' +
-          '<span class="te-catalog-structure__kicker">' + cmsEscapeHtml(template.label || template.key) + '</span>' +
-          '<span class="te-block-visual__fields">' + fields.map(function(field) {
-            const kind = field.type === 'media' || field.type === 'image' ? 'media' : 'text';
-            return '<span class="te-block-visual__field te-block-visual__field--' + kind + '">' +
-              cmsEscapeHtml(field.label || field.key || kind) + '</span>';
-          }).join('') + '</span></span>';
-        return '<button type="button" class="te-section-catalog-item te-section-catalog-item--visual" data-choose-block="' +
-          cmsEscapeAttr(template.key) + '"' + (disabled ? ' disabled' : '') + '>' +
-          '<span class="te-catalog-visual-wrap">' + sketch + '</span>' +
-          '<span class="te-catalog-card-copy"><strong>' + cmsEscapeHtml(template.label || humanize(template.key)) + '</strong>' +
-          '<small>' + cmsEscapeHtml(disabled ? 'Maximum blocks reached' :
-            (template.description || (template.fields || []).length + ' editable fields')) +
-          '</small></span></button>';
-      }).join('') : '<div class="te-empty">No compatible blocks match that search.</div>';
+      return {
+        ...template,
+        label: row?.label || template.label || humanize(template.key),
+        category: row?.category || template.category || 'Basic',
+        description: row?.description || template.description || ((template.fields || []).length + ' editable settings'),
+        catalog: row || null,
+      };
     }
-    paint('');
+
+    function blockVisual(template) {
+      const api = window.ThemePortableSections;
+      const preset = section.content?.__editor?.themePreset;
+      if (!api || section.content?.__editor?.templateKey !== 'portable' || !preset ||
+          typeof api.render !== 'function') {
+        return '<div class="te-catalog-preview-unavailable"><strong>Preview not available</strong>' +
+          '<p>This section renderer has not exposed a faithful block preview yet. The block can still be added using its registered settings.</p></div>';
+      }
+      const content = structuredClone(section.content || {});
+      const previewId = 'catalog-preview-block';
+      content[previewId] = structuredClone(template.defaultContent || {});
+      content.__editor = {
+        ...(content.__editor || {}),
+        templateKey: 'portable',
+        themePreset: preset,
+        blocks: [{ id: previewId, templateKey: template.key, enabled: true }],
+      };
+      const markup = api.render({ key: 'catalog-preview', content });
+      if (!markup) {
+        return '<div class="te-catalog-preview-unavailable"><strong>Preview not available</strong>' +
+          '<p>This component has no registered preview renderer.</p></div>';
+      }
+      const html = '<!doctype html><html><head><meta charset="utf-8">' +
+        '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+        '<link rel="stylesheet" href="/js/portable-sections.css">' +
+        '<style>html,body{margin:0;min-height:100%;background:#fff}body{pointer-events:none}</style>' +
+        '</head><body>' + markup + '</body></html>';
+      return '<iframe class="te-catalog-visual" title="Preview of ' +
+        cmsEscapeAttr(template.label || template.key) + '" sandbox="" loading="lazy" tabindex="-1" ' +
+        'srcdoc="' + cmsEscapeAttr(html) + '"></iframe>';
+    }
+
+    function renderPreview(template) {
+      if (!template) {
+        preview.innerHTML = '<div class="te-catalog-preview-unavailable"><strong>No compatible blocks</strong>' +
+          '<p>This section does not currently expose any installable child blocks.</p></div>';
+        return;
+      }
+      const item = catalogInfo(template);
+      const used = existingBlocks.filter(function(block) { return block.templateKey === template.key; }).length;
+      const totalMax = Number(schema.guardrails?.maxBlocks || 0);
+      const perTypeMax = Number(template.max);
+      const disabled = (Number.isFinite(perTypeMax) && perTypeMax >= 0 && used >= perTypeMax) ||
+        (totalMax > 0 && existingBlocks.length >= totalMax);
+      preview.innerHTML =
+        '<div class="te-catalog-preview-stage">' + blockVisual(template) + '</div>' +
+        '<div class="te-catalog-preview-meta"><div><strong>' + cmsEscapeHtml(item.label) + '</strong>' +
+          '<small>' + cmsEscapeHtml(item.description) + '</small></div>' +
+          '<button type="button" class="te-catalog-add" data-add-selected-block' + (disabled ? ' disabled' : '') + '>' +
+            (disabled ? 'Maximum reached' : 'Add block') + '</button></div>';
+      preview.querySelector('[data-add-selected-block]')?.addEventListener('click', function() {
+        if (disabled) return;
+        const key = template.key;
+        modal.close();
+        void insertBlock(sectionKey, key, owner);
+      });
+    }
+
+    function paint() {
+      const needle = String(search.value || '').trim().toLowerCase();
+      if (activeTab === 'apps') {
+        const apps = (window.ThemeEmbedReview?.getCatalogEntries?.() || []).filter(function(app) {
+          return !needle || [app.name, app.category, app.tagline].join(' ').toLowerCase().includes(needle);
+        });
+        list.innerHTML = apps.length
+          ? '<div class="te-catalog-list-group"><div class="te-catalog-list-group__label">Storefront apps</div>' +
+            apps.map(function(app) {
+              return '<button type="button" class="te-catalog-list-item' +
+                (activeKey === app.key ? ' is-selected' : '') + '" data-choose-app="' + cmsEscapeAttr(app.key) + '">' +
+                '<span class="te-catalog-list-item__icon">⊞</span><span><strong>' + cmsEscapeHtml(app.name) +
+                '</strong><small>' + cmsEscapeHtml(app.category || 'App extension') + '</small></span></button>';
+            }).join('') + '</div>'
+          : '<div class="te-empty">No compatible app extensions are available.</div>';
+        preview.innerHTML = '<div class="te-catalog-preview-unavailable"><strong>App extensions</strong>' +
+          '<p>App extensions are currently installed as page-owned storefront sections, not nested child blocks. ' +
+          'Use the app embed manager to configure and install one.</p>' +
+          '<button type="button" class="te-catalog-add" data-open-app-embeds>Open App Embeds</button></div>';
+        preview.querySelector('[data-open-app-embeds]')?.addEventListener('click', function() {
+          modal.close();
+          document.querySelector('[data-drawer-mode="app-embeds"]')?.click();
+        });
+        list.querySelectorAll('[data-choose-app]').forEach(function(button) {
+          button.addEventListener('click', function() {
+            activeKey = button.dataset.chooseApp;
+            const app = apps.find(function(item) { return item.key === activeKey; });
+            if (app) preview.querySelector('strong').textContent = app.name;
+          });
+        });
+        return;
+      }
+
+      const matching = templates.map(catalogInfo).filter(function(item) {
+        return !needle || [item.label, item.key, item.category, item.description, item.definitionKey].join(' ').toLowerCase().includes(needle);
+      });
+      if (!matching.some(item => item.key === activeKey)) activeKey = matching[0]?.key || '';
+      const groups = new Map();
+      for (const item of matching) {
+        const category = item.category || 'Basic';
+        if (!groups.has(category)) groups.set(category, []);
+        groups.get(category).push(item);
+      }
+      list.innerHTML = matching.length ? Array.from(groups.entries()).map(function([category, items]) {
+        return '<div class="te-catalog-list-group"><div class="te-catalog-list-group__label">' +
+          cmsEscapeHtml(category) + '</div>' + items.map(function(item) {
+            return '<button type="button" role="option" aria-selected="' + (activeKey === item.key) +
+              '" class="te-catalog-list-item' + (activeKey === item.key ? ' is-selected' : '') +
+              '" data-choose-block="' + cmsEscapeAttr(item.key) + '">' +
+              '<span class="te-catalog-list-item__icon">⊞</span><span><strong>' +
+              cmsEscapeHtml(item.label) + '</strong><small>' + cmsEscapeHtml(item.description) +
+              '</small></span></button>';
+          }).join('') + '</div>';
+      }).join('') : '<div class="te-empty">No compatible blocks match that search.</div>';
+      const selected = templates.find(function(item) { return item.key === activeKey; });
+      renderPreview(selected || null);
+      list.querySelectorAll('[data-choose-block]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          activeKey = button.dataset.chooseBlock;
+          paint();
+        });
+      });
+    }
+
     modal.addEventListener('close', function() { modal.remove(); });
     modal.querySelector('[data-close-block-catalog]').addEventListener('click', function() { modal.close(); });
-    modal.addEventListener('click', function(event) {
-      const button = event.target.closest('[data-choose-block]');
-      if (!button || button.disabled) return;
-      const templateKey = button.dataset.chooseBlock;
-      modal.close();
-      void insertBlock(sectionKey, templateKey, owner);
+    modal.querySelectorAll('[data-block-tab]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        activeTab = button.dataset.blockTab;
+        modal.querySelectorAll('[data-block-tab]').forEach(function(tab) {
+          const selected = tab === button;
+          tab.classList.toggle('is-active', selected);
+          tab.setAttribute('aria-selected', String(selected));
+        });
+        paint();
+      });
     });
-    search.addEventListener('input', function() { paint(search.value); });
+    search.addEventListener('input', paint);
     document.body.append(modal);
     modal.showModal();
+    paint();
     requestAnimationFrame(function() { search.focus(); });
   }
 
@@ -1448,8 +1574,17 @@
         }).join('') + '</div>' : '') +
       '<dialog class="te-section-menu" id="te-section-menu" aria-label="Add a section" hidden>' +
         '<div class="te-section-menu__head"><div><strong>Add a section</strong><small>Choose a reusable storefront component</small></div><button type="button" class="te-tree-mini" id="te-section-cancel" aria-label="Close section catalog">×</button></div>' +
-        '<input class="te-section-search" id="te-section-search" placeholder="Search sections" aria-label="Search available sections" autocomplete="off">' +
-        '<div class="te-section-catalog" id="te-section-catalog"></div>' +
+        '<div class="te-catalog-toolbar">' +
+          '<input class="te-section-search" id="te-section-search" placeholder="Search sections" aria-label="Search available sections" autocomplete="off">' +
+          '<div class="te-catalog-tabs" role="tablist" aria-label="Section source">' +
+            '<button type="button" class="is-active" data-section-tab="sections" role="tab" aria-selected="true">Sections</button>' +
+            '<button type="button" data-section-tab="apps" role="tab" aria-selected="false">Apps</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="te-catalog-layout">' +
+          '<div class="te-catalog-list" id="te-section-list" role="listbox" aria-label="Available sections"></div>' +
+          '<section class="te-catalog-preview" id="te-section-preview" aria-live="polite"></section>' +
+        '</div>' +
       '</dialog>' +
       '<div class="te-tree-group te-tree-group--global"><div class="te-tree-group__label">Footer</div>' + footerRow + '</div>';
 
@@ -1485,40 +1620,122 @@
         '<span class="te-catalog-structure__tiles"><i></i><i></i><i></i></span></span>';
     }
 
+    let activeSectionTab = 'sections';
+    let activeSectionId = '';
+    let activeAppKey = '';
+
+    function sectionCategory(entry) {
+      const labels = {
+        hero: 'Hero', collections: 'Products', story: 'Storytelling',
+        faq: 'Content', testimonials: 'Storytelling', trust: 'Content',
+        newsletter: 'Forms', features: 'Products',
+      };
+      return entry.category || labels[entry.type] || humanize(entry.type || 'Section');
+    }
+
     function renderCatalog(query) {
       const needle = String(query || '').trim().toLowerCase();
-      let entries = themeCatalog();
-      // No fallback to arbitrary JS registry keys: without a proven
-      // renderer a text-only entry would become an uneditable fake preset.
-      const filtered = entries.filter(function(entry) {
-        return !needle || (entry.label + ' ' + entry.type + ' ' + entry.id).toLowerCase().includes(needle);
-      });
-      const visualCards = filtered.map(function(entry) {
-        return '<button type="button" class="te-section-catalog-item te-section-catalog-item--visual" data-catalog-template="' +
-          cmsEscapeAttr(entry.templateKey) + '" data-catalog-preset="' +
-          cmsEscapeAttr(entry.preset || entry.id) + '">' +
-          '<span class="te-catalog-visual-wrap">' + catalogVisual(entry) + '</span>' +
-          '<span class="te-catalog-card-copy"><strong>' + cmsEscapeHtml(entry.label) +
-          '</strong><small>' + cmsEscapeHtml(humanize(entry.source || 'heuristic')) +
-          ' · ' + cmsEscapeHtml(entry.type || entry.templateKey) + '</small></span></button>';
-      }).join('');
-      byId('te-section-catalog').innerHTML =
-        '<button type="button" class="te-catalog-generate" data-start-section-generation>' +
-        '<img src="/admin/brand/agentsam-gorilla-tiny.svg" alt="" aria-hidden="true">' +
-        '<span><strong>Generate with AgentSam</strong><small>Create a reusable editable CMS section</small></span><span aria-hidden="true">↗</span></button>' +
-        (filtered.length ? visualCards : '<div class="te-empty">No sections match that search.</div>');
+      const list = byId('te-section-list');
+      const preview = byId('te-section-preview');
+      if (activeSectionTab === 'apps') {
+        const apps = (window.ThemeEmbedReview?.getCatalogEntries?.() || []).filter(function(app) {
+          return !needle || [app.name, app.category, app.tagline].join(' ').toLowerCase().includes(needle);
+        });
+        if (!apps.some(app => app.key === activeAppKey)) activeAppKey = apps[0]?.key || '';
+        list.innerHTML = apps.length ? '<div class="te-catalog-list-group"><div class="te-catalog-list-group__label">Storefront apps</div>' +
+          apps.map(function(app) {
+            return '<button type="button" class="te-catalog-list-item' +
+              (activeAppKey === app.key ? ' is-selected' : '') + '" data-choose-section-app="' + cmsEscapeAttr(app.key) + '">' +
+              '<span class="te-catalog-list-item__icon">⊞</span><span><strong>' + cmsEscapeHtml(app.name) +
+              '</strong><small>' + cmsEscapeHtml(app.category || 'App extension') + '</small></span></button>';
+          }).join('') + '</div>' : '<div class="te-empty">The packaged app catalog is still loading or contains no storefront extensions.</div>';
+        const app = apps.find(item => item.key === activeAppKey);
+        preview.innerHTML = app
+          ? '<div class="te-catalog-preview-stage"><div class="te-app-catalog-preview"><span class="te-app-catalog-preview__icon">⊞</span>' +
+            '<strong>' + cmsEscapeHtml(app.name) + '</strong><small>' + cmsEscapeHtml(app.category || 'Storefront app') + '</small>' +
+            '<p>' + cmsEscapeHtml(app.tagline || 'Configure this storefront extension and install it on the current page.') + '</p></div></div>' +
+            '<div class="te-catalog-preview-meta"><div><strong>' + cmsEscapeHtml(app.name) + '</strong>' +
+            '<small>Configuration and installation use the existing App Embeds workflow.</small></div>' +
+            '<button type="button" class="te-catalog-add" data-configure-section-app>Configure</button></div>'
+          : '<div class="te-catalog-preview-unavailable"><strong>App extensions</strong>' +
+            '<p>App extensions use the existing storefront app installation workflow.</p>' +
+            '<button type="button" class="te-catalog-add" data-open-app-embeds>Open App Embeds</button></div>';
+        preview.querySelector('[data-configure-section-app]')?.addEventListener('click', function() {
+          const key = activeAppKey;
+          if (menu.open) menu.close();
+          window.ThemeEmbedReview?.open?.(key);
+        });
+        preview.querySelector('[data-open-app-embeds]')?.addEventListener('click', function() {
+          if (menu.open) menu.close();
+          document.querySelector('[data-drawer-mode="app-embeds"]')?.click();
+        });
+        list.querySelectorAll('[data-choose-section-app]').forEach(function(button) {
+          button.addEventListener('click', function() {
+            activeAppKey = button.dataset.chooseSectionApp;
+            renderCatalog(searchInput.value);
+          });
+        });
+        return;
+      }
 
-      byId('te-section-catalog').querySelector('[data-start-section-generation]')?.addEventListener('click', function() {
+      const entries = themeCatalog().map(function(entry) {
+        const row = (window.cmsRegistry?.catalog || []).find(function(item) {
+          return item.itemType === 'section' && (
+            (entry.definitionKey && item.definitionKey === entry.definitionKey) ||
+            item.templateData?.themePreset === (entry.preset || entry.id) ||
+            item.templateData?.preset === (entry.preset || entry.id) ||
+            item.slug === (entry.preset || entry.id)
+          );
+        });
+        return { ...entry, catalog: row || null, category: sectionCategory(entry) };
+      });
+      const filtered = entries.filter(function(entry) {
+        return !needle || [entry.label, entry.type, entry.id, entry.category, entry.catalog?.sku].join(' ').toLowerCase().includes(needle);
+      });
+      if (!filtered.some(entry => entry.id === activeSectionId)) activeSectionId = filtered[0]?.id || '';
+      const groups = new Map();
+      for (const entry of filtered) {
+        if (!groups.has(entry.category)) groups.set(entry.category, []);
+        groups.get(entry.category).push(entry);
+      }
+      const generate = '<button type="button" class="te-catalog-generate" data-start-section-generation>' +
+        '<img src="/admin/brand/agentsam-gorilla-tiny.svg" alt="" aria-hidden="true">' +
+        '<span><strong>Generate with AgentSam</strong><small>Create a reusable editable CMS section</small></span><span aria-hidden="true">↗</span></button>';
+      list.innerHTML = generate + (filtered.length ? Array.from(groups.entries()).map(function([category, items]) {
+        return '<div class="te-catalog-list-group"><div class="te-catalog-list-group__label">' +
+          cmsEscapeHtml(category) + '</div>' + items.map(function(entry) {
+            return '<button type="button" role="option" aria-selected="' + (activeSectionId === entry.id) +
+              '" class="te-catalog-list-item' + (activeSectionId === entry.id ? ' is-selected' : '') +
+              '" data-choose-section="' + cmsEscapeAttr(entry.id) + '">' +
+              '<span class="te-catalog-list-item__icon">' + icon.section + '</span><span><strong>' +
+              cmsEscapeHtml(entry.label) + '</strong><small>' +
+              cmsEscapeHtml(entry.source || entry.type || 'Section') + '</small></span></button>';
+          }).join('') + '</div>';
+      }).join('') : '<div class="te-empty">No sections match that search.</div>');
+
+      const selected = filtered.find(entry => entry.id === activeSectionId);
+      preview.innerHTML = selected
+        ? '<div class="te-catalog-preview-stage">' + catalogVisual(selected) + '</div>' +
+          '<div class="te-catalog-preview-meta"><div><strong>' + cmsEscapeHtml(selected.label) + '</strong>' +
+          '<small>' + cmsEscapeHtml(selected.catalog?.description || (selected.catalog?.sku ? selected.catalog.sku + ' · ' : '') + humanize(selected.type || selected.templateKey)) +
+          '</small></div><button type="button" class="te-catalog-add" data-add-selected-section>Add section</button></div>'
+        : '<div class="te-catalog-preview-unavailable"><strong>No matching sections</strong><p>Try another search or generate a reusable section with AgentSam.</p></div>';
+
+      list.querySelector('[data-start-section-generation]')?.addEventListener('click', function() {
         if (menu.open) menu.close();
-        else menu.hidden = true;
         window.dispatchEvent(new CustomEvent('theme-editor:generate-request', { detail: { kind: 'section' } }));
       });
-      byId('te-section-catalog').querySelectorAll('[data-catalog-template]').forEach(function(button) {
+      list.querySelectorAll('[data-choose-section]').forEach(function(button) {
         button.addEventListener('click', function() {
-          const insertAt = sectionInsertIndex;
-          if (menu.open) menu.close();
-          insertSection(button.dataset.catalogTemplate, button.dataset.catalogPreset, insertAt);
+          activeSectionId = button.dataset.chooseSection;
+          renderCatalog(searchInput.value);
         });
+      });
+      preview.querySelector('[data-add-selected-section]')?.addEventListener('click', function() {
+        if (!selected) return;
+        const insertAt = sectionInsertIndex;
+        if (menu.open) menu.close();
+        insertSection(selected.templateKey, selected.preset || selected.id, insertAt);
       });
     }
 
@@ -1611,19 +1828,21 @@
 
     const add = byId('te-add-section');
     const menu = byId('te-section-menu');
+    const searchInput = byId('te-section-search');
     function openCatalog(anchor, index) {
       sectionInsertIndex = index;
+      activeSectionTab = 'sections';
+      activeSectionId = '';
+      if (searchInput) searchInput.value = '';
+      menu.querySelectorAll('[data-section-tab]').forEach(function(tab) {
+        const selected = tab.dataset.sectionTab === activeSectionTab;
+        tab.classList.toggle('is-active', selected);
+        tab.setAttribute('aria-selected', String(selected));
+      });
       menu.hidden = false;
       renderCatalog('');
-      const rect = anchor.getBoundingClientRect();
-      const width = Math.min(375, window.innerWidth - 16);
-      const left = Math.max(8, Math.min(window.innerWidth - width - 8,
-        window.innerWidth - rect.right >= width + 8 ? rect.right + 8 : rect.left));
-      menu.style.left = left + 'px';
-      const height = Math.min(515, window.innerHeight - 24);
-      menu.style.top = Math.max(8, Math.min(rect.top, window.innerHeight - height - 8)) + 'px';
-      if (typeof menu.show === 'function' && !menu.open) menu.show();
-      requestAnimationFrame(function() { byId('te-section-search')?.focus(); });
+      if (typeof menu.showModal === 'function' && !menu.open) menu.showModal();
+      requestAnimationFrame(function() { searchInput?.focus(); });
     }
     add?.addEventListener('click', function() { openCatalog(add, pageSections.length); });
     byId('te-tree').querySelectorAll('[data-insert-at]').forEach(function(button) {
@@ -1637,7 +1856,18 @@
       if (menu.open) menu.close();
       else { menu.hidden = true; sectionInsertIndex = null; }
     });
-    byId('te-section-search')?.addEventListener('input', function(event) { renderCatalog(event.target.value); });
+    menu.querySelectorAll('[data-section-tab]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        activeSectionTab = button.dataset.sectionTab;
+        menu.querySelectorAll('[data-section-tab]').forEach(function(tab) {
+          const selected = tab === button;
+          tab.classList.toggle('is-active', selected);
+          tab.setAttribute('aria-selected', String(selected));
+        });
+        renderCatalog(searchInput?.value || '');
+      });
+    });
+    searchInput?.addEventListener('input', function() { renderCatalog(searchInput.value); });
     // Preserve old atlas links without maintaining another source editor.
     // This opens the one canonical cross-theme section catalog in place.
     if (new URLSearchParams(location.search).get('catalog') === 'revise') {

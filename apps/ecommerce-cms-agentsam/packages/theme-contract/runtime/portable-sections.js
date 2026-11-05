@@ -36,6 +36,20 @@
     fields: [f("question", "Question"), f("answer", "Answer", "textarea")],
     defaultContent: { question: "Your question", answer: "Your answer." },
   };
+  const buttonBlock = {
+    key: "button", label: "Button", category: "Basic", definitionKey: "button",
+    repeatable: true, min: 0, max: 4,
+    fields: [
+      f("label", "Label"),
+      f("href", "Link", "link"),
+      { key: "variant", label: "Style", type: "select", options: [
+        { label: "Solid", value: "solid" },
+        { label: "Outline", value: "outline" },
+        { label: "Text", value: "text" },
+      ] },
+    ],
+    defaultContent: { label: "Explore", href: "/shop", variant: "solid" },
+  };
   const spec = (id, label, family, fields, block = null) => Object.freeze({
     id, label, type: family, family, source: id.split("/")[0],
     templateKey: "portable", preset: id,
@@ -45,20 +59,13 @@
   // ONLY register implementations with actual markup + scoped styles below.
   // Other donor concepts remain candidates and MUST NOT appear in Add Section.
   const definitions = Object.freeze([
-    spec("revise/sticky-curtain", "Sticky curtain hero", "hero", heroFields),
+    spec("revise/sticky-curtain", "Sticky curtain hero", "hero", heroFields, buttonBlock),
     spec("revise/wardrobe-rail", "Wardrobe rail", "collections", [f("title", "Heading")], imageCard),
     spec("revise/editorial-statement", "Editorial statement", "story", [f("title", "Heading"), f("body", "Body", "textarea")]),
     spec("revise/faq", "FAQ accordion", "faq", [f("title", "Heading")], faqCard),
     spec("revise/testimonials", "Testimonial cards", "testimonials", [f("title", "Heading")], detailCard),
     spec("revise/trust-row", "Trust row", "trust", [f("title", "Heading")], detailCard),
     spec("revise/newsletter", "Newsletter", "newsletter", cards.concat(f("buttonLabel", "Button text"))),
-    spec("fnf/scene-hero", "Image scene hero", "hero", heroFields),
-    spec("fnf/collection-list", "Collection grid", "collections", [f("title", "Heading")], imageCard),
-    spec("fnf/feature-card-grid", "Feature card grid", "features", [f("title", "Heading")], detailCard),
-    spec("fnf/manifesto-split", "Manifesto split", "story", [
-      f("title", "Heading"), f("body", "Body", "textarea"), f("imageUrl", "Image", "media"),
-    ]),
-    spec("fnf/newsletter", "Newsletter CTA", "newsletter", cards.concat(f("buttonLabel", "Button text"))),
   ]);
   const byId = new Map(definitions.map((item) => [item.id, item]));
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
@@ -94,12 +101,22 @@
     const cta = content.ctaPrimary || {};
     const target = cta.openInNewTab === true ? ' target="_blank" rel="noopener noreferrer"' : "";
     const photo = image(content.imageUrl);
+    const buttons = sectionBlocks(entry);
+    const actions = buttons.length
+      ? buttons.map((item) => {
+        const variant = ["solid", "outline", "text"].includes(item.variant) ? item.variant : "solid";
+        return '<a class="ps-cta ps-cta--' + variant + '" data-cms-block="' + esc(item.id)
+          + '" data-cms="' + esc(item.id) + '.href" data-cms-attr="href" href="' + href(item.href, "/shop") + '">'
+          + '<span data-cms="' + esc(item.id) + '.label">' + esc(item.label || "Explore") + '</span>'
+          + '<span aria-hidden="true">→</span></a>';
+      }).join("")
+      : '<a class="ps-cta" data-cms="ctaPrimary.href" data-cms-attr="href" href="' + href(cta.href, "/shop")
+        + '"' + target + '><span data-cms="ctaPrimary.label">' + esc(cta.label || "Explore") + '</span><span aria-hidden="true">→</span></a>';
     return '<div class="ps-hero-media">' + (photo ? '<img data-cms="imageUrl" src="' + photo + '" alt="" loading="lazy">' : "") + '</div>'
       + '<div class="ps-inner ps-hero-copy"><p class="ps-kicker" data-cms="eyebrow">' + esc(content.eyebrow || "") + '</p>'
       + '<h2 class="ps-display" data-cms="headline">' + esc(content.headline || "") + '</h2>'
       + '<p class="ps-description" data-cms="subheadline">' + esc(content.subheadline || "") + '</p>'
-      + '<a class="ps-cta" data-cms="ctaPrimary.href" data-cms-attr="href" href="' + href(cta.href, "/shop")
-      + '"' + target + '><span data-cms="ctaPrimary.label">' + esc(cta.label || "Explore") + '</span><span aria-hidden="true">→</span></a></div>';
+      + '<div class="ps-hero-actions">' + actions + '</div></div>';
   }
   function renderCollections(entry) {
     const content = entry.content || {};
@@ -173,6 +190,12 @@
     const defaultBlocks = [];
     for (const field of Object.keys(content)) if (/^card\d+$/.test(field)) {
       defaultBlocks.push({ id: field, templateKey: definition.blocks[0]?.key, enabled: true });
+    }
+    if (definition.blocks.length && !defaultBlocks.length) {
+      const block = definition.blocks[0];
+      const id = block.key + "1";
+      content[id] = JSON.parse(JSON.stringify(block.defaultContent || {}));
+      defaultBlocks.push({ id, templateKey: block.key, enabled: true });
     }
     content.__editor = {
       templateKey: "portable",
