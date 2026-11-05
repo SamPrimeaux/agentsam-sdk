@@ -242,7 +242,6 @@ export async function servePublicSitePage(
       if (relative.endsWith('.html') || relative.endsWith('.css') || relative.endsWith('.js') || relative.endsWith('.json')) {
         const text = await readR2Text(website.binding, r2Key);
         if (text) {
-          if (relative.endsWith('.html')) await writeCached(kv, cacheKey, text);
           if (relative.endsWith('.html')) {
             return htmlResponse(text, {
               'x-public-site-source': `r2:${website.name}`,
