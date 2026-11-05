@@ -145,6 +145,24 @@ test("cold public HTML reads are site-specific and bypass KV", async () => {
   assert.equal(beta.headers.get("cache-control"), "public, max-age=0, must-revalidate");
 });
 
+test("published page source cannot point into another site's R2 prefix", async () => {
+  const db = siteOwnedDb(
+    { "alpha.example": [siteA] },
+    { [siteA.id]: [{ id: "page_alpha_home", site_id: siteA.id, slug: "home", route_path: "/", title: "Alpha", status: "published" }] },
+    { page_alpha_home: [{ section_key: "html-document", section_type: "html_source", section_data: JSON.stringify({ source_r2_key: "sites/beta-site/public/home/index.html" }), is_visible: 1 }] },
+  );
+  await assert.rejects(resolvePublishedPageSource(db, siteA, "/"), /cms_public_page_source_outside_site/);
+});
+
+test("draft pages are not eligible for public rendering", async () => {
+  const db = siteOwnedDb(
+    { "alpha.example": [siteA] },
+    { [siteA.id]: [{ id: "page_alpha_draft", site_id: siteA.id, slug: "home", route_path: "/", title: "Draft", status: "draft" }] },
+    { page_alpha_draft: [{ section_key: "html-document", section_type: "html_source", section_data: JSON.stringify({ source_r2_key: "sites/alpha-site/public/home/index.html" }), is_visible: 1 }] },
+  );
+  assert.equal(await resolvePublishedPageSource(db, siteA, "/"), null);
+});
+
 test("unknown hostname never falls back to another site's public content", async () => {
   const response = await servePublicSitePage(
     new Request("https://unregistered.example/"),
