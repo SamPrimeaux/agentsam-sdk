@@ -11,7 +11,38 @@ import {
   websitePublicKey,
 } from './bindings.js';
 
-const DEFAULT_SITE = 'agentsam-sdk';
+/**
+ * Resolve the public site from its verified hostname. Public requests do not
+ * carry an account session, so the domain registration is the routing key;
+ * page reads remain constrained to the resolved cms_sites.id by downstream
+ * site-owned queries. Ambiguous aliases fail closed.
+ */
+export async function resolvePublicSiteIdentity(db, hostname) {
+  const host = String(hostname || '').trim().toLowerCase().replace(/\\.$/, '');
+  if (!host || !db?.prepare) return null;
+  const result = await db.prepare(`
+    SELECT id, account_id, slug, name, primary_domain, domain_aliases_json, status
+    FROM cms_sites s
+    WHERE s.status = 'active'
+      AND (
+        lower(trim(COALESCE(s.primary_domain, ''))) = ?
+        OR EXISTS (
+          SELECT 1 FROM json_each(COALESCE(s.domain_aliases_json, '[]')) alias
+          WHERE lower(trim(CAST(alias.value AS TEXT))) = ?
+        )
+      )
+    ORDER BY CASE WHEN lower(trim(COALESCE(s.primary_domain, ''))) = ? THEN 0 ELSE 1 END,
+      s.created_at ASC
+    LIMIT 2
+  `).bind(host, host, host).all();
+  const rows = result.results || [];
+  if (rows.length > 1) throw new Error('cms_public_site_domain_ambiguous');
+  const site = rows[0] || null;
+  if (site && !/^[a-z0-9][a-z0-9_-]{0,127}$/i.test(String(site.slug || ''))) {
+    throw new Error('cms_public_site_slug_invalid');
+  }
+  return site;
+}
 
 /** The standalone Theme Store (own worker/repo/R2). One constant, used below. */
 const THEME_STORE_HOST = 'themes.inneranimalmedia.com';
