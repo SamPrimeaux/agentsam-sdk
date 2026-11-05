@@ -1,0 +1,72 @@
+{
+  "schema": "agentsam.theme-media.v1",
+  "theme": "resolve",
+  "generated": [
+    {
+      "kind": "generated-stock",
+      "slot": "media-216610d365",
+      "label": "hero / background image",
+      "aspect_ratio": "16:9",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-216610d365.webp",
+      "width": 1536,
+      "height": 864
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-a70660bfa9",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-a70660bfa9.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-ced60fcecc",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-ced60fcecc.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-2a9e0f623f",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-2a9e0f623f.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-bc1322e813",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-bc1322e813.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-social",
+      "slot": "social-card",
+      "label": "social sharing card",
+      "aspect_ratio": "16:9",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/social-card.webp",
+      "width": 1536,
+      "height": 864
+    }
+  ]
+}

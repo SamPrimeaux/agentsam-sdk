@@ -1,0 +1,245 @@
+{
+  "schema": "agentsam.theme-media.v1",
+  "theme": "violet",
+  "generated": [
+    {
+      "kind": "mark",
+      "slot": "media-1057e8b372",
+      "label": "brand mark",
+      "aspect_ratio": "1:1",
+      "provider": "deterministic",
+      "output": "assets/generated/theme-mark.svg"
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-49076977d8",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image",
+      "output": "assets/generated/media-49076977d8.webp",
+      "width": 1264,
+      "height": 848
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-07b46d6457",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image",
+      "output": "assets/generated/media-07b46d6457.webp",
+      "width": 1264,
+      "height": 848
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-9bbd133220",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image",
+      "output": "assets/generated/media-9bbd133220.webp",
+      "width": 1264,
+      "height": 848
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-254b0e2ad3",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image",
+      "output": "assets/generated/media-254b0e2ad3.webp",
+      "width": 1264,
+      "height": 848
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-3a78eb7d9d",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image",
+      "output": "assets/generated/media-3a78eb7d9d.webp",
+      "width": 1264,
+      "height": 848
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-7a5fb7c91a",
+      "label": "hero / background image",
+      "aspect_ratio": "16:9",
+      "provider": "gemini",
+      "model": "gemini-3.1-flash-image",
+      "output": "assets/generated/media-7a5fb7c91a.webp",
+      "width": 1376,
+      "height": 768
+    },
+    {
+      "kind": "generated-social",
+      "slot": "social-card",
+      "label": "social sharing card",
+      "aspect_ratio": "16:9",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/social-card.webp",
+      "width": 1536,
+      "height": 864
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-3a1b5c0a8d",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-3a1b5c0a8d.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-646c65381e",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-646c65381e.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-6342d50dbd",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-6342d50dbd.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-cd07daa54a",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-cd07daa54a.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-b8f43a3887",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-b8f43a3887.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-9e73307c2a",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-9e73307c2a.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-c96a3e1979",
+      "label": "hero / background image",
+      "aspect_ratio": "16:9",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-c96a3e1979.webp",
+      "width": 1536,
+      "height": 864
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-eae4917d25",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-eae4917d25.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-fb57ffd474",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-fb57ffd474.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-af382146a0",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-af382146a0.webp",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-09d38ddffc",
+      "label": "editorial portrait",
+      "aspect_ratio": "4:5",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-09d38ddffc.webp",
+      "width": 1024,
+      "height": 1280
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-b2ae348b43",
+      "label": "editorial portrait",
+      "aspect_ratio": "4:5",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-b2ae348b43.webp",
+      "width": 1024,
+      "height": 1280
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-e03ab6b5fe",
+      "label": "hero / background image",
+      "aspect_ratio": "16:9",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-e03ab6b5fe.webp",
+      "width": 1536,
+      "height": 864
+    },
+    {
+      "kind": "generated-stock",
+      "slot": "media-f227ec5690",
+      "label": "editorial content image",
+      "aspect_ratio": "3:2",
+      "provider": "openai",
+      "model": "gpt-image-2.5-sunburst",
+      "output": "assets/generated/media-f227ec5690.webp",
+      "width": 1536,
+      "height": 1024
+    }
+  ]
+}
