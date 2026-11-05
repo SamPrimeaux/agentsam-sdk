@@ -2846,7 +2846,9 @@ export async function handleAdminCmsApi(request, env, url, context = {}) {
 
   if (path === "/api/admin/cms/themes" && method === "GET") {
     if (!context.accountId) return json({ error: "Account required" }, { status: 403 });
-    const result = await listStoreThemes(env, context.accountId, url.searchParams.get("site_id") || null);
+    const selectedSite = url.searchParams.get("site_id") || null;
+    if (!selectedSite) return json({ok:false,error:'site_id_required'}, {status:400});
+    const result = await listStoreThemes(env, context.accountId, selectedSite);
     return json(result, { status: result.ok ? 200 : 503 });
   }
   if (path === "/api/admin/cms/theme-selection" && method === "PUT") {
