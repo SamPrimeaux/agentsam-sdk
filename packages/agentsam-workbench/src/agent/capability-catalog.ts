@@ -25,11 +25,11 @@ export type ComposerCatalogSources = {
   skills?: HostItem[]; agents?: HostItem[]; commands?: HostItem[];
 };
 export const COMPOSER_GROUPS: Array<{kind: ComposerKind; label: string}> = [
-  {kind:'connection', label:'Connections'},
   {kind:'mcp', label:'MCP servers'},
-  {kind:'widget', label:'Apps / widgets'},
+  {kind:'connection', label:'Connections'},
   {kind:'plugin', label:'Plugins'},
   {kind:'skill', label:'Skills'},
+  {kind:'widget', label:'Apps / widgets'},
   {kind:'agent', label:'Agents'},
   {kind:'command', label:'Commands'},
 ];

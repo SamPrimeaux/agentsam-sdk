@@ -90,24 +90,39 @@
 .agentsam-start-context { margin: 8px auto 0; width: 100%; max-width: 1120px; display: flex; justify-content: flex-start; color: var(--nav-muted); font-size: 12px; }
 .agentsam-start-context .as-nav-title, .agentsam-start-context .as-nav-separator, .agentsam-start-context .as-nav-mode-label { display: none; }
 .agentsam-plugin-host { position: relative; width: 100%; max-width: 1120px; margin: 0 auto; }
-.agentsam-plugin-menu { position: absolute; z-index: 80; left: 0; right: 0; top: calc(100% + 8px); max-height: min(320px, 40dvh); overflow-y: auto; padding: 8px; border-radius: 18px; background: var(--nav-popover); color: var(--nav-text); box-shadow: 0 0 0 1px var(--nav-border), 0 16px 40px #00000024; }
-.agentsam-conversation-dock .agentsam-plugin-menu { top: auto; bottom: calc(100% + 8px); }
-.agentsam-plugin-heading { display: flex; gap: 8px; align-items: center; padding: 4px 8px; font-size: 13px; }
+.agentsam-plugin-menu {
+  position: absolute; z-index: 120; left: 0; right: 0; top: calc(100% + 8px);
+  max-height: min(720px, 40dvh); overflow-y: auto; overscroll-behavior: contain;
+  padding: 10px; border: 1px solid var(--nav-border); border-radius: 24px;
+  background: var(--nav-popover); color: var(--nav-text);
+  box-shadow: 0 20px 60px #00000055; backdrop-filter: blur(22px);
+}
+.agentsam-conversation-dock .agentsam-plugin-menu { top: auto; bottom: calc(100% + 10px); }
+.agentsam-plugin-heading {
+  position: sticky; top: -10px; z-index: 1; display: flex; gap: 10px; align-items: center;
+  padding: 10px 12px 12px; margin: -10px -10px 8px; border-bottom: 1px solid var(--nav-border);
+  background: var(--nav-popover); font-size: 14px;
+}
+.agentsam-plugin-heading strong { font-weight: 600; }
 .agentsam-plugin-heading span { flex: 1; color: var(--nav-muted); font-size: 12px; }
-.agentsam-plugin-menu p { padding: 12px; font-size: 13px; }
-.agentsam-plugin-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 12px; text-align: left; border-radius: 10px; }
+.agentsam-plugin-notice { padding: 10px 12px; color: var(--nav-muted); font-size: 12px; }
+.agentsam-plugin-row {
+  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px;
+  padding: 11px 13px; text-align: left; border-radius: 14px; transition: background 120ms ease;
+}
 .agentsam-plugin-row:hover, .agentsam-plugin-row[data-active="true"] { background: var(--nav-selected); }
+.agentsam-plugin-row:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: -2px; }
 .agentsam-plugin-row > span { flex: 1; min-width: 0; }
-.agentsam-plugin-row strong, .agentsam-plugin-row small { display: block; font-size: 13px; }
+.agentsam-plugin-row strong, .agentsam-plugin-row small { display: block; font-size: 14px; line-height: 1.35; }
 .agentsam-plugin-row small { color: var(--nav-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
-.agentsam-plugin-row img { width: 24px; height: 24px; object-fit: contain; }
-.agentsam-plugin-row > .agentsam-plugin-icon { flex: 0 0 24px; }
+.agentsam-plugin-row > small:last-child { flex: 0 0 auto; max-width: 180px; padding: 5px 8px; border-radius: 8px; background: var(--nav-selected); font: 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.agentsam-plugin-row img { width: 26px; height: 26px; object-fit: contain; }
+.agentsam-plugin-row > .agentsam-plugin-icon { display: grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border-radius: 9px; background: var(--nav-selected); }
+.agentsam-plugin-row > svg { width: 22px; height: 22px; flex: 0 0 22px; color: var(--nav-accent); }
 .plugin-icon-light { display: none; }
 [data-nav-theme="light"] .plugin-icon-light { display: block; }
 [data-nav-theme="light"] .plugin-icon-dark { display: none; }
 @media (prefers-color-scheme: light) { [data-nav-theme="system"] .plugin-icon-light { display: block; } [data-nav-theme="system"] .plugin-icon-dark { display: none; } }
-.agentsam-plugin-previews { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 4px 0; }
-.agentsam-plugin-previews button { display: flex; align-items: center; gap: 5px; min-height: 28px; color: var(--nav-muted); font-size: 12px; }
 .mini-agentsam-panel .agentsam-plugin-menu { position: static; margin-top: 8px; max-height: 200px; }
 .agentsam-conversation-dock { flex-shrink: 0; padding: 12px 24px 0; }
 .agentsam-conversation [data-agent-conversation-empty="true"] .agentsam-conversation-dock { padding-top: 0; }
@@ -243,6 +258,8 @@
 /* One flex-fit composer across split chat, desktop work and phone portrait. */
 .agentsam-composer-shell { container-type: inline-size; max-width: 100%; min-width: 0; }
 .agentsam-composer-surface { max-width: 100%; min-width: 0; }
+.agentsam-composer-surface .agentsam-composer-attachments { display: flex; width: 100%; min-width: 0; flex: 0 0 auto; }
+.agentsam-composer-surface .agentsam-composer-attachments > * { width: 100%; min-width: 0; }
 .agentsam-composer-surface textarea { min-width: 0; max-width: 100%; box-sizing: border-box; }
 .agentsam-composer-actions { flex-wrap: nowrap; min-width: 0; overflow: visible; }
 .agentsam-composer-actions > [style] { min-width: 0; }
@@ -303,14 +320,22 @@
   width: auto;
   padding: 0;
 }
-.agentsam-plugin-trigger-label { font-size: 12px; }
-.agentsam-plugin-host .as-nav-button[aria-label="Plugins and capabilities"] {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border-radius: 10px;
-  padding-inline: 8px;
-  white-space: nowrap;
+.agentsam-page-layout[data-composer-mode="chat"] .agentsam-composer-surface:has(.agentsam-composer-attachments) {
+  flex-direction: column; align-items: stretch; gap: 6px; border-radius: 22px; padding: 10px 12px;
+}
+.agentsam-page-layout[data-composer-mode="chat"] .agentsam-composer-surface:has(.agentsam-composer-attachments) textarea {
+  flex: 0 0 auto; width: 100%; min-height: 48px; max-height: 220px; padding: 8px 4px;
+}
+.agentsam-page-layout[data-composer-mode="chat"] .agentsam-composer-surface:has(.agentsam-composer-attachments) .agentsam-composer-actions {
+  flex: 0 0 auto; width: 100%; padding: 0;
+}
+.agentsam-plugin-host .as-nav-button[aria-label="Add tools and plugins"] {
+  display: inline-grid; width: 36px; height: 36px; flex: 0 0 36px;
+  place-items: center; border: 0; border-radius: 999px; color: var(--nav-muted); background: transparent !important; box-shadow: none !important;
+}
+.agentsam-plugin-host .as-nav-button[aria-label="Add tools and plugins"]:hover,
+.agentsam-plugin-host .as-nav-button[aria-label="Add tools and plugins"][aria-expanded="true"] {
+  background: var(--nav-selected); color: var(--nav-text);
 }
 .agentsam-project-picker { position: relative; }
 .agentsam-project-trigger {
@@ -347,7 +372,6 @@
 @media (max-width: 650px) {
   .agentsam-page-layout[data-composer-mode="chat"] .agentsam-composer-surface { border-radius: 18px; }
   .agentsam-page-layout .agentsam-conversation [data-agent-conversation-empty="true"] .agentsam-welcome-heading h1 { font-size: 22px; }
-  .agentsam-plugin-trigger-label { display: none; }
 }
 
 /* Chat/Work is a welcome-state choice, not global navigation. It lives
@@ -391,73 +415,37 @@
 .agentsam-shell .agentsam-composer-actions button[aria-label^="Select model:"]{color:var(--nav-muted);}
 
 
-/* InnerAnimal companion welcome — a real character presence in Work, not a decorative badge. */
+/* Work greeting: the selected pet is a small inline character, not a hero card. */
 .agentsam-work-welcome {
-  display: flex;
-  width: min(100%, 620px);
-  align-items: center;
-  justify-content: center;
-  gap: clamp(18px, 3vw, 34px);
-  padding: 8px 14px 24px;
-  text-align: left;
+  display: flex; width: min(100%, 620px); align-items: flex-start; justify-content: center;
+  gap: 12px; padding: 8px 14px 24px; text-align: left;
 }
 .agentsam-work-welcome-art {
-  display: grid;
-  width: clamp(112px, 15vw, 164px);
-  height: clamp(112px, 15vw, 164px);
-  flex: 0 0 auto;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--nav-accent) 22%, transparent);
-  border-radius: 30px;
-  background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--nav-accent) 13%, transparent), transparent 72%);
+  display: grid; width: 30px; height: 38px; flex: 0 0 30px; place-items: center;
+  overflow: visible; border: 0; border-radius: 0; background: transparent;
 }
-.agentsam-work-welcome-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  image-rendering: auto;
-}
-.agentsam-work-welcome-art > span {
-  color: var(--nav-accent);
-  font: 600 42px/1 var(--nav-font);
-}
+.agentsam-work-welcome-art img { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: auto; transform: translateY(-5px) scale(2); transform-origin: center center; }
+.agentsam-work-welcome-art > span { color: var(--nav-accent); font: 600 22px/1 var(--nav-font); }
 .agentsam-work-welcome-copy { min-width: 0; }
-.agentsam-work-welcome-eyebrow {
-  margin: 0 0 9px;
-  color: var(--nav-muted);
-  font: 600 9px/1.4 var(--nav-font);
-  letter-spacing: .17em;
-}
 .agentsam-work-welcome-copy h1 {
-  margin: 0 !important;
-  color: var(--nav-text);
-  font: 600 clamp(20px, 2.2vw, 27px)/1.16 var(--nav-font) !important;
-  letter-spacing: -.035em;
-  text-align: left !important;
+  margin: 0 !important; color: var(--nav-text);
+  font: 500 clamp(21px, 1.8vw, 25px)/1.25 var(--nav-font) !important;
+  letter-spacing: -.03em; text-align: left !important;
 }
-.agentsam-work-welcome-prompt {
-  margin: 8px 0 0;
-  color: var(--nav-muted);
-  font: 400 12px/1.5 var(--nav-font);
-}
+.agentsam-work-welcome-prompt { margin: 5px 0 0; color: var(--nav-muted); font: 400 12px/1.5 var(--nav-font); }
 .agentsam-work-companion-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 13px;
-  color: color-mix(in srgb, var(--nav-accent) 74%, var(--nav-text));
-  font: 500 10px/1.4 var(--nav-font);
+  display: inline-flex; align-items: center; gap: 7px; margin-top: 8px;
+  color: color-mix(in srgb, var(--nav-accent) 74%, var(--nav-text)); font: 500 11px/1.4 var(--nav-font);
 }
 .agentsam-work-companion-link:hover { color: var(--nav-text); }
 .agentsam-work-companion-link:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: 4px; border-radius: 3px; }
 .agentsam-pet-trigger picture { display: block; width: 100%; height: 100%; }
 .agentsam-pet-trigger picture img { display: block; width: 100%; height: 100%; object-fit: contain; }
 @media (max-width: 650px) {
-  .agentsam-work-welcome { gap: 14px; padding-inline: 8px; }
-  .agentsam-work-welcome-art { width: 92px; height: 92px; border-radius: 20px; }
+  .agentsam-work-welcome { gap: 10px; padding-inline: 8px; }
+  .agentsam-work-welcome-art { width: 25px; height: 32px; flex-basis: 25px; }
+  .agentsam-work-welcome-art img { transform: translateY(-4px) scale(1.9); }
   .agentsam-work-welcome-copy h1 { font-size: 20px !important; }
-  .agentsam-work-welcome-eyebrow { font-size: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .agentsam-work-welcome-art img { animation: none !important; }

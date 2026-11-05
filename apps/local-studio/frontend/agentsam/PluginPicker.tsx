@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { Bot, Box, Database, FileCode, Globe, Layers, Plug, ShieldCheck, Sparkles, SquareTerminal, Upload, Users, Wrench, X } from 'lucide-react';
-import { COMPOSER_GROUPS, filterComposerCatalog, projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
+import { Bot, Box, Database, FileCode, Globe, Layers, Plug, Plus, ShieldCheck, Sparkles, SquareTerminal, Upload, Users, Wrench, X } from 'lucide-react';
+import { filterComposerCatalog, projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
 import { loadComposerCatalog } from './plugins';
 import { sideStageComposerWidgets } from './side-stage-actions';
 import { useWorkStore } from '@/lib/work/store';
@@ -119,8 +119,8 @@ export function PluginPicker({ value, onChange, children }: {
 
   return <div className="agentsam-plugin-host" ref={root}>
     {children({
-      trigger:<button type="button" className="as-nav-button" aria-label="Plugins and capabilities" aria-expanded={open} aria-controls={id}
-        onClick={()=>{setOpen(!open);setActive(0);setRevision(n=>n+1);}}><Plug size={15}/><span className="agentsam-plugin-trigger-label">Plugins</span></button>,
+      trigger:<button type="button" className="as-nav-button" aria-label="Add tools and plugins" title="Add tools and plugins" aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
+        onClick={()=>{setOpen(!open);setActive(0);setRevision(n=>n+1);}}><Plus size={19}/></button>,
       onKeyDown,
       onSelect:(position)=>{
         setCursor(position);
@@ -131,35 +131,22 @@ export function PluginPicker({ value, onChange, children }: {
         setOpen(typingMention);
       },
     })}
-    {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="AgentSam capabilities">
+    {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="Add to your message">
       <div className="agentsam-plugin-heading">
-        <strong>AgentSam</strong><span>Type @ to add a capability</span>
+        <strong>Add to your message</strong><span>Plugins, connections, apps and tools · type @ to filter</span>
         <button type="button" className="as-nav-button" aria-label="Close capabilities" onClick={()=>setOpen(false)}><X size={16}/></button>
       </div>
-      {error&&<p role="status" className="text-xs text-muted-foreground">Connected services unavailable: {error}</p>}
-      {loading&&<p role="status" className="text-xs text-muted-foreground">Checking connected capabilities…</p>}
-      {!shown.length&&!loading&&<p className="text-xs text-muted-foreground">No matching capabilities.</p>}
-      {COMPOSER_GROUPS.map(group=>{
-        const items=shown.filter(entry=>entry.kind===group.kind);
-        return items.length?<div key={group.kind} className="agentsam-capability-group">
-          <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground">{group.label}</div>
-          {items.map(entry=><button type="button" key={entry.id}
-            className="agentsam-plugin-row" data-active={shown.indexOf(entry)===active}
-            onClick={()=>choose(entry)}>
-            {rowIcon(entry)}
-            <span className="min-w-0 flex-1"><strong>{entry.label}</strong><small>{entry.description||entry.status}</small></span>
-            <small>{entry.ready?entry.mention:'Set up'}</small>
-          </button>)}
-        </div>:null;
-      })}
+      {error&&<p role="status" className="agentsam-plugin-notice">Some connected services couldn't be loaded. Available tools are still shown.</p>}
+      {loading&&<p role="status" className="agentsam-plugin-notice">Loading your plugins and tools…</p>}
+      {!shown.length&&!loading&&<p className="agentsam-plugin-notice">No matching capabilities.</p>}
+      {shown.map((entry,index)=><button type="button" key={entry.id}
+        className="agentsam-plugin-row" data-active={index===active}
+        onClick={()=>choose(entry)}>
+        {rowIcon(entry)}
+        <span className="min-w-0 flex-1"><strong>{entry.label}</strong><small>{entry.description||entry.status}</small></span>
+        <small>{entry.ready?entry.mention:'Set up'}</small>
+      </button>)}
     </div>}
-    {entries.some(entry=>entry.ready&&(entry.kind==='connection'||entry.kind==='mcp'))&&
-      <div className="agentsam-plugin-previews" aria-label="Connected capabilities">
-        {entries.filter(entry=>entry.ready&&(entry.kind==='connection'||entry.kind==='mcp')).slice(0,4)
-          .map(entry=><button type="button" key={entry.id} title={entry.label}
-            onClick={()=>{setOpen(true);setActive(0);setRevision(n=>n+1);}}>
-            {rowIcon(entry)}{entry.mention}
-          </button>)}
-      </div>}
+
   </div>;
 }

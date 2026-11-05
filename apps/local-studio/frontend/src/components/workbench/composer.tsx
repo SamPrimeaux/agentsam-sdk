@@ -149,24 +149,19 @@ export function Composer({
   );
 
   const attachmentPreview = pendingAttachments.length ? (
-    <div className="px-1 pt-1">
-      <div className="mb-2 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-        <span>{pendingAttachments.length} of 20 images</span>
-        <span>Click a thumbnail to expand</span>
-      </div>
-      <div className="grid max-h-48 grid-cols-4 gap-2 overflow-y-auto pr-1 sm:grid-cols-5 md:grid-cols-8">
+    <div className="px-2 pt-2 pb-1" role="group" aria-label="Attached images">
+      <div className="flex max-h-[376px] flex-wrap items-start gap-3 overflow-y-auto pr-1">
         {pendingAttachments.map((attachment) => (
-          <div key={attachment.id} className="group relative aspect-square min-w-0 overflow-hidden rounded-xl border border-border/70 bg-muted">
+          <div key={attachment.id} title={attachment.name} className="group relative size-32 shrink-0 overflow-hidden rounded-[18px] border border-border/70 bg-muted/60 sm:size-40 md:size-44">
             {attachment.previewUrl ? (
               <ImageLightbox src={attachment.previewUrl} alt={attachment.name} triggerClassName="size-full cursor-zoom-in">
-                <img src={attachment.previewUrl} alt="" className="size-full object-cover" />
+                <img src={attachment.previewUrl} alt="" className="size-full object-contain p-1" />
               </ImageLightbox>
             ) : (
               <div className="grid size-full place-items-center text-xs text-muted-foreground">Image</div>
             )}
-            <span className="absolute inset-x-0 bottom-0 truncate bg-black/60 px-1.5 py-1 text-[10px] text-white" title={attachment.name}>{attachment.name}</span>
-            <Button type="button" size="icon-sm" variant="secondary" className="absolute right-1 top-1 size-6 rounded-full opacity-100 shadow sm:opacity-0 sm:group-hover:opacity-100" aria-label={`Remove ${attachment.name}`} onClick={() => removeAttachment(attachment.id)}>
-              <Trash2 className="size-3" />
+            <Button type="button" size="icon-sm" variant="secondary" className="absolute right-2 top-2 size-7 rounded-full opacity-100 shadow sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100" aria-label={`Remove ${attachment.name}`} onClick={() => removeAttachment(attachment.id)}>
+              <Trash2 className="size-3.5" />
             </Button>
           </div>
         ))}

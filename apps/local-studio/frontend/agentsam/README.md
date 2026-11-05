@@ -23,8 +23,10 @@ Do not delete the work store, composer, SideStage, browser, terminal, CMS packag
 Ember Supply can mount the same package via React or `mountNav` in its plain JavaScript shell. Its routes, identity, account choices, and colorway are supplied by the host. No Ember Supply production files are changed by this integration. The nav package intentionally excludes its composer and plugin connections.
 # Composer plugins and annotation
 
-`PluginPicker` supplies one compact grouped capability/context menu for `+` and `@`,
-with keyboard selection and minimal connected-service pills. `plugins.ts` projects
+`PluginPicker` supplies one searchable capability/context menu opened by the composer `+`
+or by typing `@`. Connected plugins and services live in that menu; the composer does
+not render persistent mention chips beneath itself. The menu supports keyboard selection.
+`plugins.ts` projects
 **the existing authenticated** `/api/connections` and the desktop connection
 bridge through the portable `agentsam-workbench/capabilities` module. The one
 `SIDE_STAGE_ACTIONS` list now powers the SideStage `+` and the composer's widget

@@ -53,6 +53,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   // Failed model responses stay inside the conversation transcript — never replace the product.
   const empty = trail.messages.length === 0 || (trail.messages.length === 1 && trail.messages[0].id === 'welcome-msg');
   const streaming = state.streamingIds.includes(trail.id);
+  const companionArt = companionStateAsset(companion, streaming ? 'working' : 'idle');
   const workSurface = state.workSurface;
   const mobileWorkOpen = isMobile && workSurface !== 'chat';
   return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
@@ -85,14 +86,12 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
           emptyState={<div className="agentsam-welcome-heading">
             {data.mode === 'work' ? <div className="agentsam-work-welcome" data-companion-id={companion.id}>
               <div className="agentsam-work-welcome-art" aria-hidden="true">
-                {companionStateAsset(companion, streaming ? 'working' : 'idle') ?
-                  <img src={companionStateAsset(companion, streaming ? 'working' : 'idle') || undefined} alt="" draggable={false} /> :
+                {companionArt ? <img src={companionArt} alt="" draggable={false} /> :
                   <span>{companion.name.slice(0, 1).toUpperCase()}</span>}
               </div>
               <div className="agentsam-work-welcome-copy">
-                <p className="agentsam-work-welcome-eyebrow">INNERANIMAL COMPANION</p>
-                <h1>{companion.id === 'geaux' ? 'Geaux is ready to GEAUX!' : `${companion.name} is ready to work.`}</h1>
-                <p className="agentsam-work-welcome-prompt">What should we work on?</p>
+                <h1>What should we work on?</h1>
+                <p className="agentsam-work-welcome-prompt">{companion.id === 'geaux' ? 'Geaux is ready to GEAUX!' : `${companion.name} is ready to work.`}</p>
                 <button type="button" className="agentsam-work-companion-link"
                   onClick={() => window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/settings/customize?view=companions' } }))}>
                   Choose a companion <span aria-hidden="true">→</span>

@@ -11,7 +11,7 @@ test('portable capability entrypoint is React/CSS-free and keeps real source aut
       is_enabled:true,composer_visible:true,setup_status:'connected',auth_type:'oauth',health_status:'healthy'}],
     widgets:[{id:'browser',label:'Browser',ready:true,action:{type:'open-side-stage',tab:'browser'}}],
   });
-  assert.deepEqual(result.map(entry=>entry.mention),['@cloudflare','@cloudflare-mcp','@browser']);
+  assert.deepEqual(result.map(entry=>entry.mention),['@cloudflare-mcp','@cloudflare','@browser']);
   assert.equal(result.find(x=>x.kind==='mcp')?.ready,true);
   assert.equal(result.find(x=>x.kind==='widget')?.action.tab,'browser');
   assert.equal(filterComposerCatalog(result,'cl').length,2);
