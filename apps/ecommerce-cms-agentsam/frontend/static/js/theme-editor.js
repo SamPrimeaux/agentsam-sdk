@@ -534,9 +534,11 @@
     }
     if (!host) {
       try {
+        const siteId = window.cmsActiveSiteId || new URLSearchParams(window.location.search).get('site_id');
+        if (!siteId) throw new Error('Select a website before choosing a theme');
         const saved = await editorRequest('/api/admin/cms/theme-selection', {
           method: 'PUT',
-          body: JSON.stringify({ slug: nextTheme, expected_version: persistedThemeVersion }),
+          body: JSON.stringify({ slug: nextTheme, expected_version: persistedThemeVersion, site_id: siteId }),
         });
         if (!saved.ok) throw new Error(saved.code || saved.error || 'Theme selection could not be saved');
         persistedThemeVersion = saved.content_version;
