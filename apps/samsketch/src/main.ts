@@ -137,6 +137,10 @@ if(bootParams.get("presentation")==="embedded") appFrame.classList.add("is-embed
 function enterStudio(){gallery?.hide();shell.dataset.ssSurface="studio";announce("Editing · "+doc.name);sendHostMessage("surface",{surface:"studio"});sendHostMessage("selection",{selection:studioContext()});}
 function showGallery(){settingsApi.close();gallery?.show();sendHostMessage("surface",{surface:"gallery"});announce("SamSketch gallery");}
 function loadDocument(next:Document){
+ stopStoryPlayback();
+ mode="select";transformMode="off";storyTransition=null;toggleTimeline(true);
+ document.querySelectorAll(".canvas-tools .icon-control").forEach(button=>button.classList.remove("active"));
+ document.getElementById("mode-select")?.classList.add("active");
  snapshot();
  doc=next;
  selectedId=doc.items[0]?.id||"";selectedPartId=null;
@@ -539,7 +543,10 @@ function refreshSelection(){
 let pressed:Vec3|null=null;
 renderer.domElement.addEventListener("pointerdown",e=>{pressed=transformControls.axis?null:[e.clientX,e.clientY,0]});
 renderer.domElement.addEventListener("pointerup",e=>{
- if(mode!=="select"||!pressed||Math.hypot(e.clientX-pressed[0],e.clientY-pressed[1])>6)return;
+ if(!pressed||Math.hypot(e.clientX-pressed[0],e.clientY-pressed[1])>6)return;
+ if(mode==="story")setManipulationMode("off");
+ if(mode!=="select")return;
+ sceneAutoRotate=false;
  const bounds=renderer.domElement.getBoundingClientRect();
  hitPointer.set((e.clientX-bounds.left)/bounds.width*2-1,-(e.clientY-bounds.top)/bounds.height*2+1);
  hitRay.setFromCamera(hitPointer,camera);
