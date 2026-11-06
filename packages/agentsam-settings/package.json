@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-settings",
-  "version": "2.6.13",
+  "version": "2.6.14",
   "type": "module",
   "sideEffects": false,
   "types": "./dist/index.d.ts",
@@ -30,7 +30,7 @@
     "lucide-react": "^0.510.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "@inneranimalmedia/agentsam-workbench": "2.6.13"
+    "@inneranimalmedia/agentsam-workbench": "2.6.14"
   },
   "publishConfig": {
     "access": "public"

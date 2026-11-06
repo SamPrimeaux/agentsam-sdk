@@ -1,6 +1,6 @@
 {
   "name": "@inneranimalmedia/agentsam-key-manager",
-  "version": "2.6.13",
+  "version": "2.6.14",
   "type": "module",
   "description": "AgentSam settings UI for keys + integrations. Uses agentsam-vault contracts; Kumo-style SensitiveInput primitives.",
   "main": "./src/index.js",
@@ -17,7 +17,7 @@
     "react": ">=18"
   },
   "dependencies": {
-    "@inneranimalmedia/agentsam-vault": "2.6.13"
+    "@inneranimalmedia/agentsam-vault": "2.6.14"
   },
   "engines": {
     "node": ">=20"
