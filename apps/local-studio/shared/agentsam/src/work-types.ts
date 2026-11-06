@@ -99,7 +99,7 @@ export type Chat = {
   workProjectId?: string;
 };
 
-export type SideKind = "chat" | "browser" | "files" | "terminal" | "artifacts" | "deploy" | "app" | "media" | "goal" | "database";
+export type SideKind = "chat" | "browser" | "files" | "terminal" | "artifacts" | "deploy" | "app" | "media" | "goal" | "database" | "design" | "plugin";
 
 export type WorkGoal = {
   id: string;
@@ -114,6 +114,8 @@ export type WorkGoal = {
 export type SideTab = {
   id: string;
   kind: SideKind;
+  pluginId?: string;
+  stageId?: string;
   title: string;
   ephemeral: boolean;
   messages: ChatMessage[];

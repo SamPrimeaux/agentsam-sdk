@@ -1,5 +1,5 @@
 import { projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
-import { sideStageComposerWidgets } from './side-stage-actions.ts';
+import { receiveSideStageRegistry, sideStageComposerWidgets } from './side-stage-actions.ts';
 
 export type ComposerPlugin = ComposerCatalogEntry;
 
@@ -10,6 +10,7 @@ export async function loadComposerCatalog(signal?: AbortSignal): Promise<Compose
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   const {listLocalStudioConnections}=await import("../src/lib/connections/client");
   const payload=await listLocalStudioConnections();
+  receiveSideStageRegistry(payload.side_stages ?? []);
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   return projectComposerCatalog({
     plugins:payload.composer_plugins || payload.plugins || [],

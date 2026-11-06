@@ -1,9 +1,10 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { Bot, Box, Database, FileCode, Globe, Layers, Plug, Plus, ShieldCheck, Sparkles, SquareTerminal, Upload, Users, Wrench, X } from 'lucide-react';
+import { Bot, Box, Database, FileCode, Film, Globe, Layers, Plug, Plus, ShieldCheck, Sparkles, SquareTerminal, Target, Upload, Users, Wrench, X } from 'lucide-react';
 import { filterComposerCatalog, projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
 import { loadComposerCatalog } from './plugins';
-import { sideStageComposerWidgets } from './side-stage-actions';
+import { sideStageComposerWidgets, sideStageRegistrySnapshot } from './side-stage-actions';
 import { useWorkStore } from '@/lib/work/store';
+import { SETTINGS_CATALOG_CHANGED_EVENT } from '@/lib/desktop/connection-deep-link';
 
 /** A single compact capability/context picker for both + and typed @. */
 export function PluginPicker({ value, onChange, children }: {
@@ -45,6 +46,11 @@ export function PluginPicker({ value, onChange, children }: {
     return ()=>{cancelled=true;};
   },[revision]);
   useEffect(() => {
+    const refresh = () => setRevision(n => n + 1);
+    window.addEventListener(SETTINGS_CATALOG_CHANGED_EVENT, refresh);
+    return () => window.removeEventListener(SETTINGS_CATALOG_CHANGED_EVENT, refresh);
+  }, []);
+  useEffect(() => {
     const close=(event:PointerEvent)=>{
       if(!root.current?.contains(event.target as Node))setOpen(false);
     };
@@ -69,9 +75,16 @@ export function PluginPicker({ value, onChange, children }: {
   }
   function choose(entry:ComposerCatalogEntry){
     if(entry.action.type==='open-side-stage'&&entry.ready){
-      useWorkStore.getState().openSideTab(entry.action.tab as Parameters<ReturnType<typeof useWorkStore.getState>['openSideTab']>[0],
-        entry.action.tab==='goal' ? { title:'Edit goal',parentChatId:useWorkStore.getState().activeChatId,ephemeral:false }
-          : entry.action.tab==='chat' ? undefined : {ephemeral:false});
+      const stage = sideStageRegistrySnapshot().actions.find(item => entry.id === 'widget:' + item.id);
+      // An @ reference cannot manufacture a stage that the authenticated
+      // runtime catalog has not actually registered.
+      if (!stage) { setOpen(false); return; }
+      useWorkStore.getState().openSideTab(
+        stage.tabKind as Parameters<ReturnType<typeof useWorkStore.getState>['openSideTab']>[0],
+        { title: stage.label, pluginId: stage.pluginId, stageId: stage.stageId,
+          parentChatId: stage.tabKind==='goal' ? useWorkStore.getState().activeChatId : null,
+          ephemeral:false },
+      );
       replaceMention(entry,false);
     } else if(entry.action.type==='setup'||!entry.ready){
       window.dispatchEvent(new CustomEvent('agentsam:navigate', { detail: { to: '/settings/integrations' } }));
@@ -104,15 +117,18 @@ export function PluginPicker({ value, onChange, children }: {
     }
   }
   const icons={
-    browser:Globe,files:FileCode,artifacts:Box,ship:Upload,cad:Layers,
-    database:Database,cli:SquareTerminal,coworker:Users,
+    globe:Globe,browser:Globe,files:FileCode,'file-code':FileCode,
+    artifacts:Box,box:Box,ship:Upload,cad:Layers,layers:Layers,layout:Layers,
+    database:Database,cli:SquareTerminal,'square-terminal':SquareTerminal,
+    coworker:Users,users:Users,target:Target,film:Film,plug:Plug,
   };
   function rowIcon(entry:ComposerCatalogEntry){
     if(entry.iconUrl)return <span className="agentsam-plugin-icon">
       <img className="plugin-icon-light" src={entry.iconUrl} alt="" />
       <img className="plugin-icon-dark" src={entry.iconDarkUrl||entry.iconUrl} alt="" />
     </span>;
-    const Component=(icons as Record<string,typeof Plug>)[entry.id.split(':').pop()||'']||
+    const Component=(icons as Record<string,typeof Plug>)[entry.icon||'']||
+      (icons as Record<string,typeof Plug>)[entry.id.split(':').pop()||'']||
       (entry.kind==='connection'?ShieldCheck:entry.kind==='mcp'?Wrench:entry.kind==='agent'?Bot:entry.kind==='skill'?Sparkles:Plug);
     return <Component size={17} aria-hidden="true" />;
   }

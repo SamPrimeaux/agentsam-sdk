@@ -3,6 +3,7 @@ import {
   loadCloudflareConnectionRecord,
 } from "../../../../packages/connectors/cfoa/src/index.js";
 import { loadPluginRegistry, materializeCloudflarePlugin } from "./plugin-registry.js";
+import { listAccountSideStages } from "./plugin-side-stages.js";
 
 export const BYOK_PROVIDER_DEFINITIONS = Object.freeze([
   { provider: "openai", service: "openai", label: "OpenAI" },
@@ -151,6 +152,7 @@ export async function loadConnectionsRegistry(env, userId) {
     available: cloudflare.configured,
     checkSource: "page_load",
   });
+  const sideStages = await listAccountSideStages(env.DB, userId);
   const pluginRegistry = await loadPluginRegistry(env, userId, { includeDisabled: true });
   pluginRegistry.plugins = pluginRegistry.plugins.map((row) => applyOauthPluginState(row, oauthTokenRows));
   const cloudflarePlugin = pluginRegistry.plugins.find((row) => row.plugin_key === "agentsam-mcp") || null;
@@ -183,6 +185,7 @@ export async function loadConnectionsRegistry(env, userId) {
     plugins: settingsPlugins,
     // Independent views of the SAME registry, never a second authority.
     composer_plugins: composerPlugins,
+    side_stages: sideStages,
     // Non-secret OAuth evidence and registered repositories from the existing account SSOT.
     oauth_status: {
       available: oauthRecords.available,

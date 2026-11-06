@@ -15,15 +15,17 @@ import { BrowserStage } from "@/components/workbench/browser";
 import { FilesStage } from "@/components/workbench/files";
 import { ArtifactsStage } from "@/components/workbench/artifacts";
 import { AppPreviewStage } from "@/components/workbench/app-preview-stage";
+import { CanvasEntryStage } from "@/components/workbench/canvas-entry-stage";
+import { PluginSideStage } from "@/components/workbench/plugin-side-stage";
 import { MovieModeSurface } from "@/components/media/MovieModeSurface";
 import { DatabaseStage } from "@/components/workbench/database-stage";
 import { TerminalPane } from "@/components/workbench/terminal";
 import { cn } from "@/lib/utils";
-import { useActiveSideTab, useWorkStore } from "@/lib/work/store";
+import { useWorkStore } from "@/lib/work/store";
 import { StudioMark } from "@/components/mark";
 import { consumePendingDatabaseAssistantContext } from "@/lib/database/assistantContext";
 import { consumePendingCadAssistantContext } from "@/lib/cad/assistantContext";
-import { SIDE_STAGE_ACTIONS } from "../../../agentsam/side-stage-actions";
+import { reloadSideStageRegistry, useSideStageRegistry } from "../../../agentsam/side-stage-actions";
 
 function TabIcon({ kind }: { kind: string }) {
   if (kind === "chat") return <Users className="size-3.5" />;
@@ -47,13 +49,26 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
   const confirmId = useWorkStore((s) => s.confirmDiscardId);
   const setConfirmDiscard = useWorkStore((s) => s.setConfirmDiscard);
   const keepSideChat = useWorkStore((s) => s.keepSideChat);
-  const tab = useActiveSideTab();
+  const registry = useSideStageRegistry();
+  const stages = registry.actions;
+  const registered = (item: (typeof tabs)[number]) => item.pluginId
+    ? stages.some(stage => stage.pluginId === item.pluginId)
+    : stages.some(stage => stage.renderer === "builtin" && stage.tabKind === item.kind);
+  // Account disabling and plugin uninstalling remove the visual entry, but
+  // preserve cached tab state, draft text and conversations for re-enabling.
+  const visibleTabs = registry.loaded && !registry.error ? tabs.filter(registered) : tabs;
+  const tab = visibleTabs.find(item => item.id === activeId) ?? visibleTabs[0] ?? null;
+  useEffect(() => {
+    if (!registry.loaded || registry.error || !visibleTabs.length) return;
+    if (!visibleTabs.some(item => item.id === activeId))
+      setActiveSideTab(visibleTabs[0].id);
+  }, [registry.loaded, registry.error, visibleTabs, activeId, setActiveSideTab]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <div className="flex h-12 items-center gap-1 border-b border-border px-2">
         <div className="scrollbar-thin flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
-          {tabs.map((item) => (
+          {visibleTabs.map((item) => (
             <div
               key={item.id}
               className={cn(
@@ -86,20 +101,33 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              {SIDE_STAGE_ACTIONS.map((item) => {
+              {!registry.loaded && <div role="status" className="px-3 py-2 text-xs text-muted-foreground">Loading additions…</div>}
+              {registry.error && <DropdownMenuItem onSelect={() => {
+                void reloadSideStageRegistry();
+              }}>Retry loading additions</DropdownMenuItem>}
+              {registry.loaded && !registry.error && !stages.length &&
+                <div role="status" className="px-3 py-2 text-xs text-muted-foreground">No additions enabled</div>}
+              {stages.map((stage) => {
                 const Icon = {
-                  goal: Target, coworker: Users, browser: Globe, files: FileCode,
-                  artifacts: Box, cad: Layers, media: Film, database: Database, cli: SquareTerminal,
-                }[item.id];
+                  target: Target, users: Users, globe: Globe, "file-code": FileCode,
+                  box: Box, layers: Layers, layout: Layers, film: Film,
+                  database: Database, "square-terminal": SquareTerminal,
+                }[stage.icon] || Layers;
                 return (
-                  <DropdownMenuItem key={item.id} onSelect={() => {
-                    const extra = item.tab === "goal"
-                      ? { title: "Edit goal", parentChatId: useWorkStore.getState().activeChatId, ephemeral: false }
-                      : item.tab === "chat" ? undefined : { ephemeral: false };
-                    openSideTab(item.tab, extra);
+                  <DropdownMenuItem key={stage.id} onSelect={() => {
+                    openSideTab(stage.tabKind as Parameters<typeof openSideTab>[0], {
+                      title: stage.label,
+                      pluginId: stage.pluginId,
+                      stageId: stage.stageId,
+                      parentChatId: stage.tabKind === "goal"
+                        ? useWorkStore.getState().activeChatId : null,
+                      ephemeral: false,
+                    });
                   }}>
-                    <Icon className="size-3.5" />
-                    {item.label}
+                    {stage.iconUrl
+                      ? <img className="size-3.5 object-contain" src={stage.iconUrl} alt="" />
+                      : <Icon className="size-3.5" />}
+                    {stage.label}
                   </DropdownMenuItem>
                 );
               })}
@@ -140,6 +168,8 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
         {tab?.kind === "files" ? <FilesStage tab={tab} /> : null}
         {tab?.kind === "artifacts" ? <ArtifactsStage /> : null}
         {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
+        {tab?.kind === "design" ? <CanvasEntryStage tab={tab} /> : null}
+        {tab?.kind === "plugin" ? <PluginSideStage stage={stages.find(stage => stage.pluginId === tab.pluginId)} /> : null}
         {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
         {tab?.kind === "terminal" ? <TerminalPane variant="side" /> : null}

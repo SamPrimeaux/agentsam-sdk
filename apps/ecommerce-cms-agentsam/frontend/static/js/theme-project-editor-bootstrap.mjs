@@ -13,6 +13,22 @@ const API = '/api/admin/cms/theme-projects';
 const scoped = path => siteId ? path + (path.includes('?') ? '&' : '?') +
   'site_id=' + encodeURIComponent(siteId) : path;
 
+// A verified document identity travels back to the optional AgentSam Side
+// Stage host. It only receives route/selection state, never auth credentials.
+function publishCanvasRoute() {
+  if (!siteId || !projectId || window.parent === window) return;
+  const canonical = new URL(location.href);
+  if (canonical.pathname !== '/admin/theme-project-editor' ||
+      canonical.searchParams.get('site_id') !== siteId ||
+      canonical.searchParams.get('project') !== projectId ||
+      canonical.searchParams.has('new')) return;
+  window.parent.postMessage({
+    type: 'agentsam:cms-canvas:route',
+    siteId, projectId,
+    href: canonical.pathname + canonical.search,
+  }, location.origin);
+}
+
 function showError(error) {
   errorNode.hidden = false;
   errorNode.textContent = 'Your theme could not be opened. Please return to Online Store and try again.';
@@ -107,6 +123,7 @@ async function boot() {
   history.replaceState(history.state,'',canonical.pathname+canonical.search);
   let project = await store.get(projectId);
   if (!project || project.id!==projectId) throw new Error('theme_project_identity_mismatch');
+  publishCanvasRoute();
   const repaired=repairEmptyThemeBlockControls(project);
   const inherited=inheritDefaultTemplates(repaired.project);
   if(repaired.changed || inherited.changed)project=await store.save(inherited.project,{expectedVersion:project.revision});
@@ -134,17 +151,20 @@ async function boot() {
         for(const [key,value] of [['section',selection.section_key],['block',selection.block_id]])
           value?next.searchParams.set(key,value):next.searchParams.delete(key);
         history.replaceState(history.state,'',next.pathname+next.search);
+        publishCanvasRoute();
       },
       onDeviceChange(device) {
         const next=new URL(location.href);
         next.searchParams.set('previewMode',device);
         history.replaceState(history.state,'',next.pathname+next.search);
+        publishCanvasRoute();
       },
       onPageChange(nextPage) {
         const next=new URL(location.href);
         next.searchParams.set('page',nextPage);
         ['section','block'].forEach(key=>next.searchParams.delete(key));
         history.replaceState(history.state,'',next.pathname+next.search);
+        publishCanvasRoute();
       },
       metadata: {
         name: project.name,
