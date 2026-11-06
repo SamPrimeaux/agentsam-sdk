@@ -157,7 +157,8 @@ export function absolutizeThemePreviewPaths(html, baseUrl) {
   } catch { return html; }
   if (!/^\/theme-packages\/[a-z0-9-]+\/\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?\/preview\/$/.test(prefix)) return html;
   return html.replace(/(\b(?:href|src|poster)\s*=\s*)(["'])(\/theme-packages\/[^"'\s<>]*)\2/g, (match, start, quote, value) =>
-    value.startsWith(prefix) ? start + quote + origin + value + quote : match);
+    (value.startsWith(prefix) || value === prefix.slice(0, -1))
+      ? start + quote + origin + value + quote : match);
 }
 
 export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
