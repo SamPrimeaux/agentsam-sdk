@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import test, { afterEach } from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
-import { createAdminAgentSamSkill } from "../apps/ecommerce-cms-agentsam/backend/agentsam/skill-authoring.js";
-import { listAgentSamSkills, getAgentSamSkill, resolveSkillsForChat } from "../apps/ecommerce-cms-agentsam/backend/agentsam/skills.js";
-import { __setApplicationAccountId } from "../apps/ecommerce-cms-agentsam/backend/lib/account-context.js";
+import { createAdminAgentSamSkill } from "../../apps/ecommerce-cms-agentsam/backend/agentsam/skill-authoring.js";
+import { listAgentSamSkills, getAgentSamSkill, resolveSkillsForChat } from "../../apps/ecommerce-cms-agentsam/backend/agentsam/skills.js";
+import { __setApplicationAccountId } from "../../apps/ecommerce-cms-agentsam/backend/lib/account-context.js";
 
 afterEach(() => __setApplicationAccountId(null));
 function buildEnv() {
   const db = new DatabaseSync(":memory:");
-  const ddl = readFileSync(new URL("../migrations/d1/0011_agentsam_skill_v2.sql", import.meta.url), "utf8");
+  const ddl = readFileSync(new URL("../../migrations/d1/0011_agentsam_skill_v2.sql", import.meta.url), "utf8");
   db.exec(ddl);
   const prepare=sql=>({bind(...args) {
     const stmt=db.prepare(sql);
