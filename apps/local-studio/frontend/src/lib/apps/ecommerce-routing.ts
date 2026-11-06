@@ -31,7 +31,7 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
     '/admin/pages': ['site_id'],
     '/admin/theme-editor': ['slug', 'site', 'site_id', 'page_id', 'showcase', 'catalog', 'source'],
     '/admin/page-edit': ['slug', 'site_id', 'page_id'],
-    '/admin/theme-project-editor': ['project','site_id','page'],
+    '/admin/theme-project-editor': ['project','site_id','page','section','block','previewMode','new'],
     '/admin/product-edit': ['id','site_id'],
     '/admin/products': ['view','site_id','collection_id'],
     '/admin/collections': ['site_id'],
@@ -48,6 +48,15 @@ export function resolveEcommerceAdminPath(candidate = '/admin/store') {
       ? ['site_id']
       : []);
   if ([...url.searchParams.keys()].some((name) => !allowed.includes(name) || url.searchParams.getAll(name).length !== 1)) return null;
+  if (url.pathname === '/admin/theme-project-editor') {
+    // Online Store's actual + New link is a site-scoped creation intent,
+    // not an arbitrary route or a request to overwrite an existing project.
+    if (url.searchParams.has('new') &&
+        (url.searchParams.get('new') !== '1' ||
+         !url.searchParams.has('site_id') || url.searchParams.has('project'))) return null;
+    if (url.searchParams.has('previewMode') &&
+        !['desktop', 'tablet', 'mobile'].includes(url.searchParams.get('previewMode') || '')) return null;
+  }
   for (const [name, value] of url.searchParams) {
     if (!idParam.test(value)
       || (name === 'view' && !['store', 'collections', 'platform'].includes(value))
