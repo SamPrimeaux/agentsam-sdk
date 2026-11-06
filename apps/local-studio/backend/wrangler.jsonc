@@ -34,6 +34,7 @@
     "IAM_OAUTH_ISSUER": "https://inneranimalmedia.com",
     "IAM_CLIENT_ID": "iam_agentsam_sdk_web",
     "GOOGLE_CLIENT_ID": "246811022042-d8q1rc1oki4uv9qiqjah8lvkffb91crp.apps.googleusercontent.com",
+    "GOOGLE_AGENT_DESKTOP_CLIENT_ID": "246811022042-eh2s6fnuj9tn1m52stv7656kftipo6f4.apps.googleusercontent.com",
     "GOOGLE_DESKTOP_CLIENT_ID": "246811022042-cckq00b5seekpkv0in358jhu42n0b6u9.apps.googleusercontent.com",
     "GITHUB_APP_ID": "5151862",
     "GITHUB_CLIENT_ID": "Iv23likfrsHDFXHiiXAK",
