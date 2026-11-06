@@ -8,3 +8,4 @@ export * from './timeline';
 export * from './manufacturing';
 
 export * from './widgets';
+export * from './design';

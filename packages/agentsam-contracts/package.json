@@ -80,6 +80,14 @@
     "./resource-scope": {
       "types": "./dist/resource-scope.d.ts",
       "import": "./dist/resource-scope.js"
+    },
+    "./design-workspace": {
+      "types": "./dist/design-workspace.d.ts",
+      "import": "./dist/design-workspace.js"
+    },
+    "./design-workspace-registry": {
+      "types": "./dist/design-workspace-registry.d.ts",
+      "import": "./dist/design-workspace-registry.js"
     }
   },
   "scripts": {

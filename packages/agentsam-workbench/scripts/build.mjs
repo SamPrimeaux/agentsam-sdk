@@ -21,6 +21,7 @@ await build({
     'manufacturing/index': 'src/manufacturing/index.ts',
     'widgets/index': 'src/widgets/index.ts',
     'knowledge/index': 'src/knowledge/index.ts',
+    'design/index': 'src/design/index.ts',
   },
   outdir: 'dist',
   outbase: 'src',
@@ -45,3 +46,6 @@ copyFileSync(`${cwd}/src/knowledge/autorag-workflow.css`, `${cwd}/dist/knowledge
 mkdirSync(`${cwd}/dist/widgets`, { recursive: true });
 copyFileSync(`${cwd}/src/widgets/widgets.css`, `${cwd}/dist/widgets/widgets.css`);
 execFileSync('tsc', ['-p', 'tsconfig.build.json'], { cwd, stdio: 'inherit' });
+
+mkdirSync(`${cwd}/dist/design`, { recursive: true });
+copyFileSync(`${cwd}/src/design/design-workspace.css`, `${cwd}/dist/design/design-workspace.css`);
