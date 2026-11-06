@@ -5,6 +5,7 @@
   "type": "module",
   "files": [
     "dist",
+    "styles",
     "README.md"
   ],
   "exports": {
@@ -15,13 +16,19 @@
     "./ui": {
       "types": "./dist/ui/index.d.ts",
       "import": "./dist/ui/index.js"
-    }
+    },
+    "./ui/provider-connect": {
+      "types": "./dist/ui/provider-connect-flow.d.ts",
+      "import": "./dist/ui/provider-connect-flow.js"
+    },
+    "./styles/provider-connect.css": "./styles/provider-connect.css"
   },
   "dependencies": {
     "@inneranimalmedia/analytics-ui": "2.6.14"
   },
   "peerDependencies": {
-    "react": ">=19"
+    "react": ">=19",
+    "react-dom": ">=19"
   },
   "license": "FSL-1.1-MIT",
   "main": "./dist/index.js",
@@ -29,10 +36,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && node --test test/*.test.mjs",
     "prepack": "npm run build"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "react": "^19.2.0",
     "typescript": "^5.9.3"
   },
