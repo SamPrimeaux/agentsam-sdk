@@ -98,6 +98,12 @@ jobs:
           npm run release:train:check
           node scripts/sdk-release-publish.mjs --plan
 
+      # Canvas Work is hosted inside the standalone Local Studio workspace.
+      # Its runtime imports the published SDK through that app's own lockfile,
+      # not the root workspace dependency tree. Install it before root tests.
+      - name: Install Studio runtime dependencies for SDK integration tests
+        run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
+
       - name: Verify SDK
         run: npm run verify
 
@@ -116,9 +122,6 @@ jobs:
         run: |
           node apps/local-studio/scripts/check-first-party-registry.mjs --require
           node apps/local-studio/scripts/verify-npm10-lock.mjs
-
-      - name: Install Studio browser-test dependencies
-        run: npm ci --prefix apps/local-studio --ignore-scripts --no-audit --no-fund
 
       - name: Install Chromium and OS libraries
         run: npm exec --prefix apps/local-studio -- playwright install --with-deps chromium
