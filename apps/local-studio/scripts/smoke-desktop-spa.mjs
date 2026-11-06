@@ -147,7 +147,7 @@ const requiredCmsEditorFiles = [
   "theme-editor/bridge.mjs",
   "theme-editor/mount.mjs",
   "theme-editor/starter-project.mjs",
-  "theme-editor/new-theme.mjs",
+  "theme-editor/system-template-registry.mjs",
 ];
 for (const relative of requiredCmsEditorFiles) {
   if (!existsSync(join(root, relative))) failures.push("desktop_cms_editor_missing:" + relative);

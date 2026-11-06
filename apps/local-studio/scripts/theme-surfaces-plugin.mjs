@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, join, relative, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build as buildLibrary } from 'vite';
 
 const studioRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = resolve(studioRoot, '../..');
@@ -65,16 +64,6 @@ export function discoverThemeSurfaces(root = repoRoot) {
 /** Identical inventory, editor runtime and preview payload for hosted and Tauri. */
 export function themeSurfacesPlugin() {
   let inventory;
-  let newThemeBundle;
-  const bundleNewTheme=()=>newThemeBundle ||= buildLibrary({
-    configFile:false,root:studioRoot,publicDir:false,logLevel:'error',
-    build:{write:false,minify:true,lib:{entry:resolve(repoRoot,'apps/ecommerce-cms-agentsam/frontend/theme-editor/new-theme.mjs'),formats:['es'],fileName:'new-theme'}},
-  }).then(result=>{
-    const output=(Array.isArray(result)?result:[result]).flatMap(item=>item.output||[]);
-    const entry=output.find(item=>item.type==='chunk'&&item.isEntry);
-    if(!entry)throw new Error('cms_new_theme_bundle_missing');
-    return entry.code;
-  });
   const load = () => {
     inventory = discoverThemeSurfaces();
     const editor = resolve(repoRoot, 'apps/ecommerce-cms-agentsam/frontend/static');
@@ -82,7 +71,7 @@ export function themeSurfacesPlugin() {
       inventory.assets.set('theme-editor/' + name, join(editor, source));
     }
     const themeEditorSource = resolve(repoRoot, 'apps/ecommerce-cms-agentsam/frontend/theme-editor');
-    for (const name of ['project.mjs', 'bridge.mjs', 'mount.mjs', 'starter-project.mjs', 'starter-products.mjs', 'starter-chrome.mjs', 'new-theme.css']) {
+    for (const name of ['project.mjs', 'bridge.mjs', 'mount.mjs', 'starter-project.mjs', 'starter-products.mjs', 'starter-chrome.mjs', 'system-template-registry.mjs']) {
       inventory.assets.set('theme-editor/' + name, join(themeEditorSource, name));
     }
     // The original merchant-facing Online Store is packaged alongside Theme Studio.
@@ -101,23 +90,14 @@ export function themeSurfacesPlugin() {
     name: 'agentsam-theme-surfaces',
     resolveId(id) { if (id === 'virtual:agentsam-theme-inventory') return '\0' + id; },
     load(id) { if (id === '\0virtual:agentsam-theme-inventory') return `export default ${JSON.stringify((inventory || load()).themes)};`; },
-    async buildStart() { load(); await bundleNewTheme(); },
+    buildStart() { load(); },
     async generateBundle() {
-      this.emitFile({type:'asset',fileName:'theme-editor/new-theme.mjs',source:await bundleNewTheme()});
       for (const [fileName, file] of (inventory || load()).assets) this.emitFile({ type: 'asset', fileName, source: readFileSync(file) });
     },
     configureServer(server) {
       load();
       server.middlewares.use((req, res, next) => {
         const key = decodeURIComponent((req.url || '').split('?')[0]).replace(/^\//, '');
-        if(key==='theme-editor/new-theme.mjs'){
-          const source='/@fs/'+resolve(repoRoot,'apps/ecommerce-cms-agentsam/frontend/theme-editor/new-theme.mjs');
-          server.transformRequest(source).then(result=>{
-            if(!result)return next();
-            res.setHeader('content-type','text/javascript');res.end(result.code);
-          }).catch(next);
-          return;
-        }
         const file = inventory.assets.get(key);
         if (!file) return next();
         const mime = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.woff2': 'font/woff2' };
