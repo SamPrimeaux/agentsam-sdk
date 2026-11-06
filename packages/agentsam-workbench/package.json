@@ -43,6 +43,11 @@
       "import": "./dist/timeline/index.js"
     },
     "./agent/mini-agentsam.css": "./dist/agent/mini-agentsam.css",
+    "./agent/selection-toolbar.css": "./dist/agent/selection-toolbar.css",
+    "./agent/SelectionToolbar": {
+      "types": "./dist/agent/SelectionToolbar.d.ts",
+      "import": "./dist/agent/SelectionToolbar.js"
+    },
     "./agent/contextual-composer.css": "./dist/agent/contextual-composer.css",
     "./agent/tool-permission.css": "./dist/agent/tool-permission.css",
     "./project-control.css": "./dist/project-control.css",

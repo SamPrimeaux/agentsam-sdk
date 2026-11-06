@@ -1,0 +1,99 @@
+/* Real Work document panel. Theme tokens own all visual state. */
+.work-artifact-document { position: relative; display: flex; flex-direction: column; min-width: 0; height: 100%; color: var(--nav-text, var(--color-foreground)); background: var(--nav-canvas, var(--color-background)); }
+.work-artifact-document.is-document-fullscreen {
+  position: fixed; inset: 0; z-index: 120; background: var(--nav-canvas, var(--color-background));
+}
+.work-artifact-document__header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 68px; padding: 9px 15px; border-bottom: 1px solid var(--nav-border, var(--color-border));
+  background: var(--nav-canvas, var(--color-background));
+}
+.work-artifact-document__identity { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.work-artifact-document__kind { color: var(--nav-muted, var(--color-muted-foreground)); font-size: 10px; text-transform: uppercase; letter-spacing: .09em; }
+.work-artifact-document__identity strong { max-width: 56ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
+.work-artifact-document__identity small { color: var(--nav-muted, var(--color-muted-foreground)); font-size: 11px; }
+.work-artifact-document__header nav { display: flex; flex: none; gap: 2px; }
+.work-artifact-document__header button {
+  display: grid; place-items: center; width: 34px; height: 34px;
+  border: 0; border-radius: 8px; background: transparent; color: var(--nav-muted, var(--color-muted-foreground));
+}
+.work-artifact-document__header button:hover:not(:disabled),
+.work-artifact-document__header button:focus-visible { background: var(--nav-selected, var(--color-muted)); color: var(--nav-text, var(--color-foreground)); }
+.work-artifact-document__header button:focus-visible { outline: 2px solid var(--nav-accent, var(--color-accent)); outline-offset: 2px; }
+.work-artifact-document__header button:disabled { cursor: default; color: var(--nav-muted, var(--color-muted-foreground)); }
+.work-artifact-document__error { font-size: 12px; padding: 11px 18px; border-bottom: 1px solid var(--nav-danger, var(--color-destructive)); color: var(--nav-danger, var(--color-destructive)); }
+.work-artifact-document__scroller { flex: 1; min-height: 0; overflow: auto; padding: clamp(18px, 4vw, 48px) clamp(16px, 4vw, 48px); }
+.work-artifact-document__body {
+  max-width: 70ch; min-height: 50%; margin: 0 auto; outline: none;
+  font-family: var(--nav-font-reading, var(--nav-font, inherit));
+  font-size: 15px; line-height: 1.65; overflow-wrap: anywhere;
+}
+.work-artifact-document__body[contenteditable="true"]:focus-visible {
+  outline: 2px solid var(--nav-border, var(--color-border)); outline-offset: 12px; border-radius: 2px;
+}
+.work-artifact-document__body > :first-child { margin-top: 0; }
+.work-artifact-document__body h1 { font-size: 27px; font-weight: 620; line-height: 1.25; letter-spacing: -.025em; margin: 1.3em 0 .6em; }
+.work-artifact-document__body h2 { font-size: 21px; font-weight: 610; line-height: 1.3; margin: 1.4em 0 .55em; }
+.work-artifact-document__body h3 { font-size: 17px; font-weight: 620; line-height: 1.4; margin: 1.25em 0 .45em; }
+.work-artifact-document__body p { margin-block: .7em; }
+.work-artifact-document__body ul, .work-artifact-document__body ol { margin-block: 1em; padding-left: 1.5em; }
+.work-artifact-document__body ul { list-style: disc; }
+.work-artifact-document__body ol { list-style: decimal; }
+.work-artifact-document__body blockquote { padding-left: 12px; border-left: 2px solid var(--nav-border, var(--color-border)); color: var(--nav-muted, var(--color-muted-foreground)); }
+.work-artifact-document__body :is(code,pre) { font-family: var(--nav-font-mono, ui-monospace, SFMono-Regular, monospace); font-size: .91em; background: var(--nav-selected, var(--color-muted)); }
+.work-artifact-document__body a { text-decoration: underline; text-underline-offset: 2px; }
+.work-artifact-document__body ::selection { background: var(--nav-selected, var(--color-muted)); }
+.work-artifact-document__body [data-tone="default"] { color: var(--nav-text, var(--color-foreground)); }
+.work-artifact-document__body [data-tone="danger"] { color: var(--nav-danger, var(--color-destructive)); }
+.work-artifact-document__body [data-tone="warning"] { color: var(--nav-warning, var(--nav-accent)); }
+.work-artifact-document__body [data-tone="success"] { color: var(--nav-success, var(--nav-accent)); }
+.work-artifact-document__body [data-tone="info"] { color: var(--nav-info, var(--nav-accent)); }
+.work-artifact-document__body [data-tone="teal"] { color: var(--nav-teal, var(--nav-accent)); }
+.work-artifact-document__body [data-tone="accent"] { color: var(--nav-accent, var(--color-accent)); }
+.work-artifact-document__body [data-highlight] { color: inherit; background: color-mix(in srgb, var(--nav-accent) 22%, transparent); border-radius: 2px; }
+.work-artifact-document__body [data-highlight="danger"] { background: color-mix(in srgb, var(--nav-danger, var(--nav-accent)) 22%, transparent); }
+.work-artifact-document__body [data-highlight="warning"] { background: color-mix(in srgb, var(--nav-warning, var(--nav-accent)) 22%, transparent); }
+.work-artifact-document__body [data-highlight="success"] { background: color-mix(in srgb, var(--nav-success, var(--nav-accent)) 22%, transparent); }
+.work-artifact-document__body [data-highlight="info"] { background: color-mix(in srgb, var(--nav-info, var(--nav-accent)) 22%, transparent); }
+.work-artifact-document__body [data-highlight="teal"] { background: color-mix(in srgb, var(--nav-teal, var(--nav-accent)) 22%, transparent); }
+.work-artifact-document__body [data-highlight="accent"] { background: color-mix(in srgb, var(--nav-accent) 22%, transparent); }
+.work-artifact-document__body [data-highlight="default"] { background: transparent; }
+.work-artifact-document__body [data-agent-comment-id] {
+  border-bottom: 1px dashed var(--nav-accent, var(--color-accent)); cursor: pointer;
+  background: color-mix(in srgb, var(--nav-accent) 12%, transparent);
+}
+.work-artifact-document__body [data-review-tag] {
+  box-shadow: inset 0 -2px var(--nav-accent, var(--color-accent));
+}
+.work-artifact-document__comments {
+  position: absolute; z-index: 2; top: 68px; right: 0; bottom: 0;
+  width: min(320px, 90%); padding: 18px; overflow: auto;
+  border-left: 1px solid var(--nav-border, var(--color-border)); background: var(--nav-surface, var(--color-card));
+  box-shadow: var(--nav-shadow);
+}
+.work-artifact-document__comments > div { display: flex; align-items: center; justify-content: space-between; }
+.work-artifact-document__comments > div button { border: 0; border-radius: 7px; background: var(--nav-selected, var(--color-muted)); padding: 6px; }
+.work-artifact-document__comments blockquote {
+  margin-block: 18px; padding-left: 12px; border-left: 2px solid var(--nav-accent, var(--color-accent));
+  font-size: 12px; line-height: 1.5;
+}
+.work-artifact-document__comments blockquote span { color: var(--nav-muted, var(--color-muted-foreground)); }
+.work-artifact-document__comments blockquote p { margin-top: 7px; }
+@media (max-width: 640px) {
+  .work-artifact-document__header { padding-inline: 8px; }
+  .work-artifact-document__identity strong { max-width: 31vw; }
+  .work-artifact-document__scroller { padding: 24px 16px; }
+  .work-artifact-document__body { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-artifact-document, .work-artifact-document * { transition: none !important; }
+}
+
+.work-artifact-document__dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.work-artifact-document__dialog-actions button {
+  min-height: 36px; padding: 8px 12px; border: 1px solid var(--nav-border, var(--color-border));
+  border-radius: 8px; color: var(--nav-text, var(--color-foreground));
+  background: var(--nav-surface, var(--color-card)); font-size: 12px;
+}
+.work-artifact-document__dialog-actions button:hover { background: var(--nav-selected, var(--color-muted)); }
+.work-artifact-document__dialog-actions button:focus-visible { outline: 2px solid var(--nav-accent, var(--color-accent)); outline-offset: 2px; }

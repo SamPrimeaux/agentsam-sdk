@@ -131,6 +131,15 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     return () => controller.abort();
   }, [user?.id]);
   const chat = state.chats.find((item) => item.id === state.activeChatId);
+  const conversationOutputFiles = chat
+    ? [...(chat.files ?? []), ...((state.projects.find(item => item.id === state.activeProjectId)?.files ?? [])
+        .filter(file => file.chatId === chat.id))]
+        .filter((file, index, rows) => rows.findIndex(other => other.path === file.path) === index)
+    : [];
+  const shareableChat = Boolean(chat?.messages.some(message => message.role !== 'system' &&
+    message.id !== 'welcome-msg' && (message.content.trim() ||
+      (Array.isArray(message.metadata?.attachments) && message.metadata.attachments.length > 0)))
+    || conversationOutputFiles.length);
   const [workProjects,setWorkProjects] = useState<import('@inneranimalmedia/agentsam-work/contracts').WorkProject[]>([]);
   const [pinnedResources,setPinnedResources] = useState<Array<{id:string;title:string;kind:string;open?:string|null}>>([]);
   const [historyStatus,setHistoryStatus] = useState<'loading'|'error'|'ready'>('loading');
@@ -428,7 +437,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         .map(item => ({id:item.id,title:item.title,projectId:item.workProjectId,pinned:item.pinned,updatedAt:item.updatedAt})),
     ],
     account: user ? { id: user.id, name: user.isDevFallback ? 'Local account' : user.displayName ?? 'Account', avatar: accountAvatarUrl || user.profileImageUrl || undefined } : undefined,
-    showSidebarHeader: false,
+    showSidebarHeader: isConversation && mode === 'work',
     newConversationAfter: 'home',
     showHistory: true,
     destinations: [
@@ -498,7 +507,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         }).catch(()=>toast.error('Could not delete conversation.'));
       } else state.deleteChat(id);
     },
-    onShare: chat ? () => setSharing(true) : undefined,
+    onShare: shareableChat ? () => setSharing(true) : undefined,
     accountActions: [
       {id:'profile-image',label:'Profile image',icon:<PawPrint />,onSelect:() => { setAvatarDraft(accountAvatarUrl || user?.profileImageUrl || ''); setAvatarDialogOpen(true); }},
       {id:'settings',label:'Settings',icon:<Settings />,onSelect:() => go('/settings/general')},
@@ -510,14 +519,26 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       { id: 'files', label: 'Project files', icon: <Files />, onSelect: () => state.openSideTab('files') },
     ],
     conversationActions: chat ? [
-      { id: 'share', label: 'Create a public link', icon: <NavShareIcon />, onSelect: () => setSharing(true) },
+      ...(shareableChat ? [{ id: 'share', label: 'Create a public link', icon: <NavShareIcon />, onSelect: () => setSharing(true) }] : []),
       { id: 'files', label: 'View files in conversation', icon: <Files />, onSelect: () => state.openSideTab('files') },
       { id: 'pin', label: chat.pinned ? 'Unpin conversation' : 'Pin conversation', icon: <Pin />, onSelect: () => state.pinChat(chat.id) },
       { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
     ] : [],
     pinnedSummary: chat ? {
-      outputs: chat.files.map(file => file.title || file.path),
-      sources: chat.messages.flatMap(message => shareAttachmentMetadata(message).map(file => file.name)),
+      subagents: state.sideTabs.filter(tab => tab.kind === 'chat' && tab.parentChatId === chat.id).map(tab => ({
+        id: tab.id, label: tab.title || 'Co-worker',
+        status: state.streamingIds.includes(tab.id) ? 'Working' : 'Idle',
+        onSelect: () => { state.setActiveSideTab(tab.id); state.setSideOpen(true); },
+      })),
+      outputs: conversationOutputFiles.map(file => ({
+        id: file.id, label: file.title || file.path, kind: file.kind || 'File',
+        onSelect: () => { state.openSideTab('artifacts', { fileId: file.id, ephemeral: false }); state.setSideOpen(true); },
+      })),
+      sources: chat.messages.flatMap(message => shareAttachmentMetadata(message).map((file, index) => ({
+        id: message.id + ':' + index, label: file.name, kind: 'Attachment',
+      }))),
+      onAddOutput: () => { state.openSideTab('files'); state.setSideOpen(true); },
+      onAddSource: () => { state.openSideTab('files'); state.setSideOpen(true); },
     } : undefined,
     resourceActions: [
       { id: 'outputs', label: 'Outputs', icon: <BookOpen />, onSelect: () => state.openSideTab('artifacts') },
