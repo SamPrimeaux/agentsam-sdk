@@ -37,6 +37,26 @@ test('website product adapter does not read cms_themes and preserves verified re
     assert.equal(result.products[0].thumbnail_url, origin + '/previews/plain-jane.svg');
   } finally { globalThis.fetch = previous; }
 });
+test('released store cover URLs preserve real theme imagery without trusting arbitrary external assets', async () => {
+  const previous = globalThis.fetch;
+  const cover = origin + '/site-media/cypress/badfa46a85417e06.webp';
+  const vector = origin + '/site-media/plain-jane/304b7711646f2cb5.svg';
+  globalThis.fetch = async () => Response.json({ok:true,products:[
+    {...product,slug:'cypress',cardImage:cover},
+    {...product,slug:'plain-jane',cardImage:vector},
+    {...product,slug:'grove',cardImage:origin+'/site-media/cypress/badfa46a85417e06.webp'},
+    {...product,slug:'ember',cardImage:origin+'/site-media/ember/badfa46a85417e06.webp?redirect=1'},
+  ]});
+  try {
+    const result=await (await handleStudioWebsiteThemeCatalog(
+      new Request('https://agentsam.test/api/admin/website-themes'),'account-one'
+    )).json();
+    assert.equal(result.products[0].thumbnail_url,cover);
+    assert.equal(result.products[1].thumbnail_url,vector);
+    assert.equal(result.products[2].thumbnail_url,null,'theme cannot reuse a different product cover');
+    assert.equal(result.products[3].thumbnail_url,null,'query parameters cannot redirect a cover');
+  } finally {globalThis.fetch=previous;}
+});
 test('invalid release or cross-domain preview never becomes an installable product', async () => {
   const previous = globalThis.fetch;
   globalThis.fetch = async () => Response.json({ ok: true, products: [{
