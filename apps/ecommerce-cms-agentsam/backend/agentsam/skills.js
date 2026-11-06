@@ -77,15 +77,29 @@ function scoreRouteKeys(row, routing = {}) {
   return score;
 }
 
+// Portable v2 production schema stores slash_trigger, not a separate slug.
+// Optional reference tables are not installed in every deployment.
+function normalizeSkillRow(row) {
+  if (!row) return row;
+  const metadata = parseMetadata(row);
+  return {
+    ...row,
+    slug: String(row.slug || row.slash_trigger || '').replace(/^\//, ''),
+    retrieval_strategy: row.retrieval_strategy || metadata.retrieval_strategy || 'db',
+  };
+}
+async function skillReferenceFiles(env, id, referencesOnly = false) {
+  const query = referencesOnly
+    ? "SELECT file_path, role, sort_order FROM agentsam_skill_file WHERE skill_id = ? AND role = 'reference' ORDER BY sort_order ASC LIMIT 4"
+    : "SELECT file_path, role, sort_order FROM agentsam_skill_file WHERE skill_id = ? ORDER BY sort_order ASC, file_path ASC";
+  try { const { results = [] } = await env.DB.prepare(query).bind(id).all(); return results; }
+  catch (error) {
+    if (/no such table/i.test(String(error?.message || ''))) return [];
+    throw error;
+  }
+}
 async function hydrateRowWithRefs(env, row) {
-  const { results: files } = await env.DB.prepare(
-    `SELECT file_path, role, sort_order FROM agentsam_skill_file
-     WHERE skill_id = ? AND role = 'reference'
-     ORDER BY sort_order ASC LIMIT 4`
-  )
-    .bind(row.id)
-    .all();
-  return hydrateSkillWithFiles(env, row, files || []);
+  return hydrateSkillWithFiles(env, row, await skillReferenceFiles(env, row.id, true));
 }
 
 export function buildSkillHash(skills = []) {
@@ -122,43 +136,24 @@ export async function recordSkillInvocations(env, skills = []) {
 }
 
 export async function listAgentSamSkills(env, { hydrate = false } = {}) {
-  const { results } = await env.DB.prepare(
-    `SELECT id, slug, name, description, file_path, scope, slash_trigger,
-            globs, tags_json, task_types_json, route_keys_json, metadata_json,
-            retrieval_strategy, sort_order, version, is_active, updated_at,
-            account_id, access_mode, always_apply
-     FROM agentsam_skill
-     WHERE is_active = 1 AND account_id = ?
-     ORDER BY sort_order ASC, name ASC`
-  )
-    .bind(requireApplicationAccountId())
-    .all();
-
-  if (!hydrate) return results || [];
-  return hydrateSkillsFromR2(env, results || []);
+  const { results = [] } = await env.DB.prepare(
+    "SELECT * FROM agentsam_skill WHERE is_active = 1 AND account_id = ? ORDER BY sort_order ASC, name ASC"
+  ).bind(requireApplicationAccountId()).all();
+  const skills = results.map(normalizeSkillRow);
+  return hydrate ? hydrateSkillsFromR2(env, skills) : skills;
 }
 
 export async function getAgentSamSkill(env, slug, { includeReferences = false } = {}) {
+  const normalized = String(slug || '').replace(/^\//, '');
+  if (!/^[a-z0-9][a-z0-9-]{0,48}$/.test(normalized)) return null;
   const row = await env.DB.prepare(
-    `SELECT * FROM agentsam_skill WHERE slug = ? AND account_id = ? AND is_active = 1 LIMIT 1`
-  )
-    .bind(slug, requireApplicationAccountId())
-    .first();
-
+    "SELECT * FROM agentsam_skill WHERE slash_trigger = ? AND account_id = ? AND is_active = 1 LIMIT 1"
+  ).bind('/' + normalized, requireApplicationAccountId()).first();
   if (!row) return null;
-
-  if (!includeReferences) {
-    return hydrateSkillRowFromR2(env, row);
-  }
-
-  const { results: files } = await env.DB.prepare(
-    `SELECT file_path, role, sort_order FROM agentsam_skill_file
-     WHERE skill_id = ? ORDER BY sort_order ASC, file_path ASC`
-  )
-    .bind(row.id)
-    .all();
-
-  return hydrateSkillWithFiles(env, row, files || []);
+  const skill = normalizeSkillRow(row);
+  return includeReferences
+    ? hydrateSkillWithFiles(env, skill, await skillReferenceFiles(env, skill.id))
+    : hydrateSkillRowFromR2(env, skill);
 }
 
 /**
@@ -166,13 +161,11 @@ export async function getAgentSamSkill(env, slug, { includeReferences = false } 
  * context.skill_slug / context.skill_slugs force-match before scoring.
  */
 export async function resolveSkillsForChat(env, message, context = {}) {
-  const { results: rows } = await env.DB.prepare(
-    `SELECT * FROM agentsam_skill WHERE is_active = 1 AND account_id = ? ORDER BY sort_order ASC`
-  )
-    .bind(requireApplicationAccountId())
-    .all();
-
-  if (!rows?.length) return [];
+  const { results = [] } = await env.DB.prepare(
+    "SELECT * FROM agentsam_skill WHERE is_active = 1 AND account_id = ? ORDER BY sort_order ASC"
+  ).bind(requireApplicationAccountId()).all();
+  const rows = results.map(normalizeSkillRow);
+  if (!rows.length) return [];
 
   const forceSlugs = normalizeSlugList(context);
   if (forceSlugs.length) {

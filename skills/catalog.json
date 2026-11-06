@@ -33,6 +33,37 @@
       "user_invocable": true
     },
     {
+      "id": "agentsam-canvas-creation",
+      "aliases": [
+        "canvas-creation",
+        "creative-canvas"
+      ],
+      "title": "AgentSam Canvas Creation",
+      "description": "Open a clean Canvas, choose one of four contextual creative directions, read real skills and create incrementally with consistent editing UX.",
+      "entry": "agentsam-canvas-creation/SKILL.md",
+      "references": [
+        "agentsam-canvas-creation/references/creation-journey.md",
+        "agentsam-canvas-creation/references/quality-and-consistency.md",
+        "agentsam-canvas-creation/references/fullstack-creation-checklist.md"
+      ],
+      "user_invocable": true
+    },
+    {
+      "id": "agentsam-cms-ready-creation",
+      "aliases": [
+        "cms-ready-canvas",
+        "canvas-to-theme"
+      ],
+      "title": "AgentSam CMS-Ready Creation",
+      "description": "Prepare independent web/app Canvas work for an optional full-stack CMS theme conversion without creating or publishing a site by default.",
+      "entry": "agentsam-cms-ready-creation/SKILL.md",
+      "references": [
+        "agentsam-cms-ready-creation/references/cms-handoff-map.md",
+        "agentsam-cms-ready-creation/references/web-fullstack-readiness.md"
+      ],
+      "user_invocable": true
+    },
+    {
       "id": "agentsam-progression-guard",
       "aliases": [
         "progression-guard",
@@ -76,7 +107,7 @@
         "sam.codebaseindex"
       ],
       "title": "AgentSam Codebaseindex",
-      "description": "Inventory-first codebase ingest. Pipeline IDs are not shell commands — use agentsam codebaseindex / codebaseindex.ingest.",
+      "description": "Inventory-first codebase ingest. Pipeline IDs are not shell commands \u2014 use agentsam codebaseindex / codebaseindex.ingest.",
       "entry": "agentsam-codebaseindex/SKILL.md",
       "references": [],
       "user_invocable": true
