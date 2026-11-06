@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Home — Fuel & Free Time Admin</title>
+<title>Home — Online Store</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/home-workspace.css">
@@ -16,12 +16,12 @@
 renderShell("/admin/home", `
   <div class="fnf-home">
     <section class="fnf-home-stage" aria-labelledby="fnf-home-heading">
-      <div class="fnf-site-preview">
-        <span class="fnf-site-preview__label">Your store <span aria-hidden="true">↗</span></span>
-        <span class="fnf-site-preview__browser"><span class="fnf-site-preview__address">fuelnfreetime.com</span><span class="fnf-site-preview__browser-dots" aria-hidden="true">···</span></span>
-        <span class="fnf-site-preview__viewport"><iframe src="/" title="Published Fuel & Free Time storefront preview" loading="lazy" tabindex="-1" aria-hidden="true"></iframe></span>
-        <span class="fnf-site-preview__hover">Customize Theme <span aria-hidden="true">↗</span></span>
-        <a class="fnf-site-preview__link" href="/admin/theme-editor" aria-label="Customize Theme" title="Customize Theme"></a>
+      <div class="fnf-site-preview" aria-label="Current website">
+        <span class="fnf-site-preview__label">Your website <span aria-hidden="true">↗</span></span>
+        <span class="fnf-site-preview__browser"><span class="fnf-site-preview__address">Finding your website…</span><span class="fnf-site-preview__browser-dots" aria-hidden="true">···</span></span>
+        <span class="fnf-site-preview__viewport"><iframe title="Published website preview" loading="lazy" tabindex="-1" aria-hidden="true" hidden></iframe><span id="home-site-preview-empty" class="fnf-site-preview__empty" role="status">Loading website preview…</span></span>
+        <span class="fnf-site-preview__hover">Open Online Store <span aria-hidden="true">↗</span></span>
+        <a class="fnf-site-preview__link" href="/admin/store" aria-label="Open Online Store" title="Open Online Store"></a>
       </div>
       <h1 id="fnf-home-heading">Your store is taking shape.<br>What would you like to work on next?</h1>
       <form id="home-agent-form" class="commerce-home-composer" aria-label="Ask AgentSam">

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Preferences — Fuel & Free Time Admin</title>
+<title>Preferences — Online Store</title>
 <link rel="stylesheet" href="/admin/css/admin.css">
 <link rel="stylesheet" href="/admin/css/console.css">
 <link rel="stylesheet" href="/admin/css/preferences.css">
@@ -14,7 +14,8 @@
 let settings = {};
 let navItems = [];
 let dirty = false;
-let domain = "fuelnfreetime.com";
+let domain = "";
+let storeName = "Your store";
 
 renderShell("/admin/preferences", `
   <div class="prefs-hub">
@@ -65,15 +66,15 @@ renderShell("/admin/preferences", `
         <div class="prefs-social-preview">
           <img id="social-image" src="" alt="Chosen social sharing graphic" hidden><div class="prefs-social-placeholder" id="social-placeholder">Choose a sharing image to preview your store’s social card.</div>
           <div class="prefs-social-meta">
-            <div class="prefs-social-domain" id="social-domain">FUELNFREETIME.COM</div>
-            <div class="prefs-social-title" id="social-preview-title">Fuel &amp; Free Time</div>
+            <div class="prefs-social-domain" id="social-domain">Loading website…</div>
+            <div class="prefs-social-title" id="social-preview-title">Your store</div>
             <div class="prefs-social-desc" id="social-preview-desc">Store description preview</div>
           </div>
         </div>
         <div class="prefs-serp" aria-label="Search result preview">
           <span class="prefs-serp-label">Search result preview</span>
-          <div class="prefs-serp-url" id="serp-url">fuelnfreetime.com</div>
-          <div class="prefs-serp-title" id="serp-title">Fuel &amp; Free Time</div>
+          <div class="prefs-serp-url" id="serp-url">Loading website…</div>
+          <div class="prefs-serp-title" id="serp-title">Your store</div>
           <div class="prefs-serp-desc" id="serp-desc"></div>
         </div>
         </div>
@@ -245,7 +246,7 @@ renderShell("/admin/preferences", `
     <div class="prefs-note" id="prefs-note"></div>
   </div>
   <dialog class="prefs-assets-dialog" id="prefs-assets-dialog" aria-labelledby="prefs-assets-title">
-    <div class="prefs-assets-header"><div><small>FNF media library</small><h2 id="prefs-assets-title">Choose an image</h2></div><button type="button" id="prefs-assets-close" class="btn ghost small" aria-label="Close media library">Close</button></div>
+    <div class="prefs-assets-header"><div><small>Website media library</small><h2 id="prefs-assets-title">Choose an image</h2></div><button type="button" id="prefs-assets-close" class="btn ghost small" aria-label="Close media library">Close</button></div>
     <div class="prefs-assets-tools"><input type="search" id="prefs-assets-search" placeholder="Search uploaded graphics, logos, and artwork" aria-label="Search media"><label class="btn ghost small prefs-upload-button">Upload new image<input type="file" id="prefs-assets-upload" accept="image/*" multiple hidden></label></div>
     <div class="prefs-assets-grid" id="prefs-assets-grid" role="list"></div>
     <p class="prefs-assets-status" id="prefs-assets-status" role="status"></p>
@@ -305,10 +306,10 @@ function updateCounters() {
   document.getElementById("meta-hint").textContent = metaLong
     ? ` · search results usually show about ${DESC_SOFT_LIMIT}` : "";
   const desc = meta || "Enter a description to be shown on search engines like Google.";
-  document.getElementById("social-preview-title").textContent = title || domain;
+  document.getElementById("social-preview-title").textContent = title || storeName;
   document.getElementById("social-preview-desc").textContent = desc;
-  document.getElementById("serp-url").textContent = domain;
-  document.getElementById("serp-title").textContent = clip(title || domain, TITLE_SOFT_LIMIT);
+  document.getElementById("serp-url").textContent = domain || "Domain not connected";
+  document.getElementById("serp-title").textContent = clip(title || storeName, TITLE_SOFT_LIMIT);
   document.getElementById("serp-desc").textContent = clip(desc, DESC_SOFT_LIMIT);
 }
 
@@ -492,9 +493,12 @@ function storePreferencesEndpoint() {
 
 function applySettings(data) {
   settings = data.settings || {};
-  domain = data.domain || domain;
+  // Never retain a previous customer's domain when a different site is selected.
+  domain = typeof data.domain === "string" ? data.domain : "";
+  storeName = String(data.site?.name || data.company?.name || "").trim() || "Your store";
+  document.title = "Preferences — " + storeName;
   navItems = (data.nav?.items || settings.navItems || []).map((item) => ({ ...item }));
-  document.getElementById("social-domain").textContent = domain.toUpperCase();
+  document.getElementById("social-domain").textContent = domain ? domain.toUpperCase() : "Domain not connected";
 
   document.getElementById("password-protection").checked = !!settings.passwordProtection;
   document.getElementById("b2b-only").checked = !!settings.b2bOnly;
