@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { heuristicStarterPreset } from '../../../packages/heuristic-theme/src/starter.js';
 import { materializeStarterProject, inheritDefaultTemplates } from '../frontend/theme-editor/starter-project.mjs';
 import { fillMissingThemeChrome } from '../frontend/theme-editor/starter-chrome.mjs';
+import { STOCK_TEMPLATES } from '../frontend/theme-editor/stock-templates.mjs';
 import { createThemeProjectAdapter, renderThemePage, sourceSectionTemplateKey } from '../packages/theme-contract/editor/project.mjs';
 
 const require = createRequire(import.meta.url);
@@ -105,7 +106,7 @@ test('required page inheritance preserves authored pages and saves through the s
   const inherited=inheritDefaultTemplates(original);
   assert.deepEqual(inherited.project.pages[0],home);
   assert.deepEqual(original.pages,[home]);
-  assert.equal(inherited.project.pages.length,11);
+  assert.equal(inherited.project.pages.length,11+Object.keys(STOCK_TEMPLATES).length);
   assert.equal(inheritDefaultTemplates(inherited.project).changed,false);
   const product=inherited.project.pages.find(page=>page.slug==='product');
   const doc=new win.DOMParser().parseFromString(renderThemePage(product),'text/html');
