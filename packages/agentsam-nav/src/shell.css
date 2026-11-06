@@ -86,7 +86,7 @@
   overflow: auto; scrollbar-width: thin; border-radius: 20px;
   padding: 14px 16px; box-shadow: var(--nav-shadow);
 }
-.as-nav-activity-title { color: var(--nav-text); font-size: var(--nav-label-size); font-weight: 600; margin: 0 0 12px; }
+.as-nav-activity-title { color: var(--nav-text); font-size: var(--nav-label-size); font-weight: var(--fw-heading); margin: 0 0 12px; }
 .as-nav-activity-section { padding-block: 4px; }
 .as-nav-activity-section-head {
   display: flex; justify-content: space-between; align-items: center;
