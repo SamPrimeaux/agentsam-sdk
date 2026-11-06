@@ -55,6 +55,7 @@ export function AppPreviewStage({
   };
 
   const [cadSelection, setCadSelection] = useState<CadSelectionContext | null>(null);
+  const [designSelection, setDesignSelection] = useState<{ resourceId: string; id: string; kind: string } | null>(null);
   const [pendingProposal, setPendingProposal] = useState<Parameters<NonNullable<CadHostHandlers["onProposal"]>>[0] | null>(null);
   const [approvalBusy, setApprovalBusy] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState("");
@@ -63,6 +64,11 @@ export function AppPreviewStage({
     const dispose = installCadHostBridge(() => iframeRef.current, {
       onReady: () => setIsReady(true),
       onSelection: (sel) => setCadSelection(sel),
+      onWorkspaceEvent: (event) => {
+        if (event.type !== "selection") return;
+        const selected = event.selection[0];
+        setDesignSelection(selected ? { resourceId: event.resourceId, id: selected.id, kind: selected.kind } : null);
+      },
       onAssistantRequest: ({ request_id, prompt, selection }) => {
         void runCadAssistantTurn({ request_id, prompt, selection }, (text) => {
           postToGuest({ type: "assistant.response", request_id, text });
@@ -116,6 +122,7 @@ export function AppPreviewStage({
             />
             <Layers className="size-3.5 text-indigo-500" />
             <span>CAD Creator</span>
+            {designSelection && <span className="max-w-36 truncate font-normal text-muted-foreground" title={`${designSelection.resourceId} / ${designSelection.kind} / ${designSelection.id}`}>Selected · {designSelection.kind}</span>}
           </div>
         </div>
 
@@ -154,7 +161,7 @@ export function AppPreviewStage({
         </div>
       )}
       {/* Embedded Iframe Stage */}
-      <div className="relative min-h-0 flex-1 bg-black">
+      <div className="relative min-h-0 flex-1 bg-black" data-design-stage="cad" data-design-selected-id={designSelection?.id}>
         <iframe
           key={reloadKey}
           ref={iframeRef}

@@ -1,4 +1,5 @@
 import {getTauriInvoke} from "./desktop/tauri";
+import type { DesignWorkspaceEvent } from "@inneranimalmedia/agentsam-workbench/design";
 /**
  * Host side of CAD Creator preview bridge (Local Studio owns conversation + write authority).
  * Validates origin/source/channel/version. Guest messages are requests only:
@@ -9,18 +10,28 @@ export const CAD_WORKSPACES = ["plan", "model", "parametric", "robotics", "rende
 export interface CadSelectionContext { source: "cad-creator"; workspace: string; project_id: string; revision: number; revision_ref?:string; object: { id: string; type: string; label: string; units: "in"|"m" } }
 export interface CadHostHandlers {
   onSelection?: (s: CadSelectionContext|null) => void;
+  /** Shared workspace selection projection; the CAD engine remains the authority. */
+  onWorkspaceEvent?: (event: DesignWorkspaceEvent) => void;
   onAssistantRequest?: (r: { request_id: string; prompt: string; selection: CadSelectionContext | null }) => void | Promise<void>;
   onProposal?: (p: { summary: string; tool: "design_apply_operation"; args: Record<string, unknown> }) => void;
   onReady?: (workspaces: string[]) => void;
 }
 const isObj = (v: unknown): v is Record<string, any> => !!v && typeof v === "object";
+/** Pure projection of a real CAD selection. This never grants edit permission. */
+export function cadSelectionToDesignEvent(selection: CadSelectionContext): DesignWorkspaceEvent {
+  return {
+    type: "selection",
+    resourceId: selection.project_id,
+    selection: [{ id: selection.object.id, kind: selection.object.type }],
+  };
+}
 export function validateCadGuestMessage(event: MessageEvent, iframe: HTMLIFrameElement | null): Record<string, any> | null {
   if (!iframe?.contentWindow || event.source !== iframe.contentWindow) return null;
   if (event.origin !== window.location.origin) return null;
   const d = event.data;
   if (!isObj(d) || d.channel !== CAD_BRIDGE_CHANNEL || d.version !== 1 || typeof d.type !== "string") return null;
   if (d.type === "cad.selection") {
-    const s = d.selection; if (s !== null && (!isObj(s) || s.source !== "cad-creator" || !isObj(s.object) || typeof s.object.id !== "string" || !s.object.id)) return null;
+    const s = d.selection; if (s !== null && (!isObj(s) || s.source !== "cad-creator" || !isObj(s.object) || typeof s.object.id !== "string" || !s.object.id || typeof s.project_id !== "string" || !s.project_id.trim() || typeof s.object.type !== "string" || !s.object.type.trim())) return null;
   }
   if (d.type === "assistant.request" && (typeof d.request_id !== "string" || typeof d.prompt !== "string")) return null;
   if (d.type === "cad.proposal" && (!isObj(d.proposal) || d.proposal.tool !== "design_apply_operation" || !isObj(d.proposal.args))) return null;
@@ -33,6 +44,7 @@ export function installCadHostBridge(iframe: () => HTMLIFrameElement | null, han
   };
   const observer = new MutationObserver(syncAppearance);
   observer.observe(document.documentElement, {attributes:true, attributeFilter:['data-theme','style']});
+  let lastSelectedProjectId: string | null = null;
   const onMessage = (event: MessageEvent) => {
     const d = validateCadGuestMessage(event, iframe()); if (!d) return;
     if (d.type === "cad.engine.request") {
@@ -43,7 +55,16 @@ export function installCadHostBridge(iframe: () => HTMLIFrameElement | null, han
       void invoke("cad_engine_request",{projectId:d.project_id,request:d.request}).then(result=>reply({result}),error=>reply({error:String(error)}));
     }
     else if (d.type === "ready") { syncAppearance(); handlers.onReady?.(Array.isArray(d.workspaces) ? d.workspaces : []); }
-    else if (d.type === "cad.selection") handlers.onSelection?.(d.selection);
+    else if (d.type === "cad.selection") {
+      const selection = d.selection as CadSelectionContext | null;
+      handlers.onSelection?.(selection);
+      if (selection) {
+        lastSelectedProjectId = selection.project_id;
+        handlers.onWorkspaceEvent?.(cadSelectionToDesignEvent(selection));
+      } else if (lastSelectedProjectId) {
+        handlers.onWorkspaceEvent?.({type: "selection", resourceId: lastSelectedProjectId, selection: []});
+      }
+    }
     else if (d.type === "assistant.request") void handlers.onAssistantRequest?.({ request_id: d.request_id, prompt: d.prompt, selection: d.selection ?? null });
     else if (d.type === "cad.proposal") handlers.onProposal?.(d.proposal);
   };
