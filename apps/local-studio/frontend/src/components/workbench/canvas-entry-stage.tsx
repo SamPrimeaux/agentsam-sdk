@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Plus, RefreshCw } from "lucide-react";
+import { IconAction } from "@/components/ui/icon-action";
 import type { SideTab } from "@inneranimalmedia/agentsam-local-shared";
 import { useWorkStore } from "@/lib/work/store";
 
@@ -113,10 +114,11 @@ export function CanvasEntryStage({ tab }: { tab: SideTab }) {
           Choose an existing website to create a private editable design.
         </p>
       </div>
-      <button type="button" className="rounded border border-border p-2"
-        aria-label="Refresh websites" onClick={() => setRevision(n => n + 1)}>
+      <IconAction label="Refresh websites" hint="Refresh the list of websites"
+        variant="outline" className="rounded p-2"
+        onClick={() => setRevision(n => n + 1)}>
         <RefreshCw size={15}/>
-      </button>
+      </IconAction>
     </header>
     {view.loading ? <p role="status" className="text-sm text-muted-foreground">
       Loading websites…

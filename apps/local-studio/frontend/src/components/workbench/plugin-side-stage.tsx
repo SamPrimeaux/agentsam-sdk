@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ExternalLink, RefreshCw, Settings2 } from "lucide-react";
+import { IconAction } from "@/components/ui/icon-action";
 import type { LocalStudioSideStageRecord } from "@/lib/connections/client";
 import { readLocalStudioPluginWorkspace } from "@/lib/connections/client";
 
@@ -75,17 +76,18 @@ export function PluginSideStage({ stage }: Props) {
     <div className="flex h-10 items-center justify-between border-b border-border px-3">
       <strong className="truncate text-xs font-semibold">{stage.label}</strong>
       <div className="flex items-center gap-1">
-        <button type="button" className="rounded border border-border p-1.5 hover:bg-muted"
-          aria-label="Refresh plugin workspace" onClick={() => setRefresh(x => x + 1)}>
+        <IconAction label="Refresh plugin workspace" hint="Reload the connected plugin workspace"
+          variant="outline" className="rounded p-1.5"
+          onClick={() => setRefresh(x => x + 1)}>
           <RefreshCw size={14}/>
-        </button>
-        <button type="button" className="rounded border border-border p-1.5 hover:bg-muted"
-          aria-label="Manage plugin connection"
+        </IconAction>
+        <IconAction label="Manage plugin connection" hint="Review installed plugin settings"
+          variant="outline" className="rounded p-1.5"
           onClick={() => window.dispatchEvent(new CustomEvent("agentsam:navigate", {
             detail: { to: "/settings/customize?view=plugins" },
           }))}>
           <Settings2 size={14}/>
-        </button>
+        </IconAction>
       </div>
     </div>
     <div className="min-h-0 flex-1 overflow-auto p-4 text-sm">
