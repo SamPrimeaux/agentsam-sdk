@@ -708,10 +708,12 @@ function ExtensionTile({
  */
 function PluginCustomizeView({
   plugins,
+  pluginsError,
   host,
   onChanged,
 }: {
   plugins: SettingsPlugin[];
+  pluginsError?: string | null;
   host: SettingsHost;
   onChanged: () => Promise<void>;
 }) {
@@ -991,9 +993,9 @@ function PluginCustomizeView({
               })}
             </div>
           ) : (
-            <div className="flex items-center gap-3 rounded-xl border border-dashed border-border/85 bg-muted/10 p-5">
+            <div role={pluginsError?"alert":"status"} className="flex items-center gap-3 rounded-xl border border-dashed border-border/85 bg-muted/10 p-5">
               <Plug className="size-5 shrink-0 text-muted-foreground"/>
-              <div className="text-[11px] leading-relaxed text-muted-foreground">No plugins installed in this account yet. Explore the verified catalog below.</div>
+              <div className="text-[11px] leading-relaxed text-muted-foreground">{pluginsError || "No plugins installed in this account yet. Explore the verified catalog below."}</div>
             </div>
           )}
         </div>
@@ -1976,7 +1978,7 @@ function CustomizeView({
   onChanged: () => Promise<void>;
 }) {
   if (view === "plugins") {
-    return <PluginCustomizeView plugins={snapshot.plugins} host={host} onChanged={onChanged} />;
+    return <PluginCustomizeView plugins={snapshot.plugins} pluginsError={snapshot.pluginsError} host={host} onChanged={onChanged} />;
   }
   if (view === "widgets") {
     return <WidgetCustomizeView widgets={snapshot.widgets} host={host} onChanged={onChanged} />;
@@ -2321,7 +2323,12 @@ function DesignView({snapshot,host}:{
   return (
     <div className="space-y-5">
       <Section title="Brand identity" description="Your approved purpose, positioning, voice and identity decisions—not storefront themes or Studio appearance.">
-        {!connected?(
+        {snapshot.pluginsError?(
+          <div role="alert" className="rounded-xl border border-border/70 p-5">
+            <p className="text-[13px] font-medium">Brand connection status unavailable</p>
+            <p className="mt-2 text-[12px] text-muted-foreground">{snapshot.pluginsError}</p>
+          </div>
+        ):!connected?(
           <div className="rounded-xl border border-border/70 p-5">
             <p className="text-[13px] font-medium">Brand identity is not connected</p>
             <p className="mt-2 text-[12px] text-muted-foreground">
@@ -2517,7 +2524,7 @@ const CHANNEL_ROWS: Array<{
   {
     id: "in_app",
     label: "In-app inbox",
-    description: "Show notices in Local Studio for this account.",
+    description: "Show notices in AgentSam for this account.",
   },
   {
     id: "email",

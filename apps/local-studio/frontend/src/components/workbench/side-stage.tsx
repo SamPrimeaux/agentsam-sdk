@@ -52,7 +52,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
   const registry = useSideStageRegistry();
   const stages = registry.actions;
   const registered = (item: (typeof tabs)[number]) => item.pluginId
-    ? stages.some(stage => stage.pluginId === item.pluginId)
+    ? stages.some(stage => stage.pluginId === item.pluginId && stage.stageId === item.stageId)
     : stages.some(stage => stage.renderer === "builtin" && stage.tabKind === item.kind);
   // Account disabling and plugin uninstalling remove the visual entry, but
   // preserve cached tab state, draft text and conversations for re-enabling.
@@ -169,7 +169,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
         {tab?.kind === "artifacts" ? <ArtifactsStage /> : null}
         {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
         {tab?.kind === "design" ? <CanvasEntryStage tab={tab} /> : null}
-        {tab?.kind === "plugin" ? <PluginSideStage stage={stages.find(stage => stage.pluginId === tab.pluginId)} /> : null}
+        {tab?.kind === "plugin" ? <PluginSideStage stage={stages.find(stage => stage.pluginId === tab.pluginId && stage.stageId === tab.stageId)} /> : null}
         {tab?.kind === "media" ? <MovieModeSurface workPane /> : null}
         {tab?.kind === "database" ? <DatabaseStage /> : null}
         {tab?.kind === "terminal" ? <TerminalPane variant="side" /> : null}

@@ -4,7 +4,7 @@ import {
 } from "@inneranimalmedia/agentsam-settings/contracts";
 
 export const localStudioSettingsManifest = defineSettingsManifest({
-  productName: "Local Studio",
+  productName: "AgentSam",
   units: [
     {
       id: "general",
@@ -105,7 +105,7 @@ export const localStudioSettingsManifest = defineSettingsManifest({
     {
       id: "docs",
       label: "Docs",
-      description: "Product contracts and documentation for Local Studio capabilities.",
+      description: "Product contracts and documentation for AgentSam capabilities.",
       icon: "docs",
     },
   ],
