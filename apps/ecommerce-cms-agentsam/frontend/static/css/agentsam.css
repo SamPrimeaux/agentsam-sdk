@@ -1,5 +1,68 @@
 /* Agent Sam — docked side panel (in-flow, not overlay) */
 
+/* The Theme Project Editor lives in a srcdoc frame rather than the Console.
+   Give it an honest split workspace instead of a fixed, pointer-blocking modal. */
+body[data-theme-editor-embedded] .theme-studio-assistant-layout {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100dvh;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+body[data-theme-editor-embedded] .theme-studio-assistant-layout > .theme-studio {
+  flex: 1 1 auto;
+  width: 0;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+body[data-theme-editor-embedded] .theme-studio-assistant-layout > .agentsam-dock {
+  flex: 0 0 auto;
+  width: 0;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+body[data-theme-editor-embedded].agentsam-open:not(.agentsam-focus-mode) .theme-studio-assistant-layout > .agentsam-dock {
+  width: min(380px, 36vw);
+  padding: 8px 8px 8px 0;
+  border-left: 0;
+  box-sizing: border-box;
+}
+body[data-theme-editor-embedded].agentsam-focus-mode .theme-studio-assistant-layout > .theme-studio {
+  display: none;
+}
+body[data-theme-editor-embedded].agentsam-focus-mode .theme-studio-assistant-layout > .agentsam-dock {
+  position: static;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+@media (max-width: 900px) {
+  body[data-theme-editor-embedded].agentsam-open:not(.agentsam-focus-mode) .theme-studio-assistant-layout > .agentsam-dock {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(390px, 100%);
+    height: 100%;
+    padding: 7px;
+    z-index: 200;
+    box-shadow: -12px 0 36px rgba(0,0,0,.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme-editor-embedded] .theme-studio-assistant-layout > .agentsam-dock {
+    transition: none;
+  }
+}
+
+
 .agentsam-dock .agentsam-backdrop {
   display: none;
 }

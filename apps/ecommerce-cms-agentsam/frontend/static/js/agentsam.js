@@ -55,6 +55,25 @@ function renderAgentsamShell() {
   // failed to provide its right rail, restore the in-flow dock in the same
   // workspace before mounting AgentSam. Desktop must never use a backdrop.
   let dock = document.getElementById("agentsam-dock");
+  // The Theme Project Editor mounts the actual editor in an about:srcdoc
+  // frame. It has no console-workspace and cannot be matched by pathname.
+  // Keep its Canvas and Side Assistant in the same in-flow layout instead
+  // of creating a full-frame backdrop that intercepts editor interactions.
+  if (!dock && document.body.hasAttribute("data-theme-editor-embedded")) {
+    const studio = document.querySelector(".theme-studio");
+    if (studio && studio.parentElement === document.body) {
+      const layout = document.createElement("div");
+      layout.className = "theme-studio-assistant-layout";
+      studio.insertAdjacentElement("beforebegin", layout);
+      layout.appendChild(studio);
+      dock = document.createElement("aside");
+      dock.id = "agentsam-dock";
+      dock.className = "agentsam-dock";
+      dock.setAttribute("aria-label", "AgentSam assistant workspace");
+      dock.setAttribute("aria-hidden", "true");
+      layout.appendChild(dock);
+    }
+  }
   if (!dock && location.pathname === "/admin/theme-editor" &&
       window.matchMedia("(min-width: 901px)").matches) {
     const main=document.querySelector(".console-workspace > .console-main");
