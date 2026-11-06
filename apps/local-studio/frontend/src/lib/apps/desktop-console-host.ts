@@ -1,5 +1,6 @@
 import { invokeStudioService, isPackagedDesktop } from '@/lib/desktop/tauri';
-import { resolveEcommerceAdminPath } from './ecommerce-routing';
+import { resolveEcommerceAdminPath, resolveEcommerceAssetPath } from './ecommerce-routing';
+import { toast } from 'sonner';
 import { isStudioAdminPath } from '../../../../shared/studio-admin-routes.mjs';
 
 export function consoleDestination(path: string): string | null {
@@ -8,21 +9,35 @@ export function consoleDestination(path: string): string | null {
   if (url.origin !== 'https://console.invalid') return null;
   if (isStudioAdminPath(url.pathname) || /^\/(mail|settings|artifacts|tickets|collaborate|sites|chats)(\/|$)/.test(url.pathname)) return path;
   const product = resolveEcommerceAdminPath(path);
-  return product ? '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(product) : null;
+  // The installed desktop must be able to render the destination, not merely
+  // recognize its route. Never navigate into a known-unrenderable product page.
+  if (!product || (isPackagedDesktop() && !resolveEcommerceAssetPath(product))) return null;
+  return '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(product);
 }
 
 /** Same-origin installed console adapter; native transport attaches the secured session. */
 export function createDesktopConsoleHost(navigate: (path: string) => void) {
   return {
     navigate(path: string) {
-      // The child already maps product destinations; validate its proposed route again.
+      // Validate before leaving the current screen. A rejected/stale destination
+      // is a contextual failure, not an empty page or a silent no-op.
+      let destination: string | null = null;
       if (path.startsWith('/apps/ecommerce-cms-agentsam?')) {
-        const page = new URL(path, 'https://console.invalid').searchParams.get('page');
+        const url = new URL(path, 'https://console.invalid');
+        const page = url.searchParams.get('page');
         const resolved = page && resolveEcommerceAdminPath(page);
-        if (resolved) navigate('/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(resolved));
+        if (resolved && (!isPackagedDesktop() || resolveEcommerceAssetPath(resolved))) {
+          destination = '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent(resolved);
+        }
       } else {
-        const destination = consoleDestination(path);
-        if (destination) navigate(destination);
+        destination = consoleDestination(path);
+      }
+      if (destination) {
+        navigate(destination);
+      } else {
+        toast.error('This page cannot open in the current desktop app.', {
+          description: 'You are still on your previous screen. Check for an app update or try another destination.',
+        });
       }
     },
     activateAssistant() { navigate('/admin/agentsam'); },
