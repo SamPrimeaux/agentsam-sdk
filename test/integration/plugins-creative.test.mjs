@@ -5,7 +5,9 @@ import {listPlugins,listPluginTools,updatePluginPreferences} from '../../src/plu
 import {createPluginRuntime} from '../../src/plugins/runtime.js';
 function dbFixture() {
  const sqlite = new DatabaseSync(':memory:');
- sqlite.exec(readFileSync(new URL('../../migrations/d1/0001_agentsam_plugin_runtime.sql', import.meta.url), 'utf8'));
+ for (const file of ['0001_agentsam_plugin_runtime.sql', '0022_agentsam_plugin_registry.sql', '0023_agentsam_plugin_install_health.sql']) {
+  sqlite.exec(readFileSync(new URL(`../../migrations/d1/${file}`, import.meta.url), 'utf8'));
+ }
  return {
   sqlite,
   prepare(sql) {

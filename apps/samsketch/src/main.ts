@@ -2,6 +2,7 @@ import {observeShellAppearance} from '../../../packages/agentsam-settings/src/ap
 import '../../../packages/agentsam-nav/src/shell.css';
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { TransformControls } from "three/addons/controls/TransformControls.js";
 import { createThreeViewport } from "@inneranimalmedia/agentsam-3d-viewer";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
@@ -12,16 +13,20 @@ import { icon, iconButton } from "./icons";
 import { mountSettingsDrawer } from "./settings-drawer";
 import { mountProgressiveStudio } from "./progressive";
 import { mountSketchGallery, type SketchProjectCategory } from "./gallery";
+import { listScenes, openScene, createScene, updateScene, removeScene, type SceneSummary } from "./scene-api";
+import { resolveSceneHit, exactSelectionRoot } from "./scene-selection";
 import "./style.css";
 import "./polish.css";
 import "./studio-shell.css";
 import "./embedded.css";
+import "./precision-studio.css";
 
 type Brand="agentsam"|"inneranimalmedia";
 type Kind="desktop"|"phone"|"panel"|"orb"|"box"|"ring"|"cad"|"template";
 type Look="clay"|"glass"|"metal";
 type Vec3=[number,number,number];
-interface Item { id:string; name:string; kind:Kind; position:Vec3; rotation:Vec3; scale:Vec3; color:string; material:Look; visible:boolean; cadParams?:CadParameters; templateId?:string; }
+type PartOverride={position?:Vec3;rotation?:Vec3;scale?:Vec3;color?:string;visible?:boolean};
+interface Item { id:string; name:string; kind:Kind; position:Vec3; rotation:Vec3; scale:Vec3; color:string; material:Look; visible:boolean; cadParams?:CadParameters; templateId?:string; partOverrides?:Record<string,PartOverride>; }
 interface Document { version:1; name:string; brand:Brand; chapter:number; items:Item[]; }
 const chapters=[
   ["The experience","Products with presence"],
@@ -38,15 +43,9 @@ const brandInfo={
 function makeItem(kind:Kind,name:string,color:string,position:Vec3,scale:Vec3=[1,1,1]):Item{
  return {id:crypto.randomUUID(),name,kind,color,position,scale,rotation:[0,0,0],material:"clay",visible:true};
 }
+// An empty scene must genuinely be empty. Authored examples are inserted only on request.
 function freshDoc(brand:Brand):Document {
- const a=brandInfo[brand];
- return {version:1,name:brand==="agentsam"?"AgentSam Product World":"InnerAnimalMedia Digital World",brand,chapter:0,items:[
-   makeItem("desktop","Desktop application",a.primary,[0,.1,0],[1,1,1]),
-   makeItem("phone","Responsive mobile",a.accent,[-3,-.2,2],[.94,.94,.94]),
-   makeItem("panel","Component library","#e9adbe",[3,1,-1.6],[1,1,1]),
-   makeItem("orb","Infrastructure",a.accent,[2.9,-1,1.8],[.78,.78,.78]),
-   makeItem("ring","Connected systems","#8ccfc4",[-3.3,1,-1.3],[.8,.8,.8])
- ]};
+ return {version:1,name:"Untitled scene",brand,chapter:0,items:[]};
 }
 const storageKey="iam-showcase-studio-draft-v1";
 const projectsKey="iam-samsketch-projects-v1";
@@ -62,6 +61,16 @@ try {
  doc=saved?.version===1 && Array.isArray(saved.items)?saved:freshDoc("agentsam");
 } catch{doc=freshDoc("agentsam");}
 let selectedId=doc.items[0]?.id||"";
+let selectedPartId:string|null=null;
+let hostedScenes:SceneSummary[]=[];
+const activeKey="iam-samsketch-active-scene-id";
+const hashKey="iam-samsketch-active-scene-hash";
+let activeSceneId=localStorage.getItem(activeKey);
+let activeSceneHash=localStorage.getItem(hashKey);
+let lastCloudDocument:string|null=null;
+let saveTimer:number|null=null,saveInFlight:Promise<void>|null=null,sceneGeneration=0;
+let cloudSaveFailed=false;
+let restoreInspectorAfterAssistant=false;
 let showGrid=false,wireframe=false,inspectorOpen=false,layersOpen=false,mode:"orbit"|"select"|"story"="select";
 let autoPlay:number|null=null;
 let progressive:ReturnType<typeof mountProgressiveStudio>|null=null;
@@ -71,6 +80,25 @@ function snapshot(){history.push(JSON.stringify(doc)); if(history.length>40)hist
 function store(){
  localStorage.setItem(storageKey,JSON.stringify(doc));
  localStorage.setItem(storageKey+":meta",JSON.stringify({updatedAt:new Date().toISOString(),name:doc.name,brand:doc.brand,itemCount:doc.items.length}));
+ scheduleCloudSave();
+}
+function cloudState(text:string){
+ const target=document.getElementById("save-state");
+ if(target)target.textContent=text;
+}
+function forgetCurrentScene(){
+ sceneGeneration++;if(saveTimer!==null){clearTimeout(saveTimer);saveTimer=null;}
+ activeSceneId=null;activeSceneHash=null;lastCloudDocument=null;cloudSaveFailed=false;
+ localStorage.removeItem(activeKey);localStorage.removeItem(hashKey);
+ cloudState("Not saved");
+}
+function scheduleCloudSave(){
+ if(!activeSceneId)return;
+ cloudSaveFailed=false;
+ if(saveTimer!==null)clearTimeout(saveTimer);
+ if(JSON.stringify(doc)===lastCloudDocument)return;
+ cloudState("Unsaved changes");
+ saveTimer=window.setTimeout(()=>{saveTimer=null;void saveToCloud(true);},1200);
 }
 function sel(){return doc.items.find(x=>x.id===selectedId);}
 function esc(s:string){return String(s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]||ch));}
@@ -79,16 +107,16 @@ function download(blob:Blob,name:string){const a=document.createElement("a");a.h
 function announce(t:string){const target=document.getElementById("notice");if(target)target.textContent=t;}
 const app=document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML='<div class="app">'+
-  '<header class="top"><div class="top-left">'+iconButton("gallery-home","house","Back to SamSketch gallery")+'<span class="studio-app-mark">SamSketch</span><button class="project" id="project-name">AgentSam Product World ▾</button></div>'+
-  '<div class="top-right">'+iconButton("layers-toggle","layers","Toggle model library")+iconButton("inspector-toggle","sliders","Toggle properties inspector")+iconButton("undo","undo","Undo")+iconButton("redo","redo","Redo")+iconButton("snapshot","capture","Capture PNG")+iconButton("export-json","export","Export scene JSON")+iconButton("save-project","folder","Save scene to gallery")+iconButton("settings-toggle","sliders","Scene settings")+'</div></header>'+
-  '<aside class="left" id="left"><div class="section"><div class="section-title">Product identity</div><div class="brand-choice"><button id="brand-agentsam">AgentSam</button><button id="brand-inneranimalmedia">InnerAnimalMedia</button></div><p class="hint">Brand styling and story assets change together; geometry and authoring behavior remain shared.</p></div>'+
+  '<header class="top"><div class="top-left">'+iconButton("gallery-home","house","Back to SamSketch gallery")+'<span class="studio-app-mark">SamSketch</span><button class="project" id="project-name">Untitled scene</button><span class="studio-save-state" id="save-state" role="status">Draft in browser</span></div>'+
+  '<div class="top-right">'+iconButton("layers-toggle","layers","Toggle model library")+iconButton("inspector-toggle","sliders","Toggle properties inspector")+iconButton("undo","undo","Undo")+iconButton("redo","redo","Redo")+iconButton("snapshot","capture","Capture PNG")+iconButton("export-json","export","Export scene JSON")+iconButton("save-project","save","Save scene to account")+iconButton("settings-toggle","sliders","Scene settings")+'</div></header>'+
+  '<aside class="left" id="left">'+
   '<div class="library-tabs" role="tablist" aria-label="Scene library"><button type="button" data-library="templates" role="tab">Models</button><button type="button" data-library="objects" role="tab">Objects</button><button type="button" data-library="shapes" role="tab">Shapes</button><button type="button" data-library="icons" role="tab">Icons</button></div>'+
   '<div id="templates-section" class="library-pane"><div class="library-intro"><div><strong>Model inventory</strong><span id="model-inventory-count">Reading source library…</span></div><button class="library-build-button" id="start-build" type="button">'+icon("sparkles",14)+' Let’s build</button></div><div class="build-starter"><strong>Start with a skill</strong><div class="skill-chips"><button type="button" data-build-skill="Sculpt">Sculpt</button><button type="button" data-build-skill="Draft">Draft</button><button type="button" data-build-skill="Model">Model</button><button type="button" data-build-skill="Animate">Animate</button><button type="button" data-build-skill="Vector">Vector</button><button type="button" data-build-skill="Scene">Scene</button></div></div><label class="search-shell">'+icon("search",15)+'<input id="template-search" type="search" placeholder="Search model, part, SKU…" aria-label="Search models and source parts"></label><div class="model-filters" role="group" aria-label="Filter model inventory"><button type="button" data-model-filter="all" class="active">All</button><button type="button" data-model-filter="composition">Compositions</button><button type="button" data-model-filter="source-part">Source parts</button></div><div class="inventory-summary" id="model-inventory-summary"></div><div class="template-catalog" id="template-catalog"></div><p class="library-footnote">Source geometry is read-only. Add an instance to the scene to transform, recolor, hide, duplicate or remove it without altering the source file.</p></div>'+
   '<div id="objects-section" class="library-pane" hidden><div class="section"><div class="section-title">Scene objects <button id="add-panel" aria-label="Add panel">'+icon("plus",14)+'</button></div><div id="layers"></div></div></div>'+
   '<div id="shapes-section" class="library-pane" hidden><div class="section"><div class="section-title">Create shape</div><div id="primitives"></div></div></div><div id="icons-section" class="library-pane" hidden><div class="library-intro"><div><strong>2D iconography</strong><span id="icon-count">85 semantic tools</span></div><button class="library-build-button" id="export-icon-pack" type="button">'+icon("download",14)+' Export SVG</button></div><label class="search-shell">'+icon("search",15)+'<input id="icon-search" type="search" placeholder="Search icon names…" aria-label="Search iconography"></label><div class="icon-library-selection" id="icon-selection">Icon reference · choose a glyph to inspect. Only tools wired into the editor perform modeling actions.</div><div class="icon-library" id="icon-catalog"></div></div></aside>'+
   '<main class="canvas-wrap"><div class="canvas-header"><div class="tag" id="chapter-label">Product World / 01</div><h1 id="stage-title">Products with presence</h1><p id="stage-subtitle">Examine every layer of the experience.</p></div>'+
-  '<div class="canvas-tools" role="toolbar" aria-label="Drawing and scene tools"><span class="tool-cluster" data-cluster="Navigate">'+iconButton("mode-select","select","Select object")+iconButton("mode-orbit","orbit","Orbit camera")+iconButton("mode-story","story","Story navigation")+'</span><span class="toolbar-separator" aria-hidden="true"></span><span class="tool-cluster" data-cluster="Canvas">'+iconButton("frame","frame","Frame scene")+iconButton("grid","grid","Toggle grid")+iconButton("wireframe","cube","Toggle wireframe")+'</span></div>'+
-  '<div class="canvas-status"><span class="dot"></span><span id="notice">Scene ready · edits saved in this browser</span></div><div class="view-gizmo" role="group" aria-label="Camera orientation and navigation"><div class="view-gizmo-orientation" aria-hidden="true"><svg viewBox="0 0 72 66" width="72" height="66"><path d="M36 5 58 17 36 29 14 17 36 5Z" fill="#eef3ff" stroke="#9aaed4" stroke-width="1.3"/><path d="M14 17v25l22 13V29L14 17Z" fill="#dfe8fa" stroke="#9aaed4" stroke-width="1.3"/><path d="M58 17v25L36 55V29l22-12Z" fill="#c8d8f3" stroke="#9aaed4" stroke-width="1.3"/><path d="M36 29v26" stroke="#9aaed4" stroke-width="1.3"/><circle cx="36" cy="29" r="3" fill="#5277d9"/></svg></div><div class="view-gizmo-copy"><span class="view-gizmo-label">View</span><div class="view-gizmo-presets"><button type="button" data-view="top" aria-pressed="false">Top</button><button type="button" data-view="front" aria-pressed="false">Front</button><button type="button" data-view="right" aria-pressed="false">Right</button><button type="button" data-view="iso" class="is-active" aria-pressed="true">Iso</button></div><div class="view-gizmo-zoom"><button type="button" data-camera-action="zoom-in" aria-label="Zoom in" title="Zoom in">+</button><button type="button" data-camera-action="zoom-out" aria-label="Zoom out" title="Zoom out">−</button><button type="button" data-camera-action="focus" aria-label="Focus selected object" title="Focus selection">Focus</button></div></div></div></main>'+
+  '<div class="canvas-tools" role="toolbar" aria-label="Drawing and scene tools"><span class="tool-cluster" data-cluster="Navigate">'+iconButton("mode-select","select","Select exact object or source part (Q)")+iconButton("transform-move","move","Move selected object (W)")+iconButton("transform-rotate","rotate","Rotate selected object (E)")+iconButton("transform-scale","scale","Scale selected object (R)")+iconButton("mode-orbit","orbit","Orbit camera")+iconButton("mode-story","story","Story navigation")+'</span><span class="toolbar-separator" aria-hidden="true"></span><span class="tool-cluster" data-cluster="Canvas">'+iconButton("frame","frame","Frame scene")+iconButton("grid","grid","Toggle grid")+iconButton("wireframe","cube","Toggle wireframe")+'</span></div>'+
+  '<div class="canvas-status"><span class="dot"></span><span id="notice">Scene ready</span></div><div class="view-gizmo" role="group" aria-label="Camera orientation and navigation"><div class="view-gizmo-orientation" aria-hidden="true"><svg viewBox="0 0 72 66" width="72" height="66"><path d="M36 5 58 17 36 29 14 17 36 5Z" fill="#eef3ff" stroke="#9aaed4" stroke-width="1.3"/><path d="M14 17v25l22 13V29L14 17Z" fill="#dfe8fa" stroke="#9aaed4" stroke-width="1.3"/><path d="M58 17v25L36 55V29l22-12Z" fill="#c8d8f3" stroke="#9aaed4" stroke-width="1.3"/><path d="M36 29v26" stroke="#9aaed4" stroke-width="1.3"/><circle cx="36" cy="29" r="3" fill="#5277d9"/></svg></div><div class="view-gizmo-copy"><span class="view-gizmo-label">View</span><div class="view-gizmo-presets"><button type="button" data-view="top" aria-pressed="false">Top</button><button type="button" data-view="front" aria-pressed="false">Front</button><button type="button" data-view="right" aria-pressed="false">Right</button><button type="button" data-view="iso" class="is-active" aria-pressed="true">Iso</button></div><div class="view-gizmo-zoom"><button type="button" data-camera-action="zoom-in" aria-label="Zoom in" title="Zoom in">+</button><button type="button" data-camera-action="zoom-out" aria-label="Zoom out" title="Zoom out">−</button><button type="button" data-camera-action="focus" aria-label="Focus selected object" title="Focus selection">Focus</button></div></div></div></main>'+
   '<section class="timeline" id="timeline-dock"><div class="studio-timeline-resize" id="timeline-resize" role="separator" aria-orientation="horizontal" aria-label="Resize scene timeline" tabindex="0"></div><div class="timeline-top"><span class="tag">Story chapters / scroll scenes</span><div class="btn-group"><button class="pill" id="timeline-collapse" type="button" aria-label="Collapse timeline" title="Collapse timeline">'+icon("chevron",13)+'</button><button class="pill" id="stop-story">Stop</button><button class="pill" id="play-story">Play story ▶</button></div></div><div class="timeline-strip" id="chapters"></div></section>'+
   '<aside class="right" id="right"><div class="inspector-heading">Properties</div><div id="inspector"></div></aside></div>';
 const appFrame=app.querySelector<HTMLElement>(".app")!;
@@ -106,56 +134,136 @@ app.append(settingsHost);
 const settingsApi=mountSettingsDrawer(settingsHost);
 const bootParams=new URLSearchParams(location.search);
 if(bootParams.get("presentation")==="embedded") appFrame.classList.add("is-embedded");
-function enterStudio(){gallery?.hide();shell.dataset.ssSurface="studio";announce("Editing · "+doc.name);sendHostMessage("selection",{selection:studioContext()});}
-function showGallery(){settingsApi.close();gallery?.show();announce("SamSketch gallery");}
+function enterStudio(){gallery?.hide();shell.dataset.ssSurface="studio";announce("Editing · "+doc.name);sendHostMessage("surface",{surface:"studio"});sendHostMessage("selection",{selection:studioContext()});}
+function showGallery(){settingsApi.close();gallery?.show();sendHostMessage("surface",{surface:"gallery"});announce("SamSketch gallery");}
 function loadDocument(next:Document){
+ stopStoryPlayback();
+ mode="select";transformMode="off";storyTransition=null;toggleTimeline(true);
+ document.querySelectorAll(".canvas-tools .icon-control").forEach(button=>button.classList.remove("active"));
+ document.getElementById("mode-select")?.classList.add("active");
  snapshot();
  doc=next;
- selectedId=doc.items[0]?.id||"";
+ selectedId=doc.items[0]?.id||"";selectedPartId=null;
  history.length=0;future.length=0;
  store();renderAll();frame();
 }
+function renderScenePreview():string|undefined{
+ try{
+  const selectedVisible=selectedHelper?.visible;
+  const gizmo=transformControls.getHelper(),gizmoVisible=gizmo.visible;
+  if(selectedHelper)selectedHelper.visible=false;
+  gizmo.visible=false;
+  renderer.render(scene,camera);
+  if(selectedHelper&&selectedVisible!==undefined)selectedHelper.visible=selectedVisible;
+  gizmo.visible=gizmoVisible;
+  const c=document.createElement("canvas");c.width=400;c.height=240;
+  const g=c.getContext("2d");if(!g)return;
+  const gradient=g.createLinearGradient(0,0,400,240);gradient.addColorStop(0,"#eff4fc");gradient.addColorStop(1,"#d9e5f6");
+  g.fillStyle=gradient;g.fillRect(0,0,400,240);
+  const canvas=renderer.domElement,ratio=Math.min(400/canvas.width,240/canvas.height);
+  const w=canvas.width*ratio,h=canvas.height*ratio;
+  g.drawImage(canvas,(400-w)/2,(240-h)/2,w,h);
+  return c.toDataURL("image/webp",0.72);
+ }catch{return undefined;}
+}
+async function refreshHostedScenes(){
+ try{
+  const result=await listScenes();hostedScenes=result.scenes;
+  gallery?.refresh();
+ }catch{
+  // Never make offline, browser-only drafts appear to be cloud documents.
+  cloudState("Account storage unavailable");
+ }
+}
+async function saveToCloud(withPreview=true):Promise<void>{
+ if(saveInFlight){await saveInFlight;return saveToCloud(withPreview);}
+ if(!activeSceneId){activeSceneId="sketch_"+crypto.randomUUID();localStorage.setItem(activeKey,activeSceneId);}
+ const id=activeSceneId,run=sceneGeneration;
+ const snapshot=structuredClone(doc),serialized=JSON.stringify(snapshot);
+ if(serialized===lastCloudDocument)return;
+ const preview=withPreview?renderScenePreview():undefined;
+ cloudState("Saving…");
+ const task=(async()=>{
+  try{
+   const result=activeSceneHash?await updateScene(id,activeSceneHash,snapshot,preview):await createScene(id,snapshot,preview);
+   if(run!==sceneGeneration)return;
+   activeSceneHash=result.scene.contentHash;
+   lastCloudDocument=serialized;cloudSaveFailed=false;
+   localStorage.setItem(activeKey,id);localStorage.setItem(hashKey,result.scene.contentHash);
+   cloudState("Saved to account");
+   const index=hostedScenes.findIndex(item=>item.id===id);
+   if(index>=0)hostedScenes[index]=result.scene;else hostedScenes.unshift(result.scene);
+   gallery?.refresh();
+  }catch(error){
+   if(run===sceneGeneration){
+    const message=error instanceof Error?error.message:String(error);
+    cloudSaveFailed=true;
+    cloudState(message==="revision_conflict"?"Save conflict":"Saved in this browser only");
+    announce("Scene account save failed: "+message+". Your local draft remains available.");
+   }
+  }
+ })();
+ saveInFlight=task;
+ try{await task;}finally{
+  saveInFlight=null;
+  if(run===sceneGeneration&&!cloudSaveFailed&&lastCloudDocument!==JSON.stringify(doc))scheduleCloudSave();
+ }
+}
 function saveCurrentToGallery(){
- const id="saved-"+crypto.randomUUID().slice(0,8);
- const entry:SavedSketchProject={id,name:doc.name,category:"Scene",itemCount:doc.items.length,updatedAt:new Date().toISOString(),preview:"web/stack.webp",document:structuredClone(doc)};
- writeSavedProjects([entry,...readSavedProjects().filter((project)=>project.name!==doc.name)]);
- gallery?.refresh();
- announce("Saved “"+doc.name+"” to SamSketch gallery");
+ void saveToCloud(true);
+}
+function newHostedScene(next:Document){
+ forgetCurrentScene();
+ loadDocument(next);
+ enterStudio();
+ void saveToCloud(true);
 }
 gallery=mountSketchGallery({
  host:shell,
  getActiveDraft:()=>{
   let updatedAt:string|undefined;
   try{updatedAt=JSON.parse(localStorage.getItem(storageKey+":meta")||"null")?.updatedAt;}catch{/* ignore */}
-  return {name:doc.name,brand:doc.brand,itemCount:doc.items.length,updatedAt};
+  return {name:doc.name,brand:doc.brand,itemCount:doc.items.length,updatedAt:doc.items.length>0&&!activeSceneHash?updatedAt:undefined};
  },
- listSaved:()=>readSavedProjects().map(({id,name,category,itemCount,updatedAt,preview})=>({id,name,category,itemCount,updatedAt,preview})),
- onOpenDraft:()=>{enterStudio();},
- onOpenBlank:()=>{loadDocument(freshDoc(doc.brand));doc.name="Untitled canvas";store();enterStudio();announce("Blank canvas ready");},
+ listSaved:()=>[
+  ...hostedScenes.map(scene=>({id:scene.id,name:scene.name,category:"Scene" as const,itemCount:scene.itemCount,updatedAt:scene.updatedAt,preview:scene.preview})),
+  ...readSavedProjects().map(({id,name,category,itemCount,updatedAt,preview})=>({id,name,category,itemCount,updatedAt,preview})),
+ ],
+ onOpenDraft:()=>{enterStudio();cloudState(activeSceneHash?"Draft in browser · cloud revision known":"Draft in browser");},
+ onOpenBlank:()=>newHostedScene(freshDoc(doc.brand)),
  onOpenSaved:(id)=>{
-  const match=readSavedProjects().find((project)=>project.id===id);
-  if(!match)return;
-  loadDocument(structuredClone(match.document));
-  enterStudio();
-  announce("Opened saved scene · "+match.name);
+  if(id.startsWith("sketch_")){
+   const run=++sceneGeneration;
+   if(saveTimer!==null){clearTimeout(saveTimer);saveTimer=null;}
+   void openScene(id).then(result=>{
+    if(run!==sceneGeneration)return;
+    activeSceneId=null;activeSceneHash=null;lastCloudDocument=null;
+    localStorage.removeItem(activeKey);localStorage.removeItem(hashKey);
+    loadDocument(result.document as Document);
+    activeSceneId=result.scene.id;activeSceneHash=result.scene.contentHash;
+    lastCloudDocument=JSON.stringify(doc);
+    localStorage.setItem(activeKey,activeSceneId);localStorage.setItem(hashKey,activeSceneHash);
+    cloudState("Saved to account");enterStudio();
+   }).catch(error=>announce("Cannot open scene: "+String(error)));
+   return;
+  }
+  const saved=readSavedProjects().find(project=>project.id===id);if(!saved)return;
+  forgetCurrentScene();loadDocument(structuredClone(saved.document));enterStudio();cloudState("Legacy browser draft · save to account");
  },
  onOpenStarter:(starterId,name)=>{
-  loadDocument(freshDoc(doc.brand));
-  doc.name=name;
-  store();
-  enterStudio();
-  addTemplate(starterId);
-  announce("Opened starter canvas · "+name);
+  forgetCurrentScene();loadDocument(freshDoc(doc.brand));doc.name=name;store();enterStudio();
+  addTemplate(starterId);void saveToCloud(true);
  },
  onDeleteSaved:(id)=>{
-  writeSavedProjects(readSavedProjects().filter((project)=>project.id!==id));
-  gallery?.refresh();
-  announce("Removed saved scene");
+  if(id.startsWith("sketch_")){
+   void removeScene(id).then(()=>{hostedScenes=hostedScenes.filter(scene=>scene.id!==id);gallery?.refresh();if(activeSceneId===id)forgetCurrentScene();})
+    .catch(error=>announce("Cannot remove scene: "+String(error)));
+  }else{writeSavedProjects(readSavedProjects().filter(project=>project.id!==id));gallery?.refresh();}
  },
 });
 function studioContext(){
- const item=sel();
- return {id:item?.id||"studio-scene",label:item?item.name+" · "+item.kind:"Entire scene",page:"/samsketch",surface:"samsketch-studio",brand:doc.brand,chapter:doc.chapter,selectedItem:item?{id:item.id,name:item.name,kind:item.kind,position:item.position,rotation:item.rotation,scale:item.scale,color:item.color}:null};
+ const item=sel();const part=selectedPartId?item?.partOverrides?.[selectedPartId]:undefined;
+ return {id:item?.id||"studio-scene",documentId:activeSceneId,revisionHash:activeSceneHash,label:item?(selectedPartId?item.name+" / "+selectedPartId:item.name+" · "+item.kind):"Entire scene",page:"/samsketch",surface:"samsketch-studio",brand:doc.brand,chapter:doc.chapter,selectedItem:item?{id:item.id,name:selectedPartId||item.name,kind:selectedPartId?"source-part":item.kind,partId:selectedPartId,position:part?.position||item.position,rotation:part?.rotation||item.rotation,scale:part?.scale||item.scale,color:part?.color||item.color}:null};
 }
 function sendHostMessage(type:string,payload:Record<string,unknown>={}){
  if(window.parent===window)return;
@@ -163,9 +271,15 @@ function sendHostMessage(type:string,payload:Record<string,unknown>={}){
 }
 window.addEventListener("message",(event:MessageEvent)=>{
  if(event.origin!==window.location.origin||event.source!==window.parent)return;
- const message=event.data as {channel?:string;version?:number;type?:string;mode?:string;theme?:string;accent?:string};
+ const message=event.data as {channel?:string;version?:number;type?:string;mode?:string;theme?:string;accent?:string;open?:boolean};
  if(message?.channel!=="agentsam.samsketch.v1"||message.version!==1)return;
  if(message.type==="host-mode"&&message.mode==="chat")settingsApi.close();
+ if(message.type==="assistant-visibility"){
+  if(message.open){
+   const inspectorShown=matchMedia("(max-width: 850px)").matches?rightPane.classList.contains("open"):appFrame.dataset.inspectorHidden!=="true";
+   if(inspectorShown){restoreInspectorAfterAssistant=true;toggleInspectorPanel();}
+  }else if(restoreInspectorAfterAssistant){restoreInspectorAfterAssistant=false;toggleInspectorPanel();}
+ }
  if(message.type==='set-theme'&&(message.theme==='light'||message.theme==='dark')) {
   applyWorkspaceTheme(message.theme);
   if(/^#[0-9a-f]{6}$/i.test(message.accent||''))document.documentElement.style.setProperty('--nav-accent',message.accent!);
@@ -256,6 +370,9 @@ const sharedViewport=createThreeViewport(viewport,{THREE,OrbitControls},{
  enableDamping:true,dampingFactor:.07,minDistance:4,maxDistance:35,
 });
 const {renderer,scene,camera,controls}=sharedViewport;
+const transformControls=new TransformControls(camera,renderer.domElement);
+scene.add(transformControls.getHelper());
+let transformMode:"off"|"translate"|"rotate"|"scale"="off";
 camera.position.set(11,6.2,13.5);
 controls.target.set(0,0,0);
 const light=new THREE.DirectionalLight("#ffffff",3.5);light.position.set(-4,10,9);light.castShadow=true;light.shadow.mapSize.set(2048,2048);light.shadow.camera.left=-12;light.shadow.camera.right=12;light.shadow.camera.top=12;light.shadow.camera.bottom=-12;scene.add(light);
@@ -309,6 +426,29 @@ function canvasCard(brand:Brand,mobile=false):THREE.CanvasTexture {
  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=renderer.capabilities.getMaxAnisotropy();return texture;
 }
 const generatedCad=new Map<string,THREE.Object3D>();
+const generatedCadParams=new Map<string,string>();
+const cadLoads=new Map<string,Promise<void>>();
+const failedCad=new Set<string>();
+function ensureCadGeometry(item:Item){
+ if(!item.cadParams)return;
+ const identity=JSON.stringify(item.cadParams),existing=generatedCadParams.get(item.id);
+ if(existing===identity&&generatedCad.has(item.id))return;
+ if(cadLoads.has(item.id)||failedCad.has(item.id+identity))return;
+ generatedCad.delete(item.id);
+ const run=createBooleanGLB(item.cadParams).then(async binary=>{
+  const parsed=await new GLTFLoader().parseAsync(binary,"");
+  const current=doc.items.find(candidate=>candidate.id===item.id);
+  if(!current||JSON.stringify(current.cadParams)!==identity)return;
+  generatedCad.set(item.id,parsed.scene);
+  generatedCadParams.set(item.id,identity);
+  redraw();
+  announce("Restored CAD geometry · "+item.name);
+ }).catch(error=>{
+  failedCad.add(item.id+identity);
+  announce("Saved CAD parameters could not regenerate geometry: "+String(error));
+ }).finally(()=>cadLoads.delete(item.id));
+ cadLoads.set(item.id,run);
+}
 function buildRoot(item:Item):THREE.Object3D {
  const root=new THREE.Group();root.userData.itemId=item.id;
  let mesh:THREE.Object3D|undefined;
@@ -336,16 +476,40 @@ function buildRoot(item:Item):THREE.Object3D {
  }else if(item.kind==="template"){
   const key=item.templateId||"";
   const loaded=instanceTemplateModel(key,item.color==="#ffffff"?undefined:item.color,wireframe,item.material);
-  if(loaded)root.add(loaded);
+  if(loaded){
+   // Every source part remains addressable within its editable scene instance.
+   loaded.traverse(node=>{
+    if(!(node instanceof THREE.Mesh))return;
+    node.userData.partId=node.name;
+    const override=item.partOverrides?.[node.name];
+    if(!override)return;
+    if(override.position)node.position.set(...override.position);
+    if(override.rotation)node.rotation.set(...override.rotation.map(v=>v*Math.PI/180) as Vec3);
+    if(override.scale)node.scale.set(...override.scale);
+    if(override.visible!==undefined)node.visible=override.visible;
+    if(override.color && node.material instanceof THREE.MeshStandardMaterial)node.material.color.set(override.color);
+   });
+   root.add(loaded);
+  }
   else if(key)void getTemplateModel(key).then(()=>{redraw();announce("3D source mesh loaded: "+modelLabel(key));}).catch(e=>announce("Template load failed: "+(e instanceof Error?e.message:String(e))));
  }else if(item.kind==="cad"){
   const stored=generatedCad.get(item.id);
-  mesh=stored ? stored.clone(true) : new THREE.Mesh(new THREE.SphereGeometry(.8,42,32),material(item.color,item.material));
-  if(stored)mesh.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry=o.geometry.clone();o.material=material(item.color,item.material);}});
+  const identity=item.cadParams?JSON.stringify(item.cadParams):"";
+  const valid=stored&&generatedCadParams.get(item.id)===identity;
+  if(valid){
+   mesh=stored.clone(true);
+   mesh.traverse(o=>{if(o instanceof THREE.Mesh){o.geometry=o.geometry.clone();o.material=material(item.color,item.material);}});
+  }else if(item.cadParams){
+   // A saved CAD object must never masquerade as a generated solid while restoring.
+   ensureCadGeometry(item);
+  }else{
+   // An ungenerated draft primitive is only an editable starting point.
+   mesh=new THREE.Mesh(new THREE.SphereGeometry(.8,42,32),material(item.color,item.material));
+  }
  }
  if(mesh){mesh.userData.itemId=item.id;root.add(mesh);}
  root.traverse(o=>{o.userData.itemId=item.id;if(o instanceof THREE.Mesh){o.castShadow=true;o.receiveShadow=true;if(o.material instanceof THREE.MeshStandardMaterial){o.material.wireframe=wireframe;}}});
- const pose=poseFor(item,doc.chapter);root.position.set(...pose);root.rotation.set(...item.rotation.map(a=>a*Math.PI/180) as Vec3);root.scale.set(...item.scale);root.visible=item.visible;
+ const pose=poseFor(item,mode==="story"?doc.chapter:0);root.position.set(...pose);root.rotation.set(...item.rotation.map(a=>a*Math.PI/180) as Vec3);root.scale.set(...item.scale);root.visible=item.visible;
  return root;
 }
 function poseFor(item:Item,chapter:number):Vec3 {
@@ -360,26 +524,73 @@ function clearStage(){
  stage.clear();roots.clear();
 }
 function redraw(){
+ transformControls.detach();
  clearStage();for(const item of doc.items){const root=buildRoot(item);stage.add(root);roots.set(item.id,root);}
- applyProgress(storyProgress);refreshSelection();store();
+ applyProgress(mode==="story"?storyProgress:0);refreshSelection();store();
+}
+function selectedSceneObject():THREE.Object3D|null {
+ return exactSelectionRoot(roots.get(selectedId)||null,selectedPartId);
 }
 function refreshSelection(){
  if(selectedHelper){scene.remove(selectedHelper);selectedHelper.dispose();selectedHelper=null;}
- const item=sel();const root=item&&roots.get(item.id);
- if(root && root.visible && selectionOutlineEnabled){selectedHelper=new THREE.BoxHelper(root,0x6185ed);scene.add(selectedHelper);}
+ transformControls.detach();
+ const target=selectedSceneObject();
+ if(target && target.visible){
+  if(selectionOutlineEnabled){selectedHelper=new THREE.BoxHelper(target,0x6185ed);scene.add(selectedHelper);}
+  if(transformMode!=="off"){transformControls.setMode(transformMode);transformControls.attach(target);}
+ }
 }
 let pressed:Vec3|null=null;
-renderer.domElement.addEventListener("pointerdown",e=>{pressed=[e.clientX,e.clientY,0]});
+renderer.domElement.addEventListener("pointerdown",e=>{pressed=transformControls.axis?null:[e.clientX,e.clientY,0]});
 renderer.domElement.addEventListener("pointerup",e=>{
- if(mode!=="select"||!pressed||Math.hypot(e.clientX-pressed[0],e.clientY-pressed[1])>6)return;
+ if(!pressed||Math.hypot(e.clientX-pressed[0],e.clientY-pressed[1])>6)return;
+ if(mode==="story")setManipulationMode("off");
+ if(mode!=="select")return;
+ sceneAutoRotate=false;
  const bounds=renderer.domElement.getBoundingClientRect();
  hitPointer.set((e.clientX-bounds.left)/bounds.width*2-1,-(e.clientY-bounds.top)/bounds.height*2+1);
  hitRay.setFromCamera(hitPointer,camera);
- const hits=hitRay.intersectObjects(stage.children,true);
- const id=hits.find(hit=>hit.object.userData.itemId)?.object.userData.itemId;
- if(id){selectedId=id;refreshSelection();renderInspector();renderLayers();progressive?.refreshContext();}
+ const hit=resolveSceneHit(hitRay.intersectObjects(stage.children,true));
+ selectedId=hit?.itemId||"";
+ selectedPartId=hit?.partId||null;
+ refreshSelection();renderInspector();renderLayers();progressive?.refreshContext();
+ sendHostMessage("selection",{selection:studioContext()});
 });
 function frame(){controls.target.set(0,0,0);camera.up.set(0,1,0);camera.position.set(11,6.2,13.5);camera.lookAt(0,0,0);controls.update();}
+function setManipulationMode(next:"off"|"translate"|"rotate"|"scale"){
+ mode="select";stopStoryPlayback();storyTransition=null;applyProgress(0);controls.enabled=true;
+ transformMode=next;appFrame.dataset.sceneMode="select";
+ document.querySelectorAll<HTMLButtonElement>("#mode-select,#transform-move,#transform-rotate,#transform-scale,#mode-orbit,#mode-story").forEach(button=>button.classList.remove("active"));
+ document.getElementById(next==="off"?"mode-select":next==="translate"?"transform-move":next==="rotate"?"transform-rotate":"transform-scale")?.classList.add("active");
+ refreshSelection();
+}
+function vector3(node:THREE.Vector3):Vec3{return [node.x,node.y,node.z].map(v=>Math.round(v*10000)/10000) as Vec3;}
+let transformStarted=false;
+transformControls.addEventListener("dragging-changed",event=>{
+ controls.enabled=!event.value;
+ if(event.value){pressed=null;sceneAutoRotate=false;stopStoryPlayback();storyTransition=null;}
+});
+transformControls.addEventListener("mouseDown",()=>{snapshot();transformStarted=true;});
+transformControls.addEventListener("objectChange",()=>{
+ const target=transformControls.object;
+ const item=sel();if(!target||!item)return;
+ if(selectedPartId){
+  const override=item.partOverrides??={};
+  const part=override[selectedPartId]??={};
+  part.position=vector3(target.position);
+  part.rotation=vector3(new THREE.Vector3(THREE.MathUtils.radToDeg(target.rotation.x),THREE.MathUtils.radToDeg(target.rotation.y),THREE.MathUtils.radToDeg(target.rotation.z)));
+  part.scale=vector3(target.scale);
+ }else{
+  item.position=vector3(target.position);
+  item.rotation=vector3(new THREE.Vector3(THREE.MathUtils.radToDeg(target.rotation.x),THREE.MathUtils.radToDeg(target.rotation.y),THREE.MathUtils.radToDeg(target.rotation.z)));
+  item.scale=vector3(target.scale);
+ }
+ selectedHelper?.update();
+});
+transformControls.addEventListener("mouseUp",()=>{
+ if(!transformStarted)return;transformStarted=false;
+ store();renderInspector();renderLayers();sendHostMessage("selection",{selection:studioContext()});
+});
 function setCameraView(viewName:string){
  const item=sel();const selectedRoot=item?roots.get(item.id):undefined;
  const target=selectedRoot?new THREE.Box3().setFromObject(selectedRoot).getCenter(new THREE.Vector3()):new THREE.Vector3(0,0,0);
@@ -391,7 +602,7 @@ function setCameraView(viewName:string){
  document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach(button=>{const active=button.dataset.view===viewName;button.classList.toggle("is-active",active);button.setAttribute("aria-pressed",String(active));});
 }
 function focusSelected(){
- const item=sel();const selectedRoot=item?roots.get(item.id):undefined;
+ const selectedRoot=selectedSceneObject()||undefined;
  if(!selectedRoot){frame();return;}
  selectedRoot.updateMatrixWorld(true);
  const bounds=new THREE.Box3().setFromObject(selectedRoot),center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());
@@ -414,9 +625,23 @@ renderer.domElement.addEventListener("wheel",e=>{
 function animate(){requestAnimationFrame(animate);if(storyTransition){const t=Math.min(1,(performance.now()-storyTransition.start)/storyTransition.duration);const smooth=t*t*(3-2*t);applyProgress(storyTransition.from+(storyTransition.to-storyTransition.from)*smooth);if(t>=1)storyTransition=null;}if(sceneAutoRotate&&!reducedMotionOverride&&!matchMedia("(prefers-reduced-motion: reduce)").matches)stage.rotation.y+=rotationSpeed;controls.update();selectedHelper?.update();renderer.render(scene,camera);}
 animate();
 
+function sourceParts(item:Item):string[]{
+ if(item.kind!=="template"||!item.templateId)return [];
+ if(item.templateId.startsWith("part:"))return [item.templateId.slice(5)];
+ return findTemplate(item.templateId)?.parts||[];
+}
 function renderLayers(){
  const host=document.getElementById("layers")!;
- host.innerHTML=doc.items.map(i=>'<div class="layer '+(i.id===selectedId?'selected':'')+'" data-select="'+esc(i.id)+'"><span class="layer-icon">'+icon(i.kind==="template"?"cube":i.kind==="desktop"?"panel":i.kind==="orb"?"orbit":"cube",16)+'</span><span class="layer-name">'+esc(i.name)+'</span><button class="layer-eye" data-visibility="'+esc(i.id)+'" title="Toggle visibility" aria-label="Toggle visibility">'+icon(i.visible?'eye':'eyeoff',15)+'</button></div>').join('');
+ host.innerHTML=doc.items.map(item=>{
+  const active=item.id===selectedId;
+  const parts=sourceParts(item);
+  const assembly='<div class="layer '+(active&&!selectedPartId?"selected":"")+'" data-select="'+esc(item.id)+'"><span class="layer-icon">'+icon("cube",16)+'</span><span class="layer-name">'+esc(item.name)+'</span>'+(parts.length?'<small class="ss-part-count">'+parts.length+' parts</small>':'')+'<button class="layer-eye" data-visibility="'+esc(item.id)+'" aria-label="Toggle assembly visibility">'+icon(item.visible?"eye":"eyeoff",15)+'</button></div>';
+  const partRows=parts.map(part=>{
+   const partVisible=item.partOverrides?.[part]?.visible!==false;
+   return '<div class="layer ss-part-row '+(active&&selectedPartId===part?"selected":"")+'" data-select="'+esc(item.id)+'" data-part="'+esc(part)+'"><span class="layer-icon">'+icon("cube",13)+'</span><span class="layer-name">'+esc(part)+'</span><button class="layer-eye" data-part-visibility="'+esc(part)+'" data-parent-id="'+esc(item.id)+'" aria-label="Toggle source part visibility">'+icon(partVisible?"eye":"eyeoff",14)+'</button></div>';
+  }).join("");
+  return '<div class="ss-assembly">'+assembly+partRows+'</div>';
+ }).join("")||'<div class="ss-empty-hierarchy">No objects in this scene. Add a model or shape to begin.</div>';
 }
 function renderPrimitives(){
  const choices:[Kind,string,string][]=[["desktop","Desktop display","Screen + stand"],["phone","Mobile device","Responsive proof"],["panel","Component panel","UI and design tokens"],["orb","Clay sphere","Soft geometry"],["box","Beveled solid","CAD-ready object"],["ring","Connected ring","Spatial symbolism"],["cad","Boolean solid","OpenCascade geometry"]];
@@ -430,13 +655,26 @@ function renderChapters(){
  document.getElementById("stage-title")!.textContent=chapters[doc.chapter][1];
  document.getElementById("stage-subtitle")!.textContent=brandInfo[doc.brand].sub+" Select a 3D object to inspect and revise it.";
 }
-function triplet(prop:"position"|"rotation"|"scale",v:Vec3){
- return '<div class="field"><label>'+prop[0].toUpperCase()+prop.slice(1)+(prop==="rotation"?" (degrees)":"")+'</label><div class="triplet">'+v.map((val,index)=>'<input type="number" step="'+(prop==="rotation"?1:.1)+'" data-prop="'+prop+'" data-axis="'+index+'" value="'+num(val)+'" aria-label="'+prop+' '+["X","Y","Z"][index]+'"/>').join('')+'</div></div>';
+function triplet(prop:"position"|"rotation"|"scale",v:Vec3,scope:"object"|"part"="object"){
+ const attr=scope==="part"?"part-prop":"prop";
+ return '<div class="field"><label>'+prop[0].toUpperCase()+prop.slice(1)+(prop==="rotation"?" (degrees)":"")+'</label><div class="triplet">'+v.map((val,index)=>'<input type="number" step="'+(prop==="rotation"?1:.1)+'" data-'+attr+'="'+prop+'" data-axis="'+index+'" value="'+num(val)+'" aria-label="'+prop+' '+["X","Y","Z"][index]+'"/>').join('')+'</div></div>';
 }
 function renderInspector(){
  const host=document.getElementById("inspector")!;
  const it=sel();
- if(!it){host.innerHTML='<div class="section"><span class="tag">Inspector</span><p>Select a scene object.</p></div>';return;}
+ if(!it){host.innerHTML='<div class="section"><span class="tag">Scene</span><p>No object selected. Select a mesh or insert an object to edit it.</p></div>';return;}
+ if(selectedPartId && it.kind==="template"){
+  const part=selectedPartId;
+  const override=it.partOverrides?.[part]||{};
+  host.innerHTML='<div class="section"><div class="section-title">Source mesh instance</div><strong>'+esc(part)+'</strong><p class="hint">Editing this part in '+esc(it.name)+'. The source STL stays unchanged.</p><button class="pill" id="select-assembly">Select parent assembly</button></div>'+
+   '<div class="section"><div class="section-title">Part transform</div>'+
+   triplet("position",override.position||[0,0,0],"part")+
+   triplet("rotation",override.rotation||[0,0,0],"part")+
+   triplet("scale",override.scale||[1,1,1],"part")+
+   '<button class="pill" id="reset-part">Reset this part</button><button class="pill" id="focus-object">Focus part</button></div>'+
+   '<div class="section"><div class="section-title">Appearance</div><div class="field"><label>Part color</label><input id="part-color" type="color" value="'+esc(override.color||"#ffffff")+'"/></div><label class="toggle-row">Part visible <input id="part-visible" type="checkbox" '+(override.visible!==false?"checked":"")+'/></label></div>';
+  return;
+ }
  const colors=[brandInfo[doc.brand].accent,"#e9adbe","#88c7cf","#d6e0fa","#a6a8cf","#2d3650"];
  host.innerHTML=
  '<div class="section"><div class="section-title">Selected object <span class="mini-badge">Editable</span></div><div class="field"><label>Object name</label><input id="name" type="text" value="'+esc(it.name)+'"/></div><div class="small">ID · '+esc(it.id.slice(0,13))+'</div><div class="btn-group" style="margin-top:13px"><button class="pill" id="duplicate">Duplicate</button><button class="pill" id="delete">Remove</button></div></div>'+
@@ -451,11 +689,11 @@ function renderInspector(){
  '<div class="section"><div class="section-title">Export & inspect</div><div class="btn-group"><button class="pill" id="export-glb">Export GLB</button><button class="pill" id="import-json">Import JSON</button><button class="pill" id="export-json-inspector">Export JSON</button><button class="pill" id="snapshot-inspector">Capture PNG</button></div><p class="hint">JSON captures the scene document. GLB captures the visible geometric assembly. Both are locally downloaded files. Browser draft storage is not device filesystem storage.</p></div>';
 }
 function renderBrand(){
- (["agentsam","inneranimalmedia"] as const).forEach(b=>document.getElementById("brand-"+b)!.classList.toggle("active",doc.brand===b));
+ (["agentsam","inneranimalmedia"] as const).forEach(b=>document.getElementById("brand-"+b)?.classList.toggle("active",doc.brand===b));
  document.documentElement.style.setProperty("--accent",brandInfo[doc.brand].accent);
  document.getElementById("project-name")!.textContent=doc.name+" ▾";
 }
-function renderAll(){renderBrand();renderPrimitives();renderLayers();renderInspector();renderChapters();redraw();progressive?.refreshContext();sendHostMessage("selection",{selection:studioContext()});}
+function renderAll(){renderBrand();renderPrimitives();renderInspector();renderChapters();redraw();renderLayers();progressive?.refreshContext();sendHostMessage("selection",{selection:studioContext()});}
 function setBackdrop(preset:string){
  const colors:Record<string,string>={blue:"#e8effb",studio:"#e8effb",neutral:"#e9e4dd",slate:"#252d3d",paper:"#f7f4ee",daylight:"#e7eff7",overcast:"#d8dfe8",night:"#242b3a"};
  const color=colors[preset]||preset||colors.blue;currentBackdrop=preset;
@@ -556,17 +794,17 @@ function addTemplate(ref:string){
  const templateRef=ref.startsWith("part:")?ref:entry.id;
  snapshot();
  const item=makeItem("template",entry.name,"#ffffff",[((doc.items.length%5)-2)*1.15,.15,0]);
- item.templateId=templateRef;doc.items.push(item);selectedId=item.id;
+ item.templateId=templateRef;doc.items.push(item);selectedId=item.id;selectedPartId=null;
  renderAll();store();
  announce(entry.kind==="source-part"?"Loading source STL instance: "+entry.name:"Loading authored composition: "+entry.name);
- void getTemplateModel(templateRef).then(()=>{redraw();announce("Inserted source-backed model · "+entry.name);}).catch(error=>announce("Model unavailable: "+String(error)));
+ void getTemplateModel(templateRef).then(()=>{redraw();renderLayers();announce("Inserted source-backed model · "+entry.name);}).catch(error=>announce("Model unavailable: "+String(error)));
 }
 function addItem(kind:Kind){
  const colors:{[key in Kind]:string}={desktop:"#2c3a57",phone:"#477ae5",panel:"#e9adbe",orb:"#86c4dc",box:"#95b4e6",ring:"#91d7cf",cad:"#f0d2ad",template:"#ffffff"};
- mutate(()=>{const i=makeItem(kind,kind==="cad"?"CAD Boolean solid":kind.charAt(0).toUpperCase()+kind.slice(1),colors[kind],[((doc.items.length%4)-1.5)*1.4,.15,(Math.floor(doc.items.length/4)-.5)*1.5]);doc.items.push(i);selectedId=i.id;});
+ mutate(()=>{const i=makeItem(kind,kind==="cad"?"CAD Boolean solid":kind.charAt(0).toUpperCase()+kind.slice(1),colors[kind],[((doc.items.length%4)-1.5)*1.4,.15,(Math.floor(doc.items.length/4)-.5)*1.5]);doc.items.push(i);selectedId=i.id;selectedPartId=null;});
 }
-function undo(){if(!history.length)return;future.push(JSON.stringify(doc));doc=JSON.parse(history.pop()!) as Document;selectedId=doc.items.find(x=>x.id===selectedId)?.id||doc.items[0]?.id||"";renderAll();}
-function redo(){if(!future.length)return;history.push(JSON.stringify(doc));doc=JSON.parse(future.pop()!) as Document;selectedId=doc.items[0]?.id||"";renderAll();}
+function undo(){if(!history.length)return;future.push(JSON.stringify(doc));doc=JSON.parse(history.pop()!) as Document;selectedId=doc.items.find(x=>x.id===selectedId)?.id||doc.items[0]?.id||"";selectedPartId=null;renderAll();}
+function redo(){if(!future.length)return;history.push(JSON.stringify(doc));doc=JSON.parse(future.pop()!) as Document;selectedId=doc.items[0]?.id||"";selectedPartId=null;renderAll();}
 async function exportGLB(){
  announce("Preparing scene GLB...");
  try{const exporter=new GLTFExporter();const output=await exporter.parseAsync(stage,{binary:true,onlyVisible:true});const bytes=output as ArrayBuffer;download(new Blob([bytes],{type:"model/gltf-binary"}),"iam-showcase-scene.glb");announce("Visible geometry exported as GLB.");}
@@ -584,7 +822,7 @@ async function generateCAD(){
   let target=sel();
   if(!target||target.kind!=="cad"){addItem("cad");target=sel();}
   const item=target!;
-  mutate(()=>{item.kind="cad";item.name="OCC Boolean solid";item.material="clay";item.cadParams=structuredClone(params);generatedCad.set(item.id,parsed.scene);});
+  mutate(()=>{item.kind="cad";item.name="OCC Boolean solid";item.material="clay";item.cadParams=structuredClone(params);generatedCad.set(item.id,parsed.scene);generatedCadParams.set(item.id,JSON.stringify(params));});
   announce("OpenCascade Boolean complete · geometry regenerated; source parameters saved in scene manifest.");
  }catch(e){announce("CAD generation error: "+(e instanceof Error?e.message:String(e)));console.error(e);}
  finally{if(button)button.disabled=false;}
@@ -594,7 +832,8 @@ function importScene(){
  const picker=document.createElement("input");picker.type="file";picker.accept=".json,application/json";
  picker.addEventListener("change",async()=>{const file=picker.files?.[0];if(!file)return;
  try{const data=JSON.parse(await file.text());if(data.version!==1||!Array.isArray(data.items)||!["agentsam","inneranimalmedia"].includes(data.brand))throw Error("Unsupported manifest");
- snapshot();doc=data as Document;selectedId=doc.items[0]?.id||"";renderAll();announce("Manifest imported. Rebuild external CAD meshes from their source if needed.");
+ newHostedScene(data as Document);
+ announce("Scene imported as a separate document; source assets remain unchanged.");
  }catch(e){announce("Import failed: "+(e instanceof Error?e.message:String(e)));}});
  picker.click();
 }
@@ -602,11 +841,21 @@ function importScene(){
 document.addEventListener("click",e=>{
  const target=e.target as HTMLElement;
  const layer=target.closest<HTMLElement>("[data-select]");
- if(layer&&!target.closest("[data-visibility]")){selectedId=layer.dataset.select||"";refreshSelection();renderLayers();renderInspector();progressive?.refreshContext();sendHostMessage("selection",{selection:studioContext()});return;}
+ if(layer&&!target.closest("[data-visibility],[data-part-visibility]")){
+  selectedId=layer.dataset.select||"";selectedPartId=layer.dataset.part||null;
+  refreshSelection();renderLayers();renderInspector();progressive?.refreshContext();
+  sendHostMessage("selection",{selection:studioContext()});return;
+ }
  const button=target.closest<HTMLButtonElement>("button");if(!button)return;
  const id=button.id,add=button.dataset.add,chapter=button.dataset.chapter,selection=button.closest<HTMLElement>("[data-select]")?.dataset.select;
  if(add){addItem(add as Kind);announce("Primitive created. Select, transform and refine in the inspector.");return;}
  if(chapter){setChapter(Number(chapter));return;}
+ if(button.dataset.partVisibility && button.dataset.parentId){
+  e.stopPropagation();const it=doc.items.find(x=>x.id===button.dataset.parentId);
+  const part=button.dataset.partVisibility;
+  if(it)mutate(()=>{const overrides=it.partOverrides??={};const value=overrides[part]??={};value.visible=value.visible===false;});
+  return;
+ }
  if(button.dataset.visibility){e.stopPropagation();const it=doc.items.find(x=>x.id===button.dataset.visibility);if(it)mutate(()=>{it.visible=!it.visible});return;}
  if(button.dataset.color){const it=sel();if(it)mutate(()=>{it.color=button.dataset.color!});return;}
  if(selection){selectedId=selection;refreshSelection();renderLayers();renderInspector();return;}
@@ -615,12 +864,17 @@ document.addEventListener("click",e=>{
   if(doc.brand!==brand)mutate(()=>{doc.brand=brand;doc.name=brand==="agentsam"?"AgentSam Product World":"InnerAnimalMedia Digital World";doc.items.forEach(i=>{if(i.kind==="desktop")i.color=brandInfo[brand].primary;if(i.kind==="orb")i.color=brandInfo[brand].accent;});});
   return;
  }
+ if(id==="select-assembly"){selectedPartId=null;refreshSelection();renderInspector();renderLayers();sendHostMessage("selection",{selection:studioContext()});return;}
+ if(id==="reset-part"){const it=sel();if(it&&selectedPartId){const part=selectedPartId;mutate(()=>{if(it.partOverrides)delete it.partOverrides[part];});}return;}
  if(id==="add-panel"){addItem("panel");return;}
- if(id==="duplicate"){const it=sel();if(it)mutate(()=>{const copy=structuredClone(it);copy.id=crypto.randomUUID();copy.name+=" copy";copy.position=[it.position[0]+.6,it.position[1]+.4,it.position[2]+.2];doc.items.push(copy);selectedId=copy.id;});return;}
- if(id==="delete"){const it=sel();if(it)mutate(()=>{doc.items=doc.items.filter(x=>x.id!==it.id);selectedId=doc.items[0]?.id||"";});return;}
+ if(id==="duplicate"){const it=sel();if(it)mutate(()=>{selectedPartId=null;const copy=structuredClone(it);copy.id=crypto.randomUUID();copy.name+=" copy";copy.position=[it.position[0]+.6,it.position[1]+.4,it.position[2]+.2];doc.items.push(copy);selectedId=copy.id;});return;}
+ if(id==="delete"){const it=sel();if(it)mutate(()=>{selectedPartId=null;doc.items=doc.items.filter(x=>x.id!==it.id);selectedId=doc.items[0]?.id||"";});return;}
  if(id==="reset-object"){const it=sel();if(it)mutate(()=>{it.rotation=[0,0,0];it.scale=[1,1,1];});return;}
  if(id==="focus-object"){focusSelected();return;}
- if(id==="mode-select"||id==="mode-orbit"||id==="mode-story"){mode=id==="mode-select"?"select":id==="mode-orbit"?"orbit":"story";appFrame.dataset.sceneMode=mode;if(mode==="story")toggleTimeline(false);for(const v of ["select","orbit","story"])document.getElementById("mode-"+v)!.classList.toggle("active",mode===v);controls.enableZoom=mode!=="story";controls.enableRotate=mode!=="story";announce(mode==="story"?"Story mode · scroll over the stage to scrub through four chapters.":"Canvas mode · "+mode);return;}
+ if(id==="mode-select"){setManipulationMode("off");return;}
+ if(id==="transform-move"||id==="transform-rotate"||id==="transform-scale"){setManipulationMode(id==="transform-move"?"translate":id==="transform-rotate"?"rotate":"scale");return;}
+ if(id==="mode-orbit"){setManipulationMode("off");mode="orbit";appFrame.dataset.sceneMode=mode;document.getElementById("mode-select")?.classList.remove("active");button.classList.add("active");return;}
+ if(id==="mode-story"){stopStoryPlayback();mode="story";transformMode="off";refreshSelection();appFrame.dataset.sceneMode=mode;toggleTimeline(false);document.getElementById("mode-select")?.classList.remove("active");document.getElementById("mode-orbit")?.classList.remove("active");button.classList.add("active");return;}
  if(id==="frame"){frame();return;}
  if(id==="grid"){grid.visible=showGrid=!showGrid;button.classList.toggle("active",showGrid);return;}
  if(id==="wireframe"){wireframe=!wireframe;button.classList.toggle("active",wireframe);redraw();return;}
@@ -651,6 +905,21 @@ document.addEventListener("click",e=>{
 document.addEventListener("change",e=>{
  const target=e.target as HTMLInputElement;
  const it=sel();if(!it)return;
+ if(selectedPartId){
+  const part=selectedPartId;
+  const prop=target.dataset.partProp as "position"|"rotation"|"scale"|undefined;
+  const axis=Number(target.dataset.axis);
+  if(prop&&Number.isInteger(axis)&&axis>=0&&axis<=2){
+   const value=Number(target.value);if(!Number.isFinite(value))return;
+   mutate(()=>{const parts=it.partOverrides??={};const override=parts[part]??={};const tuple=override[prop]??(prop==="scale"?[1,1,1]:[0,0,0]);tuple[axis]=prop==="scale"?Math.max(.05,Math.min(15,value)):Math.max(-999,Math.min(999,value));override[prop]=tuple;});return;
+  }
+  if(target.id==="part-visible"||target.id==="part-color"){
+   mutate(()=>{const parts=it.partOverrides??={};const override=parts[part]??={};
+    if(target.id==="part-visible")override.visible=target.checked;
+    else override.color=target.value;
+   });return;
+  }
+ }
  if(target.id==="name"){const value=target.value.trim().slice(0,90);if(value)mutate(()=>{it.name=value});return;}
  if(target.id==="material"){mutate(()=>{it.material=target.value as Look});return;}
  if(target.id==="color"){mutate(()=>{it.color=target.value});return;}
@@ -664,6 +933,9 @@ document.addEventListener("change",e=>{
 document.addEventListener("keydown",e=>{
  const active=document.activeElement as HTMLElement|null;if(active&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName))return;
  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){e.preventDefault();e.shiftKey?redo():undo();}
+ if(!e.metaKey&&!e.ctrlKey&&!e.altKey&&["q","w","e","r"].includes(e.key.toLowerCase())){
+  const modeKey=e.key.toLowerCase();setManipulationMode(modeKey==="q"?"off":modeKey==="w"?"translate":modeKey==="e"?"rotate":"scale");return;
+ }
  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="d"){e.preventDefault();(document.getElementById("duplicate") as HTMLButtonElement|null)?.click();}
  if(e.key==="Delete"||e.key==="Backspace"){e.preventDefault();(document.getElementById("delete") as HTMLButtonElement|null)?.click();}
  if(e.key==="Escape"&&autoPlay!==null){window.clearInterval(autoPlay);autoPlay=null;}
@@ -698,6 +970,7 @@ renderAll();
 const preferWorkspace=bootParams.get("workspace")==="1"||bootParams.get("surface")==="studio";
 if(preferWorkspace){enterStudio();announce("SamSketch ready · 20 compositions · 47 source parts · CAD kernel on demand");}
 else{showGallery();announce("SamSketch gallery · open a canvas to begin");}
-sendHostMessage("ready",{context:studioContext()});
+void refreshHostedScenes();
+sendHostMessage("ready",{context:studioContext(),surface:gallery?.isVisible()?"gallery":"studio"});
 
 observeShellAppearance(({theme,accent})=>{applyWorkspaceTheme(theme);document.documentElement.style.setProperty('--nav-accent',accent);});

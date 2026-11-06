@@ -1,5 +1,6 @@
 import { icon } from "./icons";
 import { assetUrl } from "./asset-url";
+const previewUrl=(path:string)=>path.startsWith("/api/work/library/artifacts/")?path:assetUrl(path);
 import { compositionInventory } from "./model-inventory";
 import "./gallery.css";
 
@@ -29,7 +30,7 @@ export type GalleryApi = {
 
 type GalleryOptions = {
   host: HTMLElement;
-  getActiveDraft: () => { name: string; brand: string; itemCount: number; updatedAt?: string };
+  getActiveDraft: () => { name: string; brand: string; itemCount: number; updatedAt?: string; preview?:string|null };
   listSaved: () => Array<{ id: string; name: string; category: SketchProjectCategory; itemCount: number; updatedAt: string; preview?: string | null }>;
   onOpenDraft: () => void;
   onOpenBlank: () => void;
@@ -80,7 +81,7 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
   root.hidden = true;
   options.host.prepend(root);
 
-  let filter: "all" | "drafts" | "starters" = "all";
+  let filter: "all" | "drafts" | "starters" = "drafts";
   let query = "";
   let menuId: string | null = null;
 
@@ -97,18 +98,18 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
         preview: null,
         accent: "blank",
       },
-      {
+      ...(draft.updatedAt?[{
         id: "active-draft",
         name: draft.name || "Untitled scene",
         category: "Draft",
         kind: "draft",
         subtitle: "SamSketch · current draft",
         meta: relativeTime(draft.updatedAt) + " · " + draft.itemCount + " object" + (draft.itemCount === 1 ? "" : "s"),
-        preview: compositionInventory.find((entry) => entry.preview)?.preview || "web/stack.webp",
+        preview: draft.preview || null,
         itemCount: draft.itemCount,
         updatedAt: draft.updatedAt,
         accent: draft.brand,
-      },
+      } as SketchProjectCard]:[]),
       ...options.listSaved().map((project) => ({
         id: project.id,
         name: project.name,
@@ -133,7 +134,7 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
 
   function cardMarkup(card: SketchProjectCard) {
     const preview = card.preview
-      ? `<img loading="lazy" src="${safe(assetUrl(card.preview))}" alt="" />`
+      ? `<img loading="lazy" src="${safe(previewUrl(card.preview))}" alt="" />`
       : `<span class="ss-resource-card__placeholder">${icon(card.kind === "blank" ? "plus" : "pen", 28)}<small>${card.kind === "blank" ? "New" : "Sketch"}</small></span>`;
     const openLabel = card.kind === "blank" ? "Create" : card.kind === "starter" ? "Open starter" : "Open";
     return `<article class="ss-resource-card" data-card-id="${safe(card.id)}" data-card-kind="${card.kind}" data-starter-id="${safe(card.starterId || "")}" data-card-name="${safe(card.name)}" data-card-category="${safe(card.category)}">
@@ -180,7 +181,7 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
           <h1>Your canvases</h1>
           <p>Open a draft, start blank, or launch a source-backed composition. Previews stay lightweight — the 3D engine loads only in the editor.</p>
         </div>
-        <span class="ss-gallery__count">${cards.length} surfaces</span>
+        <span class="ss-gallery__count">${options.listSaved().length} saved</span>
       </div>
       <div class="ss-gallery__toolbar">
         <label class="ss-gallery__search">${icon("search", 15)}<input type="search" id="ss-gallery-search" placeholder="Search canvases, compositions, drafts…" aria-label="Search SamSketch projects" value="${safe(query)}"></label>
@@ -191,7 +192,7 @@ export function mountSketchGallery(options: GalleryOptions): GalleryApi {
         </div>
       </div>
       <div class="ss-gallery__grid" role="list">${cards.map(cardMarkup).join("") || `<div class="ss-gallery__empty">${icon("search", 22)}<strong>No matching canvases</strong><span>Try another search or filter.</span></div>`}</div>
-      <footer class="ss-gallery__foot"><span>SamSketch · Creative Department</span><span>Batch 2 will add Concept Board, Product Sketch, and Scene Layout templates</span></footer>
+      <footer class="ss-gallery__foot"><span>SamSketch · Creative Department</span><span>Saved scenes and source-backed starters are organized separately</span></footer>
     `;
 
     root.querySelector<HTMLInputElement>("#ss-gallery-search")?.addEventListener("input", (event) => {

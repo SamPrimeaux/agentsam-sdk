@@ -44,14 +44,14 @@ test('thread primitive has a safe standalone scroll contract', async () => {
   assert.match(source, /overflowY: 'auto'/);
 });
 
-test('legacy Local Studio TrailThread also uses the portable conversation surface', async () => {
+test('Local Studio lead ChatThread uses the portable conversation surface with chat target', async () => {
   const source = await readFile(
     new URL('../../../apps/local-studio/frontend/src/components/workbench/thread.tsx', import.meta.url),
     'utf8',
   );
   assert.match(source, /AgentConversationSurface/);
   assert.match(source, /composer=\{<Composer/);
-  assert.match(source, /targetKind="trail"/);
+  assert.match(source, /targetKind="chat"/);
 });
 
 
