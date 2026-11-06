@@ -1,3 +1,4 @@
+-- agentsam-engine: d1
 -- Link Gmail tools to the google_gmail OAuth plugin so tool_count and readiness reflect reality.
 -- Idempotent: only touches rows that are still unlinked. Applied manually to prod first.
 UPDATE agentsam_tools
