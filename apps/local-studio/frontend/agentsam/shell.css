@@ -91,9 +91,9 @@
 .agentsam-start-context .as-nav-title, .agentsam-start-context .as-nav-separator, .agentsam-start-context .as-nav-mode-label { display: none; }
 .agentsam-plugin-host { position: relative; width: 100%; max-width: 1120px; margin: 0 auto; }
 .agentsam-plugin-menu {
-  position: absolute; z-index: 120; left: 0; right: 0; top: calc(100% + 8px);
-  max-height: min(720px, 40dvh); overflow-y: auto; overscroll-behavior: contain;
-  padding: 10px; border: 1px solid var(--nav-border); border-radius: 24px;
+  position: absolute; z-index: 120; left: 0; width: min(360px, calc(100vw - 32px)); bottom: calc(100% + 8px);
+  max-height: min(520px, 55dvh); overflow-y: auto; overscroll-behavior: contain;
+  padding: 8px; border: 1px solid var(--nav-border, var(--border)); border-radius: 10px;
   background: var(--nav-popover); color: var(--nav-text);
   box-shadow: 0 20px 60px #00000055; backdrop-filter: blur(22px);
 }
@@ -107,9 +107,12 @@
 .agentsam-plugin-heading span { flex: 1; color: var(--nav-muted); font-size: 12px; }
 .agentsam-plugin-notice { padding: 10px 12px; color: var(--nav-muted); font-size: 12px; }
 .agentsam-plugin-row {
-  display: flex; align-items: center; gap: 14px; width: 100%; min-height: 64px;
-  padding: 11px 13px; text-align: left; border-radius: 14px; transition: background 120ms ease;
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px;
+  padding: 8px 10px; text-align: left; border-radius: 6px; transition: background 120ms ease;
 }
+.agentsam-plugin-row:disabled { opacity: .5; cursor: default; }
+.agentsam-plugin-search { width: 100%; min-height: 36px; margin-bottom: 6px; padding: 6px 9px; border: 1px solid var(--nav-border, var(--border)); border-radius: 5px; background: transparent; color: inherit; font-size: 12px; }
+.agentsam-plugin-heading > strong { flex: 1; }
 .agentsam-plugin-row:hover, .agentsam-plugin-row[data-active="true"] { background: var(--nav-selected); }
 .agentsam-plugin-row:focus-visible { outline: 2px solid var(--nav-accent); outline-offset: -2px; }
 .agentsam-plugin-row > span { flex: 1; min-width: 0; }

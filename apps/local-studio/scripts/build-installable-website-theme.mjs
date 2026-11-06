@@ -73,18 +73,23 @@ try {
  const staticRoutes=files.filter(f=>f.startsWith('site/')&&f.endsWith('.html'))
    // Fragment partials belong inside their parent page; presenting nav/footer/
    // section HTML files as independent website pages is a broken installer.
-   .filter(f=>/<!doctype\s+html|<html(?:\s|>)/i.test(unzip(zip,f).toString('utf8').slice(0,1800)))
+   .filter(f=>/<html(?:\s|>)/i.test(unzip(zip,f).toString('utf8').slice(0,1800)))
    .map(f=>{
      const name=f.slice(5);
      return name==='index.html'?'':name.endsWith('/index.html')?name.slice(0,-10):name;
    });
  const declaredRoutePaths=[];
+ const authoredPageByPath=new Map();
  // Preserve any author-supplied CMS route manifest when present, but never
  // require one. It is guidance, not substitute content.
  for(const f of files.filter(f=>/site\/[^/]+-cms-manifest\.json$/.test(f))){
    const declared=JSON.parse(unzip(zip,f).toString('utf8'));
    if(declared.schema==='agentsam.cms-source-manifest.v1'&&declared.theme===slug)
-     for(const p of declared.pages||[])if(typeof p.path==='string')declaredRoutePaths.push(p.path.replace(/^\/+/,'')); 
+     for(const p of declared.pages||[])if(typeof p.path==='string'){
+       const route=p.path.replace(/^\/+/, '');
+       declaredRoutePaths.push(route);
+       authoredPageByPath.set(route.replace(/\/$/,''),p);
+     }
  }
  const routes=['',...declaredRoutePaths,...staticRoutes.filter(p=>p!=='')];
  const seen=new Set(),signatures=new Set(),pages=[],missing=[],usedSlugs=new Set(),failedAssets=new Set();
@@ -92,6 +97,20 @@ try {
  const browserPath=process.env.CHROME_BIN||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
  browser=await chromium.launch({executablePath:browserPath,headless:true});
  const page=await browser.newPage({viewport:{width:1440,height:960},deviceScaleFactor:1});
+ // Some storefronts ship product cards in authored Shop HTML, but their
+ // product URLs fall back to Home at runtime. Recover a real editable product
+ // starter from those actual catalog cards rather than copying Home four times.
+ const sourceShopHtml=files.includes('site/shop.html')?unzip(zip,'site/shop.html').toString('utf8'):null;
+ const productSourceCards=sourceShopHtml?await page.evaluate(html=>{
+   const doc=new DOMParser().parseFromString(html,'text/html');
+   return [...doc.querySelectorAll('article[data-url][data-title]')].map(node=>({
+     route:node.getAttribute('data-url')?.replace(/^\/+|\/+$/g,''),
+     title:node.getAttribute('data-title'),price:node.getAttribute('data-price'),
+     color:node.getAttribute('data-color'),sizes:node.getAttribute('data-sizes'),
+     collection:node.getAttribute('data-coll'),image:node.getAttribute('data-img')
+   })).filter(x=>x.route&&x.title);
+ },sourceShopHtml):[];
+ const productCardByRoute=new Map(productSourceCards.map(card=>[card.route,card]));
  const extractor=await readFile(join(root,'apps/ecommerce-cms-agentsam/frontend/theme-editor/project.mjs'),'utf8');
  await page.route('**/__agentsam_install_extract.mjs',route=>route.fulfill({status:200,contentType:'text/javascript',body:extractor}));
  page.on('response',response=>{
@@ -106,13 +125,60 @@ try {
    return cleaned;
  };
  const queue=[];
+ // A source CMS manifest may write /about while its ZIP uses /about/index.html.
+ // These are one page, not separate editable drafts. Keep the first real URL
+ // for fetching, but deduplicate its logical route identity.
+ const routeKey=route=>route.replace(/\/+$/,'');
  const queueRoute=route=>{
    const cleaned=normalizeRoute(route);
-   if(cleaned!==null&&!seen.has(cleaned)&&!queue.includes(cleaned)&&queue.length<MAX_ROUTES)queue.push(cleaned);
+   if(cleaned!==null&&!seen.has(routeKey(cleaned))&&
+     !queue.some(other=>routeKey(other)===routeKey(cleaned))&&queue.length<MAX_ROUTES)
+     queue.push(cleaned);
  };
  routes.forEach(queueRoute);
  while(queue.length&&seen.size<MAX_ROUTES&&pages.length<MAX_PAGES){
-   const route=queue.shift();if(seen.has(route))continue;seen.add(route);
+   const route=queue.shift();if(seen.has(routeKey(route)))continue;seen.add(routeKey(route));
+   const sourceCard=productCardByRoute.get(route.replace(/\/$/,''));
+   if(sourceCard && /^products\/[a-z0-9-]+\/?$/.test(route)){
+     const pageSlug=route.replace(/[^a-z0-9-]/gi,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').toLowerCase().slice(0,55);
+     if(usedSlugs.has(pageSlug))throw Error('authored_product_slug_conflict:'+slug+':'+pageSlug);
+     const data=await page.evaluate(async ({card,html,slug,title,base})=>{
+       const source=new DOMParser().parseFromString(html,'text/html');
+       const doc=document.implementation.createHTMLDocument(title);
+       for(const el of source.querySelectorAll('head link[rel="stylesheet"],head style')){
+         const copy=el.cloneNode(true);
+         if(copy.tagName==='LINK'){
+           const href=copy.getAttribute('href')||'';
+           if(href.startsWith('/assets/'))copy.setAttribute('href',base+href.slice(1));
+           else if(href.startsWith('./assets/'))copy.setAttribute('href',base+href.slice(2));
+         }
+         doc.head.append(copy);
+       }
+       const main=doc.createElement('main');main.className='cms-product-source-starter';
+       const hero=doc.createElement('section');hero.className='cms-product-detail';
+       hero.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:clamp(24px,5vw,72px);max-width:1200px;margin:auto;padding:clamp(48px,8vw,100px) 24px;align-items:center';
+       if(card.image?.startsWith('/assets/')){const picture=doc.createElement('img');
+         picture.src=base+card.image.slice(1);
+         picture.alt=card.title;picture.style.cssText='width:100%;height:auto;aspect-ratio:4/5;object-fit:cover';hero.append(picture);
+       }
+       const details=doc.createElement('div');
+       const collection=doc.createElement('p');collection.textContent=card.collection||'Collection';details.append(collection);
+       const heading=doc.createElement('h1');heading.textContent=card.title;details.append(heading);
+       const price=doc.createElement('p');price.textContent=card.price?'$'+card.price:'Price on request';details.append(price);
+       if(card.color){const color=doc.createElement('p');color.textContent='Color: '+card.color;details.append(color);}
+       if(card.sizes){const sizes=doc.createElement('p');sizes.textContent='Available sizes: '+card.sizes;details.append(sizes);}
+       const back=doc.createElement('a');back.href=base+'shop.html';back.textContent='Back to shop';details.append(back);
+       hero.append(details);main.append(hero);doc.body.append(main);
+       const {extractThemePage}=await import('/__agentsam_install_extract.mjs');
+       return extractThemePage('<!DOCTYPE html>'+doc.documentElement.outerHTML,{slug,title,baseUrl:base});
+     },{card:sourceCard,html:sourceShopHtml,slug:pageSlug,title:sourceCard.title,base});
+     if(!data?.sections?.length||!data.sections.some(section=>section.schema.fields?.length||section.schema.blocks?.some(b=>b.fields?.length)))
+       throw Error('authored_product_card_uneditable:'+slug+':'+route);
+     data.sourceRoute='/'+route;data.sourceOrigin='authored-product-card-starter';
+     pages.push(data);usedSlugs.add(pageSlug);
+     console.log('[authored-product-starter]',slug,route,pageSlug,'fields',data.sections.reduce((n,s)=>n+(s.schema.fields?.length||0),0));
+     continue;
+   }
    const relative=route||'';
    let res;
    try {res=await page.goto(base+relative,{waitUntil:'domcontentloaded',timeout:24000});}
@@ -137,7 +203,11 @@ try {
    for(const next of state.candidates)queueRoute(next);
    if(!state.hasBody||state.text.length<75||state.headingCount===0){missing.push(route+':no_rendered_content');continue;}
    const signature=sha256(state.text.replace(/\s+/g,' ').slice(0,4000));
-   if(signatures.has(signature))continue;
+   // An authenticated portal may deliberately render the same sign-in shell
+   // for several distinct source HTML routes. Preserve each independently
+   // editable route, but disclose that its initial source view was shared.
+   const renderedAlias=signatures.has(signature);
+   if(renderedAlias && !staticRoutes.includes(route))continue;
    signatures.add(signature);
    let pageSlug=route.replace(/\/index\.html$/,'').replace(/\.html$/,'').replace(/[^a-z0-9-]/gi,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'home';
    pageSlug=pageSlug.slice(0,55).replace(/-+$/,'');
@@ -149,6 +219,22 @@ try {
    try{
      data=await page.evaluate(async ({slug,title,base})=>{
        const copy=document.documentElement.cloneNode(true);
+       // extractThemePage installs a stable preview base. Resolve assets
+       // against the rendered source document first so nested routes retain
+       // their real stylesheet/media URLs after that base changes.
+       for(const [selector,property,attribute] of [
+         ['link[rel="stylesheet"][href]','href','href'],
+         ['img[src]','src','src'],
+         ['source[src]','src','src'],
+         ['video[poster]','poster','poster']]){
+         const live=[...document.querySelectorAll(selector)];
+         const copied=[...copy.querySelectorAll(selector)];
+         for(let i=0;i<live.length;i++){
+           const resolved=live[i][property];
+           if(typeof resolved==='string'&&/^https?:\/\//.test(resolved))
+             copied[i]?.setAttribute(attribute,resolved);
+         }
+       }
        copy.querySelectorAll('script').forEach(node=>node.remove());
        const html='<!DOCTYPE html>'+copy.outerHTML;
        const {extractThemePage}=await import('/__agentsam_install_extract.mjs');
@@ -158,8 +244,57 @@ try {
    if(!data?.sections?.length||!data.sections.some(s=>s.schema.fields?.length||s.schema.blocks?.some(b=>b.fields?.length)))
      throw Error('no_editable_fields:'+slug+':'+route);
    data.sourceRoute='/'+route;
+   if(renderedAlias)data.sourceOrigin='rendered-route-alias';
    pages.push(data);
    console.log('[project]',slug,route||'/',pageSlug,'sections',data.sections.length,'media',state.imageCount,'fields',data.sections.reduce((n,s)=>n+(s.schema.fields?.length||0),0));
+ }
+ // Some published SPA bundles contain real author-supplied CMS page definitions
+ // for routes whose deployed client router no longer renders. Recover their
+ // actual authored blocks, not a screenshot or an invented substitute page.
+ // Provenance remains explicit so the editor can distinguish this recovery from
+ // a faithful browser-rendered route.
+ for(const [route,source] of authoredPageByPath){
+   if(pages.some(item=>(item.sourceRoute||'').replace(/^\/+|\/+$/g,'')===route))continue;
+   const pageSlug=route.replace(/[^a-z0-9-]/gi,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').toLowerCase().slice(0,55)||'home';
+   if(usedSlugs.has(pageSlug))throw Error('authored_manifest_page_slug_conflict:'+slug+':'+pageSlug);
+   if(!Array.isArray(source.sections)||!source.sections.length)
+     throw Error('authored_manifest_page_missing_sections:'+slug+':'+route);
+   const data=await page.evaluate(async ({source,route,slug,title,base})=>{
+     const doc=document.implementation.createHTMLDocument(title);
+     for(const sheet of document.querySelectorAll('head link[rel="stylesheet"],head style')){
+       doc.head.append(sheet.cloneNode(true));
+     }
+     const main=doc.createElement('main');main.className='cms-authored-source-page';
+     for(const section of source.sections){
+       const wrapper=doc.createElement('section');
+       wrapper.className='cms-authored-source-section';
+       wrapper.setAttribute('data-cms-definition',section.definition_key||'source-section');
+       let textNodes=0;
+       for(const block of section.blocks||[]){
+         const content=block.content_json||{};
+         const authoredText=typeof content.text==='string'?content.text:
+           typeof content.title==='string'?content.title:
+           typeof content.body==='string'?content.body:'';
+         if(!authoredText.trim())continue;
+         const tag=/heading/.test(block.definition_key||'')?'h2':'p';
+         const node=doc.createElement(tag);
+         node.textContent=authoredText;
+         wrapper.append(node);textNodes++;
+       }
+       if(!textNodes)throw Error('authored_manifest_section_empty:'+route+':'+section.definition_key);
+       main.append(wrapper);
+     }
+     doc.body.append(main);
+     const {extractThemePage}=await import('/__agentsam_install_extract.mjs');
+     return extractThemePage('<!DOCTYPE html>'+doc.documentElement.outerHTML,{slug,title,baseUrl:base});
+   },{source,route,slug:pageSlug,title:source.title||pageSlug,base});
+   if(!data?.sections?.length||!data.sections.some(section=>section.schema.fields?.length||section.schema.blocks?.some(b=>b.fields?.length)))
+     throw Error('authored_manifest_page_uneditable:'+slug+':'+route);
+   data.sourceRoute='/'+route;
+   data.sourceOrigin='authored-cms-manifest-fallback';
+   data.sourceManifestSchema='agentsam.cms-source-manifest.v1';
+   pages.push(data);usedSlugs.add(pageSlug);
+   console.log('[authored-source-recovery]',slug,route,pageSlug,'sections',data.sections.length);
  }
  if(!pages.length||!pages.some(p=>p.slug==='home'))throw Error('no_valid_home_page:'+slug);
  if(pages.length>80)throw Error('project_too_many_pages');
@@ -171,8 +306,11 @@ try {
    sourceRoutesNotRendered:missing,sourcePagesDetected:seen.size,sourceAssetErrors:[...failedAssets].slice(0,100),
    revision:0,version:'0.1.0',
  };
- const portability=auditPortableThemeProject(project,{declaredPages:manifest.pages||[]});
+ // Marketing page labels may describe sections of a one-page theme.
+ // Only concrete, source-authored CMS route records carry a page-count promise.
+ const portability=auditPortableThemeProject(project,{declaredPages:declaredRoutePaths});
  console.log('[cms-portability]',slug,JSON.stringify(portability));
+ console.log('[source-route-audit]',slug,JSON.stringify({actualPages:pages.length,sourceManifestRoutes:declaredRoutePaths.length,staticRoutes:staticRoutes.length,missing,failedAssets:[...failedAssets].slice(0,45)}));
  if(!portability.ok)throw Error('cms_portability_invalid:'+slug+':'+
    portability.errors.map(x=>x.code+'='+x.detail).join('|'));
  const output=Buffer.from(JSON.stringify(project,null,2)+'\n');

@@ -415,9 +415,19 @@ function showActiveTheme(theme,siteId) {
       try {sessionStorage.setItem('agentsam.cms.selected-site.v1',d.selected_site_id);} catch {}
     }
     const createTheme=document.getElementById('new-theme-btn');
-    if(createTheme && d.selected_site_id){
-      createTheme.href='/admin/theme-project-editor?new=1&site_id='+encodeURIComponent(d.selected_site_id);
-      createTheme.hidden=false;
+    const canvasUrl = window.AgentSamOnlineStoreHost?.canvasUrl || d.canvas_url;
+    if(createTheme && typeof canvasUrl === 'string'){
+      // A host advertises its creation capability. No merchant website is
+      // required, and standalone Ecommerce never guesses an absent SDK route.
+      const base = new URL(window.AgentSamOnlineStoreHost?.baseUrl || location.href);
+      const destination = new URL(canvasUrl, base);
+      if(destination.origin === base.origin && destination.pathname.startsWith('/')){
+        if(sites.some(site => site.id === d.selected_site_id))
+          destination.searchParams.set('site_id',d.selected_site_id);
+        createTheme.href=destination.href;
+        createTheme.hidden=false;
+        createTheme.setAttribute('aria-label','Create a Canvas');
+      }
     }
     const externalStore = document.getElementById('browse-themes-shortcut');
     if (externalStore) {

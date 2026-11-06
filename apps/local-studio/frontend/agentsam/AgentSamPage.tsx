@@ -57,7 +57,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const workSurface = state.workSurface;
   const mobileWorkOpen = isMobile && workSurface !== 'chat';
   return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
-    {!hostModeSlot ? <Nav.Topbar startup={false} showNavigationTrigger={false} rightSlot={<>
+    {!hostModeSlot ? <Nav.Topbar startup={false} showNavigationTrigger={false} rightSlot={data.mode === 'work' ? undefined : <>
       {conversationId ? <Link to="/chats" aria-label="Back to Chats" title="Back to Chats" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="size-4"/></Link> : null}
       <button type="button" className="as-nav-button" aria-label="New chat" title="New chat (⌘N)" onClick={startNewChat}><MessageSquarePlus size={18}/><span className="sr-only">New chat</span></button>
       <button type="button" className="as-nav-button" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={18}/><span className="sr-only">Search Studio</span></button>
@@ -69,7 +69,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
       <Nav.ModeSwitcher />
     </div> : null}
     <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "")}>
-      {hostModeSlot ? <div className="agentsam-context-tools" aria-label="Conversation tools"><AnnotationToggle /><SidePanelToggle /></div> : null}
+      {hostModeSlot && data.mode !== 'work' ? <div className="agentsam-context-tools" aria-label="Conversation tools"><AnnotationToggle /><SidePanelToggle /></div> : null}
       <section className="agentsam-conversation" aria-label="Conversation" inert={mobileWorkOpen || (isMobile && state.sideOpen) || workFocused} style={workFocused || mobileWorkOpen ? { display:"none" } : undefined}>
         <AgentConversationSurface
           empty={empty}
@@ -82,7 +82,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
               narrationStyle={{ bottom: 96 }}
             />
           }
-          thread={<MessageList messages={chat.messages} chatId={chat.id} streaming={streaming} />}
+          thread={<MessageList messages={chat.messages} chatId={chat.id} streaming={streaming} readingMode={data.mode === 'work'} />}
           emptyState={<div className="agentsam-welcome-heading">
             {data.mode === 'work' ? <div className="agentsam-work-welcome" data-companion-id={companion.id}>
               <div className="agentsam-work-welcome-art" aria-hidden="true">
@@ -95,7 +95,7 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
               </div>
             </div> : <h1>Where should we begin?</h1>}
           </div>}
-          composer={<Composer targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work on anything…' : 'Ask anything…'} />}
+          composer={<Composer targetId={chat.id} targetKind="chat" placeholder={data.mode === 'work' ? 'Work with ' + companion.name : 'Ask ' + companion.name} />}
           composerClassName="agentsam-conversation-dock"
         />
       </section>

@@ -44,13 +44,18 @@ test('consumer context and brand tokens stay isolated between providers', () => 
   assert.match(html, /Other workspace/);
 });
 
-test('all topbars use the same hamburger and controlled navigation state', () => {
+test('topbar and brand-hover sidebar controls share provider state', async () => {
   const html = renderToString(React.createElement(Nav.Provider,
     { value, defaultOpen: false },
     React.createElement(Nav.Topbar),
     React.createElement(Nav.TopbarLogo, { toggle: true })));
-  const triggers = html.match(/class="agentsam-nav__trigger"/g) || [];
-  assert.equal(triggers.length, 2, 'default and compatibility surfaces use one trigger implementation');
+  assert.match(html, /class="agentsam-nav__trigger"/, 'legacy topbar uses provider trigger');
+  assert.match(html, /as-nav-work-brand-toggle/, 'brand control is the same provider navigation action');
+  assert.match(html, /aria-label="Open sidebar"/);
+  assert.match(html, /aria-keyshortcuts="Meta\+Shift\+S"/);
+  assert.match(html, /as-nav-work-brand-toggle__control/);
+  const source = await import('node:fs/promises').then(({ readFile }) => readFile(new URL('../src/shell.css', import.meta.url),'utf8'));
+  assert.match(source, /as-nav-work-brand-toggle__mark img\.as-nav-logo-light/);
   assert.match(html, /aria-expanded="false"/);
   assert.doesNotMatch(html, /as-nav-brand--toggle/);
 });

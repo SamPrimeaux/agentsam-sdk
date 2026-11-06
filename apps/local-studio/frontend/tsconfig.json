@@ -27,6 +27,9 @@
       "@agentsam/icon-registry": [
         "../../../protocol/ui/icon-registry.mjs"
       ],
+      "@inneranimalmedia/agentsam-sdk/models/inventory": [
+        "../../../src/models/inventory-core.d.ts"
+      ],
       "@inneranimalmedia/agentsam-nav": [
         "../../../packages/agentsam-nav/src/index.ts"
       ],

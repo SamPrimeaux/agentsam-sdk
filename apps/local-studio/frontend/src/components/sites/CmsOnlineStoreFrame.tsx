@@ -77,6 +77,8 @@ export function CmsOnlineStoreFrame({
       try {
         dispose = await mountOnlineStore(iframe, {
           baseUrl: window.location.origin,
+          canvasUrl: '/canvas?host=online-store',
+          onCreateCanvas: (href: string) => { window.location.assign(href); },
           storefrontUrl,
           async loadStore() {
             if (!adapter.getStoreOverview) throw new Error('The site has no installed Store Overview adapter');

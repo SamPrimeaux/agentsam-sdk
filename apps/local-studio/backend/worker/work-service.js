@@ -5,6 +5,8 @@
 
 import { listAccountLibraryResources, serveAccountLibraryFile, mutateAccountLibraryArtifact } from './work-library-resources.js';
 import { handleWorkCadRequest, isWorkCadRequest } from './work-cad-models.js';
+import { handleCanvasRequest, isCanvasRequest } from './work-canvas.js';
+import { handleCanvasCms } from './work-canvas-cms.js';
 import { handleSamSketchSceneRequest, isSamSketchSceneRequest } from './work-samsketch-scenes.js';
 import { readProjectInsights } from './work-project-insights.js';
 import { handleProjectTimer } from './work-project-metrics.js';
@@ -253,6 +255,8 @@ export function isWorkRequest(pathname) {
   return (
     pathname === '/api/work/snapshot' ||
     /^\/api\/work\/library\/artifacts\/[A-Za-z0-9_-]+(?:\/file)?$/.test(pathname) ||
+    isCanvasRequest(pathname) ||
+    /^\/api\/work\/canvases\/[A-Za-z0-9_-]+\/cms\/(validate|convert)$/.test(pathname) ||
     isWorkCadRequest(pathname) ||
     isSamSketchSceneRequest(pathname) ||
     /^\/api\/work\/projects\/[^/]+\/insights$/.test(pathname) ||
@@ -268,12 +272,15 @@ export function isWorkRequest(pathname) {
   );
 }
 
-export async function handleWorkRequest(request, env, accountId) {
+export async function handleWorkRequest(request, env, accountId, context = {}) {
   if (!accountId) return json({ ok: false, error: 'unauthorized' }, 401);
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
 
   try {
+    const canvasCms = /^\/api\/work\/canvases\/([A-Za-z0-9_-]+)\/cms\/(validate|convert)$/.exec(url.pathname);
+    if (canvasCms) return handleCanvasCms(request, env, accountId, canvasCms[1], canvasCms[2]);
+    if (isCanvasRequest(url.pathname)) return handleCanvasRequest(request, env, accountId, context);
     if (isWorkCadRequest(url.pathname)) return handleWorkCadRequest(request, env, accountId);
     if (isSamSketchSceneRequest(url.pathname)) return handleSamSketchSceneRequest(request, env, accountId);
     const privateAsset = /^\/api\/work\/library\/artifacts\/([A-Za-z0-9_-]+)\/file$/.exec(url.pathname);

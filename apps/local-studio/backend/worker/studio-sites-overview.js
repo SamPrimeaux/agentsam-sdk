@@ -103,6 +103,7 @@ export async function handleStudioSitesOverview(request, env, accountId) {
     : null;
   return response({
     ok:true,source:'studio_cms_site_read_model',
+    canvas_url:'/canvas?host=online-store',
     store:{visibility:'unpublished',url:null,domain:null,company_name:null},
     site_preview:homePage?{
       title:homePage.title,site_id:selectedSite.id,

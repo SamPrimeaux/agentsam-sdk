@@ -112,7 +112,7 @@ try {
     '/admin/js/theme-project-editor-bootstrap.mjs',
     '/theme-editor/project.mjs', '/theme-editor/bridge.mjs', '/theme-editor/mount.mjs',
     '/theme-editor/starter-project.mjs', '/theme-editor/starter-products.mjs', '/theme-editor/starter-chrome.mjs',
-    '/theme-editor/new-theme.mjs',
+    '/theme-editor/system-template-registry.mjs',
   ]) {
     const response = await request(pathname);
     const type = response.headers.get('content-type') || '';
@@ -126,6 +126,16 @@ try {
     '/api/admin/completeful/status',
     '/api/admin/completeful/catalog?category=apparel',
     '/api/settings/companions',
+    '/api/work/canvases',
+    '/api/work/canvases/canvas_aaaaaaaaaaaa',
+    '/api/work/canvases/canvas_aaaaaaaaaaaa/directions',
+    '/api/work/canvases/canvas_aaaaaaaaaaaa/runs',
+    '/api/work/canvases/canvas_aaaaaaaaaaaa/events?after=0',
+    '/api/work/canvases/canvas_aaaaaaaaaaaa/runs/run_aaaaaaaaaaaa',
+    '/api/work/canvases/canvas_aaaaaaaaaaaa/runs/run_aaaaaaaaaaaa/execute',
+    '/api/work/canvases/canvas_aaaaaaaaaaaa/runs/run_aaaaaaaaaaaa/cancel',
+    '/api/work/canvases/canvas_aaaaaaaaaaaa/cms/validate',
+    '/api/work/canvases/canvas_aaaaaaaaaaaa/cms/convert',
   ]) {
     const response = await request(pathname);
     const contentType = response.headers.get('content-type') || '';

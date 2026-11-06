@@ -17,6 +17,7 @@ test('installed theme preview loads original release CSS and media from Theme St
   assert.match(next, /href="https:\/\/themes\.inneranimalmedia\.com\/theme-packages\/plain-jane\/0\.1\.0\/preview\/assets\/index\.css"/);
   assert.match(next, /src="https:\/\/themes\.inneranimalmedia\.com\/theme-packages\/plain-jane\/0\.1\.0\/preview\/images\/cover\.svg"/);
   assert.match(next, /href="https:\/\/themes\.inneranimalmedia\.com\/theme-packages\/plain-jane\/0\.1\.0\/preview\/about"/);
+  assert.match(absolutizeThemePreviewPaths('<a href="/theme-packages/plain-jane/0.1.0/preview">Home</a>',base), /href="https:\/\/themes\.inneranimalmedia\.com\/theme-packages\/plain-jane\/0\.1\.0\/preview"/);
   assert.match(next, /href="\/admin\/pages"/);
 });
 
@@ -26,12 +27,21 @@ test('other releases and unrelated URLs are not rewritten', () => {
   assert.equal(absolutizeThemePreviewPaths(html, 'javascript:alert(1)'), html);
 });
 
-test('real Plain Jane installer artifact contains release paths that are corrected', async () => {
-  const project = JSON.parse(await readFile(new URL('../frontend/static/data/site-theme-projects/plain-jane-0.1.0.json', import.meta.url), 'utf8'));
-  const page = project.pages.find(p => p.slug === 'home');
-  assert.ok(page);
-  assert.ok(page.template.includes('href="/theme-packages/plain-jane/0.1.0/preview/assets/'));
-  const corrected = absolutizeThemePreviewPaths(page.template, page.assetBase);
-  assert.match(corrected, /href="https:\/\/themes\.inneranimalmedia\.com\/theme-packages\/plain-jane\/0\.1\.0\/preview\/assets\//);
-  assert.ok(!corrected.includes('href="/theme-packages/plain-jane/0.1.0/preview/assets/'));
+test('every bundled editable project retains source stylesheet paths after resolution', async () => {
+  const root = new URL('../frontend/static/data/site-theme-projects/', import.meta.url);
+  const index = JSON.parse(await readFile(new URL('index.json', root), 'utf8'));
+  for (const entry of index.packages) {
+    const project = JSON.parse(await readFile(new URL(entry.slug + '-' + entry.version + '.json', root), 'utf8'));
+    assert.equal(project.sourceReleaseSha256, entry.sha256);
+    for (const page of project.pages) {
+      const previewBase = page.assetBase || project.sourcePreviewUrl;
+      const result = absolutizeThemePreviewPaths(page.template, previewBase);
+      const styleTags=[...result.matchAll(/<link\b[^>]*>/gi)]
+        .map(match=>match[0]).filter(tag=>/rel=["']stylesheet["']/i.test(tag));
+      assert.ok(styleTags.every(tag=>!/(?:href|src)=["']\/theme-packages\//i.test(tag)),
+        entry.slug + ':' + page.slug + ' contains a broken root-relative stylesheet');
+      assert.ok(!result.includes('<script type="module"'),
+        entry.slug + ':' + page.slug + ' must not execute source application scripts');
+    }
+  }
 });

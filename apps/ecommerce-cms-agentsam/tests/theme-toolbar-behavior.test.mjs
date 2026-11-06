@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { getRegistryPage, registryForAdmin } from "../backend/cms/registry.js";
 import { attachCmsDefinitions, normalizeCmsDefinition } from "../backend/cms/definition-registry.mjs";
+import { templateNavigation } from "../frontend/theme-editor/system-template-registry.mjs";
 
 const require = createRequire(new URL("../package.json", import.meta.url));
 const { JSDOM } = require("jsdom");
@@ -68,8 +69,16 @@ async function editorFixture({ mobile = false, pageSlug = "shop", mediaAssets = 
       },
     };
   }
+  // This JSDOM fixture executes scripts with eval rather than a browser
+  // module loader. Inject the real registry export, not a test-only menu.
+  w.__templateNavigation = templateNavigation;
   for (const file of ["pages-shared.js", "agentsam.js", "theme-editor.js"]) {
-    w.eval(readFileSync(new URL(file, root), "utf8"));
+    let script = readFileSync(new URL(file, root), "utf8");
+    if (file === "theme-editor.js") script = script.replace(
+      "const { templateNavigation } = await import('/theme-editor/system-template-registry.mjs');",
+      "const templateNavigation = window.__templateNavigation;"
+    );
+    w.eval(script);
   }
   await tick();
   await tick();
@@ -102,7 +111,7 @@ test("real editor mounts compact toolbar, one drawer and installed page tree", a
     assert.equal(doc.getElementById("te-tree-path"), null);
     assert.equal(doc.getElementById("te-library-browse"), null);
     doc.getElementById("te-add-section").click();
-    const generate = doc.querySelector("#te-section-catalog [data-start-section-generation]");
+    const generate = doc.querySelector("#te-section-menu [data-start-section-generation]");
     assert.ok(generate, "the Add Section catalog exposes the actual AgentSam generation entry");
     assert.match(generate.textContent, /Generate with AgentSam/i);
     let generationRequest = null;

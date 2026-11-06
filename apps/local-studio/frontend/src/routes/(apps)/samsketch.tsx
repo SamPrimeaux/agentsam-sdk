@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNav } from "@inneranimalmedia/agentsam-nav";
 import { useWorkStore } from "@/lib/work/store";
 import { SamSketchAssistantPane, SamSketchMiniComposer } from "@/components/workbench/SamSketchAssistantPane";
+import { SpecialistWorkspaceActions } from "@/components/workbench/SpecialistWorkspaceActions";
 
 type SamSketchContext = {
   id?: string;
@@ -92,7 +93,7 @@ function SamSketchPage() {
         <iframe
           ref={iframeRef}
           title="SamSketch model and scene studio"
-          src="/samsketch/index.html?presentation=embedded"
+          src={"/samsketch/index.html?presentation=embedded"+(typeof window!=="undefined"&&new URLSearchParams(window.location.search).get("document")?"&document="+encodeURIComponent(new URLSearchParams(window.location.search).get("document")!):"")}
           className="size-full border-0"
           allow="fullscreen"
           onLoad={() => {
@@ -109,6 +110,7 @@ function SamSketchPage() {
           <SamSketchAssistantPane selected={selection?.label} onCollapse={() => setAssistantOpen(false)} />
         </div>
       )}
+      {ready&&editorSurface==="studio"&&<div className="absolute right-3 top-16 z-40 rounded border border-border bg-background/95 p-1"><SpecialistWorkspaceActions kind="sketch" frame={iframeRef} resourceId={selection?.documentId}/></div>}
       {!ready && <span className="sr-only" role="status">Loading SamSketch workspace</span>}
     </div>
   );

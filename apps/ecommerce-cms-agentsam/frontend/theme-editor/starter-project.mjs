@@ -4,6 +4,8 @@
  */
 import { STARTER_PRODUCT_ILLUSTRATIONS } from './starter-products.mjs';
 import { starterChrome, starterChromeStyles, starterChromeScript } from './starter-chrome.mjs';
+import { stockTemplateTypes } from './system-template-registry.mjs';
+import { STOCK_TEMPLATES, STOCK_TEMPLATE_STYLES, STOCK_ADAPTER_SCRIPT } from './stock-templates.mjs';
 const SAFE = /^[a-z][a-z0-9-]{0,63}$/;
 const html = value => String(value ?? '').replaceAll('&','&amp;')
   .replaceAll('<','&lt;').replaceAll('>','&gt;')
@@ -131,12 +133,7 @@ export function materializeStarterProject(preset, site) {
 /** Platform page defaults fill only missing templates. Authored pages and chrome win. */
 export function inheritDefaultTemplates(project) {
   const result=structuredClone(project);
-  const templates=[
-    ['home','Home page','home'],['product','Product','product'],
-    ['collection','Collection','collection'],['collection-list','Collection list','collection_list'],
-    ['cart','Cart','cart'],['search','Search','search'],['page','Page','page'],
-    ['blog','Blog','blog'],['article','Article','article'],['contact','Contact','contact'],['not-found','404','not_found']
-  ];
+  const templates=stockTemplateTypes().map(item=>[item.slug,item.title,item.kind]);
   const authored=new Set(result.pages.flatMap(page=>[page.slug,page.page_type,page.template_key].filter(Boolean)));
   const first=result.pages.find(page=>page.slug==='home')||result.pages[0];
   const chrome=(first.sections||[]).filter(section=>section.globalKey||['HEADER','FOOTER'].includes(section.zone));
@@ -144,7 +141,25 @@ export function inheritDefaultTemplates(project) {
   const illustration=STARTER_PRODUCT_ILLUSTRATIONS[0];
   let changed=false;
   for(const [slug,title,kind] of templates){
-    if(authored.has(slug)||authored.has(kind)||(slug==='not-found'&&authored.has('404')))continue;
+    // A custom product template must not suppress the stock Default product.
+    // Only a page occupying the exact stock slug can override that slot.
+    if(authored.has(slug))continue;
+    const stock=STOCK_TEMPLATES[kind];
+    if(stock){
+      changed=true;
+      const key='default_'+kind;
+      const section={key,name:title,type:kind,zone:'BODY',sourceKind:kind,version:0,status:'draft',
+        html:'<section class="stk-section" data-theme-section="'+key+'">'+stock.html+'</section>',
+        content:{...stock.content,__editor:{templateKey:key,visibility:{enabled:true},blocks:[]}},
+        schema:{key,label:title,fields:stock.fields,settings:[],blocks:[]}};
+      const sections=[...chrome.filter(item=>item.zone!=='FOOTER'&&!/footer/i.test(item.globalKey||'')),section,
+        ...chrome.filter(item=>item.zone==='FOOTER'||/footer/i.test(item.globalKey||''))];
+      result.pages.push({slug,title,page_type:kind,template_key:kind,assetBase:first.assetBase||'',status:'draft',sections,
+        template:'<!doctype html><html lang="en"><head>'+sourceHead+
+          '<meta name="viewport" content="width=device-width,initial-scale=1"><style>'+STOCK_TEMPLATE_STYLES+'</style></head><body>'+
+          sections.map(item=>'<!--theme-section:'+item.key+'-->').join('')+STOCK_ADAPTER_SCRIPT+'</body></html>'});
+      continue;
+    }
     changed=true;
     const key='default_'+kind;
     const content={

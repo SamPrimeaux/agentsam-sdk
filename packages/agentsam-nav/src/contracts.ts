@@ -40,8 +40,14 @@ export interface NavValue {
   projectActions?: NavAction[];
   conversationActions?: NavAction[];
   resourceActions?: NavAction[];
-  /** Snapshot shown in the reusable pinned-summary popover. */
-  pinnedSummary?: { outputs?: string[]; sources?: string[] };
+  /** Live thread activity. Entries carry their actual target action, never a fixture. */
+  pinnedSummary?: {
+    subagents?: Array<{ id: string; label: string; status?: string; onSelect?: () => void }>;
+    outputs?: Array<string | { id: string; label: string; kind?: string; onSelect?: () => void }>;
+    sources?: Array<string | { id: string; label: string; kind?: string; onSelect?: () => void }>;
+    onAddOutput?: () => void;
+    onAddSource?: () => void;
+  };
   getProjectActions?: (project: NavProject) => NavAction[];
   getConversationActions?: (conversation: NavConversation) => NavAction[];
   onNavigate?: (href: string) => void;

@@ -498,8 +498,22 @@
   }
 
   function themeCatalog() {
-    // Section ownership is independent of the theme preview selector.
-    // Every supported implementation is reusable on every CMS page.
+    // Installed projects own a derived registry of reusable source sections.
+    // Do not offer portable/native templates that the project adapter cannot
+    // install: that was the cause of theme_section_template_not_found.
+    if (host) {
+      return Object.entries(window.SECTION_SCHEMAS?.[slug] || {})
+        .filter(function([key, definition]) {
+          return /^(source-|custom-)/.test(key) && definition?.capabilities?.insert === true;
+        })
+        .map(function([key, definition]) {
+          return { id: key, label: definition.label || humanize(key),
+            type: definition.sourceKind || 'content-section', templateKey: key,
+            source: definition.sourcePage ? 'From ' + humanize(definition.sourcePage) : 'Theme library',
+            preset: key, category: 'Theme sections', previewHtml: definition.previewHtml || '' };
+        });
+    }
+    // CMS pages use the published portable renderer catalog, not fixture labels.
     const portable = window.ThemePortableSections?.catalog() || [];
     const registry = window.SECTION_SCHEMAS?.[slug] || {};
     const native = Object.entries(registry)
@@ -828,31 +842,10 @@
     else clearTimeout(autosaveTimer);
   }
 
-  const storefrontMenu = [
-    { id: 'home', title: 'Home page', icon: 'home', page: 'home' },
-    { id: 'products', title: 'Products', icon: 'product', children: [
-      { title: 'Default product', template: 'product' },
-      { title: 'Products list', template: 'products-list' },
-    ], resource: 'products' },
-    { id: 'collections', title: 'Collections', icon: 'collection', children: [
-      { title: 'Default collection', template: 'collection' },
-      { title: 'Collections list', template: 'collections-list' },
-    ], resource: 'collections' },
-    { id: 'gift-card', title: 'Gift card', icon: 'gift', template: 'gift-card' },
-    { id: 'cart', title: 'Cart', icon: 'cart', template: 'cart' },
-    { id: 'checkout', title: 'Checkout & customer accounts', icon: 'checkout', template: 'checkout' },
-    { id: 'pages', title: 'Pages', icon: 'page', resource: 'pages' },
-    { id: 'blogs', title: 'Blogs', icon: 'blog', children: [
-      { title: 'Default blog', template: 'blog' },
-    ] },
-    { id: 'posts', title: 'Blog posts', icon: 'post', children: [
-      { title: 'Default article', template: 'article' },
-    ] },
-    { id: 'search', title: 'Search', icon: 'search', template: 'search' },
-    { id: 'password', title: 'Password', icon: 'lock', template: 'password' },
-    { id: '404', title: '404 page', icon: 'gift', template: '404' },
-    { id: 'metaobject', title: 'Create metaobject template', icon: 'plus', template: 'metaobject', create: true },
-  ];
+  // Derived from the supported template registry, not the current theme's
+  // installed pages or products. Every capability stays offered.
+  const { templateNavigation } = await import('/theme-editor/system-template-registry.mjs');
+  const storefrontMenu = templateNavigation();
   if (resolveShowcase) {
     const products = storefrontMenu.find(item => item.id === 'products');
     products.children = [
@@ -881,19 +874,17 @@
     ];
     const cart = storefrontMenu.find(item => item.id === 'cart'); cart.page = 'resolve-cart';
     const password = storefrontMenu.find(item => item.id === 'password'); password.page = 'resolve-password';
-    storefrontMenu.splice(storefrontMenu.findIndex(item => item.id === 'checkout') + 1, 0, {
-      id: 'customer', title: 'Customer accounts', icon: 'checkout', children: [
-        { title: 'Sign in', page: 'resolve-sign-in' },
-        { title: 'Sign up', page: 'resolve-sign-up' },
-        { title: 'Account overview', page: 'resolve-account' },
-        { title: 'Order history', page: 'resolve-orders' },
-        { title: 'Saved pieces', page: 'resolve-saved' },
-        { title: 'Profile & preferences', page: 'resolve-profile' },
-      ],
-    });
+    storefrontMenu.find(item=>item.id==='customer').children.push(
+      { title: 'Sign in', page: 'resolve-sign-in' },
+      { title: 'Sign up', page: 'resolve-sign-up' },
+      { title: 'Account overview', page: 'resolve-account' },
+      { title: 'Order history', page: 'resolve-orders' },
+      { title: 'Saved pieces', page: 'resolve-saved' },
+      { title: 'Profile & preferences', page: 'resolve-profile' },
+    );
   }
   if (journalShowcase) {
-    storefrontMenu.splice(0,storefrontMenu.length,
+    const journalMenu = [
       {id:'home',title:'Journal home',icon:'home',page:'journal-home'},
       {id:'blogs',title:'Blog index',icon:'blog',children:[{title:'Notes on a quieter life',page:'journal-home'}]},
       {id:'posts',title:'Articles',icon:'post',children:[
@@ -908,7 +899,11 @@
         {title:'Terms',page:'journal-terms'},
         {title:'404',page:'journal-404'}
       ]}
-    );
+    ];
+    storefrontMenu.find(item=>item.id==='blogs').children.push(...journalMenu.filter(item=>item.id==='blogs').flatMap(item=>item.children||[]));
+    storefrontMenu.find(item=>item.id==='posts').children.push(...journalMenu.filter(item=>item.id==='posts').flatMap(item=>item.children||[]));
+    storefrontMenu.find(item=>item.id==='pages').children.push(...journalMenu.filter(item=>item.id==='pages').flatMap(item=>item.children||[]));
+    storefrontMenu.find(item=>item.id==='home').page='journal-home';
   }
   // Installed package pages are listed from the authorized CMS page inventory below.
 
@@ -954,7 +949,14 @@
         page.page_type === kind || page.template_key === kind ||
         page.slug?.endsWith('-' + template));
       if (installed) void switchPage(installed.slug);
-      else setNote('No ' + title.toLowerCase() + ' template is installed for this site yet. Add a page to the installed package before editing it here.', 'error');
+      else {
+        const params=new URLSearchParams(location.search);
+        const target=new URL('/canvas',location.origin);
+        target.searchParams.set('host','online-store');
+        target.searchParams.set('template',kind);
+        if(params.get('site_id'))target.searchParams.set('site_id',params.get('site_id'));
+        window.top.location.assign(target.href);
+      }
       return;
     }
     showcaseTemplate = { template, title, subtitle: 'Customize this ' + (resolveShowcase ? 'Resolve' : 'Violet') + ' template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
@@ -1110,7 +1112,7 @@
         child.preset ? 'data-picker-preset="' + cmsEscapeAttr(child.preset) + '" data-preset-page="' + cmsEscapeAttr(child.page) + '"' :
         child.page ? 'data-picker-page="' + cmsEscapeAttr(child.page) + '"' :
         child.resource && child.id ? 'data-picker-resource="' + cmsEscapeAttr(child.resource) + '" data-resource-id="' + cmsEscapeAttr(child.id) + '"' :
-        'data-picker-template="' + cmsEscapeAttr(child.template || 'metaobject') + '"', child.page ? '' : 'UI scaffold', false)).join('');
+        'data-picker-template="' + cmsEscapeAttr(child.template || 'metaobject') + '"', child.page ? 'Theme' : child.origin==='stock' ? 'Stock · editable starter' : 'Create template', false)).join('');
       if(canCreateResolve){
         const instructions={
           products:['Build your first product template','Start with the existing Resolve product layout and style its sections. Product inventory comes later.'],
@@ -1137,7 +1139,7 @@
           hasChildren ? 'data-picker-category="' + cmsEscapeAttr(group.id) + '"' :
             page ? 'data-picker-page="' + cmsEscapeAttr(page.slug) + '"' :
             'data-picker-template="' + cmsEscapeAttr(group.template || group.id) + '"',
-          (!hasChildren && !page) ? 'UI scaffold' : '', hasChildren);
+          (!hasChildren && !page) ? 'Stock · editable starter' : '', hasChildren);
       }).join('');
     }
     // One search across actual authorized CMS pages, not only menu headings.
@@ -1594,6 +1596,11 @@
     // Draw portable catalog previews using the SAME registered renderer and
     // CSS as the storefront. Never fabricate a card for a missing renderer.
     function catalogVisual(entry) {
+      // Installed theme sources carry a faithful isolated preview generated
+      // by the same renderer as the page, with the originating theme styles.
+      if (entry.previewHtml) return '<iframe class="te-catalog-visual" title="Preview of ' +
+        cmsEscapeAttr(entry.label || entry.id) + '" sandbox="" loading="lazy" tabindex="-1" srcdoc="' +
+        cmsEscapeAttr(entry.previewHtml) + '"></iframe>';
       const api = window.ThemePortableSections;
       const preset = entry.preset || entry.id;
       if (api && typeof api.defaults === 'function' && typeof api.render === 'function') {
@@ -1621,6 +1628,16 @@
         cmsEscapeHtml(entry.label) +
         '</span><span class="te-catalog-structure__rule"></span>' +
         '<span class="te-catalog-structure__tiles"><i></i><i></i><i></i></span></span>';
+    }
+
+    function closeSectionCatalog() {
+      const catalog = byId('te-section-menu');
+      if (catalog?.open && typeof catalog.close === 'function') catalog.close();
+      else if (catalog) {
+        catalog.removeAttribute('open');
+        catalog.hidden = true;
+      }
+      sectionInsertIndex = null;
     }
 
     let activeSectionTab = 'sections';
@@ -1665,11 +1682,11 @@
             '<button type="button" class="te-catalog-add" data-open-app-embeds>Open App Embeds</button></div>';
         preview.querySelector('[data-configure-section-app]')?.addEventListener('click', function() {
           const key = activeAppKey;
-          if (menu.open) menu.close();
+          if (menu.open) closeSectionCatalog();
           window.ThemeEmbedReview?.open?.(key);
         });
         preview.querySelector('[data-open-app-embeds]')?.addEventListener('click', function() {
-          if (menu.open) menu.close();
+          if (menu.open) closeSectionCatalog();
           document.querySelector('[data-drawer-mode="app-embeds"]')?.click();
         });
         list.querySelectorAll('[data-choose-section-app]').forEach(function(button) {
@@ -1725,7 +1742,7 @@
         : '<div class="te-catalog-preview-unavailable"><strong>No matching sections</strong><p>Try another search or generate a reusable section with AgentSam.</p></div>';
 
       list.querySelector('[data-start-section-generation]')?.addEventListener('click', function() {
-        if (menu.open) menu.close();
+        if (menu.open) closeSectionCatalog();
         window.dispatchEvent(new CustomEvent('theme-editor:generate-request', { detail: { kind: 'section' } }));
       });
       list.querySelectorAll('[data-choose-section]').forEach(function(button) {
@@ -1737,7 +1754,7 @@
       preview.querySelector('[data-add-selected-section]')?.addEventListener('click', function() {
         if (!selected) return;
         const insertAt = sectionInsertIndex;
-        if (menu.open) menu.close();
+        if (menu.open) closeSectionCatalog();
         insertSection(selected.templateKey, selected.preset || selected.id, insertAt);
       });
     }
@@ -1844,7 +1861,10 @@
       });
       menu.hidden = false;
       renderCatalog('');
-      if (typeof menu.showModal === 'function' && !menu.open) menu.showModal();
+      // Non-modal docked section library: keep the storefront canvas visible.
+      // The native <dialog> is opened non-modally so it never traps focus.
+      if (!menu.open) menu.show?.();
+      menu.setAttribute('open', '');
       requestAnimationFrame(function() { searchInput?.focus(); });
     }
     add?.addEventListener('click', function() { openCatalog(add, pageSections.length); });
@@ -1856,7 +1876,7 @@
       sectionInsertIndex = null;
     });
     byId('te-section-cancel')?.addEventListener('click', function() {
-      if (menu.open) menu.close();
+      if (menu.open) closeSectionCatalog();
       else { menu.hidden = true; sectionInsertIndex = null; }
     });
     menu.querySelectorAll('[data-section-tab]').forEach(function(button) {
@@ -4502,12 +4522,10 @@
   }
   ensureSideAssistant();
   byId('te-inspect-mode').addEventListener('click', function() {
-    if (!inspectorVisible) {
-      setInspectorVisible(true);
-      inspectionEnabled = true;
-    } else {
-      inspectionEnabled = !inspectionEnabled;
-    }
+    // Inspection is its own toggle, even when the settings inspector is hidden
+    // on narrow screens. Previously the first tap silently re-enabled it.
+    inspectionEnabled = !inspectionEnabled;
+    if (!inspectorVisible && inspectionEnabled) setInspectorVisible(true);
     const control = byId('te-inspect-mode');
     control.setAttribute('aria-pressed', String(inspectionEnabled));
     const help = inspectionEnabled ? 'Canvas inspection on — select sections in the preview' : 'Canvas inspection off — click to enable';

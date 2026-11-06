@@ -105,7 +105,14 @@ test('required page inheritance preserves authored pages and saves through the s
   const inherited=inheritDefaultTemplates(original);
   assert.deepEqual(inherited.project.pages[0],home);
   assert.deepEqual(original.pages,[home]);
-  assert.equal(inherited.project.pages.length,11);
+  assert.equal(inherited.project.pages.length,18);
+  for (const slug of ['home','product','collection','page','blog','article','search','cart',
+    'checkout','account','gift-card','password','404']) {
+    const page = inherited.project.pages.find(p => p.slug === slug);
+    assert.ok(page, 'stock '+slug+' exists even when the installed theme lacks it');
+    assert.ok(page.sections.some(section=>section.schema.fields.length),
+      'stock '+slug+' must expose editable settings');
+  }
   assert.equal(inheritDefaultTemplates(inherited.project).changed,false);
   const product=inherited.project.pages.find(page=>page.slug==='product');
   const doc=new win.DOMParser().parseFromString(renderThemePage(product),'text/html');

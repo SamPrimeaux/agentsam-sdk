@@ -15,6 +15,8 @@ import { mountProgressiveStudio } from "./progressive";
 import { mountSketchGallery, type SketchProjectCategory } from "./gallery";
 import { listScenes, openScene, createScene, updateScene, removeScene, type SceneSummary } from "./scene-api";
 import { resolveSceneHit, exactSelectionRoot } from "./scene-selection";
+import { createSamSketchDesignAdapter } from "./design-adapter";
+import { installDesignWorkspaceGuest, resolveHostedDesignScope } from "../../../packages/agentsam-contracts/src/design-workspace-bridge";
 import "./style.css";
 import "./polish.css";
 import "./studio-shell.css";
@@ -191,6 +193,7 @@ async function saveToCloud(withPreview=true):Promise<void>{
    lastCloudDocument=serialized;cloudSaveFailed=false;
    localStorage.setItem(activeKey,id);localStorage.setItem(hashKey,result.scene.contentHash);
    cloudState("Saved to account");
+   sendHostMessage("selection",{selection:studioContext()});
    const index=hostedScenes.findIndex(item=>item.id===id);
    if(index>=0)hostedScenes[index]=result.scene;else hostedScenes.unshift(result.scene);
    gallery?.refresh();
@@ -966,6 +969,34 @@ progressive=mountProgressiveStudio({
   return null;
  }
 });
+const designAdapter=createSamSketchDesignAdapter({
+ document:()=>doc,id:()=>activeSceneId,savedHash:()=>activeSceneHash,
+ selection:()=>selectedId?[selectedPartId?{id:selectedPartId,kind:"source-part",parentId:selectedId}:{id:selectedId,kind:sel()?.kind||"object"}]:[],
+ parts:id=>{const item=doc.items.find(row=>row.id===id);return item?sourceParts(item):[];},
+ load:(id,hash,value)=>{
+  forgetCurrentScene();loadDocument(value as Document);
+  activeSceneId=id;activeSceneHash=hash;lastCloudDocument=JSON.stringify(doc);
+  localStorage.setItem(activeKey,id);localStorage.setItem(hashKey,hash);
+  cloudState("Saved to account");enterStudio();
+ },
+ select:targets=>{
+  if(targets.length>1)throw new Error("design_exact_selection_required");
+  const target=targets[0];selectedId=target?.parentId||target?.id||"";selectedPartId=target?.parentId?target.id:null;
+  refreshSelection();renderInspector();renderLayers();sendHostMessage("selection",{selection:studioContext()});
+ },
+ modify:(id,partId,patch)=>mutate(()=>{
+  const item=doc.items.find(row=>row.id===id)!;
+  if(partId){item.partOverrides??={};item.partOverrides[partId]={...item.partOverrides[partId],...patch};}
+  else Object.assign(item,patch);
+ }),
+ undo,redo,
+ save:async()=>{await saveToCloud(true);if(cloudSaveFailed||JSON.stringify(doc)!==lastCloudDocument)throw new Error("design_save_not_confirmed");},
+});
+installDesignWorkspaceGuest({adapter:designAdapter,resolveScope:resolveHostedDesignScope,currentResourceId:()=>activeSceneId});
+const requestedDocument=bootParams.get("document");
+if(requestedDocument&&/^sketch_[a-z0-9-]{12,80}$/.test(requestedDocument)){
+ void resolveHostedDesignScope().then(scope=>designAdapter.open(scope,requestedDocument)).catch(error=>announce("Cannot open scene: "+String(error)));
+}
 renderAll();
 const preferWorkspace=bootParams.get("workspace")==="1"||bootParams.get("surface")==="studio";
 if(preferWorkspace){enterStudio();announce("SamSketch ready · 20 compositions · 47 source parts · CAD kernel on demand");}
