@@ -107,7 +107,7 @@ test('Local Studio owns exactly one navigation surface without nested Ecommerce 
   assert.match(shell, /navigation\.primary/);
   assert.match(shell, /navigation\.channels/);
   assert.match(shell, /navigation\.utilities/);
-  assert.match(shell, /showSidebarHeader: false/);
+  assert.match(shell, /showSidebarHeader: isConversation && mode === 'work'/);
   assert.doesNotMatch(shell, /id: 'cad', label: 'CAD Creator'/);
   assert.match(shell, /<SideStage workFocused=\{globalAssistantFocused\}/);
   assert.match(shell, /!isConversation && state.sideOpen/);
