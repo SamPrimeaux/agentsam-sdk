@@ -1,0 +1,46 @@
+/* SamSketch authoring refinement: intentionally scoped after legacy presentation styles. */
+.studio-shell .studio-save-state{
+  flex:none;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:5px 8px;border:1px solid #333840;border-radius:6px;
+  color:#aab2bf;font-size:10px;font-weight:500;line-height:1.1;
+}
+html[data-samsketch-theme="light"] .studio-shell .studio-save-state{
+  border-color:#e1e5ec;color:#6e7888;background:#f8f9fc;
+}
+.studio-shell .app:not([data-scene-mode="story"]) .canvas-header{display:none!important}
+.studio-shell .canvas-tools{border-radius:10px!important;gap:2px!important;padding:4px!important}
+.studio-shell .canvas-tools .tool-cluster::before{display:none!important}
+.studio-shell .canvas-tools .icon-control{
+  min-width:35px!important;width:35px!important;min-height:35px!important;height:35px!important;
+  padding:0!important;display:grid!important;place-items:center!important;border-radius:7px!important;
+}
+.studio-shell .canvas-tools .icon-control::after{display:none!important}
+.studio-shell .canvas-tools .toolbar-separator{height:22px!important;margin:6px 3px!important}
+.studio-shell .ss-assembly{padding:0 4px;margin:1px 0 2px}
+.studio-shell .ss-assembly>.layer{border-radius:6px;margin:0;padding:6px 7px;min-height:37px}
+.studio-shell .ss-part-row{
+  margin:1px 0 1px 18px!important;padding:4px 6px!important;min-height:29px!important;
+  border-radius:5px!important;gap:7px!important;font-size:11px!important;
+}
+.studio-shell .ss-part-row .layer-icon{
+  display:grid;place-items:center;width:20px;height:20px;border-radius:4px;
+  background:transparent;color:#8491a8;
+}
+.studio-shell .ss-part-row .layer-eye{opacity:.6}
+.studio-shell .ss-part-row:hover .layer-eye,.studio-shell .ss-part-row.selected .layer-eye{opacity:1}
+.studio-shell .ss-part-count{font-size:9px;font-weight:550;opacity:.57;white-space:nowrap}
+.studio-shell .ss-empty-hierarchy{padding:22px 14px;color:#8995a7;font-size:12px;line-height:1.6}
+.studio-shell .ss-part-row.selected{background:#29466f;border-color:#456ca5;color:#eff5ff}
+.studio-shell .ss-part-row.selected .layer-icon{color:#b8ccff}
+.studio-shell .right #inspector .section{padding:14px 13px}
+.studio-shell .right #inspector .triplet input{min-width:0}
+.studio-shell .view-gizmo{transform:scale(.9);transform-origin:right bottom}
+.studio-shell .studio-project-chip{max-width:min(280px,28vw)!important}
+@media(max-width:1080px){
+ .studio-shell .studio-save-state{display:none}
+ .studio-shell .canvas-tools{max-width:calc(100% - 12px)!important}
+ .studio-shell .canvas-tools .icon-control{min-width:31px!important;width:31px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .studio-shell .canvas-tools,.studio-shell .ss-assembly{transition:none!important}
+}

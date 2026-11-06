@@ -5,6 +5,7 @@
 
 import { listAccountLibraryResources, serveAccountLibraryFile, mutateAccountLibraryArtifact } from './work-library-resources.js';
 import { handleWorkCadRequest, isWorkCadRequest } from './work-cad-models.js';
+import { handleSamSketchSceneRequest, isSamSketchSceneRequest } from './work-samsketch-scenes.js';
 import { readProjectInsights } from './work-project-insights.js';
 import { handleProjectTimer } from './work-project-metrics.js';
 import { handleWorkData, isWorkDataRequest, listEvents, listProjects, listTickets, ticketAnalytics } from './work-data.js';
@@ -253,6 +254,7 @@ export function isWorkRequest(pathname) {
     pathname === '/api/work/snapshot' ||
     /^\/api\/work\/library\/artifacts\/[A-Za-z0-9_-]+(?:\/file)?$/.test(pathname) ||
     isWorkCadRequest(pathname) ||
+    isSamSketchSceneRequest(pathname) ||
     /^\/api\/work\/projects\/[^/]+\/insights$/.test(pathname) ||
     /^\/api\/work\/projects\/[^/]+\/timer\/(start|stop)$/.test(pathname) ||
     /^\/api\/work\/projects\/[^/]+\/draws\/\d+\/file$/.test(pathname) ||
@@ -273,6 +275,7 @@ export async function handleWorkRequest(request, env, accountId) {
 
   try {
     if (isWorkCadRequest(url.pathname)) return handleWorkCadRequest(request, env, accountId);
+    if (isSamSketchSceneRequest(url.pathname)) return handleSamSketchSceneRequest(request, env, accountId);
     const privateAsset = /^\/api\/work\/library\/artifacts\/([A-Za-z0-9_-]+)\/file$/.exec(url.pathname);
     if (privateAsset && method === 'GET') return serveAccountLibraryFile(env, accountId, privateAsset[1], url.searchParams.get('preview') === '1');
     const artifactPatch = /^\/api\/work\/library\/artifacts\/([A-Za-z0-9_-]+)$/.exec(url.pathname);

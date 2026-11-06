@@ -54,7 +54,7 @@ export function mountProgressiveStudio(options: MountOptions) {
     for (const [name, pane] of Object.entries(panes)) if (pane) pane.hidden = name !== tab;
   }
   for (const button of tabs) button.addEventListener("click", () => activateLibrary(button.dataset.library || "templates"));
-  activateLibrary("templates");
+  activateLibrary("objects");
 
   const catalog = document.getElementById("template-catalog")!;
   const search = document.getElementById("template-search") as HTMLInputElement;
