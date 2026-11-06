@@ -17,6 +17,7 @@ test('installed theme preview loads original release CSS and media from Theme St
   assert.match(next, /href="https:\/\/themes\.inneranimalmedia\.com\/theme-packages\/plain-jane\/0\.1\.0\/preview\/assets\/index\.css"/);
   assert.match(next, /src="https:\/\/themes\.inneranimalmedia\.com\/theme-packages\/plain-jane\/0\.1\.0\/preview\/images\/cover\.svg"/);
   assert.match(next, /href="https:\/\/themes\.inneranimalmedia\.com\/theme-packages\/plain-jane\/0\.1\.0\/preview\/about"/);
+  assert.match(absolutizeThemePreviewPaths('<a href="/theme-packages/plain-jane/0.1.0/preview">Home</a>',base), /href="https:\/\/themes\.inneranimalmedia\.com\/theme-packages\/plain-jane\/0\.1\.0\/preview"/);
   assert.match(next, /href="\/admin\/pages"/);
 });
 
@@ -35,7 +36,9 @@ test('every bundled editable project retains source stylesheet paths after resol
     for (const page of project.pages) {
       const previewBase = page.assetBase || project.sourcePreviewUrl;
       const result = absolutizeThemePreviewPaths(page.template, previewBase);
-      assert.ok(!/href=["']\/theme-packages\//.test(result),
+      const styleTags=[...result.matchAll(/<link\b[^>]*>/gi)]
+        .map(match=>match[0]).filter(tag=>/rel=["']stylesheet["']/i.test(tag));
+      assert.ok(styleTags.every(tag=>!/(?:href|src)=["']\/theme-packages\//i.test(tag)),
         entry.slug + ':' + page.slug + ' contains a broken root-relative stylesheet');
       assert.ok(!result.includes('<script type="module"'),
         entry.slug + ':' + page.slug + ' must not execute source application scripts');
