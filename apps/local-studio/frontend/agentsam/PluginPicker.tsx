@@ -7,9 +7,11 @@ import { useWorkStore } from '@/lib/work/store';
 import { SETTINGS_CATALOG_CHANGED_EVENT } from '@/lib/desktop/connection-deep-link';
 
 /** A single compact capability/context picker for both + and typed @. */
-export function PluginPicker({ value, onChange, children }: {
+export function PluginPicker({ value, onChange, onAttach, contextLabel, children }: {
   value: string;
   onChange: (value: string) => void;
+  onAttach?: () => void;
+  contextLabel?: string;
   children: (controls: {
     trigger: ReactNode;
     onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -27,8 +29,24 @@ export function PluginPicker({ value, onChange, children }: {
   const [cursor,setCursor] = useState(value.length);
   const [active,setActive] = useState(0);
   const [revision,setRevision] = useState(0);
+  const [section,setSection] = useState<'root'|'mention'|'skills'|'apps'>('root');
+  const [query,setQuery] = useState('');
+  const [skills,setSkills] = useState<Array<{id:string;name:string;trigger:string;description?:string}>>([]);
+  const [skillsError,setSkillsError] = useState('');
+  const [skillsLoading,setSkillsLoading] = useState(false);
+  useEffect(() => {
+    if (!open || section !== 'skills') return;
+    const controller = new AbortController();
+    setSkillsLoading(true); setSkillsError('');
+    fetch('/api/settings/skills', {credentials:'same-origin',signal:controller.signal})
+      .then(async response => {if(!response.ok)throw new Error('Your skills could not be loaded.'); return response.json();})
+      .then(data => { if(!Array.isArray(data.skills))throw new Error('Your skills could not be loaded.'); setSkills(data.skills); })
+      .catch(error => {if(!controller.signal.aborted)setSkillsError(error.message);})
+      .finally(() => {if(!controller.signal.aborted)setSkillsLoading(false);});
+    return () => controller.abort();
+  }, [open,section,revision]);
   const match=value.slice(0,cursor).match(/(?:^|\s)@([\w-]*)$/);
-  const filtered=filterComposerCatalog(entries,match?.[1]||'');
+  const filtered=filterComposerCatalog(section==='apps'?entries.filter(entry=>entry.kind!=='skill'):entries,match?.[1]||query);
   const shown=filtered.slice(0,60);
 
   useEffect(() => {
@@ -107,6 +125,7 @@ export function PluginPicker({ value, onChange, children }: {
   }
   function onKeyDown(event:KeyboardEvent<HTMLTextAreaElement>) {
     if(!open)return;
+    if(section==='root'||section==='skills') { if(event.key==='Escape'){event.preventDefault();setOpen(false);} return; }
     if(event.key==='Escape'){
       event.preventDefault();event.stopPropagation();setOpen(false);
     } else if(event.key==='ArrowDown'||event.key==='ArrowUp'){
@@ -136,7 +155,7 @@ export function PluginPicker({ value, onChange, children }: {
   return <div className="agentsam-plugin-host" ref={root}>
     {children({
       trigger:<button type="button" className="as-nav-button" aria-label="Add tools and plugins" title="Add tools and plugins" aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
-        onClick={()=>{setOpen(!open);setActive(0);setRevision(n=>n+1);}}><Plus size={19}/></button>,
+        onClick={()=>{setOpen(!open);setSection('root');setQuery('');setActive(0);setRevision(n=>n+1);}}><Plus size={19}/></button>,
       onKeyDown,
       onSelect:(position)=>{
         setCursor(position);
@@ -144,14 +163,31 @@ export function PluginPicker({ value, onChange, children }: {
         const textarea=root.current?.querySelector('textarea');
         const typingMention=Boolean(textarea?.value.slice(0,position).match(/(?:^|\s)@([\w-]*)$/));
         if(typingMention&&!open)setRevision(n=>n+1);
+        if(typingMention)setSection('mention');
         setOpen(typingMention);
       },
     })}
     {open&&<div className="agentsam-plugin-menu" id={id} role="dialog" aria-label="Add to your message">
       <div className="agentsam-plugin-heading">
-        <strong>Add to your message</strong><span>Plugins, connections, apps and tools · type @ to filter</span>
+        {section!=='root'&&<button type="button" className="as-nav-button" aria-label="Back to add menu" onClick={()=>{setSection('root');setQuery('');}}>Back</button>}
+        <strong>{section==='root'?'Add to your message':section==='skills'?'Skills':section==='apps'?'Apps':'Mention'}</strong>
         <button type="button" className="as-nav-button" aria-label="Close capabilities" onClick={()=>setOpen(false)}><X size={16}/></button>
       </div>
+      {section==='root' ? <div className="agentsam-plugin-sections">
+        {onAttach&&<button type="button" className="agentsam-plugin-row" onClick={()=>{setOpen(false);onAttach();}}><Upload size={17}/><span><strong>Files</strong><small>Attach images and references</small></span></button>}
+        <button type="button" className="agentsam-plugin-row" disabled={!contextLabel} onClick={()=>{onChange(value+(value?'\n':'')+'Target: '+contextLabel);setOpen(false);}}><Target size={17}/><span><strong>Target</strong><small>{contextLabel||'Select an element in your workspace'}</small></span></button>
+        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('mention')}><Users size={17}/><span><strong>Mention</strong><small>Reference an available capability</small></span></button>
+        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('skills')}><Sparkles size={17}/><span><strong>Skills</strong><small>Your private instructions and knowledge</small></span></button>
+        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('apps')}><Plug size={17}/><span><strong>Apps</strong><small>Connected tools and creative workspaces</small></span></button>
+      </div> : <>
+      <input type="search" aria-label={'Search '+section} placeholder={'Search '+section+'…'} value={query} onChange={event=>{setQuery(event.target.value);setActive(0);}} className="agentsam-plugin-search"/>
+      {section==='skills' ? <>
+        {skillsLoading&&<p role="status" className="agentsam-plugin-notice">Loading your skills…</p>}
+        {skillsError&&<p role="alert" className="agentsam-plugin-notice">{skillsError} <button type="button" onClick={()=>setRevision(n=>n+1)}>Retry</button></p>}
+        {!skillsLoading&&!skillsError&&!skills.length&&<p className="agentsam-plugin-notice">No private skills yet. Create one in Settings.</p>}
+        {skills.filter(skill=>(skill.name+' '+skill.description+' '+skill.trigger).toLowerCase().includes(query.toLowerCase())).map(skill=><button type="button" key={skill.id} className="agentsam-plugin-row" onClick={()=>{onChange(value+(value?' ':'')+'[skill:'+skill.id+'] '+skill.trigger+' ');setOpen(false);}}><Sparkles size={17}/><span><strong>{skill.name}</strong><small>{skill.description||skill.trigger}</small></span></button>)}
+        <a className="agentsam-plugin-row" href="/settings/skills"><Wrench size={17}/><span><strong>Manage skills</strong></span></a>
+      </> : <>
       {error&&<p role="status" className="agentsam-plugin-notice">Some connected services couldn't be loaded. Available tools are still shown.</p>}
       {loading&&<p role="status" className="agentsam-plugin-notice">Loading your plugins and tools…</p>}
       {!shown.length&&!loading&&<p className="agentsam-plugin-notice">No matching capabilities.</p>}
@@ -162,6 +198,8 @@ export function PluginPicker({ value, onChange, children }: {
         <span className="min-w-0 flex-1"><strong>{entry.label}</strong><small>{entry.description||entry.status}</small></span>
         <small>{entry.ready?entry.mention:'Set up'}</small>
       </button>)}
+      </>}
+      </>}
     </div>}
 
   </div>;

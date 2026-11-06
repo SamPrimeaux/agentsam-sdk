@@ -95,15 +95,19 @@ async function boot() {
   if (projectId && !/^[A-Za-z0-9_-]{1,160}$/.test(projectId))
     throw new Error('theme_project_id_invalid');
   if(parameters.get('new')==='1'){
-    const { prepareNewTheme }=await import('/theme-editor/new-theme.mjs');
-    const created=await prepareNewTheme({request:jsonRequest,save:project=>store.save(project),siteId});
-    projectId=created.id;
-    parameters.delete('new');
-    const createdUrl=new URL(location.href);
-    createdUrl.searchParams.delete('new');
-    createdUrl.searchParams.set('site_id',siteId);
-    createdUrl.searchParams.set('project',projectId);
-    history.replaceState(history.state,'',createdUrl.pathname+createdUrl.search);
+    // The historical three-field wizard was a dead-end, blank CMS theme.
+    // New creation is owned by independent AgentSam Canvas, not by a CMS
+    // theme draft. Verify the merchant context before offering its hint;
+    // the Canvas remains private and CMS conversion stays opt-in.
+    const site = await jsonRequest('/api/admin/store/online?site_id=' + encodeURIComponent(siteId));
+    if (site.ok !== true || site.selected_site_id !== siteId)
+      throw new Error('theme_project_site_not_authorized');
+    const target = new URL('/canvas', location.href);
+    target.searchParams.set('host', 'online-store');
+    target.searchParams.set('site_id', siteId);
+    if (window.top !== window) window.top.location.assign(target.href);
+    else location.replace(target.href);
+    return;
   }
   // List only this site's authorized projects before accepting a URL hint.
   const listing=await jsonRequest(scoped(API));

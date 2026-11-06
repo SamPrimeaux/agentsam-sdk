@@ -16,6 +16,7 @@ import { Route as appsArtifactsRouteImport } from './routes/(apps)/artifacts'
 import { Route as appsBrowseRouteImport } from './routes/(apps)/browse'
 import { Route as appsCadRouteImport } from './routes/(apps)/cad'
 import { Route as appsCampaignsRouteImport } from './routes/(apps)/campaigns'
+import { Route as appsCanvasRouteImport } from './routes/(apps)/canvas'
 import { Route as appsCliRouteImport } from './routes/(apps)/cli'
 import { Route as appsCmsRouteImport } from './routes/(apps)/cms'
 import { Route as appsCollaborateRouteImport } from './routes/(apps)/collaborate'
@@ -104,6 +105,11 @@ const appsCadRoute = appsCadRouteImport.update({
 const appsCampaignsRoute = appsCampaignsRouteImport.update({
   id: '/(apps)/campaigns',
   path: '/campaigns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const appsCanvasRoute = appsCanvasRouteImport.update({
+  id: '/(apps)/canvas',
+  path: '/canvas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const appsCliRoute = appsCliRouteImport.update({
@@ -390,6 +396,7 @@ export interface FileRoutesByFullPath {
   '/browse': typeof appsBrowseRoute
   '/cad': typeof appsCadRoute
   '/campaigns': typeof appsCampaignsRoute
+  '/canvas': typeof appsCanvasRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
   '/collaborate': typeof appsCollaborateRoute
@@ -452,6 +459,7 @@ export interface FileRoutesByTo {
   '/browse': typeof appsBrowseRoute
   '/cad': typeof appsCadRoute
   '/campaigns': typeof appsCampaignsRoute
+  '/canvas': typeof appsCanvasRoute
   '/cli': typeof appsCliRoute
   '/cms': typeof appsCmsRoute
   '/collaborate': typeof appsCollaborateRoute
@@ -512,6 +520,7 @@ export interface FileRoutesById {
   '/(apps)/browse': typeof appsBrowseRoute
   '/(apps)/cad': typeof appsCadRoute
   '/(apps)/campaigns': typeof appsCampaignsRoute
+  '/(apps)/canvas': typeof appsCanvasRoute
   '/(apps)/cli': typeof appsCliRoute
   '/(apps)/cms': typeof appsCmsRoute
   '/(apps)/collaborate': typeof appsCollaborateRoute
@@ -577,6 +586,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/cad'
     | '/campaigns'
+    | '/canvas'
     | '/cli'
     | '/cms'
     | '/collaborate'
@@ -639,6 +649,7 @@ export interface FileRouteTypes {
     | '/browse'
     | '/cad'
     | '/campaigns'
+    | '/canvas'
     | '/cli'
     | '/cms'
     | '/collaborate'
@@ -698,6 +709,7 @@ export interface FileRouteTypes {
     | '/(apps)/browse'
     | '/(apps)/cad'
     | '/(apps)/campaigns'
+    | '/(apps)/canvas'
     | '/(apps)/cli'
     | '/(apps)/cms'
     | '/(apps)/collaborate'
@@ -762,6 +774,7 @@ export interface RootRouteChildren {
   appsBrowseRoute: typeof appsBrowseRoute
   appsCadRoute: typeof appsCadRoute
   appsCampaignsRoute: typeof appsCampaignsRoute
+  appsCanvasRoute: typeof appsCanvasRoute
   appsCliRoute: typeof appsCliRoute
   appsCmsRoute: typeof appsCmsRoute
   appsCollaborateRoute: typeof appsCollaborateRoute
@@ -846,6 +859,13 @@ declare module '@tanstack/react-router' {
       path: '/campaigns'
       fullPath: '/campaigns'
       preLoaderRoute: typeof appsCampaignsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(apps)/canvas': {
+      id: '/(apps)/canvas'
+      path: '/canvas'
+      fullPath: '/canvas'
+      preLoaderRoute: typeof appsCanvasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(apps)/cli': {
@@ -1356,6 +1376,7 @@ const rootRouteChildren: RootRouteChildren = {
   appsBrowseRoute: appsBrowseRoute,
   appsCadRoute: appsCadRoute,
   appsCampaignsRoute: appsCampaignsRoute,
+  appsCanvasRoute: appsCanvasRoute,
   appsCliRoute: appsCliRoute,
   appsCmsRoute: appsCmsRoute,
   appsCollaborateRoute: appsCollaborateRoute,

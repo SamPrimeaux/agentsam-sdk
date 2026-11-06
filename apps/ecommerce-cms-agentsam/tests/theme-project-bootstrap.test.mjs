@@ -23,7 +23,7 @@ async function bootEditor(search) {
   const assigned = [];
   const top = { location: { assign(path) { assigned.push(path); }, hash: '' } };
   const href = 'https://cms.test/admin/theme-project-editor' + search;
-  const vmWindow = { top };
+  const vmWindow = { top }; vmWindow.parent = vmWindow;
   const context = {
     console: { error: (...args) => errors.push(args.map(String).join(':')) },
     location: { href, search, replace: path => assigned.push(path) },
@@ -37,6 +37,9 @@ async function bootEditor(search) {
     URL, URLSearchParams, TextDecoder, FormData,
     fetch: async path => {
       calls.push(path);
+      if (path === '/api/admin/store/online?site_id=site_a') return Response.json({
+        ok:true,selected_site_id:'site_a',available_sites:[{id:'site_a',name:'Authorized store'}],
+      });
       if (path === '/api/admin/cms/theme-projects?site_id=site_a') return Response.json({
         ok: true, projects: [{ id: 'theme_right', pages: [{ slug: 'home' }] }, { id: 'theme_other', pages: [{ slug: 'home' }] }],
       });
@@ -83,4 +86,17 @@ test('authorized project opens the same site and its existing code editor; deskt
   state.getMountHost().onEditCode();
   assert.equal(state.assigned.length, 1);
   assert.equal(state.assigned[0], '/apps/ecommerce-cms-agentsam?page=%2Fadmin%2Ftheme-code-editor&project=theme_right&site_id=site_a');
+});
+
+
+test('legacy new-theme deep link opens independent Canvas rather than blank wizard', async () => {
+  const state = await bootEditor('?site_id=site_a&new=1');
+  assert.deepEqual(state.calls, ['/api/admin/store/online?site_id=site_a']);
+  assert.equal(state.assigned.length,1);
+  const url = new URL(state.assigned[0]);
+  assert.equal(url.pathname,'/canvas');
+  assert.equal(url.searchParams.get('host'),'online-store');
+  assert.equal(url.searchParams.get('site_id'),'site_a');
+  assert.equal(state.getMountHost(),null);
+  assert.equal(state.frame.srcdoc,'');
 });

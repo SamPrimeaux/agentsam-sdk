@@ -7,6 +7,7 @@ import type { CadHostHandlers, CadSelectionContext } from "@/lib/cad-host-bridge
 import { Nav, useNav } from "@inneranimalmedia/agentsam-nav";
 import { CadConversationPane } from "@/components/workbench/CadConversationPane";
 import { cadEmbeddedUrl } from "@/lib/cad/cad-embed-url";
+import { SpecialistWorkspaceActions } from "@/components/workbench/SpecialistWorkspaceActions";
 
 interface CadSearchParams { url?: string; workspace?: string; project?: string; revision?: string }
 export const Route = createFileRoute("/(apps)/cad")({
@@ -67,6 +68,7 @@ export function CadStudioPage() {
             className="rounded border border-border px-2 py-1 disabled:opacity-40">Approve & apply</button>}
           {proposal && !canExecute && <span>Local CAD host required</span>}
           {approvalStatus && <span role="status">{approvalStatus}</span>}
+          <SpecialistWorkspaceActions kind="cad" frame={iframeRef} resourceId={selection?.project_id}/>
         </div>
       )}
       <div data-cad-editor-stage className="flex min-h-0 min-w-0 flex-1 overflow-hidden">

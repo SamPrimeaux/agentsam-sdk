@@ -828,31 +828,10 @@
     else clearTimeout(autosaveTimer);
   }
 
-  const storefrontMenu = [
-    { id: 'home', title: 'Home page', icon: 'home', page: 'home' },
-    { id: 'products', title: 'Products', icon: 'product', children: [
-      { title: 'Default product', template: 'product' },
-      { title: 'Products list', template: 'products-list' },
-    ], resource: 'products' },
-    { id: 'collections', title: 'Collections', icon: 'collection', children: [
-      { title: 'Default collection', template: 'collection' },
-      { title: 'Collections list', template: 'collections-list' },
-    ], resource: 'collections' },
-    { id: 'gift-card', title: 'Gift card', icon: 'gift', template: 'gift-card' },
-    { id: 'cart', title: 'Cart', icon: 'cart', template: 'cart' },
-    { id: 'checkout', title: 'Checkout & customer accounts', icon: 'checkout', template: 'checkout' },
-    { id: 'pages', title: 'Pages', icon: 'page', resource: 'pages' },
-    { id: 'blogs', title: 'Blogs', icon: 'blog', children: [
-      { title: 'Default blog', template: 'blog' },
-    ] },
-    { id: 'posts', title: 'Blog posts', icon: 'post', children: [
-      { title: 'Default article', template: 'article' },
-    ] },
-    { id: 'search', title: 'Search', icon: 'search', template: 'search' },
-    { id: 'password', title: 'Password', icon: 'lock', template: 'password' },
-    { id: '404', title: '404 page', icon: 'gift', template: '404' },
-    { id: 'metaobject', title: 'Create metaobject template', icon: 'plus', template: 'metaobject', create: true },
-  ];
+  // Derived from the supported template registry, not the current theme's
+  // installed pages or products. Every capability stays offered.
+  const { templateNavigation } = await import('/theme-editor/system-template-registry.mjs');
+  const storefrontMenu = templateNavigation();
   if (resolveShowcase) {
     const products = storefrontMenu.find(item => item.id === 'products');
     products.children = [
@@ -881,19 +860,17 @@
     ];
     const cart = storefrontMenu.find(item => item.id === 'cart'); cart.page = 'resolve-cart';
     const password = storefrontMenu.find(item => item.id === 'password'); password.page = 'resolve-password';
-    storefrontMenu.splice(storefrontMenu.findIndex(item => item.id === 'checkout') + 1, 0, {
-      id: 'customer', title: 'Customer accounts', icon: 'checkout', children: [
-        { title: 'Sign in', page: 'resolve-sign-in' },
-        { title: 'Sign up', page: 'resolve-sign-up' },
-        { title: 'Account overview', page: 'resolve-account' },
-        { title: 'Order history', page: 'resolve-orders' },
-        { title: 'Saved pieces', page: 'resolve-saved' },
-        { title: 'Profile & preferences', page: 'resolve-profile' },
-      ],
-    });
+    storefrontMenu.find(item=>item.id==='customer').children.push(
+      { title: 'Sign in', page: 'resolve-sign-in' },
+      { title: 'Sign up', page: 'resolve-sign-up' },
+      { title: 'Account overview', page: 'resolve-account' },
+      { title: 'Order history', page: 'resolve-orders' },
+      { title: 'Saved pieces', page: 'resolve-saved' },
+      { title: 'Profile & preferences', page: 'resolve-profile' },
+    );
   }
   if (journalShowcase) {
-    storefrontMenu.splice(0,storefrontMenu.length,
+    const journalMenu = [
       {id:'home',title:'Journal home',icon:'home',page:'journal-home'},
       {id:'blogs',title:'Blog index',icon:'blog',children:[{title:'Notes on a quieter life',page:'journal-home'}]},
       {id:'posts',title:'Articles',icon:'post',children:[
@@ -908,7 +885,11 @@
         {title:'Terms',page:'journal-terms'},
         {title:'404',page:'journal-404'}
       ]}
-    );
+    ];
+    storefrontMenu.find(item=>item.id==='blogs').children.push(...journalMenu.filter(item=>item.id==='blogs').flatMap(item=>item.children||[]));
+    storefrontMenu.find(item=>item.id==='posts').children.push(...journalMenu.filter(item=>item.id==='posts').flatMap(item=>item.children||[]));
+    storefrontMenu.find(item=>item.id==='pages').children.push(...journalMenu.filter(item=>item.id==='pages').flatMap(item=>item.children||[]));
+    storefrontMenu.find(item=>item.id==='home').page='journal-home';
   }
   // Installed package pages are listed from the authorized CMS page inventory below.
 
@@ -954,7 +935,14 @@
         page.page_type === kind || page.template_key === kind ||
         page.slug?.endsWith('-' + template));
       if (installed) void switchPage(installed.slug);
-      else setNote('No ' + title.toLowerCase() + ' template is installed for this site yet. Add a page to the installed package before editing it here.', 'error');
+      else {
+        const params=new URLSearchParams(location.search);
+        const target=new URL('/canvas',location.origin);
+        target.searchParams.set('host','online-store');
+        target.searchParams.set('template',kind);
+        if(params.get('site_id'))target.searchParams.set('site_id',params.get('site_id'));
+        window.top.location.assign(target.href);
+      }
       return;
     }
     showcaseTemplate = { template, title, subtitle: 'Customize this ' + (resolveShowcase ? 'Resolve' : 'Violet') + ' template in your CMS.', buttonLabel: 'Continue', fields: ['Email address','Full name'] };
@@ -1110,7 +1098,7 @@
         child.preset ? 'data-picker-preset="' + cmsEscapeAttr(child.preset) + '" data-preset-page="' + cmsEscapeAttr(child.page) + '"' :
         child.page ? 'data-picker-page="' + cmsEscapeAttr(child.page) + '"' :
         child.resource && child.id ? 'data-picker-resource="' + cmsEscapeAttr(child.resource) + '" data-resource-id="' + cmsEscapeAttr(child.id) + '"' :
-        'data-picker-template="' + cmsEscapeAttr(child.template || 'metaobject') + '"', child.page ? '' : 'UI scaffold', false)).join('');
+        'data-picker-template="' + cmsEscapeAttr(child.template || 'metaobject') + '"', child.page ? 'Theme' : child.origin==='stock' ? 'Stock · editable starter' : 'Create template', false)).join('');
       if(canCreateResolve){
         const instructions={
           products:['Build your first product template','Start with the existing Resolve product layout and style its sections. Product inventory comes later.'],
@@ -1137,7 +1125,7 @@
           hasChildren ? 'data-picker-category="' + cmsEscapeAttr(group.id) + '"' :
             page ? 'data-picker-page="' + cmsEscapeAttr(page.slug) + '"' :
             'data-picker-template="' + cmsEscapeAttr(group.template || group.id) + '"',
-          (!hasChildren && !page) ? 'UI scaffold' : '', hasChildren);
+          (!hasChildren && !page) ? 'Stock · editable starter' : '', hasChildren);
       }).join('');
     }
     // One search across actual authorized CMS pages, not only menu headings.

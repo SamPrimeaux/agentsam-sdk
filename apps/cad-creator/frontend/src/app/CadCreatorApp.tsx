@@ -1,4 +1,6 @@
 import {useShellAppearance} from '../../../../../packages/agentsam-settings/src/appearance';
+import {installDesignWorkspaceGuest,resolveHostedDesignScope} from '../../../../../packages/agentsam-contracts/src/design-workspace-bridge';
+import {createCadDesignAdapter} from '../lib/design-workspace-adapter';
 import {CadCamWorkspace} from '../components/CadCamWorkspace';
 import {OPENSCAD_PARAMETRIC_TEMPLATES} from '../lib/openscad/generator';
 import {insertOpenScadImport} from '../components/OpenScadLibraryPane';
@@ -511,6 +513,36 @@ export function CadCreatorApp({
     setProject(next);
     if (canCollaborate) collaborationClient.sendProjectUpdate(next);
   };
+
+  // The existing CAD engine owns every state change. The shared bridge only addresses it.
+  const workspaceState=useRef({project,hostedSelection,uiSelection});
+  workspaceState.current={project,hostedSelection,uiSelection};
+  useEffect(()=>{
+    if(accessMode!=="hosted-project")return;
+    const adapter=createCadDesignAdapter({
+      project:()=>workspaceState.current.project,
+      hosted:()=>workspaceState.current.hostedSelection,
+      selection:()=>{const target=workspaceState.current.uiSelection;return target?[{id:target.id,kind:target.group}]:[];},
+      load:value=>{
+        if(!value.project)throw new Error("cad_editable_source_unavailable");
+        workspaceState.current={project:value.project,hostedSelection:value,uiSelection:null};
+        setHostedProjectId(value.registry.project.id);setHostedRevision(value.revision.revision);
+        setHostedSelection(value);setProject(value.project);setUiSelection(null);setHistory([]);setRedoStack([]);
+      },
+      select:target=>{
+        const current=workspaceState.current.project;
+        const group=target?(["sceneElements","walls","doors","windows","rooms","furniture","parametricObjects"] as const).find(key=>current[key]?.some(row=>row.id===target.id)):null;
+        const selection=group&&target?{group,id:target.id}:null;
+        workspaceState.current.uiSelection=selection;setUiSelection(selection);if(selection)setInspectorOpen(true);
+      },
+      update:next=>{
+        const previous=workspaceState.current.project;
+        workspaceState.current.project=next;
+        setHistory(h=>[...h.slice(-20),previous]);setRedoStack([]);setVerifiedProjectRevision(null);setProject(next);
+      },
+    });
+    return installDesignWorkspaceGuest({adapter,resolveScope:resolveHostedDesignScope,currentResourceId:()=>workspaceState.current.hostedSelection?.registry.project.id||null});
+  },[accessMode]);
 
   const galleryPane = (
     <CadProjectGallery

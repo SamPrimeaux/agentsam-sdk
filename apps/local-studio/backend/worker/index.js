@@ -1331,7 +1331,17 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
     if (isWorkApi) {
       const userId = await sessionUser();
       if (!userId) return json({ ok: false, error: "unauthorized" }, 401);
-      return handleWorkRequest(request, env, userId);
+      // Resolve provider credentials lazily and only from this verified account.
+      let canvasCredentials;
+      return handleWorkRequest(request, env, userId, {
+        waitUntil: context?.waitUntil ? (task) => context.waitUntil(task) : undefined,
+        canvasRuntime: {
+          resolveCredential: async (providerId) => {
+            canvasCredentials ||= loadVaultCredentialsForAccount(env, userId);
+            return (await canvasCredentials).get(providerId) || null;
+          },
+        },
+      });
     }
 
     if(url.pathname==='/api/agentsam/openscad-libraries'||

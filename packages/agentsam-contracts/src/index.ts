@@ -18,3 +18,4 @@ export * from './spawn-policy';
 export * from './resource-scope';
 export * from './design-workspace';
 export * from './design-workspace-registry';
+export * from './design-workspace-bridge';

@@ -12,7 +12,7 @@ import { PluginPicker } from '../../../agentsam/PluginPicker';
 import { ProjectPicker } from '../../../agentsam/ProjectPicker';
 import { toast } from "sonner";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { stageChatImage, type ChatImageReference } from "@/lib/content/chat-images";
+import { resolveChatImages, stageChatImage, type ChatImagePayload, type ChatImageReference } from "@/lib/content/chat-images";
 import { ImageLightbox } from "@/components/workbench/image-lightbox";
 import { CHAT_IMAGE_DROP_EVENT, takeChatImages } from "@/lib/content/chat-drop-queue";
 
@@ -28,10 +28,18 @@ export function Composer({
   targetId,
   targetKind,
   placeholder = "Work with AgentSam",
+  onSubmit,
+  onCancel,
+  busy,
+  contextLabel,
 }: {
   targetId: string;
   targetKind: "chat" | "side";
   placeholder?: string;
+  onSubmit?: (message: { text: string; attachments: ChatImageReference[]; images: ChatImagePayload[] }) => Promise<void>;
+  onCancel?: () => void;
+  busy?: boolean;
+  contextLabel?: string;
 }) {
   const value = useWorkStore((s) => s.drafts[targetId] ?? "");
   const { user } = useCurrentUserState();
@@ -39,7 +47,10 @@ export function Composer({
   const setDraft = useWorkStore((s) => s.setDraft);
   const send = useWorkStore((s) => s.send);
   const stop = useWorkStore((s) => s.stop);
-  const streaming = useWorkStore((s) => s.streamingIds.includes(targetId));
+  const workStreaming = useWorkStore((s) => s.streamingIds.includes(targetId));
+  const [submitting, setSubmitting] = useState(false);
+  const streaming = busy ?? workStreaming;
+  const cancel = () => onCancel ? onCancel() : stop(targetId);
   const runMode = useWorkStore((s) => s.runModes[targetId] ?? defaultRunModeForTarget(targetKind));
   const setRunMode = useWorkStore((s) => s.setRunMode);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -108,8 +119,23 @@ export function Composer({
     });
   }
 
-  function submitWithAttachments() {
-    if (staging) return;
+  async function submitWithAttachments() {
+    if (staging || submitting || streaming || (!value.trim() && !pendingAttachments.length)) return;
+    if (onSubmit) {
+      setSubmitting(true);
+      try {
+        const attachments = pendingAttachments.map(({ previewUrl: _previewUrl, ...ref }) => ref);
+        const images = await resolveChatImages(attachments, user?.id || "");
+        await onSubmit({ text: value.trim(), attachments, images });
+        // Preserve anything typed while the operation was being accepted.
+        if (useWorkStore.getState().drafts[targetId] === value) setDraft(targetId, "");
+        for (const attachment of pendingAttachments) if (attachment.previewUrl) URL.revokeObjectURL(attachment.previewUrl);
+        setPendingAttachments([]);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "The instruction could not be sent. Your draft is retained.");
+      } finally { setSubmitting(false); }
+      return;
+    }
     const bag = (window as unknown as { __agentsamComposerAttachments?: unknown });
     bag.__agentsamComposerAttachments = {
       targetId, accountId: user?.id || "",
@@ -176,7 +202,7 @@ export function Composer({
       aria-label="Send"
       data-composer-send=""
       className="rounded-full border-0 shadow-none hover:bg-[var(--composer-control-hover)] disabled:opacity-100"
-      disabled={staging || (!value.trim() && pendingAttachments.length === 0)}
+      disabled={staging || submitting || streaming || (!value.trim() && pendingAttachments.length === 0)}
       onClick={submitWithAttachments}
     >
       <ArrowUp className="size-4" />
@@ -191,7 +217,7 @@ export function Composer({
       aria-label="Stop"
       data-composer-stop=""
       className="rounded-full border-0 shadow-none disabled:opacity-100"
-      onClick={() => stop(targetId)}
+      onClick={cancel}
     >
       <Square className="size-3 fill-current" />
     </Button>
@@ -239,12 +265,12 @@ export function Composer({
           }
         />
       ) : null}
-      <PluginPicker value={value} onChange={(next) => setDraft(targetId, next)}>{({ trigger, onKeyDown, onSelect }) => <AgentComposer
+      <PluginPicker value={value} onChange={(next) => setDraft(targetId, next)} onAttach={() => fileRef.current?.click()} contextLabel={contextLabel}>{({ trigger, onKeyDown, onSelect }) => <AgentComposer
         value={value}
         runMode={runMode}
         onChange={(next) => setDraft(targetId, next)}
         onSend={submitWithAttachments}
-        onCancel={() => stop(targetId)}
+        onCancel={cancel}
         streaming={streaming}
         placeholder={targetKind === "side" ? placeholder : RUN_MODE_PLACEHOLDERS[runMode]}
         toolbarStart={<>{trigger}{targetKind === 'chat' ? <ProjectPicker chatId={targetId} /> : null}{attachControl}</>}

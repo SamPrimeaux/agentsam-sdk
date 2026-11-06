@@ -17,7 +17,7 @@
     "dev": "npm run build:settings && node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080",
     "build": "npm run build:settings && node scripts/stage-console-host.mjs && node scripts/ensure-aliased-deps.mjs && NODE_ENV=production node scripts/with-app-env.mjs vite build && node scripts/stage-shell-assets.mjs && node scripts/copy-auth-portal.mjs && node scripts/build-included-apps.mjs --stage && node scripts/stage-console-host.mjs --stage && node scripts/stage-settings-shell.mjs",
     "build:desktop": "npm run build:settings && node scripts/stage-console-host.mjs && node scripts/generate-routes.mjs && node scripts/ensure-aliased-deps.mjs && NODE_ENV=production vite build --config vite.desktop.config.ts && node scripts/copy-auth-portal.mjs --out=desktop-dist --desktop && node scripts/stage-console-host.mjs --desktop",
-    "build:settings": "node scripts/stage-inneranimal-companions.mjs && npm --prefix ../../packages/agentsam-workbench run build && npm --prefix ../../packages/agentsam-settings run build",
+    "build:settings": "node scripts/build-canvas-knowledge.mjs && node scripts/stage-inneranimal-companions.mjs && npm --prefix ../../packages/agentsam-workbench run build && npm --prefix ../../packages/agentsam-settings run build",
     "site:sync": "node ../../scripts/sync-public-site.mjs",
     "site:publish": "node ../../scripts/publish-website-assets.mjs",
     "build:dev": "node scripts/with-app-env.mjs vite build --mode development",
@@ -66,6 +66,7 @@
     "cf:build:source": "node scripts/cloudflare-source-build.mjs"
   },
   "dependencies": {
+    "@inneranimalmedia/agentsam-sdk": "2.6.13",
     "@cloudflare/codemode": "^0.5.2",
     "pg": "^8.16.3"
   },
