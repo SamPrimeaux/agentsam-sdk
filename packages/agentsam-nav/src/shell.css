@@ -284,7 +284,7 @@
   width:max-content;max-width:180px;padding:6px 9px;
   color:var(--nav-text);background:var(--nav-surface, #22252d);
   border:1px solid var(--nav-border);border-radius:6px;
-  font-size:11px;line-height:1.4;pointer-events:none;
+  font-size:var(--nav-meta-size);line-height:1.4;pointer-events:none;
   opacity:0;visibility:hidden;transform:translateY(-3px);
   transition:opacity .12s ease,transform .12s ease;
 }

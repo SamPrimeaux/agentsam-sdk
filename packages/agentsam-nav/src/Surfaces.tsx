@@ -1,4 +1,4 @@
-import { Fragment, forwardRef, useEffect, useId, useRef, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -13,10 +13,10 @@ export function useNavStyle(): CSSProperties {
   return { ...(resizable ? { '--nav-width': width + 'px' } : {}), ...Object.fromEntries(Object.entries(tokens).map(([key, value]) => [`--nav-${key}`, value])), '--nav-accent': accentColor } as CSSProperties;
 }
 
-export const NavScope = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(function NavScope({ className, style, ...props }, ref) {
+export function NavScope({ className, style, ...props }: HTMLAttributes<HTMLDivElement>) {
   const { theme } = useNav();
-  return <div {...props} ref={ref} data-nav-theme={theme} className={cx('as-nav-scope', className)} style={{ ...useNavStyle(), ...style }} />;
-});
+  return <div {...props} data-nav-theme={theme} className={cx('as-nav-scope', className)} style={{ ...useNavStyle(), ...style }} />;
+}
 
 function MenuActions({ actions }: { actions: NavAction[] }) {
   return <>{actions.map((action) => <Fragment key={action.id}>
@@ -122,7 +122,7 @@ export function NavPinnedSummary() {
     <Menu.Trigger asChild><button type="button" className="as-nav-button as-nav-activity-trigger"
       aria-label="Toggle Activity" title="Activity" aria-expanded={open} aria-pressed={open}>
       <PinnedSummaryIcon /><span className="as-nav-icon-help" aria-hidden="true">Activity</span></button></Menu.Trigger>
-    <Menu.Portal><Menu.Content asChild align="end" sideOffset={8} collisionPadding={12}>
+    <Menu.Portal><Menu.Content align="end" sideOffset={8} collisionPadding={12}>
       <NavScope className="as-nav-popover as-nav-summary-popover as-nav-activity-popover">
       <Menu.Label className="as-nav-activity-title">Activity</Menu.Label>
       <section className="as-nav-activity-section" aria-label="Subagents">
