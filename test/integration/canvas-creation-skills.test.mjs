@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getSkill, loadSkill, validateCanvasDirections, loadCanvasCreationKnowledge } from '../src/skills/index.js';
+import { getSkill, loadSkill, validateCanvasDirections, loadCanvasCreationKnowledge } from '../../src/skills/index.js';
 
 const directions = () => [
   { id: 'editorial', title: 'Editorial restraint', description: 'Quiet typography, sophisticated pacing and uncluttered art direction.', creativeIntent: 'Let hierarchy and typographic composition lead the work.' },
