@@ -27,3 +27,5 @@ export {
 // Legacy catalog surface (agentsam skills list / load)
 export { listSkills, getSkill, loadSkill, AGENTSAM_SKILLS_ROOT } from './catalog.js';
 export { createNullHostedSkillStore } from './hosted-store.js';
+
+export { validateCanvasDirections, loadCanvasCreationKnowledge } from './canvas-knowledge.js';

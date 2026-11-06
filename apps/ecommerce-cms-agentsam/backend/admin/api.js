@@ -86,6 +86,7 @@ import {
   agentsamConversationsList,
 } from "../agentsam/conversations.js";
 import { agentsamFileDelete, agentsamFileGet, agentsamFileUpload } from "../agentsam/files.js";
+import { createAdminAgentSamSkill } from "../agentsam/skill-authoring.js";
 import { agentsamToolCallGet } from "../agentsam/tool-traces.js";
 import {
   agentsamGithubOAuthCallback,
@@ -1014,6 +1015,9 @@ export async function handleAdminApi(request, env, url, executionCtx = null, tru
   }
   if (path === "/api/admin/agentsam/skills" && method === "GET") {
     return agentsamSkillsList(env, url);
+  }
+  if (path === "/api/admin/agentsam/skills" && method === "POST") {
+    return createAdminAgentSamSkill(request, env, user);
   }
 
   let skillMatch = path.match(/^\/api\/admin\/agentsam\/skills\/([a-z0-9-]+)$/);

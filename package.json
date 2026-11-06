@@ -202,6 +202,8 @@
     "migrations",
     "skills/README.md",
     "skills/catalog.json",
+    "skills/agentsam-canvas-creation",
+    "skills/agentsam-cms-ready-creation",
     "skills/agentsam-app-fundamentals",
     "skills/agentsam-cloudflare-workers",
     "skills/agentsam-codebaseindex",
