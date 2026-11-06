@@ -174,7 +174,9 @@ export async function transformStorefrontHtml(response, env, slug, request) {
   // the chosen R2-backed image from social crawlers.
   if (head.socialImageUrl) {
     try {
-      const resolved = new URL(head.socialImageUrl, request?.url || "https://fuelnfreetime.com");
+      // Resolve relative artwork against the verified request, never an SDK fixture site.
+      // Absolute HTTPS assets still work when no request URL is supplied.
+      const resolved = new URL(head.socialImageUrl, request?.url || undefined);
       head.socialImageUrl = resolved.protocol === "https:" ? resolved.href : "";
     } catch { head.socialImageUrl = ""; }
   }

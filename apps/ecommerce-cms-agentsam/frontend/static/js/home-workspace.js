@@ -1,3 +1,104 @@
+/* Home first paint resolves its website from the authorized site-scoped Store read.
+ * Never use a customer fixture, the admin origin, or an unrelated draft as preview. */
+(function initVerifiedHomeSite() {
+  "use strict";
+  const card = document.querySelector(".fnf-site-preview");
+  if (!card) return;
+  const address = card.querySelector(".fnf-site-preview__address");
+  const frame = card.querySelector("iframe");
+  const empty = document.getElementById("home-site-preview-empty");
+  const link = card.querySelector(".fnf-site-preview__link");
+  const hover = card.querySelector(".fnf-site-preview__hover");
+  const scopedStore = siteId => "/admin/store?site_id=" + encodeURIComponent(siteId);
+  const fail = message => {
+    address.textContent = "Website unavailable";
+    empty.textContent = message;
+    empty.hidden = false;
+    frame.hidden = true;
+    frame.removeAttribute("src");
+    link.href = "/admin/store";
+    link.setAttribute("aria-label", "Open Online Store");
+    hover.textContent = "Open Online Store";
+  };
+  async function resolve() {
+    let requested = new URLSearchParams(location.search).get("site_id");
+    if (!requested) {
+      try { requested = sessionStorage.getItem("agentsam.cms.selected-site.v1"); }
+      catch { /* A tab may disable session storage. */ }
+    }
+    if (requested && !/^[A-Za-z0-9_-]{1,160}$/.test(requested)) {
+      fail("This website selection is invalid. Open Online Store to choose a site.");
+      return;
+    }
+    try {
+      const endpoint = "/api/admin/store/online" +
+        (requested ? "?site_id=" + encodeURIComponent(requested) : "");
+      const data = await adminFetch(endpoint);
+      // The hosted Local Studio and standalone CMS expose different shapes,
+      // but both resolve the same authorized site on the server first.
+      const siteId = data?.selected_site_id || data?.store?.site_id;
+      if (!data?.ok || !siteId || (requested && siteId !== requested)) {
+        fail("Choose an authorized website in Online Store.");
+        return;
+      }
+      const site = (Array.isArray(data.available_sites) ? data.available_sites : [])
+        .find(item => item.id === siteId);
+      const name = String(data.selected_site_name || site?.name ||
+        data.store?.site_name || data.store?.company_name || "Your website").trim();
+      const domain = String(site?.primary_domain || data.store?.domain || "").trim().toLowerCase();
+      address.textContent = domain || name;
+      document.title = "Home — " + name;
+      link.href = scopedStore(siteId);
+      link.setAttribute("aria-label", "Open Online Store for " + name);
+      hover.textContent = "Open Online Store";
+      try { sessionStorage.setItem("agentsam.cms.selected-site.v1", siteId); }
+      catch { /* Explicit session persistence is best-effort. */ }
+      const page = data.site_preview || (
+        data.store?.visibility === "public" &&
+        Array.isArray(data.pages) &&
+        data.pages.some(p => p.slug === "home" && p.status === "published")
+          ? { site_id: siteId, status: "published", url: data.store.url }
+          : null
+      );
+      if (page?.site_id === siteId && typeof page.edit_href === "string") {
+        const editor = new URL(page.edit_href, location.origin);
+        if (editor.origin === location.origin &&
+            editor.pathname === "/admin/theme-editor" &&
+            editor.searchParams.get("site_id") === siteId) {
+          link.href = editor.pathname + editor.search;
+          link.setAttribute("aria-label", "Edit homepage for " + name);
+          hover.textContent = "Edit homepage";
+        }
+      }
+      // Only the server-verified published homepage for the selected domain
+      // can populate this iframe. An installed theme thumbnail is not a site.
+      const previewUrl = page?.status === "published" && page.site_id === siteId
+        ? page.url : null;
+      if (domain && typeof previewUrl === "string") {
+        try {
+          const preview = new URL(previewUrl);
+          if (preview.protocol === "https:" && preview.hostname === domain) {
+            frame.title = name + " published homepage preview";
+            frame.src = preview.href;
+            frame.hidden = false;
+            empty.hidden = true;
+            return;
+          }
+        } catch { /* A malformed preview must never erase verified site identity. */ }
+      }
+      frame.hidden = true;
+      frame.removeAttribute("src");
+      empty.hidden = false;
+      empty.textContent = page
+        ? "This website has no published homepage preview yet."
+        : "Create a homepage in Online Store to see it here.";
+    } catch {
+      fail("Could not load your website. Open Online Store to retry.");
+    }
+  }
+  resolve();
+})();
+
 /* Home assistant workspace — one chat endpoint and one conversation shared with the side/focus modes. */
 (function () {
   "use strict";
