@@ -133,7 +133,8 @@
   let publishInFlight = false;
   let hasEditedThisSession = false;
   let autosaveFailed = false;
-  let device = ['desktop','mobile'].includes(host?.initialDevice || params.get('previewMode')) ? (host?.initialDevice || params.get('previewMode')) : localStorage.getItem('fnf-theme-editor-device') || 'desktop';
+  const preferredDevice = host?.initialDevice || params.get('previewMode') || localStorage.getItem('fnf-theme-editor-device');
+  let device = ['desktop','tablet','mobile'].includes(preferredDevice) ? preferredDevice : 'desktop';
   let inspectionEnabled = true;
   const undoHistory = [];
   const redoHistory = [];

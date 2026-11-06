@@ -74,6 +74,8 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
     '/admin/products?view=collections&site_id=site-a&collection_id=cmscol_a',
     '/admin/product-edit?id=12&site_id=site-a',
     '/admin/theme-project-editor?project=theme_heuristic&site_id=site-a&page=shop',
+    '/admin/theme-project-editor?new=1&site_id=site-a',
+    '/admin/theme-project-editor?project=theme_heuristic&site_id=site-a&page=home&section=hero&block=heading&previewMode=tablet',
     '/admin/inventory?site_id=site-a',
     '/admin/store?site_id=site-a',
     '/admin/products/create?site_id=site-a',
@@ -86,6 +88,11 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAdminPath('/admin/products/create/12?resume=https://another-site.example'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/products?site_id=site-a&site_id=site-b'),null);
   assert.equal(resolveEcommerceAdminPath('/admin/products?site_id=site-a&unexpected=1'),null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=0&site_id=site-a'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1&project=other&site_id=site-a'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?new=1&new=1&site_id=site-a'), null);
+  assert.equal(resolveEcommerceAdminPath('/admin/theme-project-editor?project=theme_heuristic&site_id=site-a&previewMode=unknown'), null);
 
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=platform'), '/admin/products?view=platform');
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=store'), '/admin/products?view=store');
