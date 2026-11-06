@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
+import { Fragment, forwardRef, useEffect, useId, useRef, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -13,10 +13,10 @@ export function useNavStyle(): CSSProperties {
   return { ...(resizable ? { '--nav-width': width + 'px' } : {}), ...Object.fromEntries(Object.entries(tokens).map(([key, value]) => [`--nav-${key}`, value])), '--nav-accent': accentColor } as CSSProperties;
 }
 
-export function NavScope({ className, style, ...props }: HTMLAttributes<HTMLDivElement>) {
+export const NavScope = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(function NavScope({ className, style, ...props }, ref) {
   const { theme } = useNav();
-  return <div {...props} data-nav-theme={theme} className={cx('as-nav-scope', className)} style={{ ...useNavStyle(), ...style }} />;
-}
+  return <div {...props} ref={ref} data-nav-theme={theme} className={cx('as-nav-scope', className)} style={{ ...useNavStyle(), ...style }} />;
+});
 
 function MenuActions({ actions }: { actions: NavAction[] }) {
   return <>{actions.map((action) => <Fragment key={action.id}>
@@ -92,8 +92,7 @@ export function NavFilesResources() {
 }
 
 export function NavPinnedSummary() {
-  const { data, theme } = useNav();
-  const style = useNavStyle();
+  const { data } = useNav();
   const [open, setOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const subagents = data.pinnedSummary?.subagents ?? [];
@@ -113,7 +112,7 @@ export function NavPinnedSummary() {
   const section = (title: string, entries: Array<string | {id:string;label:string;kind?:string;onSelect?:()=>void}>, group:string, add?:()=>void) =>
     <section className="as-nav-activity-section" aria-label={title}>
       <div className="as-nav-activity-section-head"><span>{title}</span>
-        {add ? <Menu.Item asChild><button type="button" className="as-nav-activity-add" onClick={add} aria-label={'Add '+title.toLowerCase()} title={'Add '+title.toLowerCase()}><Plus size={16}/></button></Menu.Item> : null}
+        {add ? <Menu.Item asChild><button type="button" className="as-nav-activity-add" onClick={add} aria-label={'Add '+title.toLowerCase()} title={'Add '+title.toLowerCase()}><Plus size={16}/><span className="as-nav-icon-help" aria-hidden="true">{'Add '+title.toLowerCase()}</span></button></Menu.Item> : null}
       </div>
       {entries.length ? (showAll ? entries : entries.slice(0,5)).map((entry,index)=>item(entry,index,group))
         : <p className="as-nav-activity-empty">No {title.toLowerCase()} yet</p>}
@@ -122,9 +121,9 @@ export function NavPinnedSummary() {
   return <Menu.Root open={open} onOpenChange={(next)=>{setOpen(next); if(!next)setShowAll(false);}}>
     <Menu.Trigger asChild><button type="button" className="as-nav-button as-nav-activity-trigger"
       aria-label="Toggle Activity" title="Activity" aria-expanded={open} aria-pressed={open}>
-      <PinnedSummaryIcon /></button></Menu.Trigger>
-    <Menu.Portal><Menu.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover as-nav-summary-popover as-nav-activity-popover"
-      align="end" sideOffset={8} collisionPadding={12}>
+      <PinnedSummaryIcon /><span className="as-nav-icon-help" aria-hidden="true">Activity</span></button></Menu.Trigger>
+    <Menu.Portal><Menu.Content asChild align="end" sideOffset={8} collisionPadding={12}>
+      <NavScope className="as-nav-popover as-nav-summary-popover as-nav-activity-popover">
       <Menu.Label className="as-nav-activity-title">Activity</Menu.Label>
       <section className="as-nav-activity-section" aria-label="Subagents">
         <div className="as-nav-activity-section-head"><span>Subagents</span><small>{subagents.length} used</small></div>
@@ -140,7 +139,7 @@ export function NavPinnedSummary() {
       {section('Outputs',outputs,'outputs',data.pinnedSummary?.onAddOutput)}
       <Menu.Separator className="as-nav-menu-separator"/>
       {section('Sources',sources,'sources',data.pinnedSummary?.onAddSource)}
-    </Menu.Content></Menu.Portal>
+      </NavScope></Menu.Content></Menu.Portal>
   </Menu.Root>;
 }
 

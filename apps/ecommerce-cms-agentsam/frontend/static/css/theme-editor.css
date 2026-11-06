@@ -3933,3 +3933,70 @@ dialog.te-section-menu .te-section-search {
   .te-catalog-visual { min-height: 180px; }
   .te-catalog-preview-meta { min-height: 68px; padding: 10px 12px; }
 }
+
+/* Installed theme section library: a non-modal left-side viewer, not a blocking
+   popup. The list scrolls independently and selection previews remain at its
+   lower edge while the live canvas stays usable. */
+.theme-studio .theme-studio-tree { position: relative; }
+.theme-studio .theme-studio-tree dialog.te-section-menu {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.theme-studio .theme-studio-tree dialog.te-section-menu::backdrop { display:none; }
+.theme-studio .theme-studio-tree .te-section-menu__head { padding: 12px; min-height: 48px; }
+.theme-studio .theme-studio-tree .te-section-menu__head strong { font-size: 13px; }
+.theme-studio .theme-studio-tree .te-catalog-toolbar { display: grid; gap: 8px; padding: 10px; min-height: 0; }
+.theme-studio .theme-studio-tree .te-section-search { width: 100%; min-width: 0; box-sizing: border-box; }
+.theme-studio .theme-studio-tree .te-catalog-tabs { width: 100%; box-sizing: border-box; }
+.theme-studio .theme-studio-tree .te-catalog-tabs button { flex:1; min-width: 0; }
+.theme-studio .theme-studio-tree .te-catalog-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.theme-studio .theme-studio-tree .te-catalog-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  border-right: 0;
+}
+.theme-studio .theme-studio-tree .te-catalog-preview {
+  display: flex;
+  flex: 0 0 min(260px, 40%);
+  flex-direction: column;
+  min-height: 160px;
+  overflow: hidden;
+  border-top: 1px solid #e5e7eb;
+}
+.theme-studio .theme-studio-tree .te-catalog-preview-stage {
+  flex: 1 1 auto;
+  min-height: 80px;
+  padding: 8px;
+}
+.theme-studio .theme-studio-tree .te-catalog-preview-meta {
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 8px;
+  gap: 8px;
+}
+.theme-studio .theme-studio-tree .te-catalog-preview-meta strong { font-size: 12px; }
+.theme-studio .theme-studio-tree .te-catalog-preview-meta small { font-size: 10px; }
+.theme-studio .theme-studio-tree .te-catalog-visual { width: 100%; min-height: 96px; }
+@media (max-width: 700px) {
+  .theme-studio .theme-studio-tree dialog.te-section-menu { width:100%; height:100%; max-height:none; }
+  .theme-studio .theme-studio-tree .te-catalog-layout { display:flex; flex-direction:column; }
+}

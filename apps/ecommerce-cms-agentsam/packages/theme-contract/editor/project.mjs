@@ -182,7 +182,41 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
       else el.textContent = String(value);
     }
     };
+    // Contextual editor controls must affect the actual exported storefront,
+    // not merely write inert __editor metadata to the CMS draft.
+    const styleFields = section.content.__editor?.fieldStyles || {};
+    const cssNames = {
+      color: 'color', backgroundColor: 'background-color',
+      borderColor: 'border-color', borderWidth: 'border-width',
+      borderRadius: 'border-radius', fontSize: 'font-size', fontWeight: 'font-weight',
+      textAlign: 'text-align', textTransform: 'text-transform',
+      lineHeight: 'line-height', letterSpacing: 'letter-spacing',
+      paddingTop: 'padding-top', paddingBottom: 'padding-bottom',
+      paddingLeft: 'padding-left', paddingRight: 'padding-right',
+    };
+    const safeStyle = (name, value) => {
+      if (['color','backgroundColor','borderColor'].includes(name))
+        return /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(String(value)) ? String(value) : null;
+      if (name === 'textAlign') return ['left','right','center','justify'].includes(value) ? value : null;
+      if (name === 'textTransform') return ['none','uppercase','lowercase','capitalize'].includes(value) ? value : null;
+      if (name === 'fontWeight') return ['normal','bold','lighter','bolder'].includes(value) ? value :
+        (Number.isInteger(Number(value)) && Number(value) >= 100 && Number(value) <= 900 ? String(value) : null);
+      const amount = Number(value);
+      if (!Number.isFinite(amount) || amount < 0 || amount > 400) return null;
+      return name === 'lineHeight' ? String(amount) : amount + 'px';
+    };
+    const styleNode = (document, key, styles) => {
+      const element = [...document.querySelectorAll('[data-theme-project-field]')]
+        .find(node => node.getAttribute('data-theme-project-field') === key);
+      if (!element || !styles || typeof styles !== 'object') return;
+      for (const [name, value] of Object.entries(styles)) {
+        const property = cssNames[name];
+        const safe = property && safeStyle(name, value);
+        if (safe !== null && safe !== undefined) element.style.setProperty(property, safe);
+      }
+    };
     apply(doc, [...(section.schema.fields || []), ...(section.schema.settings || [])], section.content);
+    for (const [key, styles] of Object.entries(styleFields)) styleNode(doc, key, styles);
     doc.body.firstElementChild?.setAttribute('data-theme-section', section.key);
     doc.body.firstElementChild?.setAttribute('data-cms-section', section.key);
     const blockFragments = (section.content.__editor?.blocks || []).map((block) => {
@@ -190,6 +224,10 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
       if (!template?.html) return '';
       const blockDoc = new DOMParser().parseFromString(template.html, 'text/html');
       apply(blockDoc, template.fields, section.content[block.id] || {});
+      for (const field of template.fields || []) {
+        const styles = styleFields[block.id + '.' + field.key];
+        if (styles) styleNode(blockDoc, field.binding?.field || field.key, styles);
+      }
       blockDoc.body.firstElementChild?.setAttribute('data-theme-block-id', block.id);
       blockDoc.body.firstElementChild?.setAttribute('data-cms-block', block.id);
       return blockDoc.body.innerHTML;
@@ -352,9 +390,22 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
     },
     getRegistry: async () => ({ pages: Object.fromEntries(state.pages.map((p) =>
       [p.slug, { sections: {
-        ...Object.fromEntries(Object.entries(state.sectionTemplates).map(([id,s]) =>
-          [id, { ...s.schema, key: id, label: s.name, sourcePage: s.sourcePage,
-            sourceKind: s.sourceKind, capabilities: { ...s.schema.capabilities, insert: true } }])),
+        ...Object.fromEntries(Object.entries(state.sectionTemplates).map(([id,s]) => {
+          const sourcePage = state.pages.find(page => page.slug === s.sourcePage) || p;
+          const sourceHead = sourcePage.template.match(/<head[^>]*>([\s\S]*?)<\/head>/i)?.[1]
+            ?.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '') || '';
+          // A mini-preview is rendered from the exact source section, with
+          // its donor page styles. No separately authored thumbnail or HTML fixture.
+          const previewPage = { sections: [s], template:
+            '<!doctype html><html><head>' + sourceHead +
+            '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+            '<style>html,body{margin:0}body{pointer-events:none}</style></head><body>' +
+            '<!--theme-section:' + s.key + '--></body></html>' };
+          return [id, { ...s.schema, key: id, label: s.name, sourcePage: s.sourcePage,
+            sourceKind: s.sourceKind,
+            previewHtml: renderThemePage(previewPage, state.tokens, { baseUrl: sourcePage.assetBase || undefined }),
+            capabilities: { ...s.schema.capabilities, insert: true } }];
+        })),
         ...Object.fromEntries(p.sections.map((s) => [s.key, s.schema])),
       } }])) }),
     resolvePreview: async (slug, draft) => { const p = draft || get(slug); return { html: renderThemePage(p, state.tokens, { baseUrl: p.assetBase ? await resolveAssetBase(p.assetBase) : undefined }) }; },

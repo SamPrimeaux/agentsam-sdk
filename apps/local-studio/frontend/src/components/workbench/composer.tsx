@@ -196,31 +196,31 @@ export function Composer({
   ) : null;
 
   const sendControl = (
-    <Button
+    <IconAction
       type="button"
       size="icon-sm"
-      aria-label="Send"
+      label="Send"
       data-composer-send=""
       className="rounded-full border-0 shadow-none hover:bg-[var(--composer-control-hover)] disabled:opacity-100"
       disabled={staging || submitting || streaming || (!value.trim() && pendingAttachments.length === 0)}
       onClick={submitWithAttachments}
     >
       <ArrowUp className="size-4" />
-    </Button>
+    </IconAction>
   );
 
   const cancelControl = (
-    <Button
+    <IconAction
       type="button"
       size="icon-sm"
       variant="secondary"
-      aria-label="Stop"
+      label="Stop"
       data-composer-stop=""
       className="rounded-full border-0 shadow-none disabled:opacity-100"
       onClick={cancel}
     >
       <Square className="size-3 fill-current" />
-    </Button>
+    </IconAction>
   );
 
   return (

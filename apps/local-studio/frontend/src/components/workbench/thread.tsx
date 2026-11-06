@@ -1,3 +1,4 @@
+import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useState } from "react";
 import { Download, FileText, FileCode2, ArrowUpRight } from "lucide-react";
 import type { Artifact } from "@inneranimalmedia/agentsam-local-shared";
@@ -80,8 +81,8 @@ function WorkOutputCards({ files }: {files: Artifact[]}) {
             <small>{document?'Document':'File'}</small></span>
           {inProject?<ArrowUpRight className="agentsam-work-output-card__open" size={16} aria-hidden="true"/>:null}
         </button>
-        <button type="button" className="agentsam-work-output-card__download" aria-label={'Download '+(file.title||file.path)}
-          title="Download output" onClick={()=>download(file)}><Download size={16}/></button>
+        <IconAction type="button" className="agentsam-work-output-card__download" label={'Download '+(file.title||file.path)}
+          hint="Download output" onClick={()=>download(file)}><Download size={16}/></IconAction>
       </div>;
     })}
   </div>;

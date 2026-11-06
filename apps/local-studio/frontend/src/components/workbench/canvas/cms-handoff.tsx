@@ -1,3 +1,4 @@
+import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, Check, X } from "lucide-react";
 import { API, canvasRequest, type CanvasMeta } from "./model";
@@ -28,7 +29,7 @@ export function CanvasCmsHandoff({canvas,onClose}:{canvas:CanvasMeta;onClose:()=
   finally{setBusy("");}
  }
  return <div className="cv-modal-backdrop"><section role="dialog" aria-modal="true" aria-labelledby="canvas-cms-title" className="cv-modal">
-  <header><div><span className="cv-eyebrow">Optional next step</span><h2 id="canvas-cms-title">Prepare for your website</h2></div><button aria-label="Close CMS handoff" onClick={onClose}><X size={18}/></button></header>
+  <header><div><span className="cv-eyebrow">Optional next step</span><h2 id="canvas-cms-title">Prepare for your website</h2></div><IconAction label="Close CMS handoff" onClick={onClose}><X size={18}/></IconAction></header>
   <p>Your Canvas remains independent. This checks the selected website's capabilities and creates an editable private draft.</p>
   {!result?<><label className="cv-field"><span>Website</span><select disabled={Boolean(busy)} value={site} onChange={e=>{setSite(e.target.value);setReview(null);}}><option value="">Choose a website</option>{sites.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
    {!busy&&!sites.length&&<p>No authorized website is available. You can continue working on this Canvas.</p>}

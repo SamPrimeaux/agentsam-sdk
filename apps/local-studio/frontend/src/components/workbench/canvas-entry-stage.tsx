@@ -1,3 +1,4 @@
+import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronDown, Component, ExternalLink, Frame, Hand, History, Image, Layers, Maximize2, Minimize2, MousePointer2, PanelLeft, PanelRight, Plus, Redo2, RefreshCw, Save, Settings2, Square, Type, Undo2, X, ZoomIn, ZoomOut } from "lucide-react";
 import { DesignWorkspaceFrame } from "@inneranimalmedia/agentsam-workbench/design";
@@ -296,7 +297,7 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
  const selectedNode=locateNode(document,selection)?.node;
  const snapshot:DesignWorkspaceSnapshot={contract:"agentsam.design-workspace.v1",resource:{id:canvas.id,kind:"design",appId:"agentsam-local-studio",title:document.name,href:"/canvas?canvas="+canvas.id,accountId:user?.id||""},capabilities:["create","open","select","inspect","modify","preview","save","undo","redo","generate"],revision:String(canvas.revision),savedRevision:String(canvas.revision),dirty,selection:selection?[{id:selection,kind:selectedNode?.type||"element"}]:[],status:"ready",...(busy?{activeRunId:run!.id}:{})};
  const assistant=<div className={"cv-assistant-body "+assistantMode}>
-   <div className="cv-assistant-modes"><span>{selectedNode?"Target: "+selectedNode.name:"Document context"}</span><button title="Mini AgentSam" aria-label="Mini AgentSam" onClick={()=>setAssistantMode("mini")}><Minimize2 size={13}/></button><button title="Dock AgentSam" aria-label="Dock AgentSam" onClick={()=>setAssistantMode("docked")}><PanelRight size={13}/></button><button title="Expand AgentSam" aria-label="Expand AgentSam" onClick={()=>setAssistantMode("expanded")}><Maximize2 size={13}/></button></div>
+   <div className="cv-assistant-modes"><span>{selectedNode?"Target: "+selectedNode.name:"Document context"}</span><IconAction hint="Mini AgentSam" label="Mini AgentSam" onClick={()=>setAssistantMode("mini")}><Minimize2 size={13}/></IconAction><IconAction hint="Dock AgentSam" label="Dock AgentSam" onClick={()=>setAssistantMode("docked")}><PanelRight size={13}/></IconAction><IconAction hint="Expand AgentSam" label="Expand AgentSam" onClick={()=>setAssistantMode("expanded")}><Maximize2 size={13}/></IconAction></div>
    {assistantMode!=="mini"&&<div className="cv-activity" aria-label="AgentSam execution history">
     {!events.length&&<p className="cv-panel-help">Describe a change to the document or selected element. Actual operations and saved revisions appear here.</p>}
     {events.map((event,index)=><div key={String(event.id||event.sequence||index)} className={"cv-event "+(event.type.includes("fail")?"failed":"")}><span className="cv-event-marker"/><div><p>{eventLabel(event)}</p><small>{event.type}</small>{Boolean(event.payload?.instruction)&&<blockquote>{String(event.payload?.instruction)}</blockquote>}</div></div>)}
@@ -308,13 +309,13 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
     onSubmit={async({text,attachments})=>{await startRun(text,undefined,attachments);}}/>
  </div>;
  const commands=<>
-   <button className="cv-icon-button" title="Saved Canvases" aria-label="Saved Canvases" onClick={()=>void showCanvases()}><History size={15}/></button>
-   <button className="cv-icon-button" title="New Canvas" aria-label="New Canvas" onClick={newDocument}><Plus size={15}/></button>
+   <IconAction className="cv-icon-button" hint="Saved Canvases" label="Saved Canvases" onClick={()=>void showCanvases()}><History size={15}/></IconAction>
+   <IconAction className="cv-icon-button" hint="New Canvas" label="New Canvas" onClick={newDocument}><Plus size={15}/></IconAction>
    <span className="cv-command-divider"/>
-   <button className="cv-icon-button" title="Undo (⌘Z)" aria-label="Undo" disabled={!past.length} onClick={undo}><Undo2 size={15}/></button>
-   <button className="cv-icon-button" title="Redo (⇧⌘Z)" aria-label="Redo" disabled={!future.length} onClick={redo}><Redo2 size={15}/></button>
-   <button className="cv-icon-button cv-secondary-command" title="Toggle layers" aria-label="Toggle layers" aria-pressed={layers} onClick={()=>setLayers(v=>!v)}><PanelLeft size={15}/></button>
-   <button className="cv-icon-button cv-secondary-command" title="Toggle properties" aria-label="Toggle properties" aria-pressed={properties} onClick={()=>setProperties(v=>!v)}><Settings2 size={15}/></button>
+   <IconAction className="cv-icon-button" hint="Undo (⌘Z)" label="Undo" disabled={!past.length} onClick={undo}><Undo2 size={15}/></IconAction>
+   <IconAction className="cv-icon-button" hint="Redo (⇧⌘Z)" label="Redo" disabled={!future.length} onClick={redo}><Redo2 size={15}/></IconAction>
+   <IconAction className="cv-icon-button cv-secondary-command" hint="Toggle layers" label="Toggle layers" aria-pressed={layers} onClick={()=>setLayers(v=>!v)}><PanelLeft size={15}/></IconAction>
+   <IconAction className="cv-icon-button cv-secondary-command" hint="Toggle properties" label="Toggle properties" aria-pressed={properties} onClick={()=>setProperties(v=>!v)}><Settings2 size={15}/></IconAction>
    <button className={"cv-toolbar-button"+(preview?" active":"")} onClick={()=>{setPreview(v=>!v);setFitToken(n=>n+1);}}>{preview?"Edit":"Preview"}</button>
    <button className="cv-toolbar-button cv-secondary-command" onClick={async()=>{const savedCanvas=await save();if(savedCanvas)setShowCms(true);}}>Use in CMS</button>
    <button className="cv-primary" disabled={!dirty||saving} onClick={()=>void save()}>{saving?"Saving…":dirty?<><Save size={13}/> Save</>:<><Check size={13}/> Saved</>}</button>
@@ -327,10 +328,10 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
    status={<div className="cv-status"><span>{connection?"Private Canvas":"Connection lost · retrying"}{conflict?" · remote revision changed":""}</span><span>{document.artboards.length} artboards · Revision {canvas.revision}</span></div>}>
    <CanvasStage document={document} selected={selection} boardId={boardId} preview={preview} width={previewWidth} zoom={zoom} onZoom={setZoom} onSelect={select} onChange={changeNode} fitToken={fitToken} tool={tool}/>
    <div className="cv-stage-toolbar" role="toolbar" aria-label="Canvas tools">
-    <button className={tool==="select"?"active":""} aria-label="Select tool" title="Select (V)" onClick={()=>setTool("select")}><MousePointer2 size={16}/></button>
-    <button className={tool==="pan"?"active":""} aria-label="Pan tool" title="Pan (H)" onClick={()=>setTool("pan")}><Hand size={16}/></button>
-    {!preview&&<><span/><div className="cv-insert-menu"><button aria-label="Insert element" title="Insert element" disabled={!boardId} onClick={()=>setInsertOpen(v=>!v)}><Plus size={16}/><ChevronDown size={10}/></button>{insertOpen&&<div className="cv-popover">{(["frame","text","button","image","input","link"] as const).map(type=><button key={type} onClick={()=>insert(type)}>{type[0].toUpperCase()+type.slice(1)}</button>)}</div>}</div><button aria-label="Add artboard" title="Add artboard" onClick={addBoard}><Frame size={16}/></button></>}
-    <span/><button aria-label="Zoom out" onClick={()=>setZoom(z=>Math.max(.08,z/1.2))}><ZoomOut size={15}/></button><button className="cv-zoom-value" title="Fit artboards (1)" onClick={()=>setFitToken(n=>n+1)}>{Math.round(zoom*100)}%</button><button aria-label="Zoom in" onClick={()=>setZoom(z=>Math.min(3,z*1.2))}><ZoomIn size={15}/></button>
+    <IconAction className={tool==="select"?"active":""} label="Select tool" hint="Select (V)" onClick={()=>setTool("select")}><MousePointer2 size={16}/></IconAction>
+    <IconAction className={tool==="pan"?"active":""} label="Pan tool" hint="Pan (H)" onClick={()=>setTool("pan")}><Hand size={16}/></IconAction>
+    {!preview&&<><span/><div className="cv-insert-menu"><IconAction label="Insert element" hint="Insert element" disabled={!boardId} onClick={()=>setInsertOpen(v=>!v)}><Plus size={16}/><ChevronDown size={10}/></IconAction>{insertOpen&&<div className="cv-popover">{(["frame","text","button","image","input","link"] as const).map(type=><button key={type} onClick={()=>insert(type)}>{type[0].toUpperCase()+type.slice(1)}</button>)}</div>}</div><IconAction label="Add artboard" hint="Add artboard" onClick={addBoard}><Frame size={16}/></IconAction></>}
+    <span/><IconAction label="Zoom out" onClick={()=>setZoom(z=>Math.max(.08,z/1.2))}><ZoomOut size={15}/></IconAction><button className="cv-zoom-value" title="Fit artboards (1)" onClick={()=>setFitToken(n=>n+1)}>{Math.round(zoom*100)}%</button><IconAction label="Zoom in" onClick={()=>setZoom(z=>Math.min(3,z*1.2))}><ZoomIn size={15}/></IconAction>
     {preview&&<select aria-label="Preview width" value={previewWidth} onChange={e=>setPreviewWidth(Number(e.target.value))}><option value={0}>Desktop</option><option value={768}>Tablet · 768</option><option value={390}>Phone · 390</option></select>}
    </div>
    {!document.artboards.length&&<div className="cv-invitation"><div className="cv-invitation-heading"><span className="cv-eyebrow">A new beginning</span><h1>What kind of direction are you feeling?</h1><p>Choose a direction. AgentSam will build it here, with room for you to shape every detail.</p></div>
@@ -338,17 +339,17 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
     {directions.length===4&&<details className="cv-context-details"><summary>Add context or explore other directions</summary><textarea aria-label="Creative context" value={context} onChange={e=>setContext(e.target.value)} placeholder="A little about what you have in mind…" rows={2}/><div><ModelSelect compact/><button disabled={preparing||busy} onClick={()=>void prepareDirections()}><RefreshCw size={12}/> Prepare new directions</button></div></details>}
     {directionError&&directions.length===4&&<p role="alert" className="cv-error-text">{directionError}</p>}
    </div>}
-   {busy&&<div className="cv-run-status" role="status"><span className="cv-loading-mark"/><span>{events.length?eventLabel(events[events.length-1]):"Starting creation"}</span><button onClick={()=>void cancelRun()} aria-label="Cancel creation"><Square size={12}/></button></div>}
+   {busy&&<div className="cv-run-status" role="status"><span className="cv-loading-mark"/><span>{events.length?eventLabel(events[events.length-1]):"Starting creation"}</span><IconAction onClick={()=>void cancelRun()} label="Cancel creation"><Square size={12}/></IconAction></div>}
    {assistantMode==="mini"&&<div className="cv-mini-assistant">{assistant}</div>}
   </DesignWorkspaceFrame>
   {(error||conflict||recovery)&&<div className="cv-alert" role="alert"><div>{recovery?"An unsaved working copy is available from this browser.":conflict?"A newer revision was saved while you were editing. Your changes are still here.":error}</div>
    {recovery&&<><button onClick={()=>{change(recovery);setRecovery(null);}}>Restore changes</button><button onClick={()=>{setRecovery(null);try{sessionStorage.removeItem(recoveryKey);}catch{}}}>Dismiss</button></>}
    {conflict&&<><button onClick={()=>{const blob=new Blob([JSON.stringify(document,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob);const a=window.document.createElement("a");a.href=url;a.download="canvas-recovery.json";a.click();URL.revokeObjectURL(url);}}>Export my changes</button><button onClick={()=>void reload()}>Load saved revision</button></>}
-   {!conflict&&!recovery&&<button aria-label="Dismiss error" onClick={()=>setError("")}><X size={14}/></button>}
+   {!conflict&&!recovery&&<IconAction label="Dismiss error" onClick={()=>setError("")}><X size={14}/></IconAction>}
   </div>}
-  {assistantMode==="expanded"&&<div className="cv-expanded-assistant"><header><strong>AgentSam</strong><button onClick={()=>setAssistantMode("docked")} aria-label="Restore docked assistant"><Minimize2 size={16}/></button></header>{assistant}</div>}
+  {assistantMode==="expanded"&&<div className="cv-expanded-assistant"><header><strong>AgentSam</strong><IconAction onClick={()=>setAssistantMode("docked")} label="Restore docked assistant"><Minimize2 size={16}/></IconAction></header>{assistant}</div>}
   {showCms&&<CanvasCmsHandoff canvas={canvas} onClose={()=>setShowCms(false)}/>}
-  {showLibrary&&<div className="cv-modal-backdrop"><section className="cv-modal" role="dialog" aria-modal="true" aria-labelledby="canvas-library-title"><header><h2 id="canvas-library-title">Your Canvases</h2><button aria-label="Close saved Canvases" onClick={()=>setShowLibrary(false)}><X size={18}/></button></header><div className="cv-document-list">{library.map(item=><button key={item.id} onClick={()=>switchDocument(item.id)}><Frame size={16}/><span><strong>{item.name}</strong><small>Revision {item.revision}</small></span><ArrowRight size={14}/></button>)}{!library.length&&<p>No saved Canvases were returned.</p>}</div></section></div>}
+  {showLibrary&&<div className="cv-modal-backdrop"><section className="cv-modal" role="dialog" aria-modal="true" aria-labelledby="canvas-library-title"><header><h2 id="canvas-library-title">Your Canvases</h2><IconAction label="Close saved Canvases" onClick={()=>setShowLibrary(false)}><X size={18}/></IconAction></header><div className="cv-document-list">{library.map(item=><button key={item.id} onClick={()=>switchDocument(item.id)}><Frame size={16}/><span className="sr-only" aria-hidden="true">Open Canvas</span><span><strong>{item.name}</strong><small>Revision {item.revision}</small></span><ArrowRight size={14}/></button>)}{!library.length&&<p>No saved Canvases were returned.</p>}</div></section></div>}
  </div>;
 }
 function ExistingThemeCanvas({tab}:{tab:SideTab}) {

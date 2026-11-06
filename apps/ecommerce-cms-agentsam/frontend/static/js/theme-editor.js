@@ -498,8 +498,22 @@
   }
 
   function themeCatalog() {
-    // Section ownership is independent of the theme preview selector.
-    // Every supported implementation is reusable on every CMS page.
+    // Installed projects own a derived registry of reusable source sections.
+    // Do not offer portable/native templates that the project adapter cannot
+    // install: that was the cause of theme_section_template_not_found.
+    if (host) {
+      return Object.entries(window.SECTION_SCHEMAS?.[slug] || {})
+        .filter(function([key, definition]) {
+          return /^(source-|custom-)/.test(key) && definition?.capabilities?.insert === true;
+        })
+        .map(function([key, definition]) {
+          return { id: key, label: definition.label || humanize(key),
+            type: definition.sourceKind || 'content-section', templateKey: key,
+            source: definition.sourcePage ? 'From ' + humanize(definition.sourcePage) : 'Theme library',
+            preset: key, category: 'Theme sections', previewHtml: definition.previewHtml || '' };
+        });
+    }
+    // CMS pages use the published portable renderer catalog, not fixture labels.
     const portable = window.ThemePortableSections?.catalog() || [];
     const registry = window.SECTION_SCHEMAS?.[slug] || {};
     const native = Object.entries(registry)
@@ -1582,6 +1596,11 @@
     // Draw portable catalog previews using the SAME registered renderer and
     // CSS as the storefront. Never fabricate a card for a missing renderer.
     function catalogVisual(entry) {
+      // Installed theme sources carry a faithful isolated preview generated
+      // by the same renderer as the page, with the originating theme styles.
+      if (entry.previewHtml) return '<iframe class="te-catalog-visual" title="Preview of ' +
+        cmsEscapeAttr(entry.label || entry.id) + '" sandbox="" loading="lazy" tabindex="-1" srcdoc="' +
+        cmsEscapeAttr(entry.previewHtml) + '"></iframe>';
       const api = window.ThemePortableSections;
       const preset = entry.preset || entry.id;
       if (api && typeof api.defaults === 'function' && typeof api.render === 'function') {
@@ -1609,6 +1628,16 @@
         cmsEscapeHtml(entry.label) +
         '</span><span class="te-catalog-structure__rule"></span>' +
         '<span class="te-catalog-structure__tiles"><i></i><i></i><i></i></span></span>';
+    }
+
+    function closeSectionCatalog() {
+      const catalog = byId('te-section-menu');
+      if (catalog?.open && typeof catalog.close === 'function') catalog.close();
+      else if (catalog) {
+        catalog.removeAttribute('open');
+        catalog.hidden = true;
+      }
+      sectionInsertIndex = null;
     }
 
     let activeSectionTab = 'sections';
@@ -1653,11 +1682,11 @@
             '<button type="button" class="te-catalog-add" data-open-app-embeds>Open App Embeds</button></div>';
         preview.querySelector('[data-configure-section-app]')?.addEventListener('click', function() {
           const key = activeAppKey;
-          if (menu.open) menu.close();
+          if (menu.open) closeSectionCatalog();
           window.ThemeEmbedReview?.open?.(key);
         });
         preview.querySelector('[data-open-app-embeds]')?.addEventListener('click', function() {
-          if (menu.open) menu.close();
+          if (menu.open) closeSectionCatalog();
           document.querySelector('[data-drawer-mode="app-embeds"]')?.click();
         });
         list.querySelectorAll('[data-choose-section-app]').forEach(function(button) {
@@ -1713,7 +1742,7 @@
         : '<div class="te-catalog-preview-unavailable"><strong>No matching sections</strong><p>Try another search or generate a reusable section with AgentSam.</p></div>';
 
       list.querySelector('[data-start-section-generation]')?.addEventListener('click', function() {
-        if (menu.open) menu.close();
+        if (menu.open) closeSectionCatalog();
         window.dispatchEvent(new CustomEvent('theme-editor:generate-request', { detail: { kind: 'section' } }));
       });
       list.querySelectorAll('[data-choose-section]').forEach(function(button) {
@@ -1725,7 +1754,7 @@
       preview.querySelector('[data-add-selected-section]')?.addEventListener('click', function() {
         if (!selected) return;
         const insertAt = sectionInsertIndex;
-        if (menu.open) menu.close();
+        if (menu.open) closeSectionCatalog();
         insertSection(selected.templateKey, selected.preset || selected.id, insertAt);
       });
     }
@@ -1832,7 +1861,10 @@
       });
       menu.hidden = false;
       renderCatalog('');
-      if (typeof menu.showModal === 'function' && !menu.open) menu.showModal();
+      // Non-modal docked section library: keep the storefront canvas visible.
+      // The native <dialog> is opened non-modally so it never traps focus.
+      if (!menu.open) menu.show?.();
+      menu.setAttribute('open', '');
       requestAnimationFrame(function() { searchInput?.focus(); });
     }
     add?.addEventListener('click', function() { openCatalog(add, pageSections.length); });
@@ -1844,7 +1876,7 @@
       sectionInsertIndex = null;
     });
     byId('te-section-cancel')?.addEventListener('click', function() {
-      if (menu.open) menu.close();
+      if (menu.open) closeSectionCatalog();
       else { menu.hidden = true; sectionInsertIndex = null; }
     });
     menu.querySelectorAll('[data-section-tab]').forEach(function(button) {
@@ -4490,12 +4522,10 @@
   }
   ensureSideAssistant();
   byId('te-inspect-mode').addEventListener('click', function() {
-    if (!inspectorVisible) {
-      setInspectorVisible(true);
-      inspectionEnabled = true;
-    } else {
-      inspectionEnabled = !inspectionEnabled;
-    }
+    // Inspection is its own toggle, even when the settings inspector is hidden
+    // on narrow screens. Previously the first tap silently re-enabled it.
+    inspectionEnabled = !inspectionEnabled;
+    if (!inspectorVisible && inspectionEnabled) setInspectorVisible(true);
     const control = byId('te-inspect-mode');
     control.setAttribute('aria-pressed', String(inspectionEnabled));
     const help = inspectionEnabled ? 'Canvas inspection on — select sections in the preview' : 'Canvas inspection off — click to enable';

@@ -1,3 +1,4 @@
+import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Bot, Box, Database, FileCode, Film, Globe, Layers, Plug, Plus, ShieldCheck, Sparkles, SquareTerminal, Target, Upload, Users, Wrench, X } from 'lucide-react';
 import { filterComposerCatalog, projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
@@ -154,8 +155,8 @@ export function PluginPicker({ value, onChange, onAttach, contextLabel, children
 
   return <div className="agentsam-plugin-host" ref={root}>
     {children({
-      trigger:<button type="button" className="as-nav-button" aria-label="Add tools and plugins" title="Add tools and plugins" aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
-        onClick={()=>{setOpen(!open);setSection('root');setQuery('');setActive(0);setRevision(n=>n+1);}}><Plus size={19}/></button>,
+      trigger:<IconAction type="button" className="as-nav-button" label="Add tools and plugins" hint="Add tools and plugins" aria-haspopup="dialog" aria-expanded={open} aria-controls={id}
+        onClick={()=>{setOpen(!open);setSection('root');setQuery('');setActive(0);setRevision(n=>n+1);}}><Plus size={19}/></IconAction>,
       onKeyDown,
       onSelect:(position)=>{
         setCursor(position);
@@ -174,18 +175,18 @@ export function PluginPicker({ value, onChange, onAttach, contextLabel, children
         <button type="button" className="as-nav-button" aria-label="Close capabilities" onClick={()=>setOpen(false)}><X size={16}/></button>
       </div>
       {section==='root' ? <div className="agentsam-plugin-sections">
-        {onAttach&&<button type="button" className="agentsam-plugin-row" onClick={()=>{setOpen(false);onAttach();}}><Upload size={17}/><span><strong>Files</strong><small>Attach images and references</small></span></button>}
-        <button type="button" className="agentsam-plugin-row" disabled={!contextLabel} onClick={()=>{onChange(value+(value?'\n':'')+'Target: '+contextLabel);setOpen(false);}}><Target size={17}/><span><strong>Target</strong><small>{contextLabel||'Select an element in your workspace'}</small></span></button>
-        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('mention')}><Users size={17}/><span><strong>Mention</strong><small>Reference an available capability</small></span></button>
-        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('skills')}><Sparkles size={17}/><span><strong>Skills</strong><small>Your private instructions and knowledge</small></span></button>
-        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('apps')}><Plug size={17}/><span><strong>Apps</strong><small>Connected tools and creative workspaces</small></span></button>
+        {onAttach&&<button type="button" className="agentsam-plugin-row" onClick={()=>{setOpen(false);onAttach();}}><Upload size={17}/><span className="sr-only" aria-hidden="true">Files</span><span><strong>Files</strong><small>Attach images and references</small></span></button>}
+        <button type="button" className="agentsam-plugin-row" disabled={!contextLabel} onClick={()=>{onChange(value+(value?'\n':'')+'Target: '+contextLabel);setOpen(false);}}><Target size={17}/><span className="sr-only" aria-hidden="true">Target</span><span><strong>Target</strong><small>{contextLabel||'Select an element in your workspace'}</small></span></button>
+        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('mention')}><Users size={17}/><span className="sr-only" aria-hidden="true">Mention</span><span><strong>Mention</strong><small>Reference an available capability</small></span></button>
+        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('skills')}><Sparkles size={17}/><span className="sr-only" aria-hidden="true">Skills</span><span><strong>Skills</strong><small>Your private instructions and knowledge</small></span></button>
+        <button type="button" className="agentsam-plugin-row" onClick={()=>setSection('apps')}><Plug size={17}/><span className="sr-only" aria-hidden="true">Apps</span><span><strong>Apps</strong><small>Connected tools and creative workspaces</small></span></button>
       </div> : <>
       <input type="search" aria-label={'Search '+section} placeholder={'Search '+section+'…'} value={query} onChange={event=>{setQuery(event.target.value);setActive(0);}} className="agentsam-plugin-search"/>
       {section==='skills' ? <>
         {skillsLoading&&<p role="status" className="agentsam-plugin-notice">Loading your skills…</p>}
         {skillsError&&<p role="alert" className="agentsam-plugin-notice">{skillsError} <button type="button" onClick={()=>setRevision(n=>n+1)}>Retry</button></p>}
         {!skillsLoading&&!skillsError&&!skills.length&&<p className="agentsam-plugin-notice">No private skills yet. Create one in Settings.</p>}
-        {skills.filter(skill=>(skill.name+' '+skill.description+' '+skill.trigger).toLowerCase().includes(query.toLowerCase())).map(skill=><button type="button" key={skill.id} className="agentsam-plugin-row" onClick={()=>{onChange(value+(value?' ':'')+'[skill:'+skill.id+'] '+skill.trigger+' ');setOpen(false);}}><Sparkles size={17}/><span><strong>{skill.name}</strong><small>{skill.description||skill.trigger}</small></span></button>)}
+        {skills.filter(skill=>(skill.name+' '+skill.description+' '+skill.trigger).toLowerCase().includes(query.toLowerCase())).map(skill=><button type="button" key={skill.id} className="agentsam-plugin-row" onClick={()=>{onChange(value+(value?' ':'')+'[skill:'+skill.id+'] '+skill.trigger+' ');setOpen(false);}}><Sparkles size={17}/><span className="sr-only" aria-hidden="true">Skill</span><span><strong>{skill.name}</strong><small>{skill.description||skill.trigger}</small></span></button>)}
         <a className="agentsam-plugin-row" href="/settings/skills"><Wrench size={17}/><span><strong>Manage skills</strong></span></a>
       </> : <>
       {error&&<p role="status" className="agentsam-plugin-notice">Some connected services couldn't be loaded. Available tools are still shown.</p>}

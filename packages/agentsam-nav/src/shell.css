@@ -276,3 +276,19 @@
 .as-nav-sidenav-view-all { flex:0 0 auto; border-top:1px solid var(--nav-border); padding:7px 10px 2px; }
 .as-nav-sidenav-view-all button { display:block;width:100%;border:0;background:transparent;color:var(--nav-muted);padding:9px 12px;text-align:left;font:inherit;font-size:var(--nav-meta-size);border-radius:6px;cursor:pointer; }
 .as-nav-sidenav-view-all button:hover,.as-nav-sidenav-view-all button:focus-visible { background:var(--nav-selected);color:var(--nav-text);outline-offset:2px; }
+
+/* Activity icon help is visible on hover and keyboard focus. */
+.as-nav-activity-add,.as-nav-activity-trigger { position:relative; }
+.as-nav-icon-help {
+  position:absolute;z-index:20;top:calc(100% + 6px);right:0;
+  width:max-content;max-width:180px;padding:6px 9px;
+  color:var(--nav-text);background:var(--nav-surface, #22252d);
+  border:1px solid var(--nav-border);border-radius:6px;
+  font-size:11px;line-height:1.4;pointer-events:none;
+  opacity:0;visibility:hidden;transform:translateY(-3px);
+  transition:opacity .12s ease,transform .12s ease;
+}
+.as-nav-activity-add:is(:hover,:focus-visible) .as-nav-icon-help,
+.as-nav-activity-trigger:is(:hover,:focus-visible) .as-nav-icon-help {
+  opacity:1;visibility:visible;transform:translateY(0);
+}

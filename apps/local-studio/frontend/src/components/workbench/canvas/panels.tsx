@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { IconAction } from "@/components/ui/icon-action";
+import { useEffect, useState, type CSSProperties } from "react";
 import { ChevronDown, ChevronRight, Component, Frame, Image, Layers, MousePointer2, Plus, Type } from "lucide-react";
 import { copy, locateNode, safeUrl, type Artboard, type CanvasDocument, type CanvasNode } from "./model";
 
@@ -6,13 +7,13 @@ export function CanvasLayers({document,selected,boardId,onSelect,onAdd,onCompone
  const [collapsed,setCollapsed]=useState<Set<string>>(new Set());
  const toggle=(id:string)=>setCollapsed(prev=>{const next=new Set(prev);next.has(id)?next.delete(id):next.add(id);return next;});
  const nodes=(items:CanvasNode[],board:string,depth=0):React.ReactNode=>items.map(node=><div key={node.id}>
-   <div className={"cv-layer-row"+(node.id===selected?" selected":"")} style={{paddingLeft:8+depth*12}}>
+   <div className={"cv-layer-row"+(node.id===selected?" selected":"")} style={{"--cv-layer-indent":(8+depth*12)+"px"} as CSSProperties}>
      {node.children?.length?<button aria-label={(collapsed.has(node.id)?"Expand ":"Collapse ")+node.name} onClick={()=>toggle(node.id)}>{collapsed.has(node.id)?<ChevronRight size={12}/>:<ChevronDown size={12}/>}</button>:<span className="cv-layer-spacer"/>}
      <button className="cv-layer-select" aria-pressed={node.id===selected} onClick={()=>onSelect(node.id,board)}>{node.componentId?<Component size={12}/>:node.type==="text"?<Type size={12}/>:node.type==="image"?<Image size={12}/>:<Frame size={12}/>}<span>{node.name}</span></button>
    </div>
    {!collapsed.has(node.id)&&node.children&&nodes(node.children,board,depth+1)}
  </div>);
- return <div className="cv-panel-content"><header className="cv-panel-heading"><strong>Layers</strong><button onClick={onAdd} title="Add artboard" aria-label="Add artboard"><Plus size={14}/></button></header>
+ return <div className="cv-panel-content"><header className="cv-panel-heading"><strong>Layers</strong><IconAction onClick={onAdd} hint="Add artboard" label="Add artboard"><Plus size={14}/></IconAction></header>
   {document.artboards.map(board=><section key={board.id} className="cv-layer-board">
     <button className={"cv-layer-board-title"+(board.id===boardId?" active":"")} onClick={()=>onSelect("",board.id)}><Frame size={13}/><span>{board.name}</span></button>
     {nodes(board.nodes,board.id)}

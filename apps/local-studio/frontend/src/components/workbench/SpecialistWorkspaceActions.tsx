@@ -1,3 +1,4 @@
+import { IconAction } from "@/components/ui/icon-action";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Save, Undo2, Redo2 } from "lucide-react";
 import { DesignWorkspaceRegistry, createDesignWorkspaceFrameAdapter } from "@inneranimalmedia/agentsam-contracts";
@@ -38,8 +39,8 @@ export function SpecialistWorkspaceActions({kind,frame,resourceId}:{
   if(!resourceId)return null;
   return <div className="flex min-w-0 items-center gap-1" aria-label="Document actions">
     {([["undo",Undo2,"Undo"],["redo",Redo2,"Redo"],["save",Save,"Save"]] as const).filter(([action])=>capabilities.includes(action)).map(([action,Icon,label])=>
-      <button key={action} type="button" title={label} aria-label={label} disabled={busy} onClick={()=>void execute(action)}
-        className="rounded border border-border p-1.5 text-muted-foreground hover:bg-muted disabled:opacity-40"><Icon size={14}/></button>)}
+      <IconAction key={action} type="button" hint={label} label={label} disabled={busy} onClick={()=>void execute(action)}
+        className="rounded border border-border p-1.5 text-muted-foreground hover:bg-muted disabled:opacity-40"><Icon size={14}/></IconAction>)}
     {status&&<span className="max-w-64 truncate px-2 text-[11px] text-muted-foreground" role="status" title={status}>{status}</span>}
   </div>;
 }

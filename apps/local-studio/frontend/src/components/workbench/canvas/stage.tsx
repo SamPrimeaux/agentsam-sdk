@@ -93,13 +93,45 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
   function renderNode(original:CanvasNode,board:Artboard):React.ReactNode {
     const node=nodeAtWidth(original,preview&&width?width:undefined);
     const moving=drag?.id===node.id&&position;
-    const style:CSSProperties={
-      ...safeStyle(node.style),position:"absolute",left:node.x+(moving&&drag.mode==="move"?moving.x:0),
-      top:node.y+(moving&&drag.mode==="move"?moving.y:0),
-      width:Math.max(8,node.width+(moving&&drag.mode==="resize"?moving.x:0)),
-      height:Math.max(8,node.height+(moving&&drag.mode==="resize"?moving.y:0)),
-      boxSizing:"border-box",
-    };
+    const authored=safeStyle(node.style);
+    const length=(value:unknown,fallback:string)=>typeof value==="number"?value+"px":String(value||fallback);
+    // Canvas artwork is intentionally dynamic; CSS custom properties keep
+    // authored values separate from application layout and design tokens.
+    const style={
+      "--cv-node-left":(node.x+(moving&&drag.mode==="move"?moving.x:0))+"px",
+      "--cv-node-top":(node.y+(moving&&drag.mode==="move"?moving.y:0))+"px",
+      "--cv-node-width":Math.max(8,node.width+(moving&&drag.mode==="resize"?moving.x:0))+"px",
+      "--cv-node-height":Math.max(8,node.height+(moving&&drag.mode==="resize"?moving.y:0))+"px",
+      "--cv-node-color":String(authored.color||"inherit"),
+      "--cv-node-background":String(authored.backgroundColor||authored.background||"transparent"),
+      "--cv-node-border-color":String(authored.borderColor||"transparent"),
+      "--cv-node-border-width":length(authored.borderWidth,"0px"),
+      "--cv-node-border-style":String(authored.borderStyle||"solid"),
+      "--cv-node-border-radius":length(authored.borderRadius,"0px"),
+      "--cv-node-font-family":String(authored.fontFamily||"inherit"),
+      "--cv-node-font-size":length(authored.fontSize,"inherit"),
+      "--cv-node-font-weight":String(authored.fontWeight||"inherit"),
+      "--cv-node-font-style":String(authored.fontStyle||"inherit"),
+      "--cv-node-letter-spacing":length(authored.letterSpacing,"normal"),
+      "--cv-node-line-height":String(authored.lineHeight||"1.35"),
+      "--cv-node-text-align":String(authored.textAlign||"start"),
+      "--cv-node-text-transform":String(authored.textTransform||"none"),
+      "--cv-node-text-decoration":String(authored.textDecoration||"none"),
+      "--cv-node-opacity":String(authored.opacity??1),
+      "--cv-node-padding":length(authored.padding,"0px"),
+      "--cv-node-padding-top":length(authored.paddingTop,"var(--cv-node-padding)"),
+      "--cv-node-padding-right":length(authored.paddingRight,"var(--cv-node-padding)"),
+      "--cv-node-padding-bottom":length(authored.paddingBottom,"var(--cv-node-padding)"),
+      "--cv-node-padding-left":length(authored.paddingLeft,"var(--cv-node-padding)"),
+      "--cv-node-display":String(authored.display||"block"),
+      "--cv-node-align-items":String(authored.alignItems||"stretch"),
+      "--cv-node-justify-content":String(authored.justifyContent||"flex-start"),
+      "--cv-node-gap":length(authored.gap,"0px"),
+      "--cv-node-shadow":String(authored.boxShadow||"none"),
+      "--cv-node-object-fit":String(authored.objectFit||"cover"),
+      "--cv-node-overflow":String(authored.overflow||"visible"),
+      "--cv-node-white-space":String(authored.whiteSpace||"normal"),
+    } as CSSProperties;
     if(hidden.has(node.id))return null;
     const common={
       "data-canvas-node":node.id,
@@ -108,16 +140,22 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
       style,
       onPointerDown:(event:ReactPointerEvent<HTMLDivElement>)=>startNode(event,node,board),
     };
-    return <div key={node.id} {...common} onClick={event=>{event.stopPropagation();if(preview)void action(node);else onSelect(node.id,board.id);}}>
-      {node.type==="image" ? <CanvasImage src={safeUrl(node.src,true)} alt={node.text||node.name} style={safeStyle(node.style)}/> :
-       node.type==="input" ? <input className="cv-native-input" aria-label={node.name} placeholder={node.text} readOnly={!preview} onChange={e=>{previewValues.current[node.id]=e.target.value;}} style={{font:"inherit",color:"inherit",background:"transparent"}}/> :
-       node.type==="button" ? <button type="button" className="cv-native-button" tabIndex={preview?0:-1} style={{font:"inherit",color:"inherit",textAlign:style.textAlign}}>{node.text||node.name}</button> :
+    return <div key={node.id} {...common} role={node.type==="input"?"group":"button"} tabIndex={node.type==="input"?-1:0}
+      aria-label={node.name}
+      onKeyDown={event=>{if(event.target!==event.currentTarget)return;if(event.key==="Enter"||event.key===" "){event.preventDefault();if(preview)void action(node);else onSelect(node.id,board.id);}}}
+      onClick={event=>{event.stopPropagation();if(preview)void action(node);else onSelect(node.id,board.id);}}>
+      {node.type==="image" ? <CanvasImage src={safeUrl(node.src,true)} alt={node.text||node.name}/> :
+       node.type==="input" ? <input className="cv-native-input" aria-label={node.name} placeholder={node.text} readOnly={!preview} onChange={e=>{previewValues.current[node.id]=e.target.value;}}/> :
+       node.type==="button" ? <button type="button" className="cv-native-button" tabIndex={preview?0:-1}>{node.text||node.name}</button> :
        node.type==="link" ? <span className="cv-link">{node.text||node.name}</span> :
        node.text ? <span className="cv-text">{node.text}</span> : null}
       {node.children?.map(child=>renderNode(child,board))}
       {!preview&&selected===node.id&&<>
-        <span className="cv-selection-label" style={{fontSize:11/zoom,padding:3/zoom,top:-25/zoom}}>{node.name}</span>
-        <div className="cv-resize-handle" role="button" aria-label="Resize selected element" style={{width:9/zoom,height:9/zoom,right:-4/zoom,bottom:-4/zoom}} onPointerDown={event=>startNode(event,node,board,"resize")}/>
+        <span className="cv-selection-label" style={{"--cv-label-font":11/zoom+"px","--cv-label-padding":3/zoom+"px","--cv-label-top":-25/zoom+"px"} as CSSProperties}>{node.name}</span>
+        <div className="cv-resize-handle" role="button" tabIndex={0} aria-label="Resize selected element"
+          style={{"--cv-handle-size":9/zoom+"px","--cv-handle-inset":-4/zoom+"px"} as CSSProperties}
+          onKeyDown={event=>{const delta=event.shiftKey?10:1;if(event.key==="ArrowRight"||event.key==="ArrowDown"){event.preventDefault();onChange(node.id,{width:node.width+delta,height:node.height+delta});}else if(event.key==="ArrowLeft"||event.key==="ArrowUp"){event.preventDefault();onChange(node.id,{width:Math.max(8,node.width-delta),height:Math.max(8,node.height-delta)});}}}
+          onPointerDown={event=>startNode(event,node,board,"resize")}/>
       </>}
     </div>;
   }
@@ -130,11 +168,11 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
         panGesture.current={startX:event.clientX,startY:event.clientY,...pan};
       }
     }} onPointerMove={move} onPointerUp={end} onPointerCancel={()=>{setDrag(null);setPosition(null);panGesture.current=null;}}>
-    <div className="cv-world" style={{transform:"translate("+pan.x+"px,"+pan.y+"px) scale("+zoom+")"}}>
+    <div className="cv-world" style={{"--cv-world-transform":"translate("+pan.x+"px,"+pan.y+"px) scale("+zoom+")"} as CSSProperties}>
       {boards.map(board=><section key={board.id} className="cv-artboard" data-artboard={board.id}
-        aria-label={board.name} style={{left:board.x,top:board.y,width:preview&&width?width:board.width,height:board.height,background:board.background||"#fff"}}
+        aria-label={board.name} style={{"--cv-board-left":board.x+"px","--cv-board-top":board.y+"px","--cv-board-width":(preview&&width?width:board.width)+"px","--cv-board-height":board.height+"px","--cv-board-background":board.background||"#fff"} as CSSProperties}
         onPointerDown={event=>{if(tool==="pan")return;event.stopPropagation();if(!preview)onSelect("",board.id);}}>
-        <button type="button" className={"cv-artboard-name"+(board.id===boardId?" active":"")} style={{fontSize:12/zoom,top:-30/zoom}}
+        <button type="button" className={"cv-artboard-name"+(board.id===boardId?" active":"")} style={{"--cv-board-label-font":12/zoom+"px","--cv-board-label-top":-30/zoom+"px"} as CSSProperties}
           onClick={event=>{event.stopPropagation();onSelect("",board.id);}}>{board.name}<span>{preview&&width?width:board.width} × {board.height}</span></button>
         {board.nodes.map(node=>renderNode(node,board))}
       </section>)}
@@ -145,9 +183,9 @@ export function CanvasStage({document,selected,boardId,preview,width,zoom,onZoom
     {!preview&&selectedNode&&<div className="cv-coordinate-hint">{Math.round(selectedNode.node.width)} × {Math.round(selectedNode.node.height)} · {selectedNode.node.type}</div>}
   </div>;
 }
-function CanvasImage({src,alt,style}:{src?:string;alt:string;style:CSSProperties}) {
+function CanvasImage({src,alt}:{src?:string;alt:string}) {
   const [failed,setFailed]=useState(false);
   useEffect(()=>setFailed(false),[src]);
-  return src&&!failed?<img src={src} alt={alt} draggable={false} onError={()=>setFailed(true)} style={{width:"100%",height:"100%",objectFit:style.objectFit||"cover",borderRadius:"inherit"}}/>:
+  return src&&!failed?<img className="cv-node-image" src={src} alt={alt} draggable={false} onError={()=>setFailed(true)}/>:
     <span className="cv-missing-image"><ImageOff size={20}/><span>{src?"Image unavailable":"Choose an image"}</span></span>;
 }

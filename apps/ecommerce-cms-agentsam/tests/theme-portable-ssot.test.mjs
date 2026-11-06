@@ -139,3 +139,45 @@ test('no extra copied theme registry is written when a section is reused',()=>wi
   assert.equal(store.current().sectionTemplates,undefined);
   assert.equal(store.current().pages[0].sections.length,2);
 }));
+
+test('installed theme registry renders a faithful mini-preview and inserts only real source keys',()=>withDom(async()=>{
+  const home=page('<main><section class="hero"><h1>Our studio</h1><a href="/about">About us</a></section></main>','home','Home');
+  const project=demoProject([home]);
+  const store=memoryStore(project);
+  const adapter=runtime.createThemeProjectAdapter(project,store);
+  const registry=await adapter.getRegistry();
+  const sourceKey=runtime.sourceSectionTemplateKey('home',home.sections[0].key);
+  const offered=registry.pages.home.sections[sourceKey];
+  assert.equal(offered.capabilities.insert,true);
+  assert.match(offered.previewHtml,/Our studio/);
+  assert.match(offered.previewHtml,/\.hero\{color:rebeccapurple\}/);
+  const installed=await adapter.addSection('home',sourceKey,1);
+  const updated=await adapter.getPage('home');
+  assert.equal(updated.sections[1].key,installed.section_key);
+  assert.equal(updated.sections[1].sourceTemplateKey,sourceKey);
+  assert.match((await adapter.resolvePreview('home')).html,/About us/);
+  await assert.rejects(()=>adapter.addSection('home','portable',2),/theme_section_template_not_found/);
+}));
+
+test('actual theme preview applies saved button colors and typography while rejecting unsafe style values',()=>withDom(async()=>{
+  const home=page('<main><section><button type="button">About us</button><h1>Our studio</h1></section></main>','home','Home');
+  const section=home.sections[0];
+  const button=section.schema.fields.find(f=>/action|button/i.test(f.key));
+  const heading=section.schema.fields.find(f=>/heading/i.test(f.key));
+  assert.ok(button);
+  assert.ok(heading);
+  section.content.__editor.fieldStyles={
+    [button.key]:{backgroundColor:'#1a686c',color:'#ffffff',borderRadius:9,borderWidth:2},
+    [heading.key]:{fontSize:42,color:'url(javascript:bad)',textTransform:'uppercase'},
+  };
+  const html=runtime.renderThemePage(home);
+  const rendered=new DOMParser().parseFromString(html,'text/html');
+  const b=rendered.querySelector('button');
+  const h=rendered.querySelector('h1');
+  assert.equal(b.style.backgroundColor,'rgb(26, 104, 108)');
+  assert.equal(b.style.borderRadius,'9px');
+  assert.equal(b.style.color,'rgb(255, 255, 255)');
+  assert.equal(h.style.fontSize,'42px');
+  assert.equal(h.style.textTransform,'uppercase');
+  assert.equal(h.style.color,'');
+}));

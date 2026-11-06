@@ -1,3 +1,4 @@
+import { IconAction } from "@/components/ui/icon-action";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import DOMPurify from 'dompurify';
@@ -249,16 +250,16 @@ export function ArtifactDocumentEditor({
         <small>{editable ? (saving ? 'Saving…' : dirty ? 'Unsaved changes' : project.kind === 'filesystem' ? 'Saved to file' : 'Saved locally') : 'Preview'}</small>
       </div>
       <nav aria-label="Document actions">
-        {editable ? <button type="button" aria-label="Save document" title="Save document (⌘S)" disabled={!dirty || saving}
-          onClick={() => void save()}><Save size={17}/></button> : onEditCopy ? <button type="button"
-          aria-label="Edit a document copy" title="Edit a document copy"
-          onClick={() => void onEditCopy(asMarkup(file),file.title || file.path)}><Pencil size={17}/></button> : null}
-        <button type="button" aria-label="Download document" title="Download document" onClick={download}><Download size={17}/></button>
+        {editable ? <IconAction type="button" label="Save document" hint="Save document (⌘S)" disabled={!dirty || saving}
+          onClick={() => void save()}><Save size={17}/></IconAction> : onEditCopy ? <IconAction type="button"
+          label="Edit a document copy" hint="Edit a document copy"
+          onClick={() => void onEditCopy(asMarkup(file),file.title || file.path)}><Pencil size={17}/></IconAction> : null}
+        <IconAction type="button" label="Download document" hint="Download document" onClick={download}><Download size={17}/></IconAction>
         <button type="button" aria-label={full ? 'Restore document panel':'Expand document'} title={full ? 'Restore document panel':'Expand document'}
           onClick={()=>setFull(current=>!current)}>{full?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</button>
-        {onClose ? <button type="button" aria-label="Close document" onClick={() => {
+        {onClose ? <IconAction type="button" label="Close document" onClick={() => {
           if (dirty) setConfirmClose(true); else onClose();
-        }}><X size={17}/></button> : null}
+        }}><X size={17}/></IconAction> : null}
       </nav>
     </header>
     {saveError ? <p className="work-artifact-document__error" role="alert">{saveError}</p> : null}
@@ -300,7 +301,7 @@ export function ArtifactDocumentEditor({
       </div>
     </DialogContent></Dialog>
     {commentsOpen && comments.length ? <aside className="work-artifact-document__comments" aria-label="Document comments">
-      <div><strong>Comments · {comments.length}</strong><button type="button" onClick={()=>setCommentsOpen(false)} aria-label="Close comments"><X size={15}/></button></div>
+      <div><strong>Comments · {comments.length}</strong><IconAction type="button" onClick={()=>setCommentsOpen(false)} label="Close comments"><X size={15}/></IconAction></div>
       {comments.map(item=><blockquote key={item.id}><span>“{item.excerpt.slice(0,120)}”</span><p>{item.comment}</p></blockquote>)}
     </aside>:null}
     {selection && editable ? createPortal(<DocumentSelectionToolbar anchor={selection}
