@@ -71,7 +71,7 @@ export function themeSurfacesPlugin() {
       inventory.assets.set('theme-editor/' + name, join(editor, source));
     }
     const themeEditorSource = resolve(repoRoot, 'apps/ecommerce-cms-agentsam/frontend/theme-editor');
-    for (const name of ['project.mjs', 'bridge.mjs', 'mount.mjs', 'starter-project.mjs', 'starter-products.mjs', 'starter-chrome.mjs', 'system-template-registry.mjs']) {
+    for (const name of ['project.mjs', 'bridge.mjs', 'mount.mjs', 'starter-project.mjs', 'starter-products.mjs', 'starter-chrome.mjs', 'system-template-registry.mjs', 'stock-templates.mjs']) {
       inventory.assets.set('theme-editor/' + name, join(themeEditorSource, name));
     }
     // The original merchant-facing Online Store is packaged alongside Theme Studio.

@@ -105,7 +105,7 @@ test('required page inheritance preserves authored pages and saves through the s
   const inherited=inheritDefaultTemplates(original);
   assert.deepEqual(inherited.project.pages[0],home);
   assert.deepEqual(original.pages,[home]);
-  assert.equal(inherited.project.pages.length,15);
+  assert.equal(inherited.project.pages.length,18);
   for (const slug of ['home','product','collection','page','blog','article','search','cart',
     'checkout','account','gift-card','password','404']) {
     const page = inherited.project.pages.find(p => p.slug === slug);
