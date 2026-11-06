@@ -33,8 +33,19 @@ function normalizeTheme(p) {
   const verified = Boolean(p.release?.status === 'published' &&
     SHA.test(String(p.release.sha256 || '')) &&
     p.release.storageKey === 'releases/' + slug + '/' + version + '/' + p.release.sha256 + '.zip');
-  const image = typeof p.cardImage === 'string' &&
-    /^\/previews\/[a-z0-9_-]+\.(?:webp|png|jpg|svg)$/.test(p.cardImage) ? STORE_ORIGIN + p.cardImage : null;
+  // Theme Store delivers released cover media under /site-media/<slug>/<hash>.
+  // Keep legacy /previews/ support, but never accept arbitrary hosts or paths.
+  let image = null;
+  if (typeof p.cardImage === 'string') {
+    try {
+      const cover = new URL(p.cardImage, STORE_ORIGIN);
+      const path = cover.pathname;
+      const legacy = /^\/previews\/[a-z0-9_-]+\.(?:webp|png|jpg|svg)$/.test(path);
+      const released = new RegExp('^/site-media/' + slug + '/[a-f0-9]{16,64}\\.(?:webp|png|jpg|svg)$').test(path);
+      if (cover.origin === STORE_ORIGIN && !cover.username && !cover.password &&
+          !cover.search && !cover.hash && (legacy || released)) image = cover.href;
+    } catch { /* Invalid cover metadata is not an image. */ }
+  }
   return {
     slug, version,
     sku: 'iam.theme.' + slug,

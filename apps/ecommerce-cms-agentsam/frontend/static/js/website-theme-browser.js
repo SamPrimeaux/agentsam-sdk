@@ -157,11 +157,11 @@
   const render = () => {
     const query = search?.value.trim().toLowerCase() || '';
     const current = filter?.value || 'all';
-    const visible = products.filter(p => p.can_install &&
+    const visible = products.filter(p =>
       (current === 'all' || p.category === current) &&
       (!query || [p.name, p.description, p.category, ...(p.pages || [])].join(' ').toLowerCase().includes(query)))
-      .sort((a,b) => Number(b.slug === selectedTheme?.slug) - Number(a.slug === selectedTheme?.slug)).slice(0,5);
-    if (count) count.textContent = '';
+      .sort((a,b) => Number(b.slug === selectedTheme?.slug) - Number(a.slug === selectedTheme?.slug));
+    if (count) count.textContent = visible.length + ' of ' + products.length + ' themes';
     root.replaceChildren();
     if (!visible.length) {
       root.append(node('p', 'theme-marketplace-empty', 'Choose a theme from the Theme Store.'));
@@ -175,7 +175,8 @@
         item.style.outlineOffset = '3px';
       }
       const visual = node('div', 'theme-marketplace-visual');
-      const cover = trusted(theme.thumbnail_url, '/previews/');
+      const cover = trusted(theme.thumbnail_url, '/site-media/' + theme.slug + '/') ||
+        trusted(theme.thumbnail_url, '/previews/');
       if (cover) {
         const image = node('img', 'theme-marketplace-thumb');
         image.src = cover;
@@ -195,12 +196,19 @@
       const identity = node('div', 'theme-marketplace-identity');
       identity.append(node('h3', '', theme.name),
         node('span', 'theme-marketplace-developer', 'by ' + (theme.developer || theme.author || 'InnerAnimalMedia')));
-      const install = node('button','btn ghost small theme-marketplace-add','Add');
-      install.type='button';
-      install.dataset.installTheme=theme.slug;
-      install.setAttribute('aria-label', 'Add ' + theme.name);
-      install.addEventListener('click',()=>void createPrivateDraft(theme,install,item));
-      body.append(identity,install);
+      if (theme.can_install) {
+        const install = node('button','btn ghost small theme-marketplace-add','Add');
+        install.type='button';
+        install.dataset.installTheme=theme.slug;
+        install.setAttribute('aria-label', 'Add ' + theme.name);
+        install.addEventListener('click',()=>void createPrivateDraft(theme,install,item));
+        body.append(identity,install);
+      } else {
+        const detail = trusted(theme.detail_url, '/themes/' + theme.slug + '/');
+        const view = detail && link('View theme', detail);
+        if (view) body.append(identity,view);
+        else body.append(identity);
+      }
       item.append(visual,body);
       root.append(item);
     }
