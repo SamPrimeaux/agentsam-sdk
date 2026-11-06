@@ -7,6 +7,8 @@ import {
   LINE_HEIGHT_RANGE,
   MIN_CONTRAST_RATIO,
   TERMINAL_PROFILES,
+  TERMINAL_FONTS,
+  type TerminalFontId,
   normalizeHex,
   resolveSessionAppearance,
   useSessionAppearance,
@@ -87,6 +89,8 @@ function AppearanceForm({ sessionId, onDone }: { sessionId: string; onDone: () =
   const session = useTerminalSessionStore((s) => s.sessions.find((x) => x.id === sessionId));
   const appearance = useSessionAppearance(sessionId);
   const defaultProfileId = useTerminalAppearanceStore((s) => s.defaultProfileId);
+  const defaultFontId = useTerminalAppearanceStore((s) => s.defaultFontId);
+  const setDefaultFont = useTerminalAppearanceStore((s) => s.setDefaultFont);
   const patch = useTerminalAppearanceStore((s) => s.patchSession);
   const setProfile = useTerminalAppearanceStore((s) => s.setProfile);
   const setDefaultProfile = useTerminalAppearanceStore((s) => s.setDefaultProfile);
@@ -154,6 +158,22 @@ function AppearanceForm({ sessionId, onDone }: { sessionId: string; onDone: () =
         {lowContrast ? ` — below ${MIN_CONTRAST_RATIO}:1; the terminal raises low-contrast cells automatically.` : " — meets WCAG AA."}
       </p>
 
+      <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+        Font
+        <select
+          aria-label="Terminal font"
+          className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
+          value={appearance.fontId}
+          onChange={(e) => patch(sessionId, { fontId: e.target.value as TerminalFontId })}
+        >
+          {TERMINAL_FONTS.map((font) => (
+            <option key={font.id} value={font.id}>
+              {font.label}{font.id === defaultFontId ? " (default)" : ""}
+            </option>
+          ))}
+        </select>
+        <span className="text-[11px]">Optional fonts use your device's installed version or fall back to System Mono.</span>
+      </label>
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           Font size · {appearance.fontSize}px
@@ -189,6 +209,9 @@ function AppearanceForm({ sessionId, onDone }: { sessionId: string; onDone: () =
             onClick={() => setDefaultProfile(resolveSessionAppearance(sessionId).profileId)}
           >
             Use profile as default
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setDefaultFont(appearance.fontId)}>
+            Use font as default
           </Button>
         </div>
         <Button type="button" size="sm" onClick={onDone}>Done</Button>
