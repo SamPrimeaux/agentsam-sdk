@@ -93,6 +93,7 @@ test('checkout with no cart shows the empty state and sends nothing', async () =
   assert.equal(document.querySelector('[data-cart-empty]').hidden, false);
   assert.equal(document.querySelector('form[data-adapter="checkout.session"] [type="submit"]').disabled, true);
   assert.equal(document.querySelector('[data-cart-subtotal]').textContent, '—');
+  assert.equal(document.querySelector('[data-cart-totals]').hidden, true, 'no totals for an empty cart');
   assert.equal(calls.length, 0);
 });
 
@@ -101,6 +102,7 @@ test('checkout renders the cart and posts the real session payload', async () =>
   const { dom, document, calls } = open(pageBySlug('checkout'), { cart, fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ url: 'https://pay.test/s/1' }) }) });
   assert.equal(document.querySelectorAll('[data-cart-lines] li').length, 1);
   assert.match(document.querySelector('[data-cart-subtotal]').textContent, /30/);
+  assert.equal(document.querySelector('[data-cart-totals]').hidden, false);
   document.querySelector('input[name="email"]').value = 'buyer@test.dev';
   submit(dom, document.querySelector('form[data-adapter="checkout.session"]'));
   await tick(); await tick();

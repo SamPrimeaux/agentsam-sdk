@@ -144,7 +144,7 @@ const checkout = (() => {
           <ul class="stk-lines" data-cart-lines></ul>
           ${text(c, 'empty', 'p', ' class="stk-empty" data-cart-empty')}
           ${text(c, 'continue_label', 'a', ` class="stk-alt" data-cart-empty-link href="${esc(c.continue_href)}"`)}
-          <dl class="stk-totals">
+          <dl class="stk-totals" data-cart-totals>
             <div><dt data-theme-project-field="subtotal_label">${esc(c.subtotal_label)}</dt><dd data-cart-subtotal>—</dd></div>
             <div data-discount-row hidden><dt data-theme-project-field="discount_row_label">${esc(c.discount_row_label)}</dt><dd data-cart-discount></dd></div>
           </dl>
@@ -273,7 +273,7 @@ export const STOCK_TEMPLATE_STYLES = `
 .stk-promo{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
 .stk-lines,.stk-orders{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:12px}
 .stk-lines li,.stk-orders li{display:flex;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid color-mix(in srgb,var(--iam-ink) 12%,transparent)}
-.stk-totals{margin:0;display:grid;gap:8px}
+.stk-totals{margin:20px 0 0;padding-top:16px;border-top:1px solid color-mix(in srgb,var(--iam-ink) 12%,transparent);display:grid;gap:8px}
 .stk-totals div{display:flex;justify-content:space-between;gap:16px}
 .stk-totals dt,.stk-totals dd{margin:0}
 @media(max-width:800px){.stk-checkout__grid{grid-template-columns:1fr}}
@@ -322,6 +322,7 @@ function adapterRuntime(ADAPTERS) {
       const has = items.length > 0, discount = read(DISCOUNT_KEY, null), row = $('[data-discount-row]', page);
       $('[data-cart-empty]', page).hidden = has; $('[data-cart-empty-link]', page).hidden = has;
       $('[data-cart-subtotal]', page).textContent = has ? money(subtotal) : '—';
+      $('[data-cart-totals]', page).hidden = !has;
       row.hidden = !(has && discount && discount.discount_cents > 0);
       if (!row.hidden) $('[data-cart-discount]', page).textContent = '−' + money(discount.discount_cents);
       $('form[data-adapter="checkout.session"] [type="submit"]', page).disabled = !has;
