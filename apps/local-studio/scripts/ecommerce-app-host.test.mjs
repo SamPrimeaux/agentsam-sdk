@@ -67,6 +67,8 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
   assert.equal(resolveEcommerceAssetPath('/admin/page-edit?slug=about'), '/ecommerce-cms-agentsam/admin/page-edit.html?slug=about');
   assert.equal(resolveEcommerceAssetPath('/admin/theme-editor?showcase=plain-jane&slug=journal-home'),
     '/ecommerce-cms-agentsam/admin/theme-editor.html?showcase=plain-jane&slug=journal-home');
+  assert.equal(resolveEcommerceAssetPath('/admin/products/create'), '/ecommerce-cms-agentsam/admin/_spa/index.html?__route=%2Fproducts%2Fcreate');
+  assert.equal(resolveEcommerceAssetPath('/admin/products/create?site_id=site-a'), '/ecommerce-cms-agentsam/admin/_spa/index.html?__route=%2Fproducts%2Fcreate%3Fsite_id%3Dsite-a');
   assert.equal(resolveEcommerceAssetPath('/admin/products/create/blueprint_12'), '/ecommerce-cms-agentsam/admin/_spa/index.html?__route=%2Fproducts%2Fcreate%2Fblueprint_12');
   assert.equal(resolveEcommerceAssetPath('//outside.test/admin/products'), null);
   assert.equal(resolveEcommerceAdminPath('/admin/products?view=collections'), '/admin/products?view=collections');
@@ -114,4 +116,49 @@ test('Studio launches only supported product routes; no duplicate AgentSam or un
     '/admin/login', '/admin/pos', '/admin/store?target=https://outside.test',
     '//outside.test/admin/store', '/admin/../../outside',
   ]) assert.equal(resolveEcommerceAdminPath(href), null, 'excluded route admitted: ' + href);
+});
+
+
+test('desktop host validates product destinations before navigation and leaves the current screen intact on rejection', async () => {
+  const result = await build({
+    entryPoints: [path.join(studio, 'frontend/src/lib/apps/desktop-console-host.ts')],
+    bundle: true, platform: 'node', format: 'esm', target: 'node22', write: false,
+    plugins: [{
+      name: 'isolated-native-host-contract',
+      setup(ctx) {
+        ctx.onResolve({ filter: /^@inneranimalmedia\/ecommerce-cms-agentsam\/backend\/routes$/ }, () => ({
+          path: path.join(repo, 'apps/ecommerce-cms-agentsam/backend/lib/route-manifest.js'),
+        }));
+        ctx.onResolve({ filter: /^@\/lib\/desktop\/tauri$/ }, () => ({ path: 'tauri', namespace: 'host-mock' }));
+        ctx.onResolve({ filter: /^sonner$/ }, () => ({ path: 'toast', namespace: 'host-mock' }));
+        ctx.onLoad({ filter: /.*/, namespace: 'host-mock' }, args => ({
+          contents: args.path === 'tauri'
+            ? 'export const isPackagedDesktop = () => true; export const invokeStudioService = async () => { throw Error("not used"); };'
+            : 'export const toast = { error(message) { globalThis.__agentsamTestRouteErrors.push(message); } };',
+          loader: 'js',
+        }));
+      },
+    }],
+  });
+  globalThis.__agentsamTestRouteErrors = [];
+  try {
+    const source = Buffer.from(result.outputFiles[0].text).toString('base64');
+    const { createDesktopConsoleHost, consoleDestination } = await import('data:text/javascript;base64,' + source);
+    const destinations = [];
+    const host = createDesktopConsoleHost(destination => destinations.push(destination));
+    const valid = '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent('/admin/products/create');
+
+    assert.equal(consoleDestination('/admin/products/create'), valid);
+    assert.equal(consoleDestination('/admin/products/create?resume=unknown_draft'), null);
+    host.navigate('/admin/products/create');
+    host.navigate(valid);
+    assert.deepEqual(destinations, [valid, valid]);
+
+    host.navigate('/admin/products/create?resume=unknown_draft');
+    host.navigate('/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent('/admin/products/create?resume=unknown_draft'));
+    assert.deepEqual(destinations, [valid, valid], 'invalid routes must never displace the current workspace');
+    assert.equal(globalThis.__agentsamTestRouteErrors.length, 2);
+  } finally {
+    delete globalThis.__agentsamTestRouteErrors;
+  }
 });

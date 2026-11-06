@@ -7,8 +7,43 @@ import { RedirectToSignIn } from '@/lib/auth/gates';
 import { resolveEcommerceAdminPath, resolveEcommerceAssetPath } from '@/lib/apps/ecommerce-routing';
 import { themeStoreTrySelection } from '@/lib/apps/theme-store-selection';
 import { CmsThemeCodeEditor } from '@/components/themes/CmsThemeCodeEditor';
+import { runCommand } from '@/lib/commands/native-commands';
+import { AlertCircle, ArrowLeft, Package, RefreshCw } from 'lucide-react';
 
 type Search = { site?: string; site_id?: string; project?: string; page?: string; preview?: 'local'; theme_sku?: string; theme_version?: string; action?: 'try' };
+
+function UnavailableProductRoute({ requested }: { requested?: string }) {
+  const productRequested = requested?.startsWith('/admin/products');
+  const openProducts = () => {
+    const route = '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent('/admin/products');
+    if (isPackagedDesktop()) window.location.hash = '#' + route;
+    else window.location.assign(route);
+  };
+  return (
+    <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto px-5 py-10" role="alert" data-product-route-unavailable>
+      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-sm">
+        <AlertCircle aria-hidden="true" className="mb-4 size-6 text-muted-foreground" />
+        <h1 className="text-lg font-semibold text-foreground">
+          {productRequested ? "Product Studio couldn't open" : "This page couldn't open"}
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          This desktop installation doesn't recognize the destination. The link may be outdated, or a newer app build may be needed. Your existing work wasn't changed.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-2">
+          <button type="button" className="inline-flex min-h-10 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground" onClick={openProducts}>
+            <Package aria-hidden="true" className="size-4" /> Open Products
+          </button>
+          <button type="button" className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border px-3 text-sm text-foreground hover:bg-muted" onClick={() => window.history.back()}>
+            <ArrowLeft aria-hidden="true" className="size-4" /> Go back
+          </button>
+          {isPackagedDesktop() ? <button type="button" className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border px-3 text-sm text-foreground hover:bg-muted" onClick={() => void runCommand('app.check_updates')}>
+            <RefreshCw aria-hidden="true" className="size-4" /> Check for updates
+          </button> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export const Route = createFileRoute('/(apps)/apps/ecommerce-cms-agentsam')({
   validateSearch: (search: Record<string, unknown>): Search => ({
@@ -72,9 +107,9 @@ function EcommerceAppHost() {
   if (!user && !localPreview) return <RedirectToSignIn />;
 
   return <section className="flex h-full min-h-0 w-full flex-col bg-background" data-agentsam-installed-app="ecommerce-cms-agentsam">
-    {!page ? <p role="alert" className="p-8 text-sm text-destructive">That product route is unavailable.</p>
+    {!page ? <UnavailableProductRoute requested={search.page} />
       : isCodeEditor && search.project && search.site_id ? <CmsThemeCodeEditor projectId={search.project} siteId={search.site_id} />
-      : !url ? <p role="alert" className="p-8 text-sm text-destructive">This product route is unavailable.</p>
+      : !url ? <UnavailableProductRoute requested={search.page} />
       : <iframe title="Ecommerce CMS — complete admin application" src={url} className="min-h-0 w-full flex-1 border-0" referrerPolicy="strict-origin-when-cross-origin" allow="fullscreen" />}
   </section>;
 }
