@@ -339,6 +339,8 @@ export type SettingsSnapshot = {
   agentError?: string | null;
   models: SettingsModel[];
   plugins: SettingsPlugin[];
+  /** Failure reading installed capabilities; an empty array alone must not imply no installations. */
+  pluginsError?: string | null;
   widgets: SettingsWidget[];
   mcps: SettingsCatalogItem[];
   skills: SettingsCatalogItem[];

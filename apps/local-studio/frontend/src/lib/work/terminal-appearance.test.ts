@@ -28,9 +28,24 @@ test("theme default reproduces the previous Studio terminal palette", () => {
   assert.equal(resolved.theme.foreground.toLowerCase(), "#f3f1ec");
   assert.equal(resolved.theme.cursor.toLowerCase(), "#c4b8a8");
   assert.equal(resolved.fontSize, 12.5);
+  assert.equal(resolved.fontId, "system");
+  assert.match(resolved.fontFamily, /ui-monospace/);
   assert.equal(resolved.lineHeight, 1.35);
   assert.ok(resolved.contrast >= 4.5);
   assert.equal(resolved.customized, false);
+});
+
+test("font selection is validated, live per session, and can become the default", () => {
+  store.getState().patchSession("one", { fontId: "menlo" });
+  store.getState().patchSession("two", { fontId: "not-a-font" as never });
+  assert.equal(appearance.resolveSessionAppearance("one").fontId, "menlo");
+  assert.equal(appearance.resolveSessionAppearance("two").fontId, "system");
+  store.getState().setDefaultFont("jetbrains");
+  assert.equal(appearance.resolveSessionAppearance("two").fontId, "jetbrains");
+  assert.equal(appearance.resolveSessionAppearance("one").fontId, "menlo");
+  store.getState().setProfile("one", "remote");
+  assert.equal(appearance.resolveSessionAppearance("one").fontId, "menlo");
+  assert.match(appearance.resolveSessionAppearance("one").fontFamily, /Menlo/);
 });
 
 test("lane profiles keep their published terminal palette contract", () => {
@@ -87,12 +102,14 @@ test("explicit foreground wins; contrast math matches WCAG", () => {
 });
 
 test("overrides persist and rehydrate across a restart; closed sessions are pruned", async () => {
-  store.getState().patchSession("keep", { background: "#102030", lineHeight: 1.6 });
+  store.getState().patchSession("keep", { background: "#102030", lineHeight: 1.6, fontId: "plex" });
+  store.getState().setDefaultFont("jetbrains");
   store.getState().patchSession("gone", { background: "#aa0000" });
   store.getState().setDefaultProfile("local");
   store.getState().prune(["keep"]);
   const saved = JSON.parse(data.get("agentsam-terminal-appearance-v1") ?? "{}");
   assert.equal(saved.state.defaultProfileId, "local");
+  assert.equal(saved.state.defaultFontId, "jetbrains");
   assert.deepEqual(Object.keys(saved.state.sessions), ["keep"]);
 
   store.setState({ defaultProfileId: "cms", sessions: {} }); // simulate fresh process memory
@@ -101,6 +118,8 @@ test("overrides persist and rehydrate across a restart; closed sessions are prun
   assert.equal(store.getState().defaultProfileId, "local");
   assert.equal(appearance.resolveSessionAppearance("keep").theme.background, "#102030");
   assert.equal(appearance.resolveSessionAppearance("keep").lineHeight, 1.6);
+  assert.equal(appearance.resolveSessionAppearance("keep").fontId, "plex");
+  assert.equal(appearance.resolveSessionAppearance("new").fontId, "jetbrains");
 });
 
 test("watchSessionAppearance fires only for its own session", () => {

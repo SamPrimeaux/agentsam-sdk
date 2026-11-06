@@ -134,7 +134,7 @@ export function DeviceProviderKeys({
                 name: "AgentSam synced",
                 type: "api_key",
                 service: id,
-                description: "Synchronized with AgentSam Local Studio",
+                description: "Synchronized with AgentSam",
                 expires_at: null,
                 last_used_at: null,
                 usage_count: 0,

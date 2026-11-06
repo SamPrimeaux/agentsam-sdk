@@ -255,7 +255,7 @@ async function loadPluginSettings() {
 function emptySnapshot(): SettingsSnapshot {
   return {
     fixtureName: "local-studio-live",
-    environmentLabel: "Local Studio",
+    environmentLabel: "AgentSam",
     repositoryLabel: "Local runtime",
     health: "unknown",
     credentials: [],
@@ -265,6 +265,7 @@ function emptySnapshot(): SettingsSnapshot {
     agentError: null,
     models: [],
     plugins: [],
+    pluginsError:null,
     integrationStatus:undefined,
     widgets: [],
     mcps: [],
@@ -359,6 +360,7 @@ async function liveSnapshot(): Promise<SettingsSnapshot> {
   snapshot.general.project = workspace?.default_cwd || (desktop ? "Local workspace" : "Hosted workspace");
   snapshot.widgets = settingsWidgets();
   snapshot.plugins = (pluginResult.value?.plugins||[]).map(settingsPlugin);
+  snapshot.pluginsError = pluginResult.ok ? null : "Installed connections could not be verified. Try refreshing; existing authorizations are unchanged.";
   const oauth=pluginResult.value?.oauth_status;
   const repositories=pluginResult.value?.repositories;
   if(oauth||repositories){

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AgentSamMonacoEditor, type AgentSamEditorPalette } from '../monaco/editor.js';
 import { WorkspaceSaveQueue, type SaveStatus } from '../workspace/save-queue.js';
+import { visibleWorkspaceTree, workspaceParents } from '../workspace/tree.js';
+import { DEFAULT_EDITOR_APPEARANCE, EDITOR_FONTS, normalizeEditorAppearance, type EditorAppearance, type EditorFontId } from './editor-appearance.js';
 import { assertWorkspaceFile, normalizeWorkspacePath, type FileWorkspace, type WorkspaceDiagnostic, type WorkspaceEntry, type WorkspaceFile, type WorkspaceRevision, type WorkspaceSearchHit } from '../workspace/files.js';
 
 export type WorkspaceEditorProps = {
@@ -11,11 +13,12 @@ export type WorkspaceEditorProps = {
   onExit?: () => void;
   agent?: { label: string; propose(input: {path: string; content: string; version: string}): Promise<{content: string; explanation: string}> };
 };
-type Tab = WorkspaceFile & { value: string; status: SaveStatus; diagnostics: WorkspaceDiagnostic[]; error?: string };
+type Tab = WorkspaceFile & { value: string; status: SaveStatus; diagnostics: WorkspaceDiagnostic[]; editorDiagnostics: WorkspaceDiagnostic[]; error?: string };
 type Panel = 'Explorer' | 'Search' | 'Timeline' | 'Problems' | 'References' | 'Dependencies';
 
 export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent}: WorkspaceEditorProps) {
   const [tree,setTree]=useState<WorkspaceEntry[]>([]);
+  const [expanded,setExpanded]=useState<Set<string>>(()=>new Set());
   const [tabs,setTabs]=useState<Tab[]>([]);
   const [active,setActive]=useState('');
   const [panel,setPanel]=useState<Panel>('Explorer');
@@ -27,6 +30,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const [paletteMode,setPaletteMode]=useState<'file'|'command'|null>(null);
   const [paletteQuery,setPaletteQuery]=useState('');
   const [split,setSplit]=useState(false);
+  const [appearance,setAppearance]=useState<EditorAppearance>(DEFAULT_EDITOR_APPEARANCE);
+  const [appearanceReady,setAppearanceReady]=useState(false);
+  const [appearanceOpen,setAppearanceOpen]=useState(false);
   const [cursor,setCursor]=useState({line:1,column:1});
   const [message,setMessage]=useState('');
   const [theirs,setTheirs]=useState<string|null>(null);
@@ -35,6 +41,17 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const latestTabs=useRef(tabs);latestTabs.current=tabs;
   const latestActive=useRef(active);latestActive.current=active;
   const current=tabs.find(tab=>tab.path===active);
+  const visibleTree=useMemo(()=>visibleWorkspaceTree(tree,expanded),[tree,expanded]);
+  useEffect(()=>{
+    try { setAppearance(normalizeEditorAppearance(JSON.parse(localStorage.getItem('agentsam-ide:editor-appearance-v1')||'null'))); }
+    catch { setAppearance(DEFAULT_EDITOR_APPEARANCE); }
+    setAppearanceReady(true);
+  },[]);
+  useEffect(()=>{
+    if(!appearanceReady)return;
+    try { localStorage.setItem('agentsam-ide:editor-appearance-v1',JSON.stringify(appearance)); }catch { /* Private browsing may prevent local UI preferences. */ }
+  },[appearance,appearanceReady]);
+  const updateAppearance=(change:Partial<EditorAppearance>)=>setAppearance(prev=>normalizeEditorAppearance({...prev,...change}));
 
   const queue=useMemo(()=>new WorkspaceSaveQueue({
     debounceMs:900,
@@ -56,11 +73,12 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   useEffect(()=>{void refresh();},[refresh]);
 
   const open=useCallback(async(path:string)=>{
+    setExpanded(prev=>new Set([...prev,...workspaceParents(path)]));
     if(latestTabs.current.some(tab=>tab.path===path)){setActive(path);return;}
     try{
       const file=assertWorkspaceFile(await workspace.read(path));
       queue.acceptDiskVersion(file.path,file.version);
-      setTabs(prev=>prev.some(tab=>tab.path===file.path)?prev:[...prev,{...file,value:file.content,status:'saved',diagnostics:[]}]);
+      setTabs(prev=>prev.some(tab=>tab.path===file.path)?prev:[...prev,{...file,value:file.content,status:'saved',diagnostics:[],editorDiagnostics:[]}]);
       setActive(file.path);setMessage('');
     }catch(e){setMessage(e instanceof Error?e.message:String(e));}
   },[queue,workspace]);
@@ -117,7 +135,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     try{
       const file=assertWorkspaceFile(await workspace.read(current.path));
       queue.discardDraft(current.path,file.version);
-      setTabs(prev=>prev.map(t=>t.path===file.path?{...file,value:file.content,status:'saved',diagnostics:[]}:t));
+      setTabs(prev=>prev.map(t=>t.path===file.path?{...file,value:file.content,status:'saved',diagnostics:[],editorDiagnostics:[]}:t));
       setTheirs(null);setMessage('Loaded the saved version.');
     }catch(e){setMessage(String(e));}
   };
@@ -132,7 +150,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       const result=await workspace.restore(current.path,rev.id,current.version);
       if(!result.ok){setMessage(result.message);return;}
       queue.discardDraft(current.path,result.file.version);
-      setTabs(prev=>prev.map(t=>t.path===current.path?{...result.file,value:result.file.content,status:'saved',diagnostics:[]}:t));
+      setTabs(prev=>prev.map(t=>t.path===current.path?{...result.file,value:result.file.content,status:'saved',diagnostics:[],editorDiagnostics:[]}:t));
       setMessage('Revision restored.');setHistory(await workspace.history(current.path));
     }catch(e){setMessage(String(e));}
   };
@@ -172,9 +190,15 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   ];
   const rendered=(tab:Tab)=><AgentSamMonacoEditor document={{workspaceId,path:tab.path,text:tab.value,languageId:tab.language}}
     onChange={value=>edit(tab.path,value)} onSave={()=>save(tab.path)} palette={palette}
-    savedVersion={tab.version} onSelectionChange={s=>setCursor({line:s.startLine,column:s.startColumn})} height="100%"/>;
+    onDiagnostics={markers=>setTabs(prev=>prev.map(item=>item.path===tab.path?{...item,editorDiagnostics:markers.map(marker=>({
+      path:tab.path,message:marker.message,severity:marker.severity>=8?'error':marker.severity>=4?'warning':'info',
+      line:marker.startLineNumber,column:marker.startColumn,
+    }))}:item))}
+    savedVersion={tab.version} onSelectionChange={s=>setCursor({line:s.startLine,column:s.startColumn})}
+    options={{fontFamily:EDITOR_FONTS.find(font=>font.id===appearance.fontId)!.family,fontSize:appearance.fontSize,
+      minimap:{enabled:appearance.minimap},wordWrap:appearance.wordWrap?'on':'off'}} height="100%"/>;
   const availablePanels:Panel[]=['Explorer','Search','Timeline','Problems',...(workspace.configuration?.references?.length?['References' as const]:[]),...(workspace.configuration?.dependencies?.length?['Dependencies' as const]:[])];
-  const problems=tabs.flatMap(tab=>tab.diagnostics.map(item=>({...item,path:tab.path})));
+  const problems=tabs.flatMap(tab=>[...tab.diagnostics,...tab.editorDiagnostics].map(item=>({...item,path:tab.path})));
   const dirty=current&&current.status!=='saved';
   return <div className="asi-ide">
     <header className="asi-toolbar">
@@ -183,16 +207,37 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         <button type="button" onClick={()=>setPaletteMode('file')}>Open file</button>
         <button type="button" disabled={!current} onClick={()=>setSplit(!split)}>{split?'Close split':'Split'}</button>
         <button type="button" disabled={!current} onClick={()=>void showHistory()}>History</button>
+        <button type="button" aria-label="Editor appearance" aria-expanded={appearanceOpen} onClick={()=>setAppearanceOpen(value=>!value)}>Font</button>
         <button type="button" disabled={!current||current.readonly} onClick={()=>current&&void save(current.path)}>{current?.status==='saving'?'Saving…':'Save'}</button>
         {onExit&&<button type="button" onClick={()=>{if(tabs.some(t=>t.status!=='saved')){setMessage('Save all changes before exiting.');return;}onExit();}}>Close</button>}
       </nav>
     </header>
+    {appearanceOpen&&<div className="asi-appearance-panel" role="group" aria-label="Editor appearance">
+      <label>Font<select aria-label="Editor font" value={appearance.fontId}
+        onChange={event=>updateAppearance({fontId:event.target.value as EditorFontId})}>
+        {EDITOR_FONTS.map(font=><option key={font.id} value={font.id}>{font.label}</option>)}
+      </select></label>
+      <label>Size<input type="number" aria-label="Editor font size" min={11} max={24} step={1}
+        value={appearance.fontSize} onChange={event=>updateAppearance({fontSize:Number(event.target.value)})}/></label>
+      <label><input type="checkbox" checked={appearance.minimap}
+        onChange={event=>updateAppearance({minimap:event.target.checked})}/>Minimap</label>
+      <label><input type="checkbox" checked={appearance.wordWrap}
+        onChange={event=>updateAppearance({wordWrap:event.target.checked})}/>Wrap lines</label>
+      <button type="button" onClick={()=>setAppearanceOpen(false)}>Done</button>
+    </div>}
     <div className="asi-main">
       <aside className="asi-aside" aria-label="Editor sidebar">
         <nav className="asi-sidebar-nav">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():setPanel(name)}>{name}</button>)}</nav>
         <div className="asi-side-content">
           {panel==='Explorer'&&<><div className="asi-side-header"><strong>Explorer</strong><div><button type="button" aria-label="New file" onClick={()=>{setModal('file');setPathInput('');}}>＋</button><button type="button" aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
-            <div className="asi-tree">{tree.map(entry=><button key={entry.path} type="button" aria-current={active===entry.path} disabled={entry.kind==='folder'} onClick={()=>void open(entry.path)} title={entry.path}>{entry.kind==='folder'?'▸':'▤'} {entry.path}</button>)}</div></>}
+            <div className="asi-tree">{visibleTree.map(entry=>{
+              const folder=entry.kind==='folder';const opened=expanded.has(entry.path);
+              return <button key={entry.path} type="button" data-kind={entry.kind}
+                aria-current={!folder&&active===entry.path} aria-expanded={folder?opened:undefined}
+                style={{paddingLeft:12+workspaceParents(entry.path).length*14}}
+                onClick={()=>folder?setExpanded(prev=>{const next=new Set(prev);if(next.has(entry.path))next.delete(entry.path);else next.add(entry.path);return next;}):void open(entry.path)}
+                title={entry.path}><span aria-hidden="true">{folder?(opened?'▾':'▸'):'▤'}</span><span>{entry.path.split('/').pop()}</span></button>;
+            })}</div></>}
           {panel==='Search'&&<><div className="asi-side-header"><strong>Find in files</strong></div><form className="asi-search" onSubmit={e=>{e.preventDefault();void find();}}><input value={query} aria-label="Search workspace" onChange={e=>setQuery(e.target.value)}/><button type="submit">Find</button></form>{hits.map((hit,i)=><button key={i} className="asi-hit" type="button" onClick={()=>void open(hit.path)}><strong>{hit.path}:{hit.line}</strong><span>{hit.preview}</span></button>)}</>}
           {panel==='Timeline'&&<><div className="asi-side-header"><strong>Timeline</strong></div>{history.map(rev=><div key={rev.id} className="asi-revision"><span>{rev.label||rev.createdAt}</span><button type="button" onClick={()=>void restore(rev)}>Restore</button></div>)}</>}
           {panel==='Problems'&&<><div className="asi-side-header"><strong>Problems · {problems.length}</strong></div>{problems.map((problem,i)=><button key={i} className="asi-hit" type="button" onClick={()=>void open(problem.path)}>{problem.severity}: {problem.path} — {problem.message}</button>)}</>}

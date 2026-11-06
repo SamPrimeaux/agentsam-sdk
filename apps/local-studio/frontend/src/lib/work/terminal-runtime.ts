@@ -163,7 +163,7 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
     cursorBlink: true,
     convertEol: true,
     fontSize: appearance.fontSize,
-    fontFamily: "IBM Plex Mono, ui-monospace, SF Mono, Menlo, monospace",
+    fontFamily: appearance.fontFamily,
     lineHeight: appearance.lineHeight,
     minimumContrastRatio: appearance.minimumContrastRatio,
     theme: appearance.theme,
@@ -625,12 +625,7 @@ async function createRuntime(sessionId: string, getProject: ProjectGetter): Prom
           shell: hostedConnect?.shell || "zsh",
           error: undefined,
         });
-        term.writeln(`AgentSam PTY  ·  ${runtimeLabel}  ·  ${resolvedCwd || "(runtime default)"}`);
-        term.writeln(
-          isHostedWeb
-            ? "real shell · connected runtime"
-            : `workspace ${project0.workspaceId || "?"}  ·  real shell — same host root as Monaco`,
-        );
+        term.writeln(`${runtimeLabel}  ·  ${resolvedCwd || "Home"}`);
         if (usingAgentsamd && socket && socket.readyState === WebSocket.OPEN) {
           socket.send(JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }));
         }
@@ -759,6 +754,7 @@ async function ensureRuntime(sessionId: string, getProject: ProjectGetter): Prom
       runtime.stopAppearance = watchSessionAppearance(sessionId, (next) => {
         runtime.term.options.theme = next.theme;
         runtime.term.options.fontSize = next.fontSize;
+        runtime.term.options.fontFamily = next.fontFamily;
         runtime.term.options.lineHeight = next.lineHeight;
         runtime.term.options.minimumContrastRatio = next.minimumContrastRatio;
         if (!runtime.host?.isConnected) return;

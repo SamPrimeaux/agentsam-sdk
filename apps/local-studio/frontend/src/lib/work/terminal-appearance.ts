@@ -18,9 +18,18 @@ export type TerminalProfileId = "cms" | "local" | "remote" | "sandbox";
 
 export const TERMINAL_PROFILES: ReadonlyArray<{ id: TerminalProfileId; label: string; hint: string }> = [
   { id: "cms", label: "Theme Default", hint: "Follows the account theme" },
-  { id: "local", label: "Local", hint: "Current machine · real shell" },
+  { id: "local", label: "Local", hint: "Your computer" },
   { id: "remote", label: "Remote", hint: "Connected remote runtime" },
   { id: "sandbox", label: "Sandbox", hint: "Isolated disposable runtime" },
+];
+
+export type TerminalFontId = "system" | "menlo" | "plex" | "jetbrains";
+
+export const TERMINAL_FONTS: ReadonlyArray<{ id: TerminalFontId; label: string; family: string }> = [
+  { id: "system", label: "System Mono", family: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" },
+  { id: "menlo", label: "Menlo", family: "Menlo, Monaco, Consolas, monospace" },
+  { id: "plex", label: "IBM Plex Mono", family: "'IBM Plex Mono', ui-monospace, Menlo, monospace" },
+  { id: "jetbrains", label: "JetBrains Mono", family: "'JetBrains Mono', ui-monospace, Menlo, monospace" },
 ];
 
 export type SessionAppearance = {
@@ -29,6 +38,7 @@ export type SessionAppearance = {
   foreground?: string;
   fontSize?: number;
   lineHeight?: number;
+  fontId?: TerminalFontId;
 };
 
 export type XtermPalette = {
@@ -62,6 +72,8 @@ export type ResolvedAppearance = {
   theme: XtermPalette;
   fontSize: number;
   lineHeight: number;
+  fontId: TerminalFontId;
+  fontFamily: string;
   minimumContrastRatio: number;
   /** WCAG contrast of foreground on background; xterm also enforces the minimum per cell. */
   contrast: number;
@@ -187,10 +199,11 @@ export function lanePalette(lane: "local" | "remote" | "sandbox"): XtermPalette 
 export type ResolveInput = {
   tokens: Pick<ThemeTokens, "background" | "foreground" | "accent" | "clay" | "destructive">;
   defaultProfileId: TerminalProfileId;
+  defaultFontId?: TerminalFontId;
   override?: SessionAppearance;
 };
 
-export function resolveAppearance({ tokens, defaultProfileId, override }: ResolveInput): ResolvedAppearance {
+export function resolveAppearance({ tokens, defaultProfileId, defaultFontId = "system", override }: ResolveInput): ResolvedAppearance {
   const profileId = override?.profileId ?? defaultProfileId;
   const theme = profileId === "cms" ? cmsPalette(tokens) : lanePalette(profileId);
   const background = normalizeHex(override?.background);
@@ -211,7 +224,11 @@ export function resolveAppearance({ tokens, defaultProfileId, override }: Resolv
     theme.brightWhite = foreground;
   }
   const label = TERMINAL_PROFILES.find((p) => p.id === profileId)?.label ?? "Theme Default";
+  const fontId = TERMINAL_FONTS.some((font) => font.id === override?.fontId)
+    ? override!.fontId! : (TERMINAL_FONTS.some((font) => font.id === defaultFontId) ? defaultFontId! : "system");
   return {
+    fontId,
+    fontFamily: TERMINAL_FONTS.find((font) => font.id === fontId)!.family,
     profileId,
     profileLabel: label,
     theme,
@@ -225,8 +242,10 @@ export function resolveAppearance({ tokens, defaultProfileId, override }: Resolv
 
 type AppearanceState = {
   defaultProfileId: TerminalProfileId;
+  defaultFontId: TerminalFontId;
   sessions: Record<string, SessionAppearance>;
   setDefaultProfile(id: TerminalProfileId): void;
+  setDefaultFont(id: TerminalFontId): void;
   patchSession(sessionId: string, patch: SessionAppearance): void;
   setProfile(sessionId: string, id: TerminalProfileId): void;
   resetSession(sessionId: string): void;
@@ -234,6 +253,7 @@ type AppearanceState = {
 };
 
 const PROFILE_IDS = new Set<string>(TERMINAL_PROFILES.map((p) => p.id));
+const FONT_IDS = new Set<string>(TERMINAL_FONTS.map((f) => f.id));
 
 function sanitize(patch: SessionAppearance): SessionAppearance {
   const out: SessionAppearance = {};
@@ -242,6 +262,7 @@ function sanitize(patch: SessionAppearance): SessionAppearance {
   if (bg) out.background = bg;
   const fg = normalizeHex(patch.foreground);
   if (fg) out.foreground = fg;
+  if (typeof patch.fontId === "string" && FONT_IDS.has(patch.fontId)) out.fontId = patch.fontId;
   if (typeof patch.fontSize === "number" && Number.isFinite(patch.fontSize)) out.fontSize = clampFontSize(patch.fontSize);
   if (typeof patch.lineHeight === "number" && Number.isFinite(patch.lineHeight)) out.lineHeight = clampLineHeight(patch.lineHeight);
   return out;
@@ -251,9 +272,13 @@ export const useTerminalAppearanceStore = create<AppearanceState>()(
   persist(
     (set) => ({
       defaultProfileId: "cms",
+      defaultFontId: "system",
       sessions: {},
       setDefaultProfile(id) {
         if (PROFILE_IDS.has(id)) set({ defaultProfileId: id });
+      },
+      setDefaultFont(id) {
+        if (FONT_IDS.has(id)) set({ defaultFontId: id });
       },
       patchSession(sessionId, patch) {
         if (!sessionId) return;
@@ -265,8 +290,8 @@ export const useTerminalAppearanceStore = create<AppearanceState>()(
         if (!sessionId || !PROFILE_IDS.has(id)) return;
         set((state) => {
           // Choosing a named profile replaces that session's custom colors only.
-          const { fontSize, lineHeight } = state.sessions[sessionId] ?? {};
-          return { sessions: { ...state.sessions, [sessionId]: { profileId: id, fontSize, lineHeight } } };
+          const { fontSize, lineHeight, fontId } = state.sessions[sessionId] ?? {};
+          return { sessions: { ...state.sessions, [sessionId]: { profileId: id, fontSize, lineHeight, fontId } } };
         });
       },
       resetSession(sessionId) {
@@ -288,14 +313,14 @@ export const useTerminalAppearanceStore = create<AppearanceState>()(
     {
       name: "agentsam-terminal-appearance-v1",
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ defaultProfileId: state.defaultProfileId, sessions: state.sessions }),
+      partialize: (state) => ({ defaultProfileId: state.defaultProfileId, defaultFontId: state.defaultFontId, sessions: state.sessions }),
     },
   ),
 );
 
 export function resolveSessionAppearance(sessionId: string): ResolvedAppearance {
-  const { defaultProfileId, sessions } = useTerminalAppearanceStore.getState();
-  return resolveAppearance({ tokens: readTheme().tokens, defaultProfileId, override: sessions[sessionId] });
+  const { defaultProfileId, defaultFontId, sessions } = useTerminalAppearanceStore.getState();
+  return resolveAppearance({ tokens: readTheme().tokens, defaultProfileId, defaultFontId, override: sessions[sessionId] });
 }
 
 /** Re-resolve when this session's override, the default profile, or the account theme changes. */

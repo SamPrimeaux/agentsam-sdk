@@ -912,7 +912,7 @@ export const useWorkStore = create<WorkState>()(
           kind === "design" ||
           kind === "plugin"
             ? get().sideTabs.find((t) => t.kind === kind &&
-                (kind !== "plugin" || t.pluginId === extra?.pluginId))
+                (kind !== "plugin" || (t.pluginId === extra?.pluginId && t.stageId === extra?.stageId)))
             : undefined;
         if (existing) {
           set({
