@@ -2,7 +2,7 @@ import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type 
 import { createPortal } from 'react-dom';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Box, ChevronDown, FileCode2, FileImage, FileText, Files, Film, Folder, MessageSquare, MoreHorizontal, Palette, PanelLeft, Pin, Pencil, Plus, Search, Trash2, User, X } from 'lucide-react';
+import { Box, ChevronDown, FileCode2, FileImage, FileText, Files, Film, Folder, MessageSquare, MoreHorizontal, Palette, PanelLeft, Pin, Pencil, Plus, Search, Trash2, User, Users, X } from 'lucide-react';
 import { useNav } from './NavProvider.js';
 import { NavTrigger } from './NavTrigger.js';
 import type { NavAccount, NavAction, NavConversation, NavDestination, NavProject, NavPinnedResource } from './contracts.js';
@@ -43,10 +43,20 @@ export function NavOverflowMenu({ label = 'More options', actions = [], children
 }
 
 export function NavTopbarLogo({ variant = 'mark', onClick, toggle = false }: { variant?: 'mark' | 'expanded'; onClick?: () => void; toggle?: boolean }) {
-  const { data } = useNav();
+  const { data, open, toggle: toggleNavigation } = useNav();
   const [logoFailed, setLogoFailed] = useState(false);
-  const label = toggle ? 'Toggle sidebar' : (data.brand?.name ?? 'Home');
-  if (toggle) return <NavTrigger aria-label={label} onClick={onClick} />;
+  const label = toggle ? (open ? 'Close sidebar' : 'Open sidebar') : (data.brand?.name ?? 'Home');
+  if (toggle) return <button type="button" className="as-nav-work-brand-toggle" aria-label={label}
+    title={label + ' (⌘⇧S)'} aria-keyshortcuts="Meta+Shift+S" aria-expanded={open} onClick={toggleNavigation}>
+      <span className="as-nav-work-brand-toggle__mark as-nav-brand-mark" aria-hidden="true">
+        {data.brand?.logo && !logoFailed ? <>
+          <img className="as-nav-logo-dark" src={data.brand.logo} alt="" onError={() => setLogoFailed(true)} />
+          <img className="as-nav-logo-light" data-fallback={!data.brand.lightLogo || undefined}
+            src={data.brand.lightLogo ?? data.brand.logo} alt="" onError={() => setLogoFailed(true)} />
+        </> : <PanelLeft />}
+      </span>
+      <span className="as-nav-work-brand-toggle__control" aria-hidden="true"><PanelLeft size={20}/></span>
+    </button>;
   return <button type="button" className="as-nav-button as-nav-brand" aria-label={label} title={label} onClick={onClick ?? (() => data.brand?.home && data.onNavigate?.(data.brand.home))}>
     <span className="as-nav-brand-mark">{data.brand?.logo && !logoFailed ? <><img className="as-nav-logo-dark" src={data.brand.logo} alt="" onError={() => setLogoFailed(true)} /><img className="as-nav-logo-light" data-fallback={!data.brand.lightLogo || undefined} src={data.brand.lightLogo ?? data.brand.logo} alt="" onError={() => setLogoFailed(true)} /></> : <PanelLeft />}</span>
     {variant === 'expanded' ? <span>{data.brand?.name}</span> : null}
@@ -84,14 +94,52 @@ export function NavFilesResources() {
 export function NavPinnedSummary() {
   const { data, theme } = useNav();
   const style = useNavStyle();
+  const [open, setOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const subagents = data.pinnedSummary?.subagents ?? [];
   const outputs = data.pinnedSummary?.outputs ?? [];
   const sources = data.pinnedSummary?.sources ?? [];
-  return <Menu.Root>
-    <Menu.Trigger asChild><button type="button" className="as-nav-button" aria-label="Toggle pinned summary" title="Toggle pinned summary"><PinnedSummaryIcon /></button></Menu.Trigger>
-    <Menu.Portal><Menu.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover as-nav-summary-popover" align="end" sideOffset={8} collisionPadding={12}>
-      <section><div className="as-nav-summary-heading">Outputs</div>{outputs.length ? outputs.map((item, i) => <div className="as-nav-summary-row" key={'o'+i}>{item}</div>) : <div className="as-nav-empty">No outputs yet</div>}</section>
-      <Menu.Separator className="as-nav-menu-separator" />
-      <section><div className="as-nav-summary-heading">Sources</div>{sources.length ? sources.slice(0, 6).map((item, i) => <div className="as-nav-summary-row" key={'s'+i}>{item}</div>) : <div className="as-nav-empty">No sources yet</div>}{sources.length > 6 ? <div className="as-nav-empty">Show {sources.length - 6} more in Files</div> : null}</section>
+  const item = (value: string | {id:string;label:string;kind?:string;onSelect?:()=>void}, index: number, group: string) => {
+    const entry = typeof value === 'string' ? {id:group+index,label:value,kind:group,onSelect:undefined} : value;
+    const Icon = group === 'sources' ? FileText : FileCode2;
+    const contents = <><Icon size={16} aria-hidden="true"/><span className="as-nav-activity-item__title">{entry.label}</span>
+      {entry.kind ? <small>{entry.kind}</small> : null}</>;
+    return entry.onSelect ? <Menu.Item asChild key={entry.id}>
+      <button type="button" className="as-nav-activity-item" onClick={entry.onSelect} title={entry.label}>
+        {contents}
+      </button>
+    </Menu.Item> : <div key={entry.id} className="as-nav-activity-item" title={entry.label}>{contents}</div>;
+  };
+  const section = (title: string, entries: Array<string | {id:string;label:string;kind?:string;onSelect?:()=>void}>, group:string, add?:()=>void) =>
+    <section className="as-nav-activity-section" aria-label={title}>
+      <div className="as-nav-activity-section-head"><span>{title}</span>
+        {add ? <Menu.Item asChild><button type="button" className="as-nav-activity-add" onClick={add} aria-label={'Add '+title.toLowerCase()} title={'Add '+title.toLowerCase()}><Plus size={16}/></button></Menu.Item> : null}
+      </div>
+      {entries.length ? (showAll ? entries : entries.slice(0,5)).map((entry,index)=>item(entry,index,group))
+        : <p className="as-nav-activity-empty">No {title.toLowerCase()} yet</p>}
+      {!showAll && entries.length > 5 ? <Menu.Item asChild><button type="button" className="as-nav-activity-more" onClick={(event)=>{event.preventDefault();setShowAll(true);}}>Show {entries.length - 5} more</button></Menu.Item> : null}
+    </section>;
+  return <Menu.Root open={open} onOpenChange={(next)=>{setOpen(next); if(!next)setShowAll(false);}}>
+    <Menu.Trigger asChild><button type="button" className="as-nav-button as-nav-activity-trigger"
+      aria-label="Toggle Activity" title="Activity" aria-expanded={open} aria-pressed={open}>
+      <PinnedSummaryIcon /></button></Menu.Trigger>
+    <Menu.Portal><Menu.Content data-nav-theme={theme} style={style} className="as-nav-scope as-nav-popover as-nav-summary-popover as-nav-activity-popover"
+      align="end" sideOffset={8} collisionPadding={12}>
+      <Menu.Label className="as-nav-activity-title">Activity</Menu.Label>
+      <section className="as-nav-activity-section" aria-label="Subagents">
+        <div className="as-nav-activity-section-head"><span>Subagents</span><small>{subagents.length} used</small></div>
+        {subagents.length ? (showAll ? subagents : subagents.slice(0,5)).map((agent)=>
+          <Menu.Item asChild key={agent.id}><button type="button" className="as-nav-activity-item"
+            disabled={!agent.onSelect} onClick={agent.onSelect}>
+            <Users size={16} aria-hidden="true"/><span className="as-nav-activity-item__title">{agent.label}</span>
+            {agent.status ? <small>{agent.status}</small> : null}
+          </button></Menu.Item>)
+          : <p className="as-nav-activity-empty">No subagents used</p>}
+      </section>
+      <Menu.Separator className="as-nav-menu-separator"/>
+      {section('Outputs',outputs,'outputs',data.pinnedSummary?.onAddOutput)}
+      <Menu.Separator className="as-nav-menu-separator"/>
+      {section('Sources',sources,'sources',data.pinnedSummary?.onAddSource)}
     </Menu.Content></Menu.Portal>
   </Menu.Root>;
 }
@@ -167,7 +215,7 @@ export function NavTopbar({
       <div className="as-nav-topbar-leading">{showNavigationTrigger ? <NavTrigger aria-label="Toggle sidebar" /> : null}{!startup ? contextSlot ?? <NavProjectContext /> : null}</div>
       {startup ? <div className="as-nav-topbar-center">{modeSlot ?? <NavModeSwitcher />}</div> : modeSlot}
       <NavTopbarSpacer />
-      <div className="as-nav-topbar-actions">{!startup ? <><NavShareButton /><NavConversationActions /><NavPinnedSummary /></> : null}{rightSlot}{showAccount ? <NavAccountSwitcher /> : null}</div>
+      <div className="as-nav-topbar-actions">{!startup ? <><NavConversationActions /><NavShareButton /><NavPinnedSummary /></> : null}{rightSlot}{showAccount ? <NavAccountSwitcher /> : null}</div>
     </>}
   </NavScope>;
 }
@@ -355,7 +403,7 @@ function SidenavContents() {
 }
 
 export function NavSidenav() {
-  const { open, isMobile, isPeeking, peekable, setPeeking, setOpen, menu, theme, resizable, width, setWidth } = useNav();
+  const { open, isMobile, isPeeking, peekable, setPeeking, setOpen, toggle, menu, theme, resizable, width, setWidth } = useNav();
   const style = useNavStyle();
   const [hint, setHint] = useState<{label:string; top:number; left:number} | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -378,6 +426,17 @@ export function NavSidenav() {
     }, 160);
   };
   useEffect(() => { hideHint(); return () => clearTimeout(hintTimer.current); }, [open, isMobile, menu]);
+  useEffect(() => {
+    const handleNavigationShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey &&
+          event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        toggle();
+      }
+    };
+    window.addEventListener('keydown', handleNavigationShortcut);
+    return () => window.removeEventListener('keydown', handleNavigationShortcut);
+  }, [toggle]);
   useEffect(() => {
     const dismiss = () => hideHint();
     window.addEventListener('agentsam:navigate', dismiss);

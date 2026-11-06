@@ -166,7 +166,7 @@ export function SideStage({ workFocused = false, onFocusToggle }: { workFocused?
         {tab?.kind === "chat" ? <CoworkerChat tabId={tab.id} /> : null}
         {tab?.kind === "browser" ? <BrowserStage tab={tab} /> : null}
         {tab?.kind === "files" ? <FilesStage tab={tab} /> : null}
-        {tab?.kind === "artifacts" ? <ArtifactsStage /> : null}
+        {tab?.kind === "artifacts" ? <ArtifactsStage tab={tab} /> : null}
         {tab?.kind === "app" ? <AppPreviewStage tab={tab} /> : null}
         {tab?.kind === "design" ? <CanvasEntryStage tab={tab} /> : null}
         {tab?.kind === "plugin" ? <PluginSideStage stage={stages.find(stage => stage.pluginId === tab.pluginId)} /> : null}
