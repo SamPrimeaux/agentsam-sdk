@@ -77,7 +77,22 @@ export type LocalStudioPluginRecord = {
   tool_count: number;
 };
 
+export type LocalStudioSideStageRecord = {
+  id: string;
+  pluginId: string;
+  stageId: string;
+  label: string;
+  description: string;
+  icon: string;
+  iconUrl: string | null;
+  tabKind: string;
+  renderer: "builtin" | "embed" | "workspace";
+  href?: string;
+  ready: true;
+};
+
 export type LocalStudioConnectionsResponse = {
+  side_stages?: LocalStudioSideStageRecord[];
   ok?: boolean;
   connections?: LocalStudioConnectionRecord[];
   items?: LocalStudioConnectionRecord[];
@@ -340,6 +355,13 @@ async function pluginCatalogRequest<T>(method: 'GET' | 'POST' | 'DELETE', path: 
   const result = parseJsonBody(await response.text());
   if (!response.ok) throw responseError(response.status, result);
   return result as T;
+}
+
+export function readLocalStudioPluginWorkspace(pluginId: string) {
+  if (!/^plg_[a-f0-9]{8,}$/i.test(pluginId)) throw new Error("plugin_id_invalid");
+  return pluginCatalogRequest<{ok: boolean; pluginKey?: string; contextTool?: string; result?: unknown}>(
+    "GET", "/api/plugins/" + encodeURIComponent(pluginId) + "/workspace",
+  );
 }
 
 export function discoverLocalStudioPlugins() {

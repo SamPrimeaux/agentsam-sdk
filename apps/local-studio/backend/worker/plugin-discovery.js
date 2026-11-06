@@ -5,6 +5,7 @@
  */
 import { installPlugin, updatePluginPreferences } from '@inneranimalmedia/agentsam-sdk/plugins';
 import { loadPluginRegistry } from './plugin-registry.js';
+import { normalizeCatalogSideStage } from './plugin-side-stages.js';
 
 /**
  * Provider-neutral public plugin catalog source validation and projection.
@@ -98,6 +99,8 @@ export function normalizeDiscoveredPlugin(input, source) {
   const publisherIconUrl = publisherIcon && publisherIcon.origin === sourceUrl.origin
     && /^\/catalog\/icons\/[a-z0-9-]+\.svg$/.test(publisherIcon.pathname)
     && !publisherIcon.search ? publisherIcon.toString() : null;
+  // Catalog contributions cannot inject components or widen host privileges.
+  const sideStage = normalizeCatalogSideStage(input.side_stage, sourceUrl.toString());
   return {
     pluginKey: key,
     version: text(input.version, 40),
@@ -107,6 +110,7 @@ export function normalizeDiscoveredPlugin(input, source) {
     publisher: text(input.developer_name, 100),
     iconUrl,
     publisherIconUrl,
+    sideStage,
     category: text(input.category, 55) || 'Other',
     keywords: strings(input.keywords, 20, 50),
     capabilities: strings(input.capabilities, 25, 150),
@@ -252,7 +256,8 @@ export async function installFromCatalog(env,accountId,pluginKey,fetcher=fetch) 
     settings_visible: true,
     health_strategy: 'oauth_probe',
     metadata: {source:entry.catalogUrl,version:entry.version,requires_authorization:true,
-      declared_tools:entry.toolCount,privacy_url:entry.privacyUrl,terms_url:entry.termsUrl},
+      declared_tools:entry.toolCount,privacy_url:entry.privacyUrl,terms_url:entry.termsUrl,
+      ...(entry.sideStage ? {side_stage:entry.sideStage} : {})},
   };
   const installed = await installPlugin(env.DB,{
     accountId,

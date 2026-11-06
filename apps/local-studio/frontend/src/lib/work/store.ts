@@ -99,6 +99,8 @@ const SIDE_TITLES: Record<SideKind, string> = {
   media: "MovieMode",
   goal: "Edit goal",
   database: "Database",
+  design: "Canvas",
+  plugin: "Plugin",
 };
 
 function newSideTab(kind: SideKind, extra?: Partial<SideTab>): SideTab {
@@ -906,8 +908,11 @@ export const useWorkStore = create<WorkState>()(
           kind === "deploy" ||
           kind === "goal" ||
           kind === "terminal" ||
-          kind === "database"
-            ? get().sideTabs.find((t) => t.kind === kind)
+          kind === "database" ||
+          kind === "design" ||
+          kind === "plugin"
+            ? get().sideTabs.find((t) => t.kind === kind &&
+                (kind !== "plugin" || t.pluginId === extra?.pluginId))
             : undefined;
         if (existing) {
           set({
