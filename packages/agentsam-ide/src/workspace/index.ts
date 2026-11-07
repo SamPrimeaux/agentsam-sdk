@@ -4,3 +4,5 @@ export { normalizeWorkspacePath, assertWorkspaceFile, FileWorkspaceError } from 
 export type { FileWorkspace, WorkspaceEntry, WorkspaceFile, WorkspaceWriteResult, WorkspaceDiagnostic, WorkspaceSearchHit, WorkspaceRevision, WorkspaceSnapshot, WorkspaceChange } from './files.js';
 export { hashWorkspaceEntries, diffWorkspaceSnapshots } from './merkle.js';
 export type { WorkspaceHashedEntry } from './merkle.js';
+
+export { browserFsaAvailable, chooseBrowserFsaIDEWorkspace, createBrowserFsaWorkspace } from './browser-fsa.js';

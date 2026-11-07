@@ -76,17 +76,31 @@ filesystem source assets.
   reads, writes, creates, renames and deletes. Local Studio passes its
   authenticated LSP transport into packaged Monaco.
 - Opt-in Sample Tutorial files are isolated memory state, not a host filesystem.
-- GitHub, R2, Drive, Cloudflare containers and Docker are visually discoverable
-  but are not yet connected to Local Studio. No fixture fallback is allowed.
-- Merkle comparison requires verified content hashes for every file. Snapshot
-  captures a session baseline; Changes compares against it. Durable Merkle
-  manifests, Git-aware diffs, cross-session history and provider auth remain WIP.
+- GitHub and Google Drive use explicit account-scoped OAuth-backed file adapters
+  for authorized reads and guarded manual text writes; R2 supports authorized
+  browsing and bounded text reads. Cloudflare containers expose management
+  discovery only, and Docker has no authorized filesystem adapter yet.
+  Unconnected sources never substitute tutorial files.
+- Merkle comparison requires verified content hashes for every file. Runtime
+  Snapshot captures a **session-only** baseline; Changes compares against it.
+  Persisted D1/R2 snapshots require the existing account, repository and
+  workspace authority; a local digest is never represented as a release record.
+  Cross-session history and durable snapshot integration remain WIP.
 - Previous Side Stage LSP navigation and file-preview behaviors need live
   authenticated acceptance tests before shipping this new surface to customers.
 
 The previous InnerAnimalMedia filesystem, virtual tree, Monaco, Merkle and
-provider UI components remain authoritative donor references for remaining
-work. Reuse and package their proven behavior without a parallel IDE product.
+provider UI components remain donor references. The shared WorkspaceEditor now
+uses an overscanned virtualized file tree (instead of rendering every file),
+a restrained right-click file menu, command palette, and system UI typography;
+code itself remains monospaced. No parallel editor is introduced.
+
+A Chromium web/PWA user may explicitly select a browser folder via File System
+Access. The reusable IDE adapter supplies real text reads, manual writes,
+SHA-256 version checks, post-save readback, and guarded delete. Native Tauri
+WebKit instead uses the existing authorized runtime and native LSP/PTY path;
+browser FSA does not pretend to supply native LSP, PTY, atomic CAS or history.
+This remains separate from account-scoped remote providers.
 
 ### Authenticated remote provider browsing (November 2026 follow-on)
 
@@ -106,18 +120,21 @@ FileWorkspace views inside the same packaged WorkspaceEditor:
 - Cloudflare Containers: Management API read-only discovery of selected
   account applications when containers.read is granted. The control plane
   does NOT mount a container filesystem.
-- GitHub and Docker: An icon and the existing CLI/product capability are not
-  evidence of an IDE-specific authorized filesystem adapter. Keep fail-closed
-  until provider reads and version-checked writes are genuinely connected.
+- GitHub: Authorized OAuth account/repository selection, installation-aware
+  repo listing, scoped text read and branch-specific expected-SHA file save.
+  Tokens remain backend-only. This does not claim native Git clone/commit/push.
+- Docker: Source icon only; no Docker Engine filesystem grant or adapter yet.
 - Merkle persistence: Use existing @inneranimalmedia/agentsam-repository and
   agentsam_fs_merkle_snapshots with account_id + repository_id and R2 manifests.
   No parallel IDE snapshot table. IDE in-memory snapshot remains short-lived;
   durable integration needs the existing repository ownership and index.
 
-Remote sources deliberately report readonly:true. Do not enable Save, Delete
-or Rename before proving atomic conditional writes, provider write scopes,
-account/project isolation, conflict handling, and authenticated browser and
-desktop acceptance.
+GitHub and eligible Google Drive text files can use the explicit manual Save
+path. Drive checks a file version before write, but Drive's media endpoint does
+not promise atomic CAS; concurrent external edits remain a live acceptance risk.
+R2 remains read-only pending an ETag-conditional write authority. Native Docs
+exports stay read-only. Never enable remote Delete/Rename from a generic
+provider icon or inferred OAuth scope.
 
 Backend: apps/local-studio/backend/worker/ide-source-service.js,
 backend/worker/connector-oauth.js, frontend/src/lib/work/remote-ide-workspace.ts.

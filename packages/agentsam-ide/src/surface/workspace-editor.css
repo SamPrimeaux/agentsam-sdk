@@ -30,7 +30,15 @@
 .asi-sidebar-nav { display:flex; flex-wrap:wrap; gap:2px; border-bottom:1px solid var(--asi-border); padding:4px; }
 .asi-sidebar-nav button { border-radius:5px; padding:5px 7px; font-size:11px; }
 .asi-sidebar-nav button[aria-current=true] { font-weight:700; background:var(--asi-hover); }
-.asi-side-content { min-height:0; flex:1; overflow:auto; }
+.asi-side-content { min-height:0; flex:1; overflow:auto; display:flex; flex-direction:column; }
+.asi-tree-viewport { flex:1; min-height:100px; overflow:auto; overscroll-behavior:contain; font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; }
+.asi-tree-viewport .asi-tree { display:block; }
+.asi-tree-viewport .asi-tree button { width:100%; }
+.asi-context-dismiss { position:fixed; inset:0; z-index:19; background:transparent !important; cursor:default !important; }
+.asi-context-menu { position:fixed; z-index:21; display:flex; flex-direction:column; width:210px; max-height:60vh; overflow:auto; padding:5px; border:1px solid var(--asi-border); border-radius:9px; background:var(--asi-surface); color:var(--asi-ink); box-shadow:0 12px 35px #0004; font:12px/1.4 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif; }
+.asi-context-menu button { display:block; width:100%; padding:8px 10px; text-align:left; border-radius:6px; }
+.asi-context-title { padding:6px 10px; font-size:11px; font-weight:650; color:var(--asi-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.asi-context-separator { height:1px; margin:4px 3px; background:var(--asi-border); }
 .asi-side-header { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; color:var(--asi-ink); text-transform:uppercase; letter-spacing:.055em; font-size:11px; }
 .asi-side-header div { display:flex; gap:3px; }
 .asi-side-header button { font-size:17px; min-width:24px; min-height:24px; border-radius:5px; }

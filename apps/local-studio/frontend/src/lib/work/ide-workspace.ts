@@ -45,7 +45,10 @@ export function createRuntimeIDEWorkspace(baseUrl: string, capability: string | 
     const files=listing.entries.filter(entry=>entry.kind==='file');
     if(files.some(entry=>!entry.content_hash))
       return failure('Runtime has not supplied content hashes for every file. Merkle verification requires a hash-capable runtime.', 'hash_unavailable');
-    return hashWorkspaceEntries(files.map(entry=>({path:entry.path,hash:entry.content_hash!})));
+    const snapshot=await hashWorkspaceEntries(files.map(entry=>({path:entry.path,hash:entry.content_hash!})));
+    // A runtime digest is NOT the canonical persisted Merkle release/snapshot row.
+    // Without an explicit authenticated repository+workspace binding it stays in this editor session.
+    return {...snapshot,persistence:'session'};
   };
   async function read(path: string): Promise<WorkspaceFile> {
     const result = await adapter.read(path);

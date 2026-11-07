@@ -62,6 +62,10 @@ export type WorkspaceSnapshot = {
   rootHash: string;
   fileCount: number;
   createdAt: string;
+  /** Explicitly distinguish a transient browser hash from a persisted account-owned D1/R2 record. */
+  persistence?: 'session' | 'durable';
+  repositoryId?: string;
+  workspaceId?: string;
   entries?: Array<{path: string; hash: string}>;
 };
 

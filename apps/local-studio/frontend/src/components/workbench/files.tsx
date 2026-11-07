@@ -14,6 +14,7 @@ import '@inneranimalmedia/agentsam-ide/surface/workspace-editor.css';
 import { useActiveProject, useWorkStore } from '@/lib/work/store';
 import { isAuthorizedHostProject, isSampleProject, projectNeedsConnection } from '@/lib/work/workspace-restore';
 import { createRuntimeIDEWorkspace, createTutorialIDEWorkspace } from '@/lib/work/ide-workspace';
+import { browserFsaAvailable, chooseBrowserFsaIDEWorkspace, type FileWorkspace } from '@inneranimalmedia/agentsam-ide/workspace';
 import { WorkspaceGate } from '@/components/workbench/workspace-gate';
 import { RemoteFilesSource } from '@/components/workbench/remote-files-source';
 import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
@@ -33,6 +34,11 @@ export function FilesStage({ tab: _tab }: { tab: SideTab }) {
   const selectProject = useWorkStore(state => state.setActiveProject);
   const [connectOpen, setConnectOpen] = useState(false);
   const [source,setSource] = useState<IDEFileSourceId>('local');
+  const [browserWorkspace,setBrowserWorkspace] = useState<FileWorkspace|null>(null);
+  const [browserWorkspaceName,setBrowserWorkspaceName] = useState('');
+  const [browserWorkspaceKey,setBrowserWorkspaceKey] = useState('');
+  const [browserFsaReady,setBrowserFsaReady] = useState(false);
+  useEffect(()=>setBrowserFsaReady(!isPackagedDesktop()&&browserFsaAvailable()),[]);
   const [sourceNotice, setSourceNotice] = useState('');
   const [monacoReady,setMonacoReady]=useState(false);
   const [monacoFailure,setMonacoFailure]=useState('');
@@ -78,18 +84,51 @@ export function FilesStage({ tab: _tab }: { tab: SideTab }) {
     return undefined;
   },[project?.id,project?.kind,project?.workspaceRoot,project?.runtimeBaseUrl,project?.runtimeCapability,ready]);
   const sources = useMemo<IDEFileSource[]>(() => ([
-    { id:'local', label:'Local', state: project?.kind === 'filesystem' && ready ? 'connected' : 'disconnected', detail:descriptions.local },
+    { id:'local', label:'Local', state: browserWorkspace || (project?.kind === 'filesystem' && ready) ? 'connected' : 'disconnected', detail:browserWorkspace?'User-authorized browser folder (manual save; no PTY/LSP)':descriptions.local },
     { id:'github', label:'GitHub', state:'disconnected', detail:descriptions.github },
     { id:'r2', label:'Cloudflare R2', state:'disconnected', detail:descriptions.r2 },
     { id:'drive', label:'Google Drive', state:'disconnected', detail:descriptions.drive },
     { id:'container', label:'Cloudflare container', state:'disconnected', detail:descriptions.container },
     { id:'docker', label:'Docker', state:'disconnected', detail:descriptions.docker },
-  ]), [project?.kind, ready]);
+  ]), [project?.kind, ready, browserWorkspace]);
+
+  async function openBrowserFolder() {
+    setSourceNotice('');
+    try {
+      const result=await chooseBrowserFsaIDEWorkspace();
+      setBrowserWorkspace(result.workspace);
+      setBrowserWorkspaceName(result.name);
+      setBrowserWorkspaceKey(crypto.randomUUID());
+      setSource('local');
+      setConnectOpen(false);
+    } catch(error) {
+      if(error instanceof Error && error.name==='AbortError')return;
+      setSourceNotice(error instanceof Error?error.message:String(error));
+    }
+  }
 
   if(source!=='local')return <RemoteFilesSource source={source} onSelect={setSource}
-    palette={palette} hostConnected={Boolean(project?.kind==='filesystem'&&ready)} />;
+    palette={palette} hostConnected={Boolean(browserWorkspace||(project?.kind==='filesystem'&&ready))} />;
+  if(browserWorkspace) return <section className="work-files-stage flex h-full min-h-0 min-w-0 flex-col" aria-label="Authorized browser folder IDE">
+    <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2 text-xs">
+      <strong className="truncate font-medium">Browser folder · {browserWorkspaceName}</strong>
+      <span className="ml-auto truncate text-[10px] text-muted-foreground">Manual Save · Browser File System Access · No PTY/LSP</span>
+      <button type="button" className="rounded-md border border-border px-2 py-1" onClick={()=>{setBrowserWorkspace(null);setBrowserWorkspaceName('');setConnectOpen(true);}}>Connect native host</button>
+    </div>
+    <div className="min-h-0 flex-1">
+      {monacoFailure?<p role="alert" className="p-4 text-sm text-destructive">Monaco unavailable: {monacoFailure}</p>
+        :!monacoReady?<p role="status" className="p-4 text-xs text-muted-foreground">Initializing Monaco…</p>
+        :<Suspense fallback={<p className="p-4 text-xs">Loading IDE…</p>}>
+          <WorkspaceEditor workspace={browserWorkspace} key={browserWorkspaceKey} workspaceId={browserWorkspaceKey}
+            label={browserWorkspaceName} palette={palette} sources={sources} sourceId="local"
+            onSourceSelect={setSource} showHostModes/>
+        </Suspense>}
+    </div>
+  </section>;
   if (!project || projectNeedsConnection(project) || !ready || connectOpen)
-    return <div className="h-full overflow-y-auto"><WorkspaceSourceRail sources={sources} sourceId="local" onSelect={setSource}/><WorkspaceGate project={project} force={connectOpen || !project} />
+    return <div className="h-full overflow-y-auto"><WorkspaceSourceRail sources={sources} sourceId="local" onSelect={setSource}/>
+      {sourceNotice?<p role="alert" className="p-3 text-xs text-destructive">{sourceNotice}</p>:null}
+      <WorkspaceGate project={project} force={connectOpen || !project} onOpenBrowserFolder={browserFsaReady?openBrowserFolder:undefined} />
       {connectOpen ? <button className="m-3 rounded border px-3 py-2 text-xs" type="button" onClick={()=>setConnectOpen(false)}>Back to editor</button> : null}
     </div>;
 
