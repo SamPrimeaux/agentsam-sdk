@@ -383,12 +383,25 @@ function SidenavContents() {
   return <>
     {data.showSidebarHeader !== false ? <div className="as-nav-sidenav-head"><NavTopbarLogo toggle /></div> : isMobile ? <div className="as-nav-sidenav-head as-nav-sidenav-head--close"><button type="button" className="as-nav-button" onClick={close}><X aria-hidden="true" /><span>Close navigation</span></button></div> : null}
     <div className="as-nav-sidenav-main">
+      {data.onSearch ? <div className="as-nav-sidenav-search-launch as-nav-expanded-only">
+        <button type="button" className="as-nav-destination as-nav-global-search"
+          aria-label="Search Studio pages, tools and conversations"
+          onClick={() => {
+            if (isMobile) {
+              close();
+              // Let the sidebar focus trap release before opening the host palette.
+              requestAnimationFrame(() => data.onSearch?.());
+            } else data.onSearch?.();
+          }}>
+          <Search aria-hidden="true" /><span>Search Studio</span><kbd aria-hidden="true">⌘K</kbd>
+        </button>
+      </div> : null}
       <div className="as-nav-destinations">
         {!insertAfter ? newConversation : null}
         {(data.destinations ?? []).map((item) => <Fragment key={item.id}><DestinationRow item={item} />{item.id === insertAfter ? newConversation : null}</Fragment>)}
       </div>
       {data.showHistory !== false ? <div className="as-nav-expanded-only as-nav-history">
-        <label className="as-nav-search"><Search /><input aria-label="Search projects and conversations" placeholder="Search workspace" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+        <label className="as-nav-search"><Search /><input aria-label="Filter projects and conversations" placeholder="Filter chats & projects" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         {data.historyStatus === 'error' && data.onRetryHistory ? <button type="button" className="as-nav-collection-more" onClick={data.onRetryHistory}>Retry project list</button> : null}
         <HistoryCollection id="pinned" title="Pinned" searching={Boolean(query)} empty={query ? 'No matching pinned items.' : 'Pin projects or conversations from their menus.'}
           items={[...pinnedProjects.map(item => <ProjectRow key={item.id} item={item} />),...pinnedConversations.map(item => <ConversationRow key={item.id} item={item} />),...(data.pinnedResources||[]).map(item => <PinnedResourceRow key={item.id} item={item} />)]} />

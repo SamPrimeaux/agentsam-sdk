@@ -91,6 +91,6 @@ test('navigation keeps one Projects disclosure, pinned resources, and recent cha
   assert.match(html,/aria-label="Pinned"/);
   assert.ok(recent.indexOf('title="Newer"')<recent.indexOf('title="Older"'));
   assert.doesNotMatch(recent,/title="Important"/);
-  assert.match(html,/Search projects and conversations/);
+  assert.match(html,/Filter projects and conversations/);
   assert.match(html,/View all/);
 });

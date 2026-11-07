@@ -50,6 +50,8 @@ export interface NavValue {
   };
   getProjectActions?: (project: NavProject) => NavAction[];
   getConversationActions?: (conversation: NavConversation) => NavAction[];
+  /** Host-owned global search. Navigation never owns the command implementation. */
+  onSearch?: () => void;
   onNavigate?: (href: string) => void;
   onModeChange?: (mode: NavMode) => void;
   onCreateConversation?: () => void;

@@ -67,3 +67,16 @@ test('brand image surfaces retain an icon fallback when a consumer image fails',
   assert.match(source, /onError=\{\(\) => setLogoFailed\(true\)\}/);
   assert.match(source, /: <PanelLeft \/>/);
 });
+
+
+test('host search appears inside navigation only when a search capability is supplied', () => {
+  const withSearch = renderToString(React.createElement(Nav.Provider,
+    {value:{...value,onSearch:()=>{}},defaultOpen:true},React.createElement(Nav.Sidenav)));
+  assert.match(withSearch,/Search Studio/);
+  assert.match(withSearch,/Search Studio pages, tools and conversations/);
+  assert.match(withSearch,/Filter projects and conversations/);
+  const withoutSearch = renderToString(React.createElement(Nav.Provider,
+    {value,defaultOpen:true},React.createElement(Nav.Sidenav)));
+  assert.doesNotMatch(withoutSearch,/Search Studio/);
+  assert.match(withoutSearch,/Filter projects and conversations/);
+});
