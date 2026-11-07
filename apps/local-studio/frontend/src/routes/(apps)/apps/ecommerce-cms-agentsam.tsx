@@ -14,6 +14,14 @@ type Search = { site?: string; site_id?: string; project?: string; page?: string
 
 function UnavailableProductRoute({ requested }: { requested?: string }) {
   const productRequested = requested?.startsWith('/admin/products');
+  const diagnostic = (() => {
+    if (!requested) return 'No destination was supplied.';
+    try {
+      const url = new URL(requested, 'https://agent-route.invalid');
+      const keys = [...new Set(url.searchParams.keys())];
+      return url.pathname + (keys.length ? ' · parameters: ' + keys.join(', ') : '');
+    } catch { return 'The destination could not be parsed.'; }
+  })();
   const openProducts = () => {
     const route = '/apps/ecommerce-cms-agentsam?page=' + encodeURIComponent('/admin/products');
     if (isPackagedDesktop()) window.location.hash = '#' + route;
@@ -40,6 +48,10 @@ function UnavailableProductRoute({ requested }: { requested?: string }) {
             <RefreshCw aria-hidden="true" className="size-4" /> Check for updates
           </button> : null}
         </div>
+        <details className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
+          <summary className="cursor-pointer select-none">Technical details</summary>
+          <p className="mt-2 break-all font-mono">{diagnostic}</p>
+        </details>
       </div>
     </div>
   );
