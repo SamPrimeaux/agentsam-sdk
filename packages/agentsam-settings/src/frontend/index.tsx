@@ -384,9 +384,9 @@ export function SettingsSheet({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className="absolute inset-x-0 bottom-0 max-h-[92dvh] overscroll-contain overflow-y-auto rounded-t-2xl border border-border bg-background pb-[env(safe-area-inset-bottom)] shadow-2xl md:inset-y-0 md:left-auto md:right-0 md:max-h-none md:w-[430px] md:rounded-none md:border-y-0 md:border-r-0"
+        className="absolute inset-0 flex h-[100dvh] flex-col overflow-hidden bg-background shadow-2xl md:inset-x-auto md:bottom-auto md:left-1/2 md:top-1/2 md:h-auto md:max-h-[min(88dvh,860px)] md:w-[min(720px,calc(100vw-48px))] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:border md:border-border"
       >
-        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border/70 bg-background/95 px-4 py-3 backdrop-blur sm:px-5 sm:py-4">
+        <header className="z-10 flex shrink-0 items-start justify-between gap-4 border-b border-border/70 bg-background px-4 py-3 sm:px-6 sm:py-4">
           <div className="min-w-0">
             <h2 id={titleId} className="text-[15px] font-semibold">{title}</h2>
             {description && <p id={descriptionId} className="mt-1 text-[11px] leading-4 text-muted-foreground">{description}</p>}
@@ -404,7 +404,7 @@ export function SettingsSheet({
           </button>
           </Tooltip>
         </header>
-        <div className="px-4 py-5 sm:px-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 pb-[max(20px,env(safe-area-inset-bottom))] sm:px-6">{children}</div>
       </section>
     </div>
   );
@@ -1909,6 +1909,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
 }){
   const [selected,setSelected]=useState<SettingsAgent|null>(null);
   const [draft,setDraft]=useState<SettingsAgentDraft>(freshAgent);
+  const initialEditorDraft=useRef<SettingsAgentDraft>(freshAgent());
   const [editing,setEditing]=useState(false);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
@@ -1920,7 +1921,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
   },[snapshot.agentPolicy]);
   const availableModels=snapshot.models.filter(model=>model.enabled);
   const selectedModel=availableModels.some(model=>model.id===draft.modelId);
-  const formClass="w-full rounded-lg border border-foreground/60 bg-muted/10 px-3 py-2 text-[12px] text-foreground outline-none focus:border-violet-400 focus-visible:ring-2 focus-visible:ring-violet-400/60";
+  const formClass="w-full min-h-10 rounded-lg border border-border bg-background px-3 py-2 text-[12px] text-foreground outline-none transition-colors focus:border-foreground/50 focus-visible:ring-2 focus-visible:ring-foreground/15";
   const field=(label:string,value:string,onChange:(next:string)=>void,placeholder="")=>(
     <label className="block space-y-1.5">
       <span className="text-[11px] font-medium">{label}</span>
@@ -1928,11 +1929,14 @@ function AgentsView({snapshot,view,host,onChanged}:{
     </label>
   );
   function startNew(template?:SettingsAgent){
+    const next=template?{...agentDraft(template),modelId:"",active:true}:freshAgent();
+    initialEditorDraft.current=next;
     setSelected(null);
-    setDraft(template?{...agentDraft(template),modelId:"",active:true}:freshAgent());
+    setDraft(next);
     setError("");setEditing(true);
   }
   function startEdit(agent:SettingsAgent){
+    initialEditorDraft.current=agentDraft(agent);
     setSelected(agent);setDraft(agentDraft(agent));setError("");setEditing(true);
   }
   async function saveAgent(){
@@ -1961,6 +1965,80 @@ function AgentsView({snapshot,view,host,onChanged}:{
     catch(e){setError(e instanceof Error?e.message:"Could not update execution policy.");}
     finally{setBusy(false);}
   }
+  const hasUnsavedChanges = JSON.stringify(draft) !== JSON.stringify(initialEditorDraft.current);
+  function exitEditor() {
+    if (hasUnsavedChanges && !window.confirm("Discard unsaved agent changes?")) return;
+    setEditing(false);
+    setError("");
+  }
+  if (editing) return (
+      <PluginDetailPage open={editing} title={selected?selected.name:"New agent"} description="Configure identity, tools, model, and execution rules for this account-owned agent."
+        onBack={exitEditor}>
+        <div className="space-y-5">
+          <div className="border-b border-border/70 pb-3"><h3 className="text-[13px] font-semibold">Identity</h3><p className="mt-1 text-[11px] text-muted-foreground">Choose the name and short identifier used throughout your workspace.</p></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+          {field("Agent name",draft.name,value=>setDraft(current=>({...current,name:value})),"Brand researcher")}
+          {field("Slug",draft.slug,value=>setDraft(current=>({...current,slug:value.toLowerCase()})),"brand-researcher")}
+          </div>
+          {field("Description",draft.description,value=>setDraft(current=>({...current,description:value})),"What this agent does")}
+          <div className="border-b border-border/70 pb-3 pt-2"><h3 className="text-[13px] font-semibold">Instructions & execution</h3><p className="mt-1 text-[11px] text-muted-foreground">All permissions remain subject to your connected accounts and runtime approvals.</p></div>
+          <label className="block space-y-2">
+            <span className="text-[11px] font-medium">Execution model (verified inventory)</span>
+            <select className={formClass} value={draft.modelId} onChange={event=>setDraft(current=>({...current,modelId:event.target.value}))}>
+              <option value="">No model selected</option>
+              {draft.modelId&&!selectedModel?<option value={draft.modelId}>{draft.modelId} (saved; not verified)</option>:null}
+              {availableModels.map(model=><option key={model.id} value={model.id}>{model.provider}: {model.name}</option>)}
+            </select>
+            {!availableModels.length?<p className="text-[10px] text-[var(--settings-warning-ink)]">No verified models discovered. You can save the agent, but cannot claim it is runnable yet.</p>:null}
+          </label>
+          <label className="block space-y-2">
+            <span className="text-[11px] font-medium">Agent instructions</span>
+            <textarea rows={11} value={draft.instructions}
+              onChange={event=>setDraft(current=>({...current,instructions:event.target.value}))}
+              className={cx(formClass,"min-h-[230px] resize-y leading-relaxed")} placeholder="Describe the role, task procedure and safeguards."/>
+          </label>
+          <label className="block space-y-2">
+            <span className="text-[11px] font-medium">Allowed tool patterns (one per line)</span>
+            <textarea rows={3} value={draft.allowedTools.join("\n")}
+              onChange={event=>setDraft(current=>({...current,allowedTools:event.target.value.split(/[,\n]/).map(t=>t.trim()).filter(Boolean)}))}
+              className={cx(formClass,"resize-y leading-relaxed")}/>
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-2 text-[11px] font-medium">Reasoning effort
+              <select className={formClass} value={draft.reasoningEffort} onChange={event=>setDraft(current=>({...current,reasoningEffort:event.target.value as SettingsAgentDraft["reasoningEffort"]}))}>
+                {["low","medium","high","extra_high"].map(value=><option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+            <label className="space-y-2 text-[11px] font-medium">Sandbox permissions
+              <select className={formClass} value={draft.sandboxMode} onChange={event=>setDraft(current=>({...current,sandboxMode:event.target.value as SettingsAgentDraft["sandboxMode"]}))}>
+                <option value="read-only">Read-only</option>
+                <option value="workspace-write">Workspace write (approval rules apply)</option>
+              </select>
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-[11px]">
+            <input type="checkbox" checked={draft.runInBackground} onChange={event=>setDraft(current=>({...current,runInBackground:event.target.checked}))}/>
+            Allow background execution where supported
+          </label>
+          <label className="flex items-center justify-between gap-3 text-[11px]">
+            <span>Maximum concurrent threads</span>
+            <select value={draft.maxConcurrentThreads} className="min-h-11 rounded-lg border border-foreground/60 bg-muted/20 px-2 py-1 focus-visible:outline-2 focus-visible:outline-violet-400" onChange={event=>setDraft(current=>({...current,maxConcurrentThreads:Number(event.target.value)}))}>
+              {[1,2,3,4,5,6,8,10,12].map(n=><option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-[11px]">
+            <input type="checkbox" checked={draft.active} onChange={event=>setDraft(current=>({...current,active:event.target.checked}))}/>
+            Enabled
+          </label>
+          {error?<p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
+          <div className="flex justify-end gap-2 border-t border-border/70 pt-4">
+            <button type="button" className="rounded-lg border border-border px-4 py-2 text-[11px]" onClick={exitEditor}>Back to agents</button>
+            <button type="button" disabled={busy||selected?.readOnly||!host.saveAgent} onClick={()=>void saveAgent()}
+              className="rounded-lg bg-foreground px-4 py-2 text-[11px] font-medium text-background disabled:opacity-40">Save agent</button>
+          </div>
+        </div>
+      </PluginDetailPage>
+  );
   if(view==="models"){
     return <Section title="Verified model inventory" description="Discovered per credential. Missing credentials and unsupported models are never silently substituted.">
       <ModelTable models={snapshot.models}/>
@@ -2054,68 +2132,7 @@ function AgentsView({snapshot,view,host,onChanged}:{
           ))}
         </div>
       </Section>
-      <SettingsSheet open={editing} title={selected?"Edit agent":"Create agent"} description="Instructions and model preferences are saved to your account's existing agent registry."
-        onClose={()=>setEditing(false)}>
-        <div className="space-y-4">
-          {field("Agent name",draft.name,value=>setDraft(current=>({...current,name:value})),"Brand researcher")}
-          {field("Slug",draft.slug,value=>setDraft(current=>({...current,slug:value.toLowerCase()})),"brand-researcher")}
-          {field("Description",draft.description,value=>setDraft(current=>({...current,description:value})),"What this agent does")}
-          <label className="block space-y-2">
-            <span className="text-[11px] font-medium">Execution model (verified inventory)</span>
-            <select className={formClass} value={draft.modelId} onChange={event=>setDraft(current=>({...current,modelId:event.target.value}))}>
-              <option value="">No model selected</option>
-              {draft.modelId&&!selectedModel?<option value={draft.modelId}>{draft.modelId} (saved; not verified)</option>:null}
-              {availableModels.map(model=><option key={model.id} value={model.id}>{model.provider}: {model.name}</option>)}
-            </select>
-            {!availableModels.length?<p className="text-[10px] text-[var(--settings-warning-ink)]">No verified models discovered. You can save the agent, but cannot claim it is runnable yet.</p>:null}
-          </label>
-          <label className="block space-y-2">
-            <span className="text-[11px] font-medium">Agent instructions</span>
-            <textarea rows={11} value={draft.instructions}
-              onChange={event=>setDraft(current=>({...current,instructions:event.target.value}))}
-              className={cx(formClass,"resize-y font-mono leading-relaxed")} placeholder="Describe the role, task procedure and safeguards."/>
-          </label>
-          <label className="block space-y-2">
-            <span className="text-[11px] font-medium">Allowed tool patterns (one per line)</span>
-            <textarea rows={3} value={draft.allowedTools.join("\n")}
-              onChange={event=>setDraft(current=>({...current,allowedTools:event.target.value.split(/[,\n]/).map(t=>t.trim()).filter(Boolean)}))}
-              className={cx(formClass,"font-mono")}/>
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-2 text-[11px] font-medium">Reasoning effort
-              <select className={formClass} value={draft.reasoningEffort} onChange={event=>setDraft(current=>({...current,reasoningEffort:event.target.value as SettingsAgentDraft["reasoningEffort"]}))}>
-                {["low","medium","high","extra_high"].map(value=><option key={value} value={value}>{value}</option>)}
-              </select>
-            </label>
-            <label className="space-y-2 text-[11px] font-medium">Sandbox permissions
-              <select className={formClass} value={draft.sandboxMode} onChange={event=>setDraft(current=>({...current,sandboxMode:event.target.value as SettingsAgentDraft["sandboxMode"]}))}>
-                <option value="read-only">Read-only</option>
-                <option value="workspace-write">Workspace write (approval rules apply)</option>
-              </select>
-            </label>
-          </div>
-          <label className="flex items-center gap-2 text-[11px]">
-            <input type="checkbox" checked={draft.runInBackground} onChange={event=>setDraft(current=>({...current,runInBackground:event.target.checked}))}/>
-            Allow background execution where supported
-          </label>
-          <label className="flex items-center justify-between gap-3 text-[11px]">
-            <span>Maximum concurrent threads</span>
-            <select value={draft.maxConcurrentThreads} className="min-h-11 rounded-lg border border-foreground/60 bg-muted/20 px-2 py-1 focus-visible:outline-2 focus-visible:outline-violet-400" onChange={event=>setDraft(current=>({...current,maxConcurrentThreads:Number(event.target.value)}))}>
-              {[1,2,3,4,5,6,8,10,12].map(n=><option key={n} value={n}>{n}</option>)}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-[11px]">
-            <input type="checkbox" checked={draft.active} onChange={event=>setDraft(current=>({...current,active:event.target.checked}))}/>
-            Enabled
-          </label>
-          {error?<p role="alert" className="rounded-lg border border-red-500/30 p-3 text-[11px] text-[var(--settings-danger-ink)]">{error}</p>:null}
-          <div className="flex justify-end gap-2 border-t border-border/70 pt-4">
-            <button type="button" className="rounded-lg border border-border px-4 py-2 text-[11px]" onClick={()=>setEditing(false)}>Cancel</button>
-            <button type="button" disabled={busy||selected?.readOnly||!host.saveAgent} onClick={()=>void saveAgent()}
-              className="rounded-lg bg-violet-600 px-4 py-2 text-[11px] font-medium text-white disabled:opacity-40">Save agent</button>
-          </div>
-        </div>
-      </SettingsSheet>
+
     </div>
   );
 }
