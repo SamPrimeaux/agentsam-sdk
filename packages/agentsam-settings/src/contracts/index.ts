@@ -1,3 +1,7 @@
+export type { SettingsBillingSnapshot, SettingsBillingInvoice, SettingsBillingPlan } from "./billing";
+export { normalizeBillingApi, safeBillingUrl, BILLING_NOT_CONFIGURED } from "./billing";
+export { normalizeVerifiedToolUsage } from "./tool-usage";
+
 export type SettingsUnitId =
   | "general"
   | "agents"
@@ -417,6 +421,10 @@ export interface SettingsHost {
   listPermissionOptions?(): Promise<SettingsPermissionOption[]>;
   mintCredential?(input: SettingsMintInput): Promise<SettingsMintResult>;
   revokeCredential?(id: string): Promise<void>;
+  /** Billing data comes from the authenticated host, never package fixtures. */
+  readBilling?(): Promise<import("./billing").SettingsBillingSnapshot>;
+  /** Host generates a fresh provider session after checking account ownership. */
+  openBillingPortal?(): Promise<void>;
   saveAgent?(draft: SettingsAgentDraft, id?: string): Promise<void>;
   archiveAgent?(id: string): Promise<void>;
   updateAgentPolicy?(policy: SettingsAgentPolicy): Promise<void>;

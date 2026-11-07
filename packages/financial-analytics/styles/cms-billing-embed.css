@@ -1,0 +1,31 @@
+/* Host site owns semantic design tokens; this embed never forces app-shell colors. */
+.agentsam-billing-embed {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(12px, 4vw, 28px);
+  width: 100%;
+  min-width: 0;
+  padding: clamp(16px, 4vw, 32px);
+  background: var(--site-surface-raised, var(--surface-raised, transparent));
+  color: var(--site-text, var(--text-primary, inherit));
+  border: 1px solid var(--site-border, var(--border-subtle, currentColor));
+  border-radius: var(--site-radius-lg, 12px);
+}
+.agentsam-billing-embed-inline { border-color: transparent; background: transparent; }
+.agentsam-billing-embed-copy { min-width: 0; flex: 1 1 210px; }
+.agentsam-billing-embed h2 { margin: 0; font: inherit; font-size: clamp(17px, 4.5vw, 24px); font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
+.agentsam-billing-embed p { margin: 8px 0 0; font: inherit; font-size: 14px; line-height: 1.5; color: var(--site-text-secondary, var(--text-secondary, inherit)); }
+.agentsam-billing-embed-action {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 10px 16px;
+  border-radius: var(--site-radius-button, 8px);
+  background: var(--site-action-bg, var(--accent, currentColor));
+  color: var(--site-action-text, var(--accent-contrast, white));
+  text-decoration: none; font: inherit; font-size: 14px; font-weight: 600;
+}
+.agentsam-billing-embed-unavailable { font-size: 13px; line-height: 1.4; color: var(--site-text-secondary, var(--text-secondary, inherit)); max-width: 240px; }
+.agentsam-billing-embed a:focus-visible { outline: 2px solid var(--site-focus-ring, currentColor); outline-offset: 3px; }
+@media (max-width: 480px) { .agentsam-billing-embed-action { width: 100%; } .agentsam-billing-embed-unavailable { max-width: none; } }

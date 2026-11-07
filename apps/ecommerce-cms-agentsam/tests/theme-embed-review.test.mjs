@@ -12,7 +12,7 @@ const tick=()=>new Promise(done=>setTimeout(done,0));
 test('embed catalog matches manifests and declares installable templates',()=>{
   execFileSync(process.execPath,[new URL('../scripts/sync-theme-embed-catalog.mjs',import.meta.url).pathname,'--check']);
   const catalog=JSON.parse(readFileSync(catalogPath,'utf8'));
-  assert.equal(catalog.apps.length,5);
+  assert.equal(catalog.apps.length,6);
   assert.equal(catalog.preview_only,false);
   assert.equal(catalog.installable,true);
   assert.equal(catalog.apps.find(x=>x.key==='newsletter_subscribe').default_config.double_opt_in,true);
@@ -42,9 +42,17 @@ test('packaged editor lists embeds and installs through the CMS catalog-resource
   try{
     w.eval(src('theme-embed-review.js'));
     await tick();
-    assert.equal(w.document.querySelectorAll('[data-embed-open]').length,5);
+    assert.equal(w.document.querySelectorAll('[data-embed-open]').length,6);
     assert.equal(w.document.querySelector('#te-embed-empty'),null);
     assert.equal(w.ThemeEmbedReview.isPreviewOnly,false);
+    w.document.querySelector('[data-embed-open="customer_billing"]').click();
+    assert.match(w.document.querySelector('.ter-inspector-scroll').textContent,/authenticated billing route/);
+    assert.ok(w.document.querySelector('[data-embed-select="style"]'));
+    assert.equal(w.document.querySelector('[data-embed-input="button_href"]'),null);
+    w.document.querySelector('[data-embed-preview]').click();
+    assert.match(w.document.querySelector('dialog').textContent,/host must provide an authenticated billing destination/i);
+    assert.equal(w.document.querySelector('dialog button[disabled]')?.textContent,'View billing');
+    w.document.querySelector('dialog').close();
     w.document.querySelector('[data-embed-open="newsletter_subscribe"]').click();
     assert.match(w.document.querySelector('[data-embed-note]').textContent,/not installed/i);
     assert.ok(w.document.querySelector('[data-embed-install]'));
