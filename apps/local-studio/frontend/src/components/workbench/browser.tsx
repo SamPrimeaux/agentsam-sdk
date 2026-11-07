@@ -126,6 +126,19 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
             aria-label="Address"
           />
         </div>
+        {desktop ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-11 shrink-0 md:size-9"
+            aria-label="Manage Chrome extensions"
+            title="Manage Chrome extensions"
+            onClick={() => openChrome('chrome://extensions/')}
+          >
+            <Puzzle className="size-4" />
+          </Button>
+        ) : null}
         {desktop ? <Button type="submit" size="sm" className="h-11 shrink-0 md:h-8">Open in Chrome</Button> : tab.url ? (
           <Button
             type="button"
@@ -151,7 +164,6 @@ export function BrowserStage({ tab }: { tab: SideTab }) {
           <div className="flex flex-wrap justify-center gap-2">
             <Button type="button" onClick={() => openChrome()}><Globe className="mr-2 size-4" />Open browser</Button>
             <Button type="button" variant="outline" onClick={() => openChrome('chrome://downloads/')}><Download className="mr-2 size-4" />Downloads</Button>
-            <Button type="button" variant="outline" onClick={() => openChrome('chrome://extensions/')}><Puzzle className="mr-2 size-4" />Extensions</Button>
             <Button type="button" variant="outline" onClick={() => openChrome('chrome://settings/content/')}><ShieldCheck className="mr-2 size-4" />Site permissions</Button>
           </div>
           {browserProfile ? <div className="max-w-xl rounded-lg border border-border bg-muted/50 px-3 py-2 text-left text-xs text-muted-foreground"><div>Separate Chrome profile</div><code className="mt-1 block break-all">{browserProfile.profile_path}</code></div> : null}
