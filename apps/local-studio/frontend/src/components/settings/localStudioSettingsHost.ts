@@ -46,6 +46,7 @@ import {
   disconnectLocalStudioPublicPlugin,
   disconnectLocalStudioProvider,
   listLocalStudioConnections,
+  listLocalStudioGitHubRepositories,
   startLocalStudioProviderConnection,
   updateLocalStudioPlugin,
   type LocalStudioPluginRecord,
@@ -140,6 +141,7 @@ function settingsPlugin(plugin: LocalStudioPluginRecord): SettingsPlugin {
     settingsVisible: plugin.settings_visible,
     setupUrl: plugin.setup_url || null,
     disconnectUrl: plugin.disconnect_url || null,
+    connectionRef: plugin.connection_ref || null,
     iconUrl: plugin.icon_url || null,
     iconDarkUrl: plugin.icon_dark_url || null,
     iconAlt: plugin.icon_alt || null,
@@ -569,6 +571,14 @@ export const localStudioSettingsHost: SettingsHost = {
     }
     return {pluginKey:body.pluginKey||"",contextTool:body.contextTool||"",result:body.result};
   },
+  async listPluginRepositories(pluginId) {
+    const registry = await loadPluginSettings();
+    const record = (registry.plugins || []).find(plugin => plugin.id === pluginId);
+    if (!record || record.provider_key !== "github" || record.plugin_kind !== "oauth" || !record.connection_ref)
+      throw new Error("github_connection_required");
+    const result = await listLocalStudioGitHubRepositories(record.connection_ref);
+    return { repositories: result.repositories, hasMore: result.hasMore };
+  },
   async setPluginEnabled(id, enabled) {
     await updateLocalStudioPlugin(id, { enabled });
     if (typeof window !== "undefined") {
@@ -580,8 +590,19 @@ export const localStudioSettingsHost: SettingsHost = {
     const plugins = (registry.plugins||[]).map(settingsPlugin);
     const plugin = plugins.find((candidate) => candidate.id === id);
     if (!plugin) throw new Error("plugin_not_found");
+    // Cloudflare owns a dedicated PKCE + resource-account connection; route it BEFORE
+    // the generic OAuth adapters, which intentionally support only Google/GitHub.
+    if (plugin.providerKey === "cloudflare") {
+      const pluginsView = "/settings/customize?view=plugins";
+      await startLocalStudioProviderConnection("cloudflare", {
+        returnTo: isPackagedDesktop()
+          ? buildConnectionReturnUrl("cloudflare", pluginsView) : pluginsView,
+        ...(options.fullCloudflareAccess === true ? { packs: ["all"] } : {}),
+      });
+      return;
+    }
     if (plugin.kind === "oauth") {
-      // Provider-connection plugins use the host's existing connect routes; Gmail is the only one this host serves.
+      // Provider-connection plugins use the host's existing connect routes.
       const returnTo = isPackagedDesktop()
         ? buildConnectionReturnUrl(plugin.providerKey, "/settings/customize?view=plugins")
         : "/settings/customize?view=plugins";
@@ -599,14 +620,6 @@ export const localStudioSettingsHost: SettingsHost = {
       return;
     }
     if (!plugin.setupUrl) throw new Error("plugin_setup_unavailable");
-    if (plugin.setupUrl.startsWith("/api/connections/") && plugin.providerKey === "cloudflare") {
-      const pluginsView = "/settings/customize?view=plugins";
-      await startLocalStudioProviderConnection("cloudflare", {
-        // The packaged app returns through its deep link; the web build returns to the web page.
-        returnTo: isPackagedDesktop() ? buildConnectionReturnUrl("cloudflare", pluginsView) : pluginsView,
-      });
-      return;
-    }
     if (/^https:\/\//i.test(plugin.setupUrl)) {
       await openExternalUrl(plugin.setupUrl);
       return;
@@ -618,6 +631,10 @@ export const localStudioSettingsHost: SettingsHost = {
     const plugins = (registry.plugins||[]).map(settingsPlugin);
     const plugin = plugins.find((candidate) => candidate.id === id);
     if (!plugin) throw new Error("plugin_not_found");
+    if (plugin.providerKey === "cloudflare") {
+      await disconnectLocalStudioProvider("cloudflare");
+      return;
+    }
     if (plugin.kind === "oauth") {
       const raw = (registry.plugins || []).find((candidate) => candidate.id === id);
       if (!raw?.connection_ref) throw new Error("plugin_disconnect_unavailable");
@@ -629,10 +646,7 @@ export const localStudioSettingsHost: SettingsHost = {
       await disconnectLocalStudioPublicPlugin(plugin.id);
       return;
     }
-    if (!plugin.disconnectUrl || plugin.providerKey !== "cloudflare") {
-      throw new Error("plugin_disconnect_unavailable");
-    }
-    await disconnectLocalStudioProvider("cloudflare");
+    throw new Error("plugin_disconnect_unavailable");
   },
   async setWidgetVisible(id, visible) {
     setLocalStudioWidgetVisible(id, visible);

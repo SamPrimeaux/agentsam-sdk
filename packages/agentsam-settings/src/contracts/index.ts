@@ -163,6 +163,8 @@ export type SettingsPlugin = SettingsCatalogItem & {
   settingsVisible: boolean;
   setupUrl?: string | null;
   disconnectUrl?: string | null;
+  /** Safe account identifier reference; never a credential or token. */
+  connectionRef?: string | null;
   iconUrl?: string | null;
   iconDarkUrl?: string | null;
   iconAlt?: string | null;
@@ -174,6 +176,17 @@ export type SettingsPlugin = SettingsCatalogItem & {
   lastHealthyAt?: number | null;
   lastErrorCode?: string | null;
   lastErrorMessage?: string | null;
+};
+
+export type SettingsPluginRepository = {
+  id: string;
+  fullName: string;
+  description: string;
+  private: boolean;
+  defaultBranch: string;
+  updatedAt: string;
+  htmlUrl: string;
+  permissions: { pull:boolean; push:boolean; admin:boolean };
 };
 
 /** Operator-reviewed plugin catalog entries, never implicit permission grants. */
@@ -437,8 +450,10 @@ export interface SettingsHost {
   installPluginFromCatalog?(pluginKey: string): Promise<void>;
   removeCatalogPlugin?(pluginId: string): Promise<void>;
   readPluginWorkspace?(pluginId: string): Promise<{pluginKey:string;contextTool:string;result:unknown}>;
+  /** Provider-scoped live repository read; no tokens returned to Settings. */
+  listPluginRepositories?(pluginId: string): Promise<{repositories:SettingsPluginRepository[];hasMore:boolean}>;
   setPluginEnabled?(id: string, enabled: boolean): Promise<void>;
-  beginPluginSetup?(id: string, options?: {allowWrites?: boolean}): Promise<void>;
+  beginPluginSetup?(id: string, options?: {allowWrites?: boolean;fullCloudflareAccess?:boolean}): Promise<void>;
   disconnectPlugin?(id: string): Promise<void>;
   setWidgetVisible?(id: string, visible: boolean): Promise<void>;
   openWidget?(id: string): void;

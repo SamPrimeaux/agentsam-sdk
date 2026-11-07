@@ -398,6 +398,21 @@ export function beginLocalStudioPublicPluginOAuth(pluginId:string,allowWrites=fa
     {allow_writes:allowWrites,desktop:isPackagedDesktop()},
   );
 }
+/** Repository visibility is checked server-side against this account's sealed GitHub grant. */
+export function listLocalStudioGitHubRepositories(connectionRef: string) {
+  if (!/^github:[a-zA-Z0-9-]{1,39}$/.test(connectionRef)) throw new Error("github_connection_invalid");
+  return pluginCatalogRequest<{
+    ok: boolean;
+    account: string;
+    repositories: Array<{
+      id:string; fullName:string; description:string; private:boolean; defaultBranch:string;
+      updatedAt:string; htmlUrl:string; permissions:{pull:boolean;push:boolean;admin:boolean};
+    }>;
+    limitedTo:number;
+    hasMore:boolean;
+  }>("GET","/api/work/github/repos?connection_id="+encodeURIComponent(connectionRef));
+}
+
 export function beginLocalStudioGmailConnection(returnTo: string) {
   return pluginCatalogRequest<{ok:boolean;authorize_url:string}>(
     'POST','/api/work/gmail/oauth/start',{return_to:returnTo},

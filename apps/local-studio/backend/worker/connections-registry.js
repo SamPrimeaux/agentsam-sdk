@@ -49,7 +49,9 @@ export function parseOauthConnectionRef(secretRef) {
  * from the catalog-v1 MCP flow.
  */
 export function applyOauthPluginState(plugin, tokenRows = []) {
-  if (plugin?.plugin_kind !== "oauth") return plugin;
+  // Cloudflare has its own connection and health authority. Only these
+  // generic OAuth connectors should derive status from user_oauth_tokens.
+  if (plugin?.plugin_kind !== "oauth" || !["google_gmail","google_drive","google_calendar","github"].includes(plugin.provider_key)) return plugin;
   const ref = parseOauthConnectionRef(plugin.secret_ref);
   const token = ref
     ? tokenRows.find((row) => String(row.provider).toLowerCase() === ref.provider

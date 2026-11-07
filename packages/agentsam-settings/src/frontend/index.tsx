@@ -73,6 +73,7 @@ import type {
   SettingsPlugin,
   SettingsDiscoveredPlugin,
   SettingsPluginDiscovery,
+  SettingsPluginRepository,
   SettingsSnapshot,
   SettingsWidget,
   SettingsTheme,
@@ -703,6 +704,25 @@ function ExtensionTile({
 }
 
 
+/** Plugin detail lives in the Settings content area, not a second drawer over the workspace. */
+function PluginDetailPage({open,title,description,onBack,children}:{
+  open:boolean; title:string; description?:string; onBack:()=>void; children:ReactNode;
+}) {
+  if (!open) return null;
+  return <section aria-label={"Plugin details: "+title} className="mx-auto w-full max-w-3xl space-y-6 pb-12">
+    <nav aria-label="Plugin breadcrumb" className="flex items-center gap-2 text-[12px] text-muted-foreground">
+      <button type="button" onClick={onBack} className="min-h-9 rounded-lg px-2 transition hover:bg-muted/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30">Plugins</button>
+      <ChevronRight className="size-3.5"/>
+      <span className="truncate text-foreground">{title}</span>
+    </nav>
+    <header className="border-b border-border/65 pb-4">
+      <h2 className="text-[21px] font-semibold tracking-[-0.03em] text-foreground">{title}</h2>
+      {description ? <p className="mt-1 text-[12px] leading-5 text-muted-foreground">{description}</p>:null}
+    </header>
+    {children}
+  </section>;
+}
+
 /**
  * Installed state comes exclusively from SettingsSnapshot/plugins (the host's
  * real registry). Discoverable entries come from an operator-configured,
@@ -727,9 +747,14 @@ function PluginCustomizeView({
   const [workspace,setWorkspace] = useState<{pluginKey:string;contextTool:string;result:unknown}|null>(null);
   const [workspaceError,setWorkspaceError] = useState("");
   const [workspaceBusy,setWorkspaceBusy] = useState(false);
+  const [gitRepositories,setGitRepositories] = useState<SettingsPluginRepository[] | null>(null);
+  const [gitRepositoriesError,setGitRepositoriesError] = useState("");
+  const [gitRepositoriesBusy,setGitRepositoriesBusy] = useState(false);
+  const [gitRepositoriesHasMore,setGitRepositoriesHasMore] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [directoryTab, setDirectoryTab] = useState<"public" | "personal">("public");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
   const [notice, setNotice] = useState("");
@@ -754,6 +779,35 @@ function PluginCustomizeView({
         .some(value => value.toLowerCase().includes(needle)))
     ));
   }, [discovered, activeCategory, searchTerm]);
+  const filteredInstalled = useMemo(() => {
+    const needle = searchTerm.trim().toLowerCase();
+    return plugins.filter(plugin => !needle || [
+      plugin.name, plugin.subtitle, plugin.providerKey, plugin.pluginKey, ...plugin.capabilities,
+    ].some(value => value.toLowerCase().includes(needle)));
+  }, [plugins, searchTerm]);
+  const selectPlugin = (key: string) => {
+    setSelectedKey(key);
+    setGitRepositories(null);
+    setGitRepositoriesError("");
+    setGitRepositoriesHasMore(false);
+    setActionError("");
+    setNotice("");
+  };
+  async function readGitRepositories(pluginId: string) {
+    setGitRepositoriesBusy(true);
+    setGitRepositoriesError("");
+    try {
+      if (!host.listPluginRepositories) throw new Error("GitHub repository browsing is not available on this host.");
+      const result=await host.listPluginRepositories(pluginId);
+      setGitRepositories(result.repositories);
+      setGitRepositoriesHasMore(result.hasMore);
+    } catch (error) {
+      setGitRepositories(null);
+      setGitRepositoriesError(error instanceof Error ? error.message : "Unable to access your GitHub repositories.");
+    } finally {
+      setGitRepositoriesBusy(false);
+    }
+  }
 
   async function openWorkspace(id:string) {
     setSelectedKey(null);
@@ -820,12 +874,18 @@ function PluginCustomizeView({
     }
   }
 
-  // Installation or OAuth completion alone never means executable tools are ready.
+  // Native/API OAuth connectors use provider-backed operations, not MCP tool rows.
+  // Only remote catalog MCP products require tool registration to be considered runnable.
   const isRunnable = (row: SettingsPlugin | null | undefined) => Boolean(
     row?.setupStatus === "connected" && row.enabled && row.toolCount > 0 && row.healthStatus === "healthy"
   );
-  const installedState = (row: SettingsPlugin) => isRunnable(row)
-    ? "Connected" : row.setupStatus === "connected" ? "Verify tools" : "Needs connection";
+  const isConnected = (row: SettingsPlugin | null | undefined) => Boolean(
+    row?.setupStatus === "connected" && row.enabled && row.healthStatus === "healthy" &&
+    (row.installationKey !== "catalog-v1" || row.toolCount > 0)
+  );
+  const installedState = (row: SettingsPlugin) => isConnected(row)
+    ? "Connected" : row.setupStatus === "connected" && row.installationKey === "catalog-v1"
+      ? "Verify tools" : row.setupStatus === "connected" ? "Check connection" : "Needs connection";
   const stateFor = (entry: SettingsDiscoveredPlugin) => {
     const row = plugins.find(plugin=>plugin.pluginKey === entry.pluginKey);
     return row ? installedState(row) : entry.installationId ? "Needs connection" : "Available";
@@ -961,133 +1021,164 @@ function PluginCustomizeView({
 
   return (
     <>
-      <section className="space-y-6 pb-8">
-        <div className="space-y-3">
+      {!anySelected ? <section className="mx-auto w-full max-w-5xl space-y-7 pb-10" aria-label="Plugin directory">
+        <header className="space-y-1">
+          <h2 className="text-[22px] font-semibold tracking-[-0.035em] text-foreground">Plugins</h2>
+          <p className="text-[12px] text-muted-foreground">Connect the tools you use to your AgentSam workspace.</p>
+        </header>
+
+        <label className="relative block w-full">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/>
+          <input type="search" aria-label="Search plugins" value={searchTerm} onChange={event=>setSearchTerm(event.target.value)}
+            placeholder="Search plugins"
+            className="h-11 w-full rounded-xl border border-border bg-muted/15 pl-10 pr-4 text-[13px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-foreground/40 focus-visible:ring-2 focus-visible:ring-foreground/10"/>
+        </label>
+
+        <section aria-label="Installed plugins" className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <h3 className="flex items-center gap-2 text-[15px] font-semibold tracking-[-0.025em]">Installed <ChevronRight className="size-4 text-muted-foreground"/></h3>
-              <p className="mt-1 text-[11px] text-muted-foreground">Actual plugins saved in this account's registry.</p>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-[14px] font-semibold">Installed</h3>
+              <span className="text-[11px] text-muted-foreground">{plugins.length}</span>
             </div>
-            <button type="button" onClick={()=>void (async()=>{await onChanged();await refresh();})()}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground">
-              <RefreshCw className={cx("size-3.5",loading && "animate-spin")}/> Refresh
-            </button>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={()=>{setDirectoryTab("personal");setSearchTerm("");}}
+                className="min-h-9 rounded-lg px-3 text-[12px] text-muted-foreground transition hover:bg-muted/40 hover:text-foreground">Manage</button>
+              <button type="button" aria-label="Refresh installed plugins" disabled={loading}
+                onClick={()=>void (async()=>{await onChanged();await refresh();})()}
+                className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted/40 hover:text-foreground disabled:opacity-50">
+                <RefreshCw className={cx("size-4",loading && "animate-spin")}/>
+              </button>
+            </div>
           </div>
-          {plugins.length ? (
-            <div className="flex gap-3 overflow-x-auto pb-2" aria-label="Installed plugins">
-              {plugins.map(plugin=>{
+          {filteredInstalled.length ? (
+            <div className="flex flex-wrap gap-2.5" aria-label="Installed plugin shortcuts">
+              {filteredInstalled.map(plugin=>{
                 const matched = discovered.find(entry=>entry.pluginKey===plugin.pluginKey);
                 return (
-                  <button type="button" key={plugin.id} onClick={()=>{if(plugin.installationKey==="catalog-v1" && isRunnable(plugin) && host.readPluginWorkspace)
-                      void openWorkspace(plugin.id);
-                    else {setSelectedKey(plugin.id);setActionError("");setNotice("");}}}
-                    aria-label={"View installed "+plugin.name}
-                    className="group flex w-[100px] shrink-0 flex-col items-center gap-2 rounded-xl p-2 text-center hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400">
-                    <span className="relative flex size-[67px] items-center justify-center overflow-hidden rounded-[20px] border border-border/90 bg-muted/35 text-foreground/85 shadow-[0_8px_20px_-14px_rgba(0,0,0,0.5)]">
-                      {iconFor(matched ?? plugin,"size-7")}
-                      {plugin.iconUrl ? <img src={plugin.iconUrl} alt={plugin.iconAlt || ""} onError={event=>{event.currentTarget.hidden=true;}}
-                        className={cx("absolute inset-0 size-full bg-muted/35",plugin.iconFit==="cover"?"object-cover":"object-contain p-2.5")}/> : null}
-                      <span className={cx("absolute bottom-1 right-1 size-2.5 rounded-full border-2 border-background",isRunnable(plugin)?"bg-emerald-400":"bg-amber-400")}/>
-                    </span>
-                    <span className="w-full truncate text-[11px] font-medium text-foreground">{plugin.name}</span>
-                    <span className="w-full truncate text-[9px] text-muted-foreground">{installedState(plugin)}</span>
+                  <button key={plugin.id} type="button" onClick={()=>selectPlugin(plugin.id)}
+                    title={plugin.name+" · "+installedState(plugin)}
+                    aria-label={"View "+plugin.name+" settings · "+installedState(plugin)}
+                    className="group relative flex size-12 shrink-0 items-center justify-center rounded-[13px] border border-border/80 bg-muted/15 text-foreground transition hover:-translate-y-0.5 hover:border-foreground/35 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40">
+                    {plugin.iconUrl ? <img src={plugin.iconUrl} alt="" loading="lazy" onError={event=>{event.currentTarget.hidden=true;}}
+                      className={cx("size-9",plugin.iconFit==="cover"?"rounded-md object-cover":"object-contain")}/>
+                      : iconFor(matched ?? plugin,"size-5")}
+                    <span aria-hidden="true" className={cx("absolute -bottom-1 -right-1 size-2.5 rounded-full border-2 border-background",
+                      isConnected(plugin)?"bg-emerald-500":"bg-amber-500")}/>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div role={pluginsError?"alert":"status"} className="flex items-center gap-3 rounded-xl border border-dashed border-border/85 bg-muted/10 p-5">
-              <Plug className="size-5 shrink-0 text-muted-foreground"/>
-              <div className="text-[11px] leading-relaxed text-muted-foreground">{pluginsError || "No plugins installed in this account yet. Explore the verified catalog below."}</div>
-            </div>
+            <p role={pluginsError?"alert":"status"} className="rounded-xl border border-dashed border-border px-4 py-5 text-[12px] text-muted-foreground">
+              {pluginsError || (plugins.length ? "No installed plugins match your search." : "No plugins installed in this account yet. Explore the verified catalog below.")}
+            </p>
           )}
-        </div>
+        </section>
 
-        <div className="space-y-4 border-t border-border/65 pt-6">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h3 className="text-[16px] font-semibold tracking-[-0.025em]">Discover plugins</h3>
-              <p className="mt-1 text-[11px] text-muted-foreground">Published plugin packages from configured, verified catalog sources. {catalog ? `${catalog.configuredSources} source${catalog.configuredSources===1?"":"s"} configured` : "Checking sources…"}</p>
-            </div>
-            <span className="text-[11px] text-muted-foreground">{filtered.length} plugins</span>
-          </div>
-          <label className="relative block w-full max-w-md">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"/>
-            <input type="search" aria-label="Search plugins" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}
-              placeholder="Search plugins and capabilities"
-              className="h-11 w-full rounded-[14px] border border-border/85 bg-muted/15 pl-10 pr-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus:border-violet-400/70 focus:ring-2 focus:ring-violet-400/15"/>
-          </label>
-          <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter plugins by category">
-            {categories.map(category=>(
-              <button key={category} type="button" aria-pressed={activeCategory===category} onClick={()=>setActiveCategory(category)}
-                className={cx("shrink-0 rounded-full border px-3 py-1.5 text-[11px] transition-colors",
-                  activeCategory===category ? "border-violet-400/50 bg-violet-400/15 font-medium text-foreground" :
-                    "border-border/70 bg-background/45 text-muted-foreground hover:text-foreground")}>
-                {category==="all"?"All plugins":category}
+        <section className="space-y-4 border-t border-border/70 pt-5" aria-label="Browse plugin directory">
+          <div role="tablist" aria-label="Plugin directory" className="inline-flex items-center gap-1 rounded-xl bg-muted/30 p-1">
+            {(["public","personal"] as const).map(tab=>(
+              <button key={tab} type="button" role="tab" aria-selected={directoryTab===tab}
+                onClick={()=>setDirectoryTab(tab)}
+                className={cx("min-h-9 rounded-lg px-4 text-[12px] font-medium transition-colors",
+                  directoryTab===tab?"bg-background text-foreground shadow-sm ring-1 ring-border/70":"text-muted-foreground hover:text-foreground")}>
+                {tab==="public"?"Public":"Personal"}
               </button>
             ))}
           </div>
-          {catalogError ? (
-            <div className="flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-400/[0.065] p-3 text-[11px] text-[var(--settings-warning-ink)]">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0"/>
-              <span>{catalogError}{catalog?.errors?.length ? ` Affected source${catalog.errors.length===1?"":"s"}: ${catalog.errors.map(error=>error.source).join(", ")}.` : ""}</span>
-            </div>
-          ) : null}
-          {loading && !catalog ? <div className="rounded-2xl border border-border/70 p-8 text-center text-[12px] text-muted-foreground">Loading verified plugin catalog…</div>
-            : filtered.length ? (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {filtered.map(plugin=>{
-                  const state=stateFor(plugin);
-                  return (
-                    <button key={plugin.pluginKey} type="button" onClick={()=>{const installed=plugins.find(row=>row.pluginKey===plugin.pluginKey);
-                      if(installed&&isRunnable(installed)&&host.readPluginWorkspace)void openWorkspace(installed.id);
-                      else {setSelectedKey(plugin.pluginKey);setActionError("");setNotice("");}}}
-                      aria-label={"Explore "+plugin.name}
-                      className="group flex min-w-0 flex-col overflow-hidden rounded-[18px] border border-border/75 bg-background/60 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/25 hover:bg-muted/20 hover:shadow-[0_14px_35px_-24px_rgba(0,0,0,0.55)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400">
-                      <div className="relative flex min-h-[124px] items-end overflow-hidden bg-gradient-to-br from-violet-400/[0.15] via-sky-400/[0.035] to-fuchsia-400/[0.11] p-4">
-                        <div className="absolute -right-8 -top-10 size-40 rounded-full border border-violet-400/15 bg-violet-400/[0.065]"/>
-                        <div className="relative flex w-full items-end justify-between gap-3">
-                          <span className="flex size-14 items-center justify-center overflow-hidden rounded-[18px] border border-foreground/15 bg-background/75 text-violet-300 shadow-lg">
-                            {plugin.iconUrl
-                              ? <img src={plugin.iconUrl} alt="" loading="lazy" className="size-full object-contain p-1.5"/>
-                              : plugin.publisherIconUrl
-                                ? <PublisherMark url={plugin.publisherIconUrl} className="size-7 text-foreground"/>
-                                : iconFor(plugin,"size-7")}
-                          </span>
-                          <span className={cx("rounded-full border px-2 py-1 text-[10px] font-medium",stateClasses(state))}>{state}</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-1 flex-col gap-2 p-4">
-                        <p className="flex items-center gap-1.5 text-[13px] font-semibold tracking-[-0.02em] text-foreground">
-                          <PublisherMark url={plugin.publisherIconUrl} className="size-3 text-muted-foreground"/>{plugin.name}</p>
-                        <p className="line-clamp-2 min-h-[34px] text-[11px] leading-[1.6] text-muted-foreground">{plugin.subtitle || plugin.description}</p>
-                        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/65 pt-3">
-                          <span className="text-[10px] text-muted-foreground">{plugin.toolCount} tools · {plugin.skillCount} skills</span>
-                          <span className="flex items-center gap-1 text-[11px] font-medium text-foreground/80">Explore <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-0.5"/></span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-border p-9 text-center text-[11px] text-muted-foreground">
-                {catalog?.plugins.length ? "No plugins match these filters." : "No discoverable plugins available from configured catalogs."}
-                {(searchTerm || activeCategory!=="all") ? <button type="button" onClick={()=>{setSearchTerm("");setActiveCategory("all");}} className="ml-2 underline underline-offset-4">Clear filters</button> : null}
-              </div>
-            )}
-          <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Installing a plugin records it in this account. OAuth authorization, tool registration and verified connection health are separate requirements before tools can execute.
-          </p>
-        </div>
-      </section>
 
-      <SettingsSheet open={anySelected} title={name} description={selected?.subtitle}
-        onClose={()=>{setSelectedKey(null);setActionError("");setNotice("");}}>
+          {directoryTab === "public" ? (
+            <div role="tabpanel" className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-[15px] font-semibold">Discover plugins</h3>
+                  <p className="mt-1 text-[11px] text-muted-foreground">Verified publishers and real catalog entries. {catalog ? String(catalog.configuredSources)+" catalog source(s)" : "Checking sources…"}</p>
+                </div>
+                {categories.length > 2 ? (
+                  <select aria-label="Filter public plugins by category" value={activeCategory}
+                    onChange={event=>setActiveCategory(event.target.value)}
+                    className="min-h-9 max-w-full rounded-lg border border-border bg-background px-3 text-[12px] text-foreground">
+                    {categories.map(category=><option key={category} value={category}>{category==="all"?"All categories":category}</option>)}
+                  </select>
+                ) : null}
+              </div>
+              {catalogError ? (
+                <div role="alert" className="flex gap-2 rounded-lg border border-amber-500/25 px-3 py-3 text-[12px] text-[var(--settings-warning-ink)]">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0"/>
+                  <span>{catalogError}{catalog?.errors?.length ? " Affected source(s): "+catalog.errors.map(error=>error.source).join(", ")+".":""}</span>
+                </div>
+              ) : null}
+              {loading && !catalog ? <p role="status" className="py-8 text-[12px] text-muted-foreground">Loading plugin directory…</p>
+                : filtered.length ? (
+                  <div className="grid gap-x-5 gap-y-1 sm:grid-cols-2">
+                    {filtered.map(plugin=>{
+                      const state=stateFor(plugin);
+                      return (
+                        <button type="button" key={plugin.pluginKey} onClick={()=>selectPlugin(plugin.pluginKey)}
+                          aria-label={"View "+plugin.name+" plugin"}
+                          className="group flex min-h-[80px] min-w-0 items-center gap-3 rounded-xl px-2 py-3 text-left transition hover:bg-muted/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/30">
+                          <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-[12px] border border-border/80 bg-muted/20">
+                            {plugin.iconUrl ? <img src={plugin.iconUrl} alt="" loading="lazy" className="size-9 object-contain"/>
+                              : plugin.publisherIconUrl ? <PublisherMark url={plugin.publisherIconUrl} className="size-6 text-foreground"/>
+                              : iconFor(plugin,"size-5")}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[13px] font-medium text-foreground">{plugin.name}</span>
+                            <span className="mt-1 block line-clamp-2 text-[11px] leading-4 text-muted-foreground">{plugin.subtitle || plugin.description}</span>
+                            <span className="mt-1 block truncate text-[10px] text-muted-foreground">{plugin.publisher}</span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground">
+                            <span className="hidden lg:inline">{state}</span><ChevronRight className="size-4"/>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-[12px] text-muted-foreground">
+                    {catalog?.plugins.length ? "No plugins match these filters." : "No discoverable plugins available from configured catalogs."}
+                    {(searchTerm || activeCategory!=="all") ? <button type="button" onClick={()=>{setSearchTerm("");setActiveCategory("all");}} className="ml-2 underline underline-offset-4">Clear filters</button>:null}
+                  </p>
+                )}
+              <p className="text-[11px] leading-5 text-muted-foreground">Installing a catalog plugin records it in this account. OAuth authorization, tool registration and verified connection health are separate requirements before MCP tools can execute.</p>
+            </div>
+          ) : (
+            <div role="tabpanel" className="space-y-3">
+              <div>
+                <h3 className="text-[15px] font-semibold">Your plugins</h3>
+                <p className="mt-1 text-[11px] text-muted-foreground">Manage your existing connections and installed integrations.</p>
+              </div>
+              {filteredInstalled.length ? (
+                <div className="divide-y divide-border/60 rounded-xl border border-border/70">
+                  {filteredInstalled.map(plugin=>(
+                    <button type="button" key={plugin.id} onClick={()=>selectPlugin(plugin.id)}
+                      className="flex min-h-[72px] w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foreground/25">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-[11px] border border-border/80 bg-muted/20">
+                        {plugin.iconUrl ? <img src={plugin.iconUrl} alt="" className="size-8 object-contain"/> : iconFor(plugin,"size-5")}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[13px] font-medium">{plugin.name}</span>
+                        <span className="mt-1 block truncate text-[11px] text-muted-foreground">{plugin.subtitle}</span>
+                      </span>
+                      <span className="hidden text-[11px] text-muted-foreground sm:inline">{installedState(plugin)}</span>
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground"/>
+                    </button>
+                  ))}
+                </div>
+              ) : <p className="rounded-xl border border-dashed border-border p-7 text-[12px] text-muted-foreground">
+                {pluginsError || (plugins.length ? "No installed plugins match your search." : "No plugins installed in this account yet.")}
+              </p>}
+            </div>
+          )}
+        </section>
+      </section> : null}
+
+      <PluginDetailPage open={anySelected} title={name} description={selected?.subtitle}
+        onBack={()=>{setSelectedKey(null);setActionError("");setNotice("");}}>
         {selected ? (
           <div className="space-y-5">
             <div className="flex items-start gap-3.5">
-              <div className="flex size-[70px] shrink-0 items-center justify-center overflow-hidden rounded-[20px] border border-border/80 bg-gradient-to-br from-violet-400/20 to-sky-400/10 text-violet-300">
+              <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-border/80 bg-muted/25 text-foreground">
                 {selectedCatalog?.iconUrl
                   ? <img src={selectedCatalog.iconUrl} alt="" className="size-full object-contain p-2"/>
                   : installed?.iconUrl
@@ -1133,6 +1224,53 @@ function PluginCustomizeView({
               </div>
             ) : null}
 
+            {installed?.providerKey==="github" && installed.connectionRef && host.listPluginRepositories ? (
+              <section aria-label="GitHub repositories" className="space-y-3 border-t border-border/70 pt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-[14px] font-semibold">Repositories</h3>
+                    <p className="mt-1 text-[11px] text-muted-foreground">Verify the GitHub grant with a real account-scoped repository read.</p>
+                  </div>
+                  <button type="button" disabled={gitRepositoriesBusy} onClick={()=>void readGitRepositories(installed.id)}
+                    className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 text-[11px] font-medium hover:bg-muted/30 disabled:opacity-50">
+                    <RefreshCw className={cx("size-3.5",gitRepositoriesBusy&&"animate-spin")}/>
+                    {gitRepositories?"Refresh":"Load repositories"}
+                  </button>
+                </div>
+                {gitRepositoriesError ? <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-[12px] text-[var(--settings-warning-ink)]">{gitRepositoriesError}</p>:null}
+                {gitRepositoriesBusy ? <p role="status" className="py-3 text-[12px] text-muted-foreground">Checking your GitHub repository access…</p>:null}
+                {gitRepositories && !gitRepositoriesBusy ? (
+                  gitRepositories.length ? <div className="divide-y divide-border/70 overflow-hidden rounded-xl border border-border/80">
+                    {gitRepositories.map(repo=><a key={repo.id} href={repo.htmlUrl} target="_blank" rel="noopener noreferrer"
+                      className="flex min-h-[62px] items-center gap-3 px-3 py-2.5 transition-colors hover:bg-muted/25">
+                      <FolderOpen className="size-4 shrink-0 text-muted-foreground"/>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[12px] font-medium">{repo.fullName}</span>
+                        <span className="mt-1 block truncate text-[10px] text-muted-foreground">{repo.private?"Private":"Public"} · {repo.defaultBranch||"No default branch"} · {repo.permissions.push?"Push access":repo.permissions.pull?"Read access":"Access level unavailable"}</span>
+                      </span>
+                      <ExternalLink className="size-3.5 shrink-0 text-muted-foreground"/>
+                    </a>)}
+                  </div> : <p className="rounded-xl border border-dashed border-border px-4 py-6 text-[12px] text-muted-foreground">No repositories were returned by GitHub for this connection.</p>
+                ) : null}
+                {gitRepositoriesHasMore ? <p className="text-[11px] text-muted-foreground">Showing the first 100 repositories. More may be available in GitHub.</p>:null}
+              </section>
+            ):null}
+
+            {installed?.kind==="oauth" && installed.connectionRef ? (
+              <section className="space-y-2" aria-label="Connected accounts">
+                <h3 className="text-[14px] font-semibold">Connected account</h3>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border/80 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-[12px] font-medium">{installed.connectionRef.split(":").slice(1).join(":") || installed.providerKey}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{installed.providerKey} · {installedState(installed)}</p>
+                  </div>
+                  <span className={cx("size-2 shrink-0 rounded-full",isConnected(installed)?"bg-emerald-500":"bg-amber-500")}/>
+                </div>
+              </section>
+            ) : null}
+
+            <section className="space-y-2" aria-label="Plugin information">
+              <h3 className="text-[14px] font-semibold">Information</h3>
             <div className="overflow-hidden rounded-xl border border-border/80 px-3">
               {selectedCatalog ? <>
                 <PreferenceRow label="Developer" description="Publisher of the plugin package." value={selectedCatalog.publisher}/>
@@ -1143,8 +1281,11 @@ function PluginCustomizeView({
               </> : null}
               {installed ? <>
                 <PreferenceRow label="Connection status" description="Recorded connection state for this account." value={installed.setupStatus}/>
-                <PreferenceRow label="Health" description="Runtime-reported health status." value={installed.healthStatus}/>
-                <PreferenceRow label="Tools registered" description="Actual executable tools registered for this installation." value={String(installed.toolCount)}/>
+                <PreferenceRow label={installed.installationKey==="catalog-v1"?"Runtime health":"Credential health"}
+                  description={installed.installationKey==="catalog-v1"?"Remote tool health.":"Provider token state; not a repository workflow test."} value={installed.healthStatus}/>
+                {installed.installationKey==="catalog-v1" || installed.toolCount > 0 ?
+                  <PreferenceRow label="MCP tools registered" description="Executable MCP tools registered for this installation." value={String(installed.toolCount)}/>
+                  : <PreferenceRow label="Integration" description="Native/provider OAuth connections do not require MCP tool rows. Test an actual provider operation to verify functionality." value="Provider adapter"/>}
                 <PreferenceRow label="Authentication" description="Required credential type." value={installed.authType}/>
                 {!(installed.installationKey==="catalog-v1" && installed.setupStatus!=="connected") && host.setPluginEnabled ?
                   <PreferenceRow label="Enabled" description="Controls participation in the active runtime."
@@ -1152,6 +1293,7 @@ function PluginCustomizeView({
                   : null}
               </> : null}
             </div>
+            </section>
 
             {selectedCatalog ? (
               <div className="flex flex-wrap gap-2 text-[11px]">
@@ -1188,13 +1330,22 @@ function PluginCustomizeView({
                   <span className="font-medium text-[var(--settings-warning-ink)]">Installed · authorization required.</span> This plugin's MCP tools will not run in Studio until a supported OAuth connection and tool registration flow is completed.
                 </div>
               ) : null}
-              {(installed?.setupUrl || installed?.installationKey === "catalog-v1") && host.beginPluginSetup ? (
+              {(installed?.setupUrl || installed?.kind === "oauth" || installed?.installationKey === "catalog-v1") && host.beginPluginSetup ? (
                 <button type="button" disabled={busy} onClick={()=>void run(()=>host.beginPluginSetup!(installed.id))}
                   className="flex h-10 w-full items-center justify-center gap-2 rounded-full bg-violet-600 text-[11px] font-semibold text-white hover:bg-violet-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 disabled:opacity-40">
                   {installed.installationKey==="catalog-v1" ? "Connect read-only" :
                     installed.setupStatus==="connected"?"Reconnect":"Connect plugin"} <ArrowUpRight className="size-3.5"/>
                 </button>
               ) : null}
+              {installed?.providerKey==="cloudflare" && host.beginPluginSetup ? (
+                <div className="rounded-xl border border-border/80 p-3">
+                  <p className="text-[12px] font-medium">Full Cloudflare authorization</p>
+                  <p className="mt-1 text-[11px] leading-5 text-muted-foreground">Request every scope in the configured Cloudflare OAuth catalog, including infrastructure write permissions. Your existing permissions are not reduced or changed unless you approve a new grant.</p>
+                  <button type="button" disabled={busy}
+                    onClick={()=>void run(()=>host.beginPluginSetup!(installed.id,{fullCloudflareAccess:true}))}
+                    className="mt-3 min-h-10 w-full rounded-lg border border-border px-4 text-[12px] font-medium transition hover:bg-muted/25 disabled:opacity-50">Authorize full Cloudflare scope catalog</button>
+                </div>
+              ):null}
               {installed?.installationKey === "catalog-v1" && selectedCatalog?.toolPermissions.some(tool=>tool.requiresApproval) && host.beginPluginSetup ? (
                 <button type="button" disabled={busy}
                   onClick={()=>void run(()=>host.beginPluginSetup!(installed.id,{allowWrites:true}))}
@@ -1214,14 +1365,14 @@ function PluginCustomizeView({
                   Remove installation
                 </button>
               ) : null}
-              {(installed?.disconnectUrl || installed?.installationKey==="catalog-v1") && installed?.setupStatus==="connected" && host.disconnectPlugin ? (
+              {(installed?.disconnectUrl || installed?.kind==="oauth" || installed?.installationKey==="catalog-v1") && installed?.setupStatus==="connected" && host.disconnectPlugin ? (
                 <button type="button" disabled={busy} onClick={()=>void run(()=>host.disconnectPlugin!(installed.id))}
-                  className="h-9 w-full rounded-full border border-border px-4 text-[11px] text-muted-foreground hover:bg-muted">Disconnect</button>
+                  className="h-9 w-full rounded-lg border border-border px-4 text-[11px] text-muted-foreground hover:bg-muted">Disconnect</button>
               ) : null}
             </div>
           </div>
         ) : null}
-      </SettingsSheet>
+      </PluginDetailPage>
     </>
   );
 }

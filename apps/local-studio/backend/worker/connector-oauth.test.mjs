@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { oauthAad, sealOauthToken } from "../../../../packages/agentsam-vault/src/crypto/oauth-envelope.js";
 import {
+  listGitHubConnectionRepositories,
   beginConnectorOAuth,
   completeConnectorOAuth,
   connectorForCallback,
@@ -122,4 +124,51 @@ test("missing client config fails closed", async () => {
   const e = env(); e.GITHUB_CLIENT_SECRET = "";
   const res = await handleConnectorWorkRequest(post("/api/work/connect/github/start"), e, "au_test");
   assert.equal(res.status, 503);
+});
+
+test("GitHub repository read uses only the account-bound sealed grant and never exposes tokens", async () => {
+  const account = "au_user23";
+  const e = env();
+  const token = "test_github_access_token_secret";
+  const encoded = await sealOauthToken(e.VAULT_MASTER_KEY,token,oauthAad("github",account,"user23"));
+  let lookedUpAccount=null,lookedUpUser=null,providerAuth="";
+  e.DB={prepare(sql){
+    assert.match(sql,/account_id = \?/);
+    return {bind(...args){lookedUpAccount=args[0];lookedUpUser=args[1];return {async first(){
+      if(args[0]!==account||args[1]!=="user23")return null;
+      return {account_identifier:"user23",access_token_encrypted:encoded,expires_at:null};
+    }};}};
+  }};
+  const read=async (url, options)=>{
+    assert.equal(new URL(url).hostname,"api.github.com");
+    providerAuth=options.headers.authorization;
+    return Response.json([{id:1,full_name:"user23/my-project",private:true,default_branch:"main",permissions:{push:true,pull:true,admin:false},description:"Project"}]);
+  };
+  const path="https://agentsam.inneranimalmedia.com/api/work/github/repos?connection_id=github%3Auser23";
+  const success=await listGitHubConnectionRepositories(new Request(path),e,account,read);
+  assert.equal(success.status,200);
+  const result=await success.json();
+  assert.equal(result.repositories[0].fullName,"user23/my-project");
+  assert.equal(result.repositories[0].permissions.push,true);
+  assert.equal(lookedUpAccount,account);
+  assert.equal(lookedUpUser,"user23");
+  assert.equal(providerAuth,"Bearer "+token);
+  assert.ok(!JSON.stringify(result).includes(token));
+  assert.ok(!JSON.stringify(result).includes(encoded));
+  const denied=await listGitHubConnectionRepositories(new Request(path),e,"au_other",read);
+  assert.equal(denied.status,404);
+  const invalid=await listGitHubConnectionRepositories(new Request(path.replace("user23","../../evil")),e,account,read);
+  assert.equal(invalid.status,400);
+  assert.ok(isConnectorWorkRequest("/api/work/github/repos"));
+});
+
+test("GitHub repository read rejects missing grants and revoked provider responses", async () => {
+  const e=env();
+  const missing=await listGitHubConnectionRepositories(new Request("https://agentsam.inneranimalmedia.com/api/work/github/repos?connection_id=github%3Anope"),e,"au_missing",async()=>{throw new Error("network should not be called");});
+  assert.equal(missing.status,404);
+  const encoded=await sealOauthToken(e.VAULT_MASTER_KEY,"test_revoke_token",oauthAad("github","au_one","owner"));
+  e.DB={prepare(sql){return {bind(){return {async first(){return {account_identifier:"owner",access_token_encrypted:encoded,expires_at:null};}};}};}};
+  const revoked=await listGitHubConnectionRepositories(new Request("https://agentsam.inneranimalmedia.com/api/work/github/repos?connection_id=github%3Aowner"),e,"au_one",async()=>Response.json({message:"Requires reauthorization"},{status:401}));
+  assert.equal(revoked.status,403);
+  assert.equal((await revoked.json()).error,"github_repository_access_denied");
 });
