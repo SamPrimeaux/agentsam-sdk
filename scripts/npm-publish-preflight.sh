@@ -22,7 +22,14 @@ if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
   exit 1
 fi
 
-npm whoami >/dev/null
+if [[ "${CI:-}" == "true" ]]; then
+  if [[ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]]; then
+    echo "REFUSE PUBLISH: GitHub Actions OIDC is unavailable" >&2
+    exit 1
+  fi
+else
+  npm whoami >/dev/null
+fi
 npm run release:train:check
 node scripts/verify-registry-train.mjs --intent-only
 

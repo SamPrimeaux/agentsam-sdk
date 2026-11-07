@@ -1,0 +1,11 @@
+# AgentSam npm trusted publishing (GitHub Actions OIDC)
+
+The stable publisher is `.github/workflows/publish-stable.yml` on `SamPrimeaux/agentsam-sdk`, triggered manually from `main`. The alpha publisher uses `.github/workflows/publish-alpha.yml`. The workflows use GitHub-hosted runners, `id-token: write`, and npm 11.21+ without a publish token.
+
+**Important one-time npm account setup:** Each already-existing public package must have its own npmjs.com **Settings → Trusted publishing** entry. Choose **GitHub Actions**, owner **SamPrimeaux**, repository **agentsam-sdk**, workflow filename **publish-stable.yml**, and allow **direct `npm publish`**. Leave environment blank (the workflow does not declare one). Add a second entry for **publish-alpha.yml** if alpha publishing is needed. The Ecommerce product package has its own entry. The local release plan (`node scripts/sdk-release-publish.mjs --plan`) lists the dependency-ordered 63 stable packages.
+
+npm requires first publishing a new package interactively before its trusted publisher can be configured. The operator can bootstrap a missing package with an authenticated `npm publish --access public` from that package directory. npm Web login requires an interactive browser; never fabricate `NPM_TOKEN` in CI. Avoid changing a version that already exists. New npm trusted-publisher configurations must complete their first successful CI publish within the provider's activation window.
+
+**Workflow:** Verify the package entries on npm; run GitHub Actions → **Publish AgentSam SDK stable release** → **Run workflow** with the exact version from `main`. The release publisher skips versions already visible, waits for registry propagation after publishing, then verifies every dependency-ordered package. If the registry remains unavailable, re-run the same workflow after checking npm status; never increment the package version merely to retry.
+
+The npm Trusted Publisher entry is managed by npm's owner account and cannot be created by committing source code. A green local test or `npm whoami` does not prove GitHub OIDC is configured. The first end-to-end proof is a successful authenticated GitHub Actions publish from the chosen workflow.

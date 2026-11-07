@@ -88,8 +88,8 @@ if(localPublish){
  const auth=spawnSync('npm',['whoami'],{cwd:root,encoding:'utf8'});
  if(auth.status!==0||!auth.stdout.trim())throw Error('npm_login_required_run_npm_login_first');
  console.log('LOCAL_PUBLISH_AUTHENTICATED '+auth.stdout.trim()+' · '+version);
-}else if(process.env.CI!=='true'||process.env.GITHUB_REF!=='refs/heads/main'||!process.env.NODE_AUTH_TOKEN){
- throw Error('publish_requires_approved_main_and_npm_credentials');
+}else if(process.env.CI!=='true'||process.env.GITHUB_REF!=='refs/heads/main'||!process.env.ACTIONS_ID_TOKEN_REQUEST_URL){
+ throw Error('publish_requires_approved_main_and_github_oidc');
 }
 function npm(args,cwd=root,quiet=false){
  const res=spawnSync('npm',args,{cwd,encoding:'utf8',stdio:quiet?['ignore','pipe','pipe']:'inherit'});
@@ -97,7 +97,7 @@ function npm(args,cwd=root,quiet=false){
  return res;
 }
 function exists(name){
- const r=npm(['view',name+'@'+version,'version','--json'],root,true);
+ const r=npm(['view',name+'@'+version,'version','--json','--prefer-online','--fetch-retries=0'],root,true);
  if(r.status!==0)return false;
  try{const v=JSON.parse(r.stdout);return v===version||(Array.isArray(v)&&v.includes(version));}
  catch{return false;}
@@ -115,9 +115,10 @@ for(const item of order){
  }
  npm(['publish','--access','public',...(localPublish?[]:['--provenance'])],dir);
  let confirmed=false;
- for(let attempt=0;attempt<5;attempt++){
+ for(let attempt=0;attempt<36;attempt++){
   if(exists(item.name)){confirmed=true;break;}
-  await sleep(3000);
+  console.log('WAIT_REGISTRY_VISIBILITY '+item.name+' attempt '+(attempt+1)+'/36');
+  await sleep(5000);
  }
  if(!confirmed)throw Error('version_not_visible_after_publish:'+item.name);
 }

@@ -26,11 +26,13 @@ jobs:
         with:
           fetch-depth: 0
       - name: Configure npm and Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
           registry-url: https://registry.npmjs.org
-          cache: npm
+          package-manager-cache: false
+      - name: Require npm OIDC compatible CLI
+        run: npm install --global npm@^11.21.0
       - name: Install exact dependency graph
         run: npm ci
       - name: Check approved release train
@@ -44,12 +46,8 @@ jobs:
       - name: Run release verification
         run: npm run verify:release
       - name: Clean-main publish preflight
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm run release:publish:preflight
       - name: Publish pinned public dependencies and SDK
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: node scripts/sdk-release-publish.mjs --publish
       - name: Verify standalone packed SDK with published first-party dependencies
         run: AGENTSAM_REQUIRE_PUBLISHED_SDK=1 node --test test/integration/goap-packed-consumer.test.mjs
@@ -75,7 +73,6 @@ jobs:
         run: npm --prefix apps/ecommerce-cms-agentsam run release:verify
       - name: Publish coordinated Ecommerce CMS product
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           APPROVED_VERSION: ${{ inputs.version }}
         run: |
           node -e 'const root=require("./package.json"),product=require("./apps/ecommerce-cms-agentsam/package.json"); if(root.version!==process.env.APPROVED_VERSION||product.version!==root.version||product.private)throw Error("ecommerce_release_train_mismatch")'
