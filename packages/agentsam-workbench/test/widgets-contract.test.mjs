@@ -36,14 +36,14 @@ test('countdown formatter supports minute and hour ranges', () => {
 test('gallery preserves the 22 distinct donor designs without making concepts runnable', () => {
   assert.equal(WIDGET_GALLERY_DEFINITIONS.length, 22);
   assert.equal(new Set(WIDGET_GALLERY_DEFINITIONS.map((widget) => widget.id)).size, 22);
-  assert.equal(BUILTIN_WIDGET_DEFINITIONS.length, 2);
-  assert.deepEqual(BUILTIN_WIDGET_DEFINITIONS.map(widget => widget.id), ['queues', 'countdown']);
+  assert.equal(BUILTIN_WIDGET_DEFINITIONS.length, 4);
+  assert.deepEqual(BUILTIN_WIDGET_DEFINITIONS.map(widget => widget.id), ['queues', 'countdown', 'clock', 'calculator']);
   assert.ok(BUILTIN_WIDGET_DEFINITIONS.every(widget => widget.availability === 'ready'));
 
   const readyIds = WIDGET_GALLERY_DEFINITIONS
     .filter((widget) => widget.availability === 'ready')
     .map((widget) => widget.id);
-  assert.deepEqual(readyIds, ['queues', 'countdown']);
+  assert.deepEqual(readyIds, ['queues', 'countdown', 'clock', 'calculator']);
 
   for (const widget of WIDGET_GALLERY_DEFINITIONS) {
     assert.ok(widget.title && widget.description && widget.category && widget.ownerPackage);

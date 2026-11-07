@@ -137,7 +137,7 @@ Accept: packages are retrievable from npm at matching versions; main is deployed
 | 02 Tool/capability runtime | PARTIAL · PROJECTION MERGED | PR #479 fixed shared tool definitions through account installations and mismatched runtime context; SQLite tests pass; Gmail has 16 linked tools, intentionally disabled for this account. | Prove real authorized provider execution; 81 unmapped tools and other provider associations remain to reconcile. |
 | 03 Customer keys | QUEUED | Existing mint/revoke + hardcoded `DEFAULT_SCOPES` identified | Replace issuance policy after capability contract |
 | 04 OAuth | QUEUED | Existing native PKCE, OAuth token/grant tables and worker paths | Provider lifecycle acceptance |
-| 05 Settings/telemetry | QUEUED | Live and fixture settings paths coexist; tool health checks absent | Shared host contract + observable execution |
+| 05 Settings/telemetry | WIP GRADUATION IN PROGRESS | [Widget utility acceptance](../acceptance/AGENTSAM_WIDGET_UTILITIES_2026-11-06.md): native Clock/Calculator now packaged in Workbench; Settings uses real controls, Utilities route mounts, isolated tarball consumer and Chrome interactions passed. | Other Settings fixtures/telemetry remain; graduate donor approvals/metrics only with real account-owned adapters; 18 widget concepts still preview-only. |
 | 06 Release | LOCAL DEV PASS · PUBLIC PUBLISH BLOCKED | `npm run launch` started Tauri desktop binary; `launch:check` passed. CI `ETARGET` cannot fetch unissued workbench@2.6.14; local `npm whoami` E401. | Restore authenticated npm publishing, publish dependency-ordered 2.6.14 train, verify clean external consumer, installer signing, live deployment and remaining product security gates. |
 
 ## Launch line for next agent

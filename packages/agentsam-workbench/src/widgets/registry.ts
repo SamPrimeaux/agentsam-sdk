@@ -28,6 +28,32 @@ export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
     ownerPackage: '@inneranimalmedia/agentsam-workbench',
     deeplink: '/widgets',
   } satisfies AgentSamWidgetDefinition),
+  Object.freeze({
+    id: 'clock',
+    kind: 'clock',
+    title: 'World & Precision Clock',
+    description: 'Device-backed world clock with timezone selection, seconds and date.',
+    icon: 'clock',
+    category: 'utility',
+    tags: ['utility', 'time', 'world-clock', 'timezone'],
+    sizes: ['small', 'medium'] as const,
+    availability: 'ready',
+    ownerPackage: '@inneranimalmedia/agentsam-workbench',
+    deeplink: '/widgets',
+  } satisfies AgentSamWidgetDefinition),
+  Object.freeze({
+    id: 'calculator',
+    kind: 'calculator',
+    title: 'Utility Calculator',
+    description: 'Bounded arithmetic, keyboard input and session history, without dynamic code evaluation.',
+    icon: 'calculator',
+    category: 'utility',
+    tags: ['utility', 'math', 'calculator', 'history'],
+    sizes: ['small', 'medium'] as const,
+    availability: 'ready',
+    ownerPackage: '@inneranimalmedia/agentsam-workbench',
+    deeplink: '/widgets',
+  } satisfies AgentSamWidgetDefinition),
 ] satisfies readonly AgentSamWidgetDefinition[]);
 
 /** Curated metadata from the preserved 22-widget donor gallery.
@@ -36,30 +62,6 @@ export const BUILTIN_WIDGET_DEFINITIONS = Object.freeze([
  */
 export const WIDGET_GALLERY_DEFINITIONS = Object.freeze([
   ...BUILTIN_WIDGET_DEFINITIONS,
-  Object.freeze({
-    id: 'clock',
-    kind: 'clock',
-    title: 'World & Precision Clock',
-    description: 'UTC offset, timezone selector, local solar time, and seconds sweep',
-    icon: 'clock',
-    category: 'utility',
-    tags: ['utility', 'time', 'world-clock', 'timezone'],
-    sizes: ['small', 'medium'] as const,
-    availability: 'demo',
-    ownerPackage: '@inneranimalmedia/agentsam-workbench',
-  } satisfies AgentSamWidgetDefinition),
-  Object.freeze({
-    id: 'calculator',
-    kind: 'calculator',
-    title: 'Utility Calculator',
-    description: 'Quick arithmetic and expression evaluator with history tape',
-    icon: 'calculator',
-    category: 'utility',
-    tags: ['utility', 'math', 'calculator', 'history'],
-    sizes: ['small', 'medium'] as const,
-    availability: 'demo',
-    ownerPackage: '@inneranimalmedia/agentsam-workbench',
-  } satisfies AgentSamWidgetDefinition),
   Object.freeze({
     id: 'quick-controls',
     kind: 'quick-controls',

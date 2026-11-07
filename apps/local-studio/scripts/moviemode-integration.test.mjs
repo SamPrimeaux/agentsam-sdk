@@ -24,10 +24,10 @@ test("Media replaces Content while Work can still focus MovieMode", () => {
   const shell = read("../frontend/agentsam/AgentSamShell.tsx");
   assert.match(read("../scripts/studio-navigation.mjs"), /id:'media',label:'Media',href:'\/media'/);
   assert.doesNotMatch(shell, /id: 'utilities'/);
-  assert.match(read("../frontend/agentsam/side-stage-actions.ts"), /tab: 'media'/);
+  assert.match(read("../frontend/agentsam/side-stage-actions.ts"), /"media", "database", "terminal"/);
   assert.match(read("../frontend/src/components/workbench/side-stage.tsx"), /MovieModeSurface workPane/);
   assert.match(read("../frontend/agentsam/AgentSamPage.tsx"), /workFocused/);
-  assert.match(read("../frontend/src/routes/(apps)/widgets.tsx"), /Navigate to="\/settings"/);
+  assert.match(read("../frontend/src/routes/(apps)/widgets.tsx"), /component: WidgetUtilitiesPage/);
 });
 
 test("Full-height editors scroll within their Work container instead of viewport overflow", () => {
