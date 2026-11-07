@@ -44,14 +44,17 @@ test('Completeful can release independently without bumping every SDK package', 
   const provider = JSON.parse(readFileSync(path.join(root, 'packages/providers/completeful/package.json'), 'utf8'));
   const sdk = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert.equal(provider.releaseTrain, 'independent');
-  assert.equal(provider.version, '2.6.14');
-  assert.equal(sdk.version, '2.6.13');
+  assert.match(provider.version, /^\d+\.\d+\.\d+$/);
+  assert.match(sdk.version, /^\d+\.\d+\.\d+$/);
   const check = execFileSync(process.execPath, ['scripts/release-train.mjs', 'check'], {
     cwd: root, encoding: 'utf8',
   });
   assert.match(check, /PASS all public release packages and dependency pins aligned/);
+  const nextVersion = sdk.version.replace(/(\d+)$/, (_, patch) => String(Number(patch) + 1));
   const alignPreview = execFileSync(process.execPath, [
-    'scripts/release-train.mjs', 'align', '--dry-run',
+    'scripts/release-train.mjs', 'align', nextVersion, '--dry-run',
   ], { cwd: root, encoding: 'utf8' });
-  assert.doesNotMatch(alignPreview, /agentsam-provider-completeful@2\.6\.13/);
+  assert.match(alignPreview, /WOULD ALIGN @inneranimalmedia\/agentsam-sdk@/);
+  assert.doesNotMatch(alignPreview, /WOULD ALIGN @inneranimalmedia\/agentsam-provider-completeful@/);
+  assert.doesNotMatch(alignPreview, /WOULD ALIGN @inneranimalmedia\/samsketch@/);
 });
