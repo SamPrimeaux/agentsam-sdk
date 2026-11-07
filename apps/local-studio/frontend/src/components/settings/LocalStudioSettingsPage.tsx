@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "@inneranimalmedia/agentsam-workbench/widgets/widgets.css";
 import { toast } from "sonner";
 import {
   SettingsProductPage,

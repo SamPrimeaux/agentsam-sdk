@@ -1,4 +1,5 @@
-import { QueueDepthWidget } from '@inneranimalmedia/agentsam-workbench/widgets';
+import { useEffect, useState } from 'react';
+import { QueueDepthWidget, formatClockTime } from '@inneranimalmedia/agentsam-workbench/widgets';
 import {
   Activity,
   Check,
@@ -10,11 +11,24 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-/**
- * Gallery artwork is sample-only. Never fetches domain data or advertises
- * a simulated approval, run, metric, or provider connection as live.
- * Real widget renderers continue to be owned by the Workbench widget surface.
- */
+/** Gallery concepts stay explicitly non-operational; installed utilities show real data. */
+function ClockLivePreview() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    const update = () => setNow(new Date());
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return <div className="flex h-full flex-col justify-center gap-2">
+    <span className="text-[10px] font-medium tracking-wide text-muted-foreground">DEVICE TIME</span>
+    <time className="font-mono text-[31px] font-medium tracking-[-0.06em] text-foreground" suppressHydrationWarning>
+      {now ? formatClockTime(now) : '--:--:--'}
+    </time>
+    <span className="text-[10px] text-muted-foreground">Live timezone controls available in widget</span>
+  </div>;
+}
+
 export function WidgetGalleryPreview({ id, interactive = false }: { id: string; interactive?: boolean }) {
   const line = (width: string, light = false) => (
     <span
@@ -61,18 +75,11 @@ export function WidgetGalleryPreview({ id, interactive = false }: { id: string; 
       {miniLabel("Ready to start")}
     </div>;
   }
-  if (id === "clock") {
-    return <div className="flex h-full flex-col justify-center gap-2">
-      {miniLabel("LOCAL TIME")}
-      <div className="font-mono text-[31px] font-medium tracking-[-0.06em] text-foreground">09:41<span className="ml-1 text-sm text-muted-foreground">:08</span></div>
-      <div className="flex justify-between text-[10px] text-muted-foreground"><span>New York</span><span>UTC − 04:00</span></div>
-      <div className="mt-2 border-t border-border/70 pt-2 text-[10px] text-muted-foreground">Tokyo <span className="float-right text-foreground/70">22:41</span></div>
-    </div>;
-  }
+  if (id === "clock") return <ClockLivePreview />;
   if (id === "calculator") {
     return <div className="flex h-full flex-col justify-center gap-3">
-      <div className="text-right font-mono text-[12px] text-muted-foreground">24 × 18</div>
-      <div className="text-right font-mono text-[34px] leading-none tracking-[-0.05em] text-foreground">432</div>
+      {miniLabel("ARITHMETIC · LOCAL")}
+      <div className="text-[16px] font-semibold text-foreground">Ready to calculate</div>
       <div className="grid grid-cols-4 gap-1.5">{["7","8","9","÷","4","5","6","×"].map(k=><span key={k} className="rounded-md border border-border/60 bg-background/70 py-1.5 text-center font-mono text-[11px] text-foreground/75">{k}</span>)}</div>
     </div>;
   }
