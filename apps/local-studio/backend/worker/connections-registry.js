@@ -152,15 +152,19 @@ export async function loadConnectionsRegistry(env, userId) {
     available: cloudflare.configured,
     checkSource: "page_load",
   });
-  const sideStages = await listAccountSideStages(env.DB, userId);
+  const allSideStages = await listAccountSideStages(env.DB, userId, {includeDisabled:true});
+  const sideStages = allSideStages.filter(stage => stage.enabled);
   const pluginRegistry = await loadPluginRegistry(env, userId, { includeDisabled: true });
   pluginRegistry.plugins = pluginRegistry.plugins.map((row) => applyOauthPluginState(row, oauthTokenRows));
   const cloudflarePlugin = pluginRegistry.plugins.find((row) => row.plugin_key === "agentsam-mcp") || null;
+  const nativeSideStage = row =>
+    row.family_key === 'core' && row.plugin_kind === 'native' &&
+    row.metadata?.side_stage?.renderer === 'builtin';
   const settingsPlugins = pluginRegistry.plugins
-    .filter((row) => row.settings_visible === 1 || row.settings_visible === true)
+    .filter((row) => (row.settings_visible === 1 || row.settings_visible === true) && !nativeSideStage(row))
     .map((row) => safePluginSettingsRecord(row, pluginRegistry.tools));
   const composerPlugins = pluginRegistry.plugins
-    .filter((row) => row.composer_visible === 1 || row.composer_visible === true)
+    .filter((row) => (row.composer_visible === 1 || row.composer_visible === true) && !nativeSideStage(row))
     .map((row) => safePluginSettingsRecord(row, pluginRegistry.tools));
 
   const latestByProvider = new Map();
@@ -186,6 +190,7 @@ export async function loadConnectionsRegistry(env, userId) {
     // Independent views of the SAME registry, never a second authority.
     composer_plugins: composerPlugins,
     side_stages: sideStages,
+    side_stage_catalog: allSideStages,
     // Non-secret OAuth evidence and registered repositories from the existing account SSOT.
     oauth_status: {
       available: oauthRecords.available,

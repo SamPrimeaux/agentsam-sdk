@@ -31,6 +31,7 @@ export const localStudioSettingsManifest = defineSettingsManifest({
       icon: "sliders",
       views: [
         { id: "plugins", label: "Plugins" },
+        { id: "panels", label: "Side Stage" },
         { id: "companions", label: "Companions" },
         { id: "widgets", label: "Widgets" },
         { id: "mcps", label: "MCPs" },

@@ -40,6 +40,7 @@ import {
   isGoogleCliCloudPath,
 } from "./gclioa.js";
 import { loadConnectionsRegistry, safePluginSettingsRecord } from "./connections-registry.js";
+import { updateAccountSideStage } from "./plugin-side-stages.js";
 import { handleDatabaseRequest, isDatabaseRequest } from "./database-service.js";
 import { handleWorkRequest, isWorkRequest } from "./work-service.js";
 import { handleStudioChatHistory } from "./studio-chat-history.js";
@@ -758,6 +759,7 @@ export default {
     const isLlmInventory = url.pathname === "/api/llm/inventory";
     const isCfConnection = isCloudflareConnectionPath(url.pathname);
     const isConnectionsRegistry = url.pathname === "/api/connections";
+    const sideStagePreferenceMatch = /^\/api\/connections\/side-stages\/(plg_[a-f0-9]{8,})$/i.exec(url.pathname);
     const isStudioPreferences=url.pathname==="/api/settings/preferences";
     const isStudioAccountAvatar=url.pathname==="/api/settings/account-avatar";
     const isStudioCompanions=url.pathname==="/api/settings/companions";
@@ -1349,6 +1351,26 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       const accountId=await sessionUser();
       if(!accountId)return json({ok:false,error:'unauthorized'},401);
       return handleOpenScadLibraries(request,env,{id:accountId});
+    }
+
+    if (sideStagePreferenceMatch) {
+      if (request.method !== 'POST') return json({ok:false,error:'method_not_allowed'},405,{allow:'POST'});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:'unauthorized'},401);
+      const origin = request.headers.get('origin');
+      if (origin && origin !== url.origin) return json({ok:false,error:'origin_not_allowed'},403);
+      if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))
+        return json({ok:false,error:'json_content_type_required'},415);
+      const body=await request.json().catch(()=>null);
+      if (!body || typeof body !== 'object' || Array.isArray(body) ||
+          Object.keys(body).length!==1 || typeof body.enabled!=='boolean')
+        return json({ok:false,error:'side_stage_request_invalid'},400);
+      try {
+        return json(await updateAccountSideStage(env.DB,userId,sideStagePreferenceMatch[1],body.enabled));
+      } catch(error) {
+        const code=String(error?.message||'side_stage_update_failed');
+        return json({ok:false,error:code.slice(0,100)},code==='side_stage_not_found'?404:400);
+      }
     }
 
     if (isConnectionsRegistry) {
