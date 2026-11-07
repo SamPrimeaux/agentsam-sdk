@@ -40,3 +40,30 @@ Status: `available` (can connect), `connected` (host confirms a link), `action_r
 The package does not assume a store, order system, payment processor, chart of accounts, or Cloudflare account. FinancialMetricDeck uses analytics-ui primitives and is presentation-only.
 
 Cloudflare runtime counts and Workers Analytics Engine events are not invoice-aligned charges. Only a billing source that returns billed usage should expose `cloud_billing` and `cloud_billed_cost`.
+
+
+## CMS billing portal embed
+
+`CmsBillingPortalEmbed` is a small, theme-token-driven entry point to the
+host's authenticated billing area. It is not a Stripe widget, does not handle
+cards, and cannot be given an external or protocol-relative payment URL by
+theme content.
+
+```tsx
+import { CmsBillingPortalEmbed } from
+  "@inneranimalmedia/financial-analytics/ui/cms-billing-portal";
+import "@inneranimalmedia/financial-analytics/styles/cms-billing-embed.css";
+
+// The site host must verify this route is authenticated before supplying it.
+<CmsBillingPortalEmbed
+  billingHref={authenticatedBillingRoute}
+  content={{ heading: "Billing & invoices", style: "card" }}
+/>
+```
+
+The SDK Ecommerce CMS manifest exposes `customer_billing` in the existing
+App Embeds catalog. Installed instances persist as page-owned sections and
+blocks, with real draft settings and an inert editor preview. Hosts must still
+mount the component at their published site slot and supply a verified
+account route before visitors can use it. The package deliberately does
+not assume every CMS host implements that route.

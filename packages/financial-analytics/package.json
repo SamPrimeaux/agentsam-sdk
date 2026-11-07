@@ -21,6 +21,11 @@
       "types": "./dist/ui/provider-connect-flow.d.ts",
       "import": "./dist/ui/provider-connect-flow.js"
     },
+    "./ui/cms-billing-portal": {
+      "types": "./dist/ui/cms-billing-portal-embed.d.ts",
+      "import": "./dist/ui/cms-billing-portal-embed.js"
+    },
+    "./styles/cms-billing-embed.css": "./styles/cms-billing-embed.css",
     "./styles/provider-connect.css": "./styles/provider-connect.css"
   },
   "dependencies": {

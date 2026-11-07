@@ -87,6 +87,29 @@
       ]
     },
     {
+      "key": "customer_billing",
+      "name": "Customer billing portal",
+      "icon": "credit-card",
+      "tagline": "A theme-styled sign-in entry to verified account invoices and subscriptions.",
+      "category": "Account",
+      "provider": "AgentSam Ecommerce + CMS",
+      "default_config": {
+        "enabled": false,
+        "placement": "inline",
+        "trigger": "manual",
+        "heading": "Manage your billing",
+        "subtitle": "View invoices and manage your subscription in your secure account.",
+        "button_label": "View billing",
+        "style": "card",
+        "source_type": "account_billing",
+        "requires_authenticated_route": true
+      },
+      "surfaces": [
+        "storefront_embed",
+        "cms_block"
+      ]
+    },
+    {
       "key": "newsletter_subscribe",
       "name": "Email subscriptions",
       "icon": "send",

@@ -1,4 +1,6 @@
 import { useShellAppearance } from "../appearance";
+import { SettingsBillingPanel } from "./billing";
+export { SettingsBillingPanel } from "./billing";
 import { SettingsThemeGallery } from "./themes";
 import { WidgetGalleryPreview } from "./WidgetGalleryPreview";
 import { BuiltinWidget } from "@inneranimalmedia/agentsam-workbench/widgets";
@@ -2498,20 +2500,15 @@ function StorageView({ snapshot }: { snapshot: SettingsSnapshot }) {
   );
 }
 
-function UsageView({ snapshot }: { snapshot: SettingsSnapshot }) {
+function UsageView({ snapshot, host }: { snapshot: SettingsSnapshot; host: SettingsHost }) {
   return (
     <>
-      <Section title="Current usage" description="Usage and cost remain evidence, not hidden routing inputs.">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <SettingsBillingPanel host={host} />
+      <Section title="Measured platform usage" description="Usage estimates are separate from invoiced charges.">
+        <p className="mb-3 text-xs text-muted-foreground">Recorded tool call costs are not the same as complete model, infrastructure, or invoice spending.</p>
+        {snapshot.usage.length ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {snapshot.usage.map((metric) => <MetricCard key={metric.label} {...metric} />)}
-        </div>
-      </Section>
-      <Section title="Limits">
-        <div className="rounded-lg border border-border/70 px-3">
-          <PreferenceRow label="Agent concurrency" description="Maximum simultaneous local/remote agent lanes." value="4" />
-          <PreferenceRow label="Terminal sessions" description="Maximum active PTYs per account." value="4" />
-          <PreferenceRow label="Usage warnings" description="Notify before a configured budget threshold is exceeded." trailing={<Toggle enabled />} />
-        </div>
+        </div> : <p className="text-xs text-muted-foreground">No verified account-scoped usage measurements are available from this host.</p>}
       </Section>
     </>
   );
@@ -2827,7 +2824,7 @@ function renderUnit(
     case "keys":
       return <KeysSubView snapshot={snapshot} view={view} />;
     case "usage":
-      return <UsageView snapshot={snapshot} />;
+      return <UsageView snapshot={snapshot} host={host} />;
     case "notifications":
       return <NotificationsView snapshot={snapshot} host={host} onChanged={onChanged} />;
     case "docs":
