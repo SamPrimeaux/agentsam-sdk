@@ -281,6 +281,9 @@
           }
         }])
       ],
+      // Search is discoverable in the authorized side navigation. Reuse the
+      // existing Console search dialog, never create a second search engine.
+      onSearch: () => document.getElementById('console-search-trigger')?.click(),
       onNavigate: navigateHost
     };
   }

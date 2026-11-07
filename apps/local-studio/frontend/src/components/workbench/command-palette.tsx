@@ -23,8 +23,13 @@ export function CommandPalette() {
         setOpen((v) => !v);
       }
     }
+    const onOpenSearch = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("agentsam:open-command-palette", onOpenSearch);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("agentsam:open-command-palette", onOpenSearch);
+    };
   }, []);
 
   return (

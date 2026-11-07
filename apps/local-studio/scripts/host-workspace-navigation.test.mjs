@@ -114,3 +114,35 @@ test('packaged Ecommerce Console routes authenticated Work and project reads thr
   assert.match(adapter, /url\.pathname\.startsWith\('\/api\/work\/'\).*'work'/s);
   assert.match(adapter, /invokeStudioService\(\{ operation,/);
 });
+
+test('packaged Console navigation search invokes its existing authorized dialog', () => {
+  const code = extractFunction(
+    '  function navigationValue(user) {',
+    '  function hostedParent() {',
+  );
+  let openCount = 0;
+  const context = {
+    window: { __shellUser: { id: 'account-1' } },
+    document: { getElementById: id => {
+      assert.equal(id, 'console-search-trigger');
+      return { click: () => { openCount += 1; } };
+    } },
+    sharedNavPath: '/admin/agentsam',
+    buildUserNav: () => ({ main: [], channels: [], apps: [], utilities: [] }),
+    workspaceNavigation: () => ({}),
+    safeAvatarUrl: () => null,
+    navigateHost: () => {},
+  };
+  runInNewContext(code + '\nthis.navigationValue = navigationValue;', context);
+  const navigation = context.navigationValue({ id: 'account-1', display_name: 'Member' });
+  assert.equal(typeof navigation.onSearch, 'function');
+  navigation.onSearch();
+  assert.equal(openCount, 1);
+});
+
+test('hosted mobile chrome styles target the packaged header rather than a hidden child header', () => {
+  const css = readFileSync(new URL('../frontend/agentsam/shared-nav-host.css', import.meta.url), 'utf8');
+  assert.match(css, /\.console-topbar \.console-topbar-actions \.console-search-wrap\s*\{\s*display: none/);
+  assert.match(css, /\.console-topbar \[data-shared-nav-toggle\]/);
+  assert.match(css, /border-radius: 999px/);
+});

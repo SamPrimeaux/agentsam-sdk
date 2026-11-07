@@ -26,7 +26,9 @@
 }
 @media (max-width: 767px) {
   .platform-console .platform-console-topbar { padding-inline: 10px; }
-  .platform-console .platform-console-search { right: 106px; }
+  /* Mobile search lives inside the same authorized navigation drawer. */
+  .platform-console .platform-console-search,
+  .platform-console .agentsam-topbar-search { display: none; }
 }
 /* Drawers are owned solely by @inneranimalmedia/agentsam-nav on mobile.
    There is no nested Ecommerce mobile drawer or second route shell. */

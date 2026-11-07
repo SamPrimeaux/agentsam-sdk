@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, MessageSquarePlus, Search } from 'lucide-react';
 import { Nav, useNav } from '@inneranimalmedia/agentsam-nav';
@@ -57,15 +58,16 @@ export function AgentSamPage({ conversationId }: { conversationId?: string }) {
   const workSurface = state.workSurface;
   const mobileWorkOpen = isMobile && workSurface !== 'chat';
   return <div className="agentsam-page-layout" data-composer-mode={data.mode} data-work-remaster="true" data-work-surface={workSurface}>
-    {!hostModeSlot ? <Nav.Topbar startup={false} showNavigationTrigger={false} rightSlot={data.mode === 'work' ? undefined : <>
+    {hostModeSlot ? createPortal(<div className="agentsam-mode-host"><Nav.ModeSwitcher /></div>, hostModeSlot) : null}
+    {!hostModeSlot ? <Nav.Topbar startup={false} showNavigationTrigger rightSlot={data.mode === 'work' ? undefined : <>
       {conversationId ? <Link to="/chats" aria-label="Back to Chats" title="Back to Chats" className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><ArrowLeft className="size-4"/></Link> : null}
       <button type="button" className="as-nav-button" aria-label="New chat" title="New chat (⌘N)" onClick={startNewChat}><MessageSquarePlus size={18}/><span className="sr-only">New chat</span></button>
-      <button type="button" className="as-nav-button" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={18}/><span className="sr-only">Search Studio</span></button>
+      <button type="button" className="as-nav-button agentsam-topbar-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new Event('agentsam:open-command-palette'))}><Search size={18}/><span className="sr-only">Search Studio</span></button>
       <AgentSamPetTrigger state={streaming ? 'working' : 'idle'} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
       <NotificationsMenu />
       <AnnotationToggle /><SidePanelToggle />
     </>} /> : null}
-    {empty ? <div className="agentsam-welcome-mode-bar" aria-label="Choose how to begin">
+    {empty && !hostModeSlot ? <div className="agentsam-welcome-mode-bar" aria-label="Choose how to begin">
       <Nav.ModeSwitcher />
     </div> : null}
     <div className={"agentsam-workspace" + (workFocused ? " is-work-focused" : "")}>

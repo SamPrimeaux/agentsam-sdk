@@ -292,3 +292,31 @@
 .as-nav-activity-trigger:is(:hover,:focus-visible) .as-nav-icon-help {
   opacity:1;visibility:visible;transform:translateY(0);
 }
+
+
+/* Host-provided global search is discoverable in navigation, not a mobile topbar icon. */
+.as-nav-sidenav-search-launch { padding: 4px 8px 8px; flex-shrink: 0; }
+.as-nav-global-search { min-height: 44px; border: 1px solid var(--nav-border); background: var(--nav-surface); }
+.as-nav-global-search:hover { background: var(--nav-selected); }
+.as-nav-global-search > span { flex: 1; min-width: 0; }
+.as-nav-global-search kbd { margin-left: auto; color: var(--nav-muted); font-size: 11px; }
+.as-nav-sidenav:not([data-expanded="true"]) .as-nav-sidenav-search-launch { display: none; }
+
+/* Phone chrome: the shared sidebar trigger becomes a compact tactile bubble. */
+@media (max-width: 767px) {
+  .as-nav-topbar .agentsam-nav__trigger {
+    position: relative; width: 48px; height: 48px; flex: 0 0 48px;
+    border: 1px solid var(--nav-border); border-radius: 999px;
+    background: color-mix(in srgb, var(--nav-surface) 92%, var(--nav-canvas));
+    box-shadow: 0 1px 5px color-mix(in srgb, var(--nav-canvas) 50%, transparent);
+  }
+  .as-nav-topbar .agentsam-nav__trigger::after {
+    content: ""; position: absolute; top: 10px; right: 8px;
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--nav-accent);
+  }
+  .as-nav-topbar .agentsam-nav__trigger:hover,
+  .as-nav-topbar .agentsam-nav__trigger:focus-visible {
+    background: var(--nav-selected); border-color: var(--nav-accent);
+  }
+}

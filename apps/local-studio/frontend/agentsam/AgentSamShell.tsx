@@ -457,6 +457,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       ...(navigation.utilities || []),
     ].map(destination),
     onNavigate: go,
+    onSearch: () => window.dispatchEvent(new Event('agentsam:open-command-palette')),
     onCreateConversation: () => { state.startChat(); go('/admin/agentsam'); },
     onSelectConversation: (id) => {
       if (state.chats.some(item => item.id === id)) state.setActiveChat(id);
