@@ -37,3 +37,47 @@ body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
 .studio-notification { padding:12px 0; border-bottom:1px solid var(--c-line); overflow-wrap:anywhere; }
 .studio-notification p { margin:5px 0; white-space:pre-wrap; }
 .studio-notification small { color:var(--c-muted); }
+
+
+/* Packaged Console owns the actual hosted header; Nav.Topbar is suppressed
+   there. Keep mobile search in the shared navigation rather than this chrome. */
+@media (max-width: 767px) {
+  body.agentsam-shared-navigation .console-topbar .console-search-wrap {
+    display: none;
+  }
+  body.agentsam-shared-navigation .console-topbar .console-topbar-spacer {
+    width: auto;
+    min-width: 48px;
+    padding-left: 0;
+  }
+  body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle] {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border: 1px solid var(--c-line);
+    border-radius: 999px;
+    color: var(--c-ink);
+    background: color-mix(in srgb, var(--c-surface-2) 90%, var(--c-surface));
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--c-ink) 13%, transparent);
+  }
+  body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle]::after {
+    content: "";
+    position: absolute;
+    top: 9px;
+    right: 8px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--c-focus);
+  }
+  body.agentsam-shared-navigation .console-topbar [data-shared-nav-toggle]:focus-visible {
+    outline: 2px solid var(--c-focus);
+    outline-offset: 2px;
+  }
+  /* The packaged Console's existing slot is now occupied on AgentSam routes.
+     Keep the switch centered without allocating a second chat-only header. */
+  body.agentsam-conversation-route .console-topbar {
+    padding-inline: 12px;
+  }
+}
