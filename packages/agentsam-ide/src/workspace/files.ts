@@ -4,6 +4,7 @@ export type WorkspaceEntry = {
   kind: 'file' | 'folder';
   size?: number;
   language?: string;
+  displayName?: string;
   readonly?: boolean;
 };
 
@@ -13,6 +14,7 @@ export type WorkspaceFile = {
   /** Immutable host-issued version/hash for optimistic writes. */
   version: string;
   language?: string;
+  displayName?: string;
   readonly?: boolean;
   canRename?: boolean;
   canDelete?: boolean;
@@ -49,6 +51,24 @@ export type WorkspaceWriteResult =
   | { ok: true; file: WorkspaceFile }
   | { ok: false; code: 'version_conflict' | 'validation' | 'offline' | 'permission' | 'unavailable' | string; message: string; current?: WorkspaceFile; diagnostics?: WorkspaceDiagnostic[] };
 
+export type WorkspaceChange = {
+  path: string;
+  status: 'added' | 'modified' | 'deleted' | 'renamed' | 'untracked' | 'conflict';
+  previousPath?: string;
+};
+
+export type WorkspaceSnapshot = {
+  id: string;
+  rootHash: string;
+  fileCount: number;
+  createdAt: string;
+  /** Explicitly distinguish a transient browser hash from a persisted account-owned D1/R2 record. */
+  persistence?: 'session' | 'durable';
+  repositoryId?: string;
+  workspaceId?: string;
+  entries?: Array<{path: string; hash: string}>;
+};
+
 export interface FileWorkspace {
   /** The host authenticates, authorizes and scopes every operation. */
   list(directory?: string): Promise<WorkspaceEntry[]>;
@@ -61,8 +81,12 @@ export interface FileWorkspace {
   history(path: string): Promise<WorkspaceRevision[]>;
   restore(path: string, revisionId: string, expectedVersion: string): Promise<WorkspaceWriteResult>;
   validate?(path: string, content: string): Promise<WorkspaceDiagnostic[]>;
+  /** Optional, host-authorized Git/diff implementation. Never synthesize change status. */
+  changes?(): Promise<WorkspaceChange[]>;
+  /** Optional, host-authorized Merkle manifest. Never claim a snapshot without a root hash. */
+  snapshot?(): Promise<WorkspaceSnapshot>;
   /** Renderability and external language policy are host decisions. */
-  configuration?: { defaultLanguage?: string; supportedLanguages?: string[]; directories?: string[]; references?: string[]; dependencies?: string[] };
+  configuration?: { readonly?: boolean; manualSave?: boolean; defaultLanguage?: string; supportedLanguages?: string[]; directories?: string[]; references?: string[]; dependencies?: string[] };
 }
 
 export class FileWorkspaceError extends Error {

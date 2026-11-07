@@ -14,6 +14,8 @@ export type SaveHost = {
   onStatus?(path: string, status: SaveStatus, reason?: string): void;
   onCommitted?(path: string, text: string, outcome: Extract<SaveOutcome, {ok: true}>, superseded: boolean): void;
   debounceMs?: number;
+  /** Host must opt in to manual saving when provider updates lack atomic CAS. */
+  manualSave?: boolean;
 };
 
 type Entry = {
@@ -76,7 +78,7 @@ export class WorkspaceSaveQueue {
     if (e.status === 'conflict') return; // never auto-overwrite an unresolved disk conflict
     e.status = 'modified';
     this.host.onStatus?.(path, 'modified');
-    this.schedule(path, e);
+    if (!this.host.manualSave) this.schedule(path, e);
   }
 
   private schedule(path: string, e: Entry): void {
@@ -115,7 +117,7 @@ export class WorkspaceSaveQueue {
         e.status = superseded ? 'modified' : 'saved';
         this.host.onCommitted?.(path, text, result, superseded);
         this.host.onStatus?.(path, e.status);
-        if (superseded) this.schedule(path, e);
+        if (superseded && !this.host.manualSave) this.schedule(path, e);
       } else {
         e.status = result.code === 'version_conflict' ? 'conflict' : 'error';
         this.host.onStatus?.(path, e.status, result.error);

@@ -14,12 +14,14 @@ type Props = {
   project: Project | null;
   /** When true, sample opt-in is offered even if a sample is already active. */
   force?: boolean;
+  /** Explicit user gesture to open a Chromium web/PWA File System Access folder. */
+  onOpenBrowserFolder?: () => Promise<void>;
 };
 
 /**
  * Real connect / open / sample gate. Never substitutes in-memory demo files for a host workspace.
  */
-export function WorkspaceGate({ project, force = false }: Props) {
+export function WorkspaceGate({ project, force = false, onOpenBrowserFolder }: Props) {
   const connectHost = useWorkStore((s) => s.createFilesystemProject);
   const createSample = useWorkStore((s) => s.createSampleProject);
   const projects = useWorkStore((s) => s.projects);
@@ -110,6 +112,9 @@ export function WorkspaceGate({ project, force = false }: Props) {
             <RefreshCw className={"size-3.5" + (busy ? " animate-spin" : "")} />
             {busy ? "Checking runtime…" : hostNeedsReconnect ? "Reconnect host" : "Connect authorized root"}
           </Button>
+          {onOpenBrowserFolder ? <Button type="button" variant="outline" onClick={()=>void onOpenBrowserFolder()}>
+            <FolderGit2 className="size-3.5" /> Open browser folder
+          </Button> : null}
           <Button
             type="button"
             variant="ghost"
@@ -121,7 +126,7 @@ export function WorkspaceGate({ project, force = false }: Props) {
           </Button>
         </div>
         <p className="work-workspace-gate__hint">
-          Run <code>agentsam start-local</code> from a Git worktree, then connect. Samples stay labeled and never become the canonical project.
+          Run <code>agentsam start-local</code> from a Git worktree, then connect for native filesystem, LSP and PTY. Browser folder access uses an explicit picker with manual saves and does not mount a runtime. Samples stay labeled.
         </p>
         {showSampleNotice ? (
           <p className="work-workspace-gate__sample" role="status">

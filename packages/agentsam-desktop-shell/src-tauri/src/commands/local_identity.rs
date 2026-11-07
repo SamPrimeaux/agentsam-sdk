@@ -282,7 +282,21 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
         }
         "work" => {
             let path = request.path.as_deref().unwrap_or("").trim();
-            let valid_path = path == "/api/work/snapshot"
+            // The native bridge must explicitly recognize the Worker IDE API.
+            // Do not expand this into a generic /api/work/* network proxy.
+            let ide_path = path.split('?').next().unwrap_or("");
+            let ide_read = matches!(ide_path,
+                "/api/work/ide/sources"
+                | "/api/work/ide/drive/files" | "/api/work/ide/drive/file"
+                | "/api/work/ide/github/repos" | "/api/work/ide/github/tree" | "/api/work/ide/github/file"
+                | "/api/work/ide/r2/buckets" | "/api/work/ide/r2/objects" | "/api/work/ide/r2/file"
+                | "/api/work/ide/containers/applications");
+            let ide_write = matches!(ide_path, "/api/work/ide/drive/file" | "/api/work/ide/github/file");
+            let requested_method = request.method.as_deref().unwrap_or("GET").to_ascii_uppercase();
+            if ide_read && requested_method != "GET" && !(ide_write && requested_method == "PUT") {
+                return Err("studio_service_ide_method_invalid".into());
+            }
+            let valid_path = ide_read || path == "/api/work/snapshot"
                 || path.starts_with("/api/work/snapshot?")
                 || (path.starts_with("/api/work/projects/")
                     && path.ends_with("/insights")
@@ -314,6 +328,7 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 "POST" => Method::POST,
                 "PATCH" => Method::PATCH,
                 "DELETE" => Method::DELETE,
+                "PUT" if ide_write => Method::PUT,
                 _ => return Err("studio_service_work_method_invalid".into()),
             };
             Ok((method, path.to_string()))
@@ -971,6 +986,41 @@ mod tests {
                 method: Some("GET".into()),
             };
             assert!(studio_service_route(&request).is_err());
+        }
+    }
+
+    #[test]
+    fn ide_bridge_allows_only_scoped_provider_reads_and_versioned_writes() {
+        for (path, method) in [
+            ("/api/work/ide/sources", "GET"),
+            ("/api/work/ide/drive/files?account=hello%40example.com", "GET"),
+            ("/api/work/ide/drive/file?account=hello%40example.com&id=xyz", "PUT"),
+            ("/api/work/ide/github/repos?account=developer", "GET"),
+            ("/api/work/ide/github/file?account=developer&repo=Org%2FRepo&path=a.ts", "PUT"),
+            ("/api/work/ide/r2/objects?account=01234567890123456789012345678901&bucket=b", "GET"),
+            ("/api/work/ide/containers/applications?account=01234567890123456789012345678901", "GET"),
+        ] {
+            let request = StudioServiceBridgeRequest {
+                operation: "work".into(), account_id: None,
+                body: None, body_base64: None, content_type: None,
+                path: Some(path.into()), method: Some(method.into()),
+            };
+            assert_eq!(studio_service_route(&request).unwrap().0.as_str(), method);
+        }
+        for (path, method) in [
+            ("/api/work/ide/github/file", "DELETE"),
+            ("/api/work/ide/r2/file", "PUT"),
+            ("/api/work/ide/sources", "POST"),
+            ("/api/work/ide/drive/file/../secrets", "GET"),
+            ("/api/work/ide/unknown", "GET"),
+            ("https://other.example/api/work/ide/sources", "GET"),
+        ] {
+            let request = StudioServiceBridgeRequest {
+                operation: "work".into(), account_id: None,
+                body: None, body_base64: None, content_type: None,
+                path: Some(path.into()), method: Some(method.into()),
+            };
+            assert!(studio_service_route(&request).is_err(), "should reject {path} {method}");
         }
     }
 

@@ -91,3 +91,18 @@ test('initial disk read cannot implicitly clear early typing or permit unversion
   assert.deepEqual(writes,['typed before read:v1']);
   assert.equal(queue.status('src/a.ts'),'saved');
 });
+
+test('manual save provider never auto-publishes an edited file',async()=>{
+  let writes=0;
+  const queue=new WorkspaceSaveQueue({manualSave:true,debounceMs:5,
+    async write(_path,_text,version){writes++;assert.equal(version,'v1');return {ok:true,version:'v2'};},
+  });
+  queue.acceptDiskVersion('document.md','v1');
+  queue.edit('document.md','local changes');
+  await new Promise(resolve=>setTimeout(resolve,35));
+  assert.equal(writes,0);
+  assert.equal(queue.status('document.md'),'modified');
+  await queue.flush('document.md');
+  assert.equal(writes,1);
+  assert.equal(queue.status('document.md'),'saved');
+});
