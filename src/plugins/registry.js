@@ -162,13 +162,19 @@ export async function listPlugins(db, options = {}) {
 export async function listPluginTools(db, options = {}) {
   const accountId = clean(options.accountId);
   const includeDisabledPlugins = options.includeDisabledPlugins === true;
+  // Tools can be account-owned (custom installs) or global registry definitions.
+  // The *installation* is always account-owned. EXISTS avoids duplicated tools
+  // when a provider has several installations, and never leaks another tenant's tools.
   const result = await db.prepare(`
     SELECT t.* FROM agentsam_tools t
-    JOIN agentsam_plugin_installations i ON i.plugin_id = t.plugin_id AND i.account_id = t.account_id
-    WHERE t.account_id = ? AND t.is_active = 1
-      AND (? = 1 OR i.enabled = 1)
+    WHERE t.is_active = 1 AND (t.account_id = ? OR t.account_id IS NULL)
+      AND EXISTS (
+        SELECT 1 FROM agentsam_plugin_installations i
+        WHERE i.plugin_id = t.plugin_id AND i.account_id = ?
+          AND (? = 1 OR i.enabled = 1)
+      )
     ORDER BY t.connector_priority, t.sort_priority, t.tool_name
-  `).bind(accountId, includeDisabledPlugins ? 1 : 0).all();
+  `).bind(accountId, accountId, includeDisabledPlugins ? 1 : 0).all();
   return (result?.results || []).map((row) => ({
     ...row, input_schema: json(row.input_schema, {}), output_schema: json(row.output_schema, null),
     handler_config: json(row.handler_config, {}), intent_tags: json(row.intent_tags, []),

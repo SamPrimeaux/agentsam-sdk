@@ -1,7 +1,8 @@
 import { projectComposerCatalog, type ComposerCatalogEntry } from '@inneranimalmedia/agentsam-workbench/capabilities';
 import { receiveSideStageRegistry, sideStageComposerWidgets } from './side-stage-actions.ts';
 
-export type ComposerPlugin = ComposerCatalogEntry;
+export { projectComposerPlugins } from './composer-projection.ts';
+export type { ComposerPlugin } from './composer-projection.ts';
 
 /** Read-only composition of the *same* authenticated Settings state and SideStage actions. */
 export async function loadComposerCatalog(signal?: AbortSignal): Promise<ComposerCatalogEntry[]> {
@@ -20,7 +21,3 @@ export async function loadComposerCatalog(signal?: AbortSignal): Promise<Compose
 }
 /** Kept as a compatibility alias for existing picker callers. */
 export const loadComposerPlugins = loadComposerCatalog;
-
-export function projectComposerPlugins(rows: unknown): ComposerPlugin[] {
-  return projectComposerCatalog({plugins:Array.isArray(rows)?rows:[]});
-}

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { projectComposerPlugins } from '../frontend/agentsam/plugins.ts';
+import { projectComposerPlugins } from '../frontend/agentsam/composer-projection.ts';
 
 test('composer projects only enabled visible registry installations', () => {
   const row = { id: 'installation', plugin_key: 'example', display_name: 'Example', composer_visible: 1, is_enabled: 1, setup_status: 'connected', health_status: 'healthy', mention_aliases: ['example', '@example'], auth_type: 'oauth' };

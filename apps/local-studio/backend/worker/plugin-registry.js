@@ -161,7 +161,16 @@ export async function createLocalStudioPluginRuntime(env, accountId, options = {
     tools: registry.tools,
     db: env.DB,
     dispatchers: { plugin: dispatch, codemode: dispatch, mcp: mcpDispatch, native: nativeDispatch, internal: nativeDispatch },
-    authorizeTool: options.authorizeTool,
+    // The runtime was resolved for this signed-in account. A caller-supplied
+    // context may narrow that principal but must never switch to another one.
+    authorizeTool: async (entry) => {
+      const requestedAccount = entry.context?.accountId;
+      if (requestedAccount && requestedAccount !== accountId) return false;
+      if (entry.tool?.account_id && entry.tool.account_id !== accountId) return false;
+      return typeof options.authorizeTool === 'function'
+        ? options.authorizeTool(entry)
+        : true;
+    },
     requireApproval: options.requireApproval,
   });
 }
