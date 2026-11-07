@@ -1,3 +1,7 @@
+export type { SettingsBillingSnapshot, SettingsBillingInvoice, SettingsBillingPlan } from "./billing";
+export { normalizeBillingApi, safeBillingUrl, BILLING_NOT_CONFIGURED } from "./billing";
+export { normalizeVerifiedToolUsage } from "./tool-usage";
+
 export type SettingsUnitId =
   | "general"
   | "agents"
@@ -159,6 +163,8 @@ export type SettingsPlugin = SettingsCatalogItem & {
   settingsVisible: boolean;
   setupUrl?: string | null;
   disconnectUrl?: string | null;
+  /** Safe account identifier reference; never a credential or token. */
+  connectionRef?: string | null;
   iconUrl?: string | null;
   iconDarkUrl?: string | null;
   iconAlt?: string | null;
@@ -170,6 +176,17 @@ export type SettingsPlugin = SettingsCatalogItem & {
   lastHealthyAt?: number | null;
   lastErrorCode?: string | null;
   lastErrorMessage?: string | null;
+};
+
+export type SettingsPluginRepository = {
+  id: string;
+  fullName: string;
+  description: string;
+  private: boolean;
+  defaultBranch: string;
+  updatedAt: string;
+  htmlUrl: string;
+  permissions: { pull:boolean; push:boolean; admin:boolean };
 };
 
 /** Operator-reviewed plugin catalog entries, never implicit permission grants. */
@@ -387,10 +404,40 @@ export type SettingsSnapshot = {
   };
 };
 
+export type SettingsPermissionOption = {
+  key: string;
+  domain: string;
+  verb: string;
+  description: string;
+  mutating: boolean;
+};
+
+export type SettingsMintInput = {
+  kind: Exclude<CredentialKind, "provider">;
+  name: string;
+  expiration: "never" | "30 days" | "90 days" | "1 year";
+  access: "all" | "read-only" | "custom";
+  scopes?: string[];
+};
+
+export type SettingsMintResult = {
+  credential: SettingsCredential;
+  secretOnce: string;
+  env: string;
+};
+
 export interface SettingsHost {
   documentationHref?: string;
   capabilities(): Promise<SettingsCapabilities>;
   snapshot(): Promise<SettingsSnapshot>;
+  listCredentials?(): Promise<SettingsCredential[]>;
+  listPermissionOptions?(): Promise<SettingsPermissionOption[]>;
+  mintCredential?(input: SettingsMintInput): Promise<SettingsMintResult>;
+  revokeCredential?(id: string): Promise<void>;
+  /** Billing data comes from the authenticated host, never package fixtures. */
+  readBilling?(): Promise<import("./billing").SettingsBillingSnapshot>;
+  /** Host generates a fresh provider session after checking account ownership. */
+  openBillingPortal?(): Promise<void>;
   saveAgent?(draft: SettingsAgentDraft, id?: string): Promise<void>;
   archiveAgent?(id: string): Promise<void>;
   updateAgentPolicy?(policy: SettingsAgentPolicy): Promise<void>;
@@ -403,8 +450,10 @@ export interface SettingsHost {
   installPluginFromCatalog?(pluginKey: string): Promise<void>;
   removeCatalogPlugin?(pluginId: string): Promise<void>;
   readPluginWorkspace?(pluginId: string): Promise<{pluginKey:string;contextTool:string;result:unknown}>;
+  /** Provider-scoped live repository read; no tokens returned to Settings. */
+  listPluginRepositories?(pluginId: string): Promise<{repositories:SettingsPluginRepository[];hasMore:boolean}>;
   setPluginEnabled?(id: string, enabled: boolean): Promise<void>;
-  beginPluginSetup?(id: string, options?: {allowWrites?: boolean}): Promise<void>;
+  beginPluginSetup?(id: string, options?: {allowWrites?: boolean;fullCloudflareAccess?:boolean}): Promise<void>;
   disconnectPlugin?(id: string): Promise<void>;
   setWidgetVisible?(id: string, visible: boolean): Promise<void>;
   openWidget?(id: string): void;

@@ -372,6 +372,34 @@
         ],
         "delay_ms": 0
       }
+    },
+    {
+      "key": "customer_billing",
+      "name": "Customer billing portal",
+      "icon": "credit-card",
+      "tagline": "A theme-styled sign-in entry to verified account invoices and subscriptions.",
+      "category": "Account",
+      "capabilities": [
+        "cms.embed.render"
+      ],
+      "surfaces": [
+        "storefront_embed",
+        "cms_block"
+      ],
+      "permissions": [
+        "Link to the authenticated account billing screen; no invoice or card details appear publicly"
+      ],
+      "default_config": {
+        "enabled": false,
+        "placement": "inline",
+        "trigger": "manual",
+        "heading": "Manage your billing",
+        "subtitle": "View invoices and manage your subscription in your secure account.",
+        "button_label": "View billing",
+        "style": "card",
+        "source_type": "account_billing",
+        "requires_authenticated_route": true
+      }
     }
   ]
 }

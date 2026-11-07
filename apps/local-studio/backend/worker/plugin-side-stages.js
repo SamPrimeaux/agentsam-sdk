@@ -96,7 +96,7 @@ export function projectSideStageContribution(row) {
     tabKind,
     renderer,
     ...(href ? {href} : {}),
-    // Host UI cannot grant a capability or bypass plugin authorization.
+    // A surface enabled preference is separate from its available runtime authority.
     ready: true,
   };
 }
@@ -115,7 +115,8 @@ export async function ensureCoreSideStageInstallations(db, accountId) {
   `).bind(accountId).run();
 }
 
-export async function listAccountSideStages(db, accountId) {
+export async function listAccountSideStages(db, accountId, options = {}) {
+  const includeDisabled = options.includeDisabled === true;
   await ensureCoreSideStageInstallations(db, accountId);
   const result = await db.prepare(`
     SELECT p.id,p.plugin_key,p.family_key,p.plugin_kind,p.display_name,
@@ -137,8 +138,33 @@ export async function listAccountSideStages(db, accountId) {
   `).bind(accountId, accountId).all();
   return (result.results || [])
     .filter(row => Number(row.installed_and_ready) === 1 &&
-      (row.stage_enabled === null || row.stage_enabled === undefined ||
-       Number(row.stage_enabled) === 1))
-    .map(projectSideStageContribution)
+      (includeDisabled || Number(row.stage_enabled) === 1))
+    .map(row => {
+      const stage = projectSideStageContribution(row);
+      return stage ? {...stage,enabled:Number(row.stage_enabled) === 1} : null;
+    })
     .filter(Boolean);
+}
+
+/** Only account-owned installation state is mutable, not global plugin definitions. */
+export async function updateAccountSideStage(db, accountId, pluginId, enabled) {
+  if (!accountId) throw new Error('side_stage_account_required');
+  if (!/^plg_[a-f0-9]{8,}$/i.test(String(pluginId))) throw new Error('side_stage_plugin_invalid');
+  if (typeof enabled !== 'boolean') throw new Error('side_stage_enabled_required');
+  await ensureCoreSideStageInstallations(db, accountId);
+  const exists = await db.prepare(`
+    SELECT p.id FROM agentsam_plugins p
+    JOIN agentsam_plugin_installations i ON i.plugin_id=p.id
+    WHERE p.id=? AND i.account_id=? AND i.instance_key='side-stage-v1'
+      AND p.family_key='core' AND p.plugin_kind='native'
+      AND json_extract(p.metadata_json,'$.side_stage.renderer')='builtin'
+    LIMIT 1
+  `).bind(pluginId,accountId).first();
+  if (!exists) throw new Error('side_stage_not_found');
+  await db.prepare(`
+    UPDATE agentsam_plugin_installations
+    SET enabled=?,updated_at=unixepoch()
+    WHERE account_id=? AND plugin_id=? AND instance_key='side-stage-v1'
+  `).bind(enabled?1:0,accountId,pluginId).run();
+  return {ok:true,pluginId,enabled};
 }

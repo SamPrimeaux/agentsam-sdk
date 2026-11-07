@@ -98,6 +98,9 @@ jobs:
           npm run release:train:check
           node scripts/sdk-release-publish.mjs --plan
 
+      - name: Verify manual and CI publishing safeguards
+        run: node --test scripts/sdk-release-publish.test.mjs
+
       # Canvas Work is hosted inside the standalone Local Studio workspace.
       # Its runtime imports the published SDK through that app's own lockfile,
       # not the root workspace dependency tree. Install it before root tests.

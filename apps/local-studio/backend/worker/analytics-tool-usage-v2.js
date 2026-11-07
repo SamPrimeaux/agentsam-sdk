@@ -29,6 +29,7 @@ export async function queryAccountToolUsage(env,accountId,rawRange='30d'){
        SUM(CASE WHEN status!='success' THEN 1 ELSE 0 END) failures,
        AVG(duration_ms) average_duration_ms,
        COALESCE(SUM(cost_usd),0) recorded_cost_usd,
+       COUNT(cost_usd) priced_calls,
        MIN(created_at_unix) first_event_unix,
        MAX(created_at_unix) last_event_unix
        FROM agentsam_tool_call_log WHERE account_id=? AND created_at_unix>=?`).first(),
@@ -54,7 +55,8 @@ export async function queryAccountToolUsage(env,accountId,rawRange='30d'){
       last_event_unix:nullable(summary?.last_event_unix),measured_calls:calls},
     totals:{calls,successes,failures:count(summary?.failures),success_rate:ratio(successes,calls),
       average_duration_ms:nullable(summary?.average_duration_ms),
-      recorded_cost_usd:count(summary?.recorded_cost_usd)},
+      recorded_cost_usd:count(summary?.recorded_cost_usd),
+      priced_calls:count(summary?.priced_calls)},
     by_tool:(byTool?.results||[]).map(r=>({
       tool_key:String(r.tool_key||'unknown'),calls:count(r.calls),successes:count(r.successes),
       failures:count(r.failures),success_rate:ratio(count(r.successes),count(r.calls)),

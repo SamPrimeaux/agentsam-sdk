@@ -415,12 +415,83 @@ export async function connectorStatus(env, userId, key) {
   }
 }
 
+/**
+ * A GitHub connection becomes useful only when its stored, account-bound grant
+ * can perform a real GitHub read. Tokens stay on the Worker; never return them
+ * to Desktop, browser JavaScript or the plugin registry response.
+ */
+export async function listGitHubConnectionRepositories(request, env, userId, fetcher = fetch) {
+  if (request.method !== "GET") return json({ ok:false, error:"method_not_allowed" }, 405);
+  const connectionId = new URL(request.url).searchParams.get("connection_id") || "";
+  const { provider, accountIdentifier } = connectionIdParts(connectionId);
+  if (provider !== "github" || !/^[a-zA-Z0-9-]{1,39}$/.test(accountIdentifier)) {
+    return json({ ok:false, error:"github_connection_required" }, 400);
+  }
+  if (!env.DB?.prepare) return json({ ok:false, error:"database_unavailable" }, 503);
+  const material = vaultMaterial(env);
+  if (!material) return json({ ok:false, error:"vault_required" }, 503);
+
+  const record = await env.DB.prepare(
+    "SELECT account_identifier, access_token_encrypted, expires_at " +
+    "FROM user_oauth_tokens WHERE account_id = ? AND LOWER(provider) = 'github' " +
+    "AND account_identifier = ? AND is_active = 1 AND (revoked_at IS NULL OR revoked_at = 0) LIMIT 1"
+  ).bind(userId, accountIdentifier).first();
+  if (!record) return json({ ok:false, error:"github_connection_not_found" }, 404);
+  if (record.expires_at && Number(record.expires_at) <= Math.floor(Date.now() / 1000)) {
+    return json({ ok:false, error:"github_connection_expired" }, 401);
+  }
+  const token = await readStoredOauthToken(material, record, "access",
+    oauthAad("github", userId, record.account_identifier));
+  if (!token) return json({ ok:false, error:"github_connection_token_unavailable" }, 409);
+
+  let response;
+  try {
+    response = await fetcher(
+      "https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member", {
+        headers:{
+          authorization:"Bearer " + token,
+          accept:"application/vnd.github+json",
+          "x-github-api-version":"2022-11-28",
+          "user-agent":"agentsam-local-studio",
+        },
+        redirect:"error",
+        signal:AbortSignal.timeout(12000),
+      });
+  } catch {
+    return json({ ok:false, error:"github_repositories_unreachable" }, 502);
+  }
+  if (response.status === 401 || response.status === 403) {
+    return json({ ok:false, error:"github_repository_access_denied", providerStatus:response.status }, 403);
+  }
+  if (!response.ok) return json({ ok:false, error:"github_repository_list_failed", providerStatus:response.status }, 502);
+  const data = await response.json().catch(()=>null);
+  if (!Array.isArray(data)) return json({ ok:false, error:"github_repository_response_invalid" }, 502);
+  const repositories = data.slice(0,100).filter(repo=>
+    repo && typeof repo.full_name==="string" && /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repo.full_name)
+  ).map(repo=>({
+    id:String(repo.id || repo.full_name),
+    fullName:repo.full_name,
+    description:typeof repo.description==="string" ? repo.description.slice(0,280) : "",
+    private:repo.private===true,
+    defaultBranch:typeof repo.default_branch==="string" ? repo.default_branch : "",
+    updatedAt:typeof repo.updated_at==="string" ? repo.updated_at : "",
+    htmlUrl:"https://github.com/"+repo.full_name,
+    permissions:{
+      pull:repo.permissions?.pull===true,
+      push:repo.permissions?.push===true,
+      admin:repo.permissions?.admin===true,
+    },
+  }));
+  return json({ ok:true, account:accountIdentifier, repositories, limitedTo:100, hasMore:data.length===100 });
+}
+
 export function isConnectorWorkRequest(pathname) {
-  return /^\/api\/work\/connect\/(google_drive|google_calendar|github)\/(start|status|disconnect)$/.test(pathname);
+  return pathname === "/api/work/github/repos" || /^\/api\/work\/connect\/(google_drive|google_calendar|github)\/(start|status|disconnect)$/.test(pathname);
 }
 
 export async function handleConnectorWorkRequest(request, env, userId) {
   const url = new URL(request.url);
+  if (url.pathname === "/api/work/github/repos") return listGitHubConnectionRepositories(request,env,userId);
   const match = url.pathname.match(/^\/api\/work\/connect\/([a-z_]+)\/(start|status|disconnect)$/);
   if (!match) return json({ ok: false, error: "not_found" }, 404);
   const [, key, action] = match;

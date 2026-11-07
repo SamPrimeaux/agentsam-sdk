@@ -1,3 +1,6 @@
+export type { FinancialConnectionProvider, FinancialProviderStatus, FinancialAuthorizationHandoff } from "./provider-connections.js";
+export { validateFinancialAuthorizationUrl } from "./provider-connections.js";
+
 export type FinancialCapability =
   | "transactions" | "sales" | "transaction_categories" | "recurring_revenue"
   | "receivables" | "refunds" | "taxes" | "customers" | "inventory"

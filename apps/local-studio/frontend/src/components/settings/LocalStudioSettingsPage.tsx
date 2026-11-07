@@ -12,6 +12,7 @@ import { localStudioSettingsManifest } from "./localStudioSettingsManifest";
 import { localStudioSettingsHost } from "./localStudioSettingsHost";
 import { LiveKeysSettingsPage } from "./LiveKeysSettingsPage";
 import { InnerAnimalCompanionsPage } from "../../../agentsam/InnerAnimalCompanionsPage";
+import { SideStagePreferencesPage } from "./SideStagePreferencesPage";
 
 export function LocalStudioSettingsPage({
   unitId,
@@ -70,7 +71,9 @@ export function LocalStudioSettingsPage({
       }}
       renderCustomView={(unit, view) => unit === "customize" && view === "companions"
         ? <InnerAnimalCompanionsPage />
-        : null}
+        : unit === "customize" && view === "panels"
+          ? <SideStagePreferencesPage />
+          : null}
     />
   );
 }

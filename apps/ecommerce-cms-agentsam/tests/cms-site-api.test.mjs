@@ -435,11 +435,31 @@ test("catalog embed installs and lists against the selected site-first page iden
     assert.equal(installedBody.catalog_key, "contact_form");
     assert.equal(installedBody.canonical.status, "linked");
 
+    // The billing app is installed as a canonical section/block, never a parallel
+    // CMS table or an embedded payment processor.
+    const billingInstall = await handleAdminCmsApi(
+      request(installUrl, "POST", {
+        catalogKey: "customer_billing",
+        settings: { enabled: true, heading: "My invoices", style: "inline" },
+      }),
+      env, new URL("https://cms.test" + installUrl), { accountId: "acct-a" },
+    );
+    const billingBody = await billingInstall.json();
+    assert.equal(billingInstall.status, 201, JSON.stringify(billingBody));
+    assert.equal(billingBody.catalog_key, "customer_billing");
+    assert.equal(billingBody.canonical.status, "linked");
+    assert.equal(billingBody.instance.settings.heading, "My invoices");
+    assert.equal(billingBody.instance.settings.style, "inline");
+    assert.equal(billingBody.instance.settings.__editor.catalogKey, "customer_billing");
+    assert.equal(billingBody.instance.settings.__editor.blocks[0].id, "embed-root");
+
     const listed = await handleAdminCmsApi(
       request(installUrl, "GET"), env, new URL("https://cms.test" + installUrl), { accountId: "acct-a" },
     );
     assert.equal(listed.status, 200);
-    assert.equal((await listed.json()).installed[0].catalog_key, "contact_form");
+    const installedRows = (await listed.json()).installed;
+    assert.equal(installedRows.length, 2);
+    assert.deepEqual(installedRows.map(row => row.catalog_key).sort(), ["contact_form", "customer_billing"]);
 
     const crossSiteUrl = "/api/admin/cms/pages/embed-page/catalog-resources?site_id=site-a2&page_id=" + page.id;
     const crossSite = await handleAdminCmsApi(

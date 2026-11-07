@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const mode=process.argv[2]||'--plan';
-if(!['--plan','--publish'].includes(mode))throw Error('expected --plan or --publish');
+if(!['--plan','--publish','--publish-local'].includes(mode))throw Error('expected --plan, --publish or --publish-local');
 const read=p=>JSON.parse(fs.readFileSync(p,'utf8'));
 const sdk=read(path.join(root,'package.json')),version=sdk.version;
 if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('stable_sdk_version_required');
@@ -73,8 +73,24 @@ for(const name of ['src/lib/cad/project-v2.js','packages/agentsam-occt/package.j
 console.log('AGENTSAM_STABLE_RELEASE '+version+' '+order.length+' packages');
 for(const [i,x]of order.entries())console.log(String(i+1).padStart(2,'0')+' '+x.name+'@'+version+' '+path.relative(root,x.cwd));
 if(mode==='--plan')process.exit(0);
-if(process.env.CI!=='true'||process.env.GITHUB_REF!=='refs/heads/main'||!process.env.NODE_AUTH_TOKEN)
+const localPublish=mode==='--publish-local';
+if(localPublish){
+ // Local publishing deliberately uses the operator's npm login, never a fabricated CI identity.
+ if(process.env.CI==='true'||!process.stdin.isTTY)throw Error('local_publish_requires_interactive_terminal');
+ if(process.argv[3]!==`--confirm=${version}`)throw Error(`local_publish_requires_--confirm=${version}`);
+ const git=(...args)=>{
+  const result=spawnSync('git',args,{cwd:root,encoding:'utf8'});
+  if(result.status!==0)throw Error('git_preflight_failed:'+args.join(' '));
+  return result.stdout.trim();
+ };
+ if(git('branch','--show-current')!=='main'||git('status','--porcelain')||git('rev-parse','HEAD')!==git('rev-parse','origin/main'))
+  throw Error('local_publish_requires_clean_synchronized_main');
+ const auth=spawnSync('npm',['whoami'],{cwd:root,encoding:'utf8'});
+ if(auth.status!==0||!auth.stdout.trim())throw Error('npm_login_required_run_npm_login_first');
+ console.log('LOCAL_PUBLISH_AUTHENTICATED '+auth.stdout.trim()+' · '+version);
+}else if(process.env.CI!=='true'||process.env.GITHUB_REF!=='refs/heads/main'||!process.env.NODE_AUTH_TOKEN){
  throw Error('publish_requires_approved_main_and_npm_credentials');
+}
 function npm(args,cwd=root,quiet=false){
  const res=spawnSync('npm',args,{cwd,encoding:'utf8',stdio:quiet?['ignore','pipe','pipe']:'inherit'});
  if(!quiet&&res.status!==0)throw Error('npm_failed:'+args.join(' '));
@@ -97,7 +113,7 @@ for(const item of order){
   npm(['install','--package-lock-only','--ignore-scripts'],dir);
   npm(['ci','--ignore-scripts'],dir);
  }
- npm(['publish','--access','public','--provenance'],dir);
+ npm(['publish','--access','public',...(localPublish?[]:['--provenance'])],dir);
  let confirmed=false;
  for(let attempt=0;attempt<5;attempt++){
   if(exists(item.name)){confirmed=true;break;}

@@ -6,7 +6,6 @@ on:
       version:
         description: Exact approved SDK train version
         required: true
-        default: "2.6.13"
 
 permissions:
   contents: read

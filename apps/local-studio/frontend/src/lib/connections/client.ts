@@ -89,10 +89,12 @@ export type LocalStudioSideStageRecord = {
   renderer: "builtin" | "embed" | "workspace";
   href?: string;
   ready: true;
+  enabled?: boolean;
 };
 
 export type LocalStudioConnectionsResponse = {
   side_stages?: LocalStudioSideStageRecord[];
+  side_stage_catalog?: LocalStudioSideStageRecord[];
   ok?: boolean;
   connections?: LocalStudioConnectionRecord[];
   items?: LocalStudioConnectionRecord[];
@@ -175,6 +177,16 @@ async function connectionRequest<T>(
 
 export async function listLocalStudioConnections(): Promise<LocalStudioConnectionsResponse> {
   return connectionRequest<LocalStudioConnectionsResponse>("/api/connections");
+}
+
+/** Controls only personal panel visibility, never OAuth, install or permissions. */
+export async function updateSideStageVisibility(pluginId: string, enabled: boolean) {
+  if (!/^plg_[a-f0-9]{8,}$/i.test(pluginId)) throw new Error("side_stage_plugin_invalid");
+  const result = await connectionRequest<{ok:boolean;pluginId:string;enabled:boolean}>(
+    "/api/connections/side-stages/" + encodeURIComponent(pluginId),
+    {method:"POST",body:{enabled}},
+  );
+  return result;
 }
 
 export async function startLocalStudioProviderConnection(
@@ -386,6 +398,21 @@ export function beginLocalStudioPublicPluginOAuth(pluginId:string,allowWrites=fa
     {allow_writes:allowWrites,desktop:isPackagedDesktop()},
   );
 }
+/** Repository visibility is checked server-side against this account's sealed GitHub grant. */
+export function listLocalStudioGitHubRepositories(connectionRef: string) {
+  if (!/^github:[a-zA-Z0-9-]{1,39}$/.test(connectionRef)) throw new Error("github_connection_invalid");
+  return pluginCatalogRequest<{
+    ok: boolean;
+    account: string;
+    repositories: Array<{
+      id:string; fullName:string; description:string; private:boolean; defaultBranch:string;
+      updatedAt:string; htmlUrl:string; permissions:{pull:boolean;push:boolean;admin:boolean};
+    }>;
+    limitedTo:number;
+    hasMore:boolean;
+  }>("GET","/api/work/github/repos?connection_id="+encodeURIComponent(connectionRef));
+}
+
 export function beginLocalStudioGmailConnection(returnTo: string) {
   return pluginCatalogRequest<{ok:boolean;authorize_url:string}>(
     'POST','/api/work/gmail/oauth/start',{return_to:returnTo},

@@ -138,6 +138,7 @@
           ? 'Editing an installed CMS instance. Save writes through the page draft provider.'
           : 'Configure settings, then install into this page. Installation creates a persisted section and block identity.'
       )+'</p>'+
+      (app.key==='customer_billing' ? '<p class="ter-notice">The account destination is resolved by the authorized site host, never entered through a theme. Publishing requires a working authenticated billing route.</p>' : '')+
       '<details open><summary>Content</summary>'+
       field('heading','Heading',c.heading||'')+field('subtitle','Supporting text',c.subtitle||'')+
       field('button_label','Button label',c.button_label||'')+
@@ -147,10 +148,13 @@
       select('placement','Placement',c.placement||'inline',['inline','top','center','bottom-right','bottom-left'])+
       select('trigger','Trigger',c.trigger||'manual',['manual','immediate','delay','scroll','exit-intent'])+
       field('delay_ms','Delay (milliseconds)',Number(c.delay_ms)||0,'number','min="0" max="60000" step="100"')+
-      checkbox('dismissible','Dismissible',c.dismissible!==false)+'</details>'+
+      (app.key==='customer_billing' ? '' : checkbox('dismissible','Dismissible',c.dismissible!==false))+'</details>'+
       '<details><summary>Appearance</summary>'+
-      field('background','Background',c.background||'#141414','color')+
-      field('accent','Accent',c.accent||'#8b181b','color')+'</details>'+
+      (app.key==='customer_billing'
+        ? select('style','Presentation',c.style||'card',['card','inline'])+
+          '<p class="ter-muted">Colors and typography follow the active site theme. No payment credentials are stored in CMS content.</p>'
+        : field('background','Background',c.background||'#141414','color')+
+          field('accent','Accent',c.accent||'#8b181b','color'))+'</details>'+
       (hasFields?'<details open><summary>Form and consent</summary>'+
         '<p class="ter-muted">Required fields are enforced for interactive preview and stored on the installed instance.</p>'+
         editableFields.map(name => {
@@ -314,7 +318,10 @@
       '<div class="ter-dialog-content" style="--ter-surface:'+esc(/^#[0-9a-f]{6}$/i.test(c.background)?c.background:'#141414')+
         ';--ter-accent:'+esc(/^#[0-9a-f]{6}$/i.test(c.accent)?c.accent:'#8b181b')+'">'+
         '<h2>'+esc(c.heading||app.name)+'</h2><p>'+esc(c.subtitle||'')+'</p>'+
-        (fields.length?'<form data-embed-form novalidate>'+
+        (key==='customer_billing'
+          ? '<button type="button" disabled aria-disabled="true">'+esc(c.button_label||'View billing')+'</button>'+
+            '<p role="status">Preview only. The account host must provide an authenticated billing destination before visitors can open invoices.</p>'
+          : fields.length?'<form data-embed-form novalidate>'+
           fields.map(name => '<label>'+esc(fieldLabel(name))+(required.has(name)?' *':'')+
             (name==='message'?'<textarea name="message" rows="3" '+(required.has(name)?'required':'')+'></textarea>':
             '<input type="'+(name==='email'?'email':'text')+'" name="'+esc(name)+'" '+(required.has(name)?'required':'')+'>')+'</label>').join('')+

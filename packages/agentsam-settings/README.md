@@ -30,3 +30,34 @@ build and seven-width real-browser checks. The machine-readable v1 quality
 receipt contract is in `protocol/ui/agentsam.ui-quality.v1.schema.json` and
 its acceptance/limitations are in `docs/product/AGENTSAM-UI-QUALITY-GATE.md`.
 A passing Settings receipt does not certify unrelated CMS themes.
+
+
+## Verified account billing and tool costs
+
+The `usage` unit has two **separate** authorities:
+
+- `SettingsBillingPanel` uses optional `SettingsHost.readBilling()` and
+  `openBillingPortal()`. The host must read authenticated, account-scoped
+  billing records; the package never stores payment credentials or claims a
+  successful payment after redirecting. A missing host integration or failed
+  read is explicitly unavailable. In Local Studio web, the adapter looks for
+  `GET /api/billing`, `GET /api/billing/invoices`, and a POST-created
+  `/api/billing/portal` session. The separate InnerAnimalMedia billing
+  backend already implements those endpoints, but they are not assumed to
+  exist on every Local Studio deployment.
+- `normalizeVerifiedToolUsage()` accepts only the authenticated account
+  `agentsam.tool-usage.v2` receipt with a matching recorded/priced-call
+  count from the existing `/api/analytics/tool-usage?range=30d` endpoint.
+  This represents **recorded tool costs**, not total provider/model/cloud
+  bills. Unpriced calls do not become zero-cost charges, and the account
+  ledger is read only after server-side session authorization.
+
+The CMS has a first-party `customer_billing` manifest entry that installs
+through the existing site-scoped `catalog-resources` API into canonical
+`cms_page_sections` / `cms_section_blocks`. The editor's payment preview
+cannot collect funds; hosts must supply an authenticated route to render the
+portal link. Installation alone is **not proof of a live published renderer**.
+
+Do not turn either provider data or a CMS theme setting into an authorization
+source. Payment processing, subscription activation, and invoice settlement
+require server-verified transactions and webhooks.
