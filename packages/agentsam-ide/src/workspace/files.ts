@@ -4,6 +4,7 @@ export type WorkspaceEntry = {
   kind: 'file' | 'folder';
   size?: number;
   language?: string;
+  displayName?: string;
   readonly?: boolean;
 };
 
@@ -13,6 +14,7 @@ export type WorkspaceFile = {
   /** Immutable host-issued version/hash for optimistic writes. */
   version: string;
   language?: string;
+  displayName?: string;
   readonly?: boolean;
   canRename?: boolean;
   canDelete?: boolean;
@@ -80,7 +82,7 @@ export interface FileWorkspace {
   /** Optional, host-authorized Merkle manifest. Never claim a snapshot without a root hash. */
   snapshot?(): Promise<WorkspaceSnapshot>;
   /** Renderability and external language policy are host decisions. */
-  configuration?: { defaultLanguage?: string; supportedLanguages?: string[]; directories?: string[]; references?: string[]; dependencies?: string[] };
+  configuration?: { readonly?: boolean; defaultLanguage?: string; supportedLanguages?: string[]; directories?: string[]; references?: string[]; dependencies?: string[] };
 }
 
 export class FileWorkspaceError extends Error {

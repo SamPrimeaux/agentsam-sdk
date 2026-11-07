@@ -87,3 +87,44 @@ filesystem source assets.
 The previous InnerAnimalMedia filesystem, virtual tree, Monaco, Merkle and
 provider UI components remain authoritative donor references for remaining
 work. Reuse and package their proven behavior without a parallel IDE product.
+
+### Authenticated remote provider browsing (November 2026 follow-on)
+
+Local Studio's existing Work authentication routes now host read-only provider-backed
+FileWorkspace views inside the same packaged WorkspaceEditor:
+
+- Google Drive: Existing google_drive OAuth grant in user_oauth_tokens, encrypted
+  token and refresh support from connector-oauth.js; explicit Google account
+  selection; Google Drive v3 folder listing and bounded text reads. The OAuth
+  application's drive.file permission only sees files the app is authorized
+  for. Native Docs may be inspected as exported text, but are not edited.
+  Unconnected accounts are not substituted with Gmail or Google Cloud grants.
+- Cloudflare R2: Existing cfoa OAuth resolver, explicit Cloudflare account
+  selection, R2 bucket listing, prefix/cursor browsing, bounded text reads
+  and ETag metadata. Supports non-default bucket jurisdictions. Requires
+  actually granted read scopes, not an available OAuth consent option.
+- Cloudflare Containers: Management API read-only discovery of selected
+  account applications when containers.read is granted. The control plane
+  does NOT mount a container filesystem.
+- GitHub and Docker: An icon and the existing CLI/product capability are not
+  evidence of an IDE-specific authorized filesystem adapter. Keep fail-closed
+  until provider reads and version-checked writes are genuinely connected.
+- Merkle persistence: Use existing @inneranimalmedia/agentsam-repository and
+  agentsam_fs_merkle_snapshots with account_id + repository_id and R2 manifests.
+  No parallel IDE snapshot table. IDE in-memory snapshot remains short-lived;
+  durable integration needs the existing repository ownership and index.
+
+Remote sources deliberately report readonly:true. Do not enable Save, Delete
+or Rename before proving atomic conditional writes, provider write scopes,
+account/project isolation, conflict handling, and authenticated browser and
+desktop acceptance.
+
+Backend: apps/local-studio/backend/worker/ide-source-service.js,
+backend/worker/connector-oauth.js, frontend/src/lib/work/remote-ide-workspace.ts.
+The shared WorkspaceSourceRail and Monaco UI hosts all providers; no alternate
+provider-specific editor. Tokens never leave the authenticated backend.
+
+OAuth permission rule: A scope that appears among 374 possible Cloudflare
+consent options is not a granted permission. Verify every account's stored
+grant before access. Never use a globally privileged environment API token to
+stand in for the end user's Cloudflare OAuth connection.

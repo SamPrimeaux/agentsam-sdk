@@ -3,7 +3,7 @@
  * It must not maintain a second explorer/Monaco implementation.
  */
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import type { IDEFileSource, IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
+import { WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
 import type { AgentSamEditorPalette } from '@inneranimalmedia/agentsam-ide/monaco';
 import { HttpLspTransport, workspaceRootFileUri } from '@inneranimalmedia/agentsam-ide/lsp';
 import { isPackagedDesktop } from '@/lib/desktop/tauri';
@@ -15,6 +15,7 @@ import { useActiveProject, useWorkStore } from '@/lib/work/store';
 import { isAuthorizedHostProject, isSampleProject, projectNeedsConnection } from '@/lib/work/workspace-restore';
 import { createRuntimeIDEWorkspace, createTutorialIDEWorkspace } from '@/lib/work/ide-workspace';
 import { WorkspaceGate } from '@/components/workbench/workspace-gate';
+import { RemoteFilesSource } from '@/components/workbench/remote-files-source';
 import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
 
 const descriptions: Record<IDEFileSourceId, string> = {
@@ -31,6 +32,7 @@ export function FilesStage({ tab: _tab }: { tab: SideTab }) {
   const projects = useWorkStore(state => state.projects);
   const selectProject = useWorkStore(state => state.setActiveProject);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [source,setSource] = useState<IDEFileSourceId>('local');
   const [sourceNotice, setSourceNotice] = useState('');
   const [monacoReady,setMonacoReady]=useState(false);
   const [monacoFailure,setMonacoFailure]=useState('');
@@ -84,8 +86,10 @@ export function FilesStage({ tab: _tab }: { tab: SideTab }) {
     { id:'docker', label:'Docker', state:'disconnected', detail:descriptions.docker },
   ]), [project?.kind, ready]);
 
+  if(source!=='local')return <RemoteFilesSource source={source} onSelect={setSource}
+    palette={palette} hostConnected={Boolean(project?.kind==='filesystem'&&ready)} />;
   if (!project || projectNeedsConnection(project) || !ready || connectOpen)
-    return <div className="h-full overflow-y-auto"><WorkspaceGate project={project} force={connectOpen || !project} />
+    return <div className="h-full overflow-y-auto"><WorkspaceSourceRail sources={sources} sourceId="local" onSelect={setSource}/><WorkspaceGate project={project} force={connectOpen || !project} />
       {connectOpen ? <button className="m-3 rounded border px-3 py-2 text-xs" type="button" onClick={()=>setConnectOpen(false)}>Back to editor</button> : null}
     </div>;
 
@@ -108,10 +112,7 @@ export function FilesStage({ tab: _tab }: { tab: SideTab }) {
       <Suspense fallback={<p className="p-4 text-xs text-muted-foreground">Loading AgentSam IDE…</p>}>
       <WorkspaceEditor key={project.id} workspace={workspace} workspaceId={project.id}
         label={project.name} palette={palette} lsp={lsp} showHostModes sources={sources} sourceId="local"
-        onSourceSelect={id => {
-          if(id==='local' && isAuthorizedHostProject(project)) { setSourceNotice('Local runtime is active. Files use the authorized host root.'); return; }
-          setSourceNotice(descriptions[id] + '. No connection has been established for this provider in Local Studio; no files were changed.');
-        }}/>
+        onSourceSelect={id => setSource(id)}/>
       </Suspense>
     </div>
   </section>;

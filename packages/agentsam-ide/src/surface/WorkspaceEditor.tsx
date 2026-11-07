@@ -54,6 +54,23 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const latestActive=useRef(active);latestActive.current=active;
   const current=tabs.find(tab=>tab.path===active);
   const visibleTree=useMemo(()=>visibleWorkspaceTree(tree,expanded),[tree,expanded]);
+  const loadedFolders=useRef<Set<string>>(new Set());
+  const readonly=workspace.configuration?.readonly===true;
+  const toggleFolder=async(path:string)=>{
+    if(expanded.has(path)){
+      setExpanded(prev=>{const next=new Set(prev);next.delete(path);return next;});return;
+    }
+    if(!loadedFolders.current.has(path)){
+      try{
+        const children=await workspace.list(path);
+        // The host is the authority for children. Lazy source providers do not
+        // need to fetch every folder's contents just to display the root.
+        setTree(prev=>[...new Map([...prev,...children].map(item=>[item.path,item])).values()]);
+        loadedFolders.current.add(path);
+      }catch(error){setMessage(error instanceof Error?error.message:String(error));return;}
+    }
+    setExpanded(prev=>new Set([...prev,path]));
+  };
   useEffect(()=>{
     try { setAppearance(normalizeEditorAppearance(JSON.parse(localStorage.getItem('agentsam-ide:editor-appearance-v1')||'null'))); }
     catch { setAppearance(DEFAULT_EDITOR_APPEARANCE); }
@@ -96,12 +113,13 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   },[queue,workspace]);
 
   const edit=(path:string,value:string)=>{
+    if(readonly||latestTabs.current.find(tab=>tab.path===path)?.readonly)return;
     setTabs(prev=>prev.map(tab=>tab.path===path?{...tab,value}:tab));
     queue.edit(path,value);
   };
   const save=useCallback(async(path:string,force=false)=>{
     const tab=latestTabs.current.find(item=>item.path===path);
-    if(!tab||tab.readonly)return;
+    if(!tab||tab.readonly||readonly)return;
     if(workspace.validate){
       try{
         const diagnostics=await workspace.validate(path,tab.value);
@@ -167,6 +185,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     }catch(e){setMessage(String(e));}
   };
   const create=async()=>{
+    if(readonly){setMessage('This provider is read-only.');return;}
     try{
       const path=normalizeWorkspacePath(pathInput,modal==='folder'?'folder':'file');
       if(modal==='rename'&&current){
@@ -180,7 +199,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     }catch(e){setMessage(e instanceof Error?e.message:String(e));}
   };
   const remove=async()=>{
-    if(!current||current.status!=='saved'||!window.confirm('Delete '+current.path+'?'))return;
+    if(readonly||!current||current.status!=='saved'||!window.confirm('Delete '+current.path+'?'))return;
     try{await workspace.delete(current.path,current.version);closeTab(current.path);await refresh();}
     catch(e){setMessage(String(e));}
   };
@@ -220,7 +239,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     {name:'Split editor',run:()=>setSplit(!split)},
   ];
   const rendered=(tab:Tab)=><AgentSamMonacoEditor document={{workspaceId,path:tab.path,text:tab.value,languageId:tab.language}}
-    onChange={value=>edit(tab.path,value)} onSave={()=>save(tab.path)} palette={palette}
+    onChange={value=>edit(tab.path,value)} onSave={()=>save(tab.path)} palette={palette} readOnly={Boolean(readonly||tab.readonly)}
     onDiagnostics={markers=>setTabs(prev=>prev.map(item=>item.path===tab.path?{...item,editorDiagnostics:markers.map(marker=>({
       path:tab.path,message:marker.message,severity:marker.severity>=8?'error':marker.severity>=4?'warning':'info',
       line:marker.startLineNumber,column:marker.startColumn,
@@ -240,7 +259,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         <button type="button" disabled={!current} onClick={()=>setSplit(!split)}>{split?'Close split':'Split'}</button>
         <button type="button" disabled={!current} onClick={()=>void showHistory()}>History</button>
         <button type="button" aria-label="Editor appearance" aria-expanded={appearanceOpen} onClick={()=>setAppearanceOpen(value=>!value)}>Font</button>
-        <button type="button" disabled={!current||current.readonly} onClick={()=>current&&void save(current.path)}>{current?.status==='saving'?'Saving…':'Save'}</button>
+        <button type="button" disabled={!current||current.readonly||readonly} onClick={()=>current&&void save(current.path)}>{current?.status==='saving'?'Saving…':'Save'}</button>
         {onExit&&<button type="button" onClick={()=>{if(tabs.some(t=>t.status!=='saved')){setMessage('Save all changes before exiting.');return;}onExit();}}>Close</button>}
       </nav>
     </header>
@@ -262,14 +281,14 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         {sources?.length ? <WorkspaceSourceRail sources={sources} sourceId={sourceId} onSelect={onSourceSelect} /> : null}
         <nav className="asi-sidebar-nav">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():name==='Changes'?void showChanges():name==='Snapshot'?void showSnapshot():setPanel(name)}>{name}</button>)}</nav>
         <div className="asi-side-content">
-          {panel==='Explorer'&&<><div className="asi-side-header"><strong>Explorer</strong><div><button type="button" aria-label="New file" onClick={()=>{setModal('file');setPathInput('');}}>＋</button><button type="button" aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
+          {panel==='Explorer'&&<><div className="asi-side-header"><strong>Explorer</strong><div><button type="button" disabled={readonly} aria-label="New file" onClick={()=>{setModal('file');setPathInput('');}}>＋</button><button type="button" disabled={readonly} aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
             <div className="asi-tree">{visibleTree.map(entry=>{
               const folder=entry.kind==='folder';const opened=expanded.has(entry.path);
               return <button key={entry.path} type="button" data-kind={entry.kind}
                 aria-current={!folder&&active===entry.path} aria-expanded={folder?opened:undefined}
                 style={{paddingLeft:12+workspaceParents(entry.path).length*14}}
-                onClick={()=>folder?setExpanded(prev=>{const next=new Set(prev);if(next.has(entry.path))next.delete(entry.path);else next.add(entry.path);return next;}):void open(entry.path)}
-                title={entry.path}><span aria-hidden="true">{folder?(opened?'▾':'▸'):'▤'}</span><span>{entry.path.split('/').pop()}</span></button>;
+                onClick={()=>folder?void toggleFolder(entry.path):void open(entry.path)}
+                title={entry.path}><span aria-hidden="true">{folder?(opened?'▾':'▸'):'▤'}</span><span>{entry.displayName||entry.path.split('/').pop()}</span></button>;
             })}</div></>}
           {panel==='Search'&&<><div className="asi-side-header"><strong>Find in files</strong></div><form className="asi-search" onSubmit={e=>{e.preventDefault();void find();}}><input value={query} aria-label="Search workspace" onChange={e=>setQuery(e.target.value)}/><button type="submit">Find</button></form>{hits.map((hit,i)=><button key={i} className="asi-hit" type="button" onClick={()=>void open(hit.path)}><strong>{hit.path}:{hit.line}</strong><span>{hit.preview}</span></button>)}</>}
           {panel==='Timeline'&&<><div className="asi-side-header"><strong>Timeline</strong></div>{history.map(rev=><div key={rev.id} className="asi-revision"><span>{rev.label||rev.createdAt}</span><button type="button" onClick={()=>void restore(rev)}>Restore</button></div>)}</>}
@@ -283,8 +302,8 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
         </div>
       </aside>
       <section className="asi-center" aria-label="Code editor">
-        <div className="asi-tabs" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>setActive(tab.path)}>{tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
-        {current?<><div className="asi-breadcrumb">{current.path.split('/').join(' › ')}<div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>void remove()} disabled={Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
+        <div className="asi-tabs" role="tablist">{tabs.map(tab=><div key={tab.path} role="tab" aria-selected={active===tab.path}><button type="button" onClick={()=>setActive(tab.path)}>{tab.displayName||tab.path.split('/').at(-1)}{tab.status!=='saved'?' ●':''}</button><button type="button" aria-label={'Close '+tab.path} onClick={()=>closeTab(tab.path)}>×</button></div>)}</div>
+        {current?<><div className="asi-breadcrumb">{current.displayName||current.path.split('/').join(' › ')}<div><button type="button" onClick={()=>{setModal('rename');setPathInput(current.path);}} disabled={readonly||Boolean(dirty)||current.canRename===false}>Rename</button><button type="button" onClick={()=>void remove()} disabled={readonly||Boolean(dirty)||current.canDelete===false}>Delete</button></div></div>
         <div className={'asi-editors'+(split?' asi-split':'')}><div>{rendered(current)}</div>{split&&<div>{rendered(current)}</div>}</div>
         {current.status==='conflict'&&<div className="asi-alert" role="alert"><strong>File changed elsewhere. Your edits are preserved.</strong><button type="button" onClick={()=>void reload()}>Reload theirs</button><button type="button" onClick={()=>{if(window.confirm('Overwrite their saved version? Your content will be recorded as a new revision.'))void save(current.path,true);}}>Overwrite</button><button type="button" onClick={async()=>{try{setTheirs((await workspace.read(current.path)).content);}catch(e){setMessage(String(e));}}}>Compare</button></div>}
         {current.status==='error'&&<div className="asi-alert" role="alert"><strong>Save failed. Your changes remain available.</strong><button type="button" onClick={()=>void save(current.path)}>Retry</button></div>}

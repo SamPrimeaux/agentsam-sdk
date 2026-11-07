@@ -273,6 +273,72 @@ export async function disconnectConnector(env, userId, connectionId) {
   return { ok: true, provider: def.provider };
 }
 
+/**
+ * Server-only, account-scoped Google OAuth access for IDE providers.
+ * Consumes the existing encrypted user_oauth_tokens SSOT. Never sends a token
+ * to the browser, falls back to another Google grant, or guesses an account.
+ */
+export async function resolveConnectorAccess(env, userId, provider, accountIdentifier, options = {}) {
+  const def = connectorProvider(provider);
+  if (!def || def.kind !== "google" || !clean(userId) || !clean(accountIdentifier)) {
+    return { ok: false, code: "oauth_account_selection_required" };
+  }
+  let row;
+  try {
+    row = await env.DB.prepare(
+      "SELECT account_identifier, access_token_encrypted, refresh_token_encrypted, scopes, expires_at " +
+      "FROM user_oauth_tokens WHERE account_id=? AND LOWER(provider)=? AND account_identifier=? " +
+      "AND COALESCE(is_active,1)=1 AND (revoked_at IS NULL OR revoked_at=0) LIMIT 1"
+    ).bind(userId, def.provider, accountIdentifier).first();
+  } catch {
+    return { ok: false, code: "oauth_storage_unavailable" };
+  }
+  if (!row) return { ok: false, code: "oauth_not_connected" };
+  const granted = clean(row.scopes).split(/[,\s]+/).filter(Boolean);
+  const allowed = options.requiredScopes || def.scopes.slice(3);
+  if (!allowed.some(scope => granted.includes(scope))) {
+    return { ok: false, code: "oauth_insufficient_scope", grantedScopes: granted };
+  }
+  const vault = vaultMaterial(env);
+  if (!vault) return { ok: false, code: "oauth_vault_unavailable" };
+  const aad = oauthAad(def.provider, userId, accountIdentifier);
+  const expires = Number(row.expires_at || 0);
+  const now = Math.floor(Date.now() / 1000);
+  if (!expires || expires > now + 90) {
+    const access = await readStoredOauthToken(vault, row, "access", aad);
+    if (access) return { ok: true, accessToken: access, grantedScopes: granted };
+  }
+  const refreshToken = await readStoredOauthToken(vault, row, "refresh", aad);
+  if (!refreshToken || !clean(env.GOOGLE_CLIENT_ID) || !clean(env.GOOGLE_CLIENT_SECRET))
+    return { ok: false, code: "oauth_reconnect_required" };
+  let result;
+  try {
+    const res = await (options.fetchImpl || fetch)(GOOGLE_TOKEN_URL, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: clean(env.GOOGLE_CLIENT_ID),
+        client_secret: clean(env.GOOGLE_CLIENT_SECRET),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.access_token) return { ok: false, code: "oauth_reconnect_required" };
+    result = data;
+  } catch {
+    return { ok: false, code: "oauth_refresh_unavailable" };
+  }
+  const accessEncrypted = await sealOauthToken(vault, clean(result.access_token), aad);
+  const nextExpiry = now + Math.max(60, Number(result.expires_in || 3600));
+  await env.DB.prepare(
+    "UPDATE user_oauth_tokens SET access_token_encrypted=?, expires_at=?, updated_at=?, " +
+    "last_refresh_at=?, last_refresh_error_code=NULL, refresh_failure_count=0 " +
+    "WHERE account_id=? AND LOWER(provider)=? AND account_identifier=? AND COALESCE(is_active,1)=1"
+  ).bind(accessEncrypted, nextExpiry, now, now, userId, def.provider, accountIdentifier).run();
+  return { ok: true, accessToken: clean(result.access_token), grantedScopes: granted };
+}
+
 export async function connectorStatus(env, userId, key) {
   const def = connectorProvider(key);
   if (!def) return [];
