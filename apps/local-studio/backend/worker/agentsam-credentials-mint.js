@@ -36,18 +36,50 @@ async function sha256Hex(value) {
   return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-const DEFAULT_SCOPES = Object.freeze([
-  "account:read",
-  "repository:read",
-  "database:read",
-  "vectors:read",
-  "models:invoke",
-  "agentsam:context",
-  "terminal:exec:local",
-  "terminal:exec:remote",
-  "terminal:exec:sandbox",
-  "terminal:enroll",
-]);
+function parseScopes(value) {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Scopes come from the agentsam_capabilities registry, never from a constant.
+ *  - explicit `scopes`: registry keys, a domain subtree wildcard (design.*), or *; unknown values are rejected
+ *  - permissions read-only: every active non-mutating capability
+ *  - permissions all, or a personal key with no choice: the minting account's own authority (wildcard)
+ *  - a service key must choose explicitly
+ */
+export async function resolveCredentialScopes(db, kind, input = {}) {
+  const requested = Array.isArray(input.scopes) ? input.scopes.map(trim).filter(Boolean) : [];
+  const preset = trim(input.permissions).toLowerCase();
+  if (!requested.length && preset !== "read-only") {
+    if (preset === "all" || kind === "account") return ["*"];
+    throw new Error("scopes_required");
+  }
+  const { results } = await db
+    .prepare("SELECT capability_key, domain, is_mutating FROM agentsam_capabilities WHERE is_active = 1")
+    .all();
+  const rows = results || [];
+  if (!requested.length) {
+    const readOnly = rows.filter((row) => !row.is_mutating).map((row) => row.capability_key).sort();
+    if (!readOnly.length) throw new Error("no_read_only_capabilities");
+    return readOnly;
+  }
+  const keys = new Set(rows.map((row) => row.capability_key));
+  const domains = new Set();
+  for (const row of rows) {
+    const parts = String(row.domain).split(".");
+    for (let i = 1; i <= parts.length; i++) domains.add(parts.slice(0, i).join("."));
+  }
+  const unknown = requested.filter(
+    (scope) => scope !== "*" && !keys.has(scope) && !(scope.endsWith(".*") && domains.has(scope.slice(0, -2))),
+  );
+  if (unknown.length) throw new Error("unknown_scopes:" + unknown.join(","));
+  return [...new Set(requested)];
+}
 
 /**
  * @param {object} env
@@ -58,6 +90,8 @@ const DEFAULT_SCOPES = Object.freeze([
  *   clientType?: string,
  *   expiresAtUnix?: number | null,
  *   mintedBy?: string,
+ *   scopes?: string[],
+ *   permissions?: 'all' | 'read-only',
  * }} input
  */
 export async function mintStudioCredential(env, input = {}) {
@@ -81,6 +115,8 @@ export async function mintStudioCredential(env, input = {}) {
     : kind === "service"
       ? "integration"
       : "cli";
+
+  const scopes = await resolveCredentialScopes(db, kind, input);
 
   const secret = randomToken(tokenPrefix, 24);
   if (!secret.startsWith(`${tokenPrefix}_`)) throw new Error("token_prefix_mismatch");
@@ -114,7 +150,7 @@ export async function mintStudioCredential(env, input = {}) {
       authorityType,
       clientType,
       accountId,
-      JSON.stringify([...DEFAULT_SCOPES]),
+      JSON.stringify(scopes),
       now,
       expiresAt,
       trim(input.mintedBy) || STUDIO_VAULT_ACTOR,
@@ -132,6 +168,7 @@ export async function mintStudioCredential(env, input = {}) {
     client_type: clientType,
     created_at_unix: now,
     expires_at_unix: expiresAt,
+    scopes,
     secret_once: secret,
   };
 }
@@ -176,6 +213,7 @@ export async function listStudioCredentials(env, accountId) {
       last_used_at_unix:
         row.last_used_at_unix == null ? null : Number(row.last_used_at_unix) || null,
       secret_preview: row.prefix || "••••",
+      scopes: parseScopes(row.scopes_json),
     };
   });
 }

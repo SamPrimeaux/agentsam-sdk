@@ -1,6 +1,6 @@
 /**
  * AgentSam API credential terminal scopes (CLI/whoami).
- * Keep in sync with IAM backend/auth/agentsam-terminal-scopes.js.
+ * Legacy terminal scope strings. The agentsam_capabilities registry is the authority.
  */
 
 export const TERMINAL_SCOPES = Object.freeze({
@@ -22,7 +22,10 @@ export function credentialHasScope(scopes, required) {
   const need = String(required || '').trim();
   if (!need) return false;
   const set = new Set(normalizeScopeList(scopes));
-  if (set.has(need)) return true;
+  if (set.has(need) || set.has('*')) return true;
+  if (set.has('terminal.*') && need.startsWith('terminal')) return true;
+  if (need.startsWith('terminal:exec:') && set.has('terminal.execute')) return true;
+  if (need === TERMINAL_SCOPES.ENROLL && set.has('terminal.manage')) return true;
   if (need.startsWith('terminal:exec:') && need !== TERMINAL_SCOPES.EXEC_ALL && set.has(TERMINAL_SCOPES.EXEC_ALL)) {
     return true;
   }
