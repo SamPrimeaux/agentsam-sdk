@@ -133,12 +133,12 @@ Accept: packages are retrievable from npm at matching versions; main is deployed
 
 | Sprint | State | Evidence | Next owner/action |
 | --- | --- | --- | --- |
-| 01 Release foundations | VERIFIED IN PART · RELEASE NOT ACCEPTED | Native `cargo check`, local desktop production build, browser desktop smoke, desktop auth contract smoke, 30 targeted tests and 2 migration tests pass; migration 1353 D1 tag repaired with idempotence regression; protected WIP audited. Source packages aligned at 2.6.14. | Need signed installer/runtime smoke; manual D1 migration ledger reconciliation (1352/1353 absent); open PR #477; unmatched merch/widget work; 8 stash dispositions; publish 2.6.14 and verify deployed SHA |
-| 02 Tool/capability runtime | BLOCKED ON 01 | 16 global Gmail tools linked in D1 but excluded by account join; Gmail installation disabled; 81 unmapped tools | Repair global-tool account projection with tests; verify one real tool |
+| 01 Release foundations | LOCAL LAUNCH ACCEPTED · PUBLIC RELEASE BLOCKED | See [source + npm launch receipt](../acceptance/AGENTSAM_SDK_LOCAL_LAUNCH_2026-11-06.md): native Tauri executable ran; build/desktop/auth/test gates pass; six D1 migrations are tracked and current; PR #477/#479 merged; obsolete worktrees pruned; merch tests graduated. | npm registry has 2.6.13 only; npm auth E401 prevents 2.6.14 publication; signed installer and clean external npm install remain unverified. Intentional widget and eight stash WIP assigned to app-specific acceptance. |
+| 02 Tool/capability runtime | PARTIAL · PROJECTION MERGED | PR #479 fixed shared tool definitions through account installations and mismatched runtime context; SQLite tests pass; Gmail has 16 linked tools, intentionally disabled for this account. | Prove real authorized provider execution; 81 unmapped tools and other provider associations remain to reconcile. |
 | 03 Customer keys | QUEUED | Existing mint/revoke + hardcoded `DEFAULT_SCOPES` identified | Replace issuance policy after capability contract |
 | 04 OAuth | QUEUED | Existing native PKCE, OAuth token/grant tables and worker paths | Provider lifecycle acceptance |
 | 05 Settings/telemetry | QUEUED | Live and fixture settings paths coexist; tool health checks absent | Shared host contract + observable execution |
-| 06 Release | QUEUED | npm latest 2.6.13, local packages 2.6.14 | Publish/build/ship acceptance after earlier gates |
+| 06 Release | LOCAL DEV PASS · PUBLIC PUBLISH BLOCKED | `npm run launch` started Tauri desktop binary; `launch:check` passed. CI `ETARGET` cannot fetch unissued workbench@2.6.14; local `npm whoami` E401. | Restore authenticated npm publishing, publish dependency-ordered 2.6.14 train, verify clean external consumer, installer signing, live deployment and remaining product security gates. |
 
 ## Launch line for next agent
 
