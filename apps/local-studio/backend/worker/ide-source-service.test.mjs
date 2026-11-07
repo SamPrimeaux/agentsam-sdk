@@ -167,3 +167,39 @@ test('R2 rejects path traversal, unsupported jurisdiction and write verbs',async
   assert.equal((await handleIdeSourceRequest(get(base+'&jurisdiction=bad'),env(rows),owner,{fetchImpl:f})).status,400);
   assert.equal((await handleIdeSourceRequest(new Request('https://agentsam.example/api/work/ide/r2/file',{method:'POST'}),env(rows),owner,{fetchImpl:f})).status,405);
 });
+
+test('Drive text edit uses existing OAuth grant and rejects stale document version before upload',async()=>{
+  const account='write@example.com';
+  const rows=[await fixture('google_drive',account,'https://www.googleapis.com/auth/drive.file')];
+  let uploads=0;
+  const fetchImpl=async(url,options)=>{
+    assert.equal(options.headers.authorization,'Bearer unit-test-access');
+    if(String(url).includes('/upload/')){
+      uploads++;
+      assert.equal(options.method,'PATCH');
+      assert.equal(new TextDecoder().decode(options.body),'Updated markdown');
+      return Response.json({id:'file_123',version:'4'});
+    }
+    return Response.json({id:'file_123',name:'workspace.md',mimeType:'text/markdown',version:'3',size:50,
+      capabilities:{canDownload:true,canEdit:true}});
+  };
+  const url='/api/work/ide/drive/file?account='+encodeURIComponent(account)+'&id=file_123';
+  const makePut=version=>new Request('https://agentsam.example'+url,{method:'PUT',
+    headers:{'content-type':'application/json'},body:JSON.stringify({id:'file_123',content:'Updated markdown',expectedVersion:version})});
+  const stale=await parse(await handleIdeSourceRequest(makePut('2'),env(rows),owner,{fetchImpl}));
+  assert.equal(stale.status,409);assert.equal(stale.error,'version_conflict');assert.equal(uploads,0);
+  const saved=await parse(await handleIdeSourceRequest(makePut('3'),env(rows),owner,{fetchImpl}));
+  assert.equal(saved.status,200);assert.equal(saved.file.version,'4');assert.equal(uploads,1);
+  assert.equal(JSON.stringify(saved).includes('unit-test-access'),false);
+});
+test('Drive readonly grant cannot write even when file claims canEdit',async()=>{
+  const account='readonly@example.com';
+  const rows=[await fixture('google_drive',account,'https://www.googleapis.com/auth/drive.readonly')];
+  let uploads=0;
+  const url='/api/work/ide/drive/file?account='+encodeURIComponent(account)+'&id=file_123';
+  const data=await parse(await handleIdeSourceRequest(new Request('https://agentsam.example'+url,{method:'PUT',
+    headers:{'content-type':'application/json'},body:JSON.stringify({id:'file_123',content:'No',expectedVersion:'3'})}),env(rows),owner,{fetchImpl:async()=>{
+      uploads++;return Response.json({id:'file_123',name:'file.md',mimeType:'text/markdown',version:'3',capabilities:{canEdit:true,canDownload:true}});
+    }}));
+  assert.equal(data.status,403);assert.equal(data.error,'drive_write_not_permitted');assert.equal(uploads,1);
+});

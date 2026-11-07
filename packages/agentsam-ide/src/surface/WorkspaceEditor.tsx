@@ -84,6 +84,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
 
   const queue=useMemo(()=>new WorkspaceSaveQueue({
     debounceMs:900,
+    manualSave: workspace.configuration?.manualSave,
     write: async (path,content,version,overwrite)=>{
       const result=await workspace.write(path,content,version,{overwrite});
       return result.ok?{ok:true as const,version:result.file.version}:{ok:false as const,error:result.message,code:result.code};

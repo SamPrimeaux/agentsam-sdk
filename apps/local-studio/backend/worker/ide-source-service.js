@@ -7,6 +7,7 @@
  * is validated for that provider; never call an unchecked PUT from Monaco.
  */
 import { resolveConnectorAccess, connectorStatus } from './connector-oauth.js';
+import { handleGithubIdeSourceRequest, isGithubIdeSourceRequest } from './github-ide-service.js';
 import {
   listCloudflareConnectionRecords,
   resolveCloudflareCredential,
@@ -15,6 +16,7 @@ import {
 const CF_API = 'https://api.cloudflare.com/client/v4';
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const MAX_TEXT_BYTES = 1024 * 1024;
+const DRIVE_WRITE_SCOPE = ['https://www.googleapis.com/auth/drive.file','https://www.googleapis.com/auth/drive'];
 const DRIVE_SCOPE = [
   'https://www.googleapis.com/auth/drive.file',
   'https://www.googleapis.com/auth/drive',
@@ -61,14 +63,14 @@ async function boundedText(response) {
 }
 
 export function isIdeSourceRequest(path) {
-  return /^\/api\/work\/ide\/(sources|drive\/(files|file)|r2\/(buckets|objects|file)|containers\/applications)$/.test(path);
+  return isGithubIdeSourceRequest(path) || /^\/api\/work\/ide\/(sources|drive\/(files|file)|r2\/(buckets|objects|file)|containers\/applications)$/.test(path);
 }
 
 async function googleAccess(env, owner, account, fetchImpl) {
   if (!account || !account.includes('@') || account.length>320) return {error:'drive_account_selection_required',status:400};
   const auth=await resolveConnectorAccess(env,owner,'google_drive',account,{requiredScopes:DRIVE_SCOPE,fetchImpl});
   if(!auth.ok) return {error:auth.code,status:auth.code==='oauth_insufficient_scope'?403:401};
-  return {token:auth.accessToken};
+  return {token:auth.accessToken,writable:DRIVE_WRITE_SCOPE.some(scope=>auth.grantedScopes?.includes(scope))};
 }
 
 async function cfAccess(env, owner, account, required, fetchImpl) {
@@ -111,17 +113,20 @@ export async function handleIdeSourceRequest(request, env, owner, opts={}) {
   if(!owner) return error('unauthorized',401);
   const url=new URL(request.url);
   if(!isIdeSourceRequest(url.pathname)) return error('not_found',404);
-  if(request.method!=='GET') return error('method_not_allowed',405);
+  if(isGithubIdeSourceRequest(url.pathname))return handleGithubIdeSourceRequest(request,env,owner,opts);
+  if(request.method!=='GET'&&!(request.method==='PUT'&&url.pathname==='/api/work/ide/drive/file')) return error('method_not_allowed',405);
   const f=opts.fetchImpl||fetch;
   const sp=url.searchParams;
   const account=sanitize(sp.get('account'));
   try {
     if(url.pathname.endsWith('/sources')) {
-      const [drive,cf]=await Promise.all([
+      const [drive,github,cf]=await Promise.all([
         connectorStatus(env,owner,'google_drive'),
+        connectorStatus(env,owner,'github'),
         listCloudflareConnectionRecords(env,owner),
       ]);
       return json({ok:true,googleDrive:drive.map(x=>({account:x.accountIdentifier,label:x.accountLabel})),
+        github:github.map(x=>({account:x.accountIdentifier,label:x.accountLabel})),
         cloudflare:cf.filter(x=>x.status==='connected'&&accountOk(x.cloudflareAccountId))
           .map(x=>({account:x.cloudflareAccountId,label:x.accountLabel,scopes:x.scopes}))});
     }
@@ -145,7 +150,7 @@ export async function handleIdeSourceRequest(request, env, owner, opts={}) {
         return json({ok:true,entries:files.map(x=>({
           id:x.id,name:x.name,kind:x.mimeType==='application/vnd.google-apps.folder'?'folder':'file',
           mimeType:x.mimeType,size:Number(x.size||0),version:x.version?String(x.version):null,
-          readonly:true,canDownload:x.capabilities?.canDownload!==false,
+          readonly:x.mimeType?.startsWith('application/vnd.google-apps.') || x.capabilities?.canEdit!==true || !auth.writable,canDownload:x.capabilities?.canDownload!==false,
         })),nextPageToken:response.data.nextPageToken||null});
       }
       const id=safeId(sp.get('id'));
@@ -162,6 +167,28 @@ export async function handleIdeSourceRequest(request, env, owner, opts={}) {
       const isNative=String(meta.mimeType).startsWith('application/vnd.google-apps.');
       if(isNative && !['application/vnd.google-apps.document'].includes(meta.mimeType))
         return error('drive_native_format_requires_specialized_editor',415);
+      if(request.method==='PUT') {
+        if(!auth.writable || meta.capabilities?.canEdit!==true)return error('drive_write_not_permitted',403);
+        if(isNative)return error('drive_native_document_requires_docs_editor',415);
+        let body;
+        try{body=await request.json();}catch{return error('invalid_json');}
+        if(body?.id!==id || typeof body?.content!=='string' || !body.expectedVersion || !/^[0-9]+$/.test(String(body.expectedVersion)))
+          return error('drive_version_required');
+        if(String(meta.version)!==String(body.expectedVersion))return error('version_conflict',409);
+        const encoded=new TextEncoder().encode(body.content);
+        if(encoded.byteLength>MAX_TEXT_BYTES)return error('file_too_large',413);
+        // Drive v3 doesn't document an atomic compare-and-swap on media updates.
+        // Save is explicit/manual in the IDE; reject a known stale version first.
+        const upload=await f('https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(id)+'?uploadType=media&fields=id,name,mimeType,version',{
+          method:'PATCH',headers:{authorization:'Bearer '+auth.token,accept:'application/json',
+            'content-type':meta.mimeType||'text/plain; charset=utf-8'},body:encoded,
+        });
+        if(!upload.ok)return error(upload.status===403?'drive_write_not_permitted':upload.status===409?'version_conflict':'drive_write_failed',
+          upload.status===403?403:upload.status===409?409:502);
+        const updated=await upload.json().catch(()=>({}));
+        if(!updated.version||String(updated.version)===String(meta.version))return error('drive_version_unverified',502);
+        return json({ok:true,file:{id,name:meta.name,mimeType:meta.mimeType,content:body.content,version:String(updated.version),readonly:false}});
+      }
       const contentUrl=isNative
         ? DRIVE_API+'/files/'+encodeURIComponent(id)+'/export?mimeType='+encodeURIComponent('text/plain')
         : DRIVE_API+'/files/'+encodeURIComponent(id)+'?alt=media';
@@ -169,8 +196,8 @@ export async function handleIdeSourceRequest(request, env, owner, opts={}) {
       if(!response.ok)return error(response.status===403?'drive_download_not_permitted':'drive_download_failed',response.status===403?403:502);
       const content=await boundedText(response);
       return json({ok:true,file:{id,name:meta.name,content,mimeType:meta.mimeType,
-        version:String(meta.version||'unversioned'),readonly:true,
-        note:isNative?'Google Docs export (read-only text projection)':'Drive file (read-only until conditional writes are verified)'}});
+        version:String(meta.version||'unversioned'),readonly:isNative||meta.capabilities?.canEdit!==true||!auth.writable||!meta.version,
+        note:isNative?'Google Docs export (read-only text projection)':'Plain-text Drive file; manual save performs a preflight version check (not atomic)'}});
     }
     const cf=await cfAccess(env,owner,account,
       url.pathname.includes('/containers')?['containers.read']:['workers-r2.read','workers-r2-bucket-item.read'],f);
