@@ -142,7 +142,7 @@ test('packaged Console navigation search invokes its existing authorized dialog'
 
 test('hosted mobile chrome styles target the packaged header rather than a hidden child header', () => {
   const css = readFileSync(new URL('../frontend/agentsam/shared-nav-host.css', import.meta.url), 'utf8');
-  assert.match(css, /\.console-topbar \.console-search-wrap\s*\{\s*display: none/);
+  assert.match(css, /\.console-topbar \.console-topbar-actions \.console-search-wrap\s*\{\s*display: none/);
   assert.match(css, /\.console-topbar \[data-shared-nav-toggle\]/);
   assert.match(css, /border-radius: 999px/);
 });

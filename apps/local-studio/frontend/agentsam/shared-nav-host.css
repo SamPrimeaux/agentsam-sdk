@@ -42,7 +42,9 @@ body.agentsam-shared-navigation .console-main { overscroll-behavior:contain; }
 /* Packaged Console owns the actual hosted header; Nav.Topbar is suppressed
    there. Keep mobile search in the shared navigation rather than this chrome. */
 @media (max-width: 767px) {
-  body.agentsam-shared-navigation .console-topbar .console-search-wrap {
+  /* Outrank the packaged Console's later, more specific
+     .console-topbar:not(...) .console-topbar-actions .console-search-wrap. */
+  body.agentsam-shared-navigation .console-topbar .console-topbar-actions .console-search-wrap {
     display: none;
   }
   body.agentsam-shared-navigation .console-topbar .console-topbar-spacer {
