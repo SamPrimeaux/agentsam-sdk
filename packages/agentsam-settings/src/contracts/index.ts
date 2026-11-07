@@ -387,10 +387,36 @@ export type SettingsSnapshot = {
   };
 };
 
+export type SettingsPermissionOption = {
+  key: string;
+  domain: string;
+  verb: string;
+  description: string;
+  mutating: boolean;
+};
+
+export type SettingsMintInput = {
+  kind: Exclude<CredentialKind, "provider">;
+  name: string;
+  expiration: "never" | "30 days" | "90 days" | "1 year";
+  access: "all" | "read-only" | "custom";
+  scopes?: string[];
+};
+
+export type SettingsMintResult = {
+  credential: SettingsCredential;
+  secretOnce: string;
+  env: string;
+};
+
 export interface SettingsHost {
   documentationHref?: string;
   capabilities(): Promise<SettingsCapabilities>;
   snapshot(): Promise<SettingsSnapshot>;
+  listCredentials?(): Promise<SettingsCredential[]>;
+  listPermissionOptions?(): Promise<SettingsPermissionOption[]>;
+  mintCredential?(input: SettingsMintInput): Promise<SettingsMintResult>;
+  revokeCredential?(id: string): Promise<void>;
   saveAgent?(draft: SettingsAgentDraft, id?: string): Promise<void>;
   archiveAgent?(id: string): Promise<void>;
   updateAgentPolicy?(policy: SettingsAgentPolicy): Promise<void>;
