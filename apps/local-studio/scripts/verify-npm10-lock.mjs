@@ -17,6 +17,11 @@ const lock = JSON.parse(fs.readFileSync(path.join(appRoot, 'package-lock.json'),
 const packages = lock.packages || {};
 const version = manifest.version;
 const sdkRelease = expectedSdkTarballVersion(path.resolve(appRoot, '../..'), version, { requirePublished: process.env.AGENTSAM_REQUIRE_PUBLISHED_SDK === '1' });
+// Before publication, the independently locked Studio is still installed from
+// the last REAL npm release. The new train must be checked after registry
+// publication, not represented by invented tarballs or integrity digests.
+const lockedVersion = sdkRelease.phase === 'candidate-uses-previous-published-sdk'
+  ? sdkRelease.version : version;
 
 function fail(message) {
   console.error(message);
@@ -24,14 +29,15 @@ function fail(message) {
 }
 
 if (lock.lockfileVersion !== 3) fail('Local Studio lockfileVersion must be 3');
-if (lock.version !== version) fail('Local Studio lock version ' + lock.version + ' != ' + version);
-if (packages['']?.version !== version) fail('Local Studio root lock package version mismatch');
+if (lock.version !== lockedVersion) fail('Local Studio lock version ' + lock.version + ' != ' + lockedVersion + ' (' + sdkRelease.phase + ')');
+if (packages['']?.version !== lockedVersion) fail('Local Studio root lock package version mismatch');
 
 for (const key of ['frontend', 'backend', 'shared/agentsam']) {
   const workspaceManifest = JSON.parse(fs.readFileSync(path.join(appRoot, key, 'package.json'), 'utf8'));
-  if (packages[key]?.version !== workspaceManifest.version) {
+  if (workspaceManifest.version !== version) fail(key + ' workspace manifest is outside release train ' + version);
+  if (packages[key]?.version !== lockedVersion) {
     fail(key + ' lock version ' + String(packages[key]?.version || '<missing>') +
-      ' != workspace manifest ' + String(workspaceManifest.version || '<missing>'));
+      ' != expected locked release ' + lockedVersion + ' (' + sdkRelease.phase + ')');
   }
 }
 
@@ -52,8 +58,8 @@ for (const [name, resolved] of requiredLinks) {
 }
 
 const loading = packages['../../packages/agentsam-loading-scene'];
-if (loading?.version !== version) {
-  fail('Loading Scene lock metadata is not on release ' + version);
+if (loading?.version !== lockedVersion) {
+  fail('Loading Scene lock metadata is not on actual locked release ' + lockedVersion);
 }
 
 // A green source-link check must never conceal stale registry tarballs. In
@@ -63,8 +69,8 @@ const firstPartyTarballs = Object.entries(packages).filter(([key, entry]) =>
   /^node_modules\/@inneranimalmedia\/[^/]+$/.test(key) && !entry?.link && typeof entry?.version === 'string'
 );
 for (const [key, entry] of firstPartyTarballs) {
-  if (entry.version !== version) {
-    fail('Local Studio release train lock drift: ' + key + '@' + entry.version + ' != ' + version);
+  if (entry.version !== lockedVersion) {
+    fail('Local Studio real npm tarball drift: ' + key + '@' + entry.version + ' != ' + lockedVersion + ' (' + sdkRelease.phase + ')');
   }
   if (!String(entry.resolved || '').includes('registry.npmjs.org/') || !entry.integrity) {
     fail('Local Studio first-party tarball missing npm registry integrity: ' + key);
@@ -100,6 +106,6 @@ if (!String(lru.resolved || '').includes('lru-cache-11.5.2.tgz') || !lru.integri
 }
 
 console.log(
-  'ok Local Studio lock: ' + version +
+  'ok Local Studio lock: ' + lockedVersion + ' (target ' + version + ')' +
   ' · product workspaces aligned · SDK npm tarball ' + sdkRelease.version + ' (' + sdkRelease.phase + ') · canonical source links present · lru-cache@11.5.2'
 );

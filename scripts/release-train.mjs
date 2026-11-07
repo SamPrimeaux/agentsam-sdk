@@ -166,6 +166,9 @@ function align() {
   let changedVersions = 0;
   let changedEdges = 0;
   for (const { file, manifest } of workspaces) {
+    // Private source-only workspaces are not npm release-train packages.
+    // Preserve file: dependencies and local versions during an SDK bump.
+    if (manifest.private === true) continue;
     let changed = false;
     if (!isIndependentlyVersioned(manifest) && manifest.version !== targetVersion) {
       manifest.version = targetVersion;

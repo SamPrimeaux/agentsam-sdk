@@ -16,24 +16,26 @@ describe('Local Studio npm 10 product lock', () => {
     const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
     const packages = lock.packages || {};
     const sdkRelease = expectedSdkTarballVersion(root, pkg.version, { requirePublished: process.env.AGENTSAM_REQUIRE_PUBLISHED_SDK === '1' });
+    const lockedVersion = sdkRelease.phase === 'candidate-uses-previous-published-sdk'
+      ? sdkRelease.version : pkg.version;
 
     assert.equal(lock.lockfileVersion, 3);
-    assert.equal(lock.version, pkg.version);
-    assert.equal(packages['']?.version, pkg.version);
+    assert.equal(lock.version, lockedVersion);
+    assert.equal(packages['']?.version, lockedVersion);
 
     for (const key of ['frontend', 'backend', 'shared/agentsam']) {
-      assert.equal(packages[key]?.version, pkg.version, key + ' must match product version');
+      assert.equal(packages[key]?.version, lockedVersion, key + ' must match real npm lock phase');
     }
 
     assert.deepEqual(packages['node_modules/@inneranimalmedia/agentsam-loading-scene'], {
       resolved: '../../packages/agentsam-loading-scene',
       link: true,
     });
-    assert.equal(packages['../../packages/agentsam-loading-scene']?.version, pkg.version);
+    assert.equal(packages['../../packages/agentsam-loading-scene']?.version, lockedVersion);
 
     for (const [key, entry] of Object.entries(packages)) {
       if (!key.includes('node_modules/@inneranimalmedia/') || entry.link || !entry.version) continue;
-      assert.equal(entry.version, pkg.version, key + ' must match the Studio release train');
+      assert.equal(entry.version, lockedVersion, key + ' must match the genuinely published lock phase');
       assert.ok(entry.integrity, key + ' needs a verifiable npm integrity digest');
     }
 
