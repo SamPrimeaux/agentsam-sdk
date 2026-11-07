@@ -1,5 +1,6 @@
+import { WorkspaceSourceRail, type IDEFileSource, type IDEFileSourceId } from './WorkspaceSourceRail.js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AgentSamMonacoEditor, type AgentSamEditorPalette } from '../monaco/editor.js';
+import { AgentSamMonacoEditor, type AgentSamEditorPalette, type AgentSamMonacoEditorProps } from '../monaco/editor.js';
 import { WorkspaceSaveQueue, type SaveStatus } from '../workspace/save-queue.js';
 import { visibleWorkspaceTree, workspaceParents } from '../workspace/tree.js';
 import { DEFAULT_EDITOR_APPEARANCE, EDITOR_FONTS, normalizeEditorAppearance, type EditorAppearance, type EditorFontId } from './editor-appearance.js';
@@ -10,13 +11,21 @@ export type WorkspaceEditorProps = {
   workspaceId: string;
   label: string;
   palette?: AgentSamEditorPalette;
+  /** Authenticated LSP transport belongs to the host, not the IDE. */
+  lsp?: AgentSamMonacoEditorProps['lsp'];
+  onNavigate?: AgentSamMonacoEditorProps['onNavigate'];
+  onApplyWorkspaceEdit?: AgentSamMonacoEditorProps['onApplyWorkspaceEdit'];
+  sources?: IDEFileSource[];
+  sourceId?: IDEFileSourceId;
+  onSourceSelect?: (source: IDEFileSourceId) => void;
+  showHostModes?: boolean;
   onExit?: () => void;
   agent?: { label: string; propose(input: {path: string; content: string; version: string}): Promise<{content: string; explanation: string}> };
 };
 type Tab = WorkspaceFile & { value: string; status: SaveStatus; diagnostics: WorkspaceDiagnostic[]; editorDiagnostics: WorkspaceDiagnostic[]; error?: string };
-type Panel = 'Explorer' | 'Search' | 'Timeline' | 'Problems' | 'References' | 'Dependencies';
+type Panel = 'Explorer' | 'Search' | 'Timeline' | 'Problems' | 'Changes' | 'Snapshot' | 'References' | 'Dependencies';
 
-export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent}: WorkspaceEditorProps) {
+export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit, agent, lsp, onNavigate, onApplyWorkspaceEdit, sources, sourceId = 'local', onSourceSelect, showHostModes = false}: WorkspaceEditorProps) {
   const [tree,setTree]=useState<WorkspaceEntry[]>([]);
   const [expanded,setExpanded]=useState<Set<string>>(()=>new Set());
   const [tabs,setTabs]=useState<Tab[]>([]);
@@ -35,6 +44,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
   const [appearanceOpen,setAppearanceOpen]=useState(false);
   const [cursor,setCursor]=useState({line:1,column:1});
   const [message,setMessage]=useState('');
+  const [changeEntries,setChangeEntries]=useState<import('../workspace/files.js').WorkspaceChange[]>([]);
+  const [snapshot,setSnapshot]=useState<import('../workspace/files.js').WorkspaceSnapshot|null>(null);
+  const [modeLoading,setModeLoading]=useState(false);
   const [theirs,setTheirs]=useState<string|null>(null);
   const [proposal,setProposal]=useState<{path:string;content:string;explanation:string}|null>(null);
   const [agentBusy,setAgentBusy]=useState(false);
@@ -179,6 +191,22 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     catch(e){setMessage(String(e));}
     finally{setAgentBusy(false);}
   };
+  const showChanges=async()=>{
+    setPanel('Changes');
+    if(!workspace.changes){setMessage('Changes are unavailable: this workspace has no authorized Git/diff provider.');return;}
+    setModeLoading(true);
+    try{setChangeEntries(await workspace.changes());setMessage('');}
+    catch(e){setMessage(e instanceof Error?e.message:String(e));}
+    finally{setModeLoading(false);}
+  };
+  const showSnapshot=async()=>{
+    setPanel('Snapshot');
+    if(!workspace.snapshot){setMessage('Merkle snapshots are unavailable until a trusted workspace snapshot provider is connected.');return;}
+    setModeLoading(true);
+    try{const result=await workspace.snapshot();if(!result.rootHash)throw new Error('Host returned a snapshot without a root hash.');setSnapshot(result);setMessage('');}
+    catch(e){setMessage(e instanceof Error?e.message:String(e));}
+    finally{setModeLoading(false);}
+  };
   const commands=[
     {name:'Save',run:()=>current&&void save(current.path)},
     {name:'New file',run:()=>{setModal('file');setPathInput('');}},
@@ -186,6 +214,9 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     {name:'Find in files',run:()=>setPanel('Search')},
     {name:'Timeline',run:()=>void showHistory()},
     {name:'Refresh',run:()=>void refresh()},
+    {name:'Changes',run:()=>void showChanges()},
+    {name:'Merkle snapshot',run:()=>void showSnapshot()},
+    {name:'Editor appearance',run:()=>setAppearanceOpen(true)},
     {name:'Split editor',run:()=>setSplit(!split)},
   ];
   const rendered=(tab:Tab)=><AgentSamMonacoEditor document={{workspaceId,path:tab.path,text:tab.value,languageId:tab.language}}
@@ -194,10 +225,10 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       path:tab.path,message:marker.message,severity:marker.severity>=8?'error':marker.severity>=4?'warning':'info',
       line:marker.startLineNumber,column:marker.startColumn,
     }))}:item))}
-    savedVersion={tab.version} onSelectionChange={s=>setCursor({line:s.startLine,column:s.startColumn})}
+    savedVersion={tab.version} lsp={lsp} onNavigate={onNavigate} onApplyWorkspaceEdit={onApplyWorkspaceEdit} onSelectionChange={s=>setCursor({line:s.startLine,column:s.startColumn})}
     options={{fontFamily:EDITOR_FONTS.find(font=>font.id===appearance.fontId)!.family,fontSize:appearance.fontSize,
       minimap:{enabled:appearance.minimap},wordWrap:appearance.wordWrap?'on':'off'}} height="100%"/>;
-  const availablePanels:Panel[]=['Explorer','Search','Timeline','Problems',...(workspace.configuration?.references?.length?['References' as const]:[]),...(workspace.configuration?.dependencies?.length?['Dependencies' as const]:[])];
+  const availablePanels:Panel[]=['Explorer','Search','Timeline','Problems',...(showHostModes?['Changes' as const,'Snapshot' as const]:[]),...(workspace.configuration?.references?.length?['References' as const]:[]),...(workspace.configuration?.dependencies?.length?['Dependencies' as const]:[])];
   const problems=tabs.flatMap(tab=>[...tab.diagnostics,...tab.editorDiagnostics].map(item=>({...item,path:tab.path})));
   const dirty=current&&current.status!=='saved';
   return <div className="asi-ide">
@@ -205,6 +236,7 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
       <strong>{label}</strong>
       <nav aria-label="Editor actions">
         <button type="button" onClick={()=>setPaletteMode('file')}>Open file</button>
+        <button type="button" onClick={()=>{setPaletteMode('command');setPaletteQuery('');}}>Commands</button>
         <button type="button" disabled={!current} onClick={()=>setSplit(!split)}>{split?'Close split':'Split'}</button>
         <button type="button" disabled={!current} onClick={()=>void showHistory()}>History</button>
         <button type="button" aria-label="Editor appearance" aria-expanded={appearanceOpen} onClick={()=>setAppearanceOpen(value=>!value)}>Font</button>
@@ -227,7 +259,8 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
     </div>}
     <div className="asi-main">
       <aside className="asi-aside" aria-label="Editor sidebar">
-        <nav className="asi-sidebar-nav">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():setPanel(name)}>{name}</button>)}</nav>
+        {sources?.length ? <WorkspaceSourceRail sources={sources} sourceId={sourceId} onSelect={onSourceSelect} /> : null}
+        <nav className="asi-sidebar-nav">{availablePanels.map(name=><button type="button" aria-current={panel===name} key={name} onClick={()=>name==='Timeline'?void showHistory():name==='Changes'?void showChanges():name==='Snapshot'?void showSnapshot():setPanel(name)}>{name}</button>)}</nav>
         <div className="asi-side-content">
           {panel==='Explorer'&&<><div className="asi-side-header"><strong>Explorer</strong><div><button type="button" aria-label="New file" onClick={()=>{setModal('file');setPathInput('');}}>＋</button><button type="button" aria-label="New folder" onClick={()=>{setModal('folder');setPathInput('');}}>▣</button><button type="button" aria-label="Refresh files" onClick={()=>void refresh()}>↻</button></div></div>
             <div className="asi-tree">{visibleTree.map(entry=>{
@@ -241,6 +274,10 @@ export function WorkspaceEditor({workspace, workspaceId, label, palette, onExit,
           {panel==='Search'&&<><div className="asi-side-header"><strong>Find in files</strong></div><form className="asi-search" onSubmit={e=>{e.preventDefault();void find();}}><input value={query} aria-label="Search workspace" onChange={e=>setQuery(e.target.value)}/><button type="submit">Find</button></form>{hits.map((hit,i)=><button key={i} className="asi-hit" type="button" onClick={()=>void open(hit.path)}><strong>{hit.path}:{hit.line}</strong><span>{hit.preview}</span></button>)}</>}
           {panel==='Timeline'&&<><div className="asi-side-header"><strong>Timeline</strong></div>{history.map(rev=><div key={rev.id} className="asi-revision"><span>{rev.label||rev.createdAt}</span><button type="button" onClick={()=>void restore(rev)}>Restore</button></div>)}</>}
           {panel==='Problems'&&<><div className="asi-side-header"><strong>Problems · {problems.length}</strong></div>{problems.map((problem,i)=><button key={i} className="asi-hit" type="button" onClick={()=>void open(problem.path)}>{problem.severity}: {problem.path} — {problem.message}</button>)}</>}
+          {panel==='Changes'&&<><div className="asi-side-header"><strong>Changes</strong><button type="button" aria-label="Refresh changes" onClick={()=>void showChanges()}>↻</button></div>
+            {modeLoading?<p>Inspecting verified changes…</p>:!workspace.changes?<p>No Git/diff provider is connected to this workspace.</p>:changeEntries.length===0?<p>No reported changes.</p>:changeEntries.map((entry,i)=><button className="asi-hit" key={entry.path+String(i)} type="button" onClick={()=>void open(entry.path)}><strong>{entry.status}</strong><span>{entry.path}</span></button>)}</>}
+          {panel==='Snapshot'&&<><div className="asi-side-header"><strong>Merkle snapshot</strong><button type="button" aria-label="Refresh Merkle snapshot" onClick={()=>void showSnapshot()}>↻</button></div>
+            {!workspace.snapshot?<p>No verified snapshot provider is connected.</p>:snapshot?<div className="asi-snapshot"><strong>{snapshot.rootHash}</strong><p>{snapshot.fileCount} tracked files · {snapshot.createdAt}</p>{snapshot.entries?.map(item=><p key={item.path}>{item.path} — {item.hash}</p>)}</div>:<p>{modeLoading?'Reading trusted snapshot…':'No snapshot loaded.'}</p>}</>}
           {panel==='References'&&workspace.configuration?.references?.map(item=><p key={item}>{item}</p>)}
           {panel==='Dependencies'&&workspace.configuration?.dependencies?.map(item=><p key={item}>{item}</p>)}
         </div>

@@ -1,746 +1,118 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Download, FileCode, Folder, Globe, List, Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { languageFromPath, uid } from "@/lib/utils";
-import { downloadText } from "@/lib/work/bundle";
-import { buildWorkspacePreview } from "@/lib/work/workspace-preview";
-import { useActiveProject, useWorkStore } from "@/lib/work/store";
-import type { Artifact, SideTab } from "@inneranimalmedia/agentsam-local-shared";
-import { WorkspaceSaveQueue, type SaveStatus } from "@inneranimalmedia/agentsam-ide/workspace";
-import { applyLspWorkspaceEdit, workspaceRootFileUri, type LspWorkspaceEdit } from "@inneranimalmedia/agentsam-ide/lsp";
-import { cn } from "@/lib/utils";
-import { LspLanguageSetup } from "@/components/workbench/LspLanguageSetup";
-import { WorkspaceGate } from "@/components/workbench/workspace-gate";
-import { isAuthorizedHostProject, isSampleProject, projectNeedsConnection } from "@/lib/work/workspace-restore";
+/**
+ * Side Stage Files is a host of the shared @inneranimalmedia/agentsam-ide UI.
+ * It must not maintain a second explorer/Monaco implementation.
+ */
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import type { IDEFileSource, IDEFileSourceId } from '@inneranimalmedia/agentsam-ide/surface';
+import type { AgentSamEditorPalette } from '@inneranimalmedia/agentsam-ide/monaco';
+import { HttpLspTransport, workspaceRootFileUri } from '@inneranimalmedia/agentsam-ide/lsp';
+import { isPackagedDesktop } from '@/lib/desktop/tauri';
+import { NativeLspTransport } from '@/lib/desktop/native-lsp';
+import { readTheme, type StoredTheme } from '@/lib/work/theme';
+const WorkspaceEditor = lazy(()=>import('@inneranimalmedia/agentsam-ide/surface').then(mod=>({default:mod.WorkspaceEditor})));
+import '@inneranimalmedia/agentsam-ide/surface/workspace-editor.css';
+import { useActiveProject, useWorkStore } from '@/lib/work/store';
+import { isAuthorizedHostProject, isSampleProject, projectNeedsConnection } from '@/lib/work/workspace-restore';
+import { createRuntimeIDEWorkspace, createTutorialIDEWorkspace } from '@/lib/work/ide-workspace';
+import { WorkspaceGate } from '@/components/workbench/workspace-gate';
+import type { SideTab } from '@inneranimalmedia/agentsam-local-shared';
 
-const MonacoPane = lazy(() =>
-  import("@/components/workbench/monaco-pane").then((m) => ({ default: m.MonacoPane })),
-);
+const descriptions: Record<IDEFileSourceId, string> = {
+  local: 'Local runtime — requires an authorized root and capability',
+  github: 'GitHub — requires an authorized repository connection',
+  r2: 'Cloudflare R2 — requires an account-scoped storage binding',
+  drive: 'Google Drive — requires OAuth and an authorized folder',
+  container: 'Cloudflare container — requires an authorized sandbox session',
+  docker: 'Docker — requires an authorized host Docker engine',
+};
 
-type TreeNode =
-  | { type: "dir"; name: string; path: string; children: TreeNode[] }
-  | { type: "file"; name: string; file: Artifact };
-
-function buildTree(files: Artifact[]): TreeNode[] {
-  const root: TreeNode[] = [];
-  const dirs = new Map<string, TreeNode & { type: "dir" }>();
-
-  const ensureDir = (parts: string[]) => {
-    let list = root;
-    let path = "";
-    for (const part of parts) {
-      path = path ? `${path}/${part}` : part;
-      let node = dirs.get(path);
-      if (!node) {
-        node = { type: "dir", name: part, path, children: [] };
-        dirs.set(path, node);
-        list.push(node);
-      }
-      list = node.children;
-    }
-    return list;
-  };
-
-  for (const file of [...files].sort((a, b) => a.path.localeCompare(b.path))) {
-    const parts = file.path.split("/").filter(Boolean);
-    const name = parts.pop() ?? file.path;
-    const list = parts.length ? ensureDir(parts) : root;
-    list.push({ type: "file", name, file });
-  }
-
-  const sortNodes = (nodes: TreeNode[]) => {
-    nodes.sort((a, b) => {
-      if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
-    for (const n of nodes) if (n.type === "dir") sortNodes(n.children);
-  };
-  sortNodes(root);
-  return root;
-}
-
-function TreeRows({
-  nodes,
-  depth,
-  selectedId,
-  openDirs,
-  onToggle,
-  onSelect,
-}: {
-  nodes: TreeNode[];
-  depth: number;
-  selectedId: string | null;
-  openDirs: Set<string>;
-  onToggle: (path: string) => void;
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <>
-      {nodes.map((node) => {
-        if (node.type === "dir") {
-          const open = openDirs.has(node.path);
-          return (
-            <div key={node.path}>
-              <button
-                type="button"
-                className="flex min-h-10 w-full items-center gap-1 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/60"
-                style={{ paddingLeft: 8 + depth * 12 }}
-                onClick={() => onToggle(node.path)}
-              >
-                <ChevronRight className={cn("size-3.5 shrink-0 transition-transform", open && "rotate-90")} />
-                <Folder className="size-3.5 shrink-0 text-stone" />
-                <span className="truncate">{node.name}</span>
-              </button>
-              {open ? (
-                <TreeRows
-                  nodes={node.children}
-                  depth={depth + 1}
-                  selectedId={selectedId}
-                  openDirs={openDirs}
-                  onToggle={onToggle}
-                  onSelect={onSelect}
-                />
-              ) : null}
-            </div>
-          );
-        }
-        return (
-          <button
-            key={node.file.id}
-            type="button"
-            onClick={() => onSelect(node.file.id)}
-            className={cn(
-              "flex min-h-10 w-full items-center gap-2 rounded-md py-1.5 text-left text-xs",
-              selectedId === node.file.id ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/60",
-            )}
-            style={{ paddingLeft: 8 + depth * 12 + 16 }}
-          >
-            <FileCode className="size-3.5 shrink-0" />
-            <span className="truncate">{node.name}</span>
-          </button>
-        );
-      })}
-    </>
-  );
-}
-
-export function FilesStage({ tab }: { tab: SideTab }) {
+export function FilesStage({ tab: _tab }: { tab: SideTab }) {
   const project = useActiveProject();
-  const workspaces = useWorkStore((s) => s.projects);
-  const selectWorkspace = useWorkStore((s) => s.setActiveProject);
-  const createSample = useWorkStore((s) => s.createSampleProject);
-  const connectHostWorkspace = useWorkStore((s) => s.createFilesystemProject);
-  const workSurface = useWorkStore((s) => s.workSurface);
-  const [hostLaneOpen, setHostLaneOpen] = useState(false);
-  const [hostLaneName, setHostLaneName] = useState("");
-  const [hostRuntimeUrl, setHostRuntimeUrl] = useState("http://127.0.0.1:3099");
-  const [hostLaneBusy, setHostLaneBusy] = useState(false);
-  const [hostLaneError, setHostLaneError] = useState<string | null>(null);
-  const [newWorkspaceOpen, setNewWorkspaceOpen] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState("");
-  const upsertFile = useWorkStore((s) => s.upsertFile);
-  const deleteFile = useWorkStore((s) => s.deleteFile);
-  const selectFile = useWorkStore((s) => s.selectFile);
-  const openSideTab = useWorkStore((s) => s.openSideTab);
-  const setBrowserSrcdoc = useWorkStore((s) => s.setBrowserSrcdoc);
-  const isFilesystem = project?.kind === "filesystem";
-  const selected = project
-    ? project.files.find((f) => f.id === tab.fileId) ?? project.files[0] ?? null
-    : null;
-  const showGate =
-    !project ||
-    projectNeedsConnection(project) ||
-    (project.kind === "filesystem" && !isAuthorizedHostProject(project) && !project.files.length);
-  const [creating, setCreating] = useState(false);
-  const [path, setPath] = useState("src/untitled.ts");
-  const [mobileList, setMobileList] = useState(!selected);
-  const [openDirs, setOpenDirs] = useState<Set<string>>(() => new Set());
-  const [mounted, setMounted] = useState(false);
-  const [fsError, setFsError] = useState<string | null>(null);
-  const [conflict, setConflict] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<SaveStatus>("saved");
-  const [lspStatus, setLspStatus] = useState<'missing'|'starting'|'ready'|'error'>('missing');
-  const [lspDetail, setLspDetail] = useState<string | undefined>();
-  const [lspRetry,setLspRetry]=useState(0);
-  const [navigationTarget,setNavigationTarget] = useState<{path:string;line:number;column:number}|undefined>();
-  const [versions, setVersions] = useState<Record<string, string>>({});
-  const selectedPathRef = useRef<string | null>(selected?.path ?? null);
-  selectedPathRef.current = selected?.path ?? null;
-  const saveQueue = useMemo(() => new WorkspaceSaveQueue({
-    debounceMs: 700,
-    write: async (filePath, content, expectedVersion, overwrite) => {
-      if (!project?.runtimeBaseUrl) return { ok: false as const, error: 'filesystem_runtime_unavailable' };
-      const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-      const adapter = new RuntimeFilesystemAdapter(project.runtimeBaseUrl, project.runtimeCapability);
-      return adapter.write(filePath, content, expectedVersion, overwrite);
-    },
-    onStatus: (filePath, status, reason) => {
-      if (selectedPathRef.current !== filePath) return;
-      setSaveState(status);
-      if (status === 'conflict') setConflict(reason || 'File changed on disk. Reload or overwrite intentionally.');
-      if (status === 'error') setFsError(reason || 'Could not save the file.');
-      if (status === 'saved') { setConflict(null); setFsError(null); }
-    },
-    onCommitted: (filePath, content, result, superseded) => {
-      setVersions(previous => ({ ...previous, [filePath]: result.version }));
-      if (superseded || !project) return; // Never restore a stale snapshot over newer typing.
-      const current = useWorkStore.getState().projects.find(p => p.id === project.id)?.files.find(f => f.path === filePath);
-      if (current?.content !== content) return;
-      upsertFile(project.id, { ...current, updatedAt: result.mtime || Date.now(), origin: 'editor' });
-    },
-  }), [project?.id, project?.runtimeBaseUrl, project?.runtimeCapability, upsertFile]);
-
-  useEffect(() => () => { void saveQueue.flushAll(); }, [saveQueue]);
-  useEffect(() => {
-    if (!isFilesystem || !selected) return;
-    const status = saveQueue.status(selected.path);
-    setSaveState(status);
-    setConflict(status === 'conflict' ? 'File changed on disk. Reload or overwrite intentionally.' : null);
-  }, [selected?.path, isFilesystem, saveQueue]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!project || !isFilesystem || !project.runtimeBaseUrl) return;
-    let cancelled = false;
-    (async () => {
-      const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-      const adapter = new RuntimeFilesystemAdapter(
-        project.runtimeBaseUrl!,
-        project.runtimeCapability,
-      );
-      const listed = await adapter.list(".", true);
-      const source = listed;
-      if (cancelled) return;
-      if (!source.ok) {
-        setFsError(`${source.error}. Run: agentsam start-local`);
-        return;
-      }
-      setFsError(null);
-      const stubs = (source.entries as Array<{ path: string; kind: string; mtime?: number }>)
-        .filter((e) => e.kind === "file")
-        .slice(0, 800)
-        .map((e) => ({
-          id: `fs:${e.path}`,
-          path: e.path,
-          language: languageFromPath(e.path),
-          content: "",
-          updatedAt: e.mtime || Date.now(),
-          kind: "code" as const,
-          origin: "editor" as const,
-        }));
-      useWorkStore.getState().patchProject(project.id, (p) => ({ ...p, files: stubs }));
-    })().catch((err) => {
-      if (!cancelled) setFsError(err instanceof Error ? err.message : String(err));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [isFilesystem, project?.id, project?.runtimeBaseUrl, project?.runtimeCapability, project?.workspaceRoot]);
-
-  useEffect(() => {
-    if (!project || !isFilesystem || !selected || !project.runtimeBaseUrl) return;
-    if (selected.content) return;
-    let cancelled = false;
-    (async () => {
-      const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-      const adapter = new RuntimeFilesystemAdapter(
-        project.runtimeBaseUrl!,
-        project.runtimeCapability,
-      );
-      const doc = await adapter.read(selected.path);
-      if (cancelled) return;
-      if (!doc.ok) {
-        setFsError(doc.error);
-        return;
-      }
-      setVersions((v) => ({ ...v, [selected.path]: doc.version }));
-      saveQueue.acceptDiskVersion(selected.path, doc.version);
-      // Late initial read must not overwrite keystrokes already entered in Monaco.
-      if (saveQueue.status(selected.path) !== 'saved') return;
-      upsertFile(project.id, {
-        ...selected,
-        content: doc.content,
-        updatedAt: doc.mtime || Date.now(),
-        origin: "editor",
-      });
-      setSaveState("saved");
-      setConflict(null);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isFilesystem, selected?.id, selected?.path, project?.runtimeBaseUrl, project?.runtimeCapability]);
-
-  // External change detection: re-read version; never silent-overwrite on save.
-  useEffect(() => {
-    if (!project || !isFilesystem || !selected || !project.runtimeBaseUrl || !project.runtimeCapability) return;
-    let cancelled = false;
-    const check = async () => {
-      const known = versions[selected.path];
-      if (!known) return;
-      const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-      const adapter = new RuntimeFilesystemAdapter(
-        project.runtimeBaseUrl!,
-        project.runtimeCapability,
-      );
-      const doc = await adapter.read(selected.path);
-      if (cancelled || !doc.ok) return;
-      if (doc.version !== known) {
-        if (saveQueue.status(selected.path) !== 'saved') {
-          setSaveState("conflict");
-          setConflict("Disk changed while this buffer was dirty. Reload or overwrite intentionally.");
-        } else {
-          setVersions((v) => ({ ...v, [selected.path]: doc.version }));
-          saveQueue.acceptDiskVersion(selected.path, doc.version);
-          upsertFile(project.id, {
-            ...selected,
-            content: doc.content,
-            updatedAt: doc.mtime || Date.now(),
-            origin: "editor",
-          });
-          setSaveState("saved");
-          setConflict(null);
-        }
-      }
-    };
-    const onFocus = () => {
-      void check();
-    };
-    window.addEventListener("focus", onFocus);
-    const timer = window.setInterval(() => {
-      void check();
-    }, 2500);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("focus", onFocus);
-      window.clearInterval(timer);
-    };
-  }, [
-    isFilesystem,
-    selected?.path,
-    selected?.id,
-    versions,
-    saveState,
-    project?.runtimeBaseUrl,
-    project?.runtimeCapability,
-    project?.id,
-  ]);
-
-  const tree = useMemo(() => buildTree(project?.files ?? []), [project?.files]);
-
-  function previewHtml(file: Artifact) {
-    if (!project) return;
-    const id = openSideTab("browser", {
-      title: file.path,
-      ephemeral: false,
-    });
-    setBrowserSrcdoc(id, buildWorkspacePreview(file, project.files), file.path);
-    // Remain in the lead conversation: the existing side pane owns this preview.
-  }
-
-  async function saveFilesystem(file: Artifact, value: string, overwrite = false) {
-    if (!project?.runtimeBaseUrl) return;
-    if (!overwrite && saveQueue.status(file.path) === 'saved' && file.content === value) return;
-    saveQueue.edit(file.path, value);
-    await saveQueue.flush(file.path, overwrite);
-  }
-
-  function onEditorChange(value: string) {
-    if (!selected || !project) return;
-    if (isFilesystem) {
-      upsertFile(project.id, {
-        ...selected,
-        content: value,
-        updatedAt: Date.now(),
-        origin: "editor",
-      });
-      saveQueue.edit(selected.path, value);
-      return;
+  const projects = useWorkStore(state => state.projects);
+  const selectProject = useWorkStore(state => state.setActiveProject);
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [sourceNotice, setSourceNotice] = useState('');
+  const [monacoReady,setMonacoReady]=useState(false);
+  const [monacoFailure,setMonacoFailure]=useState('');
+  useEffect(()=>{
+    let live=true;
+    if(!import.meta.env.SSR) {
+      void import('./monaco-runtime').then(()=>{if(live)setMonacoReady(true);})
+        .catch(error=>{if(live)setMonacoFailure(error instanceof Error?error.message:String(error));});
     }
-    upsertFile(project.id, {
-      ...selected,
-      content: value,
-      updatedAt: Date.now(),
-      origin: "editor",
-    });
-  }
+    return ()=>{live=false;};
+  },[]);
+  const [theme,setTheme]=useState<StoredTheme>(readTheme);
+  useEffect(()=>{
+    const update=(event:Event)=>setTheme((event as CustomEvent<StoredTheme>).detail ?? readTheme());
+    window.addEventListener('agentsam:theme',update);
+    return ()=>window.removeEventListener('agentsam:theme',update);
+  },[]);
+  const palette = useMemo<AgentSamEditorPalette>(()=>({
+    base:theme.monacoBase,
+    background:theme.tokens.background,
+    foreground:theme.tokens.foreground,
+    panel:theme.tokens.card,
+    border:theme.tokens.border,
+    muted:theme.tokens.clay,
+    accent:theme.tokens.ring,
+    comment:theme.tokens.clay,
+    string:theme.tokens.stone,
+    keyword:theme.tokens.foreground,
+  }),[theme]);
+  const ready = Boolean(project && (isAuthorizedHostProject(project) || isSampleProject(project)));
+  const workspace = useMemo(() => {
+    if (!project || !ready) return null;
+    if (project.kind === 'filesystem' && project.runtimeBaseUrl)
+      return createRuntimeIDEWorkspace(project.runtimeBaseUrl, project.runtimeCapability);
+    return createTutorialIDEWorkspace(project.id);
+  }, [project?.id, project?.kind, project?.runtimeBaseUrl, project?.runtimeCapability, ready]);
+  const lsp = useMemo(()=>{
+    if(!project || project.kind!=='filesystem' || !ready || !project.workspaceRoot)return undefined;
+    const workspaceRootUri=workspaceRootFileUri(project.workspaceRoot);
+    if(isPackagedDesktop())return {transport:new NativeLspTransport(project.workspaceRoot),workspaceRootUri};
+    if(project.runtimeBaseUrl && project.runtimeCapability)
+      return {transport:new HttpLspTransport(project.runtimeBaseUrl,project.runtimeCapability),workspaceRootUri};
+    return undefined;
+  },[project?.id,project?.kind,project?.workspaceRoot,project?.runtimeBaseUrl,project?.runtimeCapability,ready]);
+  const sources = useMemo<IDEFileSource[]>(() => ([
+    { id:'local', label:'Local', state: project?.kind === 'filesystem' && ready ? 'connected' : 'disconnected', detail:descriptions.local },
+    { id:'github', label:'GitHub', state:'disconnected', detail:descriptions.github },
+    { id:'r2', label:'Cloudflare R2', state:'disconnected', detail:descriptions.r2 },
+    { id:'drive', label:'Google Drive', state:'disconnected', detail:descriptions.drive },
+    { id:'container', label:'Cloudflare container', state:'disconnected', detail:descriptions.container },
+    { id:'docker', label:'Docker', state:'disconnected', detail:descriptions.docker },
+  ]), [project?.kind, ready]);
 
-  if (showGate) {
-    return <WorkspaceGate project={project} force={!project || projectNeedsConnection(project)} />;
-  }
+  if (!project || projectNeedsConnection(project) || !ready || connectOpen)
+    return <div className="h-full overflow-y-auto"><WorkspaceGate project={project} force={connectOpen || !project} />
+      {connectOpen ? <button className="m-3 rounded border px-3 py-2 text-xs" type="button" onClick={()=>setConnectOpen(false)}>Back to editor</button> : null}
+    </div>;
 
-  return (
-    <div className="work-files-stage flex h-full min-h-0 flex-col" data-surface={workSurface === "code" ? "code" : "files"}>
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-sidebar/60 px-2 py-2" aria-label="Editor workspaces">
-        <label className="min-w-0 flex-1 text-[11px] text-muted-foreground">
-          Workspace lane
-          <select aria-label="Active editor workspace" className="mt-1 block min-h-9 w-full min-w-0 rounded-md border border-border bg-background px-2 text-xs text-foreground"
-            value={project!.id} onChange={event=>{selectWorkspace(event.target.value);setMobileList(false);}}>
-            {workspaces.map(workspace=><option key={workspace.id} value={workspace.id}>
-              {workspace.name} · {workspace.kind === "filesystem" ? "host" : isSampleProject(workspace) ? "sample" : "browser"}
-            </option>)}
-          </select>
-        </label>
-        <Button type="button" size="sm" variant="outline" className="self-end"
-          aria-label="Open opt-in sample tutorial workspace" onClick={()=>setNewWorkspaceOpen(value=>!value)}>
-          <Plus className="size-3.5"/> Sample
-        </Button>
-        <Button type="button" size="sm" variant="outline" className="self-end"
-          aria-label="Connect an authorized local filesystem lane" onClick={()=>{setHostLaneOpen(value=>!value);setHostLaneError(null);}}>
-          <Folder className="size-3.5"/> Host
-        </Button>
-        {hostLaneOpen&&<form className="flex w-full flex-col gap-2 rounded-md border border-border p-2" onSubmit={event=>{
-          event.preventDefault();
-          if(hostLaneBusy)return;
-          setHostLaneBusy(true);setHostLaneError(null);
-          void connectHostWorkspace({root:"",name:hostLaneName.trim()||undefined,runtimeBaseUrl:hostRuntimeUrl.trim()})
-            .then(()=>{setHostLaneOpen(false);setHostLaneName("");setMobileList(false);})
-            .catch(error=>setHostLaneError(error instanceof Error?error.message:String(error)))
-            .finally(()=>setHostLaneBusy(false));
-        }}>
-          <p className="text-[11px] text-muted-foreground">Attach a local runtime bound to a separate Git worktree. The runtime reports and authorizes its root; the browser cannot choose one.</p>
-          <Input aria-label="Local lane display name" placeholder="Website / CAD / Software"
-            value={hostLaneName} onChange={event=>setHostLaneName(event.target.value)} maxLength={80}/>
-          <Input aria-label="Loopback runtime endpoint" type="url" required
-            value={hostRuntimeUrl} onChange={event=>setHostRuntimeUrl(event.target.value)} />
-          {hostLaneError&&<p role="alert" className="text-xs text-destructive">{hostLaneError}</p>}
-          <Button type="submit" size="sm" disabled={hostLaneBusy}>{hostLaneBusy?"Checking runtime…":"Connect authorized root"}</Button>
-        </form>}
-        {newWorkspaceOpen&&<form className="flex w-full flex-wrap gap-2" onSubmit={event=>{
-          event.preventDefault();
-          const name=newWorkspaceName.trim();
-          if (!name) return;
-          createSample(name);
-          setNewWorkspaceName("");
-          setNewWorkspaceOpen(false);
-          setMobileList(false);
-        }}>
-          <Input aria-label="Sample tutorial workspace name" autoFocus placeholder="Sample tutorial"
-            value={newWorkspaceName} onChange={event=>setNewWorkspaceName(event.target.value)} className="min-w-36 flex-1" required maxLength={80}/>
-          <Button type="submit" size="sm">Open sample tutorial</Button>
-        </form>}
-        <p className="w-full text-[10px] leading-snug text-muted-foreground">
-          Monaco files are scoped by workspace. Independent filesystem agents require separate authorized Git worktrees; sharing a root does not isolate writes.
-        </p>
-      </div>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
-      <div
-        className={cn(
-          "work-files-tree flex min-h-0 flex-col border-border bg-sidebar md:w-56 md:shrink-0 md:border-r",
-          mobileList ? "flex-1" : "hidden md:flex",
-        )}
-      >
-        <div className="flex items-center gap-1 border-b border-border px-2 py-2">
-          <p className="flex-1 truncate px-1 text-xs text-muted-foreground">
-            {isFilesystem ? "Filesystem" : isSampleProject(project) ? "Files · Sample" : "Files"}
-          </p>
-          <Button type="button" size="icon-sm" variant="ghost" aria-label="New file" onClick={() => setCreating(true)}>
-            <Plus className="size-4" />
-          </Button>
-        </div>
-        {fsError ? <p className="px-2 py-2 text-[11px] text-red-400">{fsError}</p> : null}
-        <div className="scrollbar-thin flex-1 overflow-y-auto p-1">
-          {tree.length === 0 ? (
-            <p className="px-2 py-3 text-xs text-muted-foreground">
-              {isFilesystem
-                ? "Connect a local runtime (agentsam start-local) to list host files."
-                : "Captured files land here when AgentSam or a co-worker writes code."}
-            </p>
-          ) : (
-            <TreeRows
-              nodes={tree}
-              depth={0}
-              selectedId={selected?.id ?? null}
-              openDirs={openDirs}
-              onToggle={(dir) =>
-                setOpenDirs((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(dir)) next.delete(dir);
-                  else next.add(dir);
-                  return next;
-                })
-              }
-              onSelect={(id) => {
-                selectFile(id);
-                setMobileList(false);
-              }}
-            />
-          )}
-        </div>
-      </div>
-
-      <div className={cn("flex min-h-0 min-w-0 flex-1 flex-col", mobileList && "hidden md:flex")}>
-        {selected ? (
-          <>
-            <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                className="md:hidden"
-                aria-label="Back to file list"
-                onClick={() => setMobileList(true)}
-              >
-                <List className="size-4" />
-              </Button>
-              <span className="min-w-0 flex-1 truncate px-1 font-mono text-xs text-muted-foreground">
-                {selected.path}
-                {isFilesystem ? ` · ${saveState}` : ""}
-              </span>
-              {isFilesystem ? <span aria-label="Language server status" title={lspDetail} className="px-2 text-[11px] text-muted-foreground">LSP: {lspStatus}{lspDetail&&lspStatus==='ready' ? ` (${lspDetail})` : ''}</span> : null}
-              {isFilesystem ? <LspLanguageSetup onInstalled={() => setLspRetry((x) => x + 1)}/> : null}
-              {isFilesystem&&lspStatus==='error'?<Button type="button" size="sm" variant="outline" title={lspDetail} onClick={()=>setLspRetry(x=>x+1)}>Retry LSP</Button>:null}
-              {conflict ? (
-                <>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={async () => {
-                      if (!project.runtimeBaseUrl || !selected) return;
-                      const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-                      const adapter = new RuntimeFilesystemAdapter(
-                        project.runtimeBaseUrl,
-                        project.runtimeCapability,
-                      );
-                      const doc = await adapter.read(selected.path);
-                      if (doc.ok) {
-                        setVersions((v) => ({ ...v, [selected.path]: doc.version }));
-                        saveQueue.discardDraft(selected.path, doc.version);
-                        upsertFile(project.id, { ...selected, content: doc.content, updatedAt: doc.mtime });
-                        setConflict(null);
-                        setSaveState("saved");
-                      }
-                    }}
-                  >
-                    Reload disk
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => void saveFilesystem(selected, selected.content, true)}
-                  >
-                    Overwrite
-                  </Button>
-                </>
-              ) : null}
-              {selected.language === "html" || selected.path.endsWith(".html") ? (
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  aria-label="Preview rendered page"
-                  onClick={() => previewHtml(selected)}
-                >
-                  <Globe className="size-4" />
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Download"
-                onClick={() => downloadText(selected.content, selected.path.split("/").pop() || selected.path)}
-              >
-                <Download className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Delete file"
-                onClick={() => {
-                  if (isFilesystem && project.runtimeBaseUrl) {
-                    void (async () => {
-                      const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-                      const adapter = new RuntimeFilesystemAdapter(
-                        project.runtimeBaseUrl!,
-                        project.runtimeCapability,
-                      );
-                      await adapter.remove(selected.path, versions[selected.path]);
-                      deleteFile(project.id, selected.id);
-                      setMobileList(true);
-                    })();
-                    return;
-                  }
-                  deleteFile(project.id, selected.id);
-                  setMobileList(true);
-                }}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </div>
-            {conflict ? <p className="border-b border-border px-3 py-1.5 text-[11px] text-amber-300">{conflict}</p> : null}
-            <div className="min-h-0 flex-1">
-              {!mounted ? (
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Opening Monaco
-                </div>
-              ) : (
-                <Suspense
-                  fallback={
-                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                      Opening Monaco
-                    </div>
-                  }
-                >
-                  <MonacoPane file={selected} workspaceId={project.id} onChange={onEditorChange}
-                    runtimeBaseUrl={isFilesystem ? project.runtimeBaseUrl ?? undefined : undefined}
-                    runtimeCapability={isFilesystem ? project.runtimeCapability ?? undefined : undefined}
-                    workspaceRoot={isFilesystem ? project.workspaceRoot ?? undefined : undefined}
-                    savedVersion={isFilesystem ? versions[selected.path] : undefined}
-                    lspRetry={lspRetry}
-                    onLspStatus={(status, detail) => {setLspStatus(status);setLspDetail(detail);}}
-                    navigationTarget={navigationTarget}
-                    onApplyWorkspaceEdit={async (edit) => {
-                      if(!project.runtimeBaseUrl||!project.workspaceRoot)throw new Error('workspace_runtime_required');
-                      await saveQueue.flushAll();
-                      const pending=project.files.filter(item=>saveQueue.status(item.path)!=='saved');
-                      if(pending.length)throw new Error('lsp_rename_requires_clean_saved_files');
-                      const {RuntimeFilesystemAdapter}=await import('@/lib/work/workspace-fs');
-                      const adapter=new RuntimeFilesystemAdapter(project.runtimeBaseUrl,project.runtimeCapability);
-                      try {
-                        await applyLspWorkspaceEdit(edit as LspWorkspaceEdit,workspaceRootFileUri(project.workspaceRoot),{
-                          read:async path=>{
-                            const source=await adapter.read(path);
-                            if(!source.ok)throw new Error(source.error);
-                            return {content:source.content,version:source.version};
-                          },
-                          write:async(path,content,version)=>{
-                            const result=await adapter.write(path,content,version,false);
-                            if(!result.ok)throw new Error(result.error);
-                            return {version:result.version};
-                          },
-                          committed:(path,content,version)=>{
-                            saveQueue.acceptDiskVersion(path,version);
-                            const known=useWorkStore.getState().projects.find(p=>p.id===project.id)?.files.find(file=>file.path===path);
-                            upsertFile(project.id,{id:known?.id||`fs:${path}`,path,language:known?.language||languageFromPath(path),content,updatedAt:Date.now(),kind:'code',origin:'editor'});
-                          },
-                        });
-                      }catch(error){
-                        const message=error instanceof Error?error.message:String(error);
-                        setFsError(message);
-                        throw error;
-                      }
-                    }}
-                    onNavigate={async (uri, range) => {
-                      const root=(project.workspaceRoot||'').replace(/\\/g,'/').replace(/\/$/,'');
-                      if(!root)throw new Error('workspace_root_required');
-                      const prefix=workspaceRootFileUri(root) + '/';
-                      if(!uri.startsWith(prefix))throw new Error('lsp_target_outside_authorized_workspace');
-                      const relative=decodeURIComponent(uri.slice(prefix.length));
-                      if(!relative||relative.split('/').some(part=>part==='..'))throw new Error('lsp_invalid_target_path');
-                      const next=project.files.find(item=>item.path===relative);
-                      const id=next?.id||`fs:${relative}`;
-                      if(!next)upsertFile(project.id,{id,path:relative,language:languageFromPath(relative),content:'',updatedAt:Date.now(),kind:'code',origin:'editor'});
-                      setNavigationTarget({path:relative,line:range.start.line+1,column:range.start.character+1});
-                      selectFile(id);
-                    }}
-                    onSave={(text) => isFilesystem ? saveFilesystem(selected, text) : undefined} />
-                </Suspense>
-              )}
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-            <FileCode className="mb-3 size-8 text-stone" />
-            <h2 className="text-base font-medium">No file open</h2>
-            <p className="mt-1 max-w-sm text-sm text-muted-foreground text-pretty">
-              {isFilesystem
-                ? "Select a host file, or create one on the authorized workspace root."
-                : "Ask the lead agent or a co-worker to write something, or add a file of your own."}
-            </p>
-            <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => setCreating(true)}>
-              New file
-            </Button>
-          </div>
-        )}
-      </div>
-
-      <Dialog open={creating} onOpenChange={setCreating}>
-        <DialogContent>
-          <DialogTitle>New file</DialogTitle>
-          <DialogDescription>
-            {isFilesystem
-              ? "Creates a real file on the authorized host workspace."
-              : isSampleProject(project)
-                ? "Stored on this sample tutorial workspace and opened in Monaco."
-                : "Stored on this browser workspace and opened in Monaco."}
-          </DialogDescription>
-          <form
-            className="mt-4 flex flex-col gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const next = path.trim().replace(/^\/+/, "");
-              if (!next) return;
-              if (isFilesystem && project.runtimeBaseUrl) {
-                void (async () => {
-                  const { RuntimeFilesystemAdapter } = await import("@/lib/work/workspace-fs");
-                  const adapter = new RuntimeFilesystemAdapter(
-                    project.runtimeBaseUrl!,
-                    project.runtimeCapability,
-                  );
-                  const created = await adapter.create(next, "");
-                  if (!created.ok) {
-                    setFsError(created.error);
-                    return;
-                  }
-                  const file = {
-                    id: `fs:${next}`,
-                    path: next,
-                    language: languageFromPath(next),
-                    content: "",
-                    updatedAt: Date.now(),
-                    kind: next.endsWith(".html") ? ("preview" as const) : ("code" as const),
-                    origin: "editor" as const,
-                  };
-                  setVersions((v) => ({ ...v, [next]: created.version }));
-                  saveQueue.acceptDiskVersion(next, created.version);
-                  upsertFile(project.id, file);
-                  selectFile(file.id);
-                  setCreating(false);
-                  setMobileList(false);
-                })();
-                return;
-              }
-              const file = {
-                id: uid(),
-                path: next,
-                language: languageFromPath(next),
-                content: "",
-                updatedAt: Date.now(),
-                kind: next.endsWith(".html") ? ("preview" as const) : ("code" as const),
-                origin: "editor" as const,
-              };
-              upsertFile(project.id, file);
-              const saved = useWorkStore
-                .getState()
-                .projects.find((p) => p.id === project.id)
-                ?.files.find((f) => f.path === next);
-              if (saved) {
-                selectFile(saved.id);
-                setMobileList(false);
-              }
-              setCreating(false);
-            }}
-          >
-            <Input value={path} onChange={(e) => setPath(e.target.value)} autoFocus />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" onClick={() => setCreating(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">Create</Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-      </div>
+  if (!workspace) return <p role="alert">No authorized workspace is available.</p>;
+  if (monacoFailure) return <p role="alert" className="p-4 text-sm text-destructive">IDE runtime unavailable: {monacoFailure}</p>;
+  if (!monacoReady) return <p role="status" className="p-4 text-sm text-muted-foreground">Initializing Monaco and language workers…</p>;
+  return <section className="work-files-stage flex h-full min-h-0 min-w-0 flex-col" aria-label="AgentSam IDE Files">
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-sidebar/50 px-2 py-1.5 text-xs">
+      <label htmlFor="asi-active-workspace" className="text-muted-foreground">Workspace</label>
+      <select id="asi-active-workspace" className="min-w-0 max-w-[55%] rounded border border-border bg-background px-2 py-1"
+        value={project.id} onChange={event=>{setSourceNotice('');selectProject(event.target.value);}}>
+        {projects.filter(item=>isAuthorizedHostProject(item)||isSampleProject(item)).map(item=><option key={item.id} value={item.id}>{item.name}{isSampleProject(item)?' (tutorial)':''}</option>)}
+      </select>
+      <button className="rounded border border-border px-2 py-1" type="button" onClick={()=>setConnectOpen(true)}>Connect workspace</button>
+      <span className="ml-auto truncate text-[10px] text-muted-foreground">{isSampleProject(project)?'Tutorial only':'Authorized host'}</span>
     </div>
-  );
+    {sourceNotice ? <div role="status" className="border-b border-border px-3 py-2 text-xs text-muted-foreground">{sourceNotice}
+      <button type="button" className="ml-3 underline" onClick={()=>setSourceNotice('')}>Dismiss</button></div> : null}
+    <div className="min-h-0 flex-1">
+      <Suspense fallback={<p className="p-4 text-xs text-muted-foreground">Loading AgentSam IDE…</p>}>
+      <WorkspaceEditor key={project.id} workspace={workspace} workspaceId={project.id}
+        label={project.name} palette={palette} lsp={lsp} showHostModes sources={sources} sourceId="local"
+        onSourceSelect={id => {
+          if(id==='local' && isAuthorizedHostProject(project)) { setSourceNotice('Local runtime is active. Files use the authorized host root.'); return; }
+          setSourceNotice(descriptions[id] + '. No connection has been established for this provider in Local Studio; no files were changed.');
+        }}/>
+      </Suspense>
+    </div>
+  </section>;
 }

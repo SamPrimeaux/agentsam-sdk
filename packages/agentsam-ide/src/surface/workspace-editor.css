@@ -82,3 +82,23 @@
   .asi-editors.asi-split>div+div { display:none; }
   .asi-status { gap:8px; }
 }
+
+/* Shared IDE source rail and host-backed inspection modes (all hosts). */
+.asi-source-rail {display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:7px;border-bottom:1px solid var(--asi-border);}
+.asi-source-rail button {position:relative;display:grid;place-items:center;width:36px;height:34px;padding:5px;border-radius:7px;border:1px solid transparent;}
+.asi-source-rail button[aria-pressed=true] {border-color:var(--ring,var(--asi-ink));background:var(--asi-hover);}
+.asi-source-rail button[data-state=disconnected] {opacity:.58;}
+.asi-source-rail img {width:21px;height:21px;object-fit:contain;}
+.asi-source-rail button[data-state=connected]::after {content:"";position:absolute;right:3px;bottom:3px;width:5px;height:5px;border-radius:50%;background:#38ad82;}
+.asi-snapshot {padding:9px;overflow-wrap:anywhere;font-size:11px;}
+.asi-snapshot strong {font-family:ui-monospace,monospace;overflow-wrap:anywhere;}
+/* Monaco's code remains monospace; its commands and context menus use application UI typography. */
+.monaco-menu .action-label,.monaco-menu .action-item,.monaco-menu .monaco-action-bar,
+.quick-input-widget,.quick-input-widget .monaco-list-row,
+.context-view.monaco-menu-container {
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif !important;
+}
+.asi-dialog,.asi-palette-results,.asi-appearance-panel {font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+
+/* Embedded Side Stage must take its host height; Theme Studio retains its own sizing. */
+.work-files-stage .asi-ide {min-height:0;}

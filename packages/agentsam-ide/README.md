@@ -57,3 +57,33 @@ npm run verify:ide-package
 A separate React/Vite consumer smoke test verified browser edits, selection, Cmd+S callback, per-project model isolation, tab switches and no external network requests against a packed tarball.
 
 **Do not** ship a second Monaco component or assume arbitrary scratch content is a real filesystem project. The three separately testable owners are: the editor UI, the workspace filesystem host, and the optional language-server session.
+
+
+### Unified IDE host (November 2026 WIP)
+
+Local Studio Side Stage Files mounts the packaged WorkspaceEditor used by
+Ecommerce Theme Studio, replacing a second file tree and editor chrome.
+
+The shared package includes a source rail (Local, GitHub, R2, Drive, Cloudflare
+container, Docker), command palette, system-font context menus, Explorer,
+Search, Timeline, Problems, versioned saves, conflict handling, split editing
+and verified Merkle snapshot/Changes contracts. Docker artwork uses the official
+Simple Icons asset; the other source logos come from the InnerAnimalMedia
+filesystem source assets.
+
+**Status distinctions (must remain truthful):**
+- The authorized RuntimeFilesystemAdapter supplies real versioned filesystem
+  reads, writes, creates, renames and deletes. Local Studio passes its
+  authenticated LSP transport into packaged Monaco.
+- Opt-in Sample Tutorial files are isolated memory state, not a host filesystem.
+- GitHub, R2, Drive, Cloudflare containers and Docker are visually discoverable
+  but are not yet connected to Local Studio. No fixture fallback is allowed.
+- Merkle comparison requires verified content hashes for every file. Snapshot
+  captures a session baseline; Changes compares against it. Durable Merkle
+  manifests, Git-aware diffs, cross-session history and provider auth remain WIP.
+- Previous Side Stage LSP navigation and file-preview behaviors need live
+  authenticated acceptance tests before shipping this new surface to customers.
+
+The previous InnerAnimalMedia filesystem, virtual tree, Monaco, Merkle and
+provider UI components remain authoritative donor references for remaining
+work. Reuse and package their proven behavior without a parallel IDE product.
