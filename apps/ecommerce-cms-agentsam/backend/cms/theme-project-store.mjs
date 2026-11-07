@@ -9,7 +9,9 @@ import { readR2Json, writeR2Json } from "./r2-store.js";
 import { resolveCmsSite } from "./site-context.mjs";
 
 const SAFE_ID = /^[A-Za-z0-9_-]{1,160}$/;
-const SAFE_SLUG = /^[a-z][a-z0-9-]{0,63}$/;
+// System route `404` is a canonical editor template; its leading digit must
+// not invalidate an otherwise safe theme project during startup repair.
+const SAFE_SLUG = /^(?:[a-z][a-z0-9-]{0,63}|404)$/;
 const PACKAGE_NAME = /^@inneranimalmedia\/[a-z0-9-]+$/;
 const PACKAGE_VERSION = /^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/;
 const MAX_PROJECT_BYTES = 8 * 1024 * 1024;

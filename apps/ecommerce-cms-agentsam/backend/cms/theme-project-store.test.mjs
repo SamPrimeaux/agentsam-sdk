@@ -35,6 +35,20 @@ test("CMS theme project payload validation retains the editable page contract", 
   assert.equal(validated.pages[0].sections[0].schema.fields[0].key, "field_1");
 });
 
+test("CMS theme projects accept a repaired 404 page without loosening arbitrary slug validation", () => {
+  const base = project();
+  const missingPage = structuredClone(base.pages[0]);
+  missingPage.slug = "404";
+  missingPage.title = "Page not found";
+  const saved = validateThemeProjectPayload(project({ pages: [...base.pages, missingPage] }));
+  assert.equal(saved.pages[1].slug, "404");
+  for (const unsafeSlug of ["12", "404-evil", "../404", "_private"]) {
+    const bad = structuredClone(missingPage);
+    bad.slug = unsafeSlug;
+    assert.throws(() => validateThemeProjectPayload(project({ pages: [bad] })), /theme_project_page_invalid/);
+  }
+});
+
 test("CMS theme project payload validation rejects oversized or unsafe projects", () => {
   assert.throws(() => validateThemeProjectPayload(project({ id: "__proto__" })));
   const oversized = project();
