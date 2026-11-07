@@ -1696,14 +1696,25 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         if (exp === "30d" || exp === "30 days") expiresAtUnix = Math.floor(Date.now() / 1000) + 30 * 86400;
         else if (exp === "90d" || exp === "90 days") expiresAtUnix = Math.floor(Date.now() / 1000) + 90 * 86400;
         else if (exp === "1y" || exp === "1 year") expiresAtUnix = Math.floor(Date.now() / 1000) + 365 * 86400;
-        const minted = await mintStudioCredential(env, {
-          accountId: userId,
-          kind,
-          name: body.name || body.label || "",
-          clientType: body.client_type || body.clientType,
-          expiresAtUnix,
-          mintedBy: STUDIO_VAULT_ACTOR,
-        });
+        let minted;
+        try {
+          minted = await mintStudioCredential(env, {
+            accountId: userId,
+            kind,
+            name: body.name || body.label || "",
+            clientType: body.client_type || body.clientType,
+            expiresAtUnix,
+            scopes: Array.isArray(body.scopes) ? body.scopes : undefined,
+            permissions: body.permissions,
+            mintedBy: STUDIO_VAULT_ACTOR,
+          });
+        } catch (error) {
+          const message = String(error && error.message ? error.message : error);
+          if (/^(scopes_required|unknown_scopes:|no_read_only_capabilities)/.test(message)) {
+            return json({ ok: false, error: message.split(":")[0], detail: message }, 400, headers);
+          }
+          throw error;
+        }
         return json(
           {
             ok: true,
@@ -1716,6 +1727,7 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
               client_type: minted.client_type,
               created_at_unix: minted.created_at_unix,
               expires_at_unix: minted.expires_at_unix,
+              scopes: minted.scopes,
             },
             secret_once: minted.secret_once,
             env: minted.env,
@@ -1723,6 +1735,13 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
           200,
           headers,
         );
+      }
+
+      if (url.pathname === "/api/vault/credentials/capabilities" && request.method === "GET") {
+        const { results } = await env.DB.prepare(
+          "SELECT capability_key, domain, verb, description, is_mutating FROM agentsam_capabilities WHERE is_active = 1 ORDER BY domain, verb",
+        ).all();
+        return json({ ok: true, capabilities: results || [] }, 200, headers);
       }
 
       const delCred = url.pathname.match(/^\/api\/vault\/credentials\/([^/]+)$/);

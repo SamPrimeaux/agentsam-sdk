@@ -56,7 +56,7 @@ export async function resolveCredentialScopes(db, kind, input = {}) {
   const requested = Array.isArray(input.scopes) ? input.scopes.map(trim).filter(Boolean) : [];
   const preset = trim(input.permissions).toLowerCase();
   if (!requested.length && preset !== "read-only") {
-    if (preset === "all" || kind === "account") return ["*"];
+    if (preset === "all" || (kind === "account" && preset !== "restricted")) return ["*"];
     throw new Error("scopes_required");
   }
   const { results } = await db
