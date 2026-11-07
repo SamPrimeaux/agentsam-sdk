@@ -89,10 +89,12 @@ export type LocalStudioSideStageRecord = {
   renderer: "builtin" | "embed" | "workspace";
   href?: string;
   ready: true;
+  enabled?: boolean;
 };
 
 export type LocalStudioConnectionsResponse = {
   side_stages?: LocalStudioSideStageRecord[];
+  side_stage_catalog?: LocalStudioSideStageRecord[];
   ok?: boolean;
   connections?: LocalStudioConnectionRecord[];
   items?: LocalStudioConnectionRecord[];
@@ -175,6 +177,16 @@ async function connectionRequest<T>(
 
 export async function listLocalStudioConnections(): Promise<LocalStudioConnectionsResponse> {
   return connectionRequest<LocalStudioConnectionsResponse>("/api/connections");
+}
+
+/** Controls only personal panel visibility, never OAuth, install or permissions. */
+export async function updateSideStageVisibility(pluginId: string, enabled: boolean) {
+  if (!/^plg_[a-f0-9]{8,}$/i.test(pluginId)) throw new Error("side_stage_plugin_invalid");
+  const result = await connectionRequest<{ok:boolean;pluginId:string;enabled:boolean}>(
+    "/api/connections/side-stages/" + encodeURIComponent(pluginId),
+    {method:"POST",body:{enabled}},
+  );
+  return result;
 }
 
 export async function startLocalStudioProviderConnection(

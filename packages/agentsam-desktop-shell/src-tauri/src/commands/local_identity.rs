@@ -197,6 +197,15 @@ fn studio_service_route(request: &StudioServiceBridgeRequest) -> Result<(Method,
                 "DELETE" => Method::DELETE,
                 _ => return Err("studio_service_connections_method_invalid".into()),
             };
+            if path.starts_with("/api/connections/side-stages/") {
+                let id = &path["/api/connections/side-stages/".len()..];
+                let valid_id = id.strip_prefix("plg_").map(|suffix| {
+                    suffix.len() >= 8 && suffix.chars().all(|ch| ch.is_ascii_hexdigit())
+                }).unwrap_or(false);
+                if method != Method::POST || !valid_id {
+                    return Err("studio_service_side_stage_request_invalid".into());
+                }
+            }
             Ok((method, path.to_string()))
         }
         "plugins" => {
