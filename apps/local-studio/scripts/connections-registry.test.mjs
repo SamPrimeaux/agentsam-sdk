@@ -128,7 +128,7 @@ describe("connections registry", () => {
 });
 
 describe("oauth-kind plugin state", () => {
-  const plugin = { id: "plg_g", plugin_kind: "oauth", secret_ref: "oauth:google_gmail:a@b.c", setup_status: "unconfigured" };
+  const plugin = { id: "plg_g", plugin_kind: "oauth", provider_key: "google_gmail", secret_ref: "oauth:google_gmail:a@b.c", setup_status: "unconfigured" };
   it("derives connection state from the matching user_oauth_tokens row", () => {
     const live = applyOauthPluginState(plugin, [{ provider: "google_gmail", account_identifier: "a@b.c", is_active: 1, revoked_at: null, last_refresh_error_code: null }]);
     assert.equal(live.setup_status, "connected");
@@ -138,5 +138,8 @@ describe("oauth-kind plugin state", () => {
     assert.equal(failing.health_status, "auth_error");
     assert.equal(applyOauthPluginState(plugin, []).setup_status, "unconfigured");
     assert.equal(applyOauthPluginState({ ...plugin, plugin_kind: "mcp" }, []).setup_status, "unconfigured");
+    const cloudflare = { ...plugin, provider_key:"cloudflare", plugin_kind:"oauth", setup_status:"connected", health_status:"healthy" };
+    assert.equal(applyOauthPluginState(cloudflare, []).setup_status, "connected");
+    assert.equal(applyOauthPluginState(cloudflare, []).health_status, "healthy");
   });
 });
