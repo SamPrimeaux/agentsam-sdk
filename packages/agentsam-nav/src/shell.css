@@ -299,7 +299,7 @@
 .as-nav-global-search { min-height: 44px; border: 1px solid var(--nav-border); background: var(--nav-surface); }
 .as-nav-global-search:hover { background: var(--nav-selected); }
 .as-nav-global-search > span { flex: 1; min-width: 0; }
-.as-nav-global-search kbd { margin-left: auto; color: var(--nav-muted); font-size: 11px; }
+.as-nav-global-search kbd { margin-left: auto; color: var(--nav-muted); font-size: var(--nav-meta-size); }
 .as-nav-sidenav:not([data-expanded="true"]) .as-nav-sidenav-search-launch { display: none; }
 
 /* Phone chrome: the shared sidebar trigger becomes a compact tactile bubble. */
