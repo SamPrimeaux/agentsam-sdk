@@ -25,8 +25,8 @@ test('manual publishing refuses a noninteractive terminal before accessing npm',
   assert.match(result.stderr, /local_publish_requires_interactive_terminal/);
 });
 
-test('CI publishing still refuses missing credentials', () => {
+test('CI publishing requires approved main and GitHub OIDC rather than a forged CI flag', () => {
   const result = run('--publish');
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /publish_requires_approved_main_and_npm_credentials/);
+  assert.match(result.stderr, /publish_requires_approved_main_and_github_oidc/);
 });

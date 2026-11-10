@@ -134,6 +134,8 @@ test("platform-v1 schema (no account_id/legacy_page_id/inline_content_json) list
     assert.deepEqual(rows.map((r) => r.id), ["p-home"]);
     assert.equal(rows[0].section_count, 2);
     assert.equal(rows[0].legacy_page_id, null);
+    assert.equal(rows[0].content_object_key, null);
+    assert.equal(rows[0].html_source_section, 0);
     assert.match(rows[0].updated_at, /^\d{4}-\d{2}-\d{2} /); // platform D1 stores unix seconds
     assert.equal(rows[0].preview_json, '{"headline":"Hi"}');
     await assert.rejects(() => listCanonicalPageRows(wrap(sqlite), "account-a", "site-b"));
