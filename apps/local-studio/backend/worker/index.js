@@ -74,6 +74,7 @@ import { handleStudioThemeDrafts } from "./studio-theme-drafts.js";
 import { handleStudioWebsiteThemeCatalog } from "./studio-website-theme-catalog.js";
 import { handleStudioWebsiteThemeInstall } from "./studio-website-theme-install.js";
 import { handleStudioThemes } from "./studio-themes.js";
+import { handleStudioNavigation } from "./studio-navigation-preferences.js";
 import { servePackagedConsole, shouldServeProductCatalogView } from "./packaged-console.js";
 import { handleAdminApi as handleEcommerceAdminApi } from "../../../ecommerce-cms-agentsam/backend/admin/api.js";
 import { handleStudioContentMediaApi } from "./content-media-api.js";
@@ -929,6 +930,11 @@ export default {
     if (url.pathname === '/api/notifications' || url.pathname.startsWith('/api/notifications/')) {
       const principal = await resolveSessionUser(request, env);
       return handleStudioNotifications(request, env, principal?.id || null);
+    }
+
+    if (url.pathname === '/api/studio/navigation') {
+      const principal = await resolveSessionUser(request, env);
+      return handleStudioNavigation(request, env, principal?.id || null);
     }
 
     if (url.pathname === '/api/studio/themes' || url.pathname.startsWith('/api/studio/themes/')) {

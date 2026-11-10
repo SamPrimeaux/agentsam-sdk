@@ -50,9 +50,12 @@
   NAV.apps.splice(0, NAV.apps.length, ...apps);
   // Installed apps are projected from the host manifest, never assumed from a menu fixture.
   NAV.apps.splice(0, NAV.apps.length);
-  if (typeof window.fetch === 'function') window.fetch('/admin/data/navigation.json', {credentials:'same-origin'})
-    .then(response => { if (!response.ok) throw new Error('Application navigation unavailable'); return response.json(); })
-    .then(data => {
+  async function refreshPlatformNavigation() {
+    try {
+      let response = await window.fetch('/api/studio/navigation', { credentials: 'same-origin' });
+      if (!response.ok) response = await window.fetch('/admin/data/navigation.json', { credentials: 'same-origin' });
+      if (!response.ok) throw new Error('Application navigation unavailable');
+      const data = await response.json();
       if (data.schema !== 'agentsam.host-navigation.v1' || !Array.isArray(data.apps)) throw new Error('Invalid application navigation');
       const inHostedAppFrame = Boolean(window.parent && window.parent !== window && !desktopHost && !hostedParent());
       NAV.main.splice(0, NAV.main.length, ...(data.primary || []).map(item =>
@@ -63,7 +66,12 @@
       NAV.utilities = data.utilities || [];
       NAV.apps.splice(0, NAV.apps.length, ...data.apps.map(app => ({id:app.id,href:app.href,label:app.label,icon:app.icon})));
       updateSharedNavigation();
-    }).catch(error => console.error('[navigation/apps]', error));
+    } catch (error) { console.error('[navigation/apps]', error); }
+  }
+  if (typeof window.fetch === 'function') {
+    void refreshPlatformNavigation();
+    window.addEventListener('agentsam:navigation-changed', refreshPlatformNavigation);
+  }
   const originalSideNav = renderSideNav;
   renderSideNav = function (active, userNav, options) {
     return originalSideNav(active, userNav, options)

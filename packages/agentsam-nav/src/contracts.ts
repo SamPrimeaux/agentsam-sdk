@@ -60,6 +60,8 @@ export interface NavValue {
   onPinConversation?: (id: string) => void;
   onRenameConversation?: (id: string, title: string) => void;
   onDeleteConversation?: (id: string) => void;
+  /** Persist the conversation/project association through the host's account or Work API. */
+  onAssignConversationToProject?: (conversationId: string, projectId: string | null) => void;
   onPinProject?: (id: string) => void;
   onRenameProject?: (id: string, name: string) => void;
   onDeleteProject?: (id: string) => void;

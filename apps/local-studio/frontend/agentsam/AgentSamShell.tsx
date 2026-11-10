@@ -9,7 +9,7 @@ import {
   writeStudioAppearanceCache,
   clearStudioAppearanceCache,
 } from '../../shared/shell-appearance.mjs';
-import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, Search, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp } from "lucide-react";
+import { MessageSquare as MessageSquareIcon, BookOpen, Film, Database, Folder, Globe, Home, Layers3, Settings, Pin, Files, Copy, PanelRight, LogIn, LogOut, PawPrint, Box, ShoppingBag, Package, Store, Tag, Ticket, TrendingUp, BarChart3, Users, Mail, CircleHelp } from "lucide-react";
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CommandPalette } from '@/components/workbench/command-palette';
@@ -181,13 +181,22 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const [navigation, setNavigation] = useState<StudioNavigationProjection>({});
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/admin/data/navigation.json', { signal: controller.signal }).then((response) => {
-      if (!response.ok) throw new Error('Application navigation unavailable');
-      return response.json();
-    }).then((projection) => {
-      if (projection.schema === 'agentsam.host-navigation.v1' && Array.isArray(projection.apps)) setNavigation(projection);
-    }).catch(() => { /* No synthetic installed-app fallback. */ });
-    return () => controller.abort();
+    const loadNavigation = async () => {
+      try {
+        let response = await fetch('/api/studio/navigation', { credentials: 'same-origin', signal: controller.signal });
+        // Packaged desktop/offline and old Workers can still read the installation
+        // catalog. Account edits are only accepted through the authenticated API.
+        if (!response.ok) response = await fetch('/admin/data/navigation.json', { signal: controller.signal });
+        if (!response.ok) throw new Error('Application navigation unavailable');
+        const projection = await response.json();
+        if (!controller.signal.aborted && projection.schema === 'agentsam.host-navigation.v1' && Array.isArray(projection.apps)) {
+          setNavigation(projection);
+        }
+      } catch { /* Never show invented installed apps. */ }
+    };
+    void loadNavigation();
+    window.addEventListener('agentsam:navigation-changed', loadNavigation);
+    return () => { controller.abort(); window.removeEventListener('agentsam:navigation-changed', loadNavigation); };
   }, []);
 
   const isMovieModeRoute = pathname === '/admin/moviemode' || pathname.startsWith('/admin/moviemode/');
@@ -421,7 +430,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
   const value: NavValue = {
     brand, mode, onModeChange: setMode, pathname: navPathname,
     project: project ? { id: project.id, name: project.name } : undefined,
-    conversation: chat ? { id: chat.id, title: chat.title } : undefined,
+    conversation: chat ? { id: chat.id, title: chat.title, pinned: chat.pinned, projectId: chat.workProjectId } : undefined,
     pinnedResources,
     onOpenResource: item => {
       if(item.open && (item.open.startsWith('/') && !item.open.startsWith('//') || item.open.startsWith('https://'))) {
@@ -508,6 +517,24 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
         }).catch(()=>toast.error('Could not delete conversation.'));
       } else state.deleteChat(id);
     },
+    onAssignConversationToProject: (id, projectId) => {
+      const accountChat = accountChats.find(item => item.id === id);
+      if (accountChat) {
+        void patchAccountChat(id, { projectId }).then(() => {
+          if (state.chats.some(item => item.id === id)) state.assignChatToWorkProject(id, projectId);
+          setChatRevision(value => value + 1);
+        }).catch(() => toast.error('Could not move conversation to project.'));
+      } else {
+        void import('@/components/work/LocalStudioWorkPage')
+          .then(({ sharedLiveWorkHost }) => {
+            const host = sharedLiveWorkHost();
+            if (!host.assignProjectChat) throw new Error('Project linking unavailable');
+            return host.assignProjectChat(id, projectId);
+          })
+          .then(() => window.dispatchEvent(new Event('agentsam:projects-changed')))
+          .catch(() => toast.error('Could not move conversation to project.'));
+      }
+    },
     onShare: shareableChat ? () => setSharing(true) : undefined,
     accountActions: [
       {id:'profile-image',label:'Profile image',icon:<PawPrint />,onSelect:() => { setAvatarDraft(accountAvatarUrl || user?.profileImageUrl || ''); setAvatarDialogOpen(true); }},
@@ -522,7 +549,6 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     conversationActions: chat ? [
       ...(shareableChat ? [{ id: 'share', label: 'Create a public link', icon: <NavShareIcon />, onSelect: () => setSharing(true) }] : []),
       { id: 'files', label: 'View files in conversation', icon: <Files />, onSelect: () => state.openSideTab('files') },
-      { id: 'pin', label: chat.pinned ? 'Unpin conversation' : 'Pin conversation', icon: <Pin />, onSelect: () => state.pinChat(chat.id) },
       { id: 'copy', label: 'Copy conversation', icon: <Copy />, onSelect: () => { void navigator.clipboard.writeText(chat.messages.map((item) => `${item.role}\n${item.content}`).join('\n\n')).then(() => toast('Conversation copied'), () => toast('Could not copy conversation')); } },
     ] : [],
     pinnedSummary: chat ? {
@@ -548,7 +574,7 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
     ],
   };
   useEffect(() => {
-    const projection = {projects:value.projects,conversations:value.conversations,project:value.project,conversation:value.conversation,historyStatus:value.historyStatus,onRetryHistory:value.onRetryHistory,onSelectConversation:value.onSelectConversation,onSelectProject:value.onSelectProject,onPinConversation:value.onPinConversation,onPinProject:value.onPinProject,onRenameConversation:value.onRenameConversation,onRenameProject:value.onRenameProject};
+    const projection = {projects:value.projects,conversations:value.conversations,project:value.project,conversation:value.conversation,historyStatus:value.historyStatus,onRetryHistory:value.onRetryHistory,onSelectConversation:value.onSelectConversation,onSelectProject:value.onSelectProject,onPinConversation:value.onPinConversation,onAssignConversationToProject:value.onAssignConversationToProject,onDeleteConversation:value.onDeleteConversation,onShare:value.onShare,conversationActions:value.conversationActions,onPinProject:value.onPinProject,onRenameConversation:value.onRenameConversation,onRenameProject:value.onRenameProject};
     const host=window as Window & {__agentsamWorkspaceNavigation?:typeof projection};
     host.__agentsamWorkspaceNavigation=projection;
     window.dispatchEvent(new Event('agentsam:workspace-navigation'));
@@ -559,7 +585,6 @@ export function AgentSamShell({ embedded = false }: { embedded?: boolean } = {})
       {!embedded ? <Nav.Sidenav /> : null}<div className="agentsam-main">
         {!embedded && !isConversation ? <Nav.Topbar className="platform-console-topbar">
           <Nav.Trigger aria-label="Toggle sidebar" />
-          <button type="button" className="platform-console-search" aria-label="Search pages and tools" title="Search pages and tools" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}><Search size={17} /><span>Search pages and tools</span><kbd>⌘K</kbd></button>
           <Nav.TopbarSpacer />
           <AgentSamPetTrigger state={petState} onActivate={() => window.dispatchEvent(new Event('agentsam:assistant:activate'))} />
           <NotificationsMenu />
