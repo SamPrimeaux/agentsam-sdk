@@ -53,3 +53,15 @@ test('Worker routes the homepage, /site assets and public SAM docs through CMS R
   assert.ok(index.includes("url.pathname === '/docs/'"));
   assert.ok(!index.includes("url.pathname.startsWith('/docs/')) {"), 'public guide routes cannot redirect to Settings docs');
 });
+
+test('reusable docs portal CSS and JavaScript are synced from one package into both public-site sources', () => {
+  const assets = {
+    'docs-portal.css': 'agentsam-docs-portal.css',
+    'docs-portal-runtime.js': 'agentsam-docs-portal.js',
+  };
+  for(const [sourceFile,publicFile] of Object.entries(assets)){
+    const canonical = readFileSync(path.join(root,'packages/agentsam-docs-theme',sourceFile),'utf8');
+    for(const site of [source,staged])
+      assert.equal(readFileSync(path.join(site,'global',publicFile),'utf8'),canonical,publicFile);
+  }
+});

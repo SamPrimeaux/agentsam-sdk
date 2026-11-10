@@ -146,6 +146,10 @@ async function boot() {
     mountThemeEditor(frame, {
       adapter: bridge,
       page: initialPage,
+      // Only authored pages within this authorized project can be selected
+      // from a draft's navigation; no fallback to another site's routes.
+      pageRoutes: Object.fromEntries(project.pages.filter(item =>
+        /^\/(?!\/)(?:[a-z0-9-]+\/)*$/.test(item.route || '')).map(item => [item.slug, item.route])),
       siteId,
       projectId,
       initialSelection:{section:parameters.get('section'),block:parameters.get('block')},

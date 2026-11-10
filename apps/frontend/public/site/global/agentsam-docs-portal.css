@@ -1,0 +1,98 @@
+/* Site-neutral technical documentation theme; visual tokens belong to the CMS project. */
+html:has(body.iam-doc-portal){scroll-behavior:smooth}
+body.iam-doc-portal {
+  --doc-background:var(--docs-bg,#0d0e12);
+  --doc-surface:var(--docs-surface,#14161b);
+  --doc-text:var(--docs-text,#eceff3);
+  --doc-muted:var(--docs-muted,#a6adb9);
+  --doc-border:var(--docs-border,#292e37);
+  --doc-accent:var(--docs-accent,#91bde5);
+  margin:0;background:var(--doc-background);color:var(--doc-text);
+  font-family:var(--docs-sans,ui-sans-serif,system-ui,sans-serif);
+  font-size:15px;line-height:1.68;overflow-wrap:break-word;
+}
+.iam-doc-portal *{box-sizing:border-box}
+.iam-doc-global{display:contents}
+.iam-doc-portal a{color:inherit;text-decoration:none}
+.iam-doc-portal :is(button,input){font:inherit}
+.iam-doc-portal :focus-visible{outline:2px solid var(--doc-accent);outline-offset:3px}
+.iam-doc-grid{min-height:100vh;max-width:1640px;margin:auto;display:grid;
+  grid-template-columns:minmax(200px,250px) minmax(0,1fr) minmax(178px,218px);
+  grid-template-rows:64px minmax(0,1fr) auto;
+  grid-template-areas:"header header header" "sidebar content toc" "footer footer footer"}
+.iam-doc-header{grid-area:header;position:sticky;top:0;z-index:12;background:var(--doc-background);
+  display:flex;align-items:center;justify-content:space-between;padding:0 28px;
+  border-bottom:1px solid var(--doc-border)}
+.iam-doc-brand{font-weight:700;letter-spacing:-.035em;font-size:16px}
+.iam-doc-menu{display:none;border:1px solid var(--doc-border);border-radius:7px;padding:7px 12px;
+  color:var(--doc-text);background:var(--doc-surface);cursor:pointer}
+.iam-doc-sidebar,.iam-doc-toc{position:sticky;top:64px;align-self:start;
+  height:calc(100vh - 64px);overflow:auto;overscroll-behavior:contain}
+.iam-doc-sidebar{grid-area:sidebar;border-right:1px solid var(--doc-border);padding:24px 13px 40px}
+.iam-doc-search-label{display:block;font-size:12px;color:var(--doc-muted);padding:0 8px 18px}
+.iam-doc-search-label input{display:block;width:100%;margin-top:8px;min-height:38px;
+  border:1px solid var(--doc-border);background:var(--doc-surface);color:var(--doc-text);
+  border-radius:7px;padding:8px 10px}
+.iam-doc-sidebar nav{display:flex;flex-direction:column;gap:2px}
+.iam-doc-group{display:block;padding:20px 10px 6px;color:var(--doc-muted);font-size:11px;
+  text-transform:uppercase;letter-spacing:.06em;font-weight:750}
+.iam-doc-group:first-child{padding-top:4px}
+.iam-doc-link{display:block;padding:7px 10px;border-radius:6px;min-height:36px;line-height:1.45;
+  color:var(--doc-muted)!important;font-size:13px}
+.iam-doc-link:hover{background:var(--doc-surface);color:var(--doc-text)!important}
+.iam-doc-link[aria-current="page"]{background:color-mix(in srgb,var(--doc-accent) 11%,var(--doc-background));
+  color:var(--doc-accent)!important;font-weight:650}
+.iam-doc-sidebar [hidden]{display:none!important}
+.iam-doc-toc{grid-area:toc;border-left:1px solid var(--doc-border);padding:27px 18px}
+.iam-doc-toc strong{font-size:12px}
+.iam-doc-toc nav{display:flex;flex-direction:column;gap:3px;margin-top:13px}
+.iam-doc-toc a{font-size:12px;line-height:1.5;padding:5px 9px;border-left:2px solid transparent;
+  color:var(--doc-muted)}
+.iam-doc-toc a:hover,.iam-doc-toc a[aria-current="location"]{border-color:var(--doc-accent);color:var(--doc-text)}
+.iam-doc-content{grid-area:content;width:min(100%,920px);margin:0 auto;padding:56px clamp(24px,5vw,80px) 110px;
+  min-width:0}
+.iam-doc-intro{border-bottom:1px solid var(--doc-border);padding-bottom:32px;margin-bottom:40px}
+.iam-doc-eyebrow{text-transform:uppercase;letter-spacing:.095em;font-size:11px;font-weight:750;color:var(--doc-accent)}
+.iam-doc-content h1{font-size:clamp(2.1rem,4vw,3.5rem);line-height:1.13;letter-spacing:-.047em;margin:12px 0 18px}
+.iam-doc-summary{font-size:clamp(1rem,1.35vw,1.2rem);color:var(--doc-muted);max-width:68ch}
+.iam-doc-meta{font-size:12px;color:var(--doc-muted)}
+.iam-doc-body-section,.iam-doc-callout,.iam-doc-collection,.iam-doc-code-section{margin:36px 0;scroll-margin-top:95px}
+.iam-doc-content h2{font-size:clamp(1.25rem,2vw,1.65rem);line-height:1.3;letter-spacing:-.025em;margin:0 0 13px}
+.iam-doc-content p{white-space:pre-line;margin:0 0 15px}
+.iam-doc-callout{border-left:3px solid var(--doc-accent);background:var(--doc-surface);padding:21px 25px;border-radius:3px 8px 8px 3px}
+.iam-doc-callout h2{font-size:1.05rem}
+.iam-doc-code-section{border:1px solid var(--doc-border);background:#0a0c10;border-radius:8px;overflow:hidden}
+.iam-doc-code-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 15px;
+  color:var(--doc-muted);font-size:12px;border-bottom:1px solid var(--doc-border)}
+.iam-doc-code-top button{background:transparent;border:1px solid var(--doc-border);color:var(--doc-text);
+  padding:4px 10px;border-radius:5px;cursor:pointer}
+.iam-doc-code-section pre{margin:0;padding:20px;overflow:auto;white-space:pre}
+.iam-doc-code-section code{font:13px/1.65 var(--docs-mono,ui-monospace,SFMono-Regular,monospace);
+  color:#dde6f0;white-space:pre}
+.iam-doc-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:22px}
+.iam-doc-card{border:1px solid var(--doc-border);border-radius:9px;padding:20px;
+  background:var(--doc-surface);font-weight:650;display:flex;flex-direction:column;gap:6px}
+.iam-doc-card:hover{border-color:var(--doc-accent)}
+.iam-doc-card-summary{color:var(--doc-muted);font-size:13px;font-weight:400;line-height:1.6}
+.iam-doc-footer{grid-area:footer;display:flex;gap:20px;justify-content:space-between;
+  padding:20px 28px;border-top:1px solid var(--doc-border);font-size:12px;color:var(--doc-muted)}
+@media(max-width:1100px){
+  .iam-doc-grid{grid-template-columns:minmax(190px,240px) minmax(0,1fr);grid-template-areas:
+    "header header" "sidebar content" "footer footer"}
+  .iam-doc-toc{display:none}
+}
+@media(max-width:730px){
+  .iam-doc-grid{display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"header" "content" "footer"}
+  .iam-doc-header{padding:0 18px}
+  .iam-doc-menu{display:block}
+  .iam-doc-sidebar{position:fixed;top:64px;bottom:0;left:0;z-index:11;width:min(85vw,320px);
+    height:calc(100dvh - 64px);background:var(--doc-background);
+    transform:translateX(-105%);transition:transform .2s ease;box-shadow:12px 0 38px #0005}
+  body[data-doc-menu-open="true"] .iam-doc-sidebar{transform:translateX(0)}
+  .iam-doc-content{padding:38px 20px 70px}
+  .iam-doc-footer{padding:18px 20px}
+}
+@media(prefers-reduced-motion:reduce){
+  .iam-doc-sidebar{transition:none}
+  html:has(body.iam-doc-portal){scroll-behavior:auto}
+}

@@ -1142,6 +1142,18 @@
           (!hasChildren && !page) ? 'Stock · editable starter' : '', hasChildren);
       }).join('');
     }
+    // Actual installed pages appear first. Stock templates remain available
+    // below them, rather than replacing the merchant's editable site.
+    if (host && !needle && !pagePickerCategory && source.length) {
+      const sitePages = source.slice(0, 40);
+      html = '<div class="te-picker-heading">Site pages ('+source.length+')</div>'+
+        sitePages.map(p=>row(p.title||humanize(p.slug),'page',
+          'data-picker-page="'+cmsEscapeAttr(p.slug)+'"',
+          p.route||p.live_route||'CMS draft',false)).join('')+
+        (source.length>sitePages.length
+          ? '<div class="te-picker-heading">Search to find more site pages</div>' : '')+
+        '<div class="te-picker-divider" role="separator"></div>'+html;
+    }
     // One search across actual authorized CMS pages, not only menu headings.
     // Preserve category browsing and do not invent templates or draft pages.
     if (needle && !parent) {
@@ -3338,7 +3350,25 @@
         if (!event.relatedTarget?.closest?.('[data-cms-block], [data-cms-section], [data-section-id]')) hoverEditorNode(null);
       });
       doc.addEventListener('click', function(event) {
+        if (host && !window.__fnfGlobalInspectMode) {
+          const link = event.target?.closest?.('a[href]');
+          if (link && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+            let destination = null;
+            try { destination = new URL(link.getAttribute('href'),location.origin); } catch {}
+            const route = destination?.origin === location.origin && !destination.search && !destination.hash
+              ? destination.pathname.replace(/\/?$/, '/') : null;
+            const matched = route && pages.find(p =>
+              (host.pageRoutes?.[p.slug] || p.route || '').replace(/\/?$/, '/') === route);
+            if (matched) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+              void switchPage(matched.slug);
+              return;
+            }
+          }
+        }
         if (!inspectionEnabled || window.__fnfGlobalInspectMode) return;
+        if (event.target?.closest?.('[data-doc-menu],[data-doc-copy],[data-doc-filter]')) return;
         const target = event.target && event.target.closest && event.target.closest('[data-cms], [data-cms-block], [data-cms-section], [data-section-id]');
         if (!target) return;
 
