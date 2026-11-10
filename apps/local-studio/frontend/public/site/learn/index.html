@@ -13,15 +13,12 @@
   <link rel="stylesheet" href="/site/global/asbd-tokens.css" />
   <link rel="stylesheet" href="/site/global/asbd-cta-asfb.css" />
   <link rel="stylesheet" href="/site/global/asbd-promo-hero.css" />
-  <script src="/site/global/asbd-theme.js" defer></script>
   <style>
     body { margin:0; min-height:100vh; font-family:var(--asbd-font-sans); background:var(--asbd-surface); color:var(--asbd-text); }
     .learn-wrap { max-width:var(--asbd-layout-max); margin:0 auto; padding:28px 32px 96px; }
     .asbd-breadcrumb { display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px; font-weight:600; color:var(--asbd-text-muted); margin-bottom:22px; }
     .asbd-breadcrumb a { color:var(--asbd-text-muted); text-decoration:none; }
     .asbd-breadcrumb a:hover { color:var(--asfb, var(--asbd-color-blue)); }
-    .asbd-doc-toolbar { display:flex; justify-content:flex-end; margin-bottom:12px; }
-    .asbd-theme-toggle { font:inherit; font-size:13px; font-weight:700; border-radius:10px; border:1px solid var(--asbd-border); background:var(--asbd-surface-elevated); color:var(--asbd-text); padding:8px 14px; cursor:pointer; }
     .filters { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:28px; }
     .filter { border:1px solid var(--asbd-border); background:transparent; color:var(--asbd-text-muted); border-radius:999px; padding:8px 14px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; transition:border-color .15s,color .15s,background .15s; }
     .filter:hover,.filter.active { color:var(--asbd-text); border-color:color-mix(in srgb, var(--asfb, #9CB5BC) 55%, transparent); background:color-mix(in srgb, var(--asfb, #9CB5BC) 14%, transparent); }
@@ -129,9 +126,6 @@
   </section>
 
   <main class="learn-wrap">
-    <div class="asbd-doc-toolbar">
-      <button type="button" class="asbd-theme-toggle" id="asbdThemeToggle">Light theme</button>
-    </div>
     <nav class="asbd-breadcrumb" aria-label="Breadcrumb">
       <a href="/">Home</a><span aria-hidden="true">/</span>
       <span aria-current="page">Learn</span>
@@ -313,10 +307,6 @@ agentsam plan brand --goap</pre>
       inject('asbd-header-mount', '/site/global/asbd-header.html'),
       inject('asbd-footer-mount', '/site/global/asbd-footer.html')
     ]).then(function () {
-      if (window.AsbdTheme) {
-        AsbdTheme.syncFromDocument();
-        AsbdTheme.bindToggle(document.getElementById('asbdThemeToggle'));
-      }
     });
 
     var filters = document.getElementById('learn-filters');
