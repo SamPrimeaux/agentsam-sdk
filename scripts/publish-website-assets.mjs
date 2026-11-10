@@ -5,13 +5,14 @@
  *   npm run site:publish          (repo root)
  *   npm run site:publish -w …     (or from apps/local-studio)
  *
- * Uploads apps/frontend/public/site/** →
+ * Uploads non-HTML assets from apps/frontend/public/site/** →
  *   sites/agentsam-sdk/public/**
- * and ASBD shell partials →
- *   sites/agentsam-sdk/partials/{header,footer}.html
+ * HTML pages and shared header/footer partials are CMS-owned and excluded.
+ * They require explicit authenticated editor promotion and version receipt.
  *
  * Requires Cloudflare auth (wrangler) and the agentsam-sdk Worker config.
  * Does not touch Worker static ASSETS — those remain the SPA build output.
+ * --only=relative-path-prefix restricts uploads; --dry-run previews them.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,6 +26,14 @@ const wranglerConfig = path.join(studioRoot, 'backend/wrangler.jsonc');
 const bucket = process.env.AGENTSAM_WEBSITE_BUCKET || 'agentsam-os-blueprint-content';
 const siteSlug = process.env.AGENTSAM_SITE_SLUG || 'agentsam-sdk';
 const dryRun = process.argv.includes('--dry-run');
+const only = process.argv.find(arg => arg.startsWith('--only='))?.slice('--only='.length) || null;
+if (only && (only.startsWith('/') || only.includes('..') || only.includes('\\')))
+  throw new Error('site_publish_only_invalid');
+const eligible = relative => !/\.html?$/i.test(relative) &&
+  !relative.includes('/_sections/') &&
+  !relative.startsWith('_sections/') && !relative.includes('source.architecture_field_manual') &&
+  !relative.split('/').some(part => part.startsWith('.')) &&
+  (!only || relative === only || relative.startsWith(only));
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -84,22 +93,13 @@ const files = walk(siteRoot);
 const results = [];
 
 for (const filePath of files) {
-  // Skip donor snapshots from public R2 publish
-  if (filePath.includes('source.architecture_field_manual')) continue;
   const rel = path.relative(siteRoot, filePath).split(path.sep).join('/');
-  const key = `sites/${siteSlug}/public/${rel}`;
+  if (!eligible(rel)) continue;
+  const key = 'sites/' + siteSlug + '/public/' + rel;
   results.push(putObject(key, filePath));
 }
 
-// Promote ASBD shell into partials (CMS shared chrome)
-const header = path.join(siteRoot, 'global/asbd-header.html');
-const footer = path.join(siteRoot, 'global/asbd-footer.html');
-if (fs.existsSync(header)) {
-  results.push(putObject(`sites/${siteSlug}/partials/header.html`, header));
-}
-if (fs.existsSync(footer)) {
-  results.push(putObject(`sites/${siteSlug}/partials/footer.html`, footer));
-}
+// Header/footer HTML and all pages are deliberately excluded from bulk puts.
 
 const failed = results.filter((r) => !r.ok);
 console.log(
@@ -109,6 +109,9 @@ console.log(
       bucket,
       siteSlug,
       uploaded: results.filter((r) => r.ok).length,
+      html_managed_by: 'cms-source-publish',
+      skipped: files.length - results.length,
+      ...(only ? { only } : {}),
       failed: failed.map((f) => f.key),
       dryRun,
     },

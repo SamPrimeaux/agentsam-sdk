@@ -23,10 +23,13 @@ test('Theme Studio uses the registered CMS page list, R2 HTML source, and D1 ver
     fetch: async (url, options = {}) => {
       calls.push({ url, options });
       if (url === '/api/cms/sites') return {
-        ok: true, json: async () => ({ ok: true, sites: [{ id: 'site-sdk', slug: 'agentsam-sdk', name: 'AgentSam SDK' }] })
+        ok: true, json: async () => ({ ok: true, sites: [{ id: 'site-sdk', slug: 'agentsam-sdk', name: 'AgentSam SDK', can_publish: true }] })
       };
+      if (url.includes('/publish?')) return { ok: true, json: async () => ({ ok: true, version: 5, published_at: 1794330000, receipt: { verified: true } }) };
       if (url.includes('/draft?')) return { ok: true, json: async () => ({ ok: true, version: 4 }) };
-      if (url.includes('/sam-docs?')) return { ok: true, json: async () => ({ ok: true, page, html, source: 'published' }) };
+      if (url.includes('/sam-docs?')) return { ok: true, json: async () => ({ ok: true,
+        page: { ...page, version: calls.some(x => x.url.includes('/draft?')) ? 4 : 3 },
+        html, source: calls.some(x => x.url.includes('/draft?')) ? 'draft' : 'published' }) };
       return { ok: true, json: async () => ({ ok: true, pages: [page] }) };
     },
     Error, JSON, Date, Object
@@ -37,7 +40,7 @@ test('Theme Studio uses the registered CMS page list, R2 HTML source, and D1 ver
   await fakeWindow.__agentsamCmsSourceHostReady;
   const host = fakeWindow.AgentSamThemeEditorHost;
   assert.equal(host.page, 'sam-docs');
-  assert.equal(host.adapter.capabilities.publish, false);
+  assert.equal(host.adapter.capabilities.publish, true);
   const registry = await host.adapter.getRegistry();
   assert.equal(registry.pages['sam-docs'].sections.document.fields[0].key, 'html');
   assert.equal(host.pageRoutes['sam-docs'], '/docs/sam/');
@@ -57,6 +60,12 @@ test('Theme Studio uses the registered CMS page list, R2 HTML source, and D1 ver
   assert.equal(draftRequest.options.method, 'PUT');
   assert.equal(JSON.parse(draftRequest.options.body).expected_version, 3);
   assert.equal(draftRequest.url.includes('site=agentsam-sdk'), true);
+  const publication = await host.adapter.request('/api/admin/cms/pages/sam-docs/publish', { method: 'POST' });
+  assert.equal(publication.receipt.verified, true);
+  const publishRequest = calls.find(x => x.url.includes('/publish?'));
+  assert.equal(JSON.parse(publishRequest.options.body).expected_version, 4);
+  assert.equal(JSON.parse(publishRequest.options.body).confirm, 'publish');
+
 });
 
 
@@ -97,14 +106,14 @@ test('an async site lookup holds editor startup until the scoped source adapter 
     ok: true,
     json: async () => ({ ok: true, sites: [
       { id: 'site_882ac8075543f0d4', slug: 'agentsam-sdk',
-        name: 'AgentSam SDK (Local Studio)' }
+        name: 'AgentSam SDK (Local Studio)', can_publish: true }
     ] }),
   });
   const ready = await fakeWindow.__agentsamCmsSourceHostReady;
   assert.equal(ready, fakeWindow.AgentSamThemeEditorHost);
   assert.equal(ready.page, 'sdk-help');
   assert.equal(ready.site, 'agentsam-sdk');
-  assert.equal(ready.adapter.capabilities.publish, false);
+  assert.equal(ready.adapter.capabilities.publish, true);
 });
 
 test('the existing Theme Editor waits for source adapter before selecting its CMS request transport', () => {
@@ -116,4 +125,19 @@ test('the existing Theme Editor waits for source adapter before selecting its CM
   assert.ok(src.indexOf('await window.__agentsamCmsSourceHostReady') <
     src.indexOf('const host = window.AgentSamThemeEditorHost'),
     'site authorization must complete before the transport is captured');
+});
+
+test('source editor does not offer publication to a site-scoped editor without approval permission', async () => {
+  const fakeWindow = {};
+  runInNewContext(script, {
+    location: { pathname: '/admin/theme-editor', search: '?slug=home&source=html&site=agentsam-sdk',
+      href: 'https://agentsam.inneranimalmedia.com/admin/theme-editor?slug=home&source=html&site=agentsam-sdk' },
+    window: fakeWindow, URLSearchParams, URL, history: { replaceState() {} },
+    fetch: async () => ({ ok: true, json: async () => ({
+      ok: true, sites: [{ id: 'site-sdk', slug: 'agentsam-sdk', name: 'AgentSam SDK', can_edit: true, can_publish: false }]
+    }) }),
+    Error, JSON, Date, Object,
+  });
+  const host = await fakeWindow.__agentsamCmsSourceHostReady;
+  assert.equal(host.adapter.capabilities.publish, false);
 });

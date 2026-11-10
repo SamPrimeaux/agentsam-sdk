@@ -38,7 +38,9 @@ export async function listCanonicalPageRows(db, accountId, siteId = null) {
         p.title, p.status, CASE WHEN typeof(p.updated_at)='integer'
           THEN datetime(p.updated_at, 'unixepoch') ELSE p.updated_at END AS updated_at,
         CASE WHEN p.route_path = '/' THEN 1 ELSE 0 END AS is_homepage,
-        p.nav_visible, p.sort_order,
+        p.nav_visible, p.sort_order, p.content_object_key,
+        EXISTS(SELECT 1 FROM cms_page_sections sec
+          WHERE sec.page_id = p.id AND sec.section_type = 'html_source') AS html_source_section,
         (SELECT COUNT(*) FROM cms_page_sections sec
           WHERE sec.page_id=p.id) AS section_count,
         (SELECT sec.section_data FROM cms_page_sections sec

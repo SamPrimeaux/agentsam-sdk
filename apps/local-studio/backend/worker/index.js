@@ -803,7 +803,7 @@ export default {
           headers: { location: target.toString(), 'cache-control': 'private, no-store' },
         });
       }
-      if (url.pathname === '/docs' || url.pathname.startsWith('/docs/')) {
+      if (url.pathname === '/docs' || url.pathname === '/docs/') {
         const target = new URL('/settings/docs', request.url);
         target.search = url.search;
         return Response.redirect(target, 302);

@@ -283,6 +283,7 @@ export async function servePublicSitePage(
 
   let relative = null;
   let r2Key = null;
+  let authoritativePage = false;
   if (isSiteStaticPath(pathname)) {
     relative = siteStaticRelative(pathname);
     r2Key = websitePublicKey(siteSlug, relative);
@@ -298,6 +299,7 @@ export async function servePublicSitePage(
       });
     }
     if (pageSource) {
+      authoritativePage = true;
       if (!pageSource.key) return null;
       r2Key = pageSource.key;
       relative = r2Key.split('/').pop() || 'index.html';
@@ -350,6 +352,14 @@ export async function servePublicSitePage(
     }
   }
 
+  // A registered, published D1 page must never silently fall back to a
+  // different old Worker asset if its authoritative R2 object is missing.
+  if (authoritativePage) {
+    return new Response('Published CMS page source unavailable', {
+      status: 503, headers: { 'cache-control': 'no-store',
+        'content-type': 'text/plain; charset=utf-8' },
+    });
+  }
   // 3) Bootstrap fallback — Worker static ASSETS (.output/public/site/…)
   if (workerAssets) {
     try {
