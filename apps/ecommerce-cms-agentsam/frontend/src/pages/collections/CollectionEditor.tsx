@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { navigateHostedStudioRoute } from "../../lib/studio-host-navigation";
 import StudioIcon from "../products/StudioIcon";
 import { collectionsApi } from "./api";
 import CollectionMediaPicker from "./CollectionMediaPicker";
@@ -167,7 +168,8 @@ export default function CollectionEditor() {
     }
     const target=supplierId?`/admin/products/create/${encodeURIComponent(supplierId)}`:"/admin/products/create";
     const returnId=savedId?`?collection_id=${encodeURIComponent(savedId)}`:"";
-    window.location.assign(collectionHref(target+returnId));
+    const destination=collectionHref(target+returnId);
+    if (!navigateHostedStudioRoute(destination)) window.location.assign(destination);
   },[save,dirty,form.title]);
   useEffect(()=>{
     window.publishDockEdit?.({
