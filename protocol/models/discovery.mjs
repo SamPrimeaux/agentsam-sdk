@@ -158,7 +158,7 @@ export async function discoverMetaModels(apiKey, fetchImpl = fetch) {
           label: id,
           reasoning_efforts: efforts.length ? efforts : undefined,
           source_url: 'https://api.meta.ai/v1/models',
-          capabilities: { chat_completions: museChat, text_output: museChat, agent_runtime: museChat },
+          capabilities: { responses: museChat, chat_completions: museChat, text_output: museChat, agent_runtime: museChat },
           metadata: {
             capability_source: museChat ? 'provider_documentation_and_credential_discovery' : 'provider_api_models_only',
             created: row.created ?? null,
