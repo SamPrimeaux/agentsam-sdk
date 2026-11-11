@@ -15,8 +15,9 @@ function validCommerceRoute(candidate: string): string | null {
     const url = new URL(candidate, window.location.origin);
     if (url.origin !== window.location.origin) return null;
     if (PRODUCT_ROUTE.test(url.pathname)) {
-      if ([...url.searchParams.keys()].some(key => !["site_id", "resume"].includes(key))) return null;
+      if ([...url.searchParams.keys()].some(key => !["site_id", "resume", "collection_id"].includes(key))) return null;
       if (url.searchParams.has("resume") && !/^psd_[A-Za-z0-9_-]+$/.test(url.searchParams.get("resume") || "")) return null;
+      if (url.searchParams.has("collection_id") && !/^[A-Za-z0-9_-]{1,128}$/.test(url.searchParams.get("collection_id") || "")) return null;
     } else if (EDIT_ROUTE.test(url.pathname)) {
       if (!/^\d+$/.test(url.searchParams.get("id") || "")) return null;
       if ([...url.searchParams.keys()].some(key => !["id", "site_id"].includes(key))) return null;
