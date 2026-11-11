@@ -12,7 +12,7 @@ import { ModelSelect } from "@/components/workbench/model-select";
 import { CanvasStage } from "./canvas/stage";
 import { CanvasInspector, CanvasLayers } from "./canvas/panels";
 import { CanvasCmsHandoff } from "./canvas/cms-handoff";
-import { API, CanvasApiError, blankDocument, canvasBounds, canvasRequest, cloneNode, copy, editNode, insertNode, locateNode, makeId, removeNode, terminalRun, type Artboard, type CanvasDocument, type CanvasEvent, type CanvasMeta, type CanvasNode, type CanvasResponse, type CanvasRun, type Direction } from "./canvas/model";
+import { API, CanvasApiError, blankDocument, canvasBounds, canvasRequest, cloneNode, copy, editNode, insertNode, locateNode, makeId, removeNode, terminalRun, withStarterPages, type Artboard, type CanvasDocument, type CanvasEvent, type CanvasMeta, type CanvasNode, type CanvasResponse, type CanvasRun, type Direction } from "./canvas/model";
 import "./canvas/canvas.css";
 
 type EventResponse={ok:boolean;events:CanvasEvent[];cursor:number;canvas?:CanvasMeta;run:CanvasRun|null};
@@ -192,6 +192,23 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
   }catch(cause){if(cause instanceof CanvasApiError&&cause.status===409)setConflict(true);setError(message(cause));return null;}
   finally{setSaving(false);}
  }
+ async function repairForCms():Promise<CanvasMeta|null> {
+  const state=current.current;
+  if(!state.canvas||!state.document)return null;
+  const next=withStarterPages(state.document);
+  if(!next)return state.canvas;
+  setSaving(true);setError("");
+  try {
+   const result=await canvasRequest<CanvasResponse>(API+"/"+encodeURIComponent(state.canvas.id),{
+    method:"PUT",headers:{"If-Match":'"'+state.canvas.contentHash+'"'},body:JSON.stringify({document:next}),
+   });
+   setPast(items=>[...items,copy(state.document!)].slice(-80));setFuture([]);
+   setCanvas(result.canvas);setDocument(next);setSaved(JSON.stringify(next));setConflict(false);
+   setBoardId(id=>next.artboards.some(b=>b.id===id)?id:next.artboards[0]?.id||"");setFitToken(n=>n+1);
+   return result.canvas;
+  }catch(cause){if(cause instanceof CanvasApiError&&cause.status===409)setConflict(true);setError(message(cause));return null;}
+  finally{setSaving(false);}
+ }
  async function reload() {
   if(!canvas)return;
   try{accept(await canvasRequest<CanvasResponse>(API+"/"+encodeURIComponent(canvas.id)));setError("");setRecovery(null);}
@@ -348,7 +365,7 @@ function IndependentCanvas({tab}:{tab:SideTab}) {
    {!conflict&&!recovery&&<IconAction label="Dismiss error" onClick={()=>setError("")}><X size={14}/></IconAction>}
   </div>}
   {assistantMode==="expanded"&&<div className="cv-expanded-assistant"><header><strong>AgentSam</strong><IconAction onClick={()=>setAssistantMode("docked")} label="Restore docked assistant"><Minimize2 size={16}/></IconAction></header>{assistant}</div>}
-  {showCms&&<CanvasCmsHandoff canvas={canvas} onClose={()=>setShowCms(false)}/>}
+  {showCms&&<CanvasCmsHandoff canvas={canvas} onRepair={repairForCms} onClose={()=>setShowCms(false)}/>}
   {showLibrary&&<div className="cv-modal-backdrop"><section className="cv-modal" role="dialog" aria-modal="true" aria-labelledby="canvas-library-title"><header><h2 id="canvas-library-title">Your Canvases</h2><IconAction label="Close saved Canvases" onClick={()=>setShowLibrary(false)}><X size={18}/></IconAction></header><div className="cv-document-list">{library.map(item=><button key={item.id} onClick={()=>switchDocument(item.id)}><Frame size={16}/><span className="sr-only" aria-hidden="true">Open Canvas</span><span><strong>{item.name}</strong><small>Revision {item.revision}</small></span><ArrowRight size={14}/></button>)}{!library.length&&<p>No saved Canvases were returned.</p>}</div></section></div>}
  </div>;
 }
