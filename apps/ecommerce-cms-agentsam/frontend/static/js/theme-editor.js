@@ -458,6 +458,16 @@
       const owned = pageSlug === slug && pageData?.slug === slug
         ? pageData : pages.find(page => page.slug === pageSlug);
       if (!owned) return null;
+      if (activeCmsSite?.id === 'theme-store' && activeCmsSite.id === window.cmsActiveSiteId) {
+        // Theme Store is an actual published CMS storefront, not a default
+        // SDK showcase. Only published, site-owned routes may be opened.
+        // Internal globals such as /_site-shell and private drafts must never
+        // be presented as public live pages.
+        if (owned.status !== 'published') return null;
+        const route = owned.route_path || owned.route || owned.live_route;
+        if (!route || route === '/_site-shell') return null;
+        return window.cmsEditorStorefrontUrl?.(activeCmsSite, route) || null;
+      }
       if (activeCmsSite?.id !== "app-store" || activeCmsSite.id !== window.cmsActiveSiteId) {
         return pages.find(page => page.slug === pageSlug)?.live_route || null;
       }
