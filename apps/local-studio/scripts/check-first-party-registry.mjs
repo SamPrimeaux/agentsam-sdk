@@ -5,20 +5,42 @@
  * Missing releases defer the downstream Cloudflare build; network failures fail closed.
  */
 import { readFileSync, appendFileSync, readdirSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => JSON.parse(readFileSync(resolve(appRoot, p), 'utf8'));
 
-export function requiredPublishedPackages(manifests) {
+export function requiredPublishedPackages(manifests, lock = null) {
   const local = new Set(manifests.filter(({ path }) => path !== 'package.json')
     .map(({ manifest }) => manifest.name).filter(Boolean));
   const required = new Map();
-  for (const { manifest } of manifests) {
+  for (const { manifest, path } of manifests) {
     for (const section of ['dependencies', 'peerDependencies', 'optionalDependencies']) {
       for (const [name, version] of Object.entries(manifest[section] || {})) {
         if (!name.startsWith('@inneranimalmedia/') || local.has(name)) continue;
+        if (version.startsWith('file:')) {
+          const packageDir = resolve(appRoot, dirname(path), version.slice(5));
+          const packagesRoot = resolve(appRoot, '../../packages');
+          const within = relative(packagesRoot, packageDir);
+          if (!within || within === '..' || within.startsWith('..' + sep) || within.startsWith(sep)) {
+            throw Error('untrusted_first_party_source_pin:' + name);
+          }
+          const source = JSON.parse(readFileSync(resolve(packageDir, 'package.json'), 'utf8'));
+          if (source.name !== name || source.version !== manifest.version) {
+            throw Error('mismatched_first_party_source_pin:' + name);
+          }
+          continue;
+        }
+        const sourceLink = lock?.packages?.['node_modules/' + name];
+        if (sourceLink?.link) {
+          const packageName = name.slice('@inneranimalmedia/'.length);
+          const expected = '../../packages/' + packageName;
+          if (sourceLink.resolved !== expected) throw Error('untrusted_first_party_lock_link:' + name);
+          const source = JSON.parse(readFileSync(resolve(appRoot, expected, 'package.json'), 'utf8'));
+          if (source.name !== name || source.version !== version) throw Error('mismatched_first_party_lock_link:' + name);
+          continue;
+        }
         const old = required.get(name);
         if (old && old !== version) throw Error('conflicting_first_party_pins:' + name);
         required.set(name, version);
@@ -82,9 +104,10 @@ export function staleLockTarballs(lock, requirements) {
 async function main() {
   const manifests = appManifestSources();
   const version = manifests[0].manifest.version;
-  const requirements = requiredPublishedPackages(manifests);
+  const lock = read('package-lock.json');
+  const requirements = requiredPublishedPackages(manifests, lock);
   const registry = await registryStatus(requirements);
-  const stale = staleLockTarballs(read('package-lock.json'), requirements);
+  const stale = staleLockTarballs(lock, requirements);
   const missing = registry.results.filter((r) => !r.published);
   const ready = registry.ready && stale.length === 0;
   console.log('Local Studio first-party registry: ' +
