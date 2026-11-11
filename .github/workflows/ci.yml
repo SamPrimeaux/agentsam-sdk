@@ -38,6 +38,11 @@ jobs:
           set -o pipefail
           npm ci 2>&1 | tee "$RUNNER_TEMP/npm-ci.log"
 
+      # Root-only installs must resolve Worker imports before nested app installs
+      # can accidentally hide missing SDK/package dependency boundaries.
+      - name: Verify clean SDK Canvas provider import
+        run: node --test --test-name-pattern='real generation orchestrator' test/integration/canvas-work-runtime.test.mjs
+
       # Included-app manifests invoke npm ci during release staging.
       # Validate the actual CAD lockfile here rather than discovering drift
       # after a successful SDK verification and before production deploy.
