@@ -349,3 +349,5 @@
   .mxs-media > img { transition: none; }
   .mxs-btn { transition: none; }
 }
+
+.mxs-section .mxs-secondary-cta { margin-inline-end: .75rem; padding: .5rem 0; text-underline-offset: .25em; }

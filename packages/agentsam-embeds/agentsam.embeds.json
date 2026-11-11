@@ -13,7 +13,8 @@
   ],
   "implementation": {
     "frontend": [
-      "src/chat-widget.js"
+      "src/chat-widget.js",
+      "src/form-widget.js"
     ],
     "backend": []
   },

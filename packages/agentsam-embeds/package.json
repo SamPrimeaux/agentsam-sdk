@@ -12,7 +12,8 @@
     ".": "./src/index.js",
     "./manifest": "./agentsam.embeds.json",
     "./chat-widget": "./src/chat-widget.js",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./form-widget": "./src/form-widget.js"
   },
   "files": [
     "src",

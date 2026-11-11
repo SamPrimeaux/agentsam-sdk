@@ -108,6 +108,21 @@
     '<label class="ter-field"><span>'+esc(label)+'</span><select data-embed-select="'+esc(name)+'">'+
     options.map(option=>'<option value="'+esc(option)+'"'+(option===value?' selected':'')+'>'+esc(option.replace(/-/g,' '))+'</option>').join('')+
     '</select></label>';
+  function chatSettings(app, config) {
+    const fields = (app.editor_fields || []).filter(spec => spec.key !== 'agent_replies');
+    return '<details open><summary>Chat settings</summary>'+checkbox('enabled','Show online store chat',config.enabled===true)+
+      fields.map(spec => {
+        const {key,label,type}=spec;
+        const value=config[key];
+        if(type==='toggle') return checkbox(key,label,value);
+        if(type==='select'||type==='radio') return select(key,label,value,spec.options);
+        if(type==='range') return field(key,label,value,'number','min="'+esc(spec.min)+'" max="'+esc(spec.max)+'" step="1"');
+        if(type==='textarea') return '<label class="ter-field"><span>'+esc(label)+'</span><textarea rows="3" maxlength="400" data-embed-input="'+esc(key)+'">'+esc(value)+'</textarea></label>';
+        if(type==='product_picker') return field(key,'Featured product IDs',Array.isArray(value)?value.join(', '):'')+
+          '<p class="ter-muted">Enter up to four published product IDs from this site.</p>';
+        return field(key,label,value||'','text',type==='color'?'placeholder="Theme color" pattern="#[a-fA-F0-9]{6}"':'');
+      }).join('')+'</details>';
+  }
   const installedFor = key => installed.filter(item => item.catalog_key === key);
 
   function withPageIdentity(path) {
@@ -239,6 +254,9 @@
     const {app,config:c}=item;
     const hasFields = Array.isArray(c.fields);
     const instances = installedFor(key);
+    const chat = key === 'store_chat';
+    (chat ? drawer : inspector).append(pane);
+    pane.classList.toggle('ter-left-inspector',chat);
     pane.innerHTML =
       '<header class="ter-inspector-head"><div><strong>'+esc(app.name)+'</strong>'+
       '<small>'+(instance ? ('Installed · '+esc(instance.section_key)) : (instances.length ? (instances.length+' installed on this page') : 'Catalog template'))+'</small></div>'+
@@ -251,7 +269,7 @@
             : 'Configure settings, then install into this page. Installation creates a persisted section and block identity.'
       )+'</p>'+
       (app.key==='customer_billing' ? '<p class="ter-notice">The account destination is resolved by the authorized site host, never entered through a theme. Publishing requires a working authenticated billing route.</p>' : '')+
-      '<details open><summary>Content</summary>'+
+      (chat ? chatSettings(app,c) : '<details open><summary>Content</summary>'+
       field('heading','Heading',c.heading||'')+field('subtitle','Supporting text',c.subtitle||'')+
       field('button_label','Button label',c.button_label||'')+
       (c.button_href!=null?field('button_href','Link target',c.button_href):'')+'</details>'+
@@ -276,7 +294,7 @@
             '<label class="ter-required">Required <input aria-label="'+esc(fieldLabel(name)+' required')+'" type="checkbox" data-embed-required="'+esc(name)+'"'+(required?' checked':'')+(included?'':' disabled')+'></label></div>';
         }).join('')+
         (app.key.startsWith('newsletter')?checkbox('double_opt_in','Double opt-in',c.double_opt_in!==false):'')+
-        '</details>':'')+
+        '</details>':''))+
       '<div class="ter-actions">'+
       (!canInstall ? '' : instance
         ? '<button type="button" data-embed-save-instance data-section-key="'+esc(instance.section_key)+'">Save instance</button>'+
@@ -288,11 +306,13 @@
         instance ? 'Installed CMS instance · edits persist on Save' : 'Template selected · not installed until you click Install'
       )+'</p></div>';
     pane.hidden=false;
-    inspector.querySelector('#te-inspector-body')?.setAttribute('aria-hidden','true');
+    if(chat) inspector.querySelector('#te-inspector-body')?.removeAttribute('aria-hidden');
+    else inspector.querySelector('#te-inspector-body')?.setAttribute('aria-hidden','true');
     pane.querySelector('[data-embed-close]').addEventListener('click',close);
     bindControls(item, instance);
     renderList();
-    if (matchMedia('(max-width: 700px)').matches) inspector.scrollIntoView({block:'start',behavior:'smooth'});
+    if(chat) pane.scrollIntoView?.({block:'start'});
+    else if (matchMedia('(max-width: 700px)').matches) inspector.scrollIntoView({block:'start',behavior:'smooth'});
   }
 
   function bindControls({app,config:c}, instance) {
@@ -301,7 +321,14 @@
         const key=input.dataset.embedInput||input.dataset.embedSelect;
         let value=input.value;
         if(key==='delay_ms')value=Math.max(0,Math.min(60000,Number(value)||0));
-        else value=value.slice(0, key==='subtitle'?400:160);
+        else if(key==='font_size'||key==='border_radius') {
+          if(!input.validity.valid||!Number.isFinite(input.valueAsNumber))return;
+          value=input.valueAsNumber;
+        } else if(key==='featured_products') {
+          value=[...new Set(value.split(',').map(id=>id.trim()).filter(id=>/^[a-z0-9_-]{1,160}$/i.test(id)))].slice(0,4);
+        } else if(app.key==='store_chat' && ['background','font_color','accent'].includes(key)) {
+          if(value&&!/^#[0-9a-f]{6}$/i.test(value))return;
+        } else value=value.slice(0, ['subtitle','greeting'].includes(key)?400:160);
         c[key]=value;
         note(instance ? 'Draft settings changed · Save to persist' : 'Template settings updated');
       });
@@ -432,7 +459,7 @@
       '</div><button type="button" data-embed-dismiss aria-label="Close preview">×</button></div>'+
       '<div class="ter-dialog-content" style="--ter-surface:'+esc(/^#[0-9a-f]{6}$/i.test(c.background)?c.background:'#141414')+
         ';--ter-accent:'+esc(/^#[0-9a-f]{6}$/i.test(c.accent)?c.accent:'#8b181b')+'">'+
-        '<h2>'+esc(c.heading||app.name)+'</h2><p>'+esc(c.subtitle||'')+'</p>'+
+        '<h2>'+esc(c.heading||app.name)+'</h2><p>'+esc(c.greeting||c.subtitle||'')+'</p>'+
         (key==='customer_billing'
           ? '<button type="button" disabled aria-disabled="true">'+esc(c.button_label||'View billing')+'</button>'+
             '<p role="status">Preview only. The account host must provide an authenticated billing destination before visitors can open invoices.</p>'
@@ -442,7 +469,7 @@
             '<input type="'+(name==='email'?'email':'text')+'" name="'+esc(name)+'" '+(required.has(name)?'required':'')+'>')+'</label>').join('')+
           '<button type="submit">'+esc(c.button_label||'Submit')+'</button>'+
           '<p role="status" data-embed-validation>Preview validation only · submissions are not sent from this dialog</p></form>':
-          '<button type="button" data-embed-dismiss>'+esc(c.button_label||'Explore')+'</button>')+
+          '<button type="button" data-embed-dismiss>'+esc(c.button_label||c.label||'Explore')+'</button>')+
         '</div><p class="ter-dialog-footer">Interactive preview of the selected settings. Installation uses the CMS save path.</p>';
     dialog.querySelectorAll('[data-embed-dismiss]').forEach(button => button.addEventListener('click',()=>dialog.close()));
     dialog.querySelector('[data-embed-form]')?.addEventListener('submit',event=>{
