@@ -1,3 +1,46 @@
+/**
+ * The installed CMS editor is isolated in srcdoc. CSS variables do not cross
+ * that boundary, so copy the host's *account-shell* semantic tokens into the
+ * editor chrome. Storefront/theme preview tokens remain separately scoped.
+ */
+export const EDITOR_CHROME_TOKEN_MAP = Object.freeze({
+  '--color-background': '--te-canvas',
+  '--color-card': '--te-panel',
+  '--color-border': '--te-border',
+  '--color-foreground': '--te-text',
+  '--color-muted': '--te-soft',
+  '--color-muted-foreground': '--te-muted',
+  '--color-accent': '--te-accent',
+  '--font-sans': '--te-font',
+});
+
+export function syncEditorChromeTokens(hostDocument, editorDocument, explicit = {}) {
+  const root = editorDocument?.documentElement;
+  if (!root) return;
+  // An installed app can itself be embedded. Resolve the nearest available
+  // same-origin account-shell theme, without reading storefront preview CSS.
+  const documents = [];
+  let current = hostDocument;
+  for (let depth = 0; current && depth < 4; depth++) {
+    documents.push(current);
+    try {
+      const view = current.defaultView;
+      const parent = view?.parent;
+      if (!parent || parent === view || !parent.document || parent.document === current) break;
+      current = parent.document;
+    } catch { break; }
+  }
+  const computed = documents.map(doc => {
+    try { return doc.defaultView?.getComputedStyle?.(doc.documentElement); }
+    catch { return null; }
+  });
+  for (const [semantic, destination] of Object.entries(EDITOR_CHROME_TOKEN_MAP)) {
+    const value = explicit[semantic] || computed.map(style => style?.getPropertyValue(semantic)?.trim()).find(Boolean);
+    if (typeof value === 'string' && value.trim()) root.style.setProperty(destination, value.trim());
+    else root.style.removeProperty(destination);
+  }
+}
+
 /** Mount the existing Theme Studio in an isolated document. Runtime adapters are supplied by the consumer. */
 export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } = {}) {
   const document = frame.contentDocument;
@@ -6,6 +49,41 @@ export function mountThemeEditor(frame, host, { assetsBase = '/theme-editor/' } 
   window.AgentSamThemeEditorHost = host;
   document.documentElement.style.setProperty('--te-host-header-height','0px');
   document.documentElement.style.setProperty('--te-host-min-height','0px');
+
+  // The app host owns the account chrome. Do not read the merchant's site
+  // design tokens from a nested storefront preview or bake in brand accents.
+  const syncChrome = () => {
+    syncEditorChromeTokens(frame.ownerDocument, document, host?.chromeTokens);
+    const accent = document.documentElement.style.getPropertyValue('--te-accent').trim();
+    // Live account theme changes update editor outlines, never storefront CSS.
+    try {
+      const preview = document.getElementById('theme-preview')?.contentDocument;
+      if (preview?.documentElement && accent)
+        preview.documentElement.style.setProperty('--cms-editor-selection-color', accent);
+    } catch { /* A cross-origin public preview is not editor-controlled. */ }
+  };
+  syncChrome();
+  const parentDocument = frame.ownerDocument;
+  const Observer = parentDocument.defaultView?.MutationObserver;
+  const observer = Observer ? new Observer(syncChrome) : null;
+  const listeners = [];
+  let ancestor = parentDocument;
+  for (let depth = 0; ancestor && depth < 4; depth++) {
+    observer?.observe(ancestor.documentElement, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] });
+    if (ancestor.body) observer?.observe(ancestor.body, { attributes: true, attributeFilter: ['style', 'class', 'data-theme'] });
+    ancestor.addEventListener('agentsam:theme-change', syncChrome);
+    listeners.push(ancestor);
+    try {
+      const view = ancestor.defaultView;
+      const parent = view?.parent;
+      if (!parent || parent === view || !parent.document || parent.document === ancestor) break;
+      ancestor = parent.document;
+    } catch { break; }
+  }
+  parentDocument.defaultView?.addEventListener('pagehide', () => {
+    observer?.disconnect();
+    listeners.forEach(doc => doc.removeEventListener('agentsam:theme-change', syncChrome));
+  }, { once: true });
 
   // A srcdoc document does not inherit the product page's styles. Reuse the
   // Console and Side Assistant owners rather than rendering unstyled chrome.
