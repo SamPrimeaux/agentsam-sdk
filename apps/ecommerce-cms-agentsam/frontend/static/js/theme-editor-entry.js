@@ -46,6 +46,30 @@
     panel.append(title,description,link);
     document.body?.replaceChildren(panel);
   }
+  function chooseMarketplaceSite(sites) {
+    const panel=document.createElement('main');
+    panel.id='cms-theme-entry-error';
+    panel.style.cssText='max-width:620px;margin:4rem auto;padding:2rem;background:#fff;color:#20202a;font:15px system-ui;';
+    const title=document.createElement('h1');
+    title.textContent='Choose a website';
+    const list=document.createElement('ul');
+    for(const site of sites) {
+      if(!site || !/^[A-Za-z0-9_-]{1,160}$/.test(site.id || '')) continue;
+      const target=new URL('/admin/theme-editor', location.origin);
+      target.searchParams.set('site_id',site.id);
+      target.searchParams.set('marketplace_kind',params.get('marketplace_kind'));
+      target.searchParams.set('marketplace_key',params.get('marketplace_key'));
+      const item=document.createElement('li');
+      const link=document.createElement('a');
+      link.href=target.href;
+      link.textContent=site.name || site.slug || site.id;
+      item.append(link);
+      list.append(item);
+    }
+    panel.append(title,list);
+    document.body.replaceChildren(panel);
+  }
+
   async function read(path) {
     const res=await fetch(path,{credentials:'same-origin',cache:'no-store',headers:{accept:'application/json'}});
     if(!res.ok)throw Error('cms_request_'+res.status);
@@ -67,6 +91,12 @@
       if(scope.kind!=='site'){
         if(scope.reason==='site_not_owned'||scope.reason==='invalid_site_id'){
           report('The requested website does not belong to this account. Choose an owned site in Online Store.');
+          return {ready:false,reason:scope.reason};
+        }
+        if(scope.reason==='site_selection_required' && location.origin!=='null' &&
+            ['plugin','cms_embed'].includes(params.get('marketplace_kind')) &&
+            /^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,159}$/.test(params.get('marketplace_key')||'')){
+          chooseMarketplaceSite(inventory.sites);
           return {ready:false,reason:scope.reason};
         }
         location.replace('/admin/store');
