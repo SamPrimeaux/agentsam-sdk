@@ -6,10 +6,11 @@ import StudioIcon from "../products/StudioIcon";
 import CollectionProductPicker from "./CollectionProductPicker";
 import { resolveAssortmentCandidates, type AssortmentSlotMatch } from "../../../../../../packages/agentsam-merch/src/collection-planning.js";
 
-export default function CollectionProducts({ products, selected, onSelect, plan, onPlan, onOpenStudio, onScaffold, collectionId }: {
+export default function CollectionProducts({ products, selected, onSelect, plan, onPlan, onOpenStudio, onScaffold, onRefresh, collectionId }: {
   products: Product[]; selected: number[]; onSelect: (ids: number[]) => void;
   plan: string[]; onPlan: (ids: string[]) => void; onOpenStudio: (supplierId?: string) => Promise<void>;
   onScaffold: () => Promise<void>;
+  onRefresh: () => Promise<void>;
   collectionId?: string | null;
 }) {
   const [picker, setPicker] = useState(false);
@@ -156,6 +157,6 @@ export default function CollectionProducts({ products, selected, onSelect, plan,
           <button aria-label={`Remove planned item ${index+1}`} onClick={()=>onPlan(plan.filter((_,i)=>i!==index))} type="button">×</button>
         </span>)}</div>}
     </section>
-    {picker && <CollectionProductPicker products={products} chosen={selected} onApply={onSelect} onClose={()=>setPicker(false)}/>}
+    {picker && <CollectionProductPicker products={products} chosen={selected} onRefresh={onRefresh} onApply={onSelect} onClose={()=>setPicker(false)}/>}
   </div>;
 }

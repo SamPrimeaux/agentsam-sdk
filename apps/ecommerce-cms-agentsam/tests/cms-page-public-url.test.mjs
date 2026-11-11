@@ -29,3 +29,13 @@ test('page edit does not interpret the AgentSam admin origin as the public domai
   assert.doesNotMatch(html,/viewButton\.href = publishedRoute/);
   assert.doesNotMatch(html,/previewLink\.href = publishedRoute/);
 });
+
+test('App Store editor templates preview a concrete resource on the authorized storefront',()=>{
+  const site={id:'app-store',primary_domain:'apps.inneranimalmedia.com'};
+  assert.equal(scope.cmsEditorStorefrontUrl(site,'/'),'https://apps.inneranimalmedia.com/');
+  assert.equal(scope.cmsEditorStorefrontUrl(site,'/apps/:slug'),'https://apps.inneranimalmedia.com/apps/agentsam-brand');
+  assert.equal(scope.cmsEditorStorefrontUrl(site,'/categories/:slug'),'https://apps.inneranimalmedia.com/categories/content');
+  assert.equal(scope.cmsEditorStorefrontUrl(site,'/collections/:slug'),'https://apps.inneranimalmedia.com/collections/embeds');
+  assert.equal(scope.cmsEditorStorefrontUrl({...site,id:'another-store'},'/apps/:slug'),null);
+  assert.equal(scope.cmsEditorStorefrontUrl({...site,primary_domain:null},'/'),null);
+});

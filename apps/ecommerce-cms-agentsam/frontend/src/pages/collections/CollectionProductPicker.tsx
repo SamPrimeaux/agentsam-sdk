@@ -1,11 +1,24 @@
 import { useMemo, useState } from "react";
 import type { Product } from "./model";
-import { safeMediaUrl } from "./model";
+import { collectionHref, safeMediaUrl } from "./model";
 import StudioIcon from "../products/StudioIcon";
 
-export default function CollectionProductPicker({ products, chosen, onClose, onApply }: {
-  products: Product[]; chosen: number[]; onClose: () => void; onApply: (ids: number[]) => void;
+export default function CollectionProductPicker({ products, chosen, onClose, onApply, onRefresh }: {
+  products: Product[]; chosen: number[]; onClose: () => void; onApply: (ids: number[]) => void; onRefresh: () => Promise<void>;
 }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
+  async function refreshCatalog() {
+    setRefreshing(true);
+    setRefreshError("");
+    try {
+      await onRefresh();
+    } catch (error) {
+      setRefreshError(error instanceof Error ? error.message : "Could not load products.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selection, setSelection] = useState<number[]>(chosen);
@@ -40,9 +53,13 @@ export default function CollectionProductPicker({ products, chosen, onClose, onA
             <span className="cs-check-icon"><StudioIcon name="check" size={13}/></span>
           </button>;
         })}
-        {!results.length && <p className="cs-muted">No matching catalog products.</p>}
+        {!products.length ? (
+          <p className="cs-muted">There are no products in this site’s catalog. <a href={collectionHref("/admin/products/create")} target="_blank" rel="noopener">Open Product Studio</a> to create one, then refresh the catalog here.</p>
+        ) : !results.length && <p className="cs-muted">No products match your search and filters.</p>}
       </div>
+      {refreshError && <p role="alert" className="cs-muted">{refreshError}</p>}
       <footer className="cs-dialog-foot"><span>{selection.length} selected · max 500</span><div>
+        {!products.length && <button className="cs-button" type="button" disabled={refreshing} onClick={() => void refreshCatalog()}>{refreshing ? "Refreshing…" : "Refresh catalog"}</button>}
         <button className="cs-button" type="button" onClick={onClose}>Cancel</button>
         <button className="cs-button primary" type="button" disabled={selection.length > 500} onClick={() => { onApply(selection); onClose(); }}>Apply products</button>
       </div></footer>
