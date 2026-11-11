@@ -13,6 +13,9 @@ type PlatformProduct = {
   collection?: string;
   thumbnail_url?: string;
   revision?: string;
+  display_name?: string | null;
+  catalog_visibility?: "internal" | "unlisted" | "public";
+  sku?: string | null;
 };
 
 type ProductEdit = Pick<PlatformProduct, "name" | "description" | "collection" | "thumbnail_url">;
@@ -39,6 +42,7 @@ export default function PlatformProductCatalog({
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [retry, setRetry] = useState(0);
+  const [showInternal, setShowInternal] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,20 +61,16 @@ export default function PlatformProductCatalog({
   }, [refresh, retry]);
 
   const visible = useMemo(() => products.filter((p) => productMatches(p, kind))
+    .filter((p) => showInternal || p.catalog_visibility !== "internal")
     .filter((p) => !search || [p.name, p.slug, p.kind, p.package_name, p.collection]
       .some((v) => String(v || "").toLowerCase().includes(search.toLowerCase())))
-    .sort((a,b) => a.name.localeCompare(b.name)), [products, kind, search]);
+    .sort((a,b) => a.name.localeCompare(b.name)), [products, kind, search, showInternal]);
 
   function inspect(p: PlatformProduct) {
     setSelected(p);
     setEdit({ name: p.name, description: p.description || "", collection: p.collection || "", thumbnail_url: p.thumbnail_url || "" });
     setNotice("");
-    // Bring the existing details panel into view; never make edits appear below
-    // an arbitrarily long product grid without moving the viewport.
-    requestAnimationFrame(() => document.getElementById("ps-product-inspector")?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      block: "start",
-    }));
+    window.scrollTo({ top: 0 });
   }
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
@@ -98,12 +98,13 @@ export default function PlatformProductCatalog({
         <button type="button" className="ps-button" onClick={() => { setLoading(true); setRetry((v) => v + 1); }}>Refresh products</button>
       </div>
       <p className="ps-platform-description">Explore and manage products you own in the existing AgentSam product registry.</p>
+      {!selected && <label className="ps-platform-toggle"><input type="checkbox" checked={showInternal} onChange={(e) => setShowInternal(e.target.checked)}/> Include internal packages</label>}
       <p className="ps-result-count" aria-live="polite">{loading ? "Loading products…" : visible.length + " products"}</p>
       {error && <div className="ps-feedback" role="alert"><strong>Product registry unavailable</strong><p>{error}</p></div>}
       {!loading && !error && visible.length === 0 && <div className="ps-empty">
         <h3>No matching products</h3><p>Try another category or search to browse your registered products.</p>
       </div>}
-      <div className="ps-catalog-grid">
+      {!selected && <div className="ps-catalog-grid">
         {visible.map((p) => (
           <button type="button" className="ps-product-card ps-platform-card" key={p.id} onClick={() => inspect(p)}>
             <div className="ps-product-photo">
@@ -112,17 +113,17 @@ export default function PlatformProductCatalog({
                 : <span className="ps-platform-initials" aria-hidden="true">{p.name.split(/\s+/).slice(0,2).map((w) => w[0]).join("").toUpperCase()}</span>}
               <span className="ps-card-arrow" aria-hidden="true">↗</span>
             </div>
-            <div className="ps-product-copy"><small>{p.kind}</small><h3>{p.name}</h3>
+            <div className="ps-product-copy"><small>{p.kind}</small><h3>{p.display_name || p.name}</h3>
               <div><span>{p.version || p.status || "Registered"}</span><span>{p.package_name || ""}</span></div>
             </div>
           </button>
         ))}
-      </div>
+      </div>}
       {selected && <div id="ps-product-inspector" className="ps-platform-inspector" role="region" aria-label="Edit registered product">
-        <div className="ps-platform-inspector-head"><div><span className="ps-eyebrow">PRODUCT DETAILS</span><h3>{selected.name}</h3></div>
-          <button className="ps-button" type="button" onClick={() => setSelected(null)}>Close</button>
+        <div className="ps-platform-inspector-head"><div><span className="ps-eyebrow">PRODUCT DETAILS</span><h3>{selected.display_name || selected.name}</h3></div>
+          <button className="ps-button" type="button" onClick={() => setSelected(null)}>← Back to catalog</button>
         </div>
-        <p>Update the presentation details of this existing AgentSam product. Repository, status, and release metadata remain managed by their authoritative systems.</p>
+        <p className="ps-platform-chips">{[selected.kind, selected.version && "v" + selected.version, selected.status, selected.catalog_visibility, selected.package_name].filter(Boolean).join(" · ")}</p>
         <form onSubmit={(event) => void save(event)} className="ps-platform-fields">
           <label>Name<input required maxLength={160} value={edit.name || ""} onChange={(e) => setEdit((s) => ({...s,name:e.target.value}))}/></label>
           <label>Collection<input maxLength={120} value={edit.collection || ""} onChange={(e) => setEdit((s) => ({...s,collection:e.target.value}))}/></label>
