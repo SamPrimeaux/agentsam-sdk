@@ -601,12 +601,8 @@ function renderSideNav(activeHref, userNav, options = {}) {
       <div class="console-nav-group">${channels}</div>
       <div class="console-nav-label console-nav-label--apps"><span>Apps</span><button type="button" class="console-nav-apps-add" data-apps-add-toggle aria-label="Add apps" aria-expanded="false" title="Add apps">${icon("plusCircle", 16)}</button></div>
       <div class="console-nav-apps-menu" data-apps-add-menu hidden>
-        <strong>Open an application</strong>
-        <nav aria-label="Available applications">
-          <a href="/admin/agentsam">AgentSam</a>
-          <a href="/admin/email">Email</a>
-        </nav>
-        <p>These available workspaces open in this dashboard. Additional app installation requires the authenticated catalog and is not simulated in this preview.</p>
+        <strong>Apps</strong>
+        <nav aria-label="Available applications" data-apps-add-list></nav>
         <button type="button" data-apps-add-close>Close</button>
       </div>
       <div class="console-nav-group">${apps}</div>
@@ -905,6 +901,30 @@ function bindConsoleGlobalHandlers() {
   if (window.__consoleGlobalHandlers) return;
   window.__consoleGlobalHandlers = true;
 
+  async function loadAppsLauncher() {
+    const lists = document.querySelectorAll("[data-apps-add-list]");
+    const fill = (nodes) => lists.forEach((list) => list.replaceChildren(...nodes.map((n) => n.cloneNode(true))));
+    const row = (label, href, note, external) => {
+      const a = document.createElement("a");
+      a.href = href;
+      if (external) { a.target = "_blank"; a.rel = "noopener noreferrer"; }
+      a.textContent = label;
+      if (note) { const s = document.createElement("small"); s.textContent = note; a.append(" ", s); }
+      return a;
+    };
+    try {
+      const response = await fetch("/api/apps/launcher", { credentials: "same-origin" });
+      if (!response.ok) throw new Error("unavailable");
+      const data = await response.json();
+      const rows = (data.apps || []).map((app) => app.href
+        ? row(app.label, app.href)
+        : app.sign_in_url ? row(app.label, app.sign_in_url, "Sign in to connect", true) : null).filter(Boolean);
+      fill(rows.length ? rows : [row("Browse the App Store", "https://apps.inneranimalmedia.com/", "", true)]);
+    } catch {
+      fill([row("Browse the App Store", "https://apps.inneranimalmedia.com/", "", true)]);
+    }
+  }
+
   document.addEventListener("click", (e) => {
     const appsToggle = e.target.closest("[data-apps-add-toggle]");
     const appsClose = e.target.closest("[data-apps-add-close]");
@@ -914,6 +934,7 @@ function bindConsoleGlobalHandlers() {
       const nextOpen = Boolean(appsToggle) && Boolean(currentMenu?.hidden);
       document.querySelectorAll("[data-apps-add-menu]").forEach((menu) => { menu.hidden = !nextOpen; });
       document.querySelectorAll("[data-apps-add-toggle]").forEach((button) => { button.setAttribute("aria-expanded", String(nextOpen)); });
+      if (nextOpen) void loadAppsLauncher();
       return;
     }
     if (!e.target.closest("[data-apps-add-menu]")) {
