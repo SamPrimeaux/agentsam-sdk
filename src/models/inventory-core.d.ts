@@ -58,7 +58,7 @@ export const INVENTORY_API_PROVIDERS: readonly Readonly<{
 
 export const WORKERS_AI_CURATED_MODEL_IDS: readonly string[];
 
-export function verifiedModelControls(model?: DiscoveredModelRecord): {
+export function verifiedModelControls(model?: Partial<DiscoveredModelRecord>): {
   reasoning_efforts: readonly string[];
   eligible: boolean;
   source: string;
