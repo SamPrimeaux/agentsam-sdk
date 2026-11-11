@@ -8,12 +8,12 @@ import vm from 'node:vm';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '../frontend');
 const source = readFileSync(resolve(root, 'shell.js'), 'utf8');
-const manifestMatch = source.match(/const NAV = (\{[\s\S]*?\n\});\n\n\/\/ Explicit user-toggle/);
+const manifestMatch = source.match(/const NAV = (\{[\s\S]*?\n\});/);
 assert.ok(manifestMatch, 'Navigation contract is defined in shell.js');
 const nav = vm.runInNewContext(`(${manifestMatch[1]})`);
 const buildUserNavMatch = source.match(/function buildUserNav\(user\) \{[\s\S]*?\n\}/);
 assert.ok(buildUserNavMatch);
-const buildUserNav = vm.runInNewContext(`(${buildUserNavMatch[0]})`, { NAV: nav, JSON });
+const buildUserNav = vm.runInNewContext(`(${buildUserNavMatch[0]})`, { NAV: nav, JSON, launcherApps: null });
 const labels = (items) => Array.from(items, (item) => item.label);
 
 test('commerce navigation stays focused on commerce and installed CMS-side apps', () => {
@@ -56,4 +56,35 @@ test('the CMS home links out to the dedicated CAD Creator product instead of emb
   assert.equal(previewServer.includes("if(p==='/admin/cad')"), false);
   assert.equal(previewServer.includes("if(pathname==='/cad')"), false);
   assert.equal(existsSync(resolve(root, 'static/cad.html')), false, 'no nested CAD shell is served from the CMS');
+});
+
+
+test('installed admin-nav apps enter the shared rail once, and uninstalled apps do not', () => {
+  const rows = [
+    {key:'agentsam',label:'AgentSam',installed:true,enabled:true,href:'/admin/agentsam',surfaces:['admin-nav','add-apps']},
+    {key:'agentsam',label:'AgentSam',installed:true,enabled:true,href:'/admin/agentsam',surfaces:['admin-nav']},
+    {key:'cad',label:'CAD Creator',installed:false,href:'/admin/cad',surfaces:['admin-nav','add-apps']},
+    {key:'embed-only',label:'Widget',installed:true,enabled:true,href:'/admin/widget',surfaces:['add-apps']},
+    {key:'analytics',label:'Analytics App',installed:true,enabled:true,href:'/admin/apps/analytics',surfaces:['admin-nav']},
+    {key:'disabled',label:'Disabled App',installed:true,enabled:false,href:'/admin/apps/disabled',surfaces:['admin-nav']},
+  ];
+  const build = vm.runInNewContext('('+buildUserNavMatch[0]+')', {NAV:nav,JSON,launcherApps:rows});
+  const rendered = build({primary_mailbox:'primary'});
+  assert.deepEqual(Array.from(rendered.apps,item=>item.label), ['AgentSam','Analytics App','Email']);
+  assert.equal(rendered.apps.filter(item=>item.href==='/admin/agentsam').length,1);
+});
+
+test('installed app nav rejects unsafe destinations and malicious catalogue labels', () => {
+  const rows = [
+    {key:'bad',label:'Bad',installed:true,enabled:true,href:'/admin/bad" onclick="evil',surfaces:['admin-nav']},
+    {key:'external',label:'External',installed:true,enabled:true,href:'https://evil.example',surfaces:['admin-nav']},
+    {key:'good',label:'<svg onload=bad()>',installed:true,enabled:true,href:'/admin/apps/good',surfaces:['admin-nav']},
+  ];
+  const build = vm.runInNewContext('('+buildUserNavMatch[0]+')', {NAV:nav,JSON,launcherApps:rows});
+  const out = build(null);
+  assert.equal(out.apps.some(item=>item.label==='Bad'),false);
+  assert.equal(out.apps.some(item=>item.label==='External'),false);
+  assert.equal(out.apps.some(item=>item.href==='/admin/apps/good'),true);
+  assert.match(source,/function escapeNavText/);
+  assert.match(source,/escapeNavText\(item\.label\)/);
 });

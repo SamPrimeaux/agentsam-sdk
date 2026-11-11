@@ -51,6 +51,7 @@ import { completeGmailOAuth, isGmailOAuthCallbackRequest } from "./gmail-service
 import { completeConnectorOAuth, isConnectorOAuthCallbackRequest } from "./connector-oauth.js";
 import { createLocalStudioPluginRuntime, loadPluginRegistry, updateLocalStudioPluginPreferences } from "./plugin-registry.js";
 import { listCatalogForAccount, installFromCatalog, removeCatalogInstallation } from "./plugin-discovery.js";
+import { listLauncherApps } from "./apps-launcher.js";
 import { beginPluginOAuth, completePluginOAuth, disconnectPublicPlugin, pluginOAuthReturnUrl } from "./plugin-oauth.js";
 import { handleStudioSkills } from "./studio-skills.js";
 import { handleStudioAgentSettings } from "./studio-agents-settings.js";
@@ -1469,20 +1470,7 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
       const userId = await sessionUser();
       if (!userId) return json({ok:false,error:"unauthorized"},401);
       try {
-        const { results } = await env.DB.prepare(
-          `SELECT p.plugin_key, p.display_name, p.icon_url, p.metadata_json, i.setup_status, i.enabled
-             FROM agentsam_plugins p
-             LEFT JOIN agentsam_plugin_installations i ON i.plugin_id = p.id AND i.account_id = ?
-            WHERE json_extract(p.metadata_json, '$.app') IS NOT NULL
-            ORDER BY p.sort_priority, p.display_name`).bind(userId).all();
-        const apps = (results || []).flatMap(row => {
-          let app; try { app = JSON.parse(row.metadata_json || "{}").app; } catch { return []; }
-          if (!app || !Array.isArray(app.surfaces) || !app.surfaces.includes("add-apps") && !app.surfaces.includes("admin-nav")) return [];
-          const href = typeof app.nav?.href === "string" && /^\/(?!\/)/.test(app.nav.href) ? app.nav.href : null;
-          const signIn = typeof app.setup?.sign_in_url === "string" && /^https:\/\//.test(app.setup.sign_in_url) ? app.setup.sign_in_url : null;
-          return [{ key: row.plugin_key, label: app.nav?.label || row.display_name, href, sign_in_url: signIn,
-            icon_url: row.icon_url || null, installed: Number(row.enabled) === 1, setup_status: row.setup_status || "not_installed" }];
-        });
+        const apps = await listLauncherApps(env.DB, userId);
         return json({ ok: true, apps });
       } catch (error) {
         console.error("apps_launcher_error", String(error?.message || error));

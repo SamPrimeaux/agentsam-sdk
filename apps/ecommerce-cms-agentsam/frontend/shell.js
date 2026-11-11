@@ -85,6 +85,15 @@ const NAV = {
   ],
 };
 
+// Null means the catalog has not loaded. An empty array is a real result.
+let launcherApps = null;
+
+function escapeNavText(value) {
+  return String(value ?? "").replace(/[&<>"']/g, character => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[character]);
+}
+
 // Explicit user-toggle overrides for collapsible nav groups. Keyed by group id.
 // When a key is present, it wins over the route-derived "should this be open"
 // guess in groupOpen(). This is the single source of truth for open/closed
@@ -545,8 +554,8 @@ function renderNavItem(item, activeHref) {
     if (item.href) {
       return `
       <div class="console-nav-split${parentActive ? " is-active" : ""}">
-        <a href="${scopedAdminHref(item.href)}" class="console-nav-item console-nav-item--split">${icon(item.icon || "store")}<span>${item.label}</span></a>
-        <button type="button" class="console-nav-toggle${open ? " is-open" : ""}" data-toggle="${item.id}" aria-label="Toggle ${item.label}" aria-expanded="${open ? "true" : "false"}">
+        <a href="${scopedAdminHref(item.href)}" class="console-nav-item console-nav-item--split">${icon(item.icon || "store")}<span>${escapeNavText(item.label)}</span></a>
+        <button type="button" class="console-nav-toggle${open ? " is-open" : ""}" data-toggle="${item.id}" aria-label="Toggle ${escapeNavText(item.label)}" aria-expanded="${open ? "true" : "false"}">
           ${icon("chev", 13, "console-icon chev")}
         </button>
       </div>
@@ -557,7 +566,7 @@ function renderNavItem(item, activeHref) {
             const analyticsAttr = child.analyticsView
               ? ` data-analytics-view="${child.analyticsView}"`
               : "";
-            return `<a href="${scopedAdminHref(child.href)}" class="console-nav-child${active ? " is-active" : ""}"${analyticsAttr}>${active ? '<span class="branch">↳</span>' : ""}${child.label}</a>`;
+            return `<a href="${scopedAdminHref(child.href)}" class="console-nav-child${active ? " is-active" : ""}"${analyticsAttr}>${active ? '<span class="branch">↳</span>' : ""}${escapeNavText(child.label)}</a>`;
           })
           .join("")}
       </div>`;
@@ -566,7 +575,7 @@ function renderNavItem(item, activeHref) {
     return `
       <button type="button" class="console-nav-item${parentActive ? " is-active" : ""}" data-toggle="${item.id}" aria-expanded="${open ? "true" : "false"}">
         ${icon(item.icon || "store")}
-        <span style="flex:1;text-align:left">${item.label}</span>
+        <span style="flex:1;text-align:left">${escapeNavText(item.label)}</span>
         ${icon("chev", 13, "console-icon chev")}
       </button>
       <div class="console-nav-children${open ? " is-open" : ""}" data-group="${item.id}">
@@ -576,16 +585,16 @@ function renderNavItem(item, activeHref) {
             const analyticsAttr = child.analyticsView
               ? ` data-analytics-view="${child.analyticsView}"`
               : "";
-            return `<a href="${scopedAdminHref(child.href)}" class="console-nav-child${active ? " is-active" : ""}"${analyticsAttr}>${active ? '<span class="branch">↳</span>' : ""}${child.label}</a>`;
+            return `<a href="${scopedAdminHref(child.href)}" class="console-nav-child${active ? " is-active" : ""}"${analyticsAttr}>${active ? '<span class="branch">↳</span>' : ""}${escapeNavText(child.label)}</a>`;
           })
           .join("")}
       </div>`;
   }
   const active = navActive(item.href, activeHref);
   if (item.agentsam) {
-    return `<a href="#" class="console-nav-item${active ? " is-active" : ""}" data-agentsam-open>${icon(item.icon)}${item.label}</a>`;
+    return `<a href="#" class="console-nav-item${active ? " is-active" : ""}" data-agentsam-open>${icon(item.icon)}${escapeNavText(item.label)}</a>`;
   }
-  return `<a href="${scopedAdminHref(item.href)}" class="console-nav-item${active ? " is-active" : ""}">${icon(item.icon)}${item.label}</a>`;
+  return `<a href="${scopedAdminHref(item.href)}" class="console-nav-item${active ? " is-active" : ""}">${icon(item.icon)}${escapeNavText(item.label)}</a>`;
 }
 
 function renderSideNav(activeHref, userNav, options = {}) {
@@ -662,6 +671,31 @@ function buildUserNav(user) {
       href: `/admin/email?mailbox=${encodeURIComponent(primary)}`,
       children,
     };
+  }
+  if (Array.isArray(launcherApps)) {
+    const entries = [];
+    const seen = new Set();
+    const seenLabels = new Set();
+    const add = (entry) => {
+      if (!entry?.href || seen.has(entry.href) || seenLabels.has(entry.label.toLowerCase())) return;
+      seen.add(entry.href);
+      seenLabels.add(entry.label.toLowerCase());
+      entries.push(entry);
+    };
+    for (const app of launcherApps) {
+      if (app?.installed !== true || app.enabled !== true || !app.surfaces?.includes("admin-nav")) continue;
+      if (typeof app.href !== "string" || !/^\/admin(?:\/|$)/.test(app.href) || /[<>"'\s]/.test(app.href)) continue;
+      if (typeof app.label !== "string" || !app.label.trim()) continue;
+      add({ href: app.href, label: app.label.trim().slice(0, 64), icon: "store" });
+    }
+    // Email is a first-party console experience; avoid plugin duplicates.
+    // The legacy AgentSam route remains until its app catalog entry exists.
+    const email = nav.apps.find(entry => entry.id === "email" || entry.label === "Email");
+    const agent = nav.apps.find(entry => entry.label === "AgentSam");
+    const agentDeclared = launcherApps.some(app => app?.label === "AgentSam" || app?.key === "agentsam");
+    if (!agentDeclared) add(agent);
+    add(email);
+    nav.apps = entries;
   }
   return nav;
 }
@@ -856,9 +890,22 @@ function renderShell(activeHref, mainHtml, options = {}) {
   if (!shellMode.hideAdminNav && window.__shellUser) hydrateShellProfile(window.__shellUser);
 
   if (!shellMode.hideAdminNav) loadShellUser()
-    .then((d) => {
+    .then(async (d) => {
       if (d) {
         hydrateShellNav(d, activeHref);
+        try {
+          const response = await fetch("/api/apps/launcher", { credentials: "same-origin" });
+          if (!response.ok) throw new Error("apps_launcher_unavailable");
+          const data = await response.json();
+          if (!data?.ok || !Array.isArray(data.apps)) throw new Error("apps_launcher_invalid");
+          launcherApps = data.apps;
+          // Do not dismiss an in-progress Apps popup while refreshing the rail.
+          if (!document.querySelector("[data-apps-add-menu]:not([hidden])")) {
+            hydrateShellNav(d, activeHref);
+          }
+        } catch {
+          // Retain first-party navigation when catalog discovery is unavailable.
+        }
       } else {
         hydrateShellProfile({
           display_name: "Account",
@@ -916,10 +963,22 @@ function bindConsoleGlobalHandlers() {
       const response = await fetch("/api/apps/launcher", { credentials: "same-origin" });
       if (!response.ok) throw new Error("unavailable");
       const data = await response.json();
-      const rows = (data.apps || []).map((app) => app.href
-        ? row(app.label, app.href)
-        : app.sign_in_url ? row(app.label, app.sign_in_url, "Sign in to connect", true) : null).filter(Boolean);
-      fill(rows.length ? rows : [row("Browse the App Store", "https://apps.inneranimalmedia.com/", "", true)]);
+      if (!data?.ok || !Array.isArray(data.apps)) throw new Error("apps_launcher_invalid");
+      launcherApps = data.apps;
+      const rows = data.apps.map((app) => {
+        if (app.installed && app.enabled && app.href) return row(app.label, app.href, "Open");
+        if (typeof app.key === "string" && /^[a-z0-9][a-z0-9._-]*$/i.test(app.key)) {
+          const intent = new URL("https://apps.inneranimalmedia.com/studio");
+          intent.searchParams.set("panel", "install");
+          intent.searchParams.set("kind", "plugin");
+          intent.searchParams.set("key", app.key);
+          return row(app.label, intent.href, app.installed ? "Manage" : "Install", true);
+        }
+        if (app.sign_in_url) return row(app.label, app.sign_in_url, "Connect", true);
+        return null;
+      }).filter(Boolean);
+      rows.push(row("Browse App Store", "https://apps.inneranimalmedia.com/", "", true));
+      fill(rows);
     } catch {
       fill([row("Browse the App Store", "https://apps.inneranimalmedia.com/", "", true)]);
     }
