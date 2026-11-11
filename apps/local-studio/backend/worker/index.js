@@ -770,6 +770,7 @@ export default {
     const isStudioSkills = url.pathname === "/api/settings/skills"
       || url.pathname.startsWith("/api/settings/skills/");
     const workspaceMatch = /^\/api\/plugins\/(plg_[a-z0-9]+)\/workspace$/i.exec(url.pathname);
+    const isAppsLauncher = url.pathname === "/api/apps/launcher";
     const isPluginCatalog = url.pathname === "/api/plugins/catalog";
     const isPluginInstall = url.pathname === "/api/plugins/install";
     const isPluginOAuthCallback = url.pathname === "/api/plugins/oauth/callback";
@@ -1461,6 +1462,31 @@ if (isAnalyticsApi && !isAnalyticsSmoke) {
         const code=String(error?.code||error?.message||'plugin_oauth_failed').slice(0,120);
         console.warn('plugin_oauth_action_failed',code);
         return json({ok:false,error:code},code.includes('not_found')?404:code.includes('unavailable')?503:400);
+      }
+    }
+    if (isAppsLauncher) {
+      if (request.method !== "GET") return json({ok:false,error:"method_not_allowed"},405,{allow:"GET"});
+      const userId = await sessionUser();
+      if (!userId) return json({ok:false,error:"unauthorized"},401);
+      try {
+        const { results } = await env.DB.prepare(
+          `SELECT p.plugin_key, p.display_name, p.icon_url, p.metadata_json, i.setup_status, i.enabled
+             FROM agentsam_plugins p
+             LEFT JOIN agentsam_plugin_installations i ON i.plugin_id = p.id AND i.account_id = ?
+            WHERE json_extract(p.metadata_json, '$.app') IS NOT NULL
+            ORDER BY p.sort_priority, p.display_name`).bind(userId).all();
+        const apps = (results || []).flatMap(row => {
+          let app; try { app = JSON.parse(row.metadata_json || "{}").app; } catch { return []; }
+          if (!app || !Array.isArray(app.surfaces) || !app.surfaces.includes("add-apps") && !app.surfaces.includes("admin-nav")) return [];
+          const href = typeof app.nav?.href === "string" && /^\/(?!\/)/.test(app.nav.href) ? app.nav.href : null;
+          const signIn = typeof app.setup?.sign_in_url === "string" && /^https:\/\//.test(app.setup.sign_in_url) ? app.setup.sign_in_url : null;
+          return [{ key: row.plugin_key, label: app.nav?.label || row.display_name, href, sign_in_url: signIn,
+            icon_url: row.icon_url || null, installed: Number(row.enabled) === 1, setup_status: row.setup_status || "not_installed" }];
+        });
+        return json({ ok: true, apps });
+      } catch (error) {
+        console.error("apps_launcher_error", String(error?.message || error));
+        return json({ ok: false, error: "apps_launcher_unavailable" }, 503);
       }
     }
     if (isPluginCatalog) {
