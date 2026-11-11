@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import {
-  assertModelAvailable,
   buildStudioInventory,
   platformCredentials,
   WORKERS_AI_CURATED,
