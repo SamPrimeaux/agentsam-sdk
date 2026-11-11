@@ -145,7 +145,7 @@ function renderRows(pages) {
         project:p.project_id,site_id:selectedSiteId,page:p.slug}).toString()
       : `/admin/page-edit?${query}`;
     const designHref = themePage ? editHref : `/admin/theme-editor?${query}`;
-    const sourceHref = !themePage && p.content_authority === "storefront-html"
+    const sourceHref = !themePage && p.html_source_editable === true
       ? `<a href="/admin/theme-editor?${cmsEscapeAttr(sourceEditorQuery(p))}" class="btn ghost small" onclick="event.stopPropagation()">Edit HTML source</a>`
       : "";
     return `

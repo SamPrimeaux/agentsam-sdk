@@ -13,6 +13,7 @@ import { localStudioSettingsHost } from "./localStudioSettingsHost";
 import { LiveKeysSettingsPage } from "./LiveKeysSettingsPage";
 import { InnerAnimalCompanionsPage } from "../../../agentsam/InnerAnimalCompanionsPage";
 import { SideStagePreferencesPage } from "./SideStagePreferencesPage";
+import { PlatformNavigationSettings } from "./PlatformNavigationSettings";
 
 export function LocalStudioSettingsPage({
   unitId,
@@ -80,6 +81,7 @@ export function LocalStudioSettingsPage({
 
 
 function LocalStudioThemeSettingsPage() {
+  const [view, setView] = useState<"themes" | "navigation">("themes");
   const [themes, setThemes] = useState<SettingsTheme[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -109,22 +111,28 @@ function LocalStudioThemeSettingsPage() {
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[.16em] text-muted-foreground">Settings / Appearance</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Themes</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Browse the available theme library and customize private account-owned styles.</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">Appearance</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Customize account themes and the shared Admin navigation.</p>
           </div>
-          <button type="button" className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted" onClick={() => void refresh()} disabled={loading}>
+          {view === "themes" ? <button type="button" className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted" onClick={() => void refresh()} disabled={loading}>
             {loading ? "Loading…" : "Refresh library"}
-          </button>
+          </button> : null}
         </div>
-        {error && <p role="alert" className="mb-4 rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive">Theme library: {error}</p>}
-        {loading && !themes.length ? (
-          <div className="rounded-xl border border-border p-8 text-sm text-muted-foreground">Loading available themes…</div>
-        ) : (
-          <SettingsThemeGallery themes={themes} host={localStudioSettingsHost} onChanged={async () => {
-            const next = await listStudioThemes();
-            setThemes(next);
-          }} />
-        )}
+        <div className="mb-5 flex gap-2 border-b border-border pb-3" role="group" aria-label="Appearance editor">
+          <button type="button" className={"rounded-md px-3 py-2 text-sm " + (view === "themes" ? "bg-muted font-semibold" : "hover:bg-muted")} aria-pressed={view === "themes"} onClick={() => setView("themes")}>Themes</button>
+          <button type="button" className={"rounded-md px-3 py-2 text-sm " + (view === "navigation" ? "bg-muted font-semibold" : "hover:bg-muted")} aria-pressed={view === "navigation"} onClick={() => setView("navigation")}>Navigation</button>
+        </div>
+        {view === "navigation" ? <PlatformNavigationSettings /> : <>
+          {error && <p role="alert" className="mb-4 rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive">Theme library: {error}</p>}
+          {loading && !themes.length ? (
+            <div className="rounded-xl border border-border p-8 text-sm text-muted-foreground">Loading available themes…</div>
+          ) : (
+            <SettingsThemeGallery themes={themes} host={localStudioSettingsHost} onChanged={async () => {
+              const next = await listStudioThemes();
+              setThemes(next);
+            }} />
+          )}
+        </>}
       </div>
     </div>
   );

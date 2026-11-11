@@ -1,0 +1,10 @@
+/* AgentSam SDK public-site typography. Components consume named roles. */
+:root {
+  --sdk-font-body: var(--asbd-font-sans);
+  --sdk-font-code: var(--asbd-font-mono);
+  --sdk-type-display: clamp(2.5rem, 1.55rem + 4.6vw, 6rem);
+  --sdk-type-title: clamp(2rem, 1.4rem + 3vw, 4.75rem);
+  --sdk-type-heading: clamp(1.75rem, 1.3rem + 2vw, 3.25rem);
+  --sdk-type-body: clamp(1rem, .94rem + .26vw, 1.1875rem);
+  --sdk-measure: 68ch;
+}

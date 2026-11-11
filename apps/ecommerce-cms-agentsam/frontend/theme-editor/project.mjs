@@ -264,7 +264,7 @@ export function renderThemePage(page, tokens = {}, { baseUrl } = {}) {
   // Preview tokens live only in the customer document, never the editor chrome.
   const vars = Object.entries(tokens).filter(([k]) => /^--[a-zA-Z0-9-]+$/.test(k)).map(([k, v]) => `${k}:${String(v).replace(/[<>;]/g, '')}`).join(';');
   html = html.replace('</head>', `<style>:root{${vars}}</style></head>`);
-  html = html.replace('</body>', `<script>document.addEventListener('click',function(e){const s=e.target.closest('[data-theme-section]');if(!s)return;e.preventDefault();const b=e.target.closest('[data-theme-block-id]');parent.postMessage({type:'agentsam:theme-preview-select',section:s.dataset.themeSection,block:b?b.dataset.themeBlockId:null},'*')});<\/script></body>`);
+  html = html.replace('</body>', `<script>document.addEventListener('click',function(e){const s=e.target.closest('[data-theme-section]');if(!s || e.target.closest('a[href],button,input,textarea,select,label'))return;e.preventDefault();const b=e.target.closest('[data-theme-block-id]');parent.postMessage({type:'agentsam:theme-preview-select',section:s.dataset.themeSection,block:b?b.dataset.themeBlockId:null},'*')});<\/script></body>`);
   return absolutizeThemePreviewPaths(html, baseUrl);
 }
 
@@ -378,7 +378,7 @@ export function createThemeProjectAdapter(project, store, { publish, resolveAsse
       state.tokens = Object.fromEntries(Object.entries(tokens || {}).filter(([key, value]) => /^--[a-zA-Z0-9-]+$/.test(key) && typeof value === 'string'));
       await persist(); return clone(state);
     },
-    listPages: async () => state.pages.map(({ slug, title }) => ({ slug, title })),
+    listPages: async () => state.pages.map(({ slug, title, route, page_type }) => ({ slug, title, ...(route ? {route} : {}), ...(page_type ? {page_type} : {}) })),
     getPage: async (slug) => {
       const page = clone(get(slug));
       page.sections = page.sections.map((item, index) => ({

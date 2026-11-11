@@ -7,6 +7,22 @@ There is no desktop editor implementation.
 The package exports `theme-editor/mount`, `theme-editor/bridge`,
 `theme-editor/project`, and `theme-editor/cms-adapter`.
 
+**Product ownership:** `apps/ecommerce-cms-agentsam` is the sole Online Store/CMS
+application. `frontend/theme-editor/` owns its production mount, adapters and
+document format. Its current imperative UI remains in
+`frontend/static/js/theme-editor.js`; Local Studio is a consuming host, not a
+second CMS. `cms-editor/frontend/src/editor/` is a typed React editor scaffold
+that is not feature-parity with the shipped editor. Do not redirect installed
+routes there until real site-scoped draft, Add Section/Block, App Embeds,
+preview, code editing and publishing have verified parity. Consolidation
+must move existing behavior behind the shared CMS authoring contract, not
+copy another bespoke editor into Local Studio or a merchant application.
+
+Account-shell theme tokens cross the isolated editor iframe via
+`syncEditorChromeTokens` in `mount.mjs`. Merchant preview styles are distinct:
+only the editor-only selection indicator receives the host accent. A host may
+supply `chromeTokens`, otherwise the nearest accessible host shell is used.
+
 `mountThemeEditor(iframe, host, { assetsBase })` loads `shared.js` followed by
 `runtime.js`. The consumer stages these files and `editor.css` from the package's
 `frontend/static` directory. Mount only trusted editor chrome in this iframe.

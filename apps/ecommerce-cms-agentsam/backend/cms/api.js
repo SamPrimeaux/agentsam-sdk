@@ -580,6 +580,9 @@ export async function listPagesAdmin(env, accountId, siteId = null) {
       status: row.status,
       updated_at: row.updated_at,
       section_count: row.section_count,
+      // Site-backed HTML can open the actual D1/R2 source editor even when
+      // it is already published (not just when classified as storefront HTML).
+      html_source_editable: Boolean(row.html_source_section && row.content_object_key),
       preview: canonicalPreview || (legacyId == null ? "" : await previewForPage(env, row.slug, legacyId, null)),
       source: "cms-d1",
       ...resolvePageAuthority(row.slug, CMS_STOREFRONT_ROUTES, {

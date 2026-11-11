@@ -135,14 +135,14 @@ test('AgentSam app and approved Ecommerce groups keep their actual route ownersh
     localStorage: { getItem: () => 'dark', setItem: () => {} },
     CONSOLE_APPEARANCE_KEY: 'console-appearance',
     document: { querySelectorAll: () => [], addEventListener: () => {} },
-    window: { __AGENTSAM_DESKTOP__: false, fetch: async (url) => {
+    window: { __AGENTSAM_DESKTOP__: false, addEventListener: () => {}, fetch: async (url) => {
       requested.push(url);
       return { ok: true, json: async () => projection };
     } },
   };
   runInNewContext(source, context);
   await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(requested, ['/admin/data/navigation.json','/api/notifications?limit=1']);
+  assert.deepEqual(requested, ['/api/studio/navigation','/api/notifications?limit=1']);
   assert.deepEqual(Array.from(context.NAV.apps, (item) => item.id), projection.apps.map((item) => item.id));
   assert.equal(context.NAV.main[0].href, '/admin/home');
   assert.equal(context.NAV.main.some((item) => item.href === '/agentsam'), false);

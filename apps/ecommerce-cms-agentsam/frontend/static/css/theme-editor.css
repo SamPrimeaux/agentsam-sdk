@@ -10,7 +10,7 @@
   --te-muted: #74746f;
   --te-soft: #f7f7f5;
   --te-accent: #5f43d5;
-  --te-accent-soft: #f1edff;
+  --te-accent-soft: color-mix(in srgb, var(--te-accent) 11%, var(--te-panel));
   --te-success: #17844a;
   --te-danger: #b42318;
 }
@@ -24,6 +24,7 @@
   overflow: hidden;
   background: var(--te-canvas);
   color: var(--te-text);
+  font-family: var(--te-font, system-ui, sans-serif);
 }
 
 .theme-studio-toolbar {

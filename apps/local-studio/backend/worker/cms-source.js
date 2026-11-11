@@ -6,8 +6,9 @@
  * files are NEVER modified by saving an editor draft.
  */
 import { resolveWebsiteAssets } from './bindings.js';
+import { changePublishedCmsSource } from './cms-source-publication.js';
 
-const PAGE_SOURCE = /^\/api\/cms\/source\/pages\/([a-z0-9][a-z0-9-]{0,99})(?:\/(draft))?$/;
+const PAGE_SOURCE = /^\/api\/cms\/source\/pages\/([a-z0-9][a-z0-9-]{0,99})(?:\/(draft|publish|rollback))?$/;
 const HTML_LIMIT = 1024 * 1024;
 
 function response(body, status = 200) {
@@ -90,8 +91,9 @@ export async function handleCmsSourceRequest({ request, url, body, env, siteSlug
     const result = await env.DB.prepare(
       `UPDATE cms_pages SET metadata_json = ?, updated_at = unixepoch()
        WHERE id = ? AND site_id = ?
-       AND COALESCE(CAST(json_extract(metadata_json,'$.cms_source_version') AS INTEGER),0) = ?`
-    ).bind(JSON.stringify(nextMetadata), page.id, dbClient.siteId, currentVersion).run();
+       AND COALESCE(CAST(json_extract(metadata_json,'$.cms_source_version') AS INTEGER),0) = ?
+       AND content_object_key = ?`
+    ).bind(JSON.stringify(nextMetadata), page.id, dbClient.siteId, currentVersion, page.content_object_key).run();
     if ((result.meta?.changes || 0) !== 1) return response({ ok: false, error: 'cms_source_version_conflict' }, 409);
     const previousKey = metadata.cms_source_draft_key;
     // Safe pruning: only the previous private draft, never the published source.
@@ -100,6 +102,12 @@ export async function handleCmsSourceRequest({ request, url, body, env, siteSlug
       try { await website.binding.delete(previousKey); } catch { /* Draft saved; a stale private file can be cleaned later. */ }
     }
     return response({ ok: true, version: nextVersion, draft_key: draftKey, sha256: hash, status: 'draft' });
+  }
+  if (method === 'POST' && (operation === 'publish' || operation === 'rollback')) {
+    return changePublishedCmsSource({
+      operation, body, website: website.binding, page, metadata, siteSlug,
+      db: env.DB, siteId: dbClient.siteId, canPublish: ownedSite.can_publish,
+    });
   }
   return response({ ok: false, error: 'cms_source_method_not_allowed' }, 405);
 }

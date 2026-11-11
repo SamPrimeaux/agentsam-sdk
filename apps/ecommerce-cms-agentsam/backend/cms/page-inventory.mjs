@@ -31,6 +31,17 @@ export async function listCanonicalPageRows(db, accountId, siteId = null) {
     const schema = await db.prepare("PRAGMA table_info(cms_pages)").bind().all();
     const columns = new Set((schema.results || []).map(column => column.name));
     const notArchived = columns.has("status") ? "AND p.status <> 'archived'" : "";
+    // Older platform-v1 installations have no R2 source pointer or section type.
+    // Keep them readable; never advertise source editing from a missing schema.
+    const hasSourcePointer = columns.has('content_object_key');
+    const sections = hasSourcePointer
+      ? await db.prepare('PRAGMA table_info(cms_page_sections)').bind().all()
+      : { results: [] };
+    const sectionColumns = new Set((sections.results || []).map(column => column.name));
+    const sourcePointer = hasSourcePointer ? 'p.content_object_key' : 'NULL';
+    const htmlSourcePredicate = hasSourcePointer && sectionColumns.has('section_type')
+      ? "EXISTS(SELECT 1 FROM cms_page_sections sec WHERE sec.page_id = p.id AND sec.section_type = 'html_source')"
+      : '0';
     // The production table is site-owned through cms_sites.id; account identity
     // is resolved through the owning site rather than duplicated on every page.
     const { results = [] } = await db.prepare(`
@@ -38,7 +49,8 @@ export async function listCanonicalPageRows(db, accountId, siteId = null) {
         p.title, p.status, CASE WHEN typeof(p.updated_at)='integer'
           THEN datetime(p.updated_at, 'unixepoch') ELSE p.updated_at END AS updated_at,
         CASE WHEN p.route_path = '/' THEN 1 ELSE 0 END AS is_homepage,
-        p.nav_visible, p.sort_order,
+        p.nav_visible, p.sort_order, ${sourcePointer} AS content_object_key,
+        ${htmlSourcePredicate} AS html_source_section,
         (SELECT COUNT(*) FROM cms_page_sections sec
           WHERE sec.page_id=p.id) AS section_count,
         (SELECT sec.section_data FROM cms_page_sections sec

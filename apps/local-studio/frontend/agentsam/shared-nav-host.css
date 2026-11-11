@@ -18,8 +18,9 @@ body.agentsam-shared-navigation .console-topbar .console-icon-btn {color:var(--c
 body.agentsam-shared-navigation .console-topbar .console-icon-btn:hover {background:var(--c-hover);color:var(--c-ink);}
 body.agentsam-shared-navigation .console-route-label {color:var(--c-ink);}
 
-body.agentsam-shared-navigation .console-topbar .console-search{color:var(--c-ink-2);background:transparent;}
-body.agentsam-shared-navigation .console-topbar .console-search:hover{background:var(--c-hover);color:var(--c-ink);}
+/* Search remains an authorized command-palette trigger, but navigation is its
+   sole visible entry point. No duplicate top-right search button. */
+body.agentsam-shared-navigation .console-topbar .console-search-wrap { display:none!important; }
 
 /* Shared page/assistant scroll treatment; each existing pane retains its owner. */
 body.agentsam-shared-navigation .console-shell {
